@@ -12,11 +12,11 @@ on:
     branches: [feature/001-scaffolding]
     paths:
       - "002-2026-PROTECCION-INFANTIL/**"
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/**"
   pull_request:
     paths:
       - "002-2026-PROTECCION-INFANTIL/**"
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:
@@ -418,3 +418,26 @@ jobs:
     steps:
       - name: Gate passed
         run: echo "All checks passed"
+
+  # Sentinel multi-producto (SPEC-299 / BRIEF A-49). Ver .github/workflows/README.md.
+  # Reporta un veredicto agregado único al ruleset "Gate CI - main":
+  # - Cualquier `needs.*.result` == failure o cancelled  → sentinel falla.
+  # - Todos success o skipped (mezcla incluida)          → sentinel pasa.
+  # Correr `if: always()` es lo que permite que reporte también cuando algún job fue skipped.
+  pi-gate:
+    runs-on: ubuntu-latest
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    if: always()
+    steps:
+      - name: Evaluar veredicto agregado
+        run: |
+          set -euo pipefail
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ pi-gate: al menos un job requerido falló."
+            exit 1
+          fi
+          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "❌ pi-gate: al menos un job requerido fue cancelado."
+            exit 1
+          fi
+          echo "✅ pi-gate: todos los jobs requeridos pasaron o fueron skipped."
