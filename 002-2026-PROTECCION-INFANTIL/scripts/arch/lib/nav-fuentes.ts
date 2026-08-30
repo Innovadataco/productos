@@ -27,7 +27,8 @@ import { predicadoPermite, type RolBarrido } from "./veredictos";
 export function dashboardHrefPorRol(rol: RolBarrido): string {
     if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
     if (rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
-    if (rol === "PARENT") return "/dashboard";
+    // SPEC-317: zona canónica del padre.
+    if (rol === "PARENT") return "/dashboard/padre";
     return "/dashboard-publico";
 }
 
@@ -58,6 +59,9 @@ const GUARDAS_HEADER: Record<string, (rol: RolBarrido) => boolean> = {
     "/cambiar-password": (rol) => rol !== "ANONIMO",
     "/dashboard": (rol) => rol === "PARENT",
     "/dashboard/circulo-confianza": (rol) => rol === "PARENT",
+    // SPEC-317: zona canónica del padre.
+    "/dashboard/padre": (rol) => rol === "PARENT",
+    "/dashboard/padre/circulo-confianza": (rol) => rol === "PARENT",
     "/mis-reportes": (rol) => rol === "PARENT",
     "/dashboard/admin": (rol) => rol === "ADMIN" || rol === "OPERADOR",
     "/dashboard/admin/configuracion": (rol) => rol === "ADMIN",

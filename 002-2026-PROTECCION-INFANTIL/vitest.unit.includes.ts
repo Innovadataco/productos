@@ -40,6 +40,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/admin/IdentificadorAgregadoAnonimo.test.tsx",
     "src/components/modules/admin/IdentificadorExpedientesAnonimos.test.tsx",
     "src/components/modules/padre/IdentificadorBusquedaClient.test.tsx",
+    // SPEC-317: menú lateral del área padre (sin BD).
+    "src/components/modules/padre/PadreSideNav.test.tsx",
     "src/components/modules/ComiteBandeja.test.tsx",
     "src/components/modules/ComiteSolicitudDetalle.test.tsx",
     "src/components/modules/ConsultaEnriquecidaClient.test.tsx",

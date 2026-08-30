@@ -268,11 +268,11 @@ async function proxyCore(request: NextRequest) {
             if (pathname.startsWith("/api/admin")) {
                 return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
             }
-            // SPEC-317: al home del rol, SALVO que homeForRole devuelva /dashboard/admin (default
-            // para roles sin caso propio) — eso volvería a esta rama y crearía bucle (I-40/D-42).
-            // En ese caso, piso seguro "/".
-            const home = homeForRole(rol);
-            return NextResponse.redirect(new URL(home.startsWith("/dashboard/admin") ? "/" : home, request.url));
+            // El "/" es deliberado (aislamiento de roles, 2026-07-19): un rol no interno en
+            // ruta interna cae a la raíz pública, no a su home. Además es el piso que impide
+            // el bucle I-40/D-42 — homeForRole devuelve /dashboard/admin por defecto.
+            // SPEC-317 evaluó cambiarlo a /dashboard/padre y se descartó (decisión CEO).
+            return NextResponse.redirect(new URL("/", request.url));
         }
         return NextResponse.next();
     }

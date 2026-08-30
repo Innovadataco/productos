@@ -157,7 +157,8 @@ describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
             // [rol, ruta que provoca redirectToHome, home esperado]
             ["COMITE_VALIDACION", "/dashboard", "/dashboard/admin/comite"],
             ["SCHOOL_ADMIN", "/dashboard", "/dashboard/colegio"],
-            // SPEC-317: home de PARENT es /dashboard/padre (zona canónica).
+            // SPEC-317: home de PARENT es /dashboard/padre. Ruta admin-only → esRutaAdminOnly
+            // → redirectToHome (no isInternalRoute), por eso devuelve el home del rol.
             ["PARENT", "/dashboard/admin/comite/gestion", "/dashboard/padre"],
             ["ADMIN", "/dashboard", "/dashboard/admin"],
             ["OPERADOR", "/dashboard", "/dashboard/admin"],
@@ -176,8 +177,7 @@ describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
 
         const parent = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", await tokenParaRol("PARENT")));
         expect(parent.status).toBe(307);
-        // SPEC-317: home de PARENT es /dashboard/padre (antes era "/").
-        expect(new URL(parent.headers.get("location")!).pathname).toBe("/dashboard/padre");
+        expect(new URL(parent.headers.get("location")!).pathname).toBe("/");
 
         const schoolAdmin = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", await tokenParaRol("SCHOOL_ADMIN")));
         expect(schoolAdmin.status).toBe(307);
@@ -257,8 +257,10 @@ describe("SPEC-317 — zona canónica /dashboard/padre", () => {
         expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/reportar")).toBe(true);
     });
 
-    // Blindaje contra bucle I-40/D-42: un rol desconocido (no interno, default homeForRole→/dashboard/admin)
-    // debe aterrizar en "/" y NO volver a redirigir (segundo salto 200, no 307).
+    // Propiedad I-40/D-42: la rama isInternalRoute usa "/" literal (aislamiento de roles,
+    // decisión CEO 2026-08-30), lo que por construcción impide el bucle — homeForRole
+    // devuelve /dashboard/admin para roles sin caso propio, y ese destino volvería a
+    // esta misma rama. El "/" rompe el ciclo sin necesidad de guarda explícita.
     it("rol desconocido en ruta admin cae a '/' y no rebota (anti-bucle I-40/D-42)", async () => {
         const token = await tokenParaRol("ROL_INEXISTENTE");
         const redirect = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", token));
