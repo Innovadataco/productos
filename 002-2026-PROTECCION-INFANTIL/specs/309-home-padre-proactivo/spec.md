@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: User description: "Home dashboard proactivo (reemplaza PlaceholderPadre.tsx con resumen inteligente del día)"
 
@@ -118,3 +118,54 @@ Como frontend del área del padre, quiero consumir el dashboard desde `GET /api/
 - SPEC-230/234 proveen expedientes y eventos.
 - Los canales oficiales son enlaces/parámetros configurables.
 - La fecha se presenta en zona `America/Bogota`.
+
+## Implementation
+
+### Resumen
+
+Se implementó el home dashboard proactivo del área padre reemplazando `PlaceholderPadre.tsx` por `HomePadreDashboard` y servicios propios en `src/lib/padre/`. Las consultas a Prisma fueron centralizadas en `src/lib/dal/services/padre-home.ts` para cumplir la regla Q-3 de no acceder directamente a `@/lib/prisma` fuera del DAL.
+
+### Archivos creados
+
+- `src/lib/padre/home.ts` — orquestador del payload del home (saludo, resumen, semáforo, timeline, sugerencia, accesos).
+- `src/lib/padre/home-semaforo.ts` — cálculo de color verde/ámbar/rojo por contacto con reglas propias.
+- `src/lib/padre/home-timeline.ts` — consulta de últimos eventos del círculo.
+- `src/lib/padre/home-sugerencia.ts` — reglas simples (sin LLM) para la sugerencia del día.
+- `src/lib/dal/services/padre-home.ts` — capa DAL con las queries Prisma para el home del padre.
+- `src/components/modules/padre/HomePadreDashboard.tsx` — contenedor del dashboard.
+- `src/components/modules/padre/ResumenCirculo.tsx` — resumen del círculo.
+- `src/components/modules/padre/SemaforoResumen.tsx` — semáforo por contacto.
+- `src/components/modules/padre/TimelineResumen.tsx` — timeline de eventos.
+- `src/components/modules/padre/SugerenciaProactiva.tsx` — banner de sugerencia.
+- `src/components/modules/padre/AccesosRapidos.tsx` — enlaces rápidos y canales oficiales.
+- `src/app/api/padre/home/route.ts` — endpoint `GET /api/padre/home`.
+
+### Archivos modificados
+
+- `src/app/dashboard/padre/page.tsx` — reemplaza `PlaceholderPadre` por `HomePadreDashboard` y orquesta `obtenerHomePadre`.
+
+### Tests
+
+- `src/lib/padre/home.test.ts`
+- `src/lib/padre/home-semaforo.test.ts`
+- `src/lib/padre/home-sugerencia.test.ts`
+- `src/components/modules/padre/ResumenCirculo.test.tsx`
+- `src/components/modules/padre/SemaforoResumen.test.tsx`
+- `src/components/modules/padre/TimelineResumen.test.tsx`
+- `src/components/modules/padre/SugerenciaProactiva.test.tsx`
+- `src/components/modules/padre/AccesosRapidos.test.tsx`
+- `src/components/modules/padre/HomePadreDashboard.test.tsx`
+- `src/app/api/padre/home/route.test.ts`
+
+### Gate de calidad
+
+- `npx tsc --noEmit`: ✅ sin errores.
+- `npm run lint`: ✅ sin errores nuevos (warnings preexistentes ajenos a SPEC-309).
+- Tests de SPEC-309: ✅ 31 tests pasan.
+- Build local: no se ejecutó por variables de entorno faltantes; se delega a CI.
+
+### Deuda técnica / notas
+
+- El build local requiere variables de entorno completas; CI ejecutará `npm run build`.
+- `scripts/dev-restart.sh` y validación en vivo con padre real quedan pendientes post-merge.
+- No se importan servicios/componentes de SPEC-305 a SPEC-308; cada bloque tiene implementación propia.

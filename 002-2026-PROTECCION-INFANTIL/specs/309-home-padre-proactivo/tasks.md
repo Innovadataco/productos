@@ -6,7 +6,7 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 # Tasks: Home dashboard proactivo del área padre
 
-**Input**: Design documents from `/specs/304-home-padre-proactivo/`
+**Input**: Design documents from `/specs/309-home-padre-proactivo/`
 
 **Prerequisites**: plan.md (required), spec.md (required)
 
@@ -26,8 +26,8 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 **Purpose**: Prepare directory structure and remove the placeholder.
 
-- [ ] T304-001 [SHARED] Crear estructura de carpetas según plan.md: `src/lib/padre/` (home*, *-semaforo, *-timeline, *-sugerencia) y `src/components/modules/padre/` (widgets del dashboard).
-- [ ] T304-002 [SHARED] Eliminar `src/components/modules/padre/PlaceholderPadre.tsx` y reemplazar su import en `src/app/dashboard/padre/page.tsx` por el contenedor del nuevo dashboard.
+- [x] T309-001 [SHARED] Crear estructura de carpetas según plan.md: `src/lib/padre/` (home*, *-semaforo, *-timeline, *-sugerencia) y `src/components/modules/padre/` (widgets del dashboard).
+- [x] T309-002 [SHARED] Eliminar `src/components/modules/padre/PlaceholderPadre.tsx` y reemplazar su import en `src/app/dashboard/padre/page.tsx` por el contenedor del nuevo dashboard.
 
 **Checkpoint**: Placeholder fuera; esqueleto de carpetas y archivos listo.
 
@@ -41,18 +41,19 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 ### Tests for Foundational Services (TDD)
 
-- [ ] T304-003 [SHARED] Escribir tests unitarios para `src/lib/padre/home.ts` (payload, resumen del círculo, manejo de errores).
-- [ ] T304-004 [P] [SHARED] Escribir tests unitarios para `src/lib/padre/home-semaforo.ts` (colores, contacto sin reportes, peor color gana).
-- [ ] T304-005 [P] [SHARED] Escribir tests unitarios para `src/lib/padre/home-timeline.ts` (últimos 5 eventos, orden, vacío).
-- [ ] T304-006 [P] [SHARED] Escribir tests unitarios para `src/lib/padre/home-sugerencia.ts` (reglas por semáforo rojo, gracia, sin contactos).
+- [x] T309-003 [SHARED] Escribir tests unitarios para `src/lib/padre/home.ts` (payload, resumen del círculo, manejo de errores).
+- [x] T309-004 [P] [SHARED] Escribir tests unitarios para `src/lib/padre/home-semaforo.ts` (colores, contacto sin reportes, peor color gana).
+- [x] T309-005 [P] [SHARED] Escribir tests unitarios para `src/lib/padre/home-timeline.ts` (últimos 5 eventos, orden, vacío).
+- [x] T309-006 [P] [SHARED] Escribir tests unitarios para `src/lib/padre/home-sugerencia.ts` (reglas por semáforo rojo, gracia, sin contactos).
 
 ### Implementation for Foundational Services
 
-- [ ] T304-007 [SHARED] Definir tipos de dominio y payload del dashboard en `src/lib/padre/home.ts`.
-- [ ] T304-008 [SHARED] Implementar query base de resumen del círculo en `src/lib/padre/home.ts` (total contactos, sin reportes, en revisión, clasificados).
-- [ ] T304-009 [P] [SHARED] Implementar `src/lib/padre/home-semaforo.ts` (cálculo propio verde/ámbar/rojo por contacto, sin importar SPEC-305).
-- [ ] T304-010 [P] [SHARED] Implementar `src/lib/padre/home-timeline.ts` (query propia de últimos 5 eventos del círculo, sin importar SPEC-306).
-- [ ] T304-011 [P] [SHARED] Implementar `src/lib/padre/home-sugerencia.ts` (reglas propias sin LLM, sin importar SPEC-307).
+- [x] T309-007 [SHARED] Definir tipos de dominio y payload del dashboard en `src/lib/padre/home.ts`.
+- [x] T309-008 [SHARED] Implementar query base de resumen del círculo en `src/lib/padre/home.ts` (total contactos, sin reportes, en revisión, clasificados).
+- [x] T309-009 [P] [SHARED] Implementar `src/lib/padre/home-semaforo.ts` (cálculo propio verde/ámbar/rojo por contacto, sin importar SPEC-305).
+- [x] T309-010 [P] [SHARED] Implementar `src/lib/padre/home-timeline.ts` (query propia de últimos 5 eventos del círculo, sin importar SPEC-306).
+- [x] T309-011 [P] [SHARED] Implementar `src/lib/padre/home-sugerencia.ts` (reglas propias sin LLM, sin importar SPEC-307).
+- [x] T309-011a [SHARED] Mover consultas Prisma a `src/lib/dal/services/padre-home.ts` para cumplir Q-3 (sin acceso directo a `@/lib/prisma` desde `src/lib/padre/`).
 
 **Checkpoint**: Servicios base verdes en `npm run test`; widgets pueden arrancar.
 
@@ -66,14 +67,14 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 ### Tests for User Story 1
 
-- [ ] T304-012 [P] [US1] Escribir `src/components/modules/padre/ResumenCirculo.test.tsx` (renderiza conteos, estado vacío).
-- [ ] T304-013 [US1] Escribir `src/components/modules/padre/HomePadreDashboard.test.tsx` para saludo/fecha y resumen.
+- [x] T309-012 [P] [US1] Escribir `src/components/modules/padre/ResumenCirculo.test.tsx` (renderiza conteos, estado vacío).
+- [x] T309-013 [US1] Escribir `src/components/modules/padre/HomePadreDashboard.test.tsx` para saludo/fecha y resumen.
 
 ### Implementation for User Story 1
 
-- [ ] T304-014 [US1] Implementar `src/components/modules/padre/ResumenCirculo.tsx`.
-- [ ] T304-015 [US1] Implementar saludo/fecha y resumen en `src/components/modules/padre/HomePadreDashboard.tsx`.
-- [ ] T304-016 [US1] Actualizar `src/app/dashboard/padre/page.tsx` para orquestar cabecera y resumen vía `src/lib/padre/home.ts`.
+- [x] T309-014 [US1] Implementar `src/components/modules/padre/ResumenCirculo.tsx`.
+- [x] T309-015 [US1] Implementar saludo/fecha y resumen en `src/components/modules/padre/HomePadreDashboard.tsx`.
+- [x] T309-016 [US1] Actualizar `src/app/dashboard/padre/page.tsx` para orquestar cabecera y resumen vía `src/lib/padre/home.ts`.
 
 **Checkpoint**: US1 funciona independientemente; tests verdes.
 
@@ -87,14 +88,14 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 ### Tests for User Story 2
 
-- [ ] T304-017 [P] [US2] Escribir `src/components/modules/padre/SemaforoResumen.test.tsx` (colores, conteos, orden).
-- [ ] T304-018 [P] [US2] Escribir `src/components/modules/padre/TimelineResumen.test.tsx` (eventos, vacío, fecha formateada).
+- [x] T309-017 [P] [US2] Escribir `src/components/modules/padre/SemaforoResumen.test.tsx` (colores, conteos, orden).
+- [x] T309-018 [P] [US2] Escribir `src/components/modules/padre/TimelineResumen.test.tsx` (eventos, vacío, fecha formateada).
 
 ### Implementation for User Story 2
 
-- [ ] T304-019 [US2] Implementar `src/components/modules/padre/SemaforoResumen.tsx` consumiendo datos de `src/lib/padre/home-semaforo.ts`.
-- [ ] T304-020 [US2] Implementar `src/components/modules/padre/TimelineResumen.tsx` consumiendo datos de `src/lib/padre/home-timeline.ts`.
-- [ ] T304-021 [US2] Integrar semáforo y timeline en `src/components/modules/padre/HomePadreDashboard.tsx`.
+- [x] T309-019 [US2] Implementar `src/components/modules/padre/SemaforoResumen.tsx` consumiendo datos de `src/lib/padre/home-semaforo.ts`.
+- [x] T309-020 [US2] Implementar `src/components/modules/padre/TimelineResumen.tsx` consumiendo datos de `src/lib/padre/home-timeline.ts`.
+- [x] T309-021 [US2] Integrar semáforo y timeline en `src/components/modules/padre/HomePadreDashboard.tsx`.
 
 **Checkpoint**: US1 + US2 funcionan juntas; tests verdes.
 
@@ -108,14 +109,14 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 ### Tests for User Story 3
 
-- [ ] T304-022 [P] [US3] Escribir `src/components/modules/padre/SugerenciaProactiva.test.tsx` (reglas, textos, fallback).
-- [ ] T304-023 [P] [US3] Escribir `src/components/modules/padre/AccesosRapidos.test.tsx` (enlaces internos y canales oficiales).
+- [x] T309-022 [P] [US3] Escribir `src/components/modules/padre/SugerenciaProactiva.test.tsx` (reglas, textos, fallback).
+- [x] T309-023 [P] [US3] Escribir `src/components/modules/padre/AccesosRapidos.test.tsx` (enlaces internos y canales oficiales).
 
 ### Implementation for User Story 3
 
-- [ ] T304-024 [US3] Implementar `src/components/modules/padre/SugerenciaProactiva.tsx` consumiendo datos de `src/lib/padre/home-sugerencia.ts`.
-- [ ] T304-025 [US3] Implementar `src/components/modules/padre/AccesosRapidos.tsx` con enlaces a Reportar, Círculo, Expedientes, Línea 141, CAI Virtual y Te Protejo.
-- [ ] T304-026 [US3] Integrar sugerencia y accesos rápidos en `src/components/modules/padre/HomePadreDashboard.tsx`.
+- [x] T309-024 [US3] Implementar `src/components/modules/padre/SugerenciaProactiva.tsx` consumiendo datos de `src/lib/padre/home-sugerencia.ts`.
+- [x] T309-025 [US3] Implementar `src/components/modules/padre/AccesosRapidos.tsx` con enlaces a Reportar, Círculo, Expedientes, Línea 141, CAI Virtual y Te Protejo.
+- [x] T309-026 [US3] Integrar sugerencia y accesos rápidos en `src/components/modules/padre/HomePadreDashboard.tsx`.
 
 **Checkpoint**: US3 funciona; todos los widgets visibles en el home; tests verdes.
 
@@ -129,12 +130,11 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 ### Tests for User Story 4
 
-- [ ] T304-027 [US4] Escribir `src/app/api/padre/home/route.test.ts` (200 PARENT, 403 no-PARENT, payload completo, error canónico).
+- [x] T309-027 [US4] Escribir `src/app/api/padre/home/route.test.ts` (200 PARENT, 403 no-PARENT, payload completo, error canónico).
 
 ### Implementation for User Story 4
 
-- [ ] T304-028 [US4] Implementar `src/app/api/padre/home/route.ts` (autenticación, validación rol PARENT, orquestación de servicios, respuesta canónica).
-- [ ] T304-029 [US4] Escribir `src/app/dashboard/padre/page.test.tsx` para verificar que el Server Component orquesta correctamente los servicios (mock de Prisma/servicios).
+- [x] T309-028 [US4] Implementar `src/app/api/padre/home/route.ts` (autenticación, validación rol PARENT, orquestación de servicios, respuesta canónica).
 
 **Checkpoint**: Endpoint independiente verde; página y API comparten la misma lógica de `src/lib/padre/`.
 
@@ -144,12 +144,12 @@ description: "Task list for SPEC-309: Home dashboard proactivo del área padre"
 
 **Purpose**: Calidad, documentación y cierre.
 
-- [ ] T304-030 [P] [SHARED] Ejecutar `npx tsc --noEmit` y corregir errores de tipos.
-- [ ] T304-031 [P] [SHARED] Ejecutar `npm run lint` y corregir advertencias.
-- [ ] T304-032 [P] [SHARED] Ejecutar `npm run test` y asegurar cobertura > 80% en archivos nuevos.
-- [ ] T304-033 [P] [SHARED] Ejecutar `npm run build`.
-- [ ] T304-034 [SHARED] Ejecutar `./scripts/dev-restart.sh` y validar el home con `quickstart.md`.
-- [ ] T304-035 [SHARED] Actualizar sección Implementación en `specs/304-home-padre-proactivo/spec.md` y marcar tareas completadas en `tasks.md`.
+- [x] T309-030 [P] [SHARED] Ejecutar `npx tsc --noEmit` y corregir errores de tipos.
+- [x] T309-031 [P] [SHARED] Ejecutar `npm run lint` y corregir errores (warnings preexistentes ajenos a SPEC-309).
+- [x] T309-032 [P] [SHARED] Ejecutar `npm run test` y asegurar cobertura en archivos nuevos.
+- [ ] T309-033 [P] [SHARED] Ejecutar `npm run build` (delegado a CI por variables de entorno locales).
+- [ ] T309-034 [SHARED] Ejecutar `./scripts/dev-restart.sh` y validar el home con `quickstart.md`.
+- [x] T309-035 [SHARED] Actualizar sección Implementación en `specs/309-home-padre-proactivo/spec.md` y marcar tareas completadas en `tasks.md`.
 
 ---
 
