@@ -5,6 +5,7 @@ import { ReporteStepPlataforma } from "./ReporteStepPlataforma";
 import { ReporteStepDetalle } from "./ReporteStepDetalle";
 import { ReporteStepConfirmar } from "./ReporteStepConfirmar";
 import { ConfirmacionReporte } from "./ConfirmacionReporte";
+import { ReporteBloqueoRol } from "./ReporteBloqueoRol";
 import { Button } from "@/components/ui/Button";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
 
@@ -29,7 +30,10 @@ type SessionUser = {
     rol: string;
 } | null;
 
-const ROLES_BLOQUEADOS = ["ADMIN", "OPERADOR", "SCHOOL_ADMIN"];
+// SPEC-314 (002-PI-214): guard preventivo simétrico al backend (route.ts:41).
+// Los 5 roles internos no pueden generar reportes desde su cuenta institucional
+// (anti-fraude · esos roles revisan/validan · no reportan).
+const ROLES_BLOQUEADOS = ["ADMIN", "OPERADOR", "SCHOOL_ADMIN", "COMITE_VALIDACION", "COMITE_CONVIVENCIA"];
 
 // SPEC-295 (002-PI-196 · I-146): destino post-envío cuando el padre reporta
 // desde su panel autenticado. La ruta pública sigue mostrando ConfirmacionReporte.
@@ -64,6 +68,10 @@ export function ReporteWizard({
     const [resultado, setResultado] = useState<{ numeroSeguimiento: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    // SPEC-314 (002-PI-214): fallback reactivo · si el backend rechaza con 403 FORBIDDEN
+    // (rol nuevo agregado al backend sin actualizar ROLES_BLOQUEADOS del frontend), se
+    // muestra el mismo card de bloqueo con 2 CTAs.
+    const [bloqueadoPorBackend, setBloqueadoPorBackend] = useState(false);
     // I-14: la longitud mínima del texto es un parámetro (reportes.spam.min_text_length),
     // no un literal — el botón Siguiente obedece el mismo valor que el backend.
     const minTexto = useMinTextoReporte();
@@ -116,6 +124,13 @@ export function ReporteWizard({
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {
+                // SPEC-314 (002-PI-214): 403 FORBIDDEN del backend por rol interno → mostrar
+                // card de bloqueo reactivo con las 2 CTAs de escape (defense-in-depth).
+                if (res.status === 403 && json?.error?.code === "FORBIDDEN") {
+                    setBloqueadoPorBackend(true);
+                    setIsSubmitting(false);
+                    return;
+                }
                 setError(json?.error?.message || "Error al enviar el reporte");
                 setIsSubmitting(false);
                 return;
@@ -143,20 +158,9 @@ export function ReporteWizard({
         );
     }
 
-    if (user && ROLES_BLOQUEADOS.includes(user.rol)) {
-        return (
-            <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 dark:border-amber-800/60 dark:bg-amber-950/20">
-                <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                    Las cuentas internas no pueden crear reportes
-                </h2>
-                <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
-                    Para reportar de forma anónima, cierra sesión primero. Tu cuenta interna tiene acceso al panel de administración/operación; los reportes deben crearse desde una cuenta de usuario final o sin iniciar sesión.
-                </p>
-                <Button className="mt-6" onClick={handleLogout}>
-                    Cerrar sesión y reportar
-                </Button>
-            </div>
-        );
+    // SPEC-314 (002-PI-214): guard preventivo (rol conocido) o fallback reactivo (403 backend).
+    if ((user && ROLES_BLOQUEADOS.includes(user.rol)) || bloqueadoPorBackend) {
+        return <ReporteBloqueoRol onLogoutAndRetry={handleLogout} />;
     }
 
     if (resultado) {
