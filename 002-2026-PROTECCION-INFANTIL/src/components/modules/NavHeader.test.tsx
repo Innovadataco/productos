@@ -58,11 +58,12 @@ describe("NavHeader", () => {
         expect(logo?.getAttribute("href")).toBe("/");
     });
 
-    it("botón Dashboard apunta a /dashboard para padre autenticado", () => {
+    // SPEC-317: home de PARENT es /dashboard/padre (zona canónica).
+    it("botón Dashboard apunta a /dashboard/padre para padre autenticado", () => {
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
         const dashboard = screen.getByText("Dashboard").closest("a");
-        expect(dashboard?.getAttribute("href")).toBe("/dashboard");
+        expect(dashboard?.getAttribute("href")).toBe("/dashboard/padre");
     });
 
     it("botón Dashboard apunta a /dashboard-publico para anónimos", () => {
@@ -81,22 +82,24 @@ describe("NavHeader", () => {
         expect(screen.queryByText("Mis reportes")).toBeNull();
     });
 
+    // SPEC-317: rutas de PARENT actualizadas a zona canónica /dashboard/padre/*.
     it("PARENT sí ve las entradas de su área en el menú (I-36)", () => {
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
         const toggle = screen.getByText("Padre").closest("button");
         if (toggle) fireEvent.click(toggle);
-        expect(screen.getByText("Círculo de Confianza").closest("a")?.getAttribute("href")).toBe("/dashboard/circulo-confianza");
+        expect(screen.getByText("Círculo de Confianza").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/circulo-confianza");
         expect(screen.getByText("Mis reportes").closest("a")?.getAttribute("href")).toBe("/mis-reportes");
     });
 
-    it("menú desplegable de padre muestra enlace a Mi panel", () => {
+    // SPEC-317: "Mi panel" apunta a /dashboard/padre (zona canónica del padre).
+    it("menú desplegable de padre muestra enlace a Mi panel en /dashboard/padre", () => {
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
         const toggle = screen.getByText("Padre").closest("button");
         if (toggle) fireEvent.click(toggle);
         const link = screen.getByText("Mi panel").closest("a");
-        expect(link?.getAttribute("href")).toBe("/dashboard");
+        expect(link?.getAttribute("href")).toBe("/dashboard/padre");
     });
 
     // SPEC-118 (D-37, decisión ZEUS): ningún elemento de navegación ofrece un
@@ -116,8 +119,9 @@ describe("NavHeader", () => {
         expect(dashboard?.getAttribute("href")).toBe("/dashboard/colegio");
     });
 
-    it("D-37: el botón Dashboard NO se ofrece al padre estando en /dashboard", () => {
-        mockPathname = "/dashboard";
+    // SPEC-317: home de PARENT es /dashboard/padre; el Dashboard es clic muerto solo ahí.
+    it("D-37: el botón Dashboard NO se ofrece al padre estando en /dashboard/padre", () => {
+        mockPathname = "/dashboard/padre";
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
         expect(screen.queryByText("Dashboard")).toBeNull();

@@ -268,7 +268,8 @@ async function proxyCore(request: NextRequest) {
             if (pathname.startsWith("/api/admin")) {
                 return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
             }
-            return NextResponse.redirect(new URL("/", request.url));
+            // SPEC-317: redirigir al home del rol en vez de "/" (UX coherente con el test "redirigen a su home").
+            return redirectToHome(request, rol);
         }
         return NextResponse.next();
     }

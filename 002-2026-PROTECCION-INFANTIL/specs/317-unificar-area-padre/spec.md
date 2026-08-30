@@ -1,12 +1,12 @@
 # SPEC-317 · Unificar el área del padre (002-PI-217)
 
-**Status:** DESARROLLO
+**Status**: DESARROLLO
 **Radicado:** 002-PI-217 · Fábrica PI-1 (`idc-d9`)
 **Brief:** BRIEF-A-54-UNIFICAR-AREA-PADRE.md
 **Prioridad:** 🔴 CRÍTICA
 **Estimado:** 2-3h
 
-## Impacto en arquitectura
+## Impacto en arquitectura:
 
 Unificación de zonas de padre en `/dashboard/padre` como canónica:
 - `proxy.ts:199` cambia `homeForRole("PARENT")` de `/dashboard` → `/dashboard/padre`
