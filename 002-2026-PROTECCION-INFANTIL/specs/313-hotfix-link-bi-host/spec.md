@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: User description: "Hotfix post-deploy SPEC-310: el redirect a /login de /api/auth/link-bi devuelve Location con https://0.0.0.0:3000 (bind interno Docker) en vez del host público, porque request.url en Next.js dentro de Docker refleja el bind interno, no el host real del cliente que llega por el proxy. Fix: usar x-forwarded-host con fallback a PI_BASE_URL con fallback a hardcode https://pi.innovadataco.com. Compuerta §4 ligera, hotfix express autorizado por CEO IDC."
 
