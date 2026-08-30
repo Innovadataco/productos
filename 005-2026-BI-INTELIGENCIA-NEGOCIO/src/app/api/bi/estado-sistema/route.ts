@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sesionDeRequest } from "@/lib/auth/sesion";
 
 /**
  * SPEC-027 · GET /api/bi/estado-sistema
@@ -84,7 +85,14 @@ async function ultimoReporteBD(): Promise<{ ultimoReporte: UltimoReporte | null;
     }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+    // SPEC-035 · guard de sesión (I-33): hoy este endpoint filtra salud de
+    // vanna/superset/pi + último reporte procesado sin credencial. 401 primero.
+    const sesion = await sesionDeRequest(req);
+    if (!sesion) {
+        return NextResponse.json({ error: "no_autorizado" }, { status: 401 });
+    }
+
     const vannaUrl = (process.env.VANNA_BASE_URL || "http://bi-vanna:8001") + "/health";
     const supersetUrl = (process.env.SUPERSET_INTERNAL_URL || "http://bi-superset:8088") + "/health";
     const piUrl = (process.env.PI_BASE_URL || "https://pi.innovadataco.com") + "/api/health";

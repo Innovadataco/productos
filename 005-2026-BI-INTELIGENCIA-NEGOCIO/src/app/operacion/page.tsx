@@ -1,5 +1,6 @@
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./operacion.css";
+import { exigirSesionBi } from "@/lib/auth/guard-bi-sesion";
 import { leerOperacion } from "@/lib/bi/operacion";
 import { BarraOperacion } from "@/components/bi/operacion/BarraOperacion";
 import { EquiposChips } from "@/components/bi/operacion/EquiposChips";
@@ -30,6 +31,11 @@ const PIE_DEFAULT =
     "BI congelado · Fechas en hora de Colombia · Tablero mantenido por el CEO.";
 
 export default async function OperacionPage() {
+    // SPEC-035 · guard ANTES de leer/renderizar datos: si no hay sesión,
+    // redirect() corta aquí y el RSC del tablero NUNCA se rendriza ni streamea
+    // (el guard en el layout hermano no basta: el page renderiza en paralelo
+    // y su flight data se filtraría en el body del 307). I-33.
+    await exigirSesionBi("/operacion");
     const r = await leerOperacion();
 
     return (

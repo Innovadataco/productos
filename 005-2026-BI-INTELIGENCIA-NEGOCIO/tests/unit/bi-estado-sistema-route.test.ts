@@ -8,6 +8,14 @@ vi.mock("@/lib/prisma", () => ({
     },
 }));
 
+// SPEC-035 · el endpoint ahora exige sesión; los tests de comportamiento usan
+// una sesión válida (el 401 sin sesión se cubre en bi-operacion-guard.test.tsx).
+vi.mock("@/lib/auth/sesion", () => ({
+    sesionDeRequest: async () => ({ id: "u1", rol: "ADMIN" }),
+}));
+
+const REQ = new Request("http://localhost/api/bi/estado-sistema");
+
 /* eslint-disable import/first */
 import { GET } from "@/app/api/bi/estado-sistema/route";
 /* eslint-enable */
@@ -51,7 +59,7 @@ describe("GET /api/bi/estado-sistema", () => {
             creadoEn: new Date("2026-08-29T15:00:00Z"),
             latenciaMs: 4200,
         });
-        const res = await GET();
+        const res = await GET(REQ);
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.vanna.ok).toBe(true);
@@ -69,7 +77,7 @@ describe("GET /api/bi/estado-sistema", () => {
             pi: () => jsonRes({ status: "ok" }),
         });
         findFirst.mockRejectedValueOnce(new Error("connection refused"));
-        const res = await GET();
+        const res = await GET(REQ);
         const body = await res.json();
         expect(res.status).toBe(200);
         expect(body.vanna.ok).toBe(true);
@@ -91,7 +99,7 @@ describe("GET /api/bi/estado-sistema", () => {
             creadoEn: new Date(),
             latenciaMs: 500,
         });
-        const res = await GET();
+        const res = await GET(REQ);
         const body = await res.json();
         expect(body.vanna.ok && body.superset.ok && body.pi.ok).toBe(true);
         expect(body.ultimoReporte).toMatchObject({ id: "log-9", estado: "OK" });
@@ -105,7 +113,7 @@ describe("GET /api/bi/estado-sistema", () => {
             pi: new Error("net_p"),
         });
         findFirst.mockRejectedValueOnce(new Error("bd_off"));
-        const res = await GET();
+        const res = await GET(REQ);
         const body = await res.json();
         expect(res.status).toBe(200);
         expect(body.vanna.ok).toBe(false);
@@ -122,7 +130,7 @@ describe("GET /api/bi/estado-sistema", () => {
             pi: () => jsonRes({ status: "ok" }),
         });
         findFirst.mockResolvedValueOnce(null);
-        const res = await GET();
+        const res = await GET(REQ);
         const body = await res.json();
         expect(body.superset.ok).toBe(false);
         expect(body.superset.error).toBe("http_500");
