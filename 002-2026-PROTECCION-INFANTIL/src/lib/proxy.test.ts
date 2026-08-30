@@ -116,8 +116,8 @@ describe("esRutaPermitidaSchoolAdmin", () => {
 });
 
 /**
- * SPEC-127 (I-40, D-42) — homeForRole(PARENT) debe ser "/dashboard".
- * Antes del fix, PARENT caía al default "/dashboard/admin", que la propia puerta le
+ * SPEC-127 (I-40, D-42) — homeForRole(PARENT) debe ser "/dashboard/padre" (SPEC-317).
+ * Antes del fix SPEC-127, PARENT caía al default "/dashboard/admin", que la propia puerta le
  * niega (esDestinoPermitidoPorRol, proxy.ts:122) → doble rebote a "/".
  * Tokens firmados en memoria con jose (el proxy solo verifica el JWT; no toca BD).
  */
@@ -137,14 +137,15 @@ function requestConSesion(pathname: string, token: string): NextRequest {
 }
 
 describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
-    it("PARENT redirigido a su home aterriza en /dashboard SIN doble rebote", async () => {
+    it("PARENT redirigido a su home aterriza en /dashboard/padre SIN doble rebote", async () => {
         const token = await tokenParaRol("PARENT");
 
         // La puerta lo redirige desde una ruta admin-only a su home...
         const redirect = await proxy(requestConSesion("/dashboard/admin/comite/gestion", token));
         expect(redirect.status).toBe(307);
         const destino = new URL(redirect.headers.get("location")!).pathname;
-        expect(destino).toBe("/dashboard");
+        // SPEC-317: home de PARENT es /dashboard/padre (zona canónica).
+        expect(destino).toBe("/dashboard/padre");
 
         // ...y ese destino le está permitido: aterriza sin segundo rebote.
         const aterrizaje = await proxy(requestConSesion(destino, token));
@@ -156,7 +157,9 @@ describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
             // [rol, ruta que provoca redirectToHome, home esperado]
             ["COMITE_VALIDACION", "/dashboard", "/dashboard/admin/comite"],
             ["SCHOOL_ADMIN", "/dashboard", "/dashboard/colegio"],
-            ["PARENT", "/dashboard/admin/comite/gestion", "/dashboard"],
+            // SPEC-317: home de PARENT es /dashboard/padre. Ruta admin-only → esRutaAdminOnly
+            // → redirectToHome (no isInternalRoute), por eso devuelve el home del rol.
+            ["PARENT", "/dashboard/admin/comite/gestion", "/dashboard/padre"],
             ["ADMIN", "/dashboard", "/dashboard/admin"],
             ["OPERADOR", "/dashboard", "/dashboard/admin"],
         ];
@@ -240,6 +243,34 @@ describe("SESION_ROUTES — SPEC-250 hotfix /consentimiento (I-111)", () => {
         const res = await proxy(requestAnonima("/consentimiento"));
         expect(res.status, "anónimo → /consentimiento redirige").toBe(307);
         expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    });
+});
+
+describe("SPEC-317 — zona canónica /dashboard/padre", () => {
+    it("PARENT puede acceder a su home /dashboard/padre (esDestinoPermitidoPorRol)", () => {
+        expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre")).toBe(true);
+    });
+
+    it("PARENT puede acceder a las subrutas de su zona canónica", () => {
+        expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/circulo-confianza")).toBe(true);
+        expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/notificaciones")).toBe(true);
+        expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/reportar")).toBe(true);
+    });
+
+    // Propiedad I-40/D-42: la rama isInternalRoute usa "/" literal (aislamiento de roles,
+    // decisión CEO 2026-08-30), lo que por construcción impide el bucle — homeForRole
+    // devuelve /dashboard/admin para roles sin caso propio, y ese destino volvería a
+    // esta misma rama. El "/" rompe el ciclo sin necesidad de guarda explícita.
+    it("rol desconocido en ruta admin cae a '/' y no rebota (anti-bucle I-40/D-42)", async () => {
+        const token = await tokenParaRol("ROL_INEXISTENTE");
+        const redirect = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", token));
+        expect(redirect.status).toBe(307);
+        const destino = new URL(redirect.headers.get("location")!).pathname;
+        expect(destino).toBe("/");
+
+        // Segundo salto: "/" es ruta pública → pasa sin redirigir (no bucle).
+        const aterrizaje = await proxy(requestConSesion("/", token));
+        expect(aterrizaje.status).toBe(200);
     });
 });
 

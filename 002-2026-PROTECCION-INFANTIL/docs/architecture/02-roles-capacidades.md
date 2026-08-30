@@ -2565,9 +2565,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/comite` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/comite/aclaracion/[id]` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/comite/apelaciones` | página | redirigir→/ | no permite | sí |
-| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard | no permite | sí |
+| `/dashboard/admin/comite/auditoria` | página | redirigir→/dashboard/padre | no permite | sí |
 | `/dashboard/admin/comite/consolidacion/[expedienteId]` | página | redirigir→/ | no permite | sí |
-| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard | no permite | sí |
+| `/dashboard/admin/comite/gestion` | página | redirigir→/dashboard/padre | no permite | sí |
 | `/dashboard/admin/comite/guias-pendientes` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/configuracion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/configuracion/guias-accion` | página | redirigir→/ | no permite | sí |
@@ -3489,13 +3489,13 @@ href nuevo sin guarda declarada hace fallar la aserción B ruidosamente).
 | --- | --- |
 | `/` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, COMITE_CONVIVENCIA, PARENT, ANONIMO |
 | `/cambiar-password` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, COMITE_CONVIVENCIA, PARENT |
-| `/dashboard` | PARENT |
 | `/dashboard-publico` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, COMITE_CONVIVENCIA, PARENT, ANONIMO |
 | `/dashboard/admin` | ADMIN, OPERADOR |
 | `/dashboard/admin/comite` | COMITE_VALIDACION |
 | `/dashboard/admin/configuracion` | ADMIN |
-| `/dashboard/circulo-confianza` | PARENT |
 | `/dashboard/colegio` | SCHOOL_ADMIN |
 | `/dashboard/colegio/comite/casos` | SCHOOL_ADMIN, COMITE_CONVIVENCIA |
+| `/dashboard/padre` | PARENT |
+| `/dashboard/padre/circulo-confianza` | PARENT |
 | `/login` | ANONIMO |
 | `/mis-reportes` | PARENT |

@@ -18,15 +18,20 @@ vi.mock("next/link", () => ({
 }));
 
 describe("PadreSideNav (SPEC-231)", () => {
-    it("renderiza los 7 items del menú padre", () => {
+    // SPEC-317: "Mi perfil" se retiró de PADRE_NAV_ITEMS porque /dashboard/padre/perfil
+    // no existe todavía — la página de perfil del padre es deuda pendiente. El ítem se
+    // quita del menú lateral para no generar un enlace roto; cuando la página exista,
+    // se reincorpora aquí y en nav-items.ts.
+    it("renderiza los 6 items del menú padre (Mi perfil retirado por SPEC-317)", () => {
         mockPathname.value = "/dashboard/padre";
         render(<PadreSideNav />);
 
-        const labels = ["Inicio", "Mis expedientes", "Reportar", "Suscripción", "Círculo confianza", "Notificaciones", "Mi perfil"];
+        const labels = ["Inicio", "Mis expedientes", "Reportar", "Suscripción", "Círculo confianza", "Notificaciones"];
         for (const label of labels) {
             expect(screen.getByRole("link", { name: label })).toBeDefined();
         }
-        expect(screen.getAllByRole("link")).toHaveLength(7);
+        expect(screen.queryByRole("link", { name: "Mi perfil" })).toBeNull();
+        expect(screen.getAllByRole("link")).toHaveLength(6);
     });
 
     it("marca Inicio como activo en la raíz", () => {
