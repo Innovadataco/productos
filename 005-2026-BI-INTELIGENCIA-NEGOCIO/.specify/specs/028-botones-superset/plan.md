@@ -11,7 +11,7 @@
 ```ts
 const DASHBOARDS = [
   { slug: "ejecutivo", label: "Ejecutivo", icon: "📊" },
-  { slug: "motor-ia", label: "Motor IA", icon: "🤖" },
+  { slug: "motor_ia", label: "Motor IA", icon: "🤖" },
   { slug: "comercial", label: "Comercial", icon: "💰" },
   { slug: "operativo", label: "Operativo", icon: "⚙️" },
   { slug: "salud", label: "Salud", icon: "💚" },

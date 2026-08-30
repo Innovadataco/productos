@@ -14,7 +14,7 @@ Componente `<SupersetLink />` que renderiza 5 botones con emoji + label + link d
 - `src/components/bi/dashboards/SupersetLink.tsx` (nuevo · Client-agnostic — pura render).
 - 5 botones fijos:
   - 📊 Ejecutivo → slug `ejecutivo`
-  - 🤖 Motor IA → slug `motor-ia`
+  - 🤖 Motor IA → slug `motor_ia`
   - 💰 Comercial → slug `comercial`
   - ⚙️ Operativo → slug `operativo`
   - 💚 Salud → slug `salud`
