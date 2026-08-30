@@ -35,6 +35,14 @@ type Detalle = {
     };
     hallazgos: { positivos: string[]; negativos: string[]; semaforo: "verde" | "amarillo" | "rojo" };
     comparacionMedia: { metricas: Array<{ nombre: string; valorColegio: number; mediana: number | null }>; insuficientes: boolean };
+    // SPEC-303 (002-PI-209): bloque nuevo aditivo (I-98) · reporte real por 3 rutas.
+    actividadReportesCruzada?: {
+        total: number;
+        porEstado: Record<string, number>;
+        casosAbiertos: number;
+        ultimaActividad: string | null;
+        rango: { desde: string; hasta: string; periodoDias: number };
+    };
 };
 
 function fechaCorta(iso: string): string {
@@ -64,6 +72,8 @@ function BarrasSimples({ data }: { data: Array<{ label: string; valor: number }>
 
 export function ColegioDetalleSecciones({ detalle }: { detalle: Detalle }) {
     const { infoBasica, metricasTamaño, actividadReportes, comite, alertas, hallazgos, comparacionMedia } = detalle;
+    // SPEC-303 (002-PI-209): actividad real cruzada por 3 rutas (I-98).
+    const actividadCruzada = detalle.actividadReportesCruzada;
 
     return (
         <div className="space-y-6">
@@ -105,7 +115,37 @@ export function ColegioDetalleSecciones({ detalle }: { detalle: Detalle }) {
 
             <GlassCard>
                 <h2 className="mb-3 text-lg font-semibold text-body">3. Actividad de reportes</h2>
-                {actividadReportes.serie30Dias.length === 0 && actividadReportes.porClasificacion.length === 0 ? (
+                {/* SPEC-303 (002-PI-209): resumen real por 3 rutas de pertenencia (I-98). */}
+                {actividadCruzada && actividadCruzada.total > 0 && (
+                    <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div className="rounded-xl bg-papel/50 p-3">
+                            <p className="text-2xl font-bold text-body">{actividadCruzada.total}</p>
+                            <p className="text-xs text-muted">Reportes ({actividadCruzada.rango.periodoDias} días)</p>
+                        </div>
+                        <div className="rounded-xl bg-papel/50 p-3">
+                            <p className="text-2xl font-bold text-body">{actividadCruzada.casosAbiertos}</p>
+                            <p className="text-xs text-muted">Casos abiertos</p>
+                        </div>
+                        <div className="rounded-xl bg-papel/50 p-3">
+                            <p className="text-sm font-medium text-body">{actividadCruzada.ultimaActividad ? fechaCorta(actividadCruzada.ultimaActividad) : "—"}</p>
+                            <p className="text-xs text-muted">Última actividad</p>
+                        </div>
+                        <div className="rounded-xl bg-papel/50 p-3">
+                            <p className="text-xs text-muted">Por estado</p>
+                            <ul className="mt-1 space-y-0.5 text-xs text-body">
+                                {Object.entries(actividadCruzada.porEstado).map(([estado, n]) => (
+                                    <li key={estado}>{estado}: <span className="font-medium">{n}</span></li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
+                {actividadCruzada && actividadCruzada.total === 0 ? (
+                    <EmptyState
+                        title="Aún no hay actividad registrada"
+                        description={`Sin reportes que pertenezcan al colegio en los últimos ${actividadCruzada.rango.periodoDias} días.`}
+                    />
+                ) : actividadReportes.serie30Dias.length === 0 && actividadReportes.porClasificacion.length === 0 && !actividadCruzada ? (
                     <EmptyState title="Sin datos" description="No hay reportes en el periodo analizado." />
                 ) : (
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

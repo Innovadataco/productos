@@ -8,7 +8,7 @@ import type { DbClient } from "../unit-of-work";
 import { calcularHallazgos } from "@/lib/analytics/hallazgos-colegio";
 import { cargarParametrosAnalytics } from "@/lib/analytics/parametros";
 import type { ParametrosAnalyticsColegios } from "@/lib/analytics/parametros";
-import type { FiltrosResumenColegios, ColegioResumenItem, ColegioDetalleResponse } from "./analytics-colegio-types";
+import type { FiltrosResumenColegios, ColegioResumenItem, ColegioDetalleResponse, UmbralesSemaforoDTO } from "./analytics-colegio-types";
 import {
     contarTamañoColegio,
     metricasReportesColegio,
@@ -16,6 +16,36 @@ import {
     metricasAlertasColegio,
     calcularComparacionMedia,
 } from "./analytics-colegio-helpers";
+import { ColegioActividadRepository } from "./colegio-actividad";
+
+// SPEC-303 (002-PI-209): DTO de umbrales derivado de ParametrosAnalyticsColegios.
+function umbralesADTO(u: ParametrosAnalyticsColegios): UmbralesSemaforoDTO {
+    return {
+        casosAbiertosAlto: u.casosAbiertosAlto,
+        casosSinMovimientoDias: u.casosSinMovimientoDias,
+        porcentajeProcesadoMin: u.porcentajeProcesadoMin,
+        inactividadAlertaDias: u.inactividadAlertaDias,
+        spamAlertaPct: u.spamAlertaPct,
+        resolucionComiteOkPct: u.resolucionComiteOkPct,
+        periodoDefaultDias: u.periodoDefaultDias,
+    };
+}
+
+// SPEC-303 (002-PI-209): motivo corto (≤ 60 chars) del hallazgo negativo con mayor peso.
+// Si no hay hallazgos negativos, devuelve null (colegio verde).
+function pickMotivoNoVerde(negativos: string[]): string | null {
+    if (negativos.length === 0) return null;
+    const primero = negativos[0] ?? null;
+    if (!primero) return null;
+    return primero.length <= 60 ? primero : `${primero.slice(0, 57)}…`;
+}
+
+// SPEC-303 (002-PI-209): rango últimos N días con base en el default configurado.
+function rangoUltimosDias(dias: number): { desde: Date; hasta: Date } {
+    const hasta = new Date();
+    const desde = new Date(hasta.getTime() - dias * 24 * 3600 * 1000);
+    return { desde, hasta };
+}
 
 export class AnalyticsColegioRepository {
     private readonly db: DbClient;
@@ -91,9 +121,12 @@ export class AnalyticsColegioRepository {
         },
         umbrales: ParametrosAnalyticsColegios
     ): Promise<ColegioResumenItem> {
-        const [{ alumnos, profesores }, reportes] = await Promise.all([
+        // SPEC-303 (002-PI-209): actividad cruzada por 3 rutas (I-98). Paraleliza con el resto.
+        const rangoActividad = rangoUltimosDias(umbrales.periodoDefaultDias);
+        const [{ alumnos, profesores }, reportes, actividadReal] = await Promise.all([
             contarTamañoColegio(colegio.id, this.db),
             metricasReportesColegio(colegio.tenantId, umbrales.periodoDefaultDias, this.db),
+            new ColegioActividadRepository(this.db).actividadDelColegio(colegio.id, rangoActividad),
         ]);
 
         const comite = await metricasComiteColegio(colegio.id, this.db);
@@ -116,6 +149,9 @@ export class AnalyticsColegioRepository {
             alertasSinOperador: alertas.total - alertas.resueltas,
         });
 
+        const negativos = hallazgos.hallazgos.filter((h) => h.tipo === "negativo").map((h) => h.mensaje);
+        const motivoNoVerde = hallazgos.semaforo === "verde" ? null : pickMotivoNoVerde(negativos);
+
         return {
             id: colegio.id,
             nombre: colegio.nombre,
@@ -130,6 +166,9 @@ export class AnalyticsColegioRepository {
             alertasEscaladas: comite.casosEscalados,
             casosProcesadosPct,
             semaforo: hallazgos.semaforo,
+            // SPEC-303 (002-PI-209): campos aditivos.
+            totalReportesActividad: actividadReal.total,
+            motivoNoVerde,
         };
     }
 
@@ -191,6 +230,13 @@ export class AnalyticsColegioRepository {
             this.db
         );
 
+        // SPEC-303 (002-PI-209): actividad cruzada por 3 rutas (I-98) para el detalle.
+        const rangoActividad = rangoUltimosDias(umbrales.periodoDefaultDias);
+        const actividadCruzada = await new ColegioActividadRepository(this.db).actividadDelColegio(
+            colegio.id,
+            rangoActividad
+        );
+
         return {
             id: colegio.id,
             infoBasica: {
@@ -218,6 +264,19 @@ export class AnalyticsColegioRepository {
                 semaforo: hallazgos.semaforo,
             },
             comparacionMedia: comparacion,
+            // SPEC-303 (002-PI-209): bloques nuevos aditivos para cerrar I-98 y I-104.
+            actividadReportesCruzada: {
+                total: actividadCruzada.total,
+                porEstado: actividadCruzada.porEstado as Record<string, number>,
+                casosAbiertos: actividadCruzada.casosAbiertos,
+                ultimaActividad: actividadCruzada.ultimaActividad?.toISOString() ?? null,
+                rango: {
+                    desde: rangoActividad.desde.toISOString(),
+                    hasta: rangoActividad.hasta.toISOString(),
+                    periodoDias: umbrales.periodoDefaultDias,
+                },
+            },
+            umbralesSemaforo: umbralesADTO(umbrales),
         };
     }
 }

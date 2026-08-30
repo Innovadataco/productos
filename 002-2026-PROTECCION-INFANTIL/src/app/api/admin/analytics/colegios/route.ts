@@ -56,9 +56,20 @@ export async function GET(request: Request) {
             { skip: (page - 1) * pageSize, take: pageSize }
         );
 
+        // SPEC-303 (002-PI-209): añade `umbralesSemaforo` al top-level del payload para que
+        // el frontend renderice la leyenda del semáforo con los umbrales vigentes (I-104).
         const response = {
             items,
             pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+            umbralesSemaforo: {
+                casosAbiertosAlto: params.casosAbiertosAlto,
+                casosSinMovimientoDias: params.casosSinMovimientoDias,
+                porcentajeProcesadoMin: params.porcentajeProcesadoMin,
+                inactividadAlertaDias: params.inactividadAlertaDias,
+                spamAlertaPct: params.spamAlertaPct,
+                resolucionComiteOkPct: params.resolucionComiteOkPct,
+                periodoDefaultDias: params.periodoDefaultDias,
+            },
         };
 
         setCache(cacheK, response, ttlDesdeMinutos(params.cacheTtlMin));
