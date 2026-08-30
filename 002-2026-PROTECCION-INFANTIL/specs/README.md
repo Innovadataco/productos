@@ -446,7 +446,7 @@
 | [227](227-historial-recomendaciones/spec.md) | SPEC-227 — Historial de recomendaciones y métricas de tuning (002-PI-128) | 🔵 Planeado |
 | [233](233-busqueda-por-identificador/spec.md) | SPEC-233 — Vista búsqueda por identificador padre + admin (002-PI-133) | 🔵 Planeado |
 | [241](241-consentimiento-modal-audit/spec.md) | SPEC-241 · Consentimiento informado + modal legal + AuditConsentimiento (002-PI-144) | 🟢 Implementado |
-| [304](304-home-padre-proactivo/spec.md) | SPEC-304 · Home dashboard proactivo del área padre (A-50) | 🔵 Planeado |
+| [309](309-home-padre-proactivo/spec.md) | SPEC-309 · Home dashboard proactivo del área padre (A-50) | 🔵 Planeado |
 | [305](305-semaforo-circulo-confianza/spec.md) | SPEC-305 · Semáforo por hijo/familiar del círculo de confianza (A-50) | 🟢 Implementado |
 | [306](306-timeline-eventos-circulo/spec.md) | SPEC-306 · Timeline eventos del círculo de confianza (A-50) | 🟢 Implementado |
 | [307](307-sugerencia-proactiva-padre/spec.md) | SPEC-307 · Sugerencia proactiva para padres (A-50) | 🔵 Planeado |
