@@ -268,8 +268,11 @@ async function proxyCore(request: NextRequest) {
             if (pathname.startsWith("/api/admin")) {
                 return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
             }
-            // SPEC-317: redirigir al home del rol en vez de "/" (UX coherente con el test "redirigen a su home").
-            return redirectToHome(request, rol);
+            // SPEC-317: al home del rol, SALVO que homeForRole devuelva /dashboard/admin (default
+            // para roles sin caso propio) — eso volvería a esta rama y crearía bucle (I-40/D-42).
+            // En ese caso, piso seguro "/".
+            const home = homeForRole(rol);
+            return NextResponse.redirect(new URL(home.startsWith("/dashboard/admin") ? "/" : home, request.url));
         }
         return NextResponse.next();
     }

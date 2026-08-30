@@ -176,7 +176,7 @@ describe("proxy — home por rol (SPEC-127, I-40/D-42)", () => {
 
         const parent = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", await tokenParaRol("PARENT")));
         expect(parent.status).toBe(307);
-        // SPEC-317: home de PARENT es /dashboard/padre (antes era "/dashboard").
+        // SPEC-317: home de PARENT es /dashboard/padre (antes era "/").
         expect(new URL(parent.headers.get("location")!).pathname).toBe("/dashboard/padre");
 
         const schoolAdmin = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", await tokenParaRol("SCHOOL_ADMIN")));
@@ -255,6 +255,20 @@ describe("SPEC-317 — zona canónica /dashboard/padre", () => {
         expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/circulo-confianza")).toBe(true);
         expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/notificaciones")).toBe(true);
         expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/reportar")).toBe(true);
+    });
+
+    // Blindaje contra bucle I-40/D-42: un rol desconocido (no interno, default homeForRole→/dashboard/admin)
+    // debe aterrizar en "/" y NO volver a redirigir (segundo salto 200, no 307).
+    it("rol desconocido en ruta admin cae a '/' y no rebota (anti-bucle I-40/D-42)", async () => {
+        const token = await tokenParaRol("ROL_INEXISTENTE");
+        const redirect = await proxy(requestConSesion("/dashboard/admin/monitoreo/worker", token));
+        expect(redirect.status).toBe(307);
+        const destino = new URL(redirect.headers.get("location")!).pathname;
+        expect(destino).toBe("/");
+
+        // Segundo salto: "/" es ruta pública → pasa sin redirigir (no bucle).
+        const aterrizaje = await proxy(requestConSesion("/", token));
+        expect(aterrizaje.status).toBe(200);
     });
 });
 
