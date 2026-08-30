@@ -1,20 +1,56 @@
 /**
- * SPEC-135 (E-2): notificación ciega del círculo cuando un reporte visible toca un
- * identificador del círculo de un usuario. Movimiento mecánico desde el god-module
- * (F1); la revisión N+1 (FR-004) se aplica en la F2 de SPEC-135.
+ * SPEC-135 (E-2) + SPEC-308 (A-50): notificación del círculo cuando un reporte
+ * visible toca un identificador del círculo de un usuario. Reemplaza la alerta
+ * ciega por una alerta enriquecida con contexto real (contacto, identificador,
+ * plataforma, categoría, total reportes, link al expediente).
  */
 import { prisma } from "@/lib/prisma";
 import { getParametroSistemaValor } from "@/lib/parametros";
-import { enviarAlertaCirculoConfianza } from "@/lib/email";
+import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
 import type { EstadoReporte } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { ESTADOS_VISIBLES } from "./tipos";
+
+async function obtenerNombrePlataforma(
+    plataformaId: string | null | undefined,
+    otraPlataforma: string | null | undefined
+): Promise<string> {
+    if (plataformaId) {
+        const plataforma = await prisma.plataforma.findUnique({
+            where: { id: plataformaId },
+            select: { nombre: true },
+        });
+        if (plataforma?.nombre) return plataforma.nombre;
+    }
+    if (otraPlataforma) return otraPlataforma;
+    return "Plataforma no especificada";
+}
+
+async function obtenerCategoriaReporte(reporteId: string): Promise<string | null> {
+    const clasificacion = await prisma.clasificacionIA.findUnique({
+        where: { reporteId },
+        select: { categoria: true },
+    });
+    return clasificacion?.categoria ?? null;
+}
+
+async function contarReportesVisibles(identificador: string): Promise<number> {
+    const reportes = await prisma.reporte.findMany({
+        where: {
+            identificador,
+            eliminado: false,
+            estado: { in: ESTADOS_VISIBLES },
+        },
+        select: { id: true },
+    });
+    return reportes.length;
+}
 
 /**
  * Evalúa si un reporte debe notificar a los usuarios que tienen contactos de confianza
  * asociados al mismo identificador. Respeta la preferencia de notificaciones del usuario,
  * el flag global de notificaciones y un periodo de cooldown entre alertas. Envía un email
- * de alerta ciega con el conteo de novedades y actualiza la marca temporal de la última notificación.
+ * enriquecido con contexto real y actualiza la marca temporal de la última notificación.
  * Cualquier error se captura y se loguea sin interrumpir el flujo.
  *
  * @param reporteId - UUID del reporte que puede generar notificaciones.
@@ -24,9 +60,12 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
         const reporte = await prisma.reporte.findUnique({
             where: { id: reporteId },
             select: {
+                id: true,
                 identificador: true,
                 estado: true,
                 eliminado: true,
+                plataformaId: true,
+                otraPlataforma: true,
             },
         });
         if (!reporte || reporte.eliminado) {
@@ -72,7 +111,7 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                 },
                 identificadores: {
                     where: { activo: true },
-                    select: { valor: true },
+                    select: { valor: true, plataformaId: true },
                 },
             },
         });
@@ -82,90 +121,93 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             return;
         }
 
-        // Agrupar contactos por usuario
-        const contactosPorUsuario = new Map<
-            string,
-            { email: string; notificacionesCirculo: boolean; ultimaNotificacionCirculoEn: Date | null; valores: Set<string> }
-        >();
-        for (const contacto of contactos) {
+        // SPEC-308: una alerta enriquecida por contacto impactado. El cooldown se
+        // evalúa por usuario (ultimaNotificacionCirculoEn), no por contacto.
+        const contactosANotificar = contactos.filter((contacto) => {
             const usuario = contacto.usuario;
-            const existente = contactosPorUsuario.get(usuario.id);
-            const valores = new Set(contacto.identificadores.map((i) => i.valor));
-            if (existente) {
-                for (const v of valores) existente.valores.add(v);
-            } else {
-                contactosPorUsuario.set(usuario.id, {
-                    email: usuario.email,
-                    notificacionesCirculo: usuario.notificacionesCirculo,
-                    ultimaNotificacionCirculoEn: usuario.ultimaNotificacionCirculoEn,
-                    valores,
-                });
+            if (!usuario.notificacionesCirculo) {
+                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuario.id} desactivó notificaciones`);
+                return false;
             }
-        }
-
-        // SPEC-135 (E-2, FR-004): el conteo de novedades por usuario era una query por
-        // usuario (N+1 real). Ahora UNA query para todos los valores de los usuarios
-        // candidatos en la ventana mínima común (ahora - cooldown; cada ventanaInicio
-        // individual es >= esa cota), y el distinct por usuario se calcula en memoria.
-        // Mismo resultado por construcción: la ventana y los valores de cada usuario
-        // son un subconjunto de la query global. El loop restante NO es un N+1 de
-        // lectura: son envíos de email y un update de timestamp por usuario notificado.
-        const valoresCandidatos = new Set<string>();
-        for (const datos of contactosPorUsuario.values()) {
-            if (!datos.notificacionesCirculo) continue;
-            for (const v of datos.valores) valoresCandidatos.add(v);
-        }
-        const reportesEnVentana =
-            valoresCandidatos.size > 0
-                ? await prisma.reporte.findMany({
-                    where: {
-                        identificador: { in: Array.from(valoresCandidatos) },
-                        eliminado: false,
-                        estado: { in: ESTADOS_VISIBLES },
-                        creadoEn: { gte: new Date(ahora.getTime() - cooldownMs) },
-                    },
-                    select: { identificador: true, creadoEn: true },
-                })
-                : [];
-
-        for (const [usuarioId, datos] of contactosPorUsuario.entries()) {
-            if (!datos.notificacionesCirculo) {
-                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuarioId} desactivó notificaciones`);
-                continue;
-            }
-
-            const ventanaInicio = datos.ultimaNotificacionCirculoEn
-                ? new Date(Math.max(datos.ultimaNotificacionCirculoEn.getTime(), ahora.getTime() - cooldownMs))
-                : new Date(ahora.getTime() - cooldownMs);
-
-            // Distinct de identificadores con reportes visibles en la ventana del usuario
-            const identificadoresNuevos = new Set<string>();
-            for (const r of reportesEnVentana) {
-                if (datos.valores.has(r.identificador) && r.creadoEn >= ventanaInicio) {
-                    identificadoresNuevos.add(r.identificador);
-                }
-            }
-
-            const novedades = identificadoresNuevos.size;
-            if (novedades === 0) {
-                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuarioId} sin novedades en la ventana`);
-                continue;
-            }
-
             if (
-                datos.ultimaNotificacionCirculoEn &&
-                ahora.getTime() - datos.ultimaNotificacionCirculoEn.getTime() < cooldownMs
+                usuario.ultimaNotificacionCirculoEn &&
+                ahora.getTime() - usuario.ultimaNotificacionCirculoEn.getTime() < cooldownMs
             ) {
-                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuarioId} en cooldown`);
-                continue;
+                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuario.id} en cooldown`);
+                return false;
             }
+            return true;
+        });
 
-            logger.info(`[CIRCULO] Enviando alerta ciega a ${datos.email} (${novedades} novedades)`);
-            await enviarAlertaCirculoConfianza(datos.email, novedades);
-            await prisma.usuario.update({
-                where: { id: usuarioId },
-                data: { ultimaNotificacionCirculoEn: ahora },
+        if (contactosANotificar.length === 0) return;
+
+        // Precargar en lotes para evitar N+1: nombres de plataforma de los
+        // identificadores de contacto y expedientes de los padres candidatos.
+        const plataformaIds = new Set<string>();
+        const usuarioIds = new Set<string>();
+        for (const contacto of contactosANotificar) {
+            usuarioIds.add(contacto.usuario.id);
+            const identificadorContacto = contacto.identificadores.find((i) => i.valor === reporte.identificador);
+            if (identificadorContacto?.plataformaId) {
+                plataformaIds.add(identificadorContacto.plataformaId);
+            }
+        }
+
+        const [plataformaReporte, categoria, totalReportes, plataformas, expedientes] = await Promise.all([
+            obtenerNombrePlataforma(reporte.plataformaId, reporte.otraPlataforma),
+            obtenerCategoriaReporte(reporte.id),
+            contarReportesVisibles(reporte.identificador),
+            prisma.plataforma.findMany({
+                where: { id: { in: Array.from(plataformaIds) } },
+                select: { id: true, nombre: true },
+            }),
+            prisma.expediente.findMany({
+                where: {
+                    padreUsuarioId: { in: Array.from(usuarioIds) },
+                    identificadorReportado: reporte.identificador,
+                },
+                orderBy: { fechaApertura: "desc" },
+                select: { padreUsuarioId: true, id: true },
+            }),
+        ]);
+
+        const nombrePlataformaPorId = new Map(plataformas.map((p) => [p.id, p.nombre]));
+        const expedientePorUsuario = new Map<string, string>();
+        for (const e of expedientes) {
+            if (!expedientePorUsuario.has(e.padreUsuarioId)) {
+                expedientePorUsuario.set(e.padreUsuarioId, e.id);
+            }
+        }
+
+        const usuariosActualizados = new Set<string>();
+
+        for (const contacto of contactosANotificar) {
+            const usuario = contacto.usuario;
+            const identificadorContacto = contacto.identificadores.find((i) => i.valor === reporte.identificador);
+            const plataforma = identificadorContacto?.plataformaId
+                ? (nombrePlataformaPorId.get(identificadorContacto.plataformaId) ?? plataformaReporte)
+                : plataformaReporte;
+            const expedienteId = expedientePorUsuario.get(usuario.id) ?? null;
+
+            logger.info(`[CIRCULO] Enviando alerta enriquecida a ${usuario.email} (${reporte.identificador})`);
+            await enviarAlertaCirculoConfianzaEnriquecida({
+                destinatario: { usuarioId: usuario.id, email: usuario.email },
+                reporteId: reporte.id,
+                nombreContacto: contacto.etiqueta ?? "",
+                identificador: reporte.identificador,
+                plataforma,
+                categoria: categoria ?? "",
+                totalReportes,
+                expedienteId,
             });
+
+            if (!usuariosActualizados.has(usuario.id)) {
+                await prisma.usuario.update({
+                    where: { id: usuario.id },
+                    data: { ultimaNotificacionCirculoEn: ahora },
+                });
+                usuariosActualizados.add(usuario.id);
+            }
         }
     } catch (error) {
         logger.error("[CIRCULO] Error enviando notificación:", error);

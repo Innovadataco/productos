@@ -19,11 +19,11 @@ import {
     crearPaisCiudad,
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
-import { enviarAlertaCirculoConfianza } from "@/lib/email";
+import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 vi.mock("@/lib/email", () => ({
-    enviarAlertaCirculoConfianza: vi.fn().mockResolvedValue(undefined),
+    enviarAlertaCirculoConfianzaEnriquecida: vi.fn().mockResolvedValue(undefined),
 }));
 
 async function crearCirculoParams() {
@@ -356,17 +356,17 @@ describe("circulo-confianza", () => {
 
     describe("notificarCambioCirculoSiCorresponde", () => {
         beforeEach(() => {
-            vi.mocked(enviarAlertaCirculoConfianza).mockClear();
+            vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mockClear();
         });
 
         it("no falla si no hay contactos", async () => {
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
             const reporte = await crearReporte("+57300X", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
             await expect(notificarCambioCirculoSiCorresponde(reporte.id)).resolves.not.toThrow();
-            expect(enviarAlertaCirculoConfianza).not.toHaveBeenCalled();
+            expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
         });
 
-        it("envía email ciego y actualiza timestamp cuando un contacto activo tiene reportes visibles", async () => {
+        it("envía alerta enriquecida y actualiza timestamp cuando un contacto activo tiene reportes visibles", async () => {
             const usuario = await crearUsuario("PARENT");
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
             await agregarContacto(usuario.id, {
@@ -377,10 +377,16 @@ describe("circulo-confianza", () => {
 
             await notificarCambioCirculoSiCorresponde(reporte.id);
 
-            expect(enviarAlertaCirculoConfianza).toHaveBeenCalledOnce();
-            const args = vi.mocked(enviarAlertaCirculoConfianza).mock.calls[0];
-            expect(args[0]).toBe(usuario.email);
-            expect(args[1]).toBe(1);
+            expect(enviarAlertaCirculoConfianzaEnriquecida).toHaveBeenCalledOnce();
+            const args = vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mock.calls[0][0];
+            expect(args.destinatario.email).toBe(usuario.email);
+            expect(args.destinatario.usuarioId).toBe(usuario.id);
+            expect(args.reporteId).toBe(reporte.id);
+            expect(args.nombreContacto).toBe("contacto de prueba");
+            expect(args.identificador).toBe("+57300NOTIF");
+            expect(args.plataforma).toBe("WhatsApp");
+            expect(args.categoria).toBe("SOLICITUD_MATERIAL");
+            expect(args.totalReportes).toBe(1);
 
             const actualizado = await prisma.usuario.findUnique({
                 where: { id: usuario.id },
@@ -403,7 +409,7 @@ describe("circulo-confianza", () => {
 
             await notificarCambioCirculoSiCorresponde(reporte.id);
 
-            expect(enviarAlertaCirculoConfianza).not.toHaveBeenCalled();
+            expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
         });
 
         it("respeta la preferencia del usuario desactivada", async () => {
@@ -417,7 +423,40 @@ describe("circulo-confianza", () => {
 
             await notificarCambioCirculoSiCorresponde(reporte.id);
 
-            expect(enviarAlertaCirculoConfianza).not.toHaveBeenCalled();
+            expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
+        });
+
+        it("no envía alerta cuando el reporte no está en estado visible", async () => {
+            const usuario = await crearUsuario("PARENT");
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+            await agregarContacto(usuario.id, {
+                identificadores: [{ valor: "+57300PEND", plataformaId: plataforma!.id }],
+            });
+            const reporte = await crearReporte("+57300PEND", plataforma!.id, "PENDIENTE", "SOLICITUD_MATERIAL");
+
+            await notificarCambioCirculoSiCorresponde(reporte.id);
+
+            expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
+        });
+
+        it("menciona el identificador específico cuando el contacto tiene varios identificadores", async () => {
+            const usuario = await crearUsuario("PARENT");
+            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+            await agregarContacto(usuario.id, {
+                etiqueta: "contacto multi",
+                identificadores: [
+                    { valor: "+57300MULTI1", plataformaId: plataforma!.id },
+                    { valor: "+57300MULTI2", plataformaId: plataforma!.id },
+                ],
+            });
+            const reporte = await crearReporte("+57300MULTI2", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
+
+            await notificarCambioCirculoSiCorresponde(reporte.id);
+
+            expect(enviarAlertaCirculoConfianzaEnriquecida).toHaveBeenCalledOnce();
+            const args = vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mock.calls[0][0];
+            expect(args.identificador).toBe("+57300MULTI2");
+            expect(args.nombreContacto).toBe("contacto multi");
         });
     });
 });
