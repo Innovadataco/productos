@@ -15,7 +15,7 @@ con un valor muestra fijo — al proxy solo le importa el prefijo).
 | ADMIN, OPERADOR (por defecto) | `/dashboard/admin` |
 | COMITE_CONVIVENCIA | `/dashboard/colegio/comite` |
 | COMITE_VALIDACION | `/dashboard/admin/comite` |
-| PARENT | `/dashboard` |
+| PARENT | `/dashboard/padre` |
 | SCHOOL_ADMIN | `/dashboard/colegio` |
 
 Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
@@ -40,9 +40,9 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/admin/comite` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/comite/aclaracion/[id]` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/comite/apelaciones` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
-| `/dashboard/admin/comite/auditoria` | ADMIN | OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/comite/auditoria` | ADMIN | OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/comite/consolidacion/[expedienteId]` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
-| `/dashboard/admin/comite/gestion` | ADMIN | OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/admin/comite/gestion` | ADMIN | OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/dashboard/padre)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/comite/guias-pendientes` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/configuracion` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/admin/configuracion/guias-accion` | ADMIN, OPERADOR, COMITE_VALIDACION | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>PARENT (redirigir→/)<br>ANONIMO (redirigir→/login) |
@@ -145,6 +145,6 @@ flowchart LR
     bloqueado_ADMIN__OPERADOR______________[ruta no permitida] -->|ADMIN, OPERADOR (por defecto)| ADMIN__OPERADOR______________([/dashboard/admin])
     bloqueado_COMITE_CONVIVENCIA[ruta no permitida] -->|COMITE_CONVIVENCIA| COMITE_CONVIVENCIA([/dashboard/colegio/comite])
     bloqueado_COMITE_VALIDACION[ruta no permitida] -->|COMITE_VALIDACION| COMITE_VALIDACION([/dashboard/admin/comite])
-    bloqueado_PARENT[ruta no permitida] -->|PARENT| PARENT([/dashboard])
+    bloqueado_PARENT[ruta no permitida] -->|PARENT| PARENT([/dashboard/padre])
     bloqueado_SCHOOL_ADMIN[ruta no permitida] -->|SCHOOL_ADMIN| SCHOOL_ADMIN([/dashboard/colegio])
 ```
