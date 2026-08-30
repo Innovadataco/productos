@@ -458,6 +458,7 @@
 | [308](308-notificacion-enriquecida-circulo/spec.md) | SPEC-308 · Notificación enriquecida del círculo de confianza (A-50) | 🔵 Planeado |
 | [311](311-ficha-colegio-rediseno/spec.md) | SPEC-311 · Ficha colegio admin Fase 2 · Rediseño 4 bloques A→D (002-PI-210 · cierra I-98) | 🔵 Planeado |
 | [317](317-unificar-area-padre/spec.md) | SPEC-317 · Unificar el área del padre — zona canónica /dashboard/padre (002-PI-217) | 🟡 En desarrollo |
+| [322](322-aviso-cambio-contrasena/spec.md) | SPEC-322 · Aviso por correo cuando cambia la contraseña (002-PI-222) | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 

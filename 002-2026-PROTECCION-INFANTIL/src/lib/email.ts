@@ -551,3 +551,26 @@ export async function enviarAlertaDerivaMotor(params: {
         })),
     });
 }
+
+// SPEC-322: aviso de seguridad al dueño de la cuenta cuando su contraseña cambia.
+// Cubre caminos 1 (restablecer por token), 2 (cambio voluntario) y 8 (activación).
+export async function enviarEmailCambioPassword(email: string): Promise<void> {
+    const ahora = new Date();
+    const fechaHora = ahora.toLocaleString("es-CO", {
+        timeZone: "America/Bogota",
+        dateStyle: "long",
+        timeStyle: "short",
+    });
+    await programar({
+        evento: "auth.password_cambiada",
+        destinatarios: [
+            {
+                email,
+                variables: {
+                    fechaHora,
+                    urlRecuperar: `${baseUrl()}/recuperar`,
+                },
+            },
+        ],
+    });
+}

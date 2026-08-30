@@ -3,6 +3,7 @@ import { createToken, setSessionCookie } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { activarSchema } from "@/lib/validators";
 import { RegistroColegioService } from "@/lib/dal/services/registro-colegio";
+import { enviarEmailCambioPassword } from "@/lib/email";
 
 export async function POST(request: Request) {
     try {
@@ -31,6 +32,14 @@ export async function POST(request: Request) {
         const { user } = resultado;
         const sessionToken = await createToken({ sub: user.id, rol: user.rol });
         await setSessionCookie(request, sessionToken);
+
+        // SPEC-322 (camino 8): aviso de seguridad al dueño de la cuenta recién activada.
+        // try/catch: un fallo de correo no debe romper la activación.
+        try {
+            await enviarEmailCambioPassword(user.email);
+        } catch {
+            // fallo silencioso — el aviso no es bloqueante
+        }
 
         return NextResponse.json(
             {

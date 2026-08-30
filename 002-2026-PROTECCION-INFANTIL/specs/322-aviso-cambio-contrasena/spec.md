@@ -17,11 +17,14 @@ roba la sesión y cambia la clave, el usuario legítimo no se entera. I-214.
 |---|---|---|
 | 1 | Restablecer por token | `POST /api/auth/recuperar/restablecer` |
 | 2 | Cambio voluntario/forzado | `POST /api/auth/cambiar-password` |
+| 4 | Admin regenera clave operador/comité | `POST /api/admin/operadores/[id]/regenerar-password` |
+| 6 | Admin regenera clave rector | `POST /api/admin/colegios/[id]/regenerar-password` |
+| 7 | Rector regenera clave comité | `POST /api/colegio/comite/cuenta/regenerar-password` |
 | 8 | Activación por invitación | `POST /api/auth/activar` |
 
-**Fuera de alcance — caminos 3-7 (admin resets):** ya envían un correo de credenciales con la nueva
-clave al mismo destinatario. Añadir un segundo aviso simultáneo duplicaría la notificación sin sumar
-seguridad. Decisión: omitir en esta spec; revisar cuando el flujo admin cambie.
+**Fuera de alcance — caminos 3 y 5:** sí envían un correo de credenciales con la nueva clave al
+mismo destinatario → duplicar el aviso sería peor que no mandarlo. Los caminos 4/6/7 NO mandan
+ningún correo al dueño, por eso entran en este SPEC.
 
 **Contenido del correo:** contraseña cambió + cuándo (fecha y hora Colombia) + qué hacer si no fue el
 usuario (recuperar + contactar soporte). Sin la contraseña, sin enlaces de sesión.

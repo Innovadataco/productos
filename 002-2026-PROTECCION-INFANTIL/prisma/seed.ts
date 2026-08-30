@@ -928,6 +928,13 @@ async function seedEventosEmailMigrados() {
             asunto: "[PI-MOTOR] Deriva del motor: {{sobreUmbral}} categorías sobre el umbral",
             cuerpoMarkdown: "{{cuerpo}}",
         },
+        // SPEC-322: aviso de seguridad cuando cambia la contraseña (caminos propios del usuario).
+        {
+            clave: "auth.password_cambiada.email",
+            asunto: "Tu contraseña fue cambiada — {{fechaHora}}",
+            cuerpoMarkdown:
+                "Hola,\n\nTu contraseña en Protección Infantil fue cambiada el **{{fechaHora}}** (hora de Colombia).\n\nSi fuiste tú, no necesitas hacer nada.\n\nSi **no fuiste tú**, recupera tu acceso de inmediato en {{urlRecuperar}} y escribe a soporte.\n\nEste es un mensaje automático de seguridad. No contiene tu contraseña ni enlaces de sesión.",
+        },
     ];
 
     for (const p of plantillas) {
@@ -984,6 +991,8 @@ async function seedEventosEmailMigrados() {
         { evento: "infra.alerta", plantillaClave: "infra.alerta.email", rol: "ADMIN", obligatoria: true },
         { evento: "infra.rate_limit", plantillaClave: "infra.rate_limit.email", rol: "ADMIN", obligatoria: true },
         { evento: "motor.deriva.alerta", plantillaClave: "motor.deriva.alerta.email", rol: "ADMIN", obligatoria: true },
+        // SPEC-322: aviso de seguridad — cubre todos los roles (rol:"ALL" es metadata; motor no filtra por rol).
+        { evento: "auth.password_cambiada", plantillaClave: "auth.password_cambiada.email", rol: "ALL", obligatoria: true },
     ];
 
     for (const r of reglas) {

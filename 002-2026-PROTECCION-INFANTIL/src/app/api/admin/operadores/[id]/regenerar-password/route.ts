@@ -6,6 +6,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { withValidation } from "@/lib/validation";
 import { operadorIdParamsSchema } from "@/lib/schemas";
 import { OperadorService } from "@/lib/dal/services/operadores";
+import { enviarEmailCambioPassword } from "@/lib/email";
 
 function getClientInfo(request: Request) {
     return {
@@ -39,6 +40,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
 
         const { password } = await service.regenerarPassword(operador, admin.id, getClientInfo(request), "regenerar");
+
+        // SPEC-322 (camino 4): aviso al dueño de la cuenta cuando un admin le regenera la clave.
+        try {
+            await enviarEmailCambioPassword(operador.email);
+        } catch {
+            // fallo silencioso — el aviso no es bloqueante
+        }
 
         const esComite = operador.rol === "COMITE_VALIDACION";
         return NextResponse.json({

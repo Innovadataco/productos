@@ -6,6 +6,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ComiteConvivenciaService } from "@/lib/dal/services/comite-convivencia";
+import { enviarEmailCambioPassword } from "@/lib/email";
 import type { InfoClienteDto } from "@/lib/dal/services/comite-convivencia";
 
 function getClientInfo(request: Request): InfoClienteDto {
@@ -46,6 +47,13 @@ export async function POST(request: Request) {
             user.id,
             getClientInfo(request)
         );
+
+        // SPEC-322 (camino 7): aviso al miembro del comité cuando el rector le regenera la clave.
+        try {
+            await enviarEmailCambioPassword(resultado.cuenta.email);
+        } catch {
+            // fallo silencioso — el aviso no es bloqueante
+        }
 
         return NextResponse.json(resultado);
     } catch (error) {

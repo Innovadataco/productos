@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { restablecerPasswordSchema } from "@/lib/validators";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
+import { enviarEmailCambioPassword } from "@/lib/email";
 
 export async function POST(request: Request) {
     try {
@@ -32,6 +33,14 @@ export async function POST(request: Request) {
                 { error: { message: "Token inválido o expirado", code: ERROR_CODES.AUTH_INVALID } },
                 { status: 400 }
             );
+        }
+
+        // SPEC-322 (camino 1): aviso de seguridad al dueño de la cuenta.
+        // try/catch: un fallo de correo no debe romper el cambio de clave.
+        try {
+            await enviarEmailCambioPassword(resultado.email);
+        } catch {
+            // fallo silencioso — el aviso no es bloqueante
         }
 
         return NextResponse.json({ message: "Contraseña actualizada correctamente." });
