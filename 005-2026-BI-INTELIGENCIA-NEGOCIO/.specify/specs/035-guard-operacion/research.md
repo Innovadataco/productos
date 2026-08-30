@@ -33,6 +33,12 @@ Implementación: lista `["dashboard","operacion"]` de layouts protegidos; para c
 ### D-035.5 · SPEC-036 (login propio) cambia UNA línea
 Cuando entre el login propio de BI, lo único que cambia en `operacion/layout.tsx` (y `dashboard/layout.tsx`) es a qué guard llaman — o el interior de `exigirSesionBi`. La estructura (layout con guard) se queda. Por eso este SPEC se hace "bien", no como algo temporal.
 
+### D-035.6 · El guard en el layout NO cierra el leak de `/operacion` (hallazgo medido)
+`redirect()` en un layout async NO frena el `page.tsx` hermano: renderiza en paralelo y su RSC flight se streamea al body del 307. Medido con `curl` anónimo: 307 con 52KB de body conteniendo toda la PII ("Fábrica PI-1", "Dev BI-2", "Reembolsos", "congelada"). `/dashboard` no filtra porque sus datos son client-fetch; `/operacion` los renderiza server-side (lee el archivo). **Fix:** guard también al TOPE de `operacion/page.tsx` antes de `leerOperacion()`, con el MISMO helper (nota de Fábrica: nunca inline · así SPEC-036 cambia una sola línea). Re-medido: body 0 PII, 52KB→7.8KB. `/operacion` es la ÚNICA protección de esa PII (no hay 401 de API detrás). `/chat` NO necesita guard en page (client · no server-renderiza PII); le basta el layout.
+
+### D-035.7 · Guards de API (401 · DoS · ampliación v2)
+El CEO probó `POST` anónimo a `/api/bi/preguntar` en prod → disparó el jurado de 3 modelos (~76s de Ollama · DoS contra el motor que comparte PI). El guard de UI no protege la API. Se agrega `sesionDeRequest` + 401 (`{error:"no_autorizado"}`, igual que aprobar/rechazar) como PRIMERA línea, antes de `req.json()` y del motor, en `preguntar` y `estado-sistema`. `/api/health` queda público (healthcheck Docker · lo rompería guardarlo). Enumeración completa de rutas confirmó que no queda ninguna con datos sin guard.
+
 ## Fuentes consultadas
 
 - `src/app/operacion/` (solo page.tsx + css · sin layout · el hueco)

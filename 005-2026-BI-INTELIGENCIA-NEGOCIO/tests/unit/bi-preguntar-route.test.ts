@@ -4,6 +4,13 @@ vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 const preguntarMock = vi.fn();
 vi.mock("@/lib/bi/motor", () => ({ preguntar: (...args: unknown[]) => preguntarMock(...args) }));
 
+// SPEC-035 · el endpoint ahora exige sesión; estos tests de comportamiento del
+// motor usan una sesión válida (el 401 sin sesión se cubre en
+// bi-operacion-guard.test.tsx).
+vi.mock("@/lib/auth/sesion", () => ({
+    sesionDeRequest: async () => ({ id: "u1", rol: "ADMIN" }),
+}));
+
 // eslint-disable-next-line import/first
 import { POST } from "@/app/api/bi/preguntar/route";
 

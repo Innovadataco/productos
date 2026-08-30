@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { preguntar } from "@/lib/bi/motor";
+import { sesionDeRequest } from "@/lib/auth/sesion";
 import type { Rol } from "@/lib/bi/tipos";
 
 const ROLES_VALIDOS: Rol[] = ["ADMIN", "SCHOOL_ADMIN", "PARENT"];
@@ -24,6 +25,15 @@ function validarBody(raw: unknown): { ok: true; body: { preguntaNL: string; rol:
 }
 
 export async function POST(req: Request) {
+    // SPEC-035 · guard de sesión ANTES de tocar body o motor (I-33): un POST
+    // anónimo disparaba el jurado de 3 modelos (~76s de Ollama en el Mac
+    // Studio · DoS trivial contra el mismo motor que usa PI en prod). El 401
+    // corta acá sin invocar ningún modelo.
+    const sesion = await sesionDeRequest(req);
+    if (!sesion) {
+        return NextResponse.json({ error: "no_autorizado" }, { status: 401 });
+    }
+
     let raw: unknown;
     try {
         raw = await req.json();
