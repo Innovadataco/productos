@@ -44,6 +44,37 @@ export interface ActividadReportesCruzada {
     rango: { desde: string; hasta: string; periodoDias: number };
 }
 
+// SPEC-311 (002-PI-210 · Fase 2): distribución por rol reportante del rango vigente.
+// La categoría "estudiante" siempre vale 0 en el estado actual (no existe RolUsuario.STUDENT);
+// reservada para futuro. Invariante: padre + estudiante + profesor + anonimo === ActividadReportesCruzada.total.
+export interface DistribucionRolReportante {
+    padre: number;
+    estudiante: number;
+    profesor: number;
+    anonimo: number;
+}
+
+// SPEC-311 (002-PI-210 · Fase 2): operadores DISTINCT asignados a alertas del colegio.
+export interface OperadorAsignado {
+    id: string;
+    nombre: string;
+    email: string;
+}
+
+// SPEC-311 (002-PI-210 · Fase 2): línea de tiempo del colegio (Bloque C).
+export interface LineaTiempoColegio {
+    fechaRegistro: string;
+    primerReporte: string | null;
+    picoActividad: { anioMes: string; total: number } | null;
+    hoy: string;
+}
+
+// SPEC-311 (002-PI-210 · Fase 2): serie mensual de reportes (Bloque B · alimenta TendenciaReportes).
+export interface PuntoSerieMensual {
+    anioMes: string;
+    total: number;
+}
+
 export interface SerieTemporalPunto {
     fecha: string;
     total: number;
@@ -99,6 +130,11 @@ export interface ColegioDetalleResponse {
     // SPEC-303 (002-PI-209): añadidos aditivos para cerrar I-98 y I-104.
     actividadReportesCruzada: ActividadReportesCruzada;
     umbralesSemaforo: UmbralesSemaforoDTO;
+    // SPEC-311 (002-PI-210 · Fase 2): 4 bloques aditivos para el rediseño 4 bloques A→D.
+    distribucionRol: DistribucionRolReportante;
+    operadoresAsignados: OperadorAsignado[];
+    lineaTiempo: LineaTiempoColegio;
+    serieMensual: PuntoSerieMensual[];
 }
 
 export interface FiltrosResumenColegios {

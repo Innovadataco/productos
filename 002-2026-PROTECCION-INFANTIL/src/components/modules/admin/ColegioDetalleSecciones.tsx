@@ -3,6 +3,7 @@
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ColegioLineaTiempo } from "./ColegioLineaTiempo";
 
 type Detalle = {
     id: string;
@@ -35,7 +36,6 @@ type Detalle = {
     };
     hallazgos: { positivos: string[]; negativos: string[]; semaforo: "verde" | "amarillo" | "rojo" };
     comparacionMedia: { metricas: Array<{ nombre: string; valorColegio: number; mediana: number | null }>; insuficientes: boolean };
-    // SPEC-303 (002-PI-209): bloque nuevo aditivo (I-98) · reporte real por 3 rutas.
     actividadReportesCruzada?: {
         total: number;
         porEstado: Record<string, number>;
@@ -43,6 +43,16 @@ type Detalle = {
         ultimaActividad: string | null;
         rango: { desde: string; hasta: string; periodoDias: number };
     };
+    // SPEC-311 (002-PI-210 · Fase 2): 4 bloques aditivos.
+    distribucionRol?: { padre: number; estudiante: number; profesor: number; anonimo: number };
+    operadoresAsignados?: Array<{ id: string; nombre: string; email: string }>;
+    lineaTiempo?: {
+        fechaRegistro: string;
+        primerReporte: string | null;
+        picoActividad: { anioMes: string; total: number } | null;
+        hoy: string;
+    };
+    serieMensual?: Array<{ anioMes: string; total: number }>;
 };
 
 function fechaCorta(iso: string): string {
@@ -70,124 +80,229 @@ function BarrasSimples({ data }: { data: Array<{ label: string; valor: number }>
     );
 }
 
+// SPEC-311 (002-PI-210 · Fase 2): semáforo con ícono + texto (nunca solo color · contraste AA).
+function badgeSemaforo(semaforo: "verde" | "amarillo" | "rojo") {
+    const variant = semaforo === "verde" ? "success" : semaforo === "rojo" ? "danger" : "warning";
+    const icono = semaforo === "verde" ? "🟢" : semaforo === "rojo" ? "🔴" : "🟡";
+    const texto = semaforo === "verde" ? "Al día" : semaforo === "rojo" ? "Requiere acción" : "Requiere mirada";
+    return (
+        <Badge variant={variant}>
+            <span aria-hidden="true">{icono}</span> {texto}
+        </Badge>
+    );
+}
+
+// SPEC-311 (002-PI-210 · Fase 2 · Bloque A): motivo breve del hallazgo negativo con mayor peso.
+function primerMotivo(hallazgos: { negativos: string[] }): string | null {
+    return hallazgos.negativos[0] ?? null;
+}
+
 export function ColegioDetalleSecciones({ detalle }: { detalle: Detalle }) {
     const { infoBasica, metricasTamaño, actividadReportes, comite, alertas, hallazgos, comparacionMedia } = detalle;
-    // SPEC-303 (002-PI-209): actividad real cruzada por 3 rutas (I-98).
     const actividadCruzada = detalle.actividadReportesCruzada;
+    const distribucionRol = detalle.distribucionRol;
+    const operadoresAsignados = detalle.operadoresAsignados ?? [];
+    const lineaTiempo = detalle.lineaTiempo;
+    const serieMensual = detalle.serieMensual;
+    const motivo = hallazgos.semaforo === "verde" ? null : primerMotivo(hallazgos);
+    const totalRango = actividadCruzada?.total ?? 0;
+    const casosAbiertos = actividadCruzada?.casosAbiertos ?? 0;
+    const procesadoPct =
+        actividadCruzada && actividadCruzada.total > 0
+            ? Math.round(
+                ((actividadCruzada.total -
+                      (actividadCruzada.porEstado.PENDIENTE ?? 0) -
+                      (actividadCruzada.porEstado.REVISION_MANUAL ?? 0)) /
+                      actividadCruzada.total) *
+                      100
+            )
+            : 0;
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <GlassCard>
-                    <h2 className="mb-3 text-lg font-semibold text-body">1. Información básica</h2>
-                    <dl className="space-y-2 text-sm">
-                        <div className="flex justify-between"><dt className="text-muted">Nombre</dt><dd className="text-body font-medium">{infoBasica.nombre}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Tipo de periodo</dt><dd className="text-body">{infoBasica.tipoPeriodo}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Ubicación</dt><dd className="text-body">{infoBasica.ciudad}{infoBasica.departamento ? `, ${infoBasica.departamento}` : ""}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Dirección</dt><dd className="text-body">{infoBasica.direccion || "—"}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Registro</dt><dd className="text-body">{fechaCorta(infoBasica.fechaRegistro)}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Contacto rector</dt><dd className="text-body">{infoBasica.contactoRector ? `${infoBasica.contactoRector.nombre} · ${infoBasica.contactoRector.email}` : "—"}</dd></div>
-                    </dl>
-                </GlassCard>
-
-                <GlassCard>
-                    <h2 className="mb-3 text-lg font-semibold text-body">2. Métricas de tamaño</h2>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-xl bg-papel/50 p-4">
-                            <p className="text-2xl font-bold text-body">{metricasTamaño.alumnos}</p>
-                            <p className="text-xs text-muted">Alumnos activos</p>
-                        </div>
-                        <div className="rounded-xl bg-papel/50 p-4">
-                            <p className="text-2xl font-bold text-body">{metricasTamaño.profesores}</p>
-                            <p className="text-xs text-muted">Profesores activos</p>
-                        </div>
-                        <div className="rounded-xl bg-papel/50 p-4">
-                            <p className="text-2xl font-bold text-body">{metricasTamaño.cursos}</p>
-                            <p className="text-xs text-muted">Cursos activos</p>
-                        </div>
-                        <div className="rounded-xl bg-papel/50 p-4">
-                            <p className="text-2xl font-bold text-body">{metricasTamaño.materias}</p>
-                            <p className="text-xs text-muted">Materias activas</p>
-                        </div>
-                    </div>
-                </GlassCard>
-            </div>
-
+            {/* ================ BLOQUE A · ¿QUÉ PASA AQUÍ HOY? ================ */}
             <GlassCard>
-                <h2 className="mb-3 text-lg font-semibold text-body">3. Actividad de reportes</h2>
-                {/* SPEC-303 (002-PI-209): resumen real por 3 rutas de pertenencia (I-98). */}
-                {actividadCruzada && actividadCruzada.total > 0 && (
-                    <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <div className="rounded-xl bg-papel/50 p-3">
-                            <p className="text-2xl font-bold text-body">{actividadCruzada.total}</p>
-                            <p className="text-xs text-muted">Reportes ({actividadCruzada.rango.periodoDias} días)</p>
-                        </div>
-                        <div className="rounded-xl bg-papel/50 p-3">
-                            <p className="text-2xl font-bold text-body">{actividadCruzada.casosAbiertos}</p>
-                            <p className="text-xs text-muted">Casos abiertos</p>
-                        </div>
-                        <div className="rounded-xl bg-papel/50 p-3">
-                            <p className="text-sm font-medium text-body">{actividadCruzada.ultimaActividad ? fechaCorta(actividadCruzada.ultimaActividad) : "—"}</p>
-                            <p className="text-xs text-muted">Última actividad</p>
-                        </div>
-                        <div className="rounded-xl bg-papel/50 p-3">
-                            <p className="text-xs text-muted">Por estado</p>
-                            <ul className="mt-1 space-y-0.5 text-xs text-body">
-                                {Object.entries(actividadCruzada.porEstado).map(([estado, n]) => (
-                                    <li key={estado}>{estado}: <span className="font-medium">{n}</span></li>
-                                ))}
-                            </ul>
-                        </div>
+                <div className="mb-4 flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-body">A. ¿Qué pasa aquí hoy?</h2>
+                    {badgeSemaforo(hallazgos.semaforo)}
+                    {motivo && <span className="text-sm text-muted">↳ {motivo}</span>}
+                </div>
+                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl bg-papel/50 p-4">
+                        <p className="text-3xl font-bold text-body">{casosAbiertos}</p>
+                        <p className="text-xs text-muted">Casos abiertos</p>
                     </div>
-                )}
-                {actividadCruzada && actividadCruzada.total === 0 ? (
+                    <div className="rounded-xl bg-papel/50 p-4">
+                        <p className="text-3xl font-bold text-body">{totalRango}</p>
+                        <p className="text-xs text-muted">
+                            Reportes{" "}
+                            {actividadCruzada ? `(últimos ${actividadCruzada.rango.periodoDias} días)` : ""}
+                        </p>
+                    </div>
+                    <div className="rounded-xl bg-papel/50 p-4">
+                        <p className="text-3xl font-bold text-body">{procesadoPct}%</p>
+                        <p className="text-xs text-muted">Procesados</p>
+                    </div>
+                </div>
+                <div className="mb-4 flex flex-wrap gap-3">
+                    <a
+                        href="#actividad"
+                        className="rounded-lg border border-tinta/20 bg-papel/70 px-4 py-2 text-sm text-body hover:bg-tinta/5 dark:border-tinta/30 dark:bg-papel/70 dark:hover:bg-tinta/10"
+                    >
+                        Ver casos abiertos
+                    </a>
+                    <a
+                        href="#alertas"
+                        className="rounded-lg border border-tinta/20 bg-papel/70 px-4 py-2 text-sm text-body hover:bg-tinta/5 dark:border-tinta/30 dark:bg-papel/70 dark:hover:bg-tinta/10"
+                    >
+                        Ver alertas
+                    </a>
+                </div>
+                <div>
+                    <p className="mb-2 text-sm font-medium text-body">Operadores asignados</p>
+                    {operadoresAsignados.length === 0 ? (
+                        <p className="text-sm text-muted">Sin operadores asignados</p>
+                    ) : (
+                        <ul className="space-y-1 text-sm text-muted">
+                            {operadoresAsignados.map((op) => (
+                                <li key={op.id}>
+                                    <span className="text-body font-medium">{op.nombre}</span>
+                                    <span className="ml-2 text-subtle">· {op.email}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </GlassCard>
+
+            {/* ================ BLOQUE B · CÓMO SE COMPORTA ================ */}
+            <GlassCard>
+                <h2 id="actividad" className="mb-3 text-lg font-semibold text-body">
+                    B. Cómo se comporta
+                </h2>
+                {(!actividadCruzada || actividadCruzada.total === 0) && (!serieMensual || serieMensual.length === 0) ? (
                     <EmptyState
                         title="Aún no hay actividad registrada"
-                        description={`Sin reportes que pertenezcan al colegio en los últimos ${actividadCruzada.rango.periodoDias} días.`}
+                        description="Sin reportes que pertenezcan al colegio en el período."
                     />
-                ) : actividadReportes.serie30Dias.length === 0 && actividadReportes.porClasificacion.length === 0 && !actividadCruzada ? (
-                    <EmptyState title="Sin datos" description="No hay reportes en el periodo analizado." />
                 ) : (
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         <div>
-                            <h3 className="mb-2 text-sm font-medium text-body">Últimos {actividadReportes.serie30Dias.length} días con datos</h3>
-                            <BarrasSimples data={actividadReportes.serie30Dias.map((s) => ({ label: s.fecha.slice(5), valor: s.total }))} />
-                        </div>
-                        <div>
-                            <h3 className="mb-2 text-sm font-medium text-body">Por clasificación</h3>
-                            <BarrasSimples data={actividadReportes.porClasificacion.map((c) => ({ label: c.categoria, valor: c.total }))} />
-                        </div>
-                        <div>
-                            <h3 className="mb-2 text-sm font-medium text-body">Top 5 identificadores</h3>
-                            {actividadReportes.topIdentificadores.length === 0 ? (
-                                <p className="text-sm text-muted">Sin identificadores reportados</p>
+                            <h3 className="mb-2 text-sm font-medium text-body">Reportes por mes</h3>
+                            {serieMensual && serieMensual.length > 0 ? (
+                                <BarrasSimples data={serieMensual.map((s) => ({ label: s.anioMes, valor: s.total }))} />
                             ) : (
-                                <ul className="space-y-2 text-sm">
-                                    {actividadReportes.topIdentificadores.map((t) => (
-                                        <li key={t.identificador} className="flex justify-between">
-                                            <span className="text-muted">{t.identificador} <span className="text-subtle">({t.plataforma})</span></span>
-                                            <span className="font-medium text-body">{t.total}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <p className="text-sm text-muted">Sin serie mensual</p>
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="mb-2 text-sm font-medium text-body">Por estado</h3>
+                            {actividadCruzada && Object.keys(actividadCruzada.porEstado).length > 0 ? (
+                                <BarrasSimples
+                                    data={Object.entries(actividadCruzada.porEstado).map(([estado, n]) => ({
+                                        label: estado,
+                                        valor: n,
+                                    }))}
+                                />
+                            ) : (
+                                <p className="text-sm text-muted">Sin distribución</p>
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="mb-2 text-sm font-medium text-body">Quién reporta</h3>
+                            {distribucionRol ? (
+                                <BarrasSimples
+                                    data={[
+                                        { label: "Padres", valor: distribucionRol.padre },
+                                        { label: "Estudiantes", valor: distribucionRol.estudiante },
+                                        { label: "Profesores", valor: distribucionRol.profesor },
+                                        { label: "Anónimos", valor: distribucionRol.anonimo },
+                                    ]}
+                                />
+                            ) : (
+                                <p className="text-sm text-muted">Sin distribución por rol</p>
                             )}
                         </div>
                     </div>
                 )}
+                {actividadReportes.topIdentificadores.length > 0 && (
+                    <div className="mt-6">
+                        <h3 className="mb-2 text-sm font-medium text-body">Top 5 identificadores</h3>
+                        <ul className="space-y-2 text-sm">
+                            {actividadReportes.topIdentificadores.map((t) => (
+                                <li key={t.identificador} className="flex justify-between">
+                                    <span className="text-muted">
+                                        {t.identificador} <span className="text-subtle">({t.plataforma})</span>
+                                    </span>
+                                    <span className="font-medium text-body">{t.total}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </GlassCard>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <GlassCard>
-                    <h2 className="mb-3 text-lg font-semibold text-body">4. Comité de Convivencia</h2>
-                    <dl className="space-y-2 text-sm">
-                        <div className="flex justify-between"><dt className="text-muted">Integrantes activos</dt><dd className="text-body">{comite.integrantesActivos}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Casos escalados</dt><dd className="text-body">{comite.casosEscalados}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Casos resueltos</dt><dd className="text-body">{comite.casosResueltos}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Tiempo promedio resolución</dt><dd className="text-body">{comite.tiempoPromedioResolucionHoras !== null ? `${Math.round(comite.tiempoPromedioResolucionHoras)} h` : "—"}</dd></div>
+            {/* ================ BLOQUE C · LÍNEA DE TIEMPO ================ */}
+            <GlassCard>
+                <h2 className="mb-3 text-lg font-semibold text-body">C. Línea de tiempo (desde el ingreso)</h2>
+                {lineaTiempo ? (
+                    <ColegioLineaTiempo lineaTiempo={lineaTiempo} />
+                ) : (
+                    <p className="text-sm text-muted">Línea de tiempo no disponible.</p>
+                )}
+            </GlassCard>
+
+            {/* ================ BLOQUE D · FICHA Y CONTEXTO ================ */}
+            <GlassCard>
+                <h2 className="mb-4 text-lg font-semibold text-body">D. Ficha y contexto</h2>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <section>
+                        <h3 className="mb-2 text-sm font-medium text-body">Información básica</h3>
+                        <dl className="space-y-2 text-sm">
+                            <div className="flex justify-between"><dt className="text-muted">Nombre</dt><dd className="text-body font-medium">{infoBasica.nombre}</dd></div>
+                            <div className="flex justify-between"><dt className="text-muted">Tipo de periodo</dt><dd className="text-body">{infoBasica.tipoPeriodo}</dd></div>
+                            <div className="flex justify-between"><dt className="text-muted">Ubicación</dt><dd className="text-body">{infoBasica.ciudad}{infoBasica.departamento ? `, ${infoBasica.departamento}` : ""}</dd></div>
+                            <div className="flex justify-between"><dt className="text-muted">Dirección</dt><dd className="text-body">{infoBasica.direccion || "—"}</dd></div>
+                            <div className="flex justify-between"><dt className="text-muted">Registro</dt><dd className="text-body">{fechaCorta(infoBasica.fechaRegistro)}</dd></div>
+                            <div className="flex justify-between"><dt className="text-muted">Contacto rector</dt><dd className="text-body">{infoBasica.contactoRector ? `${infoBasica.contactoRector.nombre} · ${infoBasica.contactoRector.email}` : "—"}</dd></div>
+                        </dl>
+                    </section>
+
+                    <section>
+                        <h3 className="mb-2 text-sm font-medium text-body">Métricas de tamaño</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-xl bg-papel/50 p-3">
+                                <p className="text-xl font-bold text-body">{metricasTamaño.alumnos}</p>
+                                <p className="text-xs text-muted">Alumnos activos</p>
+                            </div>
+                            <div className="rounded-xl bg-papel/50 p-3">
+                                <p className="text-xl font-bold text-body">{metricasTamaño.profesores}</p>
+                                <p className="text-xs text-muted">Profesores activos</p>
+                            </div>
+                            <div className="rounded-xl bg-papel/50 p-3">
+                                <p className="text-xl font-bold text-body">{metricasTamaño.cursos}</p>
+                                <p className="text-xs text-muted">Cursos activos</p>
+                            </div>
+                            <div className="rounded-xl bg-papel/50 p-3">
+                                <p className="text-xl font-bold text-body">{metricasTamaño.materias}</p>
+                                <p className="text-xs text-muted">Materias activas</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <section className="mt-6">
+                    <h3 className="mb-2 text-sm font-medium text-body">Comité de Convivencia</h3>
+                    <dl className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
+                        <div><dt className="text-muted">Integrantes activos</dt><dd className="text-body">{comite.integrantesActivos}</dd></div>
+                        <div><dt className="text-muted">Casos escalados</dt><dd className="text-body">{comite.casosEscalados}</dd></div>
+                        <div><dt className="text-muted">Casos resueltos</dt><dd className="text-body">{comite.casosResueltos}</dd></div>
+                        <div><dt className="text-muted">Tiempo promedio</dt><dd className="text-body">{comite.tiempoPromedioResolucionHoras !== null ? `${Math.round(comite.tiempoPromedioResolucionHoras)} h` : "—"}</dd></div>
                     </dl>
                     {comite.ultimosCasos.length > 0 && (
-                        <div className="mt-4">
-                            <h3 className="mb-2 text-sm font-medium text-body">Últimos casos</h3>
+                        <div className="mt-3">
+                            <p className="mb-1 text-xs font-medium text-body">Últimos casos</p>
                             <ul className="space-y-1 text-sm">
                                 {comite.ultimosCasos.map((c) => (
                                     <li key={c.numero} className="flex justify-between text-muted">
@@ -198,17 +313,17 @@ export function ColegioDetalleSecciones({ detalle }: { detalle: Detalle }) {
                             </ul>
                         </div>
                     )}
-                </GlassCard>
+                </section>
 
-                <GlassCard>
-                    <h2 className="mb-3 text-lg font-semibold text-body">5. Alertas</h2>
-                    <dl className="space-y-2 text-sm">
-                        <div className="flex justify-between"><dt className="text-muted">Total</dt><dd className="text-body">{alertas.total}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Resueltas</dt><dd className="text-body">{alertas.resueltas}</dd></div>
+                <section id="alertas" className="mt-6">
+                    <h3 className="mb-2 text-sm font-medium text-body">Alertas del colegio</h3>
+                    <dl className="grid grid-cols-2 gap-2 text-sm">
+                        <div><dt className="text-muted">Total</dt><dd className="text-body">{alertas.total}</dd></div>
+                        <div><dt className="text-muted">Resueltas</dt><dd className="text-body">{alertas.resueltas}</dd></div>
                     </dl>
                     {alertas.ultimasAlertas.length > 0 && (
-                        <div className="mt-4">
-                            <h3 className="mb-2 text-sm font-medium text-body">Últimas alertas</h3>
+                        <div className="mt-3">
+                            <p className="mb-1 text-xs font-medium text-body">Últimas alertas</p>
                             <ul className="space-y-1 text-sm">
                                 {alertas.ultimasAlertas.map((a) => (
                                     <li key={a.id} className="flex justify-between text-muted">
@@ -219,49 +334,46 @@ export function ColegioDetalleSecciones({ detalle }: { detalle: Detalle }) {
                             </ul>
                         </div>
                     )}
-                </GlassCard>
-            </div>
+                </section>
 
-            <GlassCard>
-                <div className="mb-3 flex items-center gap-3">
-                    <h2 className="text-lg font-semibold text-body">6. Hallazgos</h2>
-                    <Badge variant={hallazgos.semaforo === "verde" ? "success" : hallazgos.semaforo === "rojo" ? "danger" : "warning"}>{hallazgos.semaforo}</Badge>
-                </div>
-                {hallazgos.positivos.length === 0 && hallazgos.negativos.length === 0 ? (
-                    <p className="text-sm text-muted">Sin hallazgos destacados.</p>
-                ) : (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <h3 className="mb-2 text-sm font-medium text-estado-pino">Qué está bien</h3>
-                            <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
-                                {hallazgos.positivos.map((h, i) => (<li key={i}>{h}</li>))}
-                            </ul>
-                        </div>
-                        <div>
-                            <h3 className="mb-2 text-sm font-medium text-estado-rubi">Qué está mal</h3>
-                            <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
-                                {hallazgos.negativos.map((h, i) => (<li key={i}>{h}</li>))}
-                            </ul>
-                        </div>
-                    </div>
-                )}
-            </GlassCard>
-
-            <GlassCard>
-                <h2 className="mb-3 text-lg font-semibold text-body">7. Comparación con la media</h2>
-                {comparacionMedia.insuficientes ? (
-                    <p className="text-sm text-muted">Insuficientes colegios activos para calcular la mediana (&lt; 3).</p>
-                ) : (
-                    <div className="space-y-3">
-                        {comparacionMedia.metricas.map((m) => (
-                            <div key={m.nombre} className="grid grid-cols-3 gap-4 text-sm">
-                                <span className="text-muted">{m.nombre}</span>
-                                <span className="text-body font-medium">{m.valorColegio}</span>
-                                <span className="text-subtle">Mediana: {m.mediana ?? "—"}</span>
+                <section className="mt-6">
+                    <h3 className="mb-2 text-sm font-medium text-body">Hallazgos</h3>
+                    {hallazgos.positivos.length === 0 && hallazgos.negativos.length === 0 ? (
+                        <p className="text-sm text-muted">Sin hallazgos destacados.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <p className="mb-1 text-xs font-medium text-estado-pino">Qué está bien</p>
+                                <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
+                                    {hallazgos.positivos.map((h, i) => (<li key={i}>{h}</li>))}
+                                </ul>
                             </div>
-                        ))}
-                    </div>
-                )}
+                            <div>
+                                <p className="mb-1 text-xs font-medium text-estado-rubi">Qué está mal</p>
+                                <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
+                                    {hallazgos.negativos.map((h, i) => (<li key={i}>{h}</li>))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+                </section>
+
+                <section className="mt-6">
+                    <h3 className="mb-2 text-sm font-medium text-body">Comparación con la media</h3>
+                    {comparacionMedia.insuficientes ? (
+                        <p className="text-sm text-muted">Insuficientes colegios activos para calcular la mediana (&lt; 3).</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {comparacionMedia.metricas.map((m) => (
+                                <div key={m.nombre} className="grid grid-cols-3 gap-4 text-sm">
+                                    <span className="text-muted">{m.nombre}</span>
+                                    <span className="text-body font-medium">{m.valorColegio}</span>
+                                    <span className="text-subtle">Mediana: {m.mediana ?? "—"}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
             </GlassCard>
         </div>
     );

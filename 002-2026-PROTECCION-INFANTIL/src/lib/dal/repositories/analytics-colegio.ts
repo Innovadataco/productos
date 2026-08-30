@@ -8,7 +8,16 @@ import type { DbClient } from "../unit-of-work";
 import { calcularHallazgos } from "@/lib/analytics/hallazgos-colegio";
 import { cargarParametrosAnalytics } from "@/lib/analytics/parametros";
 import type { ParametrosAnalyticsColegios } from "@/lib/analytics/parametros";
-import type { FiltrosResumenColegios, ColegioResumenItem, ColegioDetalleResponse, UmbralesSemaforoDTO } from "./analytics-colegio-types";
+import type {
+    FiltrosResumenColegios,
+    ColegioResumenItem,
+    ColegioDetalleResponse,
+    UmbralesSemaforoDTO,
+    DistribucionRolReportante,
+    OperadorAsignado,
+    LineaTiempoColegio,
+    PuntoSerieMensual,
+} from "./analytics-colegio-types";
 import {
     contarTamañoColegio,
     metricasReportesColegio,
@@ -232,10 +241,16 @@ export class AnalyticsColegioRepository {
 
         // SPEC-303 (002-PI-209): actividad cruzada por 3 rutas (I-98) para el detalle.
         const rangoActividad = rangoUltimosDias(umbrales.periodoDefaultDias);
-        const actividadCruzada = await new ColegioActividadRepository(this.db).actividadDelColegio(
-            colegio.id,
-            rangoActividad
-        );
+        // SPEC-311 (002-PI-210 · Fase 2): rango all-time para lineaTiempo + serieMensual.
+        const rangoAllTime = { desde: colegio.creadoEn, hasta: new Date() };
+        const [actividadCruzada, actividadAllTime, operadoresAsignados, distribucionRol] = await Promise.all([
+            new ColegioActividadRepository(this.db).actividadDelColegio(colegio.id, rangoActividad),
+            new ColegioActividadRepository(this.db).actividadDelColegio(colegio.id, rangoAllTime),
+            this.obtenerOperadoresAsignados(colegio.id),
+            this.obtenerDistribucionRol(colegio.id, rangoActividad),
+        ]);
+        const lineaTiempo = this.computarLineaTiempo(colegio.creadoEn, actividadAllTime.reportes);
+        const serieMensual = this.computarSerieMensual(colegio.creadoEn, actividadAllTime.reportes);
 
         return {
             id: colegio.id,
@@ -277,6 +292,131 @@ export class AnalyticsColegioRepository {
                 },
             },
             umbralesSemaforo: umbralesADTO(umbrales),
+            // SPEC-311 (002-PI-210 · Fase 2): 4 bloques aditivos para rediseño 4 bloques A→D.
+            distribucionRol,
+            operadoresAsignados,
+            lineaTiempo,
+            serieMensual,
         };
+    }
+
+    // SPEC-311 (002-PI-210): DISTINCT Usuarios asignados a AlertaColegio del colegio.
+    private async obtenerOperadoresAsignados(colegioId: string): Promise<OperadorAsignado[]> {
+        const usuarios = await this.db.usuario.findMany({
+            where: { alertasAsignadas: { some: { colegioId } } },
+            select: { id: true, nombre: true, email: true },
+            orderBy: { nombre: "asc" },
+        });
+        return usuarios.map((u) => ({ id: u.id, nombre: u.nombre ?? "—", email: u.email }));
+    }
+
+    // SPEC-311 (002-PI-210): distribución por rol reportante del rango vigente.
+    // Invariante: padre + estudiante + profesor + anonimo === actividadCruzada.total
+    private async obtenerDistribucionRol(
+        colegioId: string,
+        rango: { desde: Date; hasta: Date }
+    ): Promise<DistribucionRolReportante> {
+        const actividad = await new ColegioActividadRepository(this.db).actividadDelColegio(colegioId, rango);
+        const ids = actividad.reportes.map((r) => r.id);
+        if (ids.length === 0) return { padre: 0, estudiante: 0, profesor: 0, anonimo: 0 };
+
+        const detalles = await this.db.reporte.findMany({
+            where: { id: { in: ids } },
+            select: {
+                id: true,
+                esAnonimo: true,
+                origenRol: true,
+                usuario: { select: { rol: true } },
+            },
+        });
+
+        let padre = 0;
+        let profesor = 0;
+        let anonimo = 0;
+        const estudiante = 0; // sin RolUsuario.STUDENT en el schema actual · reservado (D5 research).
+        for (const r of detalles) {
+            if (r.origenRol === "PARENT") {
+                padre += 1;
+            } else if (r.esAnonimo || !r.usuario) {
+                anonimo += 1;
+            } else if (r.usuario.rol === "PARENT") {
+                padre += 1;
+            } else if (
+                r.usuario.rol === "SCHOOL_ADMIN" ||
+                r.usuario.rol === "OPERADOR" ||
+                r.usuario.rol === "COMITE_VALIDACION" ||
+                r.usuario.rol === "COMITE_CONVIVENCIA"
+            ) {
+                profesor += 1;
+            } else {
+                anonimo += 1;
+            }
+        }
+        return { padre, estudiante, profesor, anonimo };
+    }
+
+    // SPEC-311 (002-PI-210): línea de tiempo (Bloque C) con hitos derivados de reportes all-time.
+    private computarLineaTiempo(
+        fechaRegistro: Date,
+        reportesAllTime: Array<{ id: string; creadoEn: Date }>
+    ): LineaTiempoColegio {
+        const hoy = new Date();
+        if (reportesAllTime.length === 0) {
+            return {
+                fechaRegistro: fechaRegistro.toISOString(),
+                primerReporte: null,
+                picoActividad: null,
+                hoy: hoy.toISOString(),
+            };
+        }
+        let minTs = reportesAllTime[0]!.creadoEn.getTime();
+        const buckets = new Map<string, number>();
+        for (const r of reportesAllTime) {
+            const ts = r.creadoEn.getTime();
+            if (ts < minTs) minTs = ts;
+            const anioMes = r.creadoEn.toISOString().slice(0, 7);
+            buckets.set(anioMes, (buckets.get(anioMes) ?? 0) + 1);
+        }
+        // Empate → mes más reciente (lexicográfico max cuando coinciden totales).
+        let pico: { anioMes: string; total: number } | null = null;
+        for (const [anioMes, total] of buckets) {
+            if (!pico || total > pico.total || (total === pico.total && anioMes > pico.anioMes)) {
+                pico = { anioMes, total };
+            }
+        }
+        return {
+            fechaRegistro: fechaRegistro.toISOString(),
+            primerReporte: new Date(minTs).toISOString(),
+            picoActividad: pico,
+            hoy: hoy.toISOString(),
+        };
+    }
+
+    // SPEC-311 (002-PI-210): serie mensual (Bloque B) all-time con relleno de meses vacíos.
+    private computarSerieMensual(
+        fechaRegistro: Date,
+        reportesAllTime: Array<{ id: string; creadoEn: Date }>
+    ): PuntoSerieMensual[] {
+        const buckets = new Map<string, number>();
+        for (const r of reportesAllTime) {
+            const anioMes = r.creadoEn.toISOString().slice(0, 7);
+            buckets.set(anioMes, (buckets.get(anioMes) ?? 0) + 1);
+        }
+        if (buckets.size === 0) return [];
+        // Rellenar meses vacíos entre el primerReporte (o fechaRegistro) y hoy.
+        const sortedKeys = [...buckets.keys()].sort();
+        const primeraClave = sortedKeys[0]!;
+        const [pAnio, pMes] = primeraClave.split("-").map(Number);
+        const fechaInicio = new Date(pAnio!, pMes! - 1, 1);
+        const hoy = new Date();
+        const serie: PuntoSerieMensual[] = [];
+        const cursor = new Date(fechaInicio);
+        while (cursor <= hoy) {
+            const anioMes = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+            serie.push({ anioMes, total: buckets.get(anioMes) ?? 0 });
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+        void fechaRegistro; // fechaRegistro no se usa hoy (se conserva por si se decide "desde ingreso").
+        return serie;
     }
 }
