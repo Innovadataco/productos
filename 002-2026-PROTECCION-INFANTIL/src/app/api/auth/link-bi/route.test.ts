@@ -5,6 +5,11 @@ import * as auth from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { Usuario } from "@prisma/client";
 
+// CI genera su propio .env.test (heredoc en ci.yml) sin BI_BASE_URL — la ruta
+// solo la necesita en runtime (dentro de GET), así que fijarla acá hace el
+// test independiente de qué .env.test cargue el runner.
+process.env.BI_BASE_URL ||= "https://bi.innovadataco.com";
+
 const USUARIO: Usuario = {
     id: "user-1",
     email: "padre@example.com",
