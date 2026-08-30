@@ -27,7 +27,7 @@ Postgres 0.0.0.0:5432, hermes 8642/9119. PI no publica NINGÚN puerto al host sa
 ## Rutas
 
 - Repo en el VPS: `/opt/proteccion-infantil/repo` (clone de `Innovadataco/productos`,
-  rama `feature/001-scaffolding`, deploy key read-only).
+  rama `main`, deploy key read-only).
 - App: `/opt/proteccion-infantil/repo/002-2026-PROTECCION-INFANTIL`.
 - Secretos: `.env.production` (600, root) SOLO en el VPS — nunca en git.
   Respaldo de `ENCRYPTION_KEY` y `PARAM_ENCRYPTION_KEY`: con el CEO (fuera del VPS).

@@ -745,12 +745,12 @@ SMOKE_BASE_URL=https://pi.innovadataco.com \
 ## 14. Gate de merge (CI) — branch protection · ACCIÓN DEL CEO
 
 El workflow `ci-002-proteccion-infantil` (tsc + lint + suite con cobertura + journeys por
-rol + arch:check + build) corre en todo push y PR a `feature/001-scaffolding`. Para que
+rol + arch:check + build) corre en todo push y PR a `main`. Para que
 sea GATE de merge real (no solo informativo), el CEO debe activar la protección de rama
-en GitHub (ODIN no tiene ese permiso):
+en GitHub (Desarrollo no tiene ese permiso):
 
 1. Repo `Innovadataco/productos` → **Settings → Branches → Add branch ruleset** (o editar la regla existente).
-2. Target: `feature/001-scaffolding`.
+2. Target: `main`.
 3. Activar **Require status checks to pass before merging** y marcar el check **`gate`**
    (job del workflow `ci-002-proteccion-infantil`).
 4. Guardar. Desde ese momento ningún PR entra con el gate en rojo.
