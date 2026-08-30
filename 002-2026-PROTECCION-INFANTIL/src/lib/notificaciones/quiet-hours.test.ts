@@ -61,4 +61,44 @@ describe("aplicarQuietHours", () => {
     it("rechaza formato inválido", () => {
         expect(() => aplicarQuietHours(new Date(), "invalido")).toThrow("Ventana de silencio inválida");
     });
+
+    describe("SPEC-312 (I-165) · skip categórico por canal", () => {
+        // 22:00 Bogotá está DENTRO de la ventana 20:00-07:00 → sin skip se diferiría.
+        const dentroVentana = fromZonedTime(new Date(2026, 7, 22, 22, 0, 0), TIMEZONE_MOTOR);
+        const fueraVentana = fromZonedTime(new Date(2026, 7, 22, 10, 0, 0), TIMEZONE_MOTOR);
+
+        it("canal EMAIL dentro de la ventana → NO difiere (retorna sin modificar)", () => {
+            const result = aplicarQuietHours(dentroVentana, DEFAULT_QUIET_HOURS, "EMAIL");
+            expect(result.getTime()).toBe(dentroVentana.getTime());
+        });
+
+        it("canal IN_APP dentro de la ventana → NO difiere", () => {
+            const result = aplicarQuietHours(dentroVentana, DEFAULT_QUIET_HOURS, "IN_APP");
+            expect(result.getTime()).toBe(dentroVentana.getTime());
+        });
+
+        it("canal EMAIL fuera de la ventana → sin cambios (trivial)", () => {
+            const result = aplicarQuietHours(fueraVentana, DEFAULT_QUIET_HOURS, "EMAIL");
+            expect(result.getTime()).toBe(fueraVentana.getTime());
+        });
+
+        it("canal PUSH (hipotético Fase 2) dentro de la ventana → SÍ aplica la ventana", () => {
+            const result = aplicarQuietHours(dentroVentana, DEFAULT_QUIET_HOURS, "PUSH");
+            const resultBogota = toZonedTime(result, TIMEZONE_MOTOR);
+            expect(resultBogota.getDate()).toBe(23);
+            expect(resultBogota.getHours()).toBe(7);
+        });
+
+        it("canal desconocido dentro de la ventana → SÍ aplica la ventana (conservador)", () => {
+            const result = aplicarQuietHours(dentroVentana, DEFAULT_QUIET_HOURS, "INVENTADO");
+            const resultBogota = toZonedTime(result, TIMEZONE_MOTOR);
+            expect(resultBogota.getHours()).toBe(7);
+        });
+
+        it("sin canal (retro-compat) dentro de la ventana → SÍ aplica la ventana", () => {
+            const result = aplicarQuietHours(dentroVentana, DEFAULT_QUIET_HOURS);
+            const resultBogota = toZonedTime(result, TIMEZONE_MOTOR);
+            expect(resultBogota.getHours()).toBe(7);
+        });
+    });
 });

@@ -154,7 +154,11 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
             canceladasPorReemplazo += reemplazo.count;
 
             const conOffset = aplicarOffset(base, regla.offset);
-            const enviarEn = aplicarQuietHours(conOffset);
+            // SPEC-312 (I-165): pasar el canal para saltar la ventana en EMAIL/IN_APP.
+            // La ventana queda en el default (undefined); leer el parámetro de BD en
+            // el emisor es deuda diferida (ver specs/312 · tasks.md), irrelevante para
+            // EMAIL/IN_APP que se saltan categóricamente por canal.
+            const enviarEn = aplicarQuietHours(conOffset, undefined, regla.canal);
 
             const variables = {
                 ...(input.metadatos ?? {}),

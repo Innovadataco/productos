@@ -86,7 +86,8 @@ export async function procesarNotificacion(
     // chequeo protege contra cambios de regla/parámetro en caliente.
     if (
         notificacion.enviarEn &&
-        aplicarQuietHours(notificacion.enviarEn, config.quietHours).getTime() > ahora.getTime()
+        // SPEC-312 (I-165): pasar el canal para saltar la ventana en EMAIL/IN_APP.
+        aplicarQuietHours(notificacion.enviarEn, config.quietHours, notificacion.canal).getTime() > ahora.getTime()
     ) {
         return { accion: "diferida_quiet_hours" };
     }
