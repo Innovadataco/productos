@@ -57,6 +57,16 @@ Si solo viene `x-forwarded-host` sin `x-forwarded-proto` (o viceversa), no se re
 ### D-030.5 · `PI_BASE_URL` fuera de alcance
 Este SPEC endurece solo `BI_BASE_URL`. `PI_BASE_URL` (host de PI, usado en el redirect al emisor) ya fue endurecido del lado emisor por SPEC-313 y su fallback hardcode `https://pi.innovadataco.com` es un destino fijo conocido — no tiene el mismo riesgo de localhost. Tocarlo sería scope creep.
 
+### D-030.6 · Nivel 1 entra con solo `x-forwarded-host` (observación de Fábrica · REVISO)
+El plan inicial exigía AMBOS headers (`fwdHost && fwdProto`). Fábrica observó (no bloqueante) que si un proxy manda `x-forwarded-host` sin `x-forwarded-proto`, se cae innecesariamente al Nivel 2. Como ya había default `https`, adopté la mejora: Nivel 1 entra con solo `x-forwarded-host`; el proto se toma del header si viene, default `https` si no. Estrictamente más robusto sin costo (Cloudflare hoy manda los dos, así que no cambia el caso normal).
+
+### D-030.7 · El path THROW no es reproducible con `next start` local (verificación por unit test)
+Al probar con `next build && next start`, un request "sin forwarded headers" NO dispara el throw: Next.js 15 SIEMPRE inyecta `x-forwarded-host` con el host del socket local (ej. `localhost:3011`) — consistente con la evidencia D-029.6 de SPEC-029. Por eso el Nivel 1 siempre resuelve en el server local. En producción real, Cloudflare Tunnel sobrescribe `x-forwarded-host` con el host público (`bi.innovadataco.com`), así que:
+- El caso normal prod SIEMPRE resuelve por Nivel 1 con el host público → nunca localhost.
+- El throw (Nivel 3) solo dispararía si NO llega `x-forwarded-host` Y falta `BI_BASE_URL` — situación de infra rota que el proxy normal nunca produce.
+
+Como el throw no es reproducible vía `next start`, su verificación autoritativa es el **unit test** con un header source vacío (`hdrs({})` → `.get()` devuelve null), que sí ejercita la rama y confirma el throw con mensaje `[SPEC-030]`. La verificación curl confirma el Nivel 1 con host público explícito.
+
 ## Fuentes consultadas
 
 - `src/app/dashboard/layout.tsx` (SPEC-029 · línea del fallback frágil)

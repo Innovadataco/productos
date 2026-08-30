@@ -38,9 +38,12 @@ async function loadRoute() {
     return await import("@/app/api/auth/link/route");
 }
 
-function makeReq(params: Record<string, string>): Request {
+function makeReq(
+    params: Record<string, string>,
+    headers?: Record<string, string>,
+): Request {
     const qs = new URLSearchParams(params).toString();
-    return new Request(`${BI_BASE}/api/auth/link?${qs}`);
+    return new Request(`${BI_BASE}/api/auth/link?${qs}`, { headers });
 }
 
 function locHeader(res: Response): string {
@@ -165,5 +168,25 @@ describe("GET /api/auth/link", () => {
         const res = await GET(makeReq({ token: jwt, returnTo: "/etc/passwd" }));
         expect(res.status).toBe(302);
         expect(locHeader(res)).toBe(`${BI_BASE}/dashboard`);
+    });
+
+    it("SPEC-030 · x-forwarded-host en el request → redirect usa ese host público (no el env)", async () => {
+        const jwt = await signEphemeral({
+            sub: "u1",
+            role: "ADMIN",
+            linkTo: "bi",
+        });
+        const { GET } = await loadRoute();
+        const res = await GET(
+            makeReq(
+                { token: jwt, returnTo: "/dashboard" },
+                {
+                    "x-forwarded-host": "bi.innovadataco.com",
+                    "x-forwarded-proto": "https",
+                },
+            ),
+        );
+        expect(res.status).toBe(302);
+        expect(locHeader(res)).toBe("https://bi.innovadataco.com/dashboard");
     });
 });

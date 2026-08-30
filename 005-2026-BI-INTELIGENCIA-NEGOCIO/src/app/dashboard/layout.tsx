@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { ReactNode } from "react";
 import { sesionDeRequest } from "@/lib/auth/sesion";
+import { resolveBiBaseUrl } from "@/lib/bi/base-url";
 import { BiAppShell } from "@/components/bi/layout/BiAppShell";
 
 export default async function DashboardLayout({
@@ -38,7 +39,9 @@ export default async function DashboardLayout({
         // agregue sub-rutas evaluamos alternativas (middleware.ts con
         // NextRequest, o extraer del `Referer` cuando esté presente).
         const pi = process.env.PI_BASE_URL ?? "https://pi.innovadataco.com";
-        const bi = process.env.BI_BASE_URL ?? "http://localhost:3001";
+        // SPEC-030 · resolución endurecida: proxy-header → env → (prod THROW /
+        // dev localhost). Nunca localhost silencioso en producción.
+        const bi = resolveBiBaseUrl(h);
         const returnTo = `${bi}/dashboard`;
         redirect(
             `${pi}/api/auth/link-bi?returnTo=${encodeURIComponent(returnTo)}`,
