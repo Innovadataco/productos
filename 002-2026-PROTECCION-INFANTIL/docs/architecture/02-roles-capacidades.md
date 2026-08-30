@@ -207,6 +207,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/link-bi` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
 | `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
@@ -644,6 +645,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/link-bi` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
 | `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
@@ -1081,6 +1083,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/link-bi` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
 | `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
@@ -1518,6 +1521,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones/mias` | api | HTTP 403 | no permite | sí |
 | `/api/auth/activar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/link-bi` | api | HTTP 403 | no permite | sí |
 | `/api/auth/login` | api | HTTP 403 | no permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
 | `/api/auth/recuperar/restablecer` | api | HTTP 403 | no permite | sí |
@@ -1955,6 +1959,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones/mias` | api | HTTP 403 | no permite | sí |
 | `/api/auth/activar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/link-bi` | api | HTTP 403 | no permite | sí |
 | `/api/auth/login` | api | HTTP 403 | no permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
 | `/api/auth/recuperar/restablecer` | api | HTTP 403 | no permite | sí |
@@ -2392,6 +2397,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones/mias` | api | permitir | permite | sí |
 | `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/link-bi` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
 | `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |
@@ -2829,6 +2835,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/apelaciones/mias` | api | HTTP 401 | permite | **NO** |
 | `/api/auth/activar` | api | permitir | permite | sí |
 | `/api/auth/cambiar-password` | api | permitir | permite | sí |
+| `/api/auth/link-bi` | api | permitir | permite | sí |
 | `/api/auth/login` | api | permitir | permite | sí |
 | `/api/auth/logout` | api | permitir | permite | sí |
 | `/api/auth/recuperar/restablecer` | api | permitir | permite | sí |

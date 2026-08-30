@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: User description: "Puente sesión PI↔BI (SPEC-310 · 002-PI-211). Cierra I-30 (parte PI). La cookie de PI (__Host-token) no puede cruzar a bi.innovadataco.com por el prefijo __Host-. Decisión CEO (Opción C): handoff con JWT ephemeral one-shot. Nuevo endpoint GET /api/auth/link-bi que valida la sesión PI actual, genera un JWT efímero (TTL 60s, claim linkTo:bi) firmado con JWT_SECRET, y redirige 302 a BI. Sin sesión PI, redirige a /login encadenando el returnTo. La parte BI (endpoint /api/auth/link + guard) la construye Fábrica BI-2 en paralelo."
 
