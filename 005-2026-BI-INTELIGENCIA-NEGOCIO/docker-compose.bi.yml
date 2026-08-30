@@ -163,8 +163,16 @@ services:
       PI_BASE_URL: ${PI_BASE_URL}
       ENABLE_HTTPS_HEADERS: "true"
       HOSTNAME: "0.0.0.0"
+      # SPEC-033 · ruta del JSON del tablero /operacion (montado read-only abajo).
+      OPERACION_JSON_PATH: /data/operacion.json
     ports:
       - "127.0.0.1:3001:3000"
+    volumes:
+      # SPEC-033 · el CEO escribe operacion.json por SSH en el host (fuera de
+      # git); la vista /operacion lo lee read-only en cada request. El archivo
+      # NO se crea en el repo · lo publica el CEO. Verificar el montaje desde
+      # dentro del contenedor: `docker exec <bi-next> cat /data/operacion.json` (I-31).
+      - /opt/proteccion-infantil/bi-operacion:/data:ro
     networks:
       - bi-net
     depends_on:
