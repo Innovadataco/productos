@@ -6,7 +6,7 @@
 
 **Status**: PLANEADO
 
-**Impacto en arquitectura**: Añade plantilla de notificación en `src/lib/notificaciones/plantillas/`, extiende `src/lib/email.ts` con un wrapper que consume el motor existente sin modificarlo, y dispara desde el servicio de notificaciones del círculo de confianza del DAL. No cambia schema ni el motor de notificaciones.
+**Impacto en arquitectura:** Añade plantilla de notificación en `src/lib/notificaciones/plantillas/`, extiende `src/lib/email.ts` con un wrapper que consume el motor existente sin modificarlo, y dispara desde el servicio de notificaciones del círculo de confianza del DAL. No cambia schema ni el motor de notificaciones.
 
 **Input**: User description: "Notificación enriquecida (email/push con contexto real · no genérico). Crear src/lib/notificaciones/plantillas/reporte-circulo.ts con renderizado de email enriquecido (nombre contacto, identificador, plataforma, categoría, total reportes, link a expediente). Integrar con src/lib/email.ts enviando alerta contextual vía programar() del motor (sin modificar motor.ts)."
 
