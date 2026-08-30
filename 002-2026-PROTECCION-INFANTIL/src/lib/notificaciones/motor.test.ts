@@ -102,13 +102,18 @@ describe("motor de notificaciones", () => {
         expect(result.programadas).toBe(1);
     });
 
-    it("programar con offset futuro respeta quiet hours", async () => {
+    it("programar con canal EMAIL NO difiere por quiet hours (SPEC-312)", async () => {
         const usuario = await crearUsuario("PARENT", "padre@test.com");
         const plantilla = await crearPlantilla("suscripcion.por_vencer.email", "EMAIL", "Hola", "Vencimiento");
         await crearRegla("suscripcion.por_vencer", "PARENT", "-1d", "EMAIL", plantilla.clave, true);
 
-        // Base: 22:00 Bogotá; offset -1d → 22:00 Bogotá del día anterior (dentro de quiet hours).
+        // Base: 22:00 Bogotá (2026-08-22T03:00:00Z). Offset -1d → 22:00 Bogotá del día anterior
+        // = 2026-08-21T03:00:00Z (dentro de la ventana 20:00-07:00).
+        // SPEC-312: EMAIL se salta quiet hours categóricamente → enviarEn debe ser exactamente
+        // conOffset = base - 24h, sin ningún desplazamiento adicional.
         const base = new Date("2026-08-22T03:00:00.000Z"); // 22:00 Bogotá
+        const conOffset = new Date(base.getTime() - 24 * 60 * 60 * 1000); // 2026-08-21T03:00:00Z
+
         await programar({
             evento: "suscripcion.por_vencer",
             destinatarios: [{ usuarioId: usuario.id, variables: {} }],
@@ -117,8 +122,9 @@ describe("motor de notificaciones", () => {
 
         const notificacion = await prisma.notificacion.findFirst();
         expect(notificacion).not.toBeNull();
-        // Debe haberse diferido a 07:00 Bogotá del día anterior = 2026-08-21 12:00 UTC
-        expect(notificacion!.enviarEn!.getTime()).toBeGreaterThanOrEqual(base.getTime() - 15 * 60 * 60 * 1000);
+        // Assert exacto: sin deferral, enviarEn == conOffset. Si quiet hours vuelve a aplicarse
+        // para EMAIL, este test falla porque el valor sería ~12:00 UTC (07:00 Bogotá diferido).
+        expect(notificacion!.enviarEn!.getTime()).toBe(conOffset.getTime());
     });
 
     it("cancelar cancela notificaciones programadas futuras", async () => {
