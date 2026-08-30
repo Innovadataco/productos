@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 type Section = { label: string; href: string; emoji: string };
 
 const SECTIONS: Section[] = [
+    // SPEC-034 · Operación va primero: es la pantalla que Jelkin abre a diario.
+    { label: "Operación", href: "/operacion", emoji: "🧭" },
     { label: "Home", href: "/dashboard", emoji: "🏠" },
     { label: "Dashboards", href: "/dashboard/dashboards", emoji: "📊" },
     { label: "Chat NL→SQL", href: "/chat", emoji: "💬" },
