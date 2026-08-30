@@ -88,6 +88,23 @@ test.describe("A · Hueco #2 · SPEC-314 · cuentas internas bloqueadas en /repo
         await ctx.close();
     });
 
+    test("MÓVIL · ¿la 2ª salida (registrarme como padre) queda dentro del fold en 375px?", async ({ browser }) => {
+        const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } }); // iPhone-ish
+        const page = await ctx.newPage();
+        await page.request.post("/api/auth/login", { data: { email: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD } });
+        await page.goto("/reportar", { waitUntil: "domcontentloaded" });
+        await page.waitForTimeout(2_500);
+        const registro = page.locator('[data-testid="cta-registro-padre"]');
+        const presente = (await registro.count()) > 0;
+        const visible = presente ? await registro.isVisible() : false;
+        const box = presente ? await registro.boundingBox() : null;
+        const dentroDelFold = box ? box.y + box.height <= 812 : false;
+        console.log(`\n[SPEC-314 MÓVIL 375px] cta-registro-padre presente:${presente} · visible:${visible} · y=${box?.y?.toFixed(0)} · dentro del fold(<=812):${dentroDelFold}`);
+        await page.screenshot({ path: "test-results/spec314-movil.png", fullPage: false }).catch(() => {});
+        // No es aserción dura: es diagnóstico de usabilidad móvil (reporta, no rompe).
+        await ctx.close();
+    });
+
     test("la salida funciona: cerrar sesión → el wizard de reporte queda utilizable", async ({ browser }) => {
         const email = process.env.E2E_OPERADOR_EMAIL;
         const password = process.env.E2E_OPERADOR_PASSWORD;
