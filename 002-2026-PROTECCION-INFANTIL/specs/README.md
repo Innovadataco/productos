@@ -451,6 +451,7 @@
 | [306](306-timeline-eventos-circulo/spec.md) | SPEC-306 · Timeline eventos del círculo de confianza (A-50) | 🟢 Implementado |
 | [307](307-sugerencia-proactiva-padre/spec.md) | SPEC-307 · Sugerencia proactiva para padres (A-50) | 🔵 Planeado |
 | [308](308-notificacion-enriquecida-circulo/spec.md) | SPEC-308 · Notificación enriquecida del círculo de confianza (A-50) | 🔵 Planeado |
+| [311](311-ficha-colegio-rediseno/spec.md) | SPEC-311 · Ficha colegio admin Fase 2 · Rediseño 4 bloques A→D (002-PI-210 · cierra I-98) | 🔵 Planeado |
 
 ## Incidencias de calidad de datos
 
