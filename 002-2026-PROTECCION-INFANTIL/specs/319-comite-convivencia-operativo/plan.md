@@ -6,7 +6,7 @@
 
 ## Summary
 
-Hacer operativa la cuenta compartida del Comité de Convivencia. El bloqueo crítico (US1/§2.1) es que tres copias del mapa rol→home en el cliente omiten `COMITE_CONVIVENCIA`, así el comité cae en `/mis-reportes` con error. Se introduce **una fuente única de verdad rol→home** en el cliente, consumida por los tres puntos de landing, coherente con `homeForRole` del middleware, con **Decisión B**: el landing del padre (`/mis-reportes`) no cambia en este SPEC. Alrededor: acceso por email reusando el flujo de invitación del rector (§2.2), directorio de integrantes operable (§2.3), firma del integrante al cerrar caso con migración aditiva (§2.4), rediseño del inicio como bandeja (§2.5) e higiene de rol (§2.6).
+Hacer operativa la cuenta compartida del Comité de Convivencia. El bloqueo crítico (US1/§2.1) es que tres copias del mapa rol→home en el cliente omiten `COMITE_CONVIVENCIA`, así el comité cae en `/mis-reportes` con error. Se introduce **una fuente única de verdad rol→home** en el cliente, consumida por los tres puntos de landing, coherente con `homeForRole` del middleware, con **Decisión A** (CEO 2026-08-30 19:14): `PARENT → /dashboard/padre` (cierra deuda A-54/SPEC-317); el rebote de `/mis-reportes` se mantiene por lista explícita de roles (excluye PARENT) para no expulsar al padre de su propia página. Alrededor: acceso por email reusando el flujo de invitación del rector (§2.2), directorio de integrantes operable (§2.3), firma del integrante al cerrar caso con migración aditiva (§2.4), rediseño del inicio como bandeja (§2.5) e higiene de rol (§2.6).
 
 ## Technical Context
 

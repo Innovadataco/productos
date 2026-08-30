@@ -7,24 +7,27 @@ Decisiones técnicas resueltas **en fuente** (candado 15 v5), antes de implement
 - **Decisión**: crear `src/lib/auth/home-para-rol.ts` — función pura `homeParaRol(rol: string | undefined): string`. Los tres consumidores (`login`, `cambiar-password`, `mis-reportes`) la importan.
 - **Rationale**: `homeForRole` vive en `src/lib/proxy.ts:192`, que importa `NextRequest`/`NextResponse` y es código de middleware/edge. Importarlo en componentes cliente arrastra dependencias de servidor. Un módulo puro es testeable en unit y no tiene ese problema. El brief confirma que `homeForRole` quedó fuera del runtime del landing (SPEC-287); la fuente única del cliente **es** el runtime real.
 - **Coherencia**: `homeParaRol` replica exactamente el mapa canónico de `homeForRole` para los roles no-padre. Se deja un comentario cruzado en ambos archivos para que no se dupliquen silenciosamente en el futuro.
-- **Mapa (Decisión B)**:
+- **Mapa (Decisión A · CEO 2026-08-30 19:14)**:
   - `ADMIN` → `/dashboard/admin`
   - `OPERADOR` → `/dashboard/admin` (resuelve la contradicción con `login:36` que decía `/dashboard/admin/operadores`)
   - `SCHOOL_ADMIN` → `/dashboard/colegio`
   - `COMITE_VALIDACION` → `/dashboard/admin/comite`
   - `COMITE_CONVIVENCIA` → `/dashboard/colegio/comite`
-  - default (incl. `PARENT`) → `/mis-reportes` **explícito y comentado** (landing del padre no cambia; seguimiento futuro lo unifica con `/dashboard/padre`)
-- **Alternativas descartadas**: (a) importar `homeForRole` — arrastra edge deps; (b) parchear las 3 copias sin fuente única — reintroduce el bug de omisión (candado 22 v5, es la causa raíz); (c) cambiar el default a `/dashboard/padre` — cambia el landing del padre mientras Jelkin lo prueba (Decisión B lo prohíbe).
+  - `PARENT` → `/dashboard/padre` **explícito** (Decisión A — cierra deuda A-54/SPEC-317)
+  - default (rol **desconocido/futuro**) → `/mis-reportes` **fallback neutro que NO dispara rebote** (evita loop; misma lección que D-99: un rol sin piso propio cae en un piso que no re-dispara un guard)
+- **Alternativas descartadas**: (a) importar `homeForRole` — arrastra edge deps + código muerto (proxy.ts fuera del runtime, confirmado por Fábrica); (b) parchear las 3 copias sin fuente única — reintroduce el bug de omisión (candado 22 v5, causa raíz); (c) **default (incl. PARENT) → /mis-reportes** (Decisión B previa) — revertida por el CEO a favor de A.
 
 ## D-2 · Callsites que NO son la fuente única (quedan locales)
 
 - `src/app/dashboard/admin/operadores/page.tsx:5` `homeParaRol` (nombre colisiona, cuidado): es el destino de **acceso-denegado al módulo operadores**, no el home del rol. Semántica distinta → queda local, con comentario. (Considerar renombrar el local a `homeAccesoDenegado` para evitar confusión de nombre con la fuente única — decisión menor en tasks.)
 - `src/components/modules/NavHeader.tsx:18` `destinoLogo`: destino del click en el logo, contextual (público vs autenticado), ya maneja `COMITE_CONVIVENCIA` correcto. Queda local.
 
-## D-3 · Rebote de `/mis-reportes` para el comité
+## D-3 · Rebote de `/mis-reportes` — lista explícita, NO derivada del home (crítico bajo A)
 
-- **Decisión**: en `mis-reportes/page.tsx`, el bloque de desvío por rol (`:42-56`) usa la fuente única: si `homeParaRol(rol)` no es `/mis-reportes`, hace `router.push(homeParaRol(rol))`. Así cualquier rol no-padre (incluido `COMITE_CONVIVENCIA`) rebota, sin listar roles a mano.
-- **Rationale**: elimina la tercera lista divergente; el rebote se deriva de la misma fuente.
+- **Decisión**: en `mis-reportes/page.tsx`, el desvío se mantiene por **lista explícita de roles con panel propio** (`ROLES_CON_PANEL_PROPIO = ["ADMIN","OPERADOR","COMITE_VALIDACION","SCHOOL_ADMIN","COMITE_CONVIVENCIA"]`). Si `user.rol` está en la lista → `router.push(homeParaRol(user.rol))`. PARENT (y cualquier rol no listado) **NO rebota**: ve su lista de reportes.
+- **Separación clave**: la **condición** (quién rebota) es la lista explícita; el **destino** (a dónde) usa `homeParaRol(rol)` (consistencia — OPERADOR→/dashboard/admin).
+- **Por qué NO derivar del home (bug evitado)**: bajo Decisión A, `homeParaRol(PARENT)=/dashboard/padre ≠ /mis-reportes`. La lógica ingenua `if (homeParaRol(rol) !== rutaActual) rebota` expulsaría al padre de su propia `/mis-reportes` **y** loopearía a un rol desconocido (cuyo default ES /mis-reportes). Cazado por Fábrica en el PARA; la lista explícita lo neutraliza.
+- **Rationale**: `/mis-reportes` es una página **legítima del padre** (su lista de reportes, la abre desde el menú). El rebote es solo para roles que no deben verla. Es un guard semánticamente distinto de la fuente única de landing — como el fallback de `operadores/page.tsx`.
 
 ## D-4 · Acceso por email del comité: reusar `/activar` (rol-agnóstico)
 

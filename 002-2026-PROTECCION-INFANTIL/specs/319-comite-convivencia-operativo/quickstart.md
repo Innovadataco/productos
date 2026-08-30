@@ -11,7 +11,7 @@ Guía de validación end-to-end. La evidencia §6 se ejerce **en producción con
 2. **Cambio de clave del comité** (cuenta que debe cambiarla) → tras definirla, aterriza en `/dashboard/colegio/comite`.
 3. **`/mis-reportes` a mano** con la cuenta del comité → **rebota** a su panel, sin `ErrorState`.
 4. **OPERADOR**: login y post-cambio-de-clave aterrizan en el **mismo** destino (`/dashboard/admin`).
-5. **PARENT**: login sigue aterrizando en `/mis-reportes` (cero regresión · Decisión B).
+5. **PARENT (Decisión A · evidencia dura)**: login aterriza en `/dashboard/padre`; y el padre abre `/mis-reportes` desde su menú y ve su lista **sin rebote**. Ambas capturas son obligatorias para el CUMPLE (es lo que SPEC-317 no probó).
 6. **Header del comité** (§2.6): no ofrece "Mi panel"/"Círculo de Confianza"/"Mis reportes".
 - Tests: `homeParaRol` unit (todos los roles + default), y los tests de los 3 consumidores que tocás (candado 24 v2).
 

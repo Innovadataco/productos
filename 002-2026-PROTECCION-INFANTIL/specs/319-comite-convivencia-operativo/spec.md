@@ -26,7 +26,8 @@ La cuenta compartida del Comité de Convivencia inicia sesión (o cambia su clav
 2. **Given** la cuenta del comité recién creada (debe cambiar la clave), **When** define su nueva clave, **Then** aterriza en `/dashboard/colegio/comite`, no en `/mis-reportes`.
 3. **Given** la cuenta del comité autenticada, **When** navega manualmente a `/mis-reportes`, **Then** el sistema la rebota a `/dashboard/colegio/comite` sin mostrar el `ErrorState` del padre.
 4. **Given** un OPERADOR, **When** inicia sesión y cuando cambia su clave, **Then** aterriza en el **mismo** destino por ambos caminos (hoy se contradicen: `/dashboard/admin/operadores` vs `/dashboard/admin`).
-5. **Given** un PARENT, **When** inicia sesión, **Then** aterriza en `/mis-reportes` **igual que hoy** — cero cambio en el landing del padre (Decisión B).
+5. **Given** un PARENT, **When** inicia sesión, **Then** aterriza en `/dashboard/padre` (Decisión A — cierra la deuda A-54/SPEC-317: el landing del padre nunca se movió porque `homeForRole` estaba fuera del runtime).
+6. **Given** un PARENT, **When** abre `/mis-reportes` desde su menú, **Then** ve su lista de reportes **sin rebote** — `/mis-reportes` sigue siendo su página legítima; solo cambia su landing por defecto.
 
 ---
 
@@ -110,9 +111,9 @@ El header deja de ofrecerle al comité opciones de padre ("Mi panel", "Círculo 
 
 ### Edge Cases
 
-- **Rol desconocido / futuro en la fuente única**: un rol no mapeado cae al default `/mis-reportes` (comportamiento conservador actual preservado). Documentado como decisión, no como olvido.
-- **PARENT y la fuente única**: PARENT cae al default `/mis-reportes` de forma **explícita y comentada** — el landing del padre NO cambia en este PR (ver Assumptions · Decisión B).
-- **Comité llega a `/mis-reportes` por un link viejo o el header**: la propia pantalla lo rebota a su panel.
+- **Rol desconocido / futuro en la fuente única**: un rol no mapeado cae al default `/mis-reportes` (fallback neutro que no dispara rebote, evitando loops). Documentado como decisión, no como olvido.
+- **PARENT y la fuente única (Decisión A)**: PARENT mapea a `/dashboard/padre` (landing). Pero PARENT NO está en la lista de rebote de `/mis-reportes` → entra a su lista de reportes sin ser expulsado. Dos comportamientos distintos que no deben confundirse.
+- **Comité llega a `/mis-reportes` por un link viejo o el header**: la propia pantalla lo rebota a su panel (COMITE_CONVIVENCIA está en la lista de rebote).
 - **Reenviar invitación cuando la cuenta ya activó su clave**: definir comportamiento en plan (reenviar re-habilita activación vs. informar que ya está activa) — sin exponer secreto en ningún caso.
 - **Cerrar caso sin integrantes activos**: no se permite firmar en el vacío; el sistema lo informa.
 
@@ -123,7 +124,8 @@ El header deja de ofrecerle al comité opciones de padre ("Mi panel", "Círculo 
 **§2.1 · Fuente única rol→home (P1)**
 - **FR-001**: El sistema DEBE tener **una sola fuente de verdad** para el destino de inicio por rol, consumida por los tres puntos de landing del cliente (login, cambio de clave, y el desvío de `/mis-reportes`).
 - **FR-002**: La fuente única DEBE mapear explícitamente los roles no-padre a su home canónica, coherente con `homeForRole` del middleware: `COMITE_CONVIVENCIA`→`/dashboard/colegio/comite`, `OPERADOR`→`/dashboard/admin`, `ADMIN`→`/dashboard/admin`, `SCHOOL_ADMIN`→`/dashboard/colegio`, `COMITE_VALIDACION`→`/dashboard/admin/comite`.
-- **FR-003**: `PARENT` (y cualquier rol no mapeado) DEBE caer al default `/mis-reportes` de forma **explícita y comentada** — el landing del padre no cambia en este SPEC (Decisión B).
+- **FR-003**: `PARENT` DEBE mapear a `/dashboard/padre` de forma **explícita** (Decisión A — cierra la deuda A-54/SPEC-317). Cualquier rol **no mapeado** DEBE caer al default `/mis-reportes` como fallback neutro (evita loop de rebote).
+- **FR-003b**: El desvío de `/mis-reportes` DEBE seguir siendo por **lista explícita de roles con panel propio** (`ADMIN`, `OPERADOR`, `COMITE_VALIDACION`, `SCHOOL_ADMIN`, `COMITE_CONVIVENCIA`), **excluyendo `PARENT`** — el padre entra a `/mis-reportes` sin rebote (es su página legítima). El desvío NO se deriva de comparar el home con la ruta actual (esa lógica rebotaría al padre fuera de su propia página).
 - **FR-004**: El comité DEBE aterrizar en `/dashboard/colegio/comite` tanto por login directo como tras cambiar la clave temporal.
 - **FR-005**: `/mis-reportes` DEBE rebotar a su panel a cualquier rol que no sea consumidor final de esa pantalla si llega ahí (incluye `COMITE_CONVIVENCIA`), sin pintar el error.
 - **FR-006**: La contradicción de `OPERADOR` DEBE quedar resuelta a un único destino (`/dashboard/admin`, coherente con `homeForRole`).
@@ -167,7 +169,7 @@ El header deja de ofrecerle al comité opciones de padre ("Mi panel", "Círculo 
 
 - **SC-001**: El 100% de los inicios de sesión de la cuenta del comité (login directo y tras cambiar la clave) terminan en `/dashboard/colegio/comite`; 0% terminan en `/mis-reportes` con error.
 - **SC-002**: El OPERADOR aterriza en el mismo destino por ambos caminos (login y post-cambio de clave) — 0 contradicciones.
-- **SC-003**: El PARENT sigue aterrizando donde aterriza hoy (`/mis-reportes`) — 0 regresiones en el landing del padre.
+- **SC-003**: El PARENT aterriza en `/dashboard/padre` al iniciar sesión (Decisión A), y sigue pudiendo abrir `/mis-reportes` desde su menú **sin rebote** — 0 loops, 0 padres expulsados de su lista de reportes.
 - **SC-004**: Al crear la cuenta del comité, 0 contraseñas aparecen en pantalla; el acceso llega por email.
 - **SC-005**: Un caso no puede cerrarse sin registrar un integrante firmante activo.
 - **SC-006**: La pantalla de integrantes muestra contador, estado por fila y fecha con hora en el 100% de las filas.
@@ -175,7 +177,7 @@ El header deja de ofrecerle al comité opciones de padre ("Mi panel", "Círculo 
 
 ## Assumptions
 
-- **Decisión B (aprobada por Fábrica PI-1, 2026-08-30 17:30 COT)**: la fuente única preserva el landing del padre en `/mis-reportes`. NO se cambia a `/dashboard/padre` en este SPEC porque **Jelkin está probando el rol padre ahora mismo**, y un cambio de navegación del padre fuera del alcance del bug del comité es exactamente el tipo de regresión que cuesta vueltas. La coherencia total del padre (`/mis-reportes` → `/dashboard/padre`, alineada con SPEC-317) queda para un SPEC de seguimiento con su propia evidencia; el default de la fuente única lo deja documentado, no como olvido.
+- **Decisión A (CEO, revierte la B previa; comunicada por Fábrica PI-1 2026-08-30 19:14 COT)**: la fuente única manda `PARENT → /dashboard/padre`, cerrando la deuda A-54/SPEC-317. Fundamento: `homeForRole` (proxy.ts) está fuera del runtime del middleware, así que SPEC-317 nunca movió el landing del padre — hoy el padre aterriza en la pantalla vieja `/mis-reportes`. La fuente única del cliente es el runtime real, y es el lugar exacto para cerrarlo. El riesgo de "cambiar el landing mientras Jelkin prueba" lo maneja el CEO por **cuándo despliega**, no por lo que se construye. **Riesgo introducido por A y neutralizado**: el rebote de `/mis-reportes` NO se deriva de comparar el home con la ruta actual (eso expulsaría al padre de su propia lista de reportes y loopearía a roles desconocidos); se mantiene como lista explícita de roles con panel propio que excluye a PARENT (FR-003b). **Evidencia §6 obligatoria**: incluir login de un padre real aterrizando en `/dashboard/padre` y el padre entrando a `/mis-reportes` desde su menú sin rebote — es justo lo que SPEC-317 no probó.
 - **`homeForRole` (proxy.ts) es la referencia del destino correcto**, no la fuente que se edita como origen. La fuente única del cliente es la que decide el landing en runtime (el brief indica que `homeForRole` quedó fuera del runtime tras SPEC-287); se mantienen coherentes.
 - **La cuenta del comité sigue compartida** (decisión de Jelkin): los integrantes no son usuarios; el acceso individual está descartado. La firma al cerrar es la trazabilidad que lo reemplaza.
 - **Se reusa el mecanismo de invitación del rector** (evento `colegio.invitacion.enviada`, token de invitación, ruta `/activar`) — no se crea un flujo paralelo. Se confirmará en el plan si `/activar` acepta el rol del comité o requiere un ajuste mínimo.
