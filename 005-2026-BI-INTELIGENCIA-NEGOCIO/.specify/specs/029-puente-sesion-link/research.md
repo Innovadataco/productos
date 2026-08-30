@@ -134,6 +134,37 @@ Fase 1.5. Cuando expira, el guard vuelve a disparar el flow completo PI→BI. Si
 ### D-029.5 · Emisor firma con `role: string`, no `roles: string[]`
 Coincide con `sesionDeRequest` línea 27: `typeof payload.role === "string"`. Si PI emite `roles: [...]`, sesionDeRequest devuelve `null` y el guard redirige otra vez → loop infinito. Documentado explícito en Brief §3-BI para que PI use `role` singular.
 
+### D-029.6 · `x-invoke-path` NO llega al Server Component · limitación conocida (candado 15)
+
+Hipótesis inicial del plan.md: usar `h.get("x-invoke-path")` / `h.get("x-forwarded-uri")` en `dashboard/layout.tsx` para reconstruir la ruta original y preservarla en `returnTo` del handoff a PI.
+
+**Verificación empírica (2026-08-29 21:2x COT) con `next build && next start`:**
+
+Log temporal en el layout enumeró los headers reales que llegan al Server Component:
+```
+{
+  "host": "localhost:3011",
+  "user-agent": "curl/8.7.1",
+  "accept": "*/*",
+  "x-forwarded-host": "localhost:3011",
+  "x-forwarded-port": "3011",
+  "x-forwarded-proto": "http",
+  "x-forwarded-for": "::1"
+}
+```
+
+Ni `x-invoke-path` ni `x-forwarded-uri` aparecen — incluso cuando se envían explícitamente en el request de curl, Next.js 15 los descarta antes de exponer `headers()` al Server Component. Fábrica BI-2 lo intuyó (no es API pública de Next.js) y el candado 15 confirmó su intuición.
+
+**Consecuencia aceptada:** `returnTo` siempre apunta a `/dashboard` fijo. No se preserva la sub-ruta si Jelkin abre una URL específica bajo `/dashboard/*`.
+
+**No rompe nada:**
+- El puente de sesión funciona igual (la validación del JWT y el set-cookie son independientes de la sub-ruta).
+- La única sub-ruta activa hoy es `/dashboard` mismo (SPEC-024 + SPEC-025). Cuando SPEC-025/027/028 agreguen sub-rutas y aparezca la necesidad real de preservarlas, se evalúa alternativa:
+  - Middleware `middleware.ts` con `NextRequest.nextUrl.pathname` (SÍ está disponible en middleware).
+  - Leer `Referer` cuando esté presente (no siempre lo está en navegación directa por URL bar).
+
+Documentado como TODO explícito en el comentario del layout y en `tasks.md` (fase F3).
+
 ---
 
 ## Fuentes consultadas

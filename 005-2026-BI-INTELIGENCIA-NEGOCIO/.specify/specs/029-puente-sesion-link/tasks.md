@@ -13,7 +13,7 @@
 ## F3 · Guard SPEC-024
 - [x] SPEC-024 mergeada al worktree (merge de `origin/work/bi-SPEC-024-layout-sidebar`)
 - [x] Modificar `src/app/dashboard/layout.tsx`: reemplazar `redirect("/login")` por `redirect(\`${PI_BASE_URL}/api/auth/link-bi?returnTo=<absoluteUrl>\`)`
-- [x] Uso de `headers()` + `x-invoke-path` / `x-forwarded-uri` con fallback a `/dashboard`
+- [x] `x-invoke-path` / `x-forwarded-uri` verificados empíricamente NO llegan (candado 15 · D-029.6): `returnTo` fijado a `/dashboard` con comentario explícito · limitación conocida documentada
 
 ## F4 · Documentación `.env.bi.example`
 - [x] Añadir `BI_BASE_URL` con comentario explicando su uso
