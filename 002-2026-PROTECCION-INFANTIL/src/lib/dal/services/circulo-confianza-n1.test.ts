@@ -45,7 +45,7 @@ vi.mock("@/lib/prisma", async (importOriginal) => {
 });
 
 vi.mock("@/lib/email", () => ({
-    enviarAlertaCirculoConfianza: vi.fn().mockResolvedValue(undefined),
+    enviarAlertaCirculoConfianzaEnriquecida: vi.fn().mockResolvedValue(undefined),
 }));
 
 afterAll(async () => await unmockPrisma());
@@ -54,7 +54,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { listarContactos, agregarContacto, obtenerDetalleContacto, notificarCambioCirculoSiCorresponde } from "./circulo-confianza";
 import { crearUsuario, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
-import { enviarAlertaCirculoConfianza } from "@/lib/email";
+import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 function reiniciarConteo() {
@@ -211,7 +211,7 @@ describe("SPEC-135 · notificarCambioCirculoSiCorresponde sin N+1 (FR-004)", () 
                 { clave: "circulo.notificaciones.cooldown_horas", valor: "24", tipo: "INTEGER", categoria: "EMAIL", esPublico: false },
             ],
         });
-        vi.mocked(enviarAlertaCirculoConfianza).mockClear();
+        vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mockClear();
     });
 
     it("UNA sola query de reportes para dos usuarios notificados (mismo resultado: ambos reciben el email)", async () => {
@@ -225,11 +225,13 @@ describe("SPEC-135 · notificarCambioCirculoSiCorresponde sin N+1 (FR-004)", () 
         reiniciarConteo();
         await notificarCambioCirculoSiCorresponde(reporte.id);
 
-        // El conteo de novedades por usuario era 1 query POR usuario (N+1); ahora es UNA global
+        // El conteo de reportes visibles por identificador es UNA query global (no N+1 por usuario).
         expect(conteo.reporteFindMany, "una sola query de reportes para todos los usuarios candidatos").toBe(1);
         // Mismo resultado: ambos usuarios notificados y su timestamp actualizado
-        expect(enviarAlertaCirculoConfianza).toHaveBeenCalledTimes(2);
-        const destinos = vi.mocked(enviarAlertaCirculoConfianza).mock.calls.map((c) => c[0]).sort();
+        expect(enviarAlertaCirculoConfianzaEnriquecida).toHaveBeenCalledTimes(2);
+        const destinos = vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mock.calls
+            .map((c) => c[0].destinatario.email)
+            .sort();
         expect(destinos).toEqual([usuario1.email, usuario2.email].sort());
         for (const u of [usuario1, usuario2]) {
             const actualizado = await prisma.usuario.findUnique({ where: { id: u.id }, select: { ultimaNotificacionCirculoEn: true } });

@@ -17,6 +17,7 @@ import { resetDatabase } from "./test-utils";
 import {
     enviarAlertaRevision,
     enviarAlertaScoreCritico,
+    enviarAlertaCirculoConfianzaEnriquecida,
     enviarAvisoReporteNuevoColegio,
     enviarAvisoUmbralCursoColegio,
     enviarAvisoEstudianteRepetidoColegio,
@@ -45,7 +46,7 @@ function ultimaLlamada() {
         evento: string;
         sujetoTipo?: string;
         sujetoId?: string;
-        destinatarios: Array<{ email?: string; variables: Record<string, unknown> }>;
+        destinatarios: Array<{ email?: string; usuarioId?: string; variables: Record<string, unknown> }>;
     }) : null;
 }
 
@@ -173,6 +174,108 @@ describe("enviarAlertaScoreCritico", () => {
             plataformaId: plataforma.id,
             score: 95,
             nivelRiesgo: "CRITICO",
+        });
+
+        expect(motor.programar).not.toHaveBeenCalled();
+    });
+});
+
+describe("enviarAlertaCirculoConfianzaEnriquecida", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        vi.spyOn(motor, "programar").mockResolvedValue({ programadas: 1, canceladasPorReemplazo: 0 });
+    });
+
+    it("programa el evento enriquecido con variables contextuales y sujeto Reporte", async () => {
+        await enviarAlertaCirculoConfianzaEnriquecida({
+            destinatario: { email: "padre@example.com" },
+            reporteId: "reporte-308",
+            nombreContacto: "hija Ana",
+            identificador: "+57300999999",
+            plataforma: "WhatsApp",
+            categoria: "SOLICITUD_ENCUENTRO",
+            totalReportes: 2,
+            expedienteId: "exp-308",
+        });
+
+        expect(motor.programar).toHaveBeenCalledOnce();
+        const llamada = ultimaLlamada()!;
+        expect(llamada.evento).toBe("padre.circulo_confianza.reporte_enriquecido");
+        expect(llamada.sujetoTipo).toBe("Reporte");
+        expect(llamada.sujetoId).toBe("reporte-308");
+        expect(llamada.destinatarios).toHaveLength(1);
+        expect(llamada.destinatarios[0].email).toBe("padre@example.com");
+
+        const vars = llamada.destinatarios[0].variables;
+        expect(vars.asunto).toContain("hija Ana");
+        expect(vars.cuerpo).toContain("+57300999999");
+        expect(vars.cuerpo).toContain("WhatsApp");
+        expect(vars.cuerpo).toContain("Solicitud de encuentro");
+        expect(vars.cuerpo).toContain("2 reportes registrados");
+        expect(vars.urlExpediente).toContain("/dashboard/padre/expedientes/exp-308");
+        expect(vars.urlPanel).toContain("/dashboard/circulo-confianza");
+    });
+
+    it("resuelve email por usuarioId cuando no se envía email", async () => {
+        const usuario = await prisma.usuario.create({
+            data: {
+                email: "padre-id@example.com",
+                passwordHash: "h",
+                rol: "PARENT",
+                estado: "activo",
+            },
+        });
+
+        await enviarAlertaCirculoConfianzaEnriquecida({
+            destinatario: { usuarioId: usuario.id },
+            reporteId: "reporte-308",
+            nombreContacto: "hija Ana",
+            identificador: "+57300999999",
+            plataforma: "WhatsApp",
+            categoria: "SOLICITUD_ENCUENTRO",
+            totalReportes: 1,
+        });
+
+        expect(motor.programar).toHaveBeenCalledOnce();
+        expect(ultimaLlamada()!.destinatarios[0].usuarioId).toBe(usuario.id);
+    });
+
+    it("falla closed cuando el motor no encuentra reglas activas", async () => {
+        vi.spyOn(motor, "programar").mockResolvedValue({ programadas: 0, canceladasPorReemplazo: 0 });
+
+        await expect(
+            enviarAlertaCirculoConfianzaEnriquecida({
+                destinatario: { email: "padre@example.com" },
+                reporteId: "reporte-308",
+                nombreContacto: "hija Ana",
+                identificador: "+57300999999",
+                plataforma: "WhatsApp",
+                categoria: "SOLICITUD_ENCUENTRO",
+                totalReportes: 1,
+            })
+        ).rejects.toThrow("Sin reglas activas para padre.circulo_confianza.reporte_enriquecido");
+    });
+
+    it("no llama al motor cuando circulo.notificaciones.enabled es false", async () => {
+        await prisma.parametroSistema.create({
+            data: {
+                clave: "circulo.notificaciones.enabled",
+                valor: "false",
+                tipo: "BOOLEAN",
+                categoria: "EMAIL",
+                esPublico: false,
+                descripcion: "",
+            },
+        });
+
+        await enviarAlertaCirculoConfianzaEnriquecida({
+            destinatario: { email: "padre@example.com" },
+            reporteId: "reporte-308",
+            nombreContacto: "hija Ana",
+            identificador: "+57300999999",
+            plataforma: "WhatsApp",
+            categoria: "SOLICITUD_ENCUENTRO",
+            totalReportes: 1,
         });
 
         expect(motor.programar).not.toHaveBeenCalled();
