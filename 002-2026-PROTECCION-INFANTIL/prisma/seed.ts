@@ -870,6 +870,12 @@ async function seedEventosEmailMigrados() {
                 "Tienes {{novedadTexto}} en tu Círculo de Confianza. Ingresa para revisar:\n\n{{urlPanel}}",
         },
         {
+            clave: "padre.circulo_confianza.reporte_enriquecido.email",
+            asunto: "{{asunto}}",
+            cuerpoMarkdown:
+                "{{cuerpo}}\n\nIngresa a tu panel para ver el contexto completo:\n{{urlPanel}}",
+        },
+        {
             clave: "colegio.reporte_nuevo.email",
             asunto: "Te avisamos: tienes un reporte nuevo para revisar",
             cuerpoMarkdown:
@@ -939,6 +945,21 @@ async function seedEventosEmailMigrados() {
         });
     }
 
+    // SPEC-308 (A-50): plantilla IN_APP para la alerta enriquecida del círculo.
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: "padre.circulo_confianza.reporte_enriquecido.in_app" },
+        update: {},
+        create: {
+            clave: "padre.circulo_confianza.reporte_enriquecido.in_app",
+            canal: "IN_APP",
+            asunto: null,
+            cuerpoMarkdown:
+                "Alerta sobre {{nombreContacto}}: {{textoReportes}} en {{plataforma}}. Toca para ver el expediente.",
+            variablesSchema: { type: "object" } as Prisma.InputJsonValue,
+            activa: true,
+        },
+    });
+
     // Mapeo evento → (plantilla, rol representativo, obligatoria).
     // El `rol` es metadata para el panel admin; el motor no filtra por él en programar().
     // `obligatoria=true`: auth/credenciales/bienvenida/infra/deriva (no se permite opt-out).
@@ -953,6 +974,7 @@ async function seedEventosEmailMigrados() {
         { evento: "reporte.revision.requerida", plantillaClave: "reporte.revision.requerida.email", rol: "ADMIN", obligatoria: false },
         { evento: "reporte.score_critico", plantillaClave: "reporte.score_critico.email", rol: "ADMIN", obligatoria: false },
         { evento: "padre.circulo_confianza.pendientes", plantillaClave: "padre.circulo_confianza.pendientes.email", rol: "PARENT", obligatoria: false },
+        { evento: "padre.circulo_confianza.reporte_enriquecido", plantillaClave: "padre.circulo_confianza.reporte_enriquecido.email", rol: "PARENT", obligatoria: false },
         { evento: "colegio.reporte_nuevo", plantillaClave: "colegio.reporte_nuevo.email", rol: "SCHOOL_ADMIN", obligatoria: false },
         { evento: "colegio.curso.umbral", plantillaClave: "colegio.curso.umbral.email", rol: "SCHOOL_ADMIN", obligatoria: false },
         { evento: "colegio.estudiante.repetido", plantillaClave: "colegio.estudiante.repetido.email", rol: "SCHOOL_ADMIN", obligatoria: false },
@@ -974,6 +996,16 @@ async function seedEventosEmailMigrados() {
             obligatoria: r.obligatoria,
         });
     }
+
+    // SPEC-308 (A-50): regla IN_APP asociada a la alerta enriquecida del círculo.
+    await upsertNotificacionRegla({
+        evento: "padre.circulo_confianza.reporte_enriquecido",
+        rol: "PARENT",
+        canal: "IN_APP",
+        plantillaClave: "padre.circulo_confianza.reporte_enriquecido.in_app",
+        offset: "+0m",
+        obligatoria: false,
+    });
 
     console.log(`[SEED] ${plantillas.length} plantillas + ${reglas.length} reglas de email migradas listas (SPEC-296)`);
 }

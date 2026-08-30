@@ -17,6 +17,7 @@
 import { prisma } from "./prisma.ts";
 import { getParametroSistema } from "./parametros.ts";
 import { programar } from "./notificaciones/motor.ts";
+import { renderizarEmailReporteCirculo } from "./notificaciones/plantillas/reporte-circulo.ts";
 import type { FilaDeriva } from "./motor/deriva.ts";
 
 async function getAdminEmails(): Promise<string[]> {
@@ -214,6 +215,70 @@ export async function enviarAlertaCirculoConfianza(email: string, cantidad: numb
             },
         ],
     });
+}
+
+/**
+ * SPEC-308 (A-50): alerta enriquecida del Círculo de Confianza con contexto real
+ * (contacto, identificador, plataforma, categoría, total reportes, link al
+ * expediente). El renderizado vive en `reporte-circulo.ts`; aquí solo se coordina
+ * con `programar()` del motor. Fail-closed si no hay reglas activas.
+ */
+export async function enviarAlertaCirculoConfianzaEnriquecida(payload: {
+    destinatario: { usuarioId?: string; email?: string };
+    reporteId: string;
+    nombreContacto: string;
+    identificador: string;
+    plataforma: string;
+    categoria: string;
+    totalReportes: number;
+    expedienteId?: string | null;
+}): Promise<void> {
+    if (!(await alertasHabilitadas("circulo.notificaciones.enabled"))) return;
+
+    const urlExpediente = payload.expedienteId
+        ? `${baseUrl()}/dashboard/padre/expedientes/${payload.expedienteId}`
+        : `${baseUrl()}/dashboard/circulo-confianza`;
+
+    const { asunto, cuerpo } = renderizarEmailReporteCirculo({
+        nombreContacto: payload.nombreContacto,
+        identificador: payload.identificador,
+        plataforma: payload.plataforma,
+        categoria: payload.categoria,
+        totalReportes: payload.totalReportes,
+        urlExpediente,
+    });
+
+    const totalReportes =
+        Number.isFinite(payload.totalReportes) && payload.totalReportes >= 0
+            ? Math.floor(payload.totalReportes)
+            : 0;
+
+    const result = await programar({
+        evento: "padre.circulo_confianza.reporte_enriquecido",
+        sujetoTipo: "Reporte",
+        sujetoId: payload.reporteId,
+        destinatarios: [
+            {
+                ...payload.destinatario,
+                variables: {
+                    asunto,
+                    cuerpo,
+                    nombreContacto: payload.nombreContacto,
+                    identificador: payload.identificador,
+                    plataforma: payload.plataforma,
+                    categoria: payload.categoria,
+                    totalReportes,
+                    textoReportes: totalReportes === 1 ? "1 reporte registrado" : `${totalReportes} reportes registrados`,
+                    urlExpediente,
+                    urlPanel: `${baseUrl()}/dashboard/circulo-confianza`,
+                },
+            },
+        ],
+    });
+
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para padre.circulo_confianza.reporte_enriquecido");
+    }
 }
 
 /**

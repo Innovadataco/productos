@@ -37,6 +37,7 @@ const EVENTOS_MIGRADOS = [
     "reporte.revision.requerida",
     "reporte.score_critico",
     "padre.circulo_confianza.pendientes",
+    "padre.circulo_confianza.reporte_enriquecido",
     "colegio.reporte_nuevo",
     "colegio.curso.umbral",
     "colegio.estudiante.repetido",
