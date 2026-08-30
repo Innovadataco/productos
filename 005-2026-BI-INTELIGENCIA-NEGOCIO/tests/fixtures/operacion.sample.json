@@ -1,0 +1,76 @@
+{
+  "titulo": "Operación · Protección Infantil",
+  "actualizado": "30-08-2026 16:05",
+  "commitProduccion": "90b08980",
+  "notaPie": "Producción 90b08980 · BI congelado · Fechas en hora de Colombia · Tablero mantenido por el CEO.",
+
+  "equipos": [
+    {
+      "equipo": "Fábrica PI",
+      "personas": [
+        { "nombre": "Fábrica PI-1", "estado": "en_proceso", "nota": "audita F-06" },
+        { "nombre": "Dev PI-1", "estado": "en_proceso", "nota": "corrige F-06" },
+        { "nombre": "Dev PI-2", "estado": "libre" },
+        { "nombre": "Dev PI-3", "estado": "libre" },
+        { "nombre": "Kimi", "estado": "libre" }
+      ]
+    },
+    {
+      "equipo": "Fábrica BI",
+      "personas": [
+        { "nombre": "Fábrica BI-2", "estado": "ocupado", "nota": "congelada" },
+        { "nombre": "Dev BI-1", "estado": "ocupado" },
+        { "nombre": "Dev BI-2", "estado": "ocupado" }
+      ]
+    },
+    {
+      "equipo": "Calidad",
+      "personas": [
+        { "nombre": "Calidad PI", "estado": "sin_sesion", "nota": "sesión cerrada · R-03 sin terminar" }
+      ]
+    }
+  ],
+
+  "funcionalidades": {
+    "resumen": "17 · 14 desplegadas · 5 validadas · 0 aceptadas",
+    "alerta": "F-07, F-08 y F-09 están en producción y nadie las abrió todavía.",
+    "filas": [
+      { "id": "F-01", "nombre": "Correos sin retención nocturna", "brief": "A-53", "instructivo": "212", "spec": "312", "inicio": "29-08-2026 21:20", "estimada": "30-08-2026 06:00", "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Cumple", "tuOk": "pendiente" },
+      { "id": "F-02", "nombre": "Reset de contraseña sin bucle", "brief": "A-53", "instructivo": "215", "spec": "315", "inicio": "30-08-2026 00:29", "estimada": "30-08-2026 06:00", "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Cumple", "tuOk": "pendiente" },
+      { "id": "F-03", "nombre": "Reportar con cuenta interna", "brief": "A-53", "instructivo": "214", "spec": "314", "inicio": "29-08-2026 22:54", "estimada": "30-08-2026 06:00", "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Cumple", "tuOk": "pendiente" },
+      { "id": "F-04", "nombre": "Registro de colegio", "brief": null, "instructivo": null, "spec": null, "inicio": null, "estimada": null, "fin": "30-08-2026 14:20", "desplegado": true, "calidad": "Cumple", "tuOk": "pendiente" },
+      { "id": "F-05", "nombre": "Cobros y suscripciones", "brief": "A-22", "instructivo": "157", "spec": "254-260", "inicio": "26-08-2026 00:00", "estimada": null, "fin": "30-08-2026 15:05", "desplegado": true, "calidad": "Cumple", "tuOk": "pendiente" },
+      { "id": "F-06", "nombre": "Unificar el área del padre", "brief": "A-54", "instructivo": "217", "spec": "317", "inicio": "30-08-2026 01:48", "estimada": "30-08-2026 04:00", "fin": null, "desplegado": false, "calidad": null, "tuOk": null },
+      { "id": "F-07", "nombre": "Sugerencia proactiva del padre", "brief": "A-50", "instructivo": null, "spec": "307", "inicio": "29-08-2026 18:00", "estimada": null, "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Sin probar", "tuOk": null },
+      { "id": "F-08", "nombre": "Home proactivo del padre", "brief": "A-50", "instructivo": null, "spec": "309", "inicio": "29-08-2026 18:00", "estimada": null, "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Sin probar", "tuOk": null },
+      { "id": "F-09", "nombre": "Notificación enriquecida del círculo", "brief": "A-50", "instructivo": null, "spec": "308", "inicio": "29-08-2026 18:00", "estimada": null, "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Sin probar", "tuOk": null },
+      { "id": "F-10", "nombre": "Semáforo del círculo", "brief": "A-50", "instructivo": null, "spec": "305", "inicio": "29-08-2026 13:00", "estimada": null, "fin": "29-08-2026 20:00", "desplegado": true, "calidad": "Parcial", "tuOk": null },
+      { "id": "F-11", "nombre": "Timeline de eventos del círculo", "brief": "A-50", "instructivo": null, "spec": "306", "inicio": "29-08-2026 13:00", "estimada": null, "fin": "29-08-2026 22:00", "desplegado": true, "calidad": "Parcial", "tuOk": null },
+      { "id": "F-12", "nombre": "Ficha del colegio · Fase 1", "brief": "A-23", "instructivo": "209", "spec": "303", "inicio": "29-08-2026 17:18", "estimada": null, "fin": "29-08-2026 20:54", "desplegado": true, "calidad": "Parcial", "tuOk": null },
+      { "id": "F-13", "nombre": "Ficha del colegio · Fase 2", "brief": "A-23", "instructivo": "210", "spec": "311", "inicio": "29-08-2026 21:00", "estimada": null, "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Parcial", "tuOk": null },
+      { "id": "F-14", "nombre": "Puente de sesión PI → BI", "brief": "A-52", "instructivo": "211", "spec": "310", "inicio": "29-08-2026 21:21", "estimada": null, "fin": "30-08-2026 12:07", "desplegado": true, "calidad": "Bloqueado", "tuOk": null },
+      { "id": "F-15", "nombre": "Modelo de ramas en documentación", "brief": null, "instructivo": "216", "spec": null, "inicio": "30-08-2026 01:20", "estimada": "30-08-2026 01:50", "fin": "30-08-2026 01:35", "desplegado": true, "calidad": null, "tuOk": "pendiente" },
+      { "id": "F-16", "nombre": "Página de perfil del padre", "brief": null, "instructivo": null, "spec": null, "inicio": null, "estimada": null, "fin": null, "desplegado": false, "calidad": null, "tuOk": null },
+      { "id": "F-17", "nombre": "Guardián del estado de specs", "brief": null, "instructivo": null, "spec": null, "inicio": null, "estimada": null, "fin": null, "desplegado": false, "calidad": null, "tuOk": null }
+    ]
+  },
+
+  "recorridos": {
+    "resumen": "Último informe 30-08-2026 15:05 · 68/93 · 73%",
+    "filas": [
+      { "id": "R-01", "nombre": "Un colegio se vuelve cliente", "avance": { "hechos": 10, "total": 10 }, "inicio": "30-08-2026 12:30", "estimada": null, "fin": "30-08-2026 14:20", "resultado": "Cumple", "estado": "Cerrado", "teNecesita": { "necesita": false } },
+      { "id": "R-02", "nombre": "El CEO administra los cobros", "avance": { "hechos": 5, "total": 8 }, "inicio": "30-08-2026 14:25", "estimada": "3 h", "fin": "30-08-2026 15:05", "resultado": "Cumple", "estado": "Cerrado", "teNecesita": { "necesita": true, "pasos": "entrá a Pagos → Planes, editá un plan y guardá", "critico": false } },
+      { "id": "R-03", "nombre": "Un reporte recorre su ciclo", "avance": { "hechos": 9, "total": 14 }, "inicio": "30-08-2026 15:10", "estimada": "3,5 h", "fin": null, "resultado": "Parcial", "estado": "Sin sesión", "teNecesita": { "necesita": false } },
+      { "id": "R-12", "nombre": "Rol Padre proactivo", "avance": { "hechos": 0, "total": 3 }, "inicio": null, "estimada": null, "fin": null, "resultado": "Sin probar", "estado": "Sin recorrido", "teNecesita": { "necesita": true, "pasos": "entrá con tu cuenta de padre a /dashboard/padre y mirá si aparece «Sugerencia del día»", "critico": false } },
+      { "id": "R-13", "nombre": "Reembolsos", "avance": { "hechos": 0, "total": 1 }, "inicio": null, "estimada": null, "fin": null, "resultado": "Sin probar", "estado": "Bloqueado", "teNecesita": { "necesita": true, "pasos": "requiere un pago real reembolsable", "critico": true } },
+      { "id": "R-04", "nombre": "Una familia usa el producto", "avance": { "hechos": 7, "total": 10 }, "inicio": "27-08-2026", "estimada": null, "fin": null, "resultado": "Parcial", "estado": "En espera", "teNecesita": { "necesita": false } },
+      { "id": "R-05", "nombre": "El rector opera su colegio", "avance": { "hechos": 10, "total": 10 }, "inicio": "27-08-2026", "estimada": null, "fin": "27-08-2026", "resultado": "Cumple", "estado": "Cerrado", "teNecesita": { "necesita": false } },
+      { "id": "R-06", "nombre": "El comité de validación", "avance": { "hechos": 3, "total": 5 }, "inicio": "27-08-2026", "estimada": null, "fin": null, "resultado": "Parcial", "estado": "En espera", "teNecesita": { "necesita": false } },
+      { "id": "R-07", "nombre": "El CEO vigila la operación", "avance": { "hechos": 5, "total": 10 }, "inicio": "27-08-2026", "estimada": null, "fin": null, "resultado": "Parcial", "estado": "En espera", "teNecesita": { "necesita": false } },
+      { "id": "R-08", "nombre": "Lo que ve un visitante", "avance": { "hechos": 5, "total": 5 }, "inicio": "27-08-2026", "estimada": null, "fin": "27-08-2026", "resultado": "Cumple", "estado": "Cerrado", "teNecesita": { "necesita": false } },
+      { "id": "R-09", "nombre": "Aislamiento entre colegios", "avance": { "hechos": 8, "total": 8 }, "inicio": "27-08-2026", "estimada": null, "fin": "27-08-2026", "resultado": "Cumple", "estado": "Cerrado", "teNecesita": { "necesita": false } },
+      { "id": "R-10", "nombre": "Auto-registro de colegio", "avance": { "hechos": 3, "total": 3 }, "inicio": "27-08-2026", "estimada": null, "fin": "27-08-2026", "resultado": "Cumple", "estado": "Cerrado", "teNecesita": { "necesita": false } },
+      { "id": "R-11", "nombre": "Padre freemium completo", "avance": { "hechos": 3, "total": 10 }, "inicio": "27-08-2026", "estimada": null, "fin": null, "resultado": "Parcial", "estado": "En espera", "teNecesita": { "necesita": false } }
+    ]
+  }
+}
