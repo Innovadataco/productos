@@ -1,17 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { RegistroForm } from "@/components/modules/RegistroForm";
 import { VerificacionForm } from "@/components/modules/VerificacionForm";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Alerta } from "@/components/ui/Alerta";
 
+// SPEC-314 (002-PI-214): destinos permitidos post-registro. Se restringe a rutas internas
+// que empiezan por "/" para evitar open redirect (regla defensiva).
+function destinoSeguro(returnTo: string | null): string {
+    if (!returnTo) return "/mis-reportes";
+    if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return "/mis-reportes";
+    return returnTo;
+}
+
+// SPEC-314 (002-PI-214): default export envuelve en Suspense porque `useSearchParams()`
+// requiere boundary durante prerender (Next.js 15+).
 export default function RegistroPage() {
+    return (
+        <Suspense fallback={null}>
+            <RegistroPageContent />
+        </Suspense>
+    );
+}
+
+function RegistroPageContent() {
     const { login } = useAuth();
     const router = useRouter();
+    // SPEC-314 (002-PI-214): soporta `?returnTo=<ruta>` para que el CTA B del ReporteWizard
+    // devuelva al usuario al formulario de reportar tras crear su cuenta PARENT.
+    const searchParams = useSearchParams();
+    const returnTo = destinoSeguro(searchParams.get("returnTo"));
     const [step, setStep] = useState<"email" | "verificar">("email");
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
@@ -64,7 +86,7 @@ export default function RegistroPage() {
             throw new Error(json?.error?.message || "Error al crear cuenta");
         }
         await login(data.email, data.password);
-        router.push("/mis-reportes");
+        router.push(returnTo);
     };
 
     return (

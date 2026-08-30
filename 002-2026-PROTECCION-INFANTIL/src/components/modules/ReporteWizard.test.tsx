@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReporteWizard } from "./ReporteWizard";
 
+// SPEC-314 (002-PI-214): el card de bloqueo (ReporteBloqueoRol) usa useRouter de
+// next/navigation para el CTA "Registrarme como padre". Se mockea aquí para que el
+// render en jsdom no falle al montar el componente de bloqueo.
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ push: vi.fn() }),
+}));
+
 function mockFetch(response: unknown, ok = true) {
     return vi.spyOn(global, "fetch").mockResolvedValue({
         ok,
