@@ -27,12 +27,10 @@ Reglas especificas para operar el repo `Innovadataco/productos`.
 
 ## Ramas (INQUEBRANTABLE)
 
-Este repo tiene **dos ramas y solo dos**:
+- **`main` — rama canónica y de producción.** Recibe merges vía PR con CI verde. **Prohibido commitear directo a `main`.**
+- **Ramas de trabajo — dependen del producto.** PI y BI usan `work/<producto>-SPEC-<NNN>-<slug>` (A-47, una rama por spec). Otros productos pueden tener su propia convención; consultá el `AGENTS.md` de cada carpeta.
 
-- **`feature/001-scaffolding` — PRUEBAS.** Aquí va todo el trabajo diario. Es la rama en la que commitea ODIN, siempre.
-- **`main` — PRODUCCIÓN.** Solo recibe **merges de liberación**, previa auditoría de ZEUS. **Prohibido commitear directo a `main`** y prohibido abrir ramas nuevas por feature.
-
-Si un comando te deja en `main`, vuelve a la rama de pruebas antes de commitear. Ante la duda: **detente y reporta**.
+Ante la duda sobre qué rama usar: **consultá el `AGENTS.md` del producto y detente si hay ambigüedad**.
 
 ## Staging (INQUEBRANTABLE, todos los frentes)
 

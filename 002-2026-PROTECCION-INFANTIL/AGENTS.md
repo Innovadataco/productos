@@ -6,7 +6,7 @@ Archivo de referencia para agentes de IA que trabajen en este repositorio. Asume
 
 SaaS de reportes comunitarios de riesgos para menores (Innovadataco): la comunidad reporta conductas de riesgo asociadas a números telefónicos, nicks o perfiles; una IA local clasifica la conducta y, superado un umbral configurable, el identificador aparece en una consulta pública con estadísticas agregadas (nunca datos personales ni textos de reportes).
 
-Trabajas dentro de esta carpeta (`002-2026-PROTECCION-INFANTIL`), repo `Innovadataco/productos`, rama `feature/001-scaffolding`. **Fase: DESARROLLO, no producción.** No desplegar a producción; eso lo decide el responsable.
+Trabajas dentro de esta carpeta (`002-2026-PROTECCION-INFANTIL`), repo `Innovadataco/productos`. Cada spec se trabaja en su propia rama `work/pi-SPEC-<NNN>-<slug>` sobre `main` (A-47). **Prohibido commitear directo a `main`.** No desplegar a producción; eso lo decide el responsable.
 
 ## Restricciones de producto (no negociables)
 
@@ -120,7 +120,7 @@ Cada spec vive en `specs/NNN-nombre/` con el MISMO set y formato que `specs/001-
 ## Reglas de cierre (las 5, ninguna se salta)
 
 1. Spec-Kit completo (todos los artefactos + checklist validado).
-2. commit + push a `feature/001-scaffolding`: un commit por User Story + uno de docs, con evidencia (git log + archivos tocados).
+2. commit + push a `work/pi-SPEC-<NNN>-<slug>` (la rama de la spec): un commit por User Story + uno de docs, con evidencia (git log + archivos tocados).
 3. Deploy limpio con `./scripts/dev-restart.sh`.
 4. Probar con el `quickstart.md`.
 5. Documentar: `cierre.md` (en `specs/NNN/` o histórico en `docs/cierre-NNN.md`) + sección Implementación en `spec.md` + deuda técnica.
