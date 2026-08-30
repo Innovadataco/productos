@@ -231,6 +231,11 @@ export class AutenticacionService {
                 intentosFallidos: 0,
                 estado: "activo",
                 bloqueadoHasta: null,
+                // SPEC-315 (002-PI-215): el reset por email deja al usuario con su clave
+                // definitiva elegida en el formulario; se limpia el flag para no mandarlo
+                // al guard de /cambiar-password (que pide contraseña actual). Simetría con
+                // cambiarPassword() (:157), que ya lo limpia.
+                debeCambiarPassword: false,
             });
             await new TokenRecuperacionRepository(tx).marcarUsado(tokenId);
         });
