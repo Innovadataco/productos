@@ -5,9 +5,9 @@ interface SemaforoResumenProps {
 }
 
 const clasesColor = {
-    VERDE: "bg-green-500",
-    AMBAR: "bg-amber-500",
-    ROJO: "bg-red-500",
+    VERDE: "bg-pino",
+    AMBAR: "bg-ambar",
+    ROJO: "bg-rubi",
 } as const;
 
 const textoColor = {

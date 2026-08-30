@@ -28,16 +28,16 @@ export function ResumenCirculo({ resumen }: ResumenCirculoProps) {
                     <p className="text-2xl font-bold text-body">{totalContactos}</p>
                     <p className="text-xs text-muted">Total contactos</p>
                 </div>
-                <div className="rounded-2xl bg-green-500/10 p-4 text-center">
-                    <p className="text-2xl font-bold text-green-700">{sinReportes}</p>
+                <div className="rounded-2xl bg-pino/10 p-4 text-center">
+                    <p className="text-2xl font-bold text-pino">{sinReportes}</p>
                     <p className="text-xs text-muted">Sin reportes</p>
                 </div>
-                <div className="rounded-2xl bg-amber-500/10 p-4 text-center">
-                    <p className="text-2xl font-bold text-amber-700">{enRevision}</p>
+                <div className="rounded-2xl bg-ambar/10 p-4 text-center">
+                    <p className="text-2xl font-bold text-ambar">{enRevision}</p>
                     <p className="text-xs text-muted">En revisión</p>
                 </div>
-                <div className="rounded-2xl bg-red-500/10 p-4 text-center">
-                    <p className="text-2xl font-bold text-red-700">{clasificados}</p>
+                <div className="rounded-2xl bg-rubi/10 p-4 text-center">
+                    <p className="text-2xl font-bold text-rubi">{clasificados}</p>
                     <p className="text-xs text-muted">Clasificados</p>
                 </div>
             </div>

@@ -5,9 +5,9 @@ interface SugerenciaProactivaProps {
 }
 
 const prioridadClase = {
-    baja: "border-l-4 border-green-500",
-    media: "border-l-4 border-amber-500",
-    alta: "border-l-4 border-red-500",
+    baja: "border-l-4 border-pino",
+    media: "border-l-4 border-ambar",
+    alta: "border-l-4 border-rubi",
 } as const;
 
 export function SugerenciaProactiva({ sugerencia }: SugerenciaProactivaProps) {
