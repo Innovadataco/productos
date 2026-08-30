@@ -57,18 +57,36 @@ test.describe("A · Hueco #2 · SPEC-314 · cuentas internas bloqueadas en /repo
             const roto = PATRONES_ROTO.find((p) => texto.includes(p));
             expect(roto, `${rol} /reportar rota: ${roto}`).toBeUndefined();
 
-            // Bloqueo SPEC-314 visible + botón de salida.
+            // Bloqueo SPEC-314 visible + LAS 2 salidas (data-testid estable).
             const bloqueo = page.getByText(/cuentas internas no pueden crear reportes/i);
             await expect(bloqueo, `${rol} debe ver el bloqueo SPEC-314`).toBeVisible({ timeout: 10_000 });
-            const botonSalida = page.getByRole("button", { name: /cerrar sesión y reportar/i });
-            const haySalida = (await botonSalida.count()) > 0;
-            console.log(`\n[#2-${rol}] bloqueo visible ✓ · botón "Cerrar sesión y reportar": ${haySalida}`);
-            expect(haySalida, `${rol} debe tener salida "cerrar sesión y reportar"`).toBeTruthy();
+            const salidaLogout = await page.locator('[data-testid="cta-logout-anonimo"]').count();
+            const salidaRegistro = await page.locator('[data-testid="cta-registro-padre"]').count();
+            console.log(`\n[#2-${rol}] bloqueo visible ✓ · cta-logout-anonimo: ${salidaLogout} · cta-registro-padre: ${salidaRegistro}`);
+            expect(salidaLogout, `${rol} debe tener salida "Cerrar sesión y reportar anónimo"`).toBeGreaterThan(0);
+            expect(salidaRegistro, `${rol} debe tener salida "Registrarme como padre"`).toBeGreaterThan(0);
 
             await page.screenshot({ path: `test-results/a-hueco2-${rol}.png`, fullPage: true }).catch(() => {});
             await ctx.close();
         });
     }
+
+    test("DIAGNÓSTICO · cuántas salidas tiene el bloqueo en PROD (retracta/confirma hallazgo)", async ({ browser }) => {
+        const ctx = await browser.newContext();
+        const page = await ctx.newPage();
+        await page.request.post("/api/auth/login", { data: { email: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD } });
+        await page.goto("/reportar", { waitUntil: "domcontentloaded" });
+        await page.waitForTimeout(2_500);
+        const porTestidLogout = await page.locator('[data-testid="cta-logout-anonimo"]').count();
+        const porTestidRegistro = await page.locator('[data-testid="cta-registro-padre"]').count();
+        const porTextoLogout = await page.getByRole("button", { name: /cerrar sesión.*reportar/i }).count();
+        const porTextoRegistro = await page.getByRole("button", { name: /registrarme como padre/i }).count();
+        const totalBotones = await page.locator("button").count();
+        console.log(`\n[SPEC-314 DIAG] data-testid cta-logout-anonimo: ${porTestidLogout} · cta-registro-padre: ${porTestidRegistro}`);
+        console.log(`[SPEC-314 DIAG] por texto  logout: ${porTextoLogout} · registro-padre: ${porTextoRegistro} · total <button> en pantalla: ${totalBotones}`);
+        await page.screenshot({ path: "test-results/spec314-diag.png", fullPage: true }).catch(() => {});
+        await ctx.close();
+    });
 
     test("la salida funciona: cerrar sesión → el wizard de reporte queda utilizable", async ({ browser }) => {
         const email = process.env.E2E_OPERADOR_EMAIL;
