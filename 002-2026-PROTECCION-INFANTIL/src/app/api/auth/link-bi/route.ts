@@ -29,8 +29,16 @@ export async function GET(request: Request) {
         user = await verifyAuth();
     } catch {
         const puenteUrl = `/api/auth/link-bi?returnTo=${encodeURIComponent(returnTo)}`;
+        // SPEC-313 (002-PI-213): request.url en Next.js dentro de Docker refleja
+        // el bind interno (0.0.0.0), no el host público — NUNCA usarlo como base
+        // de un redirect visible al cliente.
+        const forwardedHost = request.headers.get("x-forwarded-host");
+        const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+        const baseUrl = forwardedHost
+            ? `${forwardedProto}://${forwardedHost}`
+            : (process.env.PI_BASE_URL ?? "https://pi.innovadataco.com");
         return NextResponse.redirect(
-            new URL(`/login?returnTo=${encodeURIComponent(puenteUrl)}`, request.url),
+            new URL(`/login?returnTo=${encodeURIComponent(puenteUrl)}`, baseUrl),
             { status: 302 }
         );
     }

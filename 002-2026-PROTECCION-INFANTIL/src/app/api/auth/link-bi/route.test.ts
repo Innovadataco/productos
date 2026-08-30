@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { jwtVerify } from "jose";
 import { GET } from "./route";
 import * as auth from "@/lib/auth";
@@ -16,9 +16,9 @@ const USUARIO: Usuario = {
     rol: "PARENT",
 } as Usuario;
 
-function req(returnTo?: string) {
+function req(returnTo?: string, headers?: Record<string, string>) {
     const qs = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : "";
-    return new Request(`http://localhost:5005/api/auth/link-bi${qs}`);
+    return new Request(`http://localhost:5005/api/auth/link-bi${qs}`, headers ? { headers } : undefined);
 }
 
 async function decodificarToken(url: string) {
@@ -83,6 +83,60 @@ describe("GET /api/auth/link-bi (SPEC-310)", () => {
 
             expect(res.status).toBe(302);
             expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+        });
+
+        describe("SPEC-313 · host público real del redirect a /login (nunca 0.0.0.0)", () => {
+            const envOriginal = process.env.PI_BASE_URL;
+
+            beforeEach(() => {
+                vi.spyOn(auth, "verifyAuth").mockRejectedValue(
+                    new AppError("No autenticado", ERROR_CODES.AUTH_INVALID, 401)
+                );
+            });
+
+            afterEach(() => {
+                if (envOriginal === undefined) delete process.env.PI_BASE_URL;
+                else process.env.PI_BASE_URL = envOriginal;
+            });
+
+            it("con x-forwarded-host → Location usa ese host", async () => {
+                const res = await GET(
+                    req(undefined, { "x-forwarded-host": "pi.innovadataco.com", "x-forwarded-proto": "https" })
+                );
+
+                const location = res.headers.get("location")!;
+                expect(location.startsWith("https://pi.innovadataco.com/login")).toBe(true);
+                expect(location).not.toContain("0.0.0.0");
+            });
+
+            it("sin header, con PI_BASE_URL env → Location usa esa env", async () => {
+                process.env.PI_BASE_URL = "https://test.pi.example";
+
+                const res = await GET(req());
+
+                const location = res.headers.get("location")!;
+                expect(location.startsWith("https://test.pi.example/login")).toBe(true);
+                expect(location).not.toContain("0.0.0.0");
+            });
+
+            it("sin header ni env → Location usa el fallback hardcode", async () => {
+                delete process.env.PI_BASE_URL;
+
+                const res = await GET(req());
+
+                const location = res.headers.get("location")!;
+                expect(location.startsWith("https://pi.innovadataco.com/login")).toBe(true);
+                expect(location).not.toContain("0.0.0.0");
+            });
+
+            it("assert defensivo: request.url con host interno NUNCA se filtra al Location", async () => {
+                delete process.env.PI_BASE_URL;
+                const reqInterno = new Request("http://0.0.0.0:3000/api/auth/link-bi");
+
+                const res = await GET(reqInterno);
+
+                expect(res.headers.get("location")).not.toContain("0.0.0.0");
+            });
         });
     });
 
