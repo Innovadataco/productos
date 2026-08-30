@@ -169,6 +169,7 @@
 | [302](302-deuda-motor-notificaciones/spec.md) | SPEC-302 · Deuda motor notificaciones: métrica pendientes vencidas + ratchet manifiesto anti-I-147 + logger estructurado (002-PI-208 · R-022 §1.3) | 🟢 Implementado |
 | [303](303-ficha-colegio-cimiento/spec.md) | SPEC-303 · Ficha colegio admin Fase 1 · Cimiento de datos + semáforo (002-PI-209 · cierra I-104) | 🔵 Planeado |
 | [310](310-puente-sesion-bi-link/spec.md) | SPEC-310 · Puente de sesión PI→BI · endpoint `/api/auth/link-bi` con JWT efímero (002-PI-211 · cierra I-30 parte PI) | 🟢 Implementado |
+| [312](312-quiet-hours-skip-email/spec.md) | SPEC-312 · Quiet hours no aplica a EMAIL ni IN_APP · skip categórico por canal (002-PI-212 · cierra I-165) | 🟢 Implementado |
 | [313](313-hotfix-link-bi-host/spec.md) | SPEC-313 · Hotfix link-bi redirect host público (0.0.0.0 → x-forwarded-host/PI_BASE_URL) (002-PI-213) | 🟢 Implementado |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |

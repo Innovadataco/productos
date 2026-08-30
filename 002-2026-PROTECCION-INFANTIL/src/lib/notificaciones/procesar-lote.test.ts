@@ -14,7 +14,9 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { NotificacionRepository } from "@/lib/dal/repositories/notificacion";
 import { NotificacionPlantillaRepository } from "@/lib/dal/repositories/notificacion-plantilla";
-import { procesarLote } from "./procesar-lote";
+import { procesarLote, procesarNotificacion } from "./procesar-lote";
+import { fromZonedTime } from "date-fns-tz";
+import { TIMEZONE_MOTOR } from "./offset";
 
 // SPEC-292: `quietHours` con ventana degenerada para que NUNCA contenga la
 // hora del test (ventana no-cruza-medianoche entre `00:00` y `00:01` — al ser
@@ -174,5 +176,68 @@ describe("SPEC-292 · procesarLote (I-147 no vuelve)", () => {
             where: { estado: "ENVIADA", plantillaClave: PLANTILLA_CLAVE },
         });
         expect(enviadas).toHaveLength(3);
+    });
+});
+
+describe("SPEC-312 (I-165) · quiet hours skip por canal en procesarNotificacion", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    // 22:00 Bogotá está DENTRO de la ventana 20:00-07:00; `ahora`=22:30 la hace "vencida".
+    const CONFIG_VENTANA = {
+        quietHours: "20:00-07:00",
+        maxIntentos: 4,
+        backoffSegundos: [60, 300, 1800, 7200],
+        loteSize: 20,
+    };
+    const enviarEnEnVentana = fromZonedTime(new Date(2026, 7, 22, 22, 0, 0), TIMEZONE_MOTOR);
+    const ahora = () => fromZonedTime(new Date(2026, 7, 22, 22, 30, 0), TIMEZONE_MOTOR);
+
+    function depsMock(enviarEmail = vi.fn().mockResolvedValue({ id: "prov-312" })) {
+        return {
+            repoNotif: {
+                marcarEnviando: vi.fn().mockResolvedValue(undefined),
+                marcarEnviada: vi.fn().mockResolvedValue(undefined),
+                marcarFallida: vi.fn().mockResolvedValue(undefined),
+                marcarFallidaDefinitiva: vi.fn().mockResolvedValue(undefined),
+                marcarCancelada: vi.fn().mockResolvedValue(undefined),
+            },
+            repoPlantilla: {
+                findByClaveYCanal: vi.fn().mockResolvedValue({
+                    clave: "spec312.test",
+                    asunto: "SPEC-312",
+                    cuerpoMarkdown: "Hola {{nombre}}",
+                }),
+            },
+            enviarEmail,
+            ahora,
+        } as unknown as Parameters<typeof procesarNotificacion>[2];
+    }
+
+    const notifBase = {
+        id: "n-312",
+        enviarEn: enviarEnEnVentana,
+        destinatarioEmail: "test-312@innovadataco.com",
+        plantillaClave: "spec312.test",
+        variables: { nombre: "Test" },
+        intentos: 0,
+    };
+
+    it("canal EMAIL vencido dentro de la ventana → NO se difiere (se envía)", async () => {
+        const enviarEmail = vi.fn().mockResolvedValue({ id: "prov-email" });
+        const res = await procesarNotificacion({ ...notifBase, canal: "EMAIL" }, CONFIG_VENTANA, depsMock(enviarEmail));
+        expect(res.accion).toBe("enviada_email");
+        expect(enviarEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it("canal IN_APP vencido dentro de la ventana → NO se difiere (se envía in-app)", async () => {
+        const res = await procesarNotificacion({ ...notifBase, canal: "IN_APP" }, CONFIG_VENTANA, depsMock());
+        expect(res.accion).toBe("enviada_in_app");
+    });
+
+    it("canal PUSH (hipotético) vencido dentro de la ventana → SÍ se difiere (regresión: la ventana sigue aplicando)", async () => {
+        const res = await procesarNotificacion({ ...notifBase, canal: "PUSH" }, CONFIG_VENTANA, depsMock());
+        expect(res.accion).toBe("diferida_quiet_hours");
     });
 });

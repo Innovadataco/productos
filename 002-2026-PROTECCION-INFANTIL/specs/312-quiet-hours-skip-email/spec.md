@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-29
 
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 
 **Input**: User description: "I-165 crítica: el Motor de Notificaciones aplica quiet hours (ventana de silencio 20:00-07:00) al canal EMAIL, difiriendo códigos de verificación / reset de password / pagos / alertas de seguridad hasta 11h (07:00 COT). El emisor (motor.ts:157) llama aplicarQuietHours sin ventana ni canal, usando el default hardcodeado e ignorando el parámetro de BD — por eso el workaround de Jelkin (UPDATE ParametroSistema) nunca surtió efecto. Decisión CEO arquitectónica: quiet hours NO aplica a EMAIL ni IN_APP (los únicos 2 canales del enum hoy). Fix: skip categórico por canal. Alcance recortado MVP (CEO IDC): pasar el canal en ambos callsites y saltar la ventana para EMAIL/IN_APP; leer el parámetro de BD en el emisor queda diferido a SPEC de seguimiento."
 
