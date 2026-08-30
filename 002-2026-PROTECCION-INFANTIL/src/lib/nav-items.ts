@@ -90,7 +90,9 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     { href: "/dashboard/padre/suscripcion", label: "Suscripción" },
     { href: "/dashboard/padre/circulo-confianza", label: "Círculo confianza" },
     { href: "/dashboard/padre/notificaciones", label: "Notificaciones" },
-    { href: "/dashboard/padre/perfil", label: "Mi perfil" },
+    // SPEC-317: perfil retirado del menú — no existe página de perfil real en el sistema.
+    // La ruta /dashboard/padre/perfil queda viva con placeholder para enlaces externos.
+    // Deuda: construir la página de perfil del padre.
 ];
 
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */

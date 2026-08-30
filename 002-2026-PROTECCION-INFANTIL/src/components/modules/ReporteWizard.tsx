@@ -37,7 +37,7 @@ const ROLES_BLOQUEADOS = ["ADMIN", "OPERADOR", "SCHOOL_ADMIN", "COMITE_VALIDACIO
 
 // SPEC-295 (002-PI-196 · I-146): destino post-envío cuando el padre reporta
 // desde su panel autenticado. La ruta pública sigue mostrando ConfirmacionReporte.
-const REDIRECT_PADRE_POST_ENVIO = "/dashboard/padre/mis-reportes";
+const REDIRECT_PADRE_POST_ENVIO = "/mis-reportes"; // SPEC-317: ruta real; /dashboard/padre/mis-reportes no existe
 
 export function ReporteWizard({
     identificadorInicial,

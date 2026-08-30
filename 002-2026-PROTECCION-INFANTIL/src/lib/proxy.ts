@@ -196,7 +196,9 @@ function homeForRole(rol: string) {
     if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
     // SPEC-127 (I-40, D-42): el padre va a su área de usuario final. Sin este caso caía
     // al default "/dashboard/admin", que la propia puerta le niega → doble rebote a "/".
-    if (rol === "PARENT") return "/dashboard";
+    // SPEC-317 (002-PI-217): cambiado de "/dashboard" a "/dashboard/padre" (zona canónica).
+    // esDestinoPermitidoPorRol para PARENT permite todo salvo admin — no hay riesgo de rebote.
+    if (rol === "PARENT") return "/dashboard/padre";
     return "/dashboard/admin";
 }
 

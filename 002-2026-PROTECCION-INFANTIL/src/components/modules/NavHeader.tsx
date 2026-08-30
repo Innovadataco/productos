@@ -87,7 +87,7 @@ export function NavHeader() {
         : user?.rol === "COMITE_CONVIVENCIA"
             ? "/dashboard/colegio/comite/casos"
             : user?.rol === "PARENT"
-                ? "/dashboard"
+                ? "/dashboard/padre" // SPEC-317: zona canónica del padre
                 : "/dashboard-publico";
 
     // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
@@ -194,13 +194,13 @@ export function NavHeader() {
                                         )}
                                         {!esEmpleado && (
                                             <>
-                                                {esEnlaceNavegable("/dashboard") && (
-                                                    <NavDropdownLink href="/dashboard" onClick={() => setOpen(false)}>
+                                                {esEnlaceNavegable("/dashboard/padre") && (
+                                                    <NavDropdownLink href="/dashboard/padre" onClick={() => setOpen(false)}>
                                                         Mi panel
                                                     </NavDropdownLink>
                                                 )}
-                                                {esEnlaceNavegable("/dashboard/circulo-confianza") && (
-                                                    <NavDropdownLink href="/dashboard/circulo-confianza" onClick={() => setOpen(false)}>
+                                                {esEnlaceNavegable("/dashboard/padre/circulo-confianza") && (
+                                                    <NavDropdownLink href="/dashboard/padre/circulo-confianza" onClick={() => setOpen(false)}>
                                                         Círculo de Confianza
                                                     </NavDropdownLink>
                                                 )}
@@ -264,8 +264,8 @@ export function NavHeader() {
                             <>
                                 {!esEmpleado && (
                                     <>
-                                        {esEnlaceNavegable("/dashboard") && <MobileLink href="/dashboard" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>}
-                                        {esEnlaceNavegable("/dashboard/circulo-confianza") && <MobileLink href="/dashboard/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>}
+                                        {esEnlaceNavegable("/dashboard/padre") && <MobileLink href="/dashboard/padre" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>}
+                                        {esEnlaceNavegable("/dashboard/padre/circulo-confianza") && <MobileLink href="/dashboard/padre/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>}
                                         {esEnlaceNavegable("/mis-reportes") && <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>}
                                     </>
                                 )}
