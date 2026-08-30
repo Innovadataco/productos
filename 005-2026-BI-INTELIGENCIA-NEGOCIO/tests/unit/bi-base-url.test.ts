@@ -93,4 +93,41 @@ describe("resolveBiBaseUrl", () => {
         // Si lanzó, returned queda null. Nunca debe haber devuelto un string localhost.
         expect(returned).toBeNull();
     });
+
+    it("D-030.8 · prod + x-forwarded-host localhost (request fuera del túnel) → usa el env, NO localhost", () => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubEnv("BI_BASE_URL", "https://bi.innovadataco.com");
+        const r = resolveBiBaseUrl(
+            hdrs({
+                "x-forwarded-host": "localhost:3001",
+                "x-forwarded-proto": "http",
+            }),
+        );
+        expect(LOCALHOST_RE.test(r)).toBe(false);
+        expect(r).toBe("https://bi.innovadataco.com");
+    });
+
+    it("D-030.8 · prod + x-forwarded-host 127.0.0.1 sin env → lanza (nunca retorna localhost)", () => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubEnv("BI_BASE_URL", "");
+        let returned: string | null = null;
+        try {
+            returned = resolveBiBaseUrl(hdrs({ "x-forwarded-host": "127.0.0.1:3000" }));
+        } catch {
+            returned = null;
+        }
+        expect(returned).toBeNull();
+    });
+
+    it("dev + x-forwarded-host localhost → SÍ acepta localhost (dev normal, no rompemos)", () => {
+        vi.stubEnv("NODE_ENV", "development");
+        vi.stubEnv("BI_BASE_URL", "");
+        const r = resolveBiBaseUrl(
+            hdrs({
+                "x-forwarded-host": "localhost:3001",
+                "x-forwarded-proto": "http",
+            }),
+        );
+        expect(r).toBe("http://localhost:3001");
+    });
 });

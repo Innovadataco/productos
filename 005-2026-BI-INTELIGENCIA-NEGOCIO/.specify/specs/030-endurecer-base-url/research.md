@@ -67,6 +67,19 @@ Al probar con `next build && next start`, un request "sin forwarded headers" NO 
 
 Como el throw no es reproducible vía `next start`, su verificación autoritativa es el **unit test** con un header source vacío (`hdrs({})` → `.get()` devuelve null), que sí ejercita la rama y confirma el throw con mensaje `[SPEC-030]`. La verificación curl confirma el Nivel 1 con host público explícito.
 
+### D-030.8 · El Nivel 1 no debe devolver localhost en producción (hallazgo de Fábrica post-REVISO)
+
+D-030.7 destapó un hueco contra el objetivo del SPEC. Fábrica lo identificó: si un request llega al contenedor **sin pasar por el túnel Cloudflare** (curl directo a `127.0.0.1:3001` en el VPS, un healthcheck interno, o un cambio de config del túnel), Next inyecta `x-forwarded-host: localhost:3000/3001`. El Nivel 1 lo tomaría y haría `return` temprano → **el fallback silencioso a localhost no desapareció, se mudó del Nivel 3 al Nivel 1**.
+
+Riesgo real acotado (verificado por Fábrica): el `validarReturnTo` de PI tiene whitelist estricta, así que NO es un open redirect. Pero `localhost:3001` está en la whitelist de PI (para dev), así que un `returnTo` con ese host sería aceptado y mandaría el navegador a localhost. Bajo impacto en la práctica (el tráfico real siempre entra por el túnel), pero es exactamente la degradación silenciosa que este SPEC existe para eliminar.
+
+**Fix:** en el Nivel 1, si `NODE_ENV === "production"` y el host resuelto es local (`localhost` / `127.0.0.1` / `0.0.0.0` / `::1`, comparando solo el hostname sin puerto), NO se retorna — se cae al Nivel 2 (env, bien seteado en prod). Fuera de producción sí se acepta localhost (dev normal, no se rompe). Así el Nivel 1 sigue cubriendo el tráfico real por túnel (host público) y deja de ser una puerta trasera al localhost.
+
+Tests añadidos:
+- prod + `x-forwarded-host: localhost:3001` + env presente → usa el env, nunca localhost.
+- prod + `x-forwarded-host: 127.0.0.1:3000` sin env → lanza (nunca retorna localhost).
+- dev + `x-forwarded-host: localhost:3001` → SÍ acepta localhost (dev intacto).
+
 ## Fuentes consultadas
 
 - `src/app/dashboard/layout.tsx` (SPEC-029 · línea del fallback frágil)

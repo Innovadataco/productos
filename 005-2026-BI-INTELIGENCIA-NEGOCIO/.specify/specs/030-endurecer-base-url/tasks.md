@@ -5,6 +5,7 @@
 - [x] Normalización: proto lista `a,b` toma el primero · sin trailing slash
 - [x] Mensaje de throw claro con prefijo `[SPEC-030]`
 - [x] D-030.6 adoptado: Nivel 1 entra con solo `x-forwarded-host`, proto default `https` (observación de Fábrica en REVISO)
+- [x] D-030.8 (hallazgo Fábrica post-REVISO): en prod, `x-forwarded-host` local (localhost/127.0.0.1/0.0.0.0/::1) NO se retorna → cae al Nivel 2. `esHostLocal()` compara solo hostname sin puerto. Cierra el hueco donde el fallback localhost se había mudado del Nivel 3 al Nivel 1
 
 ## F2 · `src/app/dashboard/layout.tsx`
 - [x] Reemplazar `process.env.BI_BASE_URL ?? "http://localhost:3001"` por `resolveBiBaseUrl(h)`
@@ -17,7 +18,7 @@
 - [x] `isProd()` (cookie secure) se mantiene
 
 ## F4 · Tests unitarios
-- [x] `tests/unit/bi-base-url.test.ts` (`@vitest-environment node` · vi.stubEnv) · 9 tests verdes
+- [x] `tests/unit/bi-base-url.test.ts` (`@vitest-environment node` · vi.stubEnv) · 12 tests verdes (incluye 3 de D-030.8: prod+localhost→env · prod+127.0.0.1 sin env→throw · dev+localhost→OK)
 - [x] `tests/unit/bi-auth-link-endpoint.test.ts` · +1 test (x-forwarded-host en request → redirect usa host público) · 10 tests verdes
 
 ## F5 · Gate local (2026-08-29 23:3x COT)

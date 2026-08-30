@@ -11,6 +11,19 @@ function stripTrailingSlash(u: string): string {
     return u.endsWith("/") ? u.slice(0, -1) : u;
 }
 
+// Un host se considera "local" si apunta a la propia máquina. En producción
+// jamás debe ser el host base público (sería la degradación silenciosa que
+// este SPEC elimina).
+function esHostLocal(host: string): boolean {
+    const soloHost = host.split(":")[0]?.trim().toLowerCase() ?? "";
+    return (
+        soloHost === "localhost" ||
+        soloHost === "127.0.0.1" ||
+        soloHost === "0.0.0.0" ||
+        soloHost === "::1"
+    );
+}
+
 /**
  * Resuelve el host base público de BI en 3 niveles:
  *   1. x-forwarded-host (+ x-forwarded-proto si viene · default https) —
@@ -28,7 +41,14 @@ export function resolveBiBaseUrl(h: HeaderSource): string {
     const fwdHostRaw = h.get("x-forwarded-host");
     if (fwdHostRaw) {
         const host = fwdHostRaw.split(",")[0]?.trim();
-        if (host) {
+        // D-030.8 · en producción un x-forwarded-host localhost NO es el host
+        // público (es un request que no pasó por el túnel Cloudflare: curl
+        // directo al contenedor, healthcheck, etc. — Next inyecta el socket
+        // local). Devolverlo sería la misma degradación silenciosa a localhost
+        // que este SPEC elimina, solo movida del Nivel 3 al Nivel 1. En ese
+        // caso caemos al Nivel 2 (env, bien seteado en prod). Fuera de
+        // producción sí aceptamos localhost (es el dev normal).
+        if (host && !(process.env.NODE_ENV === "production" && esHostLocal(host))) {
             const fwdProtoRaw = h.get("x-forwarded-proto");
             const proto =
                 fwdProtoRaw?.split(",")[0]?.trim() || "https";
