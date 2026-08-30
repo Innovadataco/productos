@@ -6,6 +6,8 @@
 
 **Status**: IMPLEMENTADO
 
+**Impacto en arquitectura:** Añade endpoint `GET /api/padre/home`, componentes en `src/components/modules/padre/`, servicios en `src/lib/padre/` y consultas centralizadas en `src/lib/dal/services/padre-home.ts`. Reutiliza el DAL del círculo de confianza sin modificar schema ni el motor de IA.
+
 **Input**: User description: "Home dashboard proactivo (reemplaza PlaceholderPadre.tsx con resumen inteligente del día)"
 
 ## User Scenarios & Testing *(mandatory)*
