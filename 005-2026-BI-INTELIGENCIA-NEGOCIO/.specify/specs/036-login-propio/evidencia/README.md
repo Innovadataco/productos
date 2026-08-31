@@ -30,7 +30,7 @@ GET /dashboard:
 ── (§6.3) login correcto returnTo=/operacion → 302 a /operacion + cookie
    HTTP/1.1 302 Found
    location: http://localhost:3011/operacion
-   set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqZWxraW4iLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3ODgxMzYxNDgsImV4cCI6MTc4ODIyMjU0OH0.1YC8YIJJGgMjQR5-2nS0XulQRYQ6GGfZsGunx4SnmFA; Path=/; Expires=Tue, 01 Sep 2026 00:29:08 GMT; Max-Age=86400; Secure; HttpOnly; SameSite=lax
+   set-cookie: session=<jwt-redactado>; Path=/; Expires=Tue, 01 Sep 2026 00:29:08 GMT; Max-Age=86400; Secure; HttpOnly; SameSite=lax
    → GET /operacion CON cookie: HTTP 200
 
 ── (§6.6) recarga autenticada NO re-pide clave (2x)
@@ -61,8 +61,15 @@ cambiar la clave es solo editar `.env` + reiniciar, sin rebuild ni PR ni deploy.
 ── (§6.4) clave NUEVA (clave-nueva) → 302 /operacion + cookie session
    HTTP/1.1 302 Found
    location: http://localhost:3011/operacion
-   set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqZWxraW4iLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3ODgxMzYxNTEsImV4cCI6MTc4ODIyMjU1MX0.zL5VW0rdKmmDD5vtTO6i-0eRagGLuMVTnRzn1aadUEw; Path=/; Expires=Tue, 01 Sep 2026 00:29:11 GMT; Max-Age=86400; Secure; HttpOnly; SameSite=lax
+   set-cookie: session=<jwt-redactado>; Path=/; Expires=Tue, 01 Sep 2026 00:29:11 GMT; Max-Age=86400; Secure; HttpOnly; SameSite=lax
 ```
+
+> **Nota de higiene (I-22):** el valor firmado del JWT `session` se redactó a
+> propósito — no aporta a la evidencia (lo que importa son los atributos de la
+> cookie: `Secure·HttpOnly·SameSite=lax·Max-Age=86400`). El `JWT_SECRET` usado en
+> esta captura fue un valor **de prueba local**, nunca el de producción (que vive
+> solo en `.env.bi.production` del VPS, 600, fuera de git). Tokens firmados con el
+> secret de prueba no valen contra producción.
 
 ## Lectura de las 6
 
