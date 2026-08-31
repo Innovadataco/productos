@@ -162,8 +162,8 @@
 | [294](294-deploy-lento/spec.md) | SPEC-294 — Deploy lento: reducir 9m30s → <5min (BuildKit cache + COPY src/lib + prisma consolidado + ratchet CI) (002-PI-195) | 🟢 Implementado |
 | [295](295-padre-autenticado-reportar/spec.md) | SPEC-295 · Padre autenticado puede reportar (002-PI-196 · cierra I-146) | 🟢 Implementado |
 | [296](296-email-ts-al-motor-notificaciones/spec.md) | SPEC-296 · Migrar email.ts al Motor de Notificaciones (I-152 · 19 wrappers + ratchet CI) (002-PI-197) | 🟢 Implementado |
-| [297](297-fix-panel-admin-ia-simulacion/spec.md) | SPEC-297 · Fix panel admin IA + rescate simulación FALLIDA + puerto Ollama 11435 (002-PI-300 · I-160+I-161+I-162) | 🟡 En desarrollo |
-| [298](298-fix-i163-rubrica-modelo/spec.md) | SPEC-298 · Fix I-163: rúbrica respeta `modeloClasificacion` (002-PI-201) | 🟡 En desarrollo |
+| [297](297-fix-panel-admin-ia-simulacion/spec.md) | SPEC-297 · Fix panel admin IA + rescate simulación FALLIDA + puerto Ollama 11435 (002-PI-300 · I-160+I-161+I-162) | 🟢 Implementado |
+| [298](298-fix-i163-rubrica-modelo/spec.md) | SPEC-298 · Fix I-163: rúbrica respeta `modeloClasificacion` (002-PI-201) | 🟢 Implementado |
 | [299](299-sentinels-ci-multi-producto/spec.md) | SPEC-299 · Sentinels CI multi-producto (002-PI-202) | 🟢 Implementado |
 | [300](300-fix-sentinel-cross-producto/spec.md) | SPEC-300 · Fix sentinel CI cross-producto (002-PI-205 · cierra bug A-49) | 🔵 Planeado |
 | [302](302-deuda-motor-notificaciones/spec.md) | SPEC-302 · Deuda motor notificaciones: métrica pendientes vencidas + ratchet manifiesto anti-I-147 + logger estructurado (002-PI-208 · R-022 §1.3) | 🟢 Implementado |
@@ -175,7 +175,7 @@
 | [329](329-middleware-api-json-guardias/spec.md) | SPEC-329 · 🔴 Hotfix: los 3 guardianes de estado del middleware devuelven JSON 403 (no redirect 302 HTML) para `/api/**` gateadas; pantallas intactas (002-PI-229 · regresión A-56) | 🟡 En desarrollo |
 | [315](315-fix-reset-password-flag/spec.md) | SPEC-315 · Fix reset password no limpia `debeCambiarPassword` (002-PI-215 · bug prod loop) | 🔵 Planeado |
 | [319](319-comite-convivencia-operativo/spec.md) | SPEC-319 · El comité de convivencia, operativo · fuente única rol→home + email + integrantes + firma + rediseño (002-PI-219 · cierra I-212) | 🟡 En desarrollo |
-| [320](320-identificadores-integridad-identidad/spec.md) | SPEC-320 · Identificadores: integridad + identidad (A-58 SPEC-A) · unicidad por colegio cross-sujeto asimétrica (warn+override) + documento profesor obligatorio + catálogo único tipos documento + §2.2-bis (NIT colegio único global + documento alumno obligatorio + columna Excel) (002-PI-220 · I-213) | 🟡 En desarrollo |
+| [320](320-identificadores-integridad-identidad/spec.md) | SPEC-320 · Identificadores: integridad + identidad (A-58 SPEC-A) · unicidad por colegio cross-sujeto asimétrica (warn+override) + documento profesor obligatorio + catálogo único tipos documento + §2.2-bis (NIT colegio único global + documento alumno obligatorio + columna Excel) (002-PI-220 · I-213) | 🟢 Implementado |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
