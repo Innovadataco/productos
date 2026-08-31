@@ -64,6 +64,12 @@ describe("POST /api/padre/suscripcion/activar-freemium", () => {
         expect(json.estado).toBe("ACTIVA");
         expect(json.esFreemium).toBe(true);
         expect(json.freemiumFechaFin).toBeDefined();
+
+        // SPEC-335 (I-227): la respuesta re-sella `sesion_estado` para que el
+        // middleware abra los módulos al instante (antes solo abrían tras un refresh).
+        const setCookies = res.headers.getSetCookie?.() ?? res.headers.get("set-cookie") ?? "";
+        const cookieStr = Array.isArray(setCookies) ? setCookies.join("; ") : setCookies;
+        expect(cookieStr).toContain("sesion_estado=");
     });
 
     it("rechaza si el padre ya activó freemium antes", async () => {

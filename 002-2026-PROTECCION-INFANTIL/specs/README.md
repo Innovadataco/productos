@@ -181,6 +181,7 @@
 | [331](331-vigencia-colegio-cookie/spec.md) | SPEC-331 · 🔴 Hotfix: cookie `sesion_estado` ignora rol → SCHOOL_ADMIN sin Suscripcion obtiene 403 VIGENCIA_REQUERIDA · resolver vigencia por rol en `buildSesionEstadoValue` (002-PI-231 · I-224) | 🟡 En desarrollo |
 | [333](333-identidad-regla-notificacion-rol/spec.md) | SPEC-333 · La regla de notificación distingue el rol (A-63 · I-223) · `@@unique` con `rol` (Opción A) + migración que des-colapsa + re-seed + motor rol-aware; rector/comité/operador recuperan sus toggles sin duplicar envíos (002-PI-233) | 🟡 En desarrollo |
 | [336](336-marca-el-guardian/spec.md) | SPEC-336 · La marca «El Guardián» en el header + favicon · componente `Guardian` (escudo con niño recortado, nodos, barrido) claro/oscuro + reduced-motion; clic del logo vivo por rol (I-38) | 🟡 En desarrollo |
+| [337](337-cookie-vigencia-freemium/spec.md) | SPEC-337 · Activar freemium re-sella `sesion_estado` (I-227) · los módulos del padre abren al instante sin refresh; helper centralizado de la clase cookie-stale | 🟡 En desarrollo |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
