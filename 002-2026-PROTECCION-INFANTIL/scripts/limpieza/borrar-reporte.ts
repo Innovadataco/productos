@@ -28,6 +28,7 @@ export interface ResultadoBorrarReporte {
         eventosMatch: number;
         identificadoresHuerfanos: number;
         reporte: number;
+        eventosExpedienteDesvinculados: number;
     };
     dryRun: boolean;
 }
@@ -52,12 +53,15 @@ export async function borrarReporte(
         select: { id: true, identificador: true, plataformaId: true },
     });
 
+    const eventosExpedienteCount = await client.eventoExpediente.count({ where: { reporteId } });
+
     const conteoDetalle = {
         solicitudesComite: await client.solicitudComite.count({ where: { reporteId } }),
         correcciones: await client.correccionAdmin.count({ where: { clasificacion: { reporteId } } }),
         eventosMatch: await client.eventoMatch.count({ where: { reporteNuevoId: reporteId } }),
         identificadoresHuerfanos: 0,
         reporte: 1,
+        eventosExpedienteDesvinculados: eventosExpedienteCount,
     };
 
     if (!opts.confirm) {
@@ -65,12 +69,19 @@ export async function borrarReporte(
         log("borrar-reporte", `  · SolicitudComite: ${conteoDetalle.solicitudesComite}`);
         log("borrar-reporte", `  · CorreccionAdmin: ${conteoDetalle.correcciones}`);
         log("borrar-reporte", `  · EventoMatch: ${conteoDetalle.eventosMatch}`);
+        log("borrar-reporte", `  · EventoExpediente desvinculados (reporteId→null): ${conteoDetalle.eventosExpedienteDesvinculados}`);
         log("borrar-reporte", `  · Identificadores candidatos a huérfano: ${identificadores.length}`);
         log("borrar-reporte", "  · Reporte + cascade (ClasificacionIA, EmbeddingReporte, TransicionReporte, ReintentoReporte, AlertaColegio, SolicitudComite)");
         return { reporteId, filasBorradas: 0, detalle: conteoDetalle, dryRun: true };
     }
 
     return client.$transaction(async (tx) => {
+        // Desvincular EventoExpediente ANTES de borrar el Reporte — reporteId es nullable
+        // (RESTRICT sin onDelete); el evento debe sobrevivir vinculado al expediente.
+        const evDesv = await tx.eventoExpediente.updateMany({
+            where: { reporteId },
+            data: { reporteId: null },
+        });
         const sc = await tx.solicitudComite.deleteMany({ where: { reporteId } });
         const co = await tx.correccionAdmin.deleteMany({ where: { clasificacion: { reporteId } } });
         const em = await tx.eventoMatch.deleteMany({ where: { reporteNuevoId: reporteId } });
@@ -91,8 +102,10 @@ export async function borrarReporte(
             eventosMatch: em.count,
             identificadoresHuerfanos: huerfanos,
             reporte: rep ? 1 : 0,
+            eventosExpedienteDesvinculados: evDesv.count,
         };
-        const total = Object.values(detalle).reduce((a, b) => a + b, 0);
+        // eventosExpedienteDesvinculados son actualizaciones (no borrados), no se suman a total.
+        const total = detalle.solicitudesComite + detalle.correcciones + detalle.eventosMatch + detalle.identificadoresHuerfanos + detalle.reporte;
 
         await registrarAuditoria(tx, "reporte", motivo, total, [reporteId]);
         log("borrar-reporte", `REALIZADO reporte=${reporteId} filas=${total}`);

@@ -114,6 +114,31 @@ export async function borrarColegio(
         await tx.onboardingColegio.deleteMany({ where: { colegioId } });
         await tx.suscripcion.deleteMany({ where: { colegioId } });
 
+        // Expedientes de admin/comiteConvivencia: borrar en orden FK-safe antes del usuario.
+        // borrarReporte (ejecutado antes) ya puso EventoExpediente.reporteId = null
+        // para los reportes del tenant. Los expedientes de estos usuarios se limpian aquí.
+        const usuariosColegio = [colegio.admin?.id, colegio.comiteConvivencia?.id].filter(
+            (id): id is string => !!id,
+        );
+        if (usuariosColegio.length > 0) {
+            const expsColegio = await tx.expediente.findMany({
+                where: { padreUsuarioId: { in: usuariosColegio } },
+                select: { id: true },
+            });
+            const expColegioIds = expsColegio.map((e) => e.id);
+            if (expColegioIds.length > 0) {
+                await tx.expediente.updateMany({
+                    where: { id: { in: expColegioIds } },
+                    data: { expedienteRelacionadoAnteriorId: null },
+                });
+                await tx.aclaracionExpediente.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
+                await tx.informeConsolidado.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
+                await tx.patronExpediente.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
+                await tx.eventoExpediente.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
+                await tx.expediente.deleteMany({ where: { padreUsuarioId: { in: usuariosColegio } } });
+            }
+        }
+
         if (colegio.admin) await tx.usuario.delete({ where: { id: colegio.admin.id } });
         if (colegio.comiteConvivencia) await tx.usuario.delete({ where: { id: colegio.comiteConvivencia.id } });
 

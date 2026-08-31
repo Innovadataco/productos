@@ -12,6 +12,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/middleware.test.ts",
     // SPEC-331 (002-PI-231): vigencia cookie sesion_estado derivada por rol (SCHOOL_ADMIN/COMITE_CONVIVENCIA → colegio, PARENT → suscripción, internos → ACTIVA).
     "src/lib/routing/sesion-estado-emitter.test.ts",
+    // 002-PI-232 (A-65 · I-225): borrado FK-safe de Expediente/EventoExpediente en scripts de limpieza.
+    "scripts/limpieza/borrar-limpieza.test.ts",
     // SPEC-329 (002-PI-229): guardianes de estado devuelven JSON 403 en /api/ (contraprueba 302 en pantallas).
     "src/middleware-api-guardias.test.ts",
     "scripts/lint/ratchets.test.ts",

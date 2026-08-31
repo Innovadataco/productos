@@ -26,6 +26,7 @@ export interface ResultadoBorrarPadre {
         codigosVerificacion: number;
         tokensRecuperacion: number;
         suscripciones: number;
+        expedientes: number;
         usuario: number;
     };
     dryRun: boolean;
@@ -57,12 +58,19 @@ export async function borrarPadre(
     });
     const reporteIds = reportes.map((r) => r.id);
 
+    const expedientesUsuario = await client.expediente.findMany({
+        where: { padreUsuarioId: usuario.id },
+        select: { id: true },
+    });
+    const expedienteIds = expedientesUsuario.map((e) => e.id);
+
     const conteoDetalle = {
         contactos: await client.contactoConfianza.count({ where: { usuarioId: usuario.id } }),
         reportes: reporteIds.length,
         codigosVerificacion: await client.codigoVerificacion.count({ where: { usuarioId: usuario.id } }),
         tokensRecuperacion: await client.tokenRecuperacion.count({ where: { usuarioId: usuario.id } }),
         suscripciones: await client.suscripcion.count({ where: { usuarioId: usuario.id } }),
+        expedientes: expedienteIds.length,
         usuario: 1,
     };
 
@@ -73,6 +81,7 @@ export async function borrarPadre(
         log("borrar-padre", `  · CodigoVerificacion: ${conteoDetalle.codigosVerificacion}`);
         log("borrar-padre", `  · TokenRecuperacion: ${conteoDetalle.tokensRecuperacion}`);
         log("borrar-padre", `  · Suscripcion: ${conteoDetalle.suscripciones}`);
+        log("borrar-padre", `  · Expediente (+ AclaracionExpediente, InformeConsolidado, PatronExpediente, EventoExpediente): ${conteoDetalle.expedientes}`);
         log("borrar-padre", "  · Usuario: 1");
         return { usuarioId: usuario.id, email, filasBorradas: 0, detalle: conteoDetalle, dryRun: true };
     }
@@ -84,6 +93,22 @@ export async function borrarPadre(
     }
 
     return client.$transaction(async (tx) => {
+        // Expedientes del padre: borrar en orden FK-safe antes de borrar el Usuario.
+        // Orden: nullear self-relation → AclaracionExpediente → InformeConsolidado →
+        // PatronExpediente → EventoExpediente → Expediente.
+        // borrarReporte (ejecutado antes) ya puso EventoExpediente.reporteId = null.
+        if (expedienteIds.length > 0) {
+            await tx.expediente.updateMany({
+                where: { id: { in: expedienteIds } },
+                data: { expedienteRelacionadoAnteriorId: null },
+            });
+            await tx.aclaracionExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+            await tx.informeConsolidado.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+            await tx.patronExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+            await tx.eventoExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+            await tx.expediente.deleteMany({ where: { padreUsuarioId: usuario.id } });
+        }
+
         const cc = await tx.contactoConfianza.deleteMany({ where: { usuarioId: usuario.id } });
         const cv = await tx.codigoVerificacion.deleteMany({ where: { usuarioId: usuario.id } });
         const tr = await tx.tokenRecuperacion.deleteMany({ where: { usuarioId: usuario.id } });
@@ -96,6 +121,7 @@ export async function borrarPadre(
             codigosVerificacion: cv.count,
             tokensRecuperacion: tr.count,
             suscripciones: su.count,
+            expedientes: expedienteIds.length,
             usuario: u ? 1 : 0,
         };
         const total = Object.values(detalle).reduce((a, b) => a + b, 0);
