@@ -61,6 +61,32 @@ export class UsuarioRepository {
         return this.db.usuario.update({ where: { id }, data });
     }
 
+    // SPEC-334: perfil del padre (6 campos + nombres de país/ciudad para mostrar).
+    obtenerPerfilPadre(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                nombre: true,
+                apellidos: true,
+                fechaNacimiento: true,
+                telefono: true,
+                paisId: true,
+                ciudadId: true,
+                paisPerfil: { select: { id: true, nombre: true } },
+                ciudadPerfil: { select: { id: true, nombre: true } },
+            },
+        });
+    }
+
+    // SPEC-334: actualiza solo los campos del perfil del padre.
+    actualizarPerfilPadre(
+        id: string,
+        data: Pick<Prisma.UsuarioUncheckedUpdateInput, "nombre" | "apellidos" | "fechaNacimiento" | "telefono" | "paisId" | "ciudadId">
+    ) {
+        return this.db.usuario.update({ where: { id }, data });
+    }
+
     /** Operadores/comité con su perfil (filtro tenant opcional). */
     findOperadores(where: Prisma.UsuarioWhereInput) {
         return this.db.usuario.findMany({
