@@ -4,6 +4,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { activarSchema } from "@/lib/validators";
 import { RegistroColegioService } from "@/lib/dal/services/registro-colegio";
 import { enviarEmailCambioPassword } from "@/lib/email";
+import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
+import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
 
 export async function POST(request: Request) {
     try {
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
             // fallo silencioso — el aviso no es bloqueante
         }
 
-        return NextResponse.json(
+        const res = NextResponse.json(
             {
                 user: {
                     id: user.id,
@@ -52,6 +54,19 @@ export async function POST(request: Request) {
             },
             { status: 200 }
         );
+        try {
+            const cookieValue = await buildSesionEstadoValue(user.id);
+            res.cookies.set(NOMBRE_COOKIE, cookieValue, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: process.env.COOKIE_SECURE !== "false",
+                maxAge: TTL_SEG,
+                path: "/",
+            });
+        } catch {
+            // fallo silencioso — la cookie de estado no bloquea la activación
+        }
+        return res;
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

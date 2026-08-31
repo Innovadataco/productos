@@ -9,6 +9,8 @@ import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { consentimientoAceptarSchema } from "@/lib/validators";
 import { ConsentimientoService } from "@/lib/dal/services/consentimiento";
 import { logAudit } from "@/lib/audit";
+import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
+import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
 
 function obtenerIp(request: Request): string {
     const forwarded = request.headers.get("x-forwarded-for");
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
             metadatos: { evento: "consentimiento.aceptado", version: resultado.version },
         });
 
-        return NextResponse.json(
+        const res = NextResponse.json(
             {
                 ok: true,
                 version: resultado.version,
@@ -78,6 +80,19 @@ export async function POST(request: Request) {
             },
             { status: 201 }
         );
+        try {
+            const cookieValue = await buildSesionEstadoValue(user.id);
+            res.cookies.set(NOMBRE_COOKIE, cookieValue, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: process.env.COOKIE_SECURE !== "false",
+                maxAge: TTL_SEG,
+                path: "/",
+            });
+        } catch {
+            // fallo silencioso — la cookie de estado no bloquea el registro de consentimiento
+        }
+        return res;
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

@@ -3,6 +3,8 @@ import { verifyAuth, verifyToken } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { SessionLogService } from "@/lib/dal/services/session-log";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
+import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
 
 export async function POST(request: Request) {
     try {
@@ -34,7 +36,20 @@ export async function POST(request: Request) {
             );
         }
 
-        return NextResponse.json({ ok: true });
+        const res = NextResponse.json({ ok: true });
+        try {
+            const cookieValue = await buildSesionEstadoValue(user.id);
+            res.cookies.set(NOMBRE_COOKIE, cookieValue, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: process.env.COOKIE_SECURE !== "false",
+                maxAge: TTL_SEG,
+                path: "/",
+            });
+        } catch {
+            // fallo silencioso — el refresco de cookie no bloquea el ping de sesión
+        }
+        return res;
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

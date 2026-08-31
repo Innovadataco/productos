@@ -6,6 +6,8 @@ import { loginSchema } from "@/lib/validators";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 import { SessionLogService } from "@/lib/dal/services/session-log";
 import { RolUsuario } from "@prisma/client";
+import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
+import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
 
 export async function POST(request: Request) {
     try {
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
         const token = await createToken({ sub: user.id, rol: user.rol as RolUsuario, sesionLogId });
         await setSessionCookie(request, token);
 
-        return NextResponse.json({
+        const res = NextResponse.json({
             user: {
                 id: user.id,
                 email: user.email,
@@ -82,6 +84,19 @@ export async function POST(request: Request) {
                 debeCambiarPassword: user.debeCambiarPassword,
             },
         });
+        try {
+            const cookieValue = await buildSesionEstadoValue(user.id);
+            res.cookies.set(NOMBRE_COOKIE, cookieValue, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: process.env.COOKIE_SECURE !== "false",
+                maxAge: TTL_SEG,
+                path: "/",
+            });
+        } catch {
+            // fallo silencioso — la cookie de estado no bloquea el login
+        }
+        return res;
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

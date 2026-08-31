@@ -17,6 +17,7 @@ export async function requiereConsentimientoActual(usuarioId: string): Promise<b
     } catch (error) {
         const msg = error instanceof Error ? error.message : "Error desconocido";
         console.error("[ConsentimientoGuard] Error verificando consentimiento:", msg);
+        console.error(JSON.stringify({ usuarioId: usuarioId ?? null, evento: "consentimiento.guard.fail", detalle: msg, timestamp: new Date().toISOString() }));
         // Fail-open: si no podemos verificar, no bloqueamos al usuario.
         return false;
     }
