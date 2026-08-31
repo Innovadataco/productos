@@ -77,6 +77,26 @@ describe("POST /api/session/ping (SPEC-206)", { timeout: 30_000 }, () => {
         expect(json.error.code).toBe("AUTH_EXPIRED");
     });
 
+    // SC-04 · SPEC-318: session/ping refresca la cookie sesion_estado
+    it("ping exitoso incluye Set-Cookie con sesion_estado", async () => {
+        const padre = await crearUsuario("PARENT", "sc318-ping@example.com");
+        const sesion = await prisma.sesionLog.create({
+            data: {
+                usuarioId: padre.id,
+                rol: padre.rol,
+                iniciadaEn: new Date(),
+                ultimaActividadEn: new Date(),
+                ipHash: "test-hash",
+            },
+        });
+        mockToken = await createToken({ sub: padre.id, rol: padre.rol, sesionLogId: sesion.id });
+        const res = await ping(mockToken);
+        expect(res.status).toBe(200);
+        const setCookies = res.headers.getSetCookie?.() ?? res.headers.get("set-cookie") ?? "";
+        const cookieStr = Array.isArray(setCookies) ? setCookies.join("; ") : setCookies;
+        expect(cookieStr).toContain("sesion_estado=");
+    });
+
     it("token sin sesionLogId responde 200 sin tocar BD", async () => {
         const padre = await crearUsuario("PARENT", "padre-legacy@example.com");
         mockToken = await crearTokenUsuario(padre.id, padre.rol);
