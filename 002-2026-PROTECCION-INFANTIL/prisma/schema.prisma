@@ -1104,6 +1104,7 @@ model Colegio {
   CursoMateria             CursoMateria[]
   identificadoresAcudiente IdentificadorAcudiente[]
   identificadoresProfesor  IdentificadorProfesor[]
+  identificadoresEstudiante IdentificadorEstudiante[] // SPEC-320: colegioId denormalizado en el identificador de estudiante
   onboarding               OnboardingColegio?
   notificacionesInApp      NotificacionInApp[]
   // SPEC-210 (002-PI-110): módulo de pagos.
@@ -1303,7 +1304,14 @@ model IdentificadorAcudiente {
   plataforma Plataforma?         @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([acudienteId, tipo, valor, plataformaId])
+  // SPEC-320 (§2.1 · EXCEPCIÓN asimétrica): la unicidad de acudiente se MANTIENE
+  // por-acudiente (acudienteId,tipo,valor,plataformaId), NO por-colegio. Razón:
+  // AcudienteEstudiante es @@unique([estudianteId, orden, estado]) → una fila de
+  // acudiente por (estudiante, orden), así que un padre con dos hijos en el colegio
+  // tiene DOS filas de acudiente y su mismo identificador va legítimamente en ambas.
+  // La BD NO puede bloquear eso; el cruce entre filas lo cubre el warn de aplicación.
+  // NO unificar a (colegioId,...) — rompería al padre-de-dos-hijos. Índice parcial
+  // crudo (WHERE estado='activo', NULLS NOT DISTINCT) en la migración B.
   @@index([colegioId, estado])
   @@index([acudienteId, estado])
   @@index([valor])
@@ -1327,7 +1335,10 @@ model IdentificadorProfesor {
   plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([profesorId, tipo, valor, plataformaId])
+  // SPEC-320 (§2.1): unicidad por (colegioId,tipo,valor,plataformaId) como índice
+  // único PARCIAL crudo (WHERE estado='activo', NULLS NOT DISTINCT) en la migración B
+  // — misma red dura de BD que estudiante (dos profesores del colegio con el mismo
+  // identificador = bug I-213). Reemplaza el viejo @@unique por-profesor.
   @@index([colegioId, estado])
   @@index([profesorId, estado])
   @@index([valor])
@@ -1359,6 +1370,12 @@ model EstudianteObservacion {
 model IdentificadorEstudiante {
   id               String                     @id @default(cuid())
   estudianteId     String                     @map("alumnoId")
+  // SPEC-320 (§2.1 · H1): colegioId denormalizado. NO es redundante: es la
+  // columna que habilita la unicidad por-colegio del identificador (la llave del
+  // producto) con red de BD en el sujeto más importante (el alumno). Las tablas
+  // de acudiente y profesor ya lo llevaban; el alumno era el único sin ella.
+  // NO "limpiar" pensando que el tenant ya viaja por la relación estudiante.
+  colegioId        String
   tipo             String
   valor            String
   plataformaId     String?
@@ -1368,11 +1385,16 @@ model IdentificadorEstudiante {
   updatedAt        DateTime                   @updatedAt
 
   estudiante Estudiante      @relation(fields: [estudianteId], references: [id])
+  colegio    Colegio         @relation(fields: [colegioId], references: [id])
   plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([estudianteId, valor, tipo, plataformaId])
+  // SPEC-320 (§2.1): la unicidad se aplica como índice único PARCIAL crudo
+  // (WHERE estado='activo', NULLS NOT DISTINCT) en la migración — Prisma no
+  // expresa NULLS NOT DISTINCT ni índices parciales en @@unique. Estudiante y
+  // profesor: unicidad por (colegioId,tipo,valor,plataformaId). Ver migración B.
   @@index([estudianteId, estado])
+  @@index([colegioId, estado])
   @@map("IdentificadorAlumno")
 }
 
@@ -1551,6 +1573,23 @@ model Plataforma {
   identificadoresProfesor   IdentificadorProfesor[]
   apelaciones               Apelacion[]
   patronesInstitucionales   PatronInstitucional[]
+
+  @@index([clave])
+  @@index([esActiva])
+}
+
+// SPEC-320 (§2.3): catálogo único de tipos de documento, administrable por el
+// ADMIN. Fuente única de verdad del vocabulario de "tipo de documento" que
+// consumen estudiante, profesor y comité — reemplaza los tres vocabularios
+// paralelos previos (enum Zod estudiante, enum Prisma comité, etiquetas hardcode).
+// Mismo patrón de catálogo que Plataforma (clave @unique / nombre / esActiva).
+model TipoDocumento {
+  id        String   @id @default(cuid())
+  clave     String   @unique
+  nombre    String
+  categoria String   @default("persona")
+  esActiva  Boolean  @default(true)
+  creadoEn  DateTime @default(now())
 
   @@index([clave])
   @@index([esActiva])

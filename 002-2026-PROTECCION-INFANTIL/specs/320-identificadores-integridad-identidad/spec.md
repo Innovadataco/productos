@@ -4,7 +4,9 @@
 
 **Created**: 2026-08-30
 
-**Status**: PLANEADO
+**Status**: DESARROLLO
+
+**Impacto en arquitectura**: Cambia el esquema de datos (nueva tabla catálogo `TipoDocumento`; denormalización de `colegioId` en `IdentificadorAlumno`; campos de identidad obligatorios en `Profesor`; reordenamiento asimétrico de las constraints de unicidad de los tres identificadores con índices parciales `WHERE estado='activo'` y `NULLS NOT DISTINCT`; conversión del vocabulario del comité al catálogo). Tres migraciones aditivas en secuencia (A catálogo → B unicidad → C identidad profesor). Nuevo servicio `identificador-unicidad.ts` centraliza la validación cross-sujeto. Requiere regenerar `docs/architecture/` y dejar `npm run arch:check` en verde en el PR. No toca el proxy, la navegación ni el stack; no afecta los 5 índices críticos HNSW/GIN. La búsqueda cross-tenant de `alertas.ts` no se modifica.
 
 **Radicado**: 002-PI-220 · SPEC-320 · A-58 (SPEC-A) · I-213 · R-032
 
