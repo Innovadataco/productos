@@ -58,6 +58,26 @@ async function main(): Promise<void> {
 
     const backupSize = ejecutarBackup(backup);
 
+    // A-66 (b): pre-borrado global del subárbol identificadores+alertas en orden
+    // FK-safe ANTES del loop por colegio. Necesario porque AlertaColegio cruza
+    // tenants (alertas.ts:94 buscarActivosPorValor): una alerta del colegio Y puede
+    // referenciar un identificador del colegio X, por lo que borrar colegio X sin
+    // haber eliminado esa alerta de Y causa FK. El pre-borrado global evita tener
+    // que rastrear esa red cross-tenant desde borrar-colegio individualmente.
+    log("reset-piloto", "Pre-borrado global: SolicitudComite, AlertaColegio, identificadores, observaciones...");
+    await prisma.$transaction(async (tx) => {
+        await tx.solicitudComite.deleteMany({});
+        await tx.notaSeguimiento.deleteMany({});
+        await tx.seguimientoCaso.deleteMany({});
+        await tx.alertaColegio.deleteMany({});
+        await tx.identificadorProfesor.deleteMany({});
+        await tx.identificadorEstudiante.deleteMany({});
+        await tx.identificadorAcudiente.deleteMany({});
+        await tx.estudianteObservacion.deleteMany({});
+        await tx.acudienteEstudiante.deleteMany({});
+    });
+    log("reset-piloto", "Pre-borrado global completado.");
+
     const colegios = await prisma.colegio.findMany({ select: { id: true, nombre: true } });
     log("reset-piloto", `Colegios a borrar: ${colegios.length}`);
     for (const c of colegios) {

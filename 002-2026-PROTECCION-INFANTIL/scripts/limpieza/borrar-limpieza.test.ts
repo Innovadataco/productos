@@ -31,13 +31,13 @@ interface FakeModels {
     auditLog: { create: AnyFn };
     colegio: { findUnique: AnyFn; delete: AnyFn };
     tenant: { delete: AnyFn };
-    alertaColegio: { count: AnyFn; deleteMany: AnyFn };
-    seguimientoCaso: { count: AnyFn; deleteMany: AnyFn };
+    alertaColegio: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
+    seguimientoCaso: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
     notaSeguimiento: { count: AnyFn; deleteMany: AnyFn };
     integranteComite: { count: AnyFn; deleteMany: AnyFn };
     cursoMateria: { count: AnyFn; deleteMany: AnyFn };
     materia: { count: AnyFn; deleteMany: AnyFn };
-    estudiante: { count: AnyFn; deleteMany: AnyFn };
+    estudiante: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
     profesor: { count: AnyFn; deleteMany: AnyFn };
     curso: { count: AnyFn; deleteMany: AnyFn };
     patronInstitucional: { count: AnyFn; deleteMany: AnyFn };
@@ -46,6 +46,12 @@ interface FakeModels {
     preferenciaAlertaColegio: { count: AnyFn; deleteMany: AnyFn };
     registroAvisoColegio: { count: AnyFn; deleteMany: AnyFn };
     onboardingColegio: { count: AnyFn; deleteMany: AnyFn };
+    // A-66: 6 modelos del subárbol de A-58
+    identificadorProfesor: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
+    identificadorEstudiante: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
+    identificadorAcudiente: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
+    estudianteObservacion: { count: AnyFn; deleteMany: AnyFn };
+    acudienteEstudiante: { count: AnyFn; deleteMany: AnyFn };
 }
 
 function makeModel(extra: Record<string, AnyFn> = {}) {
@@ -96,6 +102,12 @@ function makeFakeClient(): { client: PrismaClient; tx: FakeModels } {
         preferenciaAlertaColegio: makeModel(),
         registroAvisoColegio: makeModel(),
         onboardingColegio: makeModel(),
+        // A-66: 6 modelos del subárbol de A-58
+        identificadorProfesor: makeModel(),
+        identificadorEstudiante: makeModel(),
+        identificadorAcudiente: makeModel(),
+        estudianteObservacion: makeModel(),
+        acudienteEstudiante: makeModel(),
     };
     const client = {
         ...tx,
@@ -242,5 +254,115 @@ describe("borrarPadre — A-65 · borrado de Expediente antes del Usuario", () =
         expect(tx.aclaracionExpediente.deleteMany).not.toHaveBeenCalled();
         // Usuario sí se borra
         expect(tx.usuario.delete).toHaveBeenCalled();
+    });
+});
+
+// ── borrarColegio ─────────────────────────────────────────────────────────────
+
+describe("borrarColegio — A-66 · subárbol A-58 + trampa cross-tenant AlertaColegio", () => {
+    let client: PrismaClient;
+    let tx: FakeModels;
+
+    beforeEach(async () => {
+        const f = makeFakeClient();
+        client = f.client;
+        tx = f.tx;
+
+        // Colegio encontrado con admin y sin comiteConvivencia para simplificar
+        tx.colegio.findUnique.mockResolvedValue({
+            id: "col1",
+            nombre: "Colegio Prueba",
+            tenantId: "tenant1",
+            admin: { id: "adm1", email: "admin@col.com" },
+            comiteConvivencia: null,
+        });
+        tx.reporte.findMany.mockResolvedValue([]); // sin reportes de tenant (simplifica)
+
+        // Identificadores del colegio
+        tx.identificadorProfesor.findMany.mockResolvedValue([{ id: "ip1" }]);
+        tx.identificadorEstudiante.findMany.mockResolvedValue([{ id: "ie1" }]);
+        tx.identificadorAcudiente.findMany.mockResolvedValue([]);
+
+        // AlertaColegio — incluye una alerta cross-tenant que referencia ip1
+        tx.alertaColegio.findMany.mockResolvedValue([{ id: "a1" }, { id: "a2" }]); // a2 = cross-tenant
+        // SeguimientoCaso para esas alertas
+        tx.seguimientoCaso.findMany.mockResolvedValue([{ id: "seg1" }]);
+        // Estudiantes para EstudianteObservacion y AcudienteEstudiante
+        tx.estudiante.findMany.mockResolvedValue([{ id: "est1" }]);
+        // Expediente del admin
+        tx.expediente.findMany.mockResolvedValue([]);
+        // Audit
+        tx.auditLog.create.mockResolvedValue({});
+    });
+
+    it("confirm: SolicitudComite se borra ANTES de AlertaColegio (FK-safe)", async () => {
+        const { borrarColegio } = await import("./borrar-colegio");
+        await borrarColegio("col1", "test", { confirm: true, client });
+
+        const scOrder = tx.solicitudComite.deleteMany.mock.invocationCallOrder[0];
+        const acOrder = tx.alertaColegio.deleteMany.mock.invocationCallOrder[0];
+        expect(scOrder).toBeLessThan(acOrder);
+
+        expect(tx.solicitudComite.deleteMany).toHaveBeenCalledWith({
+            where: { alertaColegioId: { in: ["a1", "a2"] } },
+        });
+    });
+
+    it("confirm: AlertaColegio se borra con IDs (cross-tenant), no solo por colegioId", async () => {
+        const { borrarColegio } = await import("./borrar-colegio");
+        await borrarColegio("col1", "test", { confirm: true, client });
+
+        expect(tx.alertaColegio.deleteMany).toHaveBeenCalledWith({
+            where: { id: { in: ["a1", "a2"] } },
+        });
+        // No debe llamarse con { where: { colegioId } } — ese patrón no cubre cross-tenant
+        const callArgs = tx.alertaColegio.deleteMany.mock.calls.map((c: unknown[]) => JSON.stringify(c));
+        expect(callArgs.every((a: string) => !a.includes('"colegioId"'))).toBe(true);
+    });
+
+    it("confirm: identificadores se borran DESPUÉS de AlertaColegio (FK-safe)", async () => {
+        const { borrarColegio } = await import("./borrar-colegio");
+        await borrarColegio("col1", "test", { confirm: true, client });
+
+        const acOrder = tx.alertaColegio.deleteMany.mock.invocationCallOrder[0];
+        const ipOrder = tx.identificadorProfesor.deleteMany.mock.invocationCallOrder[0];
+        const ieOrder = tx.identificadorEstudiante.deleteMany.mock.invocationCallOrder[0];
+
+        expect(acOrder).toBeLessThan(ipOrder);
+        expect(acOrder).toBeLessThan(ieOrder);
+    });
+
+    it("confirm: EstudianteObservacion y AcudienteEstudiante se borran ANTES de Estudiante", async () => {
+        const { borrarColegio } = await import("./borrar-colegio");
+        await borrarColegio("col1", "test", { confirm: true, client });
+
+        const eoOrder = tx.estudianteObservacion.deleteMany.mock.invocationCallOrder[0];
+        const aeOrder = tx.acudienteEstudiante.deleteMany.mock.invocationCallOrder[0];
+        const estOrder = tx.estudiante.deleteMany.mock.invocationCallOrder[0];
+
+        expect(eoOrder).toBeLessThan(estOrder);
+        expect(aeOrder).toBeLessThan(estOrder);
+
+        expect(tx.estudianteObservacion.deleteMany).toHaveBeenCalledWith({
+            where: { estudianteId: { in: ["est1"] } },
+        });
+        expect(tx.acudienteEstudiante.deleteMany).toHaveBeenCalledWith({
+            where: { estudianteId: { in: ["est1"] } },
+        });
+    });
+
+    it("confirm: sin identificadores, omite los findMany de alertas por identifier", async () => {
+        tx.identificadorProfesor.findMany.mockResolvedValue([]);
+        tx.identificadorEstudiante.findMany.mockResolvedValue([]);
+        tx.identificadorAcudiente.findMany.mockResolvedValue([]);
+        // Sin identificadores, la cláusula OR solo incluye colegioId
+        tx.alertaColegio.findMany.mockResolvedValue([{ id: "a1" }]);
+
+        const { borrarColegio } = await import("./borrar-colegio");
+        await borrarColegio("col1", "test", { confirm: true, client });
+
+        // deleteMany de identificadores no hace nada (count=0 pero se llama igual)
+        expect(tx.identificadorProfesor.deleteMany).toHaveBeenCalled();
+        expect(tx.identificadorEstudiante.deleteMany).toHaveBeenCalled();
     });
 });

@@ -16,6 +16,13 @@
  * para reutilizar su orden FK-safe. Las entidades hijas del colegio (cursos,
  * estudiantes, profesores, alertas, comité, onboarding, suscripciones) se
  * borran vía deleteMany en orden dependencias→padres dentro de una transacción.
+ *
+ * A-66: cubre el subárbol de A-58 (IdentificadorProfesor/Alumno/Acudiente +
+ * AcudienteEstudiante + EstudianteObservacion + SolicitudComite) y resuelve
+ * la trampa cross-tenant de AlertaColegio: una alerta del colegio Y puede
+ * referenciar un identificador del colegio X, por lo que se buscan TODAS las
+ * AlertaColegio que referencian los identificadores del colegio que se borra,
+ * sin filtrar solo por colegioId.
  */
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
@@ -59,9 +66,15 @@ export async function borrarColegio(
 
     const detalle: Record<string, number> = {
         reportesTenant: reporteIds.length,
+        solicitudesComite: await client.solicitudComite.count({ where: { alerta: { colegioId } } }),
         alertasColegio: await client.alertaColegio.count({ where: { colegioId } }),
         seguimientos: await client.seguimientoCaso.count({ where: { colegioId } }),
         notas: await client.notaSeguimiento.count({ where: { colegioId } }),
+        identificadoresProfesor: await client.identificadorProfesor.count({ where: { colegioId } }),
+        identificadoresEstudiante: await client.identificadorEstudiante.count({ where: { colegioId } }),
+        identificadoresAcudiente: await client.identificadorAcudiente.count({ where: { colegioId } }),
+        estudiantesObservacion: await client.estudianteObservacion.count({ where: { estudiante: { colegioId } } }),
+        acudientesEstudiante: await client.acudienteEstudiante.count({ where: { estudiante: { colegioId } } }),
         integrantesComite: colegio.comiteConvivencia
             ? await client.integranteComite.count({ where: { comiteId: colegio.comiteConvivencia.id } })
             : 0,
@@ -95,14 +108,75 @@ export async function borrarColegio(
     }
 
     return client.$transaction(async (tx) => {
-        await tx.notaSeguimiento.deleteMany({ where: { colegioId } });
-        await tx.seguimientoCaso.deleteMany({ where: { colegioId } });
-        await tx.alertaColegio.deleteMany({ where: { colegioId } });
+        // ── A-66 (a): trampa cross-tenant ──────────────────────────────────────
+        // AlertaColegio cruza colegios: una alerta del colegio Y puede referenciar
+        // un identificador del colegio X. Borrar solo WHERE colegioId=X deja esas
+        // alertas vivas → FK al borrar los identificadores de X. Se buscan TODAS
+        // las AlertaColegio que referencian los identificadores de ESTE colegio.
+
+        const identProfIds = (await tx.identificadorProfesor.findMany({
+            where: { colegioId }, select: { id: true },
+        })).map((i) => i.id);
+        const identEstIds = (await tx.identificadorEstudiante.findMany({
+            where: { colegioId }, select: { id: true },
+        })).map((i) => i.id);
+        const identAcuIds = (await tx.identificadorAcudiente.findMany({
+            where: { colegioId }, select: { id: true },
+        })).map((i) => i.id);
+
+        const orIdentClause = [
+            ...(identProfIds.length > 0 ? [{ identificadorProfesorId: { in: identProfIds } }] : []),
+            ...(identEstIds.length > 0 ? [{ identificadorEstudianteId: { in: identEstIds } }] : []),
+            ...(identAcuIds.length > 0 ? [{ identificadorAcudienteId: { in: identAcuIds } }] : []),
+        ];
+
+        // Unión: alertas propias del colegio + alertas cross-tenant por identificador
+        const todasAlertas = await tx.alertaColegio.findMany({
+            where: { OR: [{ colegioId }, ...orIdentClause] },
+            select: { id: true },
+        });
+        const todasAlertaIds = todasAlertas.map((a) => a.id);
+
+        if (todasAlertaIds.length > 0) {
+            // SolicitudComite → AlertaColegio (alertaColegioId @unique FK)
+            await tx.solicitudComite.deleteMany({ where: { alertaColegioId: { in: todasAlertaIds } } });
+            // SeguimientoCaso → AlertaColegio (alertaId @unique FK)
+            const seguimientos = await tx.seguimientoCaso.findMany({
+                where: { alertaId: { in: todasAlertaIds } }, select: { id: true },
+            });
+            if (seguimientos.length > 0) {
+                // NotaSeguimiento → SeguimientoCaso (seguimientoId FK)
+                await tx.notaSeguimiento.deleteMany({
+                    where: { seguimientoId: { in: seguimientos.map((s) => s.id) } },
+                });
+                await tx.seguimientoCaso.deleteMany({
+                    where: { id: { in: seguimientos.map((s) => s.id) } },
+                });
+            }
+            await tx.alertaColegio.deleteMany({ where: { id: { in: todasAlertaIds } } });
+        }
+
+        // ── Resto del árbol del colegio ─────────────────────────────────────────
         if (colegio.comiteConvivencia) {
             await tx.integranteComite.deleteMany({ where: { comiteId: colegio.comiteConvivencia.id } });
         }
         await tx.cursoMateria.deleteMany({ where: { colegioId } });
         await tx.materia.deleteMany({ where: { colegioId } });
+
+        // A-66: identificadores (ya sin alertas que los referencien)
+        await tx.identificadorProfesor.deleteMany({ where: { colegioId } });
+        await tx.identificadorEstudiante.deleteMany({ where: { colegioId } });
+        await tx.identificadorAcudiente.deleteMany({ where: { colegioId } });
+
+        // A-66: EstudianteObservacion y AcudienteEstudiante (referencian Estudiante)
+        const estudiantesIds = (await tx.estudiante.findMany({
+            where: { colegioId }, select: { id: true },
+        })).map((e) => e.id);
+        if (estudiantesIds.length > 0) {
+            await tx.estudianteObservacion.deleteMany({ where: { estudianteId: { in: estudiantesIds } } });
+            await tx.acudienteEstudiante.deleteMany({ where: { estudianteId: { in: estudiantesIds } } });
+        }
+
         await tx.estudiante.deleteMany({ where: { colegioId } });
         await tx.profesor.deleteMany({ where: { colegioId } });
         await tx.curso.deleteMany({ where: { colegioId } });
