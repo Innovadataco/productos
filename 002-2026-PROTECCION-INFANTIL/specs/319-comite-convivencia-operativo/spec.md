@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-30
 
-**Status**: PLANEADO
+**Status**: DESARROLLO
 
 **Input**: SPEC-319 · 002-PI-219 · Brief A-57 · Recorrido #1 manual de Jelkin · I-212. La cuenta compartida del Comité de Convivencia entra, cambia la clave y aterriza en `/mis-reportes` (pantalla del padre) con "No pudimos cargar tus reportes". Bloquea que Jelkin siga probando.
 

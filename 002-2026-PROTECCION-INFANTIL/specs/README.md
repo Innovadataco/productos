@@ -173,6 +173,7 @@
 | [312](312-quiet-hours-skip-email/spec.md) | SPEC-312 · Quiet hours no aplica a EMAIL ni IN_APP · skip categórico por canal (002-PI-212 · cierra I-165) | 🟢 Implementado |
 | [313](313-hotfix-link-bi-host/spec.md) | SPEC-313 · Hotfix link-bi redirect host público (0.0.0.0 → x-forwarded-host/PI_BASE_URL) (002-PI-213) | 🟢 Implementado |
 | [315](315-fix-reset-password-flag/spec.md) | SPEC-315 · Fix reset password no limpia `debeCambiarPassword` (002-PI-215 · bug prod loop) | 🔵 Planeado |
+| [319](319-comite-convivencia-operativo/spec.md) | SPEC-319 · El comité de convivencia, operativo · fuente única rol→home + email + integrantes + firma + rediseño (002-PI-219 · cierra I-212) | 🟡 En desarrollo |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |
