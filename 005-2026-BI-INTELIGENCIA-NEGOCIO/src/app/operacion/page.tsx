@@ -6,6 +6,7 @@ import { BarraOperacion } from "@/components/bi/operacion/BarraOperacion";
 import { EquiposChips } from "@/components/bi/operacion/EquiposChips";
 import { TablaFuncionalidades } from "@/components/bi/operacion/TablaFuncionalidades";
 import { TablaRecorridos } from "@/components/bi/operacion/TablaRecorridos";
+import { TablaPruebasJelkin } from "@/components/bi/operacion/TablaPruebasJelkin";
 import { AvisoSinDatos } from "@/components/bi/operacion/AvisoSinDatos";
 
 // SPEC-033 · lee el JSON en CADA request: editar el archivo + recargar refleja
@@ -52,6 +53,7 @@ export default async function OperacionPage() {
                         <EquiposChips equipos={r.data.equipos} />
                         <TablaFuncionalidades f={r.data.funcionalidades} />
                         <TablaRecorridos r={r.data.recorridos} />
+                        <TablaPruebasJelkin p={r.data.pruebasJelkin} />
                         <footer>
                             {r.data.notaPie && r.data.notaPie.trim()
                                 ? r.data.notaPie
