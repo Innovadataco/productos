@@ -175,8 +175,8 @@ export function validarFilasUnificado(
                 // SPEC-320 (§2.2-bis): mapear también los campos de documento del alumno.
                 const campo = p === "apellidos" ? "apellidos_alumno"
                     : p === "documentoTipo" ? "documento_tipo_alumno"
-                    : p === "documentoNumero" ? "documento_numero_alumno"
-                    : "nombre_alumno";
+                        : p === "documentoNumero" ? "documento_numero_alumno"
+                            : "nombre_alumno";
                 campos.push(campo);
                 mensajes.push(issue.message);
             }
