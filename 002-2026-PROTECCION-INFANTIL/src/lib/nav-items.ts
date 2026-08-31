@@ -88,7 +88,8 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     { href: "/dashboard/padre/expedientes", label: "Mis expedientes" },
     { href: "/dashboard/padre/reportar", label: "Reportar" },
     { href: "/dashboard/padre/suscripcion", label: "Suscripción" },
-    { href: "/dashboard/padre/circulo-confianza", label: "Círculo confianza" },
+    { href: "/dashboard/padre/hijos", label: "A quién protejo" }, // SPEC-325
+    { href: "/dashboard/padre/circulo-confianza", label: "A quién vigilo" }, // SPEC-325 (antes "Círculo confianza")
     { href: "/dashboard/padre/notificaciones", label: "Notificaciones" },
     // SPEC-317: perfil retirado del menú — no existe página de perfil real en el sistema.
     // La ruta /dashboard/padre/perfil queda viva con placeholder para enlaces externos.
