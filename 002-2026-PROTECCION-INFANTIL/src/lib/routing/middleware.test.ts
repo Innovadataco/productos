@@ -142,4 +142,21 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
         expect(res.status).not.toBe(307);
         expect(res.headers.get("x-middleware-next")).toBe("1");
     });
+
+    // SC-06 · SPEC-318: cookie sesion_estado ausente → fail-open (no expulsa)
+    it("(k) SC-06 autenticado sin cookie sesion_estado → next() (guards inactivos, no expulsa)", async () => {
+        const token = await jwtParaRol("PARENT");
+        // Sin NOMBRE_COOKIE en el header — simula usuario autenticado pero sin cookie de estado
+        const req = new NextRequest("http://localhost:5005/dashboard/padre", {
+            headers: { cookie: `token=${token}` },
+        });
+        const res = await middleware(req);
+        // El middleware NO debe redirigir ni expulsar: sin cookie, los guards no corren (fail-open)
+        expect(res.status).not.toBe(401);
+        expect(res.status).not.toBe(403);
+        // No debe redirigir a /consentimiento ni a /cambiar-password
+        const location = res.headers.get("location") ?? "";
+        expect(location).not.toContain("/consentimiento");
+        expect(location).not.toContain("/cambiar-password");
+    });
 });

@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AccionAudit" ADD VALUE 'USUARIO_CAMBIO_PASSWORD';

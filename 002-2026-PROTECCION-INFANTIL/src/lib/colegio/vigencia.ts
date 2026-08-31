@@ -23,10 +23,9 @@ const VIGENTE: ResultadoVigencia = { vigente: true, estado: "vigente", mensaje: 
  *   definida = acceso permitido (nadie se corta por omisión del dato).
  * - Roles internos (ADMIN, OPERADOR, COMITE_VALIDACION): siempre vigentes.
  *
- * Puntos de aplicación documentados (NO el middleware: corre en edge sin BD):
- * login (POST /api/auth/login), layouts de cliente (dashboard/colegio, mis-reportes,
- * dashboard) y APIs de cliente (/api/colegio/**, POST /api/reportes autenticado,
- * GET /api/reportes/mis-reportes(/[id])).
+ * Puntos de aplicación: login (POST /api/auth/login).
+ * El middleware aplica la vigencia vía la cookie `sesion_estado` (SPEC-318); los
+ * layouts y APIs de cliente ya no lo llaman directamente (SPEC-287 lo movió al Edge).
  */
 export async function verificarVigenciaCliente(usuarioId: string): Promise<ResultadoVigencia> {
     const usuario = await new UsuarioRepository().findVigenciaCliente(usuarioId);

@@ -89,4 +89,15 @@ describe("POST /api/auth/activar", { timeout: 30_000 }, () => {
         const data = await segunda.json();
         expect(data.error.message).toContain("no es válido o ya fue usado");
     });
+
+    // SC-02 · SPEC-318: activar cuenta emite cookie sesion_estado
+    it("activación exitosa incluye Set-Cookie con sesion_estado", async () => {
+        const email = "sc318-activar@example.com";
+        const token = await crearRectorInvitado(email);
+        const res = await POST(makeRequest({ token, password: "Clave1234" }));
+        expect(res.status).toBe(200);
+        const setCookies = res.headers.getSetCookie?.() ?? res.headers.get("set-cookie") ?? "";
+        const cookieStr = Array.isArray(setCookies) ? setCookies.join("; ") : setCookies;
+        expect(cookieStr).toContain("sesion_estado=");
+    });
 });

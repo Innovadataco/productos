@@ -132,6 +132,17 @@ describe("POST /api/consentimiento/aceptar (SPEC-241)", () => {
         expect(res.status).toBe(400);
     });
 
+    // SC-03 · SPEC-318: aceptar consentimiento refresca cookie sesion_estado
+    it("aceptar exitoso incluye Set-Cookie con sesion_estado", async () => {
+        const padre = await crearUsuario("PARENT");
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+        const res = await POST(requestAceptar(mockToken, { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: true }));
+        expect(res.status).toBe(201);
+        const setCookies = res.headers.getSetCookie?.() ?? res.headers.get("set-cookie") ?? "";
+        const cookieStr = Array.isArray(setCookies) ? setCookies.join("; ") : setCookies;
+        expect(cookieStr).toContain("sesion_estado=");
+    });
+
     it("SCHOOL_ADMIN acepta el convenio institucional", async () => {
         const admin = await crearUsuario("SCHOOL_ADMIN");
         mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");

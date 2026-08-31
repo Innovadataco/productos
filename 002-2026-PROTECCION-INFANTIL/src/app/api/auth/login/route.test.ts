@@ -240,6 +240,16 @@ describe("POST /api/auth/login — SesionLog (SPEC-206)", { timeout: 30_000 }, (
         expect(sesiones[0].userAgent).toBeNull();
     });
 
+    // SC-01 · SPEC-318: login exitoso emite cookie sesion_estado
+    it("login exitoso incluye Set-Cookie con sesion_estado firmado", async () => {
+        await crearUsuario("PARENT", "sc318-login@example.com");
+        const res = await login("sc318-login@example.com", "TestPass123");
+        expect(res.status).toBe(200);
+        const setCookies = res.headers.getSetCookie?.() ?? res.headers.get("set-cookie") ?? "";
+        const cookieStr = Array.isArray(setCookies) ? setCookies.join("; ") : setCookies;
+        expect(cookieStr).toContain("sesion_estado=");
+    });
+
     it("el JWT de login incluye sesionLogId", async () => {
         const padre = await crearUsuario("PARENT", "padre-jwt@example.com");
         const res = await login("padre-jwt@example.com", "TestPass123");

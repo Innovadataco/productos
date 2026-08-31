@@ -5,6 +5,10 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { getParametroSistema } from "@/lib/parametros";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 import { enviarEmailCambioPassword } from "@/lib/email";
+import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
+import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
+import { logAudit } from "@/lib/audit";
+import { AccionAudit } from "@prisma/client";
 
 const schemaBase = z.object({
     passwordActual: z.string().min(1),
@@ -58,7 +62,28 @@ export async function POST(request: Request) {
             // fallo silencioso — el aviso no es bloqueante
         }
 
-        return NextResponse.json({ ok: true });
+        // US5 · SPEC-318: auditar cambio de contraseña (enum USUARIO_CAMBIO_PASSWORD requiere T003-T005)
+        await logAudit({
+            accion: AccionAudit.USUARIO_CAMBIO_PASSWORD,
+            tipoRecurso: "Usuario",
+            recursoId: user.id,
+            usuarioId: user.id,
+        });
+
+        const res = NextResponse.json({ ok: true });
+        try {
+            const cookieValue = await buildSesionEstadoValue(user.id);
+            res.cookies.set(NOMBRE_COOKIE, cookieValue, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: process.env.COOKIE_SECURE !== "false",
+                maxAge: TTL_SEG,
+                path: "/",
+            });
+        } catch {
+            // fallo silencioso — la cookie de estado no bloquea el cambio de contraseña
+        }
+        return res;
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

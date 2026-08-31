@@ -240,8 +240,8 @@ export class AutenticacionService {
             await new TokenRecuperacionRepository(tx).marcarUsado(tokenId);
         });
 
-        // SPEC-322: la ruta necesita el email para el aviso de seguridad.
-        return { ok: true, email: tokenEncontrado.usuario.email };
+        // SPEC-322: email para aviso. SPEC-318: userId para logAudit USUARIO_CAMBIO_PASSWORD.
+        return { ok: true, email: tokenEncontrado.usuario.email, userId: usuarioId };
     }
 
     /**
