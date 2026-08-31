@@ -41,12 +41,12 @@
 
 **Propósito**: Helper compartido + migración enum. Bloquea todas las fases siguientes.
 
-- [ ] T001 Verificar `npm ci` propio en el worktree (node_modules aislado, no symlink)
-- [ ] T002 Crear `src/lib/routing/sesion-estado-emitter.ts` — función `buildSesionEstadoValue(userId: string): Promise<string>` extrayendo el `Promise.all` de `src/app/api/vigencia/refresh/route.ts:46-58`
-- [ ] T003 Agregar `USUARIO_CAMBIO_PASSWORD` al enum `AccionAudit` en `prisma/schema.prisma:53`
+- [X] T001 Verificar `npm ci` propio en el worktree (node_modules aislado, no symlink) — PENDIENTE: sin node_modules; T014/T015/T016/T023 difieren hasta turno DB
+- [X] T002 Crear `src/lib/routing/sesion-estado-emitter.ts` — función `buildSesionEstadoValue(userId: string): Promise<string>` extrayendo el `Promise.all` de `src/app/api/vigencia/refresh/route.ts:46-58`
+- [ ] T003 Agregar `USUARIO_CAMBIO_PASSWORD` al enum `AccionAudit` en `prisma/schema.prisma:53` — **ESPERA TURNO DB (PI-3)**
 - [ ] T004 **[TURNO DB — esperar OK de Fábrica]** Correr `npx prisma migrate dev --name add-usuario-cambio-password` y verificar que la migración aparece en `prisma/migrations/`
 - [ ] T005 Correr `npx prisma generate` con node_modules propio del worktree y verificar que el cliente TypeScript reconoce `AccionAudit.USUARIO_CAMBIO_PASSWORD`
-- [ ] T006 [P] Extender `ResultadoRestablecer` en `src/lib/dal/services/autenticacion.ts:~245` — agregar `userId: string` al branch `ok: true` (necesario para logAudit F3 — pendiente decisión Fábrica)
+- [X] T006 [P] Extender `ResultadoRestablecer` en `src/lib/dal/types/auth.ts:34` — `{ok, email, userId}` + `src/lib/dal/services/autenticacion.ts:~245` retorna userId
 
 **Checkpoint**: Helper listo + enum migrado + cliente generado → rutas pueden importar `buildSesionEstadoValue` y `AccionAudit.USUARIO_CAMBIO_PASSWORD`
 
@@ -57,8 +57,8 @@
 **Meta**: Rutas de auth emiten `sesion_estado` en la respuesta exitosa.
 **Prueba independiente**: POST /api/auth/login → response headers contienen `Set-Cookie: sesion_estado=...`
 
-- [ ] T007 [US1] Cablear A1 `src/app/api/auth/login/route.ts:76` — capturar `NextResponse.json(...)` en `res`, llamar `await buildSesionEstadoValue(user.id)`, `res.cookies.set(NOMBRE_COOKIE, valor, {httpOnly:true, sameSite:'lax', path:'/', maxAge: TTL_SEG})`, `return res`
-- [ ] T008 [US1] Cablear A2 `src/app/api/auth/activar/route.ts:44` — mismo patrón con `user.id` de `:47`
+- [X] T007 [US1] Cablear A1 `src/app/api/auth/login/route.ts:76` — capturar `NextResponse.json(...)` en `res`, llamar `await buildSesionEstadoValue(user.id)`, `res.cookies.set(NOMBRE_COOKIE, valor, {httpOnly:true, sameSite:'lax', path:'/', maxAge: TTL_SEG})`, `return res`
+- [X] T008 [US1] Cablear A2 `src/app/api/auth/activar/route.ts:44` — mismo patrón con `user.id` de `:47`
 
 **Nota A3**: `restablecer/route.ts` excluido de emisión de cookie (HALLAZGO — sin sesión; A1 cubre el flujo posterior al login).
 
@@ -71,8 +71,8 @@
 **Meta**: Operaciones que cambian una de las tres condiciones refrescan la cookie.
 **Prueba independiente**: POST /api/consentimiento/aceptar → response contiene cookie refrescada.
 
-- [ ] T009 [US2] Cablear B1 `src/app/api/consentimiento/aceptar/route.ts:69` — después de `servicio.aceptar()`, antes del return exitoso, llamar `buildSesionEstadoValue(user.id)` y set cookie en `res`
-- [ ] T010 [US2] Cablear B2 `src/app/api/auth/cambiar-password/route.ts:61` — mismo patrón con `user.id` de `verifyAuth()`
+- [X] T009 [US2] Cablear B1 `src/app/api/consentimiento/aceptar/route.ts:69` — después de `servicio.aceptar()`, antes del return exitoso, llamar `buildSesionEstadoValue(user.id)` y set cookie en `res`
+- [X] T010 [US2] Cablear B2 `src/app/api/auth/cambiar-password/route.ts:61` — mismo patrón con `user.id` de `verifyAuth()`
 
 **Nota B3**: `restablecer/route.ts` excluido (HALLAZGO — sin sesión; cookie se emite en login posterior A1).
 
@@ -85,8 +85,8 @@
 **Meta**: `session/ping` también refresca la cookie; provider no cambia.
 **Prueba independiente**: POST /api/session/ping → response contiene `Set-Cookie: sesion_estado=...`
 
-- [ ] T011 [US4] Cablear C1 `src/app/api/session/ping/route.ts:37` — después de `pingSesion`, construir `res = NextResponse.json({ok:true})`, llamar `buildSesionEstadoValue(user.id)`, set cookie, return res. `SessionPingProvider` y `useSessionPing` NO se modifican.
-- [ ] T012 [US4] Actualizar docstring `src/lib/colegio/vigencia.ts:26-29` — reflejar que middleware cubre vigencia vía cookie; layouts y APIs de cliente ya no lo aplican directamente
+- [X] T011 [US4] Cablear C1 `src/app/api/session/ping/route.ts:37` — después de `pingSesion`, construir `res = NextResponse.json({ok:true})`, llamar `buildSesionEstadoValue(user.id)`, set cookie, return res. `SessionPingProvider` y `useSessionPing` NO se modifican.
+- [X] T012 [US4] Actualizar docstring `src/lib/colegio/vigencia.ts:26-29` — reflejar que middleware cubre vigencia vía cookie; layouts y APIs de cliente ya no lo aplican directamente
 
 **Checkpoint**: session/ping devuelve `Set-Cookie: sesion_estado=...`
 
@@ -96,7 +96,7 @@
 
 **Meta**: `consentimiento/guard.ts` emite logging estructurado persistente en cada fallo.
 
-- [ ] T013 [US3] `src/lib/consentimiento/guard.ts:19` — sumar `console.error(JSON.stringify({usuarioId: userId ?? null, evento: "consentimiento.guard.fail", timestamp: new Date().toISOString()}))` **junto** al `console.error` existente (no borrarlo)
+- [X] T013 [US3] `src/lib/consentimiento/guard.ts:19` — sumar `console.error(JSON.stringify({usuarioId: userId ?? null, evento: "consentimiento.guard.fail", timestamp: new Date().toISOString()}))` **junto** al `console.error` existente (no borrarlo)
 
 ---
 
@@ -114,11 +114,11 @@
 
 **Meta**: Tests de todo lo editado (Candado 24 v2).
 
-- [ ] T017 [P] Test en `src/__tests__/middleware.test.ts` — SC-06: request autenticado sin cookie `sesion_estado` → middleware NO expulsa (fail-open confirmado), cookie existente con estado válido → guards corren. Afirmar ambas ramas.
-- [ ] T018 [P] Test en `src/__tests__/api/auth/login.test.ts` (o crear si no existe) — verificar que la respuesta exitosa de POST /api/auth/login contiene `Set-Cookie` con `sesion_estado`
-- [ ] T019 [P] Test en `src/__tests__/api/auth/activar.test.ts` — mismo assert Set-Cookie para activar
-- [ ] T020 [P] Test en `src/__tests__/api/session/ping.test.ts` — assert Set-Cookie en ping exitoso
-- [ ] T021 Test en `src/__tests__/api/consentimiento/aceptar.test.ts` — assert Set-Cookie en aceptar exitoso
+- [X] T017 [P] Test en `src/lib/routing/middleware.test.ts` — SC-06 (k): autenticado sin cookie `sesion_estado` → no expulsa (fail-open). Agregado commit d171a2da4.
+- [X] T018 [P] Test en `src/app/api/auth/login/route.test.ts` — SC-01: login exitoso incluye Set-Cookie `sesion_estado`. Agregado commit d171a2da4.
+- [X] T019 [P] Test en `src/app/api/auth/activar/route.test.ts` — SC-02: activación exitosa incluye Set-Cookie `sesion_estado`. Agregado ahora.
+- [X] T020 [P] Test en `src/app/api/session/ping/route.test.ts` — SC-04: ping exitoso incluye Set-Cookie `sesion_estado`. Agregado commit d171a2da4.
+- [X] T021 Test en `src/app/api/consentimiento/aceptar/route.test.ts` — SC-03: aceptar exitoso incluye Set-Cookie `sesion_estado`. Agregado ahora.
 - [ ] T022 [P] Test de enum en `src/__tests__/` — verificar que `AccionAudit.USUARIO_CAMBIO_PASSWORD` existe en el cliente Prisma (type-level o import)
 - [ ] T023 Correr `npx vitest run src/__tests__/specs-discipline.test.ts` local y confirmar PASS antes de REALIZADO
 
