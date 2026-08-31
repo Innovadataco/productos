@@ -42,6 +42,9 @@ export interface CrearReporteInput {
     estadoInicial: EstadoInicialReporte;
     prioridadAlta: boolean;
     keywordsDetectadas: string[];
+    // SPEC-323: vinculación intencional. El cliente lo incluye tras aceptar la
+    // oferta de expediente para el 2º (y posteriores) reportes del mismo identificador.
+    reportePrevioId?: string | undefined;
 }
 
 export interface ReporteCreadoDto {
@@ -52,6 +55,7 @@ export interface ReporteCreadoDto {
 
 export type ResultadoCreacion =
     | { ok: true; reporte: ReporteCreadoDto }
+    | { ok: true; reporte: ReporteCreadoDto; vinculacion: { reportePrevioId: string; reportePrevioCreadoEn: Date } }
     | { ok: false; tipo: "duplicado"; reporteExistenteId: string }
     | { ok: false; tipo: "error_numero" }
     | { ok: false; tipo: "error_cifrado" };
@@ -82,6 +86,7 @@ export class ReporteCreationService {
         const identificador = normalizarIdentificador(input.identificador);
 
         // Deduplicación autenticada: mismo usuario + identificador en 30 días.
+        let vinculacionInfo: { reportePrevioId: string; reportePrevioCreadoEn: Date } | undefined;
         if (usuarioId) {
             // SPEC-137 (E-5): advisory lock por (usuario, identificador) ANTES del
             // chequeo — la 2ª request concurrente espera aquí hasta el commit de la
@@ -90,7 +95,14 @@ export class ReporteCreationService {
             const desde = new Date(Date.now() - THIRTY_DAYS_MS);
             const existente = await this.reportes.findDuplicadoReciente(usuarioId, identificador, desde);
             if (existente) {
-                return { ok: false, tipo: "duplicado", reporteExistenteId: existente.id };
+                // SPEC-323 (candado 26): la DETECCIÓN no cambia — solo la RESPUESTA.
+                // Si el padre aceptó la oferta, envió reportePrevioId. El doble guard
+                // (id + titularidad) impide bypass arbitrario.
+                if (input.reportePrevioId === existente.id && existente.usuarioId === usuarioId) {
+                    vinculacionInfo = { reportePrevioId: existente.id, reportePrevioCreadoEn: existente.creadoEn };
+                } else {
+                    return { ok: false, tipo: "duplicado", reporteExistenteId: existente.id };
+                }
             }
         }
 
@@ -150,6 +162,13 @@ export class ReporteCreationService {
             esAnonimo: input.esAnonimo,
         });
 
+        if (vinculacionInfo) {
+            return {
+                ok: true as const,
+                reporte: { id: reporte.id, numeroSeguimiento: reporte.numeroSeguimiento, estado: reporte.estado },
+                vinculacion: vinculacionInfo,
+            };
+        }
         return {
             ok: true,
             reporte: { id: reporte.id, numeroSeguimiento: reporte.numeroSeguimiento, estado: reporte.estado },

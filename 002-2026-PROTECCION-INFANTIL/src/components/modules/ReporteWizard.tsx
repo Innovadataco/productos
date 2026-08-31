@@ -68,6 +68,9 @@ export function ReporteWizard({
     const [resultado, setResultado] = useState<{ numeroSeguimiento: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    // SPEC-323 (T007/US1): oferta de vinculación cuando el padre duplica un reporte reciente.
+    const [oferta, setOferta] = useState<{ reporteExistenteId: string; identificador: string } | null>(null);
+    const [reportePrevioId, setReportePrevioId] = useState<string | null>(null);
     // SPEC-314 (002-PI-214): fallback reactivo · si el backend rechaza con 403 FORBIDDEN
     // (rol nuevo agregado al backend sin actualizar ROLES_BLOQUEADOS del frontend), se
     // muestra el mismo card de bloqueo con 2 CTAs.
@@ -120,6 +123,8 @@ export function ReporteWizard({
                     paisId: data.paisId || null,
                     ciudadId: data.ciudadId === "otra" ? null : (data.ciudadId || null),
                     edadVictima: data.edadVictima ? Number(data.edadVictima) : undefined,
+                    // SPEC-323 (US1): señal de vinculación intencional (presente solo en el 2º reporte).
+                    ...(reportePrevioId ? { reportePrevioId } : {}),
                 }),
             });
             const json = await res.json().catch(() => null);
@@ -132,6 +137,12 @@ export function ReporteWizard({
                     return;
                 }
                 setError(json?.error?.message || "Error al enviar el reporte");
+                setIsSubmitting(false);
+                return;
+            }
+            // SPEC-323 (US1): el backend detecta duplicado reciente del padre → ofrece vinculación.
+            if (json?.oferta === true) {
+                setOferta({ reporteExistenteId: json.reporteExistenteId, identificador: json.identificador });
                 setIsSubmitting(false);
                 return;
             }
@@ -165,6 +176,42 @@ export function ReporteWizard({
 
     if (resultado) {
         return <ConfirmacionReporte numeroSeguimiento={resultado.numeroSeguimiento} />;
+    }
+
+    // SPEC-323 (T007/US1): tarjeta de oferta de vinculación.
+    if (oferta) {
+        return (
+            <div className="mx-auto max-w-xl rounded-2xl border border-ambar/30 bg-ambar/10 p-8 text-center">
+                <p className="text-lg font-semibold text-tinta">
+                    Ya reportaste este identificador recientemente
+                </p>
+                <p className="mt-2 text-sm text-tinta/80">
+                    <span className="font-mono font-bold">{oferta.identificador}</span> ya tiene un reporte tuyo en el sistema.
+                    ¿Querés agregar otro evento al mismo caso?
+                </p>
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                    <Button
+                        onClick={() => {
+                            setReportePrevioId(oferta.reporteExistenteId);
+                            update({ identificador: oferta.identificador });
+                            setStep(1);
+                            setOferta(null);
+                        }}
+                    >
+                        Sí, agregar otro evento
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            setOferta(null);
+                            setError("");
+                        }}
+                    >
+                        Cancelar
+                    </Button>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -215,6 +262,7 @@ export function ReporteWizard({
                     identificador={data.identificador}
                     plataforma={data.plataforma}
                     otraPlataforma={data.otraPlataforma}
+                    identificadorBloqueado={reportePrevioId !== null}
                     onChange={(v: { identificador: string; plataforma: string; otraPlataforma: string }) => update(v)}
                 />
             )}

@@ -10,6 +10,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
 import { validarSecretoSimulacion } from "@/lib/anti-abuso/simulador-secreto";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
+import { ExpedienteRepository } from "@/lib/dal/repositories/expediente-repository";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 
 export async function POST(request: Request) {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima } = parsed.data;
+        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima, reportePrevioId } = parsed.data;
 
         // Spec 092-US5: la longitud mínima es un parámetro (ADR_004), no un literal.
         const paramMinTexto = await getParametroSistema("reportes.spam.min_text_length");
@@ -137,11 +138,20 @@ export async function POST(request: Request) {
                 estadoInicial,
                 prioridadAlta,
                 keywordsDetectadas,
+                reportePrevioId,
             })
         );
 
         if (!resultado.ok) {
             if (resultado.tipo === "duplicado") {
+                // SPEC-323 (AD-1): padre autenticado recibe oferta de vinculación;
+                // anónimo y otros usuarios siguen con 429 (candado 26 — solo la respuesta cambia).
+                if (user?.rol === "PARENT") {
+                    return NextResponse.json(
+                        { oferta: true, reporteExistenteId: resultado.reporteExistenteId, identificador },
+                        { status: 200 }
+                    );
+                }
                 return NextResponse.json(
                     { error: { message: "Ya reportaste este identificador recientemente", code: "DUPLICATE_REPORT", reporteExistenteId: resultado.reporteExistenteId } },
                     { status: 429 }
@@ -160,6 +170,33 @@ export async function POST(request: Request) {
         }
 
         const { reporte } = resultado;
+
+        // SPEC-323 (T011/US2): vinculación aceptada → crear/reutilizar expediente y agregar eventos.
+        let expedienteId: string | undefined;
+        if ("vinculacion" in resultado && resultado.vinculacion) {
+            const { reportePrevioId, reportePrevioCreadoEn } = resultado.vinculacion;
+            const expRepo = new ExpedienteRepository();
+            const existente = await expRepo.buscarExpedienteActivo(usuarioId!, identificador);
+            const expediente = existente ?? await expRepo.crearExpediente({
+                padreUsuarioId: usuarioId!,
+                identificadorReportado: identificador,
+            });
+            expedienteId = expediente.id;
+            // Evento #1 retroactivo (reporte previo). texto="" — AD-3 opción C: el texto
+            // se descifra al leer, no se persiste en el evento.
+            await expRepo.agregarEvento({
+                expedienteId: expediente.id,
+                texto: "",
+                reporteId: reportePrevioId,
+                fechaEvento: reportePrevioCreadoEn,
+            });
+            // Evento #2 (reporte recién creado).
+            await expRepo.agregarEvento({
+                expedienteId: expediente.id,
+                texto: "",
+                reporteId: reporte.id,
+            });
+        }
 
         // Registrar señal de fuente para anti-abuso (Fase A)
         try {
@@ -188,6 +225,7 @@ export async function POST(request: Request) {
                     numeroSeguimiento: reporte.numeroSeguimiento,
                     estado: reporte.estado,
                 },
+                ...(expedienteId ? { expedienteId } : {}),
                 mensaje: "Reporte recibido. Tu número de seguimiento es " + reporte.numeroSeguimiento + ".",
             },
             { status: 201 }
