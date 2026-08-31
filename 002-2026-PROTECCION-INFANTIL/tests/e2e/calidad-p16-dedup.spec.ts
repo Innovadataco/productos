@@ -25,9 +25,10 @@ test("P16 · el padre no puede re-reportar el mismo identificador (dedup 30d)", 
 
     const idf = `p16dios${String(Date.now()).slice(-6)}`;
     const payload = {
-        identificador: idf, plataformaClave: "whatsapp", plataforma: "whatsapp",
-        texto: "Prueba P16 D-021 · reporte de padre para verificar dedup de re-reporte.",
-        esAnonimo: false, ciudad: "Bogotá",
+        identificador: idf, plataforma: "whatsapp",
+        texto: "Prueba P16 D-021 · reporte de padre para verificar dedup de re-reporte del mismo identificador.",
+        fechaIncidente: new Date().toISOString(), ciudad: "Bogotá", pais: "Colombia",
+        esAnonimo: false,
     };
 
     const r1 = await ctx.post("/api/reportes", { data: payload });
