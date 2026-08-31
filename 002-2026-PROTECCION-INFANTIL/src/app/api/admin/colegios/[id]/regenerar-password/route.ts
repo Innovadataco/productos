@@ -9,6 +9,7 @@ import { colegioIdParamsSchema } from "@/lib/schemas";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { randomBytes } from "crypto";
+import { enviarEmailCambioPassword } from "@/lib/email";
 
 function getClientInfo(request: Request) {
     return {
@@ -64,6 +65,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             ipAddress,
             userAgent,
         });
+
+        // SPEC-322 (camino 6): aviso al rector cuando un admin le regenera la clave.
+        // El rector es el dueño de la cuenta; sin este aviso no se enteraría del cambio.
+        try {
+            await enviarEmailCambioPassword(colegio.admin.email);
+        } catch {
+            // fallo silencioso — el aviso no es bloqueante
+        }
 
         return NextResponse.json({
             colegio: { id: colegio.id, nombre: colegio.nombre },

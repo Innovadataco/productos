@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { getParametroSistema } from "@/lib/parametros";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
+import { enviarEmailCambioPassword } from "@/lib/email";
 
 const schemaBase = z.object({
     passwordActual: z.string().min(1),
@@ -47,6 +48,14 @@ export async function POST(request: Request) {
                 { error: { message: "Contraseña actual incorrecta", code: ERROR_CODES.AUTH_INVALID } },
                 { status: 401 }
             );
+        }
+
+        // SPEC-322 (camino 2): aviso de seguridad al dueño de la cuenta.
+        // try/catch: un fallo de correo no debe romper el cambio de clave.
+        try {
+            await enviarEmailCambioPassword(user.email);
+        } catch {
+            // fallo silencioso — el aviso no es bloqueante
         }
 
         return NextResponse.json({ ok: true });

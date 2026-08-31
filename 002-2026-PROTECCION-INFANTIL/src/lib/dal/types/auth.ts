@@ -32,7 +32,8 @@ export type ResultadoValidacionToken =
     | { valido: false };
 
 export type ResultadoRestablecer =
-    | { ok: true }
+    // SPEC-322: incluye email para que la ruta pueda enviar el aviso de seguridad.
+    | { ok: true; email: string }
     | { ok: false; tipo: "invalido" | "sin_usuario" };
 
 export type ResultadoSolicitudCodigo =

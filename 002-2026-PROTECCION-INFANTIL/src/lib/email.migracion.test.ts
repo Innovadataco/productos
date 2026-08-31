@@ -29,6 +29,8 @@ const SEED_CMD = "npx tsx prisma/seed.ts";
 const EVENTOS_MIGRADOS = [
     "auth.codigo_verificacion",
     "auth.password_recuperacion",
+    // SPEC-322: aviso de seguridad al cambiar contraseña (obligatoria, todos los roles).
+    "auth.password_cambiada",
     "usuario.bienvenida.operador",
     "usuario.bienvenida.comite",
     "usuario.credenciales.padre",
