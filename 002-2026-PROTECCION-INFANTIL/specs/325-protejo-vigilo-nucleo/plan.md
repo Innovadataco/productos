@@ -40,7 +40,7 @@ model Hijo {
   apellidos       String   @default("")
   documentoTipo   String   // set cerrado en Zod: RC|TI|CC|CE|PASAPORTE|OTRO (OBLIGATORIO)
   documentoNumero String   // OBLIGATORIO
-  edad            Int?
+  anioNacimiento  Int?     // durable (no `edad`, que se pone rancia) · consistente con A-58; la UI calcula edad = añoActual - anioNacimiento
   sexo            String?  // set cerrado en Zod
   creadoEn        DateTime @default(now())
   actualizadoEn   DateTime @updatedAt
