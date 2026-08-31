@@ -63,6 +63,29 @@ test.describe.serial("A-56 · tres porteros (SPEC-318)", () => {
         await ctx.close();
     });
 
+    test("PORTERO 4 AISLADO · debeCambiarPassword tras firmar consent → rebota a /cambiar-password", async ({ request, browser }) => {
+        // colegio fresco: firmo consent (pasa el portero 1) pero NO cambio la clave → aísla el portero de password
+        const email2 = `soporte+e2e-a56b-${SUF}@innovadataco.com`;
+        const iso = new Date().toISOString(), fin = new Date(Date.now() + 365 * 864e5).toISOString();
+        const r = await request.post("/api/admin/colegios", {
+            data: { nombre: `Colegio A56b DIOS ${SUF}`, paisId: GEO.paisId, departamentoId: GEO.departamentoId, ciudadId: GEO.ciudadId,
+                representanteLegalNombre: "Rep A56b", representanteLegalIdentificacion: `96${SUF}`, representanteLegalEmail: email2,
+                inicioServicio: iso, finServicio: fin, tipoPeriodo: "ANUAL", adminEmail: email2, adminNombre: "Rector A56b" },
+        });
+        const pw = (await r.json()).passwordTemporal;
+        const ctx = await browser.newContext();
+        const page = await ctx.newPage();
+        await page.request.post("/api/auth/login", { data: { email: email2, password: pw } });
+        await page.request.post("/api/consentimiento/aceptar", { data: { documentoTipo: "CONVENIO_INSTITUCIONAL", esRepresentanteLegal: true } });
+        // sin cambiar la clave, intentar entrar
+        await page.goto("/dashboard/colegio", { waitUntil: "domcontentloaded" }).catch(() => {});
+        await page.waitForTimeout(1500);
+        const dest = u(page);
+        const cumple = dest.includes("/cambiar-password");
+        console.log(`\n[PORTERO-4-AISLADO] consent firmado, clave temporal sin cambiar, URL a /dashboard/colegio → ${dest} · ${cumple ? "CUMPLE (rebota a cambiar-password)" : "NO CUMPLE"}`);
+        await ctx.close();
+    });
+
     test("PORTERO 1 · tras firmar NO hay bucle (recarga ×3 + navegar)", async ({ browser }) => {
         const ctx = await browser.newContext();
         const page = await ctx.newPage();
