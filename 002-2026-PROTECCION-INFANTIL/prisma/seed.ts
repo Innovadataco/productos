@@ -824,6 +824,16 @@ async function seedEventosEmailMigrados() {
                 "Hola,\n\nRecibimos una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace:\n\n{{url}}\n\nEste enlace expira en 1 hora y solo puede usarse una vez. Si no solicitaste este cambio, ignora este mensaje.",
         },
         {
+            // SPEC-338 (I-226): alguien intentó registrarse con un correo que ya
+            // tiene cuenta. Anti-enumeración: la pantalla no revela nada; el aviso
+            // va SOLO al buzón. Lenguaje de padre (A-62), sin tecnicismos.
+            clave: "auth.cuenta_existente.email",
+            asunto: "Ya tenés una cuenta con este correo",
+            cuerpoMarkdown:
+                "Hola,\n\nAlguien intentó crear una cuenta con este correo, pero vos ya tenés una con nosotros.\n\nPara entrar, usá tu correo y tu clave acá:\n{{urlLogin}}\n\n¿No te acordás de la clave? La recuperás en un minuto acá:\n{{urlRecuperar}}\n\nSi no fuiste vos, no tenés que hacer nada: tu cuenta está segura.",
+            variablesSchema: { type: "object", properties: { urlLogin: { type: "string" }, urlRecuperar: { type: "string" } } },
+        },
+        {
             clave: "usuario.bienvenida.operador.email",
             asunto: "Tu cuenta de operador está lista",
             cuerpoMarkdown:
@@ -975,6 +985,9 @@ async function seedEventosEmailMigrados() {
     const reglas: Array<{ evento: string; plantillaClave: string; rol: string; obligatoria: boolean }> = [
         { evento: "auth.codigo_verificacion", plantillaClave: "auth.codigo_verificacion.email", rol: "PARENT", obligatoria: true },
         { evento: "auth.password_recuperacion", plantillaClave: "auth.password_recuperacion.email", rol: "PARENT", obligatoria: true },
+        // SPEC-338 (I-226): aviso "ya tenés una cuenta". rol "ALL" (como password_cambiada):
+        // el destinatario puede ser de cualquier rol; evento de una sola regla → el motor no filtra.
+        { evento: "auth.cuenta_existente", plantillaClave: "auth.cuenta_existente.email", rol: "ALL", obligatoria: true },
         { evento: "usuario.bienvenida.operador", plantillaClave: "usuario.bienvenida.operador.email", rol: "OPERADOR", obligatoria: true },
         { evento: "usuario.bienvenida.comite", plantillaClave: "usuario.bienvenida.comite.email", rol: "COMITE_VALIDACION", obligatoria: true },
         { evento: "usuario.credenciales.padre", plantillaClave: "usuario.credenciales.padre.email", rol: "PARENT", obligatoria: true },

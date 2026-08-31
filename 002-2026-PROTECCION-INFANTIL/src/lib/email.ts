@@ -51,6 +51,23 @@ export async function enviarCodigoVerificacion(email: string, codigo: string): P
     }
 }
 
+/**
+ * SPEC-338 (I-226): alguien intentó registrarse con un correo que YA tiene cuenta.
+ * La pantalla responde genérico (anti-enumeración); el aviso va SOLO al buzón, con
+ * enlaces para entrar o recuperar la clave. No revela existencia en pantalla.
+ */
+export async function enviarEmailCuentaExistente(email: string): Promise<void> {
+    const result = await programar({
+        evento: "auth.cuenta_existente",
+        destinatarios: [
+            { email, variables: { urlLogin: `${baseUrl()}/login`, urlRecuperar: `${baseUrl()}/recuperar` } },
+        ],
+    });
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para auth.cuenta_existente");
+    }
+}
+
 export async function enviarTokenRecuperacion(email: string, token: string): Promise<void> {
     const url = `${baseUrl()}/recuperar/${token}`;
     const result = await programar({

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { enviarCodigoVerificacion } from "@/lib/email";
+import { enviarCodigoVerificacion, enviarEmailCuentaExistente } from "@/lib/email";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verificarSolicitarSchema } from "@/lib/validators";
@@ -58,6 +58,15 @@ export async function POST(request: Request) {
         }
 
         if (resultado.tipo === "existente") {
+            // SPEC-338 (I-226): el correo ya tiene cuenta. La respuesta en pantalla
+            // NO revela nada (anti-enumeración); el aviso "ya tenés una cuenta" va al
+            // buzón. Fire-and-forget con fallo silencioso, igual que el envío del código.
+            try {
+                await enviarEmailCuentaExistente(email);
+            } catch {
+                const masked = email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
+                logger.error(`[VERIFICAR] Aviso cuenta-existente: envío fallido — ${masked}`);
+            }
             return NextResponse.json({ message: MENSAJE_EXITO }, { status: 202 });
         }
 
