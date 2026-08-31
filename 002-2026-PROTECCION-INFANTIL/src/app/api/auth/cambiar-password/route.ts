@@ -7,6 +7,8 @@ import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 import { enviarEmailCambioPassword } from "@/lib/email";
 import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
 import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
+import { logAudit } from "@/lib/audit";
+import { AccionAudit } from "@prisma/client";
 
 const schemaBase = z.object({
     passwordActual: z.string().min(1),
@@ -59,6 +61,14 @@ export async function POST(request: Request) {
         } catch {
             // fallo silencioso — el aviso no es bloqueante
         }
+
+        // US5 · SPEC-318: auditar cambio de contraseña (enum USUARIO_CAMBIO_PASSWORD requiere T003-T005)
+        await logAudit({
+            accion: AccionAudit.USUARIO_CAMBIO_PASSWORD,
+            tipoRecurso: "Usuario",
+            recursoId: user.id,
+            usuarioId: user.id,
+        });
 
         const res = NextResponse.json({ ok: true });
         try {

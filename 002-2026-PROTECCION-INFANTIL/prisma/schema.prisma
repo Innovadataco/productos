@@ -314,6 +314,8 @@ enum AccionAudit {
   PLAN_TOGGLE
   // SPEC-245 (002-PI-148): activación/autorización manual de suscripción por admin.
   SUSCRIPCION_ACTIVADA_MANUAL
+  // SPEC-318 (002-PI-218): auditoría de cambio/restablecimiento/activación de contraseña.
+  USUARIO_CAMBIO_PASSWORD
 }
 
 enum TipoPeriodoServicio {

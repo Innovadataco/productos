@@ -3,6 +3,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { restablecerPasswordSchema } from "@/lib/validators";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 import { enviarEmailCambioPassword } from "@/lib/email";
+import { logAudit } from "@/lib/audit";
+import { AccionAudit } from "@prisma/client";
 
 export async function POST(request: Request) {
     try {
@@ -42,6 +44,15 @@ export async function POST(request: Request) {
         } catch {
             // fallo silencioso — el aviso no es bloqueante
         }
+
+        // US5 · SPEC-318: auditar restablecimiento (enum USUARIO_CAMBIO_PASSWORD requiere T003-T005;
+        // resultado.userId disponible por F3 APROBADO — ResultadoRestablecer extendida en T006)
+        await logAudit({
+            accion: AccionAudit.USUARIO_CAMBIO_PASSWORD,
+            tipoRecurso: "Usuario",
+            recursoId: resultado.userId,
+            usuarioId: resultado.userId,
+        });
 
         return NextResponse.json({ message: "Contraseña actualizada correctamente." });
     } catch (error) {
