@@ -52,6 +52,24 @@ describe("obtenerPreferenciasUsuario", () => {
         expect(grupos).toHaveLength(0);
     });
 
+    // SPEC-333 (I-223): dos roles del mismo (evento, canal, plantilla) coexisten
+    // (des-colapso). Cada rol ve SU toggle — antes se colapsaban en una sola regla.
+    it("des-colapso: PARENT y SCHOOL_ADMIN ven cada uno su regla del mismo evento", async () => {
+        const padre = await crearUsuario("PARENT", "padre-333@test.com");
+        const rector = await crearUsuario("SCHOOL_ADMIN", "rector-333@test.com");
+        const plantilla = await crearPlantilla("suscripcion.por_vencer.email", "EMAIL");
+        await crearRegla("suscripcion.por_vencer", "PARENT", "EMAIL", plantilla.clave, true);
+        await crearRegla("suscripcion.por_vencer", "SCHOOL_ADMIN", "EMAIL", plantilla.clave, true);
+
+        const gruposPadre = await obtenerPreferenciasUsuario(padre.id, "PARENT");
+        expect(gruposPadre).toHaveLength(1);
+        expect(gruposPadre[0].evento).toBe("suscripcion.por_vencer");
+
+        const gruposRector = await obtenerPreferenciasUsuario(rector.id, "SCHOOL_ADMIN");
+        expect(gruposRector).toHaveLength(1);
+        expect(gruposRector[0].evento).toBe("suscripcion.por_vencer");
+    });
+
     // SPEC-330 (I-221): el seed sembraba el rol del padre como "PADRE" (dominio),
     // que no existe en el enum RolUsuario. La pantalla filtra por el rol enum del
     // usuario ("PARENT") → el toggle quedaba oculto. Candado 26: reproducido.

@@ -2691,8 +2691,10 @@ model NotificacionRegla {
   actualizadaPor String?
   actualizadaEn  DateTime          @updatedAt @db.Timestamptz(6)
 
-  // SPEC-247 (002-PI-150): dedup de reglas por clave canónica (evento, canal, plantillaClave).
-  @@unique([evento, canal, plantillaClave])
+  // SPEC-247 (002-PI-150): dedup de reglas por clave canónica.
+  // SPEC-333 (002-PI-233 · I-223): la identidad incluye `rol` — dos roles del mismo
+  // (evento, canal, plantillaClave) son reglas distintas (des-colapso multi-rol).
+  @@unique([evento, canal, plantillaClave, rol])
   @@index([evento, activa])
   @@map("notificacion_reglas")
 }

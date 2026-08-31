@@ -97,13 +97,17 @@ export function horaCorridaACron(hora: string | null | undefined): string {
 
 /** Destinatarios del titular: usuario padre, admin del colegio o representante legal. */
 function resolverDestinatarios(s: SuscripcionVigencia, fecha: string) {
+    // SPEC-333 (I-223): `rol` explícito por destinatario — suscripcion.* es evento
+    // multi-rol (PARENT + SCHOOL_ADMIN); el representante legal es email-only y sin rol
+    // el motor no podría filtrar su regla.
     if (s.usuario) {
-        return [{ usuarioId: s.usuario.id, variables: { nombre: s.usuario.nombre ?? "", fecha } }];
+        return [{ usuarioId: s.usuario.id, rol: "PARENT", variables: { nombre: s.usuario.nombre ?? "", fecha } }];
     }
     if (s.colegio?.admin) {
         return [
             {
                 usuarioId: s.colegio.admin.id,
+                rol: "SCHOOL_ADMIN",
                 variables: { nombre: s.colegio.admin.nombre ?? s.colegio.nombre, fecha },
             },
         ];
@@ -112,6 +116,7 @@ function resolverDestinatarios(s: SuscripcionVigencia, fecha: string) {
         return [
             {
                 email: s.colegio.representanteLegalEmail,
+                rol: "SCHOOL_ADMIN",
                 variables: { nombre: s.colegio.representanteLegalNombre || s.colegio.nombre, fecha },
             },
         ];

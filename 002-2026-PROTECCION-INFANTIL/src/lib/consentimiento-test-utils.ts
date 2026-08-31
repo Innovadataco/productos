@@ -78,16 +78,17 @@ export async function crearEventoConsentimiento() {
         });
     }
 
-    // SPEC-247 (002-PI-150): el schema impone @@unique([evento, canal, plantillaClave]).
-    // El motor de notificaciones programa UNA notificación por canal para el evento,
-    // sin filtrar por rol del destinatario; basta con una regla representativa.
+    // SPEC-333 (002-PI-233): la identidad es @@unique([evento, canal, plantillaClave, rol]).
+    // Esta util siembra la regla del padre (PARENT) para el evento de consentimiento;
+    // basta una regla representativa por canal.
     for (const canal of ["EMAIL", "IN_APP"] as const) {
         await prisma.notificacionRegla.upsert({
             where: {
-                evento_canal_plantillaClave: {
+                evento_canal_plantillaClave_rol: {
                     evento,
                     canal,
                     plantillaClave: `${evento}.${canal.toLowerCase()}`,
+                    rol: "PARENT",
                 },
             },
             update: {

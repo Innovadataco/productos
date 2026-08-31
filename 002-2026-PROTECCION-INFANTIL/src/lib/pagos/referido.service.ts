@@ -71,13 +71,16 @@ function emailTitular(s: SuscripcionConTitular): string | null {
 }
 
 function resolverDestinatariosTitular(s: SuscripcionConTitular, variables: Record<string, unknown>) {
+    // SPEC-333 (I-223): `rol` explícito — referido.* es multi-rol (PARENT + SCHOOL_ADMIN,
+    // y ADMIN vía extraDestinatarios). El representante legal es email-only.
     if (s.usuario) {
-        return [{ usuarioId: s.usuario.id, variables: { nombre: s.usuario.nombre ?? "", ...variables } }];
+        return [{ usuarioId: s.usuario.id, rol: "PARENT", variables: { nombre: s.usuario.nombre ?? "", ...variables } }];
     }
     if (s.colegio?.admin) {
         return [
             {
                 usuarioId: s.colegio.admin.id,
+                rol: "SCHOOL_ADMIN",
                 variables: { nombre: s.colegio.admin.nombre ?? s.colegio.nombre, ...variables },
             },
         ];
@@ -86,6 +89,7 @@ function resolverDestinatariosTitular(s: SuscripcionConTitular, variables: Recor
         return [
             {
                 email: s.colegio.representanteLegalEmail,
+                rol: "SCHOOL_ADMIN",
                 variables: { nombre: s.colegio.representanteLegalNombre || s.colegio.nombre, ...variables },
             },
         ];
@@ -98,7 +102,7 @@ async function emitirEventoReferido(
     evento: string,
     s: SuscripcionConTitular,
     variables: Record<string, unknown>,
-    extraDestinatarios: Array<{ email: string; variables: Record<string, unknown> }> = []
+    extraDestinatarios: Array<{ email: string; rol?: string; variables: Record<string, unknown> }> = []
 ): Promise<void> {
     const destinatarios = [...resolverDestinatariosTitular(s, variables), ...extraDestinatarios];
     if (destinatarios.length === 0) {
@@ -303,7 +307,7 @@ export async function procesarRecompensasPagoAutorizado(
                 EVENTOS_REFERIDO.TOPE_ANUAL,
                 referidor,
                 variables,
-                admins.map((a) => ({ email: a.email, variables }))
+                admins.map((a) => ({ email: a.email, rol: "ADMIN", variables }))
             );
             notificadoTopeAnual = true;
         }

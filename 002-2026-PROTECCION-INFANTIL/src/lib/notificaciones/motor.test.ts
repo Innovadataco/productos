@@ -217,3 +217,77 @@ describe("motor de notificaciones", () => {
         expect(notificacion?.motivoCancelacion).toBe("regla_cambiada_recalculo");
     });
 });
+
+// SPEC-333 (002-PI-233 · I-223): la regla distingue el rol. Al des-colapsar, un
+// evento tiene reglas de varios roles; el motor debe aplicar a cada destinatario
+// SOLO la de su rol (si no, doble envío en +0m y offset ajeno). Un solo rol =
+// conducta idéntica (cubierto por los tests de arriba con reglas PARENT únicas).
+describe("motor rol-aware (SPEC-333)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    it("evento multi-rol +0m: 1 por destinatario, sin duplicados", async () => {
+        const padre = await crearUsuario("PARENT", "padre@test.com");
+        const rector = await crearUsuario("SCHOOL_ADMIN", "rector@test.com");
+        const pl = await crearPlantilla("referido.registrado.email", "EMAIL", "Hola {{nombre}}", "Referido");
+        // Dos reglas del MISMO (evento, canal, plantillaClave), rol distinto (des-colapsadas).
+        await crearRegla("referido.registrado", "PARENT", "+0m", "EMAIL", pl.clave, false);
+        await crearRegla("referido.registrado", "SCHOOL_ADMIN", "+0m", "EMAIL", pl.clave, false);
+
+        const result = await programar({
+            evento: "referido.registrado",
+            destinatarios: [
+                { usuarioId: padre.id, rol: "PARENT", variables: { nombre: "Padre" } },
+                { usuarioId: rector.id, rol: "SCHOOL_ADMIN", variables: { nombre: "Rector" } },
+            ],
+        });
+
+        // 2 (una por destinatario), NO 4 (2 reglas × 2 destinatarios).
+        expect(result.programadas).toBe(2);
+        const notifs = await prisma.notificacion.findMany();
+        expect(notifs).toHaveLength(2);
+        expect(notifs.filter((n) => n.destinatarioEmail === "padre@test.com")).toHaveLength(1);
+        expect(notifs.filter((n) => n.destinatarioEmail === "rector@test.com")).toHaveLength(1);
+    });
+
+    it("offset por rol: padre -1d, rector -5d (no se colapsan)", async () => {
+        const padre = await crearUsuario("PARENT", "p@test.com");
+        const rector = await crearUsuario("SCHOOL_ADMIN", "r@test.com");
+        const pl = await crearPlantilla("suscripcion.por_vencer.email", "EMAIL", "Hola {{nombre}}", "Vence");
+        await crearRegla("suscripcion.por_vencer", "PARENT", "-1d", "EMAIL", pl.clave, true);
+        await crearRegla("suscripcion.por_vencer", "SCHOOL_ADMIN", "-5d", "EMAIL", pl.clave, true);
+
+        const base = new Date("2026-09-10T12:00:00.000Z");
+        await programar({
+            evento: "suscripcion.por_vencer",
+            enviarEn: base,
+            destinatarios: [
+                { usuarioId: padre.id, rol: "PARENT", variables: { nombre: "P" } },
+                { usuarioId: rector.id, rol: "SCHOOL_ADMIN", variables: { nombre: "R" } },
+            ],
+        });
+
+        const nP = await prisma.notificacion.findFirst({ where: { destinatarioEmail: "p@test.com" } });
+        const nR = await prisma.notificacion.findFirst({ where: { destinatarioEmail: "r@test.com" } });
+        // El padre (-1d) queda MÁS TARDE que el rector (-5d): cada uno respeta su offset.
+        expect(nP!.enviarEn!.getTime()).toBeGreaterThan(nR!.enviarEn!.getTime());
+    });
+
+    it("destinatario email-only con rol explícito filtra su regla", async () => {
+        const pl = await crearPlantilla("suscripcion.por_vencer.email", "EMAIL", "Hola", "Vence");
+        await crearRegla("suscripcion.por_vencer", "PARENT", "-1d", "EMAIL", pl.clave, true);
+        await crearRegla("suscripcion.por_vencer", "SCHOOL_ADMIN", "-5d", "EMAIL", pl.clave, true);
+
+        const result = await programar({
+            evento: "suscripcion.por_vencer",
+            destinatarios: [{ email: "representante@colegio.com", rol: "SCHOOL_ADMIN", variables: {} }],
+        });
+
+        // Solo la regla SCHOOL_ADMIN aplica (1 envío), no la del padre.
+        expect(result.programadas).toBe(1);
+        const notifs = await prisma.notificacion.findMany();
+        expect(notifs).toHaveLength(1);
+        expect(notifs[0].destinatarioEmail).toBe("representante@colegio.com");
+    });
+});
