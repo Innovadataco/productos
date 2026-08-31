@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-31
 
-**Status**: PLANEADO
+**Status**: DESARROLLO
 
 **Input**: SPEC-326 · 002-PI-226 · Brief A-62 · Recorrido #2 de Jelkin · I-220. Las pantallas del padre "hablan como robot"; el usuario adivina qué hacer. Regla marco: **ninguna pantalla del área del padre termina sin decirle qué puede hacer ahora**. El usuario es un padre no técnico, preocupado.
 
