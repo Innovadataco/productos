@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SeguimientoForm } from "@/components/modules/SeguimientoForm";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
+import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
 import type { BadgeVariant } from "@/components/ui/Badge";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
 import { EstadoTransicion } from "./EstadoTransicion";
@@ -28,6 +29,16 @@ type RankingData = {
     reportesAnonimos: number;
 };
 
+// SPEC-324: un reporte ajeno. Estos 4 campos son TODO lo que el backend manda —
+// no hay texto ni autor en el payload, así que la pantalla no puede mostrarlos.
+type OtroReporte = {
+    id: string;
+    creadoEn: string;
+    pais: string | null;
+    ciudad: string | null;
+    categoriaLabel: string | null;
+};
+
 type SeguimientoData = {
     numeroSeguimiento: string;
     estadoVisual: "En proceso" | "Procesado";
@@ -43,7 +54,22 @@ type SeguimientoData = {
     clasificacion: ClasificacionData | null;
     actividad: "alta" | "baja" | null;
     ranking: RankingData | null;
+    // null para el visitante anónimo (su pantalla es la de siempre).
+    otrosReportes: OtroReporte[] | null;
 };
+
+/** Fecha y hora del evento en hora de Colombia (nunca UTC en pantalla). */
+function fechaHoraColombia(iso: string): string {
+    return new Date(iso).toLocaleString("es-CO", {
+        timeZone: "America/Bogota",
+        dateStyle: "medium",
+        timeStyle: "short",
+    });
+}
+
+function lugarDe(r: OtroReporte): string {
+    return [r.ciudad, r.pais].filter(Boolean).join(", ") || "Sin ubicación";
+}
 
 function badgeVariant(badge: SeguimientoData["badge"]): BadgeVariant {
     switch (badge) {
@@ -89,6 +115,7 @@ function conductasOrdenadas(clasificacion: ClasificacionData): string[] {
 
 export function SeguimientoClient() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     // Spec 091-US2: sin query param, el RPT puede llegar por sessionStorage (URL limpia).
     const [numeroInicial] = useState(() => {
         const porUrl = searchParams.get("numero");
@@ -223,7 +250,48 @@ export function SeguimientoClient() {
                         </div>
                     )}
 
-                    <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+                    {/* SPEC-324: otros reportes del MISMO identificador. Solo fecha y
+                        hora, país, ciudad y clasificación — el payload no trae texto
+                        ni autor, y esta lista no puede inventarlos. */}
+                    {data.otrosReportes && data.otrosReportes.length > 0 && (
+                        <div className={infoBox}>
+                            <h3 className="text-sm font-semibold text-body">Otros reportes de este identificador</h3>
+                            <p className="mt-1 text-xs text-subtle">
+                                Otras personas reportaron el mismo identificador. Se muestra cuándo y dónde
+                                ocurrió y qué conducta identificó el sistema; nunca el texto ni quién reportó.
+                            </p>
+                            <ul className="mt-3 space-y-2">
+                                {data.otrosReportes.map((r) => (
+                                    <li
+                                        key={r.id}
+                                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/60 px-3 py-2 dark:bg-slate-900/40"
+                                    >
+                                        <div className="text-xs">
+                                            <p className="font-medium text-body">{fechaHoraColombia(r.creadoEn)}</p>
+                                            <p className="text-subtle">{lugarDe(r)}</p>
+                                        </div>
+                                        {r.categoriaLabel && <Badge variant="info">{r.categoriaLabel}</Badge>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                        {/* SPEC-324: el identificador viaja fijo — el padre vuelve a
+                            reportar SOBRE ESTE, no a empezar de cero. Viaja por
+                            sessionStorage y NUNCA por query string: el identificador
+                            no puede quedar en la URL (spec 091-US2 / 093-US4), misma
+                            llave de un solo uso que `seguimiento.rpt`. */}
+                        <Button
+                            className="w-full"
+                            onClick={() => {
+                                sessionStorage.setItem(REPORTAR_STORAGE_KEY, data.identificador);
+                                router.push("/reportar");
+                            }}
+                        >
+                            Reportar de nuevo a este identificador
+                        </Button>
                         <Link href="/reportar">
                             <Button variant="outline" className="w-full">
                                 Realizar otro reporte

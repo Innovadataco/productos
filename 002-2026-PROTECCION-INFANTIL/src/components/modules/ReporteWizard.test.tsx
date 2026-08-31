@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReporteWizard } from "./ReporteWizard";
+import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
 
 // SPEC-314 (002-PI-214): el card de bloqueo (ReporteBloqueoRol) usa useRouter de
 // next/navigation para el CTA "Registrarme como padre". Se mockea aquí para que el
@@ -136,15 +137,20 @@ describe("ReporteWizard", () => {
             });
         });
 
-        it("muestra checkbox 'Reportar de forma anónima' en modo autenticado", async () => {
+        // SPEC-324: el checkbox "Reportar de forma anónima" se retiró — el padre
+        // autenticado SIEMPRE reporta con su identidad (el backend ya derivaba
+        // esAnonimo de la sesión, así que el checkbox era muerto · candado 26).
+        it("NO muestra checkbox 'Reportar de forma anónima' en modo autenticado (SPEC-324)", async () => {
             mockFetch({ id: "u4", email: "parent@test.com", nombre: "Juan Padre", rol: "PARENT" });
             render(<ReporteWizard modoAutenticado />);
 
             await waitFor(() => {
-                expect(document.body.textContent).toContain("Reportar de forma anónima");
+                // el banner de identidad sigue presente...
+                expect(document.body.textContent).toContain("Reportando como");
             });
-            const checkbox = screen.getByRole("checkbox");
-            expect((checkbox as HTMLInputElement).checked).toBe(false);
+            // ...pero ya no hay checkbox ni la etiqueta de anonimato.
+            expect(document.body.textContent).not.toContain("Reportar de forma anónima");
+            expect(screen.queryByRole("checkbox")).toBeNull();
         });
 
         it("NO muestra banner en modo público anónimo (sin modoAutenticado)", async () => {
@@ -163,6 +169,63 @@ describe("ReporteWizard", () => {
             await waitFor(() => {
                 expect(document.body.textContent).not.toContain("Reportando como");
             });
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SPEC-324: el CTA "Reportar de nuevo a este identificador" de /seguimiento
+    // entrega el identificador por sessionStorage — NUNCA por la URL
+    // (spec 091-US2 / 093-US4, vigilado por url-privacy.test.ts).
+    // ─────────────────────────────────────────────────────────────────────
+    describe("SPEC-324 · identificador fijado por el handoff de /seguimiento", () => {
+        const campoIdentificador = () =>
+            screen.getByLabelText(/Número, nick o usuario/i) as HTMLInputElement;
+
+        afterEach(() => {
+            sessionStorage.clear();
+        });
+
+        it("prellena y bloquea el identificador que dejó /seguimiento", async () => {
+            sessionStorage.setItem(REPORTAR_STORAGE_KEY, "+573001234567");
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            const campo = campoIdentificador();
+            expect(campo.value).toBe("+573001234567");
+            expect(campo.readOnly).toBe(true);
+            // `readOnly` es lo que bloquea al usuario en el navegador; no se
+            // verifica con `fireEvent.change` porque ese helper no simula tecleo
+            // (dispara el evento directo y jsdom lo deja pasar aunque sea readOnly).
+        });
+
+        it("la llave es de un solo uso: se borra al montar", async () => {
+            sessionStorage.setItem(REPORTAR_STORAGE_KEY, "+573001234567");
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            expect(sessionStorage.getItem(REPORTAR_STORAGE_KEY)).toBeNull();
+        });
+
+        it("sin handoff no bloquea nada", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            expect(campoIdentificador().readOnly).toBe(false);
+        });
+
+        it("el prellenado por prop (CTA de consulta vacía) NO bloquea el campo", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard identificadorInicial="+573001234567" />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            const campo = campoIdentificador();
+            expect(campo.value).toBe("+573001234567");
+            expect(campo.readOnly).toBe(false);
+            fireEvent.change(campo, { target: { value: "+573009999999" } });
+            expect(campoIdentificador().value).toBe("+573009999999");
         });
     });
 });

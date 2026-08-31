@@ -8,6 +8,7 @@ import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { ReporteBloqueoRol } from "./ReporteBloqueoRol";
 import { Button } from "@/components/ui/Button";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
+import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
 
 type WizardData = {
     identificador: string;
@@ -49,9 +50,21 @@ export function ReporteWizard({
     const [step, setStep] = useState(1);
     const [user, setUser] = useState<SessionUser>(null);
     const [checkingSession, setCheckingSession] = useState(true);
+    // SPEC-324: el CTA "reportar de nuevo a este identificador" de /seguimiento
+    // entrega el valor por sessionStorage — el identificador NUNCA viaja en la
+    // URL (spec 091-US2 / 093-US4). Llave de un solo uso: se lee y se borra. Que
+    // el handoff exista es lo que fija el campo: el padre viene a agregar un
+    // evento sobre ESE identificador, no a escribir otro.
+    const [identificadorFijado] = useState<string | null>(() => {
+        if (typeof window === "undefined") return null;
+        const guardado = sessionStorage.getItem(REPORTAR_STORAGE_KEY);
+        if (!guardado) return null;
+        sessionStorage.removeItem(REPORTAR_STORAGE_KEY);
+        return guardado.slice(0, 100);
+    });
     const [data, setData] = useState<WizardData>({
         // F3 (N-5): valor inicial desde el CTA de la consulta vacía (ya sanitizado por la página).
-        identificador: identificadorInicial ?? "",
+        identificador: identificadorFijado ?? identificadorInicial ?? "",
         plataforma: "",
         otraPlataforma: "",
         ciudad: "",
@@ -216,7 +229,10 @@ export function ReporteWizard({
 
     return (
         <div className="mx-auto max-w-xl">
-            {/* SPEC-295 (I-146): banner de identidad + checkbox anónimo opcional. */}
+            {/* SPEC-295 (I-146): banner de identidad. SPEC-324: el checkbox "anónimo"
+                se retiró — el padre autenticado SIEMPRE reporta con su identidad. El
+                backend ya derivaba esAnonimo de la sesión (route.ts: `const esAnonimo = !user`),
+                así que el checkbox era cosmético/muerto y confundía (candado 26). */}
             {modoAutenticado && user && user.rol === "PARENT" && (
                 <div className="mb-4 rounded-2xl border border-tinta/10 bg-papel/60 p-4 text-sm">
                     <p className="text-tinta">
@@ -224,15 +240,6 @@ export function ReporteWizard({
                         <span className="font-semibold">{user.nombre ?? user.email}</span>
                         {user.nombre ? ` <${user.email}>` : ""}
                     </p>
-                    <label className="mt-2 flex items-center gap-2 text-xs text-muted">
-                        <input
-                            type="checkbox"
-                            checked={data.esAnonimo}
-                            onChange={(e) => update({ esAnonimo: e.target.checked })}
-                            className="h-4 w-4 rounded border-tinta/20"
-                        />
-                        Reportar de forma anónima (el sistema no vinculará este reporte a tu cuenta en el pipeline).
-                    </label>
                 </div>
             )}
 
@@ -262,7 +269,7 @@ export function ReporteWizard({
                     identificador={data.identificador}
                     plataforma={data.plataforma}
                     otraPlataforma={data.otraPlataforma}
-                    identificadorBloqueado={reportePrevioId !== null}
+                    identificadorBloqueado={reportePrevioId !== null || identificadorFijado !== null}
                     onChange={(v: { identificador: string; plataforma: string; otraPlataforma: string }) => update(v)}
                 />
             )}

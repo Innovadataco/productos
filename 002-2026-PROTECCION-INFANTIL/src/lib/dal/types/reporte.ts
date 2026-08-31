@@ -74,6 +74,25 @@ export interface SeguimientoDto {
     clasificacion: SeguimientoClasificacionDto | null;
     actividad: "alta" | "baja" | null;
     ranking: RankingPublicoDto | null;
+    /**
+     * SPEC-324: otros reportes aprobados del MISMO identificador. `null` para el
+     * visitante anónimo (su pantalla no cambia); lista solo para el usuario
+     * autenticado y cuando el identificador ya es visible públicamente.
+     */
+    otrosReportes: OtroReporteDto[] | null;
+}
+
+/**
+ * SPEC-324: un reporte ajeno visto desde `/seguimiento`. Estos 4 campos son
+ * TODO lo que existe del otro lado — sin texto, sin autor, sin nada que
+ * identifique a quien reportó (Ley 1581).
+ */
+export interface OtroReporteDto {
+    id: string;
+    creadoEn: Date;
+    pais: string | null;
+    ciudad: string | null;
+    categoriaLabel: string | null;
 }
 
 export interface ReporteDetallePadreDto {
