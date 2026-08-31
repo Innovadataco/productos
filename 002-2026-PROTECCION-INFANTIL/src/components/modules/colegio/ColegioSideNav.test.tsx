@@ -57,7 +57,8 @@ describe("ColegioSideNav (SPEC-173, FASE-C)", () => {
 
         const links = screen.getAllByRole("link");
         expect(links).toHaveLength(3);
-        expect(links.map((l) => l.textContent)).toEqual(["Inicio", "Estadísticas", "Gestión casos"]);
+        // SPEC-319 §2.5: etiqueta única "Gestión de casos" (antes "Gestión casos").
+        expect(links.map((l) => l.textContent)).toEqual(["Inicio", "Estadísticas", "Gestión de casos"]);
         expect(links[0].getAttribute("href")).toBe("/dashboard/colegio/comite");
         expect(links[1].getAttribute("href")).toBe("/dashboard/colegio/comite/estadisticas");
         expect(links[2].getAttribute("href")).toBe("/dashboard/colegio/comite/casos");

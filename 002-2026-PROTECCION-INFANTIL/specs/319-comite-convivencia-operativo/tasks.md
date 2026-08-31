@@ -91,10 +91,10 @@
 
 **Goal:** inicio prioriza lo urgente; no duplica menú ni lista; etiqueta única.
 
-- [ ] T031 [US5] Rediseñar el inicio `src/app/dashboard/colegio/comite/` (page/componentes `ComiteHome*`): cabecera humana (saludo por franja + fecha larga español, patrón `HomeRectorPage.tsx:49-55`); urgentes primero (vencidos y por vencer 24 h) como lista accionable con botón encima; métricas `TarjetaMetrica` con `sub`; acciones en verbo (patrón `AccionesRapidas.tsx:12-38`); empty state propio (patrón `EmptyStateColegio`).
-- [ ] T032 [US5] Quitar del inicio la duplicación del menú ("Ver bandeja de casos", "Ver estadísticas") y de la lista completa (vive en Gestión de casos).
-- [ ] T033 [US5] Etiqueta única "Gestión de casos" para `/dashboard/colegio/comite/casos` en `src/lib/nav-items.ts:75` y en `src/components/modules/NavHeader.tsx:190-194,287-289` (fuera "Mi bandeja").
-- [ ] T034 [US5] Tests de los componentes del inicio (candado 24 v2). Responsive (teléfono).
+- [X] T031 [US5] Rediseñar el inicio `src/app/dashboard/colegio/comite/` (page/componentes `ComiteHome*`): cabecera humana (saludo por franja + fecha larga español, patrón `HomeRectorPage.tsx:49-55`); urgentes primero (vencidos y por vencer 24 h) como lista accionable con botón encima; métricas `TarjetaMetrica` con `sub`; acciones en verbo (patrón `AccionesRapidas.tsx:12-38`); empty state propio (patrón `EmptyStateColegio`).
+- [X] T032 [US5] Quitar del inicio la duplicación del menú ("Ver bandeja de casos", "Ver estadísticas") y de la lista completa (vive en Gestión de casos).
+- [X] T033 [US5] Etiqueta única "Gestión de casos" para `/dashboard/colegio/comite/casos` en `src/lib/nav-items.ts:75` y en `src/components/modules/NavHeader.tsx:190-194,287-289` (fuera "Mi bandeja").
+- [X] T034 [US5] Tests de los componentes del inicio (candado 24 v2). Responsive (teléfono).
 
 ---
 
