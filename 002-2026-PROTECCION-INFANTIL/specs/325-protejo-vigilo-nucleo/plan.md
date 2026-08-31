@@ -120,9 +120,21 @@ npx vitest run specs-discipline.test.ts
 ```
 Turno de builds: 4 devs · aviso 1 línea antes de suite pesada · prod del motor PI tiene prioridad.
 
-## G · Preguntas de diseño para PARA (las que revisa Fábrica PI-1)
-1. **Desvinculación por-padre de identificador de `Hijo`** (conflicto de edición): ¿tabla puente de desvinculación (`IdentificadorHijoDesvinculado(identificadorId,usuarioId)`) o campo? Propongo tabla puente.
-2. **Unique de identificador por padre**: ¿unique duro en BD (exige resolver colisiones del backfill) o validación en service con warn+override? Propongo service (más flexible con override), índice no-único.
-3. **`ContactoConfianza.etiqueta` vs `nombre` nuevo**: ¿migrar `etiqueta`→`nombre` o coexistir? Propongo `nombre` nuevo requerido en Zod, `etiqueta` deprecado sin borrar (aditivo).
-4. **Backfill case-insensitive**: confirmar estrategia de colisiones (A.4) antes de tocar `Reporte.identificador` (tabla grande de prod).
-5. **Defensa en profundidad en el cruce** (A.3): ¿normalizar además la lista `valores` en cada callsite? Propongo sí.
+## G · Decisiones de PARA (RESUELTAS por Fábrica PI-1 · 2026-08-30 21:02)
+1. **Desvinculación por-padre → tabla puente `IdentificadorHijoDesvinculado(identificadorId, usuarioId)`.** ✅ Aprobado. El identificador del hijo es compartido; la desvinculación es por-padre.
+2. **Unicidad de contacto → validación en service con warn+override, NO unique duro en BD.** ✅ Aprobado (literal del brief · mismo criterio A-58). Índice no-único para performance.
+3. **`etiqueta` vs `nombre` → aditivo.** ✅ Agregar `nombre`+`parentesco`; **backfillear `nombre` desde `etiqueta`** (placeholder si vacía) antes del NOT NULL; `etiqueta` deprecada, **no borrar**.
+4. **Backfill case-insensitive:**
+   - `Reporte.identificador`: normalizar por-fila (lowercase+trim). **No colisiona** (columna no única).
+   - `IdentificadorReportado` (agregado, `:77`): **MERGEAR** filas que normalizan al mismo valor (sumar `totalReportes`/`reportesAutenticados`/`reportesAnonimos`, `ultimoReporteEn` = máx, dejar una). Group by valor normalizado.
+   - **Verificar conteo de colisiones en prod ANTES** (hoy ~mínimo; Fábrica ofreció correr el SELECT — aceptado). El merge se escribe correcto igual.
+   - **Candado 22 v2 (cross-world):** `upsertIncrementoReporte` (`identificador-reportado.ts:77`) **normaliza en escritura de acá en más**, si no los reportes nuevos entran crudos y el agregado se desalinea.
+5. **Normalizar en los 12 callsites del cruce → NO.** Violaría el "un solo lugar" del CEO. La normalización vive en la **función `normalizarIdentificador` aplicada en TODA ESCRITURA** (embudos: contacto, hijo, ingesta de reporte). Los 12 callsites comparan valores **ya** normalizados. **Defensa en profundidad = un TEST que afirma que los valores guardados están normalizados** (caza un embudo de escritura escapado), no parchear las 12 lecturas.
+
+### Embudos de escritura de identificador (donde SÍ se normaliza · candado 22 v5)
+| embudo | archivo |
+|---|---|
+| identificador de contacto (alta+edición) | `contactos-mutaciones.ts` (normaliza el valor persistido, no solo la clave) |
+| identificador de hijo (alta+edición) | service nuevo de `Hijo` |
+| ingesta de reporte (agregado) | `identificador-reportado.ts:77` `upsertIncrementoReporte` |
+| creación de `Reporte.identificador` | service de creación de reporte (verificar en tasks) |
