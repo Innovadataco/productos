@@ -8,7 +8,7 @@ import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { ReporteBloqueoRol } from "./ReporteBloqueoRol";
 import { Button } from "@/components/ui/Button";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
-import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
+import { tomarHandoffReportar } from "@/lib/reportar-handoff";
 
 type WizardData = {
     identificador: string;
@@ -41,30 +41,23 @@ const ROLES_BLOQUEADOS = ["ADMIN", "OPERADOR", "SCHOOL_ADMIN", "COMITE_VALIDACIO
 const REDIRECT_PADRE_POST_ENVIO = "/mis-reportes"; // SPEC-317: ruta real; /dashboard/padre/mis-reportes no existe
 
 export function ReporteWizard({
-    identificadorInicial,
     modoAutenticado = false,
 }: {
-    identificadorInicial?: string | undefined;
     modoAutenticado?: boolean;
 } = {}) {
     const [step, setStep] = useState(1);
     const [user, setUser] = useState<SessionUser>(null);
     const [checkingSession, setCheckingSession] = useState(true);
-    // SPEC-324: el CTA "reportar de nuevo a este identificador" de /seguimiento
-    // entrega el valor por sessionStorage — el identificador NUNCA viaja en la
-    // URL (spec 091-US2 / 093-US4). Llave de un solo uso: se lee y se borra. Que
-    // el handoff exista es lo que fija el campo: el padre viene a agregar un
-    // evento sobre ESE identificador, no a escribir otro.
-    const [identificadorFijado] = useState<string | null>(() => {
-        if (typeof window === "undefined") return null;
-        const guardado = sessionStorage.getItem(REPORTAR_STORAGE_KEY);
-        if (!guardado) return null;
-        sessionStorage.removeItem(REPORTAR_STORAGE_KEY);
-        return guardado.slice(0, 100);
-    });
+    // Las dos pantallas que mandan al padre acá con un identificador ya escrito
+    // (/seguimiento en SPEC-324 y la consulta vacía en F3 N-5) lo entregan por
+    // sessionStorage — el identificador NUNCA viaja en la URL (spec 091-US2 /
+    // 093-US4). Llave de un solo uso: se lee y se borra al montar. Solo
+    // /seguimiento pide `fijar`, porque ahí el padre viene a agregar un evento
+    // sobre ESE identificador; el prellenado de la consulta vacía es editable.
+    const [handoff] = useState(() => tomarHandoffReportar());
+    const identificadorFijado = handoff?.fijar ? handoff.identificador : null;
     const [data, setData] = useState<WizardData>({
-        // F3 (N-5): valor inicial desde el CTA de la consulta vacía (ya sanitizado por la página).
-        identificador: identificadorFijado ?? identificadorInicial ?? "",
+        identificador: handoff?.identificador ?? "",
         plataforma: "",
         otraPlataforma: "",
         ciudad: "",

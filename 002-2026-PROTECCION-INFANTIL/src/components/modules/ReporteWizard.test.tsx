@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReporteWizard } from "./ReporteWizard";
-import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
+import { REPORTAR_STORAGE_KEY, dejarHandoffReportar } from "@/lib/reportar-handoff";
 
 // SPEC-314 (002-PI-214): el card de bloqueo (ReporteBloqueoRol) usa useRouter de
 // next/navigation para el CTA "Registrarme como padre". Se mockea aquí para que el
@@ -173,11 +173,13 @@ describe("ReporteWizard", () => {
     });
 
     // ─────────────────────────────────────────────────────────────────────
-    // SPEC-324: el CTA "Reportar de nuevo a este identificador" de /seguimiento
-    // entrega el identificador por sessionStorage — NUNCA por la URL
-    // (spec 091-US2 / 093-US4, vigilado por url-privacy.test.ts).
+    // El identificador prellenado llega SIEMPRE por sessionStorage y NUNCA por
+    // la URL (spec 091-US2 / 093-US4, vigilado por url-privacy.test.ts): el CTA
+    // de /seguimiento lo manda fijo (SPEC-324) y el de la consulta vacía
+    // editable (F3 N-5). El wizard no acepta prop de prellenado — si volviera,
+    // volvería con ella el `?identificador=` en la URL de la página.
     // ─────────────────────────────────────────────────────────────────────
-    describe("SPEC-324 · identificador fijado por el handoff de /seguimiento", () => {
+    describe("identificador prellenado por el handoff", () => {
         const campoIdentificador = () =>
             screen.getByLabelText(/Número, nick o usuario/i) as HTMLInputElement;
 
@@ -185,8 +187,8 @@ describe("ReporteWizard", () => {
             sessionStorage.clear();
         });
 
-        it("prellena y bloquea el identificador que dejó /seguimiento", async () => {
-            sessionStorage.setItem(REPORTAR_STORAGE_KEY, "+573001234567");
+        it("prellena y bloquea el identificador que dejó /seguimiento (fijar)", async () => {
+            dejarHandoffReportar("+573001234567", { fijar: true });
             mockFetch({ error: { message: "No autenticado" } }, false);
             render(<ReporteWizard />);
 
@@ -199,26 +201,10 @@ describe("ReporteWizard", () => {
             // (dispara el evento directo y jsdom lo deja pasar aunque sea readOnly).
         });
 
-        it("la llave es de un solo uso: se borra al montar", async () => {
-            sessionStorage.setItem(REPORTAR_STORAGE_KEY, "+573001234567");
+        it("prellena SIN bloquear el de la consulta vacía (sin fijar)", async () => {
+            dejarHandoffReportar("+573001234567", { fijar: false });
             mockFetch({ error: { message: "No autenticado" } }, false);
             render(<ReporteWizard />);
-
-            await waitFor(() => expect(campoIdentificador()).toBeDefined());
-            expect(sessionStorage.getItem(REPORTAR_STORAGE_KEY)).toBeNull();
-        });
-
-        it("sin handoff no bloquea nada", async () => {
-            mockFetch({ error: { message: "No autenticado" } }, false);
-            render(<ReporteWizard />);
-
-            await waitFor(() => expect(campoIdentificador()).toBeDefined());
-            expect(campoIdentificador().readOnly).toBe(false);
-        });
-
-        it("el prellenado por prop (CTA de consulta vacía) NO bloquea el campo", async () => {
-            mockFetch({ error: { message: "No autenticado" } }, false);
-            render(<ReporteWizard identificadorInicial="+573001234567" />);
 
             await waitFor(() => expect(campoIdentificador()).toBeDefined());
             const campo = campoIdentificador();
@@ -226,6 +212,24 @@ describe("ReporteWizard", () => {
             expect(campo.readOnly).toBe(false);
             fireEvent.change(campo, { target: { value: "+573009999999" } });
             expect(campoIdentificador().value).toBe("+573009999999");
+        });
+
+        it("la llave es de un solo uso: se borra al montar", async () => {
+            dejarHandoffReportar("+573001234567", { fijar: true });
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            expect(sessionStorage.getItem(REPORTAR_STORAGE_KEY)).toBeNull();
+        });
+
+        it("sin handoff arranca vacío y editable", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            expect(campoIdentificador().value).toBe("");
+            expect(campoIdentificador().readOnly).toBe(false);
         });
     });
 });

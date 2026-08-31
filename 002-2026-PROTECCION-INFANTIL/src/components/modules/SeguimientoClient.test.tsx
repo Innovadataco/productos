@@ -2,7 +2,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SeguimientoClient } from "./SeguimientoClient";
-import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
+import { tomarHandoffReportar } from "@/lib/reportar-handoff";
 
 // `vi.mock` se iza por encima de las constantes del módulo: el mock del router
 // tiene que declararse con `vi.hoisted` para poder usarse dentro de la factory.
@@ -233,8 +233,9 @@ describe("SeguimientoClient", () => {
 
             fireEvent.click(screen.getByRole("button", { name: /Reportar de nuevo a este identificador/i }));
 
-            // El identificador queda en la llave de un solo uso...
-            expect(sessionStorage.getItem(REPORTAR_STORAGE_KEY)).toBe("30009000002");
+            // El identificador queda en la llave de un solo uso, y fijo: el padre
+            // viene a agregar un evento sobre ESE identificador.
+            expect(tomarHandoffReportar()).toEqual({ identificador: "30009000002", fijar: true });
             // ...y la navegación es a la URL limpia (spec 091-US2 / 093-US4).
             expect(pushMock).toHaveBeenCalledWith("/reportar");
             expect(pushMock.mock.calls.every(([url]) => !String(url).includes("identificador"))).toBe(true);

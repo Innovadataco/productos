@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
-import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
+import { dejarHandoffReportar } from "@/lib/reportar-handoff";
 import type { BadgeVariant } from "@/components/ui/Badge";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
 import { EstadoTransicion } from "./EstadoTransicion";
@@ -286,7 +286,7 @@ export function SeguimientoClient() {
                         <Button
                             className="w-full"
                             onClick={() => {
-                                sessionStorage.setItem(REPORTAR_STORAGE_KEY, data.identificador);
+                                dejarHandoffReportar(data.identificador, { fijar: true });
                                 router.push("/reportar");
                             }}
                         >

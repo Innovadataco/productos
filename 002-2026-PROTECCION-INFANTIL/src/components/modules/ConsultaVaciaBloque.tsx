@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Alerta } from "@/components/ui/Alerta";
+import { dejarHandoffReportar } from "@/lib/reportar-handoff";
 import { CanalesOficiales } from "./CanalesOficiales";
 
 /**
@@ -21,7 +22,17 @@ type ConsultaVaciaBloqueProps = {
 };
 
 export function ConsultaVaciaBloque({ bloque, identificador }: ConsultaVaciaBloqueProps) {
-    const hrefReportar = `/reportar?identificador=${encodeURIComponent(identificador)}`;
+    const router = useRouter();
+
+    // El identificador consultado NO puede quedar en la URL de /reportar (spec
+    // 091-US2 / 093-US4): esta es una pantalla pública y la URL termina en el
+    // historial, en el `Referer` y en los logs. Viaja por sessionStorage, sin
+    // `fijar`: acá es un prellenado de cortesía y el usuario puede corregirlo.
+    const irAReportar = () => {
+        registrarCta();
+        dejarHandoffReportar(identificador, { fijar: false });
+        router.push("/reportar");
+    };
 
     // Evento analítico fire-and-forget: NUNCA lleva el identificador (privacidad).
     const registrarCta = () => {
@@ -65,13 +76,13 @@ export function ConsultaVaciaBloque({ bloque, identificador }: ConsultaVaciaBloq
             )}
 
             <div className="text-center">
-                <Link
-                    href={hrefReportar}
-                    onClick={registrarCta}
+                <button
+                    type="button"
+                    onClick={irAReportar}
                     className="inline-flex rounded-xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:opacity-90"
                 >
                     Reportar una conducta
-                </Link>
+                </button>
             </div>
 
             <CanalesOficiales />
