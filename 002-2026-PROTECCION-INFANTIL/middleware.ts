@@ -187,17 +187,39 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     if (estado) {
         // Paso 4: consentimiento.
         if (estado.requiereConsentimiento && !esExentaConsentimiento(pathname)) {
+            // SPEC-329 (002-PI-229): las /api/** gateadas responden JSON 403 (no 302 HTML),
+            // igual que el Paso 2 con su 401 — un fetch NO puede seguir un redirect y
+            // confundir el bloqueo con éxito. Las pantallas (no-api) siguen redirigiendo.
+            if (pathname.startsWith("/api/")) {
+                return NextResponse.json(
+                    { error: { message: "Debés aceptar el consentimiento para continuar.", code: "CONSENTIMIENTO_REQUERIDO", redirectTo: GUARDIAS_ACCESO.consentimiento.destino } },
+                    { status: 403 }
+                );
+            }
             return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.consentimiento.destino));
         }
         // Paso 5: cambio-de-password obligatorio.
         if (estado.debeCambiarPassword && !esExentaCambiarPassword(pathname)) {
+            if (pathname.startsWith("/api/")) {
+                return NextResponse.json(
+                    { error: { message: "Debés cambiar tu contraseña para continuar.", code: "CAMBIO_PASSWORD_REQUERIDO", redirectTo: GUARDIAS_ACCESO.cambiarPassword.destino } },
+                    { status: 403 }
+                );
+            }
             return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.cambiarPassword.destino));
         }
         // Paso 6: vigencia por rol.
         if (tieneVigencia(sesion.rol)) {
             if (!esExentaVigencia(pathname, sesion.rol)) {
                 if (estado.vigencia !== "ACTIVA" && estado.vigencia !== "EN_GRACIA") {
-                    return aplicarCspSiCorresponde(request, redirect(request, destinoVigencia(sesion.rol)));
+                    const destino = destinoVigencia(sesion.rol);
+                    if (pathname.startsWith("/api/")) {
+                        return NextResponse.json(
+                            { error: { message: "Tu servicio no está vigente. Renová para continuar.", code: "VIGENCIA_REQUERIDA", redirectTo: destino } },
+                            { status: 403 }
+                        );
+                    }
+                    return aplicarCspSiCorresponde(request, redirect(request, destino));
                 }
             }
         }
