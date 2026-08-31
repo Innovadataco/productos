@@ -26,12 +26,12 @@ describe("PadreSideNav (SPEC-231)", () => {
         mockPathname.value = "/dashboard/padre";
         render(<PadreSideNav />);
 
-        const labels = ["Inicio", "Mis expedientes", "Reportar", "Suscripción", "Círculo confianza", "Notificaciones"];
+        const labels = ["Inicio", "Mis expedientes", "Reportar", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones"]; // SPEC-325
         for (const label of labels) {
             expect(screen.getByRole("link", { name: label })).toBeDefined();
         }
         expect(screen.queryByRole("link", { name: "Mi perfil" })).toBeNull();
-        expect(screen.getAllByRole("link")).toHaveLength(6);
+        expect(screen.getAllByRole("link")).toHaveLength(7); // SPEC-325
     });
 
     it("marca Inicio como activo en la raíz", () => {

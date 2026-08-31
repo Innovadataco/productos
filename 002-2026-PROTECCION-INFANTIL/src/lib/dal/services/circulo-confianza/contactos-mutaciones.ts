@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import type { AccionAudit, Prisma } from "@prisma/client";
 import type { IdentificadorInput } from "./tipos";
 import { contarContactosActivos, obtenerTopeContactos } from "./estado";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 
 async function validarPlataformas(identificadores: IdentificadorInput[], client: Prisma.TransactionClient | typeof prisma) {
     const plataformaIds = Array.from(new Set(identificadores.map((i) => i.plataformaId).filter(Boolean) as string[]));
@@ -31,9 +32,12 @@ function normalizarIdentificadores(identificadores: IdentificadorInput[]) {
     const normalizados: IdentificadorInput[] = [];
 
     for (const i of identificadores) {
-        const valor = i.valor.trim();
+        // SPEC-325: se PERSISTE la forma canónica (antes se guardaba solo
+        // `trim`, dejando el valor crudo → el cruce case-sensitive fallaba en
+        // silencio). La normalización vive en un único lugar compartido.
+        const valor = normalizarIdentificador(i.valor);
         if (!valor) continue;
-        const key = `${valor.toLowerCase()}|${i.plataformaId ?? ""}`;
+        const key = `${valor}|${i.plataformaId ?? ""}`;
         if (vistos.has(key)) {
             throw new Error("Identificador duplicado dentro del contacto");
         }
@@ -53,6 +57,8 @@ export async function agregarContacto(
     usuarioId: string,
     data: {
         etiqueta?: string | undefined;
+        nombre?: string | undefined; // SPEC-325: campo propio (antes solo etiqueta)
+        parentesco?: string | undefined; // SPEC-325
         nota?: string | undefined;
         identificadores: IdentificadorInput[];
     },
@@ -78,6 +84,8 @@ export async function agregarContacto(
                 usuarioId,
                 // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
                 ...(data.etiqueta !== undefined ? { etiqueta: data.etiqueta.slice(0, 100) } : {}),
+                ...(data.nombre !== undefined ? { nombre: data.nombre.slice(0, 100) } : {}),
+                ...(data.parentesco !== undefined ? { parentesco: data.parentesco.slice(0, 60) } : {}),
                 ...(data.nota !== undefined ? { nota: data.nota.slice(0, 1000) } : {}),
                 activo: true,
                 identificadores: {
@@ -131,6 +139,8 @@ export async function actualizarContacto(
     usuarioId: string,
     data: {
         etiqueta?: string | undefined;
+        nombre?: string | undefined; // SPEC-325
+        parentesco?: string | undefined; // SPEC-325
         nota?: string | undefined;
         activo?: boolean | undefined;
         identificadores?: IdentificadorInput[] | undefined;
@@ -158,6 +168,8 @@ export async function actualizarContacto(
             where: { id },
             data: {
                 etiqueta: data.etiqueta !== undefined ? data.etiqueta?.slice(0, 100) : contacto.etiqueta,
+                nombre: data.nombre !== undefined ? data.nombre?.slice(0, 100) : contacto.nombre,
+                parentesco: data.parentesco !== undefined ? data.parentesco?.slice(0, 60) : contacto.parentesco,
                 nota: data.nota !== undefined ? data.nota?.slice(0, 1000) : contacto.nota,
                 activo: nuevoActivo,
             },
@@ -245,4 +257,68 @@ export async function actualizarContacto(
             },
         });
     });
+}
+
+/**
+ * SPEC-325: baja lógica de un contacto (antes no había forma de borrar · el
+ * `grep DELETE` en las rutas daba cero). No hard-delete: consistente con la baja
+ * lógica de `AcudienteEstudiante`; `activo=false` lo saca de las vistas y del cruce.
+ */
+export async function eliminarContacto(id: string, usuarioId: string, request?: Request) {
+    const contacto = await prisma.contactoConfianza.findFirst({
+        where: { id, usuarioId },
+        select: { id: true, activo: true },
+    });
+    if (!contacto) {
+        throw new Error("Contacto no encontrado");
+    }
+
+    return prisma.$transaction(async (tx) => {
+        await tx.contactoConfianza.update({ where: { id }, data: { activo: false } });
+        await tx.identificadorContacto.updateMany({
+            where: { contactoId: id },
+            data: { activo: false },
+        });
+        await logAudit({
+            accion: "CIRCULO_CONTACT_DISABLE" as AccionAudit,
+            tipoRecurso: "ContactoConfianza",
+            recursoId: id,
+            usuarioId,
+            valorNuevo: JSON.stringify({ eliminado: true }),
+            ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
+            userAgent: request?.headers.get("user-agent") || "unknown",
+            tx,
+        });
+        return { ok: true };
+    });
+}
+
+/**
+ * SPEC-325: unicidad de identificador POR PADRE con warn+override (mismo criterio
+ * que A-58). No es un unique duro en BD (el brief lo pide como advertencia, no como
+ * bloqueo): devuelve a quién pertenece ya el identificador para que el padre decida.
+ * El valor se compara en forma canónica (mecanismo compartido).
+ */
+export async function verificarUnicidadIdentificador(
+    usuarioId: string,
+    valor: string,
+    plataformaId?: string | null
+): Promise<{ duplicado: boolean; perteneceA?: string }> {
+    const valorNorm = normalizarIdentificador(valor);
+    if (!valorNorm) return { duplicado: false };
+
+    const existente = await prisma.identificadorContacto.findFirst({
+        where: {
+            valor: valorNorm,
+            plataformaId: plataformaId ?? null,
+            activo: true,
+            contacto: { usuarioId, activo: true },
+        },
+        select: {
+            contacto: { select: { nombre: true, etiqueta: true } },
+        },
+    });
+    if (!existente) return { duplicado: false };
+    const nombre = existente.contacto.nombre || existente.contacto.etiqueta || "otro contacto";
+    return { duplicado: true, perteneceA: nombre };
 }

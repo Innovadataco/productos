@@ -55,6 +55,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { listarContactos, agregarContacto, obtenerDetalleContacto, notificarCambioCirculoSiCorresponde } from "./circulo-confianza";
 import { crearUsuario, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
 import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 function reiniciarConteo() {
@@ -66,7 +67,9 @@ function reiniciarConteo() {
 async function crearReporte(identificador: string, plataformaId: string, estado: EstadoReporte, categoria?: CategoriaConducta) {
     const reporte = await prisma.reporte.create({
         data: {
-            identificador,
+            // SPEC-325: prod normaliza el identificador al crear el reporte; el
+            // helper lo replica para cruzar con el contacto (también normalizado).
+            identificador: normalizarIdentificador(identificador),
             plataformaId,
             texto: "Texto de prueba N+1",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
@@ -164,14 +167,14 @@ describe("SPEC-135 · listarContactos sin N+1", () => {
         const contacto = await agregarContacto(usuario.id, {
             etiqueta: "Detalle N+1",
             identificadores: [
-                { valor: "+57300DET-A", plataformaId: plataforma.id },
-                { valor: "+57300DET-B", plataformaId: plataforma.id },
-                { valor: "+57300DET-C", plataformaId: plataforma.id },
+                { valor: "+57300det-a", plataformaId: plataforma.id },
+                { valor: "+57300det-b", plataformaId: plataforma.id },
+                { valor: "+57300det-c", plataformaId: plataforma.id },
             ],
         });
-        await crearReporte("+57300DET-A", plataforma.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
-        await crearReporte("+57300DET-A", plataforma.id, "CLASIFICADO", "EXTORSION");
-        await crearReporte("+57300DET-B", plataforma.id, "REVISION_MANUAL");
+        await crearReporte("+57300det-a", plataforma.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
+        await crearReporte("+57300det-a", plataforma.id, "CLASIFICADO", "EXTORSION");
+        await crearReporte("+57300det-b", plataforma.id, "REVISION_MANUAL");
 
         reiniciarConteo();
         const detalle = await obtenerDetalleContacto(contacto.id, usuario.id);
@@ -187,14 +190,14 @@ describe("SPEC-135 · listarContactos sin N+1", () => {
         expect(detalle.totalReportes).toBe(3);
         expect(detalle.identificadores).toHaveLength(3);
         const porValor = new Map(detalle.identificadores.map((i) => [i.valor, i]));
-        expect(porValor.get("+57300DET-A")!.estado).toBe("clasificado");
-        expect(porValor.get("+57300DET-A")!.totalReportes).toBe(2);
-        expect(porValor.get("+57300DET-A")!.reportes.map((r) => r.identificador)).toEqual(["+57300DET-A", "+57300DET-A"]);
-        expect(porValor.get("+57300DET-B")!.estado).toBe("enRevision");
-        expect(porValor.get("+57300DET-B")!.totalReportes).toBe(1);
-        expect(porValor.get("+57300DET-C")!.estado).toBe("sinReportes");
-        expect(porValor.get("+57300DET-C")!.totalReportes).toBe(0);
-        expect(porValor.get("+57300DET-C")!.reportes).toEqual([]);
+        expect(porValor.get("+57300det-a")!.estado).toBe("clasificado");
+        expect(porValor.get("+57300det-a")!.totalReportes).toBe(2);
+        expect(porValor.get("+57300det-a")!.reportes.map((r) => r.identificador)).toEqual(["+57300det-a", "+57300det-a"]);
+        expect(porValor.get("+57300det-b")!.estado).toBe("enRevision");
+        expect(porValor.get("+57300det-b")!.totalReportes).toBe(1);
+        expect(porValor.get("+57300det-c")!.estado).toBe("sinReportes");
+        expect(porValor.get("+57300det-c")!.totalReportes).toBe(0);
+        expect(porValor.get("+57300det-c")!.reportes).toEqual([]);
         expect(detalle.agregado, "con reportes hay agregado").not.toBeNull();
         expect(detalle.agregado!.totalReportes).toBe(3);
     });

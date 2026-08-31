@@ -14,6 +14,7 @@ import { logger } from "@/lib/logger";
 import { ReporteRepository } from "../repositories/reporte";
 import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
 import { PlataformaRepository } from "../repositories/plataforma";
+import { normalizarIdentificador } from "../identificadores/normalizar";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_INTENTOS_NUMERO = 10;
@@ -72,7 +73,13 @@ export class ReporteCreationService {
     }
 
     async crear(input: CrearReporteInput): Promise<ResultadoCreacion> {
-        const { usuarioId, identificador } = input;
+        const { usuarioId } = input;
+        // SPEC-325: embudo único del lado reporte. Se normaliza UNA vez al
+        // entrar; el dedup-lock, el dedup 30d, el Reporte.identificador y el
+        // agregado (upsertIncrementoReporte) usan todos la misma forma canónica.
+        // Sin esto, un reporte con distinto case no cruza con el identificador
+        // vigilado guardado (defecto silencioso · candado 22 v2 cross-world).
+        const identificador = normalizarIdentificador(input.identificador);
 
         // Deduplicación autenticada: mismo usuario + identificador en 30 días.
         if (usuarioId) {

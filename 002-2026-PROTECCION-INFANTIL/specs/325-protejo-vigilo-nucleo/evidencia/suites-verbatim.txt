@@ -1,0 +1,23 @@
+
+ RUN  v3.2.7 /Users/idc/Documents/GitHub/productos/.worktrees/pi-SPEC-325-protejo-vigilo-nucleo/002-2026-PROTECCION-INFANTIL
+
+ ✓ |integration| src/lib/dal/services/circulo-confianza/contactos-vigilo.test.ts (5 tests) 2819ms
+   ✓ contactos vigilo (SPEC-325) > guarda nombre y parentesco como campos propios  556ms
+   ✓ contactos vigilo (SPEC-325) > eliminar contacto = baja lógica (activo=false), no hard-delete  512ms
+   ✓ contactos vigilo (SPEC-325) > no deja eliminar un contacto ajeno  704ms
+   ✓ contactos vigilo (SPEC-325) > unicidad por-padre: warn+override dice a quién pertenece (case-insensitive)  511ms
+   ✓ contactos vigilo (SPEC-325) > 🔴 defecto silencioso: contacto guardado 'TioJuan1' CRUZA un reporte 'tiojuan1'  530ms
+ ✓ |integration| src/lib/dal/services/hijos/hijos.test.ts (5 tests) 3233ms
+   ✓ hijos · protejo (SPEC-325) > registra un hijo con identificadores y lo lista para su padre  513ms
+   ✓ hijos · protejo (SPEC-325) > un familiar que no es hijo entra igual  613ms
+   ✓ hijos · protejo (SPEC-325) > dos padres, un niño (mismo documento): no duplica, comparte datos, vincula al 2º  709ms
+   ✓ hijos · protejo (SPEC-325) > quitar un identificador solo lo desvincula de la vista de quien lo quita, sin borrarlo para el otro  694ms
+   ✓ hijos · protejo (SPEC-325) > PII: un padre no dueño no puede desvincular el identificador de otro (acceso solo por dueño)  698ms
+ ✓ |integration| src/components/modules/padre/MisHijos.test.tsx (4 tests) 91ms
+ ✓ |integration| src/lib/dal/identificadores/normalizar.test.ts (5 tests) 37ms
+
+ Test Files  4 passed (4)
+      Tests  19 passed (19)
+   Start at  21:35:34
+   Duration  7.47s (transform 90ms, setup 236ms, collect 143ms, tests 6.18s, environment 500ms, prepare 115ms)
+

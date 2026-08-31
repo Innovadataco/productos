@@ -13,6 +13,8 @@ import {
 
 const createSchema = z.object({
     etiqueta: z.string().max(100).optional(),
+    nombre: z.string().max(100).optional(), // SPEC-325
+    parentesco: z.string().max(60).optional(), // SPEC-325
     nota: z.string().max(1000).optional(),
     identificadores: z
         .array(

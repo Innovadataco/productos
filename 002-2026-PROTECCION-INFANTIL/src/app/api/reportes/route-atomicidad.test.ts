@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
 import { IdentificadorReportadoRepository } from "@/lib/dal/repositories/identificador-reportado";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 import type { Usuario } from "@prisma/client";
 
 let mockToken: string | undefined;
@@ -73,7 +74,7 @@ describe("SPEC-137 · POST /api/reportes — atomicidad", { timeout: 30_000 }, (
 
         const plataforma = (await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } }))!;
         const agregado = await prisma.identificadorReportado.findUnique({
-            where: { identificador_plataformaId: { identificador: IDENTIFICADOR, plataformaId: plataforma.id } },
+            where: { identificador_plataformaId: { identificador: normalizarIdentificador(IDENTIFICADOR), plataformaId: plataforma.id } }, // SPEC-325: el agregado se keyea normalizado
         });
         expect(agregado?.totalReportes).toBe(1);
         expect(agregado?.reportesAutenticados).toBe(1);

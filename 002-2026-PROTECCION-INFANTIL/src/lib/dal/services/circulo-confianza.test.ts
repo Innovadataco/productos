@@ -20,6 +20,7 @@ import {
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
 import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 vi.mock("@/lib/email", () => ({
@@ -76,7 +77,11 @@ async function crearReporte(
     });
     const reporte = await prisma.reporte.create({
         data: {
-            identificador,
+            // SPEC-325: producción normaliza el identificador al crear el reporte
+            // (reporte-creation.ts::crear). El helper de test lo replica para que
+            // el dato refleje cómo se almacena en prod y cruce con el contacto
+            // (también normalizado).
+            identificador: normalizarIdentificador(identificador),
             plataformaId,
             texto: "Texto de prueba",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
@@ -383,7 +388,8 @@ describe("circulo-confianza", () => {
             expect(args.destinatario.usuarioId).toBe(usuario.id);
             expect(args.reporteId).toBe(reporte.id);
             expect(args.nombreContacto).toBe("contacto de prueba");
-            expect(args.identificador).toBe("+57300NOTIF");
+            // SPEC-325: identificador normalizado (forma canónica)
+            expect(args.identificador).toBe("+57300notif");
             expect(args.plataforma).toBe("WhatsApp");
             expect(args.categoria).toBe("SOLICITUD_MATERIAL");
             expect(args.totalReportes).toBe(1);
@@ -455,7 +461,8 @@ describe("circulo-confianza", () => {
 
             expect(enviarAlertaCirculoConfianzaEnriquecida).toHaveBeenCalledOnce();
             const args = vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mock.calls[0][0];
-            expect(args.identificador).toBe("+57300MULTI2");
+            // SPEC-325: identificador normalizado (forma canónica)
+            expect(args.identificador).toBe("+57300multi2");
             expect(args.nombreContacto).toBe("contacto multi");
         });
     });

@@ -11,7 +11,7 @@ export {
     determinarEstadoContacto,
 } from "./estado";
 export { listarContactos, obtenerDetalleContacto } from "./contactos";
-export { agregarContacto, actualizarContacto } from "./contactos-mutaciones";
+export { agregarContacto, actualizarContacto, eliminarContacto, verificarUnicidadIdentificador } from "./contactos-mutaciones";
 export { obtenerVistaAgregada } from "./agregado";
 export { toggleNotificacionesCirculo, obtenerPreferenciasCirculo } from "./preferencias";
 export { notificarCambioCirculoSiCorresponde } from "./notificaciones";

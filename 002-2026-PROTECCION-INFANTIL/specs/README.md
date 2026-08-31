@@ -461,6 +461,7 @@
 | [317](317-unificar-area-padre/spec.md) | SPEC-317 · Unificar el área del padre — zona canónica /dashboard/padre (002-PI-217) | 🟡 En desarrollo |
 | [318](318-tres-porteros-apagados/spec.md) | SPEC-318 · Los tres porteros apagados — cookie sesion_estado + guardas activos (002-PI-218) | 🟡 En desarrollo |
 | [322](322-aviso-cambio-contrasena/spec.md) | SPEC-322 · Aviso por correo cuando cambia la contraseña (002-PI-222) | 🟡 En desarrollo |
+| [325](325-protejo-vigilo-nucleo/spec.md) | SPEC-325 · A quién protejo, a quién vigilo · núcleo (002-PI-225 · A-61) — modelo Hijo + arreglo ContactoConfianza + mecanismo de monitoreo compartido | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 

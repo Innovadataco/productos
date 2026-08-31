@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 435 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3045 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 438 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3066 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -323,6 +323,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/hijos` | api | permitir | permite | sí |
+| `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
@@ -440,6 +442,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/expedientes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/expedientes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/hijos` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -763,6 +766,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/hijos` | api | permitir | permite | sí |
+| `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
@@ -880,6 +885,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/expedientes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/expedientes/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/hijos` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -1203,6 +1209,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/hijos` | api | permitir | permite | sí |
+| `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
@@ -1320,6 +1328,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/expedientes` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/expedientes/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/hijos` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -1643,6 +1652,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/hijos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/hijos/identificadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
@@ -1760,6 +1771,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/expedientes` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/expedientes/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/hijos` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2083,6 +2095,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/hijos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/hijos/identificadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
@@ -2200,6 +2214,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/circulo-confianza` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/expedientes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/expedientes/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/hijos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2523,6 +2538,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/hijos` | api | permitir | permite | sí |
+| `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
@@ -2640,6 +2657,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/circulo-confianza` | página | permitir | permite | sí |
 | `/dashboard/padre/expedientes` | página | permitir | permite | sí |
 | `/dashboard/padre/expedientes/[id]` | página | permitir | permite | sí |
+| `/dashboard/padre/hijos` | página | permitir | permite | sí |
 | `/dashboard/padre/identificador/[nick]` | página | permitir | permite | sí |
 | `/dashboard/padre/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/padre/perfil` | página | permitir | permite | sí |
@@ -2963,6 +2981,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/hijos` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/hijos/identificadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/home` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/home/sugerencia` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 401 | permite | **NO** |
@@ -3080,6 +3100,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/circulo-confianza` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/expedientes` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/expedientes/[id]` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/hijos` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/notificaciones` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/perfil` | página | redirigir→/login | permite | **NO** |
@@ -3379,6 +3400,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/expediente/[id]/cerrar-forzoso` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | HTTP 401 | permite |
 | `/api/padre/expedientes/[id]/eventos` | HTTP 401 | permite |
+| `/api/padre/hijos` | HTTP 401 | permite |
+| `/api/padre/hijos/identificadores/[id]` | HTTP 401 | permite |
 | `/api/padre/home` | HTTP 401 | permite |
 | `/api/padre/home/sugerencia` | HTTP 401 | permite |
 | `/api/padre/suscripcion/activar-freemium` | HTTP 401 | permite |
@@ -3433,6 +3456,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/padre/circulo-confianza` | redirigir→/login | permite |
 | `/dashboard/padre/expedientes` | redirigir→/login | permite |
 | `/dashboard/padre/expedientes/[id]` | redirigir→/login | permite |
+| `/dashboard/padre/hijos` | redirigir→/login | permite |
 | `/dashboard/padre/identificador/[nick]` | redirigir→/login | permite |
 | `/dashboard/padre/notificaciones` | redirigir→/login | permite |
 | `/dashboard/padre/perfil` | redirigir→/login | permite |

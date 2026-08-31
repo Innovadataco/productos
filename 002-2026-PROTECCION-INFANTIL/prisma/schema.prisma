@@ -81,6 +81,10 @@ enum AccionAudit {
   CIRCULO_CONTACT_CREATE
   CIRCULO_CONTACT_UPDATE
   CIRCULO_CONTACT_DISABLE
+  HIJO_CREATE
+  HIJO_UPDATE
+  HIJO_PADRE_VINCULADO
+  HIJO_IDENTIFICADOR_DESVINCULADO
   OPERADOR_CREADO
   OPERADOR_ACTIVADO
   OPERADOR_DESACTIVADO
@@ -531,109 +535,111 @@ enum TipoPatronExpediente {
 }
 
 model Usuario {
-  id                  String        @id @default(cuid())
-  email               String        @unique
-  nombre              String?
-  passwordHash        String
-  rol                 RolUsuario
-  estado              EstadoUsuario @default(activo)
+  id                          String           @id @default(cuid())
+  email                       String           @unique
+  nombre                      String?
+  passwordHash                String
+  rol                         RolUsuario
+  estado                      EstadoUsuario    @default(activo)
   // SPEC-240 (002-PI-143): estado de activación institucional.
-  estadoActivacion    EstadoActivacion @default(REGISTRADO)
-  tokenInvitacion     String?          @unique
-  tokenInvitacionExpiraEn DateTime?    @db.Timestamptz(6)
-  debeCambiarPassword Boolean       @default(false)
-  intentosFallidos    Int           @default(0)
-  bloqueadoHasta      DateTime?
-  ultimaSesion        DateTime?
-  tenantId            String?
-  colegioId           String?       @unique
+  estadoActivacion            EstadoActivacion @default(REGISTRADO)
+  tokenInvitacion             String?          @unique
+  tokenInvitacionExpiraEn     DateTime?        @db.Timestamptz(6)
+  debeCambiarPassword         Boolean          @default(false)
+  intentosFallidos            Int              @default(0)
+  bloqueadoHasta              DateTime?
+  ultimaSesion                DateTime?
+  tenantId                    String?
+  colegioId                   String?          @unique
   // SPEC-168: cuenta compartida del Comité de Convivencia del colegio (una por colegio).
-  comiteColegioId     String?       @unique
+  comiteColegioId             String?          @unique
   // SPEC-119: ventana de servicio del cliente padre (PARENT). null = sin vigencia
   // definida = acceso permitido. Para SCHOOL_ADMIN la ventana es la del Colegio.
   /// @deprecated · usar Suscripcion.fechaInicio/fechaFin
-  inicioServicio      DateTime?
+  inicioServicio              DateTime?
   /// @deprecated · usar Suscripcion.fechaInicio/fechaFin
-  finServicio         DateTime?
+  finServicio                 DateTime?
   // SPEC-241 (002-PI-144): campos de consentimiento informado (aditivos).
   consentimientoAceptadoEn    DateTime?
   consentimientoVersion       String?
   consentimientoDocumentoHash String?
   consentimientoIP            String?
-  creadoEn            DateTime      @default(now())
-  actualizadoEn       DateTime      @updatedAt
+  creadoEn                    DateTime         @default(now())
+  actualizadoEn               DateTime         @updatedAt
 
-  tenant                       Tenant?                    @relation(fields: [tenantId], references: [id])
-  colegio                      Colegio?                   @relation(fields: [colegioId], references: [id])
-  comiteConvivenciaColegio     Colegio?                   @relation(name: "ComiteConvivenciaColegio", fields: [comiteColegioId], references: [id])
-  parametros                   ParametroSistema[]
-  auditLogs                    AuditLog[]
-  permisosModuloActualizados   PermisoModulo[]
-  codigos                      CodigoVerificacion[]
-  tokensRecuperacion           TokenRecuperacion[]
-  reportes                     Reporte[]
-  reportesDadosDeBaja          Reporte[]                  @relation("ReportesDadosDeBaja")
-  correcciones                 CorreccionAdmin[]
-  alertasSuscripcion           AlertaSuscripcion[]
-  simulaciones                 SimulacionRun[]
-  casosAsignados               Reporte[]                  @relation("CasosOperador")
-  casosComiteAsignados         Reporte[]                  @relation("CasosComite")
-  anonimizacionesValidadas     Reporte[]                  @relation("AnonimizacionesValidadas")
-  perfilOperador               PerfilOperador?
-  operadoresCreados            PerfilOperador[]           @relation("OperadoresCreados")
+  tenant                           Tenant?                         @relation(fields: [tenantId], references: [id])
+  colegio                          Colegio?                        @relation(fields: [colegioId], references: [id])
+  comiteConvivenciaColegio         Colegio?                        @relation(name: "ComiteConvivenciaColegio", fields: [comiteColegioId], references: [id])
+  parametros                       ParametroSistema[]
+  auditLogs                        AuditLog[]
+  permisosModuloActualizados       PermisoModulo[]
+  codigos                          CodigoVerificacion[]
+  tokensRecuperacion               TokenRecuperacion[]
+  reportes                         Reporte[]
+  reportesDadosDeBaja              Reporte[]                       @relation("ReportesDadosDeBaja")
+  correcciones                     CorreccionAdmin[]
+  alertasSuscripcion               AlertaSuscripcion[]
+  simulaciones                     SimulacionRun[]
+  casosAsignados                   Reporte[]                       @relation("CasosOperador")
+  casosComiteAsignados             Reporte[]                       @relation("CasosComite")
+  anonimizacionesValidadas         Reporte[]                       @relation("AnonimizacionesValidadas")
+  perfilOperador                   PerfilOperador?
+  operadoresCreados                PerfilOperador[]                @relation("OperadoresCreados")
   // SPEC-245 (002-PI-148): suscripciones que este admin autorizó manualmente.
-  suscripcionesAutorizadas     Suscripcion[]              @relation("SuscripcionesAutorizadasPorAdmin")
+  suscripcionesAutorizadas         Suscripcion[]                   @relation("SuscripcionesAutorizadasPorAdmin")
   // SPEC-246 (002-PI-149): cupones de recompensa de los que este usuario es beneficiario.
-  bonosBeneficiario            BonoPromocional[]          @relation("BonosBeneficiario")
-  contactosConfianza           ContactoConfianza[]
-  notificacionesCirculo        Boolean                    @default(true)
-  ultimaNotificacionCirculoEn  DateTime?
-  ultimaNotificacionColegioEn  DateTime?
-  transicionesReporte          TransicionReporte[]
-  solicitudesComite            SolicitudComite[]          @relation("SolicitudesComite")
-  solicitudesEscaladas         SolicitudComite[]          @relation("SolicitudesEscaladas")
-  solicitudesComiteCreadas     SolicitudComite[]          @relation("SolicitudesCreadasPorColegio")
-  notasSeguimiento             NotaSeguimiento[]
-  integrantesComite            IntegranteComite[]         @relation("IntegrantesComite")
-  integrantesComiteCreados     IntegranteComite[]         @relation("IntegrantesComiteCreados")
-  integrantesComiteModificados IntegranteComite[]         @relation("IntegrantesComiteModificados")
-  apelaciones                  Apelacion[]                @relation("ApelacionesUsuario")
-  apelacionesAsignadas         Apelacion[]                @relation("ApelacionesAsignadasComite")
-  apelacionesResueltas         Apelacion[]                @relation("ApelacionesResueltas")
-  accesosDocumentoApelacion    AccesoDocumentoApelacion[]
-  alertasAsignadas             AlertaColegio[]
-  notificacionesInApp          NotificacionInApp[]
+  bonosBeneficiario                BonoPromocional[]               @relation("BonosBeneficiario")
+  contactosConfianza               ContactoConfianza[]
+  hijos                            HijoPadre[]
+  identificadoresHijoDesvinculados IdentificadorHijoDesvinculado[]
+  notificacionesCirculo            Boolean                         @default(true)
+  ultimaNotificacionCirculoEn      DateTime?
+  ultimaNotificacionColegioEn      DateTime?
+  transicionesReporte              TransicionReporte[]
+  solicitudesComite                SolicitudComite[]               @relation("SolicitudesComite")
+  solicitudesEscaladas             SolicitudComite[]               @relation("SolicitudesEscaladas")
+  solicitudesComiteCreadas         SolicitudComite[]               @relation("SolicitudesCreadasPorColegio")
+  notasSeguimiento                 NotaSeguimiento[]
+  integrantesComite                IntegranteComite[]              @relation("IntegrantesComite")
+  integrantesComiteCreados         IntegranteComite[]              @relation("IntegrantesComiteCreados")
+  integrantesComiteModificados     IntegranteComite[]              @relation("IntegrantesComiteModificados")
+  apelaciones                      Apelacion[]                     @relation("ApelacionesUsuario")
+  apelacionesAsignadas             Apelacion[]                     @relation("ApelacionesAsignadasComite")
+  apelacionesResueltas             Apelacion[]                     @relation("ApelacionesResueltas")
+  accesosDocumentoApelacion        AccesoDocumentoApelacion[]
+  alertasAsignadas                 AlertaColegio[]
+  notificacionesInApp              NotificacionInApp[]
   // SPEC-184 (002-PI-079): blocklist y simulador de abusos.
-  bloqueosCreados              BlockList[]
-  simulacionesAbuso            SimulacionAbusoRun[]
+  bloqueosCreados                  BlockList[]
+  simulacionesAbuso                SimulacionAbusoRun[]
   // SPEC-230 (002-PI-130): expedientes del padre.
-  expedientes                  Expediente[]
+  expedientes                      Expediente[]
   // SPEC-206 (002-PI-120): sesiones activas del usuario.
-  sesionesLog                  SesionLog[]
+  sesionesLog                      SesionLog[]
   // SPEC-241 (002-PI-144): traza inmutable de aceptaciones de consentimiento.
-  auditConsentimientos         AuditConsentimiento[]
+  auditConsentimientos             AuditConsentimiento[]
   // SPEC-234 (002-PI-134): informes consolidados generados por el usuario/worker.
-  informesConsolidados         InformeConsolidado[]
+  informesConsolidados             InformeConsolidado[]
   // SPEC-235 (002-PI-135): guías de acción creadas por el admin.
-  guiasAccionCreadas           GuiaAccionCategoria[]
+  guiasAccionCreadas               GuiaAccionCategoria[]
   // SPEC-210 (002-PI-110): módulo de pagos.
-  suscripciones                Suscripcion[]
-  planesCreados                Plan[]                     @relation("PlanesCreados")
-  bonosCreados                 BonoPromocional[]          @relation("BonosCreados")
-  pagosAutorizados             Pago[]                     @relation("PagosAutorizados")
-  referidosRevisados           CodigoReferidoUso[]        @relation("ReferidosRevisados")
-  tasasIngresadas              TasaCambio[]               @relation("TasasIngresadas")
+  suscripciones                    Suscripcion[]
+  planesCreados                    Plan[]                          @relation("PlanesCreados")
+  bonosCreados                     BonoPromocional[]               @relation("BonosCreados")
+  pagosAutorizados                 Pago[]                          @relation("PagosAutorizados")
+  referidosRevisados               CodigoReferidoUso[]             @relation("ReferidosRevisados")
+  tasasIngresadas                  TasaCambio[]                    @relation("TasasIngresadas")
   // SPEC-220 (002-PI-121): dominio Análisis (reglas, recomendaciones, anomalías, digest).
-  reglasRecomendacionCreadas     ReglaRecomendacion[]
-  recomendacionesResueltas       Recomendacion[]
-  anomaliasResueltas             Anomalia[]
-  digestsSemanal                 DigestSemanal[]
+  reglasRecomendacionCreadas       ReglaRecomendacion[]
+  recomendacionesResueltas         Recomendacion[]
+  anomaliasResueltas               Anomalia[]
+  digestsSemanal                   DigestSemanal[]
   // SPEC-238 (002-PI-mega-cola): aclaraciones respondidas por el miembro del comité.
-  aclaracionesRespondidas        AclaracionExpediente[]
+  aclaracionesRespondidas          AclaracionExpediente[]
   // SPEC-239 (002-PI-mega-cola): contactos de emergencia administrados por el padre.
-  contactosEmergencia            ContactoEmergencia[]
+  contactosEmergencia              ContactoEmergencia[]
   // SPEC-224 (002-PI-125): versiones de reglas de recomendación cambiadas por el admin.
-  reglasHistorialCambiadas       ReglaRecomendacionHistorial[]
+  reglasHistorialCambiadas         ReglaRecomendacionHistorial[]
 
   @@index([email])
   @@index([rol])
@@ -798,15 +804,15 @@ model SesionLog {
 
 // SPEC-241 (002-PI-144): registro inmutable de aceptación de consentimiento informado.
 model AuditConsentimiento {
-  id                  String   @id @default(cuid())
-  usuarioId           String
-  version             String
-  documentoTipo       String
-  documentoHash       String
-  aceptadoEn          DateTime @default(now())
-  ip                  String
-  userAgent           String?
-  esRepresentanteLegal Boolean @default(false)
+  id                   String   @id @default(cuid())
+  usuarioId            String
+  version              String
+  documentoTipo        String
+  documentoHash        String
+  aceptadoEn           DateTime @default(now())
+  ip                   String
+  userAgent            String?
+  esRepresentanteLegal Boolean  @default(false)
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -829,22 +835,22 @@ model Tenant {
 // SPEC-210 (002-PI-110): Plan enriquecido. El campo `precio` es legacy del
 // placeholder original; la lógica nueva usa `precioBaseUSD`.
 model Plan {
-  id                String       @id @default(cuid())
-  nombre            String
-  tipoTitular       TipoTitular
-  duracion          DuracionPlan
-  anio              Int
-  precioBaseUSD     Float
-  precioBaseCOP     Float?
-  esFreemium        Boolean      @default(false)
+  id                    String       @id @default(cuid())
+  nombre                String
+  tipoTitular           TipoTitular
+  duracion              DuracionPlan
+  anio                  Int
+  precioBaseUSD         Float
+  precioBaseCOP         Float?
+  esFreemium            Boolean      @default(false)
   usosMaximosPorCliente Int?
-  descuentoAnualPct Float?
-  activo            Boolean      @default(true)
-  descripcion       String?
-  precio            Float? // legacy placeholder; no usar en lógica nueva
-  creadoPorAdminId  String
-  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
-  updatedAt         DateTime     @updatedAt @db.Timestamptz(6)
+  descuentoAnualPct     Float?
+  activo                Boolean      @default(true)
+  descripcion           String?
+  precio                Float? // legacy placeholder; no usar en lógica nueva
+  creadoPorAdminId      String
+  createdAt             DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime     @updatedAt @db.Timestamptz(6)
 
   creadoPor     Usuario       @relation(fields: [creadoPorAdminId], references: [id], name: "PlanesCreados")
   suscripciones Suscripcion[]
@@ -902,13 +908,13 @@ model Suscripcion {
   updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
 
   // SPEC-244/245 (002-PI-147/148): trazabilidad de origen y pago manual.
-  origen                OrigenSuscripcion @default(SOLICITADA_CLIENTE)
-  autorizadoPorAdminId  String?
-  autorizadoEn          DateTime?         @db.Timestamptz(6)
-  metodoPagoManual      MetodoPagoManual?
-  referenciaPagoManual  String?
-  montoRealPagado       Float?
-  fechaPagoReal         DateTime?         @db.Timestamptz(6)
+  origen               OrigenSuscripcion @default(SOLICITADA_CLIENTE)
+  autorizadoPorAdminId String?
+  autorizadoEn         DateTime?         @db.Timestamptz(6)
+  metodoPagoManual     MetodoPagoManual?
+  referenciaPagoManual String?
+  montoRealPagado      Float?
+  fechaPagoReal        DateTime?         @db.Timestamptz(6)
 
   colegio               Colegio?            @relation(fields: [colegioId], references: [id])
   usuario               Usuario?            @relation(fields: [usuarioId], references: [id])
@@ -996,9 +1002,9 @@ model BonoPromocional {
   createdAt                   DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt                   DateTime     @updatedAt @db.Timestamptz(6)
 
-  creadoPor   Usuario        @relation(fields: [creadoPorAdminId], references: [id], name: "BonosCreados")
-  beneficiario Usuario?      @relation(fields: [beneficiarioUsuarioId], references: [id], name: "BonosBeneficiario")
-  usos        BonoAplicado[]
+  creadoPor    Usuario        @relation(fields: [creadoPorAdminId], references: [id], name: "BonosCreados")
+  beneficiario Usuario?       @relation(fields: [beneficiarioUsuarioId], references: [id], name: "BonosBeneficiario")
+  usos         BonoAplicado[]
 
   @@index([activo, vigenciaInicio, vigenciaFin])
 }
@@ -1539,6 +1545,7 @@ model Plataforma {
   identificadores           IdentificadorReportado[]
   alertasSuscripcion        AlertaSuscripcion[]
   identificadoresContacto   IdentificadorContacto[]
+  identificadoresHijo       IdentificadorHijo[]
   identificadoresEstudiante IdentificadorEstudiante[]
   identificadoresAcudiente  IdentificadorAcudiente[]
   identificadoresProfesor   IdentificadorProfesor[]
@@ -1923,7 +1930,9 @@ model AccesoDocumentoApelacion {
 model ContactoConfianza {
   id            String   @id @default(cuid())
   usuarioId     String
-  etiqueta      String?  @db.VarChar(100)
+  etiqueta      String?  @db.VarChar(100) // SPEC-325: deprecado en favor de `nombre` (no se borra · aditivo)
+  nombre        String?  @db.VarChar(100) // SPEC-325: campo propio (antes solo `etiqueta`)
+  parentesco    String?  @db.VarChar(60) // SPEC-325: campo propio (madre/tío/amigo…)
   nota          String?  @db.Text
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
@@ -1934,6 +1943,78 @@ model ContactoConfianza {
 
   @@index([usuarioId, activo])
   @@index([usuarioId, creadoEn])
+}
+
+// ─── SPEC-325 (002-PI-225) · "A quién protejo" — módulo de hijos/familiares ───
+// PII de menor: patrón `Estudiante` (acceso solo por el padre dueño vía HijoPadre,
+// nunca por id suelto en URL, sin logs con el documento en claro). Dos entidades
+// separadas de `ContactoConfianza` (protejo lleva documento obligatorio, vigilo no),
+// pero UN mismo mecanismo de monitoreo (el cruce identificador→alerta es uno solo).
+model Hijo {
+  id              String   @id @default(cuid())
+  nombre          String
+  apellidos       String   @default("")
+  documentoTipo   String // set cerrado en Zod: RC|TI|CC|CE|PASAPORTE|OTRO (OBLIGATORIO)
+  documentoNumero String // OBLIGATORIO
+  anioNacimiento  Int? // durable (no `edad`) · consistente con A-58; la UI calcula la edad
+  sexo            String? // set cerrado en Zod
+  creadoEn        DateTime @default(now())
+  actualizadoEn   DateTime @updatedAt
+
+  padres          HijoPadre[]
+  identificadores IdentificadorHijo[]
+
+  // Detección dos-padres-un-niño: mismo documento ⇒ mismo menor, no se duplica.
+  @@unique([documentoTipo, documentoNumero])
+  @@index([documentoTipo, documentoNumero])
+}
+
+// Puente padre↔hijo (un niño puede tener dos padres separados · §3.1-bis).
+model HijoPadre {
+  id        String   @id @default(cuid())
+  hijoId    String
+  usuarioId String
+  creadoEn  DateTime @default(now())
+
+  hijo    Hijo    @relation(fields: [hijoId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([hijoId, usuarioId])
+  @@index([usuarioId])
+}
+
+model IdentificadorHijo {
+  id            String   @id @default(cuid())
+  hijoId        String
+  valor         String // SPEC-325: guardado normalizado (normalizarIdentificador)
+  tipo          String?
+  plataformaId  String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  hijo         Hijo                            @relation(fields: [hijoId], references: [id], onDelete: Cascade)
+  plataforma   Plataforma?                     @relation(fields: [plataformaId], references: [id])
+  desvinculado IdentificadorHijoDesvinculado[]
+
+  @@index([valor])
+  @@index([hijoId, activo])
+  @@index([plataformaId])
+}
+
+// El identificador del hijo es compartido entre los dos padres; "quitar" solo
+// lo desvincula de la vista de QUIEN lo quita, sin borrarlo para el otro (§3.1-bis).
+model IdentificadorHijoDesvinculado {
+  id              String   @id @default(cuid())
+  identificadorId String
+  usuarioId       String
+  creadoEn        DateTime @default(now())
+
+  identificador IdentificadorHijo @relation(fields: [identificadorId], references: [id], onDelete: Cascade)
+  usuario       Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([identificadorId, usuarioId])
+  @@index([usuarioId])
 }
 
 model IdentificadorContacto {
@@ -2312,18 +2393,18 @@ model Expediente {
   createdAt                       DateTime         @default(now()) @db.Timestamptz(6)
   updatedAt                       DateTime         @updatedAt @db.Timestamptz(6)
 
-  padre                  Usuario?             @relation(fields: [padreUsuarioId], references: [id])
+  padre                  Usuario?              @relation(fields: [padreUsuarioId], references: [id])
   eventos                EventoExpediente[]
   // SPEC-234 (002-PI-134): informes consolidados y patrones N1 del expediente.
   informes               InformeConsolidado[]
   patrones               PatronExpediente[]
-  expedienteAnterior     Expediente?          @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
-  expedientesPosteriores Expediente[]         @relation("ExpedienteRelacionado")
+  expedienteAnterior     Expediente?           @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
+  expedientesPosteriores Expediente[]          @relation("ExpedienteRelacionado")
   // SPEC-238 (002-PI-mega-cola): aclaración padre-comité (máx. una por expediente).
   aclaracion             AclaracionExpediente?
   // SPEC-239 (002-PI-mega-cola): SLA efectivo y marca de escalamiento a ROJO.
   slaEfectivoHoras       Int?
-  fechaEscaladoRojoEn    DateTime?            @db.Timestamptz(6)
+  fechaEscaladoRojoEn    DateTime?             @db.Timestamptz(6)
 
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
@@ -2383,8 +2464,8 @@ model InformeConsolidado {
   createdAt                      DateTime           @default(now()) @db.Timestamptz(6)
   updatedAt                      DateTime           @updatedAt @db.Timestamptz(6)
 
-  expediente  Expediente @relation(fields: [expedienteId], references: [id])
-  generadoPor Usuario?   @relation(fields: [generadoPorId], references: [id])
+  expediente   Expediente             @relation(fields: [expedienteId], references: [id])
+  generadoPor  Usuario?               @relation(fields: [generadoPorId], references: [id])
   // SPEC-238 (002-PI-mega-cola): aclaraciones vinculadas a este informe.
   aclaraciones AclaracionExpediente[]
 
@@ -2549,9 +2630,9 @@ model NotificacionRegla {
   actualizadaPor String?
   actualizadaEn  DateTime          @updatedAt @db.Timestamptz(6)
 
-  @@index([evento, activa])
   // SPEC-247 (002-PI-150): dedup de reglas por clave canónica (evento, canal, plantillaClave).
   @@unique([evento, canal, plantillaClave])
+  @@index([evento, activa])
   @@map("notificacion_reglas")
 }
 
@@ -2651,11 +2732,11 @@ model ReglaRecomendacion {
   // SPEC-221 (002-PI-122): última corrida del motor; gobierna la cadencia por frecuenciaMin.
   ultimaEvaluacionEn     DateTime? @db.Timestamptz(6)
 
-  creadaPor       Usuario         @relation(fields: [creadaPorAdminId], references: [id])
+  creadaPor       Usuario                       @relation(fields: [creadaPorAdminId], references: [id])
   recomendaciones Recomendacion[]
   // SPEC-224 (002-PI-125): versionado auditable; historial de snapshots previos.
-  version                Int                            @default(1)
-  historial              ReglaRecomendacionHistorial[]
+  version         Int                           @default(1)
+  historial       ReglaRecomendacionHistorial[]
 
   @@index([activa, prioridad(sort: Desc)])
   @@map("reglas_recomendacion")

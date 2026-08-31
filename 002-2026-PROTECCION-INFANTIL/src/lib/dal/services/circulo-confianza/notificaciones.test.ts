@@ -9,6 +9,7 @@ import { notificarCambioCirculoSiCorresponde } from "./notificaciones";
 import { agregarContacto } from "./index";
 import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
 import { crearUsuario, crearPlataforma, crearPaisCiudad, crearParametrosReportes } from "@/lib/reporte-test-utils";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 vi.mock("@/lib/email", () => ({
@@ -70,7 +71,8 @@ async function crearReporte(
     });
     const reporte = await prisma.reporte.create({
         data: {
-            identificador,
+            // SPEC-325: prod normaliza al crear el reporte; el helper lo replica.
+            identificador: normalizarIdentificador(identificador),
             plataformaId,
             texto: "Texto de prueba",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
@@ -124,7 +126,8 @@ describe("notificarCambioCirculoSiCorresponde (SPEC-308)", () => {
         expect(args.destinatario.email).toBe(usuario.email);
         expect(args.destinatario.usuarioId).toBe(usuario.id);
         expect(args.nombreContacto).toBe("sobrina Luisa");
-        expect(args.identificador).toBe("+57300ENRICH");
+        // SPEC-325: el identificador viaja normalizado (el sistema lo guarda canónico)
+        expect(args.identificador).toBe("+57300enrich");
         expect(args.plataforma).toBe("WhatsApp");
         expect(args.categoria).toBe("OFRECIMIENTO_REGALOS");
         expect(args.totalReportes).toBe(1);
