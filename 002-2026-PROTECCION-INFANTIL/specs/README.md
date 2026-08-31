@@ -177,6 +177,7 @@
 | [319](319-comite-convivencia-operativo/spec.md) | SPEC-319 · El comité de convivencia, operativo · fuente única rol→home + email + integrantes + firma + rediseño (002-PI-219 · cierra I-212) | 🟡 En desarrollo |
 | [320](320-identificadores-integridad-identidad/spec.md) | SPEC-320 · Identificadores: integridad + identidad (A-58 SPEC-A) · unicidad por colegio cross-sujeto asimétrica (warn+override) + documento profesor obligatorio + catálogo único tipos documento + §2.2-bis (NIT colegio único global + documento alumno obligatorio + columna Excel) (002-PI-220 · I-213) | 🟢 Implementado |
 | [330](330-rol-reglas-notificacion-enum/spec.md) | SPEC-330 · Rol de reglas de notificación = enum RolUsuario (padre) · seed `"PADRE"`→`"PARENT"` + migración de datos idempotente; el padre vuelve a ver/guardar sus toggles (002-PI-230 · I-221 parte padre) | 🟡 En desarrollo |
+| [331](331-vigencia-colegio-cookie/spec.md) | SPEC-331 · 🔴 Hotfix: cookie `sesion_estado` ignora rol → SCHOOL_ADMIN sin Suscripcion obtiene 403 VIGENCIA_REQUERIDA · resolver vigencia por rol en `buildSesionEstadoValue` (002-PI-231 · I-224) | 🟡 En desarrollo |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |

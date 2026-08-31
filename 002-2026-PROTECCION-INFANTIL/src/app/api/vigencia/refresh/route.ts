@@ -19,12 +19,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
-import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
-import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
-import { resolverEstadoVigencia } from "@/lib/pagos/vigencia-middleware";
-import { firmarSesionEstado, NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
-import { requireEnv } from "@/lib/env";
+import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
+import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
 
 export const runtime = "nodejs";
 
@@ -41,23 +37,9 @@ export async function POST() {
     }
 
     const userId = payload.sub as string;
+    const cookieValue = await buildSesionEstadoValue(userId);
 
-    // Consulta paralela — cada capa vive en su repo (Q-3 DAL frontier).
-    const [suscripcion, requiereConsentimiento, usuario] = await Promise.all([
-        new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(userId),
-        requiereConsentimientoActual(userId),
-        new UsuarioRepository().findDebeCambiarPassword(userId),
-    ]);
-
-    const vigencia = resolverEstadoVigencia(suscripcion);
-    const debeCambiarPassword = Boolean(usuario?.debeCambiarPassword);
-
-    const cookieValue = await firmarSesionEstado(
-        { vigencia, requiereConsentimiento, debeCambiarPassword },
-        requireEnv("JWT_SECRET", 32),
-    );
-
-    const res = NextResponse.json({ ok: true, vigencia, requiereConsentimiento, debeCambiarPassword });
+    const res = NextResponse.json({ ok: true });
     res.cookies.set(NOMBRE_COOKIE, cookieValue, {
         httpOnly: true,
         sameSite: "lax",
