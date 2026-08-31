@@ -36,6 +36,10 @@ export class ProfesorRepository {
                 orderBy: [{ apellidos: "asc" }, { nombre: "asc" }],
                 skip: filtro.skip,
                 take: filtro.take,
+                // SPEC-321 (P10): conteo de identificadores activos por profesor.
+                include: {
+                    _count: { select: { identificadoresProf: { where: { estado: "activo" } } } },
+                },
             }),
             this.db.profesor.count({ where }),
         ]);

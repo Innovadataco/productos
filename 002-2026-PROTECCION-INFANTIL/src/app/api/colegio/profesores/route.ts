@@ -63,8 +63,14 @@ export async function GET(request: Request) {
             take: pageSize,
         });
 
+        // SPEC-321 (P10): exponer el conteo de identificadores activos por profesor.
+        const itemsConConteo = items.map(({ _count, ...p }) => ({
+            ...p,
+            identificadoresActivos: _count.identificadoresProf,
+        }));
+
         return NextResponse.json({
-            items,
+            items: itemsConConteo,
             pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
         });
     } catch (error) {
