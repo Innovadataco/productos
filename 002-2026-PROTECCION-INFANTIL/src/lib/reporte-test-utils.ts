@@ -46,6 +46,27 @@ export async function crearPlataforma(clave = "whatsapp", nombre = "WhatsApp", c
     });
 }
 
+/**
+ * SPEC-320 (§2.3): siembra el catálogo de tipos de documento en la BD de test.
+ * Mismas claves que prisma/seed.ts (RC/TI/CC/CE/PASAPORTE/PEP/NIT/OTRO). Idempotente.
+ * Necesario porque el alta de alumno/profesor valida `claveActiva()` contra el catálogo.
+ */
+export async function crearTiposDocumento() {
+    const tipos = [
+        { clave: "RC", nombre: "Registro civil" },
+        { clave: "TI", nombre: "Tarjeta de identidad" },
+        { clave: "CC", nombre: "Cédula de ciudadanía" },
+        { clave: "CE", nombre: "Cédula de extranjería" },
+        { clave: "PASAPORTE", nombre: "Pasaporte" },
+        { clave: "PEP", nombre: "PEP / PPT" },
+        { clave: "NIT", nombre: "NIT" },
+        { clave: "OTRO", nombre: "Otro" },
+    ];
+    for (const td of tipos) {
+        await prisma.tipoDocumento.upsert({ where: { clave: td.clave }, update: {}, create: td });
+    }
+}
+
 export async function crearColegioConAdmin() {
     const { pais, ciudad } = await crearPaisCiudad();
     const tenant = await prisma.tenant.create({
