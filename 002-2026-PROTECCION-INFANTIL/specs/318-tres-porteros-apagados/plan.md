@@ -37,12 +37,9 @@ Tres rutas que ya devuelven una respuesta `NextResponse` o `Response`:
 
 Cada ruta ya tiene `userId` disponible al momento de la respuesta exitosa.
 
-### C · SessionPingProvider (§3.1 + §3.4)
+### C · session/ping también refresca la cookie (§3.4)
 
-`src/components/providers/SessionPingProvider.tsx` + `src/hooks/useSessionPing.ts`:
-- Cambiar el endpoint de `/api/session/ping` a `/api/vigencia/refresh` (POST)
-- El intervalo de refresco existente cubre §3.4 (colegio vencido ≤5 min)
-- `SessionPingProvider` NO necesita cambiar su interfaz — solo el endpoint interno
+`src/app/api/session/ping/route.ts` — sumar `buildSesionEstadoValue(user.id)` y set cookie en la respuesta exitosa (`res.cookies.set`). El `SessionPingProvider` y `useSessionPing` **no cambian** — siguen llamando `/api/session/ping`. Esto preserva la actualización de `ultimaActividadEn` (`SesionLog`) que consumen `SesionesTab.tsx`, `analisis-panel-repository.ts:209` y la regla de anomalía `uso-caido-abrupto.ts`. El refresco periódico de la cookie cubre §3.4 (colegio vencido ≤5 min). `vigencia/refresh` queda intacto y sigue funcionando como endpoint explícito de refresco.
 
 ### D · Cierre del ciclo (§3.2)
 
