@@ -821,6 +821,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | documentoNumero | String | — |
 | anioNacimiento | Int | opcional |
 | sexo | String | opcional |
+| estado | String | — |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | padres | HijoPadre | lista, relación |

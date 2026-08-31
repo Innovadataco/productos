@@ -147,9 +147,13 @@ export async function actualizarContacto(
     },
     request?: Request
 ) {
+    // SPEC-325: se traen TODOS los identificadores (antes solo los activos). Con el
+    // filtro puesto, un identificador inactivo llegaba con `id` pero fuera de
+    // `idsExistentes` y caía en la rama `create` → fila duplicada en vez de
+    // reactivación. La baja de los ausentes usa el subconjunto activo (abajo).
     const contacto = await prisma.contactoConfianza.findFirst({
         where: { id, usuarioId },
-        include: { identificadores: { where: { activo: true } } },
+        include: { identificadores: true },
     });
     if (!contacto) {
         throw new Error("Contacto no encontrado");
@@ -194,8 +198,11 @@ export async function actualizarContacto(
             const idsProveidos = new Set(proveidos.map((i) => i.id).filter(Boolean) as string[]);
             const idsExistentes = new Set(contacto.identificadores.map((i) => i.id));
 
-            // Desactivar identificadores activos que no estén en la lista enviada
-            const idsADesactivar = Array.from(idsExistentes).filter((id) => !idsProveidos.has(id));
+            // Desactivar identificadores ACTIVOS que no estén en la lista enviada
+            // (los que ya estaban inactivos no se tocan: no hay nada que bajar).
+            const idsADesactivar = contacto.identificadores
+                .filter((i) => i.activo && !idsProveidos.has(i.id))
+                .map((i) => i.id);
             if (idsADesactivar.length > 0) {
                 await tx.identificadorContacto.updateMany({
                     where: { id: { in: idsADesactivar } },
@@ -206,11 +213,14 @@ export async function actualizarContacto(
             // Crear o actualizar identificadores enviados
             for (const i of proveidos) {
                 // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                // SPEC-325: el estado es POR identificador. Omitirlo ≡ activo (lo
+                // que hacía antes al mandar la lista con el contacto activo); un
+                // contacto inhabilitado manda sobre todos: nada queda vigilando.
                 const datosIdentificador = {
                     valor: i.valor,
                     ...(i.tipo !== undefined ? { tipo: i.tipo.slice(0, 50) } : {}),
                     plataformaId: i.plataformaId || null,
-                    activo: nuevoActivo,
+                    activo: nuevoActivo === false ? false : i.activo !== false,
                 };
                 if (i.id && idsExistentes.has(i.id)) {
                     await tx.identificadorContacto.update({

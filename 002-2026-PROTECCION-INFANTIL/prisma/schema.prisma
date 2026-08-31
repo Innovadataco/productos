@@ -2032,6 +2032,8 @@ model Hijo {
   documentoNumero String // OBLIGATORIO
   anioNacimiento  Int? // durable (no `edad`) · consistente con A-58; la UI calcula la edad
   sexo            String? // set cerrado en Zod
+  // SPEC-325 (extensión): estado activo/inactivo del hijo (patrón Profesor/Estudiante, A-58).
+  estado          String   @default("activo")
   creadoEn        DateTime @default(now())
   actualizadoEn   DateTime @updatedAt
 
@@ -2041,6 +2043,7 @@ model Hijo {
   // Detección dos-padres-un-niño: mismo documento ⇒ mismo menor, no se duplica.
   @@unique([documentoTipo, documentoNumero])
   @@index([documentoTipo, documentoNumero])
+  @@index([estado])
 }
 
 // Puente padre↔hijo (un niño puede tener dos padres separados · §3.1-bis).

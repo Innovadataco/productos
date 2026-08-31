@@ -4,6 +4,17 @@
 // familiares cercanos con su documento e identificadores. Si alguien reporta el
 // identificador de un hijo, el padre se entera (mecanismo compartido). Lenguaje
 // de padre (A-62): esto NO es vigilancia, es cuidar a los tuyos.
+//
+// SPEC-325 (extensión UI) · el alta acepta VARIOS identificadores y cada tarjeta
+// expone las cuatro acciones del backend, que NO son equivalentes:
+//   · activar/inactivar HIJO ....... estado del hijo (`cambiarEstadoHijo`).
+//   · agregar identificador ........ a un hijo ya creado (`agregarIdentificador`).
+//   · activar/inactivar IDENTIFICADOR → flag GLOBAL compartido (§3.1-bis: los
+//     datos del niño son compartidos entre sus dos padres). Afecta a ambos.
+//   · quitar identificador ......... desvincula de la vista de ESTE padre; el
+//     registro compartido NO se borra (`desvincularIdentificador`).
+// Las dos últimas se ven parecidas y hacen cosas distintas: la UI las separa y
+// nombra el alcance en el texto visible, no solo en el aria-label.
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -27,7 +38,14 @@ const SEXOS = [
     { value: "OTRO", label: "Otro" },
 ];
 
-type Identificador = { id: string; valor: string; tipo: string | null; plataforma: { nombre: string } | null };
+type Plataforma = { id: string; clave: string; nombre: string };
+type Identificador = {
+    id: string;
+    valor: string;
+    tipo: string | null;
+    activo: boolean;
+    plataforma: { id: string; nombre: string; clave: string } | null;
+};
 type Hijo = {
     id: string;
     nombre: string;
@@ -36,22 +54,31 @@ type Hijo = {
     documentoNumero: string;
     anioNacimiento: number | null;
     sexo: string | null;
+    estado: string;
     identificadores: Identificador[];
+};
+/** Identificador aún no guardado: se acumula en el formulario de alta. */
+type IdentificadorNuevo = { valor: string; plataformaId: string };
+
+const FORM_VACIO = {
+    nombre: "",
+    apellidos: "",
+    documentoTipo: "TI",
+    documentoNumero: "",
+    anioNacimiento: "",
+    sexo: "",
 };
 
 export function MisHijos() {
     const [hijos, setHijos] = useState<Hijo[]>([]);
+    const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [form, setForm] = useState({
-        nombre: "",
-        apellidos: "",
-        documentoTipo: "TI",
-        documentoNumero: "",
-        anioNacimiento: "",
-        sexo: "",
-        identificador: "",
-    });
+    const [form, setForm] = useState(FORM_VACIO);
+    // Identificadores del alta: se agregan a una lista ANTES de crear al hijo,
+    // así el padre carga todos los que conoce (Roblox, teléfono, correo) de una.
+    const [nuevos, setNuevos] = useState<IdentificadorNuevo[]>([]);
+    const [borrador, setBorrador] = useState<IdentificadorNuevo>({ valor: "", plataformaId: "" });
     const [guardando, setGuardando] = useState(false);
 
     async function cargar() {
@@ -69,13 +96,35 @@ export function MisHijos() {
 
     useEffect(() => {
         void cargar();
+        // Las plataformas son opcionales: si el catálogo falla, el padre igual
+        // puede registrar el identificador "suelto" (plataformaId null).
+        fetch("/api/plataformas")
+            .then((res) => (res.ok ? res.json() : { plataformas: [] }))
+            .then((json) => setPlataformas(json.plataformas ?? []))
+            .catch(() => setPlataformas([]));
     }, []);
+
+    const opcionesPlataforma = [
+        { value: "", label: "Sin plataforma" },
+        ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
+    ];
+
+    function agregarBorrador() {
+        const valor = borrador.valor.trim();
+        if (!valor) return;
+        setNuevos((lista) => [...lista, { valor, plataformaId: borrador.plataformaId }]);
+        setBorrador({ valor: "", plataformaId: "" });
+    }
 
     async function registrar(e: React.FormEvent) {
         e.preventDefault();
         if (!form.nombre.trim() || !form.documentoNumero.trim()) return;
         setGuardando(true);
         setError(null);
+        // El identificador escrito pero no "agregado" no se pierde: entra igual.
+        const pendiente = borrador.valor.trim()
+            ? [...nuevos, { valor: borrador.valor.trim(), plataformaId: borrador.plataformaId }]
+            : nuevos;
         try {
             const body: Record<string, unknown> = {
                 nombre: form.nombre.trim(),
@@ -84,8 +133,11 @@ export function MisHijos() {
                 documentoNumero: form.documentoNumero.trim(),
                 anioNacimiento: form.anioNacimiento ? Number(form.anioNacimiento) : undefined,
                 sexo: form.sexo || undefined,
-                identificadores: form.identificador.trim()
-                    ? [{ valor: form.identificador.trim() }]
+                identificadores: pendiente.length
+                    ? pendiente.map((i) => ({
+                        valor: i.valor,
+                        ...(i.plataformaId ? { plataformaId: i.plataformaId } : {}),
+                    }))
                     : undefined,
             };
             const res = await fetch("/api/padre/hijos", {
@@ -94,7 +146,9 @@ export function MisHijos() {
                 body: JSON.stringify(body),
             });
             if (!res.ok) throw new Error("No se pudo registrar");
-            setForm({ nombre: "", apellidos: "", documentoTipo: "TI", documentoNumero: "", anioNacimiento: "", sexo: "", identificador: "" });
+            setForm(FORM_VACIO);
+            setNuevos([]);
+            setBorrador({ valor: "", plataformaId: "" });
             await cargar();
         } catch (e) {
             setError(e instanceof Error ? e.message : "Error");
@@ -103,15 +157,62 @@ export function MisHijos() {
         }
     }
 
-    async function desvincular(identificadorId: string) {
+    /** Envuelve una acción del backend: limpia el error y recarga la lista. */
+    async function accion(fn: () => Promise<Response>, mensajeError: string) {
+        setError(null);
         try {
-            const res = await fetch(`/api/padre/hijos/identificadores/${identificadorId}`, { method: "DELETE" });
-            if (!res.ok) throw new Error("No se pudo quitar");
+            const res = await fn();
+            if (!res.ok) throw new Error(mensajeError);
             await cargar();
         } catch (e) {
             setError(e instanceof Error ? e.message : "Error");
         }
     }
+
+    const cambiarEstadoHijo = (hijoId: string, estado: "activo" | "inactivo") =>
+        accion(
+            () =>
+                fetch(`/api/padre/hijos/${hijoId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ estado }),
+                }),
+            "No se pudo cambiar el estado"
+        );
+
+    // Flag GLOBAL: el identificador es del niño, no del padre (§3.1-bis).
+    const cambiarEstadoIdentificador = (identificadorId: string, activo: boolean) =>
+        accion(
+            () =>
+                fetch(`/api/padre/hijos/identificadores/${identificadorId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ activo }),
+                }),
+            "No se pudo cambiar el identificador"
+        );
+
+    // Solo saca el identificador de la vista de ESTE padre.
+    const desvincular = (identificadorId: string) =>
+        accion(
+            () => fetch(`/api/padre/hijos/identificadores/${identificadorId}`, { method: "DELETE" }),
+            "No se pudo quitar"
+        );
+
+    const agregarIdentificador = (hijoId: string, valor: string, plataformaId: string) =>
+        accion(
+            () =>
+                fetch("/api/padre/hijos/identificadores", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        hijoId,
+                        valor,
+                        ...(plataformaId ? { plataformaId } : {}),
+                    }),
+                }),
+            "No se pudo agregar el identificador"
+        );
 
     return (
         <section aria-label="A quién protejo" data-testid="mis-hijos" className="space-y-4">
@@ -124,17 +225,66 @@ export function MisHijos() {
             </header>
 
             <GlassCard className="p-4">
-                <form onSubmit={registrar} className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="form-hijo">
-                    <Input label="Nombres" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-                    <Input label="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
-                    <Select label="Tipo de documento" options={DOCUMENTO_TIPOS} value={form.documentoTipo} onChange={(e) => setForm({ ...form, documentoTipo: e.target.value })} />
-                    <Input label="Número de documento" value={form.documentoNumero} onChange={(e) => setForm({ ...form, documentoNumero: e.target.value })} required />
-                    <Input label="Año de nacimiento" type="number" value={form.anioNacimiento} onChange={(e) => setForm({ ...form, anioNacimiento: e.target.value })} />
-                    <Select label="Sexo" options={SEXOS} value={form.sexo} onChange={(e) => setForm({ ...form, sexo: e.target.value })} />
-                    <Input label="Un identificador (opcional)" placeholder="su Roblox, teléfono, correo…" value={form.identificador} onChange={(e) => setForm({ ...form, identificador: e.target.value })} />
-                    <div className="flex items-end">
-                        <Button type="submit" isLoading={guardando} disabled={guardando}>Registrar</Button>
+                <form onSubmit={registrar} className="space-y-3" data-testid="form-hijo">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Input label="Nombres" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
+                        <Input label="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
+                        <Select label="Tipo de documento" options={DOCUMENTO_TIPOS} value={form.documentoTipo} onChange={(e) => setForm({ ...form, documentoTipo: e.target.value })} />
+                        <Input label="Número de documento" value={form.documentoNumero} onChange={(e) => setForm({ ...form, documentoNumero: e.target.value })} required />
+                        <Input label="Año de nacimiento" type="number" value={form.anioNacimiento} onChange={(e) => setForm({ ...form, anioNacimiento: e.target.value })} />
+                        <Select label="Sexo" options={SEXOS} value={form.sexo} onChange={(e) => setForm({ ...form, sexo: e.target.value })} />
                     </div>
+
+                    <div className="rounded-xl border border-cielo/40 p-3 dark:border-cielo/30">
+                        <p className="text-sm font-medium text-body">Sus identificadores</p>
+                        <p className="mb-2 text-xs text-muted">
+                            Agregá todos los que conozcas: su usuario de Roblox, su teléfono, su correo.
+                            Podés sumar más después.
+                        </p>
+                        {nuevos.length > 0 && (
+                            <ul className="mb-2 flex flex-wrap gap-2" data-testid="identificadores-nuevos">
+                                {nuevos.map((i, idx) => (
+                                    <li key={`${i.valor}-${i.plataformaId}-${idx}`} className="inline-flex items-center gap-1">
+                                        <Badge>
+                                            {i.valor}
+                                            {i.plataformaId
+                                                ? ` · ${plataformas.find((p) => p.id === i.plataformaId)?.nombre ?? ""}`
+                                                : ""}
+                                        </Badge>
+                                        <button
+                                            type="button"
+                                            aria-label={`Sacar ${i.valor} de la lista`}
+                                            className="text-xs text-muted hover:text-rubi"
+                                            onClick={() => setNuevos((lista) => lista.filter((_, j) => j !== idx))}
+                                        >
+                                            ✕
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+                            <Input
+                                label="Identificador"
+                                placeholder="su Roblox, teléfono, correo…"
+                                value={borrador.valor}
+                                onChange={(e) => setBorrador({ ...borrador, valor: e.target.value })}
+                            />
+                            <Select
+                                label="Plataforma"
+                                options={opcionesPlataforma}
+                                value={borrador.plataformaId}
+                                onChange={(e) => setBorrador({ ...borrador, plataformaId: e.target.value })}
+                            />
+                            <Button type="button" variant="outline" onClick={agregarBorrador} disabled={!borrador.valor.trim()}>
+                                Agregar otro
+                            </Button>
+                        </div>
+                    </div>
+
+                    <Button type="submit" isLoading={guardando} disabled={guardando}>
+                        Registrar
+                    </Button>
                 </form>
                 {error && <p className="mt-2 text-sm text-rubi" data-testid="mis-hijos-error">{error}</p>}
             </GlassCard>
@@ -147,40 +297,123 @@ export function MisHijos() {
                 <ul className="space-y-3" data-testid="lista-hijos">
                     {hijos.map((h) => (
                         <li key={h.id}>
-                            <GlassCard className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <div className="font-medium text-body">
-                                            {h.nombre} {h.apellidos}
-                                        </div>
-                                        <div className="text-xs text-muted">
-                                            {h.documentoTipo} {h.documentoNumero}
-                                            {h.anioNacimiento ? ` · ${new Date().getFullYear() - h.anioNacimiento} años` : ""}
-                                        </div>
-                                    </div>
-                                </div>
-                                {h.identificadores.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        {h.identificadores.map((i) => (
-                                            <span key={i.id} className="inline-flex items-center gap-1">
-                                                <Badge>{i.valor}{i.plataforma ? ` · ${i.plataforma.nombre}` : ""}</Badge>
-                                                <button
-                                                    type="button"
-                                                    aria-label={`Quitar ${i.valor}`}
-                                                    className="text-xs text-muted hover:text-rubi"
-                                                    onClick={() => desvincular(i.id)}
-                                                >
-                                                    ✕
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </GlassCard>
+                            <HijoCard
+                                hijo={h}
+                                opcionesPlataforma={opcionesPlataforma}
+                                onCambiarEstadoHijo={cambiarEstadoHijo}
+                                onCambiarEstadoIdentificador={cambiarEstadoIdentificador}
+                                onDesvincular={desvincular}
+                                onAgregarIdentificador={agregarIdentificador}
+                            />
                         </li>
                     ))}
                 </ul>
             )}
         </section>
+    );
+}
+
+function HijoCard({
+    hijo,
+    opcionesPlataforma,
+    onCambiarEstadoHijo,
+    onCambiarEstadoIdentificador,
+    onDesvincular,
+    onAgregarIdentificador,
+}: {
+    hijo: Hijo;
+    opcionesPlataforma: { value: string; label: string }[];
+    onCambiarEstadoHijo: (hijoId: string, estado: "activo" | "inactivo") => Promise<void>;
+    onCambiarEstadoIdentificador: (identificadorId: string, activo: boolean) => Promise<void>;
+    onDesvincular: (identificadorId: string) => Promise<void>;
+    onAgregarIdentificador: (hijoId: string, valor: string, plataformaId: string) => Promise<void>;
+}) {
+    const [nuevo, setNuevo] = useState({ valor: "", plataformaId: "" });
+    const inactivo = hijo.estado === "inactivo";
+
+    return (
+        <GlassCard className={`p-4 ${inactivo ? "opacity-60" : ""}`} data-testid={`hijo-${hijo.id}`}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className="font-medium text-body">
+                            {hijo.nombre} {hijo.apellidos}
+                        </span>
+                        {inactivo && <Badge variant="neutral">Inactivo</Badge>}
+                    </div>
+                    <div className="text-xs text-muted">
+                        {hijo.documentoTipo} {hijo.documentoNumero}
+                        {hijo.anioNacimiento ? ` · ${new Date().getFullYear() - hijo.anioNacimiento} años` : ""}
+                    </div>
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onCambiarEstadoHijo(hijo.id, inactivo ? "activo" : "inactivo")}
+                >
+                    {inactivo ? "Activar" : "Inactivar"}
+                </Button>
+            </div>
+
+            {hijo.identificadores.length > 0 && (
+                <ul className="mt-3 space-y-2">
+                    {hijo.identificadores.map((i) => (
+                        <li key={i.id} className="flex flex-wrap items-center gap-2">
+                            <Badge variant={i.activo ? "default" : "neutral"}>
+                                {i.valor}
+                                {i.plataforma ? ` · ${i.plataforma.nombre}` : ""}
+                            </Badge>
+                            {!i.activo && <span className="text-xs text-muted">inactivo</span>}
+                            {/* Flag GLOBAL: también le cambia al otro padre del niño. */}
+                            <button
+                                type="button"
+                                aria-label={`${i.activo ? "Inactivar" : "Activar"} ${i.valor} para todos`}
+                                title="El identificador es del niño: el cambio también aplica al otro padre"
+                                className="text-xs text-muted underline hover:text-body"
+                                onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
+                            >
+                                {i.activo ? "Inactivar" : "Activar"}
+                            </button>
+                            {/* Solo esta cuenta: no borra el registro compartido. */}
+                            <button
+                                type="button"
+                                aria-label={`Quitar ${i.valor}`}
+                                title="Lo saca de tu lista; el otro padre lo sigue viendo"
+                                className="text-xs text-muted underline hover:text-rubi"
+                                onClick={() => onDesvincular(i.id)}
+                            >
+                                Quitar de mi lista
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+                <Input
+                    label="Agregar identificador"
+                    placeholder="su Roblox, teléfono, correo…"
+                    value={nuevo.valor}
+                    onChange={(e) => setNuevo({ ...nuevo, valor: e.target.value })}
+                />
+                <Select
+                    label="Plataforma"
+                    options={opcionesPlataforma}
+                    value={nuevo.plataformaId}
+                    onChange={(e) => setNuevo({ ...nuevo, plataformaId: e.target.value })}
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!nuevo.valor.trim()}
+                    onClick={async () => {
+                        await onAgregarIdentificador(hijo.id, nuevo.valor.trim(), nuevo.plataformaId);
+                        setNuevo({ valor: "", plataformaId: "" });
+                    }}
+                >
+                    Agregar
+                </Button>
+            </div>
+        </GlassCard>
     );
 }
