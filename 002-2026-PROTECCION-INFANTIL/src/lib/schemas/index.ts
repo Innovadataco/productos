@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { NivelLog, EstadoNotificacion, CanalNotificacion } from "@prisma/client";
+// SPEC-320: primitivas compartidas movidas a ./base (se re-exportan abajo para los
+// consumidores de @/lib/schemas). También en ./identidad viven las de profesor.
+import { cuidIdSchema, materiaIdSchema, emailSchema, parametroClaveSchema, estadoActivoSchema } from "./base";
+import { profesorNuevoSchema } from "./identidad";
 
 /**
  * Esquemas zod reutilizables para validación de entradas en rutas API.
@@ -7,17 +11,8 @@ import { NivelLog, EstadoNotificacion, CanalNotificacion } from "@prisma/client"
  * y garantizar consistencia entre endpoints.
  */
 
-// Identificadores y claves
-export const cuidIdSchema = z.string().cuid();
-
-// SPEC-173 (H02, candado A compuerta): Materia tiene ids mixtos en prod — la
-// migración 20260812052407 sembró el catálogo con gen_random_uuid() y la app
-// crea materias nuevas con @default(cuid()). El schema acepta ambos formatos.
-export const materiaIdSchema = z.union([cuidIdSchema, z.string().uuid()]);
-
-export const emailSchema = z.string().email().max(255);
-
-export const parametroClaveSchema = z.string().min(1).max(100);
+export { cuidIdSchema, materiaIdSchema, emailSchema, parametroClaveSchema, estadoActivoSchema } from "./base";
+export * from "./identidad";
 
 // Body vacío para POST/PATCH que no esperan payload
 export const emptyBodySchema = z.object({}).strict();
@@ -125,8 +120,6 @@ export const colegioUpdateBodySchema = z.object({
     tipoPeriodo: tipoPeriodoServicioSchema.optional(),
     estado: z.enum(["activo", "inactivo"]).optional(),
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
-
-export const estadoActivoSchema = z.enum(["activo", "inactivo"]);
 
 export const cursoBodySchema = z.object({
     nombre: z.string().min(2).max(150),
@@ -253,11 +246,8 @@ export const cursoMateriaIdParamsSchema = z.object({
 
 // SPEC-144 (FR-010, D3): alta de estudiante — obligatorios solo nombre + apellidos;
 // el resto es opcional y NUNCA bloquea el alta. Acudientes: máx 2 (D1, tabla hija).
-// SPEC-320 (§2.3): el tipo de documento del estudiante ahora CONSUME el catálogo
-// único (TipoDocumento.clave). Ya no es un enum hardcode: se acepta cualquier clave
-// del catálogo (la UI restringe las opciones a las activas) para que un tipo que el
-// admin agregue —p. ej. PEP/NIT— también sea válido para estudiantes. Es metadato
-// opcional del estudiante (sin FK); la fuente de verdad de las opciones es el catálogo.
+// SPEC-320 (§2.3): documentoTipo del estudiante CONSUME el catálogo (clave); ya no es
+// enum hardcode — acepta cualquier clave activa (metadato opcional sin FK).
 export const documentoTipoEstudianteSchema = z.string().min(1).max(20);
 
 export const acudienteEstudianteBodySchema = z.object({
@@ -285,43 +275,9 @@ export const estudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
-// SPEC-320 (§2.2): sexo del profesor (set cerrado).
-export const sexoSchema = z.enum(["M", "F", "OTRO"], {
-    message: "Sexo inválido. Valores aceptados: M, F, OTRO",
-});
-
-// SPEC-145 (FR-005) + SPEC-320 (§2.2): alta de profesor. Identidad OBLIGATORIA
-// (tipo/número de documento, año de nacimiento, sexo, email y teléfono). tipoDocumento
-// se valida además contra el catálogo TipoDocumento (clave activa) en la ruta.
-export const profesorBodySchema = z.object({
-    nombre: z.string().min(2).max(150),
-    apellidos: z.string({ message: "Falta el apellido del profesor" }).min(1, "Falta el apellido del profesor").max(150),
-    tipoDocumento: z.string({ message: "Falta el tipo de documento del profesor" }).min(1, "Falta el tipo de documento del profesor").max(20),
-    numeroDocumento: z.string({ message: "Falta el número de documento del profesor" }).min(1, "Falta el número de documento del profesor").max(50),
-    anioNacimiento: z.coerce.number({ message: "Falta el año de nacimiento del profesor" }).int().gte(1900, "Año de nacimiento inválido").lte(new Date().getFullYear(), "Año de nacimiento inválido"),
-    sexo: sexoSchema,
-    email: emailSchema,
-    telefono: z.string({ message: "Falta el teléfono del profesor" }).min(1, "Falta el teléfono del profesor").max(50),
-});
-
-export const profesorPatchSchema = z.object({
-    nombre: z.string().min(2).max(150).optional(),
-    apellidos: z.string().min(1).max(150).optional(),
-    // SPEC-320 (§2.2): email/telefono ya no admiten null (identidad obligatoria).
-    email: emailSchema.optional(),
-    telefono: z.string().min(1).max(50).optional(),
-    estado: estadoActivoSchema.optional(),
-}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
-
-export const profesorIdParamsSchema = z.object({
-    id: cuidIdSchema,
-});
-
-export const profesoresQuerySchema = z.object({
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(25),
-    estado: z.enum(["activo", "inactivo", "todos"]).default("activo"),
-});
+// SPEC-320 (§2.2): sexoSchema y los esquemas de profesor (profesorBodySchema,
+// profesorPatchSchema, profesorIdParamsSchema, profesoresQuerySchema) viven en
+// ./identidad y se re-exportan arriba (export * from "./identidad").
 
 // SPEC-144 (FR-003): el valor físico en BD sigue siendo 'ALUMNO' (@map); en código
 // y en el wire el valor es ESTUDIANTE. El parser de carga acepta "ALUMNO" legado
@@ -353,11 +309,8 @@ export const identificadorEstudianteIdParamsSchema = z.object({
 });
 
 // SPEC-146 (FR-002): payload del wizard unificado — curso + estudiantes +
-// identificadores en UNA escritura atómica. Reusa los schemas de alta ya
-// existentes (curso, estudiante con acudientes, identificador); el tipo del
-// identificador es opcional (se infiere del valor en la ruta).
-export const profesorNuevoSchema = profesorBodySchema.pick({ nombre: true, apellidos: true });
-
+// identificadores en UNA escritura atómica. `profesorNuevoSchema` vive en ./identidad
+// (deriva de profesorBodySchema) y se re-exporta arriba.
 export const identificadorUnificadoSchema = identificadorEstudianteBodySchema.extend({
     // Índice (0-based) del estudiante dentro de `estudiantes` al que pertenece.
     estudianteIndex: z.number().int().min(0),

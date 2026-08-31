@@ -12,7 +12,7 @@ import { withValidation } from "@/lib/validation";
 import { estudianteIdParamsSchema, identificadorEstudianteBodySchema } from "@/lib/schemas";
 import { verificarPropiedadEstudiante } from "@/lib/colegio/permisos";
 import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
-import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 function getClientInfo(request: Request) {

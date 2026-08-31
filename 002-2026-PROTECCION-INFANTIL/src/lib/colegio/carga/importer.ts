@@ -7,7 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
-import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 import type { FilaCargaEstudiante } from "./parser";
 
 export type ResumenImportacion = {

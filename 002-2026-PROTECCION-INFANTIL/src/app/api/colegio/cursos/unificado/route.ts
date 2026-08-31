@@ -14,7 +14,7 @@ import { withValidation, ValidationError } from "@/lib/validation";
 import { payloadUnificadoSchema } from "@/lib/schemas";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { inferirTipoIdentificador, normalizarIdentificador } from "@/lib/colegio/normalizacion";
-import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 
 /**
  * SPEC-146 (FR-002) — POST /api/colegio/cursos/unificado: crea curso +

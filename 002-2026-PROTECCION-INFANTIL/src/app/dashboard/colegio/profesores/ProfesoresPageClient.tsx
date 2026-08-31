@@ -191,22 +191,22 @@ export default function ProfesoresPageClient() {
             const url = esCrear ? "/api/colegio/profesores" : `/api/colegio/profesores/${modal.profesor.id}`;
             const body = esCrear
                 ? {
-                      nombre: form.nombre.trim(),
-                      apellidos: form.apellidos.trim(),
-                      tipoDocumento: form.tipoDocumento,
-                      numeroDocumento: form.numeroDocumento.trim(),
-                      anioNacimiento: Number(form.anioNacimiento),
-                      sexo: form.sexo,
-                      email,
-                      telefono,
-                  }
+                    nombre: form.nombre.trim(),
+                    apellidos: form.apellidos.trim(),
+                    tipoDocumento: form.tipoDocumento,
+                    numeroDocumento: form.numeroDocumento.trim(),
+                    anioNacimiento: Number(form.anioNacimiento),
+                    sexo: form.sexo,
+                    email,
+                    telefono,
+                }
                 : {
-                      // La identidad (documento, año, sexo) no se edita en esta pantalla en SPEC-A.
-                      nombre: form.nombre.trim(),
-                      apellidos: form.apellidos.trim(),
-                      email,
-                      telefono,
-                  };
+                    // La identidad (documento, año, sexo) no se edita en esta pantalla en SPEC-A.
+                    nombre: form.nombre.trim(),
+                    apellidos: form.apellidos.trim(),
+                    email,
+                    telefono,
+                };
             const res = await fetch(url, {
                 method: esCrear ? "POST" : "PATCH",
                 credentials: "include",

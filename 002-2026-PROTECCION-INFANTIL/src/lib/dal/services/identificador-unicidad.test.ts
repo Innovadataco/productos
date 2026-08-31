@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 import {
     crearColegioConAdmin,
     crearCurso,

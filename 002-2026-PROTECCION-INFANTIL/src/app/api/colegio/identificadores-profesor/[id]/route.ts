@@ -16,7 +16,7 @@ import { withValidation } from "@/lib/validation";
 import { identificadorProfesorIdParamsSchema, identificadorProfesorUpdateBodySchema } from "@/lib/schemas";
 import { verificarPropiedadIdentificadorProfesor } from "@/lib/colegio/permisos";
 import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
-import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 
 function getClientInfo(request: Request) {
     return {
