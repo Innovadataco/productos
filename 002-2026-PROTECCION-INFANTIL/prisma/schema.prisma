@@ -321,6 +321,9 @@ enum AccionAudit {
   SUSCRIPCION_ACTIVADA_MANUAL
   // SPEC-318 (002-PI-218): auditoría de cambio/restablecimiento/activación de contraseña.
   USUARIO_CAMBIO_PASSWORD
+  // SPEC-320 (§2.3): CRUD del catálogo de tipos de documento por el ADMIN.
+  ADMIN_TIPO_DOCUMENTO_CREADO
+  ADMIN_TIPO_DOCUMENTO_EDITADO
 }
 
 enum TipoPeriodoServicio {

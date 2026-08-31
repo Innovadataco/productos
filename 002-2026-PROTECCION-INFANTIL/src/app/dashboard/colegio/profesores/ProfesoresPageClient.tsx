@@ -26,10 +26,24 @@ type Profesor = {
     id: string;
     nombre: string;
     apellidos: string;
-    email: string | null;
-    telefono: string | null;
+    // SPEC-320 (§2.2): identidad obligatoria.
+    tipoDocumento: string;
+    numeroDocumento: string;
+    anioNacimiento: number;
+    sexo: string;
+    email: string;
+    telefono: string;
     estado: string;
 };
+
+type TipoDocumento = { clave: string; nombre: string };
+
+const SEXO_OPTIONS = [
+    { value: "", label: "Selecciona…" },
+    { value: "M", label: "Masculino" },
+    { value: "F", label: "Femenino" },
+    { value: "OTRO", label: "Otro" },
+];
 
 type Mensaje = { type: "success" | "error"; text: string } | null;
 
@@ -43,7 +57,16 @@ const FILTRO_OPTIONS = [
     { value: "todos", label: "Todos" },
 ];
 
-const FORM_VACIO = { nombre: "", apellidos: "", email: "", telefono: "" };
+const FORM_VACIO = {
+    nombre: "",
+    apellidos: "",
+    tipoDocumento: "",
+    numeroDocumento: "",
+    anioNacimiento: "",
+    sexo: "",
+    email: "",
+    telefono: "",
+};
 
 export default function ProfesoresPageClient() {
     const [profesores, setProfesores] = useState<Profesor[]>([]);
@@ -60,6 +83,31 @@ export default function ProfesoresPageClient() {
     const [formError, setFormError] = useState("");
     const [saving, setSaving] = useState(false);
     const [cambiandoId, setCambiandoId] = useState<string | null>(null);
+    // SPEC-320 (§2.3): tipos de documento del catálogo único, para el select de identidad.
+    const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
+
+    useEffect(() => {
+        let activo = true;
+        fetch("/api/colegio/tipos-documento", { credentials: "include" })
+            .then((r) => (r.ok ? r.json() : { items: [] }))
+            .then((d) => {
+                if (activo) setTiposDocumento(d.items ?? []);
+            })
+            .catch(() => {
+                /* el form muestra "Selecciona…" vacío si falla; no bloquea la pantalla */
+            });
+        return () => {
+            activo = false;
+        };
+    }, []);
+
+    const tipoDocumentoOptions = useMemo(
+        () => [
+            { value: "", label: "Selecciona…" },
+            ...tiposDocumento.map((t) => ({ value: t.clave, label: t.nombre })),
+        ],
+        [tiposDocumento]
+    );
 
     // Debounce del buscador (§9: 250-300 ms).
     useEffect(() => {
@@ -107,6 +155,10 @@ export default function ProfesoresPageClient() {
         setForm({
             nombre: profesor.nombre,
             apellidos: profesor.apellidos,
+            tipoDocumento: profesor.tipoDocumento ?? "",
+            numeroDocumento: profesor.numeroDocumento ?? "",
+            anioNacimiento: profesor.anioNacimiento ? String(profesor.anioNacimiento) : "",
+            sexo: profesor.sexo ?? "",
             email: profesor.email ?? "",
             telefono: profesor.telefono ?? "",
         });
@@ -115,26 +167,46 @@ export default function ProfesoresPageClient() {
     }
 
     async function guardar() {
+        if (!modal) return;
+        const esCrear = modal.modo === "crear";
+        const email = form.email.trim();
+        const telefono = form.telefono.trim();
         if (!form.nombre.trim() || !form.apellidos.trim()) {
             setFormError("Completa el nombre y los apellidos del profesor");
             return;
         }
-        if (!modal) return;
+        // SPEC-320 (§2.2): en el alta la identidad es obligatoria.
+        if (esCrear) {
+            if (!form.tipoDocumento || !form.numeroDocumento.trim() || !form.anioNacimiento.trim() || !form.sexo || !email || !telefono) {
+                setFormError("Completa la identidad del profesor: tipo y número de documento, año de nacimiento, sexo, email y teléfono");
+                return;
+            }
+        } else if (!email || !telefono) {
+            setFormError("El email y el teléfono del profesor son obligatorios");
+            return;
+        }
         setSaving(true);
         setFormError("");
         try {
-            const esCrear = modal.modo === "crear";
             const url = esCrear ? "/api/colegio/profesores" : `/api/colegio/profesores/${modal.profesor.id}`;
-            // Vacío ≡ sin dato: en alta se omite; en edición se manda null (borra).
-            const email = form.email.trim();
-            const telefono = form.telefono.trim();
-            const body = {
-                nombre: form.nombre.trim(),
-                apellidos: form.apellidos.trim(),
-                ...(esCrear
-                    ? { ...(email ? { email } : {}), ...(telefono ? { telefono } : {}) }
-                    : { email: email || null, telefono: telefono || null }),
-            };
+            const body = esCrear
+                ? {
+                      nombre: form.nombre.trim(),
+                      apellidos: form.apellidos.trim(),
+                      tipoDocumento: form.tipoDocumento,
+                      numeroDocumento: form.numeroDocumento.trim(),
+                      anioNacimiento: Number(form.anioNacimiento),
+                      sexo: form.sexo,
+                      email,
+                      telefono,
+                  }
+                : {
+                      // La identidad (documento, año, sexo) no se edita en esta pantalla en SPEC-A.
+                      nombre: form.nombre.trim(),
+                      apellidos: form.apellidos.trim(),
+                      email,
+                      telefono,
+                  };
             const res = await fetch(url, {
                 method: esCrear ? "POST" : "PATCH",
                 credentials: "include",
@@ -341,14 +413,51 @@ export default function ProfesoresPageClient() {
                         value={form.apellidos}
                         onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
                     />
+                    {/* SPEC-320 (§2.2): identidad obligatoria. En edición el documento no
+                        se cambia acá (queda solo lectura). */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <Select
+                            label="Tipo de documento"
+                            options={tipoDocumentoOptions}
+                            value={form.tipoDocumento}
+                            disabled={modal?.modo === "editar"}
+                            onChange={(e) => setForm({ ...form, tipoDocumento: e.target.value })}
+                        />
+                        <Input
+                            label="Número de documento"
+                            required
+                            value={form.numeroDocumento}
+                            disabled={modal?.modo === "editar"}
+                            onChange={(e) => setForm({ ...form, numeroDocumento: e.target.value })}
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input
+                            label="Año de nacimiento"
+                            type="number"
+                            required
+                            value={form.anioNacimiento}
+                            disabled={modal?.modo === "editar"}
+                            onChange={(e) => setForm({ ...form, anioNacimiento: e.target.value })}
+                        />
+                        <Select
+                            label="Sexo"
+                            options={SEXO_OPTIONS}
+                            value={form.sexo}
+                            disabled={modal?.modo === "editar"}
+                            onChange={(e) => setForm({ ...form, sexo: e.target.value })}
+                        />
+                    </div>
                     <Input
-                        label="Email (opcional)"
+                        label="Email"
                         type="email"
+                        required
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
                     />
                     <Input
-                        label="Teléfono (opcional)"
+                        label="Teléfono"
+                        required
                         value={form.telefono}
                         onChange={(e) => setForm({ ...form, telefono: e.target.value })}
                     />

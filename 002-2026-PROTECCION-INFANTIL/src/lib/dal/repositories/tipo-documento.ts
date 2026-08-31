@@ -39,7 +39,7 @@ export class TipoDocumentoRepository {
         return t?.esActiva === true;
     }
 
-    async crear(datos: { clave: string; nombre: string; categoria?: string }) {
+    async crear(datos: { clave: string; nombre: string; categoria?: string | undefined }) {
         const existente = await this.db.tipoDocumento.findUnique({ where: { clave: datos.clave } });
         if (existente) {
             throw new AppError("Ya existe un tipo de documento con esa clave", ERROR_CODES.CONFLICT, 409);
@@ -49,7 +49,7 @@ export class TipoDocumentoRepository {
         });
     }
 
-    async actualizar(id: string, datos: { nombre?: string; categoria?: string; esActiva?: boolean }) {
+    async actualizar(id: string, datos: { nombre?: string | undefined; categoria?: string | undefined; esActiva?: boolean | undefined }) {
         const { count } = await this.db.tipoDocumento.updateMany({
             where: { id },
             data: {

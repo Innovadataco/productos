@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +12,33 @@ import {
     type EstudianteForm,
     type ModoEstudiantes,
 } from "./tipos";
+
+/**
+ * SPEC-320 (§2.3): las opciones de tipo de documento vienen del catálogo único
+ * (para que un tipo que el admin agregue aparezca acá también). Fallback al set
+ * hardcode si la lectura falla, para no romper el wizard.
+ */
+function useTipoDocumentoOpciones() {
+    const [tipos, setTipos] = useState<{ clave: string; nombre: string }[] | null>(null);
+    useEffect(() => {
+        let activo = true;
+        fetch("/api/colegio/tipos-documento", { credentials: "include" })
+            .then((r) => (r.ok ? r.json() : { items: [] }))
+            .then((d) => {
+                if (activo && Array.isArray(d.items) && d.items.length > 0) setTipos(d.items);
+            })
+            .catch(() => {
+                /* fallback al hardcode */
+            });
+        return () => {
+            activo = false;
+        };
+    }, []);
+    return useMemo(() => {
+        if (!tipos) return DOCUMENTO_TIPO_OPCIONES;
+        return [{ value: "", label: "Sin documento" }, ...tipos.map((t) => ({ value: t.clave, label: t.nombre }))];
+    }, [tipos]);
+}
 import type { FilaListaValidada } from "@/lib/colegio/unificado/validar-lista";
 
 /**
@@ -31,6 +59,8 @@ interface TablaEstudiantesProps {
 }
 
 export function TablaEstudiantes({ estudiantes, onChange, errores, modo, onModoChange, onImportar, nuevaClave }: TablaEstudiantesProps) {
+    const documentoTipoOpciones = useTipoDocumentoOpciones();
+
     function actualizar(key: string, parcial: Partial<EstudianteForm>) {
         onChange(estudiantes.map((e) => (e.key === key ? { ...e, ...parcial } : e)));
     }
@@ -79,7 +109,7 @@ export function TablaEstudiantes({ estudiantes, onChange, errores, modo, onModoC
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <Select
                                     aria-label={`Tipo de documento del estudiante ${indice + 1}`}
-                                    options={DOCUMENTO_TIPO_OPCIONES}
+                                    options={documentoTipoOpciones}
                                     value={estudiante.documentoTipo}
                                     onChange={(e) => actualizar(estudiante.key, { documentoTipo: e.target.value })}
                                 />

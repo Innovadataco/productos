@@ -253,9 +253,12 @@ export const cursoMateriaIdParamsSchema = z.object({
 
 // SPEC-144 (FR-010, D3): alta de estudiante — obligatorios solo nombre + apellidos;
 // el resto es opcional y NUNCA bloquea el alta. Acudientes: máx 2 (D1, tabla hija).
-export const documentoTipoEstudianteSchema = z.enum(["RC", "TI", "CC", "CE", "PASAPORTE", "OTRO"], {
-    message: "Tipo de documento inválido. Valores aceptados: RC, TI, CC, CE, PASAPORTE, OTRO",
-});
+// SPEC-320 (§2.3): el tipo de documento del estudiante ahora CONSUME el catálogo
+// único (TipoDocumento.clave). Ya no es un enum hardcode: se acepta cualquier clave
+// del catálogo (la UI restringe las opciones a las activas) para que un tipo que el
+// admin agregue —p. ej. PEP/NIT— también sea válido para estudiantes. Es metadato
+// opcional del estudiante (sin FK); la fuente de verdad de las opciones es el catálogo.
+export const documentoTipoEstudianteSchema = z.string().min(1).max(20);
 
 export const acudienteEstudianteBodySchema = z.object({
     orden: z.union([z.literal(1), z.literal(2)]),

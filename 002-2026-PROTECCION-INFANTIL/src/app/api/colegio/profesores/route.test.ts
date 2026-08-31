@@ -34,9 +34,26 @@ async function setupSchoolAdmin() {
     return { admin, colegio };
 }
 
+// SPEC-320 (§2.3): el alta de profesor valida el tipoDocumento contra el catálogo.
+async function sembrarCatalogoTipos() {
+    for (const clave of ["CC", "CE", "TI", "PASAPORTE", "OTRO"]) {
+        await prisma.tipoDocumento.upsert({
+            where: { clave },
+            update: {},
+            create: { clave, nombre: clave },
+        });
+    }
+}
+
+// SPEC-320 (§2.2): identidad válida para el alta; numeroDocumento distinto por caso.
+function ident(numeroDocumento: string) {
+    return { tipoDocumento: "CC", numeroDocumento, anioNacimiento: 1985, sexo: "OTRO", email: "prof@colegio.edu.co", telefono: "+573001112233" };
+}
+
 describe("/api/colegio/profesores", () => {
     beforeEach(async () => {
         await resetDatabase();
+        await sembrarCatalogoTipos();
         await resetRateLimitStore();
         mockToken = undefined;
     });
@@ -44,7 +61,7 @@ describe("/api/colegio/profesores", () => {
     it("SCHOOL_ADMIN crea un profesor y lo ve en su lista (201 + GET)", async () => {
         const { colegio } = await setupSchoolAdmin();
 
-        const postRes = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", email: "maria@colegio.edu.co", telefono: "+573001112233" }, mockToken));
+        const postRes = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", ...ident("D-1") }, mockToken));
         expect(postRes.status).toBe(201);
         const postJson = await postRes.json();
         expect(postJson.profesor.nombre).toBe("María");
@@ -90,7 +107,7 @@ describe("/api/colegio/profesores", () => {
     it("rechaza email mal formado (400)", async () => {
         await setupSchoolAdmin();
 
-        const res = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", email: "no-es-email" }, mockToken));
+        const res = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", ...ident("D-2"), email: "no-es-email" }, mockToken));
         expect(res.status).toBe(400);
     });
 
@@ -98,10 +115,27 @@ describe("/api/colegio/profesores", () => {
         const { colegio } = await setupSchoolAdmin();
         await crearProfesor(colegio.id, { nombre: "María", apellidos: "López" });
 
-        const res = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López" }, mockToken));
+        const res = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", ...ident("D-3") }, mockToken));
         expect(res.status).toBe(409);
         const json = await res.json();
         expect(json.error.message).toBe("Ya existe un profesor con ese nombre y apellidos");
+    });
+
+    it("SPEC-320: rechaza documento (tipo+número) duplicado en el mismo colegio (409)", async () => {
+        await setupSchoolAdmin();
+        const primero = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", ...ident("DUP-1") }, mockToken));
+        expect(primero.status).toBe(201);
+        // Otro nombre, MISMO documento en el mismo colegio → 409 por documento.
+        const res = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "Otra", apellidos: "Persona", ...ident("DUP-1") }, mockToken));
+        expect(res.status).toBe(409);
+        const json = await res.json();
+        expect(json.error.message).toBe("Ya existe un profesor con ese documento en el colegio");
+    });
+
+    it("SPEC-320: rechaza tipo de documento que no está en el catálogo (400)", async () => {
+        await setupSchoolAdmin();
+        const res = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", ...ident("X-1"), tipoDocumento: "NO_EXISTE" }, mockToken));
+        expect(res.status).toBe(400);
     });
 
     it("un duplicado INACTIVO no bloquea el alta; el mismo nombre en OTRO colegio tampoco", async () => {
@@ -110,10 +144,10 @@ describe("/api/colegio/profesores", () => {
         const { colegio: colegioB } = await crearColegioConAdmin();
         await crearProfesor(colegioB.id, { nombre: "Ana", apellidos: "Pérez" });
 
-        const resInactivo = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López" }, mockToken));
+        const resInactivo = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", ...ident("D-4") }, mockToken));
         expect(resInactivo.status).toBe(201);
 
-        const resOtroColegio = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "Ana", apellidos: "Pérez" }, mockToken));
+        const resOtroColegio = await POST(request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "Ana", apellidos: "Pérez", ...ident("D-5") }, mockToken));
         expect(resOtroColegio.status).toBe(201);
     });
 
