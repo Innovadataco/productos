@@ -136,15 +136,20 @@ describe("ReporteWizard", () => {
             });
         });
 
-        it("muestra checkbox 'Reportar de forma anónima' en modo autenticado", async () => {
+        // SPEC-324: el checkbox "Reportar de forma anónima" se retiró — el padre
+        // autenticado SIEMPRE reporta con su identidad (el backend ya derivaba
+        // esAnonimo de la sesión, así que el checkbox era muerto · candado 26).
+        it("NO muestra checkbox 'Reportar de forma anónima' en modo autenticado (SPEC-324)", async () => {
             mockFetch({ id: "u4", email: "parent@test.com", nombre: "Juan Padre", rol: "PARENT" });
             render(<ReporteWizard modoAutenticado />);
 
             await waitFor(() => {
-                expect(document.body.textContent).toContain("Reportar de forma anónima");
+                // el banner de identidad sigue presente...
+                expect(document.body.textContent).toContain("Reportando como");
             });
-            const checkbox = screen.getByRole("checkbox");
-            expect((checkbox as HTMLInputElement).checked).toBe(false);
+            // ...pero ya no hay checkbox ni la etiqueta de anonimato.
+            expect(document.body.textContent).not.toContain("Reportar de forma anónima");
+            expect(screen.queryByRole("checkbox")).toBeNull();
         });
 
         it("NO muestra banner en modo público anónimo (sin modoAutenticado)", async () => {
@@ -163,6 +168,48 @@ describe("ReporteWizard", () => {
             await waitFor(() => {
                 expect(document.body.textContent).not.toContain("Reportando como");
             });
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SPEC-324: el CTA "Reportar de nuevo a este identificador" de /seguimiento
+    // llega con el identificador fijo (?identificador=...&bloqueado=1).
+    // ─────────────────────────────────────────────────────────────────────
+    describe("SPEC-324 · identificador bloqueado desde /seguimiento", () => {
+        const campoIdentificador = () =>
+            screen.getByLabelText(/Número, nick o usuario/i) as HTMLInputElement;
+
+        it("prellena y bloquea el identificador cuando llega bloqueado", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard identificadorInicial="+573001234567" identificadorBloqueado />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            const campo = campoIdentificador();
+            expect(campo.value).toBe("+573001234567");
+            expect(campo.readOnly).toBe(true);
+            // `readOnly` es lo que bloquea al usuario en el navegador; no se
+            // verifica con `fireEvent.change` porque ese helper no simula tecleo
+            // (dispara el evento directo y jsdom lo deja pasar aunque sea readOnly).
+        });
+
+        it("sin identificador inicial NO bloquea nada (el flag solo no alcanza)", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard identificadorBloqueado />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            expect(campoIdentificador().readOnly).toBe(false);
+        });
+
+        it("con identificador inicial pero sin el flag el campo sigue editable", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard identificadorInicial="+573001234567" />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            const campo = campoIdentificador();
+            expect(campo.value).toBe("+573001234567");
+            expect(campo.readOnly).toBe(false);
+            fireEvent.change(campo, { target: { value: "+573009999999" } });
+            expect(campoIdentificador().value).toBe("+573009999999");
         });
     });
 });

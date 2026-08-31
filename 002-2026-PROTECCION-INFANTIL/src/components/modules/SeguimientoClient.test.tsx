@@ -170,4 +170,65 @@ describe("SeguimientoClient", () => {
             expect(body).toContain("Reporte no encontrado");
         });
     });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SPEC-324: "otros reportes" + CTA que reporta de nuevo AL MISMO identificador.
+    // ─────────────────────────────────────────────────────────────────────
+    describe("SPEC-324 · otros reportes y CTA de nuevo reporte", () => {
+        async function consultar(data: unknown) {
+            mockFetch(data);
+            render(<SeguimientoClient />);
+            fireEvent.change(screen.getByPlaceholderText("RPT-XXXXXX"), {
+                target: { value: "RPT-ABC123" },
+            });
+            fireEvent.click(screen.getByRole("button", { name: /consultar/i }));
+            await waitFor(() => {
+                expect(document.body.textContent).toContain("Tu reporte ha sido procesado");
+            });
+        }
+
+        it("lista fecha, lugar y clasificación de los otros reportes", async () => {
+            await consultar({
+                ...baseData,
+                otrosReportes: [
+                    {
+                        id: "otro-1",
+                        creadoEn: "2026-07-20T15:30:00Z",
+                        pais: "Colombia",
+                        ciudad: "Medellín",
+                        categoriaLabel: "Solicitud de encuentro",
+                    },
+                ],
+            });
+
+            const body = document.body.textContent || "";
+            expect(body).toContain("Otros reportes de este identificador");
+            expect(body).toContain("Medellín, Colombia");
+            expect(body).toContain("Solicitud de encuentro");
+            // Hora de Colombia (UTC-5): 15:30 UTC → 10:30 a. m.
+            expect(body).toContain("10:30");
+        });
+
+        it("no dibuja el bloque cuando el backend manda null (visitante anónimo)", async () => {
+            await consultar({ ...baseData, otrosReportes: null });
+
+            expect(document.body.textContent).not.toContain("Otros reportes de este identificador");
+        });
+
+        it("no dibuja el bloque cuando la lista viene vacía", async () => {
+            await consultar({ ...baseData, otrosReportes: [] });
+
+            expect(document.body.textContent).not.toContain("Otros reportes de este identificador");
+        });
+
+        it("el CTA lleva el identificador fijo a /reportar", async () => {
+            await consultar({ ...baseData, otrosReportes: null });
+
+            const cta = screen.getByRole("link", { name: /Reportar de nuevo a este identificador/i });
+            expect(cta.getAttribute("href")).toBe("/reportar?identificador=30009000002&bloqueado=1");
+            // El CTA genérico sigue existiendo, sin bloquear nada.
+            const generico = screen.getByRole("link", { name: /Realizar otro reporte/i });
+            expect(generico.getAttribute("href")).toBe("/reportar");
+        });
+    });
 });

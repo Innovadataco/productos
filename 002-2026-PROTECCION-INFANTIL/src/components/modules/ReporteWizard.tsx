@@ -41,9 +41,14 @@ const REDIRECT_PADRE_POST_ENVIO = "/mis-reportes"; // SPEC-317: ruta real; /dash
 
 export function ReporteWizard({
     identificadorInicial,
+    identificadorBloqueado = false,
     modoAutenticado = false,
 }: {
     identificadorInicial?: string | undefined;
+    // SPEC-324: el CTA "reportar de nuevo a este identificador" de /seguimiento
+    // llega con el valor fijo — el padre viene a agregar un evento sobre ESE
+    // identificador, no a escribir otro. Sin `identificadorInicial` no bloquea nada.
+    identificadorBloqueado?: boolean;
     modoAutenticado?: boolean;
 } = {}) {
     const [step, setStep] = useState(1);
@@ -216,7 +221,10 @@ export function ReporteWizard({
 
     return (
         <div className="mx-auto max-w-xl">
-            {/* SPEC-295 (I-146): banner de identidad + checkbox anónimo opcional. */}
+            {/* SPEC-295 (I-146): banner de identidad. SPEC-324: el checkbox "anónimo"
+                se retiró — el padre autenticado SIEMPRE reporta con su identidad. El
+                backend ya derivaba esAnonimo de la sesión (route.ts: `const esAnonimo = !user`),
+                así que el checkbox era cosmético/muerto y confundía (candado 26). */}
             {modoAutenticado && user && user.rol === "PARENT" && (
                 <div className="mb-4 rounded-2xl border border-tinta/10 bg-papel/60 p-4 text-sm">
                     <p className="text-tinta">
@@ -224,15 +232,6 @@ export function ReporteWizard({
                         <span className="font-semibold">{user.nombre ?? user.email}</span>
                         {user.nombre ? ` <${user.email}>` : ""}
                     </p>
-                    <label className="mt-2 flex items-center gap-2 text-xs text-muted">
-                        <input
-                            type="checkbox"
-                            checked={data.esAnonimo}
-                            onChange={(e) => update({ esAnonimo: e.target.checked })}
-                            className="h-4 w-4 rounded border-tinta/20"
-                        />
-                        Reportar de forma anónima (el sistema no vinculará este reporte a tu cuenta en el pipeline).
-                    </label>
                 </div>
             )}
 
@@ -262,7 +261,7 @@ export function ReporteWizard({
                     identificador={data.identificador}
                     plataforma={data.plataforma}
                     otraPlataforma={data.otraPlataforma}
-                    identificadorBloqueado={reportePrevioId !== null}
+                    identificadorBloqueado={reportePrevioId !== null || (identificadorBloqueado && Boolean(identificadorInicial))}
                     onChange={(v: { identificador: string; plataforma: string; otraPlataforma: string }) => update(v)}
                 />
             )}

@@ -21,12 +21,17 @@ export const metadata: Metadata = {
 export default async function ReportarPage({
     searchParams,
 }: {
-    searchParams: Promise<{ identificador?: string }>;
+    searchParams: Promise<{ identificador?: string; bloqueado?: string }>;
 }) {
     // F3 (N-5): el CTA del estado vacío de la consulta prellena el identificador
     // (sanitizado: máx 100 chars, igual que el límite del esquema de la API).
-    const { identificador } = await searchParams;
+    const { identificador, bloqueado } = await searchParams;
     const identificadorInicial = typeof identificador === "string" ? identificador.slice(0, 100) : undefined;
+    // SPEC-324: `?bloqueado=1` viene del CTA "reportar de nuevo a este
+    // identificador" de /seguimiento. Es una garantía de UX (que el evento quede
+    // pegado al mismo identificador), no un control de seguridad: el backend
+    // valida el identificador que reciba, venga como venga.
+    const identificadorBloqueado = bloqueado === "1" && Boolean(identificadorInicial);
 
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
@@ -39,7 +44,10 @@ export default async function ReportarPage({
                 </p>
             </div>
 
-            <ReporteWizard identificadorInicial={identificadorInicial} />
+            <ReporteWizard
+                identificadorInicial={identificadorInicial}
+                identificadorBloqueado={identificadorBloqueado}
+            />
             <CanalesOficiales />
         </main>
     );

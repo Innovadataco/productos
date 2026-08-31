@@ -86,6 +86,9 @@ export interface PadreNavItem {
 export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     { href: "/dashboard/padre", label: "Inicio" },
     { href: "/dashboard/padre/expedientes", label: "Mis expedientes" },
+    // SPEC-324: acceso directo al listado de reportes individuales del padre.
+    // Ruta top-level (fuera del shell /dashboard/padre) reutilizada, no hay página nueva.
+    { href: "/mis-reportes", label: "Mis reportes" },
     { href: "/dashboard/padre/reportar", label: "Reportar" },
     { href: "/dashboard/padre/suscripcion", label: "Suscripción" },
     { href: "/dashboard/padre/hijos", label: "A quién protejo" }, // SPEC-325

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { numeroSeguimientoSchema } from "@/lib/validators";
 import { ERROR_CODES } from "@/lib/errors";
+import { getUserFromToken } from "@/lib/auth";
 import { ReporteQueryService } from "@/lib/dal/services/reporte-query";
 
 export async function GET(
@@ -26,8 +27,15 @@ export async function GET(
             );
         }
 
+        // SPEC-324: la ruta sigue siendo PÚBLICA. `getUserFromToken` no lanza y
+        // devuelve null sin cookie o con token vencido, así que el camino anónimo
+        // no cambia; solo distingue si se puede mostrar el bloque "otros reportes".
+        const usuario = await getUserFromToken(request);
+
         // SPEC-053: la consulta y el mapeo a DTOs viven en el DAL; la ruta no toca prisma.
-        const resultado = await new ReporteQueryService().seguimiento(parsedNumero.data);
+        const resultado = await new ReporteQueryService().seguimiento(parsedNumero.data, {
+            autenticado: usuario !== null,
+        });
 
         if (!resultado) {
             return NextResponse.json(

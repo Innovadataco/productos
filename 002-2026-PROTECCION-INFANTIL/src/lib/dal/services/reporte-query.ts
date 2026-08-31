@@ -13,14 +13,16 @@ import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categori
 import { formatPlataforma } from "@/lib/plataforma";
 import { formatCategoria } from "@/lib/labels";
 import { construirExplicacionPadre } from "@/lib/expediente/mensaje-padre";
-import { whereReporteVigente } from "@/lib/reportes-acceso";
+import { whereReporteVigente, whereReporteAprobado } from "@/lib/reportes-acceso";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { EstadoReporte } from "@prisma/client";
 import { ReporteRepository } from "../repositories/reporte";
 import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
+import { ReporteSeguimientoRepository } from "../repositories/reporte-seguimiento";
 import type {
     DetallePadreDto,
     MisReportesDto,
+    OtroReporteDto,
     RankingResumenDto,
     ReporteListItemDto,
     SeguimientoDto,
@@ -46,10 +48,12 @@ function categoriasDeSecundarias(value: unknown): string[] {
 export class ReporteQueryService {
     private readonly reportes: ReporteRepository;
     private readonly identificadores: IdentificadorReportadoRepository;
+    private readonly reportesSeguimiento: ReporteSeguimientoRepository;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.reportes = new ReporteRepository(tx);
         this.identificadores = new IdentificadorReportadoRepository(tx);
+        this.reportesSeguimiento = new ReporteSeguimientoRepository(tx);
     }
 
     /** GET /api/reportes/mis-reportes — listado paginado del padre autenticado. */
@@ -124,16 +128,27 @@ export class ReporteQueryService {
      * GET /api/reportes/seguimiento/[numero] — seguimiento público.
      * Devuelve null si no existe o está eliminado (la ruta responde 404).
      * Spec 089-US6: nunca score ni etiqueta de riesgo; solo conteos agregados.
+     *
+     * SPEC-324: `opts.autenticado` habilita el bloque "otros reportes". La
+     * divulgación progresiva ya vigente (`consulta-publica.ts`) reserva ciudad y
+     * detalle por evento al usuario autenticado; el anónimo sigue viendo
+     * exactamente lo mismo que antes (`otrosReportes: null`).
      */
-    async seguimiento(numero: string): Promise<SeguimientoDto | null> {
+    async seguimiento(numero: string, opts: { autenticado?: boolean } = {}): Promise<SeguimientoDto | null> {
         const reporte = await this.reportes.findByNumeroSeguimiento(numero);
         if (!reporte || reporte.eliminado) return null;
 
         const identificadorReportado = await this.identificadores.findByPar(reporte.identificador, reporte.plataformaId);
 
         let ranking = null;
+        let otrosReportes: OtroReporteDto[] | null = null;
         if (identificadorReportado?.esVisiblePublicamente) {
             ranking = await calcularRanking(reporte.identificador, reporte.plataformaId);
+            // Mismo portón que el ranking + autenticación: el bloque por evento
+            // es más fino que cualquier superficie pública de hoy (que agrega).
+            if (opts.autenticado) {
+                otrosReportes = await this.otrosReportesDe(reporte.id, reporte.identificador, reporte.plataformaId);
+            }
         }
 
         const slaRaw = await getParametroSistemaValor("ui.sla_horas_procesamiento");
@@ -173,7 +188,31 @@ export class ReporteQueryService {
                     reportesAnonimos: ranking.reportesAnonimos,
                 }
                 : null,
+            otrosReportes,
         };
+    }
+
+    /**
+     * SPEC-324: los otros reportes aprobados del mismo par (identificador,
+     * plataforma), excluyendo el que se está consultando. El repositorio ya
+     * selecciona SOLO fecha/país/ciudad/categoría: aquí no hay nada que filtrar
+     * porque texto y autor nunca se cargaron.
+     */
+    private async otrosReportesDe(
+        reporteId: string,
+        identificador: string,
+        plataformaId: string
+    ): Promise<OtroReporteDto[]> {
+        const filas = await this.reportesSeguimiento.findOtrosPorIdentificador(
+            whereReporteAprobado({ identificador, plataformaId, id: { not: reporteId } })
+        );
+        return filas.map((r) => ({
+            id: r.id,
+            creadoEn: r.creadoEn,
+            pais: r.pais,
+            ciudad: r.ciudadRel?.nombre ?? r.ciudad,
+            categoriaLabel: r.clasificacion ? formatCategoria(r.clasificacion.categoria) : null,
+        }));
     }
 
     /**
