@@ -72,7 +72,7 @@ export const COLEGIO_NAV_ITEMS: NavItem[] = [
 export const COMITE_COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio/comite", label: "Inicio", modulo: "colegios_comite_bandeja" },
     { href: "/dashboard/colegio/comite/estadisticas", label: "Estadísticas", modulo: "colegios_comite_bandeja" },
-    { href: "/dashboard/colegio/comite/casos", label: "Gestión casos", modulo: "colegios_comite_bandeja" },
+    { href: "/dashboard/colegio/comite/casos", label: "Gestión de casos", modulo: "colegios_comite_bandeja" },
 ];
 
 // SPEC-231 (002-PI-131): menú del padre — 7 entradas planas, sin grupos expandibles.

@@ -182,6 +182,7 @@ enum AccionAudit {
   // SPEC-168 (Fase F): Comité de Convivencia por colegio.
   COLEGIO_COMITE_CREADO
   COLEGIO_COMITE_PASSWORD_REGENERADA
+  COLEGIO_COMITE_INVITACION_REENVIADA
   COLEGIO_COMITE_INTEGRANTE_CREADO
   COLEGIO_COMITE_INTEGRANTE_ACTUALIZADO
   COLEGIO_COMITE_INTEGRANTE_INACTIVADO
@@ -681,6 +682,8 @@ model IntegranteComite {
   comite        Usuario  @relation(fields: [comiteId], references: [id], name: "IntegrantesComite", onDelete: Cascade)
   creadoPor     Usuario  @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
   modificadoPor Usuario? @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
+  // SPEC-319 §2.4: casos cuyo cierre firmó este integrante.
+  solicitudesFirmadas SolicitudComite[] @relation(name: "SolicitudesFirmadas")
 
   @@unique([comiteId, hashIdentificacion])
   @@index([comiteId])
@@ -1701,13 +1704,17 @@ model SolicitudComite {
   resolucion      String?   @db.Text
   creadoEn        DateTime  @default(now())
   resueltoEn      DateTime?
+  // SPEC-319 §2.4: integrante del comité que firma el cierre (cuenta compartida →
+  // trazabilidad de quién decidió). Nullable: cierres previos a la feature quedan sin firma.
+  integranteFirmanteId String?
 
-  reporte   Reporte        @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  comite    Usuario?       @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
-  operador  Usuario?       @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
-  colegio   Colegio?       @relation(fields: [colegioId], references: [id])
-  alerta    AlertaColegio? @relation(fields: [alertaColegioId], references: [id])
-  creadoPor Usuario?       @relation(fields: [creadoPorId], references: [id], name: "SolicitudesCreadasPorColegio")
+  reporte            Reporte           @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  comite             Usuario?          @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
+  operador           Usuario?          @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
+  colegio            Colegio?          @relation(fields: [colegioId], references: [id])
+  alerta             AlertaColegio?    @relation(fields: [alertaColegioId], references: [id])
+  creadoPor          Usuario?          @relation(fields: [creadoPorId], references: [id], name: "SolicitudesCreadasPorColegio")
+  integranteFirmante IntegranteComite? @relation(fields: [integranteFirmanteId], references: [id], name: "SolicitudesFirmadas")
 
   @@index([estado])
   @@index([comiteId])
@@ -1716,6 +1723,7 @@ model SolicitudComite {
   @@index([alertaColegioId])
   @@index([creadoPorId])
   @@index([creadoEn])
+  @@index([integranteFirmanteId])
 }
 
 model TransicionReporte {

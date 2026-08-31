@@ -54,11 +54,11 @@
 
 **Goal:** la cuenta del comité se activa por email; cero clave en pantalla.
 
-- [ ] T015 [US2] `src/lib/dal/services/comite-convivencia.ts` `crearCuenta`: dejar de generar/retornar `passwordTemporal`; crear la cuenta con `estadoActivacion: "INVITADO"`, `tokenInvitacion` (32 bytes), `tokenInvitacionExpiraEn` (vigencia `pagos.invitacion.token_vigencia_horas`, default 48 h). Programar evento `colegio.invitacion.enviada` con `linkActivacion = ${baseUrl}/activar?token=…`.
-- [ ] T016 [US2] `src/components/modules/colegio/comite/ComiteCuentaCard.tsx`: quitar el pintado de `passwordTemporal` (`:89-95,:126-132`); reemplazar el mensaje por confirmación de "invitación enviada por email". El form de crear no muestra secreto.
-- [ ] T017 [US2] Endpoint `/api/colegio/comite/cuenta` (POST): ajustar respuesta para no incluir `passwordTemporal`; retornar la cuenta y estado de invitación.
-- [ ] T018 [P] [US2] Verificar que la plantilla `colegio.invitacion.enviada` renderiza con variables genéricas del comité (nombre "Comité de Convivencia"); si exige `nombreRector`, pasar un rótulo válido sin romper.
-- [ ] T019 [US2] Tests: integration de `crearCuenta` (crea INVITADO+token, programa evento, no retorna password); `activarPorToken` con la cuenta del comité (rol-agnóstico, sin tocar el servicio). `npx tsc --noEmit`.
+- [X] T015 [US2] `src/lib/dal/services/comite-convivencia.ts` `crearCuenta`: dejar de generar/retornar `passwordTemporal`; crear la cuenta con `estadoActivacion: "INVITADO"`, `tokenInvitacion` (32 bytes), `tokenInvitacionExpiraEn` (vigencia `pagos.invitacion.token_vigencia_horas`, default 48 h). Programar evento `colegio.invitacion.enviada` con `linkActivacion = ${baseUrl}/activar?token=…`.
+- [X] T016 [US2] `src/components/modules/colegio/comite/ComiteCuentaCard.tsx`: quitar el pintado de `passwordTemporal` (`:89-95,:126-132`); reemplazar el mensaje por confirmación de "invitación enviada por email". El form de crear no muestra secreto.
+- [X] T017 [US2] Endpoint `/api/colegio/comite/cuenta` (POST): ajustar respuesta para no incluir `passwordTemporal`; retornar la cuenta y estado de invitación.
+- [X] T018 [P] [US2] Verificar que la plantilla `colegio.invitacion.enviada` renderiza con variables genéricas del comité (nombre "Comité de Convivencia"); si exige `nombreRector`, pasar un rótulo válido sin romper.
+- [X] T019 [US2] Tests: integration de `crearCuenta` (crea INVITADO+token, programa evento, no retorna password); `activarPorToken` con la cuenta del comité (rol-agnóstico, sin tocar el servicio). `npx tsc --noEmit`.
 
 ---
 
@@ -66,12 +66,12 @@
 
 **Goal:** integrantes operable (contador, estado, reenviar invitación, editar, fecha con hora).
 
-- [ ] T020 [US3] `src/components/modules/colegio/comite/IntegrantesList.tsx:82`: reemplazar el `<h2>` fijo por contador "N integrantes · M activos".
-- [ ] T021 [US3] `IntegrantesList.tsx:161-168`: mostrar estado ACTIVO/INACTIVO por fila como etiqueta/texto (además del botón).
-- [ ] T022 [US3] `IntegrantesList.tsx`: formatear fechas como `DD-MM-AAAA HH:MM` (COT) — agregar la hora.
-- [ ] T023 [US3] `ComiteCuentaCard.tsx`: reemplazar "Regenerar contraseña" por "Reenviar invitación" (regenera token+vigencia y reprograma `colegio.invitacion.enviada`, sin pintar secreto). Backend: método en `comite-convivencia.ts` (reusa la lógica de token de T015).
-- [ ] T024 [US3] `IntegrantesList.tsx`: agregar acción "Editar integrante" llamando al endpoint existente `integrantes/[id]/route.ts:31` (servicio `actualizar:99`). Form mínimo de edición.
-- [ ] T025 [US3] Tests de `IntegrantesList` (candado 24 v2): contador, estado por fila, no romper activar/inactivar. `npx tsc --noEmit`.
+- [X] T020 [US3] `src/components/modules/colegio/comite/IntegrantesList.tsx:82`: reemplazar el `<h2>` fijo por contador "N integrantes · M activos".
+- [X] T021 [US3] `IntegrantesList.tsx:161-168`: mostrar estado ACTIVO/INACTIVO por fila como etiqueta/texto (además del botón).
+- [X] T022 [US3] `IntegrantesList.tsx`: formatear fechas como `DD-MM-AAAA HH:MM` (COT) — agregar la hora.
+- [X] T023 [US3] `ComiteCuentaCard.tsx`: reemplazar "Regenerar contraseña" por "Reenviar invitación" (regenera token+vigencia y reprograma `colegio.invitacion.enviada`, sin pintar secreto). Backend: método en `comite-convivencia.ts` (reusa la lógica de token de T015).
+- [X] T024 [US3] `IntegrantesList.tsx`: agregar acción "Editar integrante" llamando al endpoint existente `integrantes/[id]/route.ts:31` (servicio `actualizar:99`). Form mínimo de edición.
+- [X] T025 [US3] Tests de `IntegrantesList` (candado 24 v2): contador, estado por fila, no romper activar/inactivar. `npx tsc --noEmit`.
 
 ---
 
@@ -79,11 +79,11 @@
 
 **Goal:** al cerrar un caso, se registra qué integrante activo firma.
 
-- [ ] T026 [US4] `prisma/schema.prisma`: agregar `integranteFirmanteId String?` + relación opcional a `IntegranteComite` en `SolicitudComite` (+ lado inverso `solicitudesFirmadas` en `IntegranteComite`) + `@@index([integranteFirmanteId])`. Migración aditiva `npx prisma migrate dev --name spec319_firmante_cierre`.
-- [ ] T027 [US4] `src/lib/dal/services/comite-convivencia-bandeja.ts:230` `resolver`: sumar `integranteFirmanteId` al input; validar que sea `IntegranteComite` activo del `colegioId` (si no hay activos → error claro); persistirlo; incluirlo en `logAudit` `valorNuevo`.
-- [ ] T028 [US4] Schema Zod del input de `/api/colegio/comite/solicitudes/[id]/resolver`: `integranteFirmanteId` requerido.
-- [ ] T029 [US4] `src/components/modules/colegio/comite/CasoDetalle.tsx:197`: agregar selector de integrante firmante (poblado con activos del colegio) en el form de resolver; requerido para enviar.
-- [ ] T030 [US4] Tests integration de `resolver`: firmante válido activo (OK + audit), firmante inactivo/otro colegio (rechazo), sin activos (rechazo con mensaje). `npx tsc --noEmit`.
+- [X] T026 [US4] `prisma/schema.prisma`: agregar `integranteFirmanteId String?` + relación opcional a `IntegranteComite` en `SolicitudComite` (+ lado inverso `solicitudesFirmadas` en `IntegranteComite`) + `@@index([integranteFirmanteId])`. Migración aditiva `npx prisma migrate dev --name spec319_firmante_cierre`.
+- [X] T027 [US4] `src/lib/dal/services/comite-convivencia-bandeja.ts:230` `resolver`: sumar `integranteFirmanteId` al input; validar que sea `IntegranteComite` activo del `colegioId` (si no hay activos → error claro); persistirlo; incluirlo en `logAudit` `valorNuevo`.
+- [X] T028 [US4] Schema Zod del input de `/api/colegio/comite/solicitudes/[id]/resolver`: `integranteFirmanteId` requerido.
+- [X] T029 [US4] `src/components/modules/colegio/comite/CasoDetalle.tsx:197`: agregar selector de integrante firmante (poblado con activos del colegio) en el form de resolver; requerido para enviar.
+- [X] T030 [US4] Tests integration de `resolver`: firmante válido activo (OK + audit), firmante inactivo/otro colegio (rechazo), sin activos (rechazo con mensaje). `npx tsc --noEmit`.
 
 ---
 
@@ -91,10 +91,10 @@
 
 **Goal:** inicio prioriza lo urgente; no duplica menú ni lista; etiqueta única.
 
-- [ ] T031 [US5] Rediseñar el inicio `src/app/dashboard/colegio/comite/` (page/componentes `ComiteHome*`): cabecera humana (saludo por franja + fecha larga español, patrón `HomeRectorPage.tsx:49-55`); urgentes primero (vencidos y por vencer 24 h) como lista accionable con botón encima; métricas `TarjetaMetrica` con `sub`; acciones en verbo (patrón `AccionesRapidas.tsx:12-38`); empty state propio (patrón `EmptyStateColegio`).
-- [ ] T032 [US5] Quitar del inicio la duplicación del menú ("Ver bandeja de casos", "Ver estadísticas") y de la lista completa (vive en Gestión de casos).
-- [ ] T033 [US5] Etiqueta única "Gestión de casos" para `/dashboard/colegio/comite/casos` en `src/lib/nav-items.ts:75` y en `src/components/modules/NavHeader.tsx:190-194,287-289` (fuera "Mi bandeja").
-- [ ] T034 [US5] Tests de los componentes del inicio (candado 24 v2). Responsive (teléfono).
+- [X] T031 [US5] Rediseñar el inicio `src/app/dashboard/colegio/comite/` (page/componentes `ComiteHome*`): cabecera humana (saludo por franja + fecha larga español, patrón `HomeRectorPage.tsx:49-55`); urgentes primero (vencidos y por vencer 24 h) como lista accionable con botón encima; métricas `TarjetaMetrica` con `sub`; acciones en verbo (patrón `AccionesRapidas.tsx:12-38`); empty state propio (patrón `EmptyStateColegio`).
+- [X] T032 [US5] Quitar del inicio la duplicación del menú ("Ver bandeja de casos", "Ver estadísticas") y de la lista completa (vive en Gestión de casos).
+- [X] T033 [US5] Etiqueta única "Gestión de casos" para `/dashboard/colegio/comite/casos` en `src/lib/nav-items.ts:75` y en `src/components/modules/NavHeader.tsx:190-194,287-289` (fuera "Mi bandeja").
+- [X] T034 [US5] Tests de los componentes del inicio (candado 24 v2). Responsive (teléfono).
 
 ---
 

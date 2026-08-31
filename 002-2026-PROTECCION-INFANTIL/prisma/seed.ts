@@ -1077,6 +1077,49 @@ async function seedInvitacionColegio() {
     console.log("[SEED] Catálogo Motor Notif colegio.invitacion.enviada listo (SPEC-240)");
 }
 
+// ── SPEC-319 (002-PI-219 §2.2): catálogo Motor Notif de la invitación de la
+// cuenta compartida del Comité de Convivencia. Evento PROPIO (no reusa
+// `colegio.invitacion.enviada`) porque el motor hace fan-out sobre TODAS las
+// reglas de un evento: agregar una regla de comité al evento del rector duplicaría
+// el email de ambos. Con evento propio + regla única se evita el fan-out y el texto
+// no dice "rector". Reusa el mismo mecanismo: motor + `/activar` + token opaco.
+// Idempotente (upsert por clave + upsertNotificacionRegla por clave canónica).
+async function seedInvitacionComite() {
+    const evento = "comite.invitacion.enviada";
+    const plantillaClave = `${evento}.email`;
+    const asunto = "Activa la cuenta del Comité de Convivencia";
+    const cuerpoMarkdown =
+        "Hola,\n\n" +
+        "Esta es la invitación para la cuenta compartida del **Comité de Convivencia** de **{{nombreColegio}}** en Protección Infantil.\n\n" +
+        "Para activar la cuenta y definir su contraseña, haz clic en el siguiente link:\n\n" +
+        "{{linkActivacion}}\n\n" +
+        "Este link es de un solo uso y expira en 48 horas. Si no esperabas esta invitación, ignora este mensaje.";
+
+    const variablesSchema = {
+        type: "object",
+        properties: {
+            nombreColegio: { type: "string" },
+            linkActivacion: { type: "string" },
+        },
+    };
+
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: plantillaClave },
+        update: { canal: "EMAIL", asunto, cuerpoMarkdown, variablesSchema, activa: true },
+        create: { clave: plantillaClave, canal: "EMAIL", asunto, cuerpoMarkdown, variablesSchema, activa: true },
+    });
+
+    await upsertNotificacionRegla({
+        evento,
+        rol: "COMITE_CONVIVENCIA",
+        canal: "EMAIL",
+        plantillaClave,
+        obligatoria: true,
+        activa: true,
+    });
+    console.log("[SEED] Catálogo Motor Notif comite.invitacion.enviada listo (SPEC-319)");
+}
+
 // ── SPEC-220 (002-PI-121): parámetros del dominio Análisis dinero-vs-valor ──
 // 13 claves `analisis.*` (12 del brief §5.7 + retención de snapshots).
 // Idempotente: `update: {}` — el seed nunca pisa el tuning hecho por el admin
@@ -2063,6 +2106,9 @@ async function main() {
 
     // SPEC-240 (002-PI-143): evento/plantilla de invitación al rector.
     await seedInvitacionColegio();
+
+    // SPEC-319 (002-PI-219 §2.2): evento/plantilla de invitación de la cuenta del comité.
+    await seedInvitacionComite();
 
     // SPEC-296 (002-PI-197 · cierra I-152): eventos + plantillas + reglas de los
     // 19 emails migrados desde src/lib/email.ts al motor de notificaciones.
@@ -3652,7 +3698,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedEventosSuscripcion, seedEventosRecompensa };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa };
 
 // ── SPEC-244 (002-PI-147): catálogo Motor Notif del ciclo de vida de suscripción ──
 // Idempotente: plantillas con upsert por clave; reglas con upsertNotificacionRegla

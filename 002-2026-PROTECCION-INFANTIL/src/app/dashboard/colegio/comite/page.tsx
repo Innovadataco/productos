@@ -46,15 +46,9 @@ export default async function ComitePage() {
 
     return (
         <main className="min-h-screen p-6 md:p-10">
-            <div className="mx-auto max-w-4xl space-y-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-body">Comité de Convivencia</h1>
-                    <p className="mt-2 text-muted">
-                        Resumen de los casos escalados al Comité de Convivencia de tu colegio.
-                    </p>
-                </div>
-
-                <ComiteHome resumen={resumen} />
+            <div className="mx-auto max-w-4xl">
+                {/* SPEC-319 §2.5: la cabecera humana (saludo + fecha) vive en ComiteHome. */}
+                <ComiteHome resumen={resumen} nombreUsuario={usuario.nombre?.trim() ?? ""} />
             </div>
         </main>
     );

@@ -198,7 +198,8 @@ export function NavHeader() {
                                         )}
                                         {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
                                             <NavDropdownLink href="/dashboard/colegio/comite/casos" onClick={() => setOpen(false)}>
-                                                Mi bandeja
+                                                {/* SPEC-319 §2.5: un destino, un nombre — "Gestión de casos" (igual que el lateral) */}
+                                                Gestión de casos
                                             </NavDropdownLink>
                                         )}
                                         {!esEmpleado && (
@@ -294,7 +295,7 @@ export function NavHeader() {
                                     <MobileLink href="/dashboard/admin/comite" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
                                 )}
                                 {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
-                                    <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
+                                    <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Gestión de casos</MobileLink>
                                 )}
                                 <button
                                     onClick={async () => {
