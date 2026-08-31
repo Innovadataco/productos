@@ -163,6 +163,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/alertas-prioridad.test.ts",
     // 002-PI-068: parser.test.ts importa parser.ts que carga repositorios Prisma.
     "src/lib/colegio/carga/validator.test.ts",
+    // SPEC-335: clasificación de filas de la carga de profesores (pura, sin BD).
+    "src/lib/colegio/carga-profesores/validator.test.ts",
     "src/lib/dal/repositories/analytics-colegio-helpers.test.ts",
     "src/lib/colegio/fechas-humano.test.ts",
     "src/lib/colegio/normalizacion.test.ts",
