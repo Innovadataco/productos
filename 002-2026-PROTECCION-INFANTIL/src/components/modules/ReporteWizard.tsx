@@ -8,6 +8,7 @@ import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { ReporteBloqueoRol } from "./ReporteBloqueoRol";
 import { Button } from "@/components/ui/Button";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
+import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
 
 type WizardData = {
     identificador: string;
@@ -41,22 +42,29 @@ const REDIRECT_PADRE_POST_ENVIO = "/mis-reportes"; // SPEC-317: ruta real; /dash
 
 export function ReporteWizard({
     identificadorInicial,
-    identificadorBloqueado = false,
     modoAutenticado = false,
 }: {
     identificadorInicial?: string | undefined;
-    // SPEC-324: el CTA "reportar de nuevo a este identificador" de /seguimiento
-    // llega con el valor fijo — el padre viene a agregar un evento sobre ESE
-    // identificador, no a escribir otro. Sin `identificadorInicial` no bloquea nada.
-    identificadorBloqueado?: boolean;
     modoAutenticado?: boolean;
 } = {}) {
     const [step, setStep] = useState(1);
     const [user, setUser] = useState<SessionUser>(null);
     const [checkingSession, setCheckingSession] = useState(true);
+    // SPEC-324: el CTA "reportar de nuevo a este identificador" de /seguimiento
+    // entrega el valor por sessionStorage — el identificador NUNCA viaja en la
+    // URL (spec 091-US2 / 093-US4). Llave de un solo uso: se lee y se borra. Que
+    // el handoff exista es lo que fija el campo: el padre viene a agregar un
+    // evento sobre ESE identificador, no a escribir otro.
+    const [identificadorFijado] = useState<string | null>(() => {
+        if (typeof window === "undefined") return null;
+        const guardado = sessionStorage.getItem(REPORTAR_STORAGE_KEY);
+        if (!guardado) return null;
+        sessionStorage.removeItem(REPORTAR_STORAGE_KEY);
+        return guardado.slice(0, 100);
+    });
     const [data, setData] = useState<WizardData>({
         // F3 (N-5): valor inicial desde el CTA de la consulta vacía (ya sanitizado por la página).
-        identificador: identificadorInicial ?? "",
+        identificador: identificadorFijado ?? identificadorInicial ?? "",
         plataforma: "",
         otraPlataforma: "",
         ciudad: "",
@@ -261,7 +269,7 @@ export function ReporteWizard({
                     identificador={data.identificador}
                     plataforma={data.plataforma}
                     otraPlataforma={data.otraPlataforma}
-                    identificadorBloqueado={reportePrevioId !== null || (identificadorBloqueado && Boolean(identificadorInicial))}
+                    identificadorBloqueado={reportePrevioId !== null || identificadorFijado !== null}
                     onChange={(v: { identificador: string; plataforma: string; otraPlataforma: string }) => update(v)}
                 />
             )}

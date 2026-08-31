@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SeguimientoForm } from "@/components/modules/SeguimientoForm";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
+import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
 import type { BadgeVariant } from "@/components/ui/Badge";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
 import { EstadoTransicion } from "./EstadoTransicion";
@@ -114,6 +115,7 @@ function conductasOrdenadas(clasificacion: ClasificacionData): string[] {
 
 export function SeguimientoClient() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     // Spec 091-US2: sin query param, el RPT puede llegar por sessionStorage (URL limpia).
     const [numeroInicial] = useState(() => {
         const porUrl = searchParams.get("numero");
@@ -277,12 +279,19 @@ export function SeguimientoClient() {
 
                     <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
                         {/* SPEC-324: el identificador viaja fijo — el padre vuelve a
-                            reportar SOBRE ESTE, no a empezar de cero. */}
-                        <Link
-                            href={`/reportar?identificador=${encodeURIComponent(data.identificador)}&bloqueado=1`}
+                            reportar SOBRE ESTE, no a empezar de cero. Viaja por
+                            sessionStorage y NUNCA por query string: el identificador
+                            no puede quedar en la URL (spec 091-US2 / 093-US4), misma
+                            llave de un solo uso que `seguimiento.rpt`. */}
+                        <Button
+                            className="w-full"
+                            onClick={() => {
+                                sessionStorage.setItem(REPORTAR_STORAGE_KEY, data.identificador);
+                                router.push("/reportar");
+                            }}
                         >
-                            <Button className="w-full">Reportar de nuevo a este identificador</Button>
-                        </Link>
+                            Reportar de nuevo a este identificador
+                        </Button>
                         <Link href="/reportar">
                             <Button variant="outline" className="w-full">
                                 Realizar otro reporte

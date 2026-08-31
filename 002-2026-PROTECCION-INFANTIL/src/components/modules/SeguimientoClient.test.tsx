@@ -2,9 +2,15 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SeguimientoClient } from "./SeguimientoClient";
+import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
+
+// `vi.mock` se iza por encima de las constantes del módulo: el mock del router
+// tiene que declararse con `vi.hoisted` para poder usarse dentro de la factory.
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
     useSearchParams: () => ({ get: vi.fn(() => "") }),
+    useRouter: () => ({ push: pushMock }),
 }));
 
 vi.mock("next/link", () => ({
@@ -48,6 +54,7 @@ describe("SeguimientoClient", () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+        sessionStorage.clear();
     });
 
     it("muestra el estado simplificado, las conductas y el riesgo con buen contraste", async () => {
@@ -221,12 +228,18 @@ describe("SeguimientoClient", () => {
             expect(document.body.textContent).not.toContain("Otros reportes de este identificador");
         });
 
-        it("el CTA lleva el identificador fijo a /reportar", async () => {
+        it("el CTA lleva el identificador a /reportar por sessionStorage, NO por la URL", async () => {
             await consultar({ ...baseData, otrosReportes: null });
 
-            const cta = screen.getByRole("link", { name: /Reportar de nuevo a este identificador/i });
-            expect(cta.getAttribute("href")).toBe("/reportar?identificador=30009000002&bloqueado=1");
-            // El CTA genérico sigue existiendo, sin bloquear nada.
+            fireEvent.click(screen.getByRole("button", { name: /Reportar de nuevo a este identificador/i }));
+
+            // El identificador queda en la llave de un solo uso...
+            expect(sessionStorage.getItem(REPORTAR_STORAGE_KEY)).toBe("30009000002");
+            // ...y la navegación es a la URL limpia (spec 091-US2 / 093-US4).
+            expect(pushMock).toHaveBeenCalledWith("/reportar");
+            expect(pushMock.mock.calls.every(([url]) => !String(url).includes("identificador"))).toBe(true);
+
+            // El CTA genérico sigue existiendo, sin fijar nada.
             const generico = screen.getByRole("link", { name: /Realizar otro reporte/i });
             expect(generico.getAttribute("href")).toBe("/reportar");
         });

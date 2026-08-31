@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReporteWizard } from "./ReporteWizard";
+import { REPORTAR_STORAGE_KEY } from "@/lib/reportar-handoff";
 
 // SPEC-314 (002-PI-214): el card de bloqueo (ReporteBloqueoRol) usa useRouter de
 // next/navigation para el CTA "Registrarme como padre". Se mockea aquí para que el
@@ -173,15 +174,21 @@ describe("ReporteWizard", () => {
 
     // ─────────────────────────────────────────────────────────────────────
     // SPEC-324: el CTA "Reportar de nuevo a este identificador" de /seguimiento
-    // llega con el identificador fijo (?identificador=...&bloqueado=1).
+    // entrega el identificador por sessionStorage — NUNCA por la URL
+    // (spec 091-US2 / 093-US4, vigilado por url-privacy.test.ts).
     // ─────────────────────────────────────────────────────────────────────
-    describe("SPEC-324 · identificador bloqueado desde /seguimiento", () => {
+    describe("SPEC-324 · identificador fijado por el handoff de /seguimiento", () => {
         const campoIdentificador = () =>
             screen.getByLabelText(/Número, nick o usuario/i) as HTMLInputElement;
 
-        it("prellena y bloquea el identificador cuando llega bloqueado", async () => {
+        afterEach(() => {
+            sessionStorage.clear();
+        });
+
+        it("prellena y bloquea el identificador que dejó /seguimiento", async () => {
+            sessionStorage.setItem(REPORTAR_STORAGE_KEY, "+573001234567");
             mockFetch({ error: { message: "No autenticado" } }, false);
-            render(<ReporteWizard identificadorInicial="+573001234567" identificadorBloqueado />);
+            render(<ReporteWizard />);
 
             await waitFor(() => expect(campoIdentificador()).toBeDefined());
             const campo = campoIdentificador();
@@ -192,15 +199,24 @@ describe("ReporteWizard", () => {
             // (dispara el evento directo y jsdom lo deja pasar aunque sea readOnly).
         });
 
-        it("sin identificador inicial NO bloquea nada (el flag solo no alcanza)", async () => {
+        it("la llave es de un solo uso: se borra al montar", async () => {
+            sessionStorage.setItem(REPORTAR_STORAGE_KEY, "+573001234567");
             mockFetch({ error: { message: "No autenticado" } }, false);
-            render(<ReporteWizard identificadorBloqueado />);
+            render(<ReporteWizard />);
+
+            await waitFor(() => expect(campoIdentificador()).toBeDefined());
+            expect(sessionStorage.getItem(REPORTAR_STORAGE_KEY)).toBeNull();
+        });
+
+        it("sin handoff no bloquea nada", async () => {
+            mockFetch({ error: { message: "No autenticado" } }, false);
+            render(<ReporteWizard />);
 
             await waitFor(() => expect(campoIdentificador()).toBeDefined());
             expect(campoIdentificador().readOnly).toBe(false);
         });
 
-        it("con identificador inicial pero sin el flag el campo sigue editable", async () => {
+        it("el prellenado por prop (CTA de consulta vacía) NO bloquea el campo", async () => {
             mockFetch({ error: { message: "No autenticado" } }, false);
             render(<ReporteWizard identificadorInicial="+573001234567" />);
 
