@@ -108,6 +108,7 @@ describe("ColegioRepository (E-8 LOTE 3: admin global)", () => {
 
         const creado = await repo.crear({
             nombre: "Colegio Nuevo",
+            nit: "NIT-COLEGIO-NUEVO",
             paisId: pais.id,
             ciudadId: ciudad.id,
             representanteLegalNombre: "Rep",

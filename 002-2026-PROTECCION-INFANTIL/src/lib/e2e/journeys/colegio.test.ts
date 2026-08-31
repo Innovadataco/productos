@@ -253,7 +253,7 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
             data: { colegioId, nombre: `Alertas ${CICLO}-A`, grado: "5", anioLectivo: "2026" },
         });
         const alumno = await prisma.estudiante.create({
-            data: { cursoId: curso.id, colegioId, nombre: `Alumno Alerta E2E C${CICLO}` },
+            data: { cursoId: curso.id, colegioId, nombre: `Alumno Alerta E2E C${CICLO}`, documentoTipo: "TI", documentoNumero: `E2E-ALE-${CICLO}` },
         });
         const identificador = await prisma.identificadorEstudiante.create({
             data: {

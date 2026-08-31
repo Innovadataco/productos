@@ -339,7 +339,7 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
             data: { colegioId: colegioBId, nombre: `Curso B E2E C${CICLO}`, grado: "5", anioLectivo: "2026" },
         });
         const estudianteB = await prisma.estudiante.create({
-            data: { cursoId: cursoB.id, colegioId: colegioBId, nombre: `Alumno B E2E C${CICLO}` },
+            data: { cursoId: cursoB.id, colegioId: colegioBId, nombre: `Alumno B E2E C${CICLO}`, documentoTipo: "TI", documentoNumero: `NEG-${CICLO}` },
         });
         const identificadorB = await prisma.identificadorEstudiante.create({
             data: {

@@ -15,8 +15,8 @@ async function sembrarDosColegiosConCursoYEstudiante() {
     const cursoA = await crearCurso(a.id, { nombre: "Curso A" });
     const cursoB = await crearCurso(b.id, { nombre: "Curso B" });
     const repo = new EstudianteRepository();
-    const estudianteA = await repo.crear(a.id, { cursoId: cursoA.id, nombre: "Alumno A", apellidos: "Pérez" });
-    const estudianteB = await repo.crear(b.id, { cursoId: cursoB.id, nombre: "Alumno B", apellidos: "Gómez" });
+    const estudianteA = await repo.crear(a.id, { cursoId: cursoA.id, nombre: "Alumno A", apellidos: "Pérez", documentoTipo: "TI", documentoNumero: "EST-A" });
+    const estudianteB = await repo.crear(b.id, { cursoId: cursoB.id, nombre: "Alumno B", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "EST-B" });
     return { a, b, cursoA, cursoB, estudianteA, estudianteB, repo };
 }
 
@@ -39,7 +39,7 @@ describe("EstudianteRepository", () => {
     it("crear bajo un curso de OTRO colegio lanza 404 y no persiste nada", async () => {
         const { a, cursoB, repo } = await sembrarDosColegiosConCursoYEstudiante();
 
-        await expect(repo.crear(a.id, { cursoId: cursoB.id, nombre: "Intruso", apellidos: "X" })).rejects.toMatchObject({ statusCode: 404 });
+        await expect(repo.crear(a.id, { cursoId: cursoB.id, nombre: "Intruso", apellidos: "X", documentoTipo: "TI", documentoNumero: "EST-INTRUSO" })).rejects.toMatchObject({ statusCode: 404 });
         const count = await prisma.estudiante.count({ where: { colegioId: a.id, nombre: "Intruso" } });
         expect(count, "el estudiante intruso no fue creado").toBe(0);
     });
@@ -81,12 +81,12 @@ describe("EstudianteRepository", () => {
 
     it("buscarPorNombreEnCurso y buscarDuplicadoEnCurso solo miran dentro del colegio (nombre + apellidos)", async () => {
         const { a, b, cursoA, cursoB, estudianteA, repo } = await sembrarDosColegiosConCursoYEstudiante();
-        await repo.crear(b.id, { cursoId: cursoB.id, nombre: "Alumno A", apellidos: "Pérez" });
+        await repo.crear(b.id, { cursoId: cursoB.id, nombre: "Alumno A", apellidos: "Pérez", documentoTipo: "TI", documentoNumero: "EST-A-B" });
 
         expect((await repo.buscarPorNombreEnCurso(a.id, cursoA.id, "Alumno A", "Pérez"))!.id).toBe(estudianteA.id);
         // Mismo nombre con apellidos distintos NO es duplicado (SPEC-144).
         expect(await repo.buscarPorNombreEnCurso(a.id, cursoA.id, "Alumno A", "Otro")).toBeNull();
-        const otroA = await repo.crear(a.id, { cursoId: cursoA.id, nombre: "Otro", apellidos: "Z" });
+        const otroA = await repo.crear(a.id, { cursoId: cursoA.id, nombre: "Otro", apellidos: "Z", documentoTipo: "TI", documentoNumero: "EST-OTRO" });
         expect(await repo.buscarDuplicadoEnCurso(a.id, cursoA.id, "Alumno A", "Pérez", otroA.id)).not.toBeNull();
         expect(await repo.buscarDuplicadoEnCurso(a.id, cursoA.id, "Alumno A", "Pérez", estudianteA.id)).toBeNull();
     });

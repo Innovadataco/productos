@@ -95,6 +95,7 @@ describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
         const colegioB = await prisma.colegio.create({
             data: {
                 nombre: "Colegio B",
+                nit: "NIT-COLEGIO-B",
                 paisId: paisB.id,
                 ciudadId: ciudadB.id,
                 representanteLegalNombre: "Representante B",

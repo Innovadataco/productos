@@ -57,7 +57,7 @@ describe("importarCargaMasiva", () => {
         const { admin, colegio } = await crearColegioConAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "6A", grado: "Sexto", anioLectivo: "2026" });
         await prisma.estudiante.create({
-            data: { cursoId: curso.id, colegioId: colegio.id, nombre: "María Gómez", apellidos: "Gómez", estado: "activo" },
+            data: { cursoId: curso.id, colegioId: colegio.id, nombre: "María Gómez", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "IMP-MARIA", estado: "activo" },
         });
 
         const resumen = await importarCargaMasiva([fila("6A", "María Gómez", "email", "maria@example.com")], colegio.id);

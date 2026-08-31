@@ -15,8 +15,8 @@ async function sembrar() {
     const { colegio: b } = await crearColegioConAdmin();
     const cursoA = await crearCurso(a.id, { nombre: "Curso A" });
     const cursoB = await crearCurso(b.id, { nombre: "Curso B" });
-    const estudianteA = await prisma.estudiante.create({ data: { cursoId: cursoA.id, colegioId: a.id, nombre: "Alumno A" } });
-    const estudianteB = await prisma.estudiante.create({ data: { cursoId: cursoB.id, colegioId: b.id, nombre: "Alumno B" } });
+    const estudianteA = await prisma.estudiante.create({ data: { cursoId: cursoA.id, colegioId: a.id, nombre: "Alumno A", documentoTipo: "TI", documentoNumero: "IDE-A" } });
+    const estudianteB = await prisma.estudiante.create({ data: { cursoId: cursoB.id, colegioId: b.id, nombre: "Alumno B", documentoTipo: "TI", documentoNumero: "IDE-B" } });
     const repo = new IdentificadorEstudianteRepository();
     const datosA = { estudianteId: estudianteA.id, tipo: "telefono", valor: "+573001110001", plataformaId: plataforma.id, etiquetaRelacion: "ESTUDIANTE" as const };
     const idA = await repo.crear(a.id, datosA);
@@ -102,7 +102,7 @@ describe("IdentificadorEstudianteRepository", () => {
         await repo.crear(a.id, { estudianteId: estudianteA.id, tipo: "telefono", valor: "+57300COMUN1", plataformaId: null, etiquetaRelacion: "ESTUDIANTE" });
         const { colegio: c } = await crearColegioConAdmin();
         const cursoC = await crearCurso(c.id, { nombre: "Curso C" });
-        const estudianteC = await prisma.estudiante.create({ data: { cursoId: cursoC.id, colegioId: c.id, nombre: "Alumno C" } });
+        const estudianteC = await prisma.estudiante.create({ data: { cursoId: cursoC.id, colegioId: c.id, nombre: "Alumno C", documentoTipo: "TI", documentoNumero: "IDE-C" } });
         await repo.crear(c.id, { estudianteId: estudianteC.id, tipo: "telefono", valor: "+57300comun1", plataformaId: null, etiquetaRelacion: "PADRE" });
 
         const encontrados = await repo.buscarActivosPorValor("+57300COMUN1");
