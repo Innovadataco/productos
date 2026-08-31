@@ -452,3 +452,29 @@
         radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
         rgb(var(--papel-rgb));
 }
+
+/* ── El Guardián · símbolo de marca (MARCA-EL-GUARDIAN.md §8) ────────────────
+   Versión viva: el escudo late cada 5 s, el barrido baja despacio y los nodos
+   se encienden por turnos. §7: respeta prefers-reduced-motion. Sin rojo: el
+   ámbar es el único color de alerta (lo aplica el componente por nodo). */
+@keyframes pi-respirar { 0%, 100% { transform: scale(1); } 44% { transform: scale(1.028); } }
+@keyframes pi-barrido {
+    0% { transform: translateY(-42px); opacity: 0; }
+    12% { opacity: 0.9; }
+    88% { opacity: 0.9; }
+    100% { transform: translateY(46px); opacity: 0; }
+}
+@keyframes pi-nodo { 0%, 100% { opacity: 0.28; } 18% { opacity: 1; } }
+
+.pi-cuerpo { animation: pi-respirar 5s cubic-bezier(0.4, 0, 0.2, 1) infinite; transform-origin: 50px 52px; }
+.pi-scan { animation: pi-barrido 5s cubic-bezier(0.35, 0, 0.25, 1) infinite; }
+.pi-nd { animation: pi-nodo 5s ease-in-out infinite; }
+
+/* §3: en alerta el cuerpo late más rápido (1,3 s). El header va en calma. */
+.pi-cuerpo[data-estado="alerta"] { animation-duration: 1.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .pi-cuerpo, .pi-scan, .pi-nd { animation: none; }
+    .pi-scan { opacity: 0.55; transform: none; }
+    .pi-nd { opacity: 0.75; }
+}
