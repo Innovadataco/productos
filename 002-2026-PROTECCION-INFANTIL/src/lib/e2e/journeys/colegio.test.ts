@@ -60,6 +60,7 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     nombre: `Colegio E2E Ciclo ${CICLO}`,
+                    nit: `NIT-E2E-${CICLO}`,
                     paisId: pais!.id,
                     ciudadId: ciudad!.id,
                     representanteLegalNombre: "Rector E2E",
@@ -154,7 +155,8 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
             new Request(`http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nombre: `Alumno E2E Ciclo ${CICLO}`, apellidos: "E2E" }),
+                // SPEC-320 (§2.2): documento del alumno obligatorio; TI es clave activa del catálogo seed.
+                body: JSON.stringify({ nombre: `Alumno E2E Ciclo ${CICLO}`, apellidos: "E2E", documentoTipo: "TI", documentoNumero: `E2E-DOC-${CICLO}` }),
             }),
             { params: Promise.resolve({ id: curso.id }) }
         );
@@ -194,10 +196,11 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         expect(await resPlantilla.text()).toContain("nombre_curso");
 
         // 2) Validar un CSV real (dos alumnos en un curso nuevo)
+        // SPEC-320 (§2.2-bis): el documento del alumno es obligatorio en la carga (validar-lista lo exige).
         const csv = [
-            "nombre_curso,grado,anio_lectivo,nombre_alumno,apellidos_alumno,tipo_identificador,valor_identificador,etiqueta_relacion,plataforma",
-            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Uno,E2E C${CICLO},telefono,+5731055500${CICLO}1,ESTUDIANTE,WhatsApp`,
-            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Dos,E2E C${CICLO},email,alumno-dos-e2e-c${CICLO}@test.local,PADRE,`,
+            "nombre_curso,grado,anio_lectivo,nombre_alumno,apellidos_alumno,documento_tipo_alumno,documento_numero_alumno,tipo_identificador,valor_identificador,etiqueta_relacion,plataforma",
+            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Uno,E2E C${CICLO},TI,E2E-C${CICLO}-1,telefono,+5731055500${CICLO}1,ESTUDIANTE,WhatsApp`,
+            `E2E Grupo ${CICLO}-A,Sexto,2026,Alumno Dos,E2E C${CICLO},TI,E2E-C${CICLO}-2,email,alumno-dos-e2e-c${CICLO}@test.local,PADRE,`,
         ].join("\n");
         const { POST: validarPOST } = await import("@/app/api/colegio/carga/validar/route");
         const resValidar = await validarPOST(crearRequestCargaCsv(csv));

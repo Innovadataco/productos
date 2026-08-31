@@ -15,6 +15,10 @@ function fillForm() {
     fireEvent.change(screen.getByLabelText("Nombre del colegio"), {
         target: { value: "Colegio Ejemplo" },
     });
+    // SPEC-320 (§2.2-bis): NIT del colegio obligatorio en el pre-registro.
+    fireEvent.change(screen.getByLabelText("NIT del colegio"), {
+        target: { value: "900123456-7" },
+    });
     fireEvent.change(screen.getByLabelText("Nombre del rector"), {
         target: { value: "Ana Rectora" },
     });
@@ -33,10 +37,12 @@ describe("NuevoColegioPageClient — pre-registro simplificado (SPEC-240)", () =
         vi.unstubAllGlobals();
     });
 
-    it("renderiza solo los 3 campos del pre-registro", () => {
+    it("renderiza los campos del pre-registro (colegio + NIT + rector), sin los del alta completa", () => {
         render(<NuevoColegioPageClient />);
 
         expect(screen.getByLabelText("Nombre del colegio")).toBeTruthy();
+        // SPEC-320 (§2.2-bis): NIT obligatorio en el pre-registro.
+        expect(screen.getByLabelText("NIT del colegio")).toBeTruthy();
         expect(screen.getByLabelText("Nombre del rector")).toBeTruthy();
         expect(screen.getByLabelText("Email del rector")).toBeTruthy();
         expect(screen.queryByLabelText("País")).toBeNull();
@@ -62,7 +68,8 @@ describe("NuevoColegioPageClient — pre-registro simplificado (SPEC-240)", () =
                     credentials: "include",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        nombre: "Colegio Ejemplo",
+                        nombreColegio: "Colegio Ejemplo",
+                        nit: "900123456-7",
                         nombreRector: "Ana Rectora",
                         emailRector: "rector@ejemplo.edu.co",
                     }),
