@@ -150,13 +150,13 @@ export async function generarPdfExpediente(input: PdfExpedienteInput): Promise<B
         },
         ...(contextoOtros.length
             ? contextoOtros.map((ctx, i): Content => ({
-                  ul: [
-                      `Evento externo #${i + 1}: ${formatearFecha(ctx.fechaEvento)} — ` +
-                          `${[ctx.reporte?.ciudad, ctx.reporte?.pais].filter(Boolean).join(", ") || "Lugar no especificado"} — ` +
-                          `Clasificación: ${clasificacionTexto(ctx.reporte?.clasificacion ?? null)}`,
-                  ],
-                  margin: [0, 2, 0, 2],
-              }))
+                ul: [
+                    `Evento externo #${i + 1}: ${formatearFecha(ctx.fechaEvento)} — ` +
+                        `${[ctx.reporte?.ciudad, ctx.reporte?.pais].filter(Boolean).join(", ") || "Lugar no especificado"} — ` +
+                        `Clasificación: ${clasificacionTexto(ctx.reporte?.clasificacion ?? null)}`,
+                ],
+                margin: [0, 2, 0, 2],
+            }))
             : [{ text: "No hay reportes de terceros sobre este identificador.", style: "cuerpo" } as Content]),
 
         // Pie

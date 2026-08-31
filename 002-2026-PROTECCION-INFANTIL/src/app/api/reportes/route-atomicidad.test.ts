@@ -3,8 +3,8 @@
  * (1) rollback: un fallo en el upsert del identificador aborta la tx (ni reporte
  *     ni incremento del agregado; respuesta 500 controlada).
  * (2) carrera REAL de concurrencia (condición ZEUS): 2 requests simultáneas del
- *     MISMO usuario contra el MISMO identificador → exactamente 1 reporte en BD y
- *     1 respuesta 429 DUPLICATE_REPORT (advisory lock dentro de la tx).
+ *     MISMO usuario autenticado contra el MISMO identificador → exactamente 1 reporte en BD y
+ *     1 respuesta 200-oferta (SPEC-323 candado 26: padre autenticado recibe oferta, no 429).
  * (3) camino feliz intacto: 201 + reporte + agregado incrementado.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -95,17 +95,19 @@ describe("SPEC-137 · POST /api/reportes — atomicidad", { timeout: 30_000 }, (
         expect(await prisma.identificadorReportado.count(), "el agregado no debe quedar persistido tras el rollback").toBe(0);
     });
 
-    it("carrera real: 2 requests simultáneas mismo usuario+identificador → 1 reporte y 1 × 429", async () => {
+    // SPEC-323 (candado 26): padre autenticado recibe oferta, no 429.
+    it("carrera real: 2 requests simultáneas mismo usuario+identificador → 1 reporte y 1 × 200-oferta", async () => {
         await setupUsuario();
 
         const [res1, res2] = await Promise.all([POST(requestReporte()), POST(requestReporte())]);
         const statuses = [res1.status, res2.status].sort();
 
-        expect(statuses, "una crea (201) y la otra pierde la carrera de dedup (429)").toEqual([201, 429]);
+        expect(statuses, "una crea (201) y la otra recibe oferta de vinculación (200)").toEqual([200, 201]);
 
-        const perdedora = res1.status === 429 ? res1 : res2;
-        const cuerpo = (await perdedora.json()) as { error: { code: string } };
-        expect(cuerpo.error.code).toBe("DUPLICATE_REPORT");
+        const ofertaRes = res1.status === 200 ? res1 : res2;
+        const cuerpo = (await ofertaRes.json()) as { oferta: boolean; reporteExistenteId: string };
+        expect(cuerpo.oferta, "la respuesta duplicada debe ser una oferta de vinculación").toBe(true);
+        expect(cuerpo.reporteExistenteId, "debe referenciar el reporte que ganó la carrera").toBeTruthy();
 
         expect(await prisma.reporte.count(), "exactamente UN reporte en BD tras la carrera").toBe(1);
     });

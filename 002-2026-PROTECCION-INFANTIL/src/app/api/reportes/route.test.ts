@@ -146,20 +146,29 @@ describe("POST /api/reportes", () => {
         expect(body.error.message).toContain("Plataforma no válida");
     });
 
-    it("detecta duplicado autenticado dentro de 30 días", async () => {
+    // SPEC-323 (candado 26): padre autenticado recibe oferta en lugar de 429.
+    it("detecta duplicado autenticado dentro de 30 días → oferta de vinculación (200)", async () => {
         const user = await crearUsuario("PARENT");
         const token = await crearTokenUsuario(user.id, "PARENT");
         const req1 = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
-        await POST(req1);
+        const res1 = await POST(req1);
+        expect(res1.status).toBe(201);
+        const body1 = await res1.json();
+        const reporteId = body1.reporte.id as string;
 
         const req2 = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
             ...reporteValido,
             texto: "Otro texto descriptivo del mismo incidente reportado.",
         }, token);
         const res = await POST(req2);
-        expect(res.status).toBe(429);
+        // SPEC-323: oferta, no bloqueo
+        expect(res.status).toBe(200);
         const body = await res.json();
-        expect(body.error.code).toBe("DUPLICATE_REPORT");
+        expect(body.oferta).toBe(true);
+        expect(body.reporteExistenteId).toBe(reporteId);
+        expect(body.identificador).toBe(reporteValido.identificador);
+        // Candado: sigue habiendo exactamente 1 reporte (no se creó el 2º sin vinculación)
+        expect(await prisma.reporte.count()).toBe(1);
     });
 
     it("aplica rate limiting a reportes anónimos", async () => {
