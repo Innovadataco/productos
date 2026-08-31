@@ -61,7 +61,7 @@ export default async function PerfilNotificacionesPage() {
                     <h1 className="text-2xl font-bold text-body">{tema.titulo}</h1>
                     <p className="mt-1 text-sm text-muted">{tema.subtitulo}</p>
                 </div>
-                <PreferenciasNotificaciones />
+                <PreferenciasNotificaciones rol={user.rol} correo={user.email} />
             </div>
         </main>
     );
