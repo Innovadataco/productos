@@ -33,6 +33,10 @@ describe("RegistroColegioForm", () => {
         fireEvent.change(screen.getByLabelText("Nombre del colegio"), {
             target: { value: "Colegio Ejemplo" },
         });
+        // SPEC-320 (§2.2-bis): NIT obligatorio.
+        fireEvent.change(screen.getByLabelText("NIT del colegio"), {
+            target: { value: "900123456-7" },
+        });
         fireEvent.change(screen.getByLabelText("Nombre del rector"), {
             target: { value: "Carlos Ejemplo" },
         });
@@ -43,6 +47,7 @@ describe("RegistroColegioForm", () => {
                 email: "rector@colegio.edu",
                 nombreColegio: "Colegio Ejemplo",
                 nombreRector: "Carlos Ejemplo",
+                nit: "900123456-7",
             });
         });
     });

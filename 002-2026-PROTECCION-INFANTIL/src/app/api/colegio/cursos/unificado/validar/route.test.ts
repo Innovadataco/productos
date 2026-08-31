@@ -46,6 +46,9 @@ const COLUMNAS = [
     "anio_lectivo",
     "nombre_alumno",
     "apellidos_alumno",
+    // SPEC-320 (§2.2-bis): documento del alumno obligatorio en la plantilla.
+    "documento_tipo_alumno",
+    "documento_numero_alumno",
     "tipo_identificador",
     "valor_identificador",
     "etiqueta_relacion",
@@ -57,14 +60,14 @@ const COLUMNAS = [
 ];
 
 // 5 filas: 3 con identificador (una con acudiente completo), 1 SIN identificador
-// (válida en el wizard), 1 sin apellidos (problema).
+// (válida en el wizard), 1 sin apellidos (problema). Todas con documento (§2.2-bis).
 const CSV_MIXTO = [
     COLUMNAS.join(","),
-    "6A,Sexto,2026,María,Gómez,telefono,+573001234567,ESTUDIANTE,WhatsApp,Laura Gómez,Madre,+573101112131,laura@example.com",
-    "6A,Sexto,2026,Carlos,Ruiz,email,carlos@example.com,PADRE,,,,,",
-    "6A,Sexto,2026,Ana,Torres,nick,gamer777,ESTUDIANTE,,,,,",
-    "6A,Sexto,2026,Luis,Pérez,,,,,,,,",
-    "6A,Sexto,2026,SinApellido,,telefono,+573005554444,ESTUDIANTE,,,,,",
+    "6A,Sexto,2026,María,Gómez,TI,D1,telefono,+573001234567,ESTUDIANTE,WhatsApp,Laura Gómez,Madre,+573101112131,laura@example.com",
+    "6A,Sexto,2026,Carlos,Ruiz,TI,D2,email,carlos@example.com,PADRE,,,,,",
+    "6A,Sexto,2026,Ana,Torres,TI,D3,nick,gamer777,ESTUDIANTE,,,,,",
+    "6A,Sexto,2026,Luis,Pérez,TI,D4,,,,,,,,",
+    "6A,Sexto,2026,SinApellido,,TI,D5,telefono,+573005554444,ESTUDIANTE,,,,,",
 ].join("\n");
 
 async function setupSchoolAdmin() {
@@ -127,7 +130,7 @@ describe("/api/colegio/cursos/unificado/validar", () => {
         await setupSchoolAdmin();
         const csv = [
             COLUMNAS.join(","),
-            "6A,Sexto,2026,María,Gómez,,,,,,Madre,,",
+            "6A,Sexto,2026,María,Gómez,TI,D129,,,,,,Madre,,",
         ].join("\n");
 
         const res = await POSTValidar(buildMultipartRequest(URL_VALIDAR, csv, mockToken));
@@ -143,7 +146,7 @@ describe("/api/colegio/cursos/unificado/validar", () => {
         await setupSchoolAdmin();
         const csv = [
             COLUMNAS.join(","),
-            "6A,Sexto,2026,María,Gómez,,,,,Laura Gómez,Madre,,juan.perez",
+            "6A,Sexto,2026,María,Gómez,TI,D145,,,,,Laura Gómez,Madre,,juan.perez",
         ].join("\n");
 
         const res = await POSTValidar(buildMultipartRequest(URL_VALIDAR, csv, mockToken));
@@ -156,8 +159,8 @@ describe("/api/colegio/cursos/unificado/validar", () => {
         await setupSchoolAdmin();
         const csv = [
             COLUMNAS.join(","),
-            "6A,Sexto,2026,María,Gómez,,,,,,,,",
-            "6A,Sexto,2026,María,Gómez,,,,,,,,",
+            "6A,Sexto,2026,María,Gómez,TI,D158,,,,,,,,",
+            "6A,Sexto,2026,María,Gómez,TI,D158,,,,,,,,",
         ].join("\n");
 
         const res = await POSTValidar(buildMultipartRequest(URL_VALIDAR, csv, mockToken));
@@ -185,9 +188,10 @@ describe("/api/colegio/cursos/unificado/validar", () => {
 
     it("acepta plantillas viejas sin columnas de acudiente", async () => {
         await setupSchoolAdmin();
+        // Base + documento (§2.2-bis), SIN las columnas de acudiente.
         const csv = [
-            COLUMNAS.slice(0, 9).join(","),
-            "6A,Sexto,2026,María,Gómez,telefono,+573001234567,ESTUDIANTE,",
+            COLUMNAS.slice(0, 11).join(","),
+            "6A,Sexto,2026,María,Gómez,TI,D189,telefono,+573001234567,ESTUDIANTE,",
         ].join("\n");
 
         const res = await POSTValidar(buildMultipartRequest(URL_VALIDAR, csv, mockToken));

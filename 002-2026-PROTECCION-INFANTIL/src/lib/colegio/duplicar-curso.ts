@@ -95,6 +95,16 @@ export async function duplicarCurso(input: DuplicarCursoInput): Promise<Duplicar
                 );
             }
 
+            // SPEC-320 (§2.2-bis + §2.1): PROMOCIÓN. El alumno pasa al curso del año
+            // siguiente; su matrícula del año anterior deja de estar activa. Se desactiva
+            // el estudiante ORIGEN y sus identificadores ANTES de clonar, para que el
+            // documento único por colegio y la unicidad del identificador (índices
+            // parciales WHERE estado='activo') vean solo el clon activo — sin choque.
+            for (const ident of origen.identificadores) {
+                await identificadores.cambiarEstado(colegioId, ident.id, "inactivo");
+            }
+            await estudiantes.cambiarEstado(colegioId, origen.id, "inactivo");
+
             const acudientes = origen.acudientes.map((a) => ({
                 orden: a.orden as 1 | 2,
                 nombre: a.nombre,

@@ -171,31 +171,21 @@ describe("agregarPatronPorReporte (SPEC-142, F6)", () => {
         expect((await patronesDe(b.colegio.id))[0]).toMatchObject({ grado: "9", conteo: 1 });
     });
 
-    it("varios vínculos del mismo identificador en el MISMO colegio cuentan una vez (grado del más antiguo)", async () => {
-        const plataforma = await crearPlataforma();
+    it("I-213 (SPEC-320 §2.1): dos estudiantes del MISMO colegio con el MISMO identificador ya NO es posible (bloqueado)", async () => {
+        // Antes este test creaba DOS estudiantes del mismo colegio con el mismo
+        // identificador para verificar que el patrón "cuenta una vez". Ese escenario ES
+        // exactamente el bug I-213 que §2.1 ahora bloquea con el índice único parcial:
+        // dentro de un colegio, un identificador pertenece a UNA sola persona. Por eso el
+        // test cambia de "contar varios vínculos" a AFIRMAR que el segundo se rechaza —
+        // la rama "grado del más antiguo" ya no se alcanza dentro de un colegio.
         const valor = `+57335${TAG}`;
         const { colegio } = await crearColegioConAdmin();
         const curso7 = await crearCurso(colegio.id, { grado: "7", nombre: `C7-${TAG}` });
         const curso9 = await crearCurso(colegio.id, { grado: "9", nombre: `C9-${TAG}` });
         const alumno1 = await crearEstudiante(curso7.id, colegio.id);
         const alumno2 = await crearEstudiante(curso9.id, colegio.id);
-        const v1 = await crearIdentificadorEstudiante(alumno1.id, { valor });
-        const v2 = await crearIdentificadorEstudiante(alumno2.id, { valor });
-        const reporte = await crearReportePara(valor, plataforma.id);
-        // v1 es el vínculo más antiguo (su alerta se crea primero).
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: v1.id,
-            prioridad: "media",
-            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
-        await prisma.alertaColegio.create({ data: { colegioId: colegio.id, reporteId: reporte.id, identificadorEstudianteId: v2.id,
-            prioridad: "media",
-            vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),} });
-
-        await agregarPatronPorReporte(reporte.id);
-
-        const filas = await patronesDe(colegio.id);
-        expect(filas).toHaveLength(1);
-        expect(filas[0].grado).toBe("7");
-        expect(filas[0].conteo).toBe(1);
+        await crearIdentificadorEstudiante(alumno1.id, { valor });
+        await expect(crearIdentificadorEstudiante(alumno2.id, { valor })).rejects.toThrow();
     });
 
     it("curso sin grado agrega bajo el sentinel no nulo", async () => {
