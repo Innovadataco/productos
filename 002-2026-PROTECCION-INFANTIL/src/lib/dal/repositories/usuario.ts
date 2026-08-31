@@ -256,7 +256,7 @@ export class UsuarioRepository {
     findDebeCambiarPassword(id: string) {
         return this.db.usuario.findUnique({
             where: { id },
-            select: { debeCambiarPassword: true },
+            select: { debeCambiarPassword: true, rol: true },
         });
     }
 
