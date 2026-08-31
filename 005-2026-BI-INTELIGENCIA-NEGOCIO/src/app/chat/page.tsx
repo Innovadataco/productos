@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { MensajeMotor } from "@/components/bi/chat/MensajeMotor";
 import { MensajeUsuario } from "@/components/bi/chat/MensajeUsuario";
+import { CerrarSesion } from "@/components/bi/auth/CerrarSesion";
 import type { HistorialChat, UsuarioUI } from "@/lib/bi/tipos-ui";
 import type { RespuestaMotor } from "@/lib/bi/tipos";
 
@@ -51,11 +52,14 @@ export default function ChatPage() {
 
     return (
         <div className="mx-auto flex h-screen max-w-4xl flex-col p-4">
-            <header className="mb-4">
-                <h1 className="text-lg font-semibold text-slate-900">BI · Chat NL→SQL</h1>
-                <p className="text-xs text-slate-500">
-                    Usuario mock: <code>{USUARIO_STUB.id}</code> · rol <code>{USUARIO_STUB.rol}</code>
-                </p>
+            <header className="mb-4 flex items-start justify-between">
+                <div>
+                    <h1 className="text-lg font-semibold text-slate-900">BI · Chat NL→SQL</h1>
+                    <p className="text-xs text-slate-500">
+                        Usuario mock: <code>{USUARIO_STUB.id}</code> · rol <code>{USUARIO_STUB.rol}</code>
+                    </p>
+                </div>
+                <CerrarSesion />
             </header>
             <div className="flex-1 space-y-3 overflow-y-auto" data-testid="historial">
                 {historial.map((m) =>

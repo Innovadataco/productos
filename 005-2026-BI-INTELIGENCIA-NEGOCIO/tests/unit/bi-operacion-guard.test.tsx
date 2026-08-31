@@ -61,6 +61,15 @@ describe("exigirSesionBi (helper compartido · SPEC-035)", () => {
         const { exigirSesionBi } = await import("@/lib/auth/guard-bi-sesion");
         expect(await exigirSesionBi("/x")).toEqual({ id: "u1", rol: "ADMIN" });
     });
+    // SPEC-036 · informativo (NO anti-drift): el destino ahora es el login
+    // PROPIO de BI (/login relativo con returnTo), ya no el puente SSO de PI.
+    it("sin sesión → redirige a /login propio con returnTo (SPEC-036)", async () => {
+        sesionMock.mockResolvedValue(null);
+        const { exigirSesionBi } = await import("@/lib/auth/guard-bi-sesion");
+        await expect(exigirSesionBi("/operacion")).rejects.toThrow(
+            "NEXT_REDIRECT:/login?returnTo=%2Foperacion",
+        );
+    });
 });
 
 // ── Guard de /operacion · el page NO debe leer datos sin sesión ──────────────
