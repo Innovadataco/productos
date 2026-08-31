@@ -87,6 +87,36 @@ describe("privacidad URL del identificador (spec 091 fix)", () => {
         expect(violaciones).toEqual([]);
     });
 
+    /**
+     * Endurecimiento: los checks de arriba miran el `href=`/`router.push(` en el
+     * sitio del uso, así que se evaden guardando la URL en una variable —
+     * `const href = \`/reportar?identificador=${x}\`` y después `href={href}`.
+     * Así se escapó la fuga de ConsultaVaciaBloque durante toda la spec 093.
+     * Esta guardia mira la CONSTRUCCIÓN de la URL, no dónde se usa: si en el
+     * fuente aparece un literal con `?…identificador=`, da igual en qué variable
+     * termine. Aplica también a los exentos de SPEC-233: su excepción es llevar
+     * el nick como segmento de ruta, nunca como query string.
+     */
+    it("ningún archivo arma una URL con el identificador en el query string (aunque el href viva en una variable)", () => {
+        const violaciones: string[] = [];
+        for (const archivo of archivos(SRC)) {
+            const contenido = fs.readFileSync(archivo, "utf-8");
+            // Un literal (backtick, comilla simple o doble) con `?` … `identificador=`.
+            if (/[`"'][^`"'\n]*\?[^`"'\n]*identificador=/i.test(contenido)) {
+                violaciones.push(archivo);
+            }
+            // Y la vía sin literal: searchParams.set("identificador", …). Se
+            // exige que el receptor sea un contenedor de query string — un
+            // `form.append("identificador", …)` de FormData viaja en el CUERPO
+            // de un POST, no en la URL, y ese no es el riesgo que cuida esta
+            // guardia (ApelacionesClient hace justamente eso, y está bien).
+            if (/\b\w*(?:params|query|search|url|qs)\w*\.(?:set|append)\(\s*["'`]identificador/i.test(contenido)) {
+                violaciones.push(archivo);
+            }
+        }
+        expect(violaciones).toEqual([]);
+    });
+
     it("ningún router.push deja el identificador en la URL", () => {
         const violaciones: string[] = [];
         for (const archivo of archivos(SRC)) {

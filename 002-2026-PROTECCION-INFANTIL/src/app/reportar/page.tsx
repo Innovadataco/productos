@@ -18,19 +18,12 @@ export const metadata: Metadata = {
     },
 };
 
-export default async function ReportarPage({
-    searchParams,
-}: {
-    searchParams: Promise<{ identificador?: string }>;
-}) {
-    // F3 (N-5): el CTA del estado vacío de la consulta prellena el identificador
-    // (sanitizado: máx 100 chars, igual que el límite del esquema de la API).
-    const { identificador } = await searchParams;
-    const identificadorInicial = typeof identificador === "string" ? identificador.slice(0, 100) : undefined;
-    // SPEC-324: el CTA "reportar de nuevo a este identificador" de /seguimiento
-    // NO pasa por acá — su identificador llega por sessionStorage y lo lee el
-    // propio wizard, porque no puede quedar en la URL (spec 091-US2 / 093-US4).
-
+// Esta página NO lee ningún identificador de la URL. Los dos CTA que traen uno
+// prellenado (el de /seguimiento en SPEC-324 y el del estado vacío de la
+// consulta en F3 N-5) lo entregan por sessionStorage y lo lee el propio wizard:
+// el identificador no puede quedar en la URL (spec 091-US2 / 093-US4) porque
+// esta ruta es pública y la URL queda en el historial, el `Referer` y los logs.
+export default function ReportarPage() {
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-8 text-center">
@@ -42,7 +35,7 @@ export default async function ReportarPage({
                 </p>
             </div>
 
-            <ReporteWizard identificadorInicial={identificadorInicial} />
+            <ReporteWizard />
             <CanalesOficiales />
         </main>
     );

@@ -228,6 +228,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/plataforma.test.ts",
     "src/lib/proxy.test.ts",
     "src/lib/queue.test.ts",
+    "src/lib/reportar-handoff.test.ts",
     "src/lib/reporte-aprobado.test.ts",
     "src/lib/reporte-estados-usuario.test.ts",
     "src/lib/reportes-acceso.test.ts",
