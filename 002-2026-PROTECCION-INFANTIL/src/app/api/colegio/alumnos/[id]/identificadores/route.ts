@@ -114,27 +114,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        // SPEC-320 (§2.1): warn-con-override cross-sujeto dentro del colegio. Si el
-        // identificador ya pertenece a OTRA persona del colegio y el rector no
-        // confirmó, se avisa a quién pertenece (no se bloquea en seco).
-        if (!body.confirmarCompartido) {
-            const otrosDuenos = await new IdentificadorUnicidadService().buscarOtrosDuenos(
-                estudiante.colegioId,
-                valorNormalizado,
-                { sujeto: "ESTUDIANTE", sujetoId: id }
-            );
-            if (otrosDuenos.length > 0) {
-                return NextResponse.json(
-                    {
-                        aviso: {
-                            code: "IDENTIFICADOR_EN_USO_EN_COLEGIO",
-                            message: "Este identificador ya está registrado para otra persona del colegio.",
-                            pertenece: otrosDuenos.map((d) => ({ nombre: d.nombre, rol: d.rol })),
-                        },
+        // SPEC-320 (§2.1): clasificar la colisión cross-sujeto dentro del colegio.
+        // estudiante↔estudiante y profesor↔profesor = bloqueo duro (I-213, sin
+        // override). Cross-sujeto y acudiente↔acudiente = warn-con-override.
+        const colision = await new IdentificadorUnicidadService().clasificarColision(
+            estudiante.colegioId,
+            valorNormalizado,
+            "ESTUDIANTE",
+            { sujeto: "ESTUDIANTE", sujetoId: id }
+        );
+        if (colision.duros.length > 0) {
+            return NextResponse.json(
+                {
+                    error: {
+                        message: `Este identificador ya pertenece a otro ${colision.duros[0].rol.toLowerCase()} de este colegio y no puede repetirse.`,
+                        code: ERROR_CODES.CONFLICT,
                     },
-                    { status: 200 }
-                );
-            }
+                },
+                { status: 409 }
+            );
+        }
+        if (colision.warns.length > 0 && !body.confirmarCompartido) {
+            return NextResponse.json(
+                {
+                    aviso: {
+                        code: "IDENTIFICADOR_EN_USO_EN_COLEGIO",
+                        message: "Este identificador ya está registrado para otra persona del colegio.",
+                        pertenece: colision.warns.map((d) => ({ nombre: d.nombre, rol: d.rol })),
+                    },
+                },
+                { status: 200 }
+            );
         }
 
         const identificador = await identificadores.crear(estudiante.colegioId, {

@@ -16,6 +16,7 @@ import { withValidation } from "@/lib/validation";
 import { identificadorAcudienteIdParamsSchema, identificadorAcudienteUpdateBodySchema } from "@/lib/schemas";
 import { verificarPropiedadAcudiente } from "@/lib/colegio/permisos";
 import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
+import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
 
 function getClientInfo(request: Request) {
     return {
@@ -81,6 +82,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 return NextResponse.json(
                     { error: { message: "Identificador duplicado para este acudiente", code: ERROR_CODES.CONFLICT } },
                     { status: 409 }
+                );
+            }
+
+            // SPEC-320 (§2.1): acudiente no tiene caso duro (padre-de-dos-hijos legítimo);
+            // todo cruce es warn-con-override.
+            const colision = await new IdentificadorUnicidadService().clasificarColision(
+                acudiente.colegioId,
+                valor,
+                "ACUDIENTE",
+                { sujeto: "ACUDIENTE", sujetoId: acudienteId }
+            );
+            if (colision.warns.length > 0 && !body.confirmarCompartido) {
+                return NextResponse.json(
+                    {
+                        aviso: {
+                            code: "IDENTIFICADOR_EN_USO_EN_COLEGIO",
+                            message: "Este identificador ya está registrado para otra persona del colegio.",
+                            pertenece: colision.warns.map((d) => ({ nombre: d.nombre, rol: d.rol })),
+                        },
+                    },
+                    { status: 200 }
                 );
             }
         }

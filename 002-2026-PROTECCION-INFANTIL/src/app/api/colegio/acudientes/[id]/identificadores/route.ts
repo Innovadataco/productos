@@ -17,6 +17,7 @@ import { withValidation } from "@/lib/validation";
 import { acudienteParamsSchema, identificadorAcudienteBodySchema } from "@/lib/schemas";
 import { verificarPropiedadAcudiente } from "@/lib/colegio/permisos";
 import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
+import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
 
 function getClientInfo(request: Request) {
     return {
@@ -109,6 +110,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             return NextResponse.json(
                 { error: { message: "Identificador duplicado para este acudiente", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
+            );
+        }
+
+        // SPEC-320 (§2.1): clasificar la colisión. Para acudiente NO hay caso duro
+        // (la BD lo deja por-acudiente: padre-de-dos-hijos es legítimo). Todo cruce
+        // —incluido acudiente↔acudiente— es warn-con-override, no bloquea en seco.
+        const colision = await new IdentificadorUnicidadService().clasificarColision(
+            acudiente.colegioId,
+            valorNormalizado,
+            "ACUDIENTE",
+            { sujeto: "ACUDIENTE", sujetoId: acudienteId }
+        );
+        if (colision.warns.length > 0 && !body.confirmarCompartido) {
+            return NextResponse.json(
+                {
+                    aviso: {
+                        code: "IDENTIFICADOR_EN_USO_EN_COLEGIO",
+                        message: "Este identificador ya está registrado para otra persona del colegio.",
+                        pertenece: colision.warns.map((d) => ({ nombre: d.nombre, rol: d.rol })),
+                    },
+                },
+                { status: 200 }
             );
         }
 

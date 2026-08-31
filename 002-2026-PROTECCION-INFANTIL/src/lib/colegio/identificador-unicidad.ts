@@ -33,6 +33,22 @@ export interface ExcluirSujeto {
     sujetoId: string;
 }
 
+/**
+ * Clasificación de una colisión (SPEC-320 §2.1, candado 15v5):
+ * - `duros`: colisiones que SIEMPRE son error de datos → bloqueo duro 409, sin
+ *   override. Son estudiante↔estudiante y profesor↔profesor dentro del colegio
+ *   (no hay dos personas legítimas con el mismo identificador; es el bug I-213).
+ * - `warns`: colisiones legítimas posibles → warn-con-override. Son cross-sujeto
+ *   (misma persona en dos roles) y acudiente↔acudiente (padre-de-dos-hijos).
+ */
+export interface ColisionClasificada {
+    duros: DuenoIdentificador[];
+    warns: DuenoIdentificador[];
+}
+
+/** Los sujetos con red dura de BD por-colegio (mismo tipo = error de datos). */
+const SUJETOS_RED_DURA: ReadonlySet<SujetoIdentificador> = new Set(["ESTUDIANTE", "PROFESOR"]);
+
 export class IdentificadorUnicidadService {
     private readonly db: DbClient;
 
@@ -96,5 +112,30 @@ export class IdentificadorUnicidadService {
         }
 
         return duenos;
+    }
+
+    /**
+     * Clasifica la colisión de un identificador para el sujeto que se está creando
+     * o editando. `sujetoActual` es el tipo del sujeto en cuestión.
+     * - Mismo tipo en estudiante/profesor → `duros` (bloqueo, sin override).
+     * - Cross-sujeto o acudiente↔acudiente → `warns` (warn-con-override).
+     */
+    async clasificarColision(
+        colegioId: string,
+        valor: string,
+        sujetoActual: SujetoIdentificador,
+        excluir?: ExcluirSujeto
+    ): Promise<ColisionClasificada> {
+        const otros = await this.buscarOtrosDuenos(colegioId, valor, excluir);
+        const duros: DuenoIdentificador[] = [];
+        const warns: DuenoIdentificador[] = [];
+        for (const dueno of otros) {
+            if (dueno.sujeto === sujetoActual && SUJETOS_RED_DURA.has(sujetoActual)) {
+                duros.push(dueno);
+            } else {
+                warns.push(dueno);
+            }
+        }
+        return { duros, warns };
     }
 }
