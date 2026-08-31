@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Protección Infantil">
+  <!-- El Guardián · talla mínima (MARCA-EL-GUARDIAN.md §4): escudo + niño, una tinta.
+       Estático (favicon): color pino de marca #0B6E5A. El hueco del niño nunca se quita (§7). -->
+  <defs>
+    <mask id="pi-favicon-hueco">
+      <rect width="100" height="100" fill="#fff"/>
+      <g fill="#000">
+        <circle cx="50" cy="44" r="7"/>
+        <path d="M50 53c-7.2 0-12.7 5.3-12.7 12.5v6.2c0 1.2 1 2.2 2.2 2.2h21c1.2 0 2.2-1 2.2-2.2v-6.2C62.7 58.3 57.2 53 50 53Z"/>
+      </g>
+    </mask>
+  </defs>
+  <path mask="url(#pi-favicon-hueco)" fill="#0B6E5A" d="M50 8 82 20v29C82 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/>
+</svg>

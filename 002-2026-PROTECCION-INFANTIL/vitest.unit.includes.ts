@@ -109,6 +109,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/providers/SessionPingProvider.test.tsx",
     "src/components/ui/Accordion.test.tsx",
     "src/components/ui/Alerta.test.tsx",
+    // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
+    "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",
     "src/components/ui/Cargando.test.tsx",
     "src/components/ui/CiudadSearchSelect.test.tsx",
