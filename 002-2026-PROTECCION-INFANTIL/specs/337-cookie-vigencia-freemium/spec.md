@@ -19,7 +19,7 @@ Revisados TODOS los `route.ts` bajo `suscripcion`/`pagos`. Ninguno re-emitía `s
 | `colegio/suscripcion/solicitar-plan` | No | idem (PENDIENTE_AUTORIZACION) |
 | `pagos/renovacion` | No | crea `PENDIENTE_AUTORIZACION` (autoriza el admin, SPEC-212) |
 | `pagos/aplicar-bono`, `pagos/aplicar-referido` | No | modifican una suscripción existente/pendiente; no activan a un usuario bloqueado |
-| `pagos/suscripcion/cancelar` | No (fuera de scope) | baja la vigencia; el efecto de cookie stale es acceso extra breve, no bloqueo. Semántica de cancelación (¿corte inmediato?) es decisión de UX aparte |
+| `pagos/suscripcion/cancelar` | **SÍ (arreglado)** | el usuario cancela su propia suscripción (→ CANCELADA); re-sellar corta el acceso al INSTANTE (decisión del CEO: sin "acceso extra breve") |
 | `admin/pagos/*` (activar-manual, extender, autorizar…) | No aplica | cambian la vigencia de OTRO usuario; no se puede sellar la cookie de otro en la respuesta del admin → lo resuelve el próximo `session/ping`/`vigencia/refresh` del usuario |
 
 ## Requisitos funcionales
