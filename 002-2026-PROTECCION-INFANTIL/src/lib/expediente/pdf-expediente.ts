@@ -11,10 +11,9 @@
 import { renderPdfBuffer } from "@/lib/pdf/pdfmake-node";
 import type { TDocumentDefinitions, Content, StyleDictionary } from "pdfmake/interfaces";
 
-const COLOR_PRIMARIO = "#1e40af"; // blue-800
+const COLOR_PRIMARIO = "#1d4ed8"; // blue-700
 const COLOR_TEXTO = "#1f2937";   // gray-800
 const COLOR_MUTED = "#6b7280";   // gray-500
-const COLOR_ACCENT = "#dc2626";  // red-600 (solo si hay riesgo)
 
 const estilos: StyleDictionary = {
     titulo: { fontSize: 18, bold: true, color: COLOR_PRIMARIO, margin: [0, 0, 0, 4] },

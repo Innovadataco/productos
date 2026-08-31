@@ -181,11 +181,11 @@ export function ReporteWizard({
     // SPEC-323 (T007/US1): tarjeta de oferta de vinculación.
     if (oferta) {
         return (
-            <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center dark:border-amber-800 dark:bg-amber-950/40">
-                <p className="text-lg font-semibold text-amber-900 dark:text-amber-200">
+            <div className="mx-auto max-w-xl rounded-2xl border border-ambar/30 bg-ambar/10 p-8 text-center">
+                <p className="text-lg font-semibold text-tinta">
                     Ya reportaste este identificador recientemente
                 </p>
-                <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">
+                <p className="mt-2 text-sm text-tinta/80">
                     <span className="font-mono font-bold">{oferta.identificador}</span> ya tiene un reporte tuyo en el sistema.
                     ¿Querés agregar otro evento al mismo caso?
                 </p>
