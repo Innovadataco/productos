@@ -63,25 +63,4 @@ test("I-214 camino 6 · admin regenera clave del colegio → email de aviso", as
     console.log(`[I-214-c6] colegio admin email para verificar notificaciones por SSH: ${email}`);
 });
 
-test("I-212 · seed comité y capturar credencial para probar aterrizaje", async ({ request, playwright }) => {
-    // 1) colegio + rector
-    const rectorEmail = `soporte+e2e-rectorc-${SUF}@innovadataco.com`;
-    const { passwordTemporal: rectorPw } = await seedColegio(request, rectorEmail, `Colegio Comite DIOS ${SUF}`);
-    // 2) login rector (nuevo contexto)
-    const rectorCtx: APIRequestContext = await playwright.request.newContext({ baseURL: process.env.E2E_BASE_URL });
-    const loginR = await rectorCtx.post("/api/auth/login", { data: { email: rectorEmail, password: rectorPw } });
-    console.log(`\n[I-212] login rector → ${loginR.status()}`);
-    // el rector tiene debeCambiarPassword; cambiarla para poder operar
-    const rectorPw2 = `${rectorPw}Z9!`;
-    await rectorCtx.post("/api/auth/cambiar-password", { data: { passwordActual: rectorPw, passwordNueva: rectorPw2, passwordNuevaConfirmacion: rectorPw2 } }).catch(() => {});
-    // 3) crear integrante de comité y registrar TODA la respuesta (para ver si trae clave)
-    const comiteEmail = `soporte+e2e-comite-${SUF}@innovadataco.com`;
-    const crear = await rectorCtx.post("/api/colegio/comite/integrantes", {
-        data: { nombres: "Comite", apellidos: "DIOS", tipoIdentificacion: "CEDULA_CIUDADANIA", numeroIdentificacion: `12${SUF}`, email: comiteEmail, cargo: "Integrante" },
-    });
-    const cuerpo = await crear.json().catch(() => ({}));
-    console.log(`[I-212] crear integrante → ${crear.status()} · claves respuesta: ${Object.keys(cuerpo).join(",")} · integrante keys: ${Object.keys(cuerpo.integrante ?? {}).join(",")}`);
-    console.log(`[I-212] ¿respuesta trae password? ${JSON.stringify(cuerpo).toLowerCase().includes("password")}`);
-    console.log(`[I-212] email comité sembrado: ${comiteEmail} (si no hay clave, regenerar por CEO/rector para probar aterrizaje)`);
-    await rectorCtx.dispose();
-});
+
