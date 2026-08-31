@@ -54,11 +54,11 @@
 
 **Goal:** la cuenta del comité se activa por email; cero clave en pantalla.
 
-- [ ] T015 [US2] `src/lib/dal/services/comite-convivencia.ts` `crearCuenta`: dejar de generar/retornar `passwordTemporal`; crear la cuenta con `estadoActivacion: "INVITADO"`, `tokenInvitacion` (32 bytes), `tokenInvitacionExpiraEn` (vigencia `pagos.invitacion.token_vigencia_horas`, default 48 h). Programar evento `colegio.invitacion.enviada` con `linkActivacion = ${baseUrl}/activar?token=…`.
-- [ ] T016 [US2] `src/components/modules/colegio/comite/ComiteCuentaCard.tsx`: quitar el pintado de `passwordTemporal` (`:89-95,:126-132`); reemplazar el mensaje por confirmación de "invitación enviada por email". El form de crear no muestra secreto.
-- [ ] T017 [US2] Endpoint `/api/colegio/comite/cuenta` (POST): ajustar respuesta para no incluir `passwordTemporal`; retornar la cuenta y estado de invitación.
-- [ ] T018 [P] [US2] Verificar que la plantilla `colegio.invitacion.enviada` renderiza con variables genéricas del comité (nombre "Comité de Convivencia"); si exige `nombreRector`, pasar un rótulo válido sin romper.
-- [ ] T019 [US2] Tests: integration de `crearCuenta` (crea INVITADO+token, programa evento, no retorna password); `activarPorToken` con la cuenta del comité (rol-agnóstico, sin tocar el servicio). `npx tsc --noEmit`.
+- [X] T015 [US2] `src/lib/dal/services/comite-convivencia.ts` `crearCuenta`: dejar de generar/retornar `passwordTemporal`; crear la cuenta con `estadoActivacion: "INVITADO"`, `tokenInvitacion` (32 bytes), `tokenInvitacionExpiraEn` (vigencia `pagos.invitacion.token_vigencia_horas`, default 48 h). Programar evento `colegio.invitacion.enviada` con `linkActivacion = ${baseUrl}/activar?token=…`.
+- [X] T016 [US2] `src/components/modules/colegio/comite/ComiteCuentaCard.tsx`: quitar el pintado de `passwordTemporal` (`:89-95,:126-132`); reemplazar el mensaje por confirmación de "invitación enviada por email". El form de crear no muestra secreto.
+- [X] T017 [US2] Endpoint `/api/colegio/comite/cuenta` (POST): ajustar respuesta para no incluir `passwordTemporal`; retornar la cuenta y estado de invitación.
+- [X] T018 [P] [US2] Verificar que la plantilla `colegio.invitacion.enviada` renderiza con variables genéricas del comité (nombre "Comité de Convivencia"); si exige `nombreRector`, pasar un rótulo válido sin romper.
+- [X] T019 [US2] Tests: integration de `crearCuenta` (crea INVITADO+token, programa evento, no retorna password); `activarPorToken` con la cuenta del comité (rol-agnóstico, sin tocar el servicio). `npx tsc --noEmit`.
 
 ---
 
@@ -66,12 +66,12 @@
 
 **Goal:** integrantes operable (contador, estado, reenviar invitación, editar, fecha con hora).
 
-- [ ] T020 [US3] `src/components/modules/colegio/comite/IntegrantesList.tsx:82`: reemplazar el `<h2>` fijo por contador "N integrantes · M activos".
-- [ ] T021 [US3] `IntegrantesList.tsx:161-168`: mostrar estado ACTIVO/INACTIVO por fila como etiqueta/texto (además del botón).
-- [ ] T022 [US3] `IntegrantesList.tsx`: formatear fechas como `DD-MM-AAAA HH:MM` (COT) — agregar la hora.
-- [ ] T023 [US3] `ComiteCuentaCard.tsx`: reemplazar "Regenerar contraseña" por "Reenviar invitación" (regenera token+vigencia y reprograma `colegio.invitacion.enviada`, sin pintar secreto). Backend: método en `comite-convivencia.ts` (reusa la lógica de token de T015).
-- [ ] T024 [US3] `IntegrantesList.tsx`: agregar acción "Editar integrante" llamando al endpoint existente `integrantes/[id]/route.ts:31` (servicio `actualizar:99`). Form mínimo de edición.
-- [ ] T025 [US3] Tests de `IntegrantesList` (candado 24 v2): contador, estado por fila, no romper activar/inactivar. `npx tsc --noEmit`.
+- [X] T020 [US3] `src/components/modules/colegio/comite/IntegrantesList.tsx:82`: reemplazar el `<h2>` fijo por contador "N integrantes · M activos".
+- [X] T021 [US3] `IntegrantesList.tsx:161-168`: mostrar estado ACTIVO/INACTIVO por fila como etiqueta/texto (además del botón).
+- [X] T022 [US3] `IntegrantesList.tsx`: formatear fechas como `DD-MM-AAAA HH:MM` (COT) — agregar la hora.
+- [X] T023 [US3] `ComiteCuentaCard.tsx`: reemplazar "Regenerar contraseña" por "Reenviar invitación" (regenera token+vigencia y reprograma `colegio.invitacion.enviada`, sin pintar secreto). Backend: método en `comite-convivencia.ts` (reusa la lógica de token de T015).
+- [X] T024 [US3] `IntegrantesList.tsx`: agregar acción "Editar integrante" llamando al endpoint existente `integrantes/[id]/route.ts:31` (servicio `actualizar:99`). Form mínimo de edición.
+- [X] T025 [US3] Tests de `IntegrantesList` (candado 24 v2): contador, estado por fila, no romper activar/inactivar. `npx tsc --noEmit`.
 
 ---
 
