@@ -35,8 +35,10 @@ function useTipoDocumentoOpciones() {
         };
     }, []);
     return useMemo(() => {
-        if (!tipos) return DOCUMENTO_TIPO_OPCIONES;
-        return [{ value: "", label: "Sin documento" }, ...tipos.map((t) => ({ value: t.clave, label: t.nombre }))];
+        // SPEC-320 (§2.2-bis): el documento del alumno es obligatorio; el placeholder ya
+        // no ofrece "Sin documento".
+        if (!tipos) return [{ value: "", label: "Selecciona tipo… *" }, ...DOCUMENTO_TIPO_OPCIONES.filter((o) => o.value !== "")];
+        return [{ value: "", label: "Selecciona tipo… *" }, ...tipos.map((t) => ({ value: t.clave, label: t.nombre }))];
     }, [tipos]);
 }
 import type { FilaListaValidada } from "@/lib/colegio/unificado/validar-lista";
@@ -115,7 +117,7 @@ export function TablaEstudiantes({ estudiantes, onChange, errores, modo, onModoC
                                 />
                                 <Input
                                     aria-label={`Número de documento del estudiante ${indice + 1}`}
-                                    placeholder="Número de documento (opcional)"
+                                    placeholder="Número de documento *"
                                     maxLength={50}
                                     value={estudiante.documentoNumero}
                                     onChange={(e) => actualizar(estudiante.key, { documentoNumero: e.target.value })}
