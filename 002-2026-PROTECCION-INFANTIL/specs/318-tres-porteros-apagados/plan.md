@@ -33,7 +33,7 @@ Tres rutas que ya devuelven una respuesta `NextResponse` o `Response`:
 |---|---|
 | `src/app/api/auth/login/route.ts` | `res.cookies.set(NOMBRE_COOKIE, cookieValue, opts)` antes de return |
 | `src/app/api/auth/activar/route.ts` | Mismo patrón |
-| `src/app/api/auth/recuperar/restablecer/route.ts` | Mismo patrón |
+| ~~`src/app/api/auth/recuperar/restablecer/route.ts`~~ | ~~Mismo patrón~~ **EXCLUIDO** — no crea sesión (A3 HALLAZGO aprobado) |
 
 Cada ruta ya tiene `userId` disponible al momento de la respuesta exitosa.
 
@@ -70,8 +70,8 @@ Cada ruta ya tiene `userId` disponible al momento de la respuesta exitosa.
 - `prisma/schema.prisma` + migración `AccionAudit`
 
 ### Fase 2 — Encender la señal (§3.1)
-- Cablear A1, A2, A3 (login, activar, restablecer)
-- Actualizar `SessionPingProvider` + `useSessionPing`
+- Cablear A1 (login) + A2 (activar) — A3 (restablecer) excluido: no crea sesión, cookie huérfana
+- `SessionPingProvider` y `useSessionPing` NO cambian (§C: session/ping suma cookie internamente)
 
 ### Fase 3 — Cerrar el ciclo (§3.2)
 - Callsites B1 (consentimiento/aceptar), B2 (cambiar-password), B3 (restablecer)

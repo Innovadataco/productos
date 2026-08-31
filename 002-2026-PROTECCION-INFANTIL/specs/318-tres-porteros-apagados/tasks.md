@@ -106,7 +106,7 @@
 
 - [ ] T014 [US5] `src/app/api/auth/cambiar-password/route.ts:61` — antes del return exitoso, agregar `await logAudit({accion: AccionAudit.USUARIO_CAMBIO_PASSWORD, tipoRecurso: "Usuario", recursoId: user.id, usuarioId: user.id, ipAddress: protegerIp(ip), ...})` (importar `logAudit` de `@/lib/audit`)
 - [ ] T015 [US5] `src/app/api/auth/activar/route.ts:44` — mismo patrón antes del return exitoso con `user.id` de `:47`
-- [ ] T016 [US5] [SUJETO A HALLAZGO F3] `src/app/api/auth/recuperar/restablecer/route.ts:46` — si Fábrica aprueba `userId` en `ResultadoRestablecer`: agregar logAudit con `resultado.userId` antes del return exitoso (esperar decisión inline/reabrir/descartar)
+- [ ] T016 [US5] `src/app/api/auth/recuperar/restablecer/route.ts:46` — agregar logAudit con `resultado.userId` antes del return exitoso (F3 APROBADO: opción a — `ResultadoRestablecer` extendida por T006)
 
 ---
 
