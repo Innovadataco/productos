@@ -10,20 +10,22 @@ import { EstadoSuscripcion } from "@prisma/client";
 
 /**
  * Construye el valor firmado de la cookie `sesion_estado` para un usuario.
- * Resuelve la vigencia según el rol:
- *   - SCHOOL_ADMIN / COMITE_CONVIVENCIA → ventana del colegio (SPEC-119/SPEC-331).
+ * Resuelve la vigencia según el rol (SPEC-331):
+ *   - SCHOOL_ADMIN / COMITE_CONVIVENCIA → ventana del colegio (verificarVigenciaCliente).
  *   - PARENT → suscripción propia (SPEC-242).
  *   - Roles internos (ADMIN, OPERADOR, COMITE_VALIDACION) → siempre ACTIVA.
  * Corre en Node runtime — NO importar desde middleware.ts (Edge).
  */
 export async function buildSesionEstadoValue(userId: string): Promise<string> {
-    const [suscripcion, requiereConsentimiento, usuario] = await Promise.all([
+    const repo = new UsuarioRepository();
+    const [suscripcion, requiereConsentimiento, flag, usuarioVigencia] = await Promise.all([
         new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(userId),
         requiereConsentimientoActual(userId),
-        new UsuarioRepository().findDebeCambiarPassword(userId),
+        repo.findDebeCambiarPassword(userId),
+        repo.findVigenciaCliente(userId),
     ]);
 
-    const rol = usuario?.rol;
+    const rol = usuarioVigencia?.rol;
     let vigencia: EstadoVigenciaEfectivo;
 
     if (rol === "SCHOOL_ADMIN" || rol === "COMITE_CONVIVENCIA") {
@@ -35,7 +37,7 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
         vigencia = resolverEstadoVigencia(suscripcion);
     }
 
-    const debeCambiarPassword = Boolean(usuario?.debeCambiarPassword);
+    const debeCambiarPassword = Boolean(flag?.debeCambiarPassword);
 
     return firmarSesionEstado(
         { vigencia, requiereConsentimiento, debeCambiarPassword },

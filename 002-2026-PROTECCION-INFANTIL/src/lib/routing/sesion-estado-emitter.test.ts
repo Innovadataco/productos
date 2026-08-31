@@ -10,8 +10,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mocks = vi.hoisted(() => ({
     obtenerSuscripcion: vi.fn(),
     findDebeCambiarPassword: vi.fn(),
+    findVigenciaCliente: vi.fn(),
     requiereConsentimiento: vi.fn(),
-    verificarVigencia: vi.fn(),
+    verificarVigenciaClienteMock: vi.fn(),
     firmarSesionEstado: vi.fn(async (payload: unknown) => JSON.stringify(payload)),
     requireEnv: vi.fn(() => "test-secret-de-32-chars-o-mas!!"),
 }));
@@ -25,6 +26,7 @@ vi.mock("@/lib/dal/repositories/pagos-repository", () => ({
 vi.mock("@/lib/dal/repositories/usuario", () => ({
     UsuarioRepository: vi.fn().mockImplementation(() => ({
         findDebeCambiarPassword: mocks.findDebeCambiarPassword,
+        findVigenciaCliente: mocks.findVigenciaCliente,
     })),
 }));
 
@@ -33,7 +35,7 @@ vi.mock("@/lib/consentimiento/guard", () => ({
 }));
 
 vi.mock("@/lib/colegio/vigencia", () => ({
-    verificarVigenciaCliente: mocks.verificarVigencia,
+    verificarVigenciaCliente: mocks.verificarVigenciaClienteMock,
 }));
 
 vi.mock("@/lib/routing/vigencia-cookie", () => ({
@@ -57,12 +59,13 @@ function setup({
     suscripcionEstado?: string | null;
     vigente?: boolean;
 }) {
-    mocks.findDebeCambiarPassword.mockResolvedValue({ debeCambiarPassword, rol });
+    mocks.findDebeCambiarPassword.mockResolvedValue({ debeCambiarPassword });
+    mocks.findVigenciaCliente.mockResolvedValue({ rol, colegioId: null, comiteColegioId: null, inicioServicio: null, finServicio: null });
     mocks.requiereConsentimiento.mockResolvedValue(false);
     mocks.obtenerSuscripcion.mockResolvedValue(
         suscripcionEstado ? { estado: suscripcionEstado } : null
     );
-    mocks.verificarVigencia.mockResolvedValue({
+    mocks.verificarVigenciaClienteMock.mockResolvedValue({
         vigente,
         estado: vigente ? "vigente" : "vencido",
         mensaje: "",
@@ -81,7 +84,7 @@ describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)"
             const cookie = await buildSesionEstadoValue("uid-1");
             const payload = JSON.parse(cookie);
             expect(payload.vigencia).toBe("ACTIVA");
-            expect(mocks.verificarVigencia).toHaveBeenCalledWith("uid-1");
+            expect(mocks.verificarVigenciaClienteMock).toHaveBeenCalledWith("uid-1");
         });
 
         it("vencido → SUSPENDIDA en cookie (gateado por middleware)", async () => {
@@ -93,7 +96,7 @@ describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)"
         it("delega en verificarVigenciaCliente, no en suscripción", async () => {
             setup({ rol: "SCHOOL_ADMIN", vigente: true });
             await buildSesionEstadoValue("uid-1");
-            expect(mocks.verificarVigencia).toHaveBeenCalledTimes(1);
+            expect(mocks.verificarVigenciaClienteMock).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -113,7 +116,7 @@ describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)"
         it("PARENT con suscripción ACTIVA → ACTIVA", async () => {
             setup({ rol: "PARENT", suscripcionEstado: "ACTIVA" });
             expect(JSON.parse(await buildSesionEstadoValue("uid-3")).vigencia).toBe("ACTIVA");
-            expect(mocks.verificarVigencia).not.toHaveBeenCalled();
+            expect(mocks.verificarVigenciaClienteMock).not.toHaveBeenCalled();
         });
 
         it("PARENT con suscripción EN_GRACIA → EN_GRACIA", async () => {
@@ -133,7 +136,7 @@ describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)"
             async (rol) => {
                 setup({ rol });
                 expect(JSON.parse(await buildSesionEstadoValue("uid-4")).vigencia).toBe("ACTIVA");
-                expect(mocks.verificarVigencia).not.toHaveBeenCalled();
+                expect(mocks.verificarVigenciaClienteMock).not.toHaveBeenCalled();
             }
         );
     });
