@@ -216,6 +216,13 @@ async function sembrarColegioE2E(
                 colegioId: colegio.id,
                 nombre: nombreProfesor,
                 apellidos: "Prueba",
+                // SPEC-320 (§2.2): identidad obligatoria del profesor.
+                tipoDocumento: "CC",
+                numeroDocumento: `E2E-${colegio.id.slice(-8)}`,
+                anioNacimiento: 1985,
+                sexo: "OTRO",
+                email: `profesor.e2e.${colegio.id.slice(-8)}@example.com`,
+                telefono: "+573000000000",
                 estado: "activo",
             },
         });

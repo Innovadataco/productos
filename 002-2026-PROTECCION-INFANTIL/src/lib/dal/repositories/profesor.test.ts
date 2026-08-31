@@ -13,8 +13,10 @@ async function sembrarDosColegiosConProfesor() {
     const { colegio: a } = await crearColegioConAdmin();
     const { colegio: b } = await crearColegioConAdmin();
     const repo = new ProfesorRepository();
-    const profesorA = await repo.crear(a.id, { nombre: "María", apellidos: "López", email: "maria@a.edu.co" });
-    const profesorB = await repo.crear(b.id, { nombre: "Carlos", apellidos: "Gómez" });
+    // SPEC-320 (§2.2): identidad del profesor obligatoria.
+    const identidad = { tipoDocumento: "CC", anioNacimiento: 1985, sexo: "OTRO", telefono: "+573001112233" };
+    const profesorA = await repo.crear(a.id, { nombre: "María", apellidos: "López", email: "maria@a.edu.co", numeroDocumento: "A-1001", ...identidad });
+    const profesorB = await repo.crear(b.id, { nombre: "Carlos", apellidos: "Gómez", email: "carlos@b.edu.co", numeroDocumento: "B-1001", ...identidad });
     return { a, b, profesorA, profesorB, repo };
 }
 
@@ -29,7 +31,10 @@ describe("ProfesorRepository", () => {
         expect(profesorA.colegioId).toBe(a.id);
         expect(profesorA.estado).toBe("activo");
         expect(profesorA.email).toBe("maria@a.edu.co");
-        expect(profesorA.telefono).toBeNull();
+        // SPEC-320 (§2.2): telefono ya no es nullable — se persiste el valor obligatorio.
+        expect(profesorA.telefono).toBe("+573001112233");
+        expect(profesorA.tipoDocumento).toBe("CC");
+        expect(profesorA.numeroDocumento).toBe("A-1001");
     });
 
     it("listarPaginados solo devuelve profesores del propio colegio (A/B)", async () => {
@@ -74,7 +79,7 @@ describe("ProfesorRepository", () => {
         expect(await repo.buscarPorNombreApellidosEnColegio(b.id, "Carlos", "Gómez")).not.toBeNull();
 
         // Un inactivo con el mismo nombre no cuenta como duplicado.
-        const inactivo = await repo.crear(a.id, { nombre: "Ana", apellidos: "Pérez" });
+        const inactivo = await repo.crear(a.id, { nombre: "Ana", apellidos: "Pérez", tipoDocumento: "CC", numeroDocumento: "A-2002", anioNacimiento: 1990, sexo: "F", email: "ana@a.edu.co", telefono: "+573004445566" });
         await repo.cambiarEstado(a.id, inactivo.id, "inactivo");
         expect(await repo.buscarPorNombreApellidosEnColegio(a.id, "Ana", "Pérez")).toBeNull();
     });

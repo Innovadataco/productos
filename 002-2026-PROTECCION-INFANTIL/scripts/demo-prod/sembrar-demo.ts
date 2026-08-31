@@ -218,6 +218,11 @@ async function main() {
                     colegioId: colegio.id,
                     nombre,
                     apellidos,
+                    // SPEC-320 (§2.2): identidad obligatoria del profesor.
+                    tipoDocumento: "CC",
+                    numeroDocumento: `DEMO${String(profesorIdx).padStart(4, "0")}`,
+                    anioNacimiento: 1985,
+                    sexo: "OTRO",
                     email: `soporte+profesor${String(profesorIdx).padStart(3, "0")}@innovadataco.com`,
                     telefono: `300DEMOPRO${String(profesorIdx).padStart(3, "0")}`,
                     estado: "activo",

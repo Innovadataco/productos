@@ -53,21 +53,43 @@ export class ProfesorRepository {
         return this.db.profesor.count({ where: { colegioId, estado } });
     }
 
-    /** Profesor activo con ese nombre + apellidos en el colegio (duplicado de alta → 409). */
+    /**
+     * Profesor activo con ese nombre + apellidos en el colegio (duplicado de alta → 409).
+     * SPEC-320 (§2.2 · FR-011): comparación insensible a mayúsculas ("JUAN" ≡ "Juan").
+     */
     buscarPorNombreApellidosEnColegio(colegioId: string, nombre: string, apellidos: string) {
         return this.db.profesor.findFirst({
-            where: { colegioId, nombre, apellidos, estado: "activo" },
+            where: {
+                colegioId,
+                estado: "activo",
+                nombre: { equals: nombre, mode: "insensitive" },
+                apellidos: { equals: apellidos, mode: "insensitive" },
+            },
         });
     }
 
-    /** Crea el profesor del colegio (alta manual, estado activo). */
+    /**
+     * SPEC-320 (§2.2 · FR-009): profesor con ese documento (tipo+número) en el colegio.
+     * Llave humana única por colegio → duplicado de alta 409.
+     */
+    buscarPorDocumentoEnColegio(colegioId: string, tipoDocumento: string, numeroDocumento: string) {
+        return this.db.profesor.findFirst({
+            where: { colegioId, tipoDocumento, numeroDocumento },
+        });
+    }
+
+    /** Crea el profesor del colegio (alta manual, estado activo) con identidad completa. */
     crear(
         colegioId: string,
         datos: {
             nombre: string;
             apellidos: string;
-            email?: string | undefined;
-            telefono?: string | undefined;
+            tipoDocumento: string;
+            numeroDocumento: string;
+            anioNacimiento: number;
+            sexo: string;
+            email: string;
+            telefono: string;
         }
     ) {
         return this.db.profesor.create({
@@ -75,8 +97,12 @@ export class ProfesorRepository {
                 colegioId,
                 nombre: datos.nombre,
                 apellidos: datos.apellidos,
-                email: datos.email ?? null,
-                telefono: datos.telefono ?? null,
+                tipoDocumento: datos.tipoDocumento,
+                numeroDocumento: datos.numeroDocumento,
+                anioNacimiento: datos.anioNacimiento,
+                sexo: datos.sexo,
+                email: datos.email,
+                telefono: datos.telefono,
                 estado: "activo",
             },
         });
@@ -89,8 +115,9 @@ export class ProfesorRepository {
         datos: {
             nombre?: string | undefined;
             apellidos?: string | undefined;
-            email?: string | null | undefined;
-            telefono?: string | null | undefined;
+            // SPEC-320 (§2.2): email/telefono ya no son nullable (identidad obligatoria).
+            email?: string | undefined;
+            telefono?: string | undefined;
         }
     ) {
         const { count } = await this.db.profesor.updateMany({

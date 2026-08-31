@@ -1178,22 +1178,33 @@ model Curso {
 
 // SPEC-145 (brief §7.2): modelo Profesor mínimo — nombre, apellidos, email?,
 // teléfono?, estado. Baja = soft delete (estado "inactivo"), nunca borrado físico.
+// SPEC-320 (§2.2): identidad del profesor OBLIGATORIA — tipo/número de documento,
+// año de nacimiento, sexo, teléfono y email. Nacen NOT NULL sin nullable de
+// transición (Jelkin arranca de cero). email/telefono dejan de ser nullable.
+// Llave humana: (colegioId, tipoDocumento, numeroDocumento). documentoTipo se valida
+// contra el catálogo TipoDocumento (clave). La de red social sigue siendo la del
+// producto — van las dos.
 model Profesor {
-  id        String   @id @default(cuid())
-  colegioId String
-  nombre    String
-  apellidos String
-  email     String?
-  telefono  String?
-  estado    String   @default("activo")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  colegioId       String
+  nombre          String
+  apellidos       String
+  tipoDocumento   String // clave del catálogo TipoDocumento
+  numeroDocumento String
+  anioNacimiento  Int
+  sexo            String // set cerrado en Zod (M|F|OTRO)
+  email           String
+  telefono        String
+  estado          String   @default("activo")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   colegio             Colegio                 @relation(fields: [colegioId], references: [id])
   cursos              Curso[]
   CursoMateria        CursoMateria[]
   identificadoresProf IdentificadorProfesor[]
 
+  @@unique([colegioId, tipoDocumento, numeroDocumento])
   @@index([colegioId, estado])
 }
 

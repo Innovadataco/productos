@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
 import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
+import { TipoDocumentoRepository } from "@/lib/dal/repositories/tipo-documento";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES, AppError } from "@/lib/errors";
@@ -107,6 +108,15 @@ export async function POST(request: Request) {
             throw error;
         });
 
+        // SPEC-320 (§2.2 · FR-014): tipoDocumento debe existir y estar activo en el catálogo.
+        const claveActiva = await new TipoDocumentoRepository().claveActiva(body.tipoDocumento);
+        if (!claveActiva) {
+            return NextResponse.json(
+                { error: { message: "Tipo de documento inválido o inactivo", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+
         // SPEC-145 (E-1): duplicado y creación viven en el repo (SIEMPRE con tenant).
         // FR-007: duplicado nombre + apellidos ACTIVO en el mismo colegio → 409.
         const profesores = new ProfesorRepository();
@@ -118,9 +128,26 @@ export async function POST(request: Request) {
             );
         }
 
+        // SPEC-320 (§2.2 · FR-009): documento (tipo+número) único por colegio.
+        const docDuplicado = await profesores.buscarPorDocumentoEnColegio(
+            user.colegioId,
+            body.tipoDocumento,
+            body.numeroDocumento
+        );
+        if (docDuplicado) {
+            return NextResponse.json(
+                { error: { message: "Ya existe un profesor con ese documento en el colegio", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
+
         const profesor = await profesores.crear(user.colegioId, {
             nombre: body.nombre,
             apellidos: body.apellidos,
+            tipoDocumento: body.tipoDocumento,
+            numeroDocumento: body.numeroDocumento,
+            anioNacimiento: body.anioNacimiento,
+            sexo: body.sexo,
             email: body.email,
             telefono: body.telefono,
         });

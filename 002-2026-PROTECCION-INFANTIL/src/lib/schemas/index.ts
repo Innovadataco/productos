@@ -282,20 +282,31 @@ export const estudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
-// SPEC-145 (FR-005): alta de profesor — obligatorios solo nombre + apellidos;
-// email/teléfono opcionales y NUNCA bloquean el alta. Baja = estado "inactivo".
+// SPEC-320 (§2.2): sexo del profesor (set cerrado).
+export const sexoSchema = z.enum(["M", "F", "OTRO"], {
+    message: "Sexo inválido. Valores aceptados: M, F, OTRO",
+});
+
+// SPEC-145 (FR-005) + SPEC-320 (§2.2): alta de profesor. Identidad OBLIGATORIA
+// (tipo/número de documento, año de nacimiento, sexo, email y teléfono). tipoDocumento
+// se valida además contra el catálogo TipoDocumento (clave activa) en la ruta.
 export const profesorBodySchema = z.object({
     nombre: z.string().min(2).max(150),
     apellidos: z.string({ message: "Falta el apellido del profesor" }).min(1, "Falta el apellido del profesor").max(150),
-    email: emailSchema.optional(),
-    telefono: z.string().max(50).optional(),
+    tipoDocumento: z.string({ message: "Falta el tipo de documento del profesor" }).min(1, "Falta el tipo de documento del profesor").max(20),
+    numeroDocumento: z.string({ message: "Falta el número de documento del profesor" }).min(1, "Falta el número de documento del profesor").max(50),
+    anioNacimiento: z.coerce.number({ message: "Falta el año de nacimiento del profesor" }).int().gte(1900, "Año de nacimiento inválido").lte(new Date().getFullYear(), "Año de nacimiento inválido"),
+    sexo: sexoSchema,
+    email: emailSchema,
+    telefono: z.string({ message: "Falta el teléfono del profesor" }).min(1, "Falta el teléfono del profesor").max(50),
 });
 
 export const profesorPatchSchema = z.object({
     nombre: z.string().min(2).max(150).optional(),
     apellidos: z.string().min(1).max(150).optional(),
-    email: emailSchema.optional().nullable(),
-    telefono: z.string().max(50).optional().nullable(),
+    // SPEC-320 (§2.2): email/telefono ya no admiten null (identidad obligatoria).
+    email: emailSchema.optional(),
+    telefono: z.string().min(1).max(50).optional(),
     estado: estadoActivoSchema.optional(),
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
 

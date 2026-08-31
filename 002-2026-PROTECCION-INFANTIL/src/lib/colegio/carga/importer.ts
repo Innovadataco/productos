@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
+import { IdentificadorUnicidadService } from "@/lib/colegio/identificador-unicidad";
 import type { FilaCargaEstudiante } from "./parser";
 
 export type ResumenImportacion = {
@@ -16,6 +17,11 @@ export type ResumenImportacion = {
     alumnosReutilizados: number;
     identificadoresCreados: number;
     identificadoresReutilizados: number;
+    // SPEC-320 (§2.1): identificadores omitidos porque el mismo valor ya pertenece a
+    // otra persona del colegio. En carga masiva NO hay quién confirme el override, así
+    // que TODA colisión (dura o warn) se omite y se reporta para revisión manual del
+    // rector (que puede agregarlo luego por la UI interactiva, con override si aplica).
+    identificadoresOmitidosPorConflicto: number;
 };
 
 function claveCurso(nombre: string, grado: string | null, anioLectivo: string | null): string {
@@ -50,6 +56,7 @@ export async function importarCargaMasiva(
         alumnosReutilizados: 0,
         identificadoresCreados: 0,
         identificadoresReutilizados: 0,
+        identificadoresOmitidosPorConflicto: 0,
     };
 
     // Caché en memoria para evitar queries repetidas dentro de la transacción.
@@ -118,7 +125,21 @@ export async function importarCargaMasiva(
                 await identificadores.reactivar(colegioId, existente.id, fila.identificador.etiquetaRelacion);
                 identificador = { id: existente.id, creado: false };
                 resumen.identificadoresReutilizados++;
+                identificadoresPorClave.set(identificadorKey, identificador);
             } else {
+                // SPEC-320 (§2.1): en lote no hay override interactivo. Si el valor ya
+                // pertenece a OTRA persona del colegio (dura o warn), se OMITE y se
+                // reporta; el rector lo resuelve después por la UI. No tumba el batch.
+                const colision = await new IdentificadorUnicidadService(tx).clasificarColision(
+                    colegioId,
+                    fila.identificador.valor,
+                    "ESTUDIANTE",
+                    { sujeto: "ESTUDIANTE", sujetoId: estudiante.id }
+                );
+                if (colision.duros.length > 0 || colision.warns.length > 0) {
+                    resumen.identificadoresOmitidosPorConflicto++;
+                    continue;
+                }
                 const nuevo = await identificadores.crear(colegioId, {
                     estudianteId: estudiante.id,
                     tipo: fila.identificador.tipo,
@@ -128,8 +149,8 @@ export async function importarCargaMasiva(
                 });
                 identificador = { id: nuevo.id, creado: true };
                 resumen.identificadoresCreados++;
+                identificadoresPorClave.set(identificadorKey, identificador);
             }
-            identificadoresPorClave.set(identificadorKey, identificador);
         } else {
             resumen.identificadoresReutilizados++;
         }

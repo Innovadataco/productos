@@ -102,17 +102,35 @@ export async function crearCurso(
 }
 
 // SPEC-145: fixture de profesor del colegio (mínimo: nombre + apellidos).
+let profesorDocSeq = 0;
 export async function crearProfesor(
     colegioId: string,
-    data: { nombre?: string; apellidos?: string; email?: string; telefono?: string; estado?: string } = {}
+    data: {
+        nombre?: string;
+        apellidos?: string;
+        email?: string;
+        telefono?: string;
+        estado?: string;
+        tipoDocumento?: string;
+        numeroDocumento?: string;
+        anioNacimiento?: number;
+        sexo?: string;
+    } = {}
 ) {
+    // SPEC-320 (§2.2): identidad del profesor obligatoria; el fixture provee defaults
+    // (numeroDocumento único por secuencia para no chocar con el UNIQUE por colegio).
+    const doc = data.numeroDocumento ?? `DOC${Date.now()}${profesorDocSeq++}`;
     return prisma.profesor.create({
         data: {
             colegioId,
             nombre: data.nombre ?? `Profesor ${Date.now()}`,
             apellidos: data.apellidos ?? "De Prueba",
-            email: data.email ?? null,
-            telefono: data.telefono ?? null,
+            tipoDocumento: data.tipoDocumento ?? "CC",
+            numeroDocumento: doc,
+            anioNacimiento: data.anioNacimiento ?? 1985,
+            sexo: data.sexo ?? "OTRO",
+            email: data.email ?? `profesor${doc}@example.com`,
+            telefono: data.telefono ?? "+573000000000",
             estado: data.estado ?? "activo",
         },
     });
