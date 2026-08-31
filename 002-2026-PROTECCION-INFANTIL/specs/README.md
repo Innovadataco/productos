@@ -172,6 +172,7 @@
 | [310](310-puente-sesion-bi-link/spec.md) | SPEC-310 · Puente de sesión PI→BI · endpoint `/api/auth/link-bi` con JWT efímero (002-PI-211 · cierra I-30 parte PI) | 🟢 Implementado |
 | [312](312-quiet-hours-skip-email/spec.md) | SPEC-312 · Quiet hours no aplica a EMAIL ni IN_APP · skip categórico por canal (002-PI-212 · cierra I-165) | 🟢 Implementado |
 | [313](313-hotfix-link-bi-host/spec.md) | SPEC-313 · Hotfix link-bi redirect host público (0.0.0.0 → x-forwarded-host/PI_BASE_URL) (002-PI-213) | 🟢 Implementado |
+| [329](329-middleware-api-json-guardias/spec.md) | SPEC-329 · 🔴 Hotfix: los 3 guardianes de estado del middleware devuelven JSON 403 (no redirect 302 HTML) para `/api/**` gateadas; pantallas intactas (002-PI-229 · regresión A-56) | 🟡 En desarrollo |
 | [315](315-fix-reset-password-flag/spec.md) | SPEC-315 · Fix reset password no limpia `debeCambiarPassword` (002-PI-215 · bug prod loop) | 🔵 Planeado |
 | [319](319-comite-convivencia-operativo/spec.md) | SPEC-319 · El comité de convivencia, operativo · fuente única rol→home + email + integrantes + firma + rediseño (002-PI-219 · cierra I-212) | 🟡 En desarrollo |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |

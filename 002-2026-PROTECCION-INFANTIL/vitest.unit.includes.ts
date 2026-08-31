@@ -10,6 +10,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/guardias.test.ts",
     "src/lib/routing/vigencia-cookie.test.ts",
     "src/lib/routing/middleware.test.ts",
+    // SPEC-329 (002-PI-229): guardianes de estado devuelven JSON 403 en /api/ (contraprueba 302 en pantallas).
+    "src/middleware-api-guardias.test.ts",
     "scripts/lint/ratchets.test.ts",
     // SPEC-284 (002-PI-184 · I-130): compuerta de IDs de advisory lock únicos.
     "scripts/locks-check.test.ts",
