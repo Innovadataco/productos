@@ -40,12 +40,42 @@ describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
         expect(data.error.code).toBe("VALIDATION_ERROR");
     });
 
-    it("retorna respuesta uniforme para email registrado", async () => {
+    it("email registrado: respuesta uniforme en pantalla + avisa al buzón (I-226)", async () => {
         await crearUsuario("PARENT", "registrado-verificar@example.com");
+        // El motor necesita la plantilla + regla del aviso "ya tenés una cuenta".
+        await prisma.notificacionPlantilla.create({
+            data: {
+                clave: "auth.cuenta_existente.email",
+                canal: "EMAIL",
+                asunto: "Ya tenés una cuenta con este correo",
+                cuerpoMarkdown: "Entrá: {{urlLogin}}\nRecuperá tu clave: {{urlRecuperar}}",
+            },
+        });
+        await prisma.notificacionRegla.create({
+            data: {
+                evento: "auth.cuenta_existente",
+                rol: "ALL",
+                offset: "+0m",
+                canal: "EMAIL",
+                plantillaClave: "auth.cuenta_existente.email",
+                obligatoria: true,
+            },
+        });
+
         const res = await POST(makeRequest({ email: "registrado-verificar@example.com" }));
         expect(res.status).toBe(202);
         const data = await res.json();
+        // Anti-enumeración: la pantalla NO revela que el correo existe.
         expect(data.message).toBe(MENSAJE_EXITO);
+
+        // I-226: pero el buzón SÍ recibe el aviso "ya tenés una cuenta".
+        const notif = await prisma.notificacion.findFirst({
+            where: { evento: "auth.cuenta_existente", destinatarioEmail: "registrado-verificar@example.com" },
+            orderBy: { createdAt: "desc" },
+        });
+        expect(notif).not.toBeNull();
+        expect(notif?.plantillaClave).toBe("auth.cuenta_existente.email");
+        expect(notif?.canal).toBe("EMAIL");
     });
 
     it("genera código para email no registrado", async () => {

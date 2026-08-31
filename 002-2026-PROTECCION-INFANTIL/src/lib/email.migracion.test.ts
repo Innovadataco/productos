@@ -3,7 +3,7 @@
  * al Motor de Notificaciones.
  *
  * Verifica:
- * 1. Cada uno de los 19 eventos migrados tiene ≥ 1 regla activa canal=EMAIL con
+ * 1. Cada uno de los 20 eventos migrados tiene ≥ 1 regla activa canal=EMAIL con
  *    plantilla existente en la BD post-seed. Falla si el seed regresa el bug
  *    "no hay regla → programar() no envía nada".
  * 2. Al llamar un wrapper representativo (`enviarCodigoVerificacion`), se crea
@@ -29,6 +29,8 @@ const SEED_CMD = "npx tsx prisma/seed.ts";
 const EVENTOS_MIGRADOS = [
     "auth.codigo_verificacion",
     "auth.password_recuperacion",
+    // SPEC-338 (I-226): aviso "ya tenés una cuenta" al registrarse con correo existente.
+    "auth.cuenta_existente",
     // SPEC-322: aviso de seguridad al cambiar contraseña (obligatoria, todos los roles).
     "auth.password_cambiada",
     "usuario.bienvenida.operador",
@@ -74,7 +76,7 @@ describe("email.migracion (SPEC-296 · cierra I-152)", () => {
         correrSeed();
     }, 180_000);
 
-    it("los 19 eventos migrados tienen ≥ 1 regla activa canal=EMAIL con plantilla existente", async () => {
+    it("los 20 eventos migrados tienen ≥ 1 regla activa canal=EMAIL con plantilla existente", async () => {
         for (const evento of EVENTOS_MIGRADOS) {
             const reglas = await prisma.notificacionRegla.findMany({
                 where: { evento, activa: true, canal: "EMAIL" },
