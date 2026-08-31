@@ -135,9 +135,9 @@ export function MisHijos() {
                 sexo: form.sexo || undefined,
                 identificadores: pendiente.length
                     ? pendiente.map((i) => ({
-                          valor: i.valor,
-                          ...(i.plataformaId ? { plataformaId: i.plataformaId } : {}),
-                      }))
+                        valor: i.valor,
+                        ...(i.plataformaId ? { plataformaId: i.plataformaId } : {}),
+                    }))
                     : undefined,
             };
             const res = await fetch("/api/padre/hijos", {
