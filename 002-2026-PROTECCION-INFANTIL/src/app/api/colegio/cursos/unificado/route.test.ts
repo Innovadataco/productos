@@ -210,8 +210,8 @@ describe("/api/colegio/cursos/unificado", () => {
             request(
                 payloadBase({
                     estudiantes: [
-                        { nombre: "María", apellidos: "Gómez Pérez" },
-                        { nombre: "María", apellidos: "Gómez Pérez" },
+                        { nombre: "María", apellidos: "Gómez Pérez", documentoTipo: "TI", documentoNumero: "REP-1" },
+                        { nombre: "María", apellidos: "Gómez Pérez", documentoTipo: "TI", documentoNumero: "REP-2" },
                     ],
                     identificadores: [{ estudianteIndex: 0, valor: "+573001234567" }],
                 }),
@@ -289,23 +289,25 @@ describe("/api/colegio/cursos/unificado", () => {
         expect(await conteoTablas(colegioA.id)).toEqual({ cursos: 1, estudiantes: 0, identificadores: 0, acudientes: 0, profesores: 0 });
     });
 
-    it("el identificador duplicado contra BD de OTRO estudiante no bloquea (único por estudiante)", async () => {
+    it("SPEC-320 (§2.1): el mismo identificador para OTRO estudiante del colegio AHORA se bloquea (I-213)", async () => {
+        // Antes esto se permitía (unicidad por-estudiante). §2.1 hace la unicidad POR
+        // COLEGIO cruzando sujetos: dos estudiantes del colegio con el mismo identificador
+        // es exactamente el bug I-213 → el wizard atómico aborta con 409. (candado 24 v2)
         const { colegio } = await setupSchoolAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "7° C" });
         const existente = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana", apellidos: "Torres" });
         await crearIdentificadorEstudiante(existente.id, { tipo: "nick", valor: "gamer123" });
 
-        // Mismo valor pero para un estudiante NUEVO del nuevo curso: permitido.
         const res = await POST(
             request(
                 payloadBase({
-                    estudiantes: [{ nombre: "María", apellidos: "Gómez" }],
+                    estudiantes: [{ nombre: "María", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "MG-BLOCK" }],
                     identificadores: [{ estudianteIndex: 0, tipo: "nick", valor: "gamer123" }],
                 }),
                 mockToken
             )
         );
-        expect(res.status).toBe(201);
+        expect(res.status).toBe(409);
     });
 
     it("rechaza sin autenticación", async () => {
