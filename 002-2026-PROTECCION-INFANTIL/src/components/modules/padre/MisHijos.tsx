@@ -235,7 +235,7 @@ export function MisHijos() {
                         <Select label="Sexo" options={SEXOS} value={form.sexo} onChange={(e) => setForm({ ...form, sexo: e.target.value })} />
                     </div>
 
-                    <div className="rounded-xl border border-sky-200/40 p-3 dark:border-sky-900/30">
+                    <div className="rounded-xl border border-cielo/40 p-3 dark:border-cielo/30">
                         <p className="text-sm font-medium text-body">Sus identificadores</p>
                         <p className="mb-2 text-xs text-muted">
                             Agregá todos los que conozcas: su usuario de Roblox, su teléfono, su correo.
