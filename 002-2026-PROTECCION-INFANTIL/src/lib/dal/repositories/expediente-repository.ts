@@ -117,6 +117,21 @@ export class ExpedienteRepository {
             );
         }
 
+        // SPEC-323: un reporte entra UNA sola vez al expediente. `findDuplicadoReciente`
+        // devuelve el reporte más reciente, así que del 3er reporte en adelante la
+        // vinculación reenvía como previo uno que ya es evento; sin este guard el evento
+        // se duplica y `numEventos` queda inflado. Va en el DAL (frontera Q-3) para cubrir
+        // a todos los llamadores; el alta manual del padre no manda `reporteId` y no lo cruza.
+        // Seguro contra concurrencia: la fila del expediente ya quedó bloqueada arriba.
+        if (input.reporteId) {
+            const yaEsEvento = await this.db.eventoExpediente.findFirst({
+                where: { expedienteId: expediente.id, reporteId: input.reporteId },
+            });
+            if (yaEsEvento) {
+                return yaEsEvento;
+            }
+        }
+
         const ordenSecuencial = await this.siguienteOrdenSecuencial(expediente.id);
         const reporteId = input.reporteId ?? (await this.crearReporteVinculado(expediente, input, fechaEvento));
 

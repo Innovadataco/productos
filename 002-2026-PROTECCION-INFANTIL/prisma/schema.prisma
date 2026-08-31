@@ -2510,6 +2510,9 @@ model EventoExpediente {
   reporte    Reporte?   @relation(fields: [reporteId], references: [id])
 
   @@unique([expedienteId, ordenSecuencial])
+  // SPEC-323: un reporte entra UNA sola vez al expediente. Postgres admite varios
+  // NULL en un índice único, así que el alta manual del padre (sin reporteId) no se toca.
+  @@unique([expedienteId, reporteId])
   @@index([expedienteId, fechaEvento(sort: Desc)])
 }
 

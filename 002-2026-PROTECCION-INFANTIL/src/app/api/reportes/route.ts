@@ -115,8 +115,11 @@ export async function POST(request: Request) {
         // transacción (con advisory lock por usuario+identificador dentro — cierra
         // la carrera de deduplicación). La fuente anti-abuso y el encolado quedan
         // FUERA, como hasta ahora (FR-004).
-        const resultado = await withUnitOfWork((tx) =>
-            new ReporteCreationService(tx).crear({
+        // SPEC-323: el expediente de la vinculación entra en la MISMA transacción —
+        // si falla el 2º evento no puede quedar un expediente a medias, y el advisory
+        // lock cubre además la creación concurrente del expediente.
+        const { resultado, expedienteId } = await withUnitOfWork(async (tx) => {
+            const resultado = await new ReporteCreationService(tx).crear({
                 identificador,
                 plataformaId: plataforma.id,
                 plataformaClave,
@@ -139,8 +142,37 @@ export async function POST(request: Request) {
                 prioridadAlta,
                 keywordsDetectadas,
                 reportePrevioId,
-            })
-        );
+            });
+
+            // SPEC-323 (T011/US2): vinculación aceptada → crear/reutilizar expediente
+            // y agregar ambos reportes como eventos.
+            if (!resultado.ok || !("vinculacion" in resultado) || !resultado.vinculacion) {
+                return { resultado, expedienteId: undefined as string | undefined };
+            }
+            const { reportePrevioId: previoId, reportePrevioCreadoEn } = resultado.vinculacion;
+            const expRepo = new ExpedienteRepository(tx);
+            const existente = await expRepo.buscarExpedienteActivo(usuarioId!, identificador);
+            const expediente = existente ?? await expRepo.crearExpediente({
+                padreUsuarioId: usuarioId!,
+                identificadorReportado: identificador,
+            });
+            // Evento retroactivo (reporte previo). texto="" — AD-3 opción C: el texto
+            // se descifra al leer, no se persiste en el evento. Idempotente en el DAL:
+            // del 3er reporte en adelante el previo ya es evento y no se duplica.
+            await expRepo.agregarEvento({
+                expedienteId: expediente.id,
+                texto: "",
+                reporteId: previoId,
+                fechaEvento: reportePrevioCreadoEn,
+            });
+            // Evento del reporte recién creado.
+            await expRepo.agregarEvento({
+                expedienteId: expediente.id,
+                texto: "",
+                reporteId: resultado.reporte.id,
+            });
+            return { resultado, expedienteId: expediente.id as string | undefined };
+        });
 
         if (!resultado.ok) {
             if (resultado.tipo === "duplicado") {
@@ -170,33 +202,6 @@ export async function POST(request: Request) {
         }
 
         const { reporte } = resultado;
-
-        // SPEC-323 (T011/US2): vinculación aceptada → crear/reutilizar expediente y agregar eventos.
-        let expedienteId: string | undefined;
-        if ("vinculacion" in resultado && resultado.vinculacion) {
-            const { reportePrevioId, reportePrevioCreadoEn } = resultado.vinculacion;
-            const expRepo = new ExpedienteRepository();
-            const existente = await expRepo.buscarExpedienteActivo(usuarioId!, identificador);
-            const expediente = existente ?? await expRepo.crearExpediente({
-                padreUsuarioId: usuarioId!,
-                identificadorReportado: identificador,
-            });
-            expedienteId = expediente.id;
-            // Evento #1 retroactivo (reporte previo). texto="" — AD-3 opción C: el texto
-            // se descifra al leer, no se persiste en el evento.
-            await expRepo.agregarEvento({
-                expedienteId: expediente.id,
-                texto: "",
-                reporteId: reportePrevioId,
-                fechaEvento: reportePrevioCreadoEn,
-            });
-            // Evento #2 (reporte recién creado).
-            await expRepo.agregarEvento({
-                expedienteId: expediente.id,
-                texto: "",
-                reporteId: reporte.id,
-            });
-        }
 
         // Registrar señal de fuente para anti-abuso (Fase A)
         try {
