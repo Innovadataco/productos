@@ -11,7 +11,9 @@ interface Props {
 export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
     const [cuenta, setCuenta] = useState<ComiteCuentaDto | null>(cuentaInicial);
     const [email, setEmail] = useState("");
-    const [passwordTemporal, setPasswordTemporal] = useState<string | null>(null);
+    // SPEC-319 §2.2: el acceso llega por email (link a /activar). NUNCA se pinta una
+    // contraseña en pantalla ni se transmite por chat; solo se confirma el envío.
+    const [invitacionEnviada, setInvitacionEnviada] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +21,7 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
         event.preventDefault();
         setLoading(true);
         setError(null);
-        setPasswordTemporal(null);
+        setInvitacionEnviada(false);
 
         try {
             const res = await fetch("/api/colegio/comite/cuenta", {
@@ -33,7 +35,7 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
                 return;
             }
             setCuenta(data.cuenta);
-            setPasswordTemporal(data.passwordTemporal);
+            setInvitacionEnviada(true);
             setEmail("");
         } catch {
             setError("Error de red al crear la cuenta");
@@ -42,33 +44,43 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
         }
     }
 
-    async function regenerarPassword() {
+    async function reenviarInvitacion() {
         setLoading(true);
         setError(null);
-        setPasswordTemporal(null);
+        setInvitacionEnviada(false);
 
         try {
-            const res = await fetch("/api/colegio/comite/cuenta/regenerar-password", { method: "POST" });
+            const res = await fetch("/api/colegio/comite/cuenta/reenviar-invitacion", { method: "POST" });
             const data = await res.json();
             if (!res.ok) {
-                setError(data.error?.message || "Error al regenerar la contraseña");
+                setError(data.error?.message || "Error al reenviar la invitación");
                 return;
             }
             setCuenta(data.cuenta);
-            setPasswordTemporal(data.passwordTemporal);
+            setInvitacionEnviada(true);
         } catch {
-            setError("Error de red al regenerar la contraseña");
+            setError("Error de red al reenviar la invitación");
         } finally {
             setLoading(false);
         }
     }
+
+    const avisoInvitacion = invitacionEnviada && (
+        <div className="mt-4 rounded-xl bg-pino/10 p-4 text-sm text-estado-pino ring-1 ring-pino/30">
+            <p className="font-semibold">Invitación enviada por email</p>
+            <p className="mt-1">
+                El comité recibirá un link para activar la cuenta y definir su propia contraseña. El link expira en 48 horas.
+            </p>
+        </div>
+    );
 
     if (!cuenta) {
         return (
             <section className="rounded-2xl glass p-6 md:p-8">
                 <h2 className="text-xl font-semibold text-body">Crear cuenta del comité</h2>
                 <p className="mt-2 text-sm text-muted">
-                    La cuenta es compartida por todos los integrantes del Comité de Convivencia.
+                    La cuenta es compartida por todos los integrantes del Comité de Convivencia. El acceso se envía por
+                    email: el comité define su propia contraseña, que nunca se muestra en pantalla.
                 </p>
                 <form onSubmit={crearCuenta} className="mt-4 space-y-4">
                     <div>
@@ -86,15 +98,9 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
                         />
                     </div>
                     {error && <p className="text-sm text-estado-rubi">{error}</p>}
-                    {passwordTemporal && (
-                        <div className="rounded-xl bg-pino/10 p-4 text-sm text-estado-pino ring-1 ring-pino/30">
-                            <p className="font-semibold">Contraseña temporal generada</p>
-                            <p className="mt-1 font-mono">{passwordTemporal}</p>
-                            <p className="mt-1">Entrégala al comité de forma segura; no se volverá a mostrar.</p>
-                        </div>
-                    )}
+                    {avisoInvitacion}
                     <Button type="submit" isLoading={loading}>
-                        {loading ? "Creando…" : "Crear cuenta"}
+                        {loading ? "Enviando…" : "Enviar invitación"}
                     </Button>
                 </form>
             </section>
@@ -123,17 +129,11 @@ export function ComiteCuentaCard({ cuenta: cuentaInicial }: Props) {
                 </div>
             </div>
 
-            {passwordTemporal && (
-                <div className="mt-4 rounded-xl bg-pino/10 p-4 text-sm text-estado-pino ring-1 ring-pino/30">
-                    <p className="font-semibold">Nueva contraseña temporal</p>
-                    <p className="mt-1 font-mono">{passwordTemporal}</p>
-                    <p className="mt-1">Entrégala al comité de forma segura; no se volverá a mostrar.</p>
-                </div>
-            )}
+            {avisoInvitacion}
             {error && <p className="mt-4 text-sm text-estado-rubi">{error}</p>}
 
-            <Button type="button" onClick={regenerarPassword} isLoading={loading} className="mt-6">
-                {loading ? "Generando…" : "Regenerar contraseña"}
+            <Button type="button" onClick={reenviarInvitacion} isLoading={loading} className="mt-6">
+                {loading ? "Reenviando…" : "Reenviar invitación"}
             </Button>
         </section>
     );

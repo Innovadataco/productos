@@ -77,4 +77,30 @@ export class ComiteConvivenciaRepository {
             },
         });
     }
+
+    // SPEC-319 §2.2: regenera el token de invitación y deja la cuenta en INVITADO
+    // (para "reenviar invitación" — el comité vuelve a definir su clave por /activar).
+    actualizarInvitacion(id: string, tokenInvitacion: string, tokenInvitacionExpiraEn: Date) {
+        return this.db.usuario.update({
+            where: { id },
+            data: { tokenInvitacion, tokenInvitacionExpiraEn, estadoActivacion: "INVITADO" },
+            select: {
+                id: true,
+                email: true,
+                estado: true,
+                debeCambiarPassword: true,
+                ultimaSesion: true,
+                creadoEn: true,
+            },
+        });
+    }
+
+    // SPEC-319 §2.2: nombre del colegio para la variable {{nombreColegio}} del email.
+    async nombreColegio(colegioId: string): Promise<string> {
+        const colegio = await this.db.colegio.findUnique({
+            where: { id: colegioId },
+            select: { nombre: true },
+        });
+        return colegio?.nombre ?? "tu colegio";
+    }
 }

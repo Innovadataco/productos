@@ -38,7 +38,7 @@ describe("/api/colegio/comite/cuenta", () => {
         expect(data.cuenta).toBeNull();
     });
 
-    it("crea la cuenta del comité y devuelve contraseña temporal", async () => {
+    it("SPEC-319 §2.2: crea la cuenta como INVITADO con token y NO devuelve contraseña", async () => {
         const { admin } = await crearColegioConAdmin();
         mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
 
@@ -55,7 +55,19 @@ describe("/api/colegio/comite/cuenta", () => {
         const data = await res.json();
         expect(data.cuenta.email).toBe("comite@colegio.test");
         expect(data.cuenta.estado).toBe("activo");
-        expect(data.passwordTemporal).toHaveLength(12);
+        // El acceso llega por email: NUNCA se devuelve una contraseña en la respuesta.
+        expect(data.passwordTemporal).toBeUndefined();
+        expect(data.invitacionEnviada).toBe(true);
+
+        // La cuenta nace INVITADO con token de invitación (para /activar), sin clave usable.
+        const cuentaDb = await prisma.usuario.findUnique({
+            where: { email: "comite@colegio.test" },
+            select: { estadoActivacion: true, tokenInvitacion: true, tokenInvitacionExpiraEn: true, rol: true },
+        });
+        expect(cuentaDb?.rol).toBe("COMITE_CONVIVENCIA");
+        expect(cuentaDb?.estadoActivacion).toBe("INVITADO");
+        expect(cuentaDb?.tokenInvitacion).toHaveLength(64);
+        expect(cuentaDb?.tokenInvitacionExpiraEn).not.toBeNull();
 
         const audit = await prisma.auditLog.findFirst({
             where: { accion: "COLEGIO_COMITE_CREADO" },

@@ -6,7 +6,6 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { ComiteConvivenciaService } from "@/lib/dal/services/comite-convivencia";
-import { enviarEmailCambioPassword } from "@/lib/email";
 import type { InfoClienteDto } from "@/lib/dal/services/comite-convivencia";
 
 function getClientInfo(request: Request): InfoClienteDto {
@@ -42,24 +41,21 @@ export async function POST(request: Request) {
             );
         }
 
-        const resultado = await new ComiteConvivenciaService().regenerarPassword(
+        // SPEC-319 §2.2/§2.3: reenvía la invitación (regenera token + email por /activar).
+        // Antes regeneraba una clave temporal y la pintaba; ya no. El aviso SPEC-322 de
+        // "contraseña cambiada" se quitó porque aquí NO cambia ninguna contraseña — solo
+        // se reenvía la invitación; el comité define su clave nueva al activar.
+        const resultado = await new ComiteConvivenciaService().reenviarInvitacion(
             user.colegioId,
             user.id,
             getClientInfo(request)
         );
-
-        // SPEC-322 (camino 7): aviso al miembro del comité cuando el rector le regenera la clave.
-        try {
-            await enviarEmailCambioPassword(resultado.cuenta.email);
-        } catch {
-            // fallo silencioso — el aviso no es bloqueante
-        }
 
         return NextResponse.json(resultado);
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
         }
-        return errorToResponse(error, "[COLEGIO/COMITE/CUENTA/REGENERAR-PASSWORD]");
+        return errorToResponse(error, "[COLEGIO/COMITE/CUENTA/REENVIAR-INVITACION]");
     }
 }

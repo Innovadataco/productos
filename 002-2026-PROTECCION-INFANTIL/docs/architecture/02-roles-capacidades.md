@@ -250,7 +250,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
-| `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | api | permitir | permite | sí |
 | `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
@@ -690,7 +690,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
-| `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | api | permitir | permite | sí |
 | `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
@@ -1130,7 +1130,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
-| `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | api | permitir | permite | sí |
 | `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
@@ -1570,7 +1570,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
-| `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | api | permitir | permite | sí |
 | `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
@@ -2010,7 +2010,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cobertura` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
-| `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | api | permitir | permite | sí |
 | `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | HTTP 403 | no permite | sí |
@@ -2450,7 +2450,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
-| `/api/colegio/comite/cuenta/regenerar-password` | api | permitir | permite | sí |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | api | permitir | permite | sí |
 | `/api/colegio/comite/estadisticas` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes` | api | permitir | permite | sí |
 | `/api/colegio/comite/integrantes/[id]` | api | permitir | permite | sí |
@@ -2890,7 +2890,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/cobertura` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/cuenta` | api | HTTP 401 | permite | **NO** |
-| `/api/colegio/comite/cuenta/regenerar-password` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/estadisticas` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/integrantes` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/integrantes/[id]` | api | HTTP 401 | permite | **NO** |
@@ -3316,7 +3316,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/cobertura` | HTTP 401 | permite |
 | `/api/colegio/comite` | HTTP 401 | permite |
 | `/api/colegio/comite/cuenta` | HTTP 401 | permite |
-| `/api/colegio/comite/cuenta/regenerar-password` | HTTP 401 | permite |
+| `/api/colegio/comite/cuenta/reenviar-invitacion` | HTTP 401 | permite |
 | `/api/colegio/comite/estadisticas` | HTTP 401 | permite |
 | `/api/colegio/comite/integrantes` | HTTP 401 | permite |
 | `/api/colegio/comite/integrantes/[id]` | HTTP 401 | permite |

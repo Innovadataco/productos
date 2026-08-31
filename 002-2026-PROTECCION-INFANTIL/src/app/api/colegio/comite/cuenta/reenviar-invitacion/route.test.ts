@@ -14,7 +14,7 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-describe("/api/colegio/comite/cuenta/regenerar-password", () => {
+describe("/api/colegio/comite/cuenta/reenviar-invitacion", () => {
     beforeEach(async () => {
         await resetDatabase();
         mockToken = undefined;
@@ -23,7 +23,7 @@ describe("/api/colegio/comite/cuenta/regenerar-password", () => {
         }
     });
 
-    it("regenera la contraseña de la cuenta del comité", async () => {
+    it("SPEC-319 §2.2: reenvía la invitación (nuevo token, INVITADO) sin devolver contraseña", async () => {
         const { admin, colegio } = await crearColegioConAdmin();
         await crearComiteCuenta(colegio.id, "comite@colegio.test");
         mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
@@ -31,7 +31,7 @@ describe("/api/colegio/comite/cuenta/regenerar-password", () => {
         const res = await POST(
             crearRequestAutenticado(
                 "POST",
-                "http://localhost:5005/api/colegio/comite/cuenta/regenerar-password",
+                "http://localhost:5005/api/colegio/comite/cuenta/reenviar-invitacion",
                 {},
                 mockToken
             )
@@ -40,8 +40,17 @@ describe("/api/colegio/comite/cuenta/regenerar-password", () => {
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data.cuenta.email).toBe("comite@colegio.test");
-        expect(data.cuenta.debeCambiarPassword).toBe(true);
-        expect(data.passwordTemporal).toHaveLength(12);
+        // Reenviar NO devuelve contraseña — el acceso llega por email.
+        expect(data.passwordTemporal).toBeUndefined();
+        expect(data.invitacionEnviada).toBe(true);
+
+        // La cuenta queda INVITADO con un token nuevo para /activar.
+        const cuentaDb = await prisma.usuario.findUnique({
+            where: { email: "comite@colegio.test" },
+            select: { estadoActivacion: true, tokenInvitacion: true },
+        });
+        expect(cuentaDb?.estadoActivacion).toBe("INVITADO");
+        expect(cuentaDb?.tokenInvitacion).toHaveLength(64);
 
         const audit = await prisma.auditLog.findFirst({
             where: { accion: "COLEGIO_COMITE_PASSWORD_REGENERADA" },
@@ -56,7 +65,7 @@ describe("/api/colegio/comite/cuenta/regenerar-password", () => {
         const res = await POST(
             crearRequestAutenticado(
                 "POST",
-                "http://localhost:5005/api/colegio/comite/cuenta/regenerar-password",
+                "http://localhost:5005/api/colegio/comite/cuenta/reenviar-invitacion",
                 {},
                 mockToken
             )
