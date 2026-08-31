@@ -1,6 +1,8 @@
 # SPEC-322 · Aviso por correo cuando cambia la contraseña
 
-> Status: PLANEADO · Rama: work/pi-SPEC-322-aviso-cambio-contrasena · Radicado: 002-PI-222
+> **Status**: DESARROLLO (Rama: work/pi-SPEC-322-aviso-cambio-contrasena · Radicado: 002-PI-222)
+
+**Impacto en arquitectura:** Evento de notificación nuevo `auth.password_cambiada` + plantilla de email + regla activa (`obligatoria:true`) via seed idempotente, reutilizando `programar()` del motor existente. Extensión aditiva de `ResultadoRestablecer` para exponer `email` al adaptador. Cero migración de esquema, cero campo nuevo en Prisma, cero librería nueva.
 
 ## Contexto
 
