@@ -75,6 +75,12 @@ describe("POST /api/pagos/suscripcion/cancelar", () => {
         expect(actualizada?.estado).toBe(EstadoSuscripcion.CANCELADA);
         expect(actualizada?.canceladaPorUsuario).toBe(true);
         expect(actualizada?.motivoCancelacion).toBe("Ya no la necesito");
+
+        // SPEC-337 (I-227): al cancelar se re-sella `sesion_estado` → el corte de
+        // acceso es inmediato (el middleware gatea al padre sin esperar un refresh).
+        const setCookies = res.headers.getSetCookie?.() ?? res.headers.get("set-cookie") ?? "";
+        const cookieStr = Array.isArray(setCookies) ? setCookies.join("; ") : setCookies;
+        expect(cookieStr).toContain("sesion_estado=");
     });
 
     it("rechaza con 409 si ya está cancelada", async () => {

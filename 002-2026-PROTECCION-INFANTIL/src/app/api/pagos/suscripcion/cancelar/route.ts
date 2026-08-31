@@ -15,6 +15,7 @@ import { cancelarSuscripcionCliente } from "@/lib/pagos/cancelacion.service";
 import { verificarTitularidad } from "@/lib/pagos/suscripcion-vista.service";
 import { getClientInfo } from "@/lib/pagos/api-helpers";
 import { auditAccesoDenegado } from "@/lib/audit";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 
 export async function POST(request: Request) {
     try {
@@ -49,10 +50,14 @@ export async function POST(request: Request) {
             userAgent,
         });
 
-        return NextResponse.json(
+        const res = NextResponse.json(
             { estado: resultado.estado, canceladaEn: resultado.canceladaEn.toISOString() },
             { status: 200 }
         );
+        // SPEC-337 (I-227): la suscripción quedó CANCELADA; re-sellar `sesion_estado`
+        // para que el corte de acceso sea INMEDIATO y coherente, sin esperar un refresh.
+        await sellarCookieSesionEstado(res, usuario.id);
+        return res;
     } catch (error) {
         return errorToResponse(error, "[PAGOS/SUSCRIPCION-CANCELAR]");
     }

@@ -10,6 +10,7 @@ import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { pagosActivarFreemiumBodySchema } from "@/lib/schemas/pagos";
 import { activarFreemiumConRateLimit } from "@/lib/pagos/freemium-activacion.service";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 
 export async function POST(request: Request) {
     try {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
             request,
         });
 
-        return NextResponse.json(
+        const res = NextResponse.json(
             {
                 suscripcionId: resultado.suscripcion.id,
                 estado: resultado.suscripcion.estado,
@@ -46,6 +47,10 @@ export async function POST(request: Request) {
             },
             { status: 201 }
         );
+        // SPEC-335 (I-227): la suscripción quedó ACTIVA; re-sellar `sesion_estado`
+        // para que el middleware abra los módulos AL INSTANTE, sin esperar un refresh.
+        await sellarCookieSesionEstado(res, usuario.id);
+        return res;
     } catch (error) {
         return errorToResponse(error, "[PADRE/SUSCRIPCION/ACTIVAR-FREEMIUM]");
     }
