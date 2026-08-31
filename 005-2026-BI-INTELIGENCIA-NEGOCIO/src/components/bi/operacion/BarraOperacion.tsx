@@ -1,4 +1,5 @@
 import { RelojColombia } from "./RelojColombia";
+import { CerrarSesion } from "@/components/bi/auth/CerrarSesion";
 import { mostrar } from "@/lib/bi/operacion";
 
 interface Props {
@@ -23,6 +24,7 @@ export function BarraOperacion({ titulo, actualizado, commit }: Props) {
                 <span>
                     Prod <b>{mostrar(commit)}</b>
                 </span>
+                <CerrarSesion />
             </div>
         </div>
     );

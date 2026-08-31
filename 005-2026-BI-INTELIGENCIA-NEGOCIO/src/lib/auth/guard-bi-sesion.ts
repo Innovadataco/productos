@@ -12,8 +12,8 @@ import { sesionDeRequest, type Sesion } from "@/lib/auth/sesion";
 // y NO se depende de x-invoke-path (limitación D-029.6, que solo afectaba a
 // la preservación de sub-rutas dinámicas).
 //
-// SPEC-036 (login propio de BI) cambiará únicamente el interior de este
-// helper (a qué guard redirige); la estructura layout→exigirSesionBi se queda.
+// SPEC-036 (login propio de BI) · el guard ahora redirige al login PROPIO de
+// BI (`/login`, ruta relativa), no al puente SSO de PI. Una sola puerta.
 export async function exigirSesionBi(rutaBi: string): Promise<Sesion> {
     const h = await headers();
     // Request sintético para reutilizar sesionDeRequest sin duplicar la
@@ -26,14 +26,9 @@ export async function exigirSesionBi(rutaBi: string): Promise<Sesion> {
     });
     const sesion = await sesionDeRequest(req);
     if (!sesion) {
-        // SPEC-029 · puente de sesión en PI. Con el patrón BI_BASE_URL que hoy
-        // vive en main (SPEC-030/resolveBiBaseUrl está congelado en PR #168).
-        const pi = process.env.PI_BASE_URL ?? "https://pi.innovadataco.com";
-        const bi = process.env.BI_BASE_URL ?? "http://localhost:3001";
-        const returnTo = `${bi}${rutaBi}`;
-        redirect(
-            `${pi}/api/auth/link-bi?returnTo=${encodeURIComponent(returnTo)}`,
-        );
+        // Login propio de BI · ruta relativa (returnTo también relativa, la
+        // valida sanitizeReturnTo al volver). Ya no depende de PI_BASE_URL.
+        redirect(`/login?returnTo=${encodeURIComponent(rutaBi)}`);
     }
     return sesion;
 }
