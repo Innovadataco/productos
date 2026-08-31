@@ -5,12 +5,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { crearUsuario, crearParametrosReportes } from "@/lib/reporte-test-utils";
+import { crearUsuario, crearParametrosReportes, crearPlataforma } from "@/lib/reporte-test-utils";
 import {
     agregarContacto,
     eliminarContacto,
     verificarUnicidadIdentificador,
 } from "./contactos-mutaciones";
+import { listarContactos } from "./contactos";
 
 describe("contactos vigilo (SPEC-325)", () => {
     beforeEach(async () => {
@@ -69,5 +70,38 @@ describe("contactos vigilo (SPEC-325)", () => {
         expect(res.perteneceA).toBe("Tío Juan");
         // identificador distinto → no duplicado
         expect((await verificarUnicidadIdentificador(padre.id, "otro_id")).duplicado).toBe(false);
+    });
+
+    it("🔴 defecto silencioso: contacto guardado 'TioJuan1' CRUZA un reporte 'tiojuan1'", async () => {
+        // Este es el fix estrella (§3.3 / evidencia §6.7): antes el contacto se
+        // guardaba crudo ('TioJuan1') y el reporte llegaba en otro case ('tiojuan1')
+        // → no cruzaba y no avisaba. Ahora ambos lados normalizan al mismo valor.
+        const padre = await crearUsuario("PARENT");
+        const plat = await crearPlataforma("roblox", "Roblox", "juegos");
+        // El padre guarda el identificador con mayúsculas.
+        await agregarContacto(padre.id, {
+            nombre: "Tío Juan",
+            identificadores: [{ valor: "TioJuan1", plataformaId: plat.id }],
+        });
+        // Alguien reporta el mismo identificador en minúsculas. Insertamos el
+        // reporte ya en la forma canónica (como lo deja el embudo de creación de
+        // reporte, reporte-creation.ts) en un estado que cruza (REVISION_MANUAL).
+        await prisma.reporte.create({
+            data: {
+                identificador: "tiojuan1",
+                plataformaId: plat.id,
+                texto: "reporte de prueba",
+                fechaIncidente: new Date(),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                estado: "REVISION_MANUAL",
+            },
+        });
+        const { contactos } = await listarContactos(padre.id);
+        expect(contactos).toHaveLength(1);
+        // el contacto ahora VE el reporte (cruce case-insensitive) — antes daba 0
+        expect(contactos[0].totalReportes).toBe(1);
+        expect(contactos[0].estado).not.toBe("sinReportes");
     });
 });
