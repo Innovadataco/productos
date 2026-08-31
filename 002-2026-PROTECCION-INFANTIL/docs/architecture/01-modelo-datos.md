@@ -369,6 +369,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | poblacion | Int | opcional |
 | pais | Pais | relación (FK) |
 | departamento | Departamento | opcional, relación (FK) |
+| usuariosPerfil | Usuario | lista, relación |
 | colegios | Colegio | lista, relación |
 | reportes | Reporte | lista, relación |
 
@@ -398,6 +399,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | ciudades | Ciudad | lista, relación |
 | departamentos | Departamento | lista, relación |
+| usuariosPerfil | Usuario | lista, relación |
 | colegios | Colegio | lista, relación |
 | reportes | Reporte | lista, relación |
 
@@ -1824,6 +1826,11 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | id | String | id |
 | email | String | único |
 | nombre | String | opcional |
+| apellidos | String | opcional |
+| fechaNacimiento | DateTime | opcional |
+| telefono | String | opcional |
+| paisId | String | opcional |
+| ciudadId | String | opcional |
 | passwordHash | String | — |
 | rol | RolUsuario | — |
 | estado | EstadoUsuario | — |
@@ -1905,6 +1912,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | aclaracionesRespondidas | AclaracionExpediente | lista, relación |
 | contactosEmergencia | ContactoEmergencia | lista, relación |
 | reglasHistorialCambiadas | ReglaRecomendacionHistorial | lista, relación |
+| paisPerfil | Pais | opcional, relación |
+| ciudadPerfil | Ciudad | opcional, relación |
 
 ## Diagrama ER (Mermaid)
 

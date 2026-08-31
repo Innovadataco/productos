@@ -541,6 +541,12 @@ model Usuario {
   id                          String           @id @default(cuid())
   email                       String           @unique
   nombre                      String?
+  // SPEC-334: datos de perfil del padre (aditivos, nullable). "Nombres" = `nombre`.
+  apellidos                   String?
+  fechaNacimiento             DateTime?
+  telefono                    String?
+  paisId                      String?
+  ciudadId                    String?
   passwordHash                String
   rol                         RolUsuario
   estado                      EstadoUsuario    @default(activo)
@@ -643,11 +649,16 @@ model Usuario {
   contactosEmergencia              ContactoEmergencia[]
   // SPEC-224 (002-PI-125): versiones de reglas de recomendación cambiadas por el admin.
   reglasHistorialCambiadas         ReglaRecomendacionHistorial[]
+  // SPEC-334: país/ciudad del perfil del padre (catálogo geográfico existente).
+  paisPerfil                       Pais?                           @relation("UsuariosPorPais", fields: [paisId], references: [id])
+  ciudadPerfil                     Ciudad?                         @relation("UsuariosPorCiudad", fields: [ciudadId], references: [id])
 
   @@index([email])
   @@index([rol])
   @@index([estado])
   @@index([tenantId])
+  @@index([paisId])
+  @@index([ciudadId])
 }
 
 model PerfilOperador {
@@ -1626,6 +1637,7 @@ model Pais {
 
   ciudades      Ciudad[]
   departamentos Departamento[]
+  usuariosPerfil Usuario[]    @relation("UsuariosPorPais")
   colegios      Colegio[]
   reportes      Reporte[]
 
@@ -1669,6 +1681,7 @@ model Ciudad {
 
   pais         Pais          @relation(fields: [paisId], references: [id])
   departamento Departamento? @relation(fields: [departamentoId], references: [id])
+  usuariosPerfil Usuario[]   @relation("UsuariosPorCiudad")
   colegios     Colegio[]
   reportes     Reporte[]
 

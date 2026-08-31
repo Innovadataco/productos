@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 443 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3101 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 444 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3108 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -332,6 +332,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
+| `/api/padre/perfil` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -780,6 +781,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
+| `/api/padre/perfil` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -1228,6 +1230,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
+| `/api/padre/perfil` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -1676,6 +1679,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/hijos/identificadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
+| `/api/padre/perfil` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | HTTP 403 | no permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -2124,6 +2128,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/hijos/identificadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
+| `/api/padre/perfil` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | HTTP 403 | no permite | sí |
 | `/api/pagos` | api | HTTP 403 | no permite | sí |
@@ -2572,6 +2577,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
+| `/api/padre/perfil` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -3020,6 +3026,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/hijos/identificadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/home` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/home/sugerencia` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/perfil` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/suscripcion/solicitar-plan` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos` | api | HTTP 401 | permite | **NO** |
@@ -3444,6 +3451,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/hijos/identificadores/[id]` | HTTP 401 | permite |
 | `/api/padre/home` | HTTP 401 | permite |
 | `/api/padre/home/sugerencia` | HTTP 401 | permite |
+| `/api/padre/perfil` | HTTP 401 | permite |
 | `/api/padre/suscripcion/activar-freemium` | HTTP 401 | permite |
 | `/api/padre/suscripcion/solicitar-plan` | HTTP 401 | permite |
 | `/api/pagos` | HTTP 401 | permite |
