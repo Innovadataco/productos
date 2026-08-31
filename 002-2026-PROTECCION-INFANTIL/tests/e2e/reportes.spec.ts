@@ -78,7 +78,8 @@ test.describe("Flujo de reportes comunitarios", () => {
         await expect(page.getByText(identificador)).toBeVisible();
     });
 
-    test("usuario autenticado no puede reportar el mismo identificador dos veces en 30 días", async ({ request }) => {
+    // SPEC-323 (T008/US1): el 2º reporte del padre recibe oferta, no bloqueo (candado 26).
+    test("usuario autenticado recibe oferta de vinculación al reportar el mismo identificador dos veces en 30 días", async ({ request }) => {
         const email = `e2e-parent-${Date.now()}@example.com`;
         await registrarUsuario(request, email, "TestPass123", "Parent E2E");
 
@@ -98,11 +99,41 @@ test.describe("Flujo de reportes comunitarios", () => {
 
         const primer = await request.post("/api/reportes", { data: body });
         expect(primer.status()).toBe(201);
+        const primerJson = await primer.json();
+        expect(primerJson.reporte.id).toBeTruthy();
 
+        // 2º intento sin reportePrevioId → oferta (200), no bloqueo (429).
+        const segundo = await request.post("/api/reportes", { data: body });
+        expect(segundo.status()).toBe(200);
+        const segundoJson = await segundo.json();
+        expect(segundoJson.oferta).toBe(true);
+        expect(segundoJson.reporteExistenteId).toBe(primerJson.reporte.id);
+        expect(segundoJson.identificador).toBe(identificador);
+    });
+
+    // SPEC-323 (T008/US1 · regresión anónimo): el anónimo sigue bloqueado con 429.
+    test("usuario anónimo sigue recibiendo 429 al reportar el mismo identificador dos veces", async ({ request }) => {
+        const { paisId, ciudadId } = await obtenerColombiaBogota(request);
+        const identificador = `+57300ANON${Date.now()}`;
+
+        const body = {
+            identificador,
+            plataforma: "whatsapp",
+            texto: "Contacto sospechoso con menores.",
+            fechaIncidente: "2026-07-10T10:00:00Z",
+            ciudad: "Bogotá",
+            pais: "Colombia",
+            paisId,
+            ciudadId,
+        };
+
+        const primer = await request.post("/api/reportes", { data: body });
+        expect(primer.status()).toBe(201);
+
+        // El anónimo sigue con el comportamiento anterior.
         const segundo = await request.post("/api/reportes", { data: body });
         expect(segundo.status()).toBe(429);
         const json = await segundo.json();
         expect(json.error.code).toBe("DUPLICATE_REPORT");
-        expect(json.error.message).toContain("Ya reportaste este identificador");
     });
 });

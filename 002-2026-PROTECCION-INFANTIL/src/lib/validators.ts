@@ -29,6 +29,7 @@ export const crearReporteSchema = z.object({
     ciudadId: z.string().optional(),
     otraPlataforma: z.string().max(100).optional(),
     edadVictima: z.number().int().min(0).max(120).optional(),
+    reportePrevioId: z.string().min(1).optional(),
 });
 
 export type CrearReporteInput = z.infer<typeof crearReporteSchema>;

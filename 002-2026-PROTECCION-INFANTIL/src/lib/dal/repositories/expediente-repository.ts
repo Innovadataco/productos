@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { EstadoExpediente } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import type { DbClient } from "../unit-of-work";
 import { withUnitOfWork } from "../unit-of-work";
 
@@ -302,5 +303,98 @@ export class ExpedienteRepository {
             return null;
         }
         return expediente;
+    }
+
+    /**
+     * SPEC-323 (T009): busca el expediente ACTIVO de un padre para un
+     * identificador dado. Retorna null si no existe — el flujo de vinculación
+     * usa este método para decidir si crear o reutilizar.
+     */
+    async buscarExpedienteActivo(padreUsuarioId: string, identificadorReportado: string) {
+        return this.db.expediente.findFirst({
+            where: {
+                padreUsuarioId,
+                identificadorReportado,
+                estado: EstadoExpediente.ACTIVO,
+            },
+        });
+    }
+
+    /**
+     * SPEC-323 (T014/US3): detalle del expediente para su dueño.
+     * - eventosPropios: eventos del padre con texto descifrado (AD-3 opción C).
+     * - contextoOtros: solo 4 campos de los eventos de otros (Ley 1581 § SELECT).
+     *
+     * C/AD-3: el expediente es documento probatorio del dueño (spec 090/116 acotada,
+     * no derogada); descifrado server-side solo para el padreUsuarioId dueño,
+     * nunca para ajenos, sin persistir.
+     */
+    async obtenerDetalleExpediente(id: string, padreUsuarioId: string) {
+        const expediente = await this.db.expediente.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                padreUsuarioId: true,
+                identificadorReportado: true,
+                estado: true,
+                scoreGravedadActual: true,
+                fechaApertura: true,
+                numEventos: true,
+            },
+        });
+
+        if (!expediente || expediente.padreUsuarioId !== padreUsuarioId) return null;
+
+        // Eventos propios: todos los campos + texto descifrado de su Reporte.
+        const eventosPropiosRaw = await this.db.eventoExpediente.findMany({
+            where: { expedienteId: id, expediente: { padreUsuarioId } },
+            orderBy: { ordenSecuencial: "asc" },
+            select: {
+                id: true,
+                ordenSecuencial: true,
+                fechaEvento: true,
+                texto: true,
+                plataforma: true,
+                reporteId: true,
+                reporte: {
+                    select: {
+                        texto: true,
+                        ciudad: true,
+                        pais: true,
+                        fechaIncidente: true,
+                        clasificacion: { select: { categoria: true, confianza: true } },
+                    },
+                },
+            },
+        });
+
+        const eventosPropios = eventosPropiosRaw.map((ev) => ({
+            ...ev,
+            // C/AD-3: descifrado en memoria, no persistido.
+            textoDescifrado: ev.reporte?.texto ? descifrarTextoReporte(ev.reporte.texto) : "",
+        }));
+
+        // Contexto de otros: solo fecha/ciudad/país/clasificación (Ley 1581 § SELECT).
+        const contextoOtros = await this.db.eventoExpediente.findMany({
+            where: {
+                expediente: {
+                    identificadorReportado: expediente.identificadorReportado,
+                    padreUsuarioId: { not: padreUsuarioId },
+                },
+            },
+            orderBy: { fechaEvento: "asc" },
+            select: {
+                fechaEvento: true,
+                reporte: {
+                    select: {
+                        ciudad: true,
+                        pais: true,
+                        clasificacion: { select: { categoria: true, confianza: true } },
+                    },
+                },
+            },
+        });
+
+        return { expediente, eventosPropios, contextoOtros };
     }
 }

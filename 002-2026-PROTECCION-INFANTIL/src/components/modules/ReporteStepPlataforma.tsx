@@ -10,11 +10,13 @@ export function ReporteStepPlataforma({
     identificador,
     plataforma,
     otraPlataforma,
+    identificadorBloqueado,
     onChange,
 }: {
     identificador: string;
     plataforma: string;
     otraPlataforma: string;
+    identificadorBloqueado?: boolean;
     onChange: (v: {
         identificador: string;
         plataforma: string;
@@ -59,6 +61,8 @@ export function ReporteStepPlataforma({
                 placeholder="Ej: +573001234567"
                 value={identificador}
                 onChange={(e) => onChange({ identificador: e.target.value, plataforma, otraPlataforma })}
+                readOnly={identificadorBloqueado}
+                className={identificadorBloqueado ? "opacity-70 cursor-not-allowed bg-slate-50 dark:bg-slate-800" : ""}
             />
             <Select
                 label="Plataforma"
