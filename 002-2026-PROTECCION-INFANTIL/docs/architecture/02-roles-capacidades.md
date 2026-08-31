@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 441 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3087 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 443 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3101 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -325,7 +325,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
@@ -771,7 +773,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
@@ -1217,7 +1221,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
@@ -1663,7 +1669,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes/[id]/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos/identificadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
@@ -2109,7 +2117,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes/[id]/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos/identificadores/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
@@ -2555,7 +2565,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/identificadores/[id]` | api | permitir | permite | sí |
 | `/api/padre/home` | api | permitir | permite | sí |
@@ -3001,7 +3013,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/expedientes/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/expedientes/[id]/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/hijos` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/hijos/identificadores/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/home` | api | HTTP 401 | permite | **NO** |
@@ -3423,7 +3437,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/contacto-emergencia/[id]` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | HTTP 401 | permite |
+| `/api/padre/expedientes/[id]` | HTTP 401 | permite |
 | `/api/padre/expedientes/[id]/eventos` | HTTP 401 | permite |
+| `/api/padre/expedientes/[id]/pdf` | HTTP 401 | permite |
 | `/api/padre/hijos` | HTTP 401 | permite |
 | `/api/padre/hijos/identificadores/[id]` | HTTP 401 | permite |
 | `/api/padre/home` | HTTP 401 | permite |
