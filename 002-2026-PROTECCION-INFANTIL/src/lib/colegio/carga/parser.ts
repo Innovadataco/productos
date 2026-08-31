@@ -15,6 +15,11 @@ export type FilaCargaEstudiante = {
     alumno: {
         nombre: string;
         apellidos: string;
+        // SPEC-320 (§2.2-bis): documento del alumno obligatorio. Se lee de la plantilla
+        // (columnas nuevas); la fila sin documento se marca como "fila con problema" y
+        // NO se crea (mismo patrón que apellidos), nunca rechaza el archivo entero.
+        documentoTipo: string;
+        documentoNumero: string;
     };
     identificador: {
         tipo: string;
@@ -53,6 +58,14 @@ export const COLUMNAS_REQUERIDAS = [
 // la fila sin apellidos se marca como "fila con problema", el archivo NUNCA se
 // rechaza entero. La plantilla descargable sí la incluye.
 export const COLUMNA_OPCIONAL_APELLIDOS = "apellidos_alumno";
+
+// SPEC-320 (§2.2-bis): columnas de documento del alumno. Opcionales EN EL ARCHIVO
+// (compat con plantillas viejas), pero de VALOR requerido: la fila sin documento se
+// marca como "fila con problema" y no se crea. La plantilla descargable las incluye.
+export const COLUMNAS_OPCIONALES_DOCUMENTO = [
+    "documento_tipo_alumno",
+    "documento_numero_alumno",
+];
 
 // SPEC-146 (FR-003): columnas OPCIONALES de acudiente — las trae la plantilla del
 // wizard unificado; el pipeline de carga viejo las ignora (solo se leen cuando el
@@ -249,6 +262,8 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
 
     const filas: FilaCargaEstudiante[] = [];
     const idxApellidos = headers.indexOf(COLUMNA_OPCIONAL_APELLIDOS);
+    const idxDocTipo = headers.indexOf("documento_tipo_alumno");
+    const idxDocNumero = headers.indexOf("documento_numero_alumno");
     // SPEC-146: índices de las columnas opcionales de acudiente (-1 si la
     // plantilla no las trae — en ese caso la fila no lleva la clave `acudiente`).
     const idxAcudiente = new Map(
@@ -289,6 +304,8 @@ export async function parseArchivoCarga(arrayBuffer: ArrayBuffer, extension: "cs
             alumno: {
                 nombre: nombreEstudiante,
                 apellidos: apellidosEstudiante,
+                documentoTipo: leer(idxDocTipo).toUpperCase(),
+                documentoNumero: leer(idxDocNumero),
             },
             identificador: {
                 tipo: tipoIdentificador,

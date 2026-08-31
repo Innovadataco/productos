@@ -24,6 +24,8 @@ function filaBase(override: {
         alumno: {
             nombre: override.nombreEstudiante ?? "María",
             apellidos: override.apellidosEstudiante ?? "Gómez",
+            documentoTipo: "TI",
+            documentoNumero: override.nombreEstudiante ? `VAL-${override.nombreEstudiante}` : "VAL-1",
         },
         identificador: {
             tipo: override.tipo ?? "telefono",

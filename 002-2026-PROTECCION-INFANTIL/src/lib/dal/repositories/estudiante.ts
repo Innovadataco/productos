@@ -146,6 +146,16 @@ export class EstudianteRepository {
         });
     }
 
+    /**
+     * SPEC-320 (§2.2-bis): estudiante ACTIVO con ese documento (tipo+número) en el
+     * colegio. Único por colegio (consistente con el índice parcial WHERE estado='activo').
+     */
+    buscarPorDocumentoEnColegio(colegioId: string, documentoTipo: string, documentoNumero: string) {
+        return this.db.estudiante.findFirst({
+            where: { colegioId, documentoTipo, documentoNumero, estado: "activo" },
+        });
+    }
+
     /** Duplicado de nombre + apellidos en OTRO estudiante del mismo curso (edición). */
     buscarDuplicadoEnCurso(colegioId: string, cursoId: string, nombre: string, apellidos: string, excluirId: string) {
         return this.db.estudiante.findFirst({

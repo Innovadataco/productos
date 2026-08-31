@@ -97,15 +97,25 @@ export async function importarCargaMasiva(
                 estudiante = { id: existente.id, creado: false };
                 resumen.alumnosReutilizados++;
             } else {
-                // SPEC-320 (§2.2-bis · interim): el documento del alumno es obligatorio,
-                // pero la plantilla/parser de carga masiva aún no trae columna de documento
-                // (columna Excel diferida a radicado propio). En vez de romper en silencio
-                // o inventar un documento falso, se rechaza con mensaje claro.
-                throw new AppError(
-                    "La carga masiva de alumnos requiere documento de identidad. Usá el alta individual (que ya pide el documento) o esperá la plantilla actualizada.",
-                    ERROR_CODES.VALIDATION_ERROR,
-                    400
-                );
+                // SPEC-320 (§2.2-bis): documento del alumno obligatorio (plantilla/parser
+                // ya traen las columnas). Guarda de seguridad: si la fila llegó sin
+                // documento (no debería, validar-lista lo filtra antes), se rechaza claro.
+                if (!fila.alumno.documentoTipo.trim() || !fila.alumno.documentoNumero.trim()) {
+                    throw new AppError(
+                        `Falta el documento del alumno "${fila.alumno.nombre}" en la carga.`,
+                        ERROR_CODES.VALIDATION_ERROR,
+                        400
+                    );
+                }
+                const nuevo = await estudiantes.crear(colegioId, {
+                    cursoId: curso.id,
+                    nombre: fila.alumno.nombre,
+                    apellidos: fila.alumno.apellidos,
+                    documentoTipo: fila.alumno.documentoTipo,
+                    documentoNumero: fila.alumno.documentoNumero,
+                });
+                estudiante = { id: nuevo.id, creado: true };
+                resumen.alumnosCreados++;
             }
             estudiantesPorClave.set(estudianteKey, estudiante);
         }

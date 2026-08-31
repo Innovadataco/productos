@@ -24,7 +24,7 @@ function filasDePrueba(): FilaCargaEstudiante[] {
         {
             fila: 2,
             curso: { nombre: "6A", grado: "Sexto", anioLectivo: "2026" },
-            alumno: { nombre: "María", apellidos: "Gómez" },
+            alumno: { nombre: "María", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "SES-1" },
             identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ESTUDIANTE", plataformaId: "WhatsApp" },
         },
     ];

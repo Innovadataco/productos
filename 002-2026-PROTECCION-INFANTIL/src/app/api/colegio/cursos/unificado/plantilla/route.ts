@@ -4,7 +4,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { COLUMNAS_REQUERIDAS, COLUMNA_OPCIONAL_APELLIDOS, COLUMNAS_OPCIONALES_ACUDIENTE } from "@/lib/colegio/carga/parser";
+import { COLUMNAS_REQUERIDAS, COLUMNA_OPCIONAL_APELLIDOS, COLUMNAS_OPCIONALES_DOCUMENTO, COLUMNAS_OPCIONALES_ACUDIENTE } from "@/lib/colegio/carga/parser";
 
 /**
  * SPEC-146 (FR-003) — GET /api/colegio/cursos/unificado/plantilla: plantilla de
@@ -16,6 +16,7 @@ import { COLUMNAS_REQUERIDAS, COLUMNA_OPCIONAL_APELLIDOS, COLUMNAS_OPCIONALES_AC
 const COLUMNAS_PLANTILLA = [
     ...COLUMNAS_REQUERIDAS.slice(0, 4),
     COLUMNA_OPCIONAL_APELLIDOS,
+    ...COLUMNAS_OPCIONALES_DOCUMENTO, // SPEC-320 (§2.2-bis): documento del alumno
     ...COLUMNAS_REQUERIDAS.slice(4),
     ...COLUMNAS_OPCIONALES_ACUDIENTE,
 ];
@@ -26,6 +27,8 @@ const FILA_EJEMPLO = [
     "2026",
     "María",
     "Gómez Pérez",
+    "TI",
+    "1020304050",
     "telefono",
     "+573001234567",
     "ESTUDIANTE",

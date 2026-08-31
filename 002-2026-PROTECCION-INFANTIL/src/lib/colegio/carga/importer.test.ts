@@ -9,7 +9,7 @@ function fila(nombreCurso: string, nombreEstudiante: string, tipo: string, valor
     return {
         fila: 2,
         curso: { nombre: nombreCurso, grado: "Sexto", anioLectivo: "2026" },
-        alumno: { nombre: nombreEstudiante, apellidos: apellidosEstudiante },
+        alumno: { nombre: nombreEstudiante, apellidos: apellidosEstudiante, documentoTipo: "TI", documentoNumero: `DOC-${nombreEstudiante}` },
         identificador: {
             tipo,
             valor,
