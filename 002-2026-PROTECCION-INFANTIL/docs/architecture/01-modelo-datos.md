@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **95** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **99** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -87,6 +87,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadores | IdentificadorReportado | lista, relación |
 | alertasSuscripcion | AlertaSuscripcion | lista, relación |
 | identificadoresContacto | IdentificadorContacto | lista, relación |
+| identificadoresHijo | IdentificadorHijo | lista, relación |
 | identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
@@ -117,6 +118,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | id | String | id |
 | usuarioId | String | — |
 | etiqueta | String | opcional |
+| nombre | String | opcional |
+| parentesco | String | opcional |
 | nota | String | opcional |
 | activo | Boolean | — |
 | creadoEn | DateTime | — |
@@ -483,7 +486,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (47)
+### Otros (sin regla de dominio) (51)
 
 #### `AclaracionExpediente`
 
@@ -797,6 +800,33 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | metodo | String | opcional |
 | creadoEn | DateTime | — |
 
+#### `Hijo`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| nombre | String | — |
+| apellidos | String | — |
+| documentoTipo | String | — |
+| documentoNumero | String | — |
+| anioNacimiento | Int | opcional |
+| sexo | String | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| padres | HijoPadre | lista, relación |
+| identificadores | IdentificadorHijo | lista, relación |
+
+#### `HijoPadre`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| hijoId | String | — |
+| usuarioId | String | — |
+| creadoEn | DateTime | — |
+| hijo | Hijo | relación (FK) |
+| usuario | Usuario | relación (FK) |
+
 #### `IdentificadorAcudiente`
 
 | Campo | Tipo | Atributos |
@@ -814,6 +844,33 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
+
+#### `IdentificadorHijo`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| hijoId | String | — |
+| valor | String | — |
+| tipo | String | opcional |
+| plataformaId | String | opcional |
+| activo | Boolean | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| hijo | Hijo | relación (FK) |
+| plataforma | Plataforma | opcional, relación (FK) |
+| desvinculado | IdentificadorHijoDesvinculado | lista, relación |
+
+#### `IdentificadorHijoDesvinculado`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| identificadorId | String | — |
+| usuarioId | String | — |
+| creadoEn | DateTime | — |
+| identificador | IdentificadorHijo | relación (FK) |
+| usuario | Usuario | relación (FK) |
 
 #### `IdentificadorProfesor`
 
@@ -1787,6 +1844,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | suscripcionesAutorizadas | Suscripcion | lista, relación |
 | bonosBeneficiario | BonoPromocional | lista, relación |
 | contactosConfianza | ContactoConfianza | lista, relación |
+| hijos | HijoPadre | lista, relación |
+| identificadoresHijoDesvinculados | IdentificadorHijoDesvinculado | lista, relación |
 | notificacionesCirculo | Boolean | — |
 | ultimaNotificacionCirculoEn | DateTime | opcional |
 | ultimaNotificacionColegioEn | DateTime | opcional |
@@ -1875,8 +1934,11 @@ erDiagram
     Expediente ||--o{ EventoExpediente : "expediente"
     Expediente ||--o{ InformeConsolidado : "expediente"
     Expediente ||--o{ PatronExpediente : "expediente"
+    Hijo ||--o{ HijoPadre : "hijo"
+    Hijo ||--o{ IdentificadorHijo : "hijo"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
+    IdentificadorHijo ||--o{ IdentificadorHijoDesvinculado : "identificador"
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
     InformeConsolidado ||--o{ AclaracionExpediente : "informeConsolidado"
@@ -1895,6 +1957,7 @@ erDiagram
     Plataforma ||--o{ IdentificadorAcudiente : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorContacto : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorEstudiante : "plataforma (opcional)"
+    Plataforma ||--o{ IdentificadorHijo : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorProfesor : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorReportado : "plataforma"
     Plataforma ||--o{ PatronInstitucional : "plataforma"
@@ -1943,6 +2006,8 @@ erDiagram
     Usuario ||--o{ DigestSemanal : "destinatario"
     Usuario ||--o{ Expediente : "padre (opcional)"
     Usuario ||--o{ GuiaAccionCategoria : "creadaPor"
+    Usuario ||--o{ HijoPadre : "usuario"
+    Usuario ||--o{ IdentificadorHijoDesvinculado : "usuario"
     Usuario ||--o{ InformeConsolidado : "generadoPor (opcional)"
     Usuario ||--o{ IntegranteComite : "comite"
     Usuario ||--o{ IntegranteComite : "creadoPor"
