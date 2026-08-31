@@ -72,5 +72,12 @@
       { "id": "R-10", "nombre": "Auto-registro de colegio", "avance": { "hechos": 3, "total": 3 }, "inicio": "27-08-2026", "estimada": null, "fin": "27-08-2026", "resultado": "Cumple", "estado": "Cerrado", "teNecesita": { "necesita": false } },
       { "id": "R-11", "nombre": "Padre freemium completo", "avance": { "hechos": 3, "total": 10 }, "inicio": "27-08-2026", "estimada": null, "fin": null, "resultado": "Parcial", "estado": "En espera", "teNecesita": { "necesita": false } }
     ]
+  },
+  "pruebasJelkin": {
+    "resumen": "2 pruebas · 18 hallazgos",
+    "filas": [
+      { "id": "J-01", "prueba": "Ciclo completo de colegio", "fecha": "30-08-2026 14:00", "hallazgos": "16 · → A-53, I-33", "estado": "Cumple" },
+      { "id": "J-02", "prueba": "Rol padre", "fecha": "30-08-2026 16:30", "hallazgos": "2 rojos · → I-33", "estado": "Parcial" }
+    ]
   }
 }

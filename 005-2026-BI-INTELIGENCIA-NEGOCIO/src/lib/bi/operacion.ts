@@ -68,6 +68,21 @@ export interface Recorridos {
     filas: RecorridoFila[];
 }
 
+// SPEC-037 · pruebas manuales de Jelkin (distinto de recorridos de Calidad).
+// Mismo operacion.json, un array más. Todos los campos verbatim.
+export interface PruebaJelkin {
+    id: string;
+    prueba: string;
+    fecha?: string | null;
+    hallazgos?: string | null;
+    estado?: string | null;
+}
+
+export interface PruebasJelkin {
+    resumen?: string | null;
+    filas: PruebaJelkin[];
+}
+
 export interface Operacion {
     titulo?: string | null;
     actualizado?: string | null;
@@ -76,6 +91,7 @@ export interface Operacion {
     equipos?: Equipo[] | null;
     funcionalidades?: Funcionalidades | null;
     recorridos?: Recorridos | null;
+    pruebasJelkin?: PruebasJelkin | null;
 }
 
 export type ResultadoOperacion =

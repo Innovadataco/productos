@@ -1,0 +1,16 @@
+### CASO (a) · fixture CON pruebasJelkin
+$ curl -s -H 'Authorization: Bearer <jwt-admin>' http://127.0.0.1:3001/operacion -w 'HTTP %{http_code}'
+HTTP 200
+
+$ grep -oE 'Pruebas de Jelkin|J-01|J-02|Ciclo completo de colegio|Rol padre|Cumple|Parcial|16 · → A-53, I-33|2 rojos · → I-33' operacion.html | sort -u
+16 · → A-53, I-33
+2 rojos · → I-33
+Ciclo completo de colegio
+J-01
+J-02
+Pruebas de Jelkin
+Rol padre
+
+conteo bloque:  $ grep -c 'Pruebas de Jelkin' → 1
+conteo J-01:    → 1
+conteo J-02:    → 1
