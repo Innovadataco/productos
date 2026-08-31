@@ -1,3 +1,16 @@
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "AccionAudit" ADD VALUE 'HIJO_CREATE';
+ALTER TYPE "AccionAudit" ADD VALUE 'HIJO_UPDATE';
+ALTER TYPE "AccionAudit" ADD VALUE 'HIJO_PADRE_VINCULADO';
+ALTER TYPE "AccionAudit" ADD VALUE 'HIJO_IDENTIFICADOR_DESVINCULADO';
+
 -- AlterTable
 ALTER TABLE "ContactoConfianza" ADD COLUMN     "nombre" VARCHAR(100),
 ADD COLUMN     "parentesco" VARCHAR(60);
@@ -98,7 +111,7 @@ ALTER TABLE "IdentificadorHijoDesvinculado" ADD CONSTRAINT "IdentificadorHijoDes
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- SPEC-325 (002-PI-225) · BACKFILL del mecanismo compartido (idempotente)
+-- -- SPEC-325 (002-PI-225) · BACKFILL del mecanismo compartido (idempotente)
 -- El cruce identificador→alerta era case-sensitive: el valor se guardaba crudo
 -- y el reporte entraba con otro case → no cruzaba y no avisaba (defecto silencioso).
 -- De acá en más la escritura normaliza (normalizarIdentificador = trim+lower);
