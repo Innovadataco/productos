@@ -15,6 +15,9 @@ import { Tooltip } from "@/components/ui/Tooltip";
  * EXCEPTO SCHOOL_ADMIN (D-a de 002-PI-051): la cuenta institucional no reporta
  * (proxy.ts), así que su logo SIEMPRE va a su panel, también en zona pública.
  */
+// SPEC-319: esto NO es la fuente única rol→home (esa vive en src/lib/auth/home-para-rol.ts).
+// Es el destino del click en el LOGO — contextual (público vs autenticado) y ya maneja
+// COMITE_CONVIVENCIA. No unificar con la fuente única de landing: son propósitos distintos.
 export function destinoLogo(user: { rol: string } | null, pathname: string | null): string {
     const enAreaAutenticada = pathname?.startsWith("/dashboard") ?? false;
     if (user?.rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
@@ -56,7 +59,13 @@ export function NavHeader() {
         ? (user.nombre?.[0] || user.email[0]).toUpperCase()
         : "";
 
-    const esEmpleado = user?.rol === "ADMIN" || user?.rol === "OPERADOR" || user?.rol === "COMITE_VALIDACION";
+    // SPEC-319 §2.6: COMITE_CONVIVENCIA es empleado — sin esto, el bloque !esEmpleado le
+    // ofrecía "Mi panel"/"Círculo de Confianza"/"Mis reportes" (opciones de padre).
+    const esEmpleado =
+        user?.rol === "ADMIN" ||
+        user?.rol === "OPERADOR" ||
+        user?.rol === "COMITE_VALIDACION" ||
+        user?.rol === "COMITE_CONVIVENCIA";
 
     const headerBorderClass = user?.rol === "ADMIN"
         ? "border-b-amber-500/40 dark:border-b-amber-400/30"

@@ -6,6 +6,7 @@ import { LoginForm } from "@/components/modules/LoginForm";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Alerta } from "@/components/ui/Alerta";
+import { homeParaRol } from "@/lib/auth/home-para-rol";
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -30,15 +31,9 @@ export default function LoginPage() {
             return;
         }
 
-        const getRoleHome = (rol: string | undefined) => {
-            if (rol === "ADMIN") return "/dashboard/admin";
-            if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";
-            if (rol === "OPERADOR") return "/dashboard/admin/operadores";
-            if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
-            return "/mis-reportes";
-        };
-
-        const target = redirectTo || getRoleHome(user?.rol);
+        // SPEC-319: fuente única rol→home (antes había una copia local que omitía
+        // COMITE_CONVIVENCIA y mandaba OPERADOR a /dashboard/admin/operadores).
+        const target = redirectTo || homeParaRol(user?.rol);
 
         // Navegación completa para evitar quedarse pegado en login por problemas de router cliente
         window.location.href = target;

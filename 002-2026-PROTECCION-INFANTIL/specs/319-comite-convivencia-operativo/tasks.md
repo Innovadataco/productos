@@ -10,7 +10,7 @@
 ---
 
 ## Phase 1: Setup
-- [ ] T001 Confirmar worktree y rama (`work/pi-SPEC-319-comite-convivencia-operativo` desde `origin/main`), `npx tsc --noEmit` limpio de base antes de tocar (baseline).
+- [X] T001 Confirmar worktree y rama (`work/pi-SPEC-319-comite-convivencia-operativo` desde `origin/main`), `npx tsc --noEmit` limpio de base antes de tocar (baseline).
 
 ---
 
@@ -19,14 +19,14 @@
 **Goal:** el comité aterriza en `/dashboard/colegio/comite` por login directo y tras cambiar clave; `/mis-reportes` rebota; OPERADOR unificado; PARENT preservado.
 **Independent Test:** unit de `homeParaRol` (todos los roles + default); ejercicio real con cuenta del comité (login, cambiar-clave, /mis-reportes a mano).
 
-- [ ] T002 [US1] Crear `src/lib/auth/home-para-rol.ts`: función pura `homeParaRol(rol: string | undefined): string` con el mapa canónico (ADMIN→/dashboard/admin, OPERADOR→/dashboard/admin, SCHOOL_ADMIN→/dashboard/colegio, COMITE_VALIDACION→/dashboard/admin/comite, COMITE_CONVIVENCIA→/dashboard/colegio/comite, **PARENT→/dashboard/padre** [Decisión A], **default rol desconocido→/mis-reportes** [fallback neutro sin rebote]). JSDoc citando SPEC-319, Decisión A (A-54/SPEC-317), y comentario cruzado con `homeForRole` (proxy.ts:192) para que no se dupliquen.
-- [ ] T003 [P] [US1] Crear `src/lib/auth/home-para-rol.test.ts`: caso por rol + assert PARENT→/dashboard/padre + rol desconocido→/mis-reportes + COMITE_CONVIVENCIA→/dashboard/colegio/comite + OPERADOR→/dashboard/admin.
-- [ ] T004 [US1] `src/app/login/page.tsx`: reemplazar `getRoleHome` local (`:33-38`) por import y uso de `homeParaRol`. Conservar la precedencia de `redirectTo`. (Dueño Dev PI-2.)
-- [ ] T005 [US1] `src/app/cambiar-password/page.tsx`: reemplazar el ternario local (`:56-63`) por `homeParaRol(user?.rol)`. Resuelve la omisión de COMITE_VALIDACION/COMITE_CONVIVENCIA y la contradicción de OPERADOR. (Dueño Dev PI-2.)
-- [ ] T006 [US1] `src/app/mis-reportes/page.tsx`: en el bloque de desvío (`:42-56`), mantener **lista explícita de roles con panel propio** y **sumar COMITE_CONVIVENCIA**: `const ROLES_CON_PANEL_PROPIO = ["ADMIN","OPERADOR","COMITE_VALIDACION","SCHOOL_ADMIN","COMITE_CONVIVENCIA"]; if (ROLES_CON_PANEL_PROPIO.includes(user.rol)) { router.push(homeParaRol(user.rol)); return; }`. **PARENT NO se incluye** — ve su lista de reportes sin rebote. ⚠️ NO usar `homeParaRol(rol) !== rutaActual` como condición (bajo A expulsaría al padre de su propia página y loopearía roles desconocidos). Condición = lista; destino = `homeParaRol(rol)`. Comentar por qué. (Dueño Dev PI-2.)
-- [ ] T007 [P] [US1] `src/app/dashboard/admin/operadores/page.tsx:5`: agregar comentario explicando que `homeParaRol` local es el fallback de acceso-denegado (no la fuente única de landing) — considerar renombrar a `homeAccesoDenegado` para no confundir con la fuente única.
-- [ ] T008 [P] [US1] `src/components/modules/NavHeader.tsx:18` (`destinoLogo`): agregar comentario de que es el destino del logo (contextual), no la fuente única de landing; ya maneja COMITE_CONVIVENCIA.
-- [ ] T009 [US1] Correr tests de los archivos tocados (candado 24 v2): `home-para-rol.test.ts` + tests existentes de login/cambiar-password/mis-reportes si existen. `npx tsc --noEmit` limpio.
+- [X] T002 [US1] Crear `src/lib/auth/home-para-rol.ts`: función pura `homeParaRol(rol: string | undefined): string` con el mapa canónico (ADMIN→/dashboard/admin, OPERADOR→/dashboard/admin, SCHOOL_ADMIN→/dashboard/colegio, COMITE_VALIDACION→/dashboard/admin/comite, COMITE_CONVIVENCIA→/dashboard/colegio/comite, **PARENT→/dashboard/padre** [Decisión A], **default rol desconocido→/mis-reportes** [fallback neutro sin rebote]). JSDoc citando SPEC-319, Decisión A (A-54/SPEC-317), y comentario cruzado con `homeForRole` (proxy.ts:192) para que no se dupliquen.
+- [X] T003 [P] [US1] Crear `src/lib/auth/home-para-rol.test.ts`: caso por rol + assert PARENT→/dashboard/padre + rol desconocido→/mis-reportes + COMITE_CONVIVENCIA→/dashboard/colegio/comite + OPERADOR→/dashboard/admin.
+- [X] T004 [US1] `src/app/login/page.tsx`: reemplazar `getRoleHome` local (`:33-38`) por import y uso de `homeParaRol`. Conservar la precedencia de `redirectTo`. (Dueño Dev PI-2.)
+- [X] T005 [US1] `src/app/cambiar-password/page.tsx`: reemplazar el ternario local (`:56-63`) por `homeParaRol(user?.rol)`. Resuelve la omisión de COMITE_VALIDACION/COMITE_CONVIVENCIA y la contradicción de OPERADOR. (Dueño Dev PI-2.)
+- [X] T006 [US1] `src/app/mis-reportes/page.tsx`: en el bloque de desvío (`:42-56`), mantener **lista explícita de roles con panel propio** y **sumar COMITE_CONVIVENCIA**: `const ROLES_CON_PANEL_PROPIO = ["ADMIN","OPERADOR","COMITE_VALIDACION","SCHOOL_ADMIN","COMITE_CONVIVENCIA"]; if (ROLES_CON_PANEL_PROPIO.includes(user.rol)) { router.push(homeParaRol(user.rol)); return; }`. **PARENT NO se incluye** — ve su lista de reportes sin rebote. ⚠️ NO usar `homeParaRol(rol) !== rutaActual` como condición (bajo A expulsaría al padre de su propia página y loopearía roles desconocidos). Condición = lista; destino = `homeParaRol(rol)`. Comentar por qué. (Dueño Dev PI-2.)
+- [X] T007 [P] [US1] `src/app/dashboard/admin/operadores/page.tsx:5`: agregar comentario explicando que `homeParaRol` local es el fallback de acceso-denegado (no la fuente única de landing) — considerar renombrar a `homeAccesoDenegado` para no confundir con la fuente única.
+- [X] T008 [P] [US1] `src/components/modules/NavHeader.tsx:18` (`destinoLogo`): agregar comentario de que es el destino del logo (contextual), no la fuente única de landing; ya maneja COMITE_CONVIVENCIA.
+- [X] T009 [US1] Correr tests de los archivos tocados (candado 24 v2): `home-para-rol.test.ts` + tests existentes de login/cambiar-password/mis-reportes si existen. `npx tsc --noEmit` limpio.
 
 ---
 
@@ -34,8 +34,8 @@
 
 **Goal:** el header no ofrece opciones de padre al comité.
 
-- [ ] T010 [US6] `src/components/modules/NavHeader.tsx:59`: sumar `COMITE_CONVIVENCIA` a `esEmpleado`. Verificar que el bloque `!esEmpleado` (`:195,:265`) deja de ofrecerle "Mi panel"/"Círculo de Confianza"/"Mis reportes".
-- [ ] T011 [US6] Correr tests de `NavHeader` (candado 24 v2) si existen; verificación visual con cuenta del comité.
+- [X] T010 [US6] `src/components/modules/NavHeader.tsx:59`: sumar `COMITE_CONVIVENCIA` a `esEmpleado`. Verificar que el bloque `!esEmpleado` (`:195,:265`) deja de ofrecerle "Mi panel"/"Círculo de Confianza"/"Mis reportes".
+- [X] T011 [US6] Correr tests de `NavHeader` (candado 24 v2) si existen; verificación visual con cuenta del comité.
 
 ---
 
