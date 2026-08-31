@@ -59,6 +59,7 @@ async function sembrarEstudiante(
         identificador = await prisma.identificadorEstudiante.create({
             data: {
                 estudianteId: estudiante.id,
+                colegioId,
                 tipo: "telefono",
                 valor: `+57313${String(contador).padStart(7, "0")}`,
                 etiquetaRelacion: "ESTUDIANTE",
@@ -69,6 +70,7 @@ async function sembrarEstudiante(
             await prisma.identificadorEstudiante.create({
                 data: {
                     estudianteId: estudiante.id,
+                    colegioId,
                     tipo: "nick",
                     valor: `nick-${contador}`,
                     etiquetaRelacion: "ESTUDIANTE",
@@ -81,6 +83,7 @@ async function sembrarEstudiante(
         await prisma.identificadorEstudiante.create({
             data: {
                 estudianteId: estudiante.id,
+                colegioId,
                 tipo: "nick",
                 valor: `viejo-${contador}`,
                 etiquetaRelacion: "ESTUDIANTE",

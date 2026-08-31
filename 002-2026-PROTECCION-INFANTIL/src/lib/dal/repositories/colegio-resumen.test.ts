@@ -46,6 +46,7 @@ async function sembrarEstudiante(colegioId: string, cursoId: string, opts: { con
     const identificador = await prisma.identificadorEstudiante.create({
         data: {
             estudianteId: estudiante.id,
+            colegioId,
             tipo: "telefono",
             valor: `+57311${String(contador).padStart(7, "0")}`,
             etiquetaRelacion: "ESTUDIANTE",

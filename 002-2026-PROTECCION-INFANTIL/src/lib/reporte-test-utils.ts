@@ -138,9 +138,16 @@ export async function crearIdentificadorEstudiante(
     estudianteId: string,
     data: { tipo?: string; valor?: string; plataformaId?: string | null; etiquetaRelacion?: string; estado?: string } = {}
 ) {
+    // SPEC-320 (§2.1 · H1): IdentificadorEstudiante lleva colegioId denormalizado.
+    // Se resuelve desde el estudiante para no cambiar la firma de este fixture.
+    const estudiante = await prisma.estudiante.findUniqueOrThrow({
+        where: { id: estudianteId },
+        select: { colegioId: true },
+    });
     return prisma.identificadorEstudiante.create({
         data: {
             estudianteId,
+            colegioId: estudiante.colegioId,
             tipo: data.tipo ?? "telefono",
             valor: data.valor ?? `+57${Date.now()}`,
             plataformaId: data.plataformaId ?? null,

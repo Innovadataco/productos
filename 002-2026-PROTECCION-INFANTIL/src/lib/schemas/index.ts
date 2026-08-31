@@ -188,6 +188,8 @@ export const identificadorAcudienteBodySchema = z.object({
     tipo: z.string().min(1).max(50).optional(),
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
+    // SPEC-320 (§2.1): override del warn de identificador compartido en el colegio.
+    confirmarCompartido: z.boolean().optional(),
 });
 
 export const identificadorAcudienteUpdateBodySchema = z
@@ -195,8 +197,12 @@ export const identificadorAcudienteUpdateBodySchema = z
         tipo: z.string().min(1).max(50).optional(),
         valor: z.string().min(1).max(255).optional(),
         plataformaId: cuidIdSchema.optional().nullable(),
+        confirmarCompartido: z.boolean().optional(), // SPEC-320 (§2.1): override warn
     })
-    .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+    .refine(
+        (data) => Object.keys(data).some((k) => k !== "confirmarCompartido"),
+        { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
+    );
 
 export const identificadorAcudienteIdParamsSchema = z.object({
     id: cuidIdSchema,
@@ -208,6 +214,8 @@ export const identificadorProfesorBodySchema = z.object({
     tipo: z.string().min(1).max(50).optional(),
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
+    // SPEC-320 (§2.1): override del warn de identificador compartido en el colegio.
+    confirmarCompartido: z.boolean().optional(),
 });
 
 export const identificadorProfesorUpdateBodySchema = z
@@ -215,8 +223,12 @@ export const identificadorProfesorUpdateBodySchema = z
         tipo: z.string().min(1).max(50).optional(),
         valor: z.string().min(1).max(255).optional(),
         plataformaId: cuidIdSchema.optional().nullable(),
+        confirmarCompartido: z.boolean().optional(), // SPEC-320 (§2.1): override warn
     })
-    .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+    .refine(
+        (data) => Object.keys(data).some((k) => k !== "confirmarCompartido"),
+        { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
+    );
 
 export const identificadorProfesorIdParamsSchema = z.object({
     id: cuidIdSchema,
@@ -307,6 +319,8 @@ export const identificadorEstudianteBodySchema = z.object({
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
     etiquetaRelacion: etiquetaRelacionEstudianteSchema.optional(),
+    // SPEC-320 (§2.1): override del warn de identificador compartido en el colegio.
+    confirmarCompartido: z.boolean().optional(),
 });
 
 export const identificadorEstudianteUpdateBodySchema = z.object({
@@ -314,7 +328,11 @@ export const identificadorEstudianteUpdateBodySchema = z.object({
     valor: z.string().min(1).max(255).optional(),
     plataformaId: cuidIdSchema.optional().nullable(),
     etiquetaRelacion: etiquetaRelacionEstudianteSchema.optional(),
-}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+    confirmarCompartido: z.boolean().optional(), // SPEC-320 (§2.1): override warn
+}).refine(
+    (data) => Object.keys(data).some((k) => k !== "confirmarCompartido"),
+    { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
+);
 
 export const identificadorEstudianteIdParamsSchema = z.object({
     id: cuidIdSchema,

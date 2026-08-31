@@ -344,6 +344,7 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
         const identificadorB = await prisma.identificadorEstudiante.create({
             data: {
                 estudianteId: estudianteB.id,
+                colegioId: colegioBId,
                 tipo: "telefono",
                 valor: `+5732088800${CICLO}1`,
                 plataformaId: plataforma.id,

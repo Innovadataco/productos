@@ -23,7 +23,7 @@ async function sembrarAlerta(colegioId: string, plataformaId: string, tag: strin
     const curso = await crearCurso(colegioId, { nombre: `Curso ${tag}` });
     const alumno = await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId, nombre: `Alumno ${tag}` } });
     const identificador = await prisma.identificadorEstudiante.create({
-        data: { estudianteId: alumno.id, tipo: "telefono", valor: `+57300${tag.replace(/\D/g, "").padEnd(7, "0")}`, plataformaId, etiquetaRelacion: "ESTUDIANTE" },
+        data: { estudianteId: alumno.id, colegioId, tipo: "telefono", valor: `+57300${tag.replace(/\D/g, "").padEnd(7, "0")}`, plataformaId, etiquetaRelacion: "ESTUDIANTE" },
     });
     const reporte = await prisma.reporte.create({
         data: {
@@ -122,7 +122,7 @@ describe("AlertaColegioRepository", () => {
         const curso2 = await crearCurso(a.id, { nombre: "Curso A9" });
         const alumno2 = await prisma.estudiante.create({ data: { cursoId: curso2.id, colegioId: a.id, nombre: "Alumno A9" } });
         const ident2 = await prisma.identificadorEstudiante.create({
-            data: { estudianteId: alumno2.id, tipo: "telefono", valor: "+573009999999", plataformaId: plataforma.id, etiquetaRelacion: "ESTUDIANTE" },
+            data: { estudianteId: alumno2.id, colegioId: a.id, tipo: "telefono", valor: "+573009999999", plataformaId: plataforma.id, etiquetaRelacion: "ESTUDIANTE" },
         });
         const repo = new AlertaColegioRepository();
 

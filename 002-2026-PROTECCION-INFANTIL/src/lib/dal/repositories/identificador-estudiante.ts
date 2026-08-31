@@ -109,6 +109,7 @@ export class IdentificadorEstudianteRepository {
         return this.db.identificadorEstudiante.create({
             data: {
                 estudianteId: datos.estudianteId,
+                colegioId, // SPEC-320 (§2.1 · H1): colegioId denormalizado, escrito al crear
                 tipo: datos.tipo,
                 valor: datos.valor,
                 plataformaId: datos.plataformaId ?? null,

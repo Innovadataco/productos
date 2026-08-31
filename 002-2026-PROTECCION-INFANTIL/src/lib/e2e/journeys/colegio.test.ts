@@ -258,6 +258,7 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const identificador = await prisma.identificadorEstudiante.create({
             data: {
                 estudianteId: alumno.id,
+                colegioId,
                 tipo: "telefono",
                 valor: `+5732077700${CICLO}1`,
                 plataformaId: plataforma.id,

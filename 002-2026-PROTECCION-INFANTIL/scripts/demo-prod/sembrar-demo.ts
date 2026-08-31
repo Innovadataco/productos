@@ -271,6 +271,7 @@ async function main() {
                     const ident = await prisma.identificadorEstudiante.create({
                         data: {
                             estudianteId: estudiante.id,
+                            colegioId: estudiante.colegioId, // SPEC-320 (§2.1 · H1)
                             tipo: idData.tipo,
                             valor: idData.valor,
                             plataformaId: plataforma.id,
