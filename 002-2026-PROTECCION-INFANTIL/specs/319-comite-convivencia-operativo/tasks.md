@@ -46,7 +46,7 @@
   - Comité escribe `/mis-reportes` a mano → rebota a su panel.
   - **(dura, Decisión A)** Padre real → login aterriza en `/dashboard/padre`.
   - **(dura, Decisión A)** Padre real → abre `/mis-reportes` desde su menú → ve su lista **sin rebote** (las dos caras del riesgo de A; sin ambas no hay CUMPLE).
-- [ ] T014 Push, `gh pr create`, señal `desarrollo-2: 002-PI-219 · Fase 1 · REALIZADO · commit <hash> · PR #<N> · evidencia §6 publicada`.
+- [X] T014 Push, `gh pr create`, señal `desarrollo-2: 002-PI-219 · Fase 1 · REALIZADO · commit <hash> · PR #<N> · evidencia §6 publicada`.
 
 ---
 
