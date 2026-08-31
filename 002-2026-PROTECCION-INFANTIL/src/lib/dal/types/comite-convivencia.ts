@@ -45,10 +45,14 @@ export interface DetalleSolicitudComiteDto {
         resueltoEn: string | null;
     };
     caso: import("@/lib/colegio/seguimiento").DetalleCaso;
+    // SPEC-319 §2.4: integrantes ACTIVOS del comité, para el selector de firma del cierre.
+    integrantesActivos: { id: string; nombres: string; apellidos: string }[];
 }
 
 export interface ResolverSolicitudComiteInput {
     resolucion: string;
+    // SPEC-319 §2.4: integrante activo del comité que firma el cierre (cuenta compartida).
+    integranteFirmanteId: string;
 }
 
 export interface EscalarAlertaInput {

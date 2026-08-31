@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/audit";
 import type { Prisma } from "@prisma/client";
 import { AlertaColegioRepository } from "../repositories/alerta-colegio";
 import { ComiteConvivenciaRepository } from "../repositories/comite-convivencia";
+import { ComiteConvivenciaIntegrantesRepository } from "../repositories/comite-convivencia-integrantes";
 import { ComiteConvivenciaSolicitudesRepository } from "../repositories/comite-convivencia-solicitudes";
 import { obtenerDetalleCaso, agregarNotaCaso } from "@/lib/colegio/seguimiento";
 import type {
@@ -156,6 +157,16 @@ export class ComiteConvivenciaBandejaService {
         }
 
         const caso = await obtenerDetalleCaso(colegioId, solicitud.alertaColegioId);
+
+        // SPEC-319 §2.4: integrantes activos del comité para el selector de firma.
+        const cuenta = await new ComiteConvivenciaRepository().obtenerPorColegio(colegioId);
+        const integrantes = cuenta
+            ? await new ComiteConvivenciaIntegrantesRepository().listarPorComite(cuenta.id)
+            : [];
+        const integrantesActivos = integrantes
+            .filter((i) => i.estado === "ACTIVO")
+            .map((i) => ({ id: i.id, nombres: i.nombres, apellidos: i.apellidos }));
+
         return {
             solicitud: {
                 id: solicitud.id,
@@ -167,6 +178,7 @@ export class ComiteConvivenciaBandejaService {
                 resueltoEn: solicitud.resueltoEn?.toISOString() ?? null,
             },
             caso,
+            integrantesActivos,
         };
     }
 
@@ -245,9 +257,13 @@ export class ComiteConvivenciaBandejaService {
             throw new AppError("Solicitud sin alerta asociada", ERROR_CODES.INTERNAL_ERROR, 500);
         }
 
+        // SPEC-319 §2.4: el cierre debe llevar la firma de un integrante ACTIVO del
+        // comité del colegio (cuenta compartida → trazabilidad de quién decidió).
+        const firmante = await this.validarFirmante(colegioId, input.integranteFirmanteId);
+
         const alertas = new AlertaColegioRepository();
         await alertas.cambiarEstado(colegioId, solicitud.alertaColegioId, "gestionada");
-        const resuelta = await this.solicitudes.resolver(solicitudId, input.resolucion);
+        const resuelta = await this.solicitudes.resolver(solicitudId, input.resolucion, firmante.id);
 
         await logAudit({
             accion: "COLEGIO_CASO_RESUELTO_POR_COMITE",
@@ -255,12 +271,35 @@ export class ComiteConvivenciaBandejaService {
             recursoId: resuelta.id,
             usuarioId: actorId,
             colegioId,
-            valorNuevo: JSON.stringify({ estado: "RESUELTA", resolucionLength: input.resolucion.length }),
+            valorNuevo: JSON.stringify({
+                estado: "RESUELTA",
+                resolucionLength: input.resolucion.length,
+                integranteFirmanteId: firmante.id,
+                integranteFirmante: `${firmante.nombres} ${firmante.apellidos}`,
+            }),
             ipAddress: info.ipAddress,
             userAgent: info.userAgent,
         });
 
         return { solicitud: toBandejaDto(resuelta) };
+    }
+
+    // SPEC-319 §2.4: valida que el firmante sea un integrante ACTIVO del comité del
+    // colegio. Si no hay integrantes activos, ninguno pasa esta validación (no se firma
+    // en el vacío — FR-019). Devuelve el integrante para registrarlo en caso y auditoría.
+    private async validarFirmante(colegioId: string, integranteFirmanteId: string) {
+        const cuenta = await new ComiteConvivenciaRepository().obtenerPorColegio(colegioId);
+        if (!cuenta) {
+            throw new AppError("El colegio no tiene cuenta de comité", ERROR_CODES.CONFLICT, 409);
+        }
+        const integrante = await new ComiteConvivenciaIntegrantesRepository().obtenerPorId(integranteFirmanteId);
+        if (!integrante || integrante.comiteId !== cuenta.id) {
+            throw new AppError("El integrante firmante no pertenece a este comité", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        if (integrante.estado !== "ACTIVO") {
+            throw new AppError("El integrante firmante no está activo", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        return integrante;
     }
 
     async agregarNota(

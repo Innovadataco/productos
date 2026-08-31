@@ -79,11 +79,11 @@
 
 **Goal:** al cerrar un caso, se registra qué integrante activo firma.
 
-- [ ] T026 [US4] `prisma/schema.prisma`: agregar `integranteFirmanteId String?` + relación opcional a `IntegranteComite` en `SolicitudComite` (+ lado inverso `solicitudesFirmadas` en `IntegranteComite`) + `@@index([integranteFirmanteId])`. Migración aditiva `npx prisma migrate dev --name spec319_firmante_cierre`.
-- [ ] T027 [US4] `src/lib/dal/services/comite-convivencia-bandeja.ts:230` `resolver`: sumar `integranteFirmanteId` al input; validar que sea `IntegranteComite` activo del `colegioId` (si no hay activos → error claro); persistirlo; incluirlo en `logAudit` `valorNuevo`.
-- [ ] T028 [US4] Schema Zod del input de `/api/colegio/comite/solicitudes/[id]/resolver`: `integranteFirmanteId` requerido.
-- [ ] T029 [US4] `src/components/modules/colegio/comite/CasoDetalle.tsx:197`: agregar selector de integrante firmante (poblado con activos del colegio) en el form de resolver; requerido para enviar.
-- [ ] T030 [US4] Tests integration de `resolver`: firmante válido activo (OK + audit), firmante inactivo/otro colegio (rechazo), sin activos (rechazo con mensaje). `npx tsc --noEmit`.
+- [X] T026 [US4] `prisma/schema.prisma`: agregar `integranteFirmanteId String?` + relación opcional a `IntegranteComite` en `SolicitudComite` (+ lado inverso `solicitudesFirmadas` en `IntegranteComite`) + `@@index([integranteFirmanteId])`. Migración aditiva `npx prisma migrate dev --name spec319_firmante_cierre`.
+- [X] T027 [US4] `src/lib/dal/services/comite-convivencia-bandeja.ts:230` `resolver`: sumar `integranteFirmanteId` al input; validar que sea `IntegranteComite` activo del `colegioId` (si no hay activos → error claro); persistirlo; incluirlo en `logAudit` `valorNuevo`.
+- [X] T028 [US4] Schema Zod del input de `/api/colegio/comite/solicitudes/[id]/resolver`: `integranteFirmanteId` requerido.
+- [X] T029 [US4] `src/components/modules/colegio/comite/CasoDetalle.tsx:197`: agregar selector de integrante firmante (poblado con activos del colegio) en el form de resolver; requerido para enviar.
+- [X] T030 [US4] Tests integration de `resolver`: firmante válido activo (OK + audit), firmante inactivo/otro colegio (rechazo), sin activos (rechazo con mensaje). `npx tsc --noEmit`.
 
 ---
 

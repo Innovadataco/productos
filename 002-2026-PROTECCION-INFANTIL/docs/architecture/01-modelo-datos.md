@@ -1549,12 +1549,14 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | resolucion | String | opcional |
 | creadoEn | DateTime | — |
 | resueltoEn | DateTime | opcional |
+| integranteFirmanteId | String | opcional |
 | reporte | Reporte | relación (FK) |
 | comite | Usuario | opcional, relación (FK) |
 | operador | Usuario | opcional, relación (FK) |
 | colegio | Colegio | opcional, relación (FK) |
 | alerta | AlertaColegio | opcional, relación (FK) |
 | creadoPor | Usuario | opcional, relación (FK) |
+| integranteFirmante | IntegranteComite | opcional, relación (FK) |
 
 #### `TransicionReporte`
 
@@ -1706,6 +1708,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | comite | Usuario | relación (FK) |
 | creadoPor | Usuario | relación (FK) |
 | modificadoPor | Usuario | opcional, relación (FK) |
+| solicitudesFirmadas | SolicitudComite | lista, relación |
 
 #### `PerfilOperador`
 
@@ -1880,6 +1883,7 @@ erDiagram
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
     InformeConsolidado ||--o{ AclaracionExpediente : "informeConsolidado"
+    IntegranteComite ||--o{ SolicitudComite : "integranteFirmante (opcional)"
     Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
     Pago ||--o{ BonoAplicado : "pago (opcional)"

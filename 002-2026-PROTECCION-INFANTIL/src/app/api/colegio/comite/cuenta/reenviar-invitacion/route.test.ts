@@ -53,7 +53,7 @@ describe("/api/colegio/comite/cuenta/reenviar-invitacion", () => {
         expect(cuentaDb?.tokenInvitacion).toHaveLength(64);
 
         const audit = await prisma.auditLog.findFirst({
-            where: { accion: "COLEGIO_COMITE_PASSWORD_REGENERADA" },
+            where: { accion: "COLEGIO_COMITE_INVITACION_REENVIADA" },
         });
         expect(audit).not.toBeNull();
     });

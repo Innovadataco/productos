@@ -426,6 +426,8 @@ export const escalarAlertaSchema = z.object({
 // SPEC-168 (Fase F): resolución documentada del comité al cerrar un caso.
 export const resolverSolicitudSchema = z.object({
     resolucion: z.string().trim().min(1, "Escribe la decisión del comité").max(4000),
+    // SPEC-319 §2.4: integrante activo del comité que firma el cierre (requerido).
+    integranteFirmanteId: cuidIdSchema,
 });
 
 // SPEC-169 (Fase G): onboarding, cobertura y notificaciones in-app del colegio.

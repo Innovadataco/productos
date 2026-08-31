@@ -15,6 +15,8 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
     const [error, setError] = useState<string | null>(null);
     const [nuevaNota, setNuevaNota] = useState("");
     const [resolucion, setResolucion] = useState("");
+    // SPEC-319 §2.4: integrante que firma el cierre (cuenta compartida).
+    const [firmanteId, setFirmanteId] = useState("");
     const [accionLoading, setAccionLoading] = useState(false);
 
     const cargar = useCallback(async () => {
@@ -69,7 +71,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
             const res = await fetch(`/api/colegio/comite/solicitudes/${solicitudId}/resolver`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ resolucion: resolucion.trim() }),
+                body: JSON.stringify({ resolucion: resolucion.trim(), integranteFirmanteId: firmanteId }),
             });
             const data = await res.json();
             if (!res.ok) {
@@ -194,19 +196,49 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
             {puedeResolver && solicitud.estado === "PENDIENTE" && (
                 <section className="rounded-2xl glass p-6">
                     <h2 className="text-lg font-semibold text-body">Cerrar caso con decisión</h2>
-                    <form onSubmit={resolver} className="mt-4 space-y-3">
-                        <textarea
-                            required
-                            maxLength={4000}
-                            value={resolucion}
-                            onChange={(e) => setResolucion(e.target.value)}
-                            placeholder="Escribe la decisión documentada del comité…"
-                            className="min-h-[120px] w-full rounded-xl glass-input px-4 py-2 text-sm text-body placeholder-subtle ring-accent-input"
-                        />
-                        <Button type="submit" isLoading={accionLoading}>
-                            {accionLoading ? "Cerrando…" : "Cerrar caso"}
-                        </Button>
-                    </form>
+                    {detalle.integrantesActivos.length === 0 ? (
+                        // SPEC-319 §2.4 (FR-019): sin integrantes activos no se puede firmar.
+                        <p className="mt-4 text-sm text-estado-rubi">
+                            No hay integrantes activos del comité para firmar el cierre. Agrega o activa un integrante
+                            antes de cerrar el caso.
+                        </p>
+                    ) : (
+                        <form onSubmit={resolver} className="mt-4 space-y-3">
+                            <textarea
+                                required
+                                maxLength={4000}
+                                value={resolucion}
+                                onChange={(e) => setResolucion(e.target.value)}
+                                placeholder="Escribe la decisión documentada del comité…"
+                                className="min-h-[120px] w-full rounded-xl glass-input px-4 py-2 text-sm text-body placeholder-subtle ring-accent-input"
+                            />
+                            {/* SPEC-319 §2.4: quién firma el cierre (integrante activo) */}
+                            <div>
+                                <label htmlFor="firmante" className="block text-sm font-medium text-body">
+                                    Integrante que firma el cierre
+                                </label>
+                                <select
+                                    id="firmante"
+                                    required
+                                    value={firmanteId}
+                                    onChange={(e) => setFirmanteId(e.target.value)}
+                                    className="mt-1 w-full rounded-xl glass-input px-4 py-2 text-sm text-body ring-accent-input"
+                                >
+                                    <option value="" disabled>
+                                        Selecciona un integrante…
+                                    </option>
+                                    {detalle.integrantesActivos.map((i) => (
+                                        <option key={i.id} value={i.id}>
+                                            {i.nombres} {i.apellidos}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <Button type="submit" isLoading={accionLoading} disabled={!firmanteId}>
+                                {accionLoading ? "Cerrando…" : "Cerrar caso"}
+                            </Button>
+                        </form>
+                    )}
                 </section>
             )}
         </div>

@@ -88,10 +88,12 @@ export class ComiteConvivenciaSolicitudesRepository {
         });
     }
 
-    resolver(id: string, resolucion: string) {
+    // SPEC-319 §2.4: `integranteFirmanteId` registra qué integrante firmó el cierre
+    // (requerido — el servicio valida que sea un integrante activo del comité).
+    resolver(id: string, resolucion: string, integranteFirmanteId: string) {
         return this.db.solicitudComite.update({
             where: { id },
-            data: { estado: "RESUELTA", resolucion, resueltoEn: new Date() },
+            data: { estado: "RESUELTA", resolucion, resueltoEn: new Date(), integranteFirmanteId },
             select: SELECT_BANDEJA,
         });
     }

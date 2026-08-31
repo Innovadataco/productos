@@ -149,16 +149,13 @@ export class ComiteConvivenciaService {
         const actualizada = await this.repo.actualizarInvitacion(cuenta.id, token, expiracionInvitacion());
 
         await logAudit({
-            // SPEC-319 §2.2: reusamos el enum existente (reseteo de credencial del comité).
-            // El flujo que antes regeneraba la clave ahora reenvía la invitación; para no
-            // acoplar §2.2 a una migración de enum, se mantiene esta acción. `valorNuevo`
-            // deja constancia de que fue un reenvío de invitación, no un cambio de clave.
-            accion: "COLEGIO_COMITE_PASSWORD_REGENERADA",
+            // SPEC-319 §2.2/§2.4: valor de auditoría dedicado (agregado en la migración de §2.4).
+            accion: "COLEGIO_COMITE_INVITACION_REENVIADA",
             tipoRecurso: "Usuario",
             recursoId: actualizada.id,
             usuarioId: actorId,
             colegioId,
-            valorNuevo: JSON.stringify({ accion: "invitacion_reenviada", estadoActivacion: "INVITADO" }),
+            valorNuevo: JSON.stringify({ estadoActivacion: "INVITADO" }),
             ipAddress: info.ipAddress,
             userAgent: info.userAgent,
         });
