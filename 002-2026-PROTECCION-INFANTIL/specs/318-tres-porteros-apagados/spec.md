@@ -2,7 +2,7 @@
 
 > **Status**: DESARROLLO (Rama: work/pi-SPEC-318-tres-porteros-apagados · Radicado: 002-PI-218)
 
-**Impacto en arquitectura:** Emisión de la cookie `sesion_estado` desde las rutas de autenticación (login, activar, restablecer) mediante helper compartido en `src/lib/routing/sesion-estado-emitter.ts`. Refresco periódico vía `SessionPingProvider` que pasa de `/api/session/ping` a `/api/vigencia/refresh`. Cierre del ciclo en `consentimiento/aceptar` y en los dos handlers de contraseña (caminos 2 y 3 de A-59, ya en main). Auditoría de cambio de contraseña con nuevo valor `AccionAudit` + migración. Visibilidad persistente en `consentimiento/guard.ts` (error estructurado). Cero cambio en el middleware Edge, cero nueva librería.
+**Impacto en arquitectura:** Emisión de la cookie `sesion_estado` desde las rutas de autenticación (login, activar, restablecer) mediante helper compartido en `src/lib/routing/sesion-estado-emitter.ts`. Refresco periódico vía `session/ping` que también emite la cookie (preservando el endpoint — `SessionPingProvider` sin cambios). Cierre del ciclo en `consentimiento/aceptar` y en los dos handlers de contraseña (caminos 2 y 3 de A-59, ya en main). Auditoría de cambio de contraseña con nuevo valor `AccionAudit` + migración. Visibilidad persistente en `consentimiento/guard.ts` (error estructurado). Cero cambio en el middleware Edge, cero nueva librería.
 
 ## Contexto
 
@@ -22,9 +22,9 @@ Después de autenticarse, antes de que el browser pueda navegar a una ruta prote
 | A2 | `POST /api/auth/activar` | Usuario activa por invitación |
 | A3 | `POST /api/auth/recuperar/restablecer` | Usuario restablece por token |
 
-**Helper nuevo:** `src/lib/routing/sesion-estado-emitter.ts` — `emitirSesionEstado(userId: string): Promise<string>` — hace el mismo `Promise.all` que `vigencia/refresh/route.ts` y devuelve el valor firmado de la cookie. Las rutas A1–A3 y `vigencia/refresh` lo usan; cero duplicación.
+**Helper nuevo:** `src/lib/routing/sesion-estado-emitter.ts` — `buildSesionEstadoValue(userId: string): Promise<string>` — hace el mismo `Promise.all` que `vigencia/refresh/route.ts` y devuelve el valor firmado de la cookie. Las rutas A1–A3, `session/ping` y `vigencia/refresh` lo usan; cero duplicación.
 
-**`SessionPingProvider`:** pasa de `POST /api/session/ping` a `POST /api/vigencia/refresh` (al montar y cada 5 minutos). Esto garantiza que la cookie se refresca durante la sesión abierta (§3.4).
+**`SessionPingProvider` y `useSessionPing`:** no cambian — siguen llamando `POST /api/session/ping`. La ruta `session/ping` suma el refresco de cookie sin tocar el endpoint ni la frecuencia del provider. Esto preserva la actualización de `ultimaActividadEn` que consumen `SesionesTab`, `analisis-panel-repository.ts:209`, `uso-caido-abrupto.ts` y `estaSesionActiva`.
 
 ### US2 — El ciclo se cierra (§3.2)
 
@@ -48,7 +48,7 @@ Si `sesion_estado` falta o expiró, el sistema la **produce** (US1 la emite en a
 
 ### US4 — Vigencia fuera del login (§3.4)
 
-`SessionPingProvider` llama `POST /api/vigencia/refresh` al montar y cada 5 min. Un colegio cuyo `finServicio` venció con sesión abierta recibirá una cookie con `vigencia !== ACTIVA` en ≤5 min; el middleware entonces lo redirige. Cumple "sin esperar 24h".
+`POST /api/session/ping` refresca la cookie además de actualizar `ultimaActividadEn`. `SessionPingProvider` llama ese endpoint al montar y cada 5 min — sin cambio de endpoint. Un colegio cuyo `finServicio` venció con sesión abierta recibirá una cookie con `vigencia !== ACTIVA` en ≤5 min; el middleware entonces lo redirige. Cumple "sin esperar 24h".
 
 El docstring de `vigencia.ts:26-29` se actualiza para reflejar la realidad: el middleware cubre la vigencia vía cookie; los layouts y APIs de cliente ya no lo aplican directamente.
 
