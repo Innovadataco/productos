@@ -112,10 +112,14 @@ src/lib/colegio/carga/importer.ts         # carga masiva — unicidad cross-suje
 
 Ver [research.md](research.md). Resumen de las decisiones cerradas:
 
-- **§2.1-DECISIÓN = opción A** (CEO, 2026-08-30): `@@unique` duro por-tabla dentro del colegio + warn-con-override cross-sujeto en aplicación.
+- **§2.1-DECISIÓN = opción A** (CEO, 2026-08-30), **diseño ASIMÉTRICO** (cerrado con Fábrica en el PARA):
+  - **Estudiante + Profesor** → constraint dura de BD por colegio: `UNIQUE (colegioId, tipo, valor, plataformaId) WHERE estado='activo'` NULLS NOT DISTINCT (la red que pidió el CEO; dos personas del colegio con el mismo identificador = bug I-213).
+  - **Acudiente** → se mantiene por-acudiente `UNIQUE (acudienteId, tipo, valor, plataformaId) WHERE estado='activo'` NULLS NOT DISTINCT. **Excepción documentada**: `AcudienteEstudiante` es por (estudiante, orden), así que un padre-de-dos-hijos tiene dos filas de acudiente en el mismo colegio y su mismo identificador va legítimamente en ambas — la BD no puede bloquearlo.
+  - **Todo cross-sujeto** → warn-con-override en aplicación por `(colegioId, valor)`. Nunca bloquea en seco.
 - **H1 · denormalización de `colegioId` en `IdentificadorAlumno`**: obligatoria y con justificación escrita (abajo). `crear()` de estudiante empieza a escribir `colegioId`.
-- **plataformaId nullable**: se resuelve para que "sin plataforma" cuente como caso único (centinela o índice parcial). Ver research.md §R3.
-- **H3 · orden del `@@unique` de estudiante**: se normaliza a `[colegioId?, sujetoId, tipo, valor, plataformaId]` como cambio explícito de constraint en la migración, no efecto lateral.
+- **plataformaId nullable**: `NULLS NOT DISTINCT` (PG16, índice único crudo aditivo). Ver research.md §R3.
+- **Índices parciales `WHERE estado='activo'`**: verificado que las tres tablas tienen `estado` (Estudiante:1355, Profesor:1310, Acudiente:1286).
+- **H3 · orden del `@@unique` de estudiante**: el reorden queda absorbido por la nueva constraint `(colegioId, tipo, valor, plataformaId)` de estudiante — cambio explícito de constraint en la migración, no efecto lateral.
 
 ### Justificación de la denormalización de `colegioId` (H1) — para que nadie la "limpie" en 6 meses
 
@@ -131,9 +135,9 @@ Ver [research.md](research.md). Resumen de las decisiones cerradas:
 
 1. **Migración A (§2.3 catálogo primero)**: crea `TipoDocumento`, siembra idempotente, migra vocabularios existentes (unificación `CC`↔`CEDULA_CIUDADANIA`). Va primero porque §2.2 referencia el catálogo. **Verificar datos antes**: enumerar valores distintos de tipo de documento presentes en estudiante y comité.
 2. **Migración B (§2.1 unicidad)**: agrega `colegioId` a `IdentificadorAlumno`, backfill de `colegioId` desde `Alumno` para filas existentes (aunque hoy sean ~0), reordena los tres `@@unique` a la forma normalizada por-colegio, resuelve el nullable de plataforma. **Verificar datos antes**: Fábrica ya corrió el SELECT de duplicados (0); re-verificar al desencolar.
-3. **Migración C (§2.2 identidad profesor)**: agrega los campos obligatorios a `Profesor` y la llave `(colegioId, tipoDocumento, numeroDocumento)`. **Verificar datos antes**: contar profesores existentes (SELECT: 2 filas) — como nacen obligatorios sin backfill y el reset borra la data después, confirmar que no rompe; si hubiera profesores sin documento al migrar, coordinar con Fábrica (el reset es después del deploy, la migración corre sobre lo que haya).
+3. **Migración C (§2.2 identidad profesor)**: agrega los campos obligatorios a `Profesor` y la llave `(colegioId, tipoDocumento, numeroDocumento)`, **columnas `NOT NULL` sin default, asumiendo tabla vacía**. **Prerequisito de deploy (lo corre el CEO)**: truncar `Profesor` + sus filas hijas de identificador **antes** de esta migración (paso destructivo; ver abajo). **Verificar datos antes**: confirmar que `Profesor` quedó vacía tras el truncate.
 
-> **Nota de secuencia**: como el reset-piloto corre **después** del deploy, las migraciones se aplican sobre los datos vivos. Con Postgres, agregar columnas `NOT NULL` sin default a una tabla con filas falla. Estrategia: para `Profesor` (2 filas hoy) y campos obligatorios, la migración añade las columnas con un default temporal solo-migración y lo retira, **o** se coordina que el reset de esas tablas ocurra en la misma ventana. Se detalla en data-model.md §Migración C.
+> **⚠️ Prerequisito de deploy para Migración C (corre el CEO, no el Dev)**: como el reset-piloto corre **después** del deploy y Postgres no admite columnas `NOT NULL` sin default sobre una tabla con filas, las 2 filas vivas de `Profesor` (data de prueba desechable) + sus filas hijas de identificador **se truncan en la ventana de deploy, ANTES de la migración de identidad**. **NO se usa temp-default**: un default constante en `numeroDocumento` violaría el UNIQUE `(colegioId, tipoDocumento, numeroDocumento)` si dos filas comparten colegio, y el brief pidió "sin backfill". Fábrica está confirmando el truncate con el CEO; **la migración de identidad NO se implementa hasta esa confirmación**. §2.3 catálogo y §2.1 unicidad avanzan sin esperar.
 
 ## Complexity Tracking
 

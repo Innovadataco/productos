@@ -24,16 +24,22 @@ Todas las incógnitas del Technical Context resueltas. No quedan `NEEDS CLARIFIC
 - **Cruce entre-sujetos (warn)**: la consulta de aplicación mira por `(colegioId, valor)` en las tres tablas — no depende de plataforma, así que el nullable no la afecta. `valor` se compara normalizado (ya existe `normalizarIdentificador`).
 - **Alternativa rechazada**: sentinel `plataformaId = 'SIN_PLATAFORMA'`. Requiere una fila real en `Plataforma` (es FK) y ensucia el catálogo. `COALESCE(plataformaId,'')` en índice funcional también sirve pero `NULLS NOT DISTINCT` es más limpio y nativo de PG16.
 
-## R4 · `@@unique` de estudiante — orden inconsistente (H3)
+## R4 · Constraints de unicidad — diseño ASIMÉTRICO por sujeto (H3 + cierre PARA)
 
-- **Hallazgo**: estudiante declara `@@unique([estudianteId, valor, tipo, plataformaId])` (valor antes de tipo), mientras profesor y acudiente usan `[sujetoId, tipo, valor, plataformaId]`.
-- **Decisión**: normalizar los tres a la forma por-colegio `(colegioId, sujetoId, tipo, valor, plataformaId)` con la misma semántica NULLS NOT DISTINCT. **Cambio explícito de constraint en el plan de migración**, no efecto lateral. Seguro con el reset a cero y el SELECT limpio.
+- **Hallazgo H3**: estudiante declara `@@unique([estudianteId, valor, tipo, plataformaId])` (valor antes de tipo), mientras profesor y acudiente usan `[sujetoId, tipo, valor, plataformaId]`.
+- **Hallazgo clave (Fábrica, PARA)**: `AcudienteEstudiante` es `@@unique([estudianteId, orden, estado])` (schema:1257) → **una fila de acudiente por (estudiante, orden)**. Un padre con dos hijos en el colegio tiene DOS filas de acudiente y su mismo identificador va legítimamente en dos `IdentificadorAcudiente` del mismo colegio.
+- **Decisión (asimétrica)**:
+  - **Estudiante + Profesor** → constraint dura de BD **por colegio**: `UNIQUE (colegioId, tipo, valor, plataformaId) WHERE estado='activo'` NULLS NOT DISTINCT. Un alumno/profesor tiene una identidad por colegio; dos del colegio con el mismo identificador = bug I-213. Es la red de BD que pidió el CEO.
+  - **Acudiente** → se **mantiene por-acudiente**: `UNIQUE (acudienteId, tipo, valor, plataformaId) WHERE estado='activo'` NULLS NOT DISTINCT. La BD no puede bloquear el padre-de-dos-hijos; el warn de aplicación cubre el cruce entre filas de acudiente.
+  - **Todo cross-sujeto** → warn-con-override en aplicación por `(colegioId, valor)`.
+- **Índice PARCIAL `WHERE estado='activo'`**: verificado que las tres tablas de identificador tienen `estado` (Estudiante schema:1355, Profesor:1310, Acudiente:1286). El parcial evita que una fila inactiva/histórica bloquee una nueva activa.
+- **Excepción de acudiente documentada en data-model §3.3** para que nadie la "unifique" a colegio y rompa al padre de dos hijos.
 
-## R5 · Migración de campos `NOT NULL` sobre tablas con filas (§2.2)
+## R5 · Migración de campos `NOT NULL` del profesor → truncate, no temp-default (§2.2 · cierre PARA)
 
-- **Problema**: agregar columnas `NOT NULL` sin default a `Profesor` (2 filas hoy) falla en Postgres; el reset-piloto corre **después** del deploy, así que la migración se aplica sobre datos vivos.
-- **Decisión**: la migración de identidad del profesor añade las columnas con un **default temporal solo-migración** (p. ej. `''`/`0`) para poblar las 2 filas existentes, y **retira el default** en el mismo archivo de migración dejando la columna `NOT NULL` sin default para inserciones futuras (la obligatoriedad real la impone la validación de aplicación + `NOT NULL`). Como el reset borra esas filas después, quedan sin residuo. Alternativa: coordinar con Fábrica un truncate de `Profesor` en la ventana de deploy; se deja como plan B.
-- **Rationale**: cumple "nacen obligatorios, sin nullable de transición" en el estado final del esquema, sin que la migración falle sobre las filas de prueba.
+- **Problema**: agregar columnas `NOT NULL` sin default a `Profesor` (2 filas hoy) falla en Postgres; el reset-piloto corre **después** del deploy.
+- **Decisión (Fábrica)**: **NO usar temp-default** — un default constante en `numeroDocumento` violaría el UNIQUE `(colegioId, tipoDocumento, numeroDocumento)` si dos filas comparten colegio, y el brief pidió "sin backfill". La migración de identidad se diseña **asumiendo tabla vacía**, con columnas `NOT NULL` sin default. Las 2 filas vivas de `Profesor` + sus filas hijas de identificador son data desechable y **se truncan en la ventana de deploy, ANTES de la migración de identidad** — paso **destructivo que corre el CEO** (no el Dev ni Fábrica). Fábrica lo está confirmando con el CEO; **la migración de identidad no se implementa hasta esa confirmación**.
+- **Rationale**: cumple "nacen obligatorios, sin nullable de transición" en el esquema final, sin gotcha de unique ni backfill, y sin que la migración falle.
 
 ## R6 · Vocabularios de tipo de documento — 3 fuentes, 6+ sitios (H2)
 

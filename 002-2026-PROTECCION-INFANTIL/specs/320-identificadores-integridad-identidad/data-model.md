@@ -34,7 +34,7 @@ Antes (`schema.prisma:1169`): `nombre, apellidos, email?, telefono?, estado`.
 
 - **Llave humana**: `@@unique([colegioId, tipoDocumento, numeroDocumento])`.
 - La llave de red social (identificadores) es la del producto — van las dos.
-- **Migración C** (ver R5): columnas añadidas con default temporal solo-migración para poblar las 2 filas vivas, default retirado en el mismo archivo → estado final `NOT NULL` sin default. Verificar conteo de profesores antes.
+- **Migración C** (ver R5, actualizado en PARA): columnas `NOT NULL` **sin default**, diseñadas asumiendo **tabla vacía**. Las 2 filas vivas de `Profesor` (data desechable) + sus filas hijas de identificador se **truncan en la ventana de deploy, ANTES de esta migración** — paso **destructivo que corre el CEO**, no el Dev ni Fábrica. Anotado como prerequisito de deploy en plan.md. No se usa temp-default (un default constante en `numeroDocumento` violaría el UNIQUE `(colegioId, tipoDocumento, numeroDocumento)` si dos filas comparten colegio; y el brief pidió "sin backfill").
 
 ## 3. Identificadores — unicidad por colegio (§2.1)
 
@@ -49,20 +49,27 @@ Antes (`schema.prisma:1169`): `nombre, apellidos, email?, telefono?, estado`.
 
 Ya tienen `colegioId`. Solo se normaliza el `@@unique` a la forma por colegio (3.4). Sin cambio de columnas.
 
-### 3.3 Semántica de unicidad (opción A)
+### 3.3 Semántica de unicidad (opción A · **diseño ASIMÉTRICO**, cerrado en PARA por Fábrica 2026-08-30)
 
-- **Protección dura de BD (por tabla, dentro del colegio)**: índice único con `NULLS NOT DISTINCT` (PG16, SQL crudo aditivo) sobre `("colegioId", "tipo", "valor", "plataformaId")` — evita el duplicado exacto accidental **y** trata "sin plataforma" como caso único (R3).
-- **Warn-con-override (cross-sujeto, en aplicación)**: nuevo servicio `identificador-unicidad.ts` consulta las tres tablas por `(colegioId, valor)` (valor normalizado); si el mismo valor está en **otra persona** del colegio, devuelve `{ pertenece: { nombre, rol } }`. El route responde con un aviso (no 409 automático); el override se confirma desde el cliente y se audita (FR-018). No bloquea.
+La protección dura de BD es **asimétrica por sujeto**, porque las tablas tienen cardinalidad distinta respecto a "una persona":
 
-### 3.4 Forma normalizada del `@@unique` (los tres sujetos)
+| Sujeto | Constraint dura de BD | Razón |
+|---|---|---|
+| **Estudiante** | `UNIQUE (colegioId, tipo, valor, plataformaId) WHERE estado='activo'` NULLS NOT DISTINCT | Un alumno tiene una sola fila por colegio; dos alumnos del colegio con el mismo identificador es el bug I-213. Acá va la **red dura de BD** que pidió el CEO. Requiere `colegioId` denormalizado (H1). |
+| **Profesor** | `UNIQUE (colegioId, tipo, valor, plataformaId) WHERE estado='activo'` NULLS NOT DISTINCT | Igual que estudiante: dos profesores del colegio con el mismo identificador es el bug. Red dura de BD. |
+| **Acudiente** | `UNIQUE (acudienteId, tipo, valor, plataformaId) WHERE estado='activo'` NULLS NOT DISTINCT — **se mantiene por-acudiente, NO por-colegio** | **Excepción documentada:** `AcudienteEstudiante` es `@@unique([estudianteId, orden, estado])` (schema:1257) → **una fila de acudiente por (estudiante, orden)**. Un padre con dos hijos en el colegio tiene DOS filas de acudiente, y su mismo Instagram va legítimamente en dos `IdentificadorAcudiente` del mismo colegio. La BD NO puede bloquear eso; el cruce entre filas de acudiente lo cubre el warn de aplicación. |
 
-Índice de protección dura, por tabla:
-```
-UNIQUE (colegioId, tipo, valor, plataformaId) NULLS NOT DISTINCT
-```
-(El `sujetoId` no entra en la protección dura por-colegio: dos personas distintas del mismo colegio con el mismo `(tipo, valor, plataforma)` es justamente el caso que el **warn cross-sujeto** intercepta, no un rechazo de BD. El duplicado exacto que la BD sí rechaza es "la misma tupla repetida dentro del colegio". Ver contracts para el árbol de decisión completo.)
+> ⚠️ **NO "unificar" la constraint de acudiente a `(colegioId, …)`.** El caso padre-de-dos-hijos (una persona = dos filas de acudiente en el mismo colegio, por el `@@unique([estudianteId, orden, estado])` de `AcudienteEstudiante`) se rompería. Esta excepción es deliberada; queda escrita aquí para que nadie la "limpie".
 
-> **Nota de diseño para PARA**: hay dos lecturas del "duplicado exacto por-tabla". (a) `(sujetoId, tipo, valor, plataformaId)` = un sujeto no repite su propio identificador (comportamiento actual, conservado). (b) `(colegioId, tipo, valor, plataformaId)` = dentro del colegio nadie repite esa tupla exacta (más fuerte, pero chocaría con el caso legítimo profesor=padre si ambos registran el mismo Instagram con la misma plataforma). **Recomendación: mantener la protección dura en (a) `(sujetoId, tipo, valor, plataformaId)` con NULLS NOT DISTINCT, y dejar TODO el cruce cross-sujeto —incluido mismo tipo/plataforma— al warn-con-override.** Así la BD nunca rompe el caso legítimo y el rector siempre decide. Confirmar esta lectura en el PARA.
+- **Índice PARCIAL `WHERE estado='activo'`**: las tres tablas de identificador tienen `estado String @default("activo")` (Estudiante schema:1355, Profesor:1310, Acudiente:1286). El índice parcial evita que una fila inactiva/histórica bloquee una nueva activa con el mismo valor.
+- **`NULLS NOT DISTINCT`** (PG16, SQL crudo aditivo): trata "sin plataforma" como caso único (R3).
+
+### 3.4 Warn-con-override cross-sujeto (en aplicación · los tres sujetos)
+
+- Nuevo servicio `identificador-unicidad.ts`: consulta las tres tablas por `(colegioId, valor)` (valor normalizado, solo `estado='activo'`); si el mismo valor está en **otra persona** del colegio, devuelve `{ pertenece: [{ nombre, rol }] }`.
+- El route responde con un **aviso** (no 409 automático); el override se confirma desde el cliente (`confirmarCompartido: true`) y se audita (FR-018). **Nunca bloquea en seco.**
+- Cubre todos los pares cross-sujeto (profesor+acudiente, estudiante+acudiente, estudiante+profesor) y también el cruce entre filas de acudiente que la BD deja pasar.
+- Entre colegios distintos: sin aviso (aislamiento por tenant). La consulta SIEMPRE lleva `colegioId`.
 
 ## 4. Mapa de migración de vocabulario (§2.3 · H2)
 

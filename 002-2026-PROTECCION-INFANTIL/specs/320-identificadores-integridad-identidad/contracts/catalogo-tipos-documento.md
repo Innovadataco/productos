@@ -29,8 +29,10 @@ Aplica a los 8 callsites de identificador (estudiante/profesor/acudiente · alta
 
 ### Comportamiento
 1. Se calcula `valorNormalizado` (helper existente `normalizarIdentificador`).
-2. **Protección dura de BD**: si la tupla exacta ya existe en el mismo sujeto dentro del colegio → 409 (`Identificador duplicado`). Conservado.
-3. **Cruce cross-sujeto (warn)**: si `valorNormalizado` está en **otra persona** del mismo colegio (cualquiera de los tres sujetos) y el cliente **no** envió confirmación de override → respuesta de aviso, **no** error:
+2. **Protección dura de BD (asimétrica, ver data-model §3.3)** sobre filas `estado='activo'`:
+   - **Estudiante / Profesor**: la tupla `(colegioId, tipo, valor, plataformaId)` es única por colegio → un segundo registro con la misma tupla (aunque sea otra persona) es rechazado por la BD → 409. Es la red que protege el bug I-213.
+   - **Acudiente**: la tupla `(acudienteId, tipo, valor, plataformaId)` es única por acudiente → solo rechaza el duplicado exacto en el **mismo** acudiente (el padre-de-dos-hijos con dos filas de acudiente NO se bloquea).
+3. **Cruce cross-sujeto (warn)**: si `valorNormalizado` (por `(colegioId, valor)`, estado activo) está en **otra persona** del mismo colegio que la BD dura no rechazó, y el cliente **no** envió confirmación de override → respuesta de aviso, **no** error:
 ```json
 {
   "aviso": {
