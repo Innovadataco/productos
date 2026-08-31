@@ -11,18 +11,21 @@ type Mensaje = { type: "success" | "error"; text: string } | null;
 
 interface FormState {
     nombreColegio: string;
+    nit: string;
     nombreRector: string;
     emailRector: string;
 }
 
 const initialForm: FormState = {
     nombreColegio: "",
+    nit: "",
     nombreRector: "",
     emailRector: "",
 };
 
 function validate(form: FormState): string | null {
     if (!form.nombreColegio.trim()) return "El nombre del colegio es requerido";
+    if (!form.nit.trim()) return "El NIT del colegio es requerido";
     if (!form.nombreRector.trim()) return "El nombre del rector es requerido";
     if (!form.emailRector.trim()) return "El email del rector es requerido";
     if (!form.emailRector.includes("@")) return "El email del rector no es válido";
@@ -55,7 +58,8 @@ export default function NuevoColegioPageClient() {
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    nombre: form.nombreColegio,
+                    nombreColegio: form.nombreColegio,
+                    nit: form.nit,
                     nombreRector: form.nombreRector,
                     emailRector: form.emailRector,
                 }),
@@ -99,6 +103,12 @@ export default function NuevoColegioPageClient() {
                             required
                             value={form.nombreColegio}
                             onChange={(e) => update("nombreColegio", e.target.value)}
+                        />
+                        <Input
+                            label="NIT del colegio"
+                            required
+                            value={form.nit}
+                            onChange={(e) => update("nit", e.target.value)}
                         />
                         <Input
                             label="Nombre del rector"
