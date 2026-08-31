@@ -3339,24 +3339,24 @@ async function main() {
         // suscripcion.por_vencer
         { evento: "suscripcion.por_vencer", rol: "RECTOR_COLEGIO", offset: "-5d", canal: "EMAIL", obligatoria: true },
         { evento: "suscripcion.por_vencer", rol: "RECTOR_COLEGIO", offset: "-5d", canal: "IN_APP", obligatoria: true },
-        { evento: "suscripcion.por_vencer", rol: "PADRE", offset: "-1d", canal: "EMAIL", obligatoria: true },
-        { evento: "suscripcion.por_vencer", rol: "PADRE", offset: "-1d", canal: "IN_APP", obligatoria: true },
+        { evento: "suscripcion.por_vencer", rol: "PARENT", offset: "-1d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.por_vencer", rol: "PARENT", offset: "-1d", canal: "IN_APP", obligatoria: true },
         // suscripcion.en_gracia
         { evento: "suscripcion.en_gracia", rol: "RECTOR_COLEGIO", offset: "+2d", canal: "EMAIL", obligatoria: true },
         { evento: "suscripcion.en_gracia", rol: "RECTOR_COLEGIO", offset: "+2d", canal: "IN_APP", obligatoria: true },
-        { evento: "suscripcion.en_gracia", rol: "PADRE", offset: "+2d", canal: "EMAIL", obligatoria: true },
-        { evento: "suscripcion.en_gracia", rol: "PADRE", offset: "+2d", canal: "IN_APP", obligatoria: true },
+        { evento: "suscripcion.en_gracia", rol: "PARENT", offset: "+2d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.en_gracia", rol: "PARENT", offset: "+2d", canal: "IN_APP", obligatoria: true },
         // suscripcion.cortada
         { evento: "suscripcion.cortada", rol: "RECTOR_COLEGIO", offset: "+3d", canal: "EMAIL", obligatoria: true },
         { evento: "suscripcion.cortada", rol: "RECTOR_COLEGIO", offset: "+3d", canal: "IN_APP", obligatoria: true },
-        { evento: "suscripcion.cortada", rol: "PADRE", offset: "+3d", canal: "EMAIL", obligatoria: true },
-        { evento: "suscripcion.cortada", rol: "PADRE", offset: "+3d", canal: "IN_APP", obligatoria: true },
+        { evento: "suscripcion.cortada", rol: "PARENT", offset: "+3d", canal: "EMAIL", obligatoria: true },
+        { evento: "suscripcion.cortada", rol: "PARENT", offset: "+3d", canal: "IN_APP", obligatoria: true },
         // reporte.circulo_confianza.aparece_menor
-        { evento: "reporte.circulo_confianza.aparece_menor", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
-        { evento: "reporte.circulo_confianza.aparece_menor", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "reporte.circulo_confianza.aparece_menor", rol: "PARENT", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "reporte.circulo_confianza.aparece_menor", rol: "PARENT", offset: "+0m", canal: "IN_APP", obligatoria: false },
         // reporte.resuelto
-        { evento: "reporte.resuelto", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
-        { evento: "reporte.resuelto", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "reporte.resuelto", rol: "PARENT", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "reporte.resuelto", rol: "PARENT", offset: "+0m", canal: "IN_APP", obligatoria: false },
         // caso.asignado
         { evento: "caso.asignado", rol: "COMITE_CONVIVENCIA", offset: "+0m", canal: "EMAIL", obligatoria: false },
         { evento: "caso.asignado", rol: "COMITE_CONVIVENCIA", offset: "+0m", canal: "IN_APP", obligatoria: false },
@@ -3369,14 +3369,14 @@ async function main() {
         // ── SPEC-215: programa de referidos (titulares colegio/padre + aviso a admin) ──
         { evento: "referido.registrado", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: false },
         { evento: "referido.registrado", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "IN_APP", obligatoria: false },
-        { evento: "referido.registrado", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
-        { evento: "referido.registrado", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: false },
+        { evento: "referido.registrado", rol: "PARENT", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.registrado", rol: "PARENT", offset: "+0m", canal: "IN_APP", obligatoria: false },
         { evento: "referido.recompensa.otorgada", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: true },
         { evento: "referido.recompensa.otorgada", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "IN_APP", obligatoria: true },
-        { evento: "referido.recompensa.otorgada", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: true },
-        { evento: "referido.recompensa.otorgada", rol: "PADRE", offset: "+0m", canal: "IN_APP", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "PARENT", offset: "+0m", canal: "EMAIL", obligatoria: true },
+        { evento: "referido.recompensa.otorgada", rol: "PARENT", offset: "+0m", canal: "IN_APP", obligatoria: true },
         { evento: "referido.tope_anual", rol: "RECTOR_COLEGIO", offset: "+0m", canal: "EMAIL", obligatoria: false },
-        { evento: "referido.tope_anual", rol: "PADRE", offset: "+0m", canal: "EMAIL", obligatoria: false },
+        { evento: "referido.tope_anual", rol: "PARENT", offset: "+0m", canal: "EMAIL", obligatoria: false },
         { evento: "referido.tope_anual", rol: "ADMIN", offset: "+0m", canal: "EMAIL", obligatoria: true },
     ];
 
