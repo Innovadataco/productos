@@ -34,6 +34,8 @@ type Profesor = {
     email: string;
     telefono: string;
     estado: string;
+    // SPEC-321 (P10): conteo de identificadores activos del profesor.
+    identificadoresActivos: number;
 };
 
 type TipoDocumento = { clave: string; nombre: string };
@@ -246,8 +248,8 @@ export default function ProfesoresPageClient() {
                     type: "success",
                     text:
                         nuevoEstado === "inactivo"
-                            ? `${profesor.nombre} ${profesor.apellidos} dado de baja. Sigue como titular histórico de sus cursos.`
-                            : `${profesor.nombre} ${profesor.apellidos} reactivado`,
+                            ? `${profesor.nombre} ${profesor.apellidos} inactivado. Sigue como titular histórico de sus cursos.`
+                            : `${profesor.nombre} ${profesor.apellidos} activado`,
                 });
                 await cargar();
             } else {
@@ -312,15 +314,10 @@ export default function ProfesoresPageClient() {
                         <EmptyState
                             title={
                                 filtroEstado === "inactivo"
-                                    ? "No hay profesores dados de baja"
+                                    ? "No hay profesores inactivos"
                                     : "No hay profesores registrados"
                             }
-                            description="Agrega el primer profesor para asignarlo como titular de los cursos."
-                            action={
-                                <Button className="min-h-12" onClick={abrirCrear}>
-                                    Agregar profesor
-                                </Button>
-                            }
+                            description="Usa «Agregar profesor» para registrar al primero y asignarlo como titular de los cursos."
                         />
                     ) : (
                         <Tabla aria-label="Profesores del colegio">
@@ -328,6 +325,7 @@ export default function ProfesoresPageClient() {
                                 <tr className="text-subtle">
                                     <th className="pb-3 pt-4 pl-4 font-medium">Profesor</th>
                                     <th className="pb-3 pt-4 font-medium">Contacto</th>
+                                    <th className="pb-3 pt-4 font-medium">Identificadores</th>
                                     <th className="pb-3 pt-4 font-medium">Estado</th>
                                     <th className="pb-3 pt-4 pr-4 text-right font-medium">Acciones</th>
                                 </tr>
@@ -335,7 +333,7 @@ export default function ProfesoresPageClient() {
                             <TablaBody>
                                 {filtrados.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="py-6 text-center text-sm text-muted">
+                                        <td colSpan={5} className="py-6 text-center text-sm text-muted">
                                             Sin resultados para «{filtroTexto.trim()}».
                                         </td>
                                     </tr>
@@ -354,6 +352,10 @@ export default function ProfesoresPageClient() {
                                                 ) : (
                                                     "—"
                                                 )}
+                                            </td>
+                                            <td className="py-3 pr-3 text-muted">
+                                                {/* SPEC-321 (P10): identificadores activos del profesor. */}
+                                                {profesor.identificadoresActivos}
                                             </td>
                                             <td className="py-3 pr-3">
                                                 <Badge variant={profesor.estado === "activo" ? "success" : "neutral"}>
@@ -381,7 +383,7 @@ export default function ProfesoresPageClient() {
                                                         isLoading={cambiandoId === profesor.id}
                                                         onClick={() => cambiarEstado(profesor)}
                                                     >
-                                                        {profesor.estado === "activo" ? "Dar de baja" : "Reactivar"}
+                                                        {profesor.estado === "activo" ? "Inactivar" : "Activar"}
                                                     </Button>
                                                 </span>
                                             </td>

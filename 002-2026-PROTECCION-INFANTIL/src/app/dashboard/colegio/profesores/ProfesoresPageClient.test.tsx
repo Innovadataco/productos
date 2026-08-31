@@ -6,14 +6,14 @@
  */
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import ProfesoresPageClient from "./ProfesoresPageClient";
 
 // SPEC-320 (§2.2): post-reset todo profesor nace con identidad completa
 // (tipo/número de documento, año, sexo, email y teléfono obligatorios).
 const PROFESORES = [
-    { id: "p1", nombre: "María", apellidos: "López", tipoDocumento: "CC", numeroDocumento: "111", anioNacimiento: 1985, sexo: "F", email: "maria@colegio.edu.co", telefono: "+573001112233", estado: "activo" },
-    { id: "p2", nombre: "Carlos", apellidos: "Gómez", tipoDocumento: "CC", numeroDocumento: "222", anioNacimiento: 1980, sexo: "M", email: "carlos@colegio.edu.co", telefono: "+573004445566", estado: "activo" },
+    { id: "p1", nombre: "María", apellidos: "López", tipoDocumento: "CC", numeroDocumento: "111", anioNacimiento: 1985, sexo: "F", email: "maria@colegio.edu.co", telefono: "+573001112233", estado: "activo", identificadoresActivos: 2 },
+    { id: "p2", nombre: "Carlos", apellidos: "Gómez", tipoDocumento: "CC", numeroDocumento: "222", anioNacimiento: 1980, sexo: "M", email: "carlos@colegio.edu.co", telefono: "+573004445566", estado: "activo", identificadoresActivos: 0 },
 ];
 
 // SPEC-320 (§2.3): catálogo de tipos de documento que el form consume al montar.
@@ -64,7 +64,7 @@ describe("ProfesoresPageClient", () => {
         await waitFor(() =>
             expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("estado=inactivo"))).toBe(true)
         );
-        expect(await screen.findByText(/No hay profesores dados de baja/)).toBeTruthy();
+        expect(await screen.findByText(/No hay profesores inactivos/)).toBeTruthy();
     });
 
     it("el buscador filtra con debounce y muestra empty honesto sin resultados", async () => {
@@ -80,11 +80,12 @@ describe("ProfesoresPageClient", () => {
         expect(await screen.findByText("Sin resultados para «zzz».", undefined, { timeout: 1000 })).toBeTruthy();
     });
 
-    it("estado vacío con CTA 'Agregar profesor'", async () => {
+    it("estado vacío: UN solo botón 'Agregar profesor' (SPEC-321 P5, el del encabezado)", async () => {
         mockFetchList([]);
         render(<ProfesoresPageClient />);
         expect(await screen.findByText("No hay profesores registrados")).toBeTruthy();
-        expect(screen.getAllByRole("button", { name: "Agregar profesor" }).length).toBeGreaterThan(0);
+        // P5: antes había dos (encabezado + CTA del vacío); ahora exactamente uno.
+        expect(screen.getAllByRole("button", { name: "Agregar profesor" })).toHaveLength(1);
     });
 
     it("sin apellidos no envía y explica (validación humana)", async () => {
@@ -200,12 +201,12 @@ describe("ProfesoresPageClient", () => {
         });
     });
 
-    it("baja suave: 'Dar de baja' hace PATCH estado inactivo y avisa del titular histórico", async () => {
+    it("SPEC-321 P8: 'Inactivar' hace PATCH estado inactivo y avisa del titular histórico", async () => {
         const fetchMock = mockFetchList();
         render(<ProfesoresPageClient />);
         await screen.findByText("María López");
 
-        fireEvent.click(screen.getAllByRole("button", { name: "Dar de baja" })[0]!);
+        fireEvent.click(screen.getAllByRole("button", { name: "Inactivar" })[0]!);
 
         await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === "PATCH")).toBe(true));
         const patch = fetchMock.mock.calls.find((c) => c[1]?.method === "PATCH")!;
@@ -214,17 +215,29 @@ describe("ProfesoresPageClient", () => {
         expect(await screen.findByText(/Sigue como titular histórico de sus cursos/)).toBeTruthy();
     });
 
-    it("una profesora inactiva ofrece 'Reactivar' (PATCH estado activo)", async () => {
+    it("SPEC-321 P8: un profesor inactivo ofrece 'Activar' (PATCH estado activo)", async () => {
         const fetchMock = mockFetchList([{ ...PROFESORES[0], estado: "inactivo" }]);
         render(<ProfesoresPageClient />);
         await screen.findByText("María López");
         expect(screen.getByText("Inactivo")).toBeTruthy();
 
-        fireEvent.click(screen.getByRole("button", { name: "Reactivar" }));
+        fireEvent.click(screen.getByRole("button", { name: "Activar" }));
 
         await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === "PATCH")).toBe(true));
         const patch = fetchMock.mock.calls.find((c) => c[1]?.method === "PATCH")!;
         expect(JSON.parse(patch[1].body)).toEqual({ estado: "activo" });
-        expect(await screen.findByText(/reactivado/)).toBeTruthy();
+        expect(await screen.findByText(/activado/)).toBeTruthy();
+    });
+
+    it("SPEC-321 P10: la lista muestra el conteo de identificadores activos por profesor", async () => {
+        mockFetchList();
+        render(<ProfesoresPageClient />);
+        await screen.findByText("María López");
+        // encabezado de columna + conteos del fixture (María=2, Carlos=0)
+        expect(screen.getByText("Identificadores")).toBeTruthy();
+        const filaMaria = screen.getByText("María López").closest("tr")!;
+        expect(within(filaMaria).getByText("2")).toBeTruthy();
+        const filaCarlos = screen.getByText("Carlos Gómez").closest("tr")!;
+        expect(within(filaCarlos).getByText("0")).toBeTruthy();
     });
 });
