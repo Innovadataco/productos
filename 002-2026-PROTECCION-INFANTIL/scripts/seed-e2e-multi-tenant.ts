@@ -130,6 +130,7 @@ async function sembrarColegioE2E(
         where: { tenantId: tenant.id },
         create: {
             nombre: nombreColegio,
+            nit: `E2E-NIT-${letra}`, // SPEC-320 (§2.2-bis)
             paisId,
             ciudadId,
             representanteLegalNombre: `Representante E2E ${letra}`,
@@ -199,6 +200,9 @@ async function sembrarColegioE2E(
                     colegioId: colegio.id,
                     nombre: nombreEstudiante,
                     apellidos: "Prueba",
+                    // SPEC-320 (§2.2-bis): documento del alumno obligatorio.
+                    documentoTipo: "TI",
+                    documentoNumero: `E2E-EST-${letra}`,
                     estado: "activo",
                 },
             });

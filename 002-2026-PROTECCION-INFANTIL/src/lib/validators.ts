@@ -203,6 +203,8 @@ export const verificarCompletarSchema = z.object({
     nombre: z.string({ error: "Token y contraseña requeridos" }).optional(),
     // SPEC-240 (002-PI-143): registro público de colegio (paso 2 de verificación).
     nombreColegio: z.string().min(2, "Nombre del colegio: mínimo 2 caracteres").max(150).optional(),
+    // SPEC-320 (§2.2-bis): NIT del colegio, obligatorio en el registro de colegio.
+    nit: z.string().min(1, "Falta el NIT del colegio").max(50).optional(),
     rol: z.enum(["PARENT", "SCHOOL_ADMIN"]).optional(),
 });
 export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
@@ -222,6 +224,8 @@ export const adminColegioNuevoSchema = z.object({
     nombreColegio: z.string().min(2, "Nombre del colegio: mínimo 2 caracteres").max(150),
     nombreRector: z.string().min(2, "Nombre del rector: mínimo 2 caracteres").max(150),
     emailRector: z.string().email("Email inválido").max(255, "Email: máximo 255 caracteres"),
+    // SPEC-320 (§2.2-bis): NIT institucional obligatorio, único global.
+    nit: z.string().min(1, "Falta el NIT del colegio").max(50),
 }).strict();
 export type AdminColegioNuevoInput = z.infer<typeof adminColegioNuevoSchema>;
 

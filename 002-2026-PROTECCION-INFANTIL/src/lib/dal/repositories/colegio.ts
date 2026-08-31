@@ -153,6 +153,11 @@ export class ColegioRepository {
         return this.db.colegio.create({ data });
     }
 
+    /** SPEC-320 (§2.2-bis): colegio por NIT (único global). Null si no existe. */
+    buscarPorNit(nit: string) {
+        return this.db.colegio.findUnique({ where: { nit } });
+    }
+
     /**
      * SPEC-240 (002-PI-143): alta de colegio con datos mínimos (registro público o
      * pre-registro admin). Los valores por defecto (ubicación, representante legal,

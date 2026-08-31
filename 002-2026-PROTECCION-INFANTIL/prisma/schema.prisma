@@ -1069,6 +1069,10 @@ model TasaCambio {
 model Colegio {
   id                               String              @id @default(cuid())
   nombre                           String
+  // SPEC-320 (§2.2-bis): NIT institucional — llave del colegio, ÚNICA en todo el
+  // sistema (no por tenant). Pensado para el puente padre↔colegio (el padre busca el
+  // colegio por NIT). Obligatorio; se pide en /registro-colegio y en el alta admin.
+  nit                              String              @unique
   paisId                           String
   departamentoId                   String?
   ciudadId                         String
@@ -1259,8 +1263,12 @@ model Estudiante {
   colegioId       String
   nombre          String
   apellidos       String   @default("")
-  documentoTipo   String? // set cerrado en Zod (D3): RC|TI|CC|CE|PASAPORTE|OTRO
-  documentoNumero String?
+  // SPEC-320 (§2.2-bis): documento del alumno OBLIGATORIO (antes opcional). Consume el
+  // catálogo TipoDocumento (clave). Único por colegio (colegioId, documentoTipo,
+  // documentoNumero) — índice parcial WHERE estado='activo' en la migración (Prisma no
+  // expresa parciales). Pensado como dato confiable para el cruce padre↔colegio.
+  documentoTipo   String
+  documentoNumero String
   estado          String   @default("activo")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

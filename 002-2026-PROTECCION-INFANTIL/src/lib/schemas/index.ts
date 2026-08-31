@@ -86,6 +86,8 @@ export const tipoPeriodoServicioSchema = z.enum(["MENSUAL", "SEMESTRAL", "ANUAL"
 
 export const colegioBodySchema = z.object({
     nombre: z.string().min(2).max(150),
+    // SPEC-320 (§2.2-bis): NIT institucional obligatorio, único global.
+    nit: z.string({ message: "Falta el NIT del colegio" }).min(1, "Falta el NIT del colegio").max(50),
     paisId: cuidIdSchema,
     departamentoId: cuidIdSchema.optional(),
     ciudadId: cuidIdSchema,
@@ -261,8 +263,9 @@ export const acudienteEstudianteBodySchema = z.object({
 export const estudianteBodySchema = z.object({
     nombre: z.string().min(2).max(150),
     apellidos: z.string({ message: "Falta el apellido del estudiante" }).min(1, "Falta el apellido del estudiante").max(150),
-    documentoTipo: documentoTipoEstudianteSchema.optional(),
-    documentoNumero: z.string().max(50).optional(),
+    // SPEC-320 (§2.2-bis): documento del alumno OBLIGATORIO (consume el catálogo §2.3).
+    documentoTipo: z.string({ message: "Falta el tipo de documento del estudiante" }).min(1, "Falta el tipo de documento del estudiante").max(20),
+    documentoNumero: z.string({ message: "Falta el número de documento del estudiante" }).min(1, "Falta el número de documento del estudiante").max(50),
     acudientes: z.array(acudienteEstudianteBodySchema).max(2, "Máximo 2 acudientes por estudiante").optional(),
 });
 

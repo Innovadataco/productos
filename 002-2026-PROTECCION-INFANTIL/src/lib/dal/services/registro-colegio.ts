@@ -27,11 +27,11 @@ const CIUDAD_DEFAULT_NOMBRE = "Bogotá";
 
 export type ResultadoRegistroColegio =
     | { ok: true; user: { id: string; email: string; nombre: string | null; rol: string } }
-    | { ok: false; tipo: "existente" | "ubicacion_no_configurada" };
+    | { ok: false; tipo: "existente" | "ubicacion_no_configurada" | "nit_existente" };
 
 export type ResultadoPreRegistroColegio =
     | { ok: true; user: { id: string; email: string; nombre: string | null }; token: string; colegioId: string; colegioNombre: string }
-    | { ok: false; tipo: "existente" | "ubicacion_no_configurada" };
+    | { ok: false; tipo: "existente" | "ubicacion_no_configurada" | "nit_existente" };
 
 export type ResultadoActivacion =
     | { ok: true; user: { id: string; email: string; nombre: string | null; rol: string } }
@@ -72,12 +72,18 @@ export class RegistroColegioService {
         email: string,
         password: string,
         nombreRector: string,
-        nombreColegio: string
+        nombreColegio: string,
+        nit: string
     ): Promise<ResultadoRegistroColegio> {
         const emailLower = email.toLowerCase();
         const existing = await this.usuarios.findByEmail(emailLower);
         if (existing) {
             return { ok: false, tipo: "existente" };
+        }
+
+        // SPEC-320 (§2.2-bis): NIT único global.
+        if (await this.colegios.buscarPorNit(nit)) {
+            return { ok: false, tipo: "nit_existente" };
         }
 
         const ubicacion = await this.resolverUbicacionDefault();
@@ -91,6 +97,7 @@ export class RegistroColegioService {
             const service = new RegistroColegioService(tx);
             const { colegio, tenant } = await service.crearColegioMinimo({
                 nombreColegio,
+                nit,
                 nombreRector,
                 emailRector: emailLower,
                 ubicacion,
@@ -120,12 +127,18 @@ export class RegistroColegioService {
         nombreColegio: string,
         nombreRector: string,
         emailRector: string,
-        adminId: string
+        adminId: string,
+        nit: string
     ): Promise<ResultadoPreRegistroColegio> {
         const emailLower = emailRector.toLowerCase();
         const existing = await this.usuarios.findByEmail(emailLower);
         if (existing) {
             return { ok: false, tipo: "existente" };
+        }
+
+        // SPEC-320 (§2.2-bis): NIT único global.
+        if (await this.colegios.buscarPorNit(nit)) {
+            return { ok: false, tipo: "nit_existente" };
         }
 
         const ubicacion = await this.resolverUbicacionDefault();
@@ -142,6 +155,7 @@ export class RegistroColegioService {
             const service = new RegistroColegioService(tx);
             const { colegio, tenant } = await service.crearColegioMinimo({
                 nombreColegio,
+                nit,
                 nombreRector,
                 emailRector: emailLower,
                 ubicacion,
@@ -285,6 +299,7 @@ export class RegistroColegioService {
 
     private async crearColegioMinimo(data: {
         nombreColegio: string;
+        nit: string;
         nombreRector: string;
         emailRector: string;
         ubicacion: { paisId: string; ciudadId: string; departamentoId?: string | undefined };
@@ -294,6 +309,7 @@ export class RegistroColegioService {
 
         const colegio = await this.colegios.crear({
             nombre: data.nombreColegio,
+            nit: data.nit, // SPEC-320 (§2.2-bis): NIT único global
             paisId: data.ubicacion.paisId,
             ciudadId: data.ubicacion.ciudadId,
             ...(data.ubicacion.departamentoId ? { departamentoId: data.ubicacion.departamentoId } : {}),

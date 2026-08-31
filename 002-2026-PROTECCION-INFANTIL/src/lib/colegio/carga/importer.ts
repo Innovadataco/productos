@@ -4,6 +4,7 @@
  * creados/reutilizados) queda intacta; los repos se inyectan con la tx (D2).
  */
 import type { Prisma } from "@prisma/client";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
@@ -96,13 +97,15 @@ export async function importarCargaMasiva(
                 estudiante = { id: existente.id, creado: false };
                 resumen.alumnosReutilizados++;
             } else {
-                const nuevo = await estudiantes.crear(colegioId, {
-                    cursoId: curso.id,
-                    nombre: fila.alumno.nombre,
-                    apellidos: fila.alumno.apellidos,
-                });
-                estudiante = { id: nuevo.id, creado: true };
-                resumen.alumnosCreados++;
+                // SPEC-320 (§2.2-bis · interim): el documento del alumno es obligatorio,
+                // pero la plantilla/parser de carga masiva aún no trae columna de documento
+                // (columna Excel diferida a radicado propio). En vez de romper en silencio
+                // o inventar un documento falso, se rechaza con mensaje claro.
+                throw new AppError(
+                    "La carga masiva de alumnos requiere documento de identidad. Usá el alta individual (que ya pide el documento) o esperá la plantilla actualizada.",
+                    ERROR_CODES.VALIDATION_ERROR,
+                    400
+                );
             }
             estudiantesPorClave.set(estudianteKey, estudiante);
         }

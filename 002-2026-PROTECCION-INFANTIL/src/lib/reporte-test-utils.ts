@@ -59,6 +59,8 @@ export async function crearColegioConAdmin() {
     const colegio = await prisma.colegio.create({
         data: {
             nombre: "Colegio Test",
+            // SPEC-320 (§2.2-bis): NIT obligatorio y único global.
+            nit: `TEST-NIT-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             paisId: pais.id,
             ciudadId: ciudad.id,
             representanteLegalNombre: "Representante Test",
@@ -136,17 +138,21 @@ export async function crearProfesor(
     });
 }
 
+let estudianteDocSeq = 0;
 export async function crearEstudiante(
     cursoId: string,
     colegioId: string,
-    data: { nombre?: string; apellidos?: string; estado?: string } = {}
+    data: { nombre?: string; apellidos?: string; estado?: string; documentoTipo?: string; documentoNumero?: string } = {}
 ) {
+    // SPEC-320 (§2.2-bis): documento del alumno obligatorio; numero único por secuencia.
     return prisma.estudiante.create({
         data: {
             cursoId,
             colegioId,
             nombre: data.nombre ?? `Estudiante ${Date.now()}`,
             apellidos: data.apellidos ?? "De Prueba",
+            documentoTipo: data.documentoTipo ?? "TI",
+            documentoNumero: data.documentoNumero ?? `EST${Date.now()}${estudianteDocSeq++}`,
             estado: data.estado ?? "activo",
         },
     });

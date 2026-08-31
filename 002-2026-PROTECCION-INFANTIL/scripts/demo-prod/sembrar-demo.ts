@@ -158,6 +158,7 @@ async function main() {
         const nombreColegioValue = nombreColegio(i);
         const colegioData: {
             nombre: string;
+            nit: string;
             paisId: string;
             ciudadId: string;
             representanteLegalNombre: string;
@@ -172,6 +173,7 @@ async function main() {
             departamentoId?: string;
         } = {
             nombre: nombreColegioValue,
+            nit: `DEMO-NIT-${String(idx).padStart(3, "0")}`,
             paisId: pais.id,
             ciudadId: ciudad.id,
             representanteLegalNombre: "Representante Legal Demo",
@@ -263,6 +265,9 @@ async function main() {
                         colegioId: colegio.id,
                         nombre,
                         apellidos,
+                        // SPEC-320 (§2.2-bis): documento del alumno obligatorio.
+                        documentoTipo: "TI",
+                        documentoNumero: `DEMO-EST-${estudianteIdxGlobal}`,
                         estado: "activo",
                     },
                 });

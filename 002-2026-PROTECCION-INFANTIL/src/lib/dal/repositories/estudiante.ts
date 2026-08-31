@@ -164,8 +164,9 @@ export class EstudianteRepository {
             cursoId: string;
             nombre: string;
             apellidos: string;
-            documentoTipo?: string | undefined;
-            documentoNumero?: string | undefined;
+            // SPEC-320 (§2.2-bis): documento del alumno OBLIGATORIO.
+            documentoTipo: string;
+            documentoNumero: string;
             acudientes?: DatosAcudiente[] | undefined;
         }
     ) {
@@ -182,8 +183,8 @@ export class EstudianteRepository {
                 colegioId,
                 nombre: datos.nombre,
                 apellidos: datos.apellidos,
-                documentoTipo: datos.documentoTipo ?? null,
-                documentoNumero: datos.documentoNumero ?? null,
+                documentoTipo: datos.documentoTipo,
+                documentoNumero: datos.documentoNumero,
                 estado: "activo",
                 ...(datos.acudientes && datos.acudientes.length > 0
                     ? {
