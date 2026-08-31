@@ -1,0 +1,10 @@
+### CASO (b) · fixture SIN pruebasJelkin (array ausente)
+$ curl -s -H 'Authorization: Bearer <jwt-admin>' http://127.0.0.1:3001/operacion -w 'HTTP %{http_code}'
+HTTP 200
+
+bloque Jelkin presente:  $ grep -c 'Pruebas de Jelkin' → 0   (0 = NO se pinta · candado 9)
+resto del tablero intacto:
+  · Operación (barra):     → 1
+  · Recorridos de calidad: → 1
+  · Funcionalidades:       → 1
+  · footer:                → 1
