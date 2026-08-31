@@ -44,6 +44,10 @@ export interface ProgramarInput {
     destinatarios: Array<{
         usuarioId?: string | undefined;
         email?: string | undefined;
+        // SPEC-333 (I-223): rol del destinatario para eventos con reglas de varios roles.
+        // Opcional; si falta se resuelve de `usuarioId`. Los callers de eventos multi-rol
+        // con destinatarios email-only (p. ej. representante legal) DEBEN pasarlo.
+        rol?: string | undefined;
         variables: Record<string, unknown>;
     }>;
     enviarEn?: Date | undefined;
@@ -110,6 +114,12 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
     let programadas = 0;
     let canceladasPorReemplazo = 0;
 
+    // SPEC-333 (I-223): si el evento tiene reglas de MÁS DE UN rol, cada destinatario
+    // recibe SOLO las de su rol (si no, se aplicarían reglas de otro rol → doble envío
+    // en +0m y offset ajeno). Con un solo rol, `reglas` se usa tal cual: conducta idéntica
+    // a la histórica (el motor sigue disparando por evento).
+    const filtrarPorRol = new Set(reglas.map((r) => r.rol)).size > 1;
+
     for (const destinatario of input.destinatarios) {
         const email = await resolverEmail(destinatario);
         if (!email) {
@@ -117,7 +127,26 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
             continue;
         }
 
-        for (const regla of reglas) {
+        let reglasDestino = reglas;
+        if (filtrarPorRol) {
+            const rolEfectivo =
+                destinatario.rol ??
+                (destinatario.usuarioId ? (await repoUsuario.findById(destinatario.usuarioId))?.rol : undefined);
+            if (!rolEfectivo) {
+                logMotor(
+                    "warn",
+                    `[MotorNotificaciones] evento multi-rol=${input.evento} sin rol de destinatario; se omite el destinatario`
+                );
+                continue;
+            }
+            reglasDestino = reglas.filter((r) => r.rol === rolEfectivo);
+            if (reglasDestino.length === 0) {
+                // Ese rol no tiene regla para el evento: no se aplica la de otro rol.
+                continue;
+            }
+        }
+
+        for (const regla of reglasDestino) {
             const eventoRegla = `${input.evento}.${regla.canal.toLowerCase()}`;
             // Sin usuarioId no hay preferencia de opt-out; la notificación es habilitada.
             const habilitada = destinatario.usuarioId
