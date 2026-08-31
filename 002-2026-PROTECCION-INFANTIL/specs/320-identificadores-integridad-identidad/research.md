@@ -40,11 +40,10 @@ Todas las incógnitas del Technical Context resueltas. No quedan `NEEDS CLARIFIC
 - **Problema**: agregar columnas `NOT NULL` sin default a `Profesor` (2 filas hoy) falla en Postgres; el reset-piloto corre **después** del deploy.
 - **NO usar temp-default constante**: violaría el UNIQUE `(colegioId, tipoDocumento, numeroDocumento)` si dos filas comparten colegio; descartado.
 - **Dependencia encontrada (verificada en schema:1391)**: `IdentificadorProfesor` es referenciado por `AlertaColegio.identificadorProfesorId`. Un truncate de `Profesor` arrastra `IdentificadorProfesor` → `AlertaColegio` — más de lo que parece.
-- **Dos opciones en mesa, decide el CEO (pendiente)**:
-  - **(1) Truncate**: el CEO trunca `Profesor` + hijas en la ventana de deploy antes de la migración (que asume tabla vacía). Destructivo; arrastra `AlertaColegio`.
-  - **(2) Placeholder por-fila (propuesta de Fábrica, más limpia)**: la migración hace `UPDATE Profesor SET numeroDocumento='MIGR-'||id, <otros campos con valor por-fila>` (valor único por fila → no choca con el UNIQUE) y **recién ahí** `SET NOT NULL`. Cero truncate, cero toque a FKs, los 2 profesores de prueba sobreviven editables hasta el reset. Es el patrón estándar de NOT NULL sobre tabla con filas — **no** el temp-default constante descartado.
-- **Estado**: §2.2 en pausa; **la migración de identidad no se implementa hasta el veredicto del CEO** (Fábrica lo trae en minutos). El diseño/código no-migración de US2 sí puede prepararse.
-- **Rationale**: ambas opciones dejan el esquema final "obligatorio, sin nullable de transición"; la (2) evita el borrado de datos mientras Jelkin prueba.
+- **Decisión del CEO (2026-08-30 19:52): opción (2) placeholder por-fila, sin truncate.** Truncate descartado (arrastra `AlertaColegio`). La migración: agregar columnas nullable → `UPDATE` las 2 filas vivas con placeholders **por-fila y únicos** → `SET NOT NULL` + UNIQUE. Patrón estándar de NOT NULL sobre tabla con filas — **no** el temp-default constante descartado. Los 2 profesores de prueba sobreviven editables hasta el `reset-piloto` post-deploy (el CEO ya avisó a Jelkin que sobreviven).
+- **Condición CEO 1 — placeholders que GRITAN**: nada que en una lista parezca dato real. `numeroDocumento='MIGR-'||id`, `email='migracion-'||id||'@placeholder.invalid'`, `telefono='MIGR-000'`, `anioNacimiento=0`, `tipoDocumento='OTRO'`. Si `sexo` (u otra columna) no admite un valor que grite, documento/email ya marcan la fila — anotarlo en el comentario.
+- **Condición CEO 2 — migración auto-documentada**: bloque de comentario en el archivo de migración explicando el porqué de las filas placeholder y que el `reset-piloto` post-deploy las elimina.
+- **Rationale**: deja el esquema final "obligatorio, sin nullable de transición", sin borrar datos mientras Jelkin prueba, sin paso manual en el deploy.
 
 ## R6 · Vocabularios de tipo de documento — 3 fuentes, 6+ sitios (H2)
 
