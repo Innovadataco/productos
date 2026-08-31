@@ -321,6 +321,9 @@ enum AccionAudit {
   SUSCRIPCION_ACTIVADA_MANUAL
   // SPEC-318 (002-PI-218): auditoría de cambio/restablecimiento/activación de contraseña.
   USUARIO_CAMBIO_PASSWORD
+  // SPEC-320 (§2.3): CRUD del catálogo de tipos de documento por el ADMIN.
+  ADMIN_TIPO_DOCUMENTO_CREADO
+  ADMIN_TIPO_DOCUMENTO_EDITADO
 }
 
 enum TipoPeriodoServicio {
@@ -1066,6 +1069,10 @@ model TasaCambio {
 model Colegio {
   id                               String              @id @default(cuid())
   nombre                           String
+  // SPEC-320 (§2.2-bis): NIT institucional — llave del colegio, ÚNICA en todo el
+  // sistema (no por tenant). Pensado para el puente padre↔colegio (el padre busca el
+  // colegio por NIT). Obligatorio; se pide en /registro-colegio y en el alta admin.
+  nit                              String              @unique
   paisId                           String
   departamentoId                   String?
   ciudadId                         String
@@ -1104,6 +1111,7 @@ model Colegio {
   CursoMateria             CursoMateria[]
   identificadoresAcudiente IdentificadorAcudiente[]
   identificadoresProfesor  IdentificadorProfesor[]
+  identificadoresEstudiante IdentificadorEstudiante[] // SPEC-320: colegioId denormalizado en el identificador de estudiante
   onboarding               OnboardingColegio?
   notificacionesInApp      NotificacionInApp[]
   // SPEC-210 (002-PI-110): módulo de pagos.
@@ -1177,22 +1185,33 @@ model Curso {
 
 // SPEC-145 (brief §7.2): modelo Profesor mínimo — nombre, apellidos, email?,
 // teléfono?, estado. Baja = soft delete (estado "inactivo"), nunca borrado físico.
+// SPEC-320 (§2.2): identidad del profesor OBLIGATORIA — tipo/número de documento,
+// año de nacimiento, sexo, teléfono y email. Nacen NOT NULL sin nullable de
+// transición (Jelkin arranca de cero). email/telefono dejan de ser nullable.
+// Llave humana: (colegioId, tipoDocumento, numeroDocumento). documentoTipo se valida
+// contra el catálogo TipoDocumento (clave). La de red social sigue siendo la del
+// producto — van las dos.
 model Profesor {
-  id        String   @id @default(cuid())
-  colegioId String
-  nombre    String
-  apellidos String
-  email     String?
-  telefono  String?
-  estado    String   @default("activo")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  colegioId       String
+  nombre          String
+  apellidos       String
+  tipoDocumento   String // clave del catálogo TipoDocumento
+  numeroDocumento String
+  anioNacimiento  Int
+  sexo            String // set cerrado en Zod (M|F|OTRO)
+  email           String
+  telefono        String
+  estado          String   @default("activo")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   colegio             Colegio                 @relation(fields: [colegioId], references: [id])
   cursos              Curso[]
   CursoMateria        CursoMateria[]
   identificadoresProf IdentificadorProfesor[]
 
+  @@unique([colegioId, tipoDocumento, numeroDocumento])
   @@index([colegioId, estado])
 }
 
@@ -1244,8 +1263,12 @@ model Estudiante {
   colegioId       String
   nombre          String
   apellidos       String   @default("")
-  documentoTipo   String? // set cerrado en Zod (D3): RC|TI|CC|CE|PASAPORTE|OTRO
-  documentoNumero String?
+  // SPEC-320 (§2.2-bis): documento del alumno OBLIGATORIO (antes opcional). Consume el
+  // catálogo TipoDocumento (clave). Único por colegio (colegioId, documentoTipo,
+  // documentoNumero) — índice parcial WHERE estado='activo' en la migración (Prisma no
+  // expresa parciales). Pensado como dato confiable para el cruce padre↔colegio.
+  documentoTipo   String
+  documentoNumero String
   estado          String   @default("activo")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1303,7 +1326,14 @@ model IdentificadorAcudiente {
   plataforma Plataforma?         @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([acudienteId, tipo, valor, plataformaId])
+  // SPEC-320 (§2.1 · EXCEPCIÓN asimétrica): la unicidad de acudiente se MANTIENE
+  // por-acudiente (acudienteId,tipo,valor,plataformaId), NO por-colegio. Razón:
+  // AcudienteEstudiante es @@unique([estudianteId, orden, estado]) → una fila de
+  // acudiente por (estudiante, orden), así que un padre con dos hijos en el colegio
+  // tiene DOS filas de acudiente y su mismo identificador va legítimamente en ambas.
+  // La BD NO puede bloquear eso; el cruce entre filas lo cubre el warn de aplicación.
+  // NO unificar a (colegioId,...) — rompería al padre-de-dos-hijos. Índice parcial
+  // crudo (WHERE estado='activo', NULLS NOT DISTINCT) en la migración B.
   @@index([colegioId, estado])
   @@index([acudienteId, estado])
   @@index([valor])
@@ -1327,7 +1357,10 @@ model IdentificadorProfesor {
   plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([profesorId, tipo, valor, plataformaId])
+  // SPEC-320 (§2.1): unicidad por (colegioId,tipo,valor,plataformaId) como índice
+  // único PARCIAL crudo (WHERE estado='activo', NULLS NOT DISTINCT) en la migración B
+  // — misma red dura de BD que estudiante (dos profesores del colegio con el mismo
+  // identificador = bug I-213). Reemplaza el viejo @@unique por-profesor.
   @@index([colegioId, estado])
   @@index([profesorId, estado])
   @@index([valor])
@@ -1359,6 +1392,12 @@ model EstudianteObservacion {
 model IdentificadorEstudiante {
   id               String                     @id @default(cuid())
   estudianteId     String                     @map("alumnoId")
+  // SPEC-320 (§2.1 · H1): colegioId denormalizado. NO es redundante: es la
+  // columna que habilita la unicidad por-colegio del identificador (la llave del
+  // producto) con red de BD en el sujeto más importante (el alumno). Las tablas
+  // de acudiente y profesor ya lo llevaban; el alumno era el único sin ella.
+  // NO "limpiar" pensando que el tenant ya viaja por la relación estudiante.
+  colegioId        String
   tipo             String
   valor            String
   plataformaId     String?
@@ -1368,11 +1407,16 @@ model IdentificadorEstudiante {
   updatedAt        DateTime                   @updatedAt
 
   estudiante Estudiante      @relation(fields: [estudianteId], references: [id])
+  colegio    Colegio         @relation(fields: [colegioId], references: [id])
   plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
 
-  @@unique([estudianteId, valor, tipo, plataformaId])
+  // SPEC-320 (§2.1): la unicidad se aplica como índice único PARCIAL crudo
+  // (WHERE estado='activo', NULLS NOT DISTINCT) en la migración — Prisma no
+  // expresa NULLS NOT DISTINCT ni índices parciales en @@unique. Estudiante y
+  // profesor: unicidad por (colegioId,tipo,valor,plataformaId). Ver migración B.
   @@index([estudianteId, estado])
+  @@index([colegioId, estado])
   @@map("IdentificadorAlumno")
 }
 
@@ -1551,6 +1595,23 @@ model Plataforma {
   identificadoresProfesor   IdentificadorProfesor[]
   apelaciones               Apelacion[]
   patronesInstitucionales   PatronInstitucional[]
+
+  @@index([clave])
+  @@index([esActiva])
+}
+
+// SPEC-320 (§2.3): catálogo único de tipos de documento, administrable por el
+// ADMIN. Fuente única de verdad del vocabulario de "tipo de documento" que
+// consumen estudiante, profesor y comité — reemplaza los tres vocabularios
+// paralelos previos (enum Zod estudiante, enum Prisma comité, etiquetas hardcode).
+// Mismo patrón de catálogo que Plataforma (clave @unique / nombre / esActiva).
+model TipoDocumento {
+  id        String   @id @default(cuid())
+  clave     String   @unique
+  nombre    String
+  categoria String   @default("persona")
+  esActiva  Boolean  @default(true)
+  creadoEn  DateTime @default(now())
 
   @@index([clave])
   @@index([esActiva])

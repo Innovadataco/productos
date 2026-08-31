@@ -7,17 +7,19 @@ import { Button } from "@/components/ui/Button";
 export function RegistroColegioForm({
     onSolicitarCodigo,
 }: {
-    onSolicitarCodigo: (data: { email: string; nombreColegio: string; nombreRector: string }) => Promise<void>;
+    onSolicitarCodigo: (data: { email: string; nombreColegio: string; nombreRector: string; nit: string }) => Promise<void>;
 }) {
     const [email, setEmail] = useState("");
     const [nombreColegio, setNombreColegio] = useState("");
+    // SPEC-320 (§2.2-bis): NIT del colegio, obligatorio.
+    const [nit, setNit] = useState("");
     const [nombreRector, setNombreRector] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email.trim() || !nombreColegio.trim() || !nombreRector.trim()) {
+        if (!email.trim() || !nombreColegio.trim() || !nit.trim() || !nombreRector.trim()) {
             setError("Completa todos los campos.");
             return;
         }
@@ -28,6 +30,7 @@ export function RegistroColegioForm({
                 email: email.trim(),
                 nombreColegio: nombreColegio.trim(),
                 nombreRector: nombreRector.trim(),
+                nit: nit.trim(),
             });
         } catch {
             setError("No se pudo enviar el código. Intenta de nuevo.");
@@ -50,6 +53,12 @@ export function RegistroColegioForm({
                 placeholder="Ej: Instituto Pedagógico Nacional"
                 value={nombreColegio}
                 onChange={(e) => setNombreColegio(e.target.value)}
+            />
+            <Input
+                label="NIT del colegio"
+                placeholder="Ej: 900123456-7"
+                value={nit}
+                onChange={(e) => setNit(e.target.value)}
             />
             <Input
                 label="Nombre del rector"

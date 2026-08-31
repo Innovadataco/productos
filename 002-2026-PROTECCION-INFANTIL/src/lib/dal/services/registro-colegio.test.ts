@@ -33,7 +33,8 @@ describe("RegistroColegioService (SPEC-240)", { timeout: 30_000 }, () => {
             "rector@colegio.edu",
             "Password1",
             "Ana Rector",
-            "Colegio Ejemplo"
+            "Colegio Ejemplo",
+            "NIT-EJEMPLO-1"
         );
 
         expect(resultado.ok).toBe(true);
@@ -55,13 +56,14 @@ describe("RegistroColegioService (SPEC-240)", { timeout: 30_000 }, () => {
 
     it("registrarPublico rechaza email duplicado", async () => {
         const service = new RegistroColegioService();
-        await service.registrarPublico("rector@colegio.edu", "Password1", "Ana Rector", "Colegio Ejemplo");
+        await service.registrarPublico("rector@colegio.edu", "Password1", "Ana Rector", "Colegio Ejemplo", "NIT-DUP-1");
 
         const resultado = await service.registrarPublico(
             "rector@colegio.edu",
             "Password2",
             "Otro Rector",
-            "Otro Colegio"
+            "Otro Colegio",
+            "NIT-DUP-2"
         );
 
         expect(resultado.ok).toBe(false);
@@ -75,7 +77,8 @@ describe("RegistroColegioService (SPEC-240)", { timeout: 30_000 }, () => {
             "Colegio Admin",
             "Pedro Rector",
             "pedro@colegio.edu",
-            "admin-id"
+            "admin-id",
+            "NIT-ADMIN-1"
         );
 
         expect(resultado.ok).toBe(true);
@@ -98,7 +101,8 @@ describe("RegistroColegioService (SPEC-240)", { timeout: 30_000 }, () => {
             "Colegio Activar",
             "María Rector",
             "maria@colegio.edu",
-            "admin-id"
+            "admin-id",
+            "NIT-ADMIN-2"
         );
         expect(pre.ok).toBe(true);
         if (!pre.ok) return;
@@ -134,7 +138,8 @@ describe("RegistroColegioService (SPEC-240)", { timeout: 30_000 }, () => {
             "Colegio Expirado",
             "Luis Rector",
             "luis@colegio.edu",
-            "admin-id"
+            "admin-id",
+            "NIT-ADMIN-3"
         );
         expect(pre.ok).toBe(true);
         if (!pre.ok) return;
@@ -156,7 +161,8 @@ describe("RegistroColegioService (SPEC-240)", { timeout: 30_000 }, () => {
             "Colegio Usado",
             "Carmen Rector",
             "carmen@colegio.edu",
-            "admin-id"
+            "admin-id",
+            "NIT-ADMIN-4"
         );
         expect(pre.ok).toBe(true);
         if (!pre.ok) return;

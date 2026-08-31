@@ -21,9 +21,9 @@ const ESTADOS_VISIBLES = ["CLASIFICADO", "CORREGIDO", "REVISION_MANUAL", "POSIBL
 
 async function sembrarAlerta(colegioId: string, plataformaId: string, tag: string, opts: { estadoAlerta?: string; estadoReporte?: "CLASIFICADO" | "PENDIENTE"; eliminado?: boolean } = {}) {
     const curso = await crearCurso(colegioId, { nombre: `Curso ${tag}` });
-    const alumno = await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId, nombre: `Alumno ${tag}` } });
+    const alumno = await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId, nombre: `Alumno ${tag}`, documentoTipo: "TI", documentoNumero: `ALE-${tag}` } });
     const identificador = await prisma.identificadorEstudiante.create({
-        data: { estudianteId: alumno.id, tipo: "telefono", valor: `+57300${tag.replace(/\D/g, "").padEnd(7, "0")}`, plataformaId, etiquetaRelacion: "ESTUDIANTE" },
+        data: { estudianteId: alumno.id, colegioId, tipo: "telefono", valor: `+57300${tag.replace(/\D/g, "").padEnd(7, "0")}`, plataformaId, etiquetaRelacion: "ESTUDIANTE" },
     });
     const reporte = await prisma.reporte.create({
         data: {
@@ -120,9 +120,9 @@ describe("AlertaColegioRepository", () => {
         const { colegio: a } = await crearColegioConAdmin();
         const base = await sembrarAlerta(a.id, plataforma.id, "A1");
         const curso2 = await crearCurso(a.id, { nombre: "Curso A9" });
-        const alumno2 = await prisma.estudiante.create({ data: { cursoId: curso2.id, colegioId: a.id, nombre: "Alumno A9" } });
+        const alumno2 = await prisma.estudiante.create({ data: { cursoId: curso2.id, colegioId: a.id, nombre: "Alumno A9", documentoTipo: "TI", documentoNumero: "ALE-A9" } });
         const ident2 = await prisma.identificadorEstudiante.create({
-            data: { estudianteId: alumno2.id, tipo: "telefono", valor: "+573009999999", plataformaId: plataforma.id, etiquetaRelacion: "ESTUDIANTE" },
+            data: { estudianteId: alumno2.id, colegioId: a.id, tipo: "telefono", valor: "+573009999999", plataformaId: plataforma.id, etiquetaRelacion: "ESTUDIANTE" },
         });
         const repo = new AlertaColegioRepository();
 

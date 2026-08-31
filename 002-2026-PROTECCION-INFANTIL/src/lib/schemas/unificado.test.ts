@@ -13,9 +13,10 @@ const CUID_2 = "clxxxxxxxxxxxxxxxxxxxxxx02";
 function payloadBase(override: Record<string, unknown> = {}) {
     return {
         curso: { nombre: "8° B", grado: "Octavo", anioLectivo: "2026" },
+        // SPEC-320 (§2.2-bis): el documento del alumno es obligatorio en el payload.
         estudiantes: [
-            { nombre: "María", apellidos: "Gómez Pérez" },
-            { nombre: "Carlos", apellidos: "Ruiz Díaz" },
+            { nombre: "María", apellidos: "Gómez Pérez", documentoTipo: "TI", documentoNumero: "1001" },
+            { nombre: "Carlos", apellidos: "Ruiz Díaz", documentoTipo: "TI", documentoNumero: "1002" },
         ],
         identificadores: [
             { estudianteIndex: 0, valor: "+573001234567" },

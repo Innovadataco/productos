@@ -15,10 +15,11 @@ export default function RegistroColegioPage() {
     const [step, setStep] = useState<"email" | "verificar">("email");
     const [email, setEmail] = useState("");
     const [nombreColegio, setNombreColegio] = useState("");
+    const [nit, setNit] = useState("");
     const [nombreRector, setNombreRector] = useState("");
     const [error, setError] = useState("");
 
-    const handleSolicitarCodigo = async (data: { email: string; nombreColegio: string; nombreRector: string }) => {
+    const handleSolicitarCodigo = async (data: { email: string; nombreColegio: string; nombreRector: string; nit: string }) => {
         const res = await fetch("/api/auth/verificar/solicitar", {
             method: "POST",
             credentials: "include",
@@ -31,6 +32,7 @@ export default function RegistroColegioPage() {
         }
         setEmail(data.email);
         setNombreColegio(data.nombreColegio);
+        setNit(data.nit);
         setNombreRector(data.nombreRector);
         setStep("verificar");
     };
@@ -57,6 +59,7 @@ export default function RegistroColegioPage() {
                 password: data.password,
                 nombre: nombreRector,
                 nombreColegio,
+                nit,
                 rol: "SCHOOL_ADMIN",
             }),
         });

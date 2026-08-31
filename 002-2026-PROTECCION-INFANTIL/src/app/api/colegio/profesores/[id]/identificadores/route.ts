@@ -17,6 +17,7 @@ import { withValidation } from "@/lib/validation";
 import { profesorIdParamsSchema, identificadorProfesorBodySchema } from "@/lib/schemas";
 import { verificarPropiedadProfesor } from "@/lib/colegio/permisos";
 import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 
 function getClientInfo(request: Request) {
     return {
@@ -109,6 +110,38 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             return NextResponse.json(
                 { error: { message: "Identificador duplicado para este profesor", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
+            );
+        }
+
+        // SPEC-320 (§2.1): clasificar la colisión. profesor↔profesor = bloqueo duro
+        // (I-213, sin override); cross-sujeto = warn-con-override.
+        const colision = await new IdentificadorUnicidadService().clasificarColision(
+            profesor.colegioId,
+            valorNormalizado,
+            "PROFESOR",
+            { sujeto: "PROFESOR", sujetoId: profesorId }
+        );
+        if (colision.duros.length > 0) {
+            return NextResponse.json(
+                {
+                    error: {
+                        message: `Este identificador ya pertenece a otro ${colision.duros[0].rol.toLowerCase()} de este colegio y no puede repetirse.`,
+                        code: ERROR_CODES.CONFLICT,
+                    },
+                },
+                { status: 409 }
+            );
+        }
+        if (colision.warns.length > 0 && !body.confirmarCompartido) {
+            return NextResponse.json(
+                {
+                    aviso: {
+                        code: "IDENTIFICADOR_EN_USO_EN_COLEGIO",
+                        message: "Este identificador ya está registrado para otra persona del colegio.",
+                        pertenece: colision.warns.map((d) => ({ nombre: d.nombre, rol: d.rol })),
+                    },
+                },
+                { status: 200 }
             );
         }
 

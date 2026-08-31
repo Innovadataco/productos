@@ -175,6 +175,7 @@
 | [329](329-middleware-api-json-guardias/spec.md) | SPEC-329 · 🔴 Hotfix: los 3 guardianes de estado del middleware devuelven JSON 403 (no redirect 302 HTML) para `/api/**` gateadas; pantallas intactas (002-PI-229 · regresión A-56) | 🟡 En desarrollo |
 | [315](315-fix-reset-password-flag/spec.md) | SPEC-315 · Fix reset password no limpia `debeCambiarPassword` (002-PI-215 · bug prod loop) | 🔵 Planeado |
 | [319](319-comite-convivencia-operativo/spec.md) | SPEC-319 · El comité de convivencia, operativo · fuente única rol→home + email + integrantes + firma + rediseño (002-PI-219 · cierra I-212) | 🟡 En desarrollo |
+| [320](320-identificadores-integridad-identidad/spec.md) | SPEC-320 · Identificadores: integridad + identidad (A-58 SPEC-A) · unicidad por colegio cross-sujeto asimétrica (warn+override) + documento profesor obligatorio + catálogo único tipos documento + §2.2-bis (NIT colegio único global + documento alumno obligatorio + columna Excel) (002-PI-220 · I-213) | 🟢 Implementado |
 | [244](244-suscripcion-vista-planes/spec.md) | SPEC-244 — Vista `/suscripcion` + PlanesSelector + ConfirmarPagoManual + freemium (002-PI-147) | 🔵 Planeado |
 | [245](245-admin-activar-manual/spec.md) | SPEC-245 — Admin activar suscripción manual + captura pago (002-PI-148) | 🔵 Planeado |
 | [246](246-bonos-recompensa/spec.md) | SPEC-246 — Bonos recompensa transferibles + MisCuponesCard (002-PI-149) | 🔵 Planeado |

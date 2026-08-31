@@ -9,16 +9,29 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ProfesoresPageClient from "./ProfesoresPageClient";
 
+// SPEC-320 (§2.2): post-reset todo profesor nace con identidad completa
+// (tipo/número de documento, año, sexo, email y teléfono obligatorios).
 const PROFESORES = [
-    { id: "p1", nombre: "María", apellidos: "López", email: "maria@colegio.edu.co", telefono: "+573001112233", estado: "activo" },
-    { id: "p2", nombre: "Carlos", apellidos: "Gómez", email: null, telefono: null, estado: "activo" },
+    { id: "p1", nombre: "María", apellidos: "López", tipoDocumento: "CC", numeroDocumento: "111", anioNacimiento: 1985, sexo: "F", email: "maria@colegio.edu.co", telefono: "+573001112233", estado: "activo" },
+    { id: "p2", nombre: "Carlos", apellidos: "Gómez", tipoDocumento: "CC", numeroDocumento: "222", anioNacimiento: 1980, sexo: "M", email: "carlos@colegio.edu.co", telefono: "+573004445566", estado: "activo" },
+];
+
+// SPEC-320 (§2.3): catálogo de tipos de documento que el form consume al montar.
+const TIPOS_DOC = [
+    { clave: "CC", nombre: "Cédula de ciudadanía" },
+    { clave: "TI", nombre: "Tarjeta de identidad" },
 ];
 
 function mockFetchList(items: unknown[] = PROFESORES) {
-    const fetchMock = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({ items, pagination: { page: 1, pageSize: 100, total: items.length, totalPages: 1 } }),
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("/api/colegio/tipos-documento")) {
+            return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: TIPOS_DOC }) });
+        }
+        return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ items, pagination: { page: 1, pageSize: 100, total: items.length, totalPages: 1 } }),
+        });
     });
     vi.stubGlobal("fetch", fetchMock);
     return fetchMock;
@@ -36,7 +49,9 @@ describe("ProfesoresPageClient", () => {
         expect(await screen.findByText("María López")).toBeTruthy();
         expect(screen.getByText("Carlos Gómez")).toBeTruthy();
         expect(screen.getByText("maria@colegio.edu.co")).toBeTruthy();
-        expect(fetchMock.mock.calls[0]![0]).toBe("/api/colegio/profesores?estado=activo&pageSize=100");
+        // SPEC-320 (§2.3): el catálogo se pide primero; la lista de profesores es otra llamada.
+        expect(fetchMock.mock.calls.some((c) => c[0] === "/api/colegio/tipos-documento")).toBe(true);
+        expect(fetchMock.mock.calls.some((c) => c[0] === "/api/colegio/profesores?estado=activo&pageSize=100")).toBe(true);
         expect(screen.getAllByText("Activo")).toHaveLength(2);
     });
 
@@ -94,6 +109,11 @@ describe("ProfesoresPageClient", () => {
         fireEvent.click(screen.getAllByRole("button", { name: "Agregar profesor" })[0]!);
         fireEvent.change(screen.getByLabelText(/Nombre/), { target: { value: "Ana" } });
         fireEvent.change(screen.getByLabelText(/Apellidos/), { target: { value: "Torres" } });
+        // SPEC-320 (§2.2): identidad obligatoria en el alta.
+        fireEvent.change(screen.getByLabelText("Tipo de documento"), { target: { value: "CC" } });
+        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "12345678" } });
+        fireEvent.change(screen.getByLabelText("Año de nacimiento"), { target: { value: "1990" } });
+        fireEvent.change(screen.getByLabelText("Sexo"), { target: { value: "F" } });
         fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "ana@colegio.edu.co" } });
         fireEvent.change(screen.getByLabelText(/Teléfono/), { target: { value: "+573009998877" } });
         fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
@@ -104,20 +124,30 @@ describe("ProfesoresPageClient", () => {
         expect(JSON.parse(post[1].body)).toEqual({
             nombre: "Ana",
             apellidos: "Torres",
+            tipoDocumento: "CC",
+            numeroDocumento: "12345678",
+            anioNacimiento: 1990,
+            sexo: "F",
             email: "ana@colegio.edu.co",
             telefono: "+573009998877",
         });
         expect(await screen.findByText("Profesor agregado")).toBeTruthy();
     });
 
-    it("409 del endpoint se muestra como aviso claro y el modal no cierra", async () => {
+    it("409 del endpoint (documento duplicado) se muestra como aviso claro y el modal no cierra", async () => {
+        // Candado 26: el 409 del servidor (tipo+número únicos por colegio, SPEC-320 §2.2)
+        // sigue surfaceándose. Se llena la identidad completa para que el POST dispare y
+        // el aviso NO quede enmascarado por la validación de identidad del cliente.
         const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
             if (init?.method === "POST") {
                 return Promise.resolve({
                     ok: false,
                     status: 409,
-                    json: async () => ({ error: { message: "Ya existe un profesor con ese nombre y apellidos" } }),
+                    json: async () => ({ error: { message: "Ya existe un profesor con ese documento en el colegio" } }),
                 });
+            }
+            if (String(url).includes("/api/colegio/tipos-documento")) {
+                return Promise.resolve({ ok: true, status: 200, json: async () => ({ items: TIPOS_DOC }) });
             }
             return Promise.resolve({
                 ok: true,
@@ -132,9 +162,17 @@ describe("ProfesoresPageClient", () => {
         fireEvent.click(screen.getAllByRole("button", { name: "Agregar profesor" })[0]!);
         fireEvent.change(screen.getByLabelText(/Nombre/), { target: { value: "María" } });
         fireEvent.change(screen.getByLabelText(/Apellidos/), { target: { value: "López" } });
+        fireEvent.change(screen.getByLabelText("Tipo de documento"), { target: { value: "CC" } });
+        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "111" } });
+        fireEvent.change(screen.getByLabelText("Año de nacimiento"), { target: { value: "1985" } });
+        fireEvent.change(screen.getByLabelText("Sexo"), { target: { value: "F" } });
+        fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "maria@colegio.edu.co" } });
+        fireEvent.change(screen.getByLabelText(/Teléfono/), { target: { value: "+573001112233" } });
         fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
-        expect((await screen.findByRole("alert")).textContent).toContain("Ya existe un profesor con ese nombre y apellidos");
+        // El POST se disparó (identidad completa) y el 409 del servidor se ve tal cual.
+        await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === "POST")).toBe(true));
+        expect((await screen.findByRole("alert")).textContent).toContain("Ya existe un profesor con ese documento en el colegio");
         expect(screen.getByRole("dialog")).toBeTruthy();
     });
 
@@ -143,9 +181,11 @@ describe("ProfesoresPageClient", () => {
         render(<ProfesoresPageClient />);
         await screen.findByText("María López");
 
-        fireEvent.click(screen.getAllByRole("button", { name: "Editar" })[1]!); // Carlos (sin contacto)
+        fireEvent.click(screen.getAllByRole("button", { name: "Editar" })[1]!); // Carlos
         expect(screen.getByRole("dialog").textContent).toContain("Editar profesor");
         expect((screen.getByLabelText(/Nombre/) as HTMLInputElement).value).toBe("Carlos");
+        // SPEC-320 (§2.2): el documento no se edita acá (queda solo lectura); email/teléfono sí.
+        expect((screen.getByLabelText("Número de documento") as HTMLInputElement).disabled).toBe(true);
         fireEvent.change(screen.getByLabelText(/Teléfono/), { target: { value: "+573005554444" } });
         fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
@@ -155,7 +195,7 @@ describe("ProfesoresPageClient", () => {
         expect(JSON.parse(patch[1].body)).toEqual({
             nombre: "Carlos",
             apellidos: "Gómez",
-            email: null,
+            email: "carlos@colegio.edu.co",
             telefono: "+573005554444",
         });
     });

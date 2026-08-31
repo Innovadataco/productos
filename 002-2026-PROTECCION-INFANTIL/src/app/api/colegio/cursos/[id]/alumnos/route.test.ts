@@ -35,6 +35,10 @@ async function setupSchoolAdmin() {
 describe("/api/colegio/cursos/[id]/alumnos", () => {
     beforeEach(async () => {
         await resetDatabase();
+        // SPEC-320 (§2.3): el alta de alumno valida documentoTipo contra el catálogo.
+        for (const clave of ["RC", "TI", "CC", "CE", "PASAPORTE", "OTRO"]) {
+            await prisma.tipoDocumento.upsert({ where: { clave }, update: {}, create: { clave, nombre: clave } });
+        }
         await resetRateLimitStore();
         mockToken = undefined;
     });
@@ -97,7 +101,7 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
         const otroCurso = await crearCurso(colegio2.id, { nombre: "Curso Ajeno" });
 
         const res = await POST(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${otroCurso.id}/alumnos`, { nombre: "Intruso", apellidos: "X" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${otroCurso.id}/alumnos`, { nombre: "Intruso", apellidos: "X", documentoTipo: "TI", documentoNumero: "INTRUSO-1" }, mockToken),
             { params: Promise.resolve({ id: otroCurso.id }) }
         );
 
@@ -119,15 +123,16 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
         expect(await prisma.estudiante.count({ where: { cursoId: curso.id } })).toBe(0);
     });
 
-    it("SPEC-144 (FR-010/D3): documentoTipo fuera del set cerrado responde 400 con los valores aceptados", async () => {
+    it("SPEC-320 (§2.3): documentoTipo que no está en el catálogo responde 400", async () => {
         const { admin } = await setupSchoolAdmin();
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
 
+        // "NIT" no se sembró en el catálogo de este test → inválido para alumno.
         const res = await POST(
             request(
                 "POST",
                 `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`,
-                { nombre: "Ana", apellidos: "Pérez", documentoTipo: "NIT" },
+                { nombre: "Ana", apellidos: "Pérez", documentoTipo: "NIT", documentoNumero: "999" },
                 mockToken
             ),
             { params: Promise.resolve({ id: curso.id }) }
@@ -135,7 +140,17 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
 
         expect(res.status).toBe(400);
         const json = await res.json();
-        expect(json.error.message).toContain("RC, TI, CC, CE, PASAPORTE, OTRO");
+        expect(json.error.message).toBe("Tipo de documento inválido o inactivo");
+    });
+
+    it("SPEC-320 (§2.2-bis): alta de alumno sin documento responde 400", async () => {
+        const { admin } = await setupSchoolAdmin();
+        const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
+        const res = await POST(
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "Ana", apellidos: "Pérez" }, mockToken),
+            { params: Promise.resolve({ id: curso.id }) }
+        );
+        expect(res.status).toBe(400);
     });
 
     it("SPEC-144 (FR-007): 3 acudientes responden 400; con 2 se persisten en la misma escritura", async () => {
@@ -147,7 +162,7 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
             request(
                 "POST",
                 `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`,
-                { nombre: "Ana", apellidos: "Pérez", acudientes: [acudiente, { ...acudiente, orden: 2 }, { ...acudiente, orden: 1, nombre: "Extra" }] },
+                { nombre: "Ana", apellidos: "Pérez", documentoTipo: "TI", documentoNumero: "AC-MALO", acudientes: [acudiente, { ...acudiente, orden: 2 }, { ...acudiente, orden: 1, nombre: "Extra" }] },
                 mockToken
             ),
             { params: Promise.resolve({ id: curso.id }) }

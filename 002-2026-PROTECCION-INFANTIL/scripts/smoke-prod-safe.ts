@@ -214,6 +214,7 @@ async function crearCuentasEfimeras(): Promise<CuentasEfimeras> {
     const colegio = await prisma.colegio.create({
         data: {
             nombre: `Smoke Colegio ${ts}`,
+            nit: `SMK-NIT-${ts}`, // SPEC-320 (§2.2-bis)
             paisId: pais.id,
             ciudadId: ciudad.id,
             representanteLegalNombre: "Smoke Representante",

@@ -12,6 +12,7 @@ import { withValidation } from "@/lib/validation";
 import { estudianteIdParamsSchema, identificadorEstudianteBodySchema } from "@/lib/schemas";
 import { verificarPropiedadEstudiante } from "@/lib/colegio/permisos";
 import { normalizarIdentificador, inferirTipoIdentificador } from "@/lib/colegio/normalizacion";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 function getClientInfo(request: Request) {
@@ -113,6 +114,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
+        // SPEC-320 (§2.1): clasificar la colisión cross-sujeto dentro del colegio.
+        // estudiante↔estudiante y profesor↔profesor = bloqueo duro (I-213, sin
+        // override). Cross-sujeto y acudiente↔acudiente = warn-con-override.
+        const colision = await new IdentificadorUnicidadService().clasificarColision(
+            estudiante.colegioId,
+            valorNormalizado,
+            "ESTUDIANTE",
+            { sujeto: "ESTUDIANTE", sujetoId: id }
+        );
+        if (colision.duros.length > 0) {
+            return NextResponse.json(
+                {
+                    error: {
+                        message: `Este identificador ya pertenece a otro ${colision.duros[0].rol.toLowerCase()} de este colegio y no puede repetirse.`,
+                        code: ERROR_CODES.CONFLICT,
+                    },
+                },
+                { status: 409 }
+            );
+        }
+        if (colision.warns.length > 0 && !body.confirmarCompartido) {
+            return NextResponse.json(
+                {
+                    aviso: {
+                        code: "IDENTIFICADOR_EN_USO_EN_COLEGIO",
+                        message: "Este identificador ya está registrado para otra persona del colegio.",
+                        pertenece: colision.warns.map((d) => ({ nombre: d.nombre, rol: d.rol })),
+                    },
+                },
+                { status: 200 }
+            );
+        }
+
         const identificador = await identificadores.crear(estudiante.colegioId, {
             estudianteId: id,
             tipo,
@@ -134,6 +168,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 valor: valorNormalizado,
                 plataformaId: body.plataformaId ?? null,
                 etiquetaRelacion: body.etiquetaRelacion ?? "ESTUDIANTE",
+                // SPEC-320 (§2.1 · FR-018): traza del override de identificador compartido
+                identificadorCompartidoOverride: body.confirmarCompartido ?? false,
             }),
             ipAddress,
             userAgent,

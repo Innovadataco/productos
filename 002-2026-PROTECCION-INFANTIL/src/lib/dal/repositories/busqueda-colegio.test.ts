@@ -111,6 +111,8 @@ describe("BusquedaColegioRepository", () => {
                 colegioId: a.id,
                 nombre: i % 25 === 0 ? `Ana${i}` : `Nombre${i}`,
                 apellidos: i % 25 === 0 ? `Semilla${i}` : `Apellido${i}`,
+                documentoTipo: "TI",
+                documentoNumero: `BUS-${i}`,
                 estado: "activo",
             })),
         });

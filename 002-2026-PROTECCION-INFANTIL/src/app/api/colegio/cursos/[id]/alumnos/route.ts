@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation, ValidationError } from "@/lib/validation";
 import { cursoIdParamsSchema, estudianteBodySchema } from "@/lib/schemas";
+import { TipoDocumentoRepository } from "@/lib/dal/repositories/tipo-documento";
 import { verificarPropiedadCurso } from "@/lib/colegio/permisos";
 
 function getClientInfo(request: Request) {
@@ -96,6 +97,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         if (duplicado) {
             return NextResponse.json(
                 { error: { message: "Ya existe un alumno con ese nombre en este curso", code: ERROR_CODES.CONFLICT } },
+                { status: 409 }
+            );
+        }
+
+        // SPEC-320 (§2.2-bis): documento del alumno del catálogo + único por colegio.
+        if (!(await new TipoDocumentoRepository().claveActiva(body.documentoTipo))) {
+            return NextResponse.json(
+                { error: { message: "Tipo de documento inválido o inactivo", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+        const docDuplicado = await estudiantes.buscarPorDocumentoEnColegio(curso.colegioId, body.documentoTipo, body.documentoNumero);
+        if (docDuplicado) {
+            return NextResponse.json(
+                { error: { message: "Ya existe un alumno con ese documento en el colegio", code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
             );
         }

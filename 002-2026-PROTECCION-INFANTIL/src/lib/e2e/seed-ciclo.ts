@@ -4,7 +4,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
+import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearTiposDocumento } from "@/lib/reporte-test-utils";
 import { crearParametrosExpediente } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
 
@@ -44,6 +44,9 @@ export async function sembrarBase() {
     await crearPlataforma("instagram", "Instagram", "red_social");
     await crearPlataforma("telegram", "Telegram", "mensajeria");
     await crearPaisCiudad();
+    // SPEC-320 (§2.3): el catálogo de tipos de documento (resetDatabase lo borra;
+    // el alta de alumno/profesor valida claveActiva contra él).
+    await crearTiposDocumento();
 }
 
 /** Siembra reportes del banco del ciclo (con la clasificación simulada ya persistida). */

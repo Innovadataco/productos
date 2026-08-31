@@ -135,16 +135,24 @@ describe("schemas/index", () => {
 
 // SPEC-145 (FR-005): schemas del CRUD de profesores y titular de curso (D1=A).
 describe("schemas profesor (SPEC-145)", () => {
-    it("profesorBodySchema acepta el mínimo (nombre + apellidos)", () => {
-        const parsed = profesorBodySchema.parse({ nombre: "María", apellidos: "López" });
-        expect(parsed.email).toBeUndefined();
-        expect(parsed.telefono).toBeUndefined();
+    it("profesorBodySchema exige identidad completa; el viejo mínimo se rechaza (SPEC-320 §2.2)", () => {
+        const completo = profesorBodySchema.parse({
+            nombre: "María", apellidos: "López",
+            tipoDocumento: "CC", numeroDocumento: "12345678",
+            anioNacimiento: 1990, sexo: "F",
+            email: "maria@colegio.edu.co", telefono: "+573001112233",
+        });
+        expect(completo.numeroDocumento).toBe("12345678");
+        expect(completo.anioNacimiento).toBe(1990);
+        // El mínimo de SPEC-145 (solo nombre + apellidos) ahora es inválido.
+        expect(profesorBodySchema.safeParse({ nombre: "María", apellidos: "López" }).success).toBe(false);
     });
 
-    it("profesorBodySchema acepta email y teléfono opcionales", () => {
-        expect(() =>
-            profesorBodySchema.parse({ nombre: "María", apellidos: "López", email: "maria@colegio.edu.co", telefono: "+573001112233" })
-        ).not.toThrow();
+    it("profesorBodySchema exige email y teléfono (ya no opcionales, SPEC-320 §2.2)", () => {
+        const base = { nombre: "María", apellidos: "López", tipoDocumento: "CC", numeroDocumento: "12345678", anioNacimiento: 1990, sexo: "F" };
+        expect(profesorBodySchema.safeParse({ ...base, email: "maria@colegio.edu.co", telefono: "+573001112233" }).success).toBe(true);
+        expect(profesorBodySchema.safeParse({ ...base, telefono: "+573001112233" }).success).toBe(false); // falta email
+        expect(profesorBodySchema.safeParse({ ...base, email: "maria@colegio.edu.co" }).success).toBe(false); // falta teléfono
     });
 
     it("profesorBodySchema rechaza sin apellidos con mensaje humano", () => {
@@ -157,10 +165,12 @@ describe("schemas profesor (SPEC-145)", () => {
         expect(() => profesorBodySchema.parse({ nombre: "María", apellidos: "López", email: "no-es-email" })).toThrow();
     });
 
-    it("profesorPatchSchema acepta cualquier subconjunto incluido estado", () => {
+    it("profesorPatchSchema acepta subconjuntos válidos; ya no admite email null (SPEC-320 §2.2)", () => {
         expect(() => profesorPatchSchema.parse({ estado: "inactivo" })).not.toThrow();
         expect(() => profesorPatchSchema.parse({ telefono: "+573009998877" })).not.toThrow();
-        expect(() => profesorPatchSchema.parse({ email: null })).not.toThrow();
+        expect(() => profesorPatchSchema.parse({ email: "nueva@colegio.edu.co" })).not.toThrow();
+        // Identidad obligatoria: limpiar el email con null se rechaza.
+        expect(profesorPatchSchema.safeParse({ email: null }).success).toBe(false);
     });
 
     it("profesorPatchSchema rechaza estado fuera de activo|inactivo", () => {

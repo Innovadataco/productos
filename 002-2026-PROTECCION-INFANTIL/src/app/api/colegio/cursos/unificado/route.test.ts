@@ -41,7 +41,7 @@ function payloadBase(override: Record<string, unknown> = {}) {
     return {
         curso: { nombre: "8° B", grado: "Octavo", anioLectivo: "2026" },
         estudiantes: [
-            { nombre: "María", apellidos: "Gómez Pérez" },
+            { nombre: "María", apellidos: "Gómez Pérez", documentoTipo: "TI", documentoNumero: "MARIA-1" },
             {
                 nombre: "Carlos",
                 apellidos: "Ruiz Díaz",
@@ -130,7 +130,11 @@ describe("/api/colegio/cursos/unificado", () => {
         expect(json.curso.profesorTitularId).toBe(profesor.id);
     });
 
-    it("crea el profesor nuevo inline y lo asigna (profesorCreado)", async () => {
+    it("SPEC-320 (§2.2): el alta rápida de profesor (nombre+apellidos) YA NO crea inline → 400, dirige a la ficha con identidad", async () => {
+        // §2.2 hace la identidad del profesor obligatoria; el quick-create del wizard solo
+        // trae nombre+apellidos, así que no puede crear el profesor. Se rechaza con mensaje
+        // claro (H2, confirmado por Fábrica). La ficha completa con identidad vive en la
+        // pantalla de Profesores; la UX prolija del botón deshabilitado es SPEC-B.
         const { colegio } = await setupSchoolAdmin();
 
         const res = await POST(
@@ -139,28 +143,11 @@ describe("/api/colegio/cursos/unificado", () => {
                 mockToken
             )
         );
-        expect(res.status).toBe(201);
+        expect(res.status).toBe(400);
         const json = await res.json();
-        expect(json.resumen.profesorCreado).toBe(true);
-
-        const profesor = await prisma.profesor.findFirst({ where: { colegioId: colegio.id, nombre: "Jorge" } });
-        expect(profesor).not.toBeNull();
-        expect(json.curso.profesorTitularId).toBe(profesor!.id);
-    });
-
-    it("profesorNuevo duplicado activo → 409 sugiriendo usar el existente", async () => {
-        const { colegio } = await setupSchoolAdmin();
-        await crearProfesor(colegio.id, { nombre: "Jorge", apellidos: "Pineda" });
-
-        const res = await POST(
-            request(
-                payloadBase({ profesorNuevo: { nombre: "Jorge", apellidos: "Pineda" }, estudiantes: [], identificadores: [] }),
-                mockToken
-            )
-        );
-        expect(res.status).toBe(409);
-        const json = await res.json();
-        expect(json.error.message).toContain("Elígelo de la lista");
+        expect(json.error.message).toContain("créalo primero en la sección de Profesores");
+        // No se creó ningún profesor.
+        expect(await prisma.profesor.count({ where: { colegioId: colegio.id } })).toBe(0);
     });
 
     it("curso duplicado (nombre+grado+año) → 409", async () => {
@@ -223,8 +210,8 @@ describe("/api/colegio/cursos/unificado", () => {
             request(
                 payloadBase({
                     estudiantes: [
-                        { nombre: "María", apellidos: "Gómez Pérez" },
-                        { nombre: "María", apellidos: "Gómez Pérez" },
+                        { nombre: "María", apellidos: "Gómez Pérez", documentoTipo: "TI", documentoNumero: "REP-1" },
+                        { nombre: "María", apellidos: "Gómez Pérez", documentoTipo: "TI", documentoNumero: "REP-2" },
                     ],
                     identificadores: [{ estudianteIndex: 0, valor: "+573001234567" }],
                 }),
@@ -302,23 +289,25 @@ describe("/api/colegio/cursos/unificado", () => {
         expect(await conteoTablas(colegioA.id)).toEqual({ cursos: 1, estudiantes: 0, identificadores: 0, acudientes: 0, profesores: 0 });
     });
 
-    it("el identificador duplicado contra BD de OTRO estudiante no bloquea (único por estudiante)", async () => {
+    it("SPEC-320 (§2.1): el mismo identificador para OTRO estudiante del colegio AHORA se bloquea (I-213)", async () => {
+        // Antes esto se permitía (unicidad por-estudiante). §2.1 hace la unicidad POR
+        // COLEGIO cruzando sujetos: dos estudiantes del colegio con el mismo identificador
+        // es exactamente el bug I-213 → el wizard atómico aborta con 409. (candado 24 v2)
         const { colegio } = await setupSchoolAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "7° C" });
         const existente = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana", apellidos: "Torres" });
         await crearIdentificadorEstudiante(existente.id, { tipo: "nick", valor: "gamer123" });
 
-        // Mismo valor pero para un estudiante NUEVO del nuevo curso: permitido.
         const res = await POST(
             request(
                 payloadBase({
-                    estudiantes: [{ nombre: "María", apellidos: "Gómez" }],
+                    estudiantes: [{ nombre: "María", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "MG-BLOCK" }],
                     identificadores: [{ estudianteIndex: 0, tipo: "nick", valor: "gamer123" }],
                 }),
                 mockToken
             )
         );
-        expect(res.status).toBe(201);
+        expect(res.status).toBe(409);
     });
 
     it("rechaza sin autenticación", async () => {

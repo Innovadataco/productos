@@ -41,11 +41,12 @@ async function sembrarReporte(plataformaId: string, tag: string) {
 async function sembrarEstudiante(colegioId: string, cursoId: string, opts: { conAcudiente?: boolean } = {}) {
     contador += 1;
     const estudiante = await prisma.estudiante.create({
-        data: { cursoId, colegioId, nombre: `Est ${contador}`, apellidos: "Prueba", estado: "activo" },
+        data: { cursoId, colegioId, nombre: `Est ${contador}`, apellidos: "Prueba", documentoTipo: "TI", documentoNumero: `RES-${contador}`, estado: "activo" },
     });
     const identificador = await prisma.identificadorEstudiante.create({
         data: {
             estudianteId: estudiante.id,
+            colegioId,
             tipo: "telefono",
             valor: `+57311${String(contador).padStart(7, "0")}`,
             etiquetaRelacion: "ESTUDIANTE",
@@ -114,7 +115,7 @@ describe("ColegioResumenRepository.homeRector", () => {
             }
         }
         await prisma.estudiante.create({
-            data: { cursoId: cursoA.id, colegioId: a.id, nombre: "Inactivo", apellidos: "Est", estado: "inactivo" },
+            data: { cursoId: cursoA.id, colegioId: a.id, nombre: "Inactivo", apellidos: "Est", documentoTipo: "TI", documentoNumero: "RES-INACT-1", estado: "inactivo" },
         });
 
         // Actividad de A: un reporte con DOS alertas (cuenta UNA vez, D2) hoy;

@@ -32,7 +32,7 @@ function filasValidas(plataformaId: string): FilaCargaEstudiante[] {
         {
             fila: 2,
             curso: { nombre: "6A", grado: "Sexto", anioLectivo: "2026" },
-            alumno: { nombre: "María", apellidos: "Gómez" },
+            alumno: { nombre: "María", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "CONF-1" },
             identificador: { tipo: "telefono", valor: "+573001234567", etiquetaRelacion: "ESTUDIANTE", plataformaId },
         },
     ];
@@ -95,6 +95,7 @@ describe("POST /api/colegio/carga/confirmar (SPEC-132)", () => {
         const colegioB = await prisma.colegio.create({
             data: {
                 nombre: "Colegio B",
+                nit: "NIT-COLEGIO-B",
                 paisId: paisB.id,
                 ciudadId: ciudadB.id,
                 representanteLegalNombre: "Representante B",

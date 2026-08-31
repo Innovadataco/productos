@@ -58,8 +58,8 @@ describe("/api/colegio/onboarding", () => {
         const curso = await prisma.curso.create({
             data: { colegioId: colegio.id, nombre: "6A", estado: "activo" },
         });
-        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Ana", apellidos: "López" } });
-        await prisma.profesor.create({ data: { colegioId: colegio.id, nombre: "Carlos", apellidos: "Pérez" } });
+        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Ana", apellidos: "López", documentoTipo: "TI", documentoNumero: "EST-ANA" } });
+        await prisma.profesor.create({ data: { colegioId: colegio.id, nombre: "Carlos", apellidos: "Pérez", tipoDocumento: "CC", numeroDocumento: "P-CARLOS", anioNacimiento: 1985, sexo: "OTRO", email: "carlos@example.com", telefono: "+573000000001" } });
 
         const res = await GET(request("GET", "http://localhost:5005/api/colegio/onboarding", undefined, mockToken));
         const json = await res.json();
@@ -78,13 +78,13 @@ describe("/api/colegio/onboarding", () => {
         const curso = await prisma.curso.create({
             data: { colegioId: colegio.id, nombre: "6A", estado: "activo" },
         });
-        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Ana", apellidos: "López" } });
-        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Luis", apellidos: "Gómez" } });
-        await prisma.profesor.create({ data: { colegioId: colegio.id, nombre: "Carlos", apellidos: "Pérez" } });
+        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Ana", apellidos: "López", documentoTipo: "TI", documentoNumero: "EST-ANA" } });
+        await prisma.estudiante.create({ data: { cursoId: curso.id, colegioId: colegio.id, nombre: "Luis", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "EST-LUIS" } });
+        await prisma.profesor.create({ data: { colegioId: colegio.id, nombre: "Carlos", apellidos: "Pérez", tipoDocumento: "CC", numeroDocumento: "P-CARLOS", anioNacimiento: 1985, sexo: "OTRO", email: "carlos@example.com", telefono: "+573000000001" } });
 
         // Datos de OTRO colegio no deben contarse en el resumen.
         const { colegio: otroColegio } = await crearColegioConAdmin();
-        await prisma.profesor.create({ data: { colegioId: otroColegio.id, nombre: "Otro", apellidos: "Profesor" } });
+        await prisma.profesor.create({ data: { colegioId: otroColegio.id, nombre: "Otro", apellidos: "Profesor", tipoDocumento: "CC", numeroDocumento: "P-OTRO", anioNacimiento: 1985, sexo: "OTRO", email: "otro@example.com", telefono: "+573000000002" } });
 
         const res = await GET(request("GET", "http://localhost:5005/api/colegio/onboarding", undefined, mockToken));
         expect(res.status).toBe(200);

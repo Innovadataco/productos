@@ -46,6 +46,27 @@ export async function crearPlataforma(clave = "whatsapp", nombre = "WhatsApp", c
     });
 }
 
+/**
+ * SPEC-320 (§2.3): siembra el catálogo de tipos de documento en la BD de test.
+ * Mismas claves que prisma/seed.ts (RC/TI/CC/CE/PASAPORTE/PEP/NIT/OTRO). Idempotente.
+ * Necesario porque el alta de alumno/profesor valida `claveActiva()` contra el catálogo.
+ */
+export async function crearTiposDocumento() {
+    const tipos = [
+        { clave: "RC", nombre: "Registro civil" },
+        { clave: "TI", nombre: "Tarjeta de identidad" },
+        { clave: "CC", nombre: "Cédula de ciudadanía" },
+        { clave: "CE", nombre: "Cédula de extranjería" },
+        { clave: "PASAPORTE", nombre: "Pasaporte" },
+        { clave: "PEP", nombre: "PEP / PPT" },
+        { clave: "NIT", nombre: "NIT" },
+        { clave: "OTRO", nombre: "Otro" },
+    ];
+    for (const td of tipos) {
+        await prisma.tipoDocumento.upsert({ where: { clave: td.clave }, update: {}, create: td });
+    }
+}
+
 export async function crearColegioConAdmin() {
     const { pais, ciudad } = await crearPaisCiudad();
     const tenant = await prisma.tenant.create({
@@ -59,6 +80,8 @@ export async function crearColegioConAdmin() {
     const colegio = await prisma.colegio.create({
         data: {
             nombre: "Colegio Test",
+            // SPEC-320 (§2.2-bis): NIT obligatorio y único global.
+            nit: `TEST-NIT-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             paisId: pais.id,
             ciudadId: ciudad.id,
             representanteLegalNombre: "Representante Test",
@@ -102,33 +125,55 @@ export async function crearCurso(
 }
 
 // SPEC-145: fixture de profesor del colegio (mínimo: nombre + apellidos).
+let profesorDocSeq = 0;
 export async function crearProfesor(
     colegioId: string,
-    data: { nombre?: string; apellidos?: string; email?: string; telefono?: string; estado?: string } = {}
+    data: {
+        nombre?: string;
+        apellidos?: string;
+        email?: string;
+        telefono?: string;
+        estado?: string;
+        tipoDocumento?: string;
+        numeroDocumento?: string;
+        anioNacimiento?: number;
+        sexo?: string;
+    } = {}
 ) {
+    // SPEC-320 (§2.2): identidad del profesor obligatoria; el fixture provee defaults
+    // (numeroDocumento único por secuencia para no chocar con el UNIQUE por colegio).
+    const doc = data.numeroDocumento ?? `DOC${Date.now()}${profesorDocSeq++}`;
     return prisma.profesor.create({
         data: {
             colegioId,
             nombre: data.nombre ?? `Profesor ${Date.now()}`,
             apellidos: data.apellidos ?? "De Prueba",
-            email: data.email ?? null,
-            telefono: data.telefono ?? null,
+            tipoDocumento: data.tipoDocumento ?? "CC",
+            numeroDocumento: doc,
+            anioNacimiento: data.anioNacimiento ?? 1985,
+            sexo: data.sexo ?? "OTRO",
+            email: data.email ?? `profesor${doc}@example.com`,
+            telefono: data.telefono ?? "+573000000000",
             estado: data.estado ?? "activo",
         },
     });
 }
 
+let estudianteDocSeq = 0;
 export async function crearEstudiante(
     cursoId: string,
     colegioId: string,
-    data: { nombre?: string; apellidos?: string; estado?: string } = {}
+    data: { nombre?: string; apellidos?: string; estado?: string; documentoTipo?: string; documentoNumero?: string } = {}
 ) {
+    // SPEC-320 (§2.2-bis): documento del alumno obligatorio; numero único por secuencia.
     return prisma.estudiante.create({
         data: {
             cursoId,
             colegioId,
             nombre: data.nombre ?? `Estudiante ${Date.now()}`,
             apellidos: data.apellidos ?? "De Prueba",
+            documentoTipo: data.documentoTipo ?? "TI",
+            documentoNumero: data.documentoNumero ?? `EST${Date.now()}${estudianteDocSeq++}`,
             estado: data.estado ?? "activo",
         },
     });
@@ -138,9 +183,16 @@ export async function crearIdentificadorEstudiante(
     estudianteId: string,
     data: { tipo?: string; valor?: string; plataformaId?: string | null; etiquetaRelacion?: string; estado?: string } = {}
 ) {
+    // SPEC-320 (§2.1 · H1): IdentificadorEstudiante lleva colegioId denormalizado.
+    // Se resuelve desde el estudiante para no cambiar la firma de este fixture.
+    const estudiante = await prisma.estudiante.findUniqueOrThrow({
+        where: { id: estudianteId },
+        select: { colegioId: true },
+    });
     return prisma.identificadorEstudiante.create({
         data: {
             estudianteId,
+            colegioId: estudiante.colegioId,
             tipo: data.tipo ?? "telefono",
             valor: data.valor ?? `+57${Date.now()}`,
             plataformaId: data.plataformaId ?? null,

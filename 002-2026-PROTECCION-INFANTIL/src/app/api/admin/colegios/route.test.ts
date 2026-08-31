@@ -21,6 +21,8 @@ vi.mock("@/lib/notificaciones", () => ({
 function bodyNuevoColegio() {
     return {
         nombreColegio: "Colegio Test",
+        // SPEC-320 (§2.2-bis): NIT obligatorio, único global (aleatorio por llamada).
+        nit: `NIT-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         nombreRector: "Rector Test",
         emailRector: `rector-${Date.now()}@test.com`,
     };
@@ -130,6 +132,7 @@ describe("/api/admin/colegios", () => {
         const res = await POST(
             postRequest(mockToken, {
                 nombre: `Colegio Legacy ${Date.now()}`,
+                nit: `NIT-LEGACY-${Date.now()}`, // SPEC-320 (§2.2-bis)
                 paisId: pais!.id,
                 ciudadId: ciudad!.id,
                 representanteLegalNombre: "Rector Legacy",

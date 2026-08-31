@@ -146,6 +146,16 @@ export class EstudianteRepository {
         });
     }
 
+    /**
+     * SPEC-320 (§2.2-bis): estudiante ACTIVO con ese documento (tipo+número) en el
+     * colegio. Único por colegio (consistente con el índice parcial WHERE estado='activo').
+     */
+    buscarPorDocumentoEnColegio(colegioId: string, documentoTipo: string, documentoNumero: string) {
+        return this.db.estudiante.findFirst({
+            where: { colegioId, documentoTipo, documentoNumero, estado: "activo" },
+        });
+    }
+
     /** Duplicado de nombre + apellidos en OTRO estudiante del mismo curso (edición). */
     buscarDuplicadoEnCurso(colegioId: string, cursoId: string, nombre: string, apellidos: string, excluirId: string) {
         return this.db.estudiante.findFirst({
@@ -164,8 +174,9 @@ export class EstudianteRepository {
             cursoId: string;
             nombre: string;
             apellidos: string;
-            documentoTipo?: string | undefined;
-            documentoNumero?: string | undefined;
+            // SPEC-320 (§2.2-bis): documento del alumno OBLIGATORIO.
+            documentoTipo: string;
+            documentoNumero: string;
             acudientes?: DatosAcudiente[] | undefined;
         }
     ) {
@@ -182,8 +193,8 @@ export class EstudianteRepository {
                 colegioId,
                 nombre: datos.nombre,
                 apellidos: datos.apellidos,
-                documentoTipo: datos.documentoTipo ?? null,
-                documentoNumero: datos.documentoNumero ?? null,
+                documentoTipo: datos.documentoTipo,
+                documentoNumero: datos.documentoNumero,
                 estado: "activo",
                 ...(datos.acudientes && datos.acudientes.length > 0
                     ? {

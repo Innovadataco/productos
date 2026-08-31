@@ -3461,6 +3461,33 @@ async function main() {
     }
     console.log("Plataformas creadas");
 
+    // SPEC-320 (§2.3): catálogo único de tipos de documento (norma colombiana).
+    // Idempotente: upsert por clave, update:{} para no pisar ediciones del admin.
+    // Las claves CC/CE unifican el vocabulario del comité (CEDULA_CIUDADANIA /
+    // CEDULA_EXTRANJERIA) con el de estudiante. No preguntar a Jelkin qué sembrar.
+    // Claves alineadas al vocabulario que ya usa el estudiante (RC/TI/CC/CE/PASAPORTE/
+    // OTRO) para no migrar sus datos; CC/CE unifican el vocabulario del comité
+    // (CEDULA_CIUDADANIA/CEDULA_EXTRANJERIA). PEP/NIT se agregan de la norma.
+    const tiposDocumento = [
+        { clave: "RC", nombre: "Registro civil" },
+        { clave: "TI", nombre: "Tarjeta de identidad" },
+        { clave: "CC", nombre: "Cédula de ciudadanía" },
+        { clave: "CE", nombre: "Cédula de extranjería" },
+        { clave: "PASAPORTE", nombre: "Pasaporte" },
+        { clave: "PEP", nombre: "PEP / PPT" },
+        { clave: "NIT", nombre: "NIT" },
+        { clave: "OTRO", nombre: "Otro" },
+    ];
+
+    for (const td of tiposDocumento) {
+        await prisma.tipoDocumento.upsert({
+            where: { clave: td.clave },
+            update: {},
+            create: td,
+        });
+    }
+    console.log("Tipos de documento (catálogo §2.3) creados");
+
     // Coordenadas aproximadas de ciudades principales para el mapa de consulta pública
     const COORDENADAS_CIUDADES: Record<string, { lat: number; lng: number }> = {
         "CO:Bogotá": { lat: 4.7110, lng: -74.0721 },

@@ -116,21 +116,26 @@ export async function POST(request: Request) {
         const body = await withValidation.body(adminColegioNuevoSchema)(
             new Request(request.url, { method: "POST", body: JSON.stringify(bodyRaw), headers: request.headers })
         );
-        const { nombreColegio, nombreRector, emailRector } = body;
+        const { nombreColegio, nombreRector, emailRector, nit } = body;
 
         const resultado = await new RegistroColegioService().preRegistrarPorAdmin(
             nombreColegio,
             nombreRector,
             emailRector,
-            admin.id
+            admin.id,
+            nit
         );
 
         if (!resultado.ok) {
+            // SPEC-320 (§2.2-bis): nit_existente → 409.
+            const esConflicto = resultado.tipo === "existente" || resultado.tipo === "nit_existente";
             const mensaje = resultado.tipo === "existente"
                 ? "Ya existe un usuario con el email del rector"
-                : "No se pudo resolver la ubicación por defecto del colegio";
-            const codigo = resultado.tipo === "existente" ? ERROR_CODES.CONFLICT : ERROR_CODES.INTERNAL_ERROR;
-            const status = resultado.tipo === "existente" ? 409 : 500;
+                : resultado.tipo === "nit_existente"
+                    ? "Ya existe un colegio con ese NIT"
+                    : "No se pudo resolver la ubicación por defecto del colegio";
+            const codigo = esConflicto ? ERROR_CODES.CONFLICT : ERROR_CODES.INTERNAL_ERROR;
+            const status = esConflicto ? 409 : 500;
             return NextResponse.json(
                 { error: { message: mensaje, code: codigo } },
                 { status }
@@ -187,6 +192,7 @@ async function crearColegioLegacy(request: Request, adminId: string, bodyRaw: un
 
     const {
         nombre,
+        nit,
         paisId,
         departamentoId,
         ciudadId,
@@ -222,6 +228,15 @@ async function crearColegioLegacy(request: Request, adminId: string, bodyRaw: un
         );
     }
 
+    // SPEC-320 (§2.2-bis): NIT único global.
+    const nitExistente = await new ColegioRepository().buscarPorNit(nit);
+    if (nitExistente) {
+        return NextResponse.json(
+            { error: { message: "Ya existe un colegio con ese NIT", code: ERROR_CODES.CONFLICT } },
+            { status: 409 }
+        );
+    }
+
     const password = tempPassword();
     const passwordHash = await hashPassword(password);
     const { ipAddress, userAgent } = getClientInfo(request);
@@ -231,6 +246,7 @@ async function crearColegioLegacy(request: Request, adminId: string, bodyRaw: un
 
         const creado = await new ColegioRepository(tx).crear({
             nombre,
+            nit, // SPEC-320 (§2.2-bis): NIT único global
             paisId,
             ...(departamentoId !== undefined ? { departamentoId } : {}),
             ciudadId,

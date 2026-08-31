@@ -158,6 +158,7 @@ async function main() {
         const nombreColegioValue = nombreColegio(i);
         const colegioData: {
             nombre: string;
+            nit: string;
             paisId: string;
             ciudadId: string;
             representanteLegalNombre: string;
@@ -172,6 +173,7 @@ async function main() {
             departamentoId?: string;
         } = {
             nombre: nombreColegioValue,
+            nit: `DEMO-NIT-${String(idx).padStart(3, "0")}`,
             paisId: pais.id,
             ciudadId: ciudad.id,
             representanteLegalNombre: "Representante Legal Demo",
@@ -218,6 +220,11 @@ async function main() {
                     colegioId: colegio.id,
                     nombre,
                     apellidos,
+                    // SPEC-320 (§2.2): identidad obligatoria del profesor.
+                    tipoDocumento: "CC",
+                    numeroDocumento: `DEMO${String(profesorIdx).padStart(4, "0")}`,
+                    anioNacimiento: 1985,
+                    sexo: "OTRO",
                     email: `soporte+profesor${String(profesorIdx).padStart(3, "0")}@innovadataco.com`,
                     telefono: `300DEMOPRO${String(profesorIdx).padStart(3, "0")}`,
                     estado: "activo",
@@ -258,6 +265,9 @@ async function main() {
                         colegioId: colegio.id,
                         nombre,
                         apellidos,
+                        // SPEC-320 (§2.2-bis): documento del alumno obligatorio.
+                        documentoTipo: "TI",
+                        documentoNumero: `DEMO-EST-${estudianteIdxGlobal}`,
                         estado: "activo",
                     },
                 });
@@ -271,6 +281,7 @@ async function main() {
                     const ident = await prisma.identificadorEstudiante.create({
                         data: {
                             estudianteId: estudiante.id,
+                            colegioId: estudiante.colegioId, // SPEC-320 (§2.1 · H1)
                             tipo: idData.tipo,
                             valor: idData.valor,
                             plataformaId: plataforma.id,

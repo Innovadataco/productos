@@ -33,7 +33,8 @@ export type IdentificadorLista = {
 
 export type FilaListaValidada = {
     fila: number;
-    estudiante: { nombre: string; apellidos: string };
+    // SPEC-320 (§2.2-bis): documento del alumno obligatorio (viaja al confirmar).
+    estudiante: { nombre: string; apellidos: string; documentoTipo: string; documentoNumero: string };
     acudiente: AcudienteLista | null;
     identificador: IdentificadorLista | null;
 };
@@ -121,6 +122,15 @@ export function validarFilasUnificado(
     problemas.push(...validacionConId.errores);
 
     for (const fila of validacionConId.filasValidas) {
+        // SPEC-320 (§2.2-bis): documento del alumno obligatorio (fila con problema si falta).
+        if (!fila.alumno.documentoTipo.trim() || !fila.alumno.documentoNumero.trim()) {
+            problemas.push({
+                fila: fila.fila,
+                campos: ["documento_tipo_alumno", "documento_numero_alumno"],
+                mensaje: "Falta el documento del alumno (tipo y número)",
+            });
+            continue;
+        }
         const { acudiente, problema } = validarAcudiente(fila);
         if (problema) {
             problemas.push(problema);
@@ -128,7 +138,12 @@ export function validarFilasUnificado(
         }
         filasValidas.push({
             fila: fila.fila,
-            estudiante: { nombre: fila.alumno.nombre, apellidos: fila.alumno.apellidos },
+            estudiante: {
+                nombre: fila.alumno.nombre,
+                apellidos: fila.alumno.apellidos,
+                documentoTipo: fila.alumno.documentoTipo,
+                documentoNumero: fila.alumno.documentoNumero,
+            },
             acudiente,
             identificador: {
                 tipo: fila.identificador.tipo,
@@ -156,7 +171,13 @@ export function validarFilasUnificado(
         const estudianteParsed = estudianteBodySchema.safeParse(fila.alumno);
         if (!estudianteParsed.success) {
             for (const issue of estudianteParsed.error.issues) {
-                campos.push(issue.path[0] === "apellidos" ? "apellidos_alumno" : "nombre_alumno");
+                const p = issue.path[0];
+                // SPEC-320 (§2.2-bis): mapear también los campos de documento del alumno.
+                const campo = p === "apellidos" ? "apellidos_alumno"
+                    : p === "documentoTipo" ? "documento_tipo_alumno"
+                        : p === "documentoNumero" ? "documento_numero_alumno"
+                            : "nombre_alumno";
+                campos.push(campo);
                 mensajes.push(issue.message);
             }
         }
@@ -187,7 +208,12 @@ export function validarFilasUnificado(
 
         filasValidas.push({
             fila: fila.fila,
-            estudiante: { nombre: fila.alumno.nombre, apellidos: fila.alumno.apellidos },
+            estudiante: {
+                nombre: fila.alumno.nombre,
+                apellidos: fila.alumno.apellidos,
+                documentoTipo: fila.alumno.documentoTipo,
+                documentoNumero: fila.alumno.documentoNumero,
+            },
             acudiente,
             identificador: null,
         });

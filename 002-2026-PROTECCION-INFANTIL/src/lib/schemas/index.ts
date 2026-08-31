@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { NivelLog, EstadoNotificacion, CanalNotificacion } from "@prisma/client";
+// SPEC-320: primitivas compartidas movidas a ./base (se re-exportan abajo para los
+// consumidores de @/lib/schemas). También en ./identidad viven las de profesor.
+import { cuidIdSchema, materiaIdSchema, emailSchema, parametroClaveSchema, estadoActivoSchema } from "./base";
+import { profesorNuevoSchema } from "./identidad";
 
 /**
  * Esquemas zod reutilizables para validación de entradas en rutas API.
@@ -7,17 +11,8 @@ import { NivelLog, EstadoNotificacion, CanalNotificacion } from "@prisma/client"
  * y garantizar consistencia entre endpoints.
  */
 
-// Identificadores y claves
-export const cuidIdSchema = z.string().cuid();
-
-// SPEC-173 (H02, candado A compuerta): Materia tiene ids mixtos en prod — la
-// migración 20260812052407 sembró el catálogo con gen_random_uuid() y la app
-// crea materias nuevas con @default(cuid()). El schema acepta ambos formatos.
-export const materiaIdSchema = z.union([cuidIdSchema, z.string().uuid()]);
-
-export const emailSchema = z.string().email().max(255);
-
-export const parametroClaveSchema = z.string().min(1).max(100);
+export { cuidIdSchema, materiaIdSchema, emailSchema, parametroClaveSchema, estadoActivoSchema } from "./base";
+export * from "./identidad";
 
 // Body vacío para POST/PATCH que no esperan payload
 export const emptyBodySchema = z.object({}).strict();
@@ -91,6 +86,8 @@ export const tipoPeriodoServicioSchema = z.enum(["MENSUAL", "SEMESTRAL", "ANUAL"
 
 export const colegioBodySchema = z.object({
     nombre: z.string().min(2).max(150),
+    // SPEC-320 (§2.2-bis): NIT institucional obligatorio, único global.
+    nit: z.string({ message: "Falta el NIT del colegio" }).min(1, "Falta el NIT del colegio").max(50),
     paisId: cuidIdSchema,
     departamentoId: cuidIdSchema.optional(),
     ciudadId: cuidIdSchema,
@@ -125,8 +122,6 @@ export const colegioUpdateBodySchema = z.object({
     tipoPeriodo: tipoPeriodoServicioSchema.optional(),
     estado: z.enum(["activo", "inactivo"]).optional(),
 }).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
-
-export const estadoActivoSchema = z.enum(["activo", "inactivo"]);
 
 export const cursoBodySchema = z.object({
     nombre: z.string().min(2).max(150),
@@ -188,6 +183,8 @@ export const identificadorAcudienteBodySchema = z.object({
     tipo: z.string().min(1).max(50).optional(),
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
+    // SPEC-320 (§2.1): override del warn de identificador compartido en el colegio.
+    confirmarCompartido: z.boolean().optional(),
 });
 
 export const identificadorAcudienteUpdateBodySchema = z
@@ -195,8 +192,12 @@ export const identificadorAcudienteUpdateBodySchema = z
         tipo: z.string().min(1).max(50).optional(),
         valor: z.string().min(1).max(255).optional(),
         plataformaId: cuidIdSchema.optional().nullable(),
+        confirmarCompartido: z.boolean().optional(), // SPEC-320 (§2.1): override warn
     })
-    .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+    .refine(
+        (data) => Object.keys(data).some((k) => k !== "confirmarCompartido"),
+        { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
+    );
 
 export const identificadorAcudienteIdParamsSchema = z.object({
     id: cuidIdSchema,
@@ -208,6 +209,8 @@ export const identificadorProfesorBodySchema = z.object({
     tipo: z.string().min(1).max(50).optional(),
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
+    // SPEC-320 (§2.1): override del warn de identificador compartido en el colegio.
+    confirmarCompartido: z.boolean().optional(),
 });
 
 export const identificadorProfesorUpdateBodySchema = z
@@ -215,8 +218,12 @@ export const identificadorProfesorUpdateBodySchema = z
         tipo: z.string().min(1).max(50).optional(),
         valor: z.string().min(1).max(255).optional(),
         plataformaId: cuidIdSchema.optional().nullable(),
+        confirmarCompartido: z.boolean().optional(), // SPEC-320 (§2.1): override warn
     })
-    .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+    .refine(
+        (data) => Object.keys(data).some((k) => k !== "confirmarCompartido"),
+        { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
+    );
 
 export const identificadorProfesorIdParamsSchema = z.object({
     id: cuidIdSchema,
@@ -241,9 +248,9 @@ export const cursoMateriaIdParamsSchema = z.object({
 
 // SPEC-144 (FR-010, D3): alta de estudiante — obligatorios solo nombre + apellidos;
 // el resto es opcional y NUNCA bloquea el alta. Acudientes: máx 2 (D1, tabla hija).
-export const documentoTipoEstudianteSchema = z.enum(["RC", "TI", "CC", "CE", "PASAPORTE", "OTRO"], {
-    message: "Tipo de documento inválido. Valores aceptados: RC, TI, CC, CE, PASAPORTE, OTRO",
-});
+// SPEC-320 (§2.3): documentoTipo del estudiante CONSUME el catálogo (clave); ya no es
+// enum hardcode — acepta cualquier clave activa (metadato opcional sin FK).
+export const documentoTipoEstudianteSchema = z.string().min(1).max(20);
 
 export const acudienteEstudianteBodySchema = z.object({
     orden: z.union([z.literal(1), z.literal(2)]),
@@ -256,8 +263,9 @@ export const acudienteEstudianteBodySchema = z.object({
 export const estudianteBodySchema = z.object({
     nombre: z.string().min(2).max(150),
     apellidos: z.string({ message: "Falta el apellido del estudiante" }).min(1, "Falta el apellido del estudiante").max(150),
-    documentoTipo: documentoTipoEstudianteSchema.optional(),
-    documentoNumero: z.string().max(50).optional(),
+    // SPEC-320 (§2.2-bis): documento del alumno OBLIGATORIO (consume el catálogo §2.3).
+    documentoTipo: z.string({ message: "Falta el tipo de documento del estudiante" }).min(1, "Falta el tipo de documento del estudiante").max(20),
+    documentoNumero: z.string({ message: "Falta el número de documento del estudiante" }).min(1, "Falta el número de documento del estudiante").max(50),
     acudientes: z.array(acudienteEstudianteBodySchema).max(2, "Máximo 2 acudientes por estudiante").optional(),
 });
 
@@ -270,32 +278,9 @@ export const estudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
-// SPEC-145 (FR-005): alta de profesor — obligatorios solo nombre + apellidos;
-// email/teléfono opcionales y NUNCA bloquean el alta. Baja = estado "inactivo".
-export const profesorBodySchema = z.object({
-    nombre: z.string().min(2).max(150),
-    apellidos: z.string({ message: "Falta el apellido del profesor" }).min(1, "Falta el apellido del profesor").max(150),
-    email: emailSchema.optional(),
-    telefono: z.string().max(50).optional(),
-});
-
-export const profesorPatchSchema = z.object({
-    nombre: z.string().min(2).max(150).optional(),
-    apellidos: z.string().min(1).max(150).optional(),
-    email: emailSchema.optional().nullable(),
-    telefono: z.string().max(50).optional().nullable(),
-    estado: estadoActivoSchema.optional(),
-}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
-
-export const profesorIdParamsSchema = z.object({
-    id: cuidIdSchema,
-});
-
-export const profesoresQuerySchema = z.object({
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(25),
-    estado: z.enum(["activo", "inactivo", "todos"]).default("activo"),
-});
+// SPEC-320 (§2.2): sexoSchema y los esquemas de profesor (profesorBodySchema,
+// profesorPatchSchema, profesorIdParamsSchema, profesoresQuerySchema) viven en
+// ./identidad y se re-exportan arriba (export * from "./identidad").
 
 // SPEC-144 (FR-003): el valor físico en BD sigue siendo 'ALUMNO' (@map); en código
 // y en el wire el valor es ESTUDIANTE. El parser de carga acepta "ALUMNO" legado
@@ -307,6 +292,8 @@ export const identificadorEstudianteBodySchema = z.object({
     valor: z.string().min(1).max(255),
     plataformaId: cuidIdSchema.optional(),
     etiquetaRelacion: etiquetaRelacionEstudianteSchema.optional(),
+    // SPEC-320 (§2.1): override del warn de identificador compartido en el colegio.
+    confirmarCompartido: z.boolean().optional(),
 });
 
 export const identificadorEstudianteUpdateBodySchema = z.object({
@@ -314,18 +301,19 @@ export const identificadorEstudianteUpdateBodySchema = z.object({
     valor: z.string().min(1).max(255).optional(),
     plataformaId: cuidIdSchema.optional().nullable(),
     etiquetaRelacion: etiquetaRelacionEstudianteSchema.optional(),
-}).refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
+    confirmarCompartido: z.boolean().optional(), // SPEC-320 (§2.1): override warn
+}).refine(
+    (data) => Object.keys(data).some((k) => k !== "confirmarCompartido"),
+    { message: "Debe enviar al menos un campo para actualizar", path: ["root"] }
+);
 
 export const identificadorEstudianteIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
 // SPEC-146 (FR-002): payload del wizard unificado — curso + estudiantes +
-// identificadores en UNA escritura atómica. Reusa los schemas de alta ya
-// existentes (curso, estudiante con acudientes, identificador); el tipo del
-// identificador es opcional (se infiere del valor en la ruta).
-export const profesorNuevoSchema = profesorBodySchema.pick({ nombre: true, apellidos: true });
-
+// identificadores en UNA escritura atómica. `profesorNuevoSchema` vive en ./identidad
+// (deriva de profesorBodySchema) y se re-exporta arriba.
 export const identificadorUnificadoSchema = identificadorEstudianteBodySchema.extend({
     // Índice (0-based) del estudiante dentro de `estudiantes` al que pertenece.
     estudianteIndex: z.number().int().min(0),

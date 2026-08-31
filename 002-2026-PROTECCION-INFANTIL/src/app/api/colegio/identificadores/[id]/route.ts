@@ -12,6 +12,7 @@ import { withValidation } from "@/lib/validation";
 import { identificadorEstudianteIdParamsSchema, identificadorEstudianteUpdateBodySchema } from "@/lib/schemas";
 import { verificarPropiedadIdentificador } from "@/lib/colegio/permisos";
 import { normalizarIdentificador } from "@/lib/colegio/normalizacion";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 import type { EtiquetaRelacionEstudiante } from "@prisma/client";
 
 function getClientInfo(request: Request) {
@@ -74,6 +75,38 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 return NextResponse.json(
                     { error: { message: "Identificador duplicado para este estudiante", code: ERROR_CODES.CONFLICT } },
                     { status: 409 }
+                );
+            }
+
+            // SPEC-320 (§2.1): clasificar la colisión cross-sujeto al editar.
+            // estudiante↔estudiante = bloqueo duro (I-213); cross-sujeto = warn-override.
+            const colision = await new IdentificadorUnicidadService().clasificarColision(
+                colegioId,
+                valor,
+                "ESTUDIANTE",
+                { sujeto: "ESTUDIANTE", sujetoId: identificador.estudianteId }
+            );
+            if (colision.duros.length > 0) {
+                return NextResponse.json(
+                    {
+                        error: {
+                            message: `Este identificador ya pertenece a otro ${colision.duros[0].rol.toLowerCase()} de este colegio y no puede repetirse.`,
+                            code: ERROR_CODES.CONFLICT,
+                        },
+                    },
+                    { status: 409 }
+                );
+            }
+            if (colision.warns.length > 0 && !body.confirmarCompartido) {
+                return NextResponse.json(
+                    {
+                        aviso: {
+                            code: "IDENTIFICADOR_EN_USO_EN_COLEGIO",
+                            message: "Este identificador ya está registrado para otra persona del colegio.",
+                            pertenece: colision.warns.map((d) => ({ nombre: d.nombre, rol: d.rol })),
+                        },
+                    },
+                    { status: 200 }
                 );
             }
         }

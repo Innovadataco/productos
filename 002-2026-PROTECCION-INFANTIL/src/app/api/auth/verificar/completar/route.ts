@@ -16,7 +16,7 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-        const { token, password, nombre, nombreColegio, rol } = parsed.data;
+        const { token, password, nombre, nombreColegio, nit, rol } = parsed.data;
 
         const payload = await verifyToken(token);
         if (!payload || payload.type !== "verification" || !payload.sub) {
@@ -32,17 +32,31 @@ export async function POST(request: Request) {
 
         if (nombreColegio && rol === "SCHOOL_ADMIN") {
             // SPEC-240 (002-PI-143): registro público de colegio desde /registro-colegio.
+            // SPEC-320 (§2.2-bis): el NIT es obligatorio para el registro de colegio.
+            if (!nit) {
+                return NextResponse.json(
+                    { error: { message: "Falta el NIT del colegio", code: ERROR_CODES.VALIDATION_ERROR } },
+                    { status: 400 }
+                );
+            }
             const resultado = await new RegistroColegioService().registrarPublico(
                 email,
                 password,
                 nombre || email,
-                nombreColegio
+                nombreColegio,
+                nit
             );
             if (!resultado.ok) {
                 if (resultado.tipo === "ubicacion_no_configurada") {
                     return NextResponse.json(
                         { error: { message: "Ubicación default no configurada", code: ERROR_CODES.INTERNAL_ERROR } },
                         { status: 500 }
+                    );
+                }
+                if (resultado.tipo === "nit_existente") {
+                    return NextResponse.json(
+                        { error: { message: "Ya existe un colegio con ese NIT", code: ERROR_CODES.CONFLICT } },
+                        { status: 409 }
                     );
                 }
                 return NextResponse.json(

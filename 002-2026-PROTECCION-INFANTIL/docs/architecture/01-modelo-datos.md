@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **99** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **100** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -195,6 +195,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | --- | --- | --- |
 | id | String | id |
 | nombre | String | — |
+| nit | String | único |
 | paisId | String | — |
 | departamentoId | String | opcional |
 | ciudadId | String | — |
@@ -232,6 +233,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | CursoMateria | CursoMateria | lista, relación |
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
+| identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
 | onboarding | OnboardingColegio | opcional, relación |
 | notificacionesInApp | NotificacionInApp | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
@@ -280,8 +282,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegioId | String | — |
 | nombre | String | — |
 | apellidos | String | — |
-| documentoTipo | String | opcional |
-| documentoNumero | String | opcional |
+| documentoTipo | String | — |
+| documentoNumero | String | — |
 | estado | String | — |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
@@ -313,6 +315,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | --- | --- | --- |
 | id | String | id |
 | estudianteId | String | — |
+| colegioId | String | — |
 | tipo | String | — |
 | valor | String | — |
 | plataformaId | String | opcional |
@@ -321,6 +324,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
 | estudiante | Estudiante | relación (FK) |
+| colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
 
@@ -332,8 +336,12 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegioId | String | — |
 | nombre | String | — |
 | apellidos | String | — |
-| email | String | opcional |
-| telefono | String | opcional |
+| tipoDocumento | String | — |
+| numeroDocumento | String | — |
+| anioNacimiento | Int | — |
+| sexo | String | — |
+| email | String | — |
+| telefono | String | — |
 | estado | String | — |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
@@ -486,7 +494,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (51)
+### Otros (sin regla de dominio) (52)
 
 #### `AclaracionExpediente`
 
@@ -1361,6 +1369,17 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | createdAt | DateTime | — |
 | ingresadoPor | Usuario | opcional, relación (FK) |
 
+#### `TipoDocumento`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| clave | String | único |
+| nombre | String | — |
+| categoria | String | — |
+| esActiva | Boolean | — |
+| creadoEn | DateTime | — |
+
 #### `WorkerLog`
 
 | Campo | Tipo | Atributos |
@@ -1909,6 +1928,7 @@ erDiagram
     Colegio ||--o{ CursoMateria : "colegio"
     Colegio ||--o{ Estudiante : "colegio"
     Colegio ||--o{ IdentificadorAcudiente : "colegio"
+    Colegio ||--o{ IdentificadorEstudiante : "colegio"
     Colegio ||--o{ IdentificadorProfesor : "colegio"
     Colegio ||--o{ Materia : "colegio"
     Colegio ||--o{ NotaSeguimiento : "colegio"
@@ -2065,4 +2085,5 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | RateLimit | sí |
 | SenalComunitariaCache | sí |
 | Subscription | sí |
+| TipoDocumento | sí |
 | WorkerLog | sí |

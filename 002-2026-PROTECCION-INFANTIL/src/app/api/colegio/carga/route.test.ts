@@ -78,6 +78,9 @@ const COLUMNAS = [
     "anio_lectivo",
     "nombre_alumno",
     "apellidos_alumno",
+    // SPEC-320 (§2.2-bis): documento del alumno.
+    "documento_tipo_alumno",
+    "documento_numero_alumno",
     "tipo_identificador",
     "valor_identificador",
     "etiqueta_relacion",
@@ -86,13 +89,13 @@ const COLUMNAS = [
 
 const CSV_VALIDO = [
     COLUMNAS.join(","),
-    "6A,Sexto,2026,María,Gómez,telefono,+573001234567,ESTUDIANTE,",
-    "6A,Sexto,2026,Carlos,Ruiz,email,carlos@example.com,PADRE,",
+    "6A,Sexto,2026,María,Gómez,TI,DV1,telefono,+573001234567,ESTUDIANTE,",
+    "6A,Sexto,2026,Carlos,Ruiz,TI,DV2,email,carlos@example.com,PADRE,",
 ].join("\n");
 
 const CSV_INVALIDO = [
     COLUMNAS.join(","),
-    "6A,Sexto,2026,,Gómez,telefono,+573001234567,ESTUDIANTE,",
+    "6A,Sexto,2026,,Gómez,TI,DI1,telefono,+573001234567,ESTUDIANTE,",
 ].join("\n");
 
 // SPEC-144 (D4): plantilla vieja SIN columna de apellidos — el archivo se acepta

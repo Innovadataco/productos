@@ -80,6 +80,7 @@ describe("POST /api/auth/verificar/completar", { timeout: 30_000 }, () => {
             password: "Clave1234",
             nombre: "Rector Prueba",
             nombreColegio: "Colegio Nuevo",
+            nit: "NIT-COMPLETAR-1", // SPEC-320 (§2.2-bis)
             rol: "SCHOOL_ADMIN",
         }));
         expect(res.status).toBe(201);

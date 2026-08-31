@@ -26,7 +26,8 @@ async function crearRectorInvitado(email: string) {
         "Colegio Activar",
         "Rector Activar",
         email,
-        admin.id
+        admin.id,
+        `NIT-ACTIVAR-${email}`
     );
     if (!resultado.ok) throw new Error("No se pudo crear rector invitado");
     return resultado.token;

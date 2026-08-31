@@ -52,13 +52,14 @@ async function sembrarEstudiante(
 ) {
     contador += 1;
     const estudiante = await prisma.estudiante.create({
-        data: { cursoId, colegioId, nombre: `Est ${contador}`, apellidos, estado: "activo" },
+        data: { cursoId, colegioId, nombre: `Est ${contador}`, apellidos, documentoTipo: "TI", documentoNumero: `RC-${contador}`, estado: "activo" },
     });
     let identificador: { id: string } | null = null;
     if (opts.conIdentificador) {
         identificador = await prisma.identificadorEstudiante.create({
             data: {
                 estudianteId: estudiante.id,
+                colegioId,
                 tipo: "telefono",
                 valor: `+57313${String(contador).padStart(7, "0")}`,
                 etiquetaRelacion: "ESTUDIANTE",
@@ -69,6 +70,7 @@ async function sembrarEstudiante(
             await prisma.identificadorEstudiante.create({
                 data: {
                     estudianteId: estudiante.id,
+                    colegioId,
                     tipo: "nick",
                     valor: `nick-${contador}`,
                     etiquetaRelacion: "ESTUDIANTE",
@@ -81,6 +83,7 @@ async function sembrarEstudiante(
         await prisma.identificadorEstudiante.create({
             data: {
                 estudianteId: estudiante.id,
+                colegioId,
                 tipo: "nick",
                 valor: `viejo-${contador}`,
                 etiquetaRelacion: "ESTUDIANTE",
@@ -149,7 +152,7 @@ describe("ColegioResumenRepository.cursoDetalle", () => {
         }
         // Estudiante inactivo: no se lista ni cuenta en cobertura.
         await prisma.estudiante.create({
-            data: { cursoId: cursoA.id, colegioId: a.id, nombre: "Inactivo", apellidos: "Zz", estado: "inactivo" },
+            data: { cursoId: cursoA.id, colegioId: a.id, nombre: "Inactivo", apellidos: "Zz", documentoTipo: "TI", documentoNumero: "RC-INACT-1", estado: "inactivo" },
         });
 
         // Actividad del curso: r1 hoy con DOS alertas (cuenta UNA, D2); r2 hace 5d;
@@ -281,7 +284,7 @@ describe("EstudianteRepository.contarCobertura parametrizada por curso (aditivo)
         // Curso B: 1 activo sin nada + 1 inactivo (no cuenta en ningún nivel).
         await sembrarEstudiante(a.id, cursoB.id, "Cuatro", {});
         await prisma.estudiante.create({
-            data: { cursoId: cursoB.id, colegioId: a.id, nombre: "Inactivo", apellidos: "Cinco", estado: "inactivo" },
+            data: { cursoId: cursoB.id, colegioId: a.id, nombre: "Inactivo", apellidos: "Cinco", documentoTipo: "TI", documentoNumero: "RC-INACT-2", estado: "inactivo" },
         });
 
         const repo = new EstudianteRepository();

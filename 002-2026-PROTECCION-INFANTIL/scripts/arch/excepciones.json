@@ -16,6 +16,10 @@
         "RateLimit",
         "SenalComunitariaCache",
         "Subscription",
+        "TipoDocumento",
         "WorkerLog"
-    ]
+    ],
+    "motivos": {
+        "TipoDocumento": "catálogo consumido por clave desde estudiante/profesor/comité — sin FK por diseño, §2.3 de A-58 (aprobado por ZEUS 2026-08-30)"
+    }
 }

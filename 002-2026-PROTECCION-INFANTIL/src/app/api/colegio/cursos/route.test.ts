@@ -205,6 +205,10 @@ describe("/api/colegio/cursos", () => {
 describe("/api/colegio/cursos/[id]/alumnos", () => {
     beforeEach(async () => {
         await resetDatabase();
+        // SPEC-320 (§2.3): el alta de alumno valida documentoTipo contra el catálogo.
+        for (const clave of ["RC", "TI", "CC", "CE", "PASAPORTE", "OTRO"]) {
+            await prisma.tipoDocumento.upsert({ where: { clave }, update: {}, create: { clave, nombre: clave } });
+        }
         await resetRateLimitStore();
         mockToken = undefined;
     });
@@ -214,7 +218,7 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
         const curso = await crearCurso(admin.colegioId!, { nombre: "6A" });
 
         const postRes = await POSTAlumno(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Gómez" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "MG" }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(postRes.status).toBe(201);
@@ -237,7 +241,7 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
         const otroCurso = await crearCurso(otroColegio.id, { nombre: "Curso Ajeno" });
 
         const res = await POSTAlumno(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${otroCurso.id}/alumnos`, { nombre: "Intruso", apellidos: "X" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${otroCurso.id}/alumnos`, { nombre: "Intruso", apellidos: "X", documentoTipo: "TI", documentoNumero: "INTRUSO" }, mockToken),
             { params: Promise.resolve({ id: otroCurso.id }) }
         );
         expect(res.status).toBe(404);
@@ -249,14 +253,14 @@ describe("/api/colegio/cursos/[id]/alumnos", () => {
         await crearEstudiante(curso.id, admin.colegioId!, { nombre: "María", apellidos: "Gómez" });
 
         const res = await POSTAlumno(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Gómez" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "MG" }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(409);
 
         // Mismo nombre con apellidos distintos NO es duplicado (SPEC-144).
         const resOk = await POSTAlumno(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Torres" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/alumnos`, { nombre: "María", apellidos: "Torres", documentoTipo: "TI", documentoNumero: "MT" }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(resOk.status).toBe(201);

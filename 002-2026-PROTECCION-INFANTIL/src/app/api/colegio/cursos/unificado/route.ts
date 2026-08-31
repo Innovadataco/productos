@@ -14,6 +14,7 @@ import { withValidation, ValidationError } from "@/lib/validation";
 import { payloadUnificadoSchema } from "@/lib/schemas";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { inferirTipoIdentificador, normalizarIdentificador } from "@/lib/colegio/normalizacion";
+import { IdentificadorUnicidadService } from "@/lib/dal/services/identificador-unicidad";
 
 /**
  * SPEC-146 (FR-002) — POST /api/colegio/cursos/unificado: crea curso +
@@ -83,21 +84,16 @@ export async function POST(request: Request) {
             let profesorTitularId: string | null = null;
             let profesorCreado = false;
             if (body.profesorNuevo) {
-                const existente = await profesores.buscarPorNombreApellidosEnColegio(
-                    colegioId,
-                    body.profesorNuevo.nombre,
-                    body.profesorNuevo.apellidos
+                // SPEC-320 (§2.2): la identidad del profesor es obligatoria (documento,
+                // año de nacimiento, sexo, email, teléfono). El alta rápida del wizard solo
+                // trae nombre+apellidos, así que ya NO puede crear el profesor inline: hay
+                // que darlo de alta con identidad completa en la ficha de profesor y luego
+                // elegirlo aquí de la lista. (La ficha completa en el wizard es SPEC-B.)
+                throw new AppError(
+                    "Para agregar un profesor nuevo, créalo primero en la sección de Profesores con su documento e identidad completa; luego elígelo de la lista aquí.",
+                    ERROR_CODES.VALIDATION_ERROR,
+                    400
                 );
-                if (existente) {
-                    throw new AppError(
-                        `Ya tienes a ${body.profesorNuevo.nombre} ${body.profesorNuevo.apellidos} en tu lista de profesores. Elígelo de la lista en vez de crearlo de nuevo.`,
-                        ERROR_CODES.CONFLICT,
-                        409
-                    );
-                }
-                const nuevo = await profesores.crear(colegioId, body.profesorNuevo);
-                profesorTitularId = nuevo.id;
-                profesorCreado = true;
             } else if (body.curso.profesorTitularId) {
                 const titular = await profesores.obtenerPorId(colegioId, body.curso.profesorTitularId);
                 if (!titular) {
@@ -163,6 +159,24 @@ export async function POST(request: Request) {
                 if (duplicado) {
                     throw new AppError(
                         "Ese identificador ya está registrado para este estudiante",
+                        ERROR_CODES.CONFLICT,
+                        409
+                    );
+                }
+                // SPEC-320 (§2.1): el wizard atómico enforce integridad. El override
+                // interactivo por identificador vive en la UI (SPEC-B / 002-PI-221),
+                // fuera de este alcance; acá cualquier colisión cross-sujeto o dura
+                // aborta con mensaje claro para que el rector la resuelva.
+                const colision = await new IdentificadorUnicidadService(tx).clasificarColision(
+                    colegioId,
+                    valor,
+                    "ESTUDIANTE",
+                    { sujeto: "ESTUDIANTE", sujetoId: estudianteId }
+                );
+                const otro = colision.duros[0] ?? colision.warns[0];
+                if (otro) {
+                    throw new AppError(
+                        `Este identificador ya pertenece a ${otro.nombre} (${otro.rol}) de este colegio`,
                         ERROR_CODES.CONFLICT,
                         409
                     );

@@ -29,7 +29,14 @@ const filaCargaAlumnoJsonSchema = z.object({
         grado: z.string().nullable(),
         anioLectivo: z.string().nullable(),
     }),
-    alumno: z.object({ nombre: z.string(), apellidos: z.string() }),
+    // SPEC-320 (§2.2-bis): documento del alumno (default "" para sesiones roster viejas
+    // sin la columna; validar-lista las marca como fila con problema al reprocesar).
+    alumno: z.object({
+        nombre: z.string(),
+        apellidos: z.string(),
+        documentoTipo: z.string().default(""),
+        documentoNumero: z.string().default(""),
+    }),
     identificador: z.object({
         tipo: z.string(),
         valor: z.string(),
