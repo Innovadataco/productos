@@ -6,7 +6,14 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
-import { registrarHijo, listarHijos, desvincularIdentificador } from "./hijos";
+import {
+    registrarHijo,
+    listarHijos,
+    desvincularIdentificador,
+    cambiarEstadoHijo,
+    agregarIdentificador,
+    cambiarEstadoIdentificador,
+} from "./hijos";
 
 describe("hijos · protejo (SPEC-325)", () => {
     beforeEach(async () => {
@@ -101,5 +108,62 @@ describe("hijos · protejo (SPEC-325)", () => {
         });
         const identId = (await listarHijos(dueno.id))[0].identificadores[0].id;
         await expect(desvincularIdentificador(ajeno.id, identId)).rejects.toThrow(/no encontrado/i);
+    });
+
+    // SPEC-325 (extensión): estado del hijo + varios identificadores + activar/inactivar identificador.
+    it("un hijo nace activo; se puede inactivar y reactivar (solo el dueño)", async () => {
+        const padre = await crearUsuario("PARENT");
+        const ajeno = await crearUsuario("PARENT");
+        const { hijoId } = await registrarHijo(padre.id, {
+            nombre: "Sara", documentoTipo: "TI", documentoNumero: "6006",
+        });
+        expect((await listarHijos(padre.id))[0].estado).toBe("activo");
+
+        await cambiarEstadoHijo(padre.id, hijoId, "inactivo");
+        expect((await listarHijos(padre.id))[0].estado).toBe("inactivo");
+        await cambiarEstadoHijo(padre.id, hijoId, "activo");
+        expect((await listarHijos(padre.id))[0].estado).toBe("activo");
+
+        await expect(cambiarEstadoHijo(ajeno.id, hijoId, "inactivo")).rejects.toThrow(/no encontrado/i);
+    });
+
+    it("agrega varios identificadores a un hijo ya creado; dedup; solo el dueño", async () => {
+        const padre = await crearUsuario("PARENT");
+        const ajeno = await crearUsuario("PARENT");
+        const { hijoId } = await registrarHijo(padre.id, {
+            nombre: "Dan", documentoTipo: "TI", documentoNumero: "7007",
+            identificadores: [{ valor: "DanRoblox" }],
+        });
+        await agregarIdentificador(padre.id, hijoId, { valor: "DanTel", tipo: "telefono" });
+        const ids = (await listarHijos(padre.id))[0].identificadores;
+        expect(ids.map((i) => i.valor).sort()).toEqual(["danroblox", "dantel"]);
+
+        // dedup: agregar uno igual (normalizado) no duplica
+        const dup = await agregarIdentificador(padre.id, hijoId, { valor: "DANROBLOX" });
+        expect(dup.yaExistia).toBe(true);
+        expect((await listarHijos(padre.id))[0].identificadores).toHaveLength(2);
+
+        await expect(agregarIdentificador(ajeno.id, hijoId, { valor: "X" })).rejects.toThrow(/no encontrado/i);
+    });
+
+    it("activar/inactivar un identificador (flag global); la lista lo muestra con su estado", async () => {
+        const padre = await crearUsuario("PARENT");
+        const ajeno = await crearUsuario("PARENT");
+        await registrarHijo(padre.id, {
+            nombre: "Emi", documentoTipo: "TI", documentoNumero: "8008",
+            identificadores: [{ valor: "EmiChat" }],
+        });
+        const ident = (await listarHijos(padre.id))[0].identificadores[0];
+        expect(ident.activo).toBe(true);
+
+        await cambiarEstadoIdentificador(padre.id, ident.id, false);
+        const tras = (await listarHijos(padre.id))[0].identificadores;
+        expect(tras).toHaveLength(1); // sigue visible (para reactivar), pero inactivo
+        expect(tras[0].activo).toBe(false);
+
+        await cambiarEstadoIdentificador(padre.id, ident.id, true);
+        expect((await listarHijos(padre.id))[0].identificadores[0].activo).toBe(true);
+
+        await expect(cambiarEstadoIdentificador(ajeno.id, ident.id, false)).rejects.toThrow(/no encontrado/i);
     });
 });

@@ -138,18 +138,22 @@ export async function listarHijos(usuarioId: string) {
                     documentoNumero: true,
                     anioNacimiento: true,
                     sexo: true,
+                    estado: true,
                     identificadores: {
                         where: {
-                            activo: true,
-                            // excluir los desvinculados por ESTE padre
+                            // SPEC-325 (extensión): se muestran activos e inactivos para
+                            // poder activar/inactivar; se excluyen solo los desvinculados
+                            // por ESTE padre (§3.1-bis).
                             desvinculado: { none: { usuarioId } },
                         },
                         select: {
                             id: true,
                             valor: true,
                             tipo: true,
+                            activo: true,
                             plataforma: { select: { id: true, nombre: true, clave: true } },
                         },
+                        orderBy: { creadoEn: "asc" },
                     },
                 },
             },
@@ -202,5 +206,102 @@ export async function desvincularIdentificador(
             tx,
         });
         return { ok: true };
+    });
+}
+
+/** Activa/inactiva un hijo (solo el padre dueño · PII). */
+export async function cambiarEstadoHijo(
+    usuarioId: string,
+    hijoId: string,
+    estado: "activo" | "inactivo"
+) {
+    return prisma.$transaction(async (tx) => {
+        await exigirDueno(tx, usuarioId, hijoId);
+        await tx.hijo.update({ where: { id: hijoId }, data: { estado } });
+        await logAudit({
+            accion: "HIJO_UPDATE",
+            tipoRecurso: "Hijo",
+            recursoId: hijoId,
+            usuarioId,
+            valorNuevo: JSON.stringify({ estado }),
+            tx,
+        });
+        return { ok: true, estado };
+    });
+}
+
+/**
+ * Agrega un identificador a un hijo YA creado (valor normalizado · candado 22).
+ * El identificador es compartido entre los dos padres; si ya existe uno igual
+ * (valor + plataforma) no se duplica.
+ */
+export async function agregarIdentificador(
+    usuarioId: string,
+    hijoId: string,
+    input: IdentificadorHijoInput
+) {
+    return prisma.$transaction(async (tx) => {
+        await exigirDueno(tx, usuarioId, hijoId);
+        const valor = normalizarIdentificador(input.valor);
+        if (!valor) throw new Error("Identificador vacío");
+        const plataformaId = input.plataformaId || null;
+
+        const existente = await tx.identificadorHijo.findFirst({
+            where: { hijoId, valor, plataformaId },
+            select: { id: true },
+        });
+        if (existente) {
+            // Si estaba desvinculado por ESTE padre, re-vincularlo a su vista.
+            await tx.identificadorHijoDesvinculado.deleteMany({
+                where: { identificadorId: existente.id, usuarioId },
+            });
+            return { ok: true, identificadorId: existente.id, yaExistia: true };
+        }
+
+        const creado = await tx.identificadorHijo.create({
+            data: {
+                hijoId,
+                valor,
+                ...(input.tipo !== undefined ? { tipo: input.tipo.slice(0, 50) } : {}),
+                plataformaId,
+            },
+            select: { id: true },
+        });
+        await logAudit({
+            accion: "HIJO_UPDATE",
+            tipoRecurso: "IdentificadorHijo",
+            recursoId: creado.id,
+            usuarioId,
+            valorNuevo: JSON.stringify({ hijoId, agregado: true }),
+            tx,
+        });
+        return { ok: true, identificadorId: creado.id, yaExistia: false };
+    });
+}
+
+/** Activa/inactiva un identificador de un hijo (flag global compartido · §3.1-bis). */
+export async function cambiarEstadoIdentificador(
+    usuarioId: string,
+    identificadorId: string,
+    activo: boolean
+) {
+    return prisma.$transaction(async (tx) => {
+        const ident = await tx.identificadorHijo.findUnique({
+            where: { id: identificadorId },
+            select: { hijoId: true },
+        });
+        if (!ident) throw new Error("Identificador no encontrado");
+        await exigirDueno(tx, usuarioId, ident.hijoId);
+
+        await tx.identificadorHijo.update({ where: { id: identificadorId }, data: { activo } });
+        await logAudit({
+            accion: "HIJO_UPDATE",
+            tipoRecurso: "IdentificadorHijo",
+            recursoId: identificadorId,
+            usuarioId,
+            valorNuevo: JSON.stringify({ activo }),
+            tx,
+        });
+        return { ok: true, activo };
     });
 }
