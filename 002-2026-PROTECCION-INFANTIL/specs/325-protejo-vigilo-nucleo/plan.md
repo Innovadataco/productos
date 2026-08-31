@@ -137,4 +137,4 @@ Turno de builds: 4 devs · aviso 1 línea antes de suite pesada · prod del moto
 | identificador de contacto (alta+edición) | `contactos-mutaciones.ts` (normaliza el valor persistido, no solo la clave) |
 | identificador de hijo (alta+edición) | service nuevo de `Hijo` |
 | ingesta de reporte (agregado) | `identificador-reportado.ts:77` `upsertIncrementoReporte` |
-| creación de `Reporte.identificador` | service de creación de reporte (verificar en tasks) |
+| creación de `Reporte.identificador` | **RESUELTO (C1):** `src/lib/dal/services/reporte-creation.ts::crear()` — `identificador` (input) alimenta el dedup-lock (`:82 tomarLockDedup`), el dedup 30d (`:79`), el `Reporte.identificador` (`this.reportes.create`) y el agregado (`:140 upsertIncrementoReporte`). **Normalizar UNA vez al entrar a `crear()`** cubre los 4 usos con la misma forma canónica |

@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import type { AccionAudit, Prisma } from "@prisma/client";
 import type { IdentificadorInput } from "./tipos";
 import { contarContactosActivos, obtenerTopeContactos } from "./estado";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 
 async function validarPlataformas(identificadores: IdentificadorInput[], client: Prisma.TransactionClient | typeof prisma) {
     const plataformaIds = Array.from(new Set(identificadores.map((i) => i.plataformaId).filter(Boolean) as string[]));
@@ -31,9 +32,12 @@ function normalizarIdentificadores(identificadores: IdentificadorInput[]) {
     const normalizados: IdentificadorInput[] = [];
 
     for (const i of identificadores) {
-        const valor = i.valor.trim();
+        // SPEC-325: se PERSISTE la forma canónica (antes se guardaba solo
+        // `trim`, dejando el valor crudo → el cruce case-sensitive fallaba en
+        // silencio). La normalización vive en un único lugar compartido.
+        const valor = normalizarIdentificador(i.valor);
         if (!valor) continue;
-        const key = `${valor.toLowerCase()}|${i.plataformaId ?? ""}`;
+        const key = `${valor}|${i.plataformaId ?? ""}`;
         if (vistos.has(key)) {
             throw new Error("Identificador duplicado dentro del contacto");
         }
