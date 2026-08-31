@@ -7,6 +7,16 @@ import { MisReportesList } from "@/components/modules/MisReportesList";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
+import { homeParaRol } from "@/lib/auth/home-para-rol";
+
+// SPEC-319: roles con panel propio que NO deben ver la lista de reportes del padre.
+// Este es un GUARD por lista explícita, NO la fuente única de landing: `/mis-reportes`
+// es una página legítima del PARENT (su lista de reportes), así que PARENT NO se
+// incluye — entra sin rebote. Ojo: NO derivar la condición de `homeParaRol(rol) !==`
+// ruta actual, porque bajo Decisión A (PARENT→/dashboard/padre) eso expulsaría al
+// padre de su propia página y loopearía a un rol desconocido (cuyo default ES
+// /mis-reportes). Condición = esta lista; destino = homeParaRol(rol).
+const ROLES_CON_PANEL_PROPIO = ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA"];
 
 type MisReporteItem = {
     id: string;
@@ -39,19 +49,11 @@ export default function MisReportesPage() {
             return;
         }
 
-        if (["ADMIN", "OPERADOR", "COMITE_VALIDACION"].includes(user.rol)) {
-            const target =
-                user.rol === "COMITE_VALIDACION"
-                    ? "/dashboard/admin/comite"
-                    : user.rol === "OPERADOR"
-                        ? "/dashboard/admin/operadores"
-                        : "/dashboard/admin";
-            router.push(target);
-            return;
-        }
-
-        if (user.rol === "SCHOOL_ADMIN") {
-            router.push("/dashboard/colegio");
+        // SPEC-319: rebote de roles con panel propio (incl. COMITE_CONVIVENCIA, que
+        // antes faltaba y por eso el comité se quedaba acá y disparaba el fetch de
+        // padre → 403 → ErrorState). PARENT no está en la lista: ve su lista de reportes.
+        if (ROLES_CON_PANEL_PROPIO.includes(user.rol)) {
+            router.push(homeParaRol(user.rol));
             return;
         }
 

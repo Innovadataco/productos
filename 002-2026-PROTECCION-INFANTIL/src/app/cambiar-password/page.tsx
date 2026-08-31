@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Alerta } from "@/components/ui/Alerta";
 import { Cargando } from "@/components/ui/Cargando";
+import { homeParaRol } from "@/lib/auth/home-para-rol";
 
 export default function CambiarPasswordPage() {
     const { user, isLoading } = useAuth();
@@ -53,14 +54,10 @@ export default function CambiarPasswordPage() {
             }
             setSuccess(true);
             setTimeout(() => {
-                const target = user?.rol === "ADMIN"
-                    ? "/dashboard/admin"
-                    : user?.rol === "SCHOOL_ADMIN"
-                        ? "/dashboard/colegio"
-                        : user?.rol === "OPERADOR"
-                            ? "/dashboard/admin"
-                            : "/mis-reportes";
-                window.location.href = target;
+                // SPEC-319: fuente única rol→home. La copia local omitía
+                // COMITE_VALIDACION y COMITE_CONVIVENCIA (el comité nace
+                // debeCambiarPassword:true, así que ESTE es su camino real).
+                window.location.href = homeParaRol(user?.rol);
             }, 1200);
         } catch {
             setError("Error de red. Intente de nuevo.");
