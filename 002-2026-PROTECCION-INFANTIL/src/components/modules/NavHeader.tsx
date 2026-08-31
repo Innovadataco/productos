@@ -120,7 +120,7 @@ export function NavHeader() {
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
                 <Link href={logoHref} className="flex items-center gap-2 text-lg font-bold tracking-tight text-body">
-                    {/* SPEC-334: El Guardián. El clic al inicio (logoHref/I-38) se conserva. */}
+                    {/* SPEC-336: El Guardián. El clic al inicio (logoHref/I-38) se conserva. */}
                     <Guardian className="h-8 w-8" />
                     <span className="text-gradient">Protección</span>
                     <span className="hidden sm:inline">Infantil</span>

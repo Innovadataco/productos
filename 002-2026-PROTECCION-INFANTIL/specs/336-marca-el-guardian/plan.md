@@ -1,6 +1,6 @@
-# Implementation Plan: SPEC-334 · El Guardián (header + favicon)
+# Implementation Plan: SPEC-336 · El Guardián (header + favicon)
 
-**Branch**: `work/pi-SPEC-334-marca-guardian` | **Date**: 2026-08-31 | **Spec**: [spec.md](spec.md)
+**Branch**: `work/pi-SPEC-336-marca-guardian` | **Date**: 2026-08-31 | **Spec**: [spec.md](spec.md)
 
 ## Summary
 

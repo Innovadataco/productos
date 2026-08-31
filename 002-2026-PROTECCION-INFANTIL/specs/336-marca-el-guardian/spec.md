@@ -1,4 +1,4 @@
-# SPEC-334 · La marca "El Guardián" en el header + favicon
+# SPEC-336 · La marca "El Guardián" en el header + favicon
 
 **Status**: IMPLEMENTADO
 **Radicado**: marca aprobada por Jelkin 30-08-2026 ([MARCA-EL-GUARDIAN.md] en gestión) · colegio/padre/comité/admin (header común)

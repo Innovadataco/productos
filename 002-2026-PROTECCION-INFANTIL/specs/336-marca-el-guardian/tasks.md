@@ -1,6 +1,6 @@
-# Tasks: SPEC-334 · El Guardián (header + favicon)
+# Tasks: SPEC-336 · El Guardián (header + favicon)
 
-**Branch**: `work/pi-SPEC-334-marca-guardian` · **Spec**: [spec.md](spec.md) · **Plan**: [plan.md](plan.md)
+**Branch**: `work/pi-SPEC-336-marca-guardian` · **Spec**: [spec.md](spec.md) · **Plan**: [plan.md](plan.md)
 
 ## Phase 1: Setup
 - [x] T001 Worktree + npm ci (D-82) · base main 478cc4769

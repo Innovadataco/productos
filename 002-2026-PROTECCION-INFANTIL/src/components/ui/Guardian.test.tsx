@@ -1,5 +1,5 @@
 /**
- * SPEC-334 · El Guardián — el símbolo de marca. Verifica las reglas duras de §7:
+ * SPEC-336 · El Guardián — el símbolo de marca. Verifica las reglas duras de §7:
  * el hueco del niño SIEMPRE está, las tallas simplifican (§4), y el ámbar es el
  * único color de alerta (§3, nada de rojo).
  */
@@ -7,7 +7,7 @@ import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { Guardian } from "./Guardian";
 
-describe("Guardian (SPEC-334)", () => {
+describe("Guardian (SPEC-336)", () => {
     it("es una imagen accesible con el nombre del producto", () => {
         const { getByRole } = render(<Guardian />);
         const svg = getByRole("img");
