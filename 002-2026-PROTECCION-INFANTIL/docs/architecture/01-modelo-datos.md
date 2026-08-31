@@ -2085,5 +2085,5 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | RateLimit | sí |
 | SenalComunitariaCache | sí |
 | Subscription | sí |
-| TipoDocumento | **NO — ROJO en arch:check** |
+| TipoDocumento | sí |
 | WorkerLog | sí |
