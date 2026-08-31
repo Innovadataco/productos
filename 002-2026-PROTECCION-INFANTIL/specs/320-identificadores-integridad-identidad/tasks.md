@@ -109,8 +109,8 @@ Repo `002-2026-PROTECCION-INFANTIL/`. Migraciones aditivas en `prisma/migrations
 **Independent Test**: admin agrega un tipo → aparece en los tres formularios; `CC` y `CEDULA_CIUDADANIA` quedan referidos a la misma clave.
 
 - [ ] T034 [US3] Endpoints admin del catálogo: `GET/POST /api/admin/tipos-documento`, `PATCH /api/admin/tipos-documento/[id]` (contracts §A; rol ADMIN, patrón admin existente).
-- [ ] T035 [US3] Migración A' (datos): unificar vocabulario comité → clave del catálogo (`CEDULA_CIUDADANIA`→`CC`, `CEDULA_EXTRANJERIA`→`CE`, `PASAPORTE`→`PA`). Verificar valores distintos presentes antes; reportar señal pre-migración.
-- [ ] T036 [US3] Re-apuntar los **6 sitios** del vocabulario comité al catálogo (data-model §4, ninguno afuera): `schema.prisma:419` (retirar/deprecar enum `TipoIdentificacionIntegrante`), `schemas/index.ts:415`, `admin/comite/integrantes/route.ts:10`, `admin/comite/integrantes/[id]/route.ts:10`, `colegio/comite/integrantes/[id]/route.ts:17`, `dal/types/comite.ts:25,35`.
+- [~] T035 [US3] **DIFERIDO a radicado propio (CEO 2026-08-30, candado 17)**: migración de datos del vocabulario comité. El scope real es 9 archivos/23 usos + columna viva `IntegranteComite.tipoIdentificacion` (enum Prisma con `@@index`) — materialmente más que los 6 estimados. El catálogo ya siembra `CC`/`CE` (equivalencia puesta); falta solo re-apuntar la columna del comité. Ver spec.md §Assumptions.
+- [~] T036 [US3] **DIFERIDO** (mismo motivo que T035): re-apuntar la columna del comité al catálogo. Estudiante y profesor SÍ consumen el catálogo en esta SPEC; el comité conserva su enum hasta el radicado de conversión.
 - [ ] T037 [P] [US3] Reemplazar el enum estudiante `documentoTipoEstudianteSchema` (`schemas/index.ts:244`) por validación contra el catálogo.
 - [ ] T038 [P] [US3] Reemplazar el hardcode `DOCUMENTO_TIPO_OPCIONES` (`src/components/modules/colegio/unificado/tipos.ts:52`) por consumo del catálogo (activos).
 - [ ] T039 [P] [US3] Tests: CRUD del catálogo (`admin/tipos-documento` `.test.ts`); comité/estudiante validan contra catálogo; datos migrados quedan en la misma clave.
