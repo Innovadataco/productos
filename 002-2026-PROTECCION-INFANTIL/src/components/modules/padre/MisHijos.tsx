@@ -136,7 +136,7 @@ export function MisHijos() {
                         <Button type="submit" isLoading={guardando} disabled={guardando}>Registrar</Button>
                     </div>
                 </form>
-                {error && <p className="mt-2 text-sm text-red-600" data-testid="mis-hijos-error">{error}</p>}
+                {error && <p className="mt-2 text-sm text-rubi" data-testid="mis-hijos-error">{error}</p>}
             </GlassCard>
 
             {cargando ? (
@@ -167,7 +167,7 @@ export function MisHijos() {
                                                 <button
                                                     type="button"
                                                     aria-label={`Quitar ${i.valor}`}
-                                                    className="text-xs text-muted hover:text-red-600"
+                                                    className="text-xs text-muted hover:text-rubi"
                                                     onClick={() => desvincular(i.id)}
                                                 >
                                                     ✕
