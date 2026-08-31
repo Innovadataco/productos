@@ -18,6 +18,7 @@ const updateSchema = z.object({
                 valor: z.string().min(1).max(100),
                 tipo: z.string().max(50).optional(),
                 plataformaId: z.string().max(100).optional(),
+                activo: z.boolean().optional(), // SPEC-325: estado POR identificador
             })
         )
         .optional(),

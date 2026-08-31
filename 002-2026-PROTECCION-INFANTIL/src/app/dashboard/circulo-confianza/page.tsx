@@ -51,6 +51,15 @@ type IdentificadorDetalle = Identificador & {
     totalReportes: number;
 };
 
+/** Lo que viaja en el PATCH de identificadores (SPEC-325: lleva `activo` propio). */
+type IdentificadorPayload = {
+    id?: string;
+    valor: string;
+    tipo?: string;
+    plataformaId?: string;
+    activo: boolean;
+};
+
 type GrupoCategoria = {
     clave: string;
     nombre: string;
@@ -137,6 +146,10 @@ export default function CirculoConfianzaPage() {
     });
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [submitting, setSubmitting] = useState(false);
+    // SPEC-325: alta de identificador sobre un contacto YA creado (antes solo se
+    // podían cargar en el alta del contacto y nunca más).
+    const [nuevoIdent, setNuevoIdent] = useState({ valor: "", plataformaId: "" });
+    const [guardandoIdent, setGuardandoIdent] = useState(false);
 
     const opcionesPlataforma = [
         { value: "", label: "Plataforma" },
@@ -297,7 +310,7 @@ export default function CirculoConfianzaPage() {
         }
     }
 
-    async function verDetalle(contacto: Contacto) {
+    async function verDetalle(contacto: { id: string }) {
         try {
             const res = await fetch(`/api/circulo-confianza/${contacto.id}`);
             if (!res.ok) throw new Error("Error cargando detalle");
@@ -305,6 +318,74 @@ export default function CirculoConfianzaPage() {
         } catch (e) {
             setError(e instanceof Error ? e.message : "Error cargando detalle");
         }
+    }
+
+    /**
+     * SPEC-325: el PATCH de identificadores es de LISTA COMPLETA — el backend
+     * desactiva los activos que no vengan en el arreglo. Por eso toda acción se
+     * arma sobre la lista entera del detalle, con el `activo` de cada uno.
+     */
+    function listaIdentificadores(items: IdentificadorDetalle[]): IdentificadorPayload[] {
+        return items.map((i) => ({
+            id: i.id,
+            valor: i.valor,
+            ...(i.tipo ? { tipo: i.tipo } : {}),
+            ...(i.plataforma ? { plataformaId: i.plataforma.id } : {}),
+            activo: i.activo,
+        }));
+    }
+
+    async function guardarIdentificadores(
+        contactoId: string,
+        identificadores: IdentificadorPayload[],
+        mensajeError: string
+    ) {
+        setGuardandoIdent(true);
+        setError("");
+        try {
+            const res = await fetch(`/api/circulo-confianza/${contactoId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ identificadores }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error?.message || mensajeError);
+            }
+            await verDetalle({ id: contactoId });
+            await cargarDatos();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : mensajeError);
+        } finally {
+            setGuardandoIdent(false);
+        }
+    }
+
+    /** Pausa o retoma la vigilancia de UN identificador, sin tocar a los demás. */
+    async function cambiarEstadoIdentificador(d: DetalleContacto, identId: string, activo: boolean) {
+        const lista = listaIdentificadores(d.identificadores).map((i) =>
+            i.id === identId ? { ...i, activo } : i
+        );
+        await guardarIdentificadores(d.id, lista, "Error actualizando el identificador");
+    }
+
+    async function agregarIdentificadorAContacto(e: React.FormEvent, d: DetalleContacto) {
+        e.preventDefault();
+        const valor = nuevoIdent.valor.trim();
+        if (!valor) {
+            setError("Escribe el número o nick del identificador");
+            return;
+        }
+        const lista = [
+            ...listaIdentificadores(d.identificadores),
+            {
+                valor,
+                ...(nuevoIdent.plataformaId ? { plataformaId: nuevoIdent.plataformaId } : {}),
+                activo: true,
+            },
+        ];
+        await guardarIdentificadores(d.id, lista, "Error agregando el identificador");
+        setNuevoIdent({ valor: "", plataformaId: "" });
     }
 
     if (authLoading || loading) {
@@ -508,10 +589,13 @@ export default function CirculoConfianzaPage() {
 
                             <div className="mb-4 space-y-2">
                                 <h3 className="text-sm font-semibold text-body">Identificadores</h3>
+                                <p className="text-xs text-subtle">
+                                    Inactivar deja de vigilar ese identificador; el contacto y su historial siguen ahí.
+                                </p>
                                 {detalle.identificadores.map((i) => (
                                     <div
                                         key={i.id}
-                                        className="flex items-center justify-between rounded-xl glass-input px-3 py-2"
+                                        className={`flex items-center justify-between gap-2 rounded-xl glass-input px-3 py-2 ${i.activo ? "" : "opacity-60"}`}
                                     >
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-sm text-body font-medium">{i.valor}</span>
@@ -521,15 +605,52 @@ export default function CirculoConfianzaPage() {
                                                     {formatPlataforma(i.plataforma.nombre, null, i.plataforma.clave)}
                                                 </Badge>
                                             )}
+                                            {!i.activo && <Badge variant="neutral">Sin vigilar</Badge>}
                                         </div>
                                         <div className="flex items-center gap-2 text-xs text-muted">
-                                            <Badge variant={estadoBadgeVariant[i.estado]}>{formatEstadoCirculo(i.estado)}</Badge>
-                                            {i.totalReportes > 0 && (
-                                                <span>{i.totalReportes} reporte(s)</span>
+                                            {i.activo && (
+                                                <>
+                                                    <Badge variant={estadoBadgeVariant[i.estado]}>
+                                                        {formatEstadoCirculo(i.estado)}
+                                                    </Badge>
+                                                    {i.totalReportes > 0 && <span>{i.totalReportes} reporte(s)</span>}
+                                                </>
                                             )}
+                                            <button
+                                                type="button"
+                                                disabled={guardandoIdent}
+                                                aria-label={`${i.activo ? "Inactivar" : "Activar"} ${i.valor}`}
+                                                onClick={() => cambiarEstadoIdentificador(detalle, i.id, !i.activo)}
+                                                className="rounded-lg px-2 py-1 text-xs text-subtle hover:text-body disabled:opacity-50"
+                                            >
+                                                {i.activo ? "Inactivar" : "Activar"}
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
+
+                                <form
+                                    onSubmit={(e) => agregarIdentificadorAContacto(e, detalle)}
+                                    className="rounded-xl glass-input p-2 space-y-2"
+                                >
+                                    <Input
+                                        label="Agregar identificador"
+                                        placeholder="Número o nick"
+                                        value={nuevoIdent.valor}
+                                        onChange={(e) => setNuevoIdent({ ...nuevoIdent, valor: e.target.value })}
+                                        maxLength={100}
+                                    />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Select
+                                            options={opcionesPlataforma}
+                                            value={nuevoIdent.plataformaId}
+                                            onChange={(e) => setNuevoIdent({ ...nuevoIdent, plataformaId: e.target.value })}
+                                        />
+                                        <Button type="submit" isLoading={guardandoIdent}>
+                                            Agregar
+                                        </Button>
+                                    </div>
+                                </form>
                             </div>
 
                             {detalle.agregado ? (

@@ -109,10 +109,13 @@ export async function obtenerDetalleContacto(id: string, usuarioId: string, clie
     const contacto = await c.contactoConfianza.findFirst({
         where: { id, usuarioId },
         include: {
+            // SPEC-325: el detalle trae TAMBIÉN los inactivos (antes se filtraban).
+            // Un identificador inactivado desaparecía de la pantalla y ya no había
+            // forma de reactivarlo. El estado del contacto no cambia: lo calcula
+            // `determinarEstadoContacto`, que filtra por activo aparte.
             identificadores: {
-                where: { activo: true },
                 include: { plataforma: { select: { id: true, nombre: true, clave: true } } },
-                orderBy: { creadoEn: "asc" },
+                orderBy: [{ activo: "desc" }, { creadoEn: "asc" }],
             },
         },
     });

@@ -13,6 +13,13 @@ export type IdentificadorInput = {
     valor: string;
     tipo?: string | undefined;
     plataformaId?: string | undefined;
+    /**
+     * SPEC-325: estado POR identificador. Antes no existía y `actualizarContacto`
+     * estampaba el flag del CONTACTO sobre todos sus identificadores, así que
+     * activar/inactivar uno solo era imposible. Omitido ≡ activo (comportamiento
+     * previo); un contacto inhabilitado sigue mandando: fuerza todo a inactivo.
+     */
+    activo?: boolean | undefined;
 };
 
 export const ESTADOS_CLASIFICADOS: EstadoReporte[] = ["CLASIFICADO", "CORREGIDO"];
