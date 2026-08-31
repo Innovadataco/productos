@@ -40,8 +40,8 @@
 ---
 
 ## Cierre PR-1 (Fase 1)
-- [ ] T012 Gate pre-push: `git fetch origin && git rebase origin/main`; `git diff --name-status origin/main..HEAD` (solo archivos §2.1/§2.6 + specs). `npm run arch:check` verde (sin ruta nueva). `npm run lint -- <archivos>` + grep `error`.
-- [ ] T013 Evidencia §6 (PR-1) en producción, **capturas en el PR** (candado 25):
+- [X] T012 Gate pre-push: `git fetch origin && git rebase origin/main`; `git diff --name-status origin/main..HEAD` (solo archivos §2.1/§2.6 + specs). `npm run arch:check` verde (sin ruta nueva). `npm run lint -- <archivos>` + grep `error`.
+- [X] T013 Evidencia §6 (PR-1) en producción, **capturas en el PR** (candado 25):
   - Cuenta del comité → login y cambiar-clave aterrizan en `/dashboard/colegio/comite`, no `/mis-reportes`.
   - Comité escribe `/mis-reportes` a mano → rebota a su panel.
   - **(dura, Decisión A)** Padre real → login aterriza en `/dashboard/padre`.
