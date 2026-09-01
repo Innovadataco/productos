@@ -24,7 +24,8 @@ export type EventoTimelineDAL = {
     texto: string;
     categoria: string | null;
     contactoEtiqueta: string | null;
-    expedienteId: string;
+    // SPEC-340: puede no existir aún — el expediente nace por el botón.
+    expedienteId: string | null;
 };
 
 const ESTADOS_CLASIFICADOS: EstadoReporte[] = ["CLASIFICADO", "CORREGIDO"];
@@ -113,6 +114,30 @@ export async function obtenerEventosTimeline(
         }
     }
 
+    // SPEC-340: el timeline se alimenta de la CADENA de reportes PROPIOS del
+    // padre (reportePrincipalId), no del expediente — el expediente ahora nace
+    // por el botón y no puede ser la fuente de una señal viva. Mismo blindaje
+    // de siempre: SOLO reportes propios (usuarioId), jamás texto/autor ajeno.
+    const reportes = await c.reporte.findMany({
+        where: {
+            usuarioId,
+            eliminado: false,
+            identificador: { in: Array.from(valores) },
+        },
+        orderBy: { fechaIncidente: "desc" },
+        take: limite,
+        select: {
+            id: true,
+            fechaIncidente: true,
+            identificador: true,
+            reportePrincipalId: true,
+            clasificacion: { select: { categoria: true } },
+        },
+    });
+
+    if (reportes.length === 0) return [];
+
+    // El expediente, si existe, se enlaza como vista (puede no existir aún).
     const expedientes = await c.expediente.findMany({
         where: {
             padreUsuarioId: usuarioId,
@@ -120,34 +145,16 @@ export async function obtenerEventosTimeline(
         },
         select: { id: true, identificadorReportado: true },
     });
+    const expedientePorIdentificador = new Map(expedientes.map((e) => [e.identificadorReportado, e.id]));
 
-    if (expedientes.length === 0) return [];
-
-    const expedienteIds = expedientes.map((e) => e.id);
-    const identificadorPorExpediente = new Map(expedientes.map((e) => [e.id, e.identificadorReportado]));
-
-    const eventos = await c.eventoExpediente.findMany({
-        where: { expedienteId: { in: expedienteIds } },
-        orderBy: { fechaEvento: "desc" },
-        take: limite,
-        select: {
-            id: true,
-            fechaEvento: true,
-            texto: true,
-            categoriaDetectada: true,
-            expedienteId: true,
-        },
-    });
-
-    return eventos.map((e) => {
-        const identificador = identificadorPorExpediente.get(e.expedienteId);
-        return {
-            id: e.id,
-            fechaEvento: e.fechaEvento,
-            texto: e.texto,
-            categoria: e.categoriaDetectada,
-            contactoEtiqueta: identificador ? valoresPorEtiqueta.get(identificador) ?? null : null,
-            expedienteId: e.expedienteId,
-        };
-    });
+    return reportes.map((r) => ({
+        id: r.id,
+        fechaEvento: r.fechaIncidente,
+        // El texto NO viaja al home (SPEC-340 §3.3-bis: solo por la vía con
+        // step-up). El timeline muestra fecha, categoría y a quién refiere.
+        texto: "",
+        categoria: r.clasificacion?.categoria ?? null,
+        contactoEtiqueta: valoresPorEtiqueta.get(r.identificador) ?? null,
+        expedienteId: expedientePorIdentificador.get(r.identificador) ?? null,
+    }));
 }
