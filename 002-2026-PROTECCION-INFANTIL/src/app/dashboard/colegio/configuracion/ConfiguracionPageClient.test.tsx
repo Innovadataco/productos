@@ -16,10 +16,17 @@ const ITEMS = [
     { tipoEvento: "RESUMEN_SEMANAL", habilitado: false, emailDestino: null, emailEfectivo: "rector@colegio.edu.co", umbral: null, ventanaDias: null },
 ];
 
-/** Mock de fetch: GET responde el catálogo; los PATCH pasan por `onPatch`. */
+/**
+ * Mock de fetch ENRUTADO POR URL: la pantalla comparte página con el
+ * EscudoColegioUploader de SPEC-351 (que consulta /api/colegio/configuracion/escudo),
+ * así que un mock por orden de llamadas se cruzaría con sus fetches.
+ */
 function mockFetch(opts: { items?: unknown[]; onPatch?: () => { ok: boolean; mensaje?: string } } = {}) {
     const patches: Array<Record<string, unknown>> = [];
-    const fetchMock = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+    const fetchMock = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+        if (!String(url).includes("/api/colegio/preferencias-avisos")) {
+            return { ok: true, status: 200, json: async () => ({}) };
+        }
         if (init?.method === "PATCH") {
             patches.push(JSON.parse(String(init.body)));
             const r = opts.onPatch?.() ?? { ok: true };
@@ -132,10 +139,16 @@ describe("ConfiguracionPageClient (SPEC-353 · diseño A-62)", () => {
     });
 
     it("error de carga muestra ErrorState con reintento", async () => {
-        const fetchMock = vi
-            .fn()
-            .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: { message: "Se cayó" } }) })
-            .mockResolvedValue({ ok: true, status: 200, json: async () => ({ items: ITEMS, emailPorDefecto: "rector@colegio.edu.co" }) });
+        let intentos = 0;
+        const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+            if (!String(url).includes("/api/colegio/preferencias-avisos")) {
+                return { ok: true, status: 200, json: async () => ({}) };
+            }
+            intentos += 1;
+            return intentos === 1
+                ? { ok: false, status: 500, json: async () => ({ error: { message: "Se cayó" } }) }
+                : { ok: true, status: 200, json: async () => ({ items: ITEMS, emailPorDefecto: "rector@colegio.edu.co" }) };
+        });
         vi.stubGlobal("fetch", fetchMock);
         render(<ConfiguracionPageClient />);
 
