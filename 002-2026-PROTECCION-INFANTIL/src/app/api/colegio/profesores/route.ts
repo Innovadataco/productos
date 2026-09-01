@@ -7,7 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES, AppError } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
+import { verificarVigenciaColegioSalvoCamino } from "@/lib/colegio/vigencia-camino";
 import { withValidation, ValidationError } from "@/lib/validation";
 import { profesorBodySchema, profesoresQuerySchema } from "@/lib/schemas";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
+        const vigencia = await verificarVigenciaColegioSalvoCamino(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
+        const vigencia = await verificarVigenciaColegioSalvoCamino(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },

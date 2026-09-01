@@ -381,6 +381,10 @@ describe("SPEC-344 · guardián del camino del colegio", () => {
         // SPEC-355 · ítem 3: "Agregar profesor" del paso 3 vive en la sección
         // de profesores del dashboard — el enlace no puede rebotar al paso.
         "/dashboard/colegio/profesores",
+        // SPEC-357 (I-254): LA CAJA. Un colegio a mitad del camino tiene que
+        // poder ir a pagar; si el guardián le tapa la suscripción queda
+        // encerrado (el paso le exige terminar, el cobro le impide terminar).
+        "/dashboard/colegio/suscripcion",
         "/camino/colegio/plan",
         "/api/sesion/al-dia",
         "/reportar",

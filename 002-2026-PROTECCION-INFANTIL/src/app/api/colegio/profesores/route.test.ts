@@ -7,7 +7,8 @@ import { GET, POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
-import { crearTokenUsuario, crearColegioConAdmin, crearUsuario, crearProfesor } from "@/lib/reporte-test-utils";
+import { crearTokenUsuario, crearColegioConAdmin, crearUsuario, crearProfesor, terminarCaminoColegio, vencerColegio } from "@/lib/reporte-test-utils";
+import { derivarPasoPendienteColegio } from "@/lib/dal/services/camino/estado-colegio";
 
 let mockToken: string | undefined;
 
@@ -202,13 +203,29 @@ describe("/api/colegio/profesores", () => {
         expect(res.status).toBe(403);
     });
 
-    it("SCHOOL_ADMIN con colegio vencido recibe 403", async () => {
-        const { colegio } = await setupSchoolAdmin();
-        const ayer = new Date();
-        ayer.setDate(ayer.getDate() - 1);
-        await prisma.colegio.update({ where: { id: colegio.id }, data: { finServicio: ayer } });
+    // SPEC-357 (I-254) · candado 24v2: este caso afirmaba "vencido → 403" a secas
+    // y era exactamente el encierro que Calidad reprodujo en vivo — el camino le
+    // exigía cargar un profesor y esta ruta se lo negaba. Ahora se afirma la
+    // regla completa, en sus dos mitades.
+    it("colegio vencido CON el camino a medias: puede cargar profesores (el paso que le exigen)", async () => {
+        const { admin, colegio } = await setupSchoolAdmin();
+        await vencerColegio(colegio.id);
+        expect(await derivarPasoPendienteColegio(admin.id), "premisa: el camino le pide algo").not.toBeNull();
+
+        const res = await POST(
+            request("POST", "http://localhost:5005/api/colegio/profesores", { nombre: "María", apellidos: "López", ...ident("D-357") }, mockToken),
+        );
+        expect(res.status, "el colegio encerrado puede terminar su configuración").toBe(201);
+    });
+
+    it("colegio vencido con el camino TERMINADO: 403 (la vigencia vuelve a mandar)", async () => {
+        const { admin, colegio } = await setupSchoolAdmin();
+        await terminarCaminoColegio(colegio.id, admin.id);
+        expect(await derivarPasoPendienteColegio(admin.id), "premisa: el camino cerró").toBeNull();
+
+        await vencerColegio(colegio.id);
 
         const res = await GET(request("GET", "http://localhost:5005/api/colegio/profesores", undefined, mockToken));
-        expect(res.status).toBe(403);
+        expect(res.status, "un colegio configurado y vencido sigue cortado").toBe(403);
     });
 });

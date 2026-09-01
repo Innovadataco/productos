@@ -13,6 +13,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyAuth } from "@/lib/auth";
 import { derivarPasoPendienteColegio } from "@/lib/dal/services/camino/estado-colegio";
+import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { PagosClienteRepository } from "@/lib/dal/repositories/pagos-cliente-repository";
 import { solicitarPlan } from "@/lib/pagos/suscripcion-solicitud.service";
 import {
@@ -87,9 +88,19 @@ export default async function CaminoColegioPlanPage() {
     const usuario = await verifyAuth("SCHOOL_ADMIN");
 
     // Doble valla: derivación autoritativa además del guardián.
-    const paso = await derivarPasoPendienteColegio(usuario.id);
-    if (paso === null) redirect(DESTINO_CIERRE_COLEGIO);
-    if (paso !== "plan") redirect(destinoDePasoColegio(paso));
+    //
+    // SPEC-357 (I-254): salvo que el servicio esté vencido. Un colegio que vence
+    // en el paso 3 tiene que poder volver a la caja: la valla lo devolvía al paso
+    // pendiente y lo dejaba sin salida (el paso le exige terminar, el cobro le
+    // impide terminar). Si está vencido, esta pantalla manda.
+    const [paso, vigencia] = await Promise.all([
+        derivarPasoPendienteColegio(usuario.id),
+        verificarVigenciaCliente(usuario.id),
+    ]);
+    if (vigencia.vigente) {
+        if (paso === null) redirect(DESTINO_CIERRE_COLEGIO);
+        if (paso !== "plan") redirect(destinoDePasoColegio(paso));
+    }
 
     const [planes, tasaIva, aplicaIva] = await Promise.all([
         new PagosClienteRepository().listarPlanesActivosPorTitular("COLEGIO", anioBogota()),

@@ -5,12 +5,7 @@ import { POST as POSTConfirmar } from "./confirmar/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
-import {
-    crearTokenUsuario,
-    crearColegioConAdmin,
-    crearUsuario,
-    crearPlataforma,
-} from "@/lib/reporte-test-utils";
+import { crearTokenUsuario, crearColegioConAdmin, crearUsuario, crearPlataforma, terminarCaminoColegio, vencerColegio } from "@/lib/reporte-test-utils";
 
 let mockToken: string | undefined;
 
@@ -322,11 +317,14 @@ describe("/api/colegio/carga", () => {
     });
 
     describe("aislamiento y permisos", () => {
-        it("SCHOOL_ADMIN con colegio vencido no puede validar", async () => {
+        // SPEC-357 (I-254) · candado 24v2: ver nota en cursos/materias — el caso
+        // afirmaba el encierro. Con el camino CERRADO la vigencia manda igual que
+        // antes; la mitad "a medias" se cubre en vigencia-camino.test.ts y en el
+        // handler de profesores.
+        it("SCHOOL_ADMIN con colegio vencido y el camino CERRADO no puede validar", async () => {
             const { admin, colegio } = await setupSchoolAdmin();
-            const ayer = new Date();
-            ayer.setDate(ayer.getDate() - 1);
-            await prisma.colegio.update({ where: { id: colegio.id }, data: { finServicio: ayer } });
+            await terminarCaminoColegio(colegio.id, admin.id);
+            await vencerColegio(colegio.id);
 
             const req = buildMultipartRequest(
                 "http://localhost:5005/api/colegio/carga/validar",
