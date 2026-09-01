@@ -364,6 +364,21 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         expect(r2.sql).toContain('"creadoEn" > $1');
     });
 
+    it("I-12: MAX sobre columna enum/texto → plan inválido ('la más frecuente' no es el máximo alfabético)", () => {
+        // Regresión del caso real: '¿cuál es la categoría más frecuente?'
+        // devolvió MAX(categoria) = STALKING (alfabético) — confiado y errado.
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [1], // estado: tipo EstadoReporte (no numérico ni fecha)
+            agregacion: "maximo",
+            filtros: [],
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        expect(r.ok).toBe(false);
+        if (r.ok) throw new Error("debía fallar");
+        expect(r.error).toContain("máximo alfabético");
+    });
+
     it("I-10: período sobre columna NO-fecha (estado) → plan inválido (caso real: 'qué colegios tienen más alertas')", () => {
         const plan: PlanLLM = {
             tabla_idx: 0,
