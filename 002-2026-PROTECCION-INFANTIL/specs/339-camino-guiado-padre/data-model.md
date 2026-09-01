@@ -37,6 +37,7 @@ Este es el cambio delicado del PR.
 | `@@unique([documentoTipo, documentoNumero])` | **Se retira** (era global). |
 | `@@unique([usuarioId, documentoTipo, documentoNumero])` | **Nuevo**. Un padre no repite un documento; dos padres sí pueden tener al mismo menor. |
 | `@@index([usuarioId])` | Nuevo, para listar la lista de cada padre. |
+| `onDelete: Cascade` en `usuarioId` | **Nuevo y obligatorio.** Hoy borrar un padre funciona porque la tabla puente cae en cascada y la ficha del menor sobrevive como fila global. Con dueño directo y sin esta regla, `usuario.delete` **falla con error de clave foránea** y el script de borrar padre queda roto (mismo defecto que A-65). |
 
 **Regla de negocio resultante** (Jelkin, 31-08): *si otro padre se registra con otro correo y quiere vincular a los mismos hijos, no pasa absolutamente nada*. Cada padre tiene su lista, sus interruptores y sus avisos.
 
@@ -107,12 +108,12 @@ Ambos con regla y plantilla sembradas, e incorporados a la lista del ratchet de 
 |---|---|---|
 | 1 · Permiso | El consentimiento vigente está aceptado | comprobación de consentimiento ya existente |
 | 2 · Tus datos | Nombres, apellidos, tipo y número de documento, teléfono, país y ciudad están completos | `Usuario` |
-| 3 · Tus hijos | Tiene **al menos un** menor | `Hijo` por `usuarioId` |
+| 3 · Tus hijos | Tiene **al menos un menor activo** | `Hijo` por `usuarioId` y `estado` |
 | 4 · Tu plan | Tiene una suscripción resuelta | consulta de suscripción ya existente |
 
 El primer paso incumplido, de menor a mayor, es el paso pendiente. Sin ninguno incumplido, el camino está terminado.
 
-**Por qué derivado**: una columna de progreso es una segunda fuente de verdad que se desincroniza de los hechos — exactamente la familia de defectos I-211 / I-222 / I-224 / I-227. Además hace que el camino se sostenga solo: si el padre borra su único menor, vuelve al Paso 3 sin que nadie tenga que acordarse de revertir un campo.
+**Por qué derivado**: una columna de progreso es una segunda fuente de verdad que se desincroniza de los hechos — exactamente la familia de defectos I-211 / I-222 / I-224 / I-227. Además hace que el camino se sostenga solo: si el padre inactiva su único menor, vuelve al Paso 3 sin que nadie tenga que acordarse de revertir un campo.
 
 **Dónde viaja**: como un campo más del valor firmado de `sesion_estado`, junto a consentimiento, cambio de contraseña y vigencia. Se recalcula en cada re-sellado (al entrar, al completar cada paso, y cada 5 minutos por vencimiento de la cookie).
 

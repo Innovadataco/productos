@@ -153,7 +153,7 @@ El padre recorre el camino y navega la aplicación a 390 px de ancho.
 - Enlace de registro **usado dos veces**: el segundo intento no crea nada y ofrece pedir uno nuevo.
 - Enlace **vencido** (24 h): mensaje sereno + reenvío.
 - Padre que pide el enlace **muchas veces seguidas**: el límite de solicitudes actual se conserva y responde con el mismo mensaje neutro de siempre.
-- Padre que **borra su único menor** después de terminar el camino: el portero lo devuelve al Paso 3 (el camino no se «gana» de por vida, se sostiene).
+- Padre que **inactiva su único menor** después de terminar el camino: el guardián lo devuelve al Paso 3 (el camino no se «gana» de por vida, se sostiene). No existe borrado de menores, solo activar e inactivar.
 - Documento de menor **que ya existe en otro padre**: se permite; cada padre tiene su propio registro (D-4).
 - Documento de menor **repetido dentro del mismo padre**: se rechaza con mensaje claro.
 - Padre cuyo plan **vence**: el portero de vigencia (ya existente) manda; el del camino no lo pisa.
@@ -194,7 +194,7 @@ El padre recorre el camino y navega la aplicación a 390 px de ancho.
 
 **Paso 3 · los menores**
 
-- **FR-018**: El sistema DEBE exigir **al menos un menor** para dar el camino por terminado.
+- **FR-018**: El sistema DEBE exigir **al menos un menor activo** para dar el camino por terminado. Un menor inactivo no cuenta: el padre lo apagó, no lo está cuidando.
 - **FR-019**: El sistema DEBE exigir del menor: nombres, apellidos, tipo de documento, número de documento, año de nacimiento y sexo.
 - **FR-020**: El sistema DEBE permitir sumar, de forma opcional, varias cuentas (plataforma + nick) por menor.
 - **FR-021**: El sistema DEBE topar la cantidad de menores por padre con un **parámetro de sistema** sembrado en 5, nunca con un número escrito en el código, y DEBE rechazar el excedente con el mensaje del parámetro.
