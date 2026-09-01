@@ -121,6 +121,8 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
                 setMensajeActualizar("Tu análisis ya está al día — nada nuevo que interpretar.");
             } else if (body.motivo === "cola_llena") {
                 setMensajeActualizar("La cola está llena — vuelve a intentar en unos minutos.");
+            } else if (body.motivo === "sin_hechos") {
+                setMensajeActualizar("Este expediente aún no tiene eventos analizables.");
             }
             // Refresca el estado tras la respuesta
             await cargar();

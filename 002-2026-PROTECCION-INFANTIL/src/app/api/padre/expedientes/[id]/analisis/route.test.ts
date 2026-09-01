@@ -280,3 +280,99 @@ describe("SPEC-341 · POST cool-down se chequea antes de tocar la cola (audit #2
         expect(generando).toBe(0);
     });
 });
+
+// Audit 7ac61377 (repro exacta): expediente con N FALLIDOs + hash igual + 0
+// PUBLICADO. La tarjeta dice "pídelo con Actualizar" pero el POST respondía
+// {motivo:"ya_al_dia"} y el worker no recibía nada. Fix nº1: el botón
+// Actualizar ignora el corte por agotamiento (es la vía de escape del padre).
+// Fix nº2: POST NUNCA responde "ya_al_dia" sin vigente PUBLICADO.
+describe("SPEC-348 · Actualizar es la vía de escape (audit 7ac61377)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    it("con 44 FALLIDOs del mismo hash y 0 PUBLICADO → POST encola (no ya_al_dia)", async () => {
+        const padre = await crearUsuario("PARENT");
+        const exp = await seedExpediente(padre.id, { conEvento: true });
+
+        // Calcular hash actual del expediente y sembrar 44 FALLIDOs con ese hash.
+        const { calcularHashCadena } = await import("@/lib/expediente/analisis/hash-cadena");
+        const row = await prisma.expediente.findUnique({
+            where: { id: exp.id },
+            select: { ultimoEventoEn: true, numEventos: true, categoriasDominantesJson: true },
+        });
+        const hash = calcularHashCadena({
+            ultimoEventoEn: row!.ultimoEventoEn,
+            numEventos: row!.numEventos,
+            categoriasDominantesJson: row!.categoriasDominantesJson,
+        });
+
+        for (let v = 1; v <= 44; v++) {
+            await prisma.analisisExpediente.create({
+                data: {
+                    expedienteId: exp.id, versionSecuencial: v, alcance: "PADRE_COMPLETO",
+                    hashCadena: hash, corteN: 0, texto: "",
+                    modeloUsado: "test", promptSistemaHash: "h", latenciaMs: 0,
+                    estado: "FALLIDO", motivoFallo: "grammar_error",
+                    generadoEn: new Date(Date.now() - (44 - v) * 60_000),
+                },
+            });
+        }
+
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+        const res = await POST(req("POST", exp.id), { params: Promise.resolve({ id: exp.id }) });
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(body.motivo, "el POST manual NO debe responder ya_al_dia sin vigente PUBLICADO").not.toBe("ya_al_dia");
+        expect(body.encolado, "el POST manual debe encolar para escapar del agotamiento").toBe(true);
+        expect(body.estado).toBe("GENERANDO");
+
+        // Verificar que hay un nuevo placeholder GENERANDO
+        const generando = await prisma.analisisExpediente.count({
+            where: { expedienteId: exp.id, estado: "GENERANDO", hashCadena: hash },
+        });
+        expect(generando).toBe(1);
+    });
+
+    it("GET (apertura automática) con 44 FALLIDOs sí respeta el corte por agotamiento", async () => {
+        const padre = await crearUsuario("PARENT");
+        const exp = await seedExpediente(padre.id, { conEvento: true });
+
+        const { calcularHashCadena } = await import("@/lib/expediente/analisis/hash-cadena");
+        const row = await prisma.expediente.findUnique({
+            where: { id: exp.id },
+            select: { ultimoEventoEn: true, numEventos: true, categoriasDominantesJson: true },
+        });
+        const hash = calcularHashCadena({
+            ultimoEventoEn: row!.ultimoEventoEn,
+            numEventos: row!.numEventos,
+            categoriasDominantesJson: row!.categoriasDominantesJson,
+        });
+
+        for (let v = 1; v <= 44; v++) {
+            await prisma.analisisExpediente.create({
+                data: {
+                    expedienteId: exp.id, versionSecuencial: v, alcance: "PADRE_COMPLETO",
+                    hashCadena: hash, corteN: 0, texto: "",
+                    modeloUsado: "t", promptSistemaHash: "h", latenciaMs: 0,
+                    estado: "FALLIDO", motivoFallo: "grammar_error",
+                    generadoEn: new Date(Date.now() - (44 - v) * 60_000),
+                },
+            });
+        }
+
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+        const res = await GET(req("GET", exp.id), { params: Promise.resolve({ id: exp.id }) });
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(body.agotadoPorFallos, "GET marca agotado — la apertura automática no re-encola").toBe(true);
+
+        // Cero nuevos placeholders GENERANDO por la apertura
+        const generando = await prisma.analisisExpediente.count({
+            where: { expedienteId: exp.id, estado: "GENERANDO" },
+        });
+        expect(generando).toBe(0);
+    });
+});

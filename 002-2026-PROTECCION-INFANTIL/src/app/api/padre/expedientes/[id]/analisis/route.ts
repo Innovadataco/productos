@@ -110,10 +110,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
             }, { status: 200 });
         }
 
-        // No se encoló → cadena sin cambios; el UI recibe el mensaje "ya al día".
+        // Audit 7ac61377: "ya_al_dia" SOLO tiene sentido si hay un análisis
+        // PUBLICADO vigente cuyo hash coincide con el actual. Un vigente
+        // FALLIDO / null NO califica: el POST manual es LA vía de escape del
+        // padre y debe intentar encolar. Si aun así el flujo no encoló (caso
+        // raro: expediente sin eventos), lo decimos honesto.
+        if (evaluacion.vigente && evaluacion.coincide) {
+            return NextResponse.json({
+                encolado: false,
+                motivo: "ya_al_dia",
+            }, { status: 200 });
+        }
         return NextResponse.json({
             encolado: false,
-            motivo: "ya_al_dia",
+            motivo: "sin_hechos",
         }, { status: 200 });
     } catch (error) {
         if (error instanceof AppError) return NextResponse.json(error.toJSON(), { status: error.statusCode });
