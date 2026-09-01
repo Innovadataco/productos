@@ -130,7 +130,7 @@ const COLUMNAS: Col[] = [
   { tabla: "Alumno", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio", tipo: "String" },
   { tabla: "Alumno", nombreFuente: "cursoId", nombreLegible: "Curso", descripcion: "FK Curso", tipo: "String" },
   { tabla: "Alumno", nombreFuente: "activo", nombreLegible: "Activo", descripcion: "Si el alumno esta activo", tipo: "Boolean" },
-  { tabla: "Alumno", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de registro", tipo: "DateTime" },
+  { tabla: "Alumno", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
 
   // AuditLog (5)
   { tabla: "AuditLog", nombreFuente: "id", nombreLegible: "ID audit", descripcion: "ID del evento auditado", tipo: "String" },

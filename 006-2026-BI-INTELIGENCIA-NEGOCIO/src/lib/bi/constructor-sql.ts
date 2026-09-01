@@ -197,6 +197,15 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
                 `periodo.columna_idx fuera de rango: ${String(plan.periodo.columna_idx)} (tabla "${tabla.nombreFuente}").`,
             );
         }
+        // I-10: el período SOLO aplica a columnas de fecha. Caso real: el LLM
+        // puso el período sobre `estado` (texto) → "text >= timestamp" (42883)
+        // en runtime. Rechazo determinista antes de ejecutar.
+        const tipoPeriodo = col.tipo.toLowerCase();
+        if (!tipoPeriodo.includes("date") && !tipoPeriodo.includes("time")) {
+            return fallo(
+                `El período solo aplica a columnas de fecha: "${col.nombreFuente}" es tipo ${col.tipo}. Usa la columna de fecha de la tabla (creadoEn/createdAt).`,
+            );
+        }
         const dias = plan.periodo.dias;
         if (typeof dias !== "number" || !Number.isFinite(dias) || dias < 0) {
             return fallo(`periodo.dias debe ser un número finito >= 0: ${String(dias)}.`);

@@ -364,6 +364,20 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         expect(r2.sql).toContain('"creadoEn" > $1');
     });
 
+    it("I-10: período sobre columna NO-fecha (estado) → plan inválido (caso real: 'qué colegios tienen más alertas')", () => {
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [0],
+            agregacion: "lista",
+            filtros: [],
+            periodo: { columna_idx: 1, dias: 30 }, // columna 1 = estado (EstadoReporte, NO fecha)
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        expect(r.ok).toBe(false);
+        if (r.ok) throw new Error("debía fallar");
+        expect(r.error).toContain("solo aplica a columnas de fecha");
+    });
+
     it("I-05: igualdad de texto es case-insensitive (PI mezcla 'escalada' y 'CONTACTO_INSISTENTE')", () => {        // Regresión del caso real: el LLM envió el valor en una caja distinta a
         // la almacenada y la respuesta era 0 filas habiendo datos (254 escaladas).
         const plan: PlanLLM = {
