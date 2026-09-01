@@ -53,9 +53,15 @@ export async function POST(request: Request) {
 
             const expRepo = new ExpedienteRepository(tx);
 
-            // Idempotencia: la cadena (padre+identificador) con expediente activo
-            // devuelve el existente.
-            const existente = await expRepo.buscarExpedienteActivo(usuario.id, principal.identificador);
+            // Idempotencia: la cadena (padre+identificador) con expediente EN
+            // CUALQUIER estado devuelve el existente. Con buscarExpedienteActivo
+            // (solo ACTIVO) un expediente en CONSOLIDANDO/PENDIENTE_COMITE
+            // duplicaría al segundo toque — y con el auto-cierre derogado esos
+            // estados no vuelven solos a ACTIVO (hallazgo del verificador).
+            const existente = await tx.expediente.findFirst({
+                where: { padreUsuarioId: usuario.id, identificadorReportado: principal.identificador },
+                orderBy: { fechaApertura: "desc" },
+            });
             if (existente) return { tipo: "existente" as const, expediente: existente };
 
             const expediente = await expRepo.crearExpediente({

@@ -157,22 +157,24 @@ const guardCierreDesdeAprobacionPadre: GuardFn = async ({ expediente, actor }) =
 };
 
 /**
- * FR-009: ACTIVO → CERRADO automático por inactividad. Solo el worker puede
- * ejecutarla y la inactividad se re-verifica contra el parámetro vigente.
+ * FR-009 de SPEC-230 — DEROGADO por SPEC-340 (nada se cierra nunca). El guard
+ * queda inalcanzable con el parámetro en 0 (su valor sembrado); se conserva
+ * documentado por si Jelkin revierte la regla.
  */
 const guardAutoCierreInactividad: GuardFn = async ({ expediente, actor }) => {
     if (actor.tipo !== "worker") {
         return conflicto("El cierre directo desde ACTIVO solo lo ejecuta el worker por inactividad");
     }
-    // SPEC-340 (A-68 · D-1, 01-09-2026): DEROGADO. Regla de Jelkin: nada se
-    // cierra nunca — el expediente es la carpeta viva del padre, para siempre.
-    // La transición queda en la whitelist como código muerto documentado (no se
-    // borra, por si la regla se revierte); este guard la vuelve inalcanzable:
-    // con el parámetro en 0 (su nuevo valor sembrado) ningún expediente cumple.
+    // SPEC-340 (A-68 · D-1, 01-09-2026): DEROGACIÓN INCONDICIONAL. Regla de
+    // Jelkin: nada se cierra nunca — el expediente es la carpeta viva del
+    // padre, para siempre. La transición queda en la whitelist (no se borra)
+    // pero este guard la vuelve inalcanzable sin importar el parámetro.
+    // Revertir = commit deliberado que restaure el bloque histórico de abajo,
+    // no una perilla.
+    void expediente;
+    return conflicto("El auto-cierre está derogado (SPEC-340): los expedientes no se cierran nunca");
+    /* ── Bloque histórico (SPEC-230 FR-009), conservado documentado ──────────
     const meses = await numParam("padre.expediente.auto_cierre_meses", DEFAULT_AUTO_CIERRE_MESES);
-    if (meses <= 0) {
-        return conflicto("El auto-cierre está derogado (SPEC-340): los expedientes no se cierran nunca");
-    }
     const referencia = expediente.ultimoEventoEn ?? expediente.fechaApertura;
     const limite = new Date(referencia);
     limite.setUTCMonth(limite.getUTCMonth() + meses);
@@ -180,6 +182,7 @@ const guardAutoCierreInactividad: GuardFn = async ({ expediente, actor }) => {
         return conflicto("El expediente aún no cumple el plazo de inactividad para auto-cierre");
     }
     return { ok: true };
+    ──────────────────────────────────────────────────────────────────────── */
 };
 
 /** FR-010/FR-011: CERRADO → ESCALADO solo a petición del padre titular (v1). */
@@ -208,7 +211,7 @@ export const TRANSICIONES: ReadonlyMap<EstadoExpediente, readonly TransicionDef[
             {
                 destino: EstadoExpediente.CERRADO,
                 guard: guardAutoCierreInactividad,
-                nota: "Solo worker; re-verifica inactividad > padre.expediente.auto_cierre_meses.",
+                nota: "DEROGADA (SPEC-340): inalcanzable con el parámetro en 0. Histórico: solo worker por inactividad.",
                 evento: EVENTOS_EXPEDIENTE.AUTO_CERRADO_INACTIVIDAD,
             },
         ],

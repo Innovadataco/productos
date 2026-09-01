@@ -114,7 +114,6 @@ function conductasOrdenadas(clasificacion: ClasificacionData): string[] {
 
 export function SeguimientoClient() {
     const searchParams = useSearchParams();
-    const router = useRouter();
     // Spec 091-US2: sin query param, el RPT puede llegar por sessionStorage (URL limpia).
     const [numeroInicial] = useState(() => {
         const porUrl = searchParams.get("numero");

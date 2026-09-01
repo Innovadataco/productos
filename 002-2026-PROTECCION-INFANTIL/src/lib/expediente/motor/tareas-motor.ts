@@ -2,7 +2,7 @@
  * SPEC-236 (002-PI-mega-cola): tareas del worker del motor de expediente.
  *
  * Cuatro tareas idempotentes ejecutadas en cada tick:
- * 1. Auto-cierre por inactividad (ACTIVO → CERRADO, FR-009).
+ * 1. Auto-cierre por inactividad — DEROGADO por SPEC-340 (retorna 0 siempre).
  * 2. Vigilancia del SLA del comité (48h normal / 12h ROJO, FR-015).
  * 3. Recálculo de gravedad 24h con alerta de subida a ROJO (FR-014).
  * 4. Purga de retención: overwrite a `[retenido]` sin borrar filas (FR-016).
@@ -74,15 +74,15 @@ async function numParam(clave: string, defecto: number): Promise<number> {
  * código. Se conserva, no se borra, por si la regla se revierte con historia.
  */
 export async function cerrarExpedientesInactivos(ahora: Date = new Date()): Promise<number> {
-    const meses = await numParam("padre.expediente.auto_cierre_meses", 0);
-    if (meses <= 0) {
-        // SPEC-340: derogado. 0 cerrados, siempre.
-        return 0;
-    }
+    // SPEC-340 (D-1): DEROGACIÓN INCONDICIONAL — ni un parámetro re-editado la
+    // revive. Revertir la regla de Jelkin = restaurar el bloque histórico de
+    // abajo en un commit deliberado, no girar una perilla.
+    void ahora;
+    return 0;
+    /* ── Bloque histórico (SPEC-230 FR-009), conservado documentado ──────────
+    const meses = await numParam("padre.expediente.auto_cierre_meses", DEFAULTS.autoCierreMeses);
     const limite = calcularLimiteInactividad(ahora, meses);
-
     const candidatos = await new ExpedienteMotorRepository().listarActivosInactivos(limite, DEFAULTS.limiteLote);
-
     let cerrados = 0;
     for (const exp of candidatos) {
         try {
@@ -94,13 +94,11 @@ export async function cerrarExpedientesInactivos(ahora: Date = new Date()): Prom
             });
             cerrados++;
         } catch (error) {
-            console.warn(
-                `[ExpedienteMotor] Auto-cierre omitido: expediente=${exp.id} —`,
-                error instanceof Error ? error.message : error
-            );
+            console.warn(`[ExpedienteMotor] Auto-cierre omitido: expediente=${exp.id}`, error);
         }
     }
     return cerrados;
+    ──────────────────────────────────────────────────────────────────────── */
 }
 
 /**

@@ -54,14 +54,6 @@ async function reportar(reportePrevioId?: string): Promise<{ id: string; expedie
     return { id: body.reporte!.id, ...(body.expedienteId ? { expedienteId: body.expedienteId } : {}) };
 }
 
-async function eventosDe(expedienteId: string) {
-    return prisma.eventoExpediente.findMany({
-        where: { expedienteId },
-        orderBy: { ordenSecuencial: "asc" },
-        select: { id: true, reporteId: true, ordenSecuencial: true },
-    });
-}
-
 describe("SPEC-340 · POST /api/reportes — la vinculación arma CADENA, no expediente", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();

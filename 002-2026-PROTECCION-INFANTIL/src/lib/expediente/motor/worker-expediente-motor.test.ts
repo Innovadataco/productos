@@ -97,26 +97,23 @@ describe("worker-expediente-motor (SPEC-236)", () => {
         await prisma.$disconnect();
     });
 
-    it("auto-cierre: ACTIVO inactivo > 6 meses pasa a CERRADO con marca (US2.1)", async () => {
+    // SPEC-340 (D-1): estos dos casos afirmaban el auto-cierre; ahora afirman
+    // su DEROGACIÓN — ni siquiera con el parámetro en 6 y un año de inactividad.
+    it("auto-cierre DEROGADO: ACTIVO inactivo > 6 meses NO se cierra jamás (SPEC-340)", async () => {
         const padre = await crearUsuario("PARENT");
         const hace7Meses = new Date("2026-01-10T12:00:00.000Z");
         const exp = await crearExpediente(padre.id, { ultimoEventoEn: hace7Meses });
         const ahora = new Date("2026-08-24T12:00:00.000Z");
 
         const cerrados = await cerrarExpedientesInactivos(ahora);
-        expect(cerrados).toBe(1);
+        expect(cerrados, "derogación incondicional: cero cierres, siempre").toBe(0);
 
         const actualizado = await prisma.expediente.findUnique({ where: { id: exp.id } });
-        expect(actualizado?.estado).toBe("CERRADO");
-        expect(actualizado?.autoCerradoPorInactividad).toBe(true);
-
-        const audit = await prisma.auditLog.findFirst({
-            where: { accion: "EXPEDIENTE_TRANSICION_ESTADO", recursoId: exp.id },
-        });
-        expect(audit).not.toBeNull();
+        expect(actualizado?.estado, "el expediente sigue vivo — nada se cierra nunca").toBe("ACTIVO");
+        expect(actualizado?.autoCerradoPorInactividad).toBe(false);
     });
 
-    it("auto-cierre: expediente con actividad reciente NO se cierra (frontera)", async () => {
+    it("auto-cierre derogado: tampoco con actividad reciente (nada cambia)", async () => {
         const padre = await crearUsuario("PARENT");
         // Actividad a las 00:01 Bogotá del día del límite: NO califica.
         const ahora = new Date("2026-08-24T05:01:00.000Z"); // 00:01 Bogotá

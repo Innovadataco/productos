@@ -320,6 +320,8 @@ async function seedMotorExpediente() {
 
     // 11 eventos del ciclo de vida del expediente (FR-018) con su audiencia.
     type EventoExpedienteSeed = {
+    /** SPEC-340: evento derogado — el seed desactiva su plantilla. */
+    derogada?: boolean;
         evento: string;
         roles: string[];
         asuntoEmail: string;
@@ -391,7 +393,11 @@ async function seedMotorExpediente() {
             cuerpoInApp: "El expediente {{expedienteId}} pasó a estado escalado.",
         },
         {
+            // SPEC-340 (D-1): evento DEROGADO — nada se cierra nunca. La entrada
+            // se conserva para que el seed DESACTIVE la plantilla en las BD que
+            // ya la tienen activa (el upsert pisa `activa`).
             evento: "expediente.auto_cerrado_inactividad",
+            derogada: true,
             roles: ["PADRE"],
             asuntoEmail: "Tu expediente se cerró por inactividad",
             cuerpoEmail: "Hola,\n\nTu expediente se cerró automáticamente por inactividad prolongada. Si lo necesitas, puedes solicitar su reapertura desde {{urlExpediente}}.",
@@ -407,6 +413,8 @@ async function seedMotorExpediente() {
     ];
 
     for (const e of eventosSeed) {
+        // SPEC-340: los eventos derogados quedan con la plantilla INACTIVA.
+        const activa = !e.derogada;
         const plantillas = [
             { clave: `${e.evento}.email`, canal: "EMAIL" as const, asunto: e.asuntoEmail, cuerpoMarkdown: e.cuerpoEmail },
             { clave: `${e.evento}.in_app`, canal: "IN_APP" as const, asunto: undefined, cuerpoMarkdown: e.cuerpoInApp },
@@ -419,7 +427,7 @@ async function seedMotorExpediente() {
                     asunto: pl.asunto ?? null,
                     cuerpoMarkdown: pl.cuerpoMarkdown,
                     variablesSchema: { type: "object", properties: {} },
-                    activa: true,
+                    activa,
                 },
                 create: {
                     clave: pl.clave,
