@@ -84,7 +84,9 @@ export async function PATCH(request: Request) {
         // Sin re-sellar acá, el padre completa sus datos y la cookie sigue
         // diciendo "Paso 2" hasta vencer (5 min) — la clase de bug
         // I-211/222/224/227.
-        const sellada = await sellarCookieSesionEstado(res, user.id);
+        // Defensa: el helper promete no lanzar, pero si un cambio futuro rompe esa
+        // promesa, el dato guardado no puede convertirse en un 500.
+        const sellada = await sellarCookieSesionEstado(res, user.id).catch(() => false);
         if (!sellada) {
             // T079 (Calidad · R1-8): el dato quedó guardado, pero el padre debe
             // saberlo — no repetir el paso "en silencio".

@@ -26,6 +26,7 @@ import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
 import { NOMBRE_COOKIE, TTL_SEG, leerSesionEstado } from "@/lib/routing/vigencia-cookie";
 import { destinoDePaso } from "@/lib/camino/pasos";
 import { requireEnv } from "@/lib/env";
+import { baseUrlPublica } from "@/lib/routing/base-url-publica";
 
 // SPEC-314: solo destinos internos — la defensa contra redirección abierta que
 // ya usa el registro. Cualquier otra cosa cae al panel del padre.
@@ -58,7 +59,9 @@ export async function GET(request: Request) {
                 ? destinoDePaso(estado.pasoCamino)
                 : destino;
 
-        const res = NextResponse.redirect(new URL(haciaDonde, request.url));
+        // SPEC-342 (candado 22v3): JAMÁS request.url como base de un redirect en
+        // Docker — sale 0.0.0.0 y el navegador muere. Base pública de 3 niveles.
+        const res = NextResponse.redirect(new URL(haciaDonde, baseUrlPublica(request)));
         res.cookies.set(NOMBRE_COOKIE, value, {
             httpOnly: true,
             sameSite: "lax",
@@ -74,7 +77,7 @@ export async function GET(request: Request) {
         if (!(error instanceof AppError)) {
             logger.error("[SESION/AL-DIA] Re-sellado fallido:", error);
         }
-        const res = NextResponse.redirect(new URL("/login?mensaje=sesion", request.url));
+        const res = NextResponse.redirect(new URL("/login?mensaje=sesion", baseUrlPublica(request)));
         res.cookies.delete(NOMBRE_COOKIE);
         res.cookies.delete("token");
         res.cookies.delete("__Host-token");
