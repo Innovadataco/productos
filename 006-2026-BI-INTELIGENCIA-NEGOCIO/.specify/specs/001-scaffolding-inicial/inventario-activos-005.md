@@ -1,11 +1,11 @@
 # Inventario de activos a copiar desde 005 (BI v1)
 
-- **Producto**: 006-2026-INTELIGENCIA-NEGOCIO · SPEC-001 · scaffolding inicial
+- **Producto**: 006-2026-BI-INTELIGENCIA-NEGOCIO · SPEC-001 · scaffolding inicial
 - **Fuente (solo lectura)**: `/Users/idc/Documents/GitHub/productos/005-2026-BI-INTELIGENCIA-NEGOCIO`
 - **Fecha de verificación**: 2026-09-01 (rutas verificadas contra el repo 005)
 - **Regla**: esto es un inventario para fases posteriores; en SPEC-001 NO se copia nada todavía.
 
-Todas las rutas de la columna "Ruta en 005" son relativas a la raíz del producto 005. La columna "Destino en 006" es relativa a `006-2026-INTELIGENCIA-NEGOCIO/`.
+Todas las rutas de la columna "Ruta en 005" son relativas a la raíz del producto 005. La columna "Destino en 006" es relativa a `006-2026-BI-INTELIGENCIA-NEGOCIO/`.
 
 ## (a) Modelos BI en `prisma/schema.prisma` (129 líneas)
 
@@ -91,7 +91,7 @@ Los helpers de integración `tests/integration/bi/helpers/entorno.ts` y `helpers
 
 | Ruta en 005 | Qué es | Destino en 006 |
 |---|---|---|
-| `.env.bi.example` (4568 bytes) | Template de variables BI | `.env.example` (renombrar y **depurar**: eliminar `BI_AUTH_USER`/`BI_AUTH_PASSWORD` (login propio eliminado), todo el bloque `SUPERSET_*` y `VANNA_API_URL`; conservar `JWT_SECRET` (ahora compartido con PI), `OLLAMA_HOST`, `LLM_MODEL_SQL`, `EMBED_MODEL`, `PI_BASE_URL`, `BI_BASE_URL`, bloque réplica `REPLICA_DB_*` y `DATABASE_URL`/`BI_ADMIN_*`) |
+| `.env.bi.example` (4568 bytes) | Template de variables BI | `.env.example` (renombrar y **depurar**: eliminar todo el bloque `SUPERSET_*`, `VANNA_API_URL` y `JWT_SECRET` (ya NO se comparte JWT con PI — CEO 31-08-2026); el login propio SÍ vuelve en v2 pero con hash: conservar/adaptar `BI_ADMIN_*` como bootstrap de admin; conservar `OLLAMA_HOST`, `LLM_MODEL_SQL`, `EMBED_MODEL`, `BI_BASE_URL`, bloque réplica `REPLICA_DB_*` y `DATABASE_URL`; `PI_BASE_URL` solo si se necesita enlace simbólico a PI) |
 
 ## NO se copia (eliminado para siempre o acoplado a v1)
 
@@ -107,7 +107,7 @@ Los helpers de integración `tests/integration/bi/helpers/entorno.ts` y `helpers
 | `tests/unit/bi-vanna-client.test.ts` | Test del cliente Vanna |
 | `tests/integration/bi/helpers/vanna.ts` | Helper de integración Vanna |
 | `tests/unit/bi-superset-link.test.tsx` | Acoplado a Superset |
-| `tests/unit/bi-login.test.ts` y login propio en `src/` (`src/lib/auth/*` de v1) | Auth JWT ahora compartido con PI; el login propio con clave en claro está eliminado |
+| `tests/unit/bi-login.test.ts` y login propio en `src/` (`src/lib/auth/*` de v1) | El login de v1 (clave en claro) NO se porta. El 006 implementa login propio NUEVO con credenciales hasheadas y sesión cerrada por defecto (decisión CEO 31-08-2026) |
 | `docker/mv-refresh/` (raíz `docker/`) | Revisar en fase de réplica: si su lógica ya cubre `scripts/refresh-mv.sh`, no portar el contenedor |
 | `docker-compose.bi.yml`, `Dockerfile.next` | Se reescriben para el nuevo stack (Compose en VPS Hostinger sin Superset/Vanna/Telegram); sirven solo de referencia |
 | `INVENTARIO-DE-SECRETOS.md` de 005 | Documento de secretos de v1; 006 genera el suyo propio |
@@ -118,4 +118,4 @@ Los helpers de integración `tests/integration/bi/helpers/entorno.ts` y `helpers
 2. Las 2 migraciones (`schema_catalogo_bi_inicial`, `mv_fact_bi`) cubren exactamente (a)+(c); no hay más migraciones en 005.
 3. `tests/unit/bi-motor.test.ts` y `tests/unit/motor.test.ts` parecen duplicados/sucesores; revisar cuál es el vigente al portar.
 4. Varios tests de `src/app` (rutas `bi-preguntar-route`, `bi-kpis-endpoint`, `bi-estado-sistema-route`) no se listaron en (f) porque dependen de endpoints de v1; se reescribirán con los nuevos endpoints.
-5. `.env.bi.example` requiere depuración obligatoria (login propio, Superset, Vanna) antes de usarlo como plantilla de 006.
+5. `.env.bi.example` requiere depuración obligatoria (Superset, Vanna, JWT compartido) antes de usarlo como plantilla de 006 — ver fila (g).

@@ -9,7 +9,7 @@
 ## §0 · Identidad del proyecto
 
 - **Nombre canónico:** `Producto 006 · BI v2` (o simplemente `BI v2`)
-- **Nombre carpeta:** `006-2026-INTELIGENCIA-NEGOCIO`
+- **Nombre carpeta:** `006-2026-BI-INTELIGENCIA-NEGOCIO`
 - **Dominio:** `https://bi.innovadataco.com/`
 - **Propósito:** plataforma de inteligencia de negocio para IDC sobre la operación de PI. Análisis **descriptivo**: qué pasó, qué está pasando, histórico — reportes por fechas, tendencias, comportamientos, proyecciones y estadísticas sobre la operación.
 - **Alcance:** interno · Jelkin + Fábrica · dashboards operativos nativos + chat NL con LLM local. El modelo genera **SQL de solo lectura** contra la réplica.
@@ -22,7 +22,10 @@
 |---|---|
 | Stack app | Next.js 16 + TypeScript + Tailwind + Prisma |
 | Base de datos | PostgreSQL **réplica read-only** de PI |
-| Auth | **JWT compartido con PI** (nada de login propio; nunca `rol` por body del cliente) |
+| Auth | **Login propio, cerrado por defecto** (sin sesión válida no se ve nada). BI NO comparte login/JWT/cookie/secreto con PI. Credenciales hasheadas; nunca `rol` por body del cliente. (CEO 31-08-2026) |
+| Rama | **Única:** `work/bi-SPEC-006-bi-v2` — de ella salen TODOS los PRs; no se borra tras merge, se rebasa sobre `main` (CEO 31-08-2026) |
+| CI | Workflow propio del 006, archivo nuevo; **prohibido editar los workflows existentes de PI** (CEO 31-08-2026) |
+| Réplica | Rol `bi_replica` + publicación `bi_replica` del Postgres de PI (lista explícita de tablas, SIN PII: prohibido `Usuario`/`Password`/`Session` — Ley 1581). `DATABASE_URL` apunta a la réplica con usuario propio. Si la réplica se retira de forma permanente, hay que ejecutar `pg_drop_replication_slot` (slot huérfano llena el disco y tumba PI) |
 | Motor NL→SQL | **1 solo modelo** Ollama `qwen2.5:14b` · temperature 0 · structured outputs |
 | Ollama | Mac Studio vía Tailscale (`100.91.87.86:11435`) |
 | Dashboards | Nativos en Next.js (Tremor / Recharts / ECharts) |
@@ -189,7 +192,7 @@ Cada señal es UNA línea con un verbo. Cero narrativa · cero tablas resumen.
 ## §7 · Estructura del repo de código
 
 ```
-productos/006-2026-INTELIGENCIA-NEGOCIO/
+productos/006-2026-BI-INTELIGENCIA-NEGOCIO/
 ├── .specify/
 │   ├── memory/
 │   │   └── constitution.md   ← este archivo
@@ -200,7 +203,7 @@ productos/006-2026-INTELIGENCIA-NEGOCIO/
 │   │   ├── bi/                ← Componentes BI (dashboards · chat)
 │   │   └── ui/                ← Componentes base
 │   └── lib/
-│       ├── auth/              ← Sesión JWT compartida con PI
+│       ├── auth/              ← Sesión propia BI (login cerrado por defecto)
 │       ├── bi/                ← Motor NL→SQL (candados 1-6)
 │       ├── catalogo/          ← Catálogo dinámico (candado 8)
 │       ├── seguridad/         ← Tenancy + validación SQL (candados 11, 13)
@@ -219,7 +222,7 @@ productos/006-2026-INTELIGENCIA-NEGOCIO/
 
 ## §8 · Fases de implementación
 
-1. **Fase 1:** Esqueleto sobre base PI + auth JWT compartida + dominio + CI/CD
+1. **Fase 1:** Esqueleto sobre base PI + login propio (cerrado por defecto) + dominio + CI/CD
 2. **Fase 2:** Motor NL→SQL con 1 modelo + catálogo + validador
 3. **Fase 3:** Dashboards nativos en Next.js + chat UI
 4. **Fase 4:** Deploy limpio en Hostinger + verificación en vivo

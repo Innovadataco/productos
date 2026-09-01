@@ -12,7 +12,8 @@
 - **Alcance del negocio:** análisis descriptivo de la operación de PI (qué pasó, qué está pasando, histórico): reportes por fechas, tendencias, comportamientos, proyecciones y estadísticas. El modelo genera SQL de SOLO LECTURA contra la réplica.
 - **Dominio:** `https://bi.innovadataco.com/`
 - **Stack:** Next.js 16 · TypeScript · Tailwind · Prisma · PostgreSQL (réplica read-only de PI) · Ollama (1 modelo `qwen2.5:14b`) · Dashboards nativos (Tremor/Recharts/ECharts)
-- **Auth:** JWT compartido con PI. NADA de login propio ni clave en claro; jamás pasar `rol` por body del cliente.
+- **Auth:** LOGIN PROPIO, cerrado por defecto: sin sesión válida no se ve nada. BI **NO comparte login/JWT/cookie/secreto con PI** (decisión CEO 31-08-2026). Credenciales hasheadas (bcrypt/argon2), jamás en claro; jamás pasar `rol` por body del cliente.
+- **Rama única:** `work/bi-SPEC-006-bi-v2` · worktree `.worktrees/bi-SPEC-006-bi-v2` · de ella salen TODOS los PRs y NO se borra tras merge — se rebasa sobre `main` (ver §7).
 - **Deploy:** Docker Compose en VPS Hostinger (mismo VPS que PI, stack separado). BI corre aparte de PI a propósito: las consultas pesadas de BI no deben afectar la operación de PI.
 - **Ollama:** vive en Mac Studio · vía Tailscale (`100.91.87.86:11435`) · KEEP_ALIVE=24h
 - **Eliminado para siempre:** Superset, Vanna, jurado de 3 modelos, login propio con clave en claro, paso de `rol` por body. En el VPS ya se borraron esos contenedores/volúmenes y se paró el stack de BI v1. PI sigue corriendo intacto: NO tocarlo.
@@ -67,8 +68,11 @@ Todo servicio en `docker-compose*.yml` DEBE tener `healthcheck:`. Ratchet grep-b
 ### `rm -rf .next` (o equivalente Turbopack/Vite) antes de creer un build
 Cachés viejas causan verdes falsos. Aplicable a cualquier bundler.
 
-### Push único al final del SPEC
-Gate LOCAL completo por fase antes de PUSH único. Origen: D-54 PI.
+### Push en cada checkpoint (G3 · CEO 31-08-2026)
+Lo no pusheado NO EXISTE: push en cada checkpoint, no uno único al final del SPEC. Deroga la regla "push único" de PI para este producto.
+
+### Rama única del frente (CEO 31-08-2026)
+`work/bi-SPEC-006-bi-v2`. De ella salen TODOS los PRs; tras cada merge la rama NO se borra — se rebasa sobre `main`. Una rama = un frente vivo. Deroga la convención "una rama por spec" del `AGENTS.md` raíz para el 006, por orden directa del CEO.
 
 ### Máximo 2 iteraciones CI por síntoma
 Al 3er rojo del mismo síntoma → PARA + avisa CEO. Origen: D-55 PI.
@@ -156,7 +160,7 @@ Toda respuesta pasa por sanitizer que busca patrones (`\d{10}` · emails · dire
 ## §4 · Estructura del repo
 
 ```
-006-2026-INTELIGENCIA-NEGOCIO/
+006-2026-BI-INTELIGENCIA-NEGOCIO/
 ├── .specify/
 │   ├── memory/
 │   │   └── constitution.md   ← copia sincronizada del gestión
@@ -164,24 +168,23 @@ Toda respuesta pasa por sanitizer que busca patrones (`\d{10}` · emails · dire
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── auth/         ← sesión JWT compartida con PI (sin login propio)
+│   │   │   ├── auth/         ← login propio BI (sesión cerrada por defecto)
 │   │   │   └── bi/
 │   │   │       ├── preguntar/      ← motor NL→SQL
 │   │   │       ├── kpis/           ← KPIs live
 │   │   │       └── estado-sistema/ ← salud réplica · MVs · Ollama
+│   │   ├── login/            ← pantalla de login propio
 │   │   ├── dashboard/        ← home con KPIs
 │   │   ├── chat/             ← chat NL→SQL
-│   │   └── operacion/        ← tablero operativo
+│   │   └── operacion/        ← tablero operativo (OBLIGATORIA antes del corte de dominio)
 │   ├── components/
 │   │   ├── bi/               ← componentes BI (gráficas Tremor/Recharts/ECharts)
 │   │   └── ui/               ← componentes base (copiados de PI)
 │   └── lib/
-│       ├── auth/             ← sesión JWT compartida
-│       ├── bi/               ← motor NL→SQL (candados 1-10)
+│       ├── auth/             ← sesión propia BI (credenciales hasheadas · fail-closed)
+│       ├── bi/               ← motor NL→SQL (candados 1-10) · llama Ollama directo vía Tailscale
 │       ├── catalogo/         ← catálogo dinámico (candado 8)
 │       └── observabilidad/   ← logs y métricas (candado 12)
-├── docker/
-│   └── nl2sql/               ← servicio FastAPI ligero (1 modelo Ollama)
 ├── prisma/
 │   ├── schema.prisma         ← catálogo BI + logs + cache semántico (réplica read-only + tablas propias)
 │   ├── migrations/           ← MVs `mv_fact_*` y schema · aditivas, nunca destructivas
@@ -238,12 +241,11 @@ docker compose -f docker-compose.bi.yml exec app npm run <script>
 
 Cuando cualquier SPEC toque estos archivos · Fábrica exige recorrido E2E de TODOS los roles antes de aprobar:
 
-- `middleware.ts` · guard de auth JWT compartida · tenancy · rutas exentas
-- `src/lib/auth/*` · sesión JWT compartida con PI
+- `middleware.ts` · guard de sesión propia BI (cerrado por defecto) · rutas exentas (`/login` y su API)
+- `src/lib/auth/*` · login propio BI (hash · fail-closed · helper central de sesión, ver §7 SE1-SE4)
 - `src/lib/bi/*` · motor NL→SQL (candados 1-10)
 - `src/lib/bi/validador-sql.ts` · validador post-LLM estricto (candados 5-6)
 - `src/lib/catalogo/*.ts` · catálogo dinámico (candado 8)
-- `docker/nl2sql/**` · servicio FastAPI del motor (1 modelo)
 - `prisma/schema.prisma` · esquema BD
 - `docker-compose.bi.yml` · stack BI (healthchecks obligatorios)
 - `scripts/replica-setup/**` · réplica read-only de PI (NUNCA escribir contra PI primaria)
@@ -251,7 +253,50 @@ Cuando cualquier SPEC toque estos archivos · Fábrica exige recorrido E2E de TO
 
 ---
 
-## §7 · Correcciones honestas
+## §7 · Playbook operativo (CEO 31-08-2026 · lo que PI pagó caro)
+
+### Git
+- **G1:** nunca push a `main` · nunca force-push · nunca reescribir historia · nunca borrar ramas ajenas · todo por PR.
+- **G2:** `git add` SIEMPRE acotado a `006-2026-BI-INTELIGENCIA-NEGOCIO/` (única excepción autorizada: tu propio workflow nuevo en `.github/workflows/`). Jamás `-A` ni `.` en la raíz.
+- **P4:** el síntoma no es la causa raíz: antes de arreglar un guard "que deja pasar", grep de si su condición SE EVALÚA alguna vez.
+- **P5:** evidencia EN EL PR: comando + salida real + consulta BD. Mejor aún, negativa (sin el cambio, el defecto persiste).
+
+### Docker/VPS
+- **D1:** healthcheck en TODO contenedor + `restart: unless-stopped` + logs con rotación (`max-size`) para no llenar el disco.
+- **D2:** inventariar puertos ocupados antes de asignar. Red propia de compose, nombres con prefijo `bi-`.
+- **D3 · Next.js en Docker (las 4 minas del 005):** (a) pin EXACTO de prisma; (b) `output: 'standalone'` + Dockerfile que copia `.next/standalone` + `.next/static` + `public`; (c) el build necesita devDependencies; (d) env de runtime por `env_file`, nunca horneado en la imagen.
+- **D4 · Redirects detrás de proxy:** con bind `0.0.0.0`, `request.url` MIENTE. Todo redirect absoluto usa `x-forwarded-host` con fallback a env (esto tumbó producción una vez).
+- **D5:** `pg_dump` NO existe en el contenedor de la app: backups vía el contenedor db.
+
+### Deploy
+- **S1:** el script de deploy se PRUEBA COMPLETO antes de mergearlo (build + migrate + seed + healthcheck + verificación BD). Mergear sin probarlo = problemas en producción.
+- **S2:** estructura: reset a `origin/main` → imagen etiquetada con el hash → `migrate deploy` → seed → up → healthcheck → bloque "DEPLOY VERIFICADO: `<hash>`". Rollback por tag de imagen anterior.
+- **S3:** seed EXPLÍCITO en cada deploy e idempotente: `upsert({create:{...}, update:{}})` — update vacío, nunca pisar lo que el admin editó a mano.
+
+### BD
+- **B2:** si una migración asume algo de los datos, que FALLE EN VOZ ALTA si el supuesto no se cumple. Nunca adivinar en silencio.
+- **B3:** límites, umbrales y textos = parámetros en BD con seed, nunca constantes en el código.
+
+### Sesión/Guards (el bug más repetido de PI: 5 veces el mismo patrón)
+- **SE1:** si cacheás estado de sesión: CADA endpoint que lo cambie re-emite el caché EN LA MISMA RESPUESTA, vía UN helper central. Inline en cada endpoint = el próximo lo olvida.
+- **SE2:** si el caché de sesión no se puede leer: para login/acceso, fail-closed.
+- **SE3:** guards nuevos: el destino de cada redirect debe estar exento en TODOS los guards que corren después (un bucle así casi cierra PI a todos los usuarios nuevos).
+- **SE4:** el usuario NUNCA queda atrapado: salir y cambiar contraseña siempre alcanzables, probado ruta por ruta.
+
+### Tests
+- **T2:** tests de TODO lo que toca lo editado, no solo del archivo abierto.
+- **T4:** la CI migra su BD desde cero: tus migraciones corren limpias en vacío.
+
+### Infra 005 y VPS (estado real verificado, CEO 31-08-2026)
+- Contenedores del 005 APAGADOS por orden de Jelkin y así se quedan: NO reusarlos ni levantarlos; crear los propios desde cero. Sus puertos quedaron libres.
+- En el VPS, el clon de despliegue de BI es `/opt/proteccion-infantil/bi-repo/` (PI usa `/opt/proteccion-infantil/repo/`: NO tocar).
+- `.env.bi.production` lo crea Jelkin (permisos 600, fuera de git) en `006-2026-BI-INTELIGENCIA-NEGOCIO/` dentro de ese clon. La IA define solo NOMBRES de variables y se los pide; nunca escribe ni lee ese archivo.
+- Réplica: reusar rol `bi_replica` y PUBLICACIÓN `bi_replica` del Postgres de PI (lista explícita de tablas operativas). PROHIBIDO replicar tablas con PII cruda (`Usuario`, `Password`, `Session`): datos de menores jamás llegan a BI (Ley 1581). Tabla nueva en la publicación = se pide por nombre y la autoriza Jelkin.
+- Slot de réplica: apagar la réplica un rato no pasa nada; retirarla DE FORMA PERMANENTE sin `pg_drop_replication_slot` acumula cambios hasta llenar el disco y TUMBAR PI. El slot del 005 ya fue eliminado: se parte de cero.
+
+---
+
+## §8 · Correcciones honestas
 
 Si detectas un error tuyo · asúmelo abiertamente en `03-EJECUCION/04-INCIDENCIAS.md` del repo gestión (via Fábrica) marcado `"corrección honesta <rol>"`. **No se esconde.** Precedentes PI: I-66 · I-68 · I-69.
 

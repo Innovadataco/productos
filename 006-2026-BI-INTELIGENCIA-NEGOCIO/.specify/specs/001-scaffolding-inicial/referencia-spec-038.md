@@ -1,5 +1,7 @@
 # SPEC-038 · BI v2 · Reconstrucción limpia sobre esqueleto PI
 
+> **NOTA (2026-09-01):** documento HISTÓRICO rescatado de la rama `work/bi-SPEC-038-rebuild-v2` (eliminada). Sus decisiones de auth (JWT compartido con PI) y de servicio FastAPI quedaron **superadas** por el mensaje CEO del 31-08-2026: login propio cerrado por defecto, sin servicio Python separado (el motor NL→SQL vive en Next.js), carpeta `006-2026-BI-INTELIGENCIA-NEGOCIO` y rama única `work/bi-SPEC-006-bi-v2`. El documento vigente es `spec.md` de este directorio.
+
 ## Objetivo
 
 Reconstruir el producto BI desde cero, usando el esqueleto técnico y de diseño de PI, eliminando Vanna y Superset, y usando un solo modelo Ollama para NL→SQL.
