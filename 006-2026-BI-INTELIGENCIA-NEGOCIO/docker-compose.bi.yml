@@ -4,6 +4,7 @@
 # D1: healthcheck + restart + rotación de logs en todo contenedor.
 # D2: puerto 127.0.0.1:3001 (liberado por el 005; el proxy de
 #     bi.innovadataco.com ya apunta ahí). Red propia, prefijo bi-.
+# Fase 1b: bi-db (PostgreSQL 16 + pgvector) y bi-migrate (migraciones/seed).
 # ==========================================================================
 name: bi-006
 
@@ -17,6 +18,9 @@ services:
     ports:
       - "127.0.0.1:${BI_PORT:-3001}:3000"   # puerto libre que dejó el 005; el proxy apunta ahí
     restart: unless-stopped
+    depends_on:
+      bi-db:
+        condition: service_healthy   # la app usa DATABASE_URL → la BD debe estar lista
     healthcheck:
       # 127.0.0.1 y no "localhost": en Alpine, localhost resuelve a ::1 (IPv6)
       # y el server standalone escucha en IPv4 0.0.0.0 → connection refused
@@ -33,6 +37,66 @@ services:
     networks:
       - bi-net
 
+  # PostgreSQL 16 + pgvector (extensión vector para el cache semántico:
+  # embedding vector(768) de BICacheSemantico). Recibe además la réplica
+  # read-only de PI vía pg_logical (publicación bi_replica, que YA EXISTE en
+  # el Postgres de PI; la suscripción se activa por script aparte).
+  # NUNCA replicar tablas con PII (Usuario/Password/Session) — Ley 1581.
+  bi-db:
+    image: pgvector/pgvector:pg16
+    container_name: bi-db
+    env_file:
+      - .env.bi.production   # POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB
+    # SIN ports: solo red interna bi-net; jamás se expone al host (D2)
+    restart: unless-stopped
+    healthcheck:
+      # $$ escapa el $ para que lo expanda el contenedor, no compose
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - bi-db-data:/var/lib/postgresql/data
+    networks:
+      - bi-net
+
+  # Migraciones y seed — servicio "tools" DE UN SOLO USO (corre y termina).
+  # La imagen standalone de bi-next NO lleva prisma CLI ni tsx: este servicio
+  # construye el target `tools` del Dockerfile (node_modules completo).
+  # Uso:      docker compose -f docker-compose.bi.yml --profile tools run --rm bi-migrate
+  # Seed:     docker compose -f docker-compose.bi.yml --profile tools run --rm bi-migrate npx prisma db seed
+  # EXCEPCIÓN D1 documentada: sin healthcheck ni restart — es one-shot y un
+  # restart:unless-stopped lo reejecutaría en bucle. Rotación de logs sí.
+  bi-migrate:
+    build:
+      context: .
+      target: tools
+    image: bi-006-tools:${BI_VERSION:-dev}
+    profiles: ["tools"]
+    env_file:
+      - .env.bi.production   # DATABASE_URL apunta a bi-db:5432 (red interna)
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      bi-db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bi-net
+
 networks:
   bi-net:
     driver: bridge
+
+volumes:
+  bi-db-data:
+    name: bi-db-data

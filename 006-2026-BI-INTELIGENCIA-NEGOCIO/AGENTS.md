@@ -230,6 +230,21 @@ docker compose -f docker-compose.bi.yml logs -f app
 docker compose -f docker-compose.bi.yml exec app npm run <script>
 ```
 
+### Base de datos (Fase 1b · Prisma + PostgreSQL propio `bi-db`)
+```bash
+npm run db:generate   # regenera el cliente Prisma (tras cambiar schema.prisma)
+npm run db:migrate    # prisma migrate deploy — ADITIVAS, jamás destructivas
+npm run db:seed       # seed idempotente: upsert({create:{...}, update:{}})
+```
+En producción, migrate y seed **NO corren en la imagen standalone** (no lleva
+prisma CLI ni tsx): corren vía el servicio one-shot `bi-migrate` (target `tools`
+del Dockerfile · profile `tools` del compose), que `scripts/deploy-bi006.sh`
+invoca en los pasos [3/6] y [4/6]. Manual:
+```bash
+docker compose -f docker-compose.bi.yml --profile tools run --rm bi-migrate                     # migrate deploy
+docker compose -f docker-compose.bi.yml --profile tools run --rm bi-migrate npx prisma db seed  # seed
+```
+
 ### Deploy prod (estructura S2 · merge y deploy autorizados a la IA por Jelkin 01-09-2026)
 ```bash
 ssh pi-vps 'cd /opt/proteccion-infantil/bi-repo/006-2026-BI-INTELIGENCIA-NEGOCIO && ./scripts/deploy-bi006.sh'
