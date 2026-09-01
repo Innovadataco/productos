@@ -230,9 +230,9 @@ docker compose -f docker-compose.bi.yml logs -f app
 docker compose -f docker-compose.bi.yml exec app npm run <script>
 ```
 
-### Deploy prod (SOLO Jelkin ejecuta)
+### Deploy prod (estructura S2 · merge y deploy autorizados a la IA por Jelkin 01-09-2026)
 ```bash
-./scripts/deploy-bi-prod.sh   # bloqueado para IA por classifier
+ssh pi-vps 'cd /opt/proteccion-infantil/bi-repo/006-2026-BI-INTELIGENCIA-NEGOCIO && ./scripts/deploy-bi006.sh'
 ```
 
 ---
