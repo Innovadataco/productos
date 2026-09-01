@@ -182,6 +182,9 @@ Toda respuesta pasa por sanitizer que busca patrones (`\d{10}` · emails · dire
 │   │   └── ui/               ← componentes base (copiados de PI)
 │   └── lib/
 │       ├── auth/             ← sesión propia BI (credenciales hasheadas · fail-closed)
+│       ├── ai/               ← cliente + config de Ollama (guard R2 isLocalOllamaUrl)
+│       ├── config.ts         ← parámetros en BD (bi_config · B3)
+│       ├── db.ts             ← singleton PrismaClient
 │       ├── bi/               ← motor NL→SQL (candados 1-10) · llama Ollama directo vía Tailscale
 │       ├── catalogo/         ← catálogo dinámico (candado 8)
 │       └── observabilidad/   ← logs y métricas (candado 12)

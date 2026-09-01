@@ -12,12 +12,13 @@ export default function Topbar({
 }: {
     titulo: string;
     acento: string;
-    activo: "dashboard" | "chat" | "operacion";
+    activo: "dashboard" | "chat" | "operacion" | "admin-ia";
 }) {
     const tabs = [
         { id: "dashboard", href: "/dashboard", etiqueta: "Pulso" },
         { id: "chat", href: "/chat", etiqueta: "Chat IA" },
         { id: "operacion", href: "/operacion", etiqueta: "Operación" },
+        { id: "admin-ia", href: "/admin/ia", etiqueta: "Admin IA" },
     ] as const;
 
     return (

@@ -131,3 +131,19 @@ model BICacheSemantico {
 
   @@map("bi_cache_semantico")
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// BIConfig · parámetros de configuración en BD (B3 · Admin IA)
+// Clave/valor editable sin despliegue: modelos Ollama, timeouts, umbrales.
+// El seed los crea con update:{} — NUNCA pisa lo que el operador editó a mano.
+// ────────────────────────────────────────────────────────────────────────────
+model BIConfig {
+  id            String   @id @default(cuid())
+  clave         String   @unique
+  valor         String
+  descripcion   String   @default("")
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@map("bi_config")
+}

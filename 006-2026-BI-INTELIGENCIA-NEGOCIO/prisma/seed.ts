@@ -283,12 +283,44 @@ async function seedEjemplos(): Promise<void> {
   console.log(`  · BICatalogoEjemplo: ${creados} creados · ${EJEMPLOS.length - creados} existentes`);
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Parámetros de configuración IA en BD (B3 · bi_config · Admin IA)
+// Editables sin despliegue desde la página Admin IA. update:{} vacío: si el
+// operador cambió el modelo o el timeout a mano, el seed NO lo pisa.
+// ────────────────────────────────────────────────────────────────────────────
+const CONFIGS: Array<{ clave: string; valor: string; descripcion: string }> = [
+  {
+    clave: "ia.ollama.modelo_sql",
+    valor: process.env.LLM_MODEL_SQL || "qwen2.5:14b",
+    descripcion: "Modelo Ollama para NL→SQL y chat (Mac Studio via Tailscale)",
+  },
+  {
+    clave: "ia.ollama.timeout_ms",
+    valor: "120000",
+    descripcion: "Timeout en ms de las llamadas de generacion a Ollama (entero > 0)",
+  },
+];
+
+async function seedConfig(): Promise<void> {
+  const antes = await prisma.bIConfig.count();
+  for (const c of CONFIGS) {
+    await prisma.bIConfig.upsert({
+      where: { clave: c.clave },
+      create: c,
+      update: {},
+    });
+  }
+  const creadas = (await prisma.bIConfig.count()) - antes;
+  console.log(`  · BIConfig: ${creadas} creadas · ${CONFIGS.length - creadas} existentes`);
+}
+
 async function main(): Promise<void> {
   console.log("Seed catalogo BI · Producto 006 · SPEC-006 · F3C 2026-09-01");
   await seedTablas();
   await seedColumnas();
   await seedMetricas();
   await seedEjemplos();
+  await seedConfig();
   console.log("Seed COMPLETO (idempotente: update:{} — la 2ª pasada crea 0 filas)");
 }
 

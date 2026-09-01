@@ -28,12 +28,15 @@ jobs:
         with:
           node-version: 22
 
-      # npm install (no npm ci): el package-lock se genera y se commitea en Fase 1b
+      # npm ci con lockfile commiteado (D3a: builds reproducibles)
       - name: Instalar dependencias
-        run: npm install
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Tests unitarios
+        run: npm run test:unit
 
       - name: Build
         run: npm run build
