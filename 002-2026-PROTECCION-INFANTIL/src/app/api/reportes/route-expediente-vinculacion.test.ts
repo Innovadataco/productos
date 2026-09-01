@@ -1,24 +1,23 @@
 /**
- * SPEC-323 (T011/US2) · el expediente al 2º y 3er reporte vinculado.
+ * SPEC-323 → SPEC-340 (A-68) · la vinculación al 2º y 3er reporte.
  *
- * Hueco de cobertura que dejó pasar el bug: no existía ninguna prueba que
- * ejerciera una vinculación ACEPTADA (`reportePrevioId` en el body). `route.test.ts`
- * solo cubre la RESPUESTA de oferta (200), nunca lo que pasa después.
+ * SPEC-340 DEROGÓ el expediente automático (decisión de Jelkin: el expediente
+ * lo crea el padre con el botón). La vinculación ahora se materializa en la
+ * CADENA (`Reporte.reportePrincipalId`). Estos tests afirmaban el expediente
+ * automático; ahora afirman lo contrario Y la cadena:
  *
- * (1) 2º reporte vinculado → nace el expediente con exactamente 2 eventos.
- * (2) 3er reporte vinculado → 3 eventos, NO 4. `findDuplicadoReciente` devuelve
- *     el reporte MÁS RECIENTE, así que al 3er reporte el `reportePrevioId` es el
- *     reporte #2, que ya entró como evento en la vinculación anterior. Sin guard
- *     de idempotencia se inserta dos veces y `numEventos` queda inflado.
- * (3) atomicidad: si falla el alta de un evento, no queda ni el reporte ni el
- *     expediente a medias (el bloque corre DENTRO de `withUnitOfWork`).
+ * (1) 2º reporte vinculado → entra a la cadena del 1º; NO nace expediente.
+ * (2) 3er reporte (cuyo previo es el #2, ya evento) → apunta al MISMO principal
+ *     (la cadena es plana), sin duplicar nada.
+ * (3) previo inexistente → el dedup responde oferta y nada queda escrito.
+ *     (La atomicidad de la tx la cubre route-atomicidad.test.ts de SPEC-137;
+ *     la escritura de la cadena vive dentro del mismo withUnitOfWork.)
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
-import { ExpedienteRepository } from "@/lib/dal/repositories/expediente-repository";
 
 let mockToken: string | undefined;
 
@@ -55,15 +54,7 @@ async function reportar(reportePrevioId?: string): Promise<{ id: string; expedie
     return { id: body.reporte!.id, ...(body.expedienteId ? { expedienteId: body.expedienteId } : {}) };
 }
 
-async function eventosDe(expedienteId: string) {
-    return prisma.eventoExpediente.findMany({
-        where: { expedienteId },
-        orderBy: { ordenSecuencial: "asc" },
-        select: { id: true, reporteId: true, ordenSecuencial: true },
-    });
-}
-
-describe("SPEC-323 · POST /api/reportes — expediente por vinculación", { timeout: 30_000 }, () => {
+describe("SPEC-340 · POST /api/reportes — la vinculación arma CADENA, no expediente", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         // La cola pg-boss persiste entre tests (resetDatabase no la limpia).
@@ -78,54 +69,56 @@ describe("SPEC-323 · POST /api/reportes — expediente por vinculación", { tim
         mockToken = await crearTokenUsuario(usuario.id, "PARENT");
     });
 
-    it("2º reporte vinculado: nace el expediente con los DOS reportes como eventos", async () => {
+    it("2º reporte vinculado: entra a la CADENA del 1º y NO nace ningún expediente (SPEC-340)", async () => {
         const r1 = await reportar();
         const r2 = await reportar(r1.id);
 
-        expect(r2.expedienteId, "el 201 del reporte vinculado debe devolver el expediente creado").toBeTruthy();
+        expect(r2.expedienteId, "la respuesta ya no trae expedienteId").toBeUndefined();
+        expect(await prisma.expediente.count(), "el expediente lo crea el padre con el botón, no el alta").toBe(0);
 
-        const expediente = await prisma.expediente.findUniqueOrThrow({ where: { id: r2.expedienteId! } });
-        expect(expediente.identificadorReportado).toBe(IDENTIFICADOR);
-
-        const eventos = await eventosDe(expediente.id);
-        expect(eventos.map((e) => e.reporteId), "un evento por reporte, en orden").toEqual([r1.id, r2.id]);
-        expect(expediente.numEventos, "`numEventos` debe coincidir con los eventos reales").toBe(2);
+        const enBd = await prisma.reporte.findUniqueOrThrow({ where: { id: r2.id } });
+        expect(enBd.reportePrincipalId, "el 2º apunta al 1º como principal").toBe(r1.id);
+        const principal = await prisma.reporte.findUniqueOrThrow({ where: { id: r1.id } });
+        expect(principal.reportePrincipalId, "el principal no apunta a nadie").toBeNull();
     });
 
-    it("3er reporte vinculado: 3 eventos y numEventos=3 — el reporte previo NO se duplica", async () => {
+    it("3er reporte (previo = el #2, ya evento): apunta al MISMO principal — cadena plana", async () => {
         const r1 = await reportar();
         const r2 = await reportar(r1.id);
-        // La oferta del 3er reporte referencia el reporte #2 (el más reciente),
-        // que YA es un evento del expediente.
+        // La oferta del 3er reporte referencia el #2 (el más reciente), que ya
+        // es evento de la cadena: debe resolverse al principal r1, no anidarse.
         const r3 = await reportar(r2.id);
 
-        expect(r3.expedienteId, "el 3er reporte reutiliza el expediente activo").toBe(r2.expedienteId);
+        const tres = await prisma.reporte.findUniqueOrThrow({ where: { id: r3.id } });
+        expect(tres.reportePrincipalId, "el 3º se resuelve al principal, no al #2").toBe(r1.id);
 
-        const eventos = await eventosDe(r3.expedienteId!);
-        expect(eventos.map((e) => e.reporteId), "exactamente un evento por reporte, sin repetir el #2").toEqual([
-            r1.id,
-            r2.id,
-            r3.id,
-        ]);
-        expect(new Set(eventos.map((e) => e.reporteId)).size, "ningún reporte puede aparecer dos veces").toBe(3);
-
-        const expediente = await prisma.expediente.findUniqueOrThrow({ where: { id: r3.expedienteId! } });
-        expect(expediente.numEventos, "`numEventos` inflado = contador del padre miente").toBe(3);
+        const cadena = await prisma.reporte.findMany({
+            where: { reportePrincipalId: r1.id },
+            select: { id: true },
+        });
+        expect(cadena.map((r) => r.id).sort(), "la cadena del principal tiene exactamente 2 eventos").toEqual(
+            [r2.id, r3.id].sort()
+        );
+        expect(await prisma.expediente.count(), "sigue sin nacer expediente alguno").toBe(0);
         expect(await prisma.reporte.count(), "los tres reportes se guardan igual").toBe(3);
     });
 
-    it("atomicidad: si falla el alta de un evento, no queda ni el reporte ni el expediente a medias", async () => {
-        const r1 = await reportar();
+    it("previo inexistente: el dedup responde oferta (200) y NO escribe cadena ni expediente", async () => {
+        await reportar();
 
-        vi.spyOn(ExpedienteRepository.prototype, "agregarEvento").mockRejectedValueOnce(
-            new Error("fallo inyectado al agregar el evento retroactivo")
-        );
+        // El body trae un reportePrevioId que no existe: la vinculación no es
+        // válida. El dedup del propio reporte reciente responde la oferta (200)
+        // y NADA queda escrito — ni cadena colgando, ni expediente.
+        const res = await POST(requestReporte("id-inexistente-xyz"));
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { oferta?: boolean };
+        expect(body.oferta).toBe(true);
 
-        const res = await POST(requestReporte(r1.id));
-        expect(res.status, "el fallo dentro de la tx → 500 controlada").toBe(500);
-
-        expect(await prisma.reporte.count(), "el reporte vinculado no debe quedar persistido").toBe(1);
-        expect(await prisma.expediente.count(), "el expediente no debe quedar creado sin sus eventos").toBe(0);
-        expect(await prisma.eventoExpediente.count()).toBe(0);
+        expect(await prisma.reporte.count(), "no se creó un segundo reporte").toBe(1);
+        expect(
+            await prisma.reporte.count({ where: { reportePrincipalId: { not: null } } }),
+            "ninguna cadena quedó escrita"
+        ).toBe(0);
+        expect(await prisma.expediente.count()).toBe(0);
     });
 });

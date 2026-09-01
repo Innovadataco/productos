@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **101** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **104** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -155,6 +155,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | relacion | String | — |
 | telefono | String | opcional |
 | email | String | opcional |
+| documentoTipo | String | opcional |
+| documentoNumero | String | opcional |
 | estado | String | — |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
@@ -208,6 +210,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | finServicio | DateTime | opcional |
 | tipoPeriodo | TipoPeriodoServicio | — |
 | estado | String | — |
+| escudoAssetKey | String | opcional |
 | tenantId | String | único |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
@@ -496,7 +499,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (53)
+### Otros (sin regla de dominio) (56)
 
 #### `AclaracionExpediente`
 
@@ -515,6 +518,31 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | expediente | Expediente | relación (FK) |
 | informeConsolidado | InformeConsolidado | relación (FK) |
 | respondidaPorUsuario | Usuario | opcional, relación (FK) |
+
+#### `AnalisisExpediente`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | opcional |
+| seguimientoCasoId | String | opcional |
+| versionSecuencial | Int | — |
+| alcance | AlcanceAnalisis | — |
+| hashCadena | String | — |
+| corteN | Int | — |
+| texto | String | — |
+| categoriaDominante | CategoriaConducta | opcional |
+| guiaAccionId | String | opcional |
+| modeloUsado | String | — |
+| promptSistemaHash | String | — |
+| latenciaMs | Int | — |
+| estado | EstadoAnalisis | — |
+| motivoFallo | String | opcional |
+| generadoEn | DateTime | — |
+| publicadoEn | DateTime | opcional |
+| expediente | Expediente | opcional, relación (FK) |
+| seguimientoCaso | SeguimientoCaso | opcional, relación (FK) |
+| guiaAccion | GuiaAccionCategoria | opcional, relación (FK) |
 
 #### `Anomalia`
 
@@ -756,6 +784,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | fechaCierre | DateTime | opcional |
 | fechaEscalado | DateTime | opcional |
 | estado | EstadoExpediente | — |
+| origenCreacion | String | — |
 | scoreGravedadActual | ScoreGravedad | — |
 | categoriasDominantesJson | Json | opcional |
 | numEventos | Int | — |
@@ -774,6 +803,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | aclaracion | AclaracionExpediente | opcional, relación |
 | slaEfectivoHoras | Int | opcional |
 | fechaEscaladoRojoEn | DateTime | opcional |
+| informesPadre | InformePadre | lista, relación |
+| analisisIa | AnalisisExpediente | lista, relación |
 
 #### `GuiaAccionCategoria`
 
@@ -797,6 +828,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | publicadaEn | DateTime | opcional |
 | reemplazadaEn | DateTime | opcional |
 | creadaPor | Usuario | relación (FK) |
+| analisisQueLaUsan | AnalisisExpediente | lista, relación |
 
 #### `HealthProbe`
 
@@ -917,6 +949,25 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 
+#### `InformeCaso`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| casoId | String | — |
+| numeroCorrelativo | Int | — |
+| anio | Int | — |
+| pdfHash | String | único |
+| codigoVerificacion | String | único |
+| firmadoPorNombre | String | — |
+| firmadoPorDocumento | String | — |
+| firmadoPorId | String | — |
+| escudoAssetKey | String | opcional |
+| seccionesJson | Json | — |
+| generadoEn | DateTime | — |
+| caso | SeguimientoCaso | relación (FK) |
+| firmadoPor | Usuario | relación |
+
 #### `InformeConsolidado`
 
 | Campo | Tipo | Atributos |
@@ -946,6 +997,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | expediente | Expediente | relación (FK) |
 | generadoPor | Usuario | opcional, relación (FK) |
 | aclaraciones | AclaracionExpediente | lista, relación |
+
+#### `InformePadre`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | — |
+| numeroSecuencial | Int | — |
+| pdfHash | String | único |
+| codigoVerificacion | String | — |
+| generadoEn | DateTime | — |
+| generadoPorId | String | — |
+| expediente | Expediente | relación (FK) |
+| generadoPor | Usuario | relación |
 
 #### `Materia`
 
@@ -1261,6 +1326,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | alerta | AlertaColegio | relación (FK) |
 | notas | NotaSeguimiento | lista, relación |
+| analisisIa | AnalisisExpediente | lista, relación |
+| informes | InformeCaso | lista, relación |
 
 #### `SenalComunitariaCache`
 
@@ -1394,6 +1461,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | tokenHash | String | — |
 | expiraEn | DateTime | — |
 | usado | Boolean | — |
+| rol | RolUsuario | — |
+| nombreColegio | String | opcional |
+| nit | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 
@@ -1624,6 +1694,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | alertasColegio | AlertaColegio | lista, relación |
 | eventoMatchDisparado | EventoMatch | opcional, relación |
 | eventos | EventoExpediente | lista, relación |
+| reportePrincipalId | String | opcional |
+| reportePrincipal | Reporte | opcional, relación |
+| eventosDeCadena | Reporte | lista, relación |
 
 #### `SolicitudComite`
 
@@ -1915,6 +1988,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | bloqueosCreados | BlockList | lista, relación |
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
 | expedientes | Expediente | lista, relación |
+| informesPadre | InformePadre | lista, relación |
+| informesCasoFirmados | InformeCaso | lista, relación |
 | sesionesLog | SesionLog | lista, relación |
 | auditConsentimientos | AuditConsentimiento | lista, relación |
 | informesConsolidados | InformeConsolidado | lista, relación |
@@ -1983,9 +2058,12 @@ erDiagram
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
     Expediente ||--o{ AclaracionExpediente : "expediente"
+    Expediente ||--o{ AnalisisExpediente : "expediente (opcional)"
     Expediente ||--o{ EventoExpediente : "expediente"
     Expediente ||--o{ InformeConsolidado : "expediente"
+    Expediente ||--o{ InformePadre : "expediente"
     Expediente ||--o{ PatronExpediente : "expediente"
+    GuiaAccionCategoria ||--o{ AnalisisExpediente : "guiaAccion (opcional)"
     Hijo ||--o{ HijoPadre : "hijo"
     Hijo ||--o{ IdentificadorHijo : "hijo"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
@@ -2031,6 +2109,8 @@ erDiagram
     Reporte ||--o{ ReintentoReporte : "reporte"
     Reporte ||--o{ SolicitudComite : "reporte"
     Reporte ||--o{ TransicionReporte : "reporte"
+    SeguimientoCaso ||--o{ AnalisisExpediente : "seguimientoCaso (opcional)"
+    SeguimientoCaso ||--o{ InformeCaso : "caso"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"

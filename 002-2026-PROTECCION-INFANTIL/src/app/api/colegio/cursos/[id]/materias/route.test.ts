@@ -78,10 +78,12 @@ describe("/api/colegio/cursos/[id]/materias", () => {
         const { admin, colegio } = await setupSchoolAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "6A" });
         const materia = await new MateriaRepository().crear(colegio.id, "Matemáticas");
-        await new CursoMateriaRepository().crear(colegio.id, { cursoId: curso.id, materiaId: materia.id });
+        // SPEC-344 (D3): el vínculo lleva profesor obligatorio.
+        const profesor = await crearProfesor(colegio.id);
+        await new CursoMateriaRepository().crear(colegio.id, { cursoId: curso.id, materiaId: materia.id, profesorId: profesor.id });
 
         const res = await POST(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id, profesorId: profesor.id }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(409);
@@ -92,9 +94,10 @@ describe("/api/colegio/cursos/[id]/materias", () => {
         const curso = await crearCurso(colegio.id, { nombre: "6A" });
         const { colegio: otroColegio } = await crearColegioConAdmin();
         const materiaAjena = await new MateriaRepository().crear(otroColegio.id, "Matemáticas");
+        const profesorPropio = await crearProfesor(colegio.id);
 
         const res = await POST(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materiaAjena.id }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materiaAjena.id, profesorId: profesorPropio.id }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(404);
@@ -118,7 +121,9 @@ describe("/api/colegio/cursos/[id]/materias", () => {
         const { admin, colegio } = await setupSchoolAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "6A" });
         const materia = await new MateriaRepository().crear(colegio.id, "Matemáticas");
-        const vinculo = await new CursoMateriaRepository().crear(colegio.id, { cursoId: curso.id, materiaId: materia.id });
+        // SPEC-344 (D3): el vínculo lleva profesor obligatorio.
+        const profesorDes = await crearProfesor(colegio.id);
+        const vinculo = await new CursoMateriaRepository().crear(colegio.id, { cursoId: curso.id, materiaId: materia.id, profesorId: profesorDes.id });
 
         const res = await DELETEVinculo(
             request("DELETE", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias/${vinculo.id}`, undefined, mockToken),
@@ -147,7 +152,7 @@ describe("/api/colegio/cursos/[id]/materias", () => {
         expect(getRes.status).toBe(404);
 
         const postRes = await POST(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: "cm0000000000000000000000" }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: "cm0000000000000000000000", profesorId: "cm0000000000000000000001" }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(postRes.status).toBe(404);
@@ -177,8 +182,9 @@ describe("/api/colegio/cursos/[id]/materias", () => {
             data: { id: crypto.randomUUID(), colegioId: colegio.id, nombre: "Ciencias Naturales", estado: "activo" },
         });
 
+        const profesorU = await crearProfesor(colegio.id);
         const res = await POST(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materiaUuid.id }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materiaUuid.id, profesorId: profesorU.id }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(201);
@@ -189,9 +195,10 @@ describe("/api/colegio/cursos/[id]/materias", () => {
         const { admin, colegio } = await setupSchoolAdmin();
         const curso = await crearCurso(colegio.id, { nombre: "6A" });
         const materia = await new MateriaRepository().crear(colegio.id, "Matemáticas");
+        const profesorC = await crearProfesor(colegio.id);
 
         const res = await POST(
-            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id }, mockToken),
+            request("POST", `http://localhost:5005/api/colegio/cursos/${curso.id}/materias`, { materiaId: materia.id, profesorId: profesorC.id }, mockToken),
             { params: Promise.resolve({ id: curso.id }) }
         );
         expect(res.status).toBe(201);

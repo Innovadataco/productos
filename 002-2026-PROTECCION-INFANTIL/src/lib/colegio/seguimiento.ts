@@ -190,7 +190,8 @@ export interface DetalleCaso {
     };
     timeline: HitoCaso[];
     pendientes: PendienteCaso[];
-    seguimiento: { estado: string | null; notas: NotaCasoVista[] };
+    // SPEC-350: id del SeguimientoCaso para montar el caso vivo (mapa+análisis IA).
+    seguimiento: { id: string | null; estado: string | null; notas: NotaCasoVista[] };
 }
 
 /**
@@ -268,7 +269,7 @@ export async function obtenerDetalleCaso(colegioId: string, alertaId: string): P
             match,
         }),
         pendientes: calcularPendientes({ estadoAlerta: alerta.estado, tieneNotas: notas.length > 0 }),
-        seguimiento: { estado: seguimiento?.estado ?? null, notas },
+        seguimiento: { id: seguimiento?.id ?? null, estado: seguimiento?.estado ?? null, notas },
     };
 }
 

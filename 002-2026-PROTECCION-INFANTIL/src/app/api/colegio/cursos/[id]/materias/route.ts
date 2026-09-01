@@ -9,11 +9,11 @@ import { verifyAuth } from "@/lib/auth";
 import { CursoMateriaRepository } from "@/lib/dal/repositories/curso-materia";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { ERROR_CODES } from "@/lib/errors";
+import { ERROR_CODES, AppError } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { withValidation } from "@/lib/validation";
+import { withValidation, ValidationError } from "@/lib/validation";
 import { cursoMateriaParamsSchema, cursoMateriaBodySchema } from "@/lib/schemas";
 import { verificarPropiedadCurso } from "@/lib/colegio/permisos";
 
@@ -81,7 +81,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
 
         const { id: cursoId } = withValidation.params(cursoMateriaParamsSchema)(await params);
-        const body = await withValidation.body(cursoMateriaBodySchema)(request);
+        // SPEC-344 (D3): el 400 lleva el mensaje humano de la primera issue
+        // ("Toda materia debe llevar un profesor a cargo"), no el genérico.
+        const body = await withValidation.body(cursoMateriaBodySchema)(request).catch((error: unknown) => {
+            if (error instanceof ValidationError) {
+                throw new AppError(error.details[0]?.message ?? "Datos inválidos", ERROR_CODES.VALIDATION_ERROR, 400);
+            }
+            throw error;
+        });
         const curso = await verificarPropiedadCurso(user.id, cursoId);
 
         const vinculo = await new CursoMateriaRepository().crear(curso.colegioId, {

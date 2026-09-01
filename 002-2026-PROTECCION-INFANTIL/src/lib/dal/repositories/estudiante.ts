@@ -28,6 +28,9 @@ export interface DatosAcudiente {
     relacion: string;
     telefono?: string | undefined;
     email?: string | undefined;
+    // SPEC-344 (A-69 · C1 · D-acud): documento del acudiente OPCIONAL, aditivo.
+    documentoTipo?: string | undefined;
+    documentoNumero?: string | undefined;
 }
 
 export class EstudianteRepository {
@@ -205,6 +208,9 @@ export class EstudianteRepository {
                                 relacion: a.relacion,
                                 telefono: a.telefono ?? null,
                                 email: a.email ?? null,
+                                // SPEC-344 (D-acud): documento opcional aditivo.
+                                documentoTipo: a.documentoTipo ?? null,
+                                documentoNumero: a.documentoNumero ?? null,
                             })),
                         },
                     }

@@ -68,6 +68,8 @@ async function main(): Promise<void> {
     await prisma.$transaction(async (tx) => {
         await tx.solicitudComite.deleteMany({});
         await tx.notaSeguimiento.deleteMany({});
+        // SPEC-351: InformeCaso sin Cascade — explícito antes del caso.
+        await tx.informeCaso.deleteMany({});
         await tx.seguimientoCaso.deleteMany({});
         await tx.alertaColegio.deleteMany({});
         await tx.identificadorProfesor.deleteMany({});

@@ -87,13 +87,32 @@ async function upsertNotificacionRegla(
 // Idempotencia anti-I-100: upsert por clave, propaga cambios de default definidos en código.
 async function seedParametrosPadre() {
     const parametrosPadre = [
-        { clave: "padre.expediente.auto_cierre_meses", valor: "6", tipo: TipoParametro.INTEGER, descripcion: "Meses de inactividad para auto-cierre de expediente" },
+        { clave: "padre.expediente.auto_cierre_meses", valor: "0", tipo: TipoParametro.INTEGER, descripcion: "DEROGADO (SPEC-340): 0 = los expedientes no se cierran nunca. Regla de Jelkin 01-09-2026." },
         { clave: "padre.expediente.consolidacion_min_reportes", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Mínimo de reportes para pasar a CONSOLIDANDO" },
         { clave: "padre.expediente.max_aclaraciones", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Máximo de aclaraciones por expediente" },
         // SPEC-339 (A-67 · brief §2.4): el tope de menores es PARÁMETRO, no una
         // constante en el código — el admin lo cambia sin desplegar. El mensaje
         // que ve el padre también se siembra: {{maximo}} se reemplaza al mostrarlo.
         { clave: "padre.hijos.maximo", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Máximo de menores que un padre puede registrar" },
+        // SPEC-340 (A-68 §3.3-bis): el step-up del texto sensible. Dos relojes:
+        // re-tapado (ergonomía, cliente) y umbral de contraseña (SERVIDOR).
+        { clave: "padre.texto.retapado_minutos", valor: "10", tipo: TipoParametro.INTEGER, descripcion: "Minutos hasta que el texto revelado se vuelve a tapar solo" },
+        { clave: "padre.texto.stepup_minutos", valor: "30", tipo: TipoParametro.INTEGER, descripcion: "Edad de sesión (min) a partir de la cual revelar el texto exige la contraseña" },
+        // SPEC-340 (A-68 §3.3): la clasificación EXPLICADA en lenguaje de padre.
+        // El admin las edita; el fallback si falta una clave es un texto genérico.
+        { clave: "padre.analisis.explicacion.CONTACTO_INSISTENTE", valor: "Encontramos señales de contacto insistente: alguien que escribe una y otra vez aunque no le respondan. Documentarlo ayuda a mostrar el patrón.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.SOLICITUD_MATERIAL", valor: "Encontramos señales de contacto sexual: alguien pidiendo fotos o material íntimo. Es grave y vale la pena documentarlo.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.OFRECIMIENTO_REGALOS", valor: "Encontramos señales de ofrecimientos: regalos, dinero o recargas a cambio de algo. Suele ser la puerta de entrada de un abuso.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.SUPLANTACION_IDENTIDAD", valor: "Encontramos señales de que la persona finge ser alguien que no es: otro menor, un familiar o una figura de confianza.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.SOLICITUD_ENCUENTRO", valor: "Encontramos señales de que alguien busca un encuentro en persona. Es de las señales más serias y conviene documentarla con fechas.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.COMPARTIMIENTO_SEXUAL", valor: "Encontramos señales de envío de contenido sexual hacia el menor. Documentarlo con fecha y hora fortalece tu carpeta.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.EXTORSION", valor: "Encontramos señales de presión o chantaje: pedir algo a cambio de no publicar o no contar. Guarda todo; cada mensaje cuenta.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.CONTENIDO_GENERADO_IA", valor: "Encontramos señales de contenido fabricado con inteligencia artificial usando la imagen del menor. Es reciente en la ley y sí se puede denunciar.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.DIFUSION_NO_CONSENTIDA", valor: "Encontramos señales de difusión de contenido íntimo sin permiso. No compartas el enlace; documenta y busca la baja del contenido.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.DOXING", valor: "Encontramos señales de publicación de datos personales del menor (dirección, colegio, teléfono). Conviene reforzar la privacidad de sus cuentas.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.CIBERACOSO", valor: "Encontramos señales de acoso repetido por medios digitales: burlas, amenazas o exclusión sostenida. El patrón importa más que el mensaje suelto.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.HAPPY_SLAPPING", valor: "Encontramos señales de agresión grabada o difundida para burlarse. La ley lo nombra y lo sanciona; documentarlo sirve.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.STALKING", valor: "Encontramos señales de vigilancia u hostigamiento persistente. Anota cada vez que pase, con fecha y hora: la insistencia es la clave.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
         { clave: "padre.hijos.maximo_mensaje", valor: "Puedes cuidar hasta {{maximo}} menores desde esta cuenta. Si necesitas más, escríbenos y lo resolvemos.", tipo: TipoParametro.STRING, descripcion: "Mensaje que ve el padre al alcanzar el tope de menores" },
         { clave: "padre.expediente.rate_limit_eventos_24h", valor: "999", tipo: TipoParametro.INTEGER, descripcion: "Límite de eventos que un padre puede agregar en 24h" },
         { clave: "padre.comite.sla_horas_normal", valor: "48", tipo: TipoParametro.INTEGER, descripcion: "SLA de comité para casos normales" },
@@ -301,6 +320,8 @@ async function seedMotorExpediente() {
 
     // 11 eventos del ciclo de vida del expediente (FR-018) con su audiencia.
     type EventoExpedienteSeed = {
+    /** SPEC-340: evento derogado — el seed desactiva su plantilla. */
+    derogada?: boolean;
         evento: string;
         roles: string[];
         asuntoEmail: string;
@@ -372,7 +393,11 @@ async function seedMotorExpediente() {
             cuerpoInApp: "El expediente {{expedienteId}} pasó a estado escalado.",
         },
         {
+            // SPEC-340 (D-1): evento DEROGADO — nada se cierra nunca. La entrada
+            // se conserva para que el seed DESACTIVE la plantilla en las BD que
+            // ya la tienen activa (el upsert pisa `activa`).
             evento: "expediente.auto_cerrado_inactividad",
+            derogada: true,
             roles: ["PADRE"],
             asuntoEmail: "Tu expediente se cerró por inactividad",
             cuerpoEmail: "Hola,\n\nTu expediente se cerró automáticamente por inactividad prolongada. Si lo necesitas, puedes solicitar su reapertura desde {{urlExpediente}}.",
@@ -388,6 +413,8 @@ async function seedMotorExpediente() {
     ];
 
     for (const e of eventosSeed) {
+        // SPEC-340: los eventos derogados quedan con la plantilla INACTIVA.
+        const activa = !e.derogada;
         const plantillas = [
             { clave: `${e.evento}.email`, canal: "EMAIL" as const, asunto: e.asuntoEmail, cuerpoMarkdown: e.cuerpoEmail },
             { clave: `${e.evento}.in_app`, canal: "IN_APP" as const, asunto: undefined, cuerpoMarkdown: e.cuerpoInApp },
@@ -400,7 +427,7 @@ async function seedMotorExpediente() {
                     asunto: pl.asunto ?? null,
                     cuerpoMarkdown: pl.cuerpoMarkdown,
                     variablesSchema: { type: "object", properties: {} },
-                    activa: true,
+                    activa,
                 },
                 create: {
                     clave: pl.clave,
@@ -859,6 +886,51 @@ async function seedEventosEmailMigrados() {
                 "Hola,\n\nTu cuenta quedó creada. Desde acá te avisamos si alguno de los tuyos aparece en un reporte.\n\nEntra cuando quieras:\n{{urlLogin}}\n\nTe faltan unos pocos pasos para terminar de configurarla. Con calma, toma un minuto.",
             variablesSchema: { type: "object", properties: { urlLogin: { type: "string" } } },
         },
+        // ── SPEC-344 (A-69 · C1) · registro por enlace del colegio ──────────
+        {
+            clave: "colegio.registro_enlace.email",
+            asunto: "Cree su contraseña y empecemos",
+            cuerpoMarkdown:
+                "Hola,\n\nUsted está por activar la cuenta del **{{nombreColegio}}** en Protección Infantil.\n\nAbra este enlace y cree su contraseña:\n{{url}}\n\nEl enlace vence en 24 horas y solo se puede usar una vez.\n\nSi no fue usted quien lo pidió, no tiene que hacer nada.",
+            variablesSchema: {
+                type: "object",
+                properties: { url: { type: "string" }, nombreColegio: { type: "string" } },
+            },
+        },
+        {
+            clave: "colegio.registro_enlace.cuenta_existente.email",
+            asunto: "Ya existe una cuenta con este correo",
+            cuerpoMarkdown:
+                "Hola,\n\nAlguien intentó crear una cuenta del colegio **{{nombreColegio}}** con su correo. Su cuenta ya existe.\n\nSi fue usted quien intentó, ingrese en {{urlLogin}} — puede recuperar su contraseña desde {{urlRecuperar}} si la olvidó.\n\nSi no fue usted, no tiene que hacer nada.",
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreColegio: { type: "string" },
+                    urlRecuperar: { type: "string" },
+                    urlLogin: { type: "string" },
+                },
+            },
+        },
+        {
+            clave: "colegio.registro_enlace.nit_ya_registrado.email",
+            asunto: "Alguien intentó registrar su colegio",
+            cuerpoMarkdown:
+                "Hola,\n\nAlguien intentó registrar el NIT **{{nit}}** en Protección Infantil, y ese NIT ya está a su nombre.\n\nSi fue usted quien intentó desde otro correo, contáctenos: {{urlSoporte}}.\n\nSi no fue usted, no tiene que hacer nada.",
+            variablesSchema: {
+                type: "object",
+                properties: { nit: { type: "string" }, urlSoporte: { type: "string" } },
+            },
+        },
+        {
+            clave: "colegio.bienvenida_rector.email",
+            asunto: "Su cuenta del colegio está lista",
+            cuerpoMarkdown:
+                "Hola,\n\nLa cuenta del **{{nombreColegio}}** quedó creada. Desde aquí protegerá a sus estudiantes, profesores y acudientes.\n\nEntre cuando quiera:\n{{urlLogin}}\n\nLe faltan unos pocos pasos para terminar de configurarla. Los recorremos juntos.",
+            variablesSchema: {
+                type: "object",
+                properties: { nombreColegio: { type: "string" }, urlLogin: { type: "string" } },
+            },
+        },
         {
             clave: "usuario.bienvenida.operador.email",
             asunto: "Tu cuenta de operador está lista",
@@ -1035,6 +1107,11 @@ async function seedEventosEmailMigrados() {
         // entrar, así que no admiten opt-out.
         { evento: "auth.registro_enlace", plantillaClave: "auth.registro_enlace.email", rol: "PARENT", obligatoria: true },
         { evento: "auth.bienvenida_padre", plantillaClave: "auth.bienvenida_padre.email", rol: "PARENT", obligatoria: true },
+        // SPEC-344 (A-69 · C1): reglas del registro por enlace del colegio.
+        { evento: "colegio.registro_enlace", plantillaClave: "colegio.registro_enlace.email", rol: "SCHOOL_ADMIN", obligatoria: true },
+        { evento: "colegio.registro_enlace.cuenta_existente", plantillaClave: "colegio.registro_enlace.cuenta_existente.email", rol: "SCHOOL_ADMIN", obligatoria: true },
+        { evento: "colegio.registro_enlace.nit_ya_registrado", plantillaClave: "colegio.registro_enlace.nit_ya_registrado.email", rol: "SCHOOL_ADMIN", obligatoria: true },
+        { evento: "colegio.bienvenida_rector", plantillaClave: "colegio.bienvenida_rector.email", rol: "SCHOOL_ADMIN", obligatoria: true },
         { evento: "usuario.bienvenida.operador", plantillaClave: "usuario.bienvenida.operador.email", rol: "OPERADOR", obligatoria: true },
         { evento: "usuario.bienvenida.comite", plantillaClave: "usuario.bienvenida.comite.email", rol: "COMITE_VALIDACION", obligatoria: true },
         { evento: "usuario.credenciales.padre", plantillaClave: "usuario.credenciales.padre.email", rol: "PARENT", obligatoria: true },
@@ -4009,6 +4086,75 @@ async function seedEventosRecompensa() {
         });
     }
     console.log("[SEED] Catálogo Motor Notif bono.entregado_recompensa listo (SPEC-246)");
+
+    // ── SPEC-341 (A-68 §4.4 capa 2) · parámetros del análisis IA en fila ────────
+    // Sembrados COMPLETOS con valor por defecto — regla de la casa (§1.4):
+    // los umbrales viven en ParametroSistema, jamás en el código. Admin edita
+    // después; el Dev no vuelve a preguntar a Jelkin cada vez.
+    const modeloEmbudo = (await prisma.parametroSistema.findUnique({
+        where: { clave: "ia.rubrica.modelo_embudo" },
+    }))?.valor ?? "qwen2.5:14b";
+
+    // Audit #214 · candado 3: el prompt está en TUTEO neutro (no voseo).
+    // La voz que el padre lee debe ser la misma que el prompt le pide al
+    // modelo; si el prompt está en rioplatense, el modelo puede espejarlo.
+    const promptSistemaPadre = [
+        "Eres el análisis asistido del expediente de un padre.",
+        "Describes PATRONES observados en los datos calculados, nunca acusas a nadie.",
+        "No inventas hechos: solo hablas de lo que aparece en el input.",
+        "Voz cálida y clara, en tuteo, entre 120 y 220 palabras.",
+        "Cierras sin diagnóstico, sin score, sin veredicto:",
+        "dejas la lectura para que el padre decida.",
+    ].join(" ");
+
+    const promptSistemaColegio = [
+        "Análisis asistido de patrones institucionales anónimos.",
+        "NUNCA nombras personas ni identificadores; hablas por curso, franja horaria y plataforma.",
+        "Voz técnica y descriptiva; sin recomendación clínica.",
+    ].join(" ");
+
+    const frasesProhibidas = JSON.stringify([
+        "podría ser un depredador",
+        "es un caso claro de",
+        "estamos seguros de que",
+        "sugiere abuso",
+        "alto riesgo confirmado",
+        "conducta criminal",
+        "perpetrador identificado",
+        "sin duda",
+    ]);
+
+    const parametrosAnalisis: Array<{ clave: string; valor: string; tipo: TipoParametro; descripcion: string }> = [
+        { clave: "padre.analisis.max_concurrentes", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Analisis IA concurrentes máximos (R16 · Mac de prod)" },
+        { clave: "padre.analisis.cooldown_min", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Cool-down del botón Actualizar análisis (minutos)" },
+        { clave: "padre.analisis.tiempo_estimado_seg", valor: "90", tipo: TipoParametro.INTEGER, descripcion: "Segundos que suele tomar generar un análisis (para el aviso al padre)" },
+        { clave: "padre.analisis.tope_fila", valor: "50", tipo: TipoParametro.INTEGER, descripcion: "Máximo de jobs vivos en la cola del análisis" },
+        { clave: "padre.analisis.ttl_horas", valor: "168", tipo: TipoParametro.INTEGER, descripcion: "TTL del análisis vigente (horas); pasado esto se regenera al abrir aunque el hash coincida" },
+        { clave: "padre.analisis.prioridad", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Prioridad pg-boss del análisis (< prioridad de clasificación de reportes)" },
+        { clave: "padre.analisis.modelo", valor: modeloEmbudo, tipo: TipoParametro.STRING, descripcion: "Modelo Ollama para el análisis capa 2 (se lee del embudo por defecto)" },
+        { clave: "padre.analisis.prompt_sistema", valor: promptSistemaPadre, tipo: TipoParametro.STRING, descripcion: "Prompt de sistema del análisis del padre (voz brief A-68 §4.4)" },
+        { clave: "padre.analisis.frases_prohibidas_json", valor: frasesProhibidas, tipo: TipoParametro.JSON, descripcion: "Lista JSON de frases interpretativas prohibidas — la salida del modelo se rechaza si aparece alguna" },
+        { clave: "padre.analisis.max_fallidos_consecutivos", valor: "3", tipo: TipoParametro.INTEGER, descripcion: "N FALLIDOs seguidos del mismo hash tras los cuales la UI muestra 'no pudimos generarlo' sin re-encolar (audit 87c311a0)" },
+        { clave: "colegio.analisis.max_concurrentes", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Analisis IA concurrentes del colegio (C3, futuro)" },
+        { clave: "colegio.analisis.modelo", valor: modeloEmbudo, tipo: TipoParametro.STRING, descripcion: "Modelo Ollama para el análisis del colegio (C3)" },
+        { clave: "colegio.analisis.prompt_sistema", valor: promptSistemaColegio, tipo: TipoParametro.STRING, descripcion: "Prompt de sistema del análisis blindado del colegio (C3)" },
+    ];
+
+    for (const p of parametrosAnalisis) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, tipo: p.tipo, descripcion: p.descripcion },
+            create: {
+                clave: p.clave,
+                valor: p.valor,
+                tipo: p.tipo,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: p.descripcion,
+            },
+        });
+    }
+    console.log(`[SEED] ${parametrosAnalisis.length} parámetros padre.analisis.* / colegio.analisis.* listos (SPEC-341)`);
 }
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de

@@ -278,3 +278,90 @@ export async function sendAvisoColegio(job: AvisoColegioJob): Promise<string | u
     });
     return jobId ?? undefined;
 }
+
+// ── SPEC-341 · cola del análisis IA en fila del expediente ───────────────────
+// Un job por (expediente, hashCadena) — pg-boss deduplica con singletonKey.
+// Prioridad ESTRICTAMENTE MENOR que la de clasificación de reportes (que sube
+// a 10 con prioridadAlta) — un pico de aperturas nunca demora la clasificación.
+// Backpressure propio: `padre.analisis.tope_fila` (default 50).
+
+export type AlcanceQueue = "PADRE_COMPLETO" | "COLEGIO_BLINDADO";
+export type DisparadorQueue = "APERTURA" | "ACTUALIZAR";
+
+export interface AnalisisExpedienteJob {
+    /** SPEC-350: exactamente UNO de expedienteId (padre) / seguimientoCasoId (colegio). */
+    expedienteId?: string;
+    seguimientoCasoId?: string;
+    hashCadena: string;
+    alcance: AlcanceQueue;
+    disparador: DisparadorQueue;
+    solicitadoEn: string; // ISO
+}
+
+export interface SendAnalisisResult {
+    encolado: boolean;
+    jobId?: string;
+    motivo?: "cola_llena" | "duplicado";
+}
+
+/** Cuenta jobs vivos SOLO de la cola de análisis (no comparte con reportes). */
+export async function getAnalisisQueueStats(): Promise<{ pendientes: number }> {
+    const rows = (await prisma.$queryRaw`
+        SELECT COUNT(*)::int as pendientes
+        FROM pgboss.job
+        WHERE name = 'padre.analisis.expediente'
+          AND state IN ('created', 'retry', 'active')
+    `) as [{ pendientes: number }];
+    return { pendientes: rows[0]?.pendientes ?? 0 };
+}
+
+export async function sendAnalisisExpediente(job: AnalisisExpedienteJob): Promise<SendAnalisisResult> {
+    await ensureQueue("padre.analisis.expediente");
+
+    const [prioridadStr, topeStr, tiempoEstStr] = await Promise.all([
+        getParametroSistemaValor("padre.analisis.prioridad"),
+        getParametroSistemaValor("padre.analisis.tope_fila"),
+        getParametroSistemaValor("padre.analisis.tiempo_estimado_seg"),
+    ]);
+    const prioridad = Number.parseInt(prioridadStr ?? "5", 10);
+    const tope = Number.parseInt(topeStr ?? "50", 10);
+    const expireSec = Number.parseInt(tiempoEstStr ?? "90", 10) * 3;
+
+    // Runtime guard: nunca por encima de la clasificación (SC-008 · candado CEO).
+    // La clasificación con prioridadAlta usa 10 en sendReporte; el helper del
+    // análisis aborta si alguien sube el parámetro por encima de 9 por descuido.
+    if (prioridad >= 10) {
+        throw new Error(
+            `[QUEUE] padre.analisis.prioridad=${prioridad} rompe la garantía SC-008 · debe ser < 10 (prioridad de clasificación de reportes)`
+        );
+    }
+
+    const stats = await getAnalisisQueueStats();
+    if (stats.pendientes >= tope) {
+        logger.warn(`[QUEUE·analisis] Cola llena (${stats.pendientes}/${tope}) — dueño ${job.expedienteId ?? job.seguimientoCasoId} no encolado`);
+        return { encolado: false, motivo: "cola_llena" };
+    }
+
+    // singletonKey = dueño + hash → dos aperturas seguidas del mismo
+    // expediente/caso sin cambio en la cadena no encolan dos jobs.
+    const dueno = job.expedienteId ?? job.seguimientoCasoId;
+    if (!dueno) {
+        throw new Error("[QUEUE·analisis] job sin dueño: se requiere expedienteId o seguimientoCasoId");
+    }
+    const singletonKey = `${dueno}:${job.hashCadena}`;
+
+    const jobId = await boss.send("padre.analisis.expediente", job, {
+        priority: prioridad,
+        retryLimit: 0, // R-2: sin reintentos automáticos
+        expireInSeconds: expireSec,
+        singletonKey,
+    });
+
+    if (!jobId) {
+        // pg-boss devolvió null → ya había un job con la misma singletonKey.
+        return { encolado: false, motivo: "duplicado" };
+    }
+
+    logger.info(`[QUEUE·analisis] Encolado ${jobId} · dueño=${dueno} · prioridad=${prioridad} · disparador=${job.disparador}`);
+    return { encolado: true, jobId };
+}

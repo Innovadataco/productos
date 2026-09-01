@@ -13,7 +13,7 @@ import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
-import { cursoMateriaIdParamsSchema } from "@/lib/schemas";
+import { cursoMateriaIdParamsSchema, cursoMateriaReasignarProfesorSchema } from "@/lib/schemas";
 import { verificarPropiedadCurso } from "@/lib/colegio/permisos";
 
 function getClientInfo(request: Request) {
@@ -78,6 +78,77 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
                 { status: 404 }
             );
         }
+        return errorToResponse(error, "[COLEGIO/CURSO/MATERIAS]");
+    }
+}
+
+/**
+ * SPEC-344 (A-69 · C1 · FR-031) — PATCH: reasigna el profesor a cargo de un
+ * vínculo curso↔materia existente. Aplica el candado D3 (profesorId
+ * obligatorio) en el mismo repositorio.
+ */
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string; materiaId: string }> }) {
+    try {
+        const user = await verifyAuth("SCHOOL_ADMIN");
+        await assertModulo(user, "colegios_gestion");
+        const vigencia = await verificarVigenciaColegio(user.id);
+        if (!vigencia.vigente) {
+            return NextResponse.json(
+                { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 },
+            );
+        }
+
+        const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
+        if (!rate.allowed) {
+            return NextResponse.json(
+                { error: { message: "Demasiadas solicitudes. Espere un momento.", code: ERROR_CODES.RATE_LIMITED } },
+                { status: 429, headers: rate.headers },
+            );
+        }
+
+        const { id: cursoId, materiaId } = withValidation.params(cursoMateriaIdParamsSchema)(await params);
+        const bodyRaw = await request.json().catch(() => undefined);
+        const parsed = cursoMateriaReasignarProfesorSchema.safeParse(bodyRaw);
+        if (!parsed.success) {
+            return NextResponse.json(
+                {
+                    error: {
+                        message: parsed.error.issues[0]?.message ?? "Datos inválidos",
+                        code: ERROR_CODES.VALIDATION_ERROR,
+                    },
+                },
+                { status: 400 },
+            );
+        }
+
+        const curso = await verificarPropiedadCurso(user.id, cursoId);
+        const repo = new CursoMateriaRepository();
+        const actual = await repo.obtenerPorId(curso.colegioId, materiaId);
+        if (!actual || actual.cursoId !== cursoId) {
+            return NextResponse.json(
+                { error: { message: "Vínculo no encontrado", code: ERROR_CODES.NOT_FOUND } },
+                { status: 404 },
+            );
+        }
+
+        const actualizado = await repo.reasignarProfesor(curso.colegioId, materiaId, parsed.data.profesorId);
+
+        const { ipAddress, userAgent } = getClientInfo(request);
+        await logAudit({
+            accion: "COLEGIO_CURSO_MATERIA_ACTUALIZADA",
+            tipoRecurso: "CursoMateria",
+            recursoId: materiaId,
+            usuarioId: user.id,
+            colegioId: user.colegioId ?? undefined,
+            valorAnterior: JSON.stringify({ profesorId: actual.profesorId }),
+            valorNuevo: JSON.stringify({ profesorId: parsed.data.profesorId }),
+            ipAddress,
+            userAgent,
+        });
+
+        return NextResponse.json({ vinculo: actualizado });
+    } catch (error) {
         return errorToResponse(error, "[COLEGIO/CURSO/MATERIAS]");
     }
 }

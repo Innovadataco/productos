@@ -222,20 +222,9 @@ export function ReporteWizard({
 
     return (
         <div className="mx-auto max-w-xl">
-            {/* SPEC-295 (I-146): banner de identidad. SPEC-324: el checkbox "anónimo"
-                se retiró — el padre autenticado SIEMPRE reporta con su identidad. El
-                backend ya derivaba esAnonimo de la sesión (route.ts: `const esAnonimo = !user`),
-                así que el checkbox era cosmético/muerto y confundía (candado 26). */}
-            {modoAutenticado && user && user.rol === "PARENT" && (
-                <div className="mb-4 rounded-2xl border border-tinta/10 bg-papel/60 p-4 text-sm">
-                    <p className="text-tinta">
-                        Reportando como{" "}
-                        <span className="font-semibold">{user.nombre ?? user.email}</span>
-                        {user.nombre ? ` <${user.email}>` : ""}
-                    </p>
-                </div>
-            )}
-
+            {/* SPEC-340 (A-68 §2.1): el banner "Reportando como <nombre> <correo>"
+                de SPEC-295 se retiró — Jelkin: no es necesario. La identidad sigue
+                derivándose de la sesión en el backend; nada cambia en los datos. */}
             <div className="mb-6 flex items-center justify-between">
                 {[1, 2, 3].map((s) => (
                     <div key={s} className="flex flex-1 items-center">

@@ -34,9 +34,9 @@ export function calcularSugerenciaHome(input: DatosSugerenciaInput): SugerenciaH
     if (contactosRojo > 0) {
         const plural = contactosRojo === 1 ? "contacto" : "contactos";
         return {
-            texto: `Tienes ${contactosRojo} ${plural} con nivel de atención alto. Revisa los expedientes lo antes posible.`,
-            accionHref: "/dashboard/padre/expedientes",
-            accionTexto: "Ver expedientes",
+            texto: `Tienes ${contactosRojo} ${plural} con nivel de atención alto. Entra a Mis reportes y míralo con calma.`,
+            accionHref: "/mis-reportes",
+            accionTexto: "Ver mis reportes",
             prioridad: "alta",
         };
     }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { verifyAuth } from "@/lib/auth";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
@@ -123,7 +124,12 @@ export async function POST(request: Request) {
             userAgent,
         });
 
-        return NextResponse.json({ curso }, { status: 201 });
+        const res = NextResponse.json({ curso }, { status: 201 });
+        // SPEC-344 (A-69 · C1 · Phase 9-bis): sellar cookie por si este es el
+        // primer curso activo que cierra el Paso 4 (poco probable con seed
+        // de 11 grados, pero cubre el borde de "los inactivaron todos").
+        await sellarCookieSesionEstado(res, user.id);
+        return res;
     } catch (error) {
         return errorToResponse(error, "[COLEGIO/CURSOS]");
     }

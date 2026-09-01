@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { verifyAuth } from "@/lib/auth";
 import { CursoRepository } from "@/lib/dal/repositories/curso";
 import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
@@ -223,7 +224,11 @@ export async function POST(request: Request) {
             };
         });
 
-        return NextResponse.json(resultado, { status: 201 });
+        const res = NextResponse.json(resultado, { status: 201 });
+        // SPEC-344 (A-69 · C1 · Phase 9-bis): sellar cookie — el wizard cierra
+        // simultáneamente los pasos Cursos y Estudiantes del camino.
+        await sellarCookieSesionEstado(res, user.id);
+        return res;
     } catch (error) {
         return errorToResponse(error, "[COLEGIO/CURSOS-UNIFICADO]");
     }

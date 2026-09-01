@@ -25,6 +25,9 @@ type Acudiente = {
     relacion: string;
     telefono: string | null;
     email: string | null;
+    // SPEC-344 (D-acud): documento OPCIONAL del acudiente.
+    documentoTipo?: string | null;
+    documentoNumero?: string | null;
     estado: string;
     identificadores: Identificador[];
 };
@@ -33,7 +36,16 @@ type Plataforma = { id: string; clave: string; nombre: string };
 
 type Mensaje = { type: "success" | "error"; text: string } | null;
 
-const ACUDIENTE_VACIO = { orden: 1 as 1 | 2, nombre: "", relacion: "", telefono: "", email: "" };
+const ACUDIENTE_VACIO = {
+    orden: 1 as 1 | 2,
+    nombre: "",
+    relacion: "",
+    telefono: "",
+    email: "",
+    // SPEC-344 (D-acud): documento del acudiente OPCIONAL (mockup 1.6).
+    documentoTipo: "",
+    documentoNumero: "",
+};
 const IDENTIFICADOR_VACIO = { valor: "", plataformaId: "" };
 
 interface SeccionAcudientesProps {
@@ -96,6 +108,8 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
             relacion: acudiente.relacion,
             telefono: acudiente.telefono ?? "",
             email: acudiente.email ?? "",
+            documentoTipo: acudiente.documentoTipo ?? "",
+            documentoNumero: acudiente.documentoNumero ?? "",
         });
         setEditandoAcudiente(acudiente);
         setModalAcudienteOpen(true);
@@ -118,6 +132,9 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
                     relacion: formAcudiente.relacion.trim(),
                     ...(formAcudiente.telefono.trim() ? { telefono: formAcudiente.telefono.trim() } : {}),
                     ...(formAcudiente.email.trim() ? { email: formAcudiente.email.trim() } : {}),
+                    // SPEC-344 (D-acud): documento opcional — solo viaja si viene.
+                    ...(formAcudiente.documentoTipo.trim() ? { documentoTipo: formAcudiente.documentoTipo.trim() } : {}),
+                    ...(formAcudiente.documentoNumero.trim() ? { documentoNumero: formAcudiente.documentoNumero.trim() } : {}),
                     ...(!editandoAcudiente ? { orden: formAcudiente.orden } : {}),
                 }),
             });
@@ -409,6 +426,22 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
                         value={formAcudiente.email}
                         onChange={(e) => setFormAcudiente({ ...formAcudiente, email: e.target.value })}
                     />
+                    {/* SPEC-344 (D-acud · mockup 1.6): documento OPCIONAL. */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input
+                            label="Tipo de documento (opcional)"
+                            maxLength={20}
+                            value={formAcudiente.documentoTipo}
+                            onChange={(e) => setFormAcudiente({ ...formAcudiente, documentoTipo: e.target.value })}
+                            placeholder="CC, CE, …"
+                        />
+                        <Input
+                            label="Número de documento (opcional)"
+                            maxLength={50}
+                            value={formAcudiente.documentoNumero}
+                            onChange={(e) => setFormAcudiente({ ...formAcudiente, documentoNumero: e.target.value })}
+                        />
+                    </div>
                     <div className="flex items-center gap-3">
                         <Button onClick={guardarAcudiente} isLoading={saving}>
                             Guardar

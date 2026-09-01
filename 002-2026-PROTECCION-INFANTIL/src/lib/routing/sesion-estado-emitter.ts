@@ -8,7 +8,9 @@ import { requireEnv } from "@/lib/env";
 import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { EstadoSuscripcion } from "@prisma/client";
 import { derivarPasoPendiente } from "@/lib/dal/services/camino/estado";
+import { derivarPasoPendienteColegio } from "@/lib/dal/services/camino/estado-colegio";
 import type { PasoPendiente } from "@/lib/camino/pasos";
+import type { PasoPendienteColegio } from "@/lib/camino/pasos-colegio";
 
 /**
  * Construye el valor firmado de la cookie `sesion_estado` para un usuario.
@@ -41,9 +43,16 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
 
     const debeCambiarPassword = Boolean(flag?.debeCambiarPassword);
 
-    // SPEC-339 (A-67): el camino guiado es SOLO del padre. Los demás roles nunca
-    // tienen paso pendiente, así que su experiencia no cambia en absoluto.
-    const pasoCamino: PasoPendiente = rol === "PARENT" ? await derivarPasoPendiente(userId) : null;
+    // SPEC-339 (A-67) + SPEC-344 (A-69 · C1): el camino guiado del padre y del
+    // colegio comparten la MISMA cookie firmada, discriminando por rol. El paso
+    // se DERIVA (no se persiste — regla estado.ts y estado-colegio.ts).
+    // ADMIN / OPERADOR / COMITE_VALIDACION / COMITE_CONVIVENCIA siguen con `null`.
+    const pasoCamino: PasoPendiente | PasoPendienteColegio =
+        rol === "PARENT"
+            ? await derivarPasoPendiente(userId)
+            : rol === "SCHOOL_ADMIN"
+                ? await derivarPasoPendienteColegio(userId)
+                : null;
 
     return firmarSesionEstado(
         { vigencia, requiereConsentimiento, debeCambiarPassword, pasoCamino },

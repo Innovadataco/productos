@@ -19,6 +19,7 @@ import { PaisRepository } from "@/lib/dal/repositories/pais";
 import { CiudadRepository } from "@/lib/dal/repositories/ciudad";
 import { OnboardingColegioRepository } from "@/lib/dal/repositories/onboarding-colegio";
 import { seedMateriasPorDefecto } from "@/lib/colegio/materias-seed";
+import { crearCursosPorDefecto } from "@/lib/colegio/cursos-seed";
 
 const TIMEZONE_BOGOTA = "America/Bogota";
 const DEFAULT_TOKEN_HOURS = 48;
@@ -324,6 +325,10 @@ export class RegistroColegioService {
         });
 
         await seedMateriasPorDefecto(this.db, colegio.id);
+        // SPEC-344 (D-5): al crear el colegio quedan sembrados los 11 grados
+        // del año lectivo vigente. El rector abre el Paso 4 del camino y ya
+        // los ve sin haber digitado nada; puede inactivar los que no aplican.
+        await crearCursosPorDefecto(colegio.id, String(new Date().getFullYear()), this.db);
         await new OnboardingColegioRepository(this.db).crear({ colegioId: colegio.id });
 
         return { colegio, tenant };

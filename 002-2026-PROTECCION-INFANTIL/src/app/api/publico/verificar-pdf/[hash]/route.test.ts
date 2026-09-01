@@ -69,3 +69,54 @@ describe("GET /api/publico/verificar-pdf/[hash]", () => {
         expect(response.status).toBe(404);
     });
 });
+
+// SPEC-351 (T052): el verificador público también resuelve informes del colegio.
+describe("GET /api/publico/verificar-pdf/[hash] · InformeCaso (SPEC-351)", () => {
+    it("hash de InformeCaso → 200 con metadata segura (sin PII del sujeto); anónimo", async () => {
+        const { crearColegioConAdmin, crearPlataforma, crearCurso, crearEstudiante, crearIdentificadorEstudiante } =
+            await import("@/lib/reporte-test-utils");
+        const { colegio, admin } = await crearColegioConAdmin();
+        const plataforma = await crearPlataforma("discord", "Discord", "mensajeria");
+        const curso = await crearCurso(colegio.id);
+        const estudiante = await crearEstudiante(curso.id, colegio.id);
+        const identificador = await crearIdentificadorEstudiante(estudiante.id, { plataformaId: plataforma.id });
+        const reporte = await prisma.reporte.create({
+            data: {
+                identificador: identificador.valor, plataformaId: plataforma.id, texto: "x",
+                fechaIncidente: new Date(), ciudad: "Bogotá", pais: "CO", estado: "CLASIFICADO",
+            },
+        });
+        const alerta = await prisma.alertaColegio.create({
+            data: {
+                colegioId: colegio.id, reporteId: reporte.id, tipoSujeto: "ESTUDIANTE",
+                identificadorEstudianteId: identificador.id,
+                vencimientoSla: new Date(Date.now() + 48 * 3600 * 1000),
+            },
+        });
+        const caso = await prisma.seguimientoCaso.create({ data: { colegioId: colegio.id, alertaId: alerta.id } });
+        const informe = await prisma.informeCaso.create({
+            data: {
+                casoId: caso.id, numeroCorrelativo: 1, anio: 2026,
+                pdfHash: "cafe".padEnd(64, "1"), codigoVerificacion: "abcdef0123456789",
+                firmadoPorNombre: "Rector Verificable", firmadoPorDocumento: "999",
+                firmadoPorId: admin.id, seccionesJson: ["hechos"],
+            },
+        });
+
+        const response = await GET(requestGet(informe.pdfHash), { params: Promise.resolve({ hash: informe.pdfHash }) });
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.tipo).toBe("informe_colegio");
+        expect(body.numeroCorrelativo).toBe(1);
+        expect(body.firmadoPorNombre).toBe("Rector Verificable");
+        // Sin PII del sujeto ni identificadores.
+        expect(JSON.stringify(body)).not.toContain(identificador.valor);
+    });
+
+    it("código de 16 hex del InformeCaso también resuelve", async () => {
+        const informe = await prisma.informeCaso.findFirst({ where: { codigoVerificacion: "abcdef0123456789" } });
+        if (!informe) return; // el test anterior corre primero en el mismo archivo
+        const response = await GET(requestGet("abcdef0123456789"), { params: Promise.resolve({ hash: "abcdef0123456789" }) });
+        expect(response.status).toBe(200);
+    });
+});

@@ -431,4 +431,22 @@ export class UsuarioRepository {
             include: { colegio: true, tenant: true },
         });
     }
+
+    /**
+     * SPEC-344 (A-69 · C1 · Paso 1): actualiza los 5 campos del rector en la
+     * fuente de verdad (Usuario). El reflejo denormalizado en Colegio lo hace
+     * el ColegioRepository.actualizarRepresentanteLegal.
+     */
+    actualizarDatosRector(
+        id: string,
+        datos: {
+            documentoTipo: string;
+            documentoNumero: string;
+            nombre: string;
+            apellidos: string;
+            telefono: string;
+        },
+    ) {
+        return this.db.usuario.update({ where: { id }, data: datos });
+    }
 }

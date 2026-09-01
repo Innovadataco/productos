@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
 import { ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { InformeConsolidadoRepository } from "@/lib/dal/repositories/informe-consolidado-repository";
+import { buscarInformePadrePorHash, buscarInformePadrePorCodigo } from "@/lib/dal/services/informes-padre";
+import { buscarInformeCasoPorHash, buscarInformeCasoPorCodigo } from "@/lib/dal/services/informes-caso";
 
 export async function GET(request: Request, { params }: { params: Promise<{ hash: string }> }) {
     try {
@@ -32,19 +34,51 @@ export async function GET(request: Request, { params }: { params: Promise<{ hash
             );
         }
 
+        // SPEC-340: TRES búsquedas sobre el mismo contrato de respuesta —
+        // el informe de comité (SPEC-234, por hash), el informe del PADRE por
+        // hash (sha256 del archivo: la integridad byte a byte), y el informe
+        // del padre por su CÓDIGO impreso (los 16 hex del pie: lo que una
+        // autoridad teclea desde el papel).
         const informe = await new InformeConsolidadoRepository().obtenerPorHash(hash);
-        if (!informe) {
-            return NextResponse.json(
-                { error: { message: "Informe no encontrado", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
+        if (informe) {
+            return NextResponse.json({
+                expedienteId: informe.expedienteId,
+                versionSecuencial: informe.versionSecuencial,
+                pdfGeneradoEn: informe.pdfGeneradoEn?.toISOString() ?? null,
+            });
         }
 
-        return NextResponse.json({
-            expedienteId: informe.expedienteId,
-            versionSecuencial: informe.versionSecuencial,
-            pdfGeneradoEn: informe.pdfGeneradoEn?.toISOString() ?? null,
-        });
+        const informePadre =
+            (await buscarInformePadrePorHash(hash)) ??
+            (hash.length === 16 ? await buscarInformePadrePorCodigo(hash) : null);
+        if (informePadre) {
+            // Mismo shape mínimo: sin identificadores, sin nombres, sin URLs.
+            return NextResponse.json({
+                expedienteId: informePadre.expedienteId,
+                versionSecuencial: informePadre.numeroSecuencial,
+                pdfGeneradoEn: informePadre.generadoEn.toISOString(),
+            });
+        }
+
+        // SPEC-351: informe firmado del colegio — metadata segura, sin PII del sujeto.
+        const informeCaso =
+            (await buscarInformeCasoPorHash(hash)) ??
+            (hash.length === 16 ? await buscarInformeCasoPorCodigo(hash) : null);
+        if (informeCaso) {
+            return NextResponse.json({
+                tipo: "informe_colegio",
+                casoId: informeCaso.casoId,
+                numeroCorrelativo: informeCaso.numeroCorrelativo,
+                anio: informeCaso.anio,
+                pdfGeneradoEn: informeCaso.generadoEn.toISOString(),
+                firmadoPorNombre: informeCaso.firmadoPorNombre,
+            });
+        }
+
+        return NextResponse.json(
+            { error: { message: "Informe no encontrado", code: ERROR_CODES.NOT_FOUND } },
+            { status: 404 }
+        );
     } catch {
         return NextResponse.json(
             { error: { message: "Error interno", code: ERROR_CODES.INTERNAL_ERROR } },

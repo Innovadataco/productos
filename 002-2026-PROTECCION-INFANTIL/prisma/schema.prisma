@@ -136,6 +136,8 @@ enum AccionAudit {
   COLEGIO_MATERIA_REACTIVADA
   COLEGIO_CURSO_MATERIA_CREADA
   COLEGIO_CURSO_MATERIA_DESACTIVADA
+  // SPEC-344 (A-69 · C1 · FR-031): reasignación en línea del profesor de una materia.
+  COLEGIO_CURSO_MATERIA_ACTUALIZADA
   COLEGIO_ALUMNO_CREADO
   COLEGIO_ALUMNO_EDITADO
   COLEGIO_ALUMNO_DESACTIVADO
@@ -641,6 +643,10 @@ model Usuario {
   simulacionesAbuso                SimulacionAbusoRun[]
   // SPEC-230 (002-PI-130): expedientes del padre.
   expedientes                      Expediente[]
+  // SPEC-340: informes del expediente generados por este padre.
+  informesPadre                    InformePadre[]                  @relation("InformesPadreGenerados")
+  // SPEC-351: informes de caso del colegio firmados por este usuario (rector).
+  informesCasoFirmados             InformeCaso[]                   @relation("InformesCasoFirmados")
   // SPEC-206 (002-PI-120): sesiones activas del usuario.
   sesionesLog                      SesionLog[]
   // SPEC-241 (002-PI-144): traza inmutable de aceptaciones de consentimiento.
@@ -773,13 +779,23 @@ model TokenRecuperacion {
 /// existe; se crea al completar. Del token se guarda SOLO el hash — el valor en
 /// claro viaja en el enlace del correo y nunca se persiste.
 model TokenRegistro {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   email         String
   tokenHash     String
   expiraEn      DateTime
-  usado         Boolean  @default(false)
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  usado         Boolean    @default(false)
+  // SPEC-344 (A-69 · C1): registro por enlace compartido padre + colegio.
+  // Los tokens existentes quedan como PARENT (default) — coherente: SPEC-339
+  // solo emitía tokens para padres. Nuevas emisiones del colegio llevan
+  // SCHOOL_ADMIN. `completar` fuerza el rol del token, no confía en el cliente.
+  rol           RolUsuario @default(PARENT)
+  // SPEC-344 · datos EXTRA para tokens del colegio (nombre y NIT). Se guardan
+  // al solicitar el enlace y se recuperan al completar — evita re-pedirlos al
+  // rector y evita exponer el NIT en la URL del enlace. Nulos para PARENT.
+  nombreColegio String?
+  nit           String?
+  creadoEn      DateTime   @default(now())
+  actualizadoEn DateTime   @updatedAt
 
   @@index([email])
   @@index([tokenHash])
@@ -1138,6 +1154,9 @@ model Colegio {
   finServicio                      DateTime?
   tipoPeriodo                      TipoPeriodoServicio
   estado                           String              @default("activo")
+  // SPEC-351 (A-69 · D1): clave del escudo institucional cargado en Configuración
+  // (solo PNG/JPG, ≤500 KB). Los informes firmados salen membreteados con él.
+  escudoAssetKey                   String?
   tenantId                         String              @unique
   creadoEn                         DateTime            @default(now())
   actualizadoEn                    DateTime            @updatedAt
@@ -1349,6 +1368,12 @@ model AcudienteEstudiante {
   relacion     String // "madre" | "padre" | "tía" | … (texto libre corto)
   telefono     String?
   email        String?
+  // SPEC-344 (A-69 · C1) · D-acud: documento del acudiente OPCIONAL (mockup 1.6).
+  // Sin unicidad nueva — el mismo documento puede repetirse (padre con varios
+  // hijos). El tipo se valida contra el catálogo TipoDocumento activo cuando
+  // viene; ausente = ausente.
+  documentoTipo   String?
+  documentoNumero String?
   estado       String   @default("activo") // activo | inactivo
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -1599,9 +1624,13 @@ model SeguimientoCaso {
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
-  colegio Colegio           @relation(fields: [colegioId], references: [id])
-  alerta  AlertaColegio     @relation(fields: [alertaId], references: [id])
-  notas   NotaSeguimiento[]
+  colegio    Colegio              @relation(fields: [colegioId], references: [id])
+  alerta     AlertaColegio        @relation(fields: [alertaId], references: [id])
+  notas      NotaSeguimiento[]
+  // SPEC-350 (A-69 C3): análisis IA del caso (misma tubería de SPEC-341).
+  analisisIa AnalisisExpediente[]
+  // SPEC-351 (A-69 C5): informes firmados del caso (historial inmutable).
+  informes   InformeCaso[]
 
   @@index([colegioId, estado])
 }
@@ -1797,7 +1826,16 @@ model Reporte {
   // SPEC-230 (002-PI-130): relación inversa para EventoExpediente.
   // Autorizado por ZEUS: no modifica columnas de la tabla reportes.
   eventos                  EventoExpediente[]
+  // SPEC-340 (A-68 · hallazgo T002): la CADENA gana casa propia. Antes la
+  // vinculación solo existía como EventoExpediente (exigía expediente) — con el
+  // expediente ahora manual (botón del padre), la cadena vive en el reporte:
+  // null = principal o suelto; con valor = evento de esa cadena. SetNull: si el
+  // principal cae por disputa, los eventos quedan ("se muestra lo que queda").
+  reportePrincipalId       String?
+  reportePrincipal         Reporte?            @relation("CadenaReportes", fields: [reportePrincipalId], references: [id], onDelete: SetNull)
+  eventosDeCadena          Reporte[]           @relation("CadenaReportes")
 
+  @@index([reportePrincipalId])
   @@index([identificador, plataformaId])
   @@index([estado])
   @@index([usuarioId, identificador])
@@ -2535,6 +2573,10 @@ model Expediente {
   fechaCierre                     DateTime?        @db.Timestamptz(6)
   fechaEscalado                   DateTime?        @db.Timestamptz(6)
   estado                          EstadoExpediente
+  // SPEC-340 (A-68 §4): quién creó el expediente. "AUTOMATICO" = los legados de
+  // SPEC-323 (la creación al 2º reporte, DEROGADA); "PADRE" = el botón. El
+  // default documenta el pasado sin backfill.
+  origenCreacion                  String           @default("AUTOMATICO")
   scoreGravedadActual             ScoreGravedad    @default(VERDE)
   categoriasDominantesJson        Json?
   numEventos                      Int              @default(0)
@@ -2557,6 +2599,10 @@ model Expediente {
   // SPEC-239 (002-PI-mega-cola): SLA efectivo y marca de escalamiento a ROJO.
   slaEfectivoHoras       Int?
   fechaEscaladoRojoEn    DateTime?             @db.Timestamptz(6)
+  // SPEC-340: historial inmutable de informes del padre.
+  informesPadre          InformePadre[]
+  // SPEC-341 (A-68 §4.4 capa 2): análisis IA en fila del expediente.
+  analisisIa             AnalisisExpediente[]
 
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
@@ -2594,6 +2640,28 @@ model EventoExpediente {
 // SPEC-234 (002-PI-134): informe consolidado de un expediente padre. Resultado
 // inmutable de la compilación; cada versión conserva el estado del expediente en
 // un momento dado. NUNCA incluye texto original de reportes.
+/// SPEC-340 (A-68 §4.3) · el historial INMUTABLE de informes del padre.
+///
+/// NO es InformeConsolidado: aquel es del flujo de COMITÉ y arrastra score y
+/// estado de aprobación — prohibidos para el padre (nada de puntajes). Este
+/// registro no tiene campos editables y su servicio solo crea y lista: no
+/// existe update ni delete en ninguna capa. "Es parte de la evidencia."
+model InformePadre {
+  id                 String   @id @default(cuid())
+  expedienteId       String
+  numeroSecuencial   Int
+  pdfHash            String   @unique
+  codigoVerificacion String
+  generadoEn         DateTime @default(now()) @db.Timestamptz(6)
+  generadoPorId      String
+
+  expediente  Expediente @relation(fields: [expedienteId], references: [id])
+  generadoPor Usuario    @relation("InformesPadreGenerados", fields: [generadoPorId], references: [id])
+
+  @@unique([expedienteId, numeroSecuencial])
+  @@index([expedienteId, generadoEn(sort: Desc)])
+}
+
 model InformeConsolidado {
   id                             String             @id @default(cuid())
   expedienteId                   String
@@ -2692,7 +2760,9 @@ model GuiaAccionCategoria {
   publicadaEn           DateTime?        @db.Timestamptz(6)
   reemplazadaEn         DateTime?        @db.Timestamptz(6)
 
-  creadaPor Usuario @relation(fields: [creadaPorAdminId], references: [id])
+  creadaPor         Usuario              @relation(fields: [creadaPorAdminId], references: [id])
+  // SPEC-341: análisis IA que la resuelven como "Qué puedes hacer ahora".
+  analisisQueLaUsan AnalisisExpediente[]
 
   @@index([categoria, estado])
   @@index([estado])
@@ -3105,4 +3175,85 @@ model EjecucionAccion {
   @@index([reglaId, ejecutadaEn])
   @@index([estado, ejecutadaEn])
   @@map("ejecuciones_accion")
+}
+
+// SPEC-341 (A-68 §4.4 capa 2): análisis IA en fila del expediente.
+// Uno vigente PUBLICADO por expediente + histórico inmutable (auditoría
+// permanente). Se dispara al abrir el expediente si el hash de la cadena
+// cambió; se atiende de a uno vía pg-boss con prioridad menor que la
+// clasificación de reportes. Ver specs/341-inteligencia-expediente/.
+model AnalisisExpediente {
+  id                 String             @id @default(cuid())
+  // SPEC-350 (A-69 C3): el análisis puede ser de un expediente del PADRE o de
+  // un caso del COLEGIO. XOR: exactamente uno de expedienteId/seguimientoCasoId
+  // — CHECK constraint crudo en la migración (Prisma no lo expresa) + guard en
+  // el DAL. expedienteId era NOT NULL; pasa a nullable por esta razón.
+  expedienteId       String?
+  seguimientoCasoId  String?
+  versionSecuencial  Int
+  alcance            AlcanceAnalisis
+  hashCadena         String
+  corteN             Int
+  texto              String             @db.Text
+  categoriaDominante CategoriaConducta?
+  guiaAccionId       String?
+  modeloUsado        String
+  promptSistemaHash  String
+  latenciaMs         Int
+  estado             EstadoAnalisis     @default(GENERANDO)
+  motivoFallo        String?
+  generadoEn         DateTime           @default(now()) @db.Timestamptz(6)
+  publicadoEn        DateTime?          @db.Timestamptz(6)
+
+  expediente      Expediente?          @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  seguimientoCaso SeguimientoCaso?     @relation(fields: [seguimientoCasoId], references: [id], onDelete: Cascade)
+  guiaAccion      GuiaAccionCategoria? @relation(fields: [guiaAccionId], references: [id])
+
+  @@unique([expedienteId, versionSecuencial])
+  @@unique([seguimientoCasoId, versionSecuencial])
+  @@index([expedienteId, estado])
+  @@index([expedienteId, hashCadena, estado])
+  @@index([expedienteId, versionSecuencial(sort: Desc)])
+  @@index([seguimientoCasoId, estado])
+  @@index([seguimientoCasoId, hashCadena, estado])
+  @@index([estado, generadoEn])
+}
+
+enum AlcanceAnalisis {
+  PADRE_COMPLETO
+  COLEGIO_BLINDADO
+}
+
+enum EstadoAnalisis {
+  GENERANDO
+  PUBLICADO
+  FALLIDO
+}
+
+// SPEC-351 (A-69 · C5): informe firmado del rector — PDF membreteado del caso.
+// INMUTABLE: sin update ni delete en ninguna capa (regla A-68); si el rector
+// se equivoca, genera otro. Correlativo INF-AAAA-NNNN por caso y por año
+// (Bogotá), serializado con pg_advisory_xact_lock (patrón I-208).
+model InformeCaso {
+  id                  String   @id @default(cuid())
+  casoId              String
+  numeroCorrelativo   Int
+  anio                Int
+  pdfHash             String   @unique
+  codigoVerificacion  String   @unique
+  firmadoPorNombre    String
+  firmadoPorDocumento String
+  firmadoPorId        String
+  escudoAssetKey      String?
+  seccionesJson       Json
+  generadoEn          DateTime @default(now()) @db.Timestamptz(6)
+
+  // Audit #221 · ajuste 3 (decisión CEO): SIN Cascade — un informe es evidencia
+  // y no se arrastra en silencio (alineado con InformePadre). Los scripts de
+  // limpieza lo borran explícito ANTES del caso.
+  caso       SeguimientoCaso @relation(fields: [casoId], references: [id])
+  firmadoPor Usuario         @relation("InformesCasoFirmados", fields: [firmadoPorId], references: [id])
+
+  @@unique([casoId, anio, numeroCorrelativo])
+  @@index([casoId, generadoEn(sort: Desc)])
 }

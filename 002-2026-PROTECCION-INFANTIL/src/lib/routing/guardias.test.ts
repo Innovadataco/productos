@@ -11,6 +11,7 @@ import {
     esRutaSesion,
     esExentaConsentimiento,
     esExentaCambiarPassword,
+    esExentaCamino,
     esExentaVigencia,
     destinoVigencia,
     tieneVigencia,
@@ -123,5 +124,71 @@ describe("tieneVigencia y esExentaVigencia", () => {
     it("destinoVigencia devuelve la URL configurada por rol", () => {
         expect(destinoVigencia("PARENT")).toBe("/dashboard/padre/suscripcion");
         expect(destinoVigencia("SCHOOL_ADMIN")).toBe("/dashboard/colegio/suscripcion");
+    });
+});
+
+// SPEC-346 (I-234 · recorrido en vivo 340): el sello del PDF exige que
+// /api/publico/** y /verificar/** sean alcanzables SIN JWT. Sin este candado,
+// una autoridad no puede verificar el documento.
+describe("SPEC-346 · rutas del sello público del PDF", () => {
+    it("/api/publico/verificar-pdf/<hash> es pública (sin auth)", () => {
+        expect(esRutaPublica("/api/publico/verificar-pdf/abc123")).toBe(true);
+    });
+
+    it("/api/publico/guia-accion/categoria/<cat> es pública", () => {
+        expect(esRutaPublica("/api/publico/guia-accion/categoria/CONTACTO_INSISTENTE")).toBe(true);
+    });
+
+    it("/verificar/<codigo> es pública (la página del sello)", () => {
+        expect(esRutaPublica("/verificar/abc123def")).toBe(true);
+    });
+
+    it("guard negativo — /api/padre/foo NO es pública", () => {
+        expect(esRutaPublica("/api/padre/foo")).toBe(false);
+    });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// SPEC-344 (A-69 · C1) — exenciones del camino del colegio + invariante cruzada
+// generalizada por rol. La invariante corre al IMPORT del módulo (si alguien
+// quita una exención, TODA la suite revienta al cargar); estos casos blindan
+// además las decisiones concretas contra ediciones accidentales.
+// ────────────────────────────────────────────────────────────────────────────
+describe("SPEC-344 · camino del colegio (esExentaCamino por rol)", () => {
+    it("las rutas del camino colegio están exentas PARA SCHOOL_ADMIN", () => {
+        for (const ruta of [
+            "/camino/colegio/rector",
+            "/api/colegio/suscripcion/activar-freemium",
+            "/api/colegio/carga-profesores/validar",
+            "/dashboard/colegio/cursos/unificado",
+            "/reportar",
+            "/api/sesion/al-dia",
+        ]) {
+            expect(esExentaCamino(ruta, "SCHOOL_ADMIN"), `${ruta} debería estar exenta`).toBe(true);
+        }
+    });
+
+    it("los módulos del colegio NO están exentos para SCHOOL_ADMIN (el guardián los tapa)", () => {
+        for (const ruta of ["/dashboard/colegio", "/dashboard/colegio/tablero", "/api/colegio/estadisticas"]) {
+            expect(esExentaCamino(ruta, "SCHOOL_ADMIN"), `${ruta} NO debería estar exenta`).toBe(false);
+        }
+    });
+
+    it("sin rol (callers legacy) usa la lista del padre — comportamiento SPEC-339 intacto", () => {
+        expect(esExentaCamino("/api/padre/hijos")).toBe(true);
+        expect(esExentaCamino("/api/colegio/profesores")).toBe(false);
+    });
+
+    it("vigencia.SCHOOL_ADMIN.exentas cubre TODOS los destinos del camino colegio (anti-bucle I-25/I-111/I-141)", () => {
+        for (const destino of [
+            "/camino/colegio",
+            "/api/colegio/rector",
+            "/api/colegio/suscripcion",
+            "/api/colegio/profesores",
+            "/api/colegio/cursos",
+            "/api/colegio/alumnos",
+        ]) {
+            expect(esExentaVigencia(destino, "SCHOOL_ADMIN"), `${destino} sin exención de vigencia = bucle`).toBe(true);
+        }
     });
 });

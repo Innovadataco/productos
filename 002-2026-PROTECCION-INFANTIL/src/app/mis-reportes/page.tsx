@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MisReportesList } from "@/components/modules/MisReportesList";
+import { MisReportesCadenas } from "@/components/modules/padre/MisReportesCadenas";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
@@ -85,7 +86,11 @@ export default function MisReportesPage() {
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-body">Mis reportes</h1>
-                <p className="mt-1 text-sm text-muted">Consulta el estado de los reportes que has realizado.</p>
+                <p className="mt-1 text-sm text-muted">
+                    {user?.rol === "PARENT"
+                        ? "Cada reporte con sus eventos, su análisis y lo que otros han reportado."
+                        : "Consulta el estado de los reportes que has realizado."}
+                </p>
             </div>
 
             {isLoading ? (
@@ -98,6 +103,9 @@ export default function MisReportesPage() {
                     description="Ocurrió un problema al consultar la información. Intenta recargar la página."
                     onRetry={() => window.location.reload()}
                 />
+            ) : user?.rol === "PARENT" ? (
+                // SPEC-340 (§3.1): el padre ve UNA tarjeta por cadena.
+                <MisReportesCadenas />
             ) : (
                 <MisReportesList items={items} />
             )}

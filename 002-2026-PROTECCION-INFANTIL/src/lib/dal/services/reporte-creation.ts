@@ -42,8 +42,9 @@ export interface CrearReporteInput {
     estadoInicial: EstadoInicialReporte;
     prioridadAlta: boolean;
     keywordsDetectadas: string[];
-    // SPEC-323: vinculación intencional. El cliente lo incluye tras aceptar la
-    // oferta de expediente para el 2º (y posteriores) reportes del mismo identificador.
+    // SPEC-323 → SPEC-340: vinculación intencional. El cliente lo incluye tras
+    // aceptar la oferta de CADENA para el 2º (y posteriores) reportes del mismo
+    // identificador (el expediente ya no nace acá — lo crea el padre con el botón).
     reportePrevioId?: string | undefined;
 }
 

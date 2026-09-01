@@ -38,21 +38,25 @@ describe("CursoMateriaRepository", () => {
         expect(lista[0].materia.nombre).toBe("Matemáticas");
     });
 
-    it("crea vínculo sin profesor", async () => {
+    // SPEC-344 (A-69 · D3): "Toda materia con profesor, sin excepción" — el
+    // comportamiento viejo (vínculo sin profesor) quedó PROHIBIDO por decisión
+    // de Jelkin. Test renombrado con assert fuerte del nuevo contrato.
+    it("rechaza vínculo sin profesor (D3 · SPEC-344)", async () => {
         const { colegio, curso, materia } = await setup();
         const repo = new CursoMateriaRepository();
 
-        const vinculo = await repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id });
-        expect(vinculo.profesorId).toBeNull();
-        expect(vinculo.profesor).toBeNull();
+        await expect(repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id })).rejects.toMatchObject({
+            statusCode: 400,
+            message: "Toda materia debe llevar un profesor a cargo",
+        });
     });
 
     it("rechaza duplicado (curso, materia) activo", async () => {
-        const { colegio, curso, materia } = await setup();
+        const { colegio, curso, materia, profesor } = await setup();
         const repo = new CursoMateriaRepository();
-        await repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id });
+        await repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id, profesorId: profesor.id });
 
-        await expect(repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id })).rejects.toMatchObject({ statusCode: 409 });
+        await expect(repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id, profesorId: profesor.id })).rejects.toMatchObject({ statusCode: 409 });
     });
 
     it("rechaza curso de otro colegio", async () => {
@@ -61,14 +65,15 @@ describe("CursoMateriaRepository", () => {
         const otroCurso = await crearCurso(otroColegio.id, { nombre: "7B" });
         const materia = await new MateriaRepository().crear(colegio.id, "Física");
 
-        await expect(new CursoMateriaRepository().crear(colegio.id, { cursoId: otroCurso.id, materiaId: materia.id })).rejects.toMatchObject({ statusCode: 404 });
+        const profesorPropio = await crearProfesor(colegio.id);
+        await expect(new CursoMateriaRepository().crear(colegio.id, { cursoId: otroCurso.id, materiaId: materia.id, profesorId: profesorPropio.id })).rejects.toMatchObject({ statusCode: 404 });
     });
 
     it("rechaza materia inactiva", async () => {
-        const { colegio, curso, materia } = await setup();
+        const { colegio, curso, materia, profesor } = await setup();
         await new MateriaRepository().cambiarEstado(colegio.id, materia.id, "inactivo");
 
-        await expect(new CursoMateriaRepository().crear(colegio.id, { cursoId: curso.id, materiaId: materia.id })).rejects.toMatchObject({ statusCode: 409 });
+        await expect(new CursoMateriaRepository().crear(colegio.id, { cursoId: curso.id, materiaId: materia.id, profesorId: profesor.id })).rejects.toMatchObject({ statusCode: 409 });
     });
 
     it("rechaza profesor inactivo", async () => {
@@ -79,13 +84,14 @@ describe("CursoMateriaRepository", () => {
     });
 
     it("listarPorCurso filtra por colegio", async () => {
-        const { colegio, curso, materia } = await setup();
+        const { colegio, curso, materia, profesor } = await setup();
         const { colegio: otroColegio } = await crearColegioConAdmin();
         const otroCurso = await crearCurso(otroColegio.id, { nombre: "7B" });
         const otraMateria = await new MateriaRepository().crear(otroColegio.id, "Matemáticas");
+        const otroProfesor = await crearProfesor(otroColegio.id);
         const repo = new CursoMateriaRepository();
-        await repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id });
-        await repo.crear(otroColegio.id, { cursoId: otroCurso.id, materiaId: otraMateria.id });
+        await repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id, profesorId: profesor.id });
+        await repo.crear(otroColegio.id, { cursoId: otroCurso.id, materiaId: otraMateria.id, profesorId: otroProfesor.id });
 
         expect((await repo.listarPorCurso(colegio.id, curso.id))).toHaveLength(1);
         expect((await repo.listarPorCurso(otroColegio.id, otroCurso.id))).toHaveLength(1);
@@ -103,10 +109,10 @@ describe("CursoMateriaRepository", () => {
     });
 
     it("obtenerPorId devuelve null para id ajeno", async () => {
-        const { colegio, curso, materia } = await setup();
+        const { colegio, curso, materia, profesor } = await setup();
         const { colegio: otroColegio } = await crearColegioConAdmin();
         const repo = new CursoMateriaRepository();
-        const vinculo = await repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id });
+        const vinculo = await repo.crear(colegio.id, { cursoId: curso.id, materiaId: materia.id, profesorId: profesor.id });
 
         expect(await repo.obtenerPorId(colegio.id, vinculo.id)).not.toBeNull();
         expect(await repo.obtenerPorId(otroColegio.id, vinculo.id)).toBeNull();

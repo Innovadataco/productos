@@ -76,6 +76,16 @@ export async function borrarReporte(
     }
 
     return client.$transaction(async (tx) => {
+        // SPEC-340: si el borrado es de un PRINCIPAL de cadena, sus eventos quedan
+        // sueltos explícitamente (coherente con el onDelete: SetNull de la FK; acá
+        // se hace visible y contable en el log de limpieza).
+        const cadenaDesv = await tx.reporte.updateMany({
+            where: { reportePrincipalId: reporteId },
+            data: { reportePrincipalId: null },
+        });
+        if (cadenaDesv.count > 0) {
+            log("borrar-reporte", `  · Eventos de cadena desvinculados (reportePrincipalId→null): ${cadenaDesv.count}`);
+        }
         // Desvincular EventoExpediente ANTES de borrar el Reporte — reporteId es nullable
         // (RESTRICT sin onDelete); el evento debe sobrevivir vinculado al expediente.
         const evDesv = await tx.eventoExpediente.updateMany({

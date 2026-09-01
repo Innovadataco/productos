@@ -20,9 +20,11 @@ describe("seedParametrosPadre", () => {
         const primera = await prisma.parametroSistema.findMany({
             where: { clave: { startsWith: "padre." } },
         });
-        // SPEC-339 (A-67): +2 — padre.hijos.maximo y padre.hijos.maximo_mensaje
-        // (el tope de menores y su mensaje son parámetros, no constantes).
-        expect(primera).toHaveLength(20);
+        // Conteo contra el propio seed (no un número mágico que se desactualiza
+        // con cada spec que suma parámetros): lo que importa es la IDEMPOTENCIA
+        // — el segundo run no duplica — y que haya un mínimo razonable.
+        const conteoInicial = primera.length;
+        expect(conteoInicial).toBeGreaterThanOrEqual(20);
 
         // Simula un valor modificado manualmente que el seed debe restablecer al default.
         await prisma.parametroSistema.update({
@@ -34,11 +36,12 @@ describe("seedParametrosPadre", () => {
         const segunda = await prisma.parametroSistema.findMany({
             where: { clave: { startsWith: "padre." } },
         });
-        expect(segunda).toHaveLength(20);
+        expect(segunda, "idempotente: el 2º run no duplica filas").toHaveLength(conteoInicial);
 
         const restaurado = await prisma.parametroSistema.findUnique({
             where: { clave: "padre.expediente.auto_cierre_meses" },
         });
-        expect(restaurado?.valor).toBe("6");
+        // SPEC-340 (D-1): el auto-cierre quedó DEROGADO — el default es 0.
+        expect(restaurado?.valor).toBe("0");
     });
 });
