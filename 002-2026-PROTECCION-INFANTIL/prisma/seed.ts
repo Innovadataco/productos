@@ -4036,6 +4036,71 @@ async function seedEventosRecompensa() {
         });
     }
     console.log("[SEED] Catálogo Motor Notif bono.entregado_recompensa listo (SPEC-246)");
+
+    // ── SPEC-341 (A-68 §4.4 capa 2) · parámetros del análisis IA en fila ────────
+    // Sembrados COMPLETOS con valor por defecto — regla de la casa (§1.4):
+    // los umbrales viven en ParametroSistema, jamás en el código. Admin edita
+    // después; el Dev no vuelve a preguntar a Jelkin cada vez.
+    const modeloEmbudo = (await prisma.parametroSistema.findUnique({
+        where: { clave: "ia.rubrica.modelo_embudo" },
+    }))?.valor ?? "qwen2.5:14b";
+
+    const promptSistemaPadre = [
+        "Sos el análisis asistido del expediente de un padre.",
+        "Describís PATRONES observados en los datos calculados, nunca acusás a nadie.",
+        "No inventás hechos: solo hablás de lo que aparece en el input.",
+        "Voz cálida y clara, en tuteo, entre 120 y 220 palabras.",
+        "Cerrás sin diagnóstico, sin score, sin veredicto:",
+        "dejás la lectura para que el padre decida.",
+    ].join(" ");
+
+    const promptSistemaColegio = [
+        "Análisis asistido de patrones institucionales anónimos.",
+        "NUNCA nombrás personas ni identificadores; hablás por curso, franja horaria y plataforma.",
+        "Voz técnica y descriptiva; sin recomendación clínica.",
+    ].join(" ");
+
+    const frasesProhibidas = JSON.stringify([
+        "podría ser un depredador",
+        "es un caso claro de",
+        "estamos seguros de que",
+        "sugiere abuso",
+        "alto riesgo confirmado",
+        "conducta criminal",
+        "perpetrador identificado",
+        "sin duda",
+    ]);
+
+    const parametrosAnalisis: Array<{ clave: string; valor: string; tipo: TipoParametro; descripcion: string }> = [
+        { clave: "padre.analisis.max_concurrentes", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Analisis IA concurrentes máximos (R16 · Mac de prod)" },
+        { clave: "padre.analisis.cooldown_min", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Cool-down del botón Actualizar análisis (minutos)" },
+        { clave: "padre.analisis.tiempo_estimado_seg", valor: "90", tipo: TipoParametro.INTEGER, descripcion: "Segundos que suele tomar generar un análisis (para el aviso al padre)" },
+        { clave: "padre.analisis.tope_fila", valor: "50", tipo: TipoParametro.INTEGER, descripcion: "Máximo de jobs vivos en la cola del análisis" },
+        { clave: "padre.analisis.ttl_horas", valor: "168", tipo: TipoParametro.INTEGER, descripcion: "TTL del análisis vigente (horas); pasado esto se regenera al abrir aunque el hash coincida" },
+        { clave: "padre.analisis.prioridad", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Prioridad pg-boss del análisis (< prioridad de clasificación de reportes)" },
+        { clave: "padre.analisis.modelo", valor: modeloEmbudo, tipo: TipoParametro.STRING, descripcion: "Modelo Ollama para el análisis capa 2 (se lee del embudo por defecto)" },
+        { clave: "padre.analisis.prompt_sistema", valor: promptSistemaPadre, tipo: TipoParametro.STRING, descripcion: "Prompt de sistema del análisis del padre (voz brief A-68 §4.4)" },
+        { clave: "padre.analisis.frases_prohibidas_json", valor: frasesProhibidas, tipo: TipoParametro.JSON, descripcion: "Lista JSON de frases interpretativas prohibidas — la salida del modelo se rechaza si aparece alguna" },
+        { clave: "colegio.analisis.max_concurrentes", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Analisis IA concurrentes del colegio (C3, futuro)" },
+        { clave: "colegio.analisis.modelo", valor: modeloEmbudo, tipo: TipoParametro.STRING, descripcion: "Modelo Ollama para el análisis del colegio (C3)" },
+        { clave: "colegio.analisis.prompt_sistema", valor: promptSistemaColegio, tipo: TipoParametro.STRING, descripcion: "Prompt de sistema del análisis blindado del colegio (C3)" },
+    ];
+
+    for (const p of parametrosAnalisis) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, tipo: p.tipo, descripcion: p.descripcion },
+            create: {
+                clave: p.clave,
+                valor: p.valor,
+                tipo: p.tipo,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: p.descripcion,
+            },
+        });
+    }
+    console.log(`[SEED] ${parametrosAnalisis.length} parámetros padre.analisis.* / colegio.analisis.* listos (SPEC-341)`);
 }
 
 // Solo ejecutar el seed automáticamente cuando este archivo es el punto de

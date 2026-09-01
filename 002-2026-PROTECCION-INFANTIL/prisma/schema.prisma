@@ -2574,6 +2574,8 @@ model Expediente {
   fechaEscaladoRojoEn    DateTime?             @db.Timestamptz(6)
   // SPEC-340: historial inmutable de informes del padre.
   informesPadre          InformePadre[]
+  // SPEC-341 (A-68 §4.4 capa 2): análisis IA en fila del expediente.
+  analisisIa             AnalisisExpediente[]
 
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
@@ -2731,7 +2733,9 @@ model GuiaAccionCategoria {
   publicadaEn           DateTime?        @db.Timestamptz(6)
   reemplazadaEn         DateTime?        @db.Timestamptz(6)
 
-  creadaPor Usuario @relation(fields: [creadaPorAdminId], references: [id])
+  creadaPor         Usuario              @relation(fields: [creadaPorAdminId], references: [id])
+  // SPEC-341: análisis IA que la resuelven como "Qué puedes hacer ahora".
+  analisisQueLaUsan AnalisisExpediente[]
 
   @@index([categoria, estado])
   @@index([estado])
@@ -3144,4 +3148,48 @@ model EjecucionAccion {
   @@index([reglaId, ejecutadaEn])
   @@index([estado, ejecutadaEn])
   @@map("ejecuciones_accion")
+}
+
+// SPEC-341 (A-68 §4.4 capa 2): análisis IA en fila del expediente.
+// Uno vigente PUBLICADO por expediente + histórico inmutable (auditoría
+// permanente). Se dispara al abrir el expediente si el hash de la cadena
+// cambió; se atiende de a uno vía pg-boss con prioridad menor que la
+// clasificación de reportes. Ver specs/341-inteligencia-expediente/.
+model AnalisisExpediente {
+  id                 String             @id @default(cuid())
+  expedienteId       String
+  versionSecuencial  Int
+  alcance            AlcanceAnalisis
+  hashCadena         String
+  corteN             Int
+  texto              String             @db.Text
+  categoriaDominante CategoriaConducta?
+  guiaAccionId       String?
+  modeloUsado        String
+  promptSistemaHash  String
+  latenciaMs         Int
+  estado             EstadoAnalisis     @default(GENERANDO)
+  motivoFallo        String?
+  generadoEn         DateTime           @default(now()) @db.Timestamptz(6)
+  publicadoEn        DateTime?          @db.Timestamptz(6)
+
+  expediente Expediente           @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  guiaAccion GuiaAccionCategoria? @relation(fields: [guiaAccionId], references: [id])
+
+  @@unique([expedienteId, versionSecuencial])
+  @@index([expedienteId, estado])
+  @@index([expedienteId, hashCadena, estado])
+  @@index([expedienteId, versionSecuencial(sort: Desc)])
+  @@index([estado, generadoEn])
+}
+
+enum AlcanceAnalisis {
+  PADRE_COMPLETO
+  COLEGIO_BLINDADO
+}
+
+enum EstadoAnalisis {
+  GENERANDO
+  PUBLICADO
+  FALLIDO
 }
