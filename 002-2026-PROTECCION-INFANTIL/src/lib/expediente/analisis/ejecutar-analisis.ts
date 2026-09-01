@@ -62,7 +62,20 @@ export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<v
                         fechaEvento: true,
                         categoriaDetectada: true,
                         plataforma: true,
-                        reporte: { select: { ciudad: true, pais: true, edadVictima: true } },
+                        // Audit 615 chars · fix nº2: EventoExpediente.plataforma /
+                        // categoriaDetectada quedan null si el flujo no los rellenó
+                        // (típico: hilo padre sin categoría directa). Los campos
+                        // autoritativos viven en Reporte.
+                        reporte: {
+                            select: {
+                                ciudad: true,
+                                pais: true,
+                                edadVictima: true,
+                                fechaIncidente: true,
+                                plataforma: { select: { clave: true } },
+                                clasificacion: { select: { categoria: true } },
+                            },
+                        },
                     },
                 },
             },
@@ -73,12 +86,20 @@ export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<v
         }
 
         // 2. Mapear hechos al shape del armador de padre.
+        // Audit 615 chars (fix nº1 y nº2):
+        //  · fecha: preferir Reporte.fechaIncidente (día y hora real del hecho,
+        //    la que Jelkin lee en el mockup), no EventoExpediente.fechaEvento
+        //    (que puede coincidir con creadoEn del evento en UTC).
+        //  · plataforma / categoría: cuando el EventoExpediente no las trae,
+        //    tomarlas del Reporte enlazado. En un hilo del padre lo común es
+        //    que la fuente autoritativa sea Reporte.
         const hechos: HechoPadre[] = expediente.eventos.map((e) => ({
-            fecha: e.fechaEvento,
+            fecha: e.reporte?.fechaIncidente ?? e.fechaEvento,
             ciudad: e.reporte?.ciudad ?? null,
             pais: e.reporte?.pais ?? null,
-            plataforma: e.plataforma ?? null,
-            categoria: (e.categoriaDetectada as CategoriaConducta | null) ?? null,
+            plataforma: e.plataforma ?? e.reporte?.plataforma?.clave ?? null,
+            categoria: ((e.categoriaDetectada as CategoriaConducta | null)
+                ?? (e.reporte?.clasificacion?.categoria ?? null)),
             edadReportada: e.reporte?.edadVictima ?? null,
         }));
 
@@ -100,10 +121,14 @@ export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<v
         )) ?? "qwen2.5:14b";
 
         // 5. Llamar al modelo con JSON schema estructurado.
+        // Audit 615 chars · fix nº1: JSON.stringify convierte Date → UTC ISO;
+        // el modelo lee "09:19Z" en vez de "21:15 America/Bogota" y llama a
+        // un incidente nocturno "franja matutina". Serializamos las fechas
+        // a string LEGIBLE en TZ Bogota ANTES de pasar el payload al modelo.
         const inicio = Date.now();
         const { data, metrics } = await llamarOllamaStructured<AnalisisSalida>(
             modelo,
-            JSON.stringify(payload, null, 2),
+            JSON.stringify(payloadParaModelo(payload), null, 2),
             SALIDA_SCHEMA,
             promptSistema
         );
@@ -144,6 +169,33 @@ export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<v
         logger.error(`[analisis] FALLIDO expediente=${expedienteId}: ${motivo}`);
         await cerrarPlaceholderFallando(expedienteId, hashCadena, alcance, "?", "?", 0, motivo).catch(() => null);
     }
+}
+
+/**
+ * SPEC-349 (audit 615 chars) · serializa las fechas del payload en TZ Bogota
+ * ANTES de pasarlo al modelo. Sin esto, `JSON.stringify` las convierte a UTC
+ * y el modelo interpreta "09:19Z" como "franja matutina" cuando el hecho
+ * ocurrió a las 21:15 hora Bogota (noche). Devuelve un objeto plano listo
+ * para stringify — el shape es igual al `PayloadAnalisis` original pero con
+ * `fecha: string`.
+ */
+const fmtFechaBogota = new Intl.DateTimeFormat("es-CO", {
+    dateStyle: "long",
+    timeStyle: "short",
+    timeZone: "America/Bogota",
+});
+
+export function payloadParaModelo(payload: PayloadAnalisis): unknown {
+    if (payload.alcance === "PADRE_COMPLETO") {
+        return {
+            ...payload,
+            hechos: payload.hechos.map((h) => ({
+                ...h,
+                fecha: fmtFechaBogota.format(h.fecha),
+            })),
+        };
+    }
+    return payload; // COLEGIO_BLINDADO no lleva fechas individuales
 }
 
 async function cargarHijoCruzado(padreUsuarioId: string, identificadorReportado: string) {
