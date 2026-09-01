@@ -8,9 +8,10 @@
 - [ ] T002 `npx prisma generate`.
 
 ## Fase 2 · Foundational
-- [ ] T010 [P] `src/lib/colegio/escudo-storage.ts`: helper para guardar/leer el escudo desde `pi_apelaciones_storage/escudos/<colegioId>.<ext>` con validación de tipo y tamaño ≤ 500 KB.
+- [ ] T010 [P] `src/lib/colegio/escudo-storage.ts`: helper para guardar/leer el escudo desde `pi_apelaciones_storage/escudos/<colegioId>.<ext>` con validación SOLO PNG/JPG (SVG prohibido) y tamaño ≤ 500 KB.
 - [ ] T011 [P] `src/lib/caso/pdf-informe-caso.ts`: `generarPdfInformeCaso(datos): Buffer` usando `pdfmake`. Header con escudo + nombre + NIT + fecha (TZ Bogota) + correlativo. Cuerpo por secciones seleccionadas (hechos, actuación con `NotaSeguimiento`, análisis del comité, contexto del curso). Footer con firma del rector + código de verificación de 16 hex y URL `<baseUrl>/verificar/<codigo>`.
 - [ ] T012 [P] Test contract del PDF: verifica que el buffer produce archivo válido, que el header incluye el correlativo formateado y que el footer incluye el código (grep sobre el rawText del PDF).
+- [ ] T013 [P] Test BLINDAJE del PDF (FR-004-bis · candado CEO): generar el informe de un caso demo sembrado con texto de reporte + email/nombre de denunciante conocidos → grep exacto sobre el texto extraíble del PDF = 0 ocurrencias de esos strings. La sección Hechos solo lleva fecha/lugar/clasificación.
 
 ## Fase 3 · US1 · Generar informe (P1)
 - [ ] T030 [US1] `src/lib/dal/services/informes-caso.ts`: `registrarInformeCaso({ casoId, generadoPorId, pdfHash, codigoVerificacion, secciones, anio })` con `pg_advisory_xact_lock(hashtext("informe-caso:"+casoId))` para serializar el correlativo. `buscarInformeCasoPorHash`, `buscarInformeCasoPorCodigo`. NO exporta update/delete (blindaje inmutabilidad).
@@ -33,7 +34,7 @@
 
 ## Fase 6 · Escudo del colegio (D1)
 - [ ] T060 `EscudoColegioUploader.tsx` en Configuración: input file, preview, POST al helper de T010; muestra el escudo guardado.
-- [ ] T061 Test de guard del upload: extensión no permitida → 400; > 500 KB → 400; PNG válido → 200 con la clave del asset guardada.
+- [ ] T061 Test de guard del upload: extensión no permitida → 400; SVG → 400 (prohibido explícito); > 500 KB → 400; PNG válido → 200 con la clave del asset guardada.
 - [ ] T062 Sin escudo cargado, el PDF sale con membrete neutro y aviso en la descarga (FR-002).
 
 ## Fase 7 · Polish

@@ -131,7 +131,9 @@ del rector.
   reinicia el `NNNN` en cada año (`INF-2026-0042`, `INF-2027-0001`).
   Sembrar con SEED que fija el año actual con TZ Bogota.
 - **Escudo pesa demasiado / formato malo**: en Configuración se valida
-  ≤ 500 KB y formatos PNG/JPG/SVG; si falla, el rector ve el error y
+  ≤ 500 KB y formatos SOLO PNG/JPG (SVG prohibido: puede cargar scripts
+  y se incrusta en el PDF y en Configuración — el colegio convierte su
+  logo y ya, decisión CEO 01-09); si falla, el rector ve el error y
   no rompe la generación de informes.
 - **Análisis del comité NO existe** (C4 aún no cerrado o el rector no
   lo pidió): la sección aparece deshabilitada en el panel de selección.
@@ -157,6 +159,15 @@ del rector.
   reutilizando el mecanismo de SPEC-234/341: el código se decide ANTES
   del render, viaja impreso al pie, el hash del BUFFER FINAL se
   registra — jamás entra al PDF).
+- **FR-004-bis · BLINDAJE DEL CONTENIDO (candado CEO 01-09)**: el PDF
+  del rector JAMÁS incluye texto crudo de reportes comunitarios ni la
+  identidad del denunciante (nombre, email, usuario). La sección
+  "Hechos" lleva SOLO fecha/lugar/clasificación por hecho; "Actuación"
+  lleva la bitácora del colegio (`NotaSeguimiento`, que es texto propio
+  del colegio); "Análisis del comité" lleva el texto del comité (autor
+  interno). Test con grep exacto sobre el texto extraíble del PDF: cero
+  ocurrencias del texto del reporte y del email/nombre del denunciante
+  sembrados en el caso demo.
 
 **Historial inmutable**
 
@@ -175,7 +186,7 @@ del rector.
 - **FR-008**: Nueva columna `Colegio.escudoAssetKey String?` — clave
   del asset en el almacenamiento (mismo patrón que otros uploads del
   producto). El upload se hace desde Configuración con validación
-  ≤ 500 KB y formato PNG/JPG/SVG.
+  ≤ 500 KB y formato SOLO PNG/JPG (SVG prohibido — scripts embebidos).
 
 **Verificación pública**
 
