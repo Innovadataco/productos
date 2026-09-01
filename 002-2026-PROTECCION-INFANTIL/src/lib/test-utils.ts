@@ -108,8 +108,8 @@ export async function resetDatabase(tablas?: string[]): Promise<void> {
     if (!nombreBd.includes("test")) {
         throw new Error(
             `[resetDatabase] BLOQUEADO: DATABASE_URL apunta a "${nombreBd}", que no parece una base de test. ` +
-                `Este guard existe porque la BD dev compartida fue arrasada por un reset mal dirigido (01-09-2026). ` +
-                `Corre los tests con .env.test o ajusta DATABASE_URL.`,
+                "Este guard existe porque la BD dev compartida fue arrasada por un reset mal dirigido (01-09-2026). " +
+                "Corre los tests con .env.test o ajusta DATABASE_URL.",
         );
     }
     // El aislamiento real lo proporciona test-setup.ts con un mutex en BD;
