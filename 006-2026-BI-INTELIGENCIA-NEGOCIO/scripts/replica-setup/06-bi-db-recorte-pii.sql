@@ -18,7 +18,10 @@
 -- ==========================================================================
 
 -- Reporte: sin textos (evidencia), sin identificador del reportado, sin FKs a
--- personas, sin texto libre del reportante, sin errores de proceso.
+-- personas, sin errores de proceso ni nota de baja libre.
+-- SE QUEDAN publicadas (y en el suscriptor): ciudad/pais/otraPlataforma —
+-- texto geográfico de respaldo (nombre de ciudad, no persona) del que DEPENDE
+-- la MV mv_fact_reporte_diario; motivoBaja (enum administrativo).
 ALTER TABLE "Reporte"
     DROP COLUMN IF EXISTS "texto",
     DROP COLUMN IF EXISTS "textoOriginal",
@@ -29,10 +32,7 @@ ALTER TABLE "Reporte"
     DROP COLUMN IF EXISTS "eliminadoPorId",
     DROP COLUMN IF EXISTS "anonimizacionValidadaPorId",
     DROP COLUMN IF EXISTS "processingError",
-    DROP COLUMN IF EXISTS "notaBaja",
-    DROP COLUMN IF EXISTS "ciudad",
-    DROP COLUMN IF EXISTS "pais",
-    DROP COLUMN IF EXISTS "otraPlataforma";
+    DROP COLUMN IF EXISTS "notaBaja";
 
 -- Drift DDL de PI (pg_logical no replica DDL): el master agregó esta columna
 -- tras el vuelco inicial del schema. Aditiva y tolerante (IF NOT EXISTS).
@@ -116,7 +116,7 @@ BEGIN
         WHERE c.table_schema = 'public'
           AND (c.table_name, c.column_name) IN (
             ('Reporte','texto'),('Reporte','textoOriginal'),('Reporte','identificador'),
-            ('Reporte','ciudad'),('Reporte','pais'),('Reporte','otraPlataforma'),
+            ('Reporte','notaBaja'),
             ('Alumno','nombre'),('Alumno','apellidos'),('Alumno','documentoNumero'),
             ('IdentificadorAlumno','valor'),('IdentificadorAcudiente','valor'),
             ('IdentificadorProfesor','valor'),('IdentificadorHijo','valor'),

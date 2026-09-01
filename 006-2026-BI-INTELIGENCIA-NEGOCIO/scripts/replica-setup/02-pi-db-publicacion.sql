@@ -92,7 +92,7 @@ DECLARE
     -- (texto libre del reportante; la geo viaja por paisId/ciudadId).
     -- Nota schema: Reporte usa `actualizadoEn` (no updatedAt) y NO tiene
     -- departamentoId ni colegioId.
-    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,paisId,ciudadId,estado,esAnonimo,edadVictima,origenRol,reporteOrigenId,numeroSeguimiento,tenantId,prioridadAlta,keywordsDetectadas,esRafaga,fuenteConfianza,eliminado,motivoBaja,eliminadoEn,anonimizacionValidadaEn,creadoEn,actualizadoEn'],
+    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,paisId,ciudadId,ciudad,pais,otraPlataforma,estado,esAnonimo,edadVictima,origenRol,reporteOrigenId,numeroSeguimiento,tenantId,prioridadAlta,keywordsDetectadas,esRafaga,fuenteConfianza,eliminado,motivoBaja,eliminadoEn,anonimizacionValidadaEn,creadoEn,actualizadoEn'],
     ARRAY['ClasificacionIA', NULL],
     ARRAY['clasificacion_rubrica_votos', NULL],  -- @@map · nombre real en BD
     ARRAY['CorreccionAdmin', NULL],
