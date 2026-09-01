@@ -96,7 +96,32 @@ async function obtenerTablasDePGTables(): Promise<string[]> {
  * En los tres casos, ejecuta `otorgarTodosLosPermisos()` + `asegurarPlataformas()`
  * al final para mantener el mismo contrato de estado inicial.
  */
+/**
+ * SPEC-352 (hotfix 01-09-2026): guard duro del reset. `resetDatabase` TRUNCA
+ * la base que apunte DATABASE_URL, sea cual sea — y el 01-09-2026 la BD dev
+ * compartida de la Mac amaneció ARRASADA dos veces (0 colegios, 0 parámetros;
+ * huella de plataformas del propio reset) por una suite de integración corrida
+ * con el env equivocado. Regla: solo se trunca una base cuyo NOMBRE contenga
+ * "test". Cualquier otra cosa es un error de configuración y se aborta EN VOZ
+ * ALTA antes de tocar una sola fila.
+ *
+ * Exportada pura para poder testearla sin base de datos.
+ */
+export function validarBdDeTest(databaseUrl: string | undefined): void {
+    const url = databaseUrl ?? "";
+    const nombreBd = url.split("/").pop()?.split("?")[0] ?? "";
+    if (!nombreBd.includes("test")) {
+        throw new Error(
+            `[resetDatabase] BLOQUEADO: DATABASE_URL apunta a "${nombreBd || "(vacía)"}", que no parece una base de test. ` +
+                `Este guard existe porque la BD dev compartida fue arrasada por un reset mal dirigido (01-09-2026). ` +
+                `Corre los tests con .env.test o corrige DATABASE_URL.`,
+        );
+    }
+}
+
 export async function resetDatabase(tablas?: string[]): Promise<void> {
+    // SPEC-352: primero el guard — nunca truncar una base que no sea de test.
+    validarBdDeTest(process.env.DATABASE_URL);
     // El aislamiento real lo proporciona test-setup.ts con un mutex en BD;
     // este reset solo limpia y re-seedea de forma atómica con TRUNCATE CASCADE.
     if (!Array.isArray(tablas)) {
