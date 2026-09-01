@@ -91,9 +91,9 @@ export function lecturaCapa1(hechos: HechoCapa1[]): LecturaCapa1 {
         clasificados.length >= 2 &&
         clasificados[0].clasificacion !== clasificados[clasificados.length - 1].clasificacion
             ? {
-                  primera: clasificados[0].clasificacion as string,
-                  ultima: clasificados[clasificados.length - 1].clasificacion as string,
-              }
+                primera: clasificados[0].clasificacion as string,
+                ultima: clasificados[clasificados.length - 1].clasificacion as string,
+            }
             : null;
 
     // ── Aceleración: (ancla-7d, ancla] vs (ancla-14d, ancla-7d] ────────────

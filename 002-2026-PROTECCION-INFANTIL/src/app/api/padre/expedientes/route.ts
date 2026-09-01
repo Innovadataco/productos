@@ -47,9 +47,9 @@ export async function POST(request: Request) {
                 principalId === reporte.id
                     ? reporte
                     : await tx.reporte.findFirstOrThrow({
-                          where: { id: principalId, usuarioId: usuario.id },
-                          select: { id: true, identificador: true, plataformaId: true, creadoEn: true, reportePrincipalId: true },
-                      });
+                        where: { id: principalId, usuarioId: usuario.id },
+                        select: { id: true, identificador: true, plataformaId: true, creadoEn: true, reportePrincipalId: true },
+                    });
 
             const expRepo = new ExpedienteRepository(tx);
 
