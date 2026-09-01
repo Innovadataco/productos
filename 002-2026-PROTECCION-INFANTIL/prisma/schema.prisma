@@ -1797,7 +1797,16 @@ model Reporte {
   // SPEC-230 (002-PI-130): relación inversa para EventoExpediente.
   // Autorizado por ZEUS: no modifica columnas de la tabla reportes.
   eventos                  EventoExpediente[]
+  // SPEC-340 (A-68 · hallazgo T002): la CADENA gana casa propia. Antes la
+  // vinculación solo existía como EventoExpediente (exigía expediente) — con el
+  // expediente ahora manual (botón del padre), la cadena vive en el reporte:
+  // null = principal o suelto; con valor = evento de esa cadena. SetNull: si el
+  // principal cae por disputa, los eventos quedan ("se muestra lo que queda").
+  reportePrincipalId       String?
+  reportePrincipal         Reporte?            @relation("CadenaReportes", fields: [reportePrincipalId], references: [id], onDelete: SetNull)
+  eventosDeCadena          Reporte[]           @relation("CadenaReportes")
 
+  @@index([reportePrincipalId])
   @@index([identificador, plataformaId])
   @@index([estado])
   @@index([usuarioId, identificador])

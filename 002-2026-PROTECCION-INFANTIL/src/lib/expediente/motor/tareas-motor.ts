@@ -48,7 +48,8 @@ export const TEXTO_RETENIDO = "[retenido]";
 const ACTOR_WORKER = { id: "worker-expediente-motor", tipo: "worker" as const };
 
 const DEFAULTS = {
-    autoCierreMeses: 6,
+    // SPEC-340 (D-1): derogado — 0 = jamás cerrar. Se conserva la clave por historia.
+    autoCierreMeses: 0,
     retencionMeses: 24,
     slaHorasNormal: 48,
     slaHorasRojo: 12,
@@ -61,9 +62,23 @@ async function numParam(clave: string, defecto: number): Promise<number> {
     return Number.isFinite(parsed) && parsed >= 1 ? parsed : defecto;
 }
 
-/** FR-009: cierra expedientes ACTIVO cuya última actividad supera el plazo. */
+/**
+ * FR-009 de SPEC-230 — DEROGADO por SPEC-340 (A-68 · D-1, 01-09-2026).
+ *
+ * Regla de Jelkin, textual: *"El caso no aplica: si en dos o tres meses hay un
+ * evento adicional, el padre va a su nick y sigue reportando."* Nada se cierra
+ * nunca: el expediente es la carpeta viva del padre, para siempre.
+ *
+ * La función queda (el worker la sigue invocando sin romperse) pero NO cierra:
+ * doble valla — el parámetro sembrado pasa a 0 (= apagado) Y este corte en
+ * código. Se conserva, no se borra, por si la regla se revierte con historia.
+ */
 export async function cerrarExpedientesInactivos(ahora: Date = new Date()): Promise<number> {
-    const meses = await numParam("padre.expediente.auto_cierre_meses", DEFAULTS.autoCierreMeses);
+    const meses = await numParam("padre.expediente.auto_cierre_meses", 0);
+    if (meses <= 0) {
+        // SPEC-340: derogado. 0 cerrados, siempre.
+        return 0;
+    }
     const limite = calcularLimiteInactividad(ahora, meses);
 
     const candidatos = await new ExpedienteMotorRepository().listarActivosInactivos(limite, DEFAULTS.limiteLote);

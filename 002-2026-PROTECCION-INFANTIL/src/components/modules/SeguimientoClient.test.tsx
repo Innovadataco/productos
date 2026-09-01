@@ -228,17 +228,13 @@ describe("SeguimientoClient", () => {
             expect(document.body.textContent).not.toContain("Otros reportes de este identificador");
         });
 
-        it("el CTA lleva el identificador a /reportar por sessionStorage, NO por la URL", async () => {
+        // SPEC-340 (A-68 §2.5): el CTA de SPEC-324 se retiró — el camino correcto
+        // es "Agregar otro evento" desde el reporte. Este test afirmaba el CTA;
+        // ahora afirma su ausencia (assert fuerte, candado 24).
+        it("NO existe el CTA 'Reportar de nuevo a este identificador' (SPEC-340)", async () => {
             await consultar({ ...baseData, otrosReportes: null });
 
-            fireEvent.click(screen.getByRole("button", { name: /Reportar de nuevo a este identificador/i }));
-
-            // El identificador queda en la llave de un solo uso, y fijo: el padre
-            // viene a agregar un evento sobre ESE identificador.
-            expect(tomarHandoffReportar()).toEqual({ identificador: "30009000002", fijar: true });
-            // ...y la navegación es a la URL limpia (spec 091-US2 / 093-US4).
-            expect(pushMock).toHaveBeenCalledWith("/reportar");
-            expect(pushMock.mock.calls.every(([url]) => !String(url).includes("identificador"))).toBe(true);
+            expect(screen.queryByRole("button", { name: /Reportar de nuevo a este identificador/i })).toBeNull();
 
             // El CTA genérico sigue existiendo, sin fijar nada.
             const generico = screen.getByRole("link", { name: /Realizar otro reporte/i });

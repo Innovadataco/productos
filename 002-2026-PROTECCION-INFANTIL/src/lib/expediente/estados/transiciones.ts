@@ -164,7 +164,15 @@ const guardAutoCierreInactividad: GuardFn = async ({ expediente, actor }) => {
     if (actor.tipo !== "worker") {
         return conflicto("El cierre directo desde ACTIVO solo lo ejecuta el worker por inactividad");
     }
+    // SPEC-340 (A-68 · D-1, 01-09-2026): DEROGADO. Regla de Jelkin: nada se
+    // cierra nunca — el expediente es la carpeta viva del padre, para siempre.
+    // La transición queda en la whitelist como código muerto documentado (no se
+    // borra, por si la regla se revierte); este guard la vuelve inalcanzable:
+    // con el parámetro en 0 (su nuevo valor sembrado) ningún expediente cumple.
     const meses = await numParam("padre.expediente.auto_cierre_meses", DEFAULT_AUTO_CIERRE_MESES);
+    if (meses <= 0) {
+        return conflicto("El auto-cierre está derogado (SPEC-340): los expedientes no se cierran nunca");
+    }
     const referencia = expediente.ultimoEventoEn ?? expediente.fechaApertura;
     const limite = new Date(referencia);
     limite.setUTCMonth(limite.getUTCMonth() + meses);

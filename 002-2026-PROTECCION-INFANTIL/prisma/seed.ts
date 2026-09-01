@@ -87,7 +87,7 @@ async function upsertNotificacionRegla(
 // Idempotencia anti-I-100: upsert por clave, propaga cambios de default definidos en código.
 async function seedParametrosPadre() {
     const parametrosPadre = [
-        { clave: "padre.expediente.auto_cierre_meses", valor: "6", tipo: TipoParametro.INTEGER, descripcion: "Meses de inactividad para auto-cierre de expediente" },
+        { clave: "padre.expediente.auto_cierre_meses", valor: "0", tipo: TipoParametro.INTEGER, descripcion: "DEROGADO (SPEC-340): 0 = los expedientes no se cierran nunca. Regla de Jelkin 01-09-2026." },
         { clave: "padre.expediente.consolidacion_min_reportes", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Mínimo de reportes para pasar a CONSOLIDANDO" },
         { clave: "padre.expediente.max_aclaraciones", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Máximo de aclaraciones por expediente" },
         // SPEC-339 (A-67 · brief §2.4): el tope de menores es PARÁMETRO, no una
