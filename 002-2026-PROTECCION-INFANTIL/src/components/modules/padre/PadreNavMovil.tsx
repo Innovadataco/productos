@@ -29,7 +29,7 @@ export function PadreNavMovil() {
     return (
         <nav
             aria-label="Menú del padre"
-            className="fixed inset-x-0 bottom-0 z-40 border-t border-sky-200/40 bg-papel/95 backdrop-blur-xl sm:hidden dark:border-sky-900/30 dark:bg-tinta/95"
+            className="fixed inset-x-0 bottom-0 z-40 border-t border-cielo/40 bg-papel/95 backdrop-blur-xl sm:hidden dark:border-cielo/30 dark:bg-tinta/95"
         >
             <ul className="flex overflow-x-auto px-1 py-1.5">
                 {PADRE_NAV_ITEMS.map((item) => {
