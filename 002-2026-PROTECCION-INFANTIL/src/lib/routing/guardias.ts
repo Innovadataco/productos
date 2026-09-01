@@ -37,6 +37,17 @@ export const GUARDIAS_ACCESO = {
         "/api/consulta",
         "/api/reportes",
         "/api/estadisticas-publicas",
+        // SPEC-346 (I-234 · recorrido en vivo 340): /api/publico/** es la
+        // familia de endpoints diseñados SIN auth (verificar-pdf, guia-accion
+        // pública). El portero se saltó de listarlas cuando SPEC-234 introdujo
+        // /verificar-pdf, así que la ruta respondía 401 al primer intento —
+        // una autoridad con el PDF en la mano no podía verificar sin cuenta,
+        // que es exactamente el sentido opuesto del sello.
+        "/api/publico",
+        // Página de verificación pública del sello del PDF (SPEC-234/340):
+        // el pie del PDF imprime <baseUrl>/verificar/<codigo>. Tiene que ser
+        // alcanzable sin cuenta o el sello no cumple su función.
+        "/verificar",
         "/api/health",
         // SPEC-302 (002-PI-208): señal de monitoreo del motor de notificaciones,
         // mismo trato que /api/health — consumida por curl externo (tabla §6b).

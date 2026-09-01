@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 459 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3213 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 460 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3220 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -486,6 +486,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
+| `/verificar/[codigo]` | página | permitir | permite | sí |
 
 ### OPERADOR
 
@@ -950,6 +951,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
+| `/verificar/[codigo]` | página | permitir | permite | sí |
 
 ### COMITE_VALIDACION
 
@@ -1414,6 +1416,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
+| `/verificar/[codigo]` | página | permitir | permite | sí |
 
 ### SCHOOL_ADMIN
 
@@ -1878,6 +1881,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/verificar/[codigo]` | página | redirigir→/dashboard/colegio | no permite | sí |
 
 ### COMITE_CONVIVENCIA
 
@@ -2342,6 +2346,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/seguimiento` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/terminos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/verificar/[codigo]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 
 ### PARENT
 
@@ -2806,6 +2811,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/reportar` | página | permitir | permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
+| `/verificar/[codigo]` | página | permitir | permite | sí |
 
 ### ANONIMO
 
@@ -3138,8 +3144,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | HTTP 401 | permite | **NO** |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
-| `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 401 | permite | **NO** |
-| `/api/publico/verificar-pdf/[hash]` | api | HTTP 401 | permite | **NO** |
+| `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
+| `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/[id]/evento` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
@@ -3270,6 +3276,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/reportar` | página | permitir | permite | sí |
 | `/seguimiento` | página | permitir | permite | sí |
 | `/terminos` | página | permitir | permite | sí |
+| `/verificar/[codigo]` | página | permitir | permite | sí |
 
 ## Nota: divergencias del eje anónimo (NO son rojo)
 
@@ -3574,8 +3581,6 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/pagos/suscripcion/cancelar` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/estado` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/validar-bono` | HTTP 401 | permite |
-| `/api/publico/guia-accion/categoria/[cat]` | HTTP 401 | permite |
-| `/api/publico/verificar-pdf/[hash]` | HTTP 401 | permite |
 | `/api/sesion/al-dia` | HTTP 401 | permite |
 | `/api/session/ping` | HTTP 401 | permite |
 | `/api/vigencia/refresh` | HTTP 401 | permite |
