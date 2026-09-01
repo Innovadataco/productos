@@ -10,6 +10,7 @@ import { logAudit } from "@/lib/audit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation, ValidationError } from "@/lib/validation";
 import { profesorBodySchema, profesoresQuerySchema } from "@/lib/schemas";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 
 function getClientInfo(request: Request) {
     return {
@@ -170,7 +171,11 @@ export async function POST(request: Request) {
             userAgent,
         });
 
-        return NextResponse.json({ profesor }, { status: 201 });
+        const res = NextResponse.json({ profesor }, { status: 201 });
+        // SPEC-344 (A-69 · C1 · Phase 9-bis / analyze I1): sellar cookie —
+        // al crear el primer profesor activo, el Paso 3 del camino cierra.
+        await sellarCookieSesionEstado(res, user.id);
+        return res;
     } catch (error) {
         return errorToResponse(error, "[COLEGIO/PROFESORES]");
     }
