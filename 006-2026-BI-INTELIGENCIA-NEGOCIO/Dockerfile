@@ -18,6 +18,9 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# prisma generate EXPLÍCITO: en el stage deps el postinstall de @prisma/client
+# corre sin prisma/ y queda sin tipos → el typecheck de next build falla (I-01)
+RUN npx prisma generate
 RUN npm run build
 
 # ---------- tools (migraciones/seed · NO es la imagen de producción) ----------
