@@ -225,3 +225,68 @@
 @keyframes barrido {
     60%, 100% { transform: translateX(100%); }
 }
+
+/* ==========================================================================
+   Pantallas v3 (mockup-bi-v3): pulso ampliado, personas, geografía y
+   operación ampliada. Mismo patrón de la capa viva: el estado FINAL vive
+   en el estilo inline (width) y la animación solo embellece — la regla
+   global de prefers-reduced-motion las apaga y todo aparece ya final.
+   ========================================================================== */
+
+/* Barras horizontales y pasos de embudo: el fill crece de izquierda a
+   derecha con retardo escalonado (--anim-retardo inline por fila). */
+.barra-crece-x {
+    transform-origin: left;
+    animation: creceX 0.9s var(--curva) both;
+    animation-delay: var(--anim-retardo, 0ms);
+}
+@keyframes creceX {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+/* Aviso honesto (candado 9): caja de contexto cuando el demo tiene huecos
+   o cuando una cifra NO está en la réplica. Variante ámbar para notas de
+   privacidad (Ley 1581). */
+.aviso-honesto {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    background: rgb(var(--cielo-rgb) / 0.1);
+    color: rgb(var(--cielo-ink-rgb));
+    border: 1px solid rgb(var(--cielo-rgb) / 0.25);
+}
+.aviso-honesto-ambar {
+    background: rgb(var(--ambar-rgb) / 0.08);
+    color: rgb(var(--ambar-ink-rgb));
+    border-color: rgb(var(--ambar-rgb) / 0.25);
+}
+
+/* Mapa de Geografía (leaflet) dentro del tema oscuro: fondo papel mientras
+   cargan los tiles y tooltip acorde al sistema de diseño. */
+.leaflet-container {
+    background: rgb(var(--papel-rgb));
+    font-family: inherit;
+}
+.dark .leaflet-tooltip {
+    background: rgb(var(--papel-rgb) / 0.95);
+    color: rgb(var(--tinta-rgb));
+    border: 1px solid rgb(var(--tinta-rgb) / 0.12);
+    box-shadow: var(--sombra-md);
+}
+.dark .leaflet-tooltip-top::before {
+    border-top-color: rgb(var(--tinta-rgb) / 0.12);
+}
+.dark .leaflet-bar a {
+    background: rgb(var(--papel-rgb) / 0.9);
+    color: rgb(var(--tinta-rgb));
+    border-color: rgb(var(--tinta-rgb) / 0.12);
+}
+.dark .leaflet-control-attribution {
+    background: rgb(var(--papel-rgb) / 0.7);
+    color: rgb(var(--tinta-subtle-rgb));
+}
+.dark .leaflet-control-attribution a {
+    color: rgb(var(--tinta-muted-rgb));
+}

@@ -88,8 +88,9 @@ DECLARE
     -- (nick del reportado = PII del presunto; la reincidencia agrega vía
     -- IdentificadorReportado), sin usuarioId/operadorId/comiteId/
     -- eliminadoPorId/anonimizacionValidadaPorId (personas), sin
-    -- processingError/notaBaja (texto libre), sin ciudad/pais/otraPlataforma
-    -- (texto libre del reportante; la geo viaja por paisId/ciudadId).
+    -- processingError/notaBaja (texto libre). ciudad/pais/otraPlataforma SÍ
+    -- se publican: son texto geográfico de respaldo (ciudad, no persona) y la
+    -- MV mv_fact_reporte_diario depende de ellas.
     -- Nota schema: Reporte usa `actualizadoEn` (no updatedAt) y NO tiene
     -- departamentoId ni colegioId.
     ARRAY['Reporte', 'id,plataformaId,fechaIncidente,paisId,ciudadId,ciudad,pais,otraPlataforma,estado,esAnonimo,edadVictima,origenRol,reporteOrigenId,numeroSeguimiento,tenantId,prioridadAlta,keywordsDetectadas,esRafaga,fuenteConfianza,eliminado,motivoBaja,eliminadoEn,anonimizacionValidadaEn,creadoEn,actualizadoEn'],

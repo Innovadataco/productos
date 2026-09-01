@@ -25,3 +25,8 @@ export function etiquetaDia(dia: string): string {
 export function tituloDia(dia: string): string {
     return dia.slice(0, 10);
 }
+
+/** Entero con separador de miles es-CO (2818 → "2.818"). Solo formatea. */
+export function fmtMiles(n: number): string {
+    return n.toLocaleString("es-CO");
+}

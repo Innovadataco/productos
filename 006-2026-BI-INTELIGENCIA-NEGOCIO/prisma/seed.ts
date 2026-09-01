@@ -359,6 +359,286 @@ async function seedConfig(): Promise<void> {
   console.log(`  · BIConfig: ${creadas} creadas · ${CONFIGS.length - creadas} existentes`);
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// ── AMPLIACION V2 (2026-09-01 · catálogo sobre la publicación de 40 tablas) ─
+// Extiende el catálogo con las 12 tablas de negocio de las "17 nuevas
+// autorizadas BI v2" en scripts/replica-setup/02-pi-db-publicacion.sql.
+// TODO es ADITIVO: misma regla S3 (upsert update:{} vacio, NUNCA pisar
+// customizaciones del operador). No toca ninguna fila de la seccion v1.
+//
+// Reglas aplicadas:
+//   · Columnas = EXACTAMENTE las publicadas por el 02. La PII (nombres,
+//     documentos, `valor` de identificadores) ni siquiera existe en bi-db —
+//     cortada en origen por column list — y JAMAS se lista aqui.
+//   · nombreFuente = nombre REAL en BD (respeta @@map/@map de PI: la FK de
+//     IdentificadorAlumno es "alumnoId"; la FK de AlertaColegio al alumno es
+//     "identificadorAlumnoId"; el enum de etiqueta es "EtiquetaRelacionAlumno"
+//     con valor 'ALUMNO').
+//   · excluida=true SOLO en columnas tecnicas internas: FKs a Usuario (tabla
+//     jamas publicada: el cuid no resuelve a nada en bi-db) y updatedAt/
+//     actualizadoEn (ruido de sync sin valor analitico; los timestamps de
+//     creacion SI quedan visibles para cortes temporales).
+//   · Tipos = tipos reales del schema de PI; enums PG por su nombre real en
+//     BD (en GROUP BY/SELECT conviene ::text, ver descripciones).
+//   · AlertaColegio ya existe en la seccion v1 (5 columnas): el upsert no la
+//     duplica; aqui solo se AGREGAN sus columnas reales faltantes.
+// ────────────────────────────────────────────────────────────────────────────
+
+const TABLAS_V2: Array<{
+  nombreFuente: string;
+  nombreLegible: string;
+  descripcion: string;
+  rolesPermitidos: string[];
+}> = [
+  { nombreFuente: "Profesor", nombreLegible: "Profesores", descripcion: "Docentes registrados por los colegios (sin nombres ni documentos: cortados en origen). Sinonimos: profe · docente · maestro", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "AcudienteEstudiante", nombreLegible: "Acudientes de alumnos", descripcion: "Acudientes de cada alumno (max 2; orden 1=principal 2=secundario; sin nombres ni contactos: cortados en origen). Sinonimos: acudiente · padre de familia", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "IdentificadorAlumno", nombreLegible: "Identificadores de alumnos", descripcion: "Cuentas/nicks/telefonos de alumnos registrados por el colegio (SIN valor: cortado en origen; solo tipo, plataforma y estado). Sinonimos: nick · cuenta · usuario de plataforma", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "IdentificadorAcudiente", nombreLegible: "Identificadores de acudientes", descripcion: "Cuentas/nicks/telefonos de acudientes (SIN valor: cortado en origen). Sinonimos: nick · cuenta · usuario de plataforma", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "IdentificadorProfesor", nombreLegible: "Identificadores de profesores", descripcion: "Cuentas/nicks/telefonos de profesores (SIN valor: cortado en origen). Sinonimos: nick · cuenta · usuario de plataforma", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "IdentificadorHijo", nombreLegible: "Identificadores de hijos", descripcion: "Cuentas/nicks de hijos que los padres vigilan desde la app (SIN valor: cortado en origen). Sinonimos: nick · cuenta · usuario de plataforma · hijo", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "AlertaColegio", nombreLegible: "Alertas de colegio", descripcion: "Alertas generadas al cruzar un reporte con un identificador registrado (tipoSujeto ESTUDIANTE · PROFESOR · ACUDIENTE; estado nueva · vista · gestionada · escalada · cerrada). Sinonimos: alerta · escalada", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "Suscripcion", nombreLegible: "Suscripciones SaaS", descripcion: "Suscripciones de colegios y padres al servicio (vigencia, estado, plan, freemium). Sinonimos: suscripcion · plan · vigencia", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "IdentificadorReportado", nombreLegible: "Identificadores reportados", descripcion: "Agregado publico por identificador reportado (SIN el nick en claro: cortado en origen). Contadores, scores y visibilidad. Sinonimos: vigilado · reportado", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "Hijo", nombreLegible: "Hijos", descripcion: "Hijos que los padres protegen desde la app (sin nombres ni documentos: cortados en origen). Sinonimos: hijo · menor · circulo", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "HijoPadre", nombreLegible: "Vinculos padre-hijo", descripcion: "Puente padre<->hijo (un menor puede tener dos padres). Sinonimos: hijo · circulo · vinculo", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "ContactoConfianza", nombreLegible: "Contactos de confianza", descripcion: "Personas del circulo de confianza que el padre vigila (sin nombres ni notas: cortados en origen). Sinonimos: contacto de confianza · circulo", rolesPermitidos: ["ADMIN_BI"] },
+];
+
+type ColV2 = Col & { excluida?: boolean };
+const COLUMNAS_V2: ColV2[] = [
+  // Profesor (7 publicadas)
+  { tabla: "Profesor", nombreFuente: "id", nombreLegible: "ID profesor", descripcion: "Identificador unico del profesor", tipo: "String", sinonimos: ["profe", "docente", "maestro", "profesor"] },
+  { tabla: "Profesor", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio (join por id)", tipo: "String" },
+  { tabla: "Profesor", nombreFuente: "anioNacimiento", nombreLegible: "Ano de nacimiento", descripcion: "Ano de nacimiento (la edad se deriva, no se almacena)", tipo: "Int" },
+  { tabla: "Profesor", nombreFuente: "sexo", nombreLegible: "Sexo", descripcion: "Set cerrado: M · F · OTRO", tipo: "String" },
+  { tabla: "Profesor", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica; filtrar estado='activo')", tipo: "String" },
+  { tabla: "Profesor", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime", sinonimos: ["fecha registro", "fecha"] },
+  { tabla: "Profesor", nombreFuente: "updatedAt", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // AcudienteEstudiante (7 publicadas)
+  { tabla: "AcudienteEstudiante", nombreFuente: "id", nombreLegible: "ID acudiente", descripcion: "Identificador unico del acudiente", tipo: "String", sinonimos: ["acudiente", "padre de familia", "padre", "madre"] },
+  { tabla: "AcudienteEstudiante", nombreFuente: "estudianteId", nombreLegible: "Alumno", descripcion: "FK Alumno (tabla fisica \"Alumno\")", tipo: "String" },
+  { tabla: "AcudienteEstudiante", nombreFuente: "orden", nombreLegible: "Orden", descripcion: "1 = principal · 2 = secundario (max 2 por alumno)", tipo: "Int" },
+  { tabla: "AcudienteEstudiante", nombreFuente: "relacion", nombreLegible: "Relacion", descripcion: "Texto corto libre: madre · padre · tia · abuelo ...", tipo: "String", sinonimos: ["parentesco"] },
+  { tabla: "AcudienteEstudiante", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica)", tipo: "String" },
+  { tabla: "AcudienteEstudiante", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
+  { tabla: "AcudienteEstudiante", nombreFuente: "updatedAt", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // IdentificadorAlumno (9 publicadas)
+  { tabla: "IdentificadorAlumno", nombreFuente: "id", nombreLegible: "ID identificador", descripcion: "Identificador unico del registro (NO es el nick: el valor esta cortado en origen)", tipo: "String", sinonimos: ["nick", "cuenta", "usuario de plataforma", "identificador"] },
+  { tabla: "IdentificadorAlumno", nombreFuente: "alumnoId", nombreLegible: "Alumno", descripcion: "FK Alumno (nombre REAL en BD; el modelo Prisma la llama estudianteId via @map)", tipo: "String" },
+  { tabla: "IdentificadorAlumno", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio (denormalizada para acotar por tenant)", tipo: "String" },
+  { tabla: "IdentificadorAlumno", nombreFuente: "tipo", nombreLegible: "Tipo", descripcion: "Tipo de identificador (telefono · email · nick · usuario ...)", tipo: "String", sinonimos: ["tipo de cuenta", "medio"] },
+  { tabla: "IdentificadorAlumno", nombreFuente: "plataformaId", nombreLegible: "Plataforma", descripcion: "FK Plataforma (null si no aplica)", tipo: "String", sinonimos: ["plataforma", "red social", "app"] },
+  { tabla: "IdentificadorAlumno", nombreFuente: "etiquetaRelacion", nombreLegible: "Etiqueta de relacion", descripcion: "Enum PG EtiquetaRelacionAlumno: ALUMNO · MADRE · PADRE · PRIMO · TUTOR · OTRO (usar ::text en GROUP BY)", tipo: "EtiquetaRelacionAlumno" },
+  { tabla: "IdentificadorAlumno", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica)", tipo: "String" },
+  { tabla: "IdentificadorAlumno", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
+  { tabla: "IdentificadorAlumno", nombreFuente: "updatedAt", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // IdentificadorAcudiente (8 publicadas)
+  { tabla: "IdentificadorAcudiente", nombreFuente: "id", nombreLegible: "ID identificador", descripcion: "Identificador unico del registro (NO es el nick: el valor esta cortado en origen)", tipo: "String", sinonimos: ["nick", "cuenta", "usuario de plataforma"] },
+  { tabla: "IdentificadorAcudiente", nombreFuente: "acudienteId", nombreLegible: "Acudiente", descripcion: "FK AcudienteEstudiante", tipo: "String" },
+  { tabla: "IdentificadorAcudiente", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio (denormalizada para tenant)", tipo: "String" },
+  { tabla: "IdentificadorAcudiente", nombreFuente: "tipo", nombreLegible: "Tipo", descripcion: "Tipo de identificador (telefono · email · nick ...)", tipo: "String", sinonimos: ["tipo de cuenta", "medio"] },
+  { tabla: "IdentificadorAcudiente", nombreFuente: "plataformaId", nombreLegible: "Plataforma", descripcion: "FK Plataforma (null si no aplica)", tipo: "String", sinonimos: ["plataforma", "red social", "app"] },
+  { tabla: "IdentificadorAcudiente", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica)", tipo: "String" },
+  { tabla: "IdentificadorAcudiente", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
+  { tabla: "IdentificadorAcudiente", nombreFuente: "updatedAt", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // IdentificadorProfesor (8 publicadas)
+  { tabla: "IdentificadorProfesor", nombreFuente: "id", nombreLegible: "ID identificador", descripcion: "Identificador unico del registro (NO es el nick: el valor esta cortado en origen)", tipo: "String", sinonimos: ["nick", "cuenta", "usuario de plataforma"] },
+  { tabla: "IdentificadorProfesor", nombreFuente: "profesorId", nombreLegible: "Profesor", descripcion: "FK Profesor", tipo: "String", sinonimos: ["profe", "docente"] },
+  { tabla: "IdentificadorProfesor", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio (denormalizada para tenant)", tipo: "String" },
+  { tabla: "IdentificadorProfesor", nombreFuente: "tipo", nombreLegible: "Tipo", descripcion: "Tipo de identificador (telefono · email · nick ...)", tipo: "String", sinonimos: ["tipo de cuenta", "medio"] },
+  { tabla: "IdentificadorProfesor", nombreFuente: "plataformaId", nombreLegible: "Plataforma", descripcion: "FK Plataforma (null si no aplica)", tipo: "String", sinonimos: ["plataforma", "red social", "app"] },
+  { tabla: "IdentificadorProfesor", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica)", tipo: "String" },
+  { tabla: "IdentificadorProfesor", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
+  { tabla: "IdentificadorProfesor", nombreFuente: "updatedAt", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // IdentificadorHijo (7 publicadas)
+  { tabla: "IdentificadorHijo", nombreFuente: "id", nombreLegible: "ID identificador", descripcion: "Identificador unico del registro (NO es el nick: el valor esta cortado en origen)", tipo: "String", sinonimos: ["nick", "cuenta", "usuario de plataforma", "hijo"] },
+  { tabla: "IdentificadorHijo", nombreFuente: "hijoId", nombreLegible: "Hijo", descripcion: "FK Hijo", tipo: "String" },
+  { tabla: "IdentificadorHijo", nombreFuente: "tipo", nombreLegible: "Tipo", descripcion: "Tipo de identificador (null si no aplica)", tipo: "String", sinonimos: ["tipo de cuenta", "medio"] },
+  { tabla: "IdentificadorHijo", nombreFuente: "plataformaId", nombreLegible: "Plataforma", descripcion: "FK Plataforma (null si no aplica)", tipo: "String", sinonimos: ["plataforma", "red social", "app"] },
+  { tabla: "IdentificadorHijo", nombreFuente: "activo", nombreLegible: "Activo", descripcion: "Si esta activo (baja logica con activo=false)", tipo: "Boolean" },
+  { tabla: "IdentificadorHijo", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
+  { tabla: "IdentificadorHijo", nombreFuente: "actualizadoEn", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // AlertaColegio (completa en la publicacion = 14 columnas; id, colegioId y
+  // creadoEn ya estan en la seccion v1 — aqui van las 11 faltantes)
+  { tabla: "AlertaColegio", nombreFuente: "reporteId", nombreLegible: "Reporte", descripcion: "FK Reporte que disparo la alerta", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "identificadorAlumnoId", nombreLegible: "Identificador alumno", descripcion: "FK IdentificadorAlumno (nombre REAL en BD via @map; poblada si tipoSujeto=ESTUDIANTE)", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "identificadorProfesorId", nombreLegible: "Identificador profesor", descripcion: "FK IdentificadorProfesor (poblada si tipoSujeto=PROFESOR)", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "identificadorAcudienteId", nombreLegible: "Identificador acudiente", descripcion: "FK IdentificadorAcudiente (poblada si tipoSujeto=ACUDIENTE)", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "tipoSujeto", nombreLegible: "Tipo de sujeto", descripcion: "ESTUDIANTE · PROFESOR · ACUDIENTE", tipo: "String", sinonimos: ["sujeto", "tipo de persona", "quien"] },
+  { tabla: "AlertaColegio", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "nueva · vista · gestionada · escalada · cerrada", tipo: "String", sinonimos: ["situacion", "escalada"] },
+  { tabla: "AlertaColegio", nombreFuente: "prioridad", nombreLegible: "Prioridad", descripcion: "alta · media · baja", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "vencimientoSla", nombreLegible: "Vencimiento SLA", descripcion: "Limite de gestion de la alerta (timestamptz)", tipo: "DateTime", sinonimos: ["sla", "vencimiento"] },
+  { tabla: "AlertaColegio", nombreFuente: "asignadoAId", nombreLegible: "Asignado a", descripcion: "FK Usuario (tabla jamas publicada: el cuid no resuelve en bi-db)", tipo: "String", excluida: true },
+  { tabla: "AlertaColegio", nombreFuente: "patronInstitucionalId", nombreLegible: "Patron institucional", descripcion: "FK patrones_institucionales (agregado al que aporta; null en alertas antiguas)", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "actualizadoEn", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // Suscripcion (24 publicadas)
+  { tabla: "Suscripcion", nombreFuente: "id", nombreLegible: "ID suscripcion", descripcion: "Identificador unico de la suscripcion", tipo: "String", sinonimos: ["suscripcion", "plan", "vigencia"] },
+  { tabla: "Suscripcion", nombreFuente: "tipoTitular", nombreLegible: "Tipo de titular", descripcion: "Enum PG TipoTitular: COLEGIO · PADRE (usar ::text en GROUP BY)", tipo: "TipoTitular", sinonimos: ["titular", "tipo de cliente"] },
+  { tabla: "Suscripcion", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio (null si el titular es un padre)", tipo: "String" },
+  { tabla: "Suscripcion", nombreFuente: "usuarioId", nombreLegible: "Usuario titular", descripcion: "FK Usuario (tabla jamas publicada: el cuid no resuelve en bi-db)", tipo: "String", excluida: true },
+  { tabla: "Suscripcion", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Enum PG EstadoSuscripcion: ACTIVA · EN_GRACIA · SUSPENDIDA · CANCELADA · PENDIENTE_AUTORIZACION", tipo: "EstadoSuscripcion" },
+  { tabla: "Suscripcion", nombreFuente: "planActualId", nombreLegible: "Plan actual", descripcion: "FK Plan vigente", tipo: "String", sinonimos: ["plan"] },
+  { tabla: "Suscripcion", nombreFuente: "fechaInicio", nombreLegible: "Fecha inicio", descripcion: "Inicio de la vigencia (timestamptz)", tipo: "DateTime" },
+  { tabla: "Suscripcion", nombreFuente: "fechaFin", nombreLegible: "Fecha fin", descripcion: "Fin de la vigencia (timestamptz)", tipo: "DateTime", sinonimos: ["vigencia", "vencimiento"] },
+  { tabla: "Suscripcion", nombreFuente: "fechaCorteProgramado", nombreLegible: "Corte programado", descripcion: "Fecha de corte programada (null si no aplica)", tipo: "DateTime" },
+  { tabla: "Suscripcion", nombreFuente: "esFreemium", nombreLegible: "Es freemium", descripcion: "Si es una suscripcion gratuita promocional", tipo: "Boolean" },
+  { tabla: "Suscripcion", nombreFuente: "freemiumFechaFin", nombreLegible: "Fin freemium", descripcion: "Fin del periodo freemium (null si no aplica)", tipo: "DateTime" },
+  { tabla: "Suscripcion", nombreFuente: "monedaLocal", nombreLegible: "Moneda", descripcion: "Moneda local del cliente (default COP)", tipo: "String", sinonimos: ["moneda"] },
+  { tabla: "Suscripcion", nombreFuente: "paisCliente", nombreLegible: "Pais cliente", descripcion: "Pais del cliente (default CO)", tipo: "String", sinonimos: ["pais"] },
+  { tabla: "Suscripcion", nombreFuente: "suspendidaEn", nombreLegible: "Suspendida en", descripcion: "Timestamp de suspension (null si nunca)", tipo: "DateTime" },
+  { tabla: "Suscripcion", nombreFuente: "canceladaEn", nombreLegible: "Cancelada en", descripcion: "Timestamp de cancelacion (null si activa)", tipo: "DateTime" },
+  { tabla: "Suscripcion", nombreFuente: "canceladaPorUsuario", nombreLegible: "Cancelada por usuario", descripcion: "Si la cancelo el propio titular (null si no aplica)", tipo: "Boolean" },
+  { tabla: "Suscripcion", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de creacion (UTC)", tipo: "DateTime", sinonimos: ["fecha creacion"] },
+  { tabla: "Suscripcion", nombreFuente: "updatedAt", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+  { tabla: "Suscripcion", nombreFuente: "origen", nombreLegible: "Origen", descripcion: "Enum PG OrigenSuscripcion: SOLICITADA_CLIENTE · ACTIVADA_MANUAL_ADMIN · FREEMIUM_AUTO · INVITACION_ADMIN", tipo: "OrigenSuscripcion" },
+  { tabla: "Suscripcion", nombreFuente: "autorizadoPorAdminId", nombreLegible: "Autorizado por", descripcion: "FK Usuario admin que autorizo (tabla jamas publicada: el cuid no resuelve en bi-db)", tipo: "String", excluida: true },
+  { tabla: "Suscripcion", nombreFuente: "autorizadoEn", nombreLegible: "Autorizado en", descripcion: "Timestamp de autorizacion manual (null si no aplica)", tipo: "DateTime" },
+  { tabla: "Suscripcion", nombreFuente: "metodoPagoManual", nombreLegible: "Metodo de pago manual", descripcion: "Enum PG MetodoPagoManual: TRANSFERENCIA_BANCARIA · EFECTIVO · CHEQUE · OTRO (null si pago en linea)", tipo: "MetodoPagoManual" },
+  { tabla: "Suscripcion", nombreFuente: "montoRealPagado", nombreLegible: "Monto pagado", descripcion: "Monto real pagado en activacion manual (null si no aplica)", tipo: "Float", sinonimos: ["monto", "valor pagado"] },
+  { tabla: "Suscripcion", nombreFuente: "fechaPagoReal", nombreLegible: "Fecha de pago", descripcion: "Timestamp del pago real (null si no aplica)", tipo: "DateTime" },
+
+  // IdentificadorReportado (17 publicadas; el nick en claro `identificador`
+  // esta VETADO en origen — jamas listarlo)
+  { tabla: "IdentificadorReportado", nombreFuente: "id", nombreLegible: "ID identificador", descripcion: "ID del agregado (NO es el nick: cortado en origen)", tipo: "String", sinonimos: ["vigilado", "reportado", "nick reportado"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "plataformaId", nombreLegible: "Plataforma", descripcion: "FK Plataforma del identificador", tipo: "String", sinonimos: ["plataforma", "red social", "app"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "totalReportes", nombreLegible: "Total reportes", descripcion: "Reportes totales recibidos sobre el identificador", tipo: "Int", sinonimos: ["reportes", "denuncias"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "reportesAutenticados", nombreLegible: "Reportes autenticados", descripcion: "Reportes de usuarios autenticados", tipo: "Int" },
+  { tabla: "IdentificadorReportado", nombreFuente: "reportesAnonimos", nombreLegible: "Reportes anonimos", descripcion: "Reportes anonimos recibidos", tipo: "Int", sinonimos: ["anonimos"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "reportesAprobados", nombreLegible: "Reportes aprobados", descripcion: "Reportes aprobados tras revision (base de la visibilidad publica)", tipo: "Int" },
+  { tabla: "IdentificadorReportado", nombreFuente: "autenticadosAprobados", nombreLegible: "Autenticados aprobados", descripcion: "Reportes autenticados y aprobados", tipo: "Int" },
+  { tabla: "IdentificadorReportado", nombreFuente: "esVisiblePublicamente", nombreLegible: "Visible publicamente", descripcion: "Si supera el umbral y aparece en la consulta publica", tipo: "Boolean", sinonimos: ["visible", "publico"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "ocultoPorComiteEn", nombreLegible: "Oculto por comite en", descripcion: "Timestamp en que el comite lo oculto (null si visible)", tipo: "DateTime" },
+  { tabla: "IdentificadorReportado", nombreFuente: "score", nombreLegible: "Score", descripcion: "Score agregado del identificador", tipo: "Int", sinonimos: ["puntaje", "puntuacion"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "scoreAnonimo", nombreLegible: "Score anonimo", descripcion: "Componente anonimo del score", tipo: "Int" },
+  { tabla: "IdentificadorReportado", nombreFuente: "scoreAutenticado", nombreLegible: "Score autenticado", descripcion: "Componente autenticado del score", tipo: "Int" },
+  { tabla: "IdentificadorReportado", nombreFuente: "scoreAjustado", nombreLegible: "Score ajustado", descripcion: "Score tras ajustes del comite", tipo: "Int" },
+  { tabla: "IdentificadorReportado", nombreFuente: "nivelRiesgo", nombreLegible: "Nivel de riesgo", descripcion: "Nivel de riesgo derivado (null si no calculado)", tipo: "String", sinonimos: ["riesgo", "nivel"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "ultimoReporteEn", nombreLegible: "Ultimo reporte en", descripcion: "Timestamp del ultimo reporte recibido (null si ninguno)", tipo: "DateTime", sinonimos: ["ultimo reporte"] },
+  { tabla: "IdentificadorReportado", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de creacion del agregado (UTC)", tipo: "DateTime" },
+  { tabla: "IdentificadorReportado", nombreFuente: "actualizadoEn", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // Hijo (6 publicadas)
+  { tabla: "Hijo", nombreFuente: "id", nombreLegible: "ID hijo", descripcion: "Identificador unico del hijo", tipo: "String", sinonimos: ["hijo", "menor", "circulo"] },
+  { tabla: "Hijo", nombreFuente: "anioNacimiento", nombreLegible: "Ano de nacimiento", descripcion: "Ano de nacimiento (null si no registrado; la edad se deriva)", tipo: "Int" },
+  { tabla: "Hijo", nombreFuente: "sexo", nombreLegible: "Sexo", descripcion: "Set cerrado (null si no registrado)", tipo: "String" },
+  { tabla: "Hijo", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica)", tipo: "String" },
+  { tabla: "Hijo", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
+  { tabla: "Hijo", nombreFuente: "actualizadoEn", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+
+  // HijoPadre (publicada completa = 4 columnas)
+  { tabla: "HijoPadre", nombreFuente: "id", nombreLegible: "ID vinculo", descripcion: "Identificador unico del vinculo padre-hijo", tipo: "String", sinonimos: ["vinculo", "circulo"] },
+  { tabla: "HijoPadre", nombreFuente: "hijoId", nombreLegible: "Hijo", descripcion: "FK Hijo", tipo: "String", sinonimos: ["hijo"] },
+  { tabla: "HijoPadre", nombreFuente: "usuarioId", nombreLegible: "Padre", descripcion: "FK Usuario padre (tabla jamas publicada: el cuid no resuelve en bi-db)", tipo: "String", excluida: true },
+  { tabla: "HijoPadre", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp del vinculo (UTC)", tipo: "DateTime" },
+
+  // ContactoConfianza (6 publicadas)
+  { tabla: "ContactoConfianza", nombreFuente: "id", nombreLegible: "ID contacto", descripcion: "Identificador unico del contacto de confianza", tipo: "String", sinonimos: ["contacto de confianza", "circulo"] },
+  { tabla: "ContactoConfianza", nombreFuente: "usuarioId", nombreLegible: "Usuario", descripcion: "FK Usuario dueno del circulo (tabla jamas publicada: el cuid no resuelve en bi-db)", tipo: "String", excluida: true },
+  { tabla: "ContactoConfianza", nombreFuente: "parentesco", nombreLegible: "Parentesco", descripcion: "Texto corto libre: madre · tio · amigo ... (null si no registrado)", tipo: "String", sinonimos: ["relacion"] },
+  { tabla: "ContactoConfianza", nombreFuente: "activo", nombreLegible: "Activo", descripcion: "Si el contacto esta activo", tipo: "Boolean" },
+  { tabla: "ContactoConfianza", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
+  { tabla: "ContactoConfianza", nombreFuente: "actualizadoEn", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
+];
+
+// 9 metricas nuevas del dominio ampliado (alertas, geo, plataformas,
+// anonimato, reincidencia, suscripciones SaaS, cobertura del clasificador).
+const METRICAS_V2: Array<{ nombre: string; nombreLegible: string; descripcion: string; formulaSQL: string; categoria: string }> = [
+  { nombre: "alertas_por_tipo_sujeto", nombreLegible: "Alertas por tipo de sujeto", descripcion: "Alertas de colegio agrupadas por sujeto (ESTUDIANTE · PROFESOR · ACUDIENTE)", formulaSQL: `SELECT "tipoSujeto", count(*) AS total FROM "AlertaColegio" GROUP BY "tipoSujeto" ORDER BY total DESC`, categoria: "salud" },
+  { nombre: "alertas_escaladas_sin_gestionar", nombreLegible: "Alertas escaladas sin gestionar", descripcion: "Alertas en estado escalada pendientes de gestion", formulaSQL: `SELECT count(*) FROM "AlertaColegio" WHERE "estado"='escalada'`, categoria: "salud" },
+  { nombre: "reportes_por_ciudad", nombreLegible: "Reportes por ciudad", descripcion: "Reportes activos agrupados por ciudad (texto libre del reportante)", formulaSQL: `SELECT "ciudad", count(*) AS total FROM "Reporte" WHERE "eliminado"=false GROUP BY "ciudad" ORDER BY total DESC`, categoria: "operativo" },
+  { nombre: "reportes_por_plataforma", nombreLegible: "Reportes por plataforma", descripcion: "Reportes activos agrupados por plataforma (join Plataforma)", formulaSQL: `SELECT p."nombre", count(*) AS total FROM "Reporte" r JOIN "Plataforma" p ON p."id"=r."plataformaId" WHERE r."eliminado"=false GROUP BY p."nombre" ORDER BY total DESC`, categoria: "operativo" },
+  { nombre: "anonimato_pct", nombreLegible: "Anonimato (%)", descripcion: "Porcentaje de reportes activos enviados anonimamente", formulaSQL: `SELECT count(*) FILTER (WHERE "esAnonimo")::float / NULLIF(count(*),0) * 100 AS pct_anonimos FROM "Reporte" WHERE "eliminado"=false`, categoria: "operativo" },
+  { nombre: "reincidencia_2mas", nombreLegible: "Identificadores reincidentes (2+)", descripcion: "Identificadores reportados con 2 o mas reportes acumulados", formulaSQL: `SELECT count(*) FROM "IdentificadorReportado" WHERE "totalReportes" >= 2`, categoria: "operativo" },
+  { nombre: "suscripciones_activas_por_tipo", nombreLegible: "Suscripciones activas por tipo", descripcion: "Suscripciones ACTIVA agrupadas por tipo de titular (COLEGIO · PADRE)", formulaSQL: `SELECT "tipoTitular"::text, count(*) AS total FROM "Suscripcion" WHERE "estado"='ACTIVA' GROUP BY "tipoTitular" ORDER BY total DESC`, categoria: "comercial" },
+  { nombre: "identificadores_vigilados_por_plataforma", nombreLegible: "Identificadores vigilados por plataforma", descripcion: "Agregados de identificadores reportados agrupados por plataforma", formulaSQL: `SELECT p."nombre", count(*) AS total FROM "IdentificadorReportado" ir JOIN "Plataforma" p ON p."id"=ir."plataformaId" GROUP BY p."nombre" ORDER BY total DESC`, categoria: "operativo" },
+  { nombre: "clasificacion_cobertura_pct", nombreLegible: "Cobertura clasificacion IA (%)", descripcion: "Porcentaje de reportes activos que ya tienen clasificacion IA", formulaSQL: `SELECT count(c."id")::float / NULLIF(count(r."id"),0) * 100 AS pct_cobertura FROM "Reporte" r LEFT JOIN "ClasificacionIA" c ON c."reporteId"=r."id" WHERE r."eliminado"=false`, categoria: "motor_ia" },
+];
+
+// 8 ejemplos NL→SQL nuevos (verificado=true explicito: SQL revisado contra
+// el schema real de PI y contra la lista de columnas publicadas del 02).
+const EJEMPLOS_V2: Array<{ preguntaNL: string; sql: string; categoriaConsulta: string; verificado: boolean }> = [
+  { preguntaNL: "Cuantas alertas escaladas hay sin gestionar?", sql: `SELECT count(*) FROM "AlertaColegio" WHERE "estado"='escalada'`, categoriaConsulta: "salud", verificado: true },
+  { preguntaNL: "Que plataforma concentra mas identificadores vigilados?", sql: `SELECT p."nombre", count(*) AS total FROM "IdentificadorReportado" ir JOIN "Plataforma" p ON p."id"=ir."plataformaId" GROUP BY p."nombre" ORDER BY total DESC`, categoriaConsulta: "operativo", verificado: true },
+  { preguntaNL: "Cuantos profesores hay por colegio?", sql: `SELECT c."nombre", count(pr."id") AS total FROM "Colegio" c LEFT JOIN "Profesor" pr ON pr."colegioId"=c."id" AND pr."estado"='activo' GROUP BY c."nombre" ORDER BY total DESC`, categoriaConsulta: "operativo", verificado: true },
+  { preguntaNL: "Que ciudad tiene mas reportes este mes?", sql: `SELECT "ciudad", count(*) AS total FROM "Reporte" WHERE date_trunc('month',"creadoEn")=date_trunc('month',now()) AND "eliminado"=false GROUP BY "ciudad" ORDER BY total DESC LIMIT 1`, categoriaConsulta: "reportes", verificado: true },
+  { preguntaNL: "Cuantos reportes anonimos vs identificados hubo este ano?", sql: `SELECT "esAnonimo", count(*) FROM "Reporte" WHERE date_trunc('year',"creadoEn")=date_trunc('year',now()) AND "eliminado"=false GROUP BY "esAnonimo"`, categoriaConsulta: "reportes", verificado: true },
+  { preguntaNL: "Cuantos acudientes tienen cuentas vigiladas?", sql: `SELECT count(DISTINCT "acudienteId") FROM "IdentificadorAcudiente" WHERE "estado"='activo'`, categoriaConsulta: "operativo", verificado: true },
+  { preguntaNL: "Cuantos colegios tienen suscripcion activa?", sql: `SELECT count(DISTINCT "colegioId") FROM "Suscripcion" WHERE "estado"='ACTIVA' AND "colegioId" IS NOT NULL`, categoriaConsulta: "comercial", verificado: true },
+  { preguntaNL: "Cual es la categoria mas frecuente esta semana?", sql: `SELECT "categoria"::text, count(*) AS total FROM "ClasificacionIA" WHERE "creadoEn" >= now() - interval '7 days' GROUP BY "categoria" ORDER BY total DESC LIMIT 1`, categoriaConsulta: "motor_ia", verificado: true },
+];
+
+async function seedCatalogoV2(): Promise<void> {
+  console.log("Seed catalogo BI v2 (ampliacion 2026-09-01 · 12 tablas del dominio)");
+
+  const antesT = await prisma.bICatalogoTabla.count();
+  for (const t of TABLAS_V2) {
+    await prisma.bICatalogoTabla.upsert({
+      where: { nombreFuente: t.nombreFuente },
+      create: t,
+      update: {},
+    });
+  }
+  const creadasT = (await prisma.bICatalogoTabla.count()) - antesT;
+  console.log(`  · BICatalogoTabla v2: ${creadasT} creadas · ${TABLAS_V2.length - creadasT} existentes`);
+
+  const tablasBD = await prisma.bICatalogoTabla.findMany();
+  const idMap = new Map(tablasBD.map((t) => [t.nombreFuente, t.id]));
+  const antesC = await prisma.bICatalogoColumna.count();
+  let omitidas = 0;
+  for (const c of COLUMNAS_V2) {
+    const tablaId = idMap.get(c.tabla);
+    if (!tablaId) {
+      omitidas += 1;
+      console.warn(`  ! columna ${c.tabla}.${c.nombreFuente} sin tabla padre · omitida`);
+      continue;
+    }
+    await prisma.bICatalogoColumna.upsert({
+      where: { tablaId_nombreFuente: { tablaId, nombreFuente: c.nombreFuente } },
+      create: {
+        tablaId,
+        nombreFuente: c.nombreFuente,
+        nombreLegible: c.nombreLegible,
+        descripcion: c.descripcion,
+        tipo: c.tipo,
+        sinonimos: c.sinonimos ?? [],
+        excluida: c.excluida ?? false,
+      },
+      update: {},
+    });
+  }
+  const creadasC = (await prisma.bICatalogoColumna.count()) - antesC;
+  console.log(`  · BICatalogoColumna v2: ${creadasC} creadas · ${COLUMNAS_V2.length - omitidas - creadasC} existentes · ${omitidas} omitidas`);
+
+  const antesM = await prisma.bICatalogoMetrica.count();
+  for (const m of METRICAS_V2) {
+    await prisma.bICatalogoMetrica.upsert({
+      where: { nombre: m.nombre },
+      create: m,
+      update: {},
+    });
+  }
+  const creadasM = (await prisma.bICatalogoMetrica.count()) - antesM;
+  console.log(`  · BICatalogoMetrica v2: ${creadasM} creadas · ${METRICAS_V2.length - creadasM} existentes`);
+
+  const antesE = await prisma.bICatalogoEjemplo.count();
+  for (const e of EJEMPLOS_V2) {
+    await prisma.bICatalogoEjemplo.upsert({
+      where: { preguntaNL: e.preguntaNL },
+      create: e,
+      update: {},
+    });
+  }
+  const creadosE = (await prisma.bICatalogoEjemplo.count()) - antesE;
+  console.log(`  · BICatalogoEjemplo v2: ${creadosE} creados · ${EJEMPLOS_V2.length - creadosE} existentes`);
+}
+
 async function main(): Promise<void> {
   console.log("Seed catalogo BI · Producto 006 · SPEC-006 · F3C 2026-09-01");
   await seedTablas();
@@ -366,6 +646,7 @@ async function main(): Promise<void> {
   await seedMetricas();
   await seedEjemplos();
   await seedConfig();
+  await seedCatalogoV2();
   console.log("Seed COMPLETO (idempotente: update:{} — la 2ª pasada crea 0 filas)");
 }
 

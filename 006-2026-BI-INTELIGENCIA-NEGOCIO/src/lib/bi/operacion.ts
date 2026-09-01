@@ -2,10 +2,13 @@
 // Producto 006 · BI v2 · Operación (Fase 3)
 //
 // Fuente: tablas replicadas de PI en bi-db ("Colegio", "Reporte",
-// "ClasificacionIA" — copia lógica, solo lectura desde el 006).
+// "ClasificacionIA", "AlertaColegio", "Profesor", "Alumno" — copia lógica,
+// solo lectura desde el 006).
 // Columnas reales verificadas contra 002-2026-PROTECCION-INFANTIL/prisma/schema.prisma:
 //   Colegio(id, nombre, tenantId, estado) · Reporte(tenantId, creadoEn, eliminado)
 //   ClasificacionIA(reporteId, categoria)
+//   AlertaColegio(colegioId, estado) · Profesor(colegioId, estado)
+//   Alumno(colegioId, estado)
 //
 // Candados:
 //   9  — honestidad con el vacío: sin reportes → categoriaTop null,
@@ -18,13 +21,20 @@
 // SEMÁFORO DETERMINISTA (en este orden, gana el primero que aplica):
 //   bad  — el colegio NUNCA tuvo reportes, o su último reporte tiene más de
 //          `operacion.dias_sin_actividad_bad` días (default 30).
-//   warn — actividad reciente: último reporte dentro de las últimas
-//          `operacion.horas_actividad_warn` horas (default 6); O categoría
-//          sensible recurrente: la categoría más frecuente del mes pertenece
-//          a `operacion.categorias_sensibles` (lista CSV de valores del enum
-//          CategoriaConducta de PI) y suma al menos
-//          `operacion.min_repeticion_categoria` reportes en el mes (default 3).
+//   warn — ESCALADAS SIN GESTIÓN: tiene al menos una alerta de colegio en
+//          estado 'escalada' (etiqueta propia "Escaladas sin gestión"; una
+//          escalada sin resolver pesa más que la calma aparente);
+//          O actividad reciente: último reporte dentro de las últimas
+//          `operacion.horas_actividad_warn` horas (default 6);
+//          O categoría sensible recurrente: la categoría más frecuente del
+//          mes pertenece a `operacion.categorias_sensibles` (lista CSV de
+//          valores del enum CategoriaConducta de PI) y suma al menos
+//          `operacion.min_repeticion_categoria` reportes en el mes
+//          (default 3).
 //   ok   — el resto.
+// Alertas por colegio: alertasActivas = estados 'nueva' + 'escalada' (lo
+// que exige gestión); 'vista'/'gestionada'/'cerrada' ya no la exigen.
+// Profesores/alumnos por colegio: solo filas con estado 'activo'.
 // Solo colegios con estado 'activo' (los inactivos no son operación en vivo).
 
 import { prisma } from "@/lib/db";
@@ -36,6 +46,13 @@ export interface FilaOperacion {
     hoy: number;
     categoriaTop: string | null;
     ultimoReporteHaceMin: number | null;
+    /** Alertas del colegio que exigen gestión (estados 'nueva' + 'escalada') */
+    alertasActivas: number;
+    /** Alertas en estado 'escalada' (subconjunto de alertasActivas) */
+    escaladas: number;
+    /** Roster activo del colegio (Profesor/Alumno con estado 'activo') */
+    profesores: number;
+    alumnos: number;
     estado: "ok" | "warn" | "bad";
     estadoEtiqueta: string;
 }
@@ -45,6 +62,10 @@ export interface ResumenOperacion {
     enAtencion: number;
     sinActividad: number;
     reportesHoy: number;
+    /** Colegios con ≥1 alerta por gestionar (nueva o escalada) */
+    conAlertasPorGestionar: number;
+    /** Colegios con ≥1 alerta escalada sin gestionar */
+    conEscaladasSinGestion: number;
 }
 
 export interface DatosOperacion {
@@ -83,6 +104,9 @@ const ETIQUETAS: Record<FilaOperacion["estado"], string> = {
     bad: "Sin actividad",
 };
 
+/** Etiqueta propia del warn por escaladas sin gestionar (ver semáforo). */
+const ETIQUETA_ESCALADAS = "Escaladas sin gestión";
+
 /** Fila del agregado por colegio (counts casteados a int en SQL → number). */
 interface FilaAgregada {
     colegio_id: string;
@@ -98,6 +122,20 @@ interface FilaCategoria {
     tenant_id: string;
     categoria: string;
     total: number;
+}
+
+/** Alertas por colegio: activas (nueva+escalada) y escaladas. */
+interface FilaAlertasColegio {
+    colegio_id: string;
+    alertas_activas: number;
+    escaladas: number;
+}
+
+/** Rosters activos por colegio. */
+interface FilaPersonasColegio {
+    colegio_id: string;
+    profesores: number;
+    alumnos: number;
 }
 
 function enteroPositivo(valor: string | null, fallback: number): number {
@@ -186,6 +224,35 @@ export async function getOperacion(): Promise<DatosOperacion> {
         GROUP BY r."tenantId", ci."categoria"
     `;
 
+    // Alertas por colegio: activas = 'nueva' + 'escalada' (lo que exige
+    // gestión). Un colegio sin filas en AlertaColegio no aparece aquí:
+    // en el merge vale 0 (la ausencia de filas ES el conteo real en cero).
+    const alertas = await prisma.$queryRaw<FilaAlertasColegio[]>`
+        SELECT
+            "colegioId"                                             AS colegio_id,
+            COUNT(*) FILTER (WHERE "estado" IN ('nueva', 'escalada'))::int
+                                                                    AS alertas_activas,
+            COUNT(*) FILTER (WHERE "estado" = 'escalada')::int      AS escaladas
+        FROM "AlertaColegio"
+        GROUP BY "colegioId"
+    `;
+
+    // Rosters activos por colegio (subconsultas escalares: evitan el
+    // producto cartesiano de dos LEFT JOIN independientes).
+    const personas = await prisma.$queryRaw<FilaPersonasColegio[]>`
+        SELECT
+            c."id" AS colegio_id,
+            (SELECT COUNT(*) FROM "Profesor" p
+              WHERE p."colegioId" = c."id" AND p."estado" = 'activo')::int AS profesores,
+            (SELECT COUNT(*) FROM "Alumno" a
+              WHERE a."colegioId" = c."id" AND a."estado" = 'activo')::int AS alumnos
+        FROM "Colegio" c
+        WHERE c."estado" = ${"activo"}
+    `;
+
+    const alertasPorColegio = new Map(alertas.map((f) => [f.colegio_id, f]));
+    const personasPorColegio = new Map(personas.map((f) => [f.colegio_id, f]));
+
     // Top por tenant: más reportes del mes; empate → orden alfabético
     // (determinista, misma query = mismo resultado).
     const topPorTenant = new Map<string, { categoria: string; total: number }>();
@@ -218,10 +285,21 @@ export async function getOperacion(): Promise<DatosOperacion> {
                       ),
                   );
         const top = topPorTenant.get(a.tenant_id) ?? null;
+        const alertasColegio = alertasPorColegio.get(a.colegio_id);
+        const alertasActivas = alertasColegio?.alertas_activas ?? 0;
+        const escaladas = alertasColegio?.escaladas ?? 0;
+        const personasColegio = personasPorColegio.get(a.colegio_id);
 
         let estado: FilaOperacion["estado"];
+        let estadoEtiqueta: string;
         if (ultimoReporteHaceMin === null || ultimoReporteHaceMin > minBad) {
             estado = "bad";
+            estadoEtiqueta = ETIQUETAS.bad;
+        } else if (escaladas > 0) {
+            // Escalada sin gestionar: warn con etiqueta propia, aunque no
+            // haya actividad reciente ni categoría sensible en el mes.
+            estado = "warn";
+            estadoEtiqueta = ETIQUETA_ESCALADAS;
         } else if (
             ultimoReporteHaceMin <= minWarn ||
             (top !== null &&
@@ -229,8 +307,10 @@ export async function getOperacion(): Promise<DatosOperacion> {
                 top.total >= umbrales.minRepeticionCategoria)
         ) {
             estado = "warn";
+            estadoEtiqueta = ETIQUETAS.warn;
         } else {
             estado = "ok";
+            estadoEtiqueta = ETIQUETAS.ok;
         }
 
         return {
@@ -239,8 +319,12 @@ export async function getOperacion(): Promise<DatosOperacion> {
             hoy: a.hoy,
             categoriaTop: top?.categoria ?? null,
             ultimoReporteHaceMin,
+            alertasActivas,
+            escaladas,
+            profesores: personasColegio?.profesores ?? 0,
+            alumnos: personasColegio?.alumnos ?? 0,
             estado,
-            estadoEtiqueta: ETIQUETAS[estado],
+            estadoEtiqueta,
         };
     });
 
@@ -249,6 +333,8 @@ export async function getOperacion(): Promise<DatosOperacion> {
         enAtencion: filas.filter((f) => f.estado === "warn").length,
         sinActividad: filas.filter((f) => f.estado === "bad").length,
         reportesHoy: filas.reduce((acc, f) => acc + f.hoy, 0),
+        conAlertasPorGestionar: filas.filter((f) => f.alertasActivas > 0).length,
+        conEscaladasSinGestion: filas.filter((f) => f.escaladas > 0).length,
     };
 
     return { filas, resumen };

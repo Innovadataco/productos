@@ -25,10 +25,11 @@ function deltaHoras(deltaClasificacionH: number | null): DeltaKpi {
 }
 
 /**
- * Grid de los 4 KPIs vivos (mockup pantalla 2). Todos los números vienen de
+ * Primera fila de KPIs vivos del Pulso (mockup v3 pantalla 1): reportes del
+ * mes, reportes de hoy y media de clasificación. Los números vienen de
  * PulsoData; el sparkline solo aparece en los KPIs de reportes, que tienen
- * serie real (serieDiaria) — los demás van sin spark antes que con una
- * serie inventada. Los KPIs sin delta en el contrato dicen "sin comparación".
+ * serie real (serieDiaria). "Colegios activos" vive en la segunda fila
+ * (GridKpisSecundario), donde el contrato v3 le da delta real.
  */
 export default function GridKpis({
     kpis,
@@ -39,7 +40,7 @@ export default function GridKpis({
 }) {
     const serie = serieDiaria.map((d) => d.total);
     return (
-        <div className="mb-6 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
+        <div className="mb-4 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
             <TarjetaKpi
                 etiqueta="Reportes · este mes"
                 valor={kpis.reportesMes}
@@ -55,12 +56,6 @@ export default function GridKpis({
                 retardo={480}
             />
             <TarjetaKpi
-                etiqueta="Colegios activos"
-                valor={kpis.colegiosActivos}
-                delta={{ texto: "sin comparación", tipo: "flat" }}
-                retardo={540}
-            />
-            <TarjetaKpi
                 etiqueta="Clasificación media"
                 valor={kpis.horasClasificacionMedia}
                 decimales={1}
@@ -70,7 +65,7 @@ export default function GridKpis({
                         ? { texto: "sin datos", tipo: "flat" }
                         : deltaHoras(kpis.deltaClasificacionH)
                 }
-                retardo={600}
+                retardo={540}
             />
         </div>
     );
