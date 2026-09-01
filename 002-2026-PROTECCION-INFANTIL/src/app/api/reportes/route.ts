@@ -46,12 +46,18 @@ export async function POST(request: Request) {
         }
         const esAnonimo = !user;
 
-        // SPEC-119: un padre con el servicio vencido no puede crear reportes nuevos
-        // (los ya enviados siguen su curso; el reporte anónimo no se toca).
-        if (user) {
-            const { assertVigenciaCliente } = await import("@/lib/colegio/vigencia");
-            await assertVigenciaCliente(user.id);
-        }
+        // SPEC-356 (I-253) · DEROGADO el guard de vigencia de SPEC-119 en esta ruta.
+        //
+        // El middleware YA exime `/api/reportes` de la vigencia con la razón
+        // escrita en `guardias.ts`: «Regla dura de Jelkin: proteger a un menor
+        // está por encima del cobro. Reportar no se bloquea nunca, ni por camino
+        // ni por vigencia». Este handler la contradecía: el padre con el plan
+        // vencido escribía todo el relato, daba enviar, recibía 403 y PERDÍA LO
+        // ESCRITO — el peor escenario posible del producto.
+        //
+        // La regla dura manda sobre SPEC-119. NO reintroducir el guard acá.
+        // (El cobro se reclama por las pantallas de suscripción, nunca cerrando
+        // la puerta de un reporte.)
 
         // Rate limiting por IP (anónimo) o por usuario autenticado
         const identifier = user?.id ?? undefined;

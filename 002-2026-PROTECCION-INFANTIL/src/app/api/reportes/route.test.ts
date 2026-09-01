@@ -500,7 +500,12 @@ describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
         }
     });
 
-    it("padre vencido recibe 403 con mensaje claro y NO se crea el reporte", async () => {
+    // SPEC-356 (I-253) · el test anterior afirmaba el BUG: exigía 403 para el
+    // padre vencido. La regla dura de Jelkin («proteger a un menor está por
+    // encima del cobro») manda sobre SPEC-119, y `guardias.ts` ya eximía la
+    // ruta — el handler la contradecía y el padre PERDÍA el relato escrito.
+    // Invertido con assert fuerte: no basta el 201, el reporte debe QUEDAR.
+    it("SPEC-356: padre VENCIDO reporta con normalidad (201) y el reporte queda guardado", async () => {
         const user = await crearUsuario("PARENT");
         const ayer = new Date();
         ayer.setDate(ayer.getDate() - 1);
@@ -509,13 +514,13 @@ describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
 
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
         const res = await POST(req);
-        expect(res.status).toBe(403);
-        const body = await res.json();
-        expect(body.error.message).toMatch(/vencido/i);
-        expect(body.error.message).toMatch(/soporte/i);
+        expect(res.status, "el plan vencido NUNCA bloquea un reporte").toBe(201);
 
-        const creados = await prisma.reporte.count({ where: { usuarioId: user.id } });
-        expect(creados).toBe(0);
+        // Assert fuerte: el reporte existe, es de ESE padre y NO quedó anónimo.
+        const creados = await prisma.reporte.findMany({ where: { usuarioId: user.id } });
+        expect(creados, "el relato del padre vencido se guarda, no se pierde").toHaveLength(1);
+        expect(creados[0].esAnonimo).toBe(false);
+        expect(creados[0].identificador).toBe(reporteValido.identificador);
     });
 
     it("padre sin vigencia definida reporta con normalidad (201)", async () => {

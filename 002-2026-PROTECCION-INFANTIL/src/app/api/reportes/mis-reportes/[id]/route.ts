@@ -19,9 +19,10 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function GET(_request: Request, context: RouteContext) {
     try {
         const user = await verifyAuth("PARENT");
-        // SPEC-119: un padre con el servicio vencido no consulta su área (datos intactos).
-        const { assertVigenciaCliente } = await import("@/lib/colegio/vigencia");
-        await assertVigenciaCliente(user.id);
+        // SPEC-356 (I-253) · DEROGADO el guard de vigencia de SPEC-119 acá,
+        // por la misma razón que en el listado: `/api/reportes` está exenta en
+        // `guardias.ts` por la regla dura de Jelkin, y el detalle de un reporte
+        // propio es parte de seguir el hilo de lo denunciado. NO reintroducir.
         const { id } = await context.params;
 
         // SPEC-053: la consulta y el mapeo a DTOs viven en el DAL; la ruta no toca prisma.
