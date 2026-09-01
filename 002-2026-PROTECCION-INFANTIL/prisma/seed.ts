@@ -87,13 +87,32 @@ async function upsertNotificacionRegla(
 // Idempotencia anti-I-100: upsert por clave, propaga cambios de default definidos en código.
 async function seedParametrosPadre() {
     const parametrosPadre = [
-        { clave: "padre.expediente.auto_cierre_meses", valor: "6", tipo: TipoParametro.INTEGER, descripcion: "Meses de inactividad para auto-cierre de expediente" },
+        { clave: "padre.expediente.auto_cierre_meses", valor: "0", tipo: TipoParametro.INTEGER, descripcion: "DEROGADO (SPEC-340): 0 = los expedientes no se cierran nunca. Regla de Jelkin 01-09-2026." },
         { clave: "padre.expediente.consolidacion_min_reportes", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Mínimo de reportes para pasar a CONSOLIDANDO" },
         { clave: "padre.expediente.max_aclaraciones", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Máximo de aclaraciones por expediente" },
         // SPEC-339 (A-67 · brief §2.4): el tope de menores es PARÁMETRO, no una
         // constante en el código — el admin lo cambia sin desplegar. El mensaje
         // que ve el padre también se siembra: {{maximo}} se reemplaza al mostrarlo.
         { clave: "padre.hijos.maximo", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Máximo de menores que un padre puede registrar" },
+        // SPEC-340 (A-68 §3.3-bis): el step-up del texto sensible. Dos relojes:
+        // re-tapado (ergonomía, cliente) y umbral de contraseña (SERVIDOR).
+        { clave: "padre.texto.retapado_minutos", valor: "10", tipo: TipoParametro.INTEGER, descripcion: "Minutos hasta que el texto revelado se vuelve a tapar solo" },
+        { clave: "padre.texto.stepup_minutos", valor: "30", tipo: TipoParametro.INTEGER, descripcion: "Edad de sesión (min) a partir de la cual revelar el texto exige la contraseña" },
+        // SPEC-340 (A-68 §3.3): la clasificación EXPLICADA en lenguaje de padre.
+        // El admin las edita; el fallback si falta una clave es un texto genérico.
+        { clave: "padre.analisis.explicacion.CONTACTO_INSISTENTE", valor: "Encontramos señales de contacto insistente: alguien que escribe una y otra vez aunque no le respondan. Documentarlo ayuda a mostrar el patrón.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.SOLICITUD_MATERIAL", valor: "Encontramos señales de contacto sexual: alguien pidiendo fotos o material íntimo. Es grave y vale la pena documentarlo.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.OFRECIMIENTO_REGALOS", valor: "Encontramos señales de ofrecimientos: regalos, dinero o recargas a cambio de algo. Suele ser la puerta de entrada de un abuso.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.SUPLANTACION_IDENTIDAD", valor: "Encontramos señales de que la persona finge ser alguien que no es: otro menor, un familiar o una figura de confianza.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.SOLICITUD_ENCUENTRO", valor: "Encontramos señales de que alguien busca un encuentro en persona. Es de las señales más serias y conviene documentarla con fechas.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.COMPARTIMIENTO_SEXUAL", valor: "Encontramos señales de envío de contenido sexual hacia el menor. Documentarlo con fecha y hora fortalece tu carpeta.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.EXTORSION", valor: "Encontramos señales de presión o chantaje: pedir algo a cambio de no publicar o no contar. Guarda todo; cada mensaje cuenta.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.CONTENIDO_GENERADO_IA", valor: "Encontramos señales de contenido fabricado con inteligencia artificial usando la imagen del menor. Es reciente en la ley y sí se puede denunciar.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.DIFUSION_NO_CONSENTIDA", valor: "Encontramos señales de difusión de contenido íntimo sin permiso. No compartas el enlace; documenta y busca la baja del contenido.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.DOXING", valor: "Encontramos señales de publicación de datos personales del menor (dirección, colegio, teléfono). Conviene reforzar la privacidad de sus cuentas.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.CIBERACOSO", valor: "Encontramos señales de acoso repetido por medios digitales: burlas, amenazas o exclusión sostenida. El patrón importa más que el mensaje suelto.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.HAPPY_SLAPPING", valor: "Encontramos señales de agresión grabada o difundida para burlarse. La ley lo nombra y lo sanciona; documentarlo sirve.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
+        { clave: "padre.analisis.explicacion.STALKING", valor: "Encontramos señales de vigilancia u hostigamiento persistente. Anota cada vez que pase, con fecha y hora: la insistencia es la clave.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
         { clave: "padre.hijos.maximo_mensaje", valor: "Puedes cuidar hasta {{maximo}} menores desde esta cuenta. Si necesitas más, escríbenos y lo resolvemos.", tipo: TipoParametro.STRING, descripcion: "Mensaje que ve el padre al alcanzar el tope de menores" },
         { clave: "padre.expediente.rate_limit_eventos_24h", valor: "999", tipo: TipoParametro.INTEGER, descripcion: "Límite de eventos que un padre puede agregar en 24h" },
         { clave: "padre.comite.sla_horas_normal", valor: "48", tipo: TipoParametro.INTEGER, descripcion: "SLA de comité para casos normales" },
@@ -301,6 +320,8 @@ async function seedMotorExpediente() {
 
     // 11 eventos del ciclo de vida del expediente (FR-018) con su audiencia.
     type EventoExpedienteSeed = {
+    /** SPEC-340: evento derogado — el seed desactiva su plantilla. */
+    derogada?: boolean;
         evento: string;
         roles: string[];
         asuntoEmail: string;
@@ -372,7 +393,11 @@ async function seedMotorExpediente() {
             cuerpoInApp: "El expediente {{expedienteId}} pasó a estado escalado.",
         },
         {
+            // SPEC-340 (D-1): evento DEROGADO — nada se cierra nunca. La entrada
+            // se conserva para que el seed DESACTIVE la plantilla en las BD que
+            // ya la tienen activa (el upsert pisa `activa`).
             evento: "expediente.auto_cerrado_inactividad",
+            derogada: true,
             roles: ["PADRE"],
             asuntoEmail: "Tu expediente se cerró por inactividad",
             cuerpoEmail: "Hola,\n\nTu expediente se cerró automáticamente por inactividad prolongada. Si lo necesitas, puedes solicitar su reapertura desde {{urlExpediente}}.",
@@ -388,6 +413,8 @@ async function seedMotorExpediente() {
     ];
 
     for (const e of eventosSeed) {
+        // SPEC-340: los eventos derogados quedan con la plantilla INACTIVA.
+        const activa = !e.derogada;
         const plantillas = [
             { clave: `${e.evento}.email`, canal: "EMAIL" as const, asunto: e.asuntoEmail, cuerpoMarkdown: e.cuerpoEmail },
             { clave: `${e.evento}.in_app`, canal: "IN_APP" as const, asunto: undefined, cuerpoMarkdown: e.cuerpoInApp },
@@ -400,7 +427,7 @@ async function seedMotorExpediente() {
                     asunto: pl.asunto ?? null,
                     cuerpoMarkdown: pl.cuerpoMarkdown,
                     variablesSchema: { type: "object", properties: {} },
-                    activa: true,
+                    activa,
                 },
                 create: {
                     clave: pl.clave,

@@ -86,10 +86,13 @@ export async function construirSugerenciaProactiva(
     usuarioId: string,
     repo: SugerenciaProactivaRepository = new SugerenciaProactivaRepository()
 ): Promise<SugerenciaProactiva> {
-    const [totalContactos, contactos, expedientes] = await Promise.all([
+    const [totalContactos, contactos, expedientes, novedadCadena] = await Promise.all([
         repo.contarContactosActivos(usuarioId),
         listarSemaforosPorPadre(usuarioId),
         repo.buscarExpedientesDelPadre(usuarioId),
+        // SPEC-340: la novedad viva viene de la CADENA de reportes propios —
+        // el expediente nace por el botón y puede no existir todavía.
+        repo.ultimaNovedadDeCadena(usuarioId),
     ]);
 
     const contactosPorColor = contarContactosPorColor(contactos);
@@ -140,8 +143,13 @@ export async function construirSugerenciaProactiva(
         };
     }
 
-    // Regla 4: sin novedades en 7 días.
-    const ultima = ultimaNovedad(expedientes);
+    // Regla 4: sin novedades en 7 días. La fecha más reciente entre el
+    // expediente (si existe) y la cadena de reportes (SPEC-340).
+    const ultimaExp = ultimaNovedad(expedientes);
+    const ultima =
+        ultimaExp && novedadCadena
+            ? (ultimaExp > novedadCadena ? ultimaExp : novedadCadena)
+            : (ultimaExp ?? novedadCadena);
     if (ultima) {
         const dias = haceDias(ultima);
         metadata.diasDesdeUltimaNovedad = dias;

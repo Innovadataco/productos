@@ -11,7 +11,8 @@ export type TimelineHomeItem = {
     texto: string;
     categoria: string | null;
     contactoEtiqueta: string | null;
-    expedienteId: string;
+    // SPEC-340: puede no existir aún (el expediente nace por el botón).
+    expedienteId: string | null;
 };
 
 export async function obtenerTimelineHome(usuarioId: string, limite = 5): Promise<TimelineHomeItem[]> {

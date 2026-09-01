@@ -8,6 +8,8 @@ import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { ExpedienteRepository } from "@/lib/dal/repositories/expediente-repository";
 import { generarPdfExpediente } from "@/lib/expediente/pdf-expediente";
+import { registrarInformePadre } from "@/lib/dal/services/informes-padre";
+import { randomBytes, createHash } from "node:crypto";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -31,6 +33,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         }
 
         const fechaGeneracion = new Date();
+        // SPEC-340 (§4.3): el orden del sello (contrato de SPEC-234, replicado):
+        // 1) el CÓDIGO se decide ANTES y va impreso en el pie;
+        // 2) se renderiza; 3) el HASH es del buffer FINAL (jamás entra al PDF —
+        // un hash impreso invalidaría su propia verificación); 4) se registra.
+        const codigoVerificacion = randomBytes(8).toString("hex"); // 16 hex
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://pi.innovadataco.com";
         const buffer = await generarPdfExpediente({
             identificadorReportado: detalle.expediente.identificadorReportado,
             fechaApertura: detalle.expediente.fechaApertura,
@@ -39,6 +48,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             eventosPropios: detalle.eventosPropios,
             contextoOtros: detalle.contextoOtros,
             fechaGeneracion,
+            codigoVerificacion,
+            urlVerificacion: `${baseUrl}/verificar/${codigoVerificacion}`,
+        });
+
+        const pdfHash = createHash("sha256").update(buffer).digest("hex");
+
+        // Cada generación queda auditada PERMANENTE (§4.3: "si en dos años el
+        // padre vuelve, ve el día exacto en que sacó cada informe").
+        await registrarInformePadre({
+            expedienteId: id,
+            generadoPorId: user.id,
+            pdfHash,
+            codigoVerificacion,
         });
 
         const filename = `expediente-${detalle.expediente.identificadorReportado.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;

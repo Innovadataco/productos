@@ -10,7 +10,6 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
 import { validarSecretoSimulacion } from "@/lib/anti-abuso/simulador-secreto";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
-import { ExpedienteRepository } from "@/lib/dal/repositories/expediente-repository";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 
 export async function POST(request: Request) {
@@ -115,10 +114,12 @@ export async function POST(request: Request) {
         // transacción (con advisory lock por usuario+identificador dentro — cierra
         // la carrera de deduplicación). La fuente anti-abuso y el encolado quedan
         // FUERA, como hasta ahora (FR-004).
-        // SPEC-323: el expediente de la vinculación entra en la MISMA transacción —
-        // si falla el 2º evento no puede quedar un expediente a medias, y el advisory
-        // lock cubre además la creación concurrente del expediente.
-        const { resultado, expedienteId } = await withUnitOfWork(async (tx) => {
+        // SPEC-340 (A-68 · deroga SPEC-323 §parcial): el expediente YA NO nace acá.
+        // Lo crea EL PADRE con el botón (razón de Jelkin: si él lo crea, entiende
+        // qué es — su carpeta deliberada). La vinculación ahora se materializa en
+        // la CADENA (Reporte.reportePrincipalId), dentro de la misma transacción
+        // y bajo el mismo advisory lock que cerraba la carrera del expediente.
+        const { resultado } = await withUnitOfWork(async (tx) => {
             const resultado = await new ReporteCreationService(tx).crear({
                 identificador,
                 plataformaId: plataforma.id,
@@ -144,34 +145,23 @@ export async function POST(request: Request) {
                 reportePrevioId,
             });
 
-            // SPEC-323 (T011/US2): vinculación aceptada → crear/reutilizar expediente
-            // y agregar ambos reportes como eventos.
+            // SPEC-340: vinculación aceptada → el nuevo reporte entra a la CADENA.
+            // Si el previo ya era evento de una cadena, se resuelve a SU principal
+            // (la cadena es plana: todos los eventos apuntan al mismo principal).
             if (!resultado.ok || !("vinculacion" in resultado) || !resultado.vinculacion) {
-                return { resultado, expedienteId: undefined as string | undefined };
+                return { resultado };
             }
-            const { reportePrevioId: previoId, reportePrevioCreadoEn } = resultado.vinculacion;
-            const expRepo = new ExpedienteRepository(tx);
-            const existente = await expRepo.buscarExpedienteActivo(usuarioId!, identificador);
-            const expediente = existente ?? await expRepo.crearExpediente({
-                padreUsuarioId: usuarioId!,
-                identificadorReportado: identificador,
+            const { reportePrevioId: previoId } = resultado.vinculacion;
+            const previo = await tx.reporte.findUnique({
+                where: { id: previoId },
+                select: { reportePrincipalId: true },
             });
-            // Evento retroactivo (reporte previo). texto="" — AD-3 opción C: el texto
-            // se descifra al leer, no se persiste en el evento. Idempotente en el DAL:
-            // del 3er reporte en adelante el previo ya es evento y no se duplica.
-            await expRepo.agregarEvento({
-                expedienteId: expediente.id,
-                texto: "",
-                reporteId: previoId,
-                fechaEvento: reportePrevioCreadoEn,
+            const principalId = previo?.reportePrincipalId ?? previoId;
+            await tx.reporte.update({
+                where: { id: resultado.reporte.id },
+                data: { reportePrincipalId: principalId },
             });
-            // Evento del reporte recién creado.
-            await expRepo.agregarEvento({
-                expedienteId: expediente.id,
-                texto: "",
-                reporteId: resultado.reporte.id,
-            });
-            return { resultado, expedienteId: expediente.id as string | undefined };
+            return { resultado };
         });
 
         if (!resultado.ok) {
@@ -230,7 +220,8 @@ export async function POST(request: Request) {
                     numeroSeguimiento: reporte.numeroSeguimiento,
                     estado: reporte.estado,
                 },
-                ...(expedienteId ? { expedienteId } : {}),
+                // SPEC-340: la respuesta ya no trae expedienteId — el expediente
+                // nace por el botón del padre, no en el alta.
                 mensaje: "Reporte recibido. Tu número de seguimiento es " + reporte.numeroSeguimiento + ".",
             },
             { status: 201 }

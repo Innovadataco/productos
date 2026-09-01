@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 454 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3178 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 459 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3213 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -327,8 +327,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
-| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
+| `/api/padre/expedientes` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/lectura` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/[id]` | api | permitir | permite | sí |
@@ -337,6 +338,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
+| `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
+| `/api/padre/step-up` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -353,6 +357,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/[id]/evento` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
@@ -786,8 +791,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
-| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
+| `/api/padre/expedientes` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/lectura` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/[id]` | api | permitir | permite | sí |
@@ -796,6 +802,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
+| `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
+| `/api/padre/step-up` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -812,6 +821,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/[id]/evento` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
@@ -1245,8 +1255,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
-| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
+| `/api/padre/expedientes` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/lectura` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/[id]` | api | permitir | permite | sí |
@@ -1255,6 +1266,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
+| `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
+| `/api/padre/step-up` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -1271,6 +1285,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/[id]/evento` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
@@ -1704,8 +1719,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
-| `/api/padre/expedientes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes/[id]/lectura` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos/[id]` | api | HTTP 403 | no permite | sí |
@@ -1714,6 +1730,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/perfil` | api | HTTP 403 | no permite | sí |
+| `/api/padre/reportes/[id]/texto` | api | HTTP 403 | no permite | sí |
+| `/api/padre/reportes/cadenas` | api | HTTP 403 | no permite | sí |
+| `/api/padre/step-up` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | HTTP 403 | no permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -1730,6 +1749,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 403 | no permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
+| `/api/reportes/[id]/evento` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/fallback` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/mis-reportes` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/mis-reportes/[id]` | api | HTTP 403 | no permite | sí |
@@ -2163,8 +2183,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 403 | no permite | sí |
-| `/api/padre/expedientes/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 403 | no permite | sí |
+| `/api/padre/expedientes/[id]/lectura` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expedientes/[id]/pdf` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos` | api | HTTP 403 | no permite | sí |
 | `/api/padre/hijos/[id]` | api | HTTP 403 | no permite | sí |
@@ -2173,6 +2194,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/perfil` | api | HTTP 403 | no permite | sí |
+| `/api/padre/reportes/[id]/texto` | api | HTTP 403 | no permite | sí |
+| `/api/padre/reportes/cadenas` | api | HTTP 403 | no permite | sí |
+| `/api/padre/step-up` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 403 | no permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | HTTP 403 | no permite | sí |
 | `/api/pagos` | api | HTTP 403 | no permite | sí |
@@ -2189,6 +2213,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 403 | no permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
+| `/api/reportes/[id]/evento` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/fallback` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/mis-reportes` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/mis-reportes/[id]` | api | HTTP 403 | no permite | sí |
@@ -2622,8 +2647,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | permitir | permite | sí |
-| `/api/padre/expedientes/[id]` | api | permitir | permite | sí |
+| `/api/padre/expedientes` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/eventos` | api | permitir | permite | sí |
+| `/api/padre/expedientes/[id]/lectura` | api | permitir | permite | sí |
 | `/api/padre/expedientes/[id]/pdf` | api | permitir | permite | sí |
 | `/api/padre/hijos` | api | permitir | permite | sí |
 | `/api/padre/hijos/[id]` | api | permitir | permite | sí |
@@ -2632,6 +2658,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
+| `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
+| `/api/padre/step-up` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/activar-freemium` | api | permitir | permite | sí |
 | `/api/padre/suscripcion/solicitar-plan` | api | permitir | permite | sí |
 | `/api/pagos` | api | permitir | permite | sí |
@@ -2648,6 +2677,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/[id]/evento` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
@@ -3081,8 +3111,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | api | HTTP 401 | permite | **NO** |
-| `/api/padre/expedientes/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/expedientes` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expedientes/[id]/eventos` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/expedientes/[id]/lectura` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expedientes/[id]/pdf` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/hijos` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/hijos/[id]` | api | HTTP 401 | permite | **NO** |
@@ -3091,6 +3122,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/home/sugerencia` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/perfil` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/reportes/[id]/texto` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/reportes/cadenas` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/step-up` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/suscripcion/activar-freemium` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/suscripcion/solicitar-plan` | api | HTTP 401 | permite | **NO** |
 | `/api/pagos` | api | HTTP 401 | permite | **NO** |
@@ -3107,6 +3141,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 401 | permite | **NO** |
 | `/api/publico/verificar-pdf/[hash]` | api | HTTP 401 | permite | **NO** |
 | `/api/reportes` | api | permitir | permite | sí |
+| `/api/reportes/[id]/evento` | api | permitir | permite | sí |
 | `/api/reportes/fallback` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes` | api | permitir | permite | sí |
 | `/api/reportes/mis-reportes/[id]` | api | permitir | permite | sí |
@@ -3514,8 +3549,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/contacto-emergencia/[id]` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/pedir-aclaracion` | HTTP 401 | permite |
-| `/api/padre/expedientes/[id]` | HTTP 401 | permite |
+| `/api/padre/expedientes` | HTTP 401 | permite |
 | `/api/padre/expedientes/[id]/eventos` | HTTP 401 | permite |
+| `/api/padre/expedientes/[id]/lectura` | HTTP 401 | permite |
 | `/api/padre/expedientes/[id]/pdf` | HTTP 401 | permite |
 | `/api/padre/hijos` | HTTP 401 | permite |
 | `/api/padre/hijos/[id]` | HTTP 401 | permite |
@@ -3524,6 +3560,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/home` | HTTP 401 | permite |
 | `/api/padre/home/sugerencia` | HTTP 401 | permite |
 | `/api/padre/perfil` | HTTP 401 | permite |
+| `/api/padre/reportes/[id]/texto` | HTTP 401 | permite |
+| `/api/padre/reportes/cadenas` | HTTP 401 | permite |
+| `/api/padre/step-up` | HTTP 401 | permite |
 | `/api/padre/suscripcion/activar-freemium` | HTTP 401 | permite |
 | `/api/padre/suscripcion/solicitar-plan` | HTTP 401 | permite |
 | `/api/pagos` | HTTP 401 | permite |

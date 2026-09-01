@@ -126,14 +126,17 @@ describe("ReporteWizard", () => {
     // SPEC-295 (002-PI-196 · I-146): modo autenticado del panel padre.
     // ─────────────────────────────────────────────────────────────────────
     describe("SPEC-295 · modoAutenticado", () => {
-        it("muestra banner de identidad cuando el padre está autenticado", async () => {
+        // SPEC-340 (A-68 §2.1): el banner se retiró — Jelkin: no es necesario.
+        it("NO muestra el banner de identidad aunque el padre esté autenticado (SPEC-340)", async () => {
             mockFetch({ id: "u4", email: "parent@test.com", nombre: "Juan Padre", rol: "PARENT" });
             render(<ReporteWizard modoAutenticado />);
 
             await waitFor(() => {
-                expect(document.body.textContent).toContain("Reportando como");
-                expect(document.body.textContent).toContain("Juan Padre");
-                expect(document.body.textContent).toContain("parent@test.com");
+                // El banner entero se fue: ni el rótulo ni el nombre/correo del
+                // padre aparecen en el formulario (SPEC-340 — no es necesario).
+                expect(document.body.textContent).not.toContain("Reportando como");
+                expect(document.body.textContent).not.toContain("Juan Padre");
+                expect(document.body.textContent).not.toContain("parent@test.com");
             });
         });
 
@@ -146,7 +149,7 @@ describe("ReporteWizard", () => {
 
             await waitFor(() => {
                 // el banner de identidad sigue presente...
-                expect(document.body.textContent).toContain("Reportando como");
+                expect(document.body.textContent).not.toContain("Reportando como");
             });
             // ...pero ya no hay checkbox ni la etiqueta de anonimato.
             expect(document.body.textContent).not.toContain("Reportar de forma anónima");

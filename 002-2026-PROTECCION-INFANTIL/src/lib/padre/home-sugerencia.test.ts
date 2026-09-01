@@ -18,7 +18,9 @@ describe("calcularSugerenciaHome", () => {
         expect(sugerencia.accionHref).toBe("/dashboard/padre/suscripcion");
     });
 
-    it("recomienda revisar expedientes cuando hay contactos en rojo", () => {
+    // SPEC-340: la acción apunta a Mis reportes (el hilo vivo), no a una lista
+    // de expedientes que puede estar vacía hasta que el padre cree el suyo.
+    it("recomienda ir a Mis reportes cuando hay contactos en rojo (SPEC-340)", () => {
         const sugerencia = calcularSugerenciaHome({
             totalContactos: 3,
             contactosRojo: 2,
@@ -27,7 +29,7 @@ describe("calcularSugerenciaHome", () => {
             nombrePadre: null,
         });
         expect(sugerencia.prioridad).toBe("alta");
-        expect(sugerencia.accionHref).toBe("/dashboard/padre/expedientes");
+        expect(sugerencia.accionHref).toBe("/mis-reportes");
     });
 
     it("sugiere ver el círculo cuando hay contactos en ámbar", () => {

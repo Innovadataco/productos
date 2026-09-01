@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
-import { dejarHandoffReportar } from "@/lib/reportar-handoff";
 import type { BadgeVariant } from "@/components/ui/Badge";
 import { CATEGORIAS_LABELS } from "@/lib/labels";
 import { EstadoTransicion } from "./EstadoTransicion";
@@ -115,7 +114,6 @@ function conductasOrdenadas(clasificacion: ClasificacionData): string[] {
 
 export function SeguimientoClient() {
     const searchParams = useSearchParams();
-    const router = useRouter();
     // Spec 091-US2: sin query param, el RPT puede llegar por sessionStorage (URL limpia).
     const [numeroInicial] = useState(() => {
         const porUrl = searchParams.get("numero");
@@ -278,20 +276,10 @@ export function SeguimientoClient() {
                     )}
 
                     <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-                        {/* SPEC-324: el identificador viaja fijo — el padre vuelve a
-                            reportar SOBRE ESTE, no a empezar de cero. Viaja por
-                            sessionStorage y NUNCA por query string: el identificador
-                            no puede quedar en la URL (spec 091-US2 / 093-US4), misma
-                            llave de un solo uso que `seguimiento.rpt`. */}
-                        <Button
-                            className="w-full"
-                            onClick={() => {
-                                dejarHandoffReportar(data.identificador, { fijar: true });
-                                router.push("/reportar");
-                            }}
-                        >
-                            Reportar de nuevo a este identificador
-                        </Button>
+                        {/* SPEC-340 (A-68 §2.5): el CTA "Reportar de nuevo a este
+                            identificador" de SPEC-324 se retiró — superado: el camino
+                            correcto es "Agregar otro evento" DESDE el reporte, en Mis
+                            reportes, con los datos heredados. */}
                         <Link href="/reportar">
                             <Button variant="outline" className="w-full">
                                 Realizar otro reporte

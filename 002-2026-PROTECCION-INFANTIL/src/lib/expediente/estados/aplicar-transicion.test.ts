@@ -277,17 +277,18 @@ describe("aplicarTransicion (SPEC-236)", () => {
             })
         ).rejects.toMatchObject({ statusCode: 409 });
 
-        // El worker con expediente inactivo sí, y marca autoCerradoPorInactividad.
-        const cerrado = await aplicarTransicion({
-            expedienteId: expActivo.id,
-            estadoDestino: EstadoExpediente.CERRADO,
-            motivo: MOTIVO_AUTO_CIERRE_INACTIVIDAD,
-            actor: { id: "worker-expediente-motor", tipo: "worker" },
-        });
-        expect(cerrado.estado).toBe(EstadoExpediente.CERRADO);
-        expect(cerrado.autoCerradoPorInactividad).toBe(true);
+        // SPEC-340 (D-1): NI el worker con expediente inactivo — la transición
+        // quedó derogada incondicionalmente (afirmaba el cierre hasta 01-09).
+        await expect(
+            aplicarTransicion({
+                expedienteId: expActivo.id,
+                estadoDestino: EstadoExpediente.CERRADO,
+                motivo: MOTIVO_AUTO_CIERRE_INACTIVIDAD,
+                actor: { id: "worker-expediente-motor", tipo: "worker" },
+            })
+        ).rejects.toMatchObject({ statusCode: 409 });
 
-        // El worker con expediente reciente tampoco puede (re-verificación del guard).
+        // Y con expediente reciente, igual (la derogación no distingue).
         const expReciente = await crearExpedientePrueba(padre.id, { ultimoEventoEn: new Date() });
         await expect(
             aplicarTransicion({

@@ -56,6 +56,11 @@ export interface PdfExpedienteInput {
     eventosPropios: EventoPropioParaPdf[];
     contextoOtros: ContextoOtroParaPdf[];
     fechaGeneracion: Date;
+    // SPEC-340 (§4.3): el sello. El CÓDIGO se decide ANTES de renderizar y va
+    // impreso; el HASH se calcula DESPUÉS sobre el buffer final y NUNCA entra
+    // al documento (evitaría su propia verificación — contrato de SPEC-234).
+    codigoVerificacion?: string;
+    urlVerificacion?: string;
 }
 
 const fmt = new Intl.DateTimeFormat("es-CO", {
@@ -120,6 +125,8 @@ export async function generarPdfExpediente(input: PdfExpedienteInput): Promise<B
         eventosPropios,
         contextoOtros,
         fechaGeneracion,
+        codigoVerificacion,
+        urlVerificacion,
     } = input;
 
     const contenido: Content = [
@@ -175,7 +182,25 @@ export async function generarPdfExpediente(input: PdfExpedienteInput): Promise<B
         content: contenido,
         styles: estilos,
         defaultStyle: { font: "Roboto", fontSize: 11, color: COLOR_TEXTO },
-        pageMargins: [40, 60, 40, 60],
+        pageMargins: [40, 60, 40, 80],
+        // SPEC-340 (§4.3): pie en CADA página — fecha/hora de generación (hora
+        // de Colombia) bien visible, y el código de verificación con su URL.
+        footer: (currentPage, pageCount) => ({
+            margin: [40, 12, 40, 0],
+            columns: [
+                {
+                    text: [
+                        `Generado el ${formatearFecha(fechaGeneracion)} (hora de Colombia)`,
+                        codigoVerificacion
+                            ? ` · Código de verificación: ${codigoVerificacion}${urlVerificacion ? ` · Verifícalo en ${urlVerificacion}` : ""}`
+                            : "",
+                    ].join(""),
+                    fontSize: 8,
+                    color: COLOR_TEXTO,
+                },
+                { text: `${currentPage} / ${pageCount}`, alignment: "right", fontSize: 8, color: COLOR_TEXTO },
+            ],
+        }),
     };
 
     return renderPdfBuffer(docDefinition);

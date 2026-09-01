@@ -34,4 +34,18 @@ export class SugerenciaProactivaRepository {
             },
         });
     }
+
+    /**
+     * SPEC-340: la señal viva viene de la CADENA de reportes propios — el
+     * expediente ahora nace por el botón y puede no existir aún. Solo reportes
+     * del PROPIO padre (blindaje intacto: nada ajeno entra a la sugerencia).
+     */
+    async ultimaNovedadDeCadena(usuarioId: string): Promise<Date | null> {
+        const ultimo = await prisma.reporte.findFirst({
+            where: { usuarioId, eliminado: false },
+            orderBy: { creadoEn: "desc" },
+            select: { creadoEn: true },
+        });
+        return ultimo?.creadoEn ?? null;
+    }
 }
