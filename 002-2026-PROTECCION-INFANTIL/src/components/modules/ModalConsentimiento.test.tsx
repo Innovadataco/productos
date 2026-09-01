@@ -43,12 +43,12 @@ function mockFetch(response: unknown, ok = true) {
     } as Response);
 }
 
-function renderModal() {
+function renderModal(documentoContenido = "Línea 1\nLínea 2\nLínea 3") {
     return render(
         <ModalConsentimiento
             rol="PARENT"
             documentoTipo="POLITICA_DATOS"
-            documentoContenido="Línea 1\nLínea 2\nLínea 3"
+            documentoContenido={documentoContenido}
             redirectUrl="/dashboard/padre/suscripcion"
         />
     );
@@ -134,5 +134,69 @@ describe("ModalConsentimiento (SPEC-241)", () => {
         fireEvent.click(getBoton());
 
         await waitFor(() => expect(screen.getByText("Error del servidor")).toBeDefined());
+    });
+});
+
+describe("ModalConsentimiento · render markdown (SPEC-343)", () => {
+    beforeEach(() => {
+        setupIntersectionObserverMock();
+        push.mockClear();
+        currentObserver = null;
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    it("renderiza encabezados como elementos de título, no como texto con #", () => {
+        const { container } = renderModal("## Marco legal\n\nTexto del documento.");
+        const h2 = container.querySelector("h2");
+        expect(h2?.textContent).toBe("Marco legal");
+        expect(container.textContent).not.toContain("## Marco legal");
+    });
+
+    it("renderiza negritas como <strong>, no como texto con asteriscos", () => {
+        const { container } = renderModal("Datos de **INNOVADATACO S.A.S.** aquí.");
+        const strong = container.querySelector("strong");
+        expect(strong?.textContent).toBe("INNOVADATACO S.A.S.");
+        expect(container.textContent).not.toContain("**");
+    });
+
+    it("renderiza tablas GFM como <table> dentro de un contenedor con scroll propio", () => {
+        const { container } = renderModal(
+            "| Dato | Período |\n|---|---|\n| Cuentas | 2 años |"
+        );
+        const tabla = container.querySelector("table");
+        expect(tabla).not.toBeNull();
+        expect(tabla?.parentElement?.className).toContain("overflow-x-auto");
+        expect(container.querySelector("td")?.textContent).toBe("Cuentas");
+        expect(container.textContent).not.toContain("|---|");
+    });
+
+    it("no interpreta ni ejecuta HTML embebido en el documento", () => {
+        const { container } = renderModal(
+            "Texto seguro.\n\n<script>alert(1)</script>\n\nTexto <b>enfatizado</b> final."
+        );
+        expect(container.querySelector("script")).toBeNull();
+        expect(container.querySelector("b")).toBeNull();
+        expect(container.textContent).toContain("Texto seguro.");
+    });
+
+    it("renderiza degradado un documento con tabla malformada sin lanzar error", () => {
+        const { container } = renderModal("| celda sin cierre\n|--- roto\ntexto suelto");
+        expect(container.textContent).toContain("texto suelto");
+    });
+
+    it("mantiene el candado de scroll-final con contenido markdown", async () => {
+        renderModal("## Documento\n\nContenido largo del documento legal.");
+        fireEvent.click(screen.getByTestId("check-representante"));
+        fireEvent.click(screen.getByTestId("check-politica"));
+        expect(getBoton().disabled).toBe(true);
+
+        currentObserver?.trigger(true);
+        await waitFor(() => {
+            expect(getBoton().disabled).toBe(false);
+        });
     });
 });
