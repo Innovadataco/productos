@@ -9,9 +9,12 @@ const MAX_PAGE_SIZE = 100;
 export async function GET(request: Request) {
     try {
         const user = await verifyAuth("PARENT");
-        // SPEC-119: un padre con el servicio vencido no consulta su área (datos intactos).
-        const { assertVigenciaCliente } = await import("@/lib/colegio/vigencia");
-        await assertVigenciaCliente(user.id);
+        // SPEC-356 (I-253) · DEROGADO el guard de vigencia de SPEC-119 acá.
+        // `guardias.ts` exime `/api/reportes` (y con él toda su familia, por
+        // prefijo) de la vigencia con la regla dura de Jelkin. Un padre vencido
+        // que no puede LEER sus propios reportes tampoco puede seguir el hilo
+        // de lo que ya denunció — y la página `/mis-reportes` está exenta,
+        // así que bloquear su API la dejaba vacía. NO reintroducir el guard.
 
         const { searchParams } = new URL(request.url);
         const page = clampPage(searchParams.get("page"));
