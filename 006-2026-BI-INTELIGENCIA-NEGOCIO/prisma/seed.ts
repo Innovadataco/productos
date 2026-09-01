@@ -145,11 +145,13 @@ const COLUMNAS: Col[] = [
   { tabla: "FuenteReporte", nombreFuente: "plataforma", nombreLegible: "Plataforma", descripcion: "Plataforma origen (app · extension · web)", tipo: "String" },
   { tabla: "FuenteReporte", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp del registro", tipo: "DateTime" },
 
-  // AlertaColegio (5)
+  // AlertaColegio (5) — corregido 2026-09-01: las columnas fantasma v1
+  // (tipo, resuelta) NO existen en la tabla real; las reemplazan tipoSujeto
+  // (ESTUDIANTE/ACUDIENTE/PROFESOR) y estado (nueva/vista/gestionada/escalada/cerrada)
   { tabla: "AlertaColegio", nombreFuente: "id", nombreLegible: "ID alerta", descripcion: "ID de la alerta", tipo: "String" },
   { tabla: "AlertaColegio", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio", tipo: "String" },
-  { tabla: "AlertaColegio", nombreFuente: "tipo", nombreLegible: "Tipo", descripcion: "Tipo de alerta", tipo: "String" },
-  { tabla: "AlertaColegio", nombreFuente: "resuelta", nombreLegible: "Resuelta", descripcion: "Si fue resuelta", tipo: "Boolean" },
+  { tabla: "AlertaColegio", nombreFuente: "tipoSujeto", nombreLegible: "Tipo de sujeto", descripcion: "Sujeto de la alerta (alumno · acudiente · profesor)", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Estado de gestion (nueva · vista · gestionada · escalada · cerrada)", tipo: "String" },
   { tabla: "AlertaColegio", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de la alerta", tipo: "DateTime" },
 ];
 
@@ -170,7 +172,7 @@ const METRICAS: Array<{ nombre: string; nombreLegible: string; descripcion: stri
   { nombre: "tiempo_medio_resolucion_h", nombreLegible: "Tiempo medio resolucion (h)", descripcion: "Horas promedio entre creacion y cierre de reporte", formulaSQL: `SELECT avg(EXTRACT(EPOCH FROM (tr."creadoEn" - r."creadoEn"))/3600) FROM "Reporte" r JOIN "TransicionReporte" tr ON tr."reporteId"=r.id WHERE tr."estadoNuevo"='CERRADO'`, categoria: "operativo" },
   { nombre: "solicitudes_comite_abiertas", nombreLegible: "Solicitudes comite abiertas", descripcion: "Solicitudes a comite sin resolver", formulaSQL: `SELECT count(*) FROM "SolicitudComite" WHERE "resueltoEn" IS NULL`, categoria: "operativo" },
   { nombre: "audit_events_dia", nombreLegible: "Eventos audit hoy", descripcion: "Eventos registrados hoy en AuditLog", formulaSQL: `SELECT count(*) FROM "AuditLog" WHERE date_trunc('day',"creadoEn")=current_date`, categoria: "salud" },
-  { nombre: "alertas_colegio_abiertas", nombreLegible: "Alertas colegio abiertas", descripcion: "Alertas de colegio no resueltas", formulaSQL: `SELECT count(*) FROM "AlertaColegio" WHERE "resuelta"=false`, categoria: "salud" },
+  { nombre: "alertas_colegio_abiertas", nombreLegible: "Alertas colegio abiertas", descripcion: "Alertas de colegio sin cerrar (nueva · vista · escalada)", formulaSQL: `SELECT count(*) FROM "AlertaColegio" WHERE "estado" IN ('nueva','vista','escalada')`, categoria: "salud" },
   { nombre: "colegios_registrados", nombreLegible: "Colegios registrados", descripcion: "Total de colegios en el sistema", formulaSQL: `SELECT count(*) FROM "Colegio"`, categoria: "general" },
 ];
 
@@ -202,7 +204,7 @@ const EJEMPLOS: Array<{ preguntaNL: string; sql: string; categoriaConsulta: stri
   { preguntaNL: "Solicitudes a comite pendientes", sql: `SELECT count(*) FROM "SolicitudComite" WHERE "resueltoEn" IS NULL`, categoriaConsulta: "operativo" },
   { preguntaNL: "Solicitudes a comite resueltas este mes", sql: `SELECT count(*) FROM "SolicitudComite" WHERE "resueltoEn" IS NOT NULL AND date_trunc('month',"resueltoEn")=date_trunc('month',now())`, categoriaConsulta: "operativo" },
   { preguntaNL: "Eventos de audit por accion hoy", sql: `SELECT accion, count(*) FROM "AuditLog" WHERE date_trunc('day',"creadoEn")=current_date GROUP BY accion ORDER BY count(*) DESC`, categoriaConsulta: "salud" },
-  { preguntaNL: "Alertas de colegio no resueltas", sql: `SELECT count(*) FROM "AlertaColegio" WHERE "resuelta"=false`, categoriaConsulta: "salud" },
+  { preguntaNL: "Alertas de colegio no resueltas", sql: `SELECT count(*) FROM "AlertaColegio" WHERE "estado" IN ('nueva','vista','escalada')`, categoriaConsulta: "salud" },
   { preguntaNL: "Colegios con mas alertas este mes", sql: `SELECT c.nombre, count(a.id) FROM "Colegio" c JOIN "AlertaColegio" a ON a."colegioId"=c.id WHERE date_trunc('month',a."creadoEn")=date_trunc('month',now()) GROUP BY c.nombre ORDER BY count(a.id) DESC LIMIT 10`, categoriaConsulta: "salud" },
   { preguntaNL: "Reportes creados por fuente esta semana", sql: `SELECT fr.plataforma, count(*) FROM "FuenteReporte" fr JOIN "Reporte" r ON r.id=fr."reporteId" WHERE r."creadoEn" >= now() - interval '7 days' AND r."eliminado"=false GROUP BY fr.plataforma`, categoriaConsulta: "reportes" },
   { preguntaNL: "Total de colegios registrados", sql: `SELECT count(*) FROM "Colegio"`, categoriaConsulta: "general" },
