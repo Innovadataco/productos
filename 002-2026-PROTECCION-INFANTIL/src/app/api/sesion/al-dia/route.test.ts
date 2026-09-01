@@ -68,8 +68,16 @@ describe("GET /api/sesion/al-dia (SPEC-339)", () => {
         expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/dashboard");
     });
 
-    // SPEC-314: defensa contra redirección abierta.
-    for (const malo of ["https://evil.example.com", "//evil.example.com", "evil"]) {
+    // SPEC-342 (BUG3): defensa contra redirección abierta POR URL — incluye la
+    // barra invertida que el chequeo de prefijos dejaba pasar.
+    for (const malo of [
+        "https://evil.example.com",
+        "//evil.example.com",
+        "evil",
+        "/\\evil.example.com",
+        "/\\/evil.example.com",
+        "/\\@evil.example.com",
+    ]) {
         it(`destino externo "${malo}" se descarta y cae al panel`, async () => {
             mocks.buildSesionEstadoValue.mockResolvedValue(await cookieFirmada(null));
             const res = await GET(req(malo));

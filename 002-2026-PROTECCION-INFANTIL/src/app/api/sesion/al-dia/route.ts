@@ -28,17 +28,28 @@ import { destinoDePaso } from "@/lib/camino/pasos";
 import { requireEnv } from "@/lib/env";
 import { baseUrlPublica } from "@/lib/routing/base-url-publica";
 
-// SPEC-314: solo destinos internos — la defensa contra redirección abierta que
-// ya usa el registro. Cualquier otra cosa cae al panel del padre.
-function destinoSeguro(destino: string | null): string {
-    if (!destino) return "/dashboard/padre";
-    if (!destino.startsWith("/") || destino.startsWith("//")) return "/dashboard/padre";
-    return destino;
+// SPEC-342 (BUG3 · seguridad): defensa contra redirección abierta POR URL, no
+// por parcheo de strings. El chequeo de prefijos ("//") dejaba pasar la barra
+// invertida: los navegadores normalizan "\\" como "/", así que "/\\evil.com"
+// terminaba en Location: https://evil.com/ (reproducido en vivo por Calidad).
+// La única autoridad válida es el ORIGIN resultante de resolver el destino
+// contra nuestra base: si cambió, el destino intentaba escaparse.
+function destinoSeguro(destino: string | null, base: string): string {
+    const fallback = "/dashboard/padre";
+    if (!destino || !destino.startsWith("/")) return fallback;
+    try {
+        const resuelta = new URL(destino, base);
+        if (resuelta.origin !== new URL(base).origin) return fallback;
+        return resuelta.pathname + resuelta.search;
+    } catch {
+        return fallback;
+    }
 }
 
 export async function GET(request: Request) {
     const url = new URL(request.url);
-    const destino = destinoSeguro(url.searchParams.get("destino"));
+    const base = baseUrlPublica(request);
+    const destino = destinoSeguro(url.searchParams.get("destino"), base);
 
     try {
         const usuario = await verifyAuth();
@@ -61,7 +72,7 @@ export async function GET(request: Request) {
 
         // SPEC-342 (candado 22v3): JAMÁS request.url como base de un redirect en
         // Docker — sale 0.0.0.0 y el navegador muere. Base pública de 3 niveles.
-        const res = NextResponse.redirect(new URL(haciaDonde, baseUrlPublica(request)));
+        const res = NextResponse.redirect(new URL(haciaDonde, base));
         res.cookies.set(NOMBRE_COOKIE, value, {
             httpOnly: true,
             sameSite: "lax",
@@ -77,10 +88,12 @@ export async function GET(request: Request) {
         if (!(error instanceof AppError)) {
             logger.error("[SESION/AL-DIA] Re-sellado fallido:", error);
         }
-        const res = NextResponse.redirect(new URL("/login?mensaje=sesion", baseUrlPublica(request)));
-        res.cookies.delete(NOMBRE_COOKIE);
-        res.cookies.delete("token");
-        res.cookies.delete("__Host-token");
+        const res = NextResponse.redirect(new URL("/login?mensaje=sesion", base));
+        // BUG4: sin Path=/ el delete no borra cookies fijadas con path "/" — el
+        // fallback a /login no cerraba sesión de verdad.
+        res.cookies.delete({ name: NOMBRE_COOKIE, path: "/" });
+        res.cookies.delete({ name: "token", path: "/" });
+        res.cookies.delete({ name: "__Host-token", path: "/" });
         return res;
     }
 }
