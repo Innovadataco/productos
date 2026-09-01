@@ -9,6 +9,7 @@
 import { prisma } from "../../prisma";
 import { formatCategoria } from "../../labels";
 import { whereReporteAprobado } from "../../reportes-acceso";
+import { lecturaCapa1, type HechoCapa1, type LecturaCapa1 } from "../../expediente/lectura-capa1";
 
 export interface HechoVivo {
     /** Solo para los propios (el texto se pide por reporteId); null en ajenos. */
@@ -88,4 +89,97 @@ export async function hechosDelExpediente(expedienteId: string, usuarioId: strin
     ].sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
 
     return { expediente, hechos, informes };
+}
+
+/**
+ * SPEC-340 (§4.4 · capa 1): la lectura determinista del expediente, calculada
+ * en vivo desde la cadena propia + los ajenos blindados + el cruce con hijos.
+ * (Movida al DAL desde la ruta — Q-3: prisma no sale del DAL.)
+ */
+export async function lecturaDelExpediente(
+    expedienteId: string,
+    usuarioId: string
+): Promise<{ lectura: LecturaCapa1; hijoCruzado: { nombre: string; anioNacimiento: number | null; sexo: string | null } | null } | null> {
+    const expediente = await prisma.expediente.findFirst({
+        where: { id: expedienteId, padreUsuarioId: usuarioId },
+        select: { id: true, identificadorReportado: true },
+    });
+    if (!expediente) return null;
+
+    const [propios, ajenos, hijoCruzado] = await Promise.all([
+        prisma.reporte.findMany({
+            where: { usuarioId, eliminado: false, identificador: expediente.identificadorReportado },
+            select: {
+                fechaIncidente: true,
+                ciudad: true,
+                pais: true,
+                edadVictima: true,
+                ciudadRel: { select: { nombre: true } },
+                clasificacion: { select: { categoria: true } },
+            },
+        }),
+        prisma.reporte.findMany({
+            where: whereReporteAprobado({
+                identificador: expediente.identificadorReportado,
+                NOT: { usuarioId },
+            }),
+            select: {
+                fechaIncidente: true,
+                ciudad: true,
+                pais: true,
+                esAnonimo: true,
+                edadVictima: true,
+                ciudadRel: { select: { nombre: true } },
+                clasificacion: { select: { categoria: true } },
+            },
+        }),
+        prisma.hijo.findFirst({
+            where: {
+                usuarioId,
+                estado: "activo",
+                identificadores: { some: { valor: expediente.identificadorReportado, activo: true } },
+            },
+            select: { nombre: true, anioNacimiento: true, sexo: true },
+        }),
+    ]);
+
+    const hechos: HechoCapa1[] = [
+        ...propios.map((r) => ({
+            fecha: r.fechaIncidente,
+            ciudad: r.ciudadRel?.nombre ?? r.ciudad,
+            pais: r.pais,
+            clasificacion: r.clasificacion?.categoria ?? null,
+            esPropio: true,
+            esAnonimo: false,
+            edadReportada: r.edadVictima ?? null,
+        })),
+        ...ajenos.map((r) => ({
+            fecha: r.fechaIncidente,
+            ciudad: r.ciudadRel?.nombre ?? r.ciudad,
+            pais: r.pais,
+            clasificacion: r.clasificacion?.categoria ?? null,
+            esPropio: false,
+            esAnonimo: r.esAnonimo,
+            edadReportada: r.edadVictima ?? null,
+        })),
+    ];
+
+    return {
+        lectura: lecturaCapa1(hechos),
+        hijoCruzado: hijoCruzado
+            ? { nombre: hijoCruzado.nombre.split(" ")[0], anioNacimiento: hijoCruzado.anioNacimiento, sexo: hijoCruzado.sexo }
+            : null,
+    };
+}
+
+/**
+ * SPEC-340 (§3.3-bis): el texto CIFRADO del reporte PROPIO — la ruta del
+ * step-up lo descifra tras validar la autoridad. Dueño único (PII).
+ */
+export async function textoCifradoDeReportePropio(usuarioId: string, reporteId: string): Promise<string | null> {
+    const reporte = await prisma.reporte.findFirst({
+        where: { id: reporteId, usuarioId, eliminado: false },
+        select: { texto: true },
+    });
+    return reporte?.texto ?? null;
 }

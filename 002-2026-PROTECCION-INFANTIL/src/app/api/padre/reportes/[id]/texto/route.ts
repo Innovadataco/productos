@@ -15,10 +15,10 @@ import { cookies } from "next/headers";
 import { verifyAuth, verifyToken } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { requireEnv } from "@/lib/env";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { textoCifradoDeReportePropio } from "@/lib/dal/services/expediente-vivo";
 import { leerSelloStepUp, NOMBRE_COOKIE_STEPUP } from "@/lib/routing/stepup-sello";
 
 const HOST_COOKIE = "__Host-token";
@@ -60,18 +60,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         }
 
         // El reporte PROPIO (PII: dueño único). El texto ajeno no existe acá.
-        const reporte = await prisma.reporte.findFirst({
-            where: { id, usuarioId: usuario.id, eliminado: false },
-            select: { texto: true },
-        });
-        if (!reporte) {
+        // La consulta vive en el DAL (Q-3); acá solo la autoridad y el descifrado.
+        const textoCifrado = await textoCifradoDeReportePropio(usuario.id, id);
+        if (textoCifrado === null) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
 
-        return NextResponse.json({ texto: descifrarTextoReporte(reporte.texto) });
+        return NextResponse.json({ texto: descifrarTextoReporte(textoCifrado) });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
