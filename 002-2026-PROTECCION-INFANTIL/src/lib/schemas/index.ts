@@ -243,14 +243,18 @@ export const cursoMateriaParamsSchema = z.object({
 // candado en servidor, sin migrar el schema Prisma (que mantiene profesorId
 // nullable para no romper el histórico). El vínculo se rechaza en el
 // endpoint y en el repositorio si `profesorId` viene nulo/vacío.
+const profesorObligatorioSchema = z
+    .string({ error: "Toda materia debe llevar un profesor a cargo" })
+    .cuid("Toda materia debe llevar un profesor a cargo");
+
 export const cursoMateriaBodySchema = z.object({
     materiaId: materiaIdSchema,
-    profesorId: cuidIdSchema,
+    profesorId: profesorObligatorioSchema,
 });
 
 /** Reasignación de profesor en un vínculo curso↔materia existente (FR-031). */
 export const cursoMateriaReasignarProfesorSchema = z.object({
-    profesorId: cuidIdSchema,
+    profesorId: profesorObligatorioSchema,
 });
 
 export const cursoMateriaIdParamsSchema = z.object({

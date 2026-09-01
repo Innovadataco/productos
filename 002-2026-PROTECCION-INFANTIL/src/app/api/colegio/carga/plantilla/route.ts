@@ -37,7 +37,11 @@ const FILA_EJEMPLO = [
     "WhatsApp",
 ].join(",");
 
-const CSV_PLANTILLA = [COLUMNAS_PLANTILLA.join(","), FILA_EJEMPLO].join("\n");
+// Exportado para el test-candado plantilla-autoconsistente (SPEC-344 · I-245):
+// la MISMA cadena que emite el endpoint alimenta el parser + validator en el
+// test, garantizando que la plantilla no se desincronice del validador.
+export const CSV_PLANTILLA_ALUMNOS = [COLUMNAS_PLANTILLA.join(","), FILA_EJEMPLO].join("\n");
+const CSV_PLANTILLA = CSV_PLANTILLA_ALUMNOS;
 
 export async function GET(request: Request) {
     try {

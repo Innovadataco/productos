@@ -12,7 +12,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { verificarTokenCarga } from "@/lib/colegio/carga/token";
-import { obtenerSesionRosterValida, consumirSesionRoster } from "@/lib/colegio/carga/sesion-roster";
+import { consumirSesionRoster } from "@/lib/colegio/carga/sesion-roster";
+import { CargaRosterSesionRepository } from "@/lib/dal/repositories/carga-roster-sesion";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ProfesorRepository } from "@/lib/dal/repositories/profesor";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
@@ -61,7 +62,13 @@ export async function POST(request: Request) {
             );
         }
 
-        const sesion = await obtenerSesionRosterValida(payload.sesionId, user.colegioId);
+        // SPEC-344: el roster de profesores tiene su propio shape — se lee con
+        // la variante `obtenerValidaProfesores` (el de alumnos validaría el
+        // shape equivocado y rechazaría el roster; bug cazado en recorrido).
+        const sesion = await new CargaRosterSesionRepository().obtenerValidaProfesores(
+            payload.sesionId,
+            user.colegioId,
+        );
         if (!sesion) {
             return NextResponse.json(
                 { error: { message: "La validación venció. Vuelva a validar el archivo.", code: ERROR_CODES.NOT_FOUND } },
@@ -69,7 +76,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const profesores = sesion.filas as unknown as ProfesorNormalizado[];
+        const profesores: ProfesorNormalizado[] = sesion.filas;
 
         const { creados, duplicadosRace } = await withUnitOfWork(async (tx) => {
             let creadosCount = 0;
