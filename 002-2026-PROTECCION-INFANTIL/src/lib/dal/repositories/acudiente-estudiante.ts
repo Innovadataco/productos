@@ -47,6 +47,10 @@ export interface DatosAcudiente {
     relacion: string;
     telefono?: string | null | undefined;
     email?: string | null | undefined;
+    // SPEC-344 (A-69 · C1 · D-acud): documento del acudiente OPCIONAL, sin
+    // unicidad. Aditivo — las historias existentes no se alteran.
+    documentoTipo?: string | null | undefined;
+    documentoNumero?: string | null | undefined;
 }
 
 export class AcudienteEstudianteRepository {
@@ -133,6 +137,9 @@ export class AcudienteEstudianteRepository {
                 relacion: datos.relacion,
                 telefono: datos.telefono ?? null,
                 email: datos.email ?? null,
+                // SPEC-344 (D-acud) — aditivo, opcional.
+                documentoTipo: datos.documentoTipo ?? null,
+                documentoNumero: datos.documentoNumero ?? null,
                 estado: "activo",
             },
             select: SELECT_CON_RELACIONES,
@@ -143,7 +150,7 @@ export class AcudienteEstudianteRepository {
     async actualizar(
         colegioId: string,
         id: string,
-        datos: Partial<Pick<DatosAcudiente, "nombre" | "relacion" | "telefono" | "email">>
+        datos: Partial<Pick<DatosAcudiente, "nombre" | "relacion" | "telefono" | "email" | "documentoTipo" | "documentoNumero">>
     ): Promise<AcudienteConIdentificadores> {
         const actual = await this.obtenerPorId(colegioId, id);
         if (!actual) {
@@ -155,6 +162,9 @@ export class AcudienteEstudianteRepository {
         if (datos.relacion !== undefined) data.relacion = datos.relacion;
         if (datos.telefono !== undefined) data.telefono = datos.telefono;
         if (datos.email !== undefined) data.email = datos.email;
+        // SPEC-344 (D-acud): documento opcional del acudiente.
+        if (datos.documentoTipo !== undefined) data.documentoTipo = datos.documentoTipo;
+        if (datos.documentoNumero !== undefined) data.documentoNumero = datos.documentoNumero;
 
         const { count } = await this.db.acudienteEstudiante.updateMany({
             where: { id, estudiante: { colegioId } },
