@@ -289,7 +289,9 @@ export type AlcanceQueue = "PADRE_COMPLETO" | "COLEGIO_BLINDADO";
 export type DisparadorQueue = "APERTURA" | "ACTUALIZAR";
 
 export interface AnalisisExpedienteJob {
-    expedienteId: string;
+    /** SPEC-350: exactamente UNO de expedienteId (padre) / seguimientoCasoId (colegio). */
+    expedienteId?: string;
+    seguimientoCasoId?: string;
     hashCadena: string;
     alcance: AlcanceQueue;
     disparador: DisparadorQueue;
@@ -336,13 +338,17 @@ export async function sendAnalisisExpediente(job: AnalisisExpedienteJob): Promis
 
     const stats = await getAnalisisQueueStats();
     if (stats.pendientes >= tope) {
-        logger.warn(`[QUEUE·analisis] Cola llena (${stats.pendientes}/${tope}) — expediente ${job.expedienteId} no encolado`);
+        logger.warn(`[QUEUE·analisis] Cola llena (${stats.pendientes}/${tope}) — dueño ${job.expedienteId ?? job.seguimientoCasoId} no encolado`);
         return { encolado: false, motivo: "cola_llena" };
     }
 
-    // singletonKey = expediente + hash → dos aperturas seguidas del mismo
-    // expediente sin cambio en la cadena no encolan dos jobs.
-    const singletonKey = `${job.expedienteId}:${job.hashCadena}`;
+    // singletonKey = dueño + hash → dos aperturas seguidas del mismo
+    // expediente/caso sin cambio en la cadena no encolan dos jobs.
+    const dueno = job.expedienteId ?? job.seguimientoCasoId;
+    if (!dueno) {
+        throw new Error("[QUEUE·analisis] job sin dueño: se requiere expedienteId o seguimientoCasoId");
+    }
+    const singletonKey = `${dueno}:${job.hashCadena}`;
 
     const jobId = await boss.send("padre.analisis.expediente", job, {
         priority: prioridad,
@@ -356,6 +362,6 @@ export async function sendAnalisisExpediente(job: AnalisisExpedienteJob): Promis
         return { encolado: false, motivo: "duplicado" };
     }
 
-    logger.info(`[QUEUE·analisis] Encolado ${jobId} · expediente=${job.expedienteId} · prioridad=${prioridad} · disparador=${job.disparador}`);
+    logger.info(`[QUEUE·analisis] Encolado ${jobId} · dueño=${dueno} · prioridad=${prioridad} · disparador=${job.disparador}`);
     return { encolado: true, jobId };
 }

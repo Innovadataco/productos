@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 461 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3227 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 462 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3234 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -251,6 +251,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/casos/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
@@ -717,6 +718,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/casos/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
@@ -1183,6 +1185,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/casos/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
@@ -1649,6 +1652,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/casos/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
@@ -2115,6 +2119,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/carga/plantilla` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/carga/validar` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/casos/[id]/analisis` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/cobertura` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
@@ -2581,6 +2586,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga/validar` | api | permitir | permite | sí |
+| `/api/colegio/casos/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/cobertura` | api | permitir | permite | sí |
 | `/api/colegio/comite` | api | permitir | permite | sí |
 | `/api/colegio/comite/cuenta` | api | permitir | permite | sí |
@@ -3047,6 +3053,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/carga/confirmar` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga/plantilla` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga/validar` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/casos/[id]/analisis` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/cobertura` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/cuenta` | api | HTTP 401 | permite | **NO** |
@@ -3497,6 +3504,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/carga/confirmar` | HTTP 401 | permite |
 | `/api/colegio/carga/plantilla` | HTTP 401 | permite |
 | `/api/colegio/carga/validar` | HTTP 401 | permite |
+| `/api/colegio/casos/[id]/analisis` | HTTP 401 | permite |
 | `/api/colegio/cobertura` | HTTP 401 | permite |
 | `/api/colegio/comite` | HTTP 401 | permite |
 | `/api/colegio/comite/cuenta` | HTTP 401 | permite |
