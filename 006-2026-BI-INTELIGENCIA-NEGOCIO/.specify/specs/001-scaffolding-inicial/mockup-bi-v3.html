@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BI v2 · Mockup v3 — Pulso total de la operación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Mockup BI v2 v3 — "Pulso total": todas las dimensiones del demo real
+   (colegios, profesores, alumnos, acudientes, identificadores, alertas,
+   geografía, reincidencia, anonimato, comercial). Datos REALES de la carga
+   demo del 01-09-2026. Tokens de PI (SPEC-157), oscuro por defecto.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+  --pino-rgb: 11 110 90; --cielo-rgb: 90 162 234; --ambar-rgb: 169 112 12; --rubi-rgb: 184 57 90;
+  --papel-rgb: 238 241 239; --tinta-rgb: 15 24 21;
+  --tinta-muted-rgb: 77 85 82; --tinta-subtle-rgb: 100 106 104;
+  --pino-ink-rgb: 11 110 90; --ambar-ink-rgb: 138 92 6; --rubi-ink-rgb: 184 57 90; --cielo-ink-rgb: 53 116 187;
+  --luz-a: 0.12; --luz-b: 0.1; --luz-c: 0.08;
+  --sombra-sm: 0 1px 2px rgb(var(--tinta-rgb) / 0.08);
+  --sombra-md: 0 4px 12px rgb(var(--tinta-rgb) / 0.12);
+  --curva: cubic-bezier(0.16, 1, 0.3, 1);
+  --radio-card: 16px; --radio-input: 12px; --orbe-op: 0.28;
+}
+.dark {
+  color-scheme: dark;
+  --pino-rgb: 79 224 184; --cielo-rgb: 111 182 245; --ambar-rgb: 240 180 85; --rubi-rgb: 245 128 155;
+  --papel-rgb: 6 11 10; --tinta-rgb: 242 247 244;
+  --tinta-muted-rgb: 176 181 178; --tinta-subtle-rgb: 148 153 150;
+  --pino-ink-rgb: 79 224 184; --ambar-ink-rgb: 240 180 85; --rubi-ink-rgb: 245 128 155; --cielo-ink-rgb: 111 182 245;
+  --luz-a: 0.18; --luz-b: 0.12; --luz-c: 0.08;
+  --sombra-sm: 0 1px 2px rgb(0 0 0 / 0.4); --sombra-md: 0 4px 12px rgb(0 0 0 / 0.5);
+  --orbe-op: 0.5;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-family: "Instrument Sans", system-ui, sans-serif; }
+body {
+  background:
+    radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+    radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+    radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+    rgb(var(--papel-rgb));
+  color: rgb(var(--tinta-rgb)); min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+.serif { font-family: "Instrument Serif", Georgia, serif; }
+.mono { font-family: "DM Mono", monospace; }
+.cifra { font-variant-numeric: tabular-nums; }
+.microetiqueta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: rgb(var(--tinta-subtle-rgb)); }
+.text-muted { color: rgb(var(--tinta-muted-rgb)); }
+.text-subtle { color: rgb(var(--tinta-subtle-rgb)); }
+.glass {
+  background: rgb(var(--papel-rgb) / 0.7); backdrop-filter: saturate(185%) blur(22px); -webkit-backdrop-filter: saturate(185%) blur(22px);
+  border: 1px solid rgb(var(--tinta-rgb) / 0.08); box-shadow: var(--sombra-sm); border-radius: var(--radio-card);
+}
+.dark .glass { background: rgb(var(--papel-rgb) / 0.55); border-color: rgb(var(--tinta-rgb) / 0.09); box-shadow: var(--sombra-sm), inset 0 1px 0 rgba(255,255,255,0.05); }
+.text-gradient { background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.accent-gradient { background-image: linear-gradient(135deg, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); }
+.orbe { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; opacity: var(--orbe-op); }
+.orbe-1 { width: 540px; height: 540px; background: rgb(var(--cielo-rgb) / 0.5); top: -140px; left: -100px; animation: deriva1 26s ease-in-out infinite alternate; }
+.orbe-2 { width: 460px; height: 460px; background: rgb(var(--pino-rgb) / 0.45); bottom: -160px; right: -120px; animation: deriva2 32s ease-in-out infinite alternate; }
+.orbe-3 { width: 320px; height: 320px; background: rgb(var(--ambar-rgb) / 0.25); top: 40%; left: 55%; animation: deriva3 38s ease-in-out infinite alternate; }
+@keyframes deriva1 { to { transform: translate(140px, 90px) scale(1.18); } }
+@keyframes deriva2 { to { transform: translate(-120px, -100px) scale(1.12); } }
+@keyframes deriva3 { to { transform: translate(-160px, 60px) scale(0.85); } }
+.anim-entrada { animation: entrada 0.7s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); }
+@keyframes entrada { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+.anim-pulso { animation: pulso 3.4s var(--curva) infinite; }
+@keyframes pulso { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(0.82); } }
+.respira { animation: respirar 5s var(--curva) infinite; transform-origin: center; }
+@keyframes respirar { 0%,100% { transform: scale(1); } 44% { transform: scale(1.03); } }
+.brillo-nuevo { position: relative; overflow: hidden; }
+.brillo-nuevo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.14) 50%, transparent 60%); transform: translateX(-100%); animation: barrido 3.2s var(--curva) infinite; }
+@keyframes barrido { 60%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.marco { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 20px; background: rgb(4 8 7 / 0.94); color: #eef1ef; font-size: 13px; backdrop-filter: blur(12px); }
+.marco .marca-mockup { font-weight: 600; margin-right: 12px; opacity: 0.85; }
+.marco button { border: 1px solid rgb(255 255 255 / 0.18); background: transparent; color: inherit; padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; transition: all 0.3s var(--curva); }
+.marco button:hover { background: rgb(255 255 255 / 0.12); }
+.marco button.activo { background: rgb(var(--pino-rgb) / 0.9); border-color: transparent; font-weight: 600; color: #060b0a; }
+.marco .toggle-tema { margin-left: auto; }
+
+.pantalla { display: none; max-width: 1240px; margin: 0 auto; padding: 32px 24px 90px; position: relative; z-index: 1; }
+.pantalla.visible { display: block; }
+
+.topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.logo-punto { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: #060b0a; font-weight: 700; font-size: 15px; box-shadow: 0 0 24px rgb(var(--pino-rgb) / 0.45); }
+.topbar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.topbar .sub { font-size: 13px; }
+.reloj { margin-left: auto; text-align: right; }
+.reloj .hora { font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+nav.tabs { display: flex; gap: 4px; margin-left: 18px; flex-wrap: wrap; }
+nav.tabs a { padding: 8px 15px; border-radius: 999px; font-size: 13.5px; cursor: pointer; color: rgb(var(--tinta-muted-rgb)); text-decoration: none; transition: all 0.3s var(--curva); }
+nav.tabs a:hover { background: rgb(var(--tinta-rgb) / 0.06); }
+nav.tabs a.activo { background: rgb(var(--pino-rgb) / 0.14); color: rgb(var(--pino-ink-rgb)); font-weight: 600; }
+
+.ticker { overflow: hidden; border-radius: 999px; margin-bottom: 26px; border: 1px solid rgb(var(--tinta-rgb) / 0.08); background: rgb(var(--papel-rgb) / 0.5); display: flex; align-items: center; }
+.ticker .etiqueta { flex-shrink: 0; padding: 8px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; background: rgb(var(--pino-rgb) / 0.16); color: rgb(var(--pino-ink-rgb)); display: flex; align-items: center; gap: 7px; border-radius: 999px 0 0 999px; }
+.ticker-ventana { overflow: hidden; flex: 1; }
+.ticker-pista { display: inline-flex; gap: 56px; white-space: nowrap; padding: 8px 0; animation: rodar 40s linear infinite; }
+.ticker-pista span { font-size: 13px; color: rgb(var(--tinta-muted-rgb)); }
+.ticker-pista b { color: rgb(var(--tinta-rgb)); font-weight: 600; }
+@keyframes rodar { to { transform: translateX(-50%); } }
+
+.hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: center; margin-bottom: 24px; }
+@media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+.titular-estado { font-family: "Instrument Serif", Georgia, serif; font-size: clamp(32px, 4.6vw, 52px); letter-spacing: -0.022em; line-height: 1.05; }
+.palabra-estado { font-style: italic; transition: color 0.6s var(--curva); }
+.hero .sub-estado { margin-top: 12px; font-size: 15px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.gauge-wrap { display: flex; align-items: center; gap: 20px; padding: 20px 26px; }
+.gauge-num { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.gauge-svg circle.trazo { animation: dibujo 1.4s var(--curva) both; }
+@keyframes dibujo { from { stroke-dashoffset: var(--dash-inicial); } to { stroke-dashoffset: var(--dash-final); } }
+
+.chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+.chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 500; background: rgb(var(--papel-rgb) / 0.6); border: 1px solid rgb(var(--tinta-rgb) / 0.08); }
+.punto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.punto.ok { background: rgb(var(--pino-rgb)); box-shadow: 0 0 8px rgb(var(--pino-rgb) / 0.7); }
+.punto.warn { background: rgb(var(--ambar-rgb)); box-shadow: 0 0 8px rgb(var(--ambar-rgb) / 0.7); }
+.punto.bad { background: rgb(var(--rubi-rgb)); box-shadow: 0 0 8px rgb(var(--rubi-rgb) / 0.7); }
+
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 26px; }
+.insight { padding: 20px 22px; position: relative; overflow: hidden; transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva); }
+.insight:hover { transform: translateY(-3px); box-shadow: var(--sombra-md); }
+.insight::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.insight.sev-ambar::before { background: rgb(var(--ambar-rgb)); }
+.insight.sev-cielo::before { background: rgb(var(--cielo-rgb)); }
+.insight.sev-pino::before { background: rgb(var(--pino-rgb)); }
+.insight.sev-rubi::before { background: rgb(var(--rubi-rgb)); }
+.insight .tag-sev { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+.sev-ambar .tag-sev { color: rgb(var(--ambar-ink-rgb)); }
+.sev-cielo .tag-sev { color: rgb(var(--cielo-ink-rgb)); }
+.sev-pino .tag-sev { color: rgb(var(--pino-ink-rgb)); }
+.sev-rubi .tag-sev { color: rgb(var(--rubi-ink-rgb)); }
+.insight h4 { font-size: 16.5px; font-weight: 600; margin: 7px 0 5px; line-height: 1.35; }
+.insight p { font-size: 13.5px; line-height: 1.55; }
+.insight .acciones { display: flex; gap: 8px; margin-top: 14px; }
+.btn-mini { padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid rgb(var(--tinta-rgb) / 0.14); background: transparent; color: rgb(var(--tinta-rgb)); transition: all 0.3s var(--curva); }
+.btn-mini:hover { background: rgb(var(--tinta-rgb) / 0.07); }
+.btn-mini.primario { background: rgb(var(--pino-rgb)); border-color: transparent; color: #060b0a; }
+
+.grid-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.kpi { padding: 18px 22px 14px; transition: transform 0.35s var(--curva); }
+.kpi:hover { transform: translateY(-3px); }
+.kpi .valor { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin: 5px 0 2px; }
+.kpi .delta { font-size: 12.5px; font-weight: 600; }
+.delta.up { color: rgb(var(--pino-ink-rgb)); }
+.delta.down { color: rgb(var(--rubi-ink-rgb)); }
+.delta.warn { color: rgb(var(--ambar-ink-rgb)); }
+.delta.flat { color: rgb(var(--tinta-subtle-rgb)); }
+.spark { margin-top: 10px; }
+.spark polyline { fill: none; stroke: rgb(var(--pino-rgb)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.seccion-titulo { display: flex; align-items: baseline; gap: 12px; margin: 30px 0 14px; }
+.seccion-titulo h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+.seccion-titulo .nota-lat { font-size: 12.5px; }
+
+.grid-2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-2i { display: grid; grid-template-columns: 1fr 1.6fr; gap: 16px; margin-bottom: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .grid-2, .grid-2i, .grid-3 { grid-template-columns: 1fr; } }
+.card { padding: 24px; }
+.card h3 { font-size: 16.5px; font-weight: 600; margin-bottom: 4px; }
+.card .nota { font-size: 13px; margin-bottom: 18px; }
+
+.barras { display: flex; align-items: flex-end; gap: 6px; height: 190px; padding-top: 10px; }
+.barra { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+.barra .col { width: 100%; max-width: 34px; border-radius: 6px 6px 2px 2px; background: linear-gradient(to top, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); min-height: 3px; transform-origin: bottom; animation: crece 0.8s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); transition: filter 0.25s var(--curva); }
+.barra:hover .col { filter: brightness(1.25); }
+@keyframes crece { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.barra .etq { font-size: 10px; color: rgb(var(--tinta-subtle-rgb)); }
+.barra .val { font-size: 11px; font-weight: 600; }
+
+.barras-h { display: flex; flex-direction: column; gap: 10px; }
+.barra-h { display: grid; grid-template-columns: 150px 1fr 52px; align-items: center; gap: 10px; font-size: 13px; }
+.barra-h .pista { height: 20px; border-radius: 6px; background: rgb(var(--tinta-rgb) / 0.06); overflow: hidden; }
+.barra-h .fill { height: 100%; border-radius: 6px; background: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); transform-origin: left; animation: creceX 0.9s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); }
+@keyframes creceX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.barra-h .num { text-align: right; font-weight: 600; }
+
+.donut-wrap { display: flex; align-items: center; gap: 20px; }
+.donut-seg { animation: dibujo 1.2s var(--curva) both; }
+.leyenda { display: flex; flex-direction: column; gap: 8px; font-size: 13px; flex: 1; }
+.leyenda .fila { display: flex; align-items: center; gap: 8px; }
+.leyenda .sw { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.leyenda .pct { margin-left: auto; font-weight: 600; }
+
+.split { display: flex; height: 26px; border-radius: 999px; overflow: hidden; margin: 14px 0 10px; }
+.split .a { background: rgb(var(--cielo-rgb)); animation: creceX 1s var(--curva) both; transform-origin: left; }
+.split .b { background: rgb(var(--ambar-rgb)); animation: creceX 1s var(--curva) both; transform-origin: left; }
+.split-etq { display: flex; justify-content: space-between; font-size: 13px; }
+
+.embudo { display: flex; flex-direction: column; gap: 10px; }
+.embudo .paso { display: grid; grid-template-columns: 170px 1fr 60px; align-items: center; gap: 12px; font-size: 13.5px; }
+.embudo .pista { height: 26px; border-radius: 8px; background: rgb(var(--tinta-rgb) / 0.06); overflow: hidden; }
+.embudo .fill { height: 100%; border-radius: 8px; background: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb))); animation: creceX 1s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); }
+.embudo .num { text-align: right; font-weight: 700; }
+.aviso-honesto { margin-top: 14px; padding: 12px 16px; border-radius: 12px; font-size: 12.5px; background: rgb(var(--cielo-rgb) / 0.1); color: rgb(var(--cielo-ink-rgb)); border: 1px solid rgb(var(--cielo-rgb) / 0.25); }
+
+.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla th { text-align: left; padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: rgb(var(--tinta-subtle-rgb)); border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.1); }
+.tabla td { padding: 13px 14px; border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.06); }
+.tabla tbody tr { transition: background 0.25s var(--curva); }
+.tabla tbody tr:hover td { background: rgb(var(--tinta-rgb) / 0.04); }
+.tabla tr[data-estado="warn"] td:first-child { border-left: 3px solid rgb(var(--ambar-rgb)); }
+.tabla tr[data-estado="bad"] td:first-child { border-left: 3px solid rgb(var(--rubi-rgb)); }
+.tabla tr[data-estado="ok"] td:first-child { border-left: 3px solid transparent; }
+.semaforo { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+.tag-nuevo { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 999px; background: rgb(var(--cielo-rgb) / 0.2); color: rgb(var(--cielo-ink-rgb)); margin-left: 8px; vertical-align: 1px; }
+.filtros { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.filtro { padding: 8px 16px; border-radius: 999px; font-size: 13px; cursor: pointer; border: 1px solid rgb(var(--tinta-rgb) / 0.12); background: transparent; color: rgb(var(--tinta-muted-rgb)); transition: all 0.3s var(--curva); }
+.filtro:hover { border-color: rgb(var(--pino-rgb) / 0.5); }
+.filtro.activo { background: rgb(var(--pino-rgb)); color: #060b0a; border-color: transparent; font-weight: 600; }
+.resumen-op { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.resumen-op .mini { padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
+.resumen-op .num { font-size: 30px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="orbe orbe-1"></div>
+<div class="orbe orbe-2"></div>
+<div class="orbe orbe-3"></div>
+
+<div class="marco">
+  <span class="marca-mockup">MOCKUP v3 · BI v2 (006) — pulso total</span>
+  <button data-ir="pulso" class="activo">1 · Pulso</button>
+  <button data-ir="personas">2 · Personas y vigilados</button>
+  <button data-ir="geo">3 · Geografía y reincidencia</button>
+  <button data-ir="operacion">4 · Operación</button>
+  <button class="toggle-tema" id="btn-tema">☀️ Tema claro</button>
+</div>
+
+<!-- ══════════════ PANTALLA 1 · PULSO ══════════════ -->
+<section class="pantalla visible" id="p-pulso">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Pulso de la <span class="serif text-gradient">operación</span></h1>
+      <div class="sub text-muted">12 meses de operación · réplica de PI en vivo</div>
+    </div>
+    <div class="reloj">
+      <div class="hora cifra" id="reloj">--:--:--</div>
+      <div class="microetiqueta">America/Bogota</div>
+    </div>
+    <nav class="tabs">
+      <a class="activo">Pulso</a><a data-ir="personas">Personas</a><a data-ir="geo">Geografía</a><a data-ir="operacion">Operación</a>
+    </nav>
+  </div>
+
+  <div class="ticker anim-entrada" style="--anim-retardo:60ms">
+    <span class="etiqueta"><span class="punto ok anim-pulso"></span> En vivo</span>
+    <div class="ticker-ventana"><div class="ticker-pista" id="ticker-pista"></div></div>
+  </div>
+
+  <div class="hero">
+    <div class="anim-entrada" style="--anim-retardo:120ms">
+      <h2 class="titular-estado">La operación respira <em class="palabra-estado" style="color:rgb(var(--ambar-ink-rgb))">bajo atención</em></h2>
+      <div class="sub-estado text-muted">
+        <span class="punto warn anim-pulso"></span>
+        <span><b class="cifra">7</b> reportes hoy · <b class="cifra">254</b> alertas escaladas · último reporte <b>hace 38 min</b></span>
+      </div>
+    </div>
+    <div class="gauge-wrap glass anim-entrada" style="--anim-retardo:180ms">
+      <svg class="gauge-svg" width="110" height="110" viewBox="0 0 42 42">
+        <circle cx="21" cy="21" r="15.9" fill="none" stroke="rgb(var(--tinta-rgb) / 0.08)" stroke-width="4.5"/>
+        <circle class="trazo" cx="21" cy="21" r="15.9" fill="none" stroke="url(#grad-gauge)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="100 100" style="--dash-inicial:100; --dash-final:26" transform="rotate(-90 21 21)"/>
+        <defs><linearGradient id="grad-gauge" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f0b455"/><stop offset="100%" stop-color="#6fb6f5"/>
+        </linearGradient></defs>
+      </svg>
+      <div>
+        <div class="gauge-num cifra" data-cuenta="74">0</div>
+        <div class="microetiqueta">Salud operativa</div>
+        <div class="delta warn" style="font-size:12.5px; font-weight:600; margin-top:4px">▼ 254 escaladas sin gestionar</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="microetiqueta anim-entrada" style="--anim-retardo:220ms; margin-bottom:12px; display:flex; align-items:center; gap:8px">
+    <span class="punto warn anim-pulso"></span> BI detectó · sin que le preguntes · hallazgos de la carga real
+  </div>
+  <div class="insights">
+    <div class="insight glass sev-rubi anim-entrada brillo-nuevo" style="--anim-retardo:260ms">
+      <span class="tag-sev">⚠ Gestión · crítico</span>
+      <h4>254 alertas escaladas sin gestión registrada</h4>
+      <p class="text-muted">Ninguna alerta del demo tiene seguimiento de caso. El circuito escalar→gestionar no se ejercitó.</p>
+      <div class="acciones"><button class="btn-mini primario" data-ir="operacion">Ver operación →</button></div>
+    </div>
+    <div class="insight glass sev-ambar anim-entrada" style="--anim-retardo:320ms">
+      <span class="tag-sev">◆ Patrón detectado</span>
+      <h4>60% de los reportes son anónimos</h4>
+      <p class="text-muted">1.205 de 2.013. La confianza del anonimato es el canal dominante — vigilar su calidad.</p>
+      <div class="acciones"><button class="btn-mini" data-ir="geo">Ver reincidencia →</button></div>
+    </div>
+    <div class="insight glass sev-cielo anim-entrada" style="--anim-retardo:380ms">
+      <span class="tag-sev">✓ Cobertura del motor</span>
+      <h4>Clasificación IA cubre el 99.9%</h4>
+      <p class="text-muted">2.010 de 2.013 reportes clasificados; 2 quedaron sin clasificar. Latencia media en rango.</p>
+      <div class="acciones"><button class="btn-mini" data-ir="personas">Ver personas →</button></div>
+    </div>
+  </div>
+
+  <div class="grid-kpis">
+    <div class="kpi glass anim-entrada" style="--anim-retardo:420ms">
+      <div class="microetiqueta">Reportes · 12 meses</div>
+      <div class="valor cifra" data-cuenta="2013">0</div>
+      <div class="delta up">▲ 172 en el último mes</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,28 15,26 30,24 45,25 60,20 75,16 90,17 105,10 120,7"/>
+      </svg>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:480ms">
+      <div class="microetiqueta">Alertas de colegio</div>
+      <div class="valor cifra" data-cuenta="1425">0</div>
+      <div class="delta warn">254 escaladas · 301 nuevas</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,24 30,20 60,14 90,12 120,8"/>
+      </svg>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:540ms">
+      <div class="microetiqueta">Colegios activos</div>
+      <div class="valor cifra" data-cuenta="52">0</div>
+      <div class="delta up">50 con suscripción activa</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,28 40,20 80,12 120,8"/>
+      </svg>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:600ms">
+      <div class="microetiqueta">Cobertura clasificación</div>
+      <div class="valor cifra"><span data-cuenta="99.9" data-decimal="1">0</span><span style="font-size:18px" class="text-muted">%</span></div>
+      <div class="delta flat">2 reportes sin clasificar</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,10 60,9 120,8"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card glass anim-entrada" style="--anim-retardo:660ms">
+      <h3>Reportes por día · últimos 14 días</h3>
+      <div class="nota text-muted">Fuente: mv_fact_reporte_diario (refrescada cada 15 min)</div>
+      <div class="barras" id="barras"></div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:720ms">
+      <h3>Categorías del año</h3>
+      <div class="nota text-muted">Las 14 categorías · top 6</div>
+      <div class="donut-wrap">
+        <svg width="150" height="150" viewBox="0 0 42 42">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="rgb(var(--tinta-rgb) / 0.07)" stroke-width="5"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#4fe0b8" stroke-width="5" stroke-dasharray="18 82" stroke-dashoffset="25" style="--dash-inicial:125; --dash-final:25"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#6fb6f5" stroke-width="5" stroke-dasharray="16 84" stroke-dashoffset="7" style="--dash-inicial:107; --dash-final:7"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#f0b455" stroke-width="5" stroke-dasharray="15 85" stroke-dashoffset="-9" style="--dash-inicial:91; --dash-final:-9"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#f5809b" stroke-width="5" stroke-dasharray="14 86" stroke-dashoffset="-24" style="--dash-inicial:76; --dash-final:-24"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="rgb(var(--tinta-subtle-rgb))" stroke-width="5" stroke-dasharray="37 63" stroke-dashoffset="-38" style="--dash-inicial:62; --dash-final:-38"/>
+          <text x="21" y="20" text-anchor="middle" font-size="6.4" font-weight="700" fill="rgb(var(--tinta-rgb))" class="cifra">2013</text>
+          <text x="21" y="26" text-anchor="middle" font-size="3.2" fill="rgb(var(--tinta-subtle-rgb))">reportes</text>
+        </svg>
+        <div class="leyenda">
+          <div class="fila"><span class="sw" style="background:#4fe0b8"></span>Bullying<span class="pct cifra">18%</span></div>
+          <div class="fila"><span class="sw" style="background:#6fb6f5"></span>Ciberacoso<span class="pct cifra">16%</span></div>
+          <div class="fila"><span class="sw" style="background:#f0b455"></span>Acoso digital<span class="pct cifra">15%</span></div>
+          <div class="fila"><span class="sw" style="background:#f5809b"></span>Violencia física<span class="pct cifra">14%</span></div>
+          <div class="fila"><span class="sw" style="background:rgb(var(--tinta-subtle-rgb))"></span>Otras 10 categorías<span class="pct cifra">37%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card glass anim-entrada" style="--anim-retardo:780ms">
+      <h3>Anonimato</h3>
+      <div class="nota text-muted">Quién reporta</div>
+      <div class="split"><div class="a" style="width:60%"></div><div class="b" style="width:40%"></div></div>
+      <div class="split-etq"><span>Anónimos <b class="cifra">1.205</b></span><span>Identificados <b class="cifra">808</b></span></div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:840ms">
+      <h3>Estado de reportes</h3>
+      <div class="nota text-muted">Ciclo de vida del año</div>
+      <div class="barras-h">
+        <div class="barra-h"><span>Clasificados</span><div class="pista"><div class="fill" style="width:86%"></div></div><span class="num cifra">1.726</span></div>
+        <div class="barra-h"><span>Posible spam</span><div class="pista"><div class="fill" style="width:8%"></div></div><span class="num cifra">155</span></div>
+        <div class="barra-h"><span>Revisión manual</span><div class="pista"><div class="fill" style="width:7%"></div></div><span class="num cifra">133</span></div>
+      </div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:900ms">
+      <h3>Comercial</h3>
+      <div class="nota text-muted">Suscripciones vivas</div>
+      <div class="barras-h">
+        <div class="barra-h"><span>Colegios activos</span><div class="pista"><div class="fill" style="width:91%"></div></div><span class="num cifra">50</span></div>
+        <div class="barra-h"><span>Padres premium</span><div class="pista"><div class="fill" style="width:4%"></div></div><span class="num cifra">2</span></div>
+        <div class="barra-h"><span>Padres freemium</span><div class="pista"><div class="fill" style="width:5%"></div></div><span class="num cifra">3</span></div>
+      </div>
+      <div class="aviso-honesto">Recaudo real: $0 registrado en Pago — el demo no cargó cobros.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PANTALLA 2 · PERSONAS Y VIGILADOS ══════════════ -->
+<section class="pantalla" id="p-personas">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Personas y <span class="serif text-gradient">vigilados</span></h1>
+      <div class="sub text-muted">Quiénes son los actores de la operación — sin PII, solo patrones</div>
+    </div>
+    <nav class="tabs">
+      <a data-ir="pulso">Pulso</a><a class="activo">Personas</a><a data-ir="geo">Geografía</a><a data-ir="operacion">Operación</a>
+    </nav>
+  </div>
+
+  <div class="grid-kpis">
+    <div class="kpi glass anim-entrada" style="--anim-retardo:80ms">
+      <div class="microetiqueta">Profesores</div>
+      <div class="valor cifra" data-cuenta="300">0</div>
+      <div class="delta flat">129 con cuentas vigiladas</div>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:140ms">
+      <div class="microetiqueta">Alumnos</div>
+      <div class="valor cifra" data-cuenta="2003">0</div>
+      <div class="delta flat">200 cursos · 52 colegios</div>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:200ms">
+      <div class="microetiqueta">Acudientes</div>
+      <div class="valor cifra" data-cuenta="2818">0</div>
+      <div class="delta flat">2.000 madres · 818 padres</div>
+    </div>
+    <div class="kpi glass anim-entrada brillo-nuevo" style="--anim-retardo:260ms">
+      <div class="microetiqueta">Identificadores vigilados</div>
+      <div class="valor cifra" data-cuenta="2720">0</div>
+      <div class="delta up">alumnos 1.384 · acudientes 1.207 · profes 129</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card glass anim-entrada" style="--anim-retardo:320ms">
+      <h3>Alertas por tipo de sujeto</h3>
+      <div class="nota text-muted">1.425 alertas de colegio del año</div>
+      <div class="donut-wrap">
+        <svg width="150" height="150" viewBox="0 0 42 42">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="rgb(var(--tinta-rgb) / 0.07)" stroke-width="5"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#4fe0b8" stroke-width="5" stroke-dasharray="53 47" stroke-dashoffset="25" style="--dash-inicial:125; --dash-final:25"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#f0b455" stroke-width="5" stroke-dasharray="42 58" stroke-dashoffset="-28" style="--dash-inicial:72; --dash-final:-28"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#f5809b" stroke-width="5" stroke-dasharray="5 95" stroke-dashoffset="-70" style="--dash-inicial:30; --dash-final:-70"/>
+          <text x="21" y="20" text-anchor="middle" font-size="6.4" font-weight="700" fill="rgb(var(--tinta-rgb))" class="cifra">1425</text>
+          <text x="21" y="26" text-anchor="middle" font-size="3.2" fill="rgb(var(--tinta-subtle-rgb))">alertas</text>
+        </svg>
+        <div class="leyenda">
+          <div class="fila"><span class="sw" style="background:#4fe0b8"></span>Alumnos<span class="pct cifra">53%</span></div>
+          <div class="fila"><span class="sw" style="background:#f0b455"></span>Acudientes<span class="pct cifra">42%</span></div>
+          <div class="fila"><span class="sw" style="background:#f5809b"></span>Profesores<span class="pct cifra">5%</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:380ms">
+      <h3>Estado de las alertas</h3>
+      <div class="nota text-muted">Ciclo de gestión del colegio</div>
+      <div class="barras-h">
+        <div class="barra-h"><span>Nuevas</span><div class="pista"><div class="fill" style="width:100%"></div></div><span class="num cifra">301</span></div>
+        <div class="barra-h"><span>Vistas</span><div class="pista"><div class="fill" style="width:96%"></div></div><span class="num cifra">291</span></div>
+        <div class="barra-h"><span>Gestionadas</span><div class="pista"><div class="fill" style="width:93%"></div></div><span class="num cifra">280</span></div>
+        <div class="barra-h"><span style="color:rgb(var(--rubi-ink-rgb)); font-weight:600">Escaladas</span><div class="pista"><div class="fill" style="width:84%; background:linear-gradient(to right, rgb(var(--rubi-rgb)), rgb(var(--ambar-rgb)))"></div></div><span class="num cifra">254</span></div>
+        <div class="barra-h"><span>Cerradas</span><div class="pista"><div class="fill" style="width:99%"></div></div><span class="num cifra">299</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2i">
+    <div class="card glass anim-entrada" style="--anim-retardo:440ms">
+      <h3>Círculo de confianza (padres)</h3>
+      <div class="nota text-muted">Embudo del frente familia</div>
+      <div class="embudo">
+        <div class="paso"><span>Hijos registrados</span><div class="pista"><div class="fill" style="width:100%"></div></div><span class="num cifra">11</span></div>
+        <div class="paso"><span>Con vínculo a padre</span><div class="pista"><div class="fill" style="width:18%"></div></div><span class="num cifra">2</span></div>
+        <div class="paso"><span>Contactos de confianza</span><div class="pista"><div class="fill" style="width:9%"></div></div><span class="num cifra">1</span></div>
+        <div class="paso"><span>Identificadores de hijo</span><div class="pista"><div class="fill" style="width:72%"></div></div><span class="num cifra">8</span></div>
+      </div>
+      <div class="aviso-honesto">Honesto: el demo NO sembró padres — este módulo muestra solo datos reales de prueba. Cuando se siembren padres demo, este embudo cobra vida.</div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:500ms">
+      <h3>Identificadores por plataforma</h3>
+      <div class="nota text-muted">Dónde viven las cuentas vigiladas</div>
+      <div class="barras-h">
+        <div class="barra-h"><span>WhatsApp</span><div class="pista"><div class="fill" style="width:100%"></div></div><span class="num cifra">612</span></div>
+        <div class="barra-h"><span>Telegram</span><div class="pista"><div class="fill" style="width:74%"></div></div><span class="num cifra">455</span></div>
+        <div class="barra-h"><span>TikTok</span><div class="pista"><div class="fill" style="width:61%"></div></div><span class="num cifra">374</span></div>
+        <div class="barra-h"><span>Instagram</span><div class="pista"><div class="fill" style="width:55%"></div></div><span class="num cifra">338</span></div>
+        <div class="barra-h"><span>Roblox</span><div class="pista"><div class="fill" style="width:44%"></div></div><span class="num cifra">271</span></div>
+        <div class="barra-h"><span>Otras 5</span><div class="pista"><div class="fill" style="width:38%"></div></div><span class="num cifra">670*</span></div>
+      </div>
+      <div class="aviso-honesto" style="border-color:rgb(var(--ambar-rgb)/0.25); background:rgb(var(--ambar-rgb)/0.08); color:rgb(var(--ambar-ink-rgb))">Los nicks NUNCA se muestran en claro: BI agrega y cuenta. El valor del identificador queda fuera de la réplica (Ley 1581).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PANTALLA 3 · GEOGRAFÍA Y REINCIDENCIA ══════════════ -->
+<section class="pantalla" id="p-geo">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Geografía y <span class="serif text-gradient">reincidencia</span></h1>
+      <div class="sub text-muted">Dónde pasa la operación y quién repite — patrones, no personas</div>
+    </div>
+    <nav class="tabs">
+      <a data-ir="pulso">Pulso</a><a data-ir="personas">Personas</a><a class="activo">Geografía</a><a data-ir="operacion">Operación</a>
+    </nav>
+  </div>
+
+  <div class="grid-2">
+    <div class="card glass anim-entrada" style="--anim-retardo:80ms">
+      <h3>Top ciudades del año</h3>
+      <div class="nota text-muted">21 ciudades con reportes · 19 países en catálogo</div>
+      <div class="barras-h">
+        <div class="barra-h"><span>Bogotá</span><div class="pista"><div class="fill" style="width:100%"></div></div><span class="num cifra">486</span></div>
+        <div class="barra-h"><span>Medellín</span><div class="pista"><div class="fill" style="width:62%"></div></div><span class="num cifra">301</span></div>
+        <div class="barra-h"><span>Cali</span><div class="pista"><div class="fill" style="width:47%"></div></div><span class="num cifra">228</span></div>
+        <div class="barra-h"><span>Barranquilla</span><div class="pista"><div class="fill" style="width:35%"></div></div><span class="num cifra">172</span></div>
+        <div class="barra-h"><span>Bucaramanga</span><div class="pista"><div class="fill" style="width:28%"></div></div><span class="num cifra">136</span></div>
+        <div class="barra-h"><span>Otras 16 ciudades</span><div class="pista"><div class="fill" style="width:55%; background:rgb(var(--tinta-subtle-rgb))"></div></div><span class="num cifra">690</span></div>
+      </div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:140ms">
+      <h3>Reincidencia de vigilados</h3>
+      <div class="nota text-muted">El mismo identificador en varios reportes (sembrado a propósito en el demo)</div>
+      <div class="embudo">
+        <div class="paso"><span>Identificadores únicos</span><div class="pista"><div class="fill" style="width:100%"></div></div><span class="num cifra">1.259</span></div>
+        <div class="paso"><span>Con 2+ reportes</span><div class="pista"><div class="fill" style="width:34%"></div></div><span class="num cifra">428</span></div>
+        <div class="paso"><span>Con 5+ reportes</span><div class="pista"><div class="fill" style="width:12%"></div></div><span class="num cifra">151</span></div>
+        <div class="paso"><span>Multi-ciudad</span><div class="pista"><div class="fill" style="width:5%"></div></div><span class="num cifra">63</span></div>
+      </div>
+      <div class="aviso-honesto">Presunción de inocencia: el tablero agrega y ordena; jamás lista nombres ni nicks en claro.</div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card glass anim-entrada" style="--anim-retardo:200ms">
+      <h3>Estacionalidad semanal</h3>
+      <div class="nota text-muted">¿Qué días se reporta más?</div>
+      <div class="barras" style="height:130px" id="barras-dow"></div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:260ms">
+      <h3>Reportes por mes</h3>
+      <div class="nota text-muted">12 meses de operación</div>
+      <div class="barras" style="height:130px" id="barras-mes"></div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:320ms">
+      <h3>Inter-ciudad</h3>
+      <div class="nota text-muted">Patrones que cruzan fronteras</div>
+      <div class="embudo">
+        <div class="paso"><span>Eventos de match</span><div class="pista"><div class="fill" style="width:4%"></div></div><span class="num cifra">0</span></div>
+        <div class="paso"><span>Señales comunitarias</span><div class="pista"><div class="fill" style="width:8%"></div></div><span class="num cifra">2</span></div>
+        <div class="paso"><span>Patrones institucionales</span><div class="pista"><div class="fill" style="width:4%"></div></div><span class="num cifra">1</span></div>
+      </div>
+      <div class="aviso-honesto">Los agregados de patrones no corrieron en la carga demo — cuando corran, esta tarjeta se llena sola.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PANTALLA 4 · OPERACIÓN ══════════════ -->
+<section class="pantalla" id="p-operacion">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Operación <span class="serif text-gradient">en vivo</span></h1>
+      <div class="sub text-muted">52 colegios · alertas, personas y semáforo — obligatoria antes del corte de dominio</div>
+    </div>
+    <nav class="tabs">
+      <a data-ir="pulso">Pulso</a><a data-ir="personas">Personas</a><a data-ir="geo">Geografía</a><a class="activo">Operación</a>
+    </nav>
+  </div>
+
+  <div class="resumen-op">
+    <div class="mini glass anim-entrada" style="--anim-retardo:60ms"><span class="punto ok anim-pulso" style="width:12px;height:12px"></span><div><div class="num cifra" data-cuenta="52">0</div><div class="microetiqueta">Colegios activos</div></div></div>
+    <div class="mini glass anim-entrada" style="--anim-retardo:120ms"><span class="punto warn anim-pulso" style="width:12px;height:12px"></span><div><div class="num cifra" data-cuenta="18">0</div><div class="microetiqueta">Con alertas por gestionar</div></div></div>
+    <div class="mini glass anim-entrada" style="--anim-retardo:180ms"><span class="punto bad anim-pulso" style="width:12px;height:12px"></span><div><div class="num cifra" data-cuenta="9">0</div><div class="microetiqueta">Con escaladas sin gestión</div></div></div>
+    <div class="mini glass anim-entrada" style="--anim-retardo:240ms"><span class="punto ok" style="width:12px;height:12px"></span><div><div class="num cifra" data-cuenta="7">0</div><div class="microetiqueta">Reportes hoy</div></div></div>
+  </div>
+
+  <div class="filtros anim-entrada" style="--anim-retardo:300ms">
+    <button class="filtro activo" data-f="todos">Todos</button>
+    <button class="filtro" data-f="hoy">Con actividad hoy</button>
+    <button class="filtro" data-f="atencion">Con alertas por gestionar</button>
+    <button class="filtro" data-f="escaladas">Con escaladas sin gestión</button>
+    <button class="filtro" data-f="inactivos">Sin reportes 30 días</button>
+  </div>
+
+  <div class="card glass anim-entrada" style="--anim-retardo:360ms; padding:8px 12px;">
+    <table class="tabla">
+      <thead>
+        <tr><th>Colegio</th><th>Rep. mes</th><th>Alertas activas</th><th>Escaladas</th><th>Profes</th><th>Alumnos</th><th>Categoría top</th><th>Último reporte</th><th>Estado</th></tr>
+      </thead>
+      <tbody id="tabla-op"></tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+/* ---------- Navegación ---------- */
+const botones = document.querySelectorAll('.marco button[data-ir]');
+function ir(id) {
+  document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('visible'));
+  document.getElementById('p-' + id).classList.add('visible');
+  botones.forEach(b => b.classList.toggle('activo', b.dataset.ir === id));
+  window.scrollTo({ top: 0 });
+  document.querySelectorAll('#p-' + id + ' [data-cuenta]').forEach(el => {
+    if (!el.dataset.contada) { el.dataset.contada = '1'; animarCuenta(el); }
+  });
+}
+document.querySelectorAll('[data-ir]').forEach(el =>
+  el.addEventListener('click', () => ir(el.dataset.ir)));
+if (location.hash) {
+  const dest = location.hash.slice(1);
+  if (document.getElementById('p-' + dest)) ir(dest);
+}
+
+/* ---------- Tema ---------- */
+const btnTema = document.getElementById('btn-tema');
+function pintarTema() {
+  btnTema.textContent = document.documentElement.classList.contains('dark') ? '☀️ Tema claro' : '🌙 Tema oscuro';
+}
+btnTema.addEventListener('click', () => {
+  document.documentElement.classList.toggle('dark');
+  pintarTema();
+});
+pintarTema();
+
+/* ---------- Reloj ---------- */
+function tickReloj() {
+  const el = document.getElementById('reloj');
+  if (el) el.textContent = new Date().toLocaleTimeString('es-CO', { hour12: false, timeZone: 'America/Bogota' });
+}
+tickReloj(); setInterval(tickReloj, 1000);
+
+/* ---------- Ticker (eventos reales del demo) ---------- */
+const eventos = [
+  '<b>hace 4 min</b> · Reporte clasificado como <b>CIBERACOSO</b> · Bogotá',
+  '<b>hace 11 min</b> · Alerta nueva a colegio · sujeto <b>alumno</b> · Medellín',
+  '<b>hace 26 min</b> · Réplica sincronizada · <b>2.013</b> reportes al día',
+  '<b>hace 38 min</b> · Reporte clasificado como <b>BULLYING</b> · Cali',
+  '<b>hace 1 h</b> · Alerta escalada · sujeto <b>acudiente</b> · Barranquilla',
+  '<b>hace 2 h</b> · 5 vistas materializadas refrescadas · Pulso al día',
+];
+const pista = document.getElementById('ticker-pista');
+const mitad = eventos.map(e => `<span>${e}</span>`).join('');
+pista.innerHTML = mitad + mitad;
+
+/* ---------- Count-up ---------- */
+function animarCuenta(el) {
+  const destino = parseFloat(el.dataset.cuenta);
+  const dec = parseInt(el.dataset.decimal || '0');
+  const t0 = performance.now(), dur = 1200;
+  function paso(t) {
+    const p = Math.min((t - t0) / dur, 1);
+    const suave = 1 - Math.pow(1 - p, 3);
+    const v = destino * suave;
+    el.textContent = dec ? v.toFixed(dec) : Math.round(v).toLocaleString('es-CO');
+    if (p < 1) requestAnimationFrame(paso);
+  }
+  requestAnimationFrame(paso);
+}
+document.querySelectorAll('.pantalla.visible [data-cuenta]').forEach(el => { el.dataset.contada = '1'; animarCuenta(el); });
+
+/* ---------- Barras ---------- */
+const dias = [['19',4],['20',6],['21',3],['22',8],['23',5],['24',2],['25',1],['26',7],['27',9],['28',4],['29',6],['30',5],['31',8],['01',7]];
+const maxV = Math.max(...dias.map(d => d[1]));
+document.getElementById('barras').innerHTML = dias.map(([d, v], i) => `
+  <div class="barra" title="${v} reportes">
+    <span class="val cifra">${v}</span>
+    <div class="col" style="height:${Math.round(v / maxV * 100)}%; --anim-retardo:${i * 55}ms"></div>
+    <span class="etq">${d}</span>
+  </div>`).join('');
+
+const dow = [['L',5],['M',7],['M',8],['J',6],['V',4],['S',2],['D',2]];
+const maxD = Math.max(...dow.map(d => d[1]));
+document.getElementById('barras-dow').innerHTML = dow.map(([d, v], i) => `
+  <div class="barra" title="${v} promedio">
+    <span class="val cifra">${v}</span>
+    <div class="col" style="height:${Math.round(v / maxD * 100)}%; --anim-retardo:${i * 60}ms"></div>
+    <span class="etq">${d}</span>
+  </div>`).join('');
+
+const meses = [['sep',95],['oct',140],['nov',158],['dic',121],['ene',167],['feb',172],['mar',181],['abr',176],['may',190],['jun',168],['jul',173],['ago',172]];
+const maxM = Math.max(...meses.map(m => m[1]));
+document.getElementById('barras-mes').innerHTML = meses.map(([m, v], i) => `
+  <div class="barra" title="${v} reportes">
+    <span class="val cifra">${v}</span>
+    <div class="col" style="height:${Math.round(v / maxM * 100)}%; --anim-retardo:${i * 50}ms"></div>
+    <span class="etq">${m}</span>
+  </div>`).join('');
+
+/* ---------- Operación: tabla con dimensiones ampliadas ---------- */
+const filas = [
+  { c: 'I.E. San José (Bogotá)', mes: 23, alertas: 41, esc: 6, prof: 8, alum: 61, cat: 'Bullying', ult: 'hace 12 min', est: 'warn', etq: 'Por gestionar', nuevo: true, hoy: true },
+  { c: 'Col. Nuevo Horizonte (Medellín)', mes: 19, alertas: 38, esc: 9, prof: 7, alum: 55, cat: 'Ciberacoso', ult: 'hace 40 min', est: 'bad', etq: 'Escaladas sin gestión', hoy: true },
+  { c: 'I.E. La Esperanza (Cali)', mes: 17, alertas: 22, esc: 0, prof: 6, alum: 48, cat: 'Bullying', ult: 'hace 2 h', est: 'ok', etq: 'En calma', hoy: true },
+  { c: 'Col. San Mateo (Barranquilla)', mes: 15, alertas: 19, esc: 3, prof: 6, alum: 44, cat: 'Acoso digital', ult: 'hace 3 h', est: 'warn', etq: 'Por gestionar', hoy: true },
+  { c: 'I.E. Rural El Carmen (Bucaramanga)', mes: 12, alertas: 11, esc: 0, prof: 4, alum: 30, cat: 'Violencia física', ult: 'ayer 16:04', est: 'ok', etq: 'En calma' },
+  { c: 'Col. del Valle (Cali)', mes: 11, alertas: 14, esc: 2, prof: 5, alum: 39, cat: 'Ciberacoso', ult: 'ayer 11:32', est: 'warn', etq: 'Por gestionar' },
+  { c: 'I.E. Santa Teresa (Bogotá)', mes: 9, alertas: 7, esc: 0, prof: 4, alum: 26, cat: 'Bullying', ult: 'hace 2 días', est: 'ok', etq: 'En calma' },
+  { c: 'Col. Los Pinos (Pereira)', mes: 8, alertas: 5, esc: 0, prof: 3, alum: 21, cat: '—', ult: 'hace 6 días', est: 'ok', etq: 'En calma' },
+  { c: 'I.E. Bellavista (Ibagué)', mes: 3, alertas: 2, esc: 0, prof: 2, alum: 12, cat: '—', ult: 'hace 34 días', est: 'bad', etq: 'Sin actividad' },
+];
+function pintarTabla(filtro) {
+  const data = filas.filter(f =>
+    filtro === 'todos' ? true :
+    filtro === 'hoy' ? f.hoy :
+    filtro === 'atencion' ? f.alertas > 0 && f.est !== 'ok' :
+    filtro === 'escaladas' ? f.esc > 0 :
+    f.est === 'bad' && f.etq === 'Sin actividad');
+  document.getElementById('tabla-op').innerHTML = data.map(f => `
+    <tr data-estado="${f.est}">
+      <td style="font-weight:600">${f.c}${f.nuevo ? '<span class="tag-nuevo">NUEVO</span>' : ''}</td>
+      <td class="cifra">${f.mes}</td>
+      <td class="cifra">${f.alertas}</td>
+      <td class="cifra" style="${f.esc > 0 ? 'color:rgb(var(--rubi-ink-rgb));font-weight:700' : ''}">${f.esc || '—'}</td>
+      <td class="cifra">${f.prof}</td>
+      <td class="cifra">${f.alum}</td>
+      <td>${f.cat}</td>
+      <td class="text-muted">${f.ult}</td>
+      <td><span class="semaforo"><span class="punto ${f.est} anim-pulso"></span>${f.etq}</span></td>
+    </tr>`).join('');
+}
+pintarTabla('todos');
+document.querySelectorAll('.filtro').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.filtro').forEach(x => x.classList.remove('activo'));
+  b.classList.add('activo');
+  pintarTabla(b.dataset.f);
+}));
+</script>
+</body>
+</html>

@@ -9,6 +9,8 @@
 // Se cubre: cada regla del motor (dispara / no dispara / sin historia),
 // getPulso con filas mockeadas (deltas, NULLs honestos candado 9,
 // hayDatos=false), ticker con haceMin correcto y texto determinista.
+// Ampliación v3: alertas/anonimato/estados/comercial/cobertura del Pulso
+// (mapeo del ResultSet, ceros honestos en vacío y degradación por sección).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -66,6 +68,12 @@ const F = {
     ultimo: 'AS ultimo FROM "Reporte"',
     tendencia: "AS reciente",
     colegiosSilenciosos: 'LEFT JOIN "Reporte" r',
+    // Ampliación v3 (pulso.ts)
+    alertas: 'FROM "AlertaColegio"',
+    anonimato: '"esAnonimo"',
+    estadosReporte: '"estado"::text AS estado',
+    comercial: 'FROM "Suscripcion"',
+    cobertura: "AS universo",
 } as const;
 
 const SERIE_14_REAL: Array<[string, number]> = [
@@ -129,6 +137,16 @@ describe("getPulso · datos reales mockeados", () => {
             ]],
             [F.replica, [{ total: 1 }]],
             [F.ultimo, [{ ultimo: new Date("2026-09-01T11:48:00.000Z") }]],
+            // Ampliación v3
+            [F.alertas, [{ total: 1425, escaladas: 12, nuevas: 34 }]],
+            [F.anonimato, [{ anonimos: 1205, identificados: 809 }]],
+            [F.estadosReporte, [
+                { estado: "CLASIFICADO", total: 1800 },
+                { estado: "POSIBLE_SPAM", total: 150 },
+                { estado: "REVISION_MANUAL", total: 64 },
+            ]],
+            [F.comercial, [{ colegios_activos: 52, padres_premium: 2, padres_freemium: 1 }]],
+            [F.cobertura, [{ universo: 200, con_clasificacion: 150 }]],
         ]);
 
         const pulso = await getPulso();
@@ -160,6 +178,22 @@ describe("getPulso · datos reales mockeados", () => {
         expect(pulso.saludOperativa).toBe(97);
         expect(pulso.ultimoReporteHaceMin).toBe(12);
         expect(pulso.hayDatos).toBe(true);
+        // Ampliación v3: mapeo directo del ResultSet (candado 10)
+        expect(pulso.alertas).toEqual({ total: 1425, escaladas: 12, nuevas: 34 });
+        expect(pulso.anonimato).toEqual({ anonimos: 1205, identificados: 809 });
+        expect(pulso.estadosReporte).toEqual([
+            { estado: "CLASIFICADO", total: 1800 },
+            { estado: "POSIBLE_SPAM", total: 150 },
+            { estado: "REVISION_MANUAL", total: 64 },
+        ]);
+        expect(pulso.comercial).toEqual({
+            colegiosActivos: 52,
+            padresPremium: 2,
+            padresFreemium: 1,
+        });
+        // 150/200 → 75 % · sin clasificar = 200 − 150 = 50
+        expect(pulso.coberturaClasificacionPct).toBe(75);
+        expect(pulso.sinClasificar).toBe(50);
     });
 
     it("vacío total → hayDatos=false y NULLs honestos, nada inventado", async () => {
@@ -184,6 +218,50 @@ describe("getPulso · datos reales mockeados", () => {
         expect(pulso.ticker).toEqual([]);
         expect(pulso.saludOperativa).toBe(0);
         expect(pulso.ultimoReporteHaceMin).toBeNull();
+        // Ampliación v3 en el vacío: ceros reales y cobertura NULL
+        expect(pulso.alertas).toEqual({ total: 0, escaladas: 0, nuevas: 0 });
+        expect(pulso.anonimato).toEqual({ anonimos: 0, identificados: 0 });
+        expect(pulso.estadosReporte).toEqual([]);
+        expect(pulso.comercial).toEqual({
+            colegiosActivos: 0,
+            padresPremium: 0,
+            padresFreemium: 0,
+        });
+        expect(pulso.coberturaClasificacionPct).toBeNull(); // universo 0 → NULL
+        expect(pulso.sinClasificar).toBe(0);
+    });
+
+    it("ampliación v3: una sección nueva rota degrada a ceros sin tumbar el resto", async () => {
+        mockConsultas([
+            [F.agregados, [{
+                total_historico: 10,
+                hoy: 1,
+                mes_actual: 4,
+                mes_anterior_mismo_tramo: 2,
+                reportes_7d: 3,
+                reportes_30d: 8,
+                clasificados_30d: 8,
+            }]],
+            [F.alertas, new Error('relation "AlertaColegio" does not exist')],
+            [F.comercial, new Error("permission denied for table Suscripcion")],
+            [F.cobertura, [{ universo: 10, con_clasificacion: 5 }]],
+            [F.anonimato, [{ anonimos: 7, identificados: 3 }]],
+        ]);
+
+        const pulso = await getPulso();
+
+        // Secciones rotas → ceros honestos con warn (silenciado en beforeEach)
+        expect(pulso.alertas).toEqual({ total: 0, escaladas: 0, nuevas: 0 });
+        expect(pulso.comercial).toEqual({
+            colegiosActivos: 0,
+            padresPremium: 0,
+            padresFreemium: 0,
+        });
+        // Las que sí respondieron llegan intactas
+        expect(pulso.anonimato).toEqual({ anonimos: 7, identificados: 3 });
+        expect(pulso.coberturaClasificacionPct).toBe(50);
+        expect(pulso.sinClasificar).toBe(5);
+        expect(pulso.kpis.reportesMes).toBe(4);
     });
 
     it("mes sin tramo anterior → deltaMesPct NULL (no '100%' inventado) y salud 100 real", async () => {

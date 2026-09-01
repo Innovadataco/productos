@@ -11,7 +11,7 @@ set -euo pipefail
 ENV_FILE="${BI_ENV_FILE:-/opt/proteccion-infantil/bi-repo/006-2026-BI-INTELIGENCIA-NEGOCIO/.env.bi.production}"
 set -a; source "$ENV_FILE"; set +a
 
-for MV in mv_fact_reporte_diario mv_fact_operativo mv_fact_comercial_mensual mv_fact_motor_ia_diario mv_fact_salud_sistema; do
+for MV in mv_fact_reporte_diario mv_fact_operativo mv_fact_comercial_mensual mv_fact_motor_ia_diario mv_fact_salud_sistema mv_fact_alerta_diario mv_fact_geo_ciudad; do
     docker exec bi-db psql -U "$REPLICA_DB_USER" -d "$REPLICA_DB_NAME" \
         -c "REFRESH MATERIALIZED VIEW CONCURRENTLY $MV;" > /dev/null
     echo "[$(date -Is)] $MV refrescada"

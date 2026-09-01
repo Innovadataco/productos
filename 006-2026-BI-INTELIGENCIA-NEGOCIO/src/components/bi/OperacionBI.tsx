@@ -1,19 +1,23 @@
 "use client";
 
-// src/components/bi/OperacionBI.tsx · Tablero de Operación (mockup-bi-v2 · Fase 3)
-// Cliente: 4 minicards con count-up, filtros funcionales y tabla con semáforo.
+// src/components/bi/OperacionBI.tsx · Tablero de Operación (mockup-bi-v3 · pantalla 4)
+// Cliente: 4 minicards con count-up (colegios activos, con alertas por
+// gestionar, con escaladas sin gestión, reportes hoy), filtros funcionales
+// — incluido "Con escaladas sin gestión" — y tabla ampliada (alertas
+// activas, escaladas en rubí, profes, alumnos) con semáforo.
 // Candado 9: TODA cifra viene de props (ResultSet real); el vacío se muestra
 // como "—" / mensaje honesto, jamás se inventa un dato.
 
 import { useEffect, useMemo, useState } from "react";
 import type { FilaOperacion, ResumenOperacion } from "@/lib/bi/operacion";
 
-type Filtro = "todos" | "hoy" | "atencion" | "inactivos";
+type Filtro = "todos" | "hoy" | "atencion" | "escaladas" | "inactivos";
 
 const FILTROS: Array<{ id: Filtro; etiqueta: string }> = [
     { id: "todos", etiqueta: "Todos" },
     { id: "hoy", etiqueta: "Con actividad hoy" },
-    { id: "atencion", etiqueta: "En atención" },
+    { id: "atencion", etiqueta: "Con alertas por gestionar" },
+    { id: "escaladas", etiqueta: "Con escaladas sin gestión" },
     { id: "inactivos", etiqueta: "Sin reportes 30 días" },
 ];
 
@@ -84,7 +88,7 @@ function CifraAnimada({ valor, retardo }: { valor: number; retardo: number }) {
         return () => cancelAnimationFrame(marco);
     }, [valor, retardo]);
 
-    return <span className="cifra">{visible}</span>;
+    return <span className="cifra">{visible.toLocaleString("es-CO")}</span>;
 }
 
 function MiniCard({
@@ -129,7 +133,8 @@ export default function OperacionBI({
         () =>
             filas.filter((f) => {
                 if (filtro === "hoy") return f.hoy > 0;
-                if (filtro === "atencion") return f.estado === "warn";
+                if (filtro === "atencion") return f.alertasActivas > 0;
+                if (filtro === "escaladas") return f.escaladas > 0;
                 if (filtro === "inactivos") return f.estado === "bad";
                 return true;
             }),
@@ -138,11 +143,11 @@ export default function OperacionBI({
 
     return (
         <>
-            {/* Resumen: 4 minicards con count-up */}
+            {/* Resumen: 4 minicards con count-up (mockup v3) */}
             <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3.5 mb-5">
                 <MiniCard punto="punto-ok" valor={resumen.activos} etiqueta="Colegios activos" retardo={60} />
-                <MiniCard punto="punto-warn" valor={resumen.enAtencion} etiqueta="En atención" retardo={120} />
-                <MiniCard punto="punto-bad" valor={resumen.sinActividad} etiqueta="Sin actividad 30 d" retardo={180} />
+                <MiniCard punto="punto-warn" valor={resumen.conAlertasPorGestionar} etiqueta="Con alertas por gestionar" retardo={120} />
+                <MiniCard punto="punto-bad" valor={resumen.conEscaladasSinGestion} etiqueta="Con escaladas sin gestión" retardo={180} />
                 <MiniCard punto="punto-ok" valor={resumen.reportesHoy} etiqueta="Reportes hoy" retardo={240} />
             </div>
 
@@ -167,7 +172,7 @@ export default function OperacionBI({
                 ))}
             </div>
 
-            {/* Tabla de colegios */}
+            {/* Tabla de colegios ampliada (alertas, escaladas, profes, alumnos) */}
             <div
                 className="glass anim-entrada px-3 py-2 overflow-x-auto"
                 style={{ "--anim-retardo": "360ms" } as React.CSSProperties}
@@ -182,7 +187,7 @@ export default function OperacionBI({
                     <table className="w-full border-collapse text-sm">
                         <thead>
                             <tr>
-                                {["Colegio", "Reportes mes", "Hoy", "Categoría top", "Último reporte", "Estado"].map(
+                                {["Colegio", "Rep. mes", "Alertas activas", "Escaladas", "Profes", "Alumnos", "Categoría top", "Último reporte", "Estado"].map(
                                     (th) => (
                                         <th
                                             key={th}
@@ -199,11 +204,17 @@ export default function OperacionBI({
                                 const esNuevo =
                                     f.ultimoReporteHaceMin !== null &&
                                     f.ultimoReporteHaceMin < minutosBadgeNuevo;
+                                // Escaladas sin gestión pintan la fila en rubí
+                                // (mockup v3): una escalada abierta pesa más
+                                // que el semáforo de actividad.
+                                const conEscaladas = f.escaladas > 0;
                                 return (
                                     <tr key={f.colegio} className="group">
                                         <td
                                             className="px-3.5 py-3 font-semibold border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors"
-                                            style={{ borderLeft: `3px solid ${COLOR_BORDE[f.estado]}` }}
+                                            style={{
+                                                borderLeft: `3px solid ${conEscaladas ? "rgb(var(--rubi-rgb))" : COLOR_BORDE[f.estado]}`,
+                                            }}
                                         >
                                             {f.colegio}
                                             {esNuevo && (
@@ -216,7 +227,20 @@ export default function OperacionBI({
                                             {f.reportesMes}
                                         </td>
                                         <td className="cifra px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
-                                            {f.hoy > 0 ? f.hoy : "—"}
+                                            {f.alertasActivas > 0 ? f.alertasActivas : "—"}
+                                        </td>
+                                        <td className="cifra px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
+                                            {conEscaladas ? (
+                                                <span className="font-bold text-estado-rubi">{f.escaladas}</span>
+                                            ) : (
+                                                "—"
+                                            )}
+                                        </td>
+                                        <td className="cifra px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
+                                            {f.profesores > 0 ? f.profesores : "—"}
+                                        </td>
+                                        <td className="cifra px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
+                                            {f.alumnos > 0 ? f.alumnos : "—"}
                                         </td>
                                         <td className="px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
                                             {f.categoriaTop
@@ -228,7 +252,9 @@ export default function OperacionBI({
                                         </td>
                                         <td className="px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
                                             <span className="inline-flex items-center gap-[7px] font-semibold text-[13px]">
-                                                <span className={`punto ${CLASE_PUNTO[f.estado]} anim-pulso`} />
+                                                <span
+                                                    className={`punto anim-pulso ${conEscaladas ? "punto-bad" : CLASE_PUNTO[f.estado]}`}
+                                                />
                                                 {f.estadoEtiqueta}
                                             </span>
                                         </td>

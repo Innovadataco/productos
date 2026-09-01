@@ -37,7 +37,10 @@ En el Postgres de PI **YA EXISTE** (no hace falta recrearlo; los scripts 01 y
 
 - `wal_level=logical` activo en pi-db.
 - Rol `bi_replica` con atributo REPLICATION (password en el gestor IDC).
-- Publicación `bi_replica` con las 23 tablas operativas (sin PII).
+- Publicación `bi_replica` con las 23 tablas originales SIN column lists. El
+  script 02 (reescrito 2026-09-01) la reconcilia a la lista canónica de **40
+  tablas**, 15 de ellas con **column list que corta PII en origen** (ver §
+  Prohibición PII).
 
 El **slot del 005 ya fue eliminado**: BI v2 crea suscripción y slot NUEVOS
 (`bi006_replica_sub` / `bi006_replica_slot`). No reutilizar nada del stack del
@@ -97,14 +100,17 @@ docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml exec -T pi-db
 # Esperado: "[01] Rol bi_replica ya existe — password intacto" · verificación bi_replica | t
 ```
 
-**A-3 · Publicación `bi_replica`** (idempotente: reconcilia las 23 tablas canónicas y
-**falla en voz alta si detecta PII publicada** — Ley 1581):
+**A-3 · Publicación `bi_replica`** (idempotente: reconcilia las 40 tablas canónicas
+con sus column lists anti-PII y **falla en voz alta si detecta PII publicada** —
+tabla prohibida o columna vetada — Ley 1581):
 
 ```bash
 docker compose -f /opt/proteccion-infantil/docker-compose.prod.yml exec -T pi-db \
   psql -U proteccion -d proteccion_infantil -v ON_ERROR_STOP=1 \
   < scripts/replica-setup/02-pi-db-publicacion.sql
-# Esperado: bi_replica | f · 23 tablas · SIN Usuario/Password/Session/TokenRecuperacion
+# Esperado: NOTICE "[02] Reconciliación completa: 40 tablas en bi_replica" ·
+# resumen con tiene_column_list = t en las 15 tablas con recorte ·
+# SIN Usuario/Password/Session/TokenRecuperacion ni el resto de prohibidas
 ```
 
 ---
@@ -186,7 +192,7 @@ docker compose -f docker-compose.bi.yml exec -T bi-db \
 docker compose -f docker-compose.bi.yml exec -T bi-db \
   psql -U "$REPLICA_DB_USER" -d "$REPLICA_DB_NAME" \
   < scripts/replica-setup/04-verificar-replica.sql
-# Esperado: wal receiver status=streaming · 23 tablas en 'r' (o 's')
+# Esperado: wal receiver status=streaming · 40 tablas en 'r' (o 's')
 ```
 
 TEST 7 (paridad de counts master↔réplica) y TEST 8 (INSERT rechazado por
@@ -267,20 +273,74 @@ FROM pg_replication_slots WHERE slot_name = 'bi006_replica_slot';
 
 ## ⛔ Prohibición PII (Ley 1581 · no negociable)
 
-- Las tablas con PII o credenciales de PI — `Usuario`, `Password`, `Session`,
-  `TokenRecuperacion` — **JAMÁS** van en la publicación `bi_replica`. Los datos
-  de menores y las credenciales nunca llegan a BI.
-  (Verificado en fuente 2026-09-01: en el schema de PI existen `Usuario` y
-  `TokenRecuperacion`; `Password`/`Session` no existen hoy, pero quedan vetadas
-  por si aparecen.)
-- El script **02 falla en voz alta** si detecta alguna de esas tablas dentro de
-  la publicación. El script **01** además revoca el SELECT de esas tablas al
-  rol `bi_replica` (defensa en profundidad).
-- El volcado de schema (paso B-2) crea esas tablas **vacías** en bi-db: es solo
-  estructura, pg_logical nunca las llena porque no están publicadas. Es el
-  enfoque verificado del 005.
+Desde la reescritura del script 02 (2026-09-01 · SPEC-006), la publicación
+`bi_replica` usa **column lists de PostgreSQL 16 que CORTAN PII EN ORIGEN**:
+las columnas vetadas ni siquiera salen de pi-db por el slot (defensa en
+profundidad sobre el REVOKE del script 01).
+
+### Lista canónica de tablas (40)
+
+**15 con column list anti-PII** (solo se publican las columnas listadas):
+
+| Tabla | Columnas vetadas (NUNCA salen de PI) |
+|---|---|
+| `Reporte` | `identificador` (nick del reportado), `texto`, `textoOriginal`, `usuarioId`, `operadorId`, `comiteId`, `eliminadoPorId`, `anonimizacionValidadaPorId`, `processingError`, `notaBaja`, `ciudad`, `pais`, `otraPlataforma` (texto libre) |
+| `Alumno` (@@map de `Estudiante`) | `nombre`, `apellidos`, `documentoTipo`, `documentoNumero` |
+| `IdentificadorAlumno` (@@map de `IdentificadorEstudiante`) | `valor` |
+| `Colegio` | `representanteLegalNombre`, `representanteLegalIdentificacion`, `representanteLegalEmail`, `representanteLegalTelefono` |
+| `AuditLog` | `ipAddress`, `userAgent`, `valorAnterior`, `valorNuevo` |
+| `Profesor` | `nombre`, `apellidos`, `tipoDocumento`, `numeroDocumento`, `email`, `telefono` |
+| `AcudienteEstudiante` | `nombre`, `telefono`, `email` |
+| `IdentificadorAcudiente` | `valor` |
+| `IdentificadorProfesor` | `valor` |
+| `Hijo` | `nombre`, `apellidos`, `documentoTipo`, `documentoNumero` |
+| `IdentificadorHijo` | `valor` |
+| `ContactoConfianza` | `nombre`, `etiqueta`, `nota` |
+| `IdentificadorContacto` | `valor` |
+| `IdentificadorReportado` | `identificador` (nick en claro; viajan solo los agregados: conteos, scores, `nivelRiesgo`, `ultimoReporteEn`, …) |
+| `Suscripcion` | `contratoPDFUrl`, `codigoReferidoPropio`, `codigoReferidoUsado`, `motivoCancelacion`, `referenciaPagoManual` |
+
+**25 completas** (sin PII por diseño): `ClasificacionIA`,
+`clasificacion_rubrica_votos`, `CorreccionAdmin`, `EmbeddingReporte`,
+`TransicionReporte`, `SolicitudComite`, `Plan`, `Tenant`, `Curso`,
+`AlertaColegio`, `Plataforma`, `Pais`, `Departamento`, `Ciudad`, `HijoPadre`,
+`patrones_institucionales`, `eventos_match`, `score_clientes`,
+`DerivaMotorSnapshot`, `OnboardingColegio`, `TipoDocumento`, más las 4
+**legacy** que se mantienen por compatibilidad (hoy vacías/placeholder):
+`Subscription`, `BillingCycle`, `FuenteReporte`, `AlertaSuscripcion`.
+
+### Tablas JAMÁS publicadas (ni con column list)
+
+`Usuario`, `Password`, `Session`, `TokenRecuperacion`, `CodigoVerificacion`,
+`ParametroSistema`, `CargaRosterSesion`, `DatasetEntrenamiento`,
+`DocumentoApelacion`, `AccesoDocumentoApelacion`, `block_list`,
+`IntegranteComite`, `PerfilOperador`, `ContactoEmergencia` /
+`contactos_emergencia`, `EventoExpediente`, `NotaSeguimiento`,
+`AclaracionExpediente` / `aclaracion_expediente`, `InformeConsolidado` /
+`informes_consolidados`, `Apelacion`, `AnalisisExpediente`, `InformePadre`,
+`TokenRegistro`, `notificaciones`, `HealthProbe`, `worker_logs`, `RateLimit`,
+`demo_marcado`, `simulacion_runs`, `simulacion_reportes`,
+`simulacion_abuso_runs`, `sesiones_log`, `audit_consentimientos` — datos de
+menores, credenciales, configuración sensible o texto libre. Tampoco
+**`senal_comunitaria_cache`**: su PK (`identificadorReportado`) ES el nick en
+claro y PostgreSQL exige incluir la replica identity en la column list, así
+que es imposible publicarla sin PII; la señal comunitaria se deriva en BI de
+`IdentificadorReportado` + `eventos_match`.
+
+### Mecanismos de guarda
+
+- El script **02 falla en voz alta** (RAISE EXCEPTION + ON_ERROR_STOP) si
+  detecta una tabla prohibida publicada o una columna vetada dentro de la
+  column list publicada (o publicada completa). También aborta (B2) si alguna
+  tabla canónica no existe en el master.
+- El script **01** revoca el SELECT de esas tablas al rol `bi_replica`
+  (defensa en profundidad).
+- El volcado de schema (paso B-2) crea las tablas PII **vacías** en bi-db: es
+  solo estructura, pg_logical nunca las llena porque no están publicadas. Las
+  columnas vetadas de tablas publicadas existen en bi-db pero quedan siempre
+  a NULL (pg_logical no las envía).
 - **Agregar una tabla nueva a la publicación exige pedirla por nombre y
-  autorización de Jelkin** (AGENTS.md §7). Las 23 actuales son la lista
+  autorización de Jelkin** (AGENTS.md §7). Las 40 actuales son la lista
   canónica autorizada.
 
 ---

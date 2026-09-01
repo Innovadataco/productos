@@ -16,12 +16,15 @@ export default function HeroPulso({
     reportesHoy,
     ultimoReporteHaceMin,
     saludOperativa,
+    alertasEscaladas,
 }: {
     hayDatos: boolean;
     enAtencion: boolean;
     reportesHoy: number;
     ultimoReporteHaceMin: number | null;
     saludOperativa: number | null;
+    /** Alertas escaladas del histórico (mockup v3); 0/undefined no se muestra. */
+    alertasEscaladas?: number;
 }) {
     if (!hayDatos) {
         return (
@@ -62,6 +65,15 @@ export default function HeroPulso({
                     <span>
                         <b className="cifra font-semibold text-body">{reportesHoy}</b>{" "}
                         {reportesHoy === 1 ? "reporte hoy" : "reportes hoy"}
+                        {alertasEscaladas !== undefined && alertasEscaladas > 0 && (
+                            <>
+                                {" "}·{" "}
+                                <b className="cifra font-semibold text-body">
+                                    {alertasEscaladas.toLocaleString("es-CO")}
+                                </b>{" "}
+                                {alertasEscaladas === 1 ? "alerta escalada" : "alertas escaladas"}
+                            </>
+                        )}
                         {ultimoReporteHaceMin !== null && (
                             <>
                                 {" "}· último{" "}
@@ -71,7 +83,7 @@ export default function HeroPulso({
                     </span>
                 </div>
             </div>
-            <GaugeSalud valor={saludOperativa} />
+            <GaugeSalud valor={saludOperativa} escaladasSinGestion={alertasEscaladas} />
         </div>
     );
 }

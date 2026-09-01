@@ -18,6 +18,11 @@
 // (date_trunc/interval con la TZ de la sesión); en JS solo se computan
 // DIFERENCIAS entre instantes (minutos/días transcurridos), que no
 // dependen de timezone.
+//
+// Ampliación mockup v3 (2026-09): el Pulso suma alertas de colegios,
+// anonimato, estados del pipeline, comercial (Suscripcion) y cobertura
+// de clasificación. Mismos candados: cada sección degrada a vacío/ceros
+// con warn si su consulta falla; % solo con base > 0 (si no, NULL).
 
 import { prisma } from "@/lib/db";
 
@@ -44,6 +49,24 @@ export interface PulsoData {
     ultimoReporteHaceMin: number | null;
     /** false cuando no hay ni un solo reporte histórico */
     hayDatos: boolean;
+    // ── Ampliación mockup v3 (todo histórico salvo indicación) ───────────
+    /** Alertas a colegios: total histórico, escaladas y nuevas (sin ver) */
+    alertas: { total: number; escaladas: number; nuevas: number };
+    /** Reportes no eliminados por anonimato declarado (esAnonimo) */
+    anonimato: { anonimos: number; identificados: number };
+    /** Reportes no eliminados por estado del pipeline (mayor → menor) */
+    estadosReporte: { estado: string; total: number }[];
+    /**
+     * Comercial (Suscripcion): colegios con suscripción ACTIVA (distinct
+     * colegioId), padres con suscripción ACTIVA premium y freemium.
+     * Criterio estricto documentado: solo el estado ACTIVA cuenta como
+     * relación vigente (EN_GRACIA/SUSPENDIDA/CANCELADA/PENDIENTE no).
+     */
+    comercial: { colegiosActivos: number; padresPremium: number; padresFreemium: number };
+    /** % de reportes no eliminados con ClasificacionIA · NULL sin reportes */
+    coberturaClasificacionPct: number | null;
+    /** Reportes no eliminados aún sin clasificación (universo − clasificados) */
+    sinClasificar: number;
 }
 
 // ─── Filas crudas de las consultas ───────────────────────────────────────────
@@ -80,6 +103,29 @@ interface FilaMedias {
     media_actual_h: number | null;
     media_anterior_h: number | null;
 }
+// ── Ampliación v3: filas crudas de los nuevos sondeos ─────────────────────
+interface FilaAlertas {
+    total: number;
+    escaladas: number;
+    nuevas: number;
+}
+interface FilaAnonimato {
+    anonimos: number;
+    identificados: number;
+}
+interface FilaEstadoReporte {
+    estado: string;
+    total: number;
+}
+interface FilaComercial {
+    colegios_activos: number;
+    padres_premium: number;
+    padres_freemium: number;
+}
+interface FilaCobertura {
+    universo: number;
+    con_clasificacion: number;
+}
 
 /** Medias de tiempo creación → clasificación, en horas (30 d vs. 30 previos). */
 export interface MediasClasificacion {
@@ -115,6 +161,17 @@ const AGREGADOS_VACIOS: FilaAgregados = {
     reportes_30d: 0,
     clasificados_30d: 0,
 };
+
+// Fallbacks de degradación de la ampliación v3 (consulta rota → ceros con
+// warn, jamás un dato inventado: candado 9). Un solo agregado por sondeo.
+const ALERTAS_VACIAS: FilaAlertas = { total: 0, escaladas: 0, nuevas: 0 };
+const ANONIMATO_VACIO: FilaAnonimato = { anonimos: 0, identificados: 0 };
+const COMERCIAL_VACIO: FilaComercial = {
+    colegios_activos: 0,
+    padres_premium: 0,
+    padres_freemium: 0,
+};
+const COBERTURA_VACIA: FilaCobertura = { universo: 0, con_clasificacion: 0 };
 
 // ─── Helpers puros (también usados por el motor de insights) ─────────────────
 
@@ -220,7 +277,7 @@ export async function obtenerMediasClasificacion(): Promise<MediasClasificacion>
 }
 
 /**
- * Datos vivos del Pulso. Ocho sondeos independientes en paralelo; cada uno
+ * Datos vivos del Pulso. Trece sondeos independientes en paralelo; cada uno
  * degrada a vacío por su cuenta si falla. Ningún valor se hardcodea: todo
  * sale de las filas devueltas (candados 9 y 10).
  */
@@ -236,6 +293,11 @@ export async function getPulso(): Promise<PulsoData> {
         filasTicker,
         filasReplica,
         filasUltimo,
+        filasAlertas,
+        filasAnonimato,
+        filasEstados,
+        filasComercial,
+        filasCobertura,
     ] = await Promise.all([
         obtenerMediasClasificacion(),
         // Agregados del mes/día/semana + insumos de salud, en UN paso por la MV.
@@ -320,6 +382,58 @@ export async function getPulso(): Promise<PulsoData> {
                 FROM "Reporte"
                 WHERE "eliminado" = false`,
         ),
+        // ── Ampliación v3 ──
+        intentar(
+            "alertas",
+            prisma.$queryRaw<FilaAlertas[]>`
+                SELECT count(*)::int AS total,
+                       count(*) FILTER (WHERE "estado" = 'escalada')::int AS escaladas,
+                       count(*) FILTER (WHERE "estado" = 'nueva')::int AS nuevas
+                FROM "AlertaColegio"`,
+        ),
+        intentar(
+            "anonimato",
+            prisma.$queryRaw<FilaAnonimato[]>`
+                SELECT count(*) FILTER (WHERE "esAnonimo")::int AS anonimos,
+                       count(*) FILTER (WHERE NOT "esAnonimo")::int AS identificados
+                FROM "Reporte"
+                WHERE "eliminado" = false`,
+        ),
+        intentar(
+            "estados-reporte",
+            prisma.$queryRaw<FilaEstadoReporte[]>`
+                SELECT "estado"::text AS estado,
+                       count(*)::int AS total
+                FROM "Reporte"
+                WHERE "eliminado" = false
+                GROUP BY "estado"
+                ORDER BY total DESC, "estado"`,
+        ),
+        // Comercial: solo estado ACTIVA cuenta (criterio estricto, ver
+        // contrato). tipoTitular/estado son enums de PI: el literal SQL se
+        // coacciona al enum en el master réplica (no es parámetro de usuario).
+        intentar(
+            "comercial",
+            prisma.$queryRaw<FilaComercial[]>`
+                SELECT count(DISTINCT "colegioId") FILTER (
+                         WHERE "tipoTitular" = 'COLEGIO' AND "estado" = 'ACTIVA')::int AS colegios_activos,
+                       count(*) FILTER (
+                         WHERE "tipoTitular" = 'PADRE' AND "estado" = 'ACTIVA'
+                           AND "esFreemium" = false)::int AS padres_premium,
+                       count(*) FILTER (
+                         WHERE "tipoTitular" = 'PADRE' AND "estado" = 'ACTIVA'
+                           AND "esFreemium" = true)::int AS padres_freemium
+                FROM "Suscripcion"`,
+        ),
+        intentar(
+            "cobertura-clasificacion",
+            prisma.$queryRaw<FilaCobertura[]>`
+                SELECT count(*)::int AS universo,
+                       count(c."id")::int AS con_clasificacion
+                FROM "Reporte" r
+                LEFT JOIN "ClasificacionIA" c ON c."reporteId" = r."id"
+                WHERE r."eliminado" = false`,
+        ),
     ]);
 
     const agregados = filasAgregados[0] ?? AGREGADOS_VACIOS;
@@ -366,6 +480,17 @@ export async function getPulso(): Promise<PulsoData> {
 
     const ultimo = filasUltimo[0]?.ultimo ?? null;
 
+    // ── Ampliación v3: agregados con degradación honesta a ceros ──
+    const alertas = filasAlertas[0] ?? ALERTAS_VACIAS;
+    const anonimato = filasAnonimato[0] ?? ANONIMATO_VACIO;
+    const comercial = filasComercial[0] ?? COMERCIAL_VACIO;
+    const cobertura = filasCobertura[0] ?? COBERTURA_VACIA;
+    // Sin universo de reportes no hay % computable → NULL (candado 9).
+    const coberturaClasificacionPct =
+        cobertura.universo > 0
+            ? Math.round((cobertura.con_clasificacion / cobertura.universo) * 100)
+            : null;
+
     return {
         kpis: {
             reportesMes: agregados.mes_actual,
@@ -381,5 +506,22 @@ export async function getPulso(): Promise<PulsoData> {
         saludOperativa,
         ultimoReporteHaceMin: ultimo ? minutosDesde(ultimo, ahoraMs) : null,
         hayDatos: agregados.total_historico > 0,
+        alertas: {
+            total: alertas.total,
+            escaladas: alertas.escaladas,
+            nuevas: alertas.nuevas,
+        },
+        anonimato: {
+            anonimos: anonimato.anonimos,
+            identificados: anonimato.identificados,
+        },
+        estadosReporte: filasEstados.map((f) => ({ estado: f.estado, total: f.total })),
+        comercial: {
+            colegiosActivos: comercial.colegios_activos,
+            padresPremium: comercial.padres_premium,
+            padresFreemium: comercial.padres_freemium,
+        },
+        coberturaClasificacionPct,
+        sinClasificar: cobertura.universo - cobertura.con_clasificacion,
     };
 }

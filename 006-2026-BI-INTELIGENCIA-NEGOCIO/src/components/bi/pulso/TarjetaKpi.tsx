@@ -24,6 +24,7 @@ export default function TarjetaKpi({
     delta,
     spark,
     retardo,
+    brilloNuevo = false,
 }: {
     etiqueta: string;
     valor: number | null;
@@ -32,10 +33,12 @@ export default function TarjetaKpi({
     delta: DeltaKpi;
     spark?: number[];
     retardo: number;
+    /** Barrido de brillo de "recién llegado" (mockup v3: KPI destacado). */
+    brilloNuevo?: boolean;
 }) {
     return (
         <div
-            className="glass anim-entrada p-6 pb-4 transition-transform duration-300 hover:-translate-y-[3px]"
+            className={`glass anim-entrada p-6 pb-4 transition-transform duration-300 hover:-translate-y-[3px] ${brilloNuevo ? "brillo-nuevo" : ""}`}
             style={{ "--anim-retardo": `${retardo}ms` } as React.CSSProperties}
         >
             <div className="microetiqueta">{etiqueta}</div>

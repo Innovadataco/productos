@@ -10,7 +10,14 @@ import CifraAnimada from "./CifraAnimada";
  * prefers-reduced-motion el gauge aparece ya dibujado.
  * valor null → "—" y "sin datos aún" (candado 9: jamás un 0 disfrazado).
  */
-export default function GaugeSalud({ valor }: { valor: number | null }) {
+export default function GaugeSalud({
+    valor,
+    escaladasSinGestion,
+}: {
+    valor: number | null;
+    /** Escaladas sin gestión registrada (mockup v3): nota ámbar bajo el gauge. */
+    escaladasSinGestion?: number;
+}) {
     const v = valor === null ? null : Math.max(0, Math.min(100, Math.round(valor)));
     return (
         <div
@@ -55,6 +62,12 @@ export default function GaugeSalud({ valor }: { valor: number | null }) {
                 </div>
                 <div className="microetiqueta mt-1.5">Salud operativa</div>
                 {v === null && <div className="mt-1 text-[12.5px] text-subtle">sin datos aún</div>}
+                {escaladasSinGestion !== undefined && escaladasSinGestion > 0 && (
+                    <div className="cifra mt-1 text-[12.5px] font-semibold text-estado-ambar">
+                        ▼ {escaladasSinGestion.toLocaleString("es-CO")}{" "}
+                        {escaladasSinGestion === 1 ? "escalada sin gestionar" : "escaladas sin gestionar"}
+                    </div>
+                )}
             </div>
         </div>
     );
