@@ -15,28 +15,43 @@ export type ResultadoValidacion =
 let cache: { frases: string[]; cargadoEn: number } | null = null;
 const TTL_CACHE_MS = 60_000; // el admin cambia raras veces; TTL corto es OK
 
+/**
+ * Audit #214 · candado 2: FAIL-CLOSED.
+ *
+ * El validador es la ÚNICA reja entre el modelo y el padre. Si el parámetro
+ * está ausente o mal formado, se lanza — el worker cae al camino de FALLIDO
+ * (mismo comportamiento que `prompt.ts` sin `prompt_sistema`). Mejor un aviso
+ * al padre ("intento no completó") que publicar texto sin filtrar.
+ */
 async function cargarFrases(): Promise<string[]> {
     if (cache && Date.now() - cache.cargadoEn < TTL_CACHE_MS) return cache.frases;
     const raw = await getParametroSistemaValor("padre.analisis.frases_prohibidas_json");
     if (!raw) {
-        cache = { frases: [], cargadoEn: Date.now() };
-        return [];
+        throw new Error(
+            "[analisis] Parámetro padre.analisis.frases_prohibidas_json ausente — el validador es fail-closed (audit #214)"
+        );
     }
+    let parsed: unknown;
     try {
-        const parsed = JSON.parse(raw);
-        const arr: string[] = Array.isArray(parsed) ? parsed.filter((s) => typeof s === "string") : [];
-        cache = { frases: arr, cargadoEn: Date.now() };
-        return arr;
+        parsed = JSON.parse(raw);
     } catch {
-        // Si el parámetro está mal formado, mejor devolver lista vacía que romper el worker
-        // — el operador ve el warn y arregla el JSON; el modelo publica sin filtro por esa ventana.
-        console.warn("[analisis] padre.analisis.frases_prohibidas_json no es JSON válido — sin filtro esta corrida");
-        cache = { frases: [], cargadoEn: Date.now() };
-        return [];
+        throw new Error(
+            "[analisis] padre.analisis.frases_prohibidas_json no es JSON válido — fail-closed, el análisis se marca FALLIDO"
+        );
     }
+    if (!Array.isArray(parsed)) {
+        throw new Error(
+            "[analisis] padre.analisis.frases_prohibidas_json no es un array JSON — fail-closed"
+        );
+    }
+    const arr: string[] = parsed.filter((s): s is string => typeof s === "string");
+    cache = { frases: arr, cargadoEn: Date.now() };
+    return arr;
 }
 
 export async function validarSalida(texto: string): Promise<ResultadoValidacion> {
+    // Si `cargarFrases` lanza, el llamador (ejecutor-analisis) lo captura y
+    // marca el análisis FALLIDO — la UI muestra "intento no completó".
     const frases = await cargarFrases();
     const lower = texto.toLowerCase();
     for (const frase of frases) {

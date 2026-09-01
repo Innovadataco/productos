@@ -99,6 +99,50 @@ async function ultimoGenerandoDe(expedienteId: string, hash: string) {
     });
 }
 
+/**
+ * Audit #214 · un placeholder GENERANDO más viejo que `expireInSeconds`
+ * del job (tiempo_estimado_seg * 3) es huérfano — el worker se cayó o el
+ * job expiró en pg-boss. Se marca FALLIDO para que la UI deje de esperar,
+ * y el flujo sigue como si no hubiera nada en curso (re-encola).
+ */
+async function marcarGenerandoHuerfanoComoFallido(
+    expedienteId: string,
+    hashCadena: string,
+    edadMinimaSeg: number,
+): Promise<boolean> {
+    const limite = new Date(Date.now() - edadMinimaSeg * 1000);
+    const huerfano = await prisma.analisisExpediente.findFirst({
+        where: { expedienteId, hashCadena, estado: "GENERANDO", generadoEn: { lt: limite } },
+        select: { id: true },
+    });
+    if (!huerfano) return false;
+    await prisma.analisisExpediente.update({
+        where: { id: huerfano.id },
+        data: { estado: "FALLIDO", motivoFallo: "worker_no_completo" },
+    });
+    return true;
+}
+
+/**
+ * Audit #214 · fix nº5: para el POST del botón "Actualizar", el cooldown
+ * se chequea ANTES de tocar la cola. Sin este split, un padre que aprieta
+ * el botón durante el cooldown gatilla evaluación completa (que puede
+ * encolar en `debeEncolar=true`) antes de que el POST responda "cooldown".
+ * Devuelve solo lo necesario para decidir el rechazo temprano.
+ */
+export async function cooldownDeExpediente(
+    expedienteId: string,
+    usuarioId: string
+): Promise<{ vigente: AnalisisVigenteDto | null; cooldown: { puedeActualizar: boolean; faltanSeg: number } }> {
+    const vigente = await leerVigente(expedienteId, usuarioId); // lanza 404 si no dueña
+    const cooldownMinRaw = await getParametroSistemaValor("padre.analisis.cooldown_min");
+    const cooldownMin = Number.parseInt(cooldownMinRaw ?? "5", 10);
+    const cooldown = vigente
+        ? computeCooldown(vigente.generadoEn, cooldownMin)
+        : { puedeActualizar: true, faltanSeg: 0 };
+    return { vigente, cooldown };
+}
+
 export async function evaluarYEncolarSiCorresponde(
     expedienteId: string,
     usuarioId: string,
@@ -143,11 +187,21 @@ export async function evaluarYEncolarSiCorresponde(
     let colaLlena = false;
     let estado: EstadoAnalisisUi = vigente ? "PUBLICADO" : "SIN_ANALISIS";
 
+    // Audit #214: si hay un placeholder GENERANDO huérfano (worker cayó / job
+    // expiró), lo marcamos FALLIDO ANTES de decidir. `expireInSeconds` del
+    // job = tiempo_estimado_seg * 3 en el helper de la cola; usamos la misma
+    // ventana acá para coherencia.
+    await marcarGenerandoHuerfanoComoFallido(expedienteId, hashActual, tiempoEstSeg * 3);
+
     if (debeEncolar) {
         const yaEnCurso = await ultimoGenerandoDe(expedienteId, hashActual);
         if (yaEnCurso) {
             estado = "GENERANDO";
             const stats = await getAnalisisQueueStats();
+            // Audit #214 · fix nº4: "pendientes" es el TOTAL de la cola, no la
+            // posición del job de este expediente. Sin API que devuelva la fila
+            // exacta, cambiamos el texto a "hay N trabajos en la fila" — honesto,
+            // sin fingir precisión. El polling refresca cada 15 s.
             cola = { posicion: Math.max(1, stats.pendientes), estimadoSeg: Math.max(1, stats.pendientes) * tiempoEstSeg };
         } else {
             const enviado = await sendAnalisisExpediente({
@@ -161,7 +215,7 @@ export async function evaluarYEncolarSiCorresponde(
                 estado = "GENERANDO";
                 const stats = await getAnalisisQueueStats();
                 cola = { posicion: Math.max(1, stats.pendientes), estimadoSeg: Math.max(1, stats.pendientes) * tiempoEstSeg };
-                // Insertamos un "placeholder" GENERANDO para que la UI lo vea sin depender del worker.
+                // Placeholder GENERANDO para que la UI lo vea sin depender del worker.
                 await marcarGenerando(expedienteId, hashActual, alcance);
             } else if (enviado.motivo === "cola_llena") {
                 colaLlena = true;

@@ -103,12 +103,34 @@ Todos los 27 FR con tarea implementada. Ver `analysis.md` para el mapa completo.
 
 ## Brecha conocida (documentada, no bloqueante)
 
-Test de integración pesada **T051** (arrancar el worker con `boss.work` en un entorno de test y verificar el orden serializado de 3 jobs) NO se implementó porque la garantía viene por construcción de tres piezas ya verificadas:
-- `max_concurrentes=1` viene del ParametroSistema.
-- `boss.work({ batchSize: 1, teamSize: maxConcurrentes, teamConcurrency: 1 })` en el worker.
-- `pg_advisory_xact_lock(hashtext("analisis:"+expedienteId))` al insertar cada `versionSecuencial` (mismo patrón I-208 de `informes-padre`).
+Test de integración pesada **T051** (arrancar el worker con `boss.work` en un
+entorno de test y verificar el orden serializado de 3 jobs) NO se implementó.
+Auditoría #214 corrigió la explicación anterior: `teamConcurrency` en `boss.work`
+es una API **inerte en pg-boss 12** (no arbitra concurrencia real). La garantía
+de serialización real viene de:
+- **Instancia única** por advisory-lock 123456799 en Postgres (segunda instancia
+  del worker sale con código 2).
+- **`batchSize: 1`** en `boss.work`: el worker toma un job a la vez del batch.
+- **`pg_advisory_xact_lock(hashtext("analisis:"+expedienteId))`** al escribir
+  `versionSecuencial` (mismo patrón I-208 de `informes-padre`) — dos escrituras
+  concurrentes para el mismo expediente se serializan.
 
-Si el CEO/Calidad lo pide, se implementa como test específico del worker en un ticket aparte.
+Si el CEO/Calidad pide test específico del worker, se implementa en ticket aparte.
+
+## Prioridad y contención entre colas (audit #214 · nota estructural)
+
+`padre.analisis.prioridad < queue.clasificacion.prioridad` ordena la elección
+del próximo job **dentro de la misma cola** o dentro del mismo consumer. NO
+arbitra entre colas separadas: los workers de análisis y de clasificación
+consumen colas distintas (`padre.analisis.expediente` vs `reporte-procesamiento`)
+y pg-boss no los coordina.
+
+La contención real que importa es la del **modelo Ollama** en la misma Mac:
+como el análisis usa el mismo modelo que la clasificación cascada, Ollama
+serializa por HTTP. El "cero análisis por delante" (SC-008) se traduce en la
+práctica a: el análisis usa un modelo LIGERO (embudo por defecto), corre de
+a uno, y la clasificación crítica de reportes no comparte el mismo tick del
+worker de análisis. Aceptado y anotado.
 
 ---
 

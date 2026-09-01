@@ -102,14 +102,14 @@ export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<v
         // 6. Validar salida anti-frases prohibidas.
         const validacion = await validarSalida(data.texto);
         if (!validacion.ok) {
-            await persistirFallo(expediente.id, hashCadena, alcance, modelo, promptSistemaHash, metrics.latenciaMs,
-                `${validacion.motivo}: "${validacion.fraseDetectada}"`, hechos.length);
+            await cerrarPlaceholderFallando(expediente.id, hashCadena, alcance, modelo, promptSistemaHash, metrics.latenciaMs,
+                `${validacion.motivo}: "${validacion.fraseDetectada}"`);
             logger.warn(`[analisis] rechazado por frase prohibida "${validacion.fraseDetectada}" · expediente=${expedienteId}`);
             return;
         }
 
         // 7. Persistir PUBLICADO con siguiente versionSecuencial.
-        await persistirPublicado(
+        await cerrarPlaceholderPublicando(
             expediente.id,
             hashCadena,
             alcance,
@@ -124,7 +124,7 @@ export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<v
     } catch (err) {
         const motivo = err instanceof Error ? err.message.slice(0, 500) : "error_desconocido";
         logger.error(`[analisis] FALLIDO expediente=${expedienteId}: ${motivo}`);
-        await persistirFallo(expedienteId, hashCadena, alcance, "?", "?", 0, motivo, 0).catch(() => null);
+        await cerrarPlaceholderFallando(expedienteId, hashCadena, alcance, "?", "?", 0, motivo).catch(() => null);
     }
 }
 
@@ -144,7 +144,15 @@ async function cargarHijoCruzado(padreUsuarioId: string, identificadorReportado:
     };
 }
 
-async function persistirPublicado(
+/**
+ * Fija el resultado sobre EL MISMO placeholder GENERANDO que el DAL insertó
+ * al abrir el expediente (audit #214 · candado 1: cerrar la fila, no crear
+ * una nueva — si no, el placeholder queda eterno cuando el worker termina y
+ * la UI hace polling infinito). Si por alguna raza NO existe placeholder
+ * (worker que corrió antes del DAL), se crea una fila con `versionSecuencial`
+ * nuevo por respaldo.
+ */
+export async function cerrarPlaceholderPublicando(
     expedienteId: string,
     hashCadena: string,
     alcance: AlcanceAnalisis,
@@ -156,23 +164,12 @@ async function persistirPublicado(
     corteN: number,
 ): Promise<void> {
     await prisma.$transaction(async (tx) => {
-        // Serializar por expediente (patrón informes-padre / reportes) para
-        // que dos jobs concurrentes generen versionSecuencial únicos.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`analisis:${expedienteId}`}))`;
 
-        const ultimo = await tx.analisisExpediente.findFirst({
-            where: { expedienteId },
-            orderBy: { versionSecuencial: "desc" },
-            select: { versionSecuencial: true },
-        });
-        const versionSecuencial = (ultimo?.versionSecuencial ?? 0) + 1;
-
-        // Categoría dominante del payload (PADRE) o del primer agregado (COLEGIO).
         const categoriaDominante = payload.alcance === "PADRE_COMPLETO"
             ? payload.categoriaDominante
             : (payload.agregadosPorCategoria[0]?.categoria ?? null);
 
-        // Resolver GuiaAccionCategoria publicada de la categoría dominante (FR-012/013).
         let guiaAccionId: string | null = null;
         if (categoriaDominante) {
             const guia = await tx.guiaAccionCategoria.findFirst({
@@ -183,10 +180,38 @@ async function persistirPublicado(
             guiaAccionId = guia?.id ?? null;
         }
 
+        const placeholder = await tx.analisisExpediente.findFirst({
+            where: { expedienteId, hashCadena, estado: "GENERANDO" },
+            select: { id: true },
+        });
+
+        if (placeholder) {
+            await tx.analisisExpediente.update({
+                where: { id: placeholder.id },
+                data: {
+                    corteN,
+                    texto,
+                    categoriaDominante,
+                    guiaAccionId,
+                    modeloUsado,
+                    promptSistemaHash,
+                    latenciaMs,
+                    estado: "PUBLICADO",
+                    publicadoEn: new Date(),
+                },
+            });
+            return;
+        }
+
+        const ultimo = await tx.analisisExpediente.findFirst({
+            where: { expedienteId },
+            orderBy: { versionSecuencial: "desc" },
+            select: { versionSecuencial: true },
+        });
         await tx.analisisExpediente.create({
             data: {
                 expedienteId,
-                versionSecuencial,
+                versionSecuencial: (ultimo?.versionSecuencial ?? 0) + 1,
                 alcance,
                 hashCadena,
                 corteN,
@@ -203,7 +228,11 @@ async function persistirPublicado(
     });
 }
 
-async function persistirFallo(
+/**
+ * Igual que `cerrarPlaceholderPublicando` pero marca FALLIDO con motivo.
+ * La UI lo ve como estado terminal (no como generando eterno).
+ */
+export async function cerrarPlaceholderFallando(
     expedienteId: string,
     hashCadena: string,
     alcance: AlcanceAnalisis,
@@ -211,10 +240,23 @@ async function persistirFallo(
     promptSistemaHash: string,
     latenciaMs: number,
     motivoFallo: string,
-    corteN: number,
 ): Promise<void> {
     await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`analisis:${expedienteId}`}))`;
+
+        const placeholder = await tx.analisisExpediente.findFirst({
+            where: { expedienteId, hashCadena, estado: "GENERANDO" },
+            select: { id: true },
+        });
+
+        if (placeholder) {
+            await tx.analisisExpediente.update({
+                where: { id: placeholder.id },
+                data: { modeloUsado, promptSistemaHash, latenciaMs, estado: "FALLIDO", motivoFallo },
+            });
+            return;
+        }
+
         const ultimo = await tx.analisisExpediente.findFirst({
             where: { expedienteId },
             orderBy: { versionSecuencial: "desc" },
@@ -226,7 +268,7 @@ async function persistirFallo(
                 versionSecuencial: (ultimo?.versionSecuencial ?? 0) + 1,
                 alcance,
                 hashCadena,
-                corteN,
+                corteN: 0,
                 texto: "",
                 modeloUsado,
                 promptSistemaHash,

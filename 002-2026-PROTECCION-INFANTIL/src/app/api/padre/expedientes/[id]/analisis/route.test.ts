@@ -198,3 +198,85 @@ describe("POST /api/padre/expedientes/[id]/analisis (SPEC-341 · Actualizar)", (
         expect(filas).toBe(1);
     });
 });
+
+// Audit #214 · candado 1 (placeholder eterno) — el DAL trata un GENERANDO viejo
+// como muerto y reencola en la siguiente apertura.
+describe("SPEC-341 · placeholder GENERANDO huérfano (audit #214)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    it("un GENERANDO más viejo que tiempo_estimado*3 → se marca FALLIDO y la GET reencola", async () => {
+        const padre = await crearUsuario("PARENT");
+        const exp = await seedExpediente(padre.id, { conEvento: true });
+
+        // Calcular hash actual y sembrar placeholder viejo con ese hash.
+        const { calcularHashCadena } = await import("@/lib/expediente/analisis/hash-cadena");
+        const row = await prisma.expediente.findUnique({
+            where: { id: exp.id },
+            select: { ultimoEventoEn: true, numEventos: true, categoriasDominantesJson: true },
+        });
+        const hash = calcularHashCadena({
+            ultimoEventoEn: row!.ultimoEventoEn,
+            numEventos: row!.numEventos,
+            categoriasDominantesJson: row!.categoriasDominantesJson,
+        });
+
+        // tiempo_estimado_seg default = 90 → ventana muerta = 270s.
+        // Sembramos placeholder de hace 1 hora.
+        const hace1Hora = new Date(Date.now() - 3600 * 1000);
+        await prisma.analisisExpediente.create({
+            data: {
+                expedienteId: exp.id, versionSecuencial: 1, alcance: "PADRE_COMPLETO",
+                hashCadena: hash, corteN: 0, texto: "",
+                modeloUsado: "?", promptSistemaHash: "?", latenciaMs: 0,
+                estado: "GENERANDO", generadoEn: hace1Hora,
+            },
+        });
+
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+        await GET(req("GET", exp.id), { params: Promise.resolve({ id: exp.id }) });
+
+        // El placeholder viejo quedó marcado FALLIDO
+        const viejo = await prisma.analisisExpediente.findFirst({
+            where: { expedienteId: exp.id, generadoEn: { lt: new Date(Date.now() - 30 * 60 * 1000) } },
+        });
+        expect(viejo?.estado).toBe("FALLIDO");
+        expect(viejo?.motivoFallo).toBe("worker_no_completo");
+
+        // Y la apertura encoló un nuevo placeholder GENERANDO
+        const nuevos = await prisma.analisisExpediente.count({
+            where: { expedienteId: exp.id, estado: "GENERANDO" },
+        });
+        expect(nuevos).toBe(1);
+    });
+});
+
+// Audit #214 · fix nº5 · el POST rechaza por cooldown ANTES de encolar
+describe("SPEC-341 · POST cool-down se chequea antes de tocar la cola (audit #214)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    it("con vigente en cooldown, POST no crea placeholder GENERANDO nuevo", async () => {
+        const padre = await crearUsuario("PARENT");
+        const exp = await seedExpediente(padre.id, { conEvento: true });
+        await prisma.analisisExpediente.create({
+            data: {
+                expedienteId: exp.id, versionSecuencial: 1, alcance: "PADRE_COMPLETO",
+                hashCadena: "x".repeat(64), corteN: 1, texto: "análisis reciente",
+                modeloUsado: "m", promptSistemaHash: "h", latenciaMs: 100,
+                estado: "PUBLICADO", publicadoEn: new Date(), generadoEn: new Date(),
+            },
+        });
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+
+        await POST(req("POST", exp.id), { params: Promise.resolve({ id: exp.id }) });
+
+        // Solo la fila PUBLICADO sembrada, cero GENERANDO nuevas.
+        const generando = await prisma.analisisExpediente.count({
+            where: { expedienteId: exp.id, estado: "GENERANDO" },
+        });
+        expect(generando).toBe(0);
+    });
+});

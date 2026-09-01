@@ -17,6 +17,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import {
     evaluarYEncolarSiCorresponde,
+    cooldownDeExpediente,
 } from "@/lib/dal/services/analisis-expediente";
 
 async function guardPadre(): Promise<{ id: string; email: string; rol: string }> {
@@ -76,17 +77,21 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     try {
         const user = await guardPadre();
         const { id } = await params;
-        const evaluacion = await evaluarYEncolarSiCorresponde(id, user.id, "ACTUALIZAR");
 
-        // Cool-down: la evaluación NO chequea (siempre calcula la ventana); acá el POST
-        // devuelve el motivo del rechazo si cool-down aún corre.
-        if (evaluacion.vigente && !evaluacion.cooldown.puedeActualizar) {
+        // Audit #214 · fix nº5: cool-down PRIMERO, sin tocar la cola. Si el
+        // vigente aún cae dentro de la ventana, respondemos sin encolar ni
+        // evaluar el hash — el padre presiona el botón por accidente y no
+        // gastamos un tick del motor por eso.
+        const previo = await cooldownDeExpediente(id, user.id);
+        if (previo.vigente && !previo.cooldown.puedeActualizar) {
             return NextResponse.json({
                 encolado: false,
                 motivo: "cooldown",
-                faltanSeg: evaluacion.cooldown.faltanSeg,
+                faltanSeg: previo.cooldown.faltanSeg,
             }, { status: 200 });
         }
+
+        const evaluacion = await evaluarYEncolarSiCorresponde(id, user.id, "ACTUALIZAR");
 
         if (evaluacion.colaLlena) {
             return NextResponse.json({
@@ -103,12 +108,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
             }, { status: 200 });
         }
 
-        // No se encoló → cadena sin cambios; reiniciamos el cool-down "conceptual"
-        // dejándolo al valor total (el UI ya lee el nuevo generadoEn del vigente).
+        // No se encoló → cadena sin cambios; el UI recibe el mensaje "ya al día".
         return NextResponse.json({
             encolado: false,
             motivo: "ya_al_dia",
-            cooldownReiniciadoSeg: evaluacion.cooldown.faltanSeg,
         }, { status: 200 });
     } catch (error) {
         if (error instanceof AppError) return NextResponse.json(error.toJSON(), { status: error.statusCode });

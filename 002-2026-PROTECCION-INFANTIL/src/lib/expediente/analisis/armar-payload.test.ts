@@ -77,12 +77,14 @@ describe("armarPayload · COLEGIO_BLINDADO (BLINDAJE PII · SC-002/SC-006)", () 
         expect(p.agregadosPorCategoria.find((a) => a.categoria === "CIBERACOSO")?.cantidad).toBe(4);
     });
 
-    it("NO contiene ningún identificador, nombre, texto de reporte, edad ni sexo (SC-002)", () => {
-        // Sembramos nombres/identificadores en el CONTEXTO del test — el payload NO los recibe.
+    it("NO contiene ningún identificador, nombre, texto, email, edad ni sexo (SC-002 · audit #214 nº6)", () => {
+        // Sembramos nombres/identificadores/emails en el CONTEXTO del test — el payload NO los recibe.
         const identificadoresProhibidos = [
             "alum_1_0001", "acu_1_2", "prof_1_003",
             "María Fernanda", "Juan Carlos", "12345678",
             "textocifradodelreporte", "@usuario_real",
+            // Audit #214 · fix nº6: emails también deben estar prohibidos.
+            "acudiente@ejemplo.com", "profe.demo@innovadataco.com",
         ];
         const p = armarPayloadColegio({ agregados });
         const asJson = JSON.stringify(p);
@@ -92,13 +94,27 @@ describe("armarPayload · COLEGIO_BLINDADO (BLINDAJE PII · SC-002/SC-006)", () 
                 .not.toContain(prohibido);
         }
 
-        // Guardas positivas: el shape correcto está.
+        // Audit #214 · fix nº6: assert ESTRUCTURAL — el shape del payload se
+        // valida con Object.keys, no solo con substring negativo. Si el
+        // armador cambia y agrega un campo nuevo, este test lo caza aunque
+        // ningún string prohibido aparezca por casualidad.
+        expect(Object.keys(p).sort()).toEqual(
+            ["agregadosPorCategoria", "agregadosPorCurso", "agregadosPorFranja", "agregadosPorPlataforma", "alcance", "numHechos"].sort()
+        );
+        expect(p.alcance).toBe("COLEGIO_BLINDADO");
+        // Ningún elemento de los agregados debe tener campos que no sean {categoria|franjaHoraria|curso|plataforma, cantidad}.
+        for (const a of p.agregadosPorCategoria) expect(Object.keys(a).sort()).toEqual(["cantidad", "categoria"].sort());
+        for (const a of p.agregadosPorFranja) expect(Object.keys(a).sort()).toEqual(["cantidad", "franjaHoraria"].sort());
+        for (const a of p.agregadosPorCurso) expect(Object.keys(a).sort()).toEqual(["cantidad", "curso"].sort());
+        for (const a of p.agregadosPorPlataforma) expect(Object.keys(a).sort()).toEqual(["cantidad", "plataforma"].sort());
+
+        // Grep negativo también (respaldo al assert estructural).
         expect(asJson).toContain("COLEGIO_BLINDADO");
         expect(asJson).toContain("agregadosPorCategoria");
-        // Y NO hay campos individuales — nada de edad/sexo/hechos crudos.
         expect(asJson).not.toContain("edadReportada");
         expect(asJson).not.toContain("hijoCruzado");
         expect(asJson).not.toContain("hechos");
+        expect(asJson).not.toContain("email");
     });
 
     it("tolera lista vacía", () => {

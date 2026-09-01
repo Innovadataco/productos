@@ -48,7 +48,7 @@ describe("validarSalida (SPEC-341)", () => {
         expect(r.ok).toBe(true);
     });
 
-    it("tolera JSON mal formado — devuelve OK y logea warn (no rompe el worker)", async () => {
+    it("FAIL-CLOSED: JSON mal formado → lanza (audit #214, el análisis se marca FALLIDO)", async () => {
         await prisma.parametroSistema.upsert({
             where: { clave: "padre.analisis.frases_prohibidas_json" },
             update: { valor: "{malformado" },
@@ -61,7 +61,12 @@ describe("validarSalida (SPEC-341)", () => {
             },
         });
         _invalidarCacheParaTests();
-        const r = await validarSalida("cualquier cosa");
-        expect(r.ok).toBe(true);
+        await expect(validarSalida("cualquier cosa")).rejects.toThrow(/fail-closed/);
+    });
+
+    it("FAIL-CLOSED: parámetro ausente → lanza", async () => {
+        await prisma.parametroSistema.deleteMany({ where: { clave: "padre.analisis.frases_prohibidas_json" } });
+        _invalidarCacheParaTests();
+        await expect(validarSalida("cualquier cosa")).rejects.toThrow(/audit #214/);
     });
 });

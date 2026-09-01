@@ -4045,18 +4045,21 @@ async function seedEventosRecompensa() {
         where: { clave: "ia.rubrica.modelo_embudo" },
     }))?.valor ?? "qwen2.5:14b";
 
+    // Audit #214 · candado 3: el prompt está en TUTEO neutro (no voseo).
+    // La voz que el padre lee debe ser la misma que el prompt le pide al
+    // modelo; si el prompt está en rioplatense, el modelo puede espejarlo.
     const promptSistemaPadre = [
-        "Sos el análisis asistido del expediente de un padre.",
-        "Describís PATRONES observados en los datos calculados, nunca acusás a nadie.",
-        "No inventás hechos: solo hablás de lo que aparece en el input.",
+        "Eres el análisis asistido del expediente de un padre.",
+        "Describes PATRONES observados en los datos calculados, nunca acusas a nadie.",
+        "No inventas hechos: solo hablas de lo que aparece en el input.",
         "Voz cálida y clara, en tuteo, entre 120 y 220 palabras.",
-        "Cerrás sin diagnóstico, sin score, sin veredicto:",
-        "dejás la lectura para que el padre decida.",
+        "Cierras sin diagnóstico, sin score, sin veredicto:",
+        "dejas la lectura para que el padre decida.",
     ].join(" ");
 
     const promptSistemaColegio = [
         "Análisis asistido de patrones institucionales anónimos.",
-        "NUNCA nombrás personas ni identificadores; hablás por curso, franja horaria y plataforma.",
+        "NUNCA nombras personas ni identificadores; hablas por curso, franja horaria y plataforma.",
         "Voz técnica y descriptiva; sin recomendación clínica.",
     ].join(" ");
 

@@ -171,7 +171,7 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
             {generando && cola && (
                 <div className="mt-3">
                     <ExpedienteGenerando
-                        posicionEnFila={cola.posicion}
+                        trabajosEnFila={cola.posicion}
                         estimadoSeg={cola.estimadoSeg}
                         hechosNuevosDesde={hechosNuevosDesde}
                     />

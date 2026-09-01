@@ -9,7 +9,12 @@
 "use client";
 
 interface Props {
-    posicionEnFila: number;
+    /**
+     * Audit #214 · fix nº4: es el TOTAL de trabajos vivos en la cola del
+     * análisis (no la posición del job propio). Sin API que devuelva la fila
+     * exacta, mantenemos el texto honesto: "hay N trabajos en la fila".
+     */
+    trabajosEnFila: number;
     estimadoSeg: number;
     hechosNuevosDesde: number;
 }
@@ -20,16 +25,16 @@ function formatearEstimado(seg: number): string {
     return `~${min} ${min === 1 ? "minuto" : "minutos"}`;
 }
 
-export function ExpedienteGenerando({ posicionEnFila, estimadoSeg, hechosNuevosDesde }: Props) {
-    const enFila = posicionEnFila > 1;
+export function ExpedienteGenerando({ trabajosEnFila, estimadoSeg, hechosNuevosDesde }: Props) {
+    const conCola = trabajosEnFila > 1;
     return (
         <div className="rounded-2xl border border-madera/30 bg-madera/10 p-4 text-sm text-body">
             <p className="font-medium">
                 Estamos generando tu análisis con lo más reciente
             </p>
             <p className="mt-1 text-muted">
-                {enFila
-                    ? `Hay ${posicionEnFila - 1} antes en la fila. Estará en ${formatearEstimado(estimadoSeg)}.`
+                {conCola
+                    ? `Hay ${trabajosEnFila} trabajos en la fila. Estará listo en ${formatearEstimado(estimadoSeg)} aproximadamente.`
                     : `Estará en ${formatearEstimado(estimadoSeg)}. Puedes navegar y volver — se actualiza solo.`}
             </p>
             {hechosNuevosDesde > 0 && (
