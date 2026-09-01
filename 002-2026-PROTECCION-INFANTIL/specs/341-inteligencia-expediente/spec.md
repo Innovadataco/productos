@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-01
 
-**Status**: Draft
+**Status**: DESARROLLO
+
+**Impacto en arquitectura:** aditivo · nuevo modelo `AnalisisExpediente` + enums `AlcanceAnalisis` / `EstadoAnalisis` · nueva cola pg-boss `padre.analisis.expediente` con advisory-lock 123456799 · nueva ruta `GET/POST /api/padre/expedientes/[id]/analisis` · nuevo componente `AnalisisExpediente` bajo el mapa del `ExpedienteVivo` (SPEC-340). Sin cambios en tablas existentes; el motor de expediente actual (SPEC-323/236/340) no se toca.
 
 **Input**: Brief A-68 §4.4 capa 2 · Fase 2 · "La inteligencia del expediente"
 
