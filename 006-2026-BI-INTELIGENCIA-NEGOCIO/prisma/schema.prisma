@@ -106,6 +106,7 @@ model BIConsultaLog {
   usuarioId   String
   preguntaNL  String
   sqlGenerado String?
+  planJson    String?  // plan del LLM (índices, filtros, valores) — candado 12: traza completa
   estado      String   @default("pendiente")
   latenciaMs  Int?
   fuenteCache Boolean  @default(false)

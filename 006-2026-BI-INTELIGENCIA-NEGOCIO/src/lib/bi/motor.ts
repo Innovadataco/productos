@@ -129,6 +129,7 @@ interface PatchLog {
     estado: string;
     latenciaMs: number;
     sqlGenerado?: string | null;
+    planJson?: string | null;
     fuenteCache?: boolean;
     error?: string | null;
 }
@@ -214,6 +215,9 @@ function textoParaCache(filas: Record<string, unknown>[]): string {
 export async function preguntar(pregunta: string, usuarioEmail: string): Promise<RespuestaMotor> {
     const t0 = Date.now();
     const logId = await crearLog(pregunta, usuarioEmail);
+    // Plan del LLM capturado para la traza (candado 12): índices, filtros y
+    // VALORES exactos — sin esto un filtro erróneo del LLM no era depurable.
+    let planCapturado: PlanLLM | null = null;
 
     /** Cierra la traza y devuelve la respuesta con su consultaLogId. */
     async function finalizar(r: RespuestaMotor, errorLog?: string): Promise<RespuestaMotor> {
@@ -221,6 +225,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             estado: r.estado,
             latenciaMs: Date.now() - t0,
             sqlGenerado: r.sql ?? null,
+            planJson: planCapturado ? JSON.stringify(planCapturado) : null,
             fuenteCache: r.fuenteCache ?? false,
             error: errorLog ?? null,
         });
@@ -306,6 +311,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
                 { temperature: 0, seed: 42 },
             );
             plan = res.data;
+            planCapturado = plan; // candado 12: el plan (con valores) va a la bitácora
         } catch (e) {
             console.error(`[BI-MOTOR] LLM falló o JSON inválido: ${mensajeDeError(e)}`);
             return await finalizar({ estado: "error", texto: TEXTO_ERROR_LLM }, mensajeDeError(e));

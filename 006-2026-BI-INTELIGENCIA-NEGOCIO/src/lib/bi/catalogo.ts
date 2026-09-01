@@ -16,6 +16,8 @@ const ROL_MOTOR = "ADMIN_BI";
 export interface ColumnaCat {
     nombreFuente: string;
     tipo: string;
+    /** Descripción de la columna (lleva los valores posibles si es enum) — candado 8. */
+    descripcion?: string;
 }
 
 export interface TablaCat {
@@ -59,6 +61,7 @@ export async function cargarCatalogo(): Promise<Catalogo> {
             columnas: t.columnas.map((c) => ({
                 nombreFuente: c.nombreFuente,
                 tipo: c.tipo,
+                descripcion: c.descripcion || undefined,
             })),
         })),
     };
@@ -77,7 +80,11 @@ export function presentarCatalogoParaLLM(cat: Catalogo): string {
             lineas.push(`  Descripción: ${t.descripcion}`);
         }
         t.columnas.forEach((c, columnaIdx) => {
-            lineas.push(`  [columna_idx=${columnaIdx}] ${c.nombreFuente} · tipo ${c.tipo}`);
+            // I-06: la descripción de columna viaja al prompt — cuando es un
+            // enum lleva los valores posibles ('Valores: a · b · c') y el LLM
+            // elige el valor EXACTO en vez de adivinar la caja.
+            const detalle = c.descripcion ? ` — ${c.descripcion}` : "";
+            lineas.push(`  [columna_idx=${columnaIdx}] ${c.nombreFuente} · tipo ${c.tipo}${detalle}`);
         });
     });
     return lineas.join("\n");
