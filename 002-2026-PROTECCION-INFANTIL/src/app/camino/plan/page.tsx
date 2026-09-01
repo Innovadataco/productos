@@ -51,6 +51,9 @@ async function actionActivarFreemium() {
     revalidatePath("/camino/plan");
 }
 
+// La página depende de la sesión: nunca se pre-renderiza estática.
+export const dynamic = "force-dynamic";
+
 export default async function CaminoPlanPage() {
     const usuario = await verifyAuth("PARENT");
 

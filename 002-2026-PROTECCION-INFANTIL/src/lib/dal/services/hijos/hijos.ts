@@ -26,11 +26,13 @@
  *
  * El identificador se guarda en forma canónica (mecanismo compartido · candado 22).
  */
-import { prisma } from "@/lib/prisma";
-import { logAudit } from "@/lib/audit";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+// SPEC-197 (I-88): este módulo entra a la cadena de los workers — imports
+// RELATIVOS, no alias @/lib (la allowlist del ratchet solo se encoge).
+import { prisma } from "../../../prisma";
+import { logAudit } from "../../../audit";
+import { AppError, ERROR_CODES } from "../../../errors";
 import type { Prisma } from "@prisma/client";
-import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
+import { normalizarIdentificador } from "../../identificadores/normalizar";
 import type { RegistrarHijoInput, ActualizarHijoInput, IdentificadorHijoInput } from "./tipos";
 
 function normalizarIdentificadores(identificadores: IdentificadorHijoInput[]) {

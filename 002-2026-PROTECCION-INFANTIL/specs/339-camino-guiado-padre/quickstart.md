@@ -80,7 +80,7 @@ Con la cuenta recién creada, **en el Paso 1**, escribir a mano en la barra de d
 17. Cargar un menor con todos sus datos y una cuenta (plataforma + nick).
 18. Corregirle el apellido → **verificar** que el cambio queda guardado y visible.
 19. Cargar hasta llegar a cinco. Intentar el **sexto** → lo rechaza con el mensaje del parámetro.
-20. Cambiar `padre.hijos.maximo` a `3` desde la administración e intentar un cuarto → lo rechaza. **Sin desplegar nada.** Devolverlo a `5`.
+20. Con **dos** menores registrados, cambiar `padre.hijos.maximo` a `2` desde la administración e intentar un **tercero** → lo rechaza con el mensaje del parámetro. **Sin desplegar nada.** Devolverlo a `5`. *(Corregido: la versión anterior pedía bajar el tope a 3 con cinco ya registrados e "intentar un cuarto", que no existe.)*
 21. Intentar registrar dos veces el **mismo documento en la misma lista** → lo rechaza con mensaje claro.
 
 **La prueba de los dos padres** (D-4 · FR-022-a a FR-022-c) — hay que hacerla con **dos cuentas**:
@@ -91,6 +91,11 @@ Con la cuenta recién creada, **en el Paso 1**, escribir a mano en la barra de d
 25. **Verificar**: el padre B lo sigue viendo activo y sigue recibiendo sus avisos.
 26. Con el padre A, cambiarle el nombre al menor.
 27. **Verificar**: en la lista del padre B el nombre **no cambió**.
+
+**El aviso que hace útil el Paso 3** (punto 4 de Calidad):
+
+21-bis. Con un menor cargado con una cuenta (p. ej. Roblox), crear un reporte sobre ese identificador y dejar que el motor lo procese.
+21-ter. **Verificar**: al padre le llega el correo *"Sobre <nombre> — sin afán, pero míralo"*. Apagar los avisos del círculo y repetir → el aviso del hijo **sigue llegando** (interruptores propios).
 
 ---
 
@@ -117,6 +122,19 @@ Con la cuenta recién creada, **en el Paso 1**, escribir a mano en la barra de d
 36. **Registro de colegio**: `/registro-colegio` sigue funcionando con su **código de 6 dígitos**, sin cambios visibles.
 37. Entrar como administrador, como colegio, como operador y como comité: **ninguno** ve el camino ni queda encerrado.
 38. Un padre con el plan vencido sigue yendo a su pantalla de renovación, no al camino.
+
+---
+
+## Recorrido 7 · Los bordes que cazó Calidad
+
+39. **Plan pagado**: en el Paso 4 elegir un plan de pago → queda "esperando autorización" y los módulos **abren igual** (el padre hizo su parte; no espera encerrado al administrador).
+40. **Bono**: aplicar un código de bono en el Paso 4 → funciona dentro del camino.
+41. **Enlace abierto en otro aparato**: pedir el enlace en el computador y abrirlo en el teléfono → funciona (el token no depende de la sesión que lo pidió).
+42. **Enlace con sesión ya iniciada**: abrir el enlace de registro teniendo otra sesión abierta → no rompe; la cuenta del enlace queda creada con su propia sesión.
+43. **Correo caído al pedir el enlace**: la pantalla responde igual y al reintentar llega (el token quedó creado; verificado por prueba automática).
+44. **Botón atrás** a mitad del camino → vuelve a la pantalla anterior sin romper el estado; escribir la URL de un módulo sigue devolviendo al paso.
+45. **Dos pestañas** en el mismo paso → completar el paso en una y navegar en la otra → la otra avanza (la cookie es compartida).
+46. **Cuenta creada por el administrador** con cambio de contraseña obligatorio → el muro de contraseña corre ANTES que el camino; tras cambiarla, entra al Paso 1.
 
 ---
 

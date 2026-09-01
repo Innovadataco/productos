@@ -2,7 +2,7 @@
 
 **Feature Branch**: `work/pi-SPEC-339-camino-guiado-padre`
 **Created**: 31-08-2026
-**Status**: PLANEADO
+**Status**: DESARROLLO
 **Radicado**: A-67 · Brief del CEO 31-08-2026 v1.0 · mockup navegable aprobado por Jelkin
 **Impacto en arquitectura:** SÍ.
 1. Nace un **cuarto portero** en `middleware.ts` (camino incompleto), alimentado por un campo nuevo de la cookie firmada `sesion_estado`. Es el mismo mecanismo de los porteros de consentimiento/vigencia (SPEC-287/318/331/337), no uno nuevo.
@@ -271,6 +271,21 @@ Conteo en producción, solo lectura: **0 menores con más de un padre vinculado*
 
 - La tabla puente padre↔menor queda **sin uso** y documentada como tal — no se elimina.
 - El mecanismo de «cuentas desvinculadas por este padre» queda **apagado** y documentado — no se elimina.
+
+## Addendum · Auditoría de Calidad (31-08-2026, consolidada por el CEO)
+
+Calidad auditó el diseño en paralelo. Tres bloqueos y siete ajustes entraron al alcance; todo verificado en fuente antes de aceptarse:
+
+1. **Bucle camino↔vigencia** (real): las rutas del camino entran a las exentas de vigencia del padre, y nace la **invariante cruzada** — el destino de cada guardián debe estar exento en todos los que corren después. Verificada al arranque; probada por mutación.
+2. **Paso 1 sin pantalla propia**: reusa `/consentimiento` con el rótulo «Paso 1 de 4» — el modal no se rehace (brief §2.2) y desaparece el choque con el guardián de consentimiento.
+3. **Plan pagado no encierra**: «Paso 4 cumplido» = cualquier suscripción registrada, incluida una pendiente de autorización.
+4. **El cruce identificador-de-hijo → aviso ENTRA en A-67**: nadie leía los identificadores del menor — el Paso 3 exigía un dato que no disparaba nada. Mismo mecanismo del círculo, presentación propia, e **interruptor y enfriamiento propios** (`notificacionesHijos`, `ultimaNotificacionHijosEn`): reusar los del círculo hacía que un aviso de contacto silenciara al hijo y que apagar el círculo apagara al hijo.
+5. **Reportar sin muro de cobro**: el enlace del menú del padre (`/dashboard/padre/reportar`) chocaba contra la guarda de vigencia. Exento, junto a `/mis-reportes`. El ayudante muerto `esRutaExenta` (nadie lo llamaba y comparaba la ruta equivocada) se eliminó.
+6. `/api/session/ping` y el re-sellado, exentos del camino.
+7. El sellado fallido al cerrar los pasos 2 y 3 **avisa al padre** (no silencioso), con prueba del camino infeliz.
+8. El armazón del camino lleva **dos salidas visibles**: «Salir y seguir después» y «Este no es mi correo» (I-25/I-35 fueron de rutas; este habría sido de pantalla).
+9. **Retroactivo**: los padres existentes entran al camino en su próximo ingreso — automático porque el paso se deriva del estado real, y hoy cuesta cero (1 padre en producción, base limpiada el 31-08 por orden de Jelkin).
+10. «Suscripción resuelta» definida explícitamente (= cualquier suscripción registrada); si el plan vence estando en el camino, **manda el guardián de vigencia**, no el del camino.
 
 ## Assumptions
 

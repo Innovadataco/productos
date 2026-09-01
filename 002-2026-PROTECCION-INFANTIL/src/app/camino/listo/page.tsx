@@ -12,6 +12,9 @@ import { listarHijos } from "@/lib/dal/services/hijos";
 import { destinoDePaso } from "@/lib/camino/pasos";
 import { Button } from "@/components/ui/Button";
 
+// La página depende de la sesión: nunca se pre-renderiza estática.
+export const dynamic = "force-dynamic";
+
 export default async function CaminoListoPage() {
     const usuario = await verifyAuth("PARENT");
 

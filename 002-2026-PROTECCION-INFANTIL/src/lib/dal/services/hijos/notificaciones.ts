@@ -17,11 +17,13 @@
  *   2. Presentación propia: al padre no se le habla igual de «Carlos · tío» que
  *      de su hijo.
  */
-import { prisma } from "@/lib/prisma";
-import { getParametroSistemaValor } from "@/lib/parametros";
-import { enviarAlertaHijoReporte } from "@/lib/email";
+// SPEC-197 (I-88): este módulo entra a la cadena de los workers — imports
+// RELATIVOS, no alias @/lib (la allowlist del ratchet solo se encoge).
+import { prisma } from "../../../prisma";
+import { getParametroSistemaValor } from "../../../parametros";
+import { enviarAlertaHijoReporte } from "../../../email";
 import type { EstadoReporte } from "@prisma/client";
-import { logger } from "@/lib/logger";
+import { logger } from "../../../logger";
 import { ESTADOS_VISIBLES } from "../circulo-confianza/tipos";
 
 /**
