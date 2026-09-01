@@ -39,6 +39,8 @@ COPY package.json tsconfig.json ./
 COPY prisma ./prisma
 # src por si el seed importa utilidades de la app (alias @/* del tsconfig)
 COPY src ./src
+# scripts operativos (ratchet de índices A-45 y futuros)
+COPY scripts ./scripts
 # prisma generate EXPLÍCITO: el postinstall de @prisma/client corrió sin
 # prisma/ en deps → sin esto, `prisma db seed` falla con "did not initialize"
 RUN npx prisma generate
