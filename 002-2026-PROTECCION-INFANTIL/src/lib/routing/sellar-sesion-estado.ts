@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { buildSesionEstadoValue } from "./sesion-estado-emitter";
 import { NOMBRE_COOKIE, TTL_SEG } from "./vigencia-cookie";
 
@@ -34,6 +35,36 @@ export async function sellarCookieSesionEstado(res: NextResponse, userId: string
         return true;
     } catch {
         // la cookie de estado no bloquea la acción principal
+        return false;
+    }
+}
+
+/**
+ * SPEC-342 (hotfix I-227 re-confirmada) · variante para SERVER ACTIONS.
+ *
+ * La causa raíz del padre atrapado en /camino/listo: la RUTA
+ * /api/padre/suscripcion/activar-freemium sí re-sella (SPEC-335), pero las
+ * pantallas del plan (/camino/plan y /dashboard/padre/suscripcion) activan por
+ * SERVER ACTION → `activarFreemiumConRateLimit` directo, sin pasar por la ruta.
+ * El sellado de la ruta era la valla equivocada para este flujo (candado 26:
+ * el síntoma no es la causa). En vigencia nunca se notó porque su guardián
+ * falla ABIERTO con cookie vieja; el del camino falla CERRADO — 5 min preso.
+ *
+ * Mismo contrato que la variante de NextResponse: true = selló.
+ */
+export async function sellarCookieSesionEstadoEnAccion(userId: string): Promise<boolean> {
+    try {
+        const value = await buildSesionEstadoValue(userId);
+        const store = await cookies();
+        store.set(NOMBRE_COOKIE, value, {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.COOKIE_SECURE !== "false",
+            maxAge: TTL_SEG,
+            path: "/",
+        });
+        return true;
+    } catch {
         return false;
     }
 }
