@@ -6,7 +6,9 @@ import { ModalConsentimiento } from "@/components/modules/ModalConsentimiento";
 import type { RolUsuario } from "@prisma/client";
 
 const DASHBOARD_POR_ROL: Record<RolUsuario, string> = {
-    PARENT: "/dashboard/padre/suscripcion",
+    // SPEC-339: el padre no va a una pantalla fija — el guardián del camino lo
+    // lleva a su paso pendiente (aceptar re-sella la cookie en esta misma ruta).
+    PARENT: "/dashboard/padre",
     SCHOOL_ADMIN: "/dashboard/colegio",
     COMITE_CONVIVENCIA: "/dashboard/colegio",
     ADMIN: "/dashboard/admin",
@@ -51,6 +53,9 @@ export default async function ConsentimientoPage() {
             documentoTipo={documentoTipo}
             documentoContenido={documentoContenido}
             redirectUrl={DASHBOARD_POR_ROL[rol]}
+            // SPEC-339 (brief §2.2): para el padre, esta pantalla ES el Paso 1
+            // del camino. No se rehace: gana el rótulo.
+            {...(rol === "PARENT" ? { indicadorPaso: "Paso 1 de 4 · Permiso" } : {})}
         />
     );
 }

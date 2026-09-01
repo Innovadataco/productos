@@ -69,7 +69,11 @@ const FORM_VACIO = {
     sexo: "",
 };
 
-export function MisHijos() {
+/**
+ * SPEC-339: `onListaCambio` avisa al Paso 3 del camino cuántos menores activos
+ * hay, para habilitar el "Siguiente" sin duplicar la consulta.
+ */
+export function MisHijos({ onListaCambio }: { onListaCambio?: (activos: number) => void } = {}) {
     const [hijos, setHijos] = useState<Hijo[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [cargando, setCargando] = useState(true);
@@ -86,7 +90,9 @@ export function MisHijos() {
         try {
             const res = await fetch("/api/padre/hijos");
             if (!res.ok) throw new Error("No se pudo cargar");
-            setHijos(await res.json());
+            const lista = (await res.json()) as Hijo[];
+            setHijos(lista);
+            onListaCambio?.(lista.filter((h) => h.estado === "activo").length);
         } catch (e) {
             setError(e instanceof Error ? e.message : "Error");
         } finally {

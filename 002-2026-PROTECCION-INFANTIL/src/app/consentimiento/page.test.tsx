@@ -64,6 +64,8 @@ type ModalProps = {
     documentoTipo: string;
     documentoContenido: string;
     redirectUrl: string;
+    // SPEC-339: rótulo del Paso 1 cuando el padre recorre el camino.
+    indicadorPaso?: string;
 };
 
 async function invocarPagina(): Promise<React.ReactNode> {
@@ -105,8 +107,10 @@ describe("ConsentimientoPage (SPEC-241)", () => {
         mockToken = "token-padre";
         mockPayload = { sub: padre.id, rol: "PARENT" };
 
+        // SPEC-339: el padre ya no va a una pantalla fija — aterriza en el panel
+        // y el guardián del camino lo lleva a su paso pendiente.
         await expect(invocarPagina()).rejects.toThrow(
-            "NEXT_REDIRECT /dashboard/padre/suscripcion"
+            "NEXT_REDIRECT /dashboard/padre"
         );
     });
 
@@ -120,7 +124,9 @@ describe("ConsentimientoPage (SPEC-241)", () => {
         expect(elemento.type).toBe(ModalConsentimiento);
         expect(elemento.props.rol).toBe("PARENT");
         expect(elemento.props.documentoTipo).toBe("POLITICA_DATOS");
-        expect(elemento.props.redirectUrl).toBe("/dashboard/padre/suscripcion");
+        expect(elemento.props.redirectUrl).toBe("/dashboard/padre"); // SPEC-339
+        // SPEC-339 (brief §2.2): para el padre esta pantalla es el Paso 1 del camino.
+        expect(elemento.props.indicadorPaso).toBe("Paso 1 de 4 · Permiso");
         expect(elemento.props.documentoContenido.length).toBeGreaterThan(0);
     });
 

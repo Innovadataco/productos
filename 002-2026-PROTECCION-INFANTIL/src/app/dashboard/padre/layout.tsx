@@ -3,6 +3,7 @@ import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { PadreSideNav } from "@/components/modules/padre/PadreSideNav";
+import { PadreNavMovil } from "@/components/modules/padre/PadreNavMovil";
 import { Alerta } from "@/components/ui/Alerta";
 import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
 
@@ -37,7 +38,10 @@ export default async function PadreLayout({ children }: { children: React.ReactN
     return (
         <div className="theme-padre flex min-h-screen bg-page">
             <PadreSideNav />
-            <main className="min-w-0 flex-1">
+            {/* SPEC-339: en móvil el padre no tenía NINGÚN menú (el lateral es
+                hidden sm:flex). Barra inferior + aire para que no tape contenido. */}
+            <PadreNavMovil />
+            <main className="min-w-0 flex-1 pb-16 sm:pb-0">
                 {debeMostrarBanner(estadoVigencia) && (
                     <div className="px-4 pt-4 sm:px-6">
                         <Alerta tono="advertencia">Tu plan vence pronto. Renueva para no perder el acceso.</Alerta>
