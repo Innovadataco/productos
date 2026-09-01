@@ -210,6 +210,31 @@ export const verificarCompletarSchema = z.object({
 });
 export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
 
+// SPEC-339 (A-67 §2.1): la puerta del padre por enlace. Las dos condiciones
+// visibles del brief: 8 caracteres y que coincidan; se conserva letra+número
+// del estándar del sitio.
+export const registroSolicitarSchema = z.object({
+    email: z.string({ error: "Email inválido" }).trim().toLowerCase().min(1, "Email inválido")
+        .refine((val) => val.includes("@"), { message: "Email inválido" }),
+});
+export type RegistroSolicitarInput = z.infer<typeof registroSolicitarSchema>;
+
+export const registroCompletarSchema = z
+    .object({
+        token: z.string({ error: "Enlace y contraseña requeridos" }).min(1, "Enlace y contraseña requeridos"),
+        password: z.string({ error: "Enlace y contraseña requeridos" })
+            .min(1, "Enlace y contraseña requeridos")
+            .refine((val) => val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
+                message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número",
+            }),
+        passwordConfirmacion: z.string({ error: "Confirma tu contraseña" }).min(1, "Confirma tu contraseña"),
+    })
+    .refine((data) => data.password === data.passwordConfirmacion, {
+        message: "Las contraseñas no coinciden",
+        path: ["passwordConfirmacion"],
+    });
+export type RegistroCompletarInput = z.infer<typeof registroCompletarSchema>;
+
 export const activarSchema = z.object({
     token: z.string({ error: "Token requerido" }).min(1, "Token requerido"),
     password: z.string({ error: "Contraseña requerida" })
