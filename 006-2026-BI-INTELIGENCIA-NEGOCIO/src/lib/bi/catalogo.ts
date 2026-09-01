@@ -20,6 +20,26 @@ export interface ColumnaCat {
     descripcion?: string;
 }
 
+/**
+ * Dominio de valores declarado para una columna (candado 8: el catálogo es
+ * dato). Dos formatos aceptados en la descripción: con prefijo "Valores
+ * reales: A · B · C" o la descripción completa siendo solo la lista
+ * "A · B · C". Vacío si la columna no declara dominio.
+ */
+export function valoresDeColumna(col: ColumnaCat): string[] {
+    const d = col.descripcion ?? "";
+    const conPrefijo = d.match(/Valores reales:\s*(.+)$/i);
+    const bruto = conPrefijo ? conPrefijo[1] : d;
+    const tokens = bruto
+        .split("·")
+        .map((s) => s.trim())
+        .filter((s) => /^[A-ZÁÉÍÓÚÜ_]+$/i.test(s) && !s.includes(" "));
+    // Sin prefijo solo se acepta si TODA la descripción era la lista (evita
+    // leer dominios en descripciones narrativas).
+    if (!conPrefijo && tokens.join(" · ") !== bruto.trim()) return [];
+    return tokens.filter((s) => s.length >= 3 && s !== "OTRO");
+}
+
 export interface TablaCat {
     nombreFuente: string;
     nombreLegible: string;
