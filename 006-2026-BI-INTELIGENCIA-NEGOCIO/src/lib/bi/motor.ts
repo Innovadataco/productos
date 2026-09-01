@@ -46,7 +46,11 @@ const SYSTEM_PROMPT =
     "temporal (hoy ≈ 1 día, esta semana ≈ 7, este mes ≈ 30, este año ≈ 365, últimos N días = N), " +
     "siempre con una columna de fecha del catálogo y dias entero >= 1. Si la pregunta NO pide " +
     "ventana temporal, omite el período por completo. NUNCA conviertas ventanas temporales a " +
-    "filtros de fecha absoluta: para eso existe el período.";
+    "filtros de fecha absoluta: para eso existe el período. " +
+    "No agregues filtros que la pregunta no pide explícitamente: cada filtro debe venir de una " +
+    "condición dicha por el usuario. Cuando una columna lista 'Valores reales: a · b · c' en su " +
+    "descripción, el valor del filtro debe ser EXACTAMENTE uno de esos valores (nunca una frase " +
+    "como 'hace_un_ano' ni una paráfrasis).";
 
 /** Marcas temporales en la pregunta (para el fallback de período malformado). */
 const REGEX_MARCAS_TEMPORALES = /\b(hoy|ayer|semanas?|mes(?:es)?|años?|días?|últim[oa]s?|recientes?)\b/i;
@@ -104,11 +108,14 @@ function formatearCelda(v: unknown): string {
 function esTablaInexistente(e: unknown): boolean {
     if (!e || typeof e !== "object") return false;
     const err = e as { code?: unknown; meta?: unknown; message?: unknown };
-    if (err.code === "42P01") return true;
+    if (err.code === "42P01" || err.code === "42703") return true;
     const meta = err.meta as { code?: unknown } | undefined;
-    if (meta && meta.code === "42P01") return true;
+    if (meta && (meta.code === "42P01" || meta.code === "42703")) return true;
+    // I-07: NADA de coincidencia por mensaje — "function lower(...) does not
+    // exist" (42883, función, no tabla) se colaba como sin_datos habiendo
+    // datos. Solo los SQLSTATE exactos de tabla/columna inexistente degradan.
     const msg = typeof err.message === "string" ? err.message : "";
-    return msg.includes("42P01") || msg.includes("does not exist");
+    return msg.includes("42P01") || msg.includes("42703");
 }
 
 /** Crea la fila de traza (candado 12). Fail-open: devuelve "" si falla. */
