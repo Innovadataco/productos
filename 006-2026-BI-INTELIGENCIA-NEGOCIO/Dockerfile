@@ -39,6 +39,9 @@ COPY package.json tsconfig.json ./
 COPY prisma ./prisma
 # src por si el seed importa utilidades de la app (alias @/* del tsconfig)
 COPY src ./src
+# prisma generate EXPLÍCITO: el postinstall de @prisma/client corrió sin
+# prisma/ en deps → sin esto, `prisma db seed` falla con "did not initialize"
+RUN npx prisma generate
 CMD ["npx", "prisma", "migrate", "deploy"]
 
 # ---------- runner ----------
@@ -54,6 +57,8 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+# openssl: el engine de Prisma (linux-musl-openssl-3.0.x) enlaza contra libssl.so.3
+RUN apk add --no-cache openssl
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public

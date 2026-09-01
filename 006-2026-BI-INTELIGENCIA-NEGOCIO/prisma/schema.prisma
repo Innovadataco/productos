@@ -10,6 +10,10 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
+  // Alpine (node:22-alpine) usa OpenSSL 3: sin este target el engine musl
+  // por defecto enlaza contra libssl.so.1.1 y falla en runtime (I-02).
+  // "native" cubre CI/desarrollo (glibc).
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
