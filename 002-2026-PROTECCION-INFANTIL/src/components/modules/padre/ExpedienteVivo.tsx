@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/Button";
 import { TextoSensible } from "./TextoSensible";
+import { AnalisisExpediente } from "./AnalisisExpediente";
 
 const MapaUbicaciones = dynamic(
     () => import("@/components/modules/MapaUbicaciones").then((m) => m.MapaUbicaciones),
@@ -190,6 +191,9 @@ export function ExpedienteVivo({
                     aria-label="Recorrer la historia"
                 />
             </section>
+
+            {/* ── SPEC-341 · Análisis detallado (capa 2, IA en fila) ── */}
+            <AnalisisExpediente expedienteId={expedienteId} />
 
             {/* ── La lectura (capa 1: solo cifras) ── */}
             {lectura && lectura.total > 0 && (
