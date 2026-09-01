@@ -6,6 +6,8 @@
  *   - `vigencia`: estado de la suscripción (ACTIVA, EN_GRACIA, ..., SIN_SUSCRIPCION)
  *   - `requiereConsentimiento`: si el usuario debe firmar el consentimiento (SPEC-241)
  *   - `debeCambiarPassword`: si el usuario debe cambiar contraseña obligatoriamente
+ *   - `pasoCamino`: paso pendiente del camino guiado del padre (SPEC-339), o
+ *     `null` si el camino está terminado o el usuario no es padre
  *
  * Fuente única de estado de sesión en Edge. Se refresca al llegar (o al expirar el
  * TTL) por `POST /api/vigencia/refresh` (Node runtime, corre Prisma). Firmada
@@ -15,6 +17,7 @@
  * el nombre de la cookie sí cambia a `sesion_estado` porque ya cubre 3 flags.
  */
 import type { EstadoVigenciaEfectivo } from "@/lib/pagos/vigencia-middleware";
+import { esPasoCamino, type PasoPendiente } from "@/lib/camino/pasos";
 
 export const NOMBRE_COOKIE = "sesion_estado";
 export const TTL_SEG = 300; // 5 minutos
@@ -23,6 +26,9 @@ export interface SesionEstadoPayload {
     vigencia: EstadoVigenciaEfectivo;
     requiereConsentimiento: boolean;
     debeCambiarPassword: boolean;
+    // SPEC-339 (A-67): paso pendiente del camino. `null` = camino terminado, o
+    // el usuario no es padre y no recorre camino.
+    pasoCamino: PasoPendiente;
     iat: number; // unix seconds
 }
 
@@ -112,6 +118,10 @@ export async function leerSesionEstado(
     if (typeof payload.vigencia !== "string") return null;
     if (typeof payload.requiereConsentimiento !== "boolean") return null;
     if (typeof payload.debeCambiarPassword !== "boolean") return null;
+    // SPEC-339: validación estricta, igual que los otros tres campos. Una cookie
+    // emitida ANTES de este despliegue no trae el campo y se descarta acá; el
+    // guardián la re-sella en el rebote, sin que nadie tenga que volver a entrar.
+    if (payload.pasoCamino !== null && !esPasoCamino(payload.pasoCamino)) return null;
 
     const now = Math.floor(Date.now() / 1000);
     if (payload.iat > now + 5) return null; // sesgo de reloj tolerado 5s

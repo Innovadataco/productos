@@ -26,7 +26,7 @@ async function req(pathname: string, rol: string, estado: Omit<SesionEstadoPaylo
     });
 }
 
-const VIGENTE = { vigencia: "ACTIVA" as const, requiereConsentimiento: false, debeCambiarPassword: false };
+const VIGENTE = { vigencia: "ACTIVA" as const, requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino: null };
 
 describe("SPEC-329 · guardianes del middleware devuelven JSON 403 en /api/ (no redirect)", () => {
     it("Paso 4 consentimiento · POST /api/ gateado → 403 JSON con code, NO 302", async () => {

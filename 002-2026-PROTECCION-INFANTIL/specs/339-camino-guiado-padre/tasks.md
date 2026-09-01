@@ -96,6 +96,7 @@ Verificado en fuente: el guardián del camino se sienta en el paso 5 de `middlew
 - [ ] T031 [US1] Crear `src/app/api/auth/registro/solicitar/route.test.ts` — incluida la prueba de que las dos respuestas son **byte a byte iguales** (anti-enumeración, SPEC-338)
 - [ ] T032 [US1] Crear `src/app/api/auth/registro/completar/route.ts` — valida contraseña (8 caracteres, coinciden), crea el usuario con rol padre, marca el token usado, inicia sesión, **sella `sesion_estado`** para que caiga directo en el Paso 1 sin rebote, y envía `auth.bienvenida_padre`
 - [ ] T033 [US1] Crear `src/app/api/auth/registro/completar/route.test.ts` — `400`/`404`/`409`/`410` y que la cookie de estado sale sellada en la respuesta
+- [ ] T080 [US1] Probar el CORREO CAÍDO en el registro (Calidad · R2-11): si el envío falla, la cuenta y el token **quedan creados** y el padre puede pedir el enlace de nuevo. Un fallo del proveedor de correo no puede costarle la cuenta
 - [ ] T034 [US1] Rehacer `src/app/registro/page.tsx` para el padre: una sola pantalla de correo → pantalla de aviso (correo escrito, nota de correo no deseado, enviar de nuevo, escribir otro correo). **Sin tocar `VerificacionForm`**, que es del colegio
 - [ ] T035 [US1] Crear `src/app/registro/crear-clave/page.tsx` — contraseña dos veces, las dos condiciones a la vista, botón apagado hasta cumplirlas, y mensajes serenos para token usado o vencido con la opción de pedir otro. Es pública por herencia de `/registro` (las rutas se comparan por segmento)
 - [ ] T036 [US1] Verificar que `src/app/registro-colegio/page.tsx` y las tres rutas del código de 6 dígitos **quedan intactas** y sus pruebas siguen verdes
@@ -124,6 +125,7 @@ Verificado en fuente: el guardián del camino se sienta en el paso 5 de `middlew
 
 - [ ] T073 [US3] **Sellar la cookie con `sellarCookieSesionEstado` al registrar un hijo** en `src/app/api/padre/hijos/route.ts` — es el momento en que el Paso 3 se cumple; y también al inactivar el último menor activo en `[id]/route.ts`, que es cuando deja de cumplirse
 - [ ] T074 [US2] Probar en `src/app/api/padre/perfil/route.test.ts` y en `src/app/api/padre/hijos/route.test.ts` que la respuesta trae la cookie re-sellada **sin paso pendiente en ese paso** — la prueba de que el padre no se atasca
+- [ ] T079 [US2] Probar el sellado FALLIDO al cerrar el Paso 2 y el Paso 3 (Calidad · R1-8): si el re-sellado lanza, el padre ve un mensaje claro y el paso **no se da por hecho en silencio**. T070/T071 cubren el rebote, que es otro momento
 - [ ] T042 [US3] Aplicar el tope en `src/app/api/padre/hijos/route.ts`: leer `padre.hijos.maximo` con `getParametroSistemaValor` y responder `409` con el mensaje del parámetro. **Sin número escrito en el código**
 - [ ] T077 [US3] Volver **obligatorios** los apellidos del menor en el esquema de `POST` en `src/app/api/padre/hijos/route.ts` — hoy son opcionales (línea 12) y el modelo trae `@default("")`, en contra de lo que exige el requisito. Cambio de validación, no de esquema: las fichas viejas sin apellidos se conservan
 - [ ] T043 [US3] Ampliar el esquema de `PATCH` en `src/app/api/padre/hijos/[id]/route.ts` — hoy acepta solo `{ estado }` — para admitir la corrección de nombre, apellidos, tipo y número de documento, año de nacimiento y sexo (todos opcionales, al menos uno)
@@ -203,6 +205,6 @@ Fase 1 (T001-T002)
 
 ## Resumen
 
-- **78 tareas** · 10 fases
+- **80 tareas** · 10 fases
 - Por historia: US1 la puerta **9** · US2 el guardián y sus pantallas **23** · US3 los menores **8** · US3-bis un menor por padre **5** · US4 el plan **4** · US5 móvil **4** · fundaciones **18** · preparación y cierre **8**
-- Tareas de prueba: **19** (obligatorias por `AGENTS.md`, más el candado 24 sobre todo lo que toca lo editado)
+- Tareas de prueba: **21** (obligatorias por `AGENTS.md`, más el candado 24 sobre todo lo que toca lo editado)

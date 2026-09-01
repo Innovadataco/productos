@@ -15,6 +15,9 @@ const mocks = vi.hoisted(() => ({
     verificarVigenciaClienteMock: vi.fn(),
     firmarSesionEstado: vi.fn(async (payload: unknown) => JSON.stringify(payload)),
     requireEnv: vi.fn(() => "test-secret-de-32-chars-o-mas!!"),
+    // SPEC-339: derivación del paso del camino, mockeada — este test es del
+    // emisor, no de la derivación (que tiene su propio test de integración).
+    derivarPasoPendiente: vi.fn(),
 }));
 
 vi.mock("@/lib/dal/repositories/pagos-repository", () => ({
@@ -46,6 +49,10 @@ vi.mock("@/lib/env", () => ({
     requireEnv: mocks.requireEnv,
 }));
 
+vi.mock("@/lib/dal/services/camino/estado", () => ({
+    derivarPasoPendiente: mocks.derivarPasoPendiente,
+}));
+
 import { buildSesionEstadoValue } from "./sesion-estado-emitter";
 
 function setup({
@@ -70,6 +77,7 @@ function setup({
         estado: vigente ? "vigente" : "vencido",
         mensaje: "",
     });
+    mocks.derivarPasoPendiente.mockResolvedValue(null);
 }
 
 describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)", () => {
@@ -146,5 +154,32 @@ describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)"
             setup({ rol: "SCHOOL_ADMIN", vigente: true, debeCambiarPassword: true });
             expect(JSON.parse(await buildSesionEstadoValue("uid-5")).debeCambiarPassword).toBe(true);
         });
+    });
+
+    // ── SPEC-339 · pasoCamino en la cookie ──────────────────────────────────
+    describe("SPEC-339 · pasoCamino", () => {
+        it("PARENT: el paso pendiente derivado viaja en la cookie", async () => {
+            setup({ rol: "PARENT", suscripcionEstado: null });
+            mocks.derivarPasoPendiente.mockResolvedValue("hijos");
+            const value = await buildSesionEstadoValue("u1");
+            expect(JSON.parse(value).pasoCamino).toBe("hijos");
+            expect(mocks.derivarPasoPendiente).toHaveBeenCalledWith("u1");
+        });
+
+        it("PARENT con camino terminado: pasoCamino = null", async () => {
+            setup({ rol: "PARENT", suscripcionEstado: "ACTIVA" });
+            mocks.derivarPasoPendiente.mockResolvedValue(null);
+            const value = await buildSesionEstadoValue("u1");
+            expect(JSON.parse(value).pasoCamino).toBeNull();
+        });
+
+        for (const rol of ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]) {
+            it(`${rol}: NUNCA se deriva el camino (ni una consulta de más)`, async () => {
+                setup({ rol });
+                const value = await buildSesionEstadoValue("u1");
+                expect(JSON.parse(value).pasoCamino).toBeNull();
+                expect(mocks.derivarPasoPendiente).not.toHaveBeenCalled();
+            });
+        }
     });
 });

@@ -7,6 +7,8 @@ import { firmarSesionEstado } from "@/lib/routing/vigencia-cookie";
 import { requireEnv } from "@/lib/env";
 import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { EstadoSuscripcion } from "@prisma/client";
+import { derivarPasoPendiente } from "@/lib/dal/services/camino/estado";
+import type { PasoPendiente } from "@/lib/camino/pasos";
 
 /**
  * Construye el valor firmado de la cookie `sesion_estado` para un usuario.
@@ -39,8 +41,12 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
 
     const debeCambiarPassword = Boolean(flag?.debeCambiarPassword);
 
+    // SPEC-339 (A-67): el camino guiado es SOLO del padre. Los demás roles nunca
+    // tienen paso pendiente, así que su experiencia no cambia en absoluto.
+    const pasoCamino: PasoPendiente = rol === "PARENT" ? await derivarPasoPendiente(userId) : null;
+
     return firmarSesionEstado(
-        { vigencia, requiereConsentimiento, debeCambiarPassword },
+        { vigencia, requiereConsentimiento, debeCambiarPassword, pasoCamino },
         requireEnv("JWT_SECRET", 32),
     );
 }

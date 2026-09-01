@@ -39,7 +39,11 @@ interface DefinicionPaso {
 }
 
 export const DEFINICION_PASOS: Readonly<Record<PasoCamino, DefinicionPaso>> = {
-    permiso: { numero: 1, destino: `${RAIZ_CAMINO}/permiso`, titulo: "Permiso" },
+    // El Paso 1 NO tiene pantalla propia: reusa `/consentimiento`, que ya existe
+    // y está bien hecha (exige leer hasta el final y las dos casillas). Una
+    // pantalla `/camino/permiso` habría chocado con el guardián de
+    // consentimiento, que corre antes y manda a la suya (decisión CEO 20:20).
+    permiso: { numero: 1, destino: "/consentimiento", titulo: "Permiso" },
     datos: { numero: 2, destino: `${RAIZ_CAMINO}/datos`, titulo: "Tus datos" },
     hijos: { numero: 3, destino: `${RAIZ_CAMINO}/hijos`, titulo: "Tus hijos" },
     plan: { numero: 4, destino: `${RAIZ_CAMINO}/plan`, titulo: "Tu plan" },

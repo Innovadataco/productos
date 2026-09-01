@@ -17,7 +17,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
-import type { PasoPendiente } from "./pasos";
+import type { PasoPendiente } from "@/lib/camino/pasos";
 
 /**
  * Campos del perfil que el Paso 2 exige (brief §2.3, definidos por Jelkin).
