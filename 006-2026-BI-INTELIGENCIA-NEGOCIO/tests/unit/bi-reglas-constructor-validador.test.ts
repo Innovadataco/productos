@@ -299,6 +299,39 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         if (!r.ok) throw new Error(`debía construir: ${r.error}`);
         expect(r.sql).toBe('SELECT "id" FROM "Reporte" LIMIT $1');
     });
+
+    it("I-03: período + filtro sobre la MISMA columna → el filtro se descarta y manda el período", () => {
+        // Regresión del caso real: "este mes" llegó del LLM como rango absoluto
+        // a medianoche (creadoEn >= '2026-09-01' AND creadoEn <= '2026-09-01')
+        // MÁS período de 30 días; ANDados excluían los datos del día en curso.
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [
+                { columna_idx: 3, operador: ">=", valor: "2026-09-01" },
+                { columna_idx: 3, operador: "<=", valor: "2026-09-01" },
+            ],
+            periodo: { columna_idx: 3, dias: 30 },
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toBe(
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= NOW() - ($1 || \' days\')::interval LIMIT $2',
+        );
+        expect(r.params).toEqual([30, 100]);
+        // Los filtros sobre otras columnas SÍ se conservan junto al período.
+        const planMixto: PlanLLM = {
+            ...plan,
+            filtros: [{ columna_idx: 2, operador: "=", valor: "BULLYING" }],
+        };
+        const r2 = construirSql(CATALOGO, planMixto, LIMITE_MAXIMO);
+        if (!r2.ok) throw new Error(`debía construir: ${r2.error}`);
+        expect(r2.sql).toBe(
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE "categoria" = $1 AND "creadoEn" >= NOW() - ($2 || \' days\')::interval LIMIT $3',
+        );
+        expect(r2.params).toEqual(["BULLYING", 30, 100]);
+    });
 });
 
 // ---------------------------------------------------------------------------

@@ -41,7 +41,20 @@ const SYSTEM_PROMPT =
     "Recibes un catálogo ENUMERADO de tablas y columnas y devuelves SOLO índices numéricos " +
     "de ese catálogo (tabla_idx, columnas_idx) junto con la agregación, los filtros, el " +
     "período y el límite. Nunca escribes SQL ni nombres de tablas o columnas: el servidor " +
-    "traduce los índices. Si la pregunta es ambigua, devuelve el plan más simple y directo.";
+    "traduce los índices. Si la pregunta es ambigua, devuelve el plan más simple y directo. " +
+    "El período es OPCIONAL: inclúyelo SOLO si la pregunta pide explícitamente una ventana " +
+    "temporal (hoy ≈ 1 día, esta semana ≈ 7, este mes ≈ 30, este año ≈ 365, últimos N días = N), " +
+    "siempre con una columna de fecha del catálogo y dias entero >= 1. Si la pregunta NO pide " +
+    "ventana temporal, omite el período por completo. NUNCA conviertas ventanas temporales a " +
+    "filtros de fecha absoluta: para eso existe el período.";
+
+/** Marcas temporales en la pregunta (para el fallback de período malformado). */
+const REGEX_MARCAS_TEMPORALES = /\b(hoy|ayer|semanas?|mes(?:es)?|años?|días?|últim[oa]s?|recientes?)\b/i;
+
+/** La pregunta pide explícitamente una ventana temporal. */
+function tieneMarcasTemporales(pregunta: string): boolean {
+    return REGEX_MARCAS_TEMPORALES.test(pregunta);
+}
 
 /** Texto determinista cuando el catálogo en BD está vacío (candado 8). */
 const TEXTO_CATALOGO_VACIO =
@@ -299,7 +312,20 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
         }
 
         // 5 · Checks atómicos (candado 4): si falta algo, clarificación.
-        const faltante = validarPlanAtomico(plan, cat);
+        let faltante = validarPlanAtomico(plan, cat);
+        // Fallback determinista (I-03): si el único problema es el período
+        // malformado por el LLM y la pregunta NO pedía ventana temporal, se
+        // descarta el período y se responde sin él — la consulta sin ventana
+        // es la respuesta correcta para esa pregunta.
+        if (
+            faltante &&
+            plan.periodo &&
+            faltante.startsWith("El período indicado") &&
+            !tieneMarcasTemporales(pregunta)
+        ) {
+            delete plan.periodo;
+            faltante = validarPlanAtomico(plan, cat);
+        }
         if (faltante) {
             return await finalizar({ estado: "clarificacion", texto: faltante }, "plan_incompleto");
         }

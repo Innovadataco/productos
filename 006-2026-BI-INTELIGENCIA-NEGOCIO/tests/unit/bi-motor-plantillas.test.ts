@@ -259,6 +259,44 @@ describe("motor · clarificación por plan incompleto (candado 4, deny-by-defaul
             data: expect.objectContaining({ estado: "clarificacion", error: expect.stringContaining("limite") }),
         });
     });
+
+    it("I-03: período malformado por el LLM en pregunta SIN marca temporal → se descarta y se responde (ok)", async () => {
+        // Regresión del caso real: "¿cuántos colegios hay registrados?" llegó
+        // del LLM con período inválido y el motor pedía una ventana que la
+        // pregunta nunca pidió. El fallback descarta el período y responde.
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama({
+                tabla_idx: 0,
+                columnas_idx: [],
+                agregacion: "conteo",
+                periodo: { columna_idx: 99, dias: 0 },
+            }),
+        );
+        const r = await preguntar("¿cuántos colegios hay registrados?", EMAIL);
+
+        expect(r.estado).toBe("ok");
+        const planUsado = mocks.construirSql.mock.calls[0][1] as { periodo?: unknown };
+        expect(planUsado.periodo).toBeUndefined();
+        expect(mocks.queryRawUnsafe).toHaveBeenCalled();
+    });
+
+    it("período malformado en pregunta CON marca temporal → clarificación (no se descarta)", async () => {
+        // El fallback NO aplica: si la pregunta pide ventana y el período viene
+        // roto, la clarificación es la respuesta correcta.
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama({
+                tabla_idx: 0,
+                columnas_idx: [],
+                agregacion: "conteo",
+                periodo: { columna_idx: 99, dias: 0 },
+            }),
+        );
+        const r = await preguntar("¿cuántos colegios hay este mes?", EMAIL);
+
+        expect(r.estado).toBe("clarificacion");
+        expect(r.texto).toContain("período");
+        expect(mocks.construirSql).not.toHaveBeenCalled();
+    });
 });
 
 describe("motor · LLM con JSON inválido (candado 2: no se rescata)", () => {
