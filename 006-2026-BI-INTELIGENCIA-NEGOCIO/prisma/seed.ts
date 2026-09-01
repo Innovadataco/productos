@@ -19,21 +19,21 @@ const TABLAS: Array<{
   descripcion: string;
   rolesPermitidos: string[];
 }> = [
-  { nombreFuente: "Reporte", nombreLegible: "Reportes de riesgo", descripcion: "Reportes de conducta potencialmente peligrosa detectados por PI", rolesPermitidos: ["ADMIN", "SCHOOL_ADMIN"] },
-  { nombreFuente: "ClasificacionIA", nombreLegible: "Clasificaciones motor IA", descripcion: "Resultados del clasificador de conducta (categoria · confianza · latencia)", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "ClasificacionRubricaVoto", nombreLegible: "Votos rubrica humana", descripcion: "Votos de validacion humana sobre clasificaciones IA", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "CorreccionAdmin", nombreLegible: "Correcciones admin", descripcion: "Correcciones manuales de clasificacion IA por admin", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "TransicionReporte", nombreLegible: "Transiciones de estado", descripcion: "Historial de cambios de estado de reportes", rolesPermitidos: ["ADMIN", "SCHOOL_ADMIN"] },
-  { nombreFuente: "SolicitudComite", nombreLegible: "Solicitudes de comite", descripcion: "Solicitudes de revision por comite de un reporte", rolesPermitidos: ["ADMIN", "SCHOOL_ADMIN"] },
-  { nombreFuente: "Colegio", nombreLegible: "Colegios", descripcion: "Instituciones educativas registradas en PI", rolesPermitidos: ["ADMIN", "SCHOOL_ADMIN"] },
-  { nombreFuente: "Subscription", nombreLegible: "Suscripciones", descripcion: "Suscripciones de tenants al plan PI", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "BillingCycle", nombreLegible: "Ciclos de facturacion", descripcion: "Ciclos de cobro por suscripcion (monto · estado)", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "Plan", nombreLegible: "Planes comerciales", descripcion: "Planes de servicio disponibles (precio · nombre)", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "Tenant", nombreLegible: "Tenants", descripcion: "Clientes multi-tenant del sistema PI", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "Alumno", nombreLegible: "Alumnos", descripcion: "Estudiantes monitoreados por PI", rolesPermitidos: ["ADMIN", "SCHOOL_ADMIN"] },
-  { nombreFuente: "AuditLog", nombreLegible: "Log de auditoria", descripcion: "Registro de acciones administrativas del sistema", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "FuenteReporte", nombreLegible: "Fuentes de reporte", descripcion: "Origen del reporte (app · extension · API)", rolesPermitidos: ["ADMIN"] },
-  { nombreFuente: "AlertaColegio", nombreLegible: "Alertas de colegio", descripcion: "Alertas generadas a nivel de colegio", rolesPermitidos: ["ADMIN", "SCHOOL_ADMIN"] },
+  { nombreFuente: "Reporte", nombreLegible: "Reportes de riesgo", descripcion: "Reportes de conducta potencialmente peligrosa detectados por PI", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "ClasificacionIA", nombreLegible: "Clasificaciones motor IA", descripcion: "Resultados del clasificador de conducta (categoria · confianza · latencia)", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "ClasificacionRubricaVoto", nombreLegible: "Votos rubrica humana", descripcion: "Votos de validacion humana sobre clasificaciones IA", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "CorreccionAdmin", nombreLegible: "Correcciones admin", descripcion: "Correcciones manuales de clasificacion IA por admin", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "TransicionReporte", nombreLegible: "Transiciones de estado", descripcion: "Historial de cambios de estado de reportes", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "SolicitudComite", nombreLegible: "Solicitudes de comite", descripcion: "Solicitudes de revision por comite de un reporte", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "Colegio", nombreLegible: "Colegios", descripcion: "Instituciones educativas registradas en PI", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "Subscription", nombreLegible: "Suscripciones", descripcion: "Suscripciones de tenants al plan PI", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "BillingCycle", nombreLegible: "Ciclos de facturacion", descripcion: "Ciclos de cobro por suscripcion (monto · estado)", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "Plan", nombreLegible: "Planes comerciales", descripcion: "Planes de servicio disponibles (precio · nombre)", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "Tenant", nombreLegible: "Tenants", descripcion: "Clientes multi-tenant del sistema PI", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "Alumno", nombreLegible: "Alumnos", descripcion: "Estudiantes monitoreados por PI", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "AuditLog", nombreLegible: "Log de auditoria", descripcion: "Registro de acciones administrativas del sistema", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "FuenteReporte", nombreLegible: "Fuentes de reporte", descripcion: "Origen del reporte (app · extension · API)", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "AlertaColegio", nombreLegible: "Alertas de colegio", descripcion: "Alertas generadas a nivel de colegio", rolesPermitidos: ["ADMIN_BI"] },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -298,6 +298,51 @@ const CONFIGS: Array<{ clave: string; valor: string; descripcion: string }> = [
     clave: "ia.ollama.timeout_ms",
     valor: "120000",
     descripcion: "Timeout en ms de las llamadas de generacion a Ollama (entero > 0)",
+  },
+  {
+    clave: "bi.motor.limite_default",
+    valor: "100",
+    descripcion: "LIMIT por defecto de las consultas del motor NL->SQL cuando el plan no pide otro",
+  },
+  {
+    clave: "bi.motor.limite_maximo",
+    valor: "500",
+    descripcion: "LIMIT maximo permitido en las consultas del motor NL->SQL (techo duro)",
+  },
+  {
+    clave: "bi.insights.subida_semanal_pct",
+    valor: "50",
+    descripcion: "Umbral % de subida de una categoria (ultimas 2 semanas vs 2 anteriores) para el insight ambar del Pulso",
+  },
+  {
+    clave: "bi.insights.dias_sin_reportes",
+    valor: "30",
+    descripcion: "Dias sin reportes de un colegio activo para disparar el insight cielo del Pulso",
+  },
+  {
+    clave: "operacion.dias_sin_actividad_bad",
+    valor: "30",
+    descripcion: "Dias sin reportes para que un colegio pase a semaforo rubi en /operacion",
+  },
+  {
+    clave: "operacion.horas_actividad_warn",
+    valor: "6",
+    descripcion: "Horas desde el ultimo reporte para semaforo ambar (actividad reciente) en /operacion",
+  },
+  {
+    clave: "operacion.minutos_badge_nuevo",
+    valor: "120",
+    descripcion: "Minutos de recencia para el badge NUEVO en la tabla de /operacion",
+  },
+  {
+    clave: "operacion.min_repeticion_categoria",
+    valor: "3",
+    descripcion: "Minimo de reportes del mes en una categoria sensible para semaforo ambar",
+  },
+  {
+    clave: "operacion.categorias_sensibles",
+    valor: "SOLICITUD_MATERIAL,COMPARTIMIENTO_SEXUAL,DIFUSION_NO_CONSENTIDA,SOLICITUD_ENCUENTRO,EXTORSION",
+    descripcion: "Categorias (enum CategoriaConducta de PI, separadas por coma) que elevan el semaforo si se repiten",
   },
 ];
 

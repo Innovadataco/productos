@@ -165,3 +165,63 @@
         transition: none !important;
     }
 }
+
+/* ==========================================================================
+   Pulso (dashboard · mockup pantalla 2) — capa viva de la página:
+   ticker en bucle continuo, trazos SVG que se dibujan (gauge y donut),
+   barras que crecen escalonadas y barrido de brillo del insight nuevo.
+   Patrón común: el estado FINAL vive en el atributo/estilo base y la
+   animación solo embellece — con prefers-reduced-motion todo aparece
+   ya en su estado final (la regla global de arriba apaga las animaciones).
+   ========================================================================== */
+
+/* Ticker en vivo: la pista lleva DOS copias idénticas del contenido y
+   `rodar` desplaza exactamente -50% (una copia) → bucle continuo sin JS. */
+.ticker-pista {
+    display: flex;
+    width: max-content;
+    animation: rodar 36s linear infinite;
+}
+@keyframes rodar {
+    to { transform: translateX(-50%); }
+}
+
+/* Trazo SVG que se dibuja (gauge de salud y segmentos del donut):
+   stroke-dashoffset anima de --dash-inicial a --dash-final (inline por
+   segmento); el atributo stroke-dashoffset ya trae el valor final. */
+.trazo-animado {
+    animation: dibujo 1.4s var(--curva) both;
+}
+@keyframes dibujo {
+    from { stroke-dashoffset: var(--dash-inicial); }
+    to { stroke-dashoffset: var(--dash-final); }
+}
+
+/* Barras del gráfico diario: crecen desde abajo con retardo escalonado
+   (--anim-retardo inline por barra). */
+.barra-crece {
+    transform-origin: bottom;
+    animation: crece 0.8s var(--curva) both;
+    animation-delay: var(--anim-retardo, 0ms);
+}
+@keyframes crece {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+
+/* Barrido de brillo: marca el insight más reciente ("nuevo") */
+.brillo-nuevo {
+    position: relative;
+    overflow: hidden;
+}
+.brillo-nuevo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.14) 50%, transparent 60%);
+    transform: translateX(-100%);
+    animation: barrido 3.2s var(--curva) infinite;
+}
+@keyframes barrido {
+    60%, 100% { transform: translateX(100%); }
+}
