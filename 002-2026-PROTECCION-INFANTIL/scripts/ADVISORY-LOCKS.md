@@ -54,4 +54,4 @@ esta tabla y los `scripts/*.mjs` estén 1:1.
 - **`923456789`**: simulador de abuso (rango de banco de pruebas, no producción).
 - **`987654321`**: notificaciones (histórico, se conserva por identidad).
 
-El siguiente ID libre para un worker nuevo del pool principal es **`123456799`**.
+El siguiente ID libre para un worker nuevo del pool principal es **`123456800`**.
