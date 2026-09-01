@@ -1,5 +1,5 @@
 "use client";
- 
+/* eslint-disable max-lines -- Bandeja nivel-dios: filtros, paginación, selección y acciones inline. */
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
