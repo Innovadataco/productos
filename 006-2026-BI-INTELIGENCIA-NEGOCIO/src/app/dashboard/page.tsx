@@ -1,31 +1,57 @@
 import Topbar from "@/components/bi/Topbar";
+import { getPulso } from "@/lib/bi/pulso";
+import { getInsights } from "@/lib/bi/insights";
+import TickerVivo from "@/components/bi/pulso/TickerVivo";
+import HeroPulso from "@/components/bi/pulso/HeroPulso";
+import SeccionInsights from "@/components/bi/pulso/SeccionInsights";
+import GridKpis from "@/components/bi/pulso/GridKpis";
+import GraficoBarras from "@/components/bi/pulso/GraficoBarras";
+import GraficoDonut from "@/components/bi/pulso/GraficoDonut";
 
-export default function DashboardPage() {
+// Los datos vienen de la réplica en CADA request: jamás prerender estático
+// (Prisma corre en runtime Node, no en edge ni en build).
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/**
+ * Pulso (mockup-bi-v2 · pantalla 2) con datos REALES de la réplica de PI.
+ * Server Component: trae todo con getPulso() + getInsights() (contratos de
+ * la capa de datos, Fase 3) y compone secciones server; la única isla
+ * client es CifraAnimada (count-up con requestAnimationFrame).
+ *
+ * Candado 9: hayDatos=false apaga KPIs y gráficas — el vacío se dice en el
+ * hero, no se disfraza de ceros. Candado 10: toda cifra renderizada salió
+ * de PulsoData/Insight; esta página no calcula métricas.
+ */
+export default async function DashboardPage() {
+    const [pulso, insights] = await Promise.all([getPulso(), getInsights()]);
+    const enAtencion = insights.some((i) => i.severidad === "ambar");
+
     return (
-        <main className="relative z-10 max-w-[1180px] mx-auto px-6 pt-8 pb-20">
+        <main className="relative z-10 mx-auto max-w-[1180px] px-6 pb-20 pt-8">
             <Topbar titulo="Pulso de la" acento="operación" activo="dashboard" />
 
-            <section className="glass anim-entrada p-8 sm:p-12 text-center" style={{ "--anim-retardo": "120ms" } as React.CSSProperties}>
-                <h2 className="font-serif text-[clamp(30px,4.5vw,48px)] tracking-tight leading-tight">
-                    La operación respira <em className="text-estado-pino">en calma</em>
-                </h2>
-                <p className="text-muted mt-4 max-w-xl mx-auto text-[15px] leading-relaxed">
-                    Infraestructura validada: estás dentro con sesión propia del 006.
-                    El pulso en vivo (ticker, KPIs, “BI detectó”) se conecta a la réplica
-                    de PI en las Fases 2 y 3.
-                </p>
-                <div className="flex gap-2.5 justify-center flex-wrap mt-7">
-                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-medium border border-[rgb(var(--tinta-rgb)/0.08)] bg-[rgb(var(--papel-rgb)/0.6)]">
-                        <span className="punto punto-ok anim-pulso" /> App desplegada
-                    </span>
-                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-medium border border-[rgb(var(--tinta-rgb)/0.08)] bg-[rgb(var(--papel-rgb)/0.6)]">
-                        <span className="punto punto-ok" /> Sesión propia activa
-                    </span>
-                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12.5px] font-medium border border-[rgb(var(--tinta-rgb)/0.08)] bg-[rgb(var(--papel-rgb)/0.6)]">
-                        <span className="punto punto-warn" /> Réplica PI · Fase 1b
-                    </span>
-                </div>
-            </section>
+            <TickerVivo items={pulso.ticker} />
+
+            <HeroPulso
+                hayDatos={pulso.hayDatos}
+                enAtencion={enAtencion}
+                reportesHoy={pulso.kpis.reportesHoy}
+                ultimoReporteHaceMin={pulso.ultimoReporteHaceMin}
+                saludOperativa={pulso.saludOperativa}
+            />
+
+            <SeccionInsights insights={insights} />
+
+            {pulso.hayDatos && (
+                <>
+                    <GridKpis kpis={pulso.kpis} serieDiaria={pulso.serieDiaria} />
+                    <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+                        <GraficoBarras serie={pulso.serieDiaria} />
+                        <GraficoDonut categorias={pulso.porCategoria} totalMes={pulso.kpis.reportesMes} />
+                    </div>
+                </>
+            )}
         </main>
     );
 }

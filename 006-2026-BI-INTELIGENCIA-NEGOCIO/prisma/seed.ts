@@ -309,6 +309,41 @@ const CONFIGS: Array<{ clave: string; valor: string; descripcion: string }> = [
     valor: "500",
     descripcion: "LIMIT maximo permitido en las consultas del motor NL->SQL (techo duro)",
   },
+  {
+    clave: "bi.insights.subida_semanal_pct",
+    valor: "50",
+    descripcion: "Umbral % de subida de una categoria (ultimas 2 semanas vs 2 anteriores) para el insight ambar del Pulso",
+  },
+  {
+    clave: "bi.insights.dias_sin_reportes",
+    valor: "30",
+    descripcion: "Dias sin reportes de un colegio activo para disparar el insight cielo del Pulso",
+  },
+  {
+    clave: "operacion.dias_sin_actividad_bad",
+    valor: "30",
+    descripcion: "Dias sin reportes para que un colegio pase a semaforo rubi en /operacion",
+  },
+  {
+    clave: "operacion.horas_actividad_warn",
+    valor: "6",
+    descripcion: "Horas desde el ultimo reporte para semaforo ambar (actividad reciente) en /operacion",
+  },
+  {
+    clave: "operacion.minutos_badge_nuevo",
+    valor: "120",
+    descripcion: "Minutos de recencia para el badge NUEVO en la tabla de /operacion",
+  },
+  {
+    clave: "operacion.min_repeticion_categoria",
+    valor: "3",
+    descripcion: "Minimo de reportes del mes en una categoria sensible para semaforo ambar",
+  },
+  {
+    clave: "operacion.categorias_sensibles",
+    valor: "SOLICITUD_MATERIAL,COMPARTIMIENTO_SEXUAL,DIFUSION_NO_CONSENTIDA,SOLICITUD_ENCUENTRO,EXTORSION",
+    descripcion: "Categorias (enum CategoriaConducta de PI, separadas por coma) que elevan el semaforo si se repiten",
+  },
 ];
 
 async function seedConfig(): Promise<void> {
