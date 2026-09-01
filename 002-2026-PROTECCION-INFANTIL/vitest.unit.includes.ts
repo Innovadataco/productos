@@ -90,6 +90,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/colegio/home/FranjaVigilancia.test.tsx",
     "src/components/modules/colegio/home/HeroEstado.test.tsx",
     "src/components/modules/colegio/home/HomeRectorPage.test.tsx",
+    // SPEC-353 (A-69 · C6): tarjeta de la frase accionable.
+    "src/components/modules/colegio/home/QueHacerHoyCard.test.tsx",
     "src/components/modules/colegio/home/TendenciaReportes.test.tsx",
     "src/components/modules/colegio/seguimiento/BitacoraCaso.test.tsx",
     "src/components/modules/colegio/seguimiento/PendientesCaso.test.tsx",
@@ -177,6 +179,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/fechas-humano.test.ts",
     "src/lib/colegio/normalizacion.test.ts",
     "src/lib/colegio/periodo.test.ts",
+    // SPEC-353 (A-69 · C6): reglas puras de la frase "qué hacer hoy" del rector.
+    "src/lib/colegio/que-hacer-hoy.test.ts",
     "src/lib/colegio/seguimiento.test.ts",
     "src/lib/colegio/semaforo.test.ts",
     "src/lib/config-cache.test.ts",
