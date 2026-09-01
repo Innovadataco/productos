@@ -120,6 +120,20 @@ La lista canónica de qué se copia de 005 a 006 vive en `inventario-activos-005
 - **Réplica:** reusar rol + publicación `bi_replica` del Postgres de PI, SIN tablas con PII (Ley 1581). Slot de réplica: retiro permanente exige `pg_drop_replication_slot` (el del 005 ya fue eliminado).
 - **Playbook P/G/D/S/B/SE/T** incorporado como regla en `AGENTS.md` §7.
 
+## Visión de analítica · ayer, hoy y mañana (Jelkin · 01-09-2026)
+
+El producto organiza su inteligencia en tres zonas temporales:
+
+- **Ayer (descriptivo):** qué pasó — reportes por fecha, histórico, comparativas entre periodos.
+- **Hoy (presente vivo):** el Pulso — ticker en vivo, semáforos, qué está pasando ahora mismo.
+- **Mañana (proyección):** tendencias proyectadas con SQL sobre la réplica (medias móviles, ritmo de cierre de mes), detección de patrones y **alertas proactivas**: BI detecta, avisa y propone acción sin que le pregunten. La zona "BI detectó" del mockup es el corazón del producto, no un adorno.
+
+El mockup `mockup-bi-v2.html` (este directorio) es la referencia visual obligatoria: centro de comando vivo, oscuro por defecto, BI proactivo.
+
+## Deploy de validación (Jelkin · 01-09-2026)
+
+Se adelanta el uso del dominio: el corte vertical de Fase 1a (login + infra) se despliega directamente en `https://bi.innovadataco.com` (libre tras el apagado del 005) para validación desde internet. La eliminación del 005 sigue pendiente del corte final.
+
 ## Estado
 
 - **Fecha:** 2026-09-01
