@@ -7,7 +7,8 @@ import { cookies } from "next/headers";
  * con BI_AUTH_SECRET (propio del 006; jamás compartido con PI).
  */
 export const COOKIE_SESION = "bi_sesion";
-const DURACION_SEG = 60 * 60 * 12; // 12 h
+// B3: nada quemado — la duración de sesión es parámetro de env (minutos).
+const DURACION_SEG = Number(process.env.BI_SESION_DURACION_MIN ?? "720") * 60;
 
 function clave(): Uint8Array {
     const secreto = process.env.BI_AUTH_SECRET;

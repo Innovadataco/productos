@@ -27,7 +27,11 @@ async function sesionValida(token: string | undefined): Promise<boolean> {
 }
 
 function urlPublica(request: NextRequest, path: string): string {
-    const fallback = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://bi.innovadataco.com");
+    // B2/B3: la URL pública viene SIEMPRE de env; si falta, falla en voz alta
+    // (misconfiguración de deploy, no se adivina en silencio).
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL no configurado");
+    const fallback = new URL(appUrl);
     const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? fallback.host;
     const proto = request.headers.get("x-forwarded-proto") ?? fallback.protocol.replace(":", "");
     return `${proto}://${host}${path}`;

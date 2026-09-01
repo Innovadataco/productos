@@ -8,8 +8,8 @@
 # ==========================================================================
 set -euo pipefail
 
-RAMA="work/bi-SPEC-006-bi-v2"
-REPO_DIR="/opt/proteccion-infantil/bi-repo"
+RAMA="${BI_DEPLOY_RAMA:-work/bi-SPEC-006-bi-v2}"
+REPO_DIR="${BI_REPO_DIR:-/opt/proteccion-infantil/bi-repo}"
 APP_DIR="$REPO_DIR/006-2026-BI-INTELIGENCIA-NEGOCIO"
 
 echo "== Actualizando clon a origin/$RAMA =="
