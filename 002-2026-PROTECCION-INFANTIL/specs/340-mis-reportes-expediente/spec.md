@@ -2,7 +2,7 @@
 
 **Feature Branch**: `work/pi-SPEC-340-mis-reportes-expediente`
 **Created**: 01-09-2026
-**Status**: PLANEADO
+**Status**: IMPLEMENTADO
 **Radicado**: A-68 · Brief del CEO v1.0 (mesa Jelkin 31-08/01-09) · mockup aprobado · Fase 1 de 2 (la Fase 2, «la inteligencia» — análisis IA, radar semanal, aviso proactivo — es SPEC-341, partición aprobada por el CEO 01-09)
 **Impacto en arquitectura:** SÍ.
 1. **Deroga la creación automática del expediente** (SPEC-323): el expediente pasa a nacer por botón del padre. La cadena de reportes sigue existiendo siempre; el expediente es la vista consolidada que el padre arma a propósito.
@@ -285,3 +285,20 @@ El escudo del header pasa a **ámbar** siempre que el padre tenga alguna alerta 
 - **A-7**: Fuera de alcance de esta spec (van en SPEC-341): análisis IA (capa 2), radar semanal del hijo, aviso proactivo «otra familia reportó». Fuera de A-68 entero: cuentas gemelas, «prepárate para la denuncia», integración con la entidad competente.
 - **A-8**: Voz: tuteo neutro colombiano, serena; ámbar único color de alerta; nada de rojo (reglas vigentes de A-67).
 - **A-9**: Migraciones aditivas; el expediente de producción (1) se conserva con su historia.
+
+---
+
+## Implementación (01-09-2026)
+
+**Rama**: `work/pi-SPEC-340-mis-reportes-expediente` · ver `cierre.md` para el detalle completo, las desviaciones (la self-FK de la cadena, la derogación incondicional, el contrato del sello por construcción) y la deuda declarada.
+
+| Área | Piezas |
+|---|---|
+| Esquema | 4 migraciones: derogar auto-cierre (parámetro) · self-FK de la cadena con backfill y guardas · InformePadre + origenCreacion |
+| Derogaciones | alta sin expediente · auto-cierre incondicional · letrero y CTA fuera |
+| Rutas | cadenas · evento (herencia) · expedientes (botón) · step-up · texto (única vía) · lectura (capa 1) · PDF con sello · verificar-pdf de 3 vías |
+| Módulos puros | `lectura-capa1` (12 casos + anti-plantilla) · `stepup-sello` |
+| UI | MisReportesCadenas · AgregarEvento · TextoSensible · VerAnalisis · ExpedienteVivo (mapa+historia) · escudo ámbar |
+| Consumidores | home-timeline, sugerencia y estado vacío → la cadena (círculo documentado como no migrado) |
+
+**Pendiente**: recorrido del CEO (candado 25) y aceptación de Jelkin.

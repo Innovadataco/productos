@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **101** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **102** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -496,7 +496,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (53)
+### Otros (sin regla de dominio) (54)
 
 #### `AclaracionExpediente`
 
@@ -756,6 +756,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | fechaCierre | DateTime | opcional |
 | fechaEscalado | DateTime | opcional |
 | estado | EstadoExpediente | — |
+| origenCreacion | String | — |
 | scoreGravedadActual | ScoreGravedad | — |
 | categoriasDominantesJson | Json | opcional |
 | numEventos | Int | — |
@@ -774,6 +775,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | aclaracion | AclaracionExpediente | opcional, relación |
 | slaEfectivoHoras | Int | opcional |
 | fechaEscaladoRojoEn | DateTime | opcional |
+| informesPadre | InformePadre | lista, relación |
 
 #### `GuiaAccionCategoria`
 
@@ -946,6 +948,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | expediente | Expediente | relación (FK) |
 | generadoPor | Usuario | opcional, relación (FK) |
 | aclaraciones | AclaracionExpediente | lista, relación |
+
+#### `InformePadre`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | — |
+| numeroSecuencial | Int | — |
+| pdfHash | String | único |
+| codigoVerificacion | String | — |
+| generadoEn | DateTime | — |
+| generadoPorId | String | — |
+| expediente | Expediente | relación (FK) |
+| generadoPor | Usuario | relación |
 
 #### `Materia`
 
@@ -1624,6 +1640,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | alertasColegio | AlertaColegio | lista, relación |
 | eventoMatchDisparado | EventoMatch | opcional, relación |
 | eventos | EventoExpediente | lista, relación |
+| reportePrincipalId | String | opcional |
+| reportePrincipal | Reporte | opcional, relación |
+| eventosDeCadena | Reporte | lista, relación |
 
 #### `SolicitudComite`
 
@@ -1915,6 +1934,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | bloqueosCreados | BlockList | lista, relación |
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
 | expedientes | Expediente | lista, relación |
+| informesPadre | InformePadre | lista, relación |
 | sesionesLog | SesionLog | lista, relación |
 | auditConsentimientos | AuditConsentimiento | lista, relación |
 | informesConsolidados | InformeConsolidado | lista, relación |
@@ -1985,6 +2005,7 @@ erDiagram
     Expediente ||--o{ AclaracionExpediente : "expediente"
     Expediente ||--o{ EventoExpediente : "expediente"
     Expediente ||--o{ InformeConsolidado : "expediente"
+    Expediente ||--o{ InformePadre : "expediente"
     Expediente ||--o{ PatronExpediente : "expediente"
     Hijo ||--o{ HijoPadre : "hijo"
     Hijo ||--o{ IdentificadorHijo : "hijo"

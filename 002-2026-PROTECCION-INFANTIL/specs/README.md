@@ -475,7 +475,7 @@
 | [334](334-perfil-padre-datos/spec.md) | SPEC-334 · El padre registra los datos de su perfil · 6 campos (nombres/apellidos/fecha nac/país/ciudad/teléfono) + migración Usuario (prioridad CEO directa) | 🟡 En desarrollo |
 | [325](325-protejo-vigilo-nucleo/spec.md) | SPEC-325 · A quién protejo, a quién vigilo · núcleo (002-PI-225 · A-61) — modelo Hijo + arreglo ContactoConfianza + mecanismo de monitoreo compartido | 🟡 En desarrollo |
 | [339](339-camino-guiado-padre/spec.md) | SPEC-339 · El camino guiado del padre (A-67 · Fase 1) — registro por enlace + camino obligatorio de 4 pasos no salteable + tope de menores parametrizado + un menor por padre + cruce identificador-hijo→aviso | 🟡 En desarrollo |
-| [340](340-mis-reportes-expediente/spec.md) | SPEC-340 · Mis reportes y el expediente · el hilo (A-68 · Fase 1) — tarjeta por cadena + evento sin repetir datos + análisis explicado + step-up del texto + expediente por botón (nada se cierra) + mapa con historia + informes con sello | 🔵 Planeado |
+| [340](340-mis-reportes-expediente/spec.md) | SPEC-340 · Mis reportes y el expediente · el hilo (A-68 · Fase 1) — tarjeta por cadena + evento sin repetir datos + análisis explicado + step-up del texto + expediente por botón (nada se cierra) + mapa con historia + informes con sello | 🟢 Implementado |
 
 ## Incidencias de calidad de datos
 
