@@ -125,3 +125,24 @@ describe("tieneVigencia y esExentaVigencia", () => {
         expect(destinoVigencia("SCHOOL_ADMIN")).toBe("/dashboard/colegio/suscripcion");
     });
 });
+
+// SPEC-346 (I-234 · recorrido en vivo 340): el sello del PDF exige que
+// /api/publico/** y /verificar/** sean alcanzables SIN JWT. Sin este candado,
+// una autoridad no puede verificar el documento.
+describe("SPEC-346 · rutas del sello público del PDF", () => {
+    it("/api/publico/verificar-pdf/<hash> es pública (sin auth)", () => {
+        expect(esRutaPublica("/api/publico/verificar-pdf/abc123")).toBe(true);
+    });
+
+    it("/api/publico/guia-accion/categoria/<cat> es pública", () => {
+        expect(esRutaPublica("/api/publico/guia-accion/categoria/CONTACTO_INSISTENTE")).toBe(true);
+    });
+
+    it("/verificar/<codigo> es pública (la página del sello)", () => {
+        expect(esRutaPublica("/verificar/abc123def")).toBe(true);
+    });
+
+    it("guard negativo — /api/padre/foo NO es pública", () => {
+        expect(esRutaPublica("/api/padre/foo")).toBe(false);
+    });
+});

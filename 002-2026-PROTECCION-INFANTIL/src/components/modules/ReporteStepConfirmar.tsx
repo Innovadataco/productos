@@ -30,6 +30,12 @@ export function ReporteStepConfirmar({
 
     const plataformaDisplay = formatPlataforma(data.plataforma, data.otraPlataforma, data.plataforma);
 
+    // SPEC-346 (I-234 · recorrido 340): fecha en formato Colombia, zona Bogotá.
+    // Antes se mostraba el string crudo del `datetime-local` ("2026-08-30T21:15").
+    const fechaMostrar = data.fechaIncidente
+        ? new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeStyle: "short", timeZone: "America/Bogota" }).format(new Date(data.fechaIncidente))
+        : "No especificada";
+
     return (
         <div className="space-y-5">
             <h2 className="text-lg font-semibold text-body">Revisa y confirma</h2>
@@ -48,8 +54,8 @@ export function ReporteStepConfirmar({
                     <span className="font-medium text-body">{data.ciudad}, {data.pais}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span className="text-subtle">Fecha del incidente</span>
-                    <span className="font-medium text-body">{data.fechaIncidente || "No especificada"}</span>
+                    <span className="text-subtle">Fecha y hora del incidente</span>
+                    <span className="font-medium text-body">{fechaMostrar}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-subtle">Edad aproximada del menor</span>
