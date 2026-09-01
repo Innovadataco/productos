@@ -205,12 +205,17 @@ export async function evaluarYEncolarSiCorresponde(
 
     // Audit 87c311a0 · fix nº2: contar FALLIDOs del mismo hash. Si superan el
     // umbral, la UI muestra estado terminal ("no pudimos generarlo") en vez
-    // de re-encolar en bucle.
+    // de re-encolar en bucle EN APERTURAS AUTOMÁTICAS.
     const { agotadoPorFallos, ultimoMotivoFallo } = await contarFallidosConsecutivos(
         expedienteId, hashActual, maxFallidos
     );
 
-    if (debeEncolar && !agotadoPorFallos) {
+    // Audit 7ac61377 · el botón "Actualizar" es LA vía de escape del padre:
+    // debe forzar el re-encolado cuando el estado es agotado. Solo la apertura
+    // automática respeta el corte por agotamiento.
+    const bloqueadoPorAgotamiento = agotadoPorFallos && disparador === "APERTURA";
+
+    if (debeEncolar && !bloqueadoPorAgotamiento) {
         const yaEnCurso = await ultimoGenerandoDe(expedienteId, hashActual);
         if (yaEnCurso) {
             estado = "GENERANDO";
