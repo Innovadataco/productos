@@ -1,0 +1,45 @@
+# ==========================================================================
+# CI del producto 006 (BI v2) — archivo NUEVO autorizado por CEO 31-08-2026.
+# PROHIBIDO editar los workflows existentes de PI.
+# T3/T4: la verdad es el CI en Linux — typecheck + build en cada push/PR.
+# ==========================================================================
+name: bi-006
+
+on:
+  push:
+    branches: [work/bi-SPEC-006-bi-v2]
+    paths:
+      - "006-2026-BI-INTELIGENCIA-NEGOCIO/**"
+      - ".github/workflows/bi-006.yml"
+  pull_request:
+    paths:
+      - "006-2026-BI-INTELIGENCIA-NEGOCIO/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 006-2026-BI-INTELIGENCIA-NEGOCIO
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # npm install (no npm ci): el package-lock se genera y se commitea en Fase 1b
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          # Valores de relleno solo para compilar en CI — no son secretos reales
+          BI_AUTH_SECRET: ci-build-secret
+          BI_ADMIN_EMAIL: admin@example.com
+          BI_ADMIN_PASSWORD: ci-build-password
+          NEXT_PUBLIC_APP_URL: https://bi.innovadataco.com

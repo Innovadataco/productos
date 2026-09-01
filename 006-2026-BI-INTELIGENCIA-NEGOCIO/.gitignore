@@ -1,0 +1,9 @@
+# Dependencias y build
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secretos: jamás commitear (regla dura §1)
+.env*
+!.env.example

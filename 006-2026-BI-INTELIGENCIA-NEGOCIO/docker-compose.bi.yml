@@ -1,0 +1,36 @@
+# ==========================================================================
+# BI v2 (006) — stack de producción en VPS Hostinger.
+# SIN Superset, SIN Vanna, SIN Telegram (eliminados para siempre).
+# D1: healthcheck + restart + rotación de logs en todo contenedor.
+# D2: puerto 127.0.0.1:3001 (liberado por el 005; el proxy de
+#     bi.innovadataco.com ya apunta ahí). Red propia, prefijo bi-.
+# ==========================================================================
+name: bi-006
+
+services:
+  bi-next:
+    build: .
+    image: bi-006-next:${BI_VERSION:-dev}
+    container_name: bi-next
+    env_file:
+      - .env.bi.production   # lo crea Jelkin (600, fuera de git) — D3d
+    ports:
+      - "127.0.0.1:3001:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/bi/estado-sistema"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bi-net
+
+networks:
+  bi-net:
+    driver: bridge
