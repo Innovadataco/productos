@@ -23,6 +23,8 @@ import { getOllamaBaseUrl } from "../src/lib/ai/ollama-config.ts";
 import { prisma } from "../src/lib/prisma.ts";
 import { logAudit } from "../src/lib/audit.ts";
 import { notificarCambioCirculoSiCorresponde } from "../src/lib/dal/services/circulo-confianza/index.ts";
+// SPEC-339 (A-67): aviso al padre cuando una cuenta de su HIJO aparece en un reporte.
+import { notificarHijosSiCorresponde } from "../src/lib/dal/services/hijos/index.ts";
 import { notificarColegioSiCorresponde } from "../src/lib/colegio/alertas.ts";
 import { detectarYRegistrarMatch } from "../src/lib/dal/services/evento-match.ts";
 import { agregarPatronPorReporte } from "../src/lib/colegio/patrones.ts";
@@ -223,6 +225,12 @@ async function start() {
 
                 notificarCambioCirculoSiCorresponde(reporteId).catch((err) => {
                     console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
+                });
+
+                // SPEC-339: mismo mecanismo, presentación de hijo. Errores aislados:
+                // un fallo acá no toca el círculo ni el procesamiento.
+                notificarHijosSiCorresponde(reporteId).catch((err) => {
+                    console.error(`[WORKER] Error notificando hijos reporte=${reporteId}:`, err.message);
                 });
 
                 notificarColegioSiCorresponde(reporteId)

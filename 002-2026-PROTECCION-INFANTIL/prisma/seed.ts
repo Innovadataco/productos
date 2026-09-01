@@ -90,6 +90,11 @@ async function seedParametrosPadre() {
         { clave: "padre.expediente.auto_cierre_meses", valor: "6", tipo: TipoParametro.INTEGER, descripcion: "Meses de inactividad para auto-cierre de expediente" },
         { clave: "padre.expediente.consolidacion_min_reportes", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Mínimo de reportes para pasar a CONSOLIDANDO" },
         { clave: "padre.expediente.max_aclaraciones", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Máximo de aclaraciones por expediente" },
+        // SPEC-339 (A-67 · brief §2.4): el tope de menores es PARÁMETRO, no una
+        // constante en el código — el admin lo cambia sin desplegar. El mensaje
+        // que ve el padre también se siembra: {{maximo}} se reemplaza al mostrarlo.
+        { clave: "padre.hijos.maximo", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Máximo de menores que un padre puede registrar" },
+        { clave: "padre.hijos.maximo_mensaje", valor: "Puedes cuidar hasta {{maximo}} menores desde esta cuenta. Si necesitas más, escríbenos y lo resolvemos.", tipo: TipoParametro.STRING, descripcion: "Mensaje que ve el padre al alcanzar el tope de menores" },
         { clave: "padre.expediente.rate_limit_eventos_24h", valor: "999", tipo: TipoParametro.INTEGER, descripcion: "Límite de eventos que un padre puede agregar en 24h" },
         { clave: "padre.comite.sla_horas_normal", valor: "48", tipo: TipoParametro.INTEGER, descripcion: "SLA de comité para casos normales" },
         { clave: "padre.comite.sla_horas_gravedad_roja", valor: "12", tipo: TipoParametro.INTEGER, descripcion: "SLA de comité para expedientes ROJO" },
@@ -828,10 +833,31 @@ async function seedEventosEmailMigrados() {
             // tiene cuenta. Anti-enumeración: la pantalla no revela nada; el aviso
             // va SOLO al buzón. Lenguaje de padre (A-62), sin tecnicismos.
             clave: "auth.cuenta_existente.email",
-            asunto: "Ya tenés una cuenta con este correo",
+            // SPEC-339 (D-1): pasado a tuteo neutro. Este correo lo recibe el padre
+            // DENTRO de la puerta que reconstruye A-67; dejarlo en voseo partiría
+            // la voz en mitad del camino.
+            asunto: "Ya tienes una cuenta con este correo",
             cuerpoMarkdown:
-                "Hola,\n\nAlguien intentó crear una cuenta con este correo, pero vos ya tenés una con nosotros.\n\nPara entrar, usá tu correo y tu clave acá:\n{{urlLogin}}\n\n¿No te acordás de la clave? La recuperás en un minuto acá:\n{{urlRecuperar}}\n\nSi no fuiste vos, no tenés que hacer nada: tu cuenta está segura.",
+                "Hola,\n\nAlguien intentó crear una cuenta con este correo, pero tú ya tienes una con nosotros.\n\nPara entrar, usa tu correo y tu clave acá:\n{{urlLogin}}\n\n¿No recuerdas la clave? La recuperas en un minuto acá:\n{{urlRecuperar}}\n\nSi no fuiste tú, no tienes que hacer nada: tu cuenta está segura.",
             variablesSchema: { type: "object", properties: { urlLogin: { type: "string" }, urlRecuperar: { type: "string" } } },
+        },
+        {
+            // SPEC-339 (A-67 §2.1): el padre recibe un ENLACE, no un código que
+            // transcribe. Jelkin: "padres adultos que de pronto no son muy cercanos
+            // a la tecnología". Tuteo neutro colombiano (decisión CEO D-1).
+            clave: "auth.registro_enlace.email",
+            asunto: "Crea tu contraseña y empecemos",
+            cuerpoMarkdown:
+                "Hola,\n\nEstás para cuidarlos. Nosotros, para avisarte.\n\nAbre este enlace y crea tu contraseña:\n{{url}}\n\nEl enlace vence en 24 horas y solo se puede usar una vez.\n\nSi no fuiste tú quien lo pidió, no tienes que hacer nada.",
+            variablesSchema: { type: "object", properties: { url: { type: "string" } } },
+        },
+        {
+            // SPEC-339 (A-67 §2.1): confirmación de que la cuenta quedó creada.
+            clave: "auth.bienvenida_padre.email",
+            asunto: "Tu cuenta está lista",
+            cuerpoMarkdown:
+                "Hola,\n\nTu cuenta quedó creada. Desde acá te avisamos si alguno de los tuyos aparece en un reporte.\n\nEntra cuando quieras:\n{{urlLogin}}\n\nTe faltan unos pocos pasos para terminar de configurarla. Con calma, toma un minuto.",
+            variablesSchema: { type: "object", properties: { urlLogin: { type: "string" } } },
         },
         {
             clave: "usuario.bienvenida.operador.email",
@@ -886,6 +912,23 @@ async function seedEventosEmailMigrados() {
             asunto: "{{asunto}}",
             cuerpoMarkdown:
                 "{{cuerpo}}\n\nIngresa a tu panel para ver el contexto completo:\n{{urlPanel}}",
+        },
+        {
+            // SPEC-339 (A-67 · punto 4 Calidad): el aviso que hace ÚTIL el Paso 3.
+            // Voz del brief §3: calma que tranquiliza, cero alarma, tuteo neutro.
+            clave: "padre.hijo.reporte.email",
+            asunto: "Sobre {{nombreHijo}} — sin afán, pero míralo",
+            cuerpoMarkdown:
+                "Hola,\n\nUna cuenta de {{nombreHijo}} ({{identificador}}{{plataformaTexto}}) apareció en un reporte hoy. Entra a ver de qué se trata, con calma:\n\n{{urlPanel}}\n\nEste aviso no incluye el contenido del reporte; todo está en tu panel.",
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreHijo: { type: "string" },
+                    identificador: { type: "string" },
+                    plataformaTexto: { type: "string" },
+                    urlPanel: { type: "string" },
+                },
+            },
         },
         {
             clave: "colegio.reporte_nuevo.email",
@@ -988,6 +1031,10 @@ async function seedEventosEmailMigrados() {
         // SPEC-338 (I-226): aviso "ya tenés una cuenta". rol "ALL" (como password_cambiada):
         // el destinatario puede ser de cualquier rol; evento de una sola regla → el motor no filtra.
         { evento: "auth.cuenta_existente", plantillaClave: "auth.cuenta_existente.email", rol: "ALL", obligatoria: true },
+        // SPEC-339 (A-67): la puerta del padre. Obligatorias — sin ellas no puede
+        // entrar, así que no admiten opt-out.
+        { evento: "auth.registro_enlace", plantillaClave: "auth.registro_enlace.email", rol: "PARENT", obligatoria: true },
+        { evento: "auth.bienvenida_padre", plantillaClave: "auth.bienvenida_padre.email", rol: "PARENT", obligatoria: true },
         { evento: "usuario.bienvenida.operador", plantillaClave: "usuario.bienvenida.operador.email", rol: "OPERADOR", obligatoria: true },
         { evento: "usuario.bienvenida.comite", plantillaClave: "usuario.bienvenida.comite.email", rol: "COMITE_VALIDACION", obligatoria: true },
         { evento: "usuario.credenciales.padre", plantillaClave: "usuario.credenciales.padre.email", rol: "PARENT", obligatoria: true },
@@ -996,6 +1043,9 @@ async function seedEventosEmailMigrados() {
         { evento: "reporte.revision.requerida", plantillaClave: "reporte.revision.requerida.email", rol: "ADMIN", obligatoria: false },
         { evento: "reporte.score_critico", plantillaClave: "reporte.score_critico.email", rol: "ADMIN", obligatoria: false },
         { evento: "padre.circulo_confianza.pendientes", plantillaClave: "padre.circulo_confianza.pendientes.email", rol: "PARENT", obligatoria: false },
+        // SPEC-339: aviso sobre un hijo. NO obligatoria — el padre tiene SU
+        // interruptor (notificacionesHijos), independiente del círculo.
+        { evento: "padre.hijo.reporte", plantillaClave: "padre.hijo.reporte.email", rol: "PARENT", obligatoria: false },
         { evento: "padre.circulo_confianza.reporte_enriquecido", plantillaClave: "padre.circulo_confianza.reporte_enriquecido.email", rol: "PARENT", obligatoria: false },
         { evento: "colegio.reporte_nuevo", plantillaClave: "colegio.reporte_nuevo.email", rol: "SCHOOL_ADMIN", obligatoria: false },
         { evento: "colegio.curso.umbral", plantillaClave: "colegio.curso.umbral.email", rol: "SCHOOL_ADMIN", obligatoria: false },

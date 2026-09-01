@@ -543,6 +543,14 @@ model Usuario {
   nombre                      String?
   // SPEC-334: datos de perfil del padre (aditivos, nullable). "Nombres" = `nombre`.
   apellidos                   String?
+  // SPEC-339 (A-67): documento del padre. Obligatorio en el Paso 2 del camino
+  // guiado (validación), nullable en el esquema porque hay cuentas vivas sin él.
+  // NO se declara @@unique: dos padres pueden digitar mal el mismo número y
+  // bloquear un registro por eso dejaría a un padre afuera sin salida propia.
+  documentoTipo               String?
+  documentoNumero             String?
+  // SPEC-339: se conserva en la BD y deja de pedirse en el camino (decisión CEO
+  // D-2, 31-08-2026). Ningún dato se borra.
   fechaNacimiento             DateTime?
   telefono                    String?
   paisId                      String?
@@ -599,10 +607,20 @@ model Usuario {
   // SPEC-246 (002-PI-149): cupones de recompensa de los que este usuario es beneficiario.
   bonosBeneficiario                BonoPromocional[]               @relation("BonosBeneficiario")
   contactosConfianza               ContactoConfianza[]
+  // SPEC-339: los menores de este padre (ficha propia, no compartida).
+  hijosPropios                     Hijo[]                          @relation("HijosDelPadre")
+  /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   hijos                            HijoPadre[]
   identificadoresHijoDesvinculados IdentificadorHijoDesvinculado[]
   notificacionesCirculo            Boolean                         @default(true)
   ultimaNotificacionCirculoEn      DateTime?
+  // SPEC-339 (A-67 · punto 4 Calidad): interruptor y enfriamiento PROPIOS de los
+  // avisos sobre hijos. NO se comparten con los del círculo: un aviso sobre un
+  // contacto vigilado no puede silenciar el aviso sobre un hijo, ni apagar los
+  // del círculo puede apagar los del hijo (regla de Jelkin: cada padre — y cada
+  // frente — con sus interruptores).
+  notificacionesHijos              Boolean                         @default(true)
+  ultimaNotificacionHijosEn        DateTime?
   ultimaNotificacionColegioEn      DateTime?
   transicionesReporte              TransicionReporte[]
   solicitudesComite                SolicitudComite[]               @relation("SolicitudesComite")
@@ -659,6 +677,8 @@ model Usuario {
   @@index([tenantId])
   @@index([paisId])
   @@index([ciudadId])
+  // SPEC-339: búsqueda del padre por documento desde administración.
+  @@index([documentoTipo, documentoNumero])
 }
 
 model PerfilOperador {
@@ -699,9 +719,9 @@ model IntegranteComite {
   creadoEn             DateTime                     @default(now())
   actualizadoEn        DateTime                     @updatedAt
 
-  comite        Usuario  @relation(fields: [comiteId], references: [id], name: "IntegrantesComite", onDelete: Cascade)
-  creadoPor     Usuario  @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
-  modificadoPor Usuario? @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
+  comite              Usuario           @relation(fields: [comiteId], references: [id], name: "IntegrantesComite", onDelete: Cascade)
+  creadoPor           Usuario           @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
+  modificadoPor       Usuario?          @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
   // SPEC-319 §2.4: casos cuyo cierre firmó este integrante.
   solicitudesFirmadas SolicitudComite[] @relation(name: "SolicitudesFirmadas")
 
@@ -738,6 +758,28 @@ model TokenRecuperacion {
 
   usuarioId String?
   usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([email])
+  @@index([tokenHash])
+  @@index([expiraEn])
+}
+
+/// SPEC-339 (A-67) · enlace de registro del padre.
+///
+/// Reemplaza al código de 6 dígitos SOLO para el padre: el registro de colegio
+/// sigue usando `CodigoVerificacion` y sus rutas, intactos.
+///
+/// Sin relación con `Usuario`: cuando se pide el enlace la cuenta todavía no
+/// existe; se crea al completar. Del token se guarda SOLO el hash — el valor en
+/// claro viaja en el enlace del correo y nunca se persiste.
+model TokenRegistro {
+  id            String   @id @default(cuid())
+  email         String
+  tokenHash     String
+  expiraEn      DateTime
+  usado         Boolean  @default(false)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
 
   @@index([email])
   @@index([tokenHash])
@@ -1100,33 +1142,33 @@ model Colegio {
   creadoEn                         DateTime            @default(now())
   actualizadoEn                    DateTime            @updatedAt
 
-  pais                     Pais                       @relation(fields: [paisId], references: [id])
-  departamento             Departamento?              @relation(fields: [departamentoId], references: [id])
-  ciudad                   Ciudad                     @relation(fields: [ciudadId], references: [id])
-  tenant                   Tenant                     @relation(fields: [tenantId], references: [id])
-  admin                    Usuario?
-  comiteConvivencia        Usuario?                   @relation(name: "ComiteConvivenciaColegio")
-  cursos                   Curso[]
-  estudiantes              Estudiante[]
-  profesores               Profesor[]
-  alertas                  AlertaColegio[]
-  solicitudesComite        SolicitudComite[]
-  patrones                 PatronInstitucional[]
-  preferenciasAvisos       PreferenciaAlertaColegio[]
-  registrosAvisos          RegistroAvisoColegio[]
-  seguimientosCaso         SeguimientoCaso[]
-  notasSeguimiento         NotaSeguimiento[]
-  auditLogs                AuditLog[]
-  sesionesCarga            CargaRosterSesion[]
-  Materia                  Materia[]
-  CursoMateria             CursoMateria[]
-  identificadoresAcudiente IdentificadorAcudiente[]
-  identificadoresProfesor  IdentificadorProfesor[]
+  pais                      Pais                       @relation(fields: [paisId], references: [id])
+  departamento              Departamento?              @relation(fields: [departamentoId], references: [id])
+  ciudad                    Ciudad                     @relation(fields: [ciudadId], references: [id])
+  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
+  admin                     Usuario?
+  comiteConvivencia         Usuario?                   @relation(name: "ComiteConvivenciaColegio")
+  cursos                    Curso[]
+  estudiantes               Estudiante[]
+  profesores                Profesor[]
+  alertas                   AlertaColegio[]
+  solicitudesComite         SolicitudComite[]
+  patrones                  PatronInstitucional[]
+  preferenciasAvisos        PreferenciaAlertaColegio[]
+  registrosAvisos           RegistroAvisoColegio[]
+  seguimientosCaso          SeguimientoCaso[]
+  notasSeguimiento          NotaSeguimiento[]
+  auditLogs                 AuditLog[]
+  sesionesCarga             CargaRosterSesion[]
+  Materia                   Materia[]
+  CursoMateria              CursoMateria[]
+  identificadoresAcudiente  IdentificadorAcudiente[]
+  identificadoresProfesor   IdentificadorProfesor[]
   identificadoresEstudiante IdentificadorEstudiante[] // SPEC-320: colegioId denormalizado en el identificador de estudiante
-  onboarding               OnboardingColegio?
-  notificacionesInApp      NotificacionInApp[]
+  onboarding                OnboardingColegio?
+  notificacionesInApp       NotificacionInApp[]
   // SPEC-210 (002-PI-110): módulo de pagos.
-  suscripciones            Suscripcion[]
+  suscripciones             Suscripcion[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -1635,11 +1677,11 @@ model Pais {
   esActivo Boolean  @default(true)
   creadoEn DateTime @default(now())
 
-  ciudades      Ciudad[]
-  departamentos Departamento[]
-  usuariosPerfil Usuario[]    @relation("UsuariosPorPais")
-  colegios      Colegio[]
-  reportes      Reporte[]
+  ciudades       Ciudad[]
+  departamentos  Departamento[]
+  usuariosPerfil Usuario[]      @relation("UsuariosPorPais")
+  colegios       Colegio[]
+  reportes       Reporte[]
 
   @@index([codigo])
   @@index([esActivo])
@@ -1679,11 +1721,11 @@ model Ciudad {
   nombreNormalizado String   @default("")
   poblacion         Int?
 
-  pais         Pais          @relation(fields: [paisId], references: [id])
-  departamento Departamento? @relation(fields: [departamentoId], references: [id])
-  usuariosPerfil Usuario[]   @relation("UsuariosPorCiudad")
-  colegios     Colegio[]
-  reportes     Reporte[]
+  pais           Pais          @relation(fields: [paisId], references: [id])
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  usuariosPerfil Usuario[]     @relation("UsuariosPorCiudad")
+  colegios       Colegio[]
+  reportes       Reporte[]
 
   @@unique([nombre, paisId])
   @@index([paisId])
@@ -1771,20 +1813,20 @@ model Reporte {
 }
 
 model SolicitudComite {
-  id              String    @id @default(cuid())
-  reporteId       String    @unique
-  numero          String    @unique
-  estado          String    @default("PENDIENTE")
-  comiteId        String?
-  operadorId      String?
+  id                   String    @id @default(cuid())
+  reporteId            String    @unique
+  numero               String    @unique
+  estado               String    @default("PENDIENTE")
+  comiteId             String?
+  operadorId           String?
   // SPEC-168: escalamiento colegio-scoped al Comité de Convivencia.
-  colegioId       String?
-  alertaColegioId String?   @unique
-  creadoPorId     String?
-  motivo          String    @db.Text
-  resolucion      String?   @db.Text
-  creadoEn        DateTime  @default(now())
-  resueltoEn      DateTime?
+  colegioId            String?
+  alertaColegioId      String?   @unique
+  creadoPorId          String?
+  motivo               String    @db.Text
+  resolucion           String?   @db.Text
+  creadoEn             DateTime  @default(now())
+  resueltoEn           DateTime?
   // SPEC-319 §2.4: integrante del comité que firma el cierre (cuenta compartida →
   // trazabilidad de quién decidió). Nullable: cierres previos a la feature quedan sin firma.
   integranteFirmanteId String?
@@ -2020,12 +2062,26 @@ model ContactoConfianza {
 }
 
 // ─── SPEC-325 (002-PI-225) · "A quién protejo" — módulo de hijos/familiares ───
-// PII de menor: patrón `Estudiante` (acceso solo por el padre dueño vía HijoPadre,
-// nunca por id suelto en URL, sin logs con el documento en claro). Dos entidades
-// separadas de `ContactoConfianza` (protejo lleva documento obligatorio, vigilo no),
-// pero UN mismo mecanismo de monitoreo (el cruce identificador→alerta es uno solo).
+// PII de menor: acceso solo por el padre dueño, nunca por id suelto en URL, sin
+// logs con el documento en claro. Entidad separada de `ContactoConfianza`
+// (protejo lleva documento obligatorio, vigilo no), pero UN mismo mecanismo de
+// monitoreo (el cruce identificador→alerta es uno solo).
+//
+// SPEC-339 (A-67 · D-4, 31-08-2026): la ficha del menor tiene DUEÑO. Antes era
+// global y única por documento en todo el sistema, y dos padres compartían la
+// misma fila — con tres consecuencias verificadas: el interruptor del menor era
+// compartido (un padre le apagaba los avisos al otro), el de cada identificador
+// también, y corregir los datos del menor le reescribía la ficha al otro padre.
+//
+// Regla de Jelkin (31-08-2026): "si otro padre se registra con un correo
+// diferente y quiere vincular los mismos hijos, no pasa absolutamente nada" —
+// cada padre tiene su lista, sus interruptores y sus avisos, independientes.
 model Hijo {
   id              String   @id @default(cuid())
+  // SPEC-339: dueño de la ficha. Cascade porque la ficha no sobrevive a su padre:
+  // sin esta regla `usuario.delete` falla por clave foránea y rompe
+  // `scripts/limpieza/borrar-padre.ts`, que borra tabla por tabla (defecto A-65).
+  usuarioId       String
   nombre          String
   apellidos       String   @default("")
   documentoTipo   String // set cerrado en Zod: RC|TI|CC|CE|PASAPORTE|OTRO (OBLIGATORIO)
@@ -2037,16 +2093,29 @@ model Hijo {
   creadoEn        DateTime @default(now())
   actualizadoEn   DateTime @updatedAt
 
-  padres          HijoPadre[]
+  usuario         Usuario             @relation("HijosDelPadre", fields: [usuarioId], references: [id], onDelete: Cascade)
   identificadores IdentificadorHijo[]
+  /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
+  padres          HijoPadre[]
 
-  // Detección dos-padres-un-niño: mismo documento ⇒ mismo menor, no se duplica.
-  @@unique([documentoTipo, documentoNumero])
+  // SPEC-339: la unicidad del documento es POR PADRE, no global. Un mismo padre
+  // no repite un documento; dos padres distintos sí pueden tener al mismo menor,
+  // cada uno con su propia ficha. Reemplaza a @@unique([documentoTipo, documentoNumero]).
+  @@unique([usuarioId, documentoTipo, documentoNumero])
+  @@index([usuarioId])
   @@index([documentoTipo, documentoNumero])
   @@index([estado])
 }
 
 // Puente padre↔hijo (un niño puede tener dos padres separados · §3.1-bis).
+//
+// ⚠️ SIN USO desde SPEC-339 (31-08-2026). Existía para que dos padres
+// compartieran UNA ficha de menor; desde D-4 cada padre tiene la suya
+// (`Hijo.usuarioId`) y este puente dejó de leerse y de escribirse.
+//
+// NO SE ELIMINA por orden del CEO: si Jelkin revierte la regla de "cada padre
+// su propia lista", el puente y sus datos históricos siguen ahí. Cualquier
+// código nuevo debe usar `Hijo.usuarioId`, nunca esta tabla.
 model HijoPadre {
   id        String   @id @default(cuid())
   hijoId    String
@@ -2079,8 +2148,14 @@ model IdentificadorHijo {
   @@index([plataformaId])
 }
 
-// El identificador del hijo es compartido entre los dos padres; "quitar" solo
-// lo desvincula de la vista de QUIEN lo quita, sin borrarlo para el otro (§3.1-bis).
+// El identificador del hijo era compartido entre los dos padres; "quitar" solo
+// lo desvinculaba de la vista de QUIEN lo quitaba, sin borrarlo para el otro.
+//
+// ⚠️ SIN USO desde SPEC-339 (31-08-2026). Era el parche para compartir una ficha
+// de menor entre dos padres; con ficha propia (`Hijo.usuarioId`) quitar un
+// identificador es quitarlo de verdad, y este mecanismo perdió su razón de ser.
+//
+// NO SE ELIMINA por orden del CEO: reversible si Jelkin revierte la regla D-4.
 model IdentificadorHijoDesvinculado {
   id              String   @id @default(cuid())
   identificadorId String

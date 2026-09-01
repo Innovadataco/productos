@@ -28,12 +28,12 @@ async function getAdminEmails(): Promise<string[]> {
     return admins.map((a) => a.email);
 }
 
-async function alertasHabilitadas(clave: string): Promise<boolean> {
+export async function alertasHabilitadas(clave: string): Promise<boolean> {
     const param = await getParametroSistema(clave);
     return param ? param.valor === "true" : true;
 }
 
-function baseUrl(): string {
+export function baseUrl(): string {
     return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
 }
 
@@ -56,6 +56,10 @@ export async function enviarCodigoVerificacion(email: string, codigo: string): P
  * La pantalla responde genérico (anti-enumeración); el aviso va SOLO al buzón, con
  * enlaces para entrar o recuperar la clave. No revela existencia en pantalla.
  */
+// SPEC-339: los correos del camino del padre viven en `email-padre.ts` (este
+// adaptador tocó el techo de 500 líneas). Re-export: ningún consumidor cambia.
+export { enviarEnlaceRegistro, enviarBienvenidaPadre, enviarAlertaHijoReporte } from "./email-padre";
+
 export async function enviarEmailCuentaExistente(email: string): Promise<void> {
     const result = await programar({
         evento: "auth.cuenta_existente",

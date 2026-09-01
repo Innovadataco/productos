@@ -6,7 +6,6 @@ import { EstadoSuscripcion, type Suscripcion, type RolUsuario } from "@prisma/cl
 import {
     ahoraBogota,
     resolverEstadoVigencia,
-    esRutaExenta,
     redireccionSuscripcion,
     debeMostrarBanner,
     mensajeParaEstado,
@@ -54,27 +53,6 @@ describe("resolverEstadoVigencia", () => {
         expect(resolverEstadoVigencia(suscripcionMock(EstadoSuscripcion.PENDIENTE_AUTORIZACION))).toBe(
             EstadoSuscripcion.PENDIENTE_AUTORIZACION
         );
-    });
-});
-
-describe("esRutaExenta", () => {
-    it("exime /consentimiento, /perfil y /suscripcion para padre y colegio", () => {
-        for (const rol of ["PARENT", "SCHOOL_ADMIN"] as RolUsuario[]) {
-            expect(esRutaExenta("/consentimiento", rol)).toBe(true);
-            expect(esRutaExenta("/dashboard/padre/perfil", rol)).toBe(true);
-            expect(esRutaExenta("/dashboard/colegio/suscripcion", rol)).toBe(true);
-        }
-    });
-
-    it("exime /reportar solo para PARENT", () => {
-        expect(esRutaExenta("/reportar", "PARENT")).toBe(true);
-        expect(esRutaExenta("/reportar", "SCHOOL_ADMIN")).toBe(false);
-        expect(esRutaExenta("/reportar", "OPERADOR")).toBe(false);
-    });
-
-    it("no exime rutas de operación", () => {
-        expect(esRutaExenta("/dashboard/padre", "PARENT")).toBe(false);
-        expect(esRutaExenta("/dashboard/colegio/alumnos", "SCHOOL_ADMIN")).toBe(false);
     });
 });
 

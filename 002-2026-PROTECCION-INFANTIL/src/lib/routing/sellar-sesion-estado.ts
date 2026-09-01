@@ -12,11 +12,16 @@ import { NOMBRE_COOKIE, TTL_SEG } from "./vigencia-cookie";
  * cookie stale (I-211 / I-222 / I-224 / I-227): centralizar el patrón para que el
  * próximo endpoint no lo olvide.
  *
- * Fallo silencioso: la cookie de estado no debe bloquear la acción principal (la
+ * Fallo suave: la cookie de estado no debe bloquear la acción principal (la
  * suscripción ya quedó creada); en el peor caso el gate se abre en el próximo
  * `session/ping` o `vigencia/refresh`, como antes.
+ *
+ * SPEC-339 (T079): devuelve si selló de verdad. Los llamadores del camino usan
+ * el `false` para avisarle al padre que el avance puede tardar en reflejarse —
+ * tragarse el fallo dejaba al padre repitiendo el paso "en silencio". Los
+ * llamadores anteriores ignoran el retorno y conservan su comportamiento.
  */
-export async function sellarCookieSesionEstado(res: NextResponse, userId: string): Promise<void> {
+export async function sellarCookieSesionEstado(res: NextResponse, userId: string): Promise<boolean> {
     try {
         const value = await buildSesionEstadoValue(userId);
         res.cookies.set(NOMBRE_COOKIE, value, {
@@ -26,7 +31,9 @@ export async function sellarCookieSesionEstado(res: NextResponse, userId: string
             maxAge: TTL_SEG,
             path: "/",
         });
+        return true;
     } catch {
         // la cookie de estado no bloquea la acción principal
+        return false;
     }
 }

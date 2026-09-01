@@ -474,6 +474,7 @@
 | [326](326-lenguaje-padre/spec.md) | SPEC-326 · Cómo le habla PI al padre · notificaciones en frases + perfil/cambio-correo + país-ciudad + menú (002-PI-226 · A-62 · cierra I-220) | 🟡 En desarrollo |
 | [334](334-perfil-padre-datos/spec.md) | SPEC-334 · El padre registra los datos de su perfil · 6 campos (nombres/apellidos/fecha nac/país/ciudad/teléfono) + migración Usuario (prioridad CEO directa) | 🟡 En desarrollo |
 | [325](325-protejo-vigilo-nucleo/spec.md) | SPEC-325 · A quién protejo, a quién vigilo · núcleo (002-PI-225 · A-61) — modelo Hijo + arreglo ContactoConfianza + mecanismo de monitoreo compartido | 🟡 En desarrollo |
+| [339](339-camino-guiado-padre/spec.md) | SPEC-339 · El camino guiado del padre (A-67 · Fase 1) — registro por enlace + camino obligatorio de 4 pasos no salteable + tope de menores parametrizado + un menor por padre + cruce identificador-hijo→aviso | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 

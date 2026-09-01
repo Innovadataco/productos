@@ -28,19 +28,11 @@ export function resolverEstadoVigencia(suscripcion: Suscripcion | null | undefin
     return suscripcion.estado;
 }
 
-/**
- * Determina si una ruta debe quedar exenta de la guarda de vigencia.
- * - /consentimiento: encadenamiento con SPEC-241.
- * - /perfil, /suscripcion: rutas de gestión propia nunca bloqueadas.
- * - /reportar: solo padre; excepción social crítica (proteger menores > cobrar).
- */
-export function esRutaExenta(pathname: string, rol: RolUsuario): boolean {
-    const normalizada = pathname.replace(/\/$/, "") || "/";
-    const exentasComunes = ["/consentimiento", "/perfil", "/suscripcion"];
-    if (exentasComunes.some((ruta) => normalizada.endsWith(ruta))) return true;
-    if (rol === "PARENT" && normalizada.startsWith("/reportar")) return true;
-    return false;
-}
+// SPEC-339: acá vivía `esRutaExenta`, un helper que decía eximir /reportar de la
+// guarda de vigencia y que NUNCA funcionó: nadie lo llamaba (solo su test) y
+// comparaba contra "/reportar" cuando el enlace real del menú es
+// "/dashboard/padre/reportar". Era una trampa para el próximo que lo leyera.
+// Las exenciones reales viven en GUARDIAS_ACCESO (src/lib/routing/guardias.ts).
 
 /**
  * URL de redirección al flujo de suscripción según rol.

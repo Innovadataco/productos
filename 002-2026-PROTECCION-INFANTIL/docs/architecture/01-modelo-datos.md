@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **100** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **101** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -496,7 +496,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (52)
+### Otros (sin regla de dominio) (53)
 
 #### `AclaracionExpediente`
 
@@ -815,6 +815,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | Campo | Tipo | Atributos |
 | --- | --- | --- |
 | id | String | id |
+| usuarioId | String | — |
 | nombre | String | — |
 | apellidos | String | — |
 | documentoTipo | String | — |
@@ -824,8 +825,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | estado | String | — |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
-| padres | HijoPadre | lista, relación |
+| usuario | Usuario | relación |
 | identificadores | IdentificadorHijo | lista, relación |
+| padres | HijoPadre | lista, relación |
 
 #### `HijoPadre`
 
@@ -1383,6 +1385,18 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | esActiva | Boolean | — |
 | creadoEn | DateTime | — |
 
+#### `TokenRegistro`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| email | String | — |
+| tokenHash | String | — |
+| expiraEn | DateTime | — |
+| usado | Boolean | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+
 #### `WorkerLog`
 
 | Campo | Tipo | Atributos |
@@ -1828,6 +1842,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | email | String | único |
 | nombre | String | opcional |
 | apellidos | String | opcional |
+| documentoTipo | String | opcional |
+| documentoNumero | String | opcional |
 | fechaNacimiento | DateTime | opcional |
 | telefono | String | opcional |
 | paisId | String | opcional |
@@ -1874,10 +1890,13 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | suscripcionesAutorizadas | Suscripcion | lista, relación |
 | bonosBeneficiario | BonoPromocional | lista, relación |
 | contactosConfianza | ContactoConfianza | lista, relación |
+| hijosPropios | Hijo | lista, relación |
 | hijos | HijoPadre | lista, relación |
 | identificadoresHijoDesvinculados | IdentificadorHijoDesvinculado | lista, relación |
 | notificacionesCirculo | Boolean | — |
 | ultimaNotificacionCirculoEn | DateTime | opcional |
+| notificacionesHijos | Boolean | — |
+| ultimaNotificacionHijosEn | DateTime | opcional |
 | ultimaNotificacionColegioEn | DateTime | opcional |
 | transicionesReporte | TransicionReporte | lista, relación |
 | solicitudesComite | SolicitudComite | lista, relación |
@@ -2096,4 +2115,5 @@ por ningún otro modelo. La lista de excepciones declarada vive en
 | SenalComunitariaCache | sí |
 | Subscription | sí |
 | TipoDocumento | sí |
+| TokenRegistro | sí |
 | WorkerLog | sí |

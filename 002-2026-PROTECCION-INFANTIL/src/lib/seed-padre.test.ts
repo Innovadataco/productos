@@ -20,7 +20,9 @@ describe("seedParametrosPadre", () => {
         const primera = await prisma.parametroSistema.findMany({
             where: { clave: { startsWith: "padre." } },
         });
-        expect(primera).toHaveLength(18);
+        // SPEC-339 (A-67): +2 — padre.hijos.maximo y padre.hijos.maximo_mensaje
+        // (el tope de menores y su mensaje son parámetros, no constantes).
+        expect(primera).toHaveLength(20);
 
         // Simula un valor modificado manualmente que el seed debe restablecer al default.
         await prisma.parametroSistema.update({
@@ -32,7 +34,7 @@ describe("seedParametrosPadre", () => {
         const segunda = await prisma.parametroSistema.findMany({
             where: { clave: { startsWith: "padre." } },
         });
-        expect(segunda).toHaveLength(18);
+        expect(segunda).toHaveLength(20);
 
         const restaurado = await prisma.parametroSistema.findUnique({
             where: { clave: "padre.expediente.auto_cierre_meses" },

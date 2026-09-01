@@ -10,6 +10,9 @@ import type { RolUsuario } from "@prisma/client";
 import type { TipoDocumentoConsentimiento } from "@/lib/dal/services/consentimiento";
 
 interface ModalConsentimientoProps {
+    /** SPEC-339: "Paso 1 de 4 · Permiso" cuando la pantalla es parte del camino
+     *  guiado del padre. El modal NO se rehace (brief §2.2): solo gana el rótulo. */
+    indicadorPaso?: string;
     rol: RolUsuario;
     documentoTipo: TipoDocumentoConsentimiento;
     documentoContenido: string;
@@ -39,6 +42,7 @@ export function ModalConsentimiento({
     documentoTipo,
     documentoContenido,
     redirectUrl,
+    indicadorPaso,
 }: ModalConsentimientoProps) {
     const router = useRouter();
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -111,6 +115,9 @@ export function ModalConsentimiento({
         <div className={`${theme} min-h-screen bg-page`}>
             <main className="flex min-h-screen items-center justify-center px-4 py-8">
                 <GlassCard className="w-full max-w-2xl">
+                    {indicadorPaso && (
+                        <p className="mb-2 text-sm font-medium text-muted">{indicadorPaso}</p>
+                    )}
                     <h1 className="text-2xl font-bold text-body">{TITULO_POR_ROL[rol]}</h1>
                     <p className="mt-2 text-sm text-muted">
                         Debes leer el documento completo y aceptar los términos para continuar.
