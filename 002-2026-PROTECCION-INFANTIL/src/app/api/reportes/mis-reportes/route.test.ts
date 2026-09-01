@@ -109,7 +109,12 @@ describe("GET /api/reportes/mis-reportes — vigencia del padre (SPEC-119)", () 
         await setupParent();
     });
 
-    it("padre vencido recibe 403 con mensaje claro y sus reportes quedan intactos", async () => {
+    // SPEC-356 (I-253) · el test anterior afirmaba el BUG (403 al padre vencido).
+    // `guardias.ts` exime `/api/reportes` y con él toda su familia por prefijo:
+    // el handler contradecía la exención y dejaba la página `/mis-reportes`
+    // (también exenta) sin datos. Invertido con assert fuerte: no basta el 200,
+    // los reportes deben LLEGAR al padre.
+    it("SPEC-356: padre VENCIDO ve sus reportes (200 con contenido, no 403)", async () => {
         await crearReporteUsuario("+57300VENCIDO", "CLASIFICADO");
         const ayer = new Date();
         ayer.setDate(ayer.getDate() - 1);
@@ -119,10 +124,10 @@ describe("GET /api/reportes/mis-reportes — vigencia del padre (SPEC-119)", () 
         });
 
         const res = await GET(new Request("http://localhost:5005/api/reportes/mis-reportes"));
-        expect(res.status).toBe(403);
+        expect(res.status, "el cobro no cierra la puerta de lo ya denunciado").toBe(200);
         const body = await res.json();
-        expect(body.error.message).toMatch(/vencido/i);
-        expect(body.error.message).toMatch(/soporte/i);
+        expect(body.items, "el reporte del padre vencido le llega").toHaveLength(1);
+        expect(body.items[0].identificador).toBe("+57300VENCIDO");
 
         const intactos = await prisma.reporte.count({ where: { usuarioId: parentUser.id } });
         expect(intactos).toBe(1);
