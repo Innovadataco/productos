@@ -35,7 +35,27 @@ export function NavHeader() {
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    // SPEC-340 (A-68 §5): el ámbar del escudo — SOLO para el padre, mientras
+    // tenga alertas sin ver (del círculo o de sus hijos). Se consulta al montar
+    // y al recuperar el foco; sin polling agresivo.
+    const [alertasSinVer, setAlertasSinVer] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (user?.rol !== "PARENT") {
+            setAlertasSinVer(0);
+            return;
+        }
+        const consultar = () =>
+            fetch("/api/notificaciones/resumen", { credentials: "include" })
+                .then((r) => (r.ok ? r.json() : null))
+                .then((j) => setAlertasSinVer(j?.noLeidas ?? 0))
+                .catch(() => null);
+        void consultar();
+        const alFoco = () => void consultar();
+        window.addEventListener("focus", alFoco);
+        return () => window.removeEventListener("focus", alFoco);
+    }, [user?.rol, pathname]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -120,8 +140,8 @@ export function NavHeader() {
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
                 <Link href={logoHref} className="flex items-center gap-2 text-lg font-bold tracking-tight text-body">
-                    {/* SPEC-336: El Guardián. El clic al inicio (logoHref/I-38) se conserva. */}
-                    <Guardian className="h-8 w-8" />
+                    {/* SPEC-336: El Guardián. SPEC-340 (§5): ámbar con alertas sin ver. */}
+                    <Guardian className="h-8 w-8" estado={alertasSinVer > 0 ? "alerta" : "calma"} />
                     <span className="text-gradient">Protección</span>
                     <span className="hidden sm:inline">Infantil</span>
                 </Link>

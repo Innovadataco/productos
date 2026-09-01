@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { NavHeader } from "./NavHeader";
 
 let mockPathname = "/";
@@ -149,5 +149,45 @@ describe("NavHeader", () => {
         const toggle2 = screen.getByText("Colegio").closest("button");
         if (toggle2) fireEvent.click(toggle2);
         expect(screen.getByText("Mi colegio").closest("a")?.getAttribute("href")).toBe("/dashboard/colegio");
+    });
+
+    // ── SPEC-340 (A-68 §5 · T034): el ámbar del escudo ──────────────────────
+    describe("SPEC-340 · el escudo en ámbar", () => {
+        function mockResumen(noLeidas: number) {
+            vi.stubGlobal(
+                "fetch",
+                vi.fn(async () => new Response(JSON.stringify({ noLeidas }), { status: 200 }))
+            );
+        }
+
+        it("padre con alertas sin ver → el Guardián en alerta (ámbar)", async () => {
+            mockResumen(2);
+            mockAuth({ id: "p1", email: "p@x.co", nombre: "Padre", rol: "PARENT" });
+            const { container } = render(<NavHeader />);
+            await waitFor(() => {
+                expect(container.querySelector('[data-estado="alerta"]')).not.toBeNull();
+            });
+        });
+
+        it("padre sin alertas → calma", async () => {
+            mockResumen(0);
+            mockAuth({ id: "p1", email: "p@x.co", nombre: "Padre", rol: "PARENT" });
+            const { container } = render(<NavHeader />);
+            await waitFor(() => {
+                expect(container.querySelector('[data-estado="calma"]')).not.toBeNull();
+            });
+            expect(container.querySelector('[data-estado="alerta"]')).toBeNull();
+        });
+
+        it("un rol que no es padre NI consulta el resumen: escudo en calma", async () => {
+            const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+            vi.stubGlobal("fetch", fetchMock);
+            mockAuth({ id: "a1", email: "a@x.co", nombre: "Admin", rol: "ADMIN" });
+            const { container } = render(<NavHeader />);
+            await waitFor(() => {
+                expect(container.querySelector('[data-estado="calma"]')).not.toBeNull();
+            });
+            expect(fetchMock).not.toHaveBeenCalledWith("/api/notificaciones/resumen", expect.anything());
+        });
     });
 });

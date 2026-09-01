@@ -13,6 +13,7 @@ import { prisma } from "../../prisma";
 import { formatCategoria } from "../../labels";
 import { formatPlataforma } from "../../plataforma";
 import { whereReporteAprobado, whereReporteVigente } from "../../reportes-acceso";
+import { getParametroSistemaValor } from "../../parametros";
 import type { Prisma } from "@prisma/client";
 
 export interface EventoCadenaDto {
@@ -21,6 +22,8 @@ export interface EventoCadenaDto {
     creadoEn: Date;
     estado: string;
     categoriaLabel: string | null;
+    /** SPEC-340 §3.3: la explicación en lenguaje de padre (parametrizada). */
+    explicacion: string | null;
     textoDisponible: boolean;
     esPrincipal: boolean;
 }
@@ -91,6 +94,16 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
         porPrincipal.set(clave, lista);
     }
 
+    // Explicaciones por categoría (§3.3), UNA consulta por categoría presente.
+    const categoriasPresentes = new Set<string>();
+    for (const r of reportes) {
+        if (r.clasificacion && ESTADOS_FINALES.includes(r.estado)) categoriasPresentes.add(r.clasificacion.categoria);
+    }
+    const explicaciones = new Map<string, string | null>();
+    for (const cat of categoriasPresentes) {
+        explicaciones.set(cat, await getParametroSistemaValor(`padre.analisis.explicacion.${cat}`));
+    }
+
     // Expedientes activos del padre, por identificador (para Crear/Ver).
     const expedientes = await prisma.expediente.findMany({
         where: { padreUsuarioId: usuarioId, estado: "ACTIVO" },
@@ -139,6 +152,10 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
                 categoriaLabel:
                     r.clasificacion && ESTADOS_FINALES.includes(r.estado)
                         ? formatCategoria(r.clasificacion.categoria)
+                        : null,
+                explicacion:
+                    r.clasificacion && ESTADOS_FINALES.includes(r.estado)
+                        ? (explicaciones.get(r.clasificacion.categoria) ?? null)
                         : null,
                 textoDisponible: true,
                 esPrincipal: r.id === principalId,
