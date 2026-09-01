@@ -4084,6 +4084,7 @@ async function seedEventosRecompensa() {
         { clave: "padre.analisis.modelo", valor: modeloEmbudo, tipo: TipoParametro.STRING, descripcion: "Modelo Ollama para el análisis capa 2 (se lee del embudo por defecto)" },
         { clave: "padre.analisis.prompt_sistema", valor: promptSistemaPadre, tipo: TipoParametro.STRING, descripcion: "Prompt de sistema del análisis del padre (voz brief A-68 §4.4)" },
         { clave: "padre.analisis.frases_prohibidas_json", valor: frasesProhibidas, tipo: TipoParametro.JSON, descripcion: "Lista JSON de frases interpretativas prohibidas — la salida del modelo se rechaza si aparece alguna" },
+        { clave: "padre.analisis.max_fallidos_consecutivos", valor: "3", tipo: TipoParametro.INTEGER, descripcion: "N FALLIDOs seguidos del mismo hash tras los cuales la UI muestra 'no pudimos generarlo' sin re-encolar (audit 87c311a0)" },
         { clave: "colegio.analisis.max_concurrentes", valor: "1", tipo: TipoParametro.INTEGER, descripcion: "Analisis IA concurrentes del colegio (C3, futuro)" },
         { clave: "colegio.analisis.modelo", valor: modeloEmbudo, tipo: TipoParametro.STRING, descripcion: "Modelo Ollama para el análisis del colegio (C3)" },
         { clave: "colegio.analisis.prompt_sistema", valor: promptSistemaColegio, tipo: TipoParametro.STRING, descripcion: "Prompt de sistema del análisis blindado del colegio (C3)" },

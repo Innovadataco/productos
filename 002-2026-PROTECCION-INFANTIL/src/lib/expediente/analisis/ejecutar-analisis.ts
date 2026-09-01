@@ -24,14 +24,23 @@ interface AnalisisSalida {
 }
 
 // JSON Schema para forzar salida del modelo.
+// Audit 87c311a0 · Ollama compilaba la gramática GBNF con `minLength`/`maxLength`
+// y respondía 400 "Failed to initialize samplers: failed to parse grammar" en
+// cada intento (nunca tocaba al modelo). El embudo de la rúbrica no usa esos
+// campos — imitamos: solo tipos básicos + required + additionalProperties.
+// El rango de longitud del texto se valida DESPUÉS del parseo, no en el schema.
 const SALIDA_SCHEMA = {
     type: "object",
     properties: {
-        texto: { type: "string", minLength: 40, maxLength: 4000 },
+        texto: { type: "string" },
     },
     required: ["texto"],
     additionalProperties: false,
 };
+
+/** Rangos aceptables del texto — validados post-parseo. */
+const TEXTO_MIN_CHARS = 40;
+const TEXTO_MAX_CHARS = 4000;
 
 /** Punto único de entrada del worker. */
 export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<void> {
@@ -99,7 +108,16 @@ export async function ejecutarAnalisisJob(args: EjecutarAnalisisArgs): Promise<v
             promptSistema
         );
 
-        // 6. Validar salida anti-frases prohibidas.
+        // 6a. Validar longitud del texto (movido acá porque el schema JSON no
+        // puede llevar minLength/maxLength — rompe la gramática GBNF de Ollama).
+        if (data.texto.length < TEXTO_MIN_CHARS || data.texto.length > TEXTO_MAX_CHARS) {
+            await cerrarPlaceholderFallando(expediente.id, hashCadena, alcance, modelo, promptSistemaHash, metrics.latenciaMs,
+                `longitud_fuera_de_rango: ${data.texto.length} chars (rango ${TEXTO_MIN_CHARS}-${TEXTO_MAX_CHARS})`);
+            logger.warn(`[analisis] texto fuera de rango · expediente=${expedienteId} · chars=${data.texto.length}`);
+            return;
+        }
+
+        // 6b. Validar salida anti-frases prohibidas.
         const validacion = await validarSalida(data.texto);
         if (!validacion.ok) {
             await cerrarPlaceholderFallando(expediente.id, hashCadena, alcance, modelo, promptSistemaHash, metrics.latenciaMs,

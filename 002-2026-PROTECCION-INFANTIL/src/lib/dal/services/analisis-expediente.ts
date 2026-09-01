@@ -43,6 +43,14 @@ export interface EvaluacionDto {
     cola: { posicion: number; estimadoSeg: number } | null;
     colaLlena: boolean;
     cooldown: { puedeActualizar: boolean; faltanSeg: number };
+    /**
+     * Audit 87c311a0 · fix nº2: tras N FALLIDOs consecutivos por el mismo
+     * hashActual, la UI muestra "no pudimos generarlo, reintentaremos" en
+     * vez de re-encolar y re-prometer "~2 minutos" en bucle. N =
+     * padre.analisis.max_fallidos_consecutivos (default 3).
+     */
+    agotadoPorFallos: boolean;
+    ultimoMotivoFallo: string | null;
 }
 
 async function cargarExpedienteDelPadre(expedienteId: string, usuarioId: string) {
@@ -157,14 +165,16 @@ export async function evaluarYEncolarSiCorresponde(
         categoriasDominantesJson: exp.categoriasDominantesJson,
     });
 
-    const [cooldownMinRaw, ttlHorasRaw, tiempoEstRaw] = await Promise.all([
+    const [cooldownMinRaw, ttlHorasRaw, tiempoEstRaw, maxFallidosRaw] = await Promise.all([
         getParametroSistemaValor("padre.analisis.cooldown_min"),
         getParametroSistemaValor("padre.analisis.ttl_horas"),
         getParametroSistemaValor("padre.analisis.tiempo_estimado_seg"),
+        getParametroSistemaValor("padre.analisis.max_fallidos_consecutivos"),
     ]);
     const cooldownMin = Number.parseInt(cooldownMinRaw ?? "5", 10);
     const ttlHoras = Number.parseInt(ttlHorasRaw ?? "168", 10);
     const tiempoEstSeg = Number.parseInt(tiempoEstRaw ?? "90", 10);
+    const maxFallidos = Number.parseInt(maxFallidosRaw ?? "3", 10);
 
     const vigente = await leerVigente(expedienteId, usuarioId);
     const coincide = vigente ? vigente.texto !== "" && await hashDelVigenteCoincide(expedienteId, hashActual) : false;
@@ -193,7 +203,14 @@ export async function evaluarYEncolarSiCorresponde(
     // ventana acá para coherencia.
     await marcarGenerandoHuerfanoComoFallido(expedienteId, hashActual, tiempoEstSeg * 3);
 
-    if (debeEncolar) {
+    // Audit 87c311a0 · fix nº2: contar FALLIDOs del mismo hash. Si superan el
+    // umbral, la UI muestra estado terminal ("no pudimos generarlo") en vez
+    // de re-encolar en bucle.
+    const { agotadoPorFallos, ultimoMotivoFallo } = await contarFallidosConsecutivos(
+        expedienteId, hashActual, maxFallidos
+    );
+
+    if (debeEncolar && !agotadoPorFallos) {
         const yaEnCurso = await ultimoGenerandoDe(expedienteId, hashActual);
         if (yaEnCurso) {
             estado = "GENERANDO";
@@ -233,6 +250,35 @@ export async function evaluarYEncolarSiCorresponde(
         cola,
         colaLlena,
         cooldown,
+        agotadoPorFallos,
+        ultimoMotivoFallo,
+    };
+}
+
+/**
+ * Cuenta cuántos FALLIDOS del mismo `hashCadena` ocurrieron DESPUÉS del último
+ * PUBLICADO del expediente. Si superan el umbral, se considera "agotado" —
+ * la UI muestra estado terminal en vez de re-encolar y re-prometer.
+ */
+async function contarFallidosConsecutivos(
+    expedienteId: string,
+    hashCadena: string,
+    umbral: number,
+): Promise<{ agotadoPorFallos: boolean; ultimoMotivoFallo: string | null }> {
+    const ultimoPub = await prisma.analisisExpediente.findFirst({
+        where: { expedienteId, estado: "PUBLICADO" },
+        orderBy: { versionSecuencial: "desc" },
+        select: { versionSecuencial: true },
+    });
+    const versionMin = ultimoPub?.versionSecuencial ?? 0;
+    const fallidos = await prisma.analisisExpediente.findMany({
+        where: { expedienteId, hashCadena, estado: "FALLIDO", versionSecuencial: { gt: versionMin } },
+        orderBy: { versionSecuencial: "desc" },
+        select: { motivoFallo: true },
+    });
+    return {
+        agotadoPorFallos: fallidos.length >= umbral,
+        ultimoMotivoFallo: fallidos[0]?.motivoFallo ?? null,
     };
 }
 
