@@ -56,7 +56,7 @@ const COLUMNAS: Col[] = [
   // ClasificacionIA (7)
   { tabla: "ClasificacionIA", nombreFuente: "id", nombreLegible: "ID clasificacion", descripcion: "ID de la clasificacion IA", tipo: "String" },
   { tabla: "ClasificacionIA", nombreFuente: "reporteId", nombreLegible: "Reporte", descripcion: "FK al reporte clasificado", tipo: "String" },
-  { tabla: "ClasificacionIA", nombreFuente: "categoria", nombreLegible: "Categoria conducta", descripcion: "Categoria detectada (BULLYING · CIBERBULLYING · SPAM · OTRO)", tipo: "CategoriaConducta" },
+  { tabla: "ClasificacionIA", nombreFuente: "categoria", nombreLegible: "Categoria conducta", descripcion: "Categoria detectada. Valores reales: CONTACTO_INSISTENTE · SOLICITUD_MATERIAL · OFRECIMIENTO_REGALOS · SUPLANTACION_IDENTIDAD · SOLICITUD_ENCUENTRO · COMPARTIMIENTO_SEXUAL · OTRO · EXTORSION · CONTENIDO_GENERADO_IA · DIFUSION_NO_CONSENTIDA · DOXING · SPAM · CIBERACOSO · HAPPY_SLAPPING · STALKING", tipo: "CategoriaConducta" },
   { tabla: "ClasificacionIA", nombreFuente: "confianza", nombreLegible: "Confianza", descripcion: "Score de confianza 0.0-1.0", tipo: "Float", sinonimos: ["score"] },
   { tabla: "ClasificacionIA", nombreFuente: "latenciaMs", nombreLegible: "Latencia (ms)", descripcion: "Latencia del modelo en milisegundos", tipo: "Int", sinonimos: ["tiempo"] },
   { tabla: "ClasificacionIA", nombreFuente: "modeloUsado", nombreLegible: "Modelo LLM", descripcion: "Nombre del modelo usado (qwen2.5:14b · etc)", tipo: "String", sinonimos: ["modelo"] },
