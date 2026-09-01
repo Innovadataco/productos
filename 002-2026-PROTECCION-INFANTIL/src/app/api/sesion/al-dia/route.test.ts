@@ -68,13 +68,23 @@ describe("GET /api/sesion/al-dia (SPEC-339)", () => {
         expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/dashboard");
     });
 
-    // SPEC-314: defensa contra redirección abierta.
-    for (const malo of ["https://evil.example.com", "//evil.example.com", "evil"]) {
+    // SPEC-342 (BUG3): defensa contra redirección abierta POR URL — incluye la
+    // barra invertida que el chequeo de prefijos dejaba pasar.
+    for (const malo of [
+        "https://evil.example.com",
+        "//evil.example.com",
+        "evil",
+        "/\\evil.example.com",
+        "/\\/evil.example.com",
+        "/\\@evil.example.com",
+    ]) {
         it(`destino externo "${malo}" se descarta y cae al panel`, async () => {
             mocks.buildSesionEstadoValue.mockResolvedValue(await cookieFirmada(null));
             const res = await GET(req(malo));
             const url = new URL(res.headers.get("location") ?? "");
-            expect(url.origin).toBe("http://localhost:5005");
+            // SPEC-342: la base ya no es request.url (candado 22v3) — lo que
+            // importa: jamás el host malicioso, y el destino cae al panel.
+            expect(url.hostname).not.toContain("evil");
             expect(url.pathname).toBe("/dashboard/padre");
         });
     }
@@ -100,6 +110,37 @@ describe("GET /api/sesion/al-dia (SPEC-339)", () => {
     it("sin sesión válida → /login", async () => {
         mocks.verifyAuth.mockRejectedValue(new AppError("No autenticado", ERROR_CODES.AUTH_INVALID, 401));
         const res = await GET(req("/dashboard/padre"));
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/login");
+    });
+
+    // SPEC-342 (candado 22v3): la base del redirect JAMÁS es request.url —
+    // en Docker sale 0.0.0.0 y el navegador muere en un callejón.
+    it("Docker: el Location usa x-forwarded-host, nunca el bind interno", async () => {
+        mocks.buildSesionEstadoValue.mockResolvedValue(await cookieFirmada(null));
+        const url = new URL("http://0.0.0.0:3000/api/sesion/al-dia");
+        url.searchParams.set("destino", "/dashboard/padre");
+        const res = await GET(
+            new Request(url, { headers: { "x-forwarded-host": "pi.innovadataco.com", "x-forwarded-proto": "https" } })
+        );
+        const loc = new URL(res.headers.get("location") ?? "");
+        expect(loc.origin).toBe("https://pi.innovadataco.com");
+        expect(loc.pathname).toBe("/dashboard/padre");
+    });
+
+    it("Docker sin proxy: cae a PI_BASE_URL/dominio, jamás 0.0.0.0 — también en el camino infeliz", async () => {
+        mocks.buildSesionEstadoValue.mockRejectedValue(new Error("base caída"));
+        const res = await GET(new Request("http://0.0.0.0:3000/api/sesion/al-dia?destino=/dashboard/padre"));
+        const loc = new URL(res.headers.get("location") ?? "");
+        expect(loc.hostname).not.toBe("0.0.0.0");
+        expect(loc.pathname).toBe("/login");
+    });
+
+    // Calidad: el sellado que LANZA (no solo el false mockeado).
+    it("re-sellado que lanza una excepción → /login, sin segundo rebote", async () => {
+        mocks.buildSesionEstadoValue.mockImplementation(() => {
+            throw new Error("sin conexión");
+        });
+        const res = await GET(new Request("http://localhost:5005/api/sesion/al-dia?destino=/x"));
         expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/login");
     });
 });

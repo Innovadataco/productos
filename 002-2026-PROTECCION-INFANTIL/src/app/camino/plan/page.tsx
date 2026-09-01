@@ -18,6 +18,7 @@ import { derivarPasoPendiente } from "@/lib/dal/services/camino/estado";
 import { PagosClienteRepository } from "@/lib/dal/repositories/pagos-cliente-repository";
 import { solicitarPlan } from "@/lib/pagos/suscripcion-solicitud.service";
 import { activarFreemiumConRateLimit } from "@/lib/pagos/freemium-activacion.service";
+import { sellarCookieSesionEstadoEnAccion } from "@/lib/routing/sellar-sesion-estado";
 import { anioBogota } from "@/lib/pagos/renovacion-calculos";
 import { obtenerTasaIva, ivaAplicaA } from "@/lib/pagos/parametros-pagos";
 import { PlanesSelector } from "@/components/modules/pagos/PlanesSelector";
@@ -33,6 +34,9 @@ async function actionSolicitarPlan(planId: string, codigoBono?: string) {
         codigoBono,
         rolDueño: usuario.rol,
     });
+    // SPEC-342: cualquier suscripción registrada cumple el Paso 4 (decisión CEO)
+    // — el plan pagado también debe abrir al instante.
+    await sellarCookieSesionEstadoEnAccion(usuario.id);
     revalidatePath("/camino/plan");
 }
 
@@ -48,6 +52,9 @@ async function actionActivarFreemium() {
         ipAddress,
         userAgent,
     });
+    // SPEC-342 (I-227): la activación cambia la vigencia Y cierra el Paso 4 del
+    // camino — re-sellar AQUÍ, en la acción, que es el flujo real del botón.
+    await sellarCookieSesionEstadoEnAccion(usuario.id);
     revalidatePath("/camino/plan");
 }
 

@@ -40,7 +40,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         // T073: inactivar el ÚNICO menor activo reabre el Paso 3, y reactivarlo
         // lo cierra — re-sellar siempre que cambie el estado, al instante.
         if (parsed.data.estado !== undefined) {
-            const sellada = await sellarCookieSesionEstado(respuesta, usuario.id);
+            const sellada = await sellarCookieSesionEstado(respuesta, usuario.id).catch(() => false);
             if (!sellada) {
                 return NextResponse.json({
                     ...res,

@@ -87,6 +87,23 @@ export function PerfilPadreForm({
 
     async function guardar(e: React.FormEvent) {
         e.preventDefault();
+        // SPEC-342 (I-234): en el camino, los 7 campos del Paso 2 son obligatorios
+        // y el faltante se dice ANTES de enviar. Sin esto el padre guardaba sin
+        // ciudad, el guardián seguía exigiéndola y el rebote quedaba mudo.
+        if (esCamino) {
+            const faltantes: string[] = [];
+            if (!nombre.trim()) faltantes.push("tus nombres");
+            if (!apellidos.trim()) faltantes.push("tus apellidos");
+            if (!documentoTipo) faltantes.push("el tipo de documento");
+            if (!documentoNumero.trim()) faltantes.push("el número de documento");
+            if (!telefono.trim()) faltantes.push("tu teléfono");
+            if (!paisId) faltantes.push("tu país");
+            if (!ciudad?.id) faltantes.push("tu ciudad");
+            if (faltantes.length > 0) {
+                setError(`Te falta ${faltantes.join(", ")} para continuar.`);
+                return;
+            }
+        }
         setSaving(true);
         setError(null);
         setOk(false);

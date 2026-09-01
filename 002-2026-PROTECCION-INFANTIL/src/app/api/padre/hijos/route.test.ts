@@ -185,6 +185,25 @@ describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }
         expect(padreId).not.toBe(otro.id);
     });
 
+    // Calidad (SPEC-342): el PATCH de inactivar con test PROPIO del re-sellado.
+    it("inactivar re-sella (reabre el Paso 3) y reactivar también", async () => {
+        const hijoId = await crearMenor();
+        mocks.sellarCookieSesionEstado.mockClear();
+
+        const [q1, c1] = reqPatch(hijoId, { estado: "inactivo" });
+        expect((await PATCH(q1, c1)).status).toBe(200);
+        expect(mocks.sellarCookieSesionEstado).toHaveBeenCalledTimes(1);
+
+        const [q2, c2] = reqPatch(hijoId, { estado: "activo" });
+        expect((await PATCH(q2, c2)).status).toBe(200);
+        expect(mocks.sellarCookieSesionEstado).toHaveBeenCalledTimes(2);
+
+        // Corregir SOLO datos (sin estado) NO re-sella: el paso no cambia.
+        const [q3, c3] = reqPatch(hijoId, { apellidos: "Nuevo" });
+        expect((await PATCH(q3, c3)).status).toBe(200);
+        expect(mocks.sellarCookieSesionEstado).toHaveBeenCalledTimes(2);
+    });
+
     it("cuerpo vacío → 400", async () => {
         const hijoId = await crearMenor();
         const [req, ctx] = reqPatch(hijoId, {});

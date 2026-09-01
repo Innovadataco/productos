@@ -84,6 +84,16 @@ describe("PATCH /api/padre/perfil (SPEC-339)", { timeout: 30_000 }, () => {
         expect((await prisma.usuario.findUnique({ where: { id: padre.id } }))?.nombre).toBe("Carlos");
     });
 
+    // Calidad (SPEC-342): el fallo del sellado como EXCEPCIÓN, no solo false.
+    it("SELLADO QUE LANZA: el dato queda guardado y el padre recibe el aviso", async () => {
+        mocks.sellarCookieSesionEstado.mockRejectedValue(new Error("selló mal"));
+        const padre = await comoPadre();
+        const res = await PATCH(crearRequest({ nombre: "Ana" }));
+        // La ruta no debe reventar en 500 por el sellado: el dato ya está.
+        expect(res.status).toBe(200);
+        expect((await prisma.usuario.findUnique({ where: { id: padre.id } }))?.nombre).toBe("Ana");
+    });
+
     it("GET devuelve el documento junto al resto del perfil", async () => {
         const padre = await comoPadre();
         await prisma.usuario.update({

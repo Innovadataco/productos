@@ -82,9 +82,11 @@ function redirect(request: NextRequest, destino: string): NextResponse {
 
 function redirectAtLogin(request: NextRequest): NextResponse {
     const res = redirect(request, "/login");
-    res.cookies.delete(NOMBRE_COOKIE_SESION_LEGACY);
-    res.cookies.delete(NOMBRE_COOKIE_SESION_HOST);
-    res.cookies.delete(NOMBRE_COOKIE_SESION);
+    // SPEC-342 (BUG4): sin Path=/ estos delete no borran cookies fijadas con
+    // path "/" — la sesión "cerrada" seguía viva.
+    res.cookies.delete({ name: NOMBRE_COOKIE_SESION_LEGACY, path: "/" });
+    res.cookies.delete({ name: NOMBRE_COOKIE_SESION_HOST, path: "/" });
+    res.cookies.delete({ name: NOMBRE_COOKIE_SESION, path: "/" });
     return res;
 }
 

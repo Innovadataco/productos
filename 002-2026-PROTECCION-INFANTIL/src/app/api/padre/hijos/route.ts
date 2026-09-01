@@ -74,7 +74,9 @@ export async function POST(request: Request) {
         const respuesta = NextResponse.json(res, { status: 201 });
         // T073: registrar un menor puede CERRAR el Paso 3 del camino — re-sellar
         // al instante, no esperar los 5 minutos de la cookie (I-211/222/224/227).
-        const sellada = await sellarCookieSesionEstado(respuesta, usuario.id);
+        // Defensa: el helper promete no lanzar, pero si un cambio futuro rompe esa
+        // promesa, el dato guardado no puede convertirse en un 500.
+        const sellada = await sellarCookieSesionEstado(respuesta, usuario.id).catch(() => false);
         if (!sellada) {
             // T079: el menor quedó registrado; que el padre lo sepa.
             return NextResponse.json(

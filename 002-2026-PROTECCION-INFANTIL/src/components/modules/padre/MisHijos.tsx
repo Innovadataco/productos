@@ -225,7 +225,7 @@ export function MisHijos({ onListaCambio }: { onListaCambio?: (activos: number) 
             <header>
                 <h2 className="text-lg font-semibold text-body">A quién protejo</h2>
                 <p className="text-sm text-muted">
-                    Registrá a tus hijos y a los familiares cercanos. Si alguien reporta uno de sus
+                    Registra a tus hijos y a los familiares cercanos. Si alguien reporta uno de sus
                     identificadores (su Roblox, un teléfono, un correo), te avisamos.
                 </p>
             </header>
@@ -244,8 +244,8 @@ export function MisHijos({ onListaCambio }: { onListaCambio?: (activos: number) 
                     <div className="rounded-xl border border-cielo/40 p-3 dark:border-cielo/30">
                         <p className="text-sm font-medium text-body">Sus identificadores</p>
                         <p className="mb-2 text-xs text-muted">
-                            Agregá todos los que conozcas: su usuario de Roblox, su teléfono, su correo.
-                            Podés sumar más después.
+                            Agrega todos los que conozcas: su usuario de Roblox, su teléfono, su correo.
+                            Puedes sumar más después.
                         </p>
                         {nuevos.length > 0 && (
                             <ul className="mb-2 flex flex-wrap gap-2" data-testid="identificadores-nuevos">
