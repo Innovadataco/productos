@@ -455,6 +455,87 @@ describe("PagosRepository", () => {
         expect(await repo.existeSuscripcionVigenteParaTitular({ colegioId: colegio.id })).toBe(true);
     });
 
+    // SPEC-357 (I-254): el criterio de "vigente" para prohibir comprar tiene que
+    // ser el MISMO que el que bloquea el uso — estado Y fecha. Con solo el estado,
+    // una suscripción ACTIVA pero vencida era "vigente" para negarle la compra y
+    // "vencida" para negarle el trabajo: el colegio quedaba encerrado.
+    it("una suscripción ACTIVA pero VENCIDA no cuenta como vigente: el titular puede volver a comprar", async () => {
+        const admin = await crearAdmin();
+        const { colegio } = await crearColegioConAdmin();
+        const repo = new PagosRepository();
+        const planColegio = await repo.crearPlan({
+            tipoTitular: TipoTitular.COLEGIO,
+            duracion: DuracionPlan.MES_12,
+            anio: 2026,
+            nombre: "Plan colegio vencido",
+            precioBaseUSD: 100,
+            precio: 0,
+            creadoPorAdminId: admin.id,
+        });
+
+        await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.COLEGIO,
+            colegioId: colegio.id,
+            estado: EstadoSuscripcion.ACTIVA,
+            planActualId: planColegio.id,
+            fechaInicio: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+            fechaFin: new Date(Date.now() - 24 * 60 * 60 * 1000), // venció ayer
+            codigoReferidoPropio: "REF-VIG-003",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        expect(
+            await repo.existeSuscripcionVigenteParaTitular({ colegioId: colegio.id }),
+            "ACTIVA con fechaFin pasada NO bloquea la compra",
+        ).toBe(false);
+    });
+
+    it("EN_GRACIA vigente sí bloquea, y PENDIENTE_AUTORIZACION bloquea aunque su fecha pasara (compra en curso)", async () => {
+        const admin = await crearAdmin();
+        const { colegio: enGracia } = await crearColegioConAdmin();
+        const { colegio: pendiente } = await crearColegioConAdmin();
+        const repo = new PagosRepository();
+        const plan = await repo.crearPlan({
+            tipoTitular: TipoTitular.COLEGIO,
+            duracion: DuracionPlan.MES_12,
+            anio: 2026,
+            nombre: "Plan colegio criterios",
+            precioBaseUSD: 100,
+            precio: 0,
+            creadoPorAdminId: admin.id,
+        });
+
+        await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.COLEGIO,
+            colegioId: enGracia.id,
+            estado: EstadoSuscripcion.EN_GRACIA,
+            planActualId: plan.id,
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-VIG-004",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+        await repo.crearSuscripcion({
+            tipoTitular: TipoTitular.COLEGIO,
+            colegioId: pendiente.id,
+            estado: EstadoSuscripcion.PENDIENTE_AUTORIZACION,
+            planActualId: plan.id,
+            fechaInicio: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+            fechaFin: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: "REF-VIG-005",
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        });
+
+        expect(await repo.existeSuscripcionVigenteParaTitular({ colegioId: enGracia.id })).toBe(true);
+        expect(
+            await repo.existeSuscripcionVigenteParaTitular({ colegioId: pendiente.id }),
+            "una compra esperando autorización no es una ventana de servicio",
+        ).toBe(true);
+    });
+
     it("cuenta suscripciones freemium por usuario", async () => {
         const admin = await crearAdmin();
         const padre = await crearUsuarioPadre();

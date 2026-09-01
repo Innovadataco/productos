@@ -505,8 +505,17 @@ export class PagosRepository {
     // ── Suscripción (extensiones SPEC-244) ──
 
     /**
-     * SPEC-244 (002-PI-147): true si el titular (usuario padre o colegio) tiene
-     * una suscripción en estado ACTIVA, EN_GRACIA o PENDIENTE_AUTORIZACION.
+     * SPEC-244 (002-PI-147) · corregida por SPEC-357 (I-254): true si el titular
+     * (usuario padre o colegio) tiene una suscripción vigente — estado ACTIVA,
+     * EN_GRACIA o PENDIENTE_AUTORIZACION **Y la fecha de fin todavía no pasó**.
+     *
+     * La fecha es la corrección. Sin ella, este chequeo declaraba "vigente" a una
+     * suscripción ACTIVA cuya ventana ya venció, mientras el guardián de vigencia
+     * (que sí mira la fecha) la declaraba "vencida": la misma suscripción era
+     * vigente para prohibirle comprar y vencida para prohibirle trabajar, y el
+     * titular quedaba encerrado sin poder pagar (I-254, verificado en vivo).
+     * `PENDIENTE_AUTORIZACION` no se filtra por fecha: es una compra en curso
+     * esperando el clic de un administrador, no una ventana de servicio.
      */
     async existeSuscripcionVigenteParaTitular(filtro: { usuarioId?: string | undefined; colegioId?: string | undefined }): Promise<boolean> {
         const OR: Prisma.SuscripcionWhereInput[] = [];
@@ -514,12 +523,21 @@ export class PagosRepository {
         if (filtro.colegioId) OR.push({ colegioId: filtro.colegioId });
         if (OR.length === 0) return false;
 
+        const ahora = new Date();
         const count = await this.db.suscripcion.count({
             where: {
                 OR,
-                estado: {
-                    in: [EstadoSuscripcion.ACTIVA, EstadoSuscripcion.EN_GRACIA, EstadoSuscripcion.PENDIENTE_AUTORIZACION],
-                },
+                AND: [
+                    {
+                        OR: [
+                            {
+                                estado: { in: [EstadoSuscripcion.ACTIVA, EstadoSuscripcion.EN_GRACIA] },
+                                fechaFin: { gte: ahora },
+                            },
+                            { estado: EstadoSuscripcion.PENDIENTE_AUTORIZACION },
+                        ],
+                    },
+                ],
             },
         });
         return count > 0;

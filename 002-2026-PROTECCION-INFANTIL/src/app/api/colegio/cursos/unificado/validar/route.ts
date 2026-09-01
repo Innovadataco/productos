@@ -4,7 +4,7 @@ import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
+import { verificarVigenciaColegioSalvoCamino } from "@/lib/colegio/vigencia-camino";
 import { parseArchivoCarga } from "@/lib/colegio/carga/parser";
 import { validarFilasUnificado } from "@/lib/colegio/unificado/validar-lista";
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
+        const vigencia = await verificarVigenciaColegioSalvoCamino(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
