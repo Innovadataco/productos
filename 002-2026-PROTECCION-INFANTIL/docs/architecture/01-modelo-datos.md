@@ -521,7 +521,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | Campo | Tipo | Atributos |
 | --- | --- | --- |
 | id | String | id |
-| expedienteId | String | — |
+| expedienteId | String | opcional |
+| seguimientoCasoId | String | opcional |
 | versionSecuencial | Int | — |
 | alcance | AlcanceAnalisis | — |
 | hashCadena | String | — |
@@ -536,7 +537,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | motivoFallo | String | opcional |
 | generadoEn | DateTime | — |
 | publicadoEn | DateTime | opcional |
-| expediente | Expediente | relación (FK) |
+| expediente | Expediente | opcional, relación (FK) |
+| seguimientoCaso | SeguimientoCaso | opcional, relación (FK) |
 | guiaAccion | GuiaAccionCategoria | opcional, relación (FK) |
 
 #### `Anomalia`
@@ -1302,6 +1304,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | alerta | AlertaColegio | relación (FK) |
 | notas | NotaSeguimiento | lista, relación |
+| analisisIa | AnalisisExpediente | lista, relación |
 
 #### `SenalComunitariaCache`
 
@@ -2028,7 +2031,7 @@ erDiagram
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
     Expediente ||--o{ AclaracionExpediente : "expediente"
-    Expediente ||--o{ AnalisisExpediente : "expediente"
+    Expediente ||--o{ AnalisisExpediente : "expediente (opcional)"
     Expediente ||--o{ EventoExpediente : "expediente"
     Expediente ||--o{ InformeConsolidado : "expediente"
     Expediente ||--o{ InformePadre : "expediente"
@@ -2079,6 +2082,7 @@ erDiagram
     Reporte ||--o{ ReintentoReporte : "reporte"
     Reporte ||--o{ SolicitudComite : "reporte"
     Reporte ||--o{ TransicionReporte : "reporte"
+    SeguimientoCaso ||--o{ AnalisisExpediente : "seguimientoCaso (opcional)"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"

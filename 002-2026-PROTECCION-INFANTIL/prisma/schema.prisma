@@ -1601,9 +1601,11 @@ model SeguimientoCaso {
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
-  colegio Colegio           @relation(fields: [colegioId], references: [id])
-  alerta  AlertaColegio     @relation(fields: [alertaId], references: [id])
-  notas   NotaSeguimiento[]
+  colegio    Colegio              @relation(fields: [colegioId], references: [id])
+  alerta     AlertaColegio        @relation(fields: [alertaId], references: [id])
+  notas      NotaSeguimiento[]
+  // SPEC-350 (A-69 C3): análisis IA del caso (misma tubería de SPEC-341).
+  analisisIa AnalisisExpediente[]
 
   @@index([colegioId, estado])
 }
@@ -3157,7 +3159,12 @@ model EjecucionAccion {
 // clasificación de reportes. Ver specs/341-inteligencia-expediente/.
 model AnalisisExpediente {
   id                 String             @id @default(cuid())
-  expedienteId       String
+  // SPEC-350 (A-69 C3): el análisis puede ser de un expediente del PADRE o de
+  // un caso del COLEGIO. XOR: exactamente uno de expedienteId/seguimientoCasoId
+  // — CHECK constraint crudo en la migración (Prisma no lo expresa) + guard en
+  // el DAL. expedienteId era NOT NULL; pasa a nullable por esta razón.
+  expedienteId       String?
+  seguimientoCasoId  String?
   versionSecuencial  Int
   alcance            AlcanceAnalisis
   hashCadena         String
@@ -3173,13 +3180,17 @@ model AnalisisExpediente {
   generadoEn         DateTime           @default(now()) @db.Timestamptz(6)
   publicadoEn        DateTime?          @db.Timestamptz(6)
 
-  expediente Expediente           @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
-  guiaAccion GuiaAccionCategoria? @relation(fields: [guiaAccionId], references: [id])
+  expediente      Expediente?          @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  seguimientoCaso SeguimientoCaso?     @relation(fields: [seguimientoCasoId], references: [id], onDelete: Cascade)
+  guiaAccion      GuiaAccionCategoria? @relation(fields: [guiaAccionId], references: [id])
 
   @@unique([expedienteId, versionSecuencial])
+  @@unique([seguimientoCasoId, versionSecuencial])
   @@index([expedienteId, estado])
   @@index([expedienteId, hashCadena, estado])
   @@index([expedienteId, versionSecuencial(sort: Desc)])
+  @@index([seguimientoCasoId, estado])
+  @@index([seguimientoCasoId, hashCadena, estado])
   @@index([estado, generadoEn])
 }
 

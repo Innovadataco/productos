@@ -83,6 +83,7 @@ async function start() {
                 try {
                     await ejecutarAnalisisJob({
                         expedienteId: payload.expedienteId,
+                        seguimientoCasoId: payload.seguimientoCasoId,
                         hashCadena: payload.hashCadena,
                         alcance: payload.alcance,
                     });

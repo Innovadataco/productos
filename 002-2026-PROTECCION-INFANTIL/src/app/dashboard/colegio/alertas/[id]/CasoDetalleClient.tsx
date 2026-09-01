@@ -6,6 +6,7 @@ import type { DetalleCaso } from "@/lib/colegio/seguimiento";
 import { TimelineCaso } from "@/components/modules/colegio/seguimiento/TimelineCaso";
 import { PendientesCaso } from "@/components/modules/colegio/seguimiento/PendientesCaso";
 import { BitacoraCaso } from "@/components/modules/colegio/seguimiento/BitacoraCaso";
+import { CasoVivoColegio } from "@/components/modules/colegio/casos/CasoVivoColegio";
 
 /**
  * SPEC-159 (FR-005) — Detalle del caso: resumen visible (estudiante, curso,
@@ -112,6 +113,11 @@ export default function CasoDetalleClient({ caso }: CasoDetalleClientProps) {
                             Por seguridad nunca mostramos el contenido del reporte ni quién lo hizo.
                         </p>
                     </section>
+
+                    {/* SPEC-350 (A-69 C3 · D6): el caso vivo estilo expediente —
+                        mapa + capa 1 en vivo + análisis IA. Solo cuando la alerta
+                        ya tiene SeguimientoCaso (caso formal abierto). */}
+                    {caso.seguimiento.id && <CasoVivoColegio casoId={caso.seguimiento.id} />}
 
                     <PendientesCaso pendientes={caso.pendientes} alertaId={alerta.id} />
                     <TimelineCaso hitos={caso.timeline} />
