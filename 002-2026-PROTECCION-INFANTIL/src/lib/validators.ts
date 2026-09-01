@@ -210,6 +210,11 @@ export const verificarCompletarSchema = z.object({
 });
 export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
 
+// SPEC-339 (A-67 §2.3): documento del padre (adulto — distinto del set del
+// menor, que incluye RC/TI).
+export const DOCUMENTO_TIPOS_PADRE = ["CC", "CE", "PASAPORTE", "NIT", "OTRO"] as const;
+export type DocumentoTipoPadre = (typeof DOCUMENTO_TIPOS_PADRE)[number];
+
 // SPEC-339 (A-67 §2.1): la puerta del padre por enlace. Las dos condiciones
 // visibles del brief: 8 caracteres y que coincidan; se conserva letra+número
 // del estándar del sitio.

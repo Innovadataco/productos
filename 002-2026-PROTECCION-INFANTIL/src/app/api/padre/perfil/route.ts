@@ -5,6 +5,8 @@ import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
+import { DOCUMENTO_TIPOS_PADRE } from "@/lib/validators";
 
 // SPEC-334: teléfono con validación mínima (7-20 dígitos, permite + espacios guiones).
 const telefonoRegex = /^[+\d][\d\s-]{6,19}$/;
@@ -12,6 +14,14 @@ const telefonoRegex = /^[+\d][\d\s-]{6,19}$/;
 const perfilSchema = z.object({
     nombre: z.string().trim().min(1, "Escribe tus nombres").max(120).optional(),
     apellidos: z.string().trim().min(1, "Escribe tus apellidos").max(120).optional(),
+    // SPEC-339 (A-67 §2.3): documento del padre — obligatorio en el Paso 2 del
+    // camino (la obligatoriedad la impone derivarPasoPendiente, no este esquema:
+    // el perfil se puede guardar por partes).
+    documentoTipo: z.enum(DOCUMENTO_TIPOS_PADRE).optional(),
+    documentoNumero: z.string().trim().min(3, "Escribe el número de documento").max(40).optional(),
+    // SPEC-339 (D-2): fechaNacimiento deja de pedirse en el camino. Se ACEPTA
+    // aún (la pantalla de perfil fuera del camino puede seguir mandándola y el
+    // campo vive en la BD); simplemente ya no es parte del Paso 2.
     fechaNacimiento: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida")
@@ -59,6 +69,8 @@ export async function PATCH(request: Request) {
         const data: Prisma.UsuarioUncheckedUpdateInput = {};
         if (d.nombre !== undefined) data.nombre = d.nombre;
         if (d.apellidos !== undefined) data.apellidos = d.apellidos;
+        if (d.documentoTipo !== undefined) data.documentoTipo = d.documentoTipo;
+        if (d.documentoNumero !== undefined) data.documentoNumero = d.documentoNumero;
         if (d.telefono !== undefined) data.telefono = d.telefono;
         if (d.paisId !== undefined) data.paisId = d.paisId;
         if (d.ciudadId !== undefined) data.ciudadId = d.ciudadId;
@@ -67,7 +79,21 @@ export async function PATCH(request: Request) {
         }
         await new UsuarioRepository().actualizarPerfilPadre(user.id, data);
         const perfil = await new UsuarioRepository().obtenerPerfilPadre(user.id);
-        return NextResponse.json({ perfil });
+        const res = NextResponse.json({ perfil });
+        // SPEC-339 (T072): guardar el perfil puede CERRAR el Paso 2 del camino.
+        // Sin re-sellar acá, el padre completa sus datos y la cookie sigue
+        // diciendo "Paso 2" hasta vencer (5 min) — la clase de bug
+        // I-211/222/224/227.
+        const sellada = await sellarCookieSesionEstado(res, user.id);
+        if (!sellada) {
+            // T079 (Calidad · R1-8): el dato quedó guardado, pero el padre debe
+            // saberlo — no repetir el paso "en silencio".
+            return NextResponse.json({
+                perfil,
+                aviso: "Guardamos tus datos. Si la página no avanza en un momento, recárgala.",
+            });
+        }
+        return res;
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
