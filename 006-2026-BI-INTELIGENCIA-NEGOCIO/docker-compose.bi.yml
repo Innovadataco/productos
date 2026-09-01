@@ -65,6 +65,7 @@ services:
       - bi-db-data:/var/lib/postgresql/data
     networks:
       - bi-net
+      - pi-red   # red de PI: bi-db alcanza pi-db por nombre para la suscripción pg_logical
 
   # Migraciones y seed — servicio "tools" DE UN SOLO USO (corre y termina).
   # La imagen standalone de bi-next NO lleva prisma CLI ni tsx: este servicio
@@ -96,6 +97,11 @@ services:
 networks:
   bi-net:
     driver: bridge
+  # Red externa de PI (compose de PI): bi-db se une SOLO para la suscripción
+  # pg_logical (alcanzar pi-db por nombre). Sobreescribible por env.
+  pi-red:
+    external: true
+    name: ${PI_NET_NAME:-002-2026-proteccion-infantil_default}
 
 volumes:
   bi-db-data:
