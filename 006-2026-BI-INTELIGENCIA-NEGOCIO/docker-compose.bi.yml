@@ -18,7 +18,9 @@ services:
       - "127.0.0.1:${BI_PORT:-3001}:3000"   # puerto libre que dejó el 005; el proxy apunta ahí
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/bi/estado-sistema"]
+      # 127.0.0.1 y no "localhost": en Alpine, localhost resuelve a ::1 (IPv6)
+      # y el server standalone escucha en IPv4 0.0.0.0 → connection refused
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/bi/estado-sistema"]
       interval: 30s
       timeout: 5s
       retries: 3
