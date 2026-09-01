@@ -123,6 +123,22 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
         if (!col) {
             return fallo(`La agregación "${plan.agregacion}" requiere al menos una columna en columnas_idx.`);
         }
+        // I-12: MAX/MIN sobre columna NO numérica ni fecha es sinsentido
+        // semántico disfrazado de respuesta (caso real: "categoría más
+        // frecuente" devolvió el MAX alfabético del enum = STALKING — confiado
+        // y ERRADO; la frecuencia se calcula agrupando, no con MAX).
+        if (plan.agregacion === "maximo" || plan.agregacion === "minimo") {
+            const tipoCol = col.tipo.toLowerCase();
+            const esNumericaOFecha =
+                ["int", "integer", "float", "bigint", "decimal", "number", "numeric", "double", "real"].includes(tipoCol) ||
+                tipoCol.includes("date") ||
+                tipoCol.includes("time");
+            if (!esNumericaOFecha) {
+                return fallo(
+                    `"${plan.agregacion}" no aplica a "${col.nombreFuente}" (tipo ${col.tipo}): sería el máximo alfabético, no el más frecuente. Para eso pide el conteo de un valor concreto.`,
+                );
+            }
+        }
         selectList = `${FUNCION_POR_AGREGACION[plan.agregacion]}(${citarIdentificador(col.nombreFuente)}) AS valor`;
     } else {
         return fallo(`Agregación no soportada: ${String(plan.agregacion)}.`);

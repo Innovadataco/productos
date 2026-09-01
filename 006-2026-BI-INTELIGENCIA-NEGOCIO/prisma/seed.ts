@@ -151,7 +151,7 @@ const COLUMNAS: Col[] = [
   { tabla: "AlertaColegio", nombreFuente: "id", nombreLegible: "ID alerta", descripcion: "ID de la alerta", tipo: "String" },
   { tabla: "AlertaColegio", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio", tipo: "String" },
   { tabla: "AlertaColegio", nombreFuente: "tipoSujeto", nombreLegible: "Tipo de sujeto", descripcion: "Sujeto de la alerta (alumno · acudiente · profesor)", tipo: "String" },
-  { tabla: "AlertaColegio", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Estado de gestion (nueva · vista · gestionada · escalada · cerrada)", tipo: "String" },
+  { tabla: "AlertaColegio", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Estado de gestion de la alerta. Valores reales: nueva · vista · gestionada · escalada · cerrada", tipo: "String" },
   { tabla: "AlertaColegio", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de la alerta", tipo: "DateTime" },
 ];
 
