@@ -182,6 +182,9 @@ Toda respuesta pasa por sanitizer que busca patrones (`\d{10}` · emails · dire
 │   │   └── ui/               ← componentes base (copiados de PI)
 │   └── lib/
 │       ├── auth/             ← sesión propia BI (credenciales hasheadas · fail-closed)
+│       ├── ai/               ← cliente + config de Ollama (guard R2 isLocalOllamaUrl)
+│       ├── config.ts         ← parámetros en BD (bi_config · B3)
+│       ├── db.ts             ← singleton PrismaClient
 │       ├── bi/               ← motor NL→SQL (candados 1-10) · llama Ollama directo vía Tailscale
 │       ├── catalogo/         ← catálogo dinámico (candado 8)
 │       └── observabilidad/   ← logs y métricas (candado 12)
@@ -228,6 +231,21 @@ npm run ratchets:check       # ratchet grep-based (PII · SQL directo · etc)
 docker compose -f docker-compose.bi.yml up -d
 docker compose -f docker-compose.bi.yml logs -f app
 docker compose -f docker-compose.bi.yml exec app npm run <script>
+```
+
+### Base de datos (Fase 1b · Prisma + PostgreSQL propio `bi-db`)
+```bash
+npm run db:generate   # regenera el cliente Prisma (tras cambiar schema.prisma)
+npm run db:migrate    # prisma migrate deploy — ADITIVAS, jamás destructivas
+npm run db:seed       # seed idempotente: upsert({create:{...}, update:{}})
+```
+En producción, migrate y seed **NO corren en la imagen standalone** (no lleva
+prisma CLI ni tsx): corren vía el servicio one-shot `bi-migrate` (target `tools`
+del Dockerfile · profile `tools` del compose), que `scripts/deploy-bi006.sh`
+invoca en los pasos [3/6] y [4/6]. Manual:
+```bash
+docker compose -f docker-compose.bi.yml --profile tools run --rm bi-migrate                     # migrate deploy
+docker compose -f docker-compose.bi.yml --profile tools run --rm bi-migrate npx prisma db seed  # seed
 ```
 
 ### Deploy prod (estructura S2 · merge y deploy autorizados a la IA por Jelkin 01-09-2026)

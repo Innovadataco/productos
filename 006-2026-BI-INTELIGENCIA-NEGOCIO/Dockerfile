@@ -8,9 +8,9 @@
 # ---------- deps ----------
 FROM node:22-alpine AS deps
 WORKDIR /app
-COPY package.json ./
-# npm install (no npm ci): el package-lock se genera y se commitea en Fase 1b
-RUN npm install
+COPY package.json package-lock.json ./
+# npm ci con lockfile commiteado (D3a: builds reproducibles)
+RUN npm ci
 
 # ---------- build ----------
 FROM node:22-alpine AS build
@@ -20,7 +20,28 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
+# ---------- tools (migraciones/seed · NO es la imagen de producción) ----------
+# Fase 1b: `prisma migrate deploy` y `prisma db seed` corren AQUÍ, nunca en la
+# imagen standalone (runner): el standalone no lleva node_modules completos,
+# prisma CLI ni tsx. Lo usa el servicio bi-migrate del compose (profile tools).
+# Requiere que prisma/ exista en el contexto (llega en Fase 1b); el build de
+# producción (runner) NO toca este stage, así que no rompe si aún no existe.
+FROM node:22-alpine AS tools
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+# openssl: recomendación oficial de Prisma sobre Alpine (musl)
+RUN apk add --no-cache openssl
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json tsconfig.json ./
+COPY prisma ./prisma
+# src por si el seed importa utilidades de la app (alias @/* del tsconfig)
+COPY src ./src
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 # ---------- runner ----------
+# NOTA (Fase 1b): las migraciones y el seed NO corren en esta imagen — el
+# standalone no incluye prisma CLI ni tsx. Corren vía el servicio `bi-migrate`
+# (target `tools` de este mismo Dockerfile · profile "tools" del compose).
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
