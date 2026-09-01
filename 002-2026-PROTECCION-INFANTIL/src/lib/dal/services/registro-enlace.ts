@@ -20,6 +20,7 @@ import {
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { TokenRegistroRepository } from "@/lib/dal/repositories/token-registro";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import type { RolUsuario } from "@prisma/client";
 
 /** 24 horas (brief §2.1). La recuperación usa 1 h; este enlace es la puerta de
  *  entrada de un padre que quizá abre el correo por la noche: se le da el día. */
@@ -44,8 +45,17 @@ export class RegistroEnlaceService {
     /**
      * Crea el enlace. Devuelve el token EN CLARO para que la ruta lo mande por
      * correo (adaptador); acá no se envía nada.
+     *
+     * SPEC-344 (A-69 · C1): el parámetro `rol` parametriza para qué tipo de
+     * cuenta se emite el token (default `PARENT`, para retrocompatibilidad con
+     * los callers de SPEC-339). El completar fuerza el rol guardado en el
+     * token, no confía en el cliente.
      */
-    async solicitarEnlace(email: string): Promise<ResultadoSolicitudEnlace> {
+    async solicitarEnlace(
+        email: string,
+        rol: RolUsuario = "PARENT",
+        extras?: { nombreColegio?: string; nit?: string },
+    ): Promise<ResultadoSolicitudEnlace> {
         const existente = await this.usuarios.findByEmail(email);
         if (existente) {
             // La ruta manda el aviso "ya tienes una cuenta" (SPEC-338) y responde
@@ -65,6 +75,9 @@ export class RegistroEnlaceService {
             email,
             tokenHash: await hashToken(token),
             expiraEn: new Date(Date.now() + EXPIRACION_ENLACE_MS),
+            rol,
+            nombreColegio: extras?.nombreColegio ?? null,
+            nit: extras?.nit ?? null,
         });
 
         return { ok: true, tipo: "ok", token };
@@ -116,12 +129,17 @@ export class RegistroEnlaceService {
         const tokenId = encontrado.id;
         const email = encontrado.email;
 
+        // SPEC-344: el rol vive en el token (aditivo). Si el token no lo trae
+        // (registros previos a la migración) → PARENT por default, coherente
+        // con el uso original de SPEC-339.
+        const rolAcuenta: RolUsuario = encontrado.rol ?? "PARENT";
+
         const user = await withUnitOfWork(async (tx) => {
             const creado = await new UsuarioRepository(tx).crear({
                 email,
                 nombre: null,
                 passwordHash,
-                rol: "PARENT",
+                rol: rolAcuenta,
             });
             await new TokenRegistroRepository(tx).marcarUsado(tokenId);
             return creado;

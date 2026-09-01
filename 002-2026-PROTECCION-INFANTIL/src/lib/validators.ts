@@ -240,6 +240,36 @@ export const registroCompletarSchema = z
     });
 export type RegistroCompletarInput = z.infer<typeof registroCompletarSchema>;
 
+// SPEC-344 (A-69 · C1): registro por enlace del colegio. Reemplaza al código
+// de 6 dígitos. Anti-enumeración por AMBAS dimensiones (correo Y NIT) — la
+// respuesta hacia la pantalla es idéntica en las cuatro combinaciones
+// (matiz CEO 03:18). El aviso, cuando corresponde, va SOLO al buzón.
+export const registroColegioSolicitarSchema = z.object({
+    email: z.string({ error: "Email inválido" }).trim().toLowerCase().min(1, "Email inválido")
+        .refine((val) => val.includes("@"), { message: "Email inválido" }),
+    nombreColegio: z.string().trim().min(2, "Nombre del colegio: mínimo 2 caracteres").max(150),
+    nit: z.string().trim().min(1, "Falta el NIT del colegio").max(50),
+});
+export type RegistroColegioSolicitarInput = z.infer<typeof registroColegioSolicitarSchema>;
+
+export const registroColegioCompletarSchema = z
+    .object({
+        token: z.string({ error: "Enlace y contraseña requeridos" }).min(1, "Enlace y contraseña requeridos"),
+        password: z.string({ error: "Enlace y contraseña requeridos" })
+            .min(1, "Enlace y contraseña requeridos")
+            .refine((val) => val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
+                message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número",
+            }),
+        passwordConfirmacion: z.string({ error: "Confirma su contraseña" }).min(1, "Confirma su contraseña"),
+        // nombreColegio y nit vienen del TokenRegistro (no del cliente): más
+        // seguro y evita re-pedirlos.
+    })
+    .refine((data) => data.password === data.passwordConfirmacion, {
+        message: "Las contraseñas no coinciden",
+        path: ["passwordConfirmacion"],
+    });
+export type RegistroColegioCompletarInput = z.infer<typeof registroColegioCompletarSchema>;
+
 export const activarSchema = z.object({
     token: z.string({ error: "Token requerido" }).min(1, "Token requerido"),
     password: z.string({ error: "Contraseña requerida" })
