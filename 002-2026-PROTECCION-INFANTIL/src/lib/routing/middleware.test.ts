@@ -378,6 +378,9 @@ describe("SPEC-344 · guardián del camino del colegio", () => {
         "/dashboard/colegio/cursos/unificado",
         // Auditoría #222 · punto 2: el paso 4 enlaza la ficha del curso (materias).
         "/dashboard/colegio/cursos/cku_ficha_curso",
+        // SPEC-355 · ítem 3: "Agregar profesor" del paso 3 vive en la sección
+        // de profesores del dashboard — el enlace no puede rebotar al paso.
+        "/dashboard/colegio/profesores",
         "/camino/colegio/plan",
         "/api/sesion/al-dia",
         "/reportar",
@@ -398,6 +401,92 @@ describe("SPEC-344 · guardián del camino del colegio", () => {
             if (res.status === 403) {
                 const json = await res.json();
                 expect(json.error?.code, `${ruta} bloqueada por el camino`).not.toBe("CAMINO_INCOMPLETO");
+            }
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // SPEC-355 · CANDADO SISTÉMICO: inventario COMPLETO (22v5) de lo que cada
+    // paso del camino del colegio ENLAZA o CONSUME (href/fetch de la pantalla
+    // y de las secciones del dashboard que enlaza). Con el camino incompleto
+    // — y también con la vigencia caída — NINGUNA de estas rutas puede
+    // responder CAMINO_INCOMPLETO / VIGENCIA_REQUERIDA ni rebotar al camino.
+    // Si mañana alguien agrega un fetch a un paso sin exentarlo, se agrega acá
+    // y este test lo caza. Nacido de 4 hallazgos en vivo del CEO (prod
+    // a97dea4e): freemium sin tarjeta, profesores no exenta, materias e
+    // identificadores-profesor en 403 dentro de la ficha/wizard.
+    // ────────────────────────────────────────────────────────────────────────
+    const RUTAS_POR_PASO: Record<Exclude<PasoColegioTest, null>, string[]> = {
+        rector: ["/camino/colegio/rector", "/api/colegio/rector", "/consentimiento", "/api/consentimiento"],
+        plan: ["/camino/colegio/plan", "/api/colegio/suscripcion", "/api/pagos"],
+        profesores: [
+            "/camino/colegio/profesores",
+            "/api/colegio/profesores",
+            "/api/colegio/tipos-documento",
+            "/api/colegio/carga-profesores/plantilla",
+            "/api/colegio/carga-profesores/validar",
+            "/api/colegio/carga-profesores/confirmar",
+            // Enlace "Agregar profesor" (?crear=1) del paso 3.
+            "/dashboard/colegio/profesores",
+        ],
+        cursos: [
+            "/camino/colegio/cursos",
+            "/api/colegio/cursos",
+            "/api/colegio/cursos/cku_curso/estado",
+            // Enlace "Materias" → ficha del curso y sus fuentes de datos.
+            "/dashboard/colegio/cursos/cku_curso",
+            "/api/colegio/cursos/cku_curso/materias",
+            "/api/colegio/materias",
+            "/api/colegio/identificadores-profesor",
+        ],
+        estudiantes: [
+            "/camino/colegio/estudiantes",
+            "/api/colegio/alumnos",
+            "/api/colegio/carga",
+            // Enlace al wizard unificado y sus fuentes de datos.
+            "/dashboard/colegio/cursos/unificado",
+            "/api/colegio/cursos/unificado",
+            "/api/colegio/cursos/unificado/validar",
+            "/api/colegio/cursos/unificado/plantilla",
+            "/api/colegio/tipos-documento",
+            "/api/colegio/materias",
+            "/api/colegio/identificadores-profesor",
+            "/api/plataformas",
+        ],
+    };
+
+    async function reqRectorPasoVigencia(
+        pathname: string,
+        pasoCamino: PasoColegioTest,
+        vigencia: "ACTIVA" | "SIN_SUSCRIPCION",
+    ) {
+        const token = await jwtParaRol("SCHOOL_ADMIN");
+        const cookie = await firmarSesionEstado(
+            { vigencia, requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino },
+            JWT_SECRET_TEST,
+        );
+        return new NextRequest(`http://localhost:5005${pathname}`, {
+            headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=${cookie}` },
+        });
+    }
+
+    for (const [paso, rutas] of Object.entries(RUTAS_POR_PASO) as Array<[Exclude<PasoColegioTest, null>, string[]]>) {
+        it(`paso "${paso}": sus ${rutas.length} rutas pasan con camino incompleto Y con vigencia caída (SPEC-355)`, async () => {
+            for (const ruta of rutas) {
+                for (const vigencia of ["ACTIVA", "SIN_SUSCRIPCION"] as const) {
+                    const res = await middleware(await reqRectorPasoVigencia(ruta, paso, vigencia));
+                    const loc = res.headers.get("location");
+                    if (loc) {
+                        const path = new URL(loc).pathname;
+                        expect(path.startsWith("/camino/colegio"), `[${paso}·${vigencia}] ${ruta} rebotó al camino`).toBe(false);
+                        expect(path, `[${paso}·${vigencia}] ${ruta} rebotó al muro de cobro`).not.toBe("/dashboard/colegio/suscripcion");
+                    }
+                    if (res.status === 403) {
+                        const json = await res.json();
+                        expect(json.error?.code, `[${paso}·${vigencia}] ${ruta} bloqueada`).not.toBe("CAMINO_INCOMPLETO");
+                        expect(json.error?.code, `[${paso}·${vigencia}] ${ruta} bloqueada por vigencia`).not.toBe("VIGENCIA_REQUERIDA");
+                    }
+                }
             }
         });
     }

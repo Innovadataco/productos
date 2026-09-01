@@ -171,15 +171,25 @@ export const GUARDIAS_ACCESO = {
             // Paso 2 · plan (freemium, pagado, bono, referido).
             "/api/colegio/suscripcion",
             "/api/pagos",
-            // Paso 3 · profesores.
+            // Paso 3 · profesores. La sección /dashboard/colegio/profesores
+            // completa: el paso enlaza "Agregar profesor" (?crear=1) — sin la
+            // exención el enlace rebota al propio paso y solo sobrevive la vía
+            // Excel (SPEC-355 · ítem 3, cazado en vivo por el CEO).
             "/api/colegio/profesores",
             "/api/colegio/carga-profesores",
+            "/dashboard/colegio/profesores",
             // Paso 4 · cursos y materias. La sección /dashboard/colegio/cursos
             // completa: el paso enlaza a la ficha del curso ([id] · materias) y
             // al wizard unificado del paso 5 — sin la exención el enlace rebota
             // al propio paso (auditoría #222 · punto 2).
             "/api/colegio/cursos",
             "/dashboard/colegio/cursos",
+            // SPEC-355 · sistémico: la ficha del curso y el wizard unificado
+            // (enlazados desde los pasos 4/5) consumen materias e
+            // identificadores de profesor — sin esto sus pantallas cargan
+            // pero sus datos responden 403 CAMINO_INCOMPLETO.
+            "/api/colegio/materias",
+            "/api/colegio/identificadores-profesor",
             // Paso 5 · estudiantes.
             "/api/colegio/carga",
             "/api/colegio/alumnos",
@@ -255,9 +265,14 @@ export const GUARDIAS_ACCESO = {
                 "/api/colegio/carga",
                 "/api/colegio/alumnos",
                 "/api/colegio/tipos-documento",
-                // Sección de cursos completa (ficha [id] · materias + unificado):
-                // el camino la enlaza y corre ANTES de que exista vigencia.
+                // SPEC-355 · sistémico: datos de la ficha del curso y el wizard.
+                "/api/colegio/materias",
+                "/api/colegio/identificadores-profesor",
+                // Secciones de cursos y profesores completas (ficha [id] ·
+                // materias + unificado + "Agregar profesor" del paso 3): el
+                // camino las enlaza y corre ANTES de que exista vigencia.
                 "/dashboard/colegio/cursos",
+                "/dashboard/colegio/profesores",
                 // Auditoría #222 · punto 1: alertas de menores por encima del cobro.
                 "/dashboard/colegio/alertas",
                 "/api/colegio/alertas",

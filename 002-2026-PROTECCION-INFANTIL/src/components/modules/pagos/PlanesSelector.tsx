@@ -70,6 +70,13 @@ export function PlanesSelector({
     }, [planes]);
 
     const planFreemium = planes.find((p) => p.esFreemium);
+    const esColegio = usuario.rol === "SCHOOL_ADMIN";
+    // SPEC-355: la tarjeta de prueba gratis se pinta para CUALQUIER rol que
+    // tenga acción de freemium — el colegio quedaba sin poder avanzar sin
+    // pagar porque el gate era `rol === "PARENT"`. Para el colegio exige
+    // además que el plan freemium exista en BD (fuente de la tarjeta); el
+    // padre conserva su comportamiento histórico (tarjeta fija).
+    const mostrarFreemium = Boolean(onFreemium) && (!esColegio || Boolean(planFreemium));
 
     async function handleFreemium() {
         if (!onFreemium) return;
@@ -87,11 +94,12 @@ export function PlanesSelector({
 
     return (
         <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-8">
+            {/* SPEC-355: voz por rol — al rector se le habla de usted (Colombia). */}
             <header>
-                <h1 className="text-2xl font-bold text-body">Elige tu plan</h1>
+                <h1 className="text-2xl font-bold text-body">{esColegio ? "Elija su plan" : "Elige tu plan"}</h1>
                 <p className="mt-1 text-sm text-muted">
-                    {usuario.rol === "SCHOOL_ADMIN"
-                        ? "Selecciona el plan institucional para tu colegio."
+                    {esColegio
+                        ? "Seleccione el plan institucional para su colegio."
                         : "Selecciona el plan que mejor se ajuste a tu familia."}
                 </p>
             </header>
@@ -99,16 +107,21 @@ export function PlanesSelector({
             {errorFreemium && <Alerta tono="error">{errorFreemium}</Alerta>}
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {usuario.rol === "PARENT" && (
-                    <GlassCard className="flex flex-col">
+                {mostrarFreemium && (
+                    <GlassCard className="flex flex-col" data-testid="plan-freemium">
                         <div className="mb-4">
                             <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${acento.badge}`}>
                                 Prueba gratis
                             </span>
                         </div>
-                        <h3 className="text-lg font-semibold text-body">Prueba gratis</h3>
+                        <h3 className="text-lg font-semibold text-body">
+                            {esColegio ? (planFreemium?.nombre ?? "Prueba institucional") : "Prueba gratis"}
+                        </h3>
                         <p className="mt-1 text-sm text-muted">
-                            Explora la plataforma sin costo durante {duracionFreemiumDias} días.
+                            {esColegio
+                                ? (planFreemium?.descripcion ??
+                                  `Explore la plataforma sin costo durante ${duracionFreemiumDias} días.`)
+                                : `Explora la plataforma sin costo durante ${duracionFreemiumDias} días.`}
                         </p>
                         <div className="mt-4 flex-1">
                             <p className="text-3xl font-bold text-body">$0</p>
