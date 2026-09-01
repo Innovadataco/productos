@@ -72,10 +72,12 @@ async function saludReplica(db: EstadoDb): Promise<SaludReplica> {
 
     // Tablas ya sincronizadas con la publicación (srsubstate 'r'). Si este
     // sondeo falla se reporta solo el estado, sin el conteo.
+    // OJO: la vista es pg_subscription_rel (catálogo); "pg_stat_subscription_rel"
+    // NO existe — con el nombre erróneo este campo jamás se poblaría.
     try {
         const filas = await prisma.$queryRaw<{ total: number }[]>`
             SELECT count(*)::int AS total
-              FROM pg_stat_subscription_rel
+              FROM pg_subscription_rel
              WHERE srsubstate = 'r'`;
         salud.tablasReplicando = filas[0]?.total ?? 0;
     } catch {
