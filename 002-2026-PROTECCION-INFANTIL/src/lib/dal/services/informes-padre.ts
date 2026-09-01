@@ -77,6 +77,14 @@ export async function listarInformesPadre(expedienteId: string): Promise<Informe
 export async function buscarInformePadrePorHash(pdfHash: string) {
     return prisma.informePadre.findUnique({
         where: { pdfHash },
-        select: { id: true, generadoEn: true, numeroSecuencial: true },
+        select: { id: true, generadoEn: true, numeroSecuencial: true, expedienteId: true },
+    });
+}
+
+/** Verificación pública por el CÓDIGO impreso en el pie (16 hex). */
+export async function buscarInformePadrePorCodigo(codigo: string) {
+    return prisma.informePadre.findFirst({
+        where: { codigoVerificacion: codigo },
+        select: { id: true, generadoEn: true, numeroSecuencial: true, expedienteId: true },
     });
 }

@@ -69,7 +69,7 @@ describe("informes-padre (SPEC-340)", { timeout: 30_000 }, () => {
         const mutadores = exports.filter((e) => /^(actualizar|borrar|editar|eliminar|update|delete|marcar)/i.test(e));
         expect(mutadores, "el historial es evidencia: sin vías de mutación").toEqual([]);
         expect(exports.sort()).toEqual(
-            ["buscarInformePadrePorHash", "listarInformesPadre", "registrarInformePadre"].sort()
+            ["buscarInformePadrePorCodigo", "buscarInformePadrePorHash", "listarInformesPadre", "registrarInformePadre"].sort()
         );
     });
 });
