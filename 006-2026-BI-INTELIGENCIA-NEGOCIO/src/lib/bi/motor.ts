@@ -151,6 +151,23 @@ async function cerrarLog(id: string, patch: PatchLog): Promise<void> {
     }
 }
 
+/** Valores enum declarados en la descripción de una columna ("Valores reales: A · B · C"). */
+function extraerValoresEnum(descripcion: string): string[] {
+    const m = descripcion.match(/Valores reales:\s*(.+)$/i);
+    if (!m) return [];
+    return m[1]
+        .split("·")
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 4 && s !== "OTRO");
+}
+
+/** La pregunta menciona el valor como token. MAYÚSCULAS (enums) verbatim; minúsculas (estados) case-insensitive. */
+function mencionaValor(pregunta: string, valor: string): boolean {
+    const escapado = valor.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = valor === valor.toUpperCase() ? new RegExp(`\\b${escapado}\\b`) : new RegExp(`\\b${escapado}\\b`, "i");
+    return re.test(pregunta);
+}
+
 /**
  * Checks atómicos del plan (candado 4, deny-by-default): aunque el schema
  * cerrado acota la salida del LLM, NADA se da por válido sin verificar —
@@ -158,7 +175,7 @@ async function cerrarLog(id: string, patch: PatchLog): Promise<void> {
  * null si el plan es completo o el texto determinista de clarificación
  * que pide exactamente lo que falta.
  */
-function validarPlanAtomico(plan: PlanLLM, cat: Catalogo): string | null {
+function validarPlanAtomico(plan: PlanLLM, cat: Catalogo, pregunta: string): string | null {
     if (!esEntero(plan.tabla_idx) || plan.tabla_idx < 0 || plan.tabla_idx >= cat.tablas.length) {
         return "No pude identificar sobre qué datos quieres consultar. Reformula la pregunta indicando el tema (por ejemplo: reportes, colegios, suscripciones, facturación).";
     }
@@ -201,6 +218,20 @@ function validarPlanAtomico(plan: PlanLLM, cat: Catalogo): string | null {
         const diasOk = esEntero(plan.periodo.dias) && plan.periodo.dias >= 1 && plan.periodo.dias <= 3650;
         if (!columnaOk || !diasOk) {
             return "El período indicado no es válido. Indica una ventana en días (por ejemplo: últimos 7, 30 o 90 días).";
+        }
+    }
+
+    // I-08: la pregunta nombra VERBATIM un valor enum del catálogo pero el
+    // plan no filtra por esa columna → el LLM se tragó el filtro (caso real:
+    // "SOLICITUD_MATERIAL" en la pregunta, plan sin filtro → respondía el
+    // total 2012 en vez de 153). Deny-by-default: clarificar, no adivinar.
+    const columnasConFiltro = new Set((plan.filtros ?? []).map((f) => f.columna_idx));
+    for (const [colIdx, col] of tabla.columnas.entries()) {
+        if (columnasConFiltro.has(colIdx)) continue;
+        for (const valor of extraerValoresEnum(col.descripcion ?? "")) {
+            if (mencionaValor(pregunta, valor)) {
+                return `Mencionaste "${valor}" pero no lo usé como filtro. ¿Quieres filtrar por ${col.nombreFuente} = ${valor}? Reformula la pregunta para confirmarlo.`;
+            }
         }
     }
 
@@ -325,7 +356,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
         }
 
         // 5 · Checks atómicos (candado 4): si falta algo, clarificación.
-        let faltante = validarPlanAtomico(plan, cat);
+        let faltante = validarPlanAtomico(plan, cat, pregunta);
         // Fallback determinista (I-03): si el único problema es el período
         // malformado por el LLM y la pregunta NO pedía ventana temporal, se
         // descarta el período y se responde sin él — la consulta sin ventana
@@ -337,7 +368,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             !tieneMarcasTemporales(pregunta)
         ) {
             delete plan.periodo;
-            faltante = validarPlanAtomico(plan, cat);
+            faltante = validarPlanAtomico(plan, cat, pregunta);
         }
         if (faltante) {
             return await finalizar({ estado: "clarificacion", texto: faltante }, "plan_incompleto");

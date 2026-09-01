@@ -339,8 +339,32 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         expect(r2.params).toEqual(["BULLYING", 30, 100]);
     });
 
-    it("I-05: igualdad de texto es case-insensitive (PI mezcla 'escalada' y 'CONTACTO_INSISTENTE')", () => {
-        // Regresión del caso real: el LLM envió el valor en una caja distinta a
+    it("I-07: texto basura en columna de fecha → plan inválido ANTES de ejecutar (nunca 42883 en runtime)", () => {
+        // Regresión del caso real: el LLM envió vencimientoSla > 'ahora' —
+        // la guarda de tipos lo rechaza determinísticamente con mensaje claro.
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [{ columna_idx: 3, operador: ">", valor: "ahora" }],
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        expect(r.ok).toBe(false);
+        if (r.ok) throw new Error("debía fallar");
+        expect(r.error).toContain("no es una fecha válida");
+        // Una fecha ISO sí pasa:
+        const planOk: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [{ columna_idx: 3, operador: ">", valor: "2026-01-01" }],
+        };
+        const r2 = construirSql(CATALOGO, planOk, LIMITE_MAXIMO);
+        if (!r2.ok) throw new Error(`debía construir: ${r2.error}`);
+        expect(r2.sql).toContain('"creadoEn" > $1');
+    });
+
+    it("I-05: igualdad de texto es case-insensitive (PI mezcla 'escalada' y 'CONTACTO_INSISTENTE')", () => {        // Regresión del caso real: el LLM envió el valor en una caja distinta a
         // la almacenada y la respuesta era 0 filas habiendo datos (254 escaladas).
         const plan: PlanLLM = {
             tabla_idx: 0,

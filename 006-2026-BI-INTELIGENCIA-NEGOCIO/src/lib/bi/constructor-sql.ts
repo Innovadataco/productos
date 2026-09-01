@@ -162,6 +162,21 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
         if (typeof valor === "number" && !Number.isFinite(valor)) {
             return fallo("Valor de filtro numérico no finito (NaN o Infinity).");
         }
+        // I-07 (guarda determinista de tipos): el LLM a veces pone texto
+        // ("ahora", "hace_un_ano") en columnas con tipo — Postgres falla con
+        // 42883/22007 en ejecución. Se rechaza ANTES, como plan inválido:
+        const tipoCol = col.tipo.toLowerCase();
+        if (typeof valor === "string" && (tipoCol.includes("date") || tipoCol.includes("time"))) {
+            const esFecha = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(valor.trim());
+            if (!esFecha) {
+                return fallo(`El valor "${valor}" no es una fecha válida para la columna "${col.nombreFuente}" (tipo ${col.tipo}). Para ventanas relativas existe el período.`);
+            }
+        }
+        if (typeof valor === "string" && (tipoCol === "int" || tipoCol === "float" || tipoCol === "bigint")) {
+            if (!/^-?\d+(\.\d+)?$/.test(valor.trim())) {
+                return fallo(`El valor "${valor}" no es numérico para la columna "${col.nombreFuente}" (tipo ${col.tipo}).`);
+            }
+        }
         params.push(valor);
         // I-05/I-07: igualdad case-insensitive para texto. PI mezcla
         // convenciones ('escalada' vs 'CONTACTO_INSISTENTE') y además algunas
