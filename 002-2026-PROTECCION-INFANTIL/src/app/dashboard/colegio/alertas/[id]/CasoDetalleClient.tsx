@@ -7,6 +7,7 @@ import { TimelineCaso } from "@/components/modules/colegio/seguimiento/TimelineC
 import { PendientesCaso } from "@/components/modules/colegio/seguimiento/PendientesCaso";
 import { BitacoraCaso } from "@/components/modules/colegio/seguimiento/BitacoraCaso";
 import { CasoVivoColegio } from "@/components/modules/colegio/casos/CasoVivoColegio";
+import { InformesCasoPanel } from "@/components/modules/colegio/casos/InformesCasoPanel";
 
 /**
  * SPEC-159 (FR-005) — Detalle del caso: resumen visible (estudiante, curso,
@@ -118,6 +119,9 @@ export default function CasoDetalleClient({ caso }: CasoDetalleClientProps) {
                         mapa + capa 1 en vivo + análisis IA. Solo cuando la alerta
                         ya tiene SeguimientoCaso (caso formal abierto). */}
                     {caso.seguimiento.id && <CasoVivoColegio casoId={caso.seguimiento.id} />}
+
+                    {/* SPEC-351 (A-69 C5): informe firmado + historial inmutable. */}
+                    {caso.seguimiento.id && <InformesCasoPanel casoId={caso.seguimiento.id} />}
 
                     <PendientesCaso pendientes={caso.pendientes} alertaId={alerta.id} />
                     <TimelineCaso hitos={caso.timeline} />
