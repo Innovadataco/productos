@@ -9,7 +9,9 @@
 
 ## Fase 2 · Las derogaciones (primero, solas — el diff más caliente)
 
-- [ ] T002 [US5] Retirar la creación del expediente de la transacción del alta en `src/app/api/reportes/route.ts` conservando ÍNTEGRA la vinculación (advisory lock + no-duplicación de #202). R-1: la creación pasa al botón
+- [ ] T002a [US5] Migración: `Reporte.reportePrincipalId` (self-FK, `onDelete: SetNull`, índice) + backfill desde `EventoExpediente` con guarda que aborta si un reporte aparece en dos expedientes (data-model §0, aprobado CEO 01-09)
+- [ ] T002b [US5] En la transacción del alta (`src/app/api/reportes/route.ts:144-169`): reemplazar la creación del expediente por la escritura de `reportePrincipalId` (resolviendo al principal si el previo ya era evento). La vinculación de `reporte-creation.ts:89-102` (lock + no-duplicación #202) queda ÍNTEGRA
+- [ ] T002c [US5] `scripts/limpieza/borrar-reporte.ts`: al borrar un principal, null-ear los `reportePrincipalId` de sus eventos (coherente con SetNull)
 - [ ] T003 [US5] Derogar el auto-cierre: en `src/lib/expediente/motor/tareas-motor.ts` la tarea retorna 0 documentando la derogación (D-1, «nada se cierra nunca»); en `src/lib/expediente/estados/transiciones.ts` la transición a CERRADO por inactividad queda código muerto documentado — no se borra
 - [ ] T004 Migración de parámetro: `padre.expediente.auto_cierre_meses` → `0` (apagado) SOLO si sigue en `6` (respeta ediciones del admin); el motor trata `0` como derogado — doble valla con T003
 - [ ] T005 [P] [US1] Quitar el letrero «Reportando como…» de `src/components/modules/ReporteWizard.tsx` y actualizar los 2 tests que lo afirman (assert de que NO existe)
@@ -85,5 +87,5 @@ Fases 2-4 (T002-T017): el hilo sin expediente vivo — reportar con hora, cadena
 
 ## Resumen
 
-- **40 tareas** · 9 fases · pruebas: **12** dedicadas + la compuerta T007
+- **42 tareas** · 9 fases · pruebas: **12** dedicadas + la compuerta T007
 - Por historia: US1 3 · US2 5 · US3 5 · US4 (cubierta en T012/T032) · US5 5 · US6 2 · US7 5 · US8 3 · US9 2 · transversales 10

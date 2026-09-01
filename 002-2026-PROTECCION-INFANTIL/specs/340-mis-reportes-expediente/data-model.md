@@ -1,6 +1,29 @@
 # Data Model · SPEC-340 · el hilo
 
-**Fase 1** · 01-09-2026 · tres migraciones, todas aditivas.
+**Fase 1** · 01-09-2026 · cuatro migraciones, todas aditivas. **v2**: se suma la self-FK de la cadena (hallazgo T002, aprobado por el CEO 01-09).
+
+## 0. `Reporte.reportePrincipalId` — la cadena gana casa propia (self-FK)
+
+**El hallazgo**: la cadena HOY solo existía como `EventoExpediente` (exige `expedienteId`) — derogar el expediente automático la dejaba sin rastro. El brief asume lo contrario («la cadena existe siempre; el expediente es la vista»): esta migración hace verdad esa frase.
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `reportePrincipalId` | `String?` FK → `Reporte` (self) | `null` = principal o suelto; con valor = evento de esa cadena |
+
+`onDelete: SetNull` (si el principal cae por disputa, los eventos quedan — «el expediente muestra lo que queda») · índice por `reportePrincipalId`.
+
+**Backfill**: desde `EventoExpediente` (reporteId → principal de su expediente = el evento con `ordenSecuencial` 1). Producción: 1 expediente — trivial. Guarda que aborta si un reporte aparece en dos expedientes.
+
+**Callsites que materializan vinculación (candado 22v5, censo completo — escritura):**
+
+| Sitio | Qué hace hoy | Qué le pasa |
+|---|---|---|
+| `src/app/api/reportes/route.ts:144-169` | crea/reusa expediente + 2 `agregarEvento` en la transacción | SE DEROGA: en su lugar escribe `reportePrincipalId` (resolviendo al principal si el previo ya era evento) |
+| `src/lib/dal/services/reporte-creation.ts:89-102` | advisory lock + detecta duplicado → devuelve `vinculacion` | SE CONSERVA íntegro (el lock y la no-duplicación de #202 viven acá) |
+| `src/app/api/padre/expedientes/[id]/eventos/route.ts:44-51` | evento manual del padre al expediente existente | SE CONSERVA (es contenido del expediente, no vinculación de reportes) |
+| `scripts/limpieza/borrar-reporte.ts` | borra eventos al borrar el reporte | GANA: poner en null los `reportePrincipalId` que apunten al borrado (coherente con SetNull) |
+
+**Lectores NO tocados** (leen `EventoExpediente` DENTRO de un expediente ya creado): compilación (`senal-comunitaria`, reglas), motor (`tareas-motor`, `tareas-aclaracion`), `publicar-evento-expediente`, timeline del círculo, comité (`ConsolidacionTimeline`), fixtures. El botón «Crear expediente» arma los eventos DESDE la cadena, y de ahí en adelante todo ese mundo funciona igual.
 
 ## 1. `InformePadre` — el historial inmutable (nuevo)
 
