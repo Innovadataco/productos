@@ -4,13 +4,22 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
-import { COLUMNAS_REQUERIDAS, COLUMNA_OPCIONAL_APELLIDOS } from "@/lib/colegio/carga/parser";
+import {
+    COLUMNAS_REQUERIDAS,
+    COLUMNA_OPCIONAL_APELLIDOS,
+    COLUMNAS_OPCIONALES_DOCUMENTO,
+} from "@/lib/colegio/carga/parser";
 
-// SPEC-144 (D4): la plantilla generada por la plataforma ya trae la columna de
-// apellidos (opcional en el parser para no rechazar plantillas viejas).
+// SPEC-344 (A-69 · C1 · FR-026-ter · I-245): la plantilla oficial DEBE traer
+// TODAS las columnas obligatorias del validador — incluidas las de documento
+// del alumno (obligatorias desde SPEC-320). El defecto anterior: la plantilla
+// omitía `documento_tipo_alumno`/`documento_numero_alumno` y todo rector que
+// la descargaba y la subía tal cual obtenía 0 filas válidas. Un test-candado
+// (plantilla-autoconsistente) protege contra la regresión.
 const COLUMNAS_PLANTILLA = [
     ...COLUMNAS_REQUERIDAS.slice(0, 4),
     COLUMNA_OPCIONAL_APELLIDOS,
+    ...COLUMNAS_OPCIONALES_DOCUMENTO,
     ...COLUMNAS_REQUERIDAS.slice(4),
 ];
 
@@ -20,6 +29,8 @@ const FILA_EJEMPLO = [
     "2026",
     "María",
     "Gómez Pérez",
+    "CC",
+    "1098552331",
     "telefono",
     "+573001234567",
     "ESTUDIANTE",
