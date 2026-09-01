@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -128,11 +130,20 @@ export function ModalConsentimiento({
                         className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-papel/50 p-4 text-sm text-body dark:bg-tinta/50"
                     >
                         <div className="prose prose-sm max-w-none dark:prose-invert">
-                            {documentoContenido.split("\n").map((linea, index) => (
-                                <p key={index} className="mb-2">
-                                    {linea}
-                                </p>
-                            ))}
+                            {/* Sin rehype-raw: el HTML embebido se escapa como texto (FR-009).
+                                Tablas envueltas para scroll propio en móvil (FR-010). */}
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    table: ({ children }) => (
+                                        <div className="overflow-x-auto">
+                                            <table>{children}</table>
+                                        </div>
+                                    ),
+                                }}
+                            >
+                                {documentoContenido}
+                            </ReactMarkdown>
                         </div>
                         <div ref={finalRef} className="h-2" aria-hidden="true" />
                     </div>
