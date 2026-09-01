@@ -230,22 +230,22 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 // próximo `/api/sesion/al-dia` re-sella. No es un bloqueo duro.
                 // Continúa al Paso 6 (vigencia).
             } else {
-            if (pathname.startsWith("/api/")) {
+                if (pathname.startsWith("/api/")) {
                 // SPEC-329: las /api/** gateadas responden JSON 403, no 302 —
                 // un fetch no puede seguir un redirect y confundiría el bloqueo
                 // con un éxito.
-                return NextResponse.json(
-                    {
-                        error: {
-                            message: "Termina de configurar tu cuenta para continuar.",
-                            code: "CAMINO_INCOMPLETO",
-                            redirectTo: destino,
+                    return NextResponse.json(
+                        {
+                            error: {
+                                message: "Termina de configurar tu cuenta para continuar.",
+                                code: "CAMINO_INCOMPLETO",
+                                redirectTo: destino,
+                            },
                         },
-                    },
-                    { status: 403 }
-                );
-            }
-            return aplicarCspSiCorresponde(request, redirect(request, destino));
+                        { status: 403 }
+                    );
+                }
+                return aplicarCspSiCorresponde(request, redirect(request, destino));
             }
         }
         // Paso 6: vigencia por rol.

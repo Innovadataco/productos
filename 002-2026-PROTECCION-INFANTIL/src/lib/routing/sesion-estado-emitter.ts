@@ -51,8 +51,8 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
         rol === "PARENT"
             ? await derivarPasoPendiente(userId)
             : rol === "SCHOOL_ADMIN"
-            ? await derivarPasoPendienteColegio(userId)
-            : null;
+                ? await derivarPasoPendienteColegio(userId)
+                : null;
 
     return firmarSesionEstado(
         { vigencia, requiereConsentimiento, debeCambiarPassword, pasoCamino },

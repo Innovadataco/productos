@@ -348,13 +348,13 @@ export const GUARDIAS_ACCESO = {
             const paresEmisor: Array<[string, "PARENT" | "SCHOOL_ADMIN" | undefined]> =
                 emisor === "camino"
                     ? [
-                          ...destinosPorRolCamino.PARENT.map(
-                              (d) => [d, "PARENT" as const] as [string, "PARENT"],
-                          ),
-                          ...destinosPorRolCamino.SCHOOL_ADMIN.map(
-                              (d) => [d, "SCHOOL_ADMIN" as const] as [string, "SCHOOL_ADMIN"],
-                          ),
-                      ]
+                        ...destinosPorRolCamino.PARENT.map(
+                            (d) => [d, "PARENT" as const] as [string, "PARENT"],
+                        ),
+                        ...destinosPorRolCamino.SCHOOL_ADMIN.map(
+                            (d) => [d, "SCHOOL_ADMIN" as const] as [string, "SCHOOL_ADMIN"],
+                        ),
+                    ]
                     : destinosDe[emisor].map((d) => [d, undefined]);
 
             for (const [destino, rolCamino] of paresEmisor) {
