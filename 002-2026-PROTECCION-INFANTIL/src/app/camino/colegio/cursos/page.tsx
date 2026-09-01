@@ -57,7 +57,9 @@ export default function PasoCursosColegio() {
                 method: "PATCH",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ estado: "inactivo" }),
+                // Contrato del endpoint (SPEC-355 · ítem 6): el body es el
+                // string pelado, igual que CursosPageClient — {estado: …} da 400.
+                body: JSON.stringify("inactivo"),
             });
             if (!res.ok) throw new Error("No pudimos inactivar el curso.");
             await cargar();
@@ -75,7 +77,7 @@ export default function PasoCursosColegio() {
                 method: "PATCH",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ estado: "activo" }),
+                body: JSON.stringify("activo"),
             });
             if (!res.ok) throw new Error("No pudimos reactivar el curso.");
             await cargar();
