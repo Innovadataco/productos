@@ -32,6 +32,12 @@ export function anioBogota(fecha: Date = new Date()): number {
     );
 }
 
+/**
+ * @internal SOLO TESTS (audit #221 · ajuste 2): el camino de producción es
+ * `generarYRegistrarInforme` — este helper registra sin renderizar y si
+ * alguien lo usara con render aparte, el PDF quedaría FUERA del lock y el
+ * correlativo impreso podría divergir del registrado.
+ */
 export async function registrarInformeCaso(input: {
     casoId: string;
     firmadoPorId: string;
@@ -239,6 +245,17 @@ export async function generarYRegistrarInforme(input: {
             },
             select: { id: true, generadoEn: true },
         });
+
+        // Audit #221 · ajuste 2: el camino de producción también audita.
+        await logAudit({
+            accion: "PDF_GENERADO",
+            tipoRecurso: "InformeCaso",
+            recursoId: creado.id,
+            usuarioId: input.firmadoPorId,
+            valorNuevo: JSON.stringify({ casoId: input.casoId, correlativo }),
+            tx: tx as Prisma.TransactionClient,
+        });
+
         return { id: creado.id, correlativo, pdfHash, buffer, generadoEn: creado.generadoEn };
     });
 }

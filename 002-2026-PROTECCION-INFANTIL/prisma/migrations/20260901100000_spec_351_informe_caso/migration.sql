@@ -22,10 +22,13 @@ CREATE TABLE "InformeCaso" (
     CONSTRAINT "InformeCaso_pkey" PRIMARY KEY ("id")
 );
 
+-- Audit #221 (decisión CEO): SIN Cascade — el informe es evidencia y no se
+-- arrastra en silencio (alineado con InformePadre). La limpieza lo borra
+-- explícito ANTES del caso.
 ALTER TABLE "InformeCaso"
     ADD CONSTRAINT "InformeCaso_casoId_fkey"
     FOREIGN KEY ("casoId") REFERENCES "SeguimientoCaso"("id")
-    ON DELETE CASCADE ON UPDATE CASCADE;
+    ON DELETE RESTRICT ON UPDATE CASCADE;
 
 ALTER TABLE "InformeCaso"
     ADD CONSTRAINT "InformeCaso_firmadoPorId_fkey"

@@ -3248,7 +3248,10 @@ model InformeCaso {
   seccionesJson       Json
   generadoEn          DateTime @default(now()) @db.Timestamptz(6)
 
-  caso       SeguimientoCaso @relation(fields: [casoId], references: [id], onDelete: Cascade)
+  // Audit #221 · ajuste 3 (decisión CEO): SIN Cascade — un informe es evidencia
+  // y no se arrastra en silencio (alineado con InformePadre). Los scripts de
+  // limpieza lo borran explícito ANTES del caso.
+  caso       SeguimientoCaso @relation(fields: [casoId], references: [id])
   firmadoPor Usuario         @relation("InformesCasoFirmados", fields: [firmadoPorId], references: [id])
 
   @@unique([casoId, anio, numeroCorrelativo])

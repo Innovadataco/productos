@@ -149,6 +149,11 @@ export async function borrarColegio(
                 await tx.notaSeguimiento.deleteMany({
                     where: { seguimientoId: { in: seguimientos.map((s) => s.id) } },
                 });
+                // SPEC-351: InformeCaso SIN Cascade (evidencia, decisión CEO) —
+                // se borra explícito ANTES del caso o la FK RESTRICT bloquea.
+                await tx.informeCaso.deleteMany({
+                    where: { casoId: { in: seguimientos.map((s) => s.id) } },
+                });
                 await tx.seguimientoCaso.deleteMany({
                     where: { id: { in: seguimientos.map((s) => s.id) } },
                 });

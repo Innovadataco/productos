@@ -82,8 +82,12 @@ export async function generarPdfInformeCaso(input: PdfInformeCasoInput): Promise
     contenido.push({ text: `Informe del caso · ${fmt.format(input.fechaGeneracion)}`, style: "membrete" });
     contenido.push({ text: input.correlativo, style: "correlativo" });
 
+    // Audit #221 · ajuste 1: el curso SOLO se imprime si la sección
+    // "contexto_curso" fue marcada — antes la casilla era un no-op y el
+    // curso salía siempre en esta línea.
+    const incluirCurso = input.secciones.includes("contexto_curso") && input.curso;
     contenido.push({
-        text: `Sujeto del caso: ${input.tipoSujeto.toLowerCase()}${input.curso ? ` · curso ${input.curso}` : ""}. ` +
+        text: `Sujeto del caso: ${input.tipoSujeto.toLowerCase()}${incluirCurso ? ` · curso ${input.curso}` : ""}. ` +
             "Este informe describe hechos y actuaciones; no constituye acusación ni veredicto.",
         style: "cuerpo",
     });

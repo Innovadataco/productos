@@ -99,6 +99,8 @@ async function ejecutar(motivo: string, confirm: boolean) {
             });
             if (segs.length) {
                 await tx.notaSeguimiento.deleteMany({ where: { seguimientoId: { in: segs.map((s) => s.id) } } });
+                // SPEC-351: InformeCaso sin Cascade — explícito antes del caso.
+                await tx.informeCaso.deleteMany({ where: { casoId: { in: segs.map((s) => s.id) } } });
                 await tx.seguimientoCaso.deleteMany({ where: { id: { in: segs.map((s) => s.id) } } });
             }
             await tx.alertaColegio.deleteMany({ where: { id: PFX } });
