@@ -63,3 +63,23 @@ export function destinoDePaso(paso: PasoCamino): string {
 export function esPasoCamino(valor: unknown): valor is PasoCamino {
     return typeof valor === "string" && (PASOS_CAMINO as readonly string[]).includes(valor);
 }
+
+/**
+ * SPEC-344 (A-69 · C1): registry de destinos por rol. El guardián y el rebote
+ * `/api/sesion/al-dia` lo usan para despachar al `/camino/*` correcto según
+ * el rol de la sesión. Se importa dinámicamente para conservar Edge-safety
+ * en `pasos.ts` (cero Prisma) y para NO forzar al padre a cargar el módulo
+ * del colegio.
+ */
+import {
+    esPasoColegio,
+    destinoDePasoColegio,
+    type PasoColegio,
+} from "./pasos-colegio";
+
+export function destinoParaRol(rol: string, paso: string | null): string | null {
+    if (paso === null) return null;
+    if (rol === "PARENT" && esPasoCamino(paso)) return destinoDePaso(paso);
+    if (rol === "SCHOOL_ADMIN" && esPasoColegio(paso)) return destinoDePasoColegio(paso as PasoColegio);
+    return null;
+}

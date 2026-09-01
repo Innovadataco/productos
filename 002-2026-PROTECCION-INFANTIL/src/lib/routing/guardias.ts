@@ -122,8 +122,12 @@ export const GUARDIAS_ACCESO = {
     caminoRebote: "/api/sesion/al-dia",
 
     camino: {
-        // No hay un destino fijo: depende del paso pendiente (ver `pasos.ts`).
-        // El guardián calcula el destino; esta lista es lo que nunca puede tapar.
+        // No hay un destino fijo: depende del paso pendiente (ver `pasos.ts` para
+        // el padre y `pasos-colegio.ts` para el colegio). El guardián calcula el
+        // destino; estas listas son lo que nunca puede tapar según el rol.
+        //
+        // `exentas` = padre (comportamiento SPEC-339 sin cambios).
+        // `exentasColegio` = rector (SPEC-344 · A-69 · C1).
         exentas: [
             // Las pantallas del propio camino y lo que las alimenta.
             "/camino",
@@ -153,6 +157,44 @@ export const GUARDIAS_ACCESO = {
             // Reportar no se bloquea nunca, ni por camino ni por vigencia.
             "/reportar",
             "/dashboard/padre/reportar",
+            "/mis-reportes",
+            "/api/reportes",
+        ],
+        // SPEC-344 (A-69 · C1): exentas del camino guiado del colegio.
+        exentasColegio: [
+            // Pantallas del propio camino del colegio.
+            "/camino/colegio",
+            // Paso 1 · rector + convenio.
+            "/consentimiento",
+            "/api/consentimiento",
+            "/api/colegio/rector",
+            // Paso 2 · plan (freemium, pagado, bono, referido).
+            "/api/colegio/suscripcion",
+            "/api/pagos",
+            // Paso 3 · profesores.
+            "/api/colegio/profesores",
+            "/api/colegio/carga-profesores",
+            // Paso 4 · cursos y materias.
+            "/api/colegio/cursos",
+            // Paso 5 · estudiantes. Incluye el wizard unificado (I2 del analyze:
+            // vive en /dashboard/colegio/cursos/unificado y el rector debe poder
+            // usarlo desde el paso).
+            "/api/colegio/carga",
+            "/api/colegio/alumnos",
+            "/dashboard/colegio/cursos/unificado",
+            // Catálogos consumidos por los formularios del camino.
+            "/api/colegio/tipos-documento",
+            // Salidas y obligaciones que mandan sobre el camino.
+            "/login",
+            "/api/auth/logout",
+            "/cambiar-password",
+            "/api/auth/cambiar-password",
+            // Re-sellado de la cookie de estado; sin esto el camino no avanza.
+            "/api/sesion/al-dia",
+            "/api/session/ping",
+            "/api/vigencia/refresh",
+            // Regla dura de Jelkin: proteger a un menor está por encima del cobro.
+            "/reportar",
             "/mis-reportes",
             "/api/reportes",
         ],
@@ -189,7 +231,33 @@ export const GUARDIAS_ACCESO = {
         },
         SCHOOL_ADMIN: {
             destino: "/dashboard/colegio/suscripcion",
-            exentas: ["/dashboard/colegio/suscripcion", "/api/pagos"],
+            // SPEC-344 (A-69 · C1): sin estas exentas, un rector nuevo sin
+            // suscripción rebotaría sin fin entre el guardián del camino y
+            // el de vigencia — mismo bug I-25/I-111/I-141 que atajó SPEC-339
+            // para el padre. La invariante cruzada de más abajo lo verifica.
+            exentas: [
+                "/dashboard/colegio/suscripcion",
+                "/api/pagos",
+                // Rutas del camino del colegio (deben ser accesibles antes de
+                // que exista una suscripción vigente).
+                "/camino/colegio",
+                "/api/colegio/rector",
+                "/api/colegio/suscripcion",
+                "/api/colegio/profesores",
+                "/api/colegio/carga-profesores",
+                "/api/colegio/cursos",
+                "/api/colegio/carga",
+                "/api/colegio/alumnos",
+                "/api/colegio/tipos-documento",
+                "/dashboard/colegio/cursos/unificado",
+                "/api/sesion/al-dia",
+                "/api/session/ping",
+                "/api/vigencia/refresh",
+                // Regla dura de Jelkin: reportar nunca se bloquea por vigencia.
+                "/reportar",
+                "/mis-reportes",
+                "/api/reportes",
+            ],
         },
         COMITE_CONVIVENCIA: {
             destino: "/dashboard/colegio/suscripcion",
@@ -238,52 +306,74 @@ export const GUARDIAS_ACCESO = {
     {
         const ORDEN_GUARDIANES = ["consentimiento", "camino", "vigencia"] as const;
 
-        // Destinos que produce cada guardián. El camino no tiene un destino fijo:
-        // produce uno por paso (ver `pasos.ts`), y todos cuelgan de `/camino`
-        // salvo el Paso 1, que reusa la pantalla de consentimiento.
+        // Destinos que produce cada guardián, por rol. El camino no tiene un
+        // destino fijo: produce uno por paso — PARENT usa `/camino/**` (Paso 1
+        // reusa `/consentimiento`) y SCHOOL_ADMIN usa `/camino/colegio/**`
+        // (Paso 1 también reusa `/consentimiento`).
+        const destinosPorRolCamino: Record<"PARENT" | "SCHOOL_ADMIN", string[]> = {
+            PARENT: ["/camino", GUARDIAS_ACCESO.consentimiento.destino],
+            SCHOOL_ADMIN: ["/camino/colegio", GUARDIAS_ACCESO.consentimiento.destino],
+        };
         const destinosDe: Record<(typeof ORDEN_GUARDIANES)[number], string[]> = {
             consentimiento: [GUARDIAS_ACCESO.consentimiento.destino],
-            camino: ["/camino", GUARDIAS_ACCESO.consentimiento.destino],
+            camino: [
+                ...destinosPorRolCamino.PARENT,
+                ...destinosPorRolCamino.SCHOOL_ADMIN,
+            ],
             vigencia: Object.values(GUARDIAS_ACCESO.vigencia).map((v) => v.destino),
         };
 
-        // Exentas de cada guardián, por rol cuando corresponde.
+        // Exentas de cada guardián, opcionalmente por rol. Para vigencia, la
+        // regla generalizada SPEC-344: por cada rol con `pasoCamino` (PARENT
+        // y SCHOOL_ADMIN), los destinos del camino de ESE rol deben estar en
+        // `vigencia[rol].exentas` — no basta con verificar solo PARENT.
         const exentasDe = (
             guardian: (typeof ORDEN_GUARDIANES)[number],
+            rolCamino?: "PARENT" | "SCHOOL_ADMIN",
         ): readonly string[] => {
             if (guardian === "consentimiento") return GUARDIAS_ACCESO.consentimiento.exentas;
-            if (guardian === "camino") return GUARDIAS_ACCESO.camino.exentas;
-            // Vigencia solo aplica al padre en lo que respecta al camino.
+            if (guardian === "camino") {
+                return rolCamino === "SCHOOL_ADMIN"
+                    ? GUARDIAS_ACCESO.camino.exentasColegio
+                    : GUARDIAS_ACCESO.camino.exentas;
+            }
+            if (rolCamino === "SCHOOL_ADMIN") return GUARDIAS_ACCESO.vigencia.SCHOOL_ADMIN.exentas;
             return GUARDIAS_ACCESO.vigencia.PARENT.exentas;
         };
 
         for (let i = 0; i < ORDEN_GUARDIANES.length; i++) {
             const emisor = ORDEN_GUARDIANES[i];
-            for (const destino of destinosDe[emisor]) {
-                // Solo hacia ADELANTE. Que un guardián ANTERIOR intercepte el
-                // destino de uno posterior no es un bucle: es la precedencia
-                // correcta (primero firmas el consentimiento, después sigues el
-                // camino). El bucle nace cuando el POSTERIOR devuelve el pedido.
+            // Enumeración por rol: cada destino se verifica con las exentas del
+            // rol correspondiente en el guardián posterior.
+            const paresEmisor: Array<[string, "PARENT" | "SCHOOL_ADMIN" | undefined]> =
+                emisor === "camino"
+                    ? [
+                          ...destinosPorRolCamino.PARENT.map(
+                              (d) => [d, "PARENT" as const] as [string, "PARENT"],
+                          ),
+                          ...destinosPorRolCamino.SCHOOL_ADMIN.map(
+                              (d) => [d, "SCHOOL_ADMIN" as const] as [string, "SCHOOL_ADMIN"],
+                          ),
+                      ]
+                    : destinosDe[emisor].map((d) => [d, undefined]);
+
+            for (const [destino, rolCamino] of paresEmisor) {
                 for (let j = i + 1; j < ORDEN_GUARDIANES.length; j++) {
                     const posterior = ORDEN_GUARDIANES[j];
-                    // Una ruta pública o "de sesión pura" está exenta de TODOS
-                    // los guardianes por construcción: `middleware.ts` retorna
-                    // en sus pasos 1 y 3, antes de evaluar cualquier guardián.
-                    // Por eso `/consentimiento` no genera bucle hoy pese a no
-                    // estar en las exentas de vigencia.
                     const universales = [
                         ...GUARDIAS_ACCESO.publicas,
                         ...GUARDIAS_ACCESO.sesion,
                     ];
-                    const exentas = [...exentasDe(posterior), ...universales];
+                    const exentas = [...exentasDe(posterior, rolCamino), ...universales];
                     const cubierto = exentas.some(
                         (r) => destino === r || destino.startsWith(r + "/"),
                     );
                     if (!cubierto) {
+                        const contexto = rolCamino ? ` (rol=${rolCamino})` : "";
                         throw new Error(
-                            `[GUARDIAS_ACCESO] Invariante CRUZADA rota: "${emisor}" redirige a "${destino}", ` +
+                            `[GUARDIAS_ACCESO] Invariante CRUZADA rota: "${emisor}"${contexto} redirige a "${destino}", ` +
                                 `pero "${posterior}" no lo exime. Un usuario enviado allí rebotaría sin fin. ` +
-                                `Agrega "${destino}" a las exentas de "${posterior}".`,
+                                `Agrega "${destino}" a las exentas de "${posterior}"${contexto}.`,
                         );
                     }
                 }
@@ -317,11 +407,19 @@ export function esExentaConsentimiento(pathname: string): boolean {
 }
 
 /**
- * SPEC-339: rutas que el guardián del camino NUNCA puede tapar.
- * Es el candado "el padre nunca queda atrapado" (I-25 · I-35).
+ * SPEC-339 · SPEC-344: rutas que el guardián del camino NUNCA puede tapar,
+ * discriminadas por rol.
+ * Es el candado "el usuario nunca queda atrapado" (I-25 · I-35).
+ * - `PARENT` (o `undefined`, para compatibilidad con callers legacy):
+ *   `camino.exentas` — comportamiento SPEC-339.
+ * - `SCHOOL_ADMIN`: `camino.exentasColegio` — SPEC-344 · A-69 · C1.
  */
-export function esExentaCamino(pathname: string): boolean {
-    return GUARDIAS_ACCESO.camino.exentas.some((r) => matcheaRuta(pathname, r));
+export function esExentaCamino(pathname: string, rol?: string): boolean {
+    const lista =
+        rol === "SCHOOL_ADMIN"
+            ? GUARDIAS_ACCESO.camino.exentasColegio
+            : GUARDIAS_ACCESO.camino.exentas;
+    return lista.some((r) => matcheaRuta(pathname, r));
 }
 
 export function esExentaCambiarPassword(pathname: string): boolean {

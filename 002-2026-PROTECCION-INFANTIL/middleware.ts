@@ -32,7 +32,7 @@ import {
     NOMBRE_COOKIE as NOMBRE_COOKIE_SESION,
     leerSesionEstado,
 } from "@/lib/routing/vigencia-cookie";
-import { destinoDePaso } from "@/lib/camino/pasos";
+import { destinoDePaso, destinoParaRol } from "@/lib/camino/pasos";
 import { GUARDIAS_ACCESO as G } from "@/lib/routing/guardias";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -213,13 +213,23 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
             }
             return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.cambiarPassword.destino));
         }
-        // Paso 5 (SPEC-339 · A-67): el camino guiado del padre.
+        // Paso 5 (SPEC-339 · A-67 + SPEC-344 · A-69 · C1): el camino guiado.
         //
-        // Solo el padre lo recorre. El Paso 1 no tiene pantalla propia: reusa
-        // `/consentimiento`, que ya existe y está bien hecha; por eso el destino
-        // del paso "permiso" apunta allí y no a una pantalla nueva.
-        if (sesion.rol === "PARENT" && estado.pasoCamino && !esExentaCamino(pathname)) {
-            const destino = destinoDePaso(estado.pasoCamino);
+        // Padre (PARENT) y rector (SCHOOL_ADMIN) comparten la misma cadena. El
+        // destino se despacha por rol vía `destinoParaRol`. Otros roles nunca
+        // llevan `pasoCamino` en la cookie (emisor lo garantiza), así que no
+        // llegan a esta rama.
+        if (
+            (sesion.rol === "PARENT" || sesion.rol === "SCHOOL_ADMIN") &&
+            estado.pasoCamino &&
+            !esExentaCamino(pathname, sesion.rol)
+        ) {
+            const destino = destinoParaRol(sesion.rol, estado.pasoCamino);
+            if (!destino) {
+                // Cookie corrupta o rol/paso incompatible: dejamos pasar y el
+                // próximo `/api/sesion/al-dia` re-sella. No es un bloqueo duro.
+                // Continúa al Paso 6 (vigencia).
+            } else {
             if (pathname.startsWith("/api/")) {
                 // SPEC-329: las /api/** gateadas responden JSON 403, no 302 —
                 // un fetch no puede seguir un redirect y confundiría el bloqueo
@@ -236,6 +246,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 );
             }
             return aplicarCspSiCorresponde(request, redirect(request, destino));
+            }
         }
         // Paso 6: vigencia por rol.
         if (tieneVigencia(sesion.rol)) {
@@ -267,7 +278,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     // (Node) que re-sella la cookie y devuelve al padre a su destino o a su paso.
     // No puede ciclar: `/api/sesion/al-dia` es ruta de sesión, así que el
     // middleware retorna antes de llegar a este punto cuando la pide.
-    if (!estado && sesion.rol === "PARENT" && !esExentaCamino(pathname) && !pathname.startsWith("/api/")) {
+    if (
+        !estado &&
+        (sesion.rol === "PARENT" || sesion.rol === "SCHOOL_ADMIN") &&
+        !esExentaCamino(pathname, sesion.rol) &&
+        !pathname.startsWith("/api/")
+    ) {
         const alDia = new URL(G.caminoRebote, request.url);
         alDia.searchParams.set("destino", pathname);
         return aplicarCspSiCorresponde(request, NextResponse.redirect(alDia));
