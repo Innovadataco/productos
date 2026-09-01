@@ -379,6 +379,45 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         expect(r.error).toContain("máximo alfabético");
     });
 
+    it("I-14: valor de filtro fuera del dominio declarado de la columna → plan inválido con la lista", () => {
+        // Regresión del caso real: prioridad='nueva' (valor que solo existe en
+        // `estado`) ANDado con estado='escalada' daba 0 habiendo 254.
+        const catConDominio: Catalogo = {
+            tablas: [
+                {
+                    nombreFuente: "AlertaColegio",
+                    nombreLegible: "Alertas",
+                    descripcion: "Alertas al colegio",
+                    columnas: [
+                        { nombreFuente: "id", tipo: "text" },
+                        { nombreFuente: "estado", tipo: "text", descripcion: "Valores reales: nueva · vista · gestionada · escalada · cerrada" },
+                        { nombreFuente: "prioridad", tipo: "text", descripcion: "alta · media · baja" },
+                    ],
+                },
+            ],
+        };
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [
+                { columna_idx: 1, operador: "=", valor: "escalada" },
+                { columna_idx: 2, operador: "=", valor: "nueva" },
+            ],
+        };
+        const r = construirSql(catConDominio, plan, LIMITE_MAXIMO);
+        expect(r.ok).toBe(false);
+        if (r.ok) throw new Error("debía fallar");
+        expect(r.error).toContain("no es un valor válido");
+        expect(r.error).toContain("alta · media · baja");
+
+        // Solo con valores del dominio, construye:
+        const planOk: PlanLLM = { ...plan, filtros: [{ columna_idx: 1, operador: "=", valor: "ESCALADA" }] };
+        const r2 = construirSql(catConDominio, planOk, LIMITE_MAXIMO);
+        if (!r2.ok) throw new Error(`debía construir: ${r2.error}`);
+        expect(r2.sql).toContain('LOWER("estado"::text) = LOWER($1)');
+    });
+
     it("I-10: período sobre columna NO-fecha (estado) → plan inválido (caso real: 'qué colegios tienen más alertas')", () => {
         const plan: PlanLLM = {
             tabla_idx: 0,

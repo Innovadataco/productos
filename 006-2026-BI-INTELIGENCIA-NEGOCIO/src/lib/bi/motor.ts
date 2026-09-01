@@ -18,7 +18,7 @@ import { getModeloSql } from "@/lib/ai/ollama-config";
 import { revisarIntencion } from "./reglas-pre";
 import { construirSql, type PlanLLM } from "./constructor-sql";
 import { validarSql } from "./validador-sql";
-import { cargarCatalogo, esquemaJsonParaLLM, presentarCatalogoParaLLM, type Catalogo } from "./catalogo";
+import { cargarCatalogo, esquemaJsonParaLLM, presentarCatalogoParaLLM, valoresDeColumna, type Catalogo } from "./catalogo";
 import { buscarEnCache, normalizarPregunta } from "./cache";
 import { PLANTILLA_SIN_DATOS, renderRespuesta } from "./plantillas";
 
@@ -151,14 +151,9 @@ async function cerrarLog(id: string, patch: PatchLog): Promise<void> {
     }
 }
 
-/** Valores enum declarados en la descripción de una columna ("Valores reales: A · B · C"). */
+/** Valores enum declarados en la descripción de una columna (formato "Valores reales:" o lista pura — vía catálogo, candado 8). */
 function extraerValoresEnum(descripcion: string): string[] {
-    const m = descripcion.match(/Valores reales:\s*(.+)$/i);
-    if (!m) return [];
-    return m[1]
-        .split("·")
-        .map((s) => s.trim())
-        .filter((s) => s.length >= 4 && s !== "OTRO");
+    return valoresDeColumna({ nombreFuente: "", tipo: "", descripcion });
 }
 
 /** La pregunta menciona el valor como token. MAYÚSCULAS (enums) verbatim; minúsculas (estados) case-insensitive. */

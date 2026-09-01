@@ -14,7 +14,7 @@
 // desde bi_config); aquí no hay umbrales hardcodeados salvo el default de
 // filas cuando el plan no pide límite (constante documentada abajo).
 
-import type { Catalogo, ColumnaCat, TablaCat } from "@/lib/bi/catalogo";
+import { valoresDeColumna, type Catalogo, type ColumnaCat, type TablaCat } from "@/lib/bi/catalogo";
 
 export type Agregacion = "conteo" | "suma" | "promedio" | "maximo" | "minimo" | "lista";
 
@@ -192,6 +192,22 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
             if (!/^-?\d+(\.\d+)?$/.test(valor.trim())) {
                 return fallo(`El valor "${valor}" no es numérico para la columna "${col.nombreFuente}" (tipo ${col.tipo}).`);
             }
+        }
+        // I-14: si la columna declara dominio ("Valores reales" o lista en su
+        // descripción — candado 8), el valor del filtro DEBE pertenecer a él.
+        // Caso real: prioridad='nueva' (valor que solo existe en `estado`) →
+        // ANDado con estado='escalada' daba 0 habiendo 254. Rechazo con la
+        // lista correcta en el mensaje, antes de ejecutar.
+        const dominio = valoresDeColumna(col);
+        if (
+            typeof valor === "string" &&
+            (filtro.operador === "=" || filtro.operador === "!=") &&
+            dominio.length > 0 &&
+            !dominio.some((v) => v.toLowerCase() === valor.trim().toLowerCase())
+        ) {
+            return fallo(
+                `"${valor}" no es un valor válido de "${col.nombreFuente}". Valores válidos: ${dominio.join(" · ")}.`,
+            );
         }
         params.push(valor);
         // I-05/I-07: igualdad case-insensitive para texto. PI mezcla
