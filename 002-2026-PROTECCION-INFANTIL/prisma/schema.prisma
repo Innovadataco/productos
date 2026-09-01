@@ -614,6 +614,13 @@ model Usuario {
   identificadoresHijoDesvinculados IdentificadorHijoDesvinculado[]
   notificacionesCirculo            Boolean                         @default(true)
   ultimaNotificacionCirculoEn      DateTime?
+  // SPEC-339 (A-67 · punto 4 Calidad): interruptor y enfriamiento PROPIOS de los
+  // avisos sobre hijos. NO se comparten con los del círculo: un aviso sobre un
+  // contacto vigilado no puede silenciar el aviso sobre un hijo, ni apagar los
+  // del círculo puede apagar los del hijo (regla de Jelkin: cada padre — y cada
+  // frente — con sus interruptores).
+  notificacionesHijos              Boolean                         @default(true)
+  ultimaNotificacionHijosEn        DateTime?
   ultimaNotificacionColegioEn      DateTime?
   transicionesReporte              TransicionReporte[]
   solicitudesComite                SolicitudComite[]               @relation("SolicitudesComite")

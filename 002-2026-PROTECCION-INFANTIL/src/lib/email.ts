@@ -270,6 +270,42 @@ export async function enviarAlertaCirculoConfianza(email: string, cantidad: numb
  * expediente). El renderizado vive en `reporte-circulo.ts`; aquí solo se coordina
  * con `programar()` del motor. Fail-closed si no hay reglas activas.
  */
+/**
+ * SPEC-339 (A-67 · punto 4 Calidad): aviso al padre cuando una cuenta de SU
+ * hijo aparece en un reporte visible. Presentación propia — al padre no se le
+ * habla igual de «Carlos · tío» que de su hijo. Gate por parámetro compartido
+ * del mecanismo de monitoreo (circulo.notificaciones.enabled: un solo apagador
+ * global de emergencia), interruptor y enfriamiento POR PADRE aparte.
+ */
+export async function enviarAlertaHijoReporte(payload: {
+    destinatario: { usuarioId?: string; email?: string };
+    reporteId: string;
+    nombreHijo: string;
+    identificador: string;
+    plataforma: string | null;
+}): Promise<void> {
+    if (!(await alertasHabilitadas("circulo.notificaciones.enabled"))) return;
+    const result = await programar({
+        evento: "padre.hijo.reporte",
+        sujetoTipo: "Reporte",
+        sujetoId: payload.reporteId,
+        destinatarios: [
+            {
+                ...payload.destinatario,
+                variables: {
+                    nombreHijo: payload.nombreHijo,
+                    identificador: payload.identificador,
+                    plataformaTexto: payload.plataforma ? ` en ${payload.plataforma}` : "",
+                    urlPanel: `${baseUrl()}/dashboard/padre/hijos`,
+                },
+            },
+        ],
+    });
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para padre.hijo.reporte");
+    }
+}
+
 export async function enviarAlertaCirculoConfianzaEnriquecida(payload: {
     destinatario: { usuarioId?: string; email?: string };
     reporteId: string;

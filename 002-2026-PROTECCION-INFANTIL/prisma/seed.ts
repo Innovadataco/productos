@@ -914,6 +914,23 @@ async function seedEventosEmailMigrados() {
                 "{{cuerpo}}\n\nIngresa a tu panel para ver el contexto completo:\n{{urlPanel}}",
         },
         {
+            // SPEC-339 (A-67 · punto 4 Calidad): el aviso que hace ÚTIL el Paso 3.
+            // Voz del brief §3: calma que tranquiliza, cero alarma, tuteo neutro.
+            clave: "padre.hijo.reporte.email",
+            asunto: "Sobre {{nombreHijo}} — sin afán, pero míralo",
+            cuerpoMarkdown:
+                "Hola,\n\nUna cuenta de {{nombreHijo}} ({{identificador}}{{plataformaTexto}}) apareció en un reporte hoy. Entra a ver de qué se trata, con calma:\n\n{{urlPanel}}\n\nEste aviso no incluye el contenido del reporte; todo está en tu panel.",
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreHijo: { type: "string" },
+                    identificador: { type: "string" },
+                    plataformaTexto: { type: "string" },
+                    urlPanel: { type: "string" },
+                },
+            },
+        },
+        {
             clave: "colegio.reporte_nuevo.email",
             asunto: "Te avisamos: tienes un reporte nuevo para revisar",
             cuerpoMarkdown:
@@ -1026,6 +1043,9 @@ async function seedEventosEmailMigrados() {
         { evento: "reporte.revision.requerida", plantillaClave: "reporte.revision.requerida.email", rol: "ADMIN", obligatoria: false },
         { evento: "reporte.score_critico", plantillaClave: "reporte.score_critico.email", rol: "ADMIN", obligatoria: false },
         { evento: "padre.circulo_confianza.pendientes", plantillaClave: "padre.circulo_confianza.pendientes.email", rol: "PARENT", obligatoria: false },
+        // SPEC-339: aviso sobre un hijo. NO obligatoria — el padre tiene SU
+        // interruptor (notificacionesHijos), independiente del círculo.
+        { evento: "padre.hijo.reporte", plantillaClave: "padre.hijo.reporte.email", rol: "PARENT", obligatoria: false },
         { evento: "padre.circulo_confianza.reporte_enriquecido", plantillaClave: "padre.circulo_confianza.reporte_enriquecido.email", rol: "PARENT", obligatoria: false },
         { evento: "colegio.reporte_nuevo", plantillaClave: "colegio.reporte_nuevo.email", rol: "SCHOOL_ADMIN", obligatoria: false },
         { evento: "colegio.curso.umbral", plantillaClave: "colegio.curso.umbral.email", rol: "SCHOOL_ADMIN", obligatoria: false },
