@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 460 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3220 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 461 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3227 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
