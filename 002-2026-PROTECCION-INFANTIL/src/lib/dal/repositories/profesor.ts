@@ -58,6 +58,17 @@ export class ProfesorRepository {
     }
 
     /**
+     * SPEC-344 (A-69 · C1 · D-5): lista compacta de profesores del colegio con
+     * documento (para deduplicar el archivo de carga contra lo ya existente).
+     */
+    listarPorColegio(colegioId: string) {
+        return this.db.profesor.findMany({
+            where: { colegioId },
+            select: { id: true, tipoDocumento: true, numeroDocumento: true, estado: true },
+        });
+    }
+
+    /**
      * Profesor activo con ese nombre + apellidos en el colegio (duplicado de alta → 409).
      * SPEC-320 (§2.2 · FR-011): comparación insensible a mayúsculas ("JUAN" ≡ "Juan").
      */
