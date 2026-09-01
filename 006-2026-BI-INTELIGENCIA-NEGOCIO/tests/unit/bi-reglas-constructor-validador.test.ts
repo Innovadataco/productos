@@ -152,7 +152,13 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
             };
             const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
             if (!r.ok) throw new Error(`debía construir: ${r.error}`);
-            expect(r.sql).toBe(`SELECT "id" FROM "Reporte" WHERE "estado" ${operador} $1 LIMIT $2`);
+            // I-05: igualdad de texto va con LOWER() en ambos lados (PI mezcla
+            // minúsculas y MAYÚSCULAS entre tablas; el LLM no puede saberlo).
+            const condicion =
+                operador === "=" || operador === "!="
+                    ? `LOWER("estado") ${operador} LOWER($1)`
+                    : `"estado" ${operador} $1`;
+            expect(r.sql).toBe(`SELECT "id" FROM "Reporte" WHERE ${condicion} LIMIT $2`);
             expect(r.params).toEqual(["CLASIFICADO", 100]);
         },
     );
@@ -169,7 +175,7 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         };
         const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
         if (!r.ok) throw new Error(`debía construir: ${r.error}`);
-        expect(r.sql).toBe('SELECT "id" FROM "Reporte" WHERE "estado" = $1 AND "categoria" LIKE $2 LIMIT $3');
+        expect(r.sql).toBe('SELECT "id" FROM "Reporte" WHERE LOWER("estado") = LOWER($1) AND "categoria" LIKE $2 LIMIT $3');
         expect(r.params).toEqual(["CLASIFICADO", "%acoso%", 100]);
         // Candado 3: el valor jamás aparece interpolado en el texto SQL.
         expect(r.sql).not.toContain("CLASIFICADO");
@@ -202,7 +208,7 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
         if (!r.ok) throw new Error(`debía construir: ${r.error}`);
         expect(r.sql).toBe(
-            `SELECT "id" FROM "Reporte" WHERE "estado" = $1 AND "creadoEn" >= NOW() - ($2 || ' days')::interval LIMIT $3`,
+            `SELECT "id" FROM "Reporte" WHERE LOWER("estado") = LOWER($1) AND "creadoEn" >= NOW() - ($2 || ' days')::interval LIMIT $3`,
         );
         expect(r.params).toEqual(["CORREGIDO", 7, 25]);
     });
@@ -328,9 +334,29 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         const r2 = construirSql(CATALOGO, planMixto, LIMITE_MAXIMO);
         if (!r2.ok) throw new Error(`debía construir: ${r2.error}`);
         expect(r2.sql).toBe(
-            'SELECT COUNT(*) AS total FROM "Reporte" WHERE "categoria" = $1 AND "creadoEn" >= NOW() - ($2 || \' days\')::interval LIMIT $3',
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE LOWER("categoria") = LOWER($1) AND "creadoEn" >= NOW() - ($2 || \' days\')::interval LIMIT $3',
         );
         expect(r2.params).toEqual(["BULLYING", 30, 100]);
+    });
+
+    it("I-05: igualdad de texto es case-insensitive (PI mezcla 'escalada' y 'CONTACTO_INSISTENTE')", () => {
+        // Regresión del caso real: el LLM envió el valor en una caja distinta a
+        // la almacenada y la respuesta era 0 filas habiendo datos (254 escaladas).
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [{ columna_idx: 1, operador: "=", valor: "escalada" }],
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toBe(
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE LOWER("estado") = LOWER($1) LIMIT $2',
+        );
+        expect(r.params).toEqual(["escalada", 100]);
+        // Y el validador acepta LOWER (sin violaciones).
+        const v = validarSql(CATALOGO, r.sql);
+        expect(v.valida).toBe(true);
     });
 });
 

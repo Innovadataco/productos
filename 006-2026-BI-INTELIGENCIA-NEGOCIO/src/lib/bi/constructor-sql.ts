@@ -163,7 +163,17 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
             return fallo("Valor de filtro numérico no finito (NaN o Infinity).");
         }
         params.push(valor);
-        condiciones.push(`${citarIdentificador(col.nombreFuente)} ${filtro.operador} $${params.length}`);
+        // I-05: igualdad case-insensitive para texto. PI mezcla convenciones
+        // (AlertaColegio.estado en minúsculas, ClasificacionIA.categoria en
+        // MAYÚSCULAS) y el LLM no puede saber cuál toca: 'ESCALADA' contra
+        // 'escalada' devolvía 0 filas habiendo 254. Con LOWER() ambos lados
+        // el caso deja de importar. (A esta escala el costo es nulo.)
+        const nombreCitado = citarIdentificador(col.nombreFuente);
+        if (typeof valor === "string" && (filtro.operador === "=" || filtro.operador === "!=")) {
+            condiciones.push(`LOWER(${nombreCitado}) ${filtro.operador} LOWER($${params.length})`);
+        } else {
+            condiciones.push(`${nombreCitado} ${filtro.operador} $${params.length}`);
+        }
     }
 
     if (plan.periodo !== undefined) {

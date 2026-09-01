@@ -26,6 +26,7 @@ const PALABRAS_SQL: ReadonlySet<string> = new Set([
     "select", "from", "where", "and", "or", "not", "as", "distinct", "all",
     "like", "ilike", "in", "between", "is", "null", "exists",
     "count", "sum", "avg", "min", "max", "coalesce", "cast", "extract", "date_trunc",
+    "lower", "upper",
     "limit", "offset", "order", "by", "asc", "desc", "group", "having",
     "now", "interval", "day", "days", "week", "weeks", "month", "months", "year", "years",
     "hour", "hours", "minute", "minutes",
