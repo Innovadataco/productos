@@ -641,6 +641,8 @@ model Usuario {
   simulacionesAbuso                SimulacionAbusoRun[]
   // SPEC-230 (002-PI-130): expedientes del padre.
   expedientes                      Expediente[]
+  // SPEC-340: informes del expediente generados por este padre.
+  informesPadre                    InformePadre[]                  @relation("InformesPadreGenerados")
   // SPEC-206 (002-PI-120): sesiones activas del usuario.
   sesionesLog                      SesionLog[]
   // SPEC-241 (002-PI-144): traza inmutable de aceptaciones de consentimiento.
@@ -2544,6 +2546,10 @@ model Expediente {
   fechaCierre                     DateTime?        @db.Timestamptz(6)
   fechaEscalado                   DateTime?        @db.Timestamptz(6)
   estado                          EstadoExpediente
+  // SPEC-340 (A-68 §4): quién creó el expediente. "AUTOMATICO" = los legados de
+  // SPEC-323 (la creación al 2º reporte, DEROGADA); "PADRE" = el botón. El
+  // default documenta el pasado sin backfill.
+  origenCreacion                  String           @default("AUTOMATICO")
   scoreGravedadActual             ScoreGravedad    @default(VERDE)
   categoriasDominantesJson        Json?
   numEventos                      Int              @default(0)
@@ -2566,6 +2572,8 @@ model Expediente {
   // SPEC-239 (002-PI-mega-cola): SLA efectivo y marca de escalamiento a ROJO.
   slaEfectivoHoras       Int?
   fechaEscaladoRojoEn    DateTime?             @db.Timestamptz(6)
+  // SPEC-340: historial inmutable de informes del padre.
+  informesPadre          InformePadre[]
 
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
@@ -2603,6 +2611,28 @@ model EventoExpediente {
 // SPEC-234 (002-PI-134): informe consolidado de un expediente padre. Resultado
 // inmutable de la compilación; cada versión conserva el estado del expediente en
 // un momento dado. NUNCA incluye texto original de reportes.
+/// SPEC-340 (A-68 §4.3) · el historial INMUTABLE de informes del padre.
+///
+/// NO es InformeConsolidado: aquel es del flujo de COMITÉ y arrastra score y
+/// estado de aprobación — prohibidos para el padre (nada de puntajes). Este
+/// registro no tiene campos editables y su servicio solo crea y lista: no
+/// existe update ni delete en ninguna capa. "Es parte de la evidencia."
+model InformePadre {
+  id                 String   @id @default(cuid())
+  expedienteId       String
+  numeroSecuencial   Int
+  pdfHash            String   @unique
+  codigoVerificacion String
+  generadoEn         DateTime @default(now()) @db.Timestamptz(6)
+  generadoPorId      String
+
+  expediente  Expediente @relation(fields: [expedienteId], references: [id])
+  generadoPor Usuario    @relation("InformesPadreGenerados", fields: [generadoPorId], references: [id])
+
+  @@unique([expedienteId, numeroSecuencial])
+  @@index([expedienteId, generadoEn(sort: Desc)])
+}
+
 model InformeConsolidado {
   id                             String             @id @default(cuid())
   expedienteId                   String
