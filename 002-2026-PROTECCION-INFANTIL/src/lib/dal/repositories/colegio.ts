@@ -159,6 +159,26 @@ export class ColegioRepository {
     }
 
     /**
+     * SPEC-344 (A-69 · C1 · Paso 1): reflejo denormalizado del rector en el
+     * Colegio. La fuente de verdad son los campos del Usuario; acá guardamos
+     * las concatenaciones que consumen los reportes/lectores existentes.
+     * Retro-llena el literal "PENDIENTE" que sembraba el auto-registro.
+     */
+    actualizarRepresentanteLegal(
+        colegioId: string,
+        datos: { nombre: string; identificacion: string; telefono: string | null },
+    ) {
+        return this.db.colegio.update({
+            where: { id: colegioId },
+            data: {
+                representanteLegalNombre: datos.nombre,
+                representanteLegalIdentificacion: datos.identificacion,
+                representanteLegalTelefono: datos.telefono,
+            },
+        });
+    }
+
+    /**
      * SPEC-240 (002-PI-143): alta de colegio con datos mínimos (registro público o
      * pre-registro admin). Los valores por defecto (ubicación, representante legal,
      * inicio de servicio) los resuelve el servicio; este método solo materializa.
