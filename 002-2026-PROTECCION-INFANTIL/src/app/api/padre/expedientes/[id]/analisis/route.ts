@@ -29,7 +29,7 @@ async function guardPadre(): Promise<{ id: string; email: string; rol: string }>
 }
 
 function serializar(evaluacion: Awaited<ReturnType<typeof evaluarYEncolarSiCorresponde>>) {
-    const { vigente, hashActual, coincide, hechosNuevosDesde, estado, cola, colaLlena, cooldown } = evaluacion;
+    const { vigente, hashActual, coincide, hechosNuevosDesde, estado, cola, colaLlena, cooldown, agotadoPorFallos, ultimoMotivoFallo } = evaluacion;
     return {
         vigente: vigente
             ? {
@@ -54,6 +54,8 @@ function serializar(evaluacion: Awaited<ReturnType<typeof evaluarYEncolarSiCorre
         cola,
         colaLlena,
         cooldown,
+        agotadoPorFallos,
+        ultimoMotivoFallo,
     };
 }
 

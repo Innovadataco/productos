@@ -41,6 +41,8 @@ interface EvaluacionDto {
     cola: { posicion: number; estimadoSeg: number } | null;
     colaLlena: boolean;
     cooldown: { puedeActualizar: boolean; faltanSeg: number };
+    agotadoPorFallos: boolean;
+    ultimoMotivoFallo: string | null;
 }
 
 const POLL_INTERVAL_MS = 15_000;
@@ -145,7 +147,7 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
         );
     }
 
-    const { vigente, estado, cola, hechosNuevosDesde, coincide, cooldown, colaLlena } = data;
+    const { vigente, estado, cola, hechosNuevosDesde, coincide, cooldown, colaLlena, agotadoPorFallos } = data;
     const generando = estado === "GENERANDO";
     const puedeActualizar = cooldown.puedeActualizar && !generando && !actualizando;
     const guiaPasos = vigente?.guiaAccion ? pasosDeGuia(vigente.guiaAccion.pasos) : [];
@@ -166,6 +168,15 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
                 <p className="mt-2 text-xs text-madera">
                     La cola está llena — vuelve a intentar en unos minutos.
                 </p>
+            )}
+
+            {agotadoPorFallos && !generando && (
+                <div className="mt-3 rounded-2xl border border-madera/30 bg-madera/10 p-4 text-sm text-body">
+                    <p className="font-medium">No pudimos generar el análisis todavía.</p>
+                    <p className="mt-1 text-muted">
+                        Estamos revisándolo por dentro. Puedes volver en un rato y pedirlo con &ldquo;Actualizar análisis&rdquo;.
+                    </p>
+                </div>
             )}
 
             {generando && cola && (
