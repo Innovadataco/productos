@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BI v2 · Mockup — Inteligencia de Negocio IDC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Mockup BI v2 (006) — "Centro de comando vivo"
+   Tokens de PI (SPEC-157) en modo oscuro por defecto + capa de VIDA:
+   orbes ambientales, ticker, count-up, dibujo de trazos, BI proactivo.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+  --pino-rgb: 11 110 90; --cielo-rgb: 90 162 234; --ambar-rgb: 169 112 12; --rubi-rgb: 184 57 90;
+  --papel-rgb: 238 241 239; --tinta-rgb: 15 24 21;
+  --tinta-muted-rgb: 77 85 82; --tinta-subtle-rgb: 100 106 104;
+  --pino-ink-rgb: 11 110 90; --ambar-ink-rgb: 138 92 6; --rubi-ink-rgb: 184 57 90; --cielo-ink-rgb: 53 116 187;
+  --luz-a: 0.12; --luz-b: 0.1; --luz-c: 0.08;
+  --sombra-sm: 0 1px 2px rgb(var(--tinta-rgb) / 0.08);
+  --sombra-md: 0 4px 12px rgb(var(--tinta-rgb) / 0.12);
+  --curva: cubic-bezier(0.16, 1, 0.3, 1);
+  --radio-card: 16px; --radio-input: 12px;
+  --orbe-op: 0.28;
+}
+.dark {
+  color-scheme: dark;
+  --pino-rgb: 79 224 184; --cielo-rgb: 111 182 245; --ambar-rgb: 240 180 85; --rubi-rgb: 245 128 155;
+  --papel-rgb: 6 11 10; --tinta-rgb: 242 247 244;
+  --tinta-muted-rgb: 176 181 178; --tinta-subtle-rgb: 148 153 150;
+  --pino-ink-rgb: 79 224 184; --ambar-ink-rgb: 240 180 85; --rubi-ink-rgb: 245 128 155; --cielo-ink-rgb: 111 182 245;
+  --luz-a: 0.18; --luz-b: 0.12; --luz-c: 0.08;
+  --sombra-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --sombra-md: 0 4px 12px rgb(0 0 0 / 0.5);
+  --orbe-op: 0.5;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-family: "Instrument Sans", system-ui, sans-serif; }
+body {
+  background:
+    radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+    radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+    radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+    rgb(var(--papel-rgb));
+  color: rgb(var(--tinta-rgb));
+  min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+.serif { font-family: "Instrument Serif", Georgia, serif; }
+.mono { font-family: "DM Mono", monospace; }
+.cifra { font-variant-numeric: tabular-nums; }
+.microetiqueta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: rgb(var(--tinta-subtle-rgb)); }
+.text-muted { color: rgb(var(--tinta-muted-rgb)); }
+.text-subtle { color: rgb(var(--tinta-subtle-rgb)); }
+
+/* ---------- Vidrio ---------- */
+.glass {
+  background: rgb(var(--papel-rgb) / 0.7);
+  backdrop-filter: saturate(185%) blur(22px); -webkit-backdrop-filter: saturate(185%) blur(22px);
+  border: 1px solid rgb(var(--tinta-rgb) / 0.08);
+  box-shadow: var(--sombra-sm); border-radius: var(--radio-card);
+}
+.dark .glass {
+  background: rgb(var(--papel-rgb) / 0.55);
+  border-color: rgb(var(--tinta-rgb) / 0.09);
+  box-shadow: var(--sombra-sm), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.glass-strong {
+  background: rgb(var(--papel-rgb) / 0.9);
+  backdrop-filter: saturate(185%) blur(22px); -webkit-backdrop-filter: saturate(185%) blur(22px);
+  border: 1px solid rgb(var(--tinta-rgb) / 0.1);
+  box-shadow: var(--sombra-md); border-radius: var(--radio-card);
+}
+.dark .glass-strong { background: rgb(var(--papel-rgb) / 0.8); }
+
+/* ---------- Degradados de marca ---------- */
+.text-gradient {
+  background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)));
+  background-clip: text; -webkit-background-clip: text; color: transparent;
+}
+.accent-gradient { background-image: linear-gradient(135deg, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); }
+
+/* ---------- Orbes ambientales (la sala respira) ---------- */
+.orbe { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; opacity: var(--orbe-op); }
+.orbe-1 { width: 540px; height: 540px; background: rgb(var(--cielo-rgb) / 0.5); top: -140px; left: -100px; animation: deriva1 26s ease-in-out infinite alternate; }
+.orbe-2 { width: 460px; height: 460px; background: rgb(var(--pino-rgb) / 0.45); bottom: -160px; right: -120px; animation: deriva2 32s ease-in-out infinite alternate; }
+.orbe-3 { width: 320px; height: 320px; background: rgb(var(--ambar-rgb) / 0.25); top: 40%; left: 55%; animation: deriva3 38s ease-in-out infinite alternate; }
+@keyframes deriva1 { to { transform: translate(140px, 90px) scale(1.18); } }
+@keyframes deriva2 { to { transform: translate(-120px, -100px) scale(1.12); } }
+@keyframes deriva3 { to { transform: translate(-160px, 60px) scale(0.85); } }
+
+/* ---------- Movimiento ---------- */
+.anim-entrada { animation: entrada 0.7s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); }
+@keyframes entrada { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+.anim-pulso { animation: pulso 3.4s var(--curva) infinite; }
+@keyframes pulso { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(0.82); } }
+.respira { animation: respirar 5s var(--curva) infinite; transform-origin: center; }
+@keyframes respirar { 0%,100% { transform: scale(1); } 44% { transform: scale(1.03); } }
+.brillo-nuevo { position: relative; overflow: hidden; }
+.brillo-nuevo::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.14) 50%, transparent 60%);
+  transform: translateX(-100%); animation: barrido 3.2s var(--curva) infinite;
+}
+@keyframes barrido { 60%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Marco del mockup ---------- */
+.marco {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 20px; background: rgb(4 8 7 / 0.94); color: #eef1ef; font-size: 13px;
+  backdrop-filter: blur(12px);
+}
+.marco .marca-mockup { font-weight: 600; margin-right: 12px; opacity: 0.85; }
+.marco button {
+  border: 1px solid rgb(255 255 255 / 0.18); background: transparent; color: inherit;
+  padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; transition: all 0.3s var(--curva);
+}
+.marco button:hover { background: rgb(255 255 255 / 0.12); }
+.marco button.activo { background: rgb(var(--pino-rgb) / 0.9); border-color: transparent; font-weight: 600; color: #060b0a; }
+.marco .toggle-tema { margin-left: auto; }
+
+/* ---------- Pantallas ---------- */
+.pantalla { display: none; max-width: 1180px; margin: 0 auto; padding: 32px 24px 90px; position: relative; z-index: 1; }
+.pantalla.visible { display: block; }
+
+/* ---------- Header producto ---------- */
+.topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.logo-punto { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: #060b0a; font-weight: 700; font-size: 15px; box-shadow: 0 0 24px rgb(var(--pino-rgb) / 0.45); }
+.topbar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.topbar .sub { font-size: 13px; }
+.reloj { margin-left: auto; text-align: right; }
+.reloj .hora { font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+nav.tabs { display: flex; gap: 4px; margin-left: 18px; }
+nav.tabs a { padding: 8px 16px; border-radius: 999px; font-size: 14px; cursor: pointer; color: rgb(var(--tinta-muted-rgb)); text-decoration: none; transition: all 0.3s var(--curva); }
+nav.tabs a:hover { background: rgb(var(--tinta-rgb) / 0.06); }
+nav.tabs a.activo { background: rgb(var(--pino-rgb) / 0.14); color: rgb(var(--pino-ink-rgb)); font-weight: 600; }
+
+/* ---------- Ticker en vivo ---------- */
+.ticker {
+  overflow: hidden; border-radius: 999px; margin-bottom: 26px;
+  border: 1px solid rgb(var(--tinta-rgb) / 0.08);
+  background: rgb(var(--papel-rgb) / 0.5);
+  display: flex; align-items: center;
+}
+.ticker .etiqueta {
+  flex-shrink: 0; padding: 8px 16px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  background: rgb(var(--pino-rgb) / 0.16); color: rgb(var(--pino-ink-rgb));
+  display: flex; align-items: center; gap: 7px; border-radius: 999px 0 0 999px;
+}
+.ticker-ventana { overflow: hidden; flex: 1; }
+.ticker-pista { display: inline-flex; gap: 56px; white-space: nowrap; padding: 8px 0; animation: rodar 36s linear infinite; }
+.ticker-pista span { font-size: 13px; color: rgb(var(--tinta-muted-rgb)); }
+.ticker-pista b { color: rgb(var(--tinta-rgb)); font-weight: 600; }
+@keyframes rodar { to { transform: translateX(-50%); } }
+
+/* ---------- Hero de estado (el pulso) ---------- */
+.hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: center; margin-bottom: 24px; }
+@media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+.titular-estado {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(34px, 5vw, 56px); letter-spacing: -0.022em; line-height: 1.05;
+}
+.palabra-estado { font-style: italic; transition: color 0.6s var(--curva); }
+.hero .sub-estado { margin-top: 12px; font-size: 15px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.gauge-wrap { display: flex; align-items: center; gap: 20px; padding: 20px 26px; }
+.gauge-num { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.gauge-svg circle.trazo { animation: dibujo 1.4s var(--curva) both; }
+@keyframes dibujo { from { stroke-dashoffset: var(--dash-inicial); } to { stroke-dashoffset: var(--dash-final); } }
+
+/* ---------- Chips de estado ---------- */
+.estados { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 500;
+  background: rgb(var(--papel-rgb) / 0.6); border: 1px solid rgb(var(--tinta-rgb) / 0.08);
+}
+.punto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.punto.ok { background: rgb(var(--pino-rgb)); box-shadow: 0 0 8px rgb(var(--pino-rgb) / 0.7); }
+.punto.warn { background: rgb(var(--ambar-rgb)); box-shadow: 0 0 8px rgb(var(--ambar-rgb) / 0.7); }
+.punto.bad { background: rgb(var(--rubi-rgb)); box-shadow: 0 0 8px rgb(var(--rubi-rgb) / 0.7); }
+
+/* ---------- BI detectó (proactivo) ---------- */
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 26px; }
+.insight { padding: 20px 22px; position: relative; overflow: hidden; transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva); }
+.insight:hover { transform: translateY(-3px); box-shadow: var(--sombra-md); }
+.insight::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.insight.sev-ambar::before { background: rgb(var(--ambar-rgb)); }
+.insight.sev-cielo::before { background: rgb(var(--cielo-rgb)); }
+.insight.sev-pino::before { background: rgb(var(--pino-rgb)); }
+.insight .tag-sev { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+.sev-ambar .tag-sev { color: rgb(var(--ambar-ink-rgb)); }
+.sev-cielo .tag-sev { color: rgb(var(--cielo-ink-rgb)); }
+.sev-pino .tag-sev { color: rgb(var(--pino-ink-rgb)); }
+.insight h4 { font-size: 16.5px; font-weight: 600; margin: 7px 0 5px; line-height: 1.35; }
+.insight p { font-size: 13.5px; line-height: 1.55; }
+.insight .acciones { display: flex; gap: 8px; margin-top: 14px; }
+.btn-mini {
+  padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  border: 1px solid rgb(var(--tinta-rgb) / 0.14); background: transparent; color: rgb(var(--tinta-rgb));
+  transition: all 0.3s var(--curva);
+}
+.btn-mini:hover { background: rgb(var(--tinta-rgb) / 0.07); }
+.btn-mini.primario { background: rgb(var(--pino-rgb)); border-color: transparent; color: #060b0a; }
+.btn-mini.primario:hover { filter: brightness(1.1); }
+
+/* ---------- KPIs con vida ---------- */
+.grid-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi { padding: 20px 24px 16px; transition: transform 0.35s var(--curva); }
+.kpi:hover { transform: translateY(-3px); }
+.kpi .valor { font-size: 42px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin: 6px 0 2px; }
+.kpi .delta { font-size: 12.5px; font-weight: 600; }
+.delta.up { color: rgb(var(--pino-ink-rgb)); }
+.delta.down { color: rgb(var(--rubi-ink-rgb)); }
+.delta.warn { color: rgb(var(--ambar-ink-rgb)); }
+.delta.flat { color: rgb(var(--tinta-subtle-rgb)); }
+.spark { margin-top: 10px; }
+.spark polyline { fill: none; stroke: rgb(var(--pino-rgb)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- Gráficas ---------- */
+.grid-2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 24px; }
+@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+.card { padding: 24px; }
+.card h3 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.card .nota { font-size: 13px; margin-bottom: 18px; }
+.barras { display: flex; align-items: flex-end; gap: 6px; height: 190px; padding-top: 10px; }
+.barra { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+.barra .col {
+  width: 100%; max-width: 34px; border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(to top, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)));
+  min-height: 3px; transform-origin: bottom;
+  animation: crece 0.8s var(--curva) both; animation-delay: var(--anim-retardo, 0ms);
+  transition: filter 0.25s var(--curva);
+}
+.barra:hover .col { filter: brightness(1.25); }
+@keyframes crece { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.barra .etq { font-size: 10px; color: rgb(var(--tinta-subtle-rgb)); }
+.barra .val { font-size: 11px; font-weight: 600; }
+.donut-wrap { display: flex; align-items: center; gap: 20px; }
+.donut-seg { animation: dibujo 1.2s var(--curva) both; }
+.leyenda { display: flex; flex-direction: column; gap: 8px; font-size: 13px; flex: 1; }
+.leyenda .fila { display: flex; align-items: center; gap: 8px; }
+.leyenda .sw { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.leyenda .pct { margin-left: auto; font-weight: 600; }
+
+/* ---------- Chat vivo ---------- */
+.chat-wrap { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+@media (max-width: 860px) { .chat-wrap { grid-template-columns: 1fr; } }
+.chat-box { display: flex; flex-direction: column; height: 580px; }
+.chat-msgs { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.msg { max-width: 86%; padding: 14px 18px; border-radius: 16px; font-size: 15px; line-height: 1.6; animation: entrada 0.5s var(--curva) both; }
+.msg.usuario { align-self: flex-end; color: #060b0a; font-weight: 500; background: linear-gradient(135deg, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); border-bottom-right-radius: 4px; }
+.msg.bi { align-self: flex-start; background: rgb(var(--tinta-rgb) / 0.05); border: 1px solid rgb(var(--tinta-rgb) / 0.08); border-bottom-left-radius: 4px; }
+.msg.bi.proactivo { border-color: rgb(var(--pino-rgb) / 0.35); background: rgb(var(--pino-rgb) / 0.07); }
+.cursor-tipeo { display: inline-block; width: 2px; height: 1em; background: rgb(var(--pino-rgb)); vertical-align: -0.15em; animation: parpadeo 0.8s steps(1) infinite; }
+@keyframes parpadeo { 50% { opacity: 0; } }
+.puntos-tipeo { display: inline-flex; gap: 4px; padding: 4px 2px; }
+.puntos-tipeo i { width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--tinta-subtle-rgb)); animation: salta 1.2s ease-in-out infinite; }
+.puntos-tipeo i:nth-child(2) { animation-delay: 0.15s; }
+.puntos-tipeo i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes salta { 0%,60%,100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-5px); opacity: 1; } }
+.sql-bloque {
+  margin-top: 10px; padding: 12px 14px; border-radius: 10px;
+  background: rgb(4 8 7 / 0.92); color: #c8e6dc;
+  font-size: 12px; line-height: 1.65; overflow-x: auto; white-space: pre;
+  border: 1px solid rgb(var(--pino-rgb) / 0.25);
+}
+.msg .meta-fila { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.tag { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+.tag.ok { background: rgb(var(--pino-rgb) / 0.16); color: rgb(var(--pino-ink-rgb)); }
+.tag.info { background: rgb(var(--cielo-rgb) / 0.16); color: rgb(var(--cielo-ink-rgb)); }
+.chat-input { display: flex; gap: 10px; padding: 16px; border-top: 1px solid rgb(var(--tinta-rgb) / 0.08); }
+.chat-input input {
+  flex: 1; padding: 13px 16px; border-radius: var(--radio-input); font-size: 15px;
+  border: 1px solid rgb(var(--tinta-rgb) / 0.15); background: rgb(var(--papel-rgb) / 0.5);
+  color: rgb(var(--tinta-rgb)); outline: none; transition: all 0.3s var(--curva);
+}
+.chat-input input:focus { border-color: rgb(var(--pino-rgb)); box-shadow: 0 0 0 2px rgb(var(--pino-rgb) / 0.3), 0 0 18px rgb(var(--pino-rgb) / 0.15); }
+.btn { padding: 13px 22px; border-radius: var(--radio-input); border: none; cursor: pointer; font-size: 14.5px; font-weight: 600; color: #060b0a; transition: all 0.3s var(--curva); }
+.btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.sugerencias { display: flex; flex-direction: column; gap: 8px; }
+.sugerencia {
+  text-align: left; padding: 12px 16px; border-radius: 12px; cursor: pointer; font-size: 13.5px;
+  background: rgb(var(--papel-rgb) / 0.6); border: 1px solid rgb(var(--tinta-rgb) / 0.08);
+  color: rgb(var(--tinta-muted-rgb)); transition: all 0.3s var(--curva);
+}
+.sugerencia:hover { border-color: rgb(var(--pino-rgb) / 0.5); color: rgb(var(--tinta-rgb)); transform: translateX(3px); }
+
+/* ---------- Operación ---------- */
+.resumen-op { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.resumen-op .mini { padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
+.resumen-op .num { font-size: 32px; font-weight: 700; }
+.filtros { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.filtro {
+  padding: 8px 16px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  border: 1px solid rgb(var(--tinta-rgb) / 0.12); background: transparent;
+  color: rgb(var(--tinta-muted-rgb)); transition: all 0.3s var(--curva);
+}
+.filtro:hover { border-color: rgb(var(--pino-rgb) / 0.5); }
+.filtro.activo { background: rgb(var(--pino-rgb)); color: #060b0a; border-color: transparent; font-weight: 600; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla th { text-align: left; padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: rgb(var(--tinta-subtle-rgb)); border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.1); }
+.tabla td { padding: 13px 14px; border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.06); }
+.tabla tbody tr { transition: background 0.25s var(--curva); }
+.tabla tbody tr:hover td { background: rgb(var(--tinta-rgb) / 0.04); }
+.tabla tr[data-estado="warn"] td:first-child { border-left: 3px solid rgb(var(--ambar-rgb)); }
+.tabla tr[data-estado="bad"] td:first-child { border-left: 3px solid rgb(var(--rubi-rgb)); }
+.tabla tr[data-estado="ok"] td:first-child { border-left: 3px solid transparent; }
+.semaforo { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+.tag-nuevo { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 999px; background: rgb(var(--cielo-rgb) / 0.2); color: rgb(var(--cielo-ink-rgb)); margin-left: 8px; vertical-align: 1px; }
+
+/* ---------- Login ---------- */
+.login-wrap { min-height: calc(100vh - 60px); display: grid; place-items: center; padding: 40px 20px; position: relative; z-index: 1; }
+.login-card { width: 100%; max-width: 430px; padding: 46px 42px; text-align: center; position: relative; }
+.login-card .escudo {
+  width: 68px; height: 68px; margin: 0 auto 22px; border-radius: 22px;
+  display: grid; place-items: center; color: #060b0a; font-size: 24px; font-weight: 700;
+  box-shadow: 0 0 34px rgb(var(--pino-rgb) / 0.5);
+}
+.login-card h1 { font-size: 31px; letter-spacing: -0.02em; margin-bottom: 6px; }
+.login-card .sub { font-size: 14px; margin-bottom: 30px; }
+.campo { text-align: left; margin-bottom: 16px; }
+.campo label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+.campo input {
+  width: 100%; padding: 13px 16px; border-radius: var(--radio-input); font-size: 15px;
+  border: 1px solid rgb(var(--tinta-rgb) / 0.15); background: rgb(var(--papel-rgb) / 0.5);
+  color: rgb(var(--tinta-rgb)); outline: none; transition: all 0.3s var(--curva);
+}
+.campo input:focus { border-color: rgb(var(--pino-rgb)); box-shadow: 0 0 0 2px rgb(var(--pino-rgb) / 0.3), 0 0 20px rgb(var(--pino-rgb) / 0.15); }
+.btn-login { width: 100%; margin-top: 8px; padding: 14px; }
+.aviso-cerrado {
+  margin-top: 22px; padding: 12px 16px; border-radius: 12px; font-size: 12.5px;
+  background: rgb(var(--ambar-rgb) / 0.1); color: rgb(var(--ambar-ink-rgb));
+  border: 1px solid rgb(var(--ambar-rgb) / 0.25);
+}
+</style>
+</head>
+<body>
+
+<!-- Orbes ambientales -->
+<div class="orbe orbe-1"></div>
+<div class="orbe orbe-2"></div>
+<div class="orbe orbe-3"></div>
+
+<!-- Marco del mockup -->
+<div class="marco">
+  <span class="marca-mockup">MOCKUP · BI v2 (006) — centro de comando vivo</span>
+  <button data-ir="login" class="activo">1 · Login</button>
+  <button data-ir="dashboard">2 · Pulso</button>
+  <button data-ir="chat">3 · Chat IA</button>
+  <button data-ir="operacion">4 · Operación</button>
+  <button class="toggle-tema" id="btn-tema">☀️ Tema claro</button>
+</div>
+
+<!-- ══════════════ PANTALLA 1 · LOGIN ══════════════ -->
+<section class="pantalla visible" id="p-login" style="max-width:none; padding:0;">
+  <div class="login-wrap">
+    <div class="login-card glass-strong anim-entrada">
+      <div class="escudo accent-gradient respira">BI</div>
+      <h1 class="serif">Inteligencia de Negocio</h1>
+      <p class="sub text-muted">Innovadataco · acceso interno</p>
+      <div class="campo">
+        <label>Correo</label>
+        <input type="email" placeholder="usuario@innovadataco.com">
+      </div>
+      <div class="campo">
+        <label>Contraseña</label>
+        <input type="password" placeholder="••••••••••">
+      </div>
+      <button class="btn accent-gradient btn-login" data-ir="dashboard">Entrar</button>
+      <div class="aviso-cerrado">
+        Sistema cerrado por defecto: sin sesión válida no se muestra ningún dato.
+        Autenticación propia de BI — independiente de PI.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PANTALLA 2 · PULSO (dashboard vivo) ══════════════ -->
+<section class="pantalla" id="p-dashboard">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Pulso de la <span class="serif text-gradient">operación</span></h1>
+      <div class="sub text-muted">Inteligencia de negocio sobre PI · en vivo</div>
+    </div>
+    <div class="reloj">
+      <div class="hora cifra" id="reloj">--:--:--</div>
+      <div class="microetiqueta">America/Bogota</div>
+    </div>
+    <nav class="tabs">
+      <a class="activo">Pulso</a><a data-ir="chat">Chat IA</a><a data-ir="operacion">Operación</a>
+    </nav>
+  </div>
+
+  <!-- Ticker en vivo -->
+  <div class="ticker anim-entrada" style="--anim-retardo:60ms">
+    <span class="etiqueta"><span class="punto ok anim-pulso"></span> En vivo</span>
+    <div class="ticker-ventana">
+      <div class="ticker-pista" id="ticker-pista"></div>
+    </div>
+  </div>
+
+  <!-- Hero de estado -->
+  <div class="hero">
+    <div class="anim-entrada" style="--anim-retardo:120ms">
+      <h2 class="titular-estado">La operación respira <em class="palabra-estado" id="palabra-estado" style="color:rgb(var(--pino-ink-rgb))">en calma</em></h2>
+      <div class="sub-estado text-muted">
+        <span class="punto ok anim-pulso"></span>
+        <span><b class="cifra">7</b> reportes hoy · todos clasificados · último <b id="ultimo-reporte">hace 12 min</b></span>
+      </div>
+    </div>
+    <div class="gauge-wrap glass anim-entrada" style="--anim-retardo:180ms">
+      <svg class="gauge-svg" width="110" height="110" viewBox="0 0 42 42">
+        <circle cx="21" cy="21" r="15.9" fill="none" stroke="rgb(var(--tinta-rgb) / 0.08)" stroke-width="4.5"/>
+        <circle class="trazo" cx="21" cy="21" r="15.9" fill="none" stroke="url(#grad-gauge)" stroke-width="4.5"
+          stroke-linecap="round" stroke-dasharray="100 100" style="--dash-inicial:100; --dash-final:13" transform="rotate(-90 21 21)"/>
+        <defs><linearGradient id="grad-gauge" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#4fe0b8"/><stop offset="100%" stop-color="#6fb6f5"/>
+        </linearGradient></defs>
+      </svg>
+      <div>
+        <div class="gauge-num cifra" data-cuenta="87">0</div>
+        <div class="microetiqueta">Salud operativa</div>
+        <div class="delta up" style="font-size:12.5px; font-weight:600; margin-top:4px">▲ 4 pts esta semana</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BI detectó — proactivo -->
+  <div class="microetiqueta anim-entrada" style="--anim-retardo:220ms; margin-bottom:12px; display:flex; align-items:center; gap:8px">
+    <span class="punto warn anim-pulso"></span> BI detectó · sin que le preguntes
+  </div>
+  <div class="insights">
+    <div class="insight glass sev-ambar anim-entrada brillo-nuevo" style="--anim-retardo:260ms">
+      <span class="tag-sev">⚠ Atención · tendencia</span>
+      <h4>Acoso digital lleva 4 semanas al alza (+100%)</h4>
+      <p class="text-muted">De 3 a 6 reportes semanales. Concentrado en <b>2 colegios</b>: Nuevo Horizonte y del Valle.</p>
+      <div class="acciones">
+        <button class="btn-mini primario" data-ir="operacion">Ver colegios →</button>
+        <button class="btn-mini" data-ir="chat">Preguntar al chat</button>
+      </div>
+    </div>
+    <div class="insight glass sev-cielo anim-entrada" style="--anim-retardo:320ms">
+      <span class="tag-sev">◆ Patrón detectado</span>
+      <h4>Los viernes se reporta 40% menos</h4>
+      <p class="text-muted">Patrón sostenido 8 semanas. Puede ser subregistro de fin de semana, no mejora real.</p>
+      <div class="acciones">
+        <button class="btn-mini" data-ir="chat">Analizar patrón →</button>
+      </div>
+    </div>
+    <div class="insight glass sev-pino anim-entrada" style="--anim-retardo:380ms">
+      <span class="tag-sev">✓ Buena noticia</span>
+      <h4>Clasificación 0.8 h más rápida</h4>
+      <p class="text-muted">La media bajó a 3.2 h. El circuito de revisión está funcionando.</p>
+      <div class="acciones">
+        <button class="btn-mini" data-ir="chat">Ver tendencia →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs vivos -->
+  <div class="grid-kpis">
+    <div class="kpi glass anim-entrada" style="--anim-retardo:420ms">
+      <div class="microetiqueta">Reportes · agosto</div>
+      <div class="valor cifra" data-cuenta="148">0</div>
+      <div class="delta up">▲ 12% vs. julio</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,26 15,22 30,24 45,18 60,20 75,14 90,15 105,9 120,6"/>
+      </svg>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:480ms">
+      <div class="microetiqueta">Reportes · hoy</div>
+      <div class="valor cifra" data-cuenta="7">0</div>
+      <div class="delta flat">dentro del rango habitual</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,20 20,17 40,22 60,15 80,18 100,14 120,16"/>
+      </svg>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:540ms">
+      <div class="microetiqueta">Colegios activos</div>
+      <div class="valor cifra" data-cuenta="12">0</div>
+      <div class="delta up">▲ 2 nuevos este mes</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,28 30,24 60,18 90,12 120,8"/>
+      </svg>
+    </div>
+    <div class="kpi glass anim-entrada" style="--anim-retardo:600ms">
+      <div class="microetiqueta">Clasificación media</div>
+      <div class="valor cifra"><span data-cuenta="3.2" data-decimal="1">0</span> <span style="font-size:18px" class="text-muted">h</span></div>
+      <div class="delta up">▼ 0.8 h · mejora</div>
+      <svg class="spark" width="100%" height="34" viewBox="0 0 120 34" preserveAspectRatio="none">
+        <polyline points="0,8 30,12 60,16 90,22 120,26"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Gráficas -->
+  <div class="grid-2">
+    <div class="card glass anim-entrada" style="--anim-retardo:660ms">
+      <h3>Reportes por día · últimos 14 días</h3>
+      <div class="nota text-muted">Fuente: mv_fact_reporte_diario (réplica read-only)</div>
+      <div class="barras" id="barras"></div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:720ms">
+      <h3>Por categoría · agosto</h3>
+      <div class="nota text-muted">Distribución del mes en curso</div>
+      <div class="donut-wrap">
+        <svg width="150" height="150" viewBox="0 0 42 42">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="rgb(var(--tinta-rgb) / 0.07)" stroke-width="5"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#4fe0b8" stroke-width="5" stroke-dasharray="38 62" stroke-dashoffset="25" style="--dash-inicial:125; --dash-final:25"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#6fb6f5" stroke-width="5" stroke-dasharray="22 78" stroke-dashoffset="-13" style="--dash-inicial:87; --dash-final:-13"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#f0b455" stroke-width="5" stroke-dasharray="18 82" stroke-dashoffset="-35" style="--dash-inicial:65; --dash-final:-35"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="#f5809b" stroke-width="5" stroke-dasharray="12 88" stroke-dashoffset="-53" style="--dash-inicial:47; --dash-final:-53"/>
+          <circle class="donut-seg" cx="21" cy="21" r="15.9" fill="none" stroke="rgb(var(--tinta-subtle-rgb))" stroke-width="5" stroke-dasharray="10 90" stroke-dashoffset="-65" style="--dash-inicial:35; --dash-final:-65"/>
+          <text x="21" y="20" text-anchor="middle" font-size="7" font-weight="700" fill="rgb(var(--tinta-rgb))" class="cifra">148</text>
+          <text x="21" y="26" text-anchor="middle" font-size="3.2" fill="rgb(var(--tinta-subtle-rgb))">reportes</text>
+        </svg>
+        <div class="leyenda">
+          <div class="fila"><span class="sw" style="background:#4fe0b8"></span>Bullying<span class="pct cifra">38%</span></div>
+          <div class="fila"><span class="sw" style="background:#6fb6f5"></span>Violencia física<span class="pct cifra">22%</span></div>
+          <div class="fila"><span class="sw" style="background:#f0b455"></span>Acoso digital<span class="pct cifra">18%</span></div>
+          <div class="fila"><span class="sw" style="background:#f5809b"></span>Abuso sexual<span class="pct cifra">12%</span></div>
+          <div class="fila"><span class="sw" style="background:rgb(var(--tinta-subtle-rgb))"></span>Otros<span class="pct cifra">10%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PANTALLA 3 · CHAT IA ══════════════ -->
+<section class="pantalla" id="p-chat">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Conversá con la <span class="serif text-gradient">operación</span></h1>
+      <div class="sub text-muted">SQL de solo lectura · validado antes de ejecutarse · si no hay dato, no inventa</div>
+    </div>
+    <nav class="tabs">
+      <a data-ir="dashboard">Pulso</a><a class="activo">Chat IA</a><a data-ir="operacion">Operación</a>
+    </nav>
+  </div>
+
+  <div class="chat-wrap">
+    <div class="chat-box glass anim-entrada" style="--anim-retardo:80ms">
+      <div class="chat-msgs" id="chat-msgs">
+        <div class="msg bi proactivo">
+          👋 Antes de que preguntes: noté que <b>acoso digital</b> subió 4 semanas seguidas y que los viernes hay una caída rara de reportes.
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+            <span class="tag ok">✓ 2 hallazgos nuevos</span>
+            <span class="tag info">Proactivo · sin que me lo pidas</span>
+          </div>
+        </div>
+        <div class="msg usuario">¿Cuántos reportes hubo en agosto y cuál fue la categoría más frecuente?</div>
+        <div class="msg bi" id="msg-stream">
+          <span class="texto-stream"></span><span class="cursor-tipeo"></span>
+          <div class="sql-bloque mono" style="display:none">SELECT categoria, COUNT(*) AS total
+FROM mv_fact_reporte_diario
+WHERE mes = '2026-08'
+GROUP BY categoria
+ORDER BY total DESC
+LIMIT 20;</div>
+          <div class="meta-fila" style="display:none">
+            <span class="tag ok">✓ Validador SQL · solo lectura</span>
+            <span class="tag info">Catálogo v3 · 14 tablas visibles</span>
+            <span class="tag info">1 modelo · temp 0</span>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input">
+        <input id="chat-in" type="text" placeholder="Ej: ¿qué colegio reportó más casos este trimestre?">
+        <button class="btn accent-gradient" id="chat-enviar">Preguntar</button>
+      </div>
+    </div>
+
+    <div class="anim-entrada" style="--anim-retardo:160ms">
+      <div class="card glass" style="margin-bottom:16px">
+        <h3 style="margin-bottom:12px">Sugeridas por BI</h3>
+        <div class="sugerencias">
+          <button class="sugerencia">Muéstrame la tendencia de acoso digital por colegio</button>
+          <button class="sugerencia">¿Cuántos reportes hubo por colegio este mes?</button>
+          <button class="sugerencia">¿Qué días de la semana se reporta más?</button>
+          <button class="sugerencia">Colegios sin reportes en 30 días</button>
+        </div>
+      </div>
+      <div class="card glass">
+        <h3 style="margin-bottom:10px">Garantías del motor</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px" class="text-muted">
+          <div>✓ Solo lectura sobre la réplica — nunca toca PI</div>
+          <div>✓ SQL validado antes de ejecutarse</div>
+          <div>✓ Cifras del ResultSet, nunca inventadas</div>
+          <div>✓ Sin PII: datos de menores jamás llegan a BI</div>
+          <div>✓ Cada consulta queda en bitácora</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ PANTALLA 4 · OPERACIÓN ══════════════ -->
+<section class="pantalla" id="p-operacion">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Operación <span class="serif text-gradient">en vivo</span></h1>
+      <div class="sub text-muted">El tablero que consulta la gerencia — obligatorio antes del corte de dominio</div>
+    </div>
+    <nav class="tabs">
+      <a data-ir="dashboard">Pulso</a><a data-ir="chat">Chat IA</a><a class="activo">Operación</a>
+    </nav>
+  </div>
+
+  <div class="resumen-op">
+    <div class="mini glass anim-entrada" style="--anim-retardo:60ms">
+      <span class="punto ok anim-pulso" style="width:12px;height:12px"></span>
+      <div><div class="num cifra" data-cuenta="12">0</div><div class="microetiqueta">Colegios activos</div></div>
+    </div>
+    <div class="mini glass anim-entrada" style="--anim-retardo:120ms">
+      <span class="punto warn anim-pulso" style="width:12px;height:12px"></span>
+      <div><div class="num cifra" data-cuenta="2">0</div><div class="microetiqueta">En atención</div></div>
+    </div>
+    <div class="mini glass anim-entrada" style="--anim-retardo:180ms">
+      <span class="punto bad anim-pulso" style="width:12px;height:12px"></span>
+      <div><div class="num cifra" data-cuenta="1">0</div><div class="microetiqueta">Sin actividad 30 d</div></div>
+    </div>
+    <div class="mini glass anim-entrada" style="--anim-retardo:240ms">
+      <span class="punto ok" style="width:12px;height:12px"></span>
+      <div><div class="num cifra" data-cuenta="7">0</div><div class="microetiqueta">Reportes hoy</div></div>
+    </div>
+  </div>
+
+  <div class="filtros anim-entrada" style="--anim-retardo:300ms">
+    <button class="filtro activo" data-f="todos">Todos</button>
+    <button class="filtro" data-f="hoy">Con actividad hoy</button>
+    <button class="filtro" data-f="atencion">En atención</button>
+    <button class="filtro" data-f="inactivos">Sin reportes 30 días</button>
+  </div>
+
+  <div class="card glass anim-entrada" style="--anim-retardo:360ms; padding:8px 12px;">
+    <table class="tabla">
+      <thead>
+        <tr><th>Colegio</th><th>Reportes mes</th><th>Hoy</th><th>Categoría top</th><th>Último reporte</th><th>Estado</th></tr>
+      </thead>
+      <tbody id="tabla-op"></tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+/* ---------- Navegación ---------- */
+const botones = document.querySelectorAll('.marco button[data-ir]');
+function ir(id) {
+  document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('visible'));
+  document.getElementById('p-' + id).classList.add('visible');
+  botones.forEach(b => b.classList.toggle('activo', b.dataset.ir === id));
+  window.scrollTo({ top: 0 });
+  if (id === 'chat') arrancarStream();
+}
+document.querySelectorAll('[data-ir]').forEach(el =>
+  el.addEventListener('click', () => ir(el.dataset.ir)));
+
+/* ---------- Tema (oscuro por defecto: centro de comando) ---------- */
+const btnTema = document.getElementById('btn-tema');
+function pintarTema() {
+  btnTema.textContent = document.documentElement.classList.contains('dark') ? '☀️ Tema claro' : '🌙 Tema oscuro';
+}
+btnTema.addEventListener('click', () => {
+  document.documentElement.classList.toggle('dark');
+  pintarTema();
+});
+pintarTema();
+
+/* ---------- Reloj en vivo (America/Bogota) ---------- */
+function tickReloj() {
+  const el = document.getElementById('reloj');
+  if (el) el.textContent = new Date().toLocaleTimeString('es-CO', { hour12: false, timeZone: 'America/Bogota' });
+}
+tickReloj(); setInterval(tickReloj, 1000);
+
+/* ---------- Ticker ---------- */
+const eventos = [
+  '<b>hace 3 min</b> · Reporte #512 clasificado como <b>Bullying</b> · I.E. San José',
+  '<b>hace 12 min</b> · Reporte #511 clasificado como <b>Acoso digital</b> · Col. Nuevo Horizonte',
+  '<b>hace 42 s</b> · Réplica sincronizada · <b>1.204 filas</b> nuevas desde PI',
+  '<b>hace 26 min</b> · Expediente actualizado · Col. del Valle',
+  '<b>hace 1 h</b> · Vista <b>mv_fact_reporte_diario</b> refrescada',
+  '<b>hace 2 h</b> · Suscripción renovada · Col. San Mateo',
+];
+const pista = document.getElementById('ticker-pista');
+const mitad = eventos.map(e => `<span>${e}</span>`).join('');
+pista.innerHTML = mitad + mitad; /* duplicado para bucle continuo */
+
+/* ---------- Count-up de cifras ---------- */
+function animarCuenta(el) {
+  const destino = parseFloat(el.dataset.cuenta);
+  const dec = parseInt(el.dataset.decimal || '0');
+  const t0 = performance.now(), dur = 1200;
+  function paso(t) {
+    const p = Math.min((t - t0) / dur, 1);
+    const suave = 1 - Math.pow(1 - p, 3);
+    el.textContent = (destino * suave).toFixed(dec);
+    if (p < 1) requestAnimationFrame(paso);
+  }
+  requestAnimationFrame(paso);
+}
+document.querySelectorAll('[data-cuenta]').forEach(animarCuenta);
+
+/* ---------- Barras ---------- */
+const dias = [['19',4],['20',6],['21',3],['22',8],['23',5],['24',2],['25',1],['26',7],['27',9],['28',4],['29',6],['30',5],['31',8],['01',7]];
+const maxV = Math.max(...dias.map(d => d[1]));
+document.getElementById('barras').innerHTML = dias.map(([d, v], i) => `
+  <div class="barra" title="${v} reportes">
+    <span class="val cifra">${v}</span>
+    <div class="col" style="height:${Math.round(v / maxV * 100)}%; --anim-retardo:${i * 55}ms"></div>
+    <span class="etq">${d}</span>
+  </div>`).join('');
+
+/* ---------- Operación: tabla + filtros ---------- */
+const filas = [
+  { c: 'I.E. San José', m: 23, h: 2, cat: 'Bullying', ult: 'hace 1 h', est: 'ok', etq: 'En calma', nuevo: true },
+  { c: 'Col. Nuevo Horizonte', m: 19, h: 1, cat: 'Acoso digital', ult: 'hace 3 h', est: 'warn', etq: 'En atención' },
+  { c: 'I.E. La Esperanza', m: 17, h: 0, cat: 'Bullying', ult: 'ayer 14:22', est: 'ok', etq: 'En calma' },
+  { c: 'Col. San Mateo', m: 15, h: 2, cat: 'Violencia física', ult: 'hace 40 min', est: 'warn', etq: 'En atención', nuevo: true },
+  { c: 'I.E. Rural El Carmen', m: 12, h: 0, cat: 'Otros', ult: 'ayer 09:10', est: 'ok', etq: 'En calma' },
+  { c: 'Col. del Valle', m: 11, h: 1, cat: 'Acoso digital', ult: 'hace 2 h', est: 'ok', etq: 'En calma' },
+  { c: 'I.E. Santa Teresa', m: 9, h: 0, cat: 'Bullying', ult: 'hace 2 días', est: 'ok', etq: 'En calma' },
+  { c: 'Col. Los Pinos', m: 8, h: 0, cat: '—', ult: 'hace 6 días', est: 'warn', etq: 'Revisar' },
+  { c: 'I.E. Bellavista', m: 3, h: 0, cat: '—', ult: 'hace 34 días', est: 'bad', etq: 'Sin actividad' },
+];
+function pintarTabla(filtro) {
+  const data = filas.filter(f =>
+    filtro === 'todos' ? true :
+    filtro === 'hoy' ? f.h > 0 :
+    filtro === 'atencion' ? f.est === 'warn' :
+    f.est === 'bad');
+  document.getElementById('tabla-op').innerHTML = data.map(f => `
+    <tr data-estado="${f.est}">
+      <td style="font-weight:600">${f.c}${f.nuevo ? '<span class="tag-nuevo">NUEVO</span>' : ''}</td>
+      <td class="cifra">${f.m}</td>
+      <td class="cifra">${f.h || '—'}</td>
+      <td>${f.cat}</td>
+      <td class="text-muted">${f.ult}</td>
+      <td><span class="semaforo"><span class="punto ${f.est} anim-pulso"></span>${f.etq}</span></td>
+    </tr>`).join('');
+}
+pintarTabla('todos');
+document.querySelectorAll('.filtro').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.filtro').forEach(x => x.classList.remove('activo'));
+  b.classList.add('activo');
+  pintarTabla(b.dataset.f);
+}));
+
+/* ---------- Chat: respuesta en streaming ---------- */
+const RESPUESTA = 'En agosto hubo 148 reportes. La categoría más frecuente fue Bullying con 56 casos (38%).';
+let streamHecho = false;
+function arrancarStream() {
+  if (streamHecho) return;
+  streamHecho = true;
+  const msg = document.getElementById('msg-stream');
+  const span = msg.querySelector('.texto-stream');
+  const cursor = msg.querySelector('.cursor-tipeo');
+  let i = 0;
+  const t = setInterval(() => {
+    span.textContent = RESPUESTA.slice(0, ++i);
+    if (i >= RESPUESTA.length) {
+      clearInterval(t);
+      cursor.remove();
+      msg.querySelector('.sql-bloque').style.display = 'block';
+      msg.querySelector('.meta-fila').style.display = 'flex';
+    }
+  }, 28);
+}
+function responderDemo(pregunta) {
+  const box = document.getElementById('chat-msgs');
+  box.insertAdjacentHTML('beforeend', `<div class="msg bi"><span class="puntos-tipeo"><i></i><i></i><i></i></span></div>`);
+  box.scrollTop = box.scrollHeight;
+  setTimeout(() => {
+    const msg = box.lastElementChild;
+    msg.innerHTML = `<em>(Demo)</em> Así respondería BI v2 a “${pregunta}”: la cifra sale del ResultSet en <strong>negrita</strong>, el SQL queda visible y validado, y si no hay dato, no inventa.
+      <div class="meta-fila"><span class="tag ok">✓ Validador SQL · solo lectura</span><span class="tag info">Plantilla determinista</span></div>`;
+    box.scrollTop = box.scrollHeight;
+  }, 1400);
+}
+function enviar() {
+  const inp = document.getElementById('chat-in');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  const box = document.getElementById('chat-msgs');
+  box.insertAdjacentHTML('beforeend', `<div class="msg usuario"></div>`);
+  box.lastElementChild.textContent = txt;
+  inp.value = '';
+  box.scrollTop = box.scrollHeight;
+  responderDemo(txt);
+}
+document.getElementById('chat-enviar').addEventListener('click', enviar);
+document.getElementById('chat-in').addEventListener('keydown', e => { if (e.key === 'Enter') enviar(); });
+document.querySelectorAll('.sugerencia').forEach(s => s.addEventListener('click', () => {
+  document.getElementById('chat-in').value = s.textContent;
+  enviar();
+}));
+
+/* ---------- Apertura directa por #hash (al final: todo ya inicializado) ---------- */
+if (location.hash) {
+  const dest = location.hash.slice(1);
+  if (document.getElementById('p-' + dest)) ir(dest);
+}
+</script>
+</body>
+</html>

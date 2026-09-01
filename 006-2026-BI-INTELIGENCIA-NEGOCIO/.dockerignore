@@ -1,0 +1,12 @@
+# Dependencias (se instalan en el stage deps)
+node_modules
+.next
+.git
+
+# Secretos jamás dentro de la imagen (D3d: env de runtime por env_file)
+.env*
+!.env.example
+
+# Documentación y specs no van a la imagen
+.specify
+*.md

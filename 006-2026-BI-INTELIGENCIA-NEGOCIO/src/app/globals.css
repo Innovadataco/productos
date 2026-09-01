@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   BI v2 (006) — Sistema de diseño calcado de PI (SPEC-157) + capa viva del
+   mockup (orbes ambientales, pulso, entradas). Oscuro por defecto.
+   ========================================================================== */
+
+@layer base {
+    :root {
+        color-scheme: light;
+        --pino-rgb: 11 110 90; /* #0b6e5a — protección, acento primario */
+        --cielo-rgb: 90 162 234; /* #5aa2ea */
+        --ambar-rgb: 169 112 12; /* #a9700c — atención */
+        --rubi-rgb: 184 57 90; /* #b8395a — urgente */
+        --papel-rgb: 238 241 239; /* #eef1ef */
+        --tinta-rgb: 15 24 21; /* #0f1815 */
+        --tinta-muted-rgb: 77 85 82;
+        --tinta-subtle-rgb: 100 106 104;
+        --pino-ink-rgb: 11 110 90;
+        --ambar-ink-rgb: 138 92 6;
+        --rubi-ink-rgb: 184 57 90;
+        --cielo-ink-rgb: 53 116 187;
+        --luz-a: 0.12;
+        --luz-b: 0.1;
+        --luz-c: 0.08;
+        --sombra-sm: 0 1px 2px rgb(var(--tinta-rgb) / 0.08);
+        --sombra-md: 0 4px 12px rgb(var(--tinta-rgb) / 0.12);
+        --curva: cubic-bezier(0.16, 1, 0.3, 1);
+        --radio-card: 16px;
+        --radio-input: 12px;
+        --orbe-op: 0.28;
+    }
+
+    .dark {
+        color-scheme: dark;
+        --pino-rgb: 79 224 184; /* #4fe0b8 */
+        --cielo-rgb: 111 182 245; /* #6fb6f5 */
+        --ambar-rgb: 240 180 85; /* #f0b455 */
+        --rubi-rgb: 245 128 155; /* #f5809b */
+        --papel-rgb: 6 11 10; /* #060b0a */
+        --tinta-rgb: 242 247 244; /* #f2f7f4 */
+        --tinta-muted-rgb: 176 181 178;
+        --tinta-subtle-rgb: 148 153 150;
+        --pino-ink-rgb: 79 224 184;
+        --ambar-ink-rgb: 240 180 85;
+        --rubi-ink-rgb: 245 128 155;
+        --cielo-ink-rgb: 111 182 245;
+        --luz-a: 0.18;
+        --luz-b: 0.12;
+        --luz-c: 0.08;
+        --sombra-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+        --sombra-md: 0 4px 12px rgb(0 0 0 / 0.5);
+        --orbe-op: 0.5;
+    }
+
+    body {
+        @apply bg-page text-body antialiased;
+    }
+}
+
+@layer utilities {
+    .bg-page {
+        background:
+            radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+            radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+            radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+            rgb(var(--papel-rgb));
+    }
+
+    .text-body { color: rgb(var(--tinta-rgb)); }
+    .text-muted { color: rgb(var(--tinta-muted-rgb)); }
+    .text-subtle { color: rgb(var(--tinta-subtle-rgb)); }
+    .text-estado-pino { color: rgb(var(--pino-ink-rgb)); }
+    .text-estado-ambar { color: rgb(var(--ambar-ink-rgb)); }
+    .text-estado-rubi { color: rgb(var(--rubi-ink-rgb)); }
+
+    .glass {
+        background: rgb(var(--papel-rgb) / 0.7);
+        backdrop-filter: saturate(185%) blur(22px);
+        -webkit-backdrop-filter: saturate(185%) blur(22px);
+        border: 1px solid rgb(var(--tinta-rgb) / 0.08);
+        box-shadow: var(--sombra-sm);
+        border-radius: var(--radio-card);
+    }
+    .dark .glass {
+        background: rgb(var(--papel-rgb) / 0.55);
+        border-color: rgb(var(--tinta-rgb) / 0.09);
+        box-shadow: var(--sombra-sm), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .glass-strong {
+        background: rgb(var(--papel-rgb) / 0.9);
+        backdrop-filter: saturate(185%) blur(22px);
+        -webkit-backdrop-filter: saturate(185%) blur(22px);
+        border: 1px solid rgb(var(--tinta-rgb) / 0.1);
+        box-shadow: var(--sombra-md);
+        border-radius: var(--radio-card);
+    }
+    .dark .glass-strong { background: rgb(var(--papel-rgb) / 0.8); }
+
+    .text-gradient {
+        background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)));
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+    }
+    .accent-gradient { background-image: linear-gradient(135deg, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); }
+
+    .microetiqueta {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: rgb(var(--tinta-subtle-rgb));
+    }
+    .cifra { font-variant-numeric: tabular-nums; }
+
+    /* Movimiento — entradas escalonadas + pulso como latido de estado */
+    .anim-entrada {
+        animation: entrada 0.7s var(--curva) both;
+        animation-delay: var(--anim-retardo, 0ms);
+    }
+    .anim-pulso { animation: pulso 3.4s var(--curva) infinite; }
+    .respira { animation: respirar 5s var(--curva) infinite; transform-origin: center; }
+
+    /* Orbes ambientales (la sala respira) */
+    .orbe {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(100px);
+        pointer-events: none;
+        z-index: 0;
+        opacity: var(--orbe-op);
+    }
+    .orbe-1 { width: 540px; height: 540px; background: rgb(var(--cielo-rgb) / 0.5); top: -140px; left: -100px; animation: deriva1 26s ease-in-out infinite alternate; }
+    .orbe-2 { width: 460px; height: 460px; background: rgb(var(--pino-rgb) / 0.45); bottom: -160px; right: -120px; animation: deriva2 32s ease-in-out infinite alternate; }
+    .orbe-3 { width: 320px; height: 320px; background: rgb(var(--ambar-rgb) / 0.25); top: 40%; left: 55%; animation: deriva3 38s ease-in-out infinite alternate; }
+
+    .punto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .punto-ok { background: rgb(var(--pino-rgb)); box-shadow: 0 0 8px rgb(var(--pino-rgb) / 0.7); }
+    .punto-warn { background: rgb(var(--ambar-rgb)); box-shadow: 0 0 8px rgb(var(--ambar-rgb) / 0.7); }
+    .punto-bad { background: rgb(var(--rubi-rgb)); box-shadow: 0 0 8px rgb(var(--rubi-rgb) / 0.7); }
+}
+
+@keyframes entrada {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulso {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.82); }
+}
+@keyframes respirar {
+    0%, 100% { transform: scale(1); }
+    44% { transform: scale(1.03); }
+}
+@keyframes deriva1 { to { transform: translate(140px, 90px) scale(1.18); } }
+@keyframes deriva2 { to { transform: translate(-120px, -100px) scale(1.12); } }
+@keyframes deriva3 { to { transform: translate(-160px, 60px) scale(0.85); } }
+
+/* prefers-reduced-motion apaga TODO, sin excepción */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
