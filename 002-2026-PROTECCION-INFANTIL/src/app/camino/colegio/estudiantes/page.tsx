@@ -1,47 +1,39 @@
-"use client";
-
 /**
- * SPEC-344 (A-69 · C1) — Paso 5 · Estudiantes.
+ * SPEC-344 (A-69 · C1) · corregido por SPEC-355 (ítems 4/5) — Paso 5 · Estudiantes.
  *
  * El paso cierra cuando el colegio tiene ≥ 1 estudiante activo. Ofrece dos
  * caminos: agregar uno a la vez desde la ficha del curso, o cargar una lista
  * completa con el wizard unificado existente (`/dashboard/colegio/cursos/
- * unificado`). El wizard soporta el acudiente con documento opcional
- * aditivo (D-acud del brief); la UI vive en la ficha, aquí solo enlazamos.
+ * unificado`).
+ *
+ * SPEC-355: la versión original era un client component que consultaba
+ * `GET /api/colegio/alumnos` — endpoint listable que NUNCA existió (404 en
+ * vivo) y encima pintaba "Tiene  estudiantes activos" con el conteo caído.
+ * Ahora es un server component: el conteo sale del DAL en el mismo render
+ * (cero fetch, cero estado contradictorio), patrón del paso Plan.
  */
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
+import { verifyAuth } from "@/lib/auth";
+import { derivarPasoPendienteColegio } from "@/lib/dal/services/camino/estado-colegio";
+import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
+import { DESTINO_CIERRE_COLEGIO, destinoDePasoColegio } from "@/lib/camino/pasos-colegio";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Button } from "@/components/ui/Button";
-import { Alerta } from "@/components/ui/Alerta";
 
-export default function PasoEstudiantesColegio() {
-    const router = useRouter();
-    const [totalActivos, setTotalActivos] = useState<number | null>(null);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export const dynamic = "force-dynamic";
 
-    const cargar = async () => {
-        setCargando(true);
-        try {
-            // Endpoint listable existente `/api/colegio/alumnos` está paginado;
-            // pedimos pageSize=1 solo para leer total.
-            const res = await fetch("/api/colegio/alumnos?estado=activo&pageSize=1", { credentials: "include" });
-            if (!res.ok) throw new Error("No pudimos consultar los estudiantes.");
-            const json = await res.json();
-            setTotalActivos(json.pagination?.total ?? (json.items?.length ?? 0));
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Error cargando estudiantes.");
-        } finally {
-            setCargando(false);
-        }
-    };
+export default async function PasoEstudiantesColegio() {
+    const usuario = await verifyAuth("SCHOOL_ADMIN");
 
-    useEffect(() => { void cargar(); }, []);
+    // Doble valla: derivación autoritativa además del guardián (patrón del paso Plan).
+    const paso = await derivarPasoPendienteColegio(usuario.id);
+    if (paso === null) redirect(DESTINO_CIERRE_COLEGIO);
+    if (paso !== "estudiantes") redirect(destinoDePasoColegio(paso));
 
-    const listo = (totalActivos ?? 0) > 0;
-    const continuar = () => router.push("/camino/colegio/listo");
+    const totalActivos = usuario.colegioId
+        ? await new EstudianteRepository().contarActivos(usuario.colegioId)
+        : 0;
+    const listo = totalActivos > 0;
 
     return (
         <div className="space-y-6">
@@ -54,13 +46,10 @@ export default function PasoEstudiantesColegio() {
             </div>
 
             <GlassCard>
-                {cargando ? (
-                    <p className="text-sm text-muted">Consultando…</p>
-                ) : (
-                    <p className="text-sm text-body">
-                        Tiene <strong>{totalActivos}</strong> estudiante{totalActivos === 1 ? "" : "s"} activo{totalActivos === 1 ? "" : "s"}.
-                    </p>
-                )}
+                <p className="text-sm text-body">
+                    Tiene <strong>{totalActivos}</strong> estudiante{totalActivos === 1 ? "" : "s"} activo
+                    {totalActivos === 1 ? "" : "s"}.
+                </p>
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <Link
                         href="/dashboard/colegio/cursos/unificado"
@@ -81,11 +70,18 @@ export default function PasoEstudiantesColegio() {
                 </p>
             </GlassCard>
 
-            {error && <Alerta tono="advertencia">{error}</Alerta>}
-
-            <Button onClick={continuar} disabled={!listo} className="w-full">
-                Terminar
-            </Button>
+            {listo ? (
+                <Link
+                    href="/camino/colegio/listo"
+                    className="block w-full rounded-md bg-pino px-3 py-2 text-center text-sm font-medium text-white"
+                >
+                    Terminar
+                </Link>
+            ) : (
+                <p className="w-full rounded-md border border-tinta/15 px-3 py-2 text-center text-sm text-muted">
+                    Agregue su primer estudiante para terminar.
+                </p>
+            )}
         </div>
     );
 }

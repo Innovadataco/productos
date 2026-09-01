@@ -33,6 +33,10 @@ function fixture(parcial: Partial<HomeRector> = {}): HomeRector {
         },
         cursosMirada: [{ cursoId: "c1", nombre: "8-B", profesorTitular: "María López", alertas30d: 2 }],
         embudo: { recibidos: 4, cerrados: 1, enRevision: 2, teEsperan: 1 },
+        // SPEC-353 (C6): insumos de la frase "qué hacer hoy".
+        casosComite: { abiertos: 0, masViejoEn: null },
+        ultimaAlertaSinAbrirEn: null,
+        identificadorCruzado: { identificadores: 0, estudiantesMax: 0 },
         ...parcial,
     };
 }

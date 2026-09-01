@@ -482,6 +482,7 @@
 | [350](350-caso-colegio/spec.md) | SPEC-350 · El caso del colegio estilo expediente (A-69 · C3) — mapa+cronología reusadas del padre + capa 1 en vivo + análisis IA con `alcance=COLEGIO_BLINDADO` compartiendo cola pg-boss y worker de 341; voz USTED | 🟡 En desarrollo |
 | [344](344-camino-guiado-colegio/spec.md) | SPEC-344 · Camino guiado del colegio (A-69 · Fase C1) — registro por enlace + 5 pasos con guardián compartido con el padre + 11 grados sembrados + D3 candado servidor materia-profesor + puente D2 a Colegio.finServicio + Excel profesores fresco + I-245 plantilla alumnos | 🟡 En desarrollo |
 | [351](351-informe-firmado-rector/spec.md) | SPEC-351 · El informe firmado del rector (A-69 · C5) — PDF membreteado con escudo configurable + correlativo INF-AAAA-NNNN serializado + firma del rector + código de verificación pública (reusa sello 234/341) + historial inmutable | 🟡 En desarrollo |
+| [353](353-puesto-mando-colegio/spec.md) | SPEC-353 · Puesto de mando del colegio (A-69 · C6) — frase accionable "qué hacer hoy" en la home del rector (cruzado > sin abrir > comité > calma, solo conteos) + Configuración de avisos rediseñada al patrón A-62 (frases + Switch inmediato + umbrales en frase) | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 

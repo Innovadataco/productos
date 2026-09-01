@@ -173,6 +173,14 @@ describe("ColegioResumenRepository.homeRector", () => {
         expect(homeA.semaforo.alertas72h).toBe(3); // filas (hoy×2 + 2d), sin distinct
         expect(homeA.ultimaSenal).not.toBeNull();
 
+        // SPEC-353 (C6): el DTO trae los insumos de la frase "qué hacer hoy".
+        expect(homeA.ultimaAlertaSinAbrirEn, "hay 1 nueva → fecha presente").not.toBeNull();
+        expect(homeA.casosComite).toEqual({ abiertos: 0, masViejoEn: null });
+        expect(homeA.identificadorCruzado, "identificadores únicos → sin cruce").toEqual({
+            identificadores: 0,
+            estudiantesMax: 0,
+        });
+
         // SPEC-167: embudo por reporte distinto en el radar operativo.
         expect(homeA.embudo).toEqual({ recibidos: 4, cerrados: 0, enRevision: 3, teEsperan: 1 });
 

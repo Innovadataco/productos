@@ -126,6 +126,20 @@ export class ComiteConvivenciaSolicitudesRepository {
         return { casosAbiertos, misCasosAsignados, proximosSla };
     }
 
+    /**
+     * SPEC-353 (A-69 · C6): casos abiertos del comité + antigüedad del más
+     * viejo, para la frase "El comité tiene un caso desde hace N días" del
+     * puesto de mando del rector. Solo conteos y fechas — cero contenido.
+     */
+    async abiertosConAntiguedad(colegioId: string): Promise<{ abiertos: number; masViejoEn: Date | null }> {
+        const where: Prisma.SolicitudComiteWhereInput = { colegioId, estado: "PENDIENTE" };
+        const [abiertos, masViejo] = await Promise.all([
+            this.db.solicitudComite.count({ where }),
+            this.db.solicitudComite.aggregate({ where, _min: { creadoEn: true } }),
+        ]);
+        return { abiertos, masViejoEn: masViejo._min.creadoEn };
+    }
+
     /** SPEC-173: agregados de la bandeja, colegio-scoped. */
     async estadisticasPorColegio(colegioId: string, takeTopCategorias: number) {
         const [porEstado, resueltas, porCategoria] = await Promise.all([
