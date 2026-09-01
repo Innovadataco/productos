@@ -24,7 +24,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
 import { NOMBRE_COOKIE, TTL_SEG, leerSesionEstado } from "@/lib/routing/vigencia-cookie";
-import { destinoDePaso } from "@/lib/camino/pasos";
+import { destinoParaRol } from "@/lib/camino/pasos";
 import { requireEnv } from "@/lib/env";
 import { baseUrlPublica } from "@/lib/routing/base-url-publica";
 
@@ -65,10 +65,11 @@ export async function GET(request: Request) {
             throw new Error("cookie recién firmada ilegible");
         }
 
-        const haciaDonde =
-            usuario.rol === "PARENT" && estado.pasoCamino
-                ? destinoDePaso(estado.pasoCamino)
-                : destino;
+        // SPEC-344 (A-69 · C1): padre Y rector comparten la misma cadena. El
+        // registry `destinoParaRol` despacha por rol; roles sin camino guiado
+        // siempre reciben `null` y caen al `destino` solicitado.
+        const destinoPaso = destinoParaRol(usuario.rol, estado.pasoCamino);
+        const haciaDonde = destinoPaso ?? destino;
 
         // SPEC-342 (candado 22v3): JAMÁS request.url como base de un redirect en
         // Docker — sale 0.0.0.0 y el navegador muere. Base pública de 3 niveles.

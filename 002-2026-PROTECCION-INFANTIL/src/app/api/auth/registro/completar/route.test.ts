@@ -104,6 +104,24 @@ describe("POST /api/auth/registro/completar (SPEC-339)", { timeout: 30_000 }, ()
         expect(res.status).toBe(410);
     });
 
+    // Candado espejo (OBS-1 auditoría #222): un token de registro de COLEGIO no
+    // se consume por la ruta del padre — crearía un rector sin colegio y
+    // quemaría el correo. 409 y el enlace sigue vivo para su propio flujo.
+    it("token SCHOOL_ADMIN por la ruta del padre → 409, no crea usuario y NO consume el enlace", async () => {
+        const servicio = new RegistroEnlaceService();
+        const r = await servicio.solicitarEnlace("rectora@colegio.example.com", "SCHOOL_ADMIN", {
+            nombreColegio: "Colegio Espejo",
+            nit: "900123456-7",
+        });
+        if (!r.ok || r.tipo !== "ok") throw new Error("no se pudo crear el enlace de colegio");
+
+        const res = await POST(makeRequest({ token: r.token, password: PASS, passwordConfirmacion: PASS }));
+        expect(res.status).toBe(409);
+        expect(await prisma.usuario.findUnique({ where: { email: "rectora@colegio.example.com" } })).toBeNull();
+        // El enlace sigue vivo: su flujo correcto (registro-colegio) aún lo valida.
+        expect((await servicio.validarEnlace(r.token)).valido).toBe(true);
+    });
+
     it("carrera: la cuenta nació entre pedir y abrir (p.ej. la creó un admin) → 409", async () => {
         const token = await crearEnlace("carrera@example.com");
         await crearUsuario("PARENT", "carrera@example.com");

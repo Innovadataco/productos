@@ -155,6 +155,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | relacion | String | — |
 | telefono | String | opcional |
 | email | String | opcional |
+| documentoTipo | String | opcional |
+| documentoNumero | String | opcional |
 | estado | String | — |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
@@ -1438,6 +1440,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | tokenHash | String | — |
 | expiraEn | DateTime | — |
 | usado | Boolean | — |
+| rol | RolUsuario | — |
+| nombreColegio | String | opcional |
+| nit | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 

@@ -15,9 +15,10 @@ const mocks = vi.hoisted(() => ({
     verificarVigenciaClienteMock: vi.fn(),
     firmarSesionEstado: vi.fn(async (payload: unknown) => JSON.stringify(payload)),
     requireEnv: vi.fn(() => "test-secret-de-32-chars-o-mas!!"),
-    // SPEC-339: derivación del paso del camino, mockeada — este test es del
-    // emisor, no de la derivación (que tiene su propio test de integración).
+    // SPEC-339 · SPEC-344: derivadores mockeados — este test es del emisor,
+    // no de la derivación (cada uno tiene su propio test de integración).
     derivarPasoPendiente: vi.fn(),
+    derivarPasoPendienteColegio: vi.fn(),
 }));
 
 vi.mock("@/lib/dal/repositories/pagos-repository", () => ({
@@ -53,6 +54,10 @@ vi.mock("@/lib/dal/services/camino/estado", () => ({
     derivarPasoPendiente: mocks.derivarPasoPendiente,
 }));
 
+vi.mock("@/lib/dal/services/camino/estado-colegio", () => ({
+    derivarPasoPendienteColegio: mocks.derivarPasoPendienteColegio,
+}));
+
 import { buildSesionEstadoValue } from "./sesion-estado-emitter";
 
 function setup({
@@ -78,6 +83,7 @@ function setup({
         mensaje: "",
     });
     mocks.derivarPasoPendiente.mockResolvedValue(null);
+    mocks.derivarPasoPendienteColegio.mockResolvedValue(null);
 }
 
 describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)", () => {
@@ -173,12 +179,36 @@ describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)"
             expect(JSON.parse(value).pasoCamino).toBeNull();
         });
 
-        for (const rol of ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]) {
+        // SPEC-344 (A-69 · C1): SCHOOL_ADMIN ahora sí lleva su paso pendiente
+        // en la cookie. Es un CAMBIO ESPERADO respecto a SPEC-339 (no regresión),
+        // documentado en la SPEC-344 · US8 · SC-008.
+        it("SCHOOL_ADMIN: el paso pendiente del camino colegio viaja en la cookie", async () => {
+            setup({ rol: "SCHOOL_ADMIN", vigente: true });
+            mocks.derivarPasoPendienteColegio.mockResolvedValue("profesores");
+            const value = await buildSesionEstadoValue("u1");
+            expect(JSON.parse(value).pasoCamino).toBe("profesores");
+            expect(mocks.derivarPasoPendienteColegio).toHaveBeenCalledWith("u1");
+            // Y NO se llamó el derivador del padre.
+            expect(mocks.derivarPasoPendiente).not.toHaveBeenCalled();
+        });
+
+        it("SCHOOL_ADMIN con camino terminado: pasoCamino = null", async () => {
+            setup({ rol: "SCHOOL_ADMIN", vigente: true });
+            mocks.derivarPasoPendienteColegio.mockResolvedValue(null);
+            const value = await buildSesionEstadoValue("u1");
+            expect(JSON.parse(value).pasoCamino).toBeNull();
+        });
+
+        // Los roles internos y COMITE_CONVIVENCIA siguen SIN camino. Esta
+        // aserción se conserva idéntica a SPEC-339: cualquier futura evolución
+        // que la rompa es una regresión real.
+        for (const rol of ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA"]) {
             it(`${rol}: NUNCA se deriva el camino (ni una consulta de más)`, async () => {
                 setup({ rol });
                 const value = await buildSesionEstadoValue("u1");
                 expect(JSON.parse(value).pasoCamino).toBeNull();
                 expect(mocks.derivarPasoPendiente).not.toHaveBeenCalled();
+                expect(mocks.derivarPasoPendienteColegio).not.toHaveBeenCalled();
             });
         }
     });

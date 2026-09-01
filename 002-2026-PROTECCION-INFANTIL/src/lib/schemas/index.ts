@@ -175,6 +175,9 @@ export const acudienteUpdateBodySchema = z
         relacion: z.string().min(1).max(50).optional(),
         telefono: z.string().max(50).optional().nullable(),
         email: emailSchema.optional().nullable(),
+        // SPEC-344 (A-69 · C1 · D-acud): documento del acudiente OPCIONAL.
+        documentoTipo: z.string().min(1).max(20).optional().nullable(),
+        documentoNumero: z.string().min(1).max(50).optional().nullable(),
     })
     .refine((data) => Object.keys(data).length > 0, { message: "Debe enviar al menos un campo para actualizar", path: ["root"] });
 
@@ -236,9 +239,22 @@ export const cursoMateriaParamsSchema = z.object({
     id: cuidIdSchema,
 });
 
+// SPEC-344 (A-69 · C1 · D3): "Toda materia con profesor, sin excepción" —
+// candado en servidor, sin migrar el schema Prisma (que mantiene profesorId
+// nullable para no romper el histórico). El vínculo se rechaza en el
+// endpoint y en el repositorio si `profesorId` viene nulo/vacío.
+const profesorObligatorioSchema = z
+    .string({ error: "Toda materia debe llevar un profesor a cargo" })
+    .cuid("Toda materia debe llevar un profesor a cargo");
+
 export const cursoMateriaBodySchema = z.object({
     materiaId: materiaIdSchema,
-    profesorId: cuidIdSchema.optional().nullable(),
+    profesorId: profesorObligatorioSchema,
+});
+
+/** Reasignación de profesor en un vínculo curso↔materia existente (FR-031). */
+export const cursoMateriaReasignarProfesorSchema = z.object({
+    profesorId: profesorObligatorioSchema,
 });
 
 export const cursoMateriaIdParamsSchema = z.object({
@@ -258,6 +274,10 @@ export const acudienteEstudianteBodySchema = z.object({
     relacion: z.string().min(1).max(50),
     telefono: z.string().max(50).optional(),
     email: emailSchema.optional(),
+    // SPEC-344 (A-69 · C1 · D-acud): documento del acudiente OPCIONAL (mockup 1.6).
+    // Aditivo, sin unicidad nueva — el mismo documento puede repetirse.
+    documentoTipo: z.string().min(1).max(20).optional(),
+    documentoNumero: z.string().min(1).max(50).optional(),
 });
 
 export const estudianteBodySchema = z.object({

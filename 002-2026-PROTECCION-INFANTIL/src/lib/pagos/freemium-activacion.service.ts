@@ -155,6 +155,92 @@ function construirRequestFake(ctx: RateLimitContext): Request {
     });
 }
 
+export interface ActivarFreemiumColegioInput {
+    usuarioId: string;
+    colegioId: string;
+    email?: string | undefined;
+    nombre?: string | null;
+    aceptaTerminos: boolean;
+    ipAddress?: string | undefined;
+    userAgent?: string | undefined;
+}
+
+/**
+ * SPEC-344 (A-69 · C1) — espejo colegio de `activarFreemium`:
+ *   - crea Suscripcion con `TipoTitular.COLEGIO` y `colegioId` (no usuarioId).
+ *   - dispara el puente D2 (escribe `Colegio.finServicio` con la ventana
+ *     freemium parametrizada).
+ * Falla si el colegio ya tiene freemium o si no hay plan freemium colegio.
+ */
+export async function activarFreemiumColegio(
+    input: ActivarFreemiumColegioInput,
+): Promise<ActivarFreemiumResultado> {
+    if (!input.aceptaTerminos) {
+        throw new AppError("Debe aceptar los términos de la prueba gratis", ERROR_CODES.VALIDATION_ERROR, 400);
+    }
+
+    const repo = new PagosRepository();
+    const anio = anioBogota();
+
+    const planesFreemium = await repo.listarPlanes({
+        tipoTitular: TipoTitular.COLEGIO,
+        anio,
+        activo: true,
+        esFreemium: true,
+    });
+    const plan = planesFreemium[0];
+    if (!plan) {
+        throw new AppError("No hay un plan de prueba institucional disponible", ERROR_CODES.NOT_FOUND, 404);
+    }
+
+    // Sin repo específico de freemium por colegio: contamos las suscripciones
+    // freemium del colegio directamente vía count del cliente Prisma dentro
+    // del PagosRepository ya expuesto.
+    const yaTiene = (await repo.listarSuscripcionesPorColegio(input.colegioId)).some(
+        (s) => s.esFreemium,
+    );
+    if (yaTiene) {
+        throw new AppError("El colegio ya activó una prueba institucional", ERROR_CODES.CONFLICT, 409);
+    }
+
+    const duracionDias = await obtenerDuracionFreemiumDias();
+    const ahora = ahoraBogota();
+    const freemiumFechaFin = addDays(ahora, duracionDias);
+    const codigoReferidoPropio = await generarCodigoReferidoUnico(TipoTitular.COLEGIO);
+
+    const suscripcion = await repo.crearSuscripcion({
+        tipoTitular: TipoTitular.COLEGIO,
+        colegioId: input.colegioId,
+        planActualId: plan.id,
+        estado: EstadoSuscripcion.ACTIVA,
+        origen: OrigenSuscripcion.FREEMIUM_AUTO,
+        esFreemium: true,
+        freemiumFechaFin,
+        fechaInicio: ahora,
+        fechaFin: freemiumFechaFin,
+        monedaLocal: "COP",
+        paisCliente: "CO",
+        codigoReferidoPropio,
+    });
+
+    await logAudit({
+        accion: "SUSCRIPCION_FREEMIUM_ACTIVADA",
+        tipoRecurso: "Suscripcion",
+        recursoId: suscripcion.id,
+        usuarioId: input.usuarioId,
+        valorNuevo: JSON.stringify({
+            colegioId: input.colegioId,
+            planId: plan.id,
+            freemiumFechaFin: freemiumFechaFin.toISOString(),
+            tipoTitular: "COLEGIO",
+        }),
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+    });
+
+    return { suscripcion, freemiumFechaFin };
+}
+
 /**
  * Wrapper que aplica rate-limiting por IP antes de activar el freemium.
  * Acepta un Request real o un contexto con IP/userAgent (útil en server actions).

@@ -218,7 +218,9 @@ describe("SPEC-339 · guardián del camino", () => {
     });
 
     // T025 · un error acá no rompe una pantalla: cierra la app entera a un rol.
-    for (const rol of ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN"]) {
+    // SPEC-344: SCHOOL_ADMIN salió de esta lista — ahora SÍ recorre camino
+    // (el suyo). La lista queda con los roles que JAMÁS lo evalúan.
+    for (const rol of ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA"]) {
         it(`${rol} JAMÁS evalúa el camino, aun con pasoCamino en la cookie`, async () => {
             // Cookie deliberadamente envenenada con un paso: si el guardián
             // mirara solo la cookie y no el rol, este test lo caza.
@@ -232,6 +234,25 @@ describe("SPEC-339 · guardián del camino", () => {
             }
         });
     }
+
+    // Rol y paso INCOMPATIBLES (cookie envenenada cruzando dominios): el
+    // registry devuelve null y el guardián deja pasar sin bloquear.
+    it("SCHOOL_ADMIN con un paso del PADRE en la cookie → no redirige al camino del padre", async () => {
+        const res = await middleware(await reqPadreConPaso("/dashboard", "hijos", "SCHOOL_ADMIN"));
+        const loc = res.headers.get("location");
+        if (loc) {
+            expect(new URL(loc).pathname.startsWith("/camino/datos")).toBe(false);
+            expect(new URL(loc).pathname.startsWith("/camino/hijos")).toBe(false);
+        }
+    });
+
+    it("PARENT con un paso del COLEGIO en la cookie → no redirige al camino del colegio", async () => {
+        const res = await middleware(await reqPadreConPaso("/dashboard", "profesores" as never, "PARENT"));
+        const loc = res.headers.get("location");
+        if (loc) {
+            expect(new URL(loc).pathname.startsWith("/camino/colegio")).toBe(false);
+        }
+    });
 
     // T068 · candado A: el padre nunca queda atrapado. Una por una.
     const NUNCA_TAPADAS = [
@@ -295,6 +316,104 @@ describe("SPEC-339 · guardián del camino", () => {
         });
         const res = await middleware(req);
         expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// SPEC-344 (A-69 · C1) — El guardián del camino guiado del COLEGIO.
+// ────────────────────────────────────────────────────────────────────────────
+describe("SPEC-344 · guardián del camino del colegio", () => {
+    type PasoColegioTest = "rector" | "plan" | "profesores" | "cursos" | "estudiantes" | null;
+    async function reqRectorConPaso(pathname: string, pasoCamino: PasoColegioTest) {
+        const token = await jwtParaRol("SCHOOL_ADMIN");
+        const cookie = await firmarSesionEstado(
+            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino },
+            JWT_SECRET_TEST,
+        );
+        return new NextRequest(`http://localhost:5005${pathname}`, {
+            headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=${cookie}` },
+        });
+    }
+
+    const CASOS_COLEGIO: Array<[Exclude<PasoColegioTest, null>, string]> = [
+        ["rector", "/camino/colegio/rector"],
+        ["plan", "/camino/colegio/plan"],
+        ["profesores", "/camino/colegio/profesores"],
+        ["cursos", "/camino/colegio/cursos"],
+        ["estudiantes", "/camino/colegio/estudiantes"],
+    ];
+    for (const [paso, destino] of CASOS_COLEGIO) {
+        it(`rector en paso "${paso}" escribe /dashboard/colegio a mano → redirect a ${destino}`, async () => {
+            const res = await middleware(await reqRectorConPaso("/dashboard/colegio", paso));
+            expect(res.status).toBe(307);
+            expect(new URL(res.headers.get("location") ?? "").pathname).toBe(destino);
+        });
+    }
+
+    it("rector con camino terminado (null) → next(), sin redirect del camino", async () => {
+        const res = await middleware(await reqRectorConPaso("/dashboard/colegio", null));
+        expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+
+    it("/api/** gateada con camino colegio incompleto → 403 JSON con destino (SPEC-329)", async () => {
+        const res = await middleware(await reqRectorConPaso("/api/colegio/estadisticas", "rector"));
+        expect(res.status).toBe(403);
+        expect(res.headers.get("location")).toBeNull();
+        const json = await res.json();
+        expect(json.error.code).toBe("CAMINO_INCOMPLETO");
+        expect(json.error.redirectTo).toBe("/camino/colegio/rector");
+    });
+
+    // Candado "el rector nunca queda atrapado" (I-25 · I-35 heredado).
+    const NUNCA_TAPADAS_COLEGIO = [
+        "/api/auth/logout",
+        "/consentimiento",
+        "/api/consentimiento",
+        "/api/colegio/rector",
+        "/api/colegio/suscripcion",
+        "/api/colegio/profesores",
+        "/api/colegio/carga-profesores",
+        "/api/colegio/cursos",
+        "/api/colegio/alumnos",
+        "/dashboard/colegio/cursos/unificado",
+        // Auditoría #222 · punto 2: el paso 4 enlaza la ficha del curso (materias).
+        "/dashboard/colegio/cursos/cku_ficha_curso",
+        "/camino/colegio/plan",
+        "/api/sesion/al-dia",
+        "/reportar",
+        "/api/reportes",
+        // Auditoría #222 · punto 1: un rector que pierde un paso (p. ej. inactiva
+        // su único curso) JAMÁS pierde las alertas de menores. Regla dura.
+        "/dashboard/colegio/alertas",
+        "/api/colegio/alertas",
+    ];
+    for (const ruta of NUNCA_TAPADAS_COLEGIO) {
+        it(`rector a mitad del camino alcanza ${ruta} (no lo tapa el guardián)`, async () => {
+            const res = await middleware(await reqRectorConPaso(ruta, "plan"));
+            const loc = res.headers.get("location");
+            if (loc) {
+                const path = new URL(loc).pathname;
+                expect(path.startsWith("/camino/colegio"), `${ruta} redirigió al camino`).toBe(false);
+            }
+            if (res.status === 403) {
+                const json = await res.json();
+                expect(json.error?.code, `${ruta} bloqueada por el camino`).not.toBe("CAMINO_INCOMPLETO");
+            }
+        });
+    }
+
+    // Falla-CERRADA extendida a SCHOOL_ADMIN (SPEC-344): cookie ilegible +
+    // rector + ruta gobernada = rebote único al re-sellado.
+    it("rector SIN cookie de estado en ruta gobernada → rebote único a /api/sesion/al-dia", async () => {
+        const token = await jwtParaRol("SCHOOL_ADMIN");
+        const req = new NextRequest("http://localhost:5005/dashboard/colegio", {
+            headers: { cookie: `token=${token}` },
+        });
+        const res = await middleware(req);
+        expect(res.status).toBe(307);
+        const url = new URL(res.headers.get("location") ?? "");
+        expect(url.pathname).toBe("/api/sesion/al-dia");
+        expect(url.searchParams.get("destino")).toBe("/dashboard/colegio");
     });
 
     it("una cookie de ANTES del despliegue (sin pasoCamino) se descarta y rebota, no rompe", async () => {

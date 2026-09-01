@@ -886,6 +886,51 @@ async function seedEventosEmailMigrados() {
                 "Hola,\n\nTu cuenta quedó creada. Desde acá te avisamos si alguno de los tuyos aparece en un reporte.\n\nEntra cuando quieras:\n{{urlLogin}}\n\nTe faltan unos pocos pasos para terminar de configurarla. Con calma, toma un minuto.",
             variablesSchema: { type: "object", properties: { urlLogin: { type: "string" } } },
         },
+        // ── SPEC-344 (A-69 · C1) · registro por enlace del colegio ──────────
+        {
+            clave: "colegio.registro_enlace.email",
+            asunto: "Cree su contraseña y empecemos",
+            cuerpoMarkdown:
+                "Hola,\n\nUsted está por activar la cuenta del **{{nombreColegio}}** en Protección Infantil.\n\nAbra este enlace y cree su contraseña:\n{{url}}\n\nEl enlace vence en 24 horas y solo se puede usar una vez.\n\nSi no fue usted quien lo pidió, no tiene que hacer nada.",
+            variablesSchema: {
+                type: "object",
+                properties: { url: { type: "string" }, nombreColegio: { type: "string" } },
+            },
+        },
+        {
+            clave: "colegio.registro_enlace.cuenta_existente.email",
+            asunto: "Ya existe una cuenta con este correo",
+            cuerpoMarkdown:
+                "Hola,\n\nAlguien intentó crear una cuenta del colegio **{{nombreColegio}}** con su correo. Su cuenta ya existe.\n\nSi fue usted quien intentó, ingrese en {{urlLogin}} — puede recuperar su contraseña desde {{urlRecuperar}} si la olvidó.\n\nSi no fue usted, no tiene que hacer nada.",
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreColegio: { type: "string" },
+                    urlRecuperar: { type: "string" },
+                    urlLogin: { type: "string" },
+                },
+            },
+        },
+        {
+            clave: "colegio.registro_enlace.nit_ya_registrado.email",
+            asunto: "Alguien intentó registrar su colegio",
+            cuerpoMarkdown:
+                "Hola,\n\nAlguien intentó registrar el NIT **{{nit}}** en Protección Infantil, y ese NIT ya está a su nombre.\n\nSi fue usted quien intentó desde otro correo, contáctenos: {{urlSoporte}}.\n\nSi no fue usted, no tiene que hacer nada.",
+            variablesSchema: {
+                type: "object",
+                properties: { nit: { type: "string" }, urlSoporte: { type: "string" } },
+            },
+        },
+        {
+            clave: "colegio.bienvenida_rector.email",
+            asunto: "Su cuenta del colegio está lista",
+            cuerpoMarkdown:
+                "Hola,\n\nLa cuenta del **{{nombreColegio}}** quedó creada. Desde aquí protegerá a sus estudiantes, profesores y acudientes.\n\nEntre cuando quiera:\n{{urlLogin}}\n\nLe faltan unos pocos pasos para terminar de configurarla. Los recorremos juntos.",
+            variablesSchema: {
+                type: "object",
+                properties: { nombreColegio: { type: "string" }, urlLogin: { type: "string" } },
+            },
+        },
         {
             clave: "usuario.bienvenida.operador.email",
             asunto: "Tu cuenta de operador está lista",
@@ -1062,6 +1107,11 @@ async function seedEventosEmailMigrados() {
         // entrar, así que no admiten opt-out.
         { evento: "auth.registro_enlace", plantillaClave: "auth.registro_enlace.email", rol: "PARENT", obligatoria: true },
         { evento: "auth.bienvenida_padre", plantillaClave: "auth.bienvenida_padre.email", rol: "PARENT", obligatoria: true },
+        // SPEC-344 (A-69 · C1): reglas del registro por enlace del colegio.
+        { evento: "colegio.registro_enlace", plantillaClave: "colegio.registro_enlace.email", rol: "SCHOOL_ADMIN", obligatoria: true },
+        { evento: "colegio.registro_enlace.cuenta_existente", plantillaClave: "colegio.registro_enlace.cuenta_existente.email", rol: "SCHOOL_ADMIN", obligatoria: true },
+        { evento: "colegio.registro_enlace.nit_ya_registrado", plantillaClave: "colegio.registro_enlace.nit_ya_registrado.email", rol: "SCHOOL_ADMIN", obligatoria: true },
+        { evento: "colegio.bienvenida_rector", plantillaClave: "colegio.bienvenida_rector.email", rol: "SCHOOL_ADMIN", obligatoria: true },
         { evento: "usuario.bienvenida.operador", plantillaClave: "usuario.bienvenida.operador.email", rol: "OPERADOR", obligatoria: true },
         { evento: "usuario.bienvenida.comite", plantillaClave: "usuario.bienvenida.comite.email", rol: "COMITE_VALIDACION", obligatoria: true },
         { evento: "usuario.credenciales.padre", plantillaClave: "usuario.credenciales.padre.email", rol: "PARENT", obligatoria: true },

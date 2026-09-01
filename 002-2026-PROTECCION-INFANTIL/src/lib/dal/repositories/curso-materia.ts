@@ -58,6 +58,18 @@ export class CursoMateriaRepository {
     ) {
         const { cursoId, materiaId, profesorId } = datos;
 
+        // SPEC-344 (A-69 · C1 · D3): candado servidor "Toda materia con profesor".
+        // El schema Prisma sigue con `profesorId String?` para no romper el histórico
+        // (vínculos ya creados sin profesor quedan como están); las NUEVAS altas y
+        // reasignaciones EXIGEN el profesor.
+        if (!profesorId || profesorId.trim() === "") {
+            throw new AppError(
+                "Toda materia debe llevar un profesor a cargo",
+                ERROR_CODES.VALIDATION_ERROR,
+                400,
+            );
+        }
+
         const curso = await this.db.curso.findFirst({ where: { id: cursoId, colegioId } });
         if (!curso) {
             throw new AppError("Curso no encontrado", ERROR_CODES.NOT_FOUND, 404);
@@ -71,14 +83,12 @@ export class CursoMateriaRepository {
             throw new AppError("La materia debe estar activa", ERROR_CODES.CONFLICT, 409);
         }
 
-        if (profesorId) {
-            const profesor = await this.db.profesor.findFirst({ where: { id: profesorId, colegioId } });
-            if (!profesor) {
-                throw new AppError("Profesor no encontrado", ERROR_CODES.NOT_FOUND, 404);
-            }
-            if (profesor.estado !== "activo") {
-                throw new AppError("El profesor debe estar activo", ERROR_CODES.CONFLICT, 409);
-            }
+        const profesor = await this.db.profesor.findFirst({ where: { id: profesorId, colegioId } });
+        if (!profesor) {
+            throw new AppError("Profesor no encontrado", ERROR_CODES.NOT_FOUND, 404);
+        }
+        if (profesor.estado !== "activo") {
+            throw new AppError("El profesor debe estar activo", ERROR_CODES.CONFLICT, 409);
         }
 
         const existente = await this.db.cursoMateria.findFirst({
@@ -98,6 +108,33 @@ export class CursoMateriaRepository {
             },
             select: SELECT_CON_RELACIONES,
         });
+    }
+
+    /**
+     * SPEC-344 (A-69 · C1 · FR-031): reasignación en línea del profesor de una
+     * materia existente. Aplica el mismo candado D3 (profesorId obligatorio).
+     */
+    async reasignarProfesor(colegioId: string, id: string, profesorId: string) {
+        if (!profesorId || profesorId.trim() === "") {
+            throw new AppError(
+                "Toda materia debe llevar un profesor a cargo",
+                ERROR_CODES.VALIDATION_ERROR,
+                400,
+            );
+        }
+        const vinculo = await this.db.cursoMateria.findFirst({ where: { id, colegioId } });
+        if (!vinculo) {
+            throw new AppError("Vínculo no encontrado", ERROR_CODES.NOT_FOUND, 404);
+        }
+        const profesor = await this.db.profesor.findFirst({ where: { id: profesorId, colegioId } });
+        if (!profesor) {
+            throw new AppError("Profesor no encontrado", ERROR_CODES.NOT_FOUND, 404);
+        }
+        if (profesor.estado !== "activo") {
+            throw new AppError("El profesor debe estar activo", ERROR_CODES.CONFLICT, 409);
+        }
+        await this.db.cursoMateria.update({ where: { id }, data: { profesorId } });
+        return this.db.cursoMateria.findUniqueOrThrow({ where: { id }, select: SELECT_CON_RELACIONES });
     }
 
     /** Cambia el estado del vínculo (soft delete / reactivación). 404 si no existe o es ajeno. */

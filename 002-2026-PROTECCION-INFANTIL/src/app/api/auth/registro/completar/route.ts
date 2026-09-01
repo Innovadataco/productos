@@ -46,6 +46,14 @@ export async function POST(request: Request) {
                     { status: 409 }
                 );
             }
+            // Candado espejo (OBS-1 auditoría #222): un enlace de registro de
+            // colegio no se consume por acá — seguiría vivo para su propio flujo.
+            if (resultado.tipo === "rol_incorrecto") {
+                return NextResponse.json(
+                    { error: { message: "Este enlace no corresponde al registro de familias.", code: ERROR_CODES.CONFLICT } },
+                    { status: 409 }
+                );
+            }
             return NextResponse.json(
                 { error: { message: "Este enlace ya no sirve. Pide uno nuevo y te lo enviamos al correo.", code: ERROR_CODES.AUTH_EXPIRED } },
                 { status: 410 }

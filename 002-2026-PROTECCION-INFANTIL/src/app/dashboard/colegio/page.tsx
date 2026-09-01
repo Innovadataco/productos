@@ -5,7 +5,13 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { ColegioResumenRepository } from "@/lib/dal/repositories/colegio-resumen";
 import { HomeRectorPage } from "@/components/modules/colegio/home/HomeRectorPage";
 import { EmptyStateColegio } from "@/components/modules/colegio/home/EmptyStateColegio";
-import { OnboardingModal } from "@/components/modules/colegio/OnboardingModal";
+// SPEC-344 (A-69 · C1 · Phase 12 / FR-041): OnboardingModal APAGADO en favor
+// del camino guiado del colegio (`/camino/colegio/**` + guardián en
+// `middleware.ts`). El modal persistía "pasoActual" en BD como 2ª fuente de
+// verdad — exactamente el patrón que `estado-colegio.ts:2-17` mata. El
+// componente NO se borra (regla nada-se-borra); solo deja de montarse.
+// Reversible: revertir este commit y descomentar el import + el render.
+// import { OnboardingModal } from "@/components/modules/colegio/OnboardingModal";
 import { calcularCobertura } from "@/lib/colegio/cobertura";
 
 /**
@@ -39,13 +45,10 @@ export default async function ColegioDashboardPage() {
     }
 
     return (
-        <>
-            <OnboardingModal />
-            <HomeRectorPage
-                nombreUsuario={usuario.nombre?.trim() ?? ""}
-                datos={datos}
-                cobertura={cobertura}
-            />
-        </>
+        <HomeRectorPage
+            nombreUsuario={usuario.nombre?.trim() ?? ""}
+            datos={datos}
+            cobertura={cobertura}
+        />
     );
 }

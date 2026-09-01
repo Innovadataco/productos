@@ -169,6 +169,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/carga/validator.test.ts",
     // SPEC-352 (hotfix): guard del resetDatabase — jamás truncar una BD sin "test".
     "src/lib/validar-bd-de-test.test.ts",
+    // SPEC-344 (A-69 · C1): test-candado de la plantilla de profesores.
+    "src/lib/colegio/carga-profesores/plantilla-autoconsistente.test.ts",
+    // SPEC-344 (FR-026-ter · cierra I-245): test-candado de la plantilla de alumnos.
+    "src/app/api/colegio/carga/plantilla/plantilla-alumnos-autoconsistente.test.ts",
     "src/lib/dal/repositories/analytics-colegio-helpers.test.ts",
     "src/lib/colegio/fechas-humano.test.ts",
     "src/lib/colegio/normalizacion.test.ts",

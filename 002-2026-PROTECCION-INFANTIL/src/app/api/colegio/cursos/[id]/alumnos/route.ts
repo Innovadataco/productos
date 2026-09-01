@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { verifyAuth } from "@/lib/auth";
 import { EstudianteRepository } from "@/lib/dal/repositories/estudiante";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -141,7 +142,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         });
 
         // La clave `alumno` de la respuesta se conserva en esta SPEC (D2/contracts).
-        return NextResponse.json({ alumno: estudiante }, { status: 201 });
+        const res = NextResponse.json({ alumno: estudiante }, { status: 201 });
+        // SPEC-344 (A-69 · C1 · Phase 9-bis): sellar cookie — el primer
+        // estudiante activo cierra el Paso 5 del camino colegio.
+        await sellarCookieSesionEstado(res, user.id);
+        return res;
     } catch (error) {
         if (error instanceof Error && error.message === "Curso no encontrado") {
             return NextResponse.json(

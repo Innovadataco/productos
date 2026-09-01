@@ -46,6 +46,31 @@ const filaCargaAlumnoJsonSchema = z.object({
 });
 const filasRosterSchema = z.array(filaCargaAlumnoJsonSchema);
 
+// SPEC-344 (A-69 · C1 · D-5): la carga de PROFESORES reusa el mismo modelo de
+// sesión server-side (PII fuera del JWT, single-use, TTL 15 min) pero su
+// roster tiene OTRA forma — el ProfesorNormalizado del validador fresco. Se
+// lee de vuelta validando con Zod, igual que el de alumnos (SPEC-136 E-3).
+const filaProfesorJsonSchema = z.object({
+    nombre: z.string(),
+    apellidos: z.string(),
+    tipoDocumento: z.string(),
+    numeroDocumento: z.string(),
+    anioNacimiento: z.number(),
+    sexo: z.enum(["M", "F", "OTRO"]),
+    email: z.string(),
+    telefono: z.string(),
+});
+const filasRosterProfesoresSchema = z.array(filaProfesorJsonSchema);
+
+export type FilaRosterProfesor = z.infer<typeof filaProfesorJsonSchema>;
+
+export type SesionRosterProfesores = {
+    id: string;
+    colegioId: string;
+    filas: FilaRosterProfesor[];
+    expiraEn: Date;
+};
+
 export type SesionRoster = {
     id: string;
     colegioId: string;
@@ -82,6 +107,26 @@ export class CargaRosterSesionRepository {
             id: sesion.id,
             colegioId: sesion.colegioId,
             filas: filasRosterSchema.parse(sesion.filas),
+            expiraEn: sesion.expiraEn,
+        };
+    }
+
+    /**
+     * SPEC-344: variante para el roster de PROFESORES (mismas guardas, otro
+     * shape). Devuelve null si no existe, es de otro colegio o venció.
+     */
+    async obtenerValidaProfesores(
+        sesionId: string,
+        colegioId: string,
+    ): Promise<SesionRosterProfesores | null> {
+        const sesion = await this.db.cargaRosterSesion.findUnique({ where: { id: sesionId } });
+        if (!sesion) return null;
+        if (sesion.colegioId !== colegioId) return null;
+        if (sesion.expiraEn <= new Date()) return null;
+        return {
+            id: sesion.id,
+            colegioId: sesion.colegioId,
+            filas: filasRosterProfesoresSchema.parse(sesion.filas),
             expiraEn: sesion.expiraEn,
         };
     }

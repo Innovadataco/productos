@@ -136,6 +136,8 @@ enum AccionAudit {
   COLEGIO_MATERIA_REACTIVADA
   COLEGIO_CURSO_MATERIA_CREADA
   COLEGIO_CURSO_MATERIA_DESACTIVADA
+  // SPEC-344 (A-69 · C1 · FR-031): reasignación en línea del profesor de una materia.
+  COLEGIO_CURSO_MATERIA_ACTUALIZADA
   COLEGIO_ALUMNO_CREADO
   COLEGIO_ALUMNO_EDITADO
   COLEGIO_ALUMNO_DESACTIVADO
@@ -775,13 +777,23 @@ model TokenRecuperacion {
 /// existe; se crea al completar. Del token se guarda SOLO el hash — el valor en
 /// claro viaja en el enlace del correo y nunca se persiste.
 model TokenRegistro {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   email         String
   tokenHash     String
   expiraEn      DateTime
-  usado         Boolean  @default(false)
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  usado         Boolean    @default(false)
+  // SPEC-344 (A-69 · C1): registro por enlace compartido padre + colegio.
+  // Los tokens existentes quedan como PARENT (default) — coherente: SPEC-339
+  // solo emitía tokens para padres. Nuevas emisiones del colegio llevan
+  // SCHOOL_ADMIN. `completar` fuerza el rol del token, no confía en el cliente.
+  rol           RolUsuario @default(PARENT)
+  // SPEC-344 · datos EXTRA para tokens del colegio (nombre y NIT). Se guardan
+  // al solicitar el enlace y se recuperan al completar — evita re-pedirlos al
+  // rector y evita exponer el NIT en la URL del enlace. Nulos para PARENT.
+  nombreColegio String?
+  nit           String?
+  creadoEn      DateTime   @default(now())
+  actualizadoEn DateTime   @updatedAt
 
   @@index([email])
   @@index([tokenHash])
@@ -1351,6 +1363,12 @@ model AcudienteEstudiante {
   relacion     String // "madre" | "padre" | "tía" | … (texto libre corto)
   telefono     String?
   email        String?
+  // SPEC-344 (A-69 · C1) · D-acud: documento del acudiente OPCIONAL (mockup 1.6).
+  // Sin unicidad nueva — el mismo documento puede repetirse (padre con varios
+  // hijos). El tipo se valida contra el catálogo TipoDocumento activo cuando
+  // viene; ausente = ausente.
+  documentoTipo   String?
+  documentoNumero String?
   estado       String   @default("activo") // activo | inactivo
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
