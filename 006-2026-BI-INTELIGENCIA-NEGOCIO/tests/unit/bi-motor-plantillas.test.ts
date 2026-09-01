@@ -338,6 +338,25 @@ describe("motor · clarificación por plan incompleto (candado 4, deny-by-defaul
         const r2 = await preguntar("¿Cuántos reportes de la categoría SOLICITUD_MATERIAL hubo este año?", EMAIL);
         expect(r2.estado).toBe("ok");
     });
+
+    it("I-13: período espurio del LLM en pregunta SIN marca temporal → se descarta y se responde completo", async () => {
+        // Regresión del caso real: "alertas escaladas sin gestionar" llegó con
+        // 1 día espurio y respondía 0 habiendo 254 escaladas.
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama({
+                tabla_idx: 0,
+                columnas_idx: [],
+                agregacion: "conteo",
+                filtros: [{ columna_idx: 1, operador: "=", valor: "escalada" }],
+                periodo: { columna_idx: 2, dias: 1 },
+            }),
+        );
+        const r = await preguntar("¿Cuántas alertas escaladas hay sin gestionar?", EMAIL);
+
+        expect(r.estado).toBe("ok");
+        const planUsado = mocks.construirSql.mock.calls[0][1] as { periodo?: unknown };
+        expect(planUsado.periodo).toBeUndefined();
+    });
 });
 
 describe("motor · LLM con JSON inválido (candado 2: no se rescata)", () => {

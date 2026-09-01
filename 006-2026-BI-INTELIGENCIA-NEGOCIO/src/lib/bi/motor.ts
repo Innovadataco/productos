@@ -374,6 +374,14 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             return await finalizar({ estado: "clarificacion", texto: faltante }, "plan_incompleto");
         }
 
+        // I-13: período espurio — si la pregunta NO tiene ninguna marca
+        // temporal y el LLM aun así agregó un período, se descarta (caso
+        // real: "alertas escaladas sin gestionar" llegó con 1 día espurio y
+        // respondía 0 habiendo 254). Simétrico al fallback de I-03.
+        if (plan.periodo && !tieneMarcasTemporales(pregunta)) {
+            delete plan.periodo;
+        }
+
         // 6 · El SERVIDOR construye el SQL (candado 3) con límite de BD (B3).
         const limiteCfg = Number((await getConfig("bi.motor.limite_maximo")) ?? "500");
         const limiteMaximo = Number.isFinite(limiteCfg) && limiteCfg > 0 ? Math.floor(limiteCfg) : 500;
