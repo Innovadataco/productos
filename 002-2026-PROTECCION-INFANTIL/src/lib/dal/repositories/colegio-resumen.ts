@@ -25,6 +25,7 @@ import { EstudianteObservacionRepository } from "./estudiante-observacion";
 import { ProfesorRepository } from "./profesor";
 import { AlertaColegioRepository } from "./alerta-colegio";
 import { AcudienteEstudianteRepository } from "./acudiente-estudiante";
+import { ComiteConvivenciaSolicitudesRepository } from "./comite-convivencia-solicitudes";
 
 export interface PuntoTendencia {
     /** Fecha ISO de inicio del periodo (lunes / día 1 / 1 de enero, en UTC). */
@@ -118,6 +119,13 @@ export interface HomeRector {
     cursosMirada: CursoMirada[];
     /** SPEC-167 (FR-002): embudo por reporte distinto — el radar operativo del rector. */
     embudo: EmbudoTablero;
+    // ── SPEC-353 (A-69 · C6): insumos de la frase "qué hacer hoy" ────────────
+    /** Casos escalados al comité sin resolver + antigüedad del más viejo. */
+    casosComite: { abiertos: number; masViejoEn: Date | null };
+    /** Fecha de la alerta "nueva" más reciente (null si no hay sin abrir). */
+    ultimaAlertaSinAbrirEn: Date | null;
+    /** Identificadores que tocan >1 estudiante en 7 días — SOLO conteos (SC-005). */
+    identificadorCruzado: { identificadores: number; estudiantesMax: number };
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -207,6 +215,9 @@ export class ColegioResumenRepository {
             serieAnual,
             topCursos,
             embudo,
+            casosComite,
+            ultimaAlertaSinAbrirEn,
+            identificadorCruzado,
         ] = await Promise.all([
             colegioRepo.obtenerFichaHome(colegioId),
             estudianteRepo.contarCobertura(colegioId),
@@ -223,6 +234,10 @@ export class ColegioResumenRepository {
             alertaRepo.serieReportesPorPeriodo(colegioId, "year", anios[0]!),
             alertaRepo.topCursosPorReportes(colegioId, hace30d, 3),
             alertaRepo.embudoPorReporte(colegioId),
+            // SPEC-353 (C6): insumos de la frase "qué hacer hoy".
+            new ComiteConvivenciaSolicitudesRepository(tx).abiertosConAntiguedad(colegioId),
+            alertaRepo.ultimaAlertaSinAbrir(colegioId),
+            alertaRepo.identificadorCruzado7d(colegioId),
         ]);
 
         if (!colegio) {
@@ -273,6 +288,9 @@ export class ColegioResumenRepository {
             },
             cursosMirada,
             embudo,
+            casosComite,
+            ultimaAlertaSinAbrirEn,
+            identificadorCruzado,
         };
     }
 

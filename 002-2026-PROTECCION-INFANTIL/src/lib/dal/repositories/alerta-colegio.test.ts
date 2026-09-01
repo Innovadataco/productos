@@ -216,4 +216,78 @@ describe("AlertaColegioRepository", () => {
         const porCurso = await repo.contarVisiblesPorCursoIds(a.id, [visible.curso.id], [...ESTADOS_VISIBLES]);
         expect(porCurso.get(visible.curso.id)).toBe(1);
     });
+
+    // SPEC-353 (C6 · T001): cruce por VALOR del identificador en 7 días — solo conteos.
+    it("identificadorCruzado7d cuenta el mismo valor en 2 estudiantes distintos y respeta tenant/7d", async () => {
+        const plataforma = await crearPlataforma();
+        const { colegio: a } = await crearColegioConAdmin();
+        const { colegio: b } = await crearColegioConAdmin();
+        const repo = new AlertaColegioRepository();
+
+        // Fixture: mismo VALOR en dos alumnos distintos de A, cada uno con alerta reciente.
+        const uno = await sembrarAlerta(a.id, plataforma.id, "C1");
+        const dosBase = await sembrarAlerta(a.id, plataforma.id, "C2");
+        await prisma.identificadorEstudiante.update({
+            where: { id: dosBase.identificador.id },
+            data: { valor: uno.identificador.valor, plataformaId: null },
+        });
+
+        // Contrafixture 1: DOS alertas del MISMO estudiante no cruzan (mismo alumnoId).
+        const tres = await sembrarAlerta(a.id, plataforma.id, "C3");
+        const reporteExtra = await prisma.reporte.create({
+            data: {
+                identificador: tres.identificador.valor,
+                plataformaId: plataforma.id,
+                texto: "Reporte C3-bis",
+                fechaIncidente: new Date("2026-07-20T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-C3-bis",
+                estado: "CLASIFICADO",
+                eliminado: false,
+            },
+        });
+        await prisma.alertaColegio.create({
+            data: {
+                colegioId: a.id,
+                reporteId: reporteExtra.id,
+                identificadorEstudianteId: tres.identificador.id,
+                estado: "vista",
+                prioridad: "media",
+                vencimientoSla: new Date(Date.now() + 48 * 60 * 60 * 1000),
+            },
+        });
+        // Contrafixture 2: alerta vieja (>7 días) no cuenta para el cruce.
+        const vieja = await sembrarAlerta(a.id, plataforma.id, "C4");
+        await prisma.alertaColegio.update({
+            where: { id: vieja.alerta.id },
+            data: { creadoEn: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) },
+        });
+
+        const cruzadoA = await repo.identificadorCruzado7d(a.id);
+        expect(cruzadoA.identificadores, "un solo valor cruzado").toBe(1);
+        expect(cruzadoA.estudiantesMax, "toca 2 estudiantes").toBe(2);
+
+        const cruzadoB = await repo.identificadorCruzado7d(b.id);
+        expect(cruzadoB, "el colegio B no ve el cruce de A").toEqual({ identificadores: 0, estudiantesMax: 0 });
+    });
+
+    // SPEC-353 (C6 · T001): fecha de la alerta "nueva" más reciente, por tenant.
+    it("ultimaAlertaSinAbrir devuelve la fecha de la nueva más reciente y null sin nuevas", async () => {
+        const plataforma = await crearPlataforma();
+        const { colegio: a } = await crearColegioConAdmin();
+        const { colegio: b } = await crearColegioConAdmin();
+        const repo = new AlertaColegioRepository();
+
+        expect(await repo.ultimaAlertaSinAbrir(a.id), "colegio virgen → null").toBeNull();
+
+        await sembrarAlerta(a.id, plataforma.id, "N1", { estadoAlerta: "vista" });
+        expect(await repo.ultimaAlertaSinAbrir(a.id), "vista no cuenta").toBeNull();
+
+        const nueva = await sembrarAlerta(a.id, plataforma.id, "N2");
+        const fecha = await repo.ultimaAlertaSinAbrir(a.id);
+        expect(fecha?.getTime()).toBe(nueva.alerta.creadoEn.getTime());
+        expect(await repo.ultimaAlertaSinAbrir(b.id), "tenant B no ve la de A").toBeNull();
+    });
 });

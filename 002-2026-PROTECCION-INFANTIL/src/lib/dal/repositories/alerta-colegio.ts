@@ -273,6 +273,56 @@ export class AlertaColegioRepository {
         return filas[0]?.total ?? 0;
     }
 
+    /**
+     * SPEC-353 (A-69 · C6 · FR-004): identificador CRUZADO — un mismo
+     * identificador de estudiante presente en alertas visibles de los últimos
+     * 7 días que tocan a MÁS de un estudiante distinto. Es la señal más grave
+     * del dominio (posible depredador contactando a varios menores) y el
+     * mockup 2.1 la pinta como la frase principal del puesto de mando.
+     *
+     * OJO privacidad (SC-005): devuelve SOLO conteos — jamás el valor del
+     * identificador. El cruce es por VALOR NORMALIZADO del identificador
+     * (mismo nick en cuentas de dos estudiantes distintos), no por id de fila
+     * (un id de IdentificadorAlumno pertenece a UN estudiante por diseño).
+     */
+    async identificadorCruzado7d(
+        colegioId: string,
+    ): Promise<{ identificadores: number; estudiantesMax: number }> {
+        const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const filas: { identificadores: number; estudiantes_max: number }[] = await this.db.$queryRaw`
+            SELECT COUNT(*)::int AS identificadores,
+                   COALESCE(MAX(estudiantes), 0)::int AS estudiantes_max
+            FROM (
+                SELECT i.valor, COUNT(DISTINCT i."alumnoId")::int AS estudiantes
+                FROM "AlertaColegio" ac
+                JOIN "IdentificadorAlumno" i ON i.id = ac."identificadorAlumnoId"
+                JOIN "Reporte" r ON r.id = ac."reporteId"
+                WHERE ac."colegioId" = ${colegioId}
+                  AND ac."tipoSujeto" = 'ESTUDIANTE'
+                  AND r.eliminado = false
+                  AND ac."creadoEn" >= ${desde}
+                GROUP BY i.valor
+                HAVING COUNT(DISTINCT i."alumnoId") > 1
+            ) cruzados
+        `;
+        return {
+            identificadores: filas[0]?.identificadores ?? 0,
+            estudiantesMax: filas[0]?.estudiantes_max ?? 0,
+        };
+    }
+
+    /**
+     * SPEC-353 (C6): fecha de la alerta "nueva" más reciente — para la frase
+     * calmada ("Todo al día. La última señal llegó el …") y la urgente.
+     */
+    async ultimaAlertaSinAbrir(colegioId: string): Promise<Date | null> {
+        const resultado = await this.db.alertaColegio.aggregate({
+            where: { colegioId, estado: "nueva", reporte: { eliminado: false } },
+            _max: { creadoEn: true },
+        });
+        return resultado._max.creadoEn;
+    }
+
     /** SPEC-143 (D1): contadores del semáforo — nuevas sin gestionar + últimas 72 h. */
     async conteosSemaforo(colegioId: string): Promise<{ alertasNuevas: number; alertas72h: number }> {
         const desde72h = new Date(Date.now() - 72 * 60 * 60 * 1000);

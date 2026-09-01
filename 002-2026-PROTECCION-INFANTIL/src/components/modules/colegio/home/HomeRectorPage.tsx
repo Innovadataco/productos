@@ -12,6 +12,8 @@ import { TendenciaReportes } from "./TendenciaReportes";
 import { CursosQueMerecenMirada } from "./CursosQueMerecenMirada";
 import { AccionesRapidas } from "./AccionesRapidas";
 import { EmbudoEstado } from "./EmbudoEstado";
+import { QueHacerHoyCard } from "./QueHacerHoyCard";
+import { calcularQueHacerHoy } from "@/lib/colegio/que-hacer-hoy";
 
 /**
  * SPEC-143 (FR-001) — Composición de la home operativa del rector (mockup §5.1):
@@ -56,6 +58,20 @@ export function HomeRectorPage({ nombreUsuario, datos, cobertura }: HomeRectorPa
 
                 <div className="anim-entrada" style={retardo(70)}>
                     <HeroEstado estado={estado} />
+                </div>
+
+                {/* SPEC-353 (C6 · mockup 2.1): la frase accionable, entre el
+                    hero y el embudo. Los números están abajo; acá hablan. */}
+                <div className="anim-entrada" style={retardo(90)}>
+                    <QueHacerHoyCard
+                        frase={calcularQueHacerHoy({
+                            alertasSinAbrir: datos.semaforo.alertasNuevas,
+                            ultimaAlertaSinAbrirEn: datos.ultimaAlertaSinAbrirEn,
+                            casosComite: datos.casosComite,
+                            identificadorCruzado: datos.identificadorCruzado,
+                            ultimaSenal: datos.ultimaSenal,
+                        })}
+                    />
                 </div>
 
                 <div className="anim-entrada" style={retardo(105)}>
