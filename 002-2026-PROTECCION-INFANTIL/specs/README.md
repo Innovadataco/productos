@@ -479,6 +479,7 @@
 | [343](343-documentos-legales-publicos/spec.md) | SPEC-343 · Documentos legales públicos limpios (I-232) — política y convenio v1.0 sin notas internas + render markdown seguro en el modal + borradores fuera de public/ + test-candado | 🟡 En desarrollo |
 | [341](341-inteligencia-expediente/spec.md) | SPEC-341 · La inteligencia del expediente · análisis IA en fila (A-68 §4.4 capa 2) — genera al abrir-si-cambió + corte inmutable + Actualizar con cool-down + tubería reutilizable con `alcance` PADRE_COMPLETO / COLEGIO_BLINDADO | 🟢 Implementada |
 | [350](350-caso-colegio/spec.md) | SPEC-350 · El caso del colegio estilo expediente (A-69 · C3) — mapa+cronología reusadas del padre + capa 1 en vivo + análisis IA con `alcance=COLEGIO_BLINDADO` compartiendo cola pg-boss y worker de 341; voz USTED | 🟡 En desarrollo |
+| [344](344-camino-guiado-colegio/spec.md) | SPEC-344 · Camino guiado del colegio (A-69 · Fase C1) — registro por enlace + 5 pasos con guardián compartido con el padre + 11 grados sembrados + D3 candado servidor materia-profesor + puente D2 a Colegio.finServicio + Excel profesores fresco + I-245 plantilla alumnos | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 

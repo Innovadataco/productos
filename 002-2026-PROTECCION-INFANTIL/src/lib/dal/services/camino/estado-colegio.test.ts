@@ -82,6 +82,8 @@ async function agregarSuscripcion(colegioId: string, adminId: string) {
             duracion: "MES_1",
             anio: new Date().getFullYear(),
             precioBaseUSD: 0,
+            // La columna legacy `precio` sigue NOT NULL en la BD física.
+            precio: 0,
             esFreemium: true,
             creadoPorAdminId: adminId,
         },
