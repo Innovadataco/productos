@@ -299,3 +299,23 @@ Calidad auditó el diseño en paralelo. Tres bloqueos y siete ajustes entraron a
 - **A-8**: Las migraciones son aditivas y no destructivas; ningún dato existente se pierde. La única excepción prevista es la separación de fichas de D-4, que **duplica** registros para preservarlos — nunca borra.
 - **A-10**: Nada de lo que D-4 deja obsoleto se borra: la tabla puente y el mecanismo de desvinculación quedan inactivos y documentados, reversibles si Jelkin cambia la regla.
 - **A-9**: La base de datos de desarrollo de esta máquina está por detrás de `main` y hay que ponerla al día antes de probar; no es un hallazgo del producto.
+
+---
+
+## Implementación (31-08-2026)
+
+**Rama**: `work/pi-SPEC-339-camino-guiado-padre` · 8 commits · todo pusheado.
+
+| Área | Piezas |
+|---|---|
+| Esquema | 4 migraciones: documento del padre + `TokenRegistro` · dueño del menor (3 guardas que abortan en voz alta) · tuteo de la plantilla SPEC-338 · interruptor/enfriamiento de avisos de hijos |
+| Datos sembrados | `padre.hijos.maximo` + mensaje · eventos `auth.registro_enlace`, `auth.bienvenida_padre`, `padre.hijo.reporte` |
+| Guardián | `pasoCamino` en la cookie firmada · paso 5 de `middleware.ts` · rebote `/api/sesion/al-dia` (falla-cerrada) · invariante cruzada verificada al arranque |
+| Fuente única | `src/lib/camino/pasos.ts` (orden/destinos) · `src/lib/dal/services/camino/estado.ts` (derivación, sin columna de progreso) |
+| La puerta | `RegistroEnlaceService` + rutas `solicitar`/`completar` · `/registro` rehecha · `/registro/crear-clave/[token]` · colegio intacto |
+| Menores | ficha propia por padre · `actualizarHijo` (corrección) · tope por parámetro · sellados de pasos 2-3 con aviso si fallan |
+| El cruce | `notificarHijosSiCorresponde` en el worker · presentación propia · independencia del círculo probada en ambas direcciones |
+| Pantallas | `/camino/{datos,hijos,plan,listo}` + Paso 1 = `/consentimiento` rotulado · armazón con dos salidas · `PadreNavMovil` |
+| Evidencia | 1837 unit + ~90 integración por módulo · build · arch:check · E2E escrito · ver `cierre.md` |
+
+**Pendiente**: recorrido del CEO en navegador (candado 25) y aceptación de Jelkin.
