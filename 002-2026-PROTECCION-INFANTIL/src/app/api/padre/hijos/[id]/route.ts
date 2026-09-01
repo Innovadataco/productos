@@ -3,11 +3,26 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { cambiarEstadoHijo } from "@/lib/dal/services/hijos";
+import { actualizarHijo, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
+import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 
-// SPEC-325 (extensión) · activar/inactivar un hijo. El DAL exige que el padre sea
-// dueño del hijo (PII acceso-solo-dueño); nunca por id suelto sin verificar.
-const patchSchema = z.object({ estado: z.enum(["activo", "inactivo"]) });
+// SPEC-325 · SPEC-339 (FR-022): antes este PATCH aceptaba SOLO { estado } — el
+// padre no podía corregir un apellido mal escrito. Ahora acepta la corrección
+// completa. El DAL exige que el padre sea dueño (PII acceso-solo-dueño) y
+// rechaza el documento repetido DENTRO de su propia lista (D-4).
+const patchSchema = z
+    .object({
+        nombre: z.string().trim().min(1).max(120).optional(),
+        apellidos: z.string().trim().min(1).max(120).optional(),
+        documentoTipo: z.enum(DOCUMENTO_TIPOS).optional(),
+        documentoNumero: z.string().trim().min(1).max(40).optional(),
+        anioNacimiento: z.number().int().min(1900).max(2100).optional(),
+        sexo: z.enum(SEXOS).optional(),
+        estado: z.enum(["activo", "inactivo"]).optional(),
+    })
+    .refine((d) => Object.values(d).some((v) => v !== undefined), {
+        message: "Nada que corregir",
+    });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -20,8 +35,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 { status: 400 }
             );
         }
-        const res = await cambiarEstadoHijo(usuario.id, id, parsed.data.estado);
-        return NextResponse.json(res);
+        const res = await actualizarHijo(usuario.id, id, parsed.data);
+        const respuesta = NextResponse.json(res);
+        // T073: inactivar el ÚNICO menor activo reabre el Paso 3, y reactivarlo
+        // lo cierra — re-sellar siempre que cambie el estado, al instante.
+        if (parsed.data.estado !== undefined) {
+            const sellada = await sellarCookieSesionEstado(respuesta, usuario.id);
+            if (!sellada) {
+                return NextResponse.json({
+                    ...res,
+                    aviso: "Quedó guardado. Si la página no avanza en un momento, recárgala.",
+                });
+            }
+        }
+        return respuesta;
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });
@@ -32,7 +59,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 { status: 404 }
             );
         }
-        logger.error("[HIJOS] Error cambiando estado del hijo:", error);
+        logger.error("[HIJOS] Error actualizando hijo:", error);
         return NextResponse.json(
             { error: { message: safeErrorMessage(error), code: ERROR_CODES.INTERNAL_ERROR } },
             { status: 500 }

@@ -1,8 +1,8 @@
 /**
  * SPEC-287 (002-PI-187 · cierra I-25 → I-111 → I-141) — middleware.ts.
  *
- * Único punto de decisión de acceso de toda la app. Ejecuta los 4 guardianes
- * en orden (sesión → consentimiento → cambio de password → vigencia) usando
+ * Único punto de decisión de acceso de toda la app. Ejecuta los guardianes
+ * en orden (sesión → consentimiento → cambio de password → camino → vigencia) usando
  * `GUARDIAS_ACCESO` como fuente única. Los layouts bajo `/dashboard/**` son
  * UI puros; NINGUNO puede ejecutar `redirect(...)` (ratchet 2).
  *
@@ -23,6 +23,7 @@ import {
     esRutaSesion,
     esExentaConsentimiento,
     esExentaCambiarPassword,
+    esExentaCamino,
     esExentaVigencia,
     tieneVigencia,
     destinoVigencia,
@@ -31,6 +32,8 @@ import {
     NOMBRE_COOKIE as NOMBRE_COOKIE_SESION,
     leerSesionEstado,
 } from "@/lib/routing/vigencia-cookie";
+import { destinoDePaso } from "@/lib/camino/pasos";
+import { GUARDIAS_ACCESO as G } from "@/lib/routing/guardias";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Config del middleware Next 15 (raíz)
@@ -192,7 +195,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
             // confundir el bloqueo con éxito. Las pantallas (no-api) siguen redirigiendo.
             if (pathname.startsWith("/api/")) {
                 return NextResponse.json(
-                    { error: { message: "Debés aceptar el consentimiento para continuar.", code: "CONSENTIMIENTO_REQUERIDO", redirectTo: GUARDIAS_ACCESO.consentimiento.destino } },
+                    { error: { message: "Debes aceptar el consentimiento para continuar.", code: "CONSENTIMIENTO_REQUERIDO", redirectTo: GUARDIAS_ACCESO.consentimiento.destino } },
                     { status: 403 }
                 );
             }
@@ -202,11 +205,35 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         if (estado.debeCambiarPassword && !esExentaCambiarPassword(pathname)) {
             if (pathname.startsWith("/api/")) {
                 return NextResponse.json(
-                    { error: { message: "Debés cambiar tu contraseña para continuar.", code: "CAMBIO_PASSWORD_REQUERIDO", redirectTo: GUARDIAS_ACCESO.cambiarPassword.destino } },
+                    { error: { message: "Debes cambiar tu contraseña para continuar.", code: "CAMBIO_PASSWORD_REQUERIDO", redirectTo: GUARDIAS_ACCESO.cambiarPassword.destino } },
                     { status: 403 }
                 );
             }
             return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.cambiarPassword.destino));
+        }
+        // Paso 5 (SPEC-339 · A-67): el camino guiado del padre.
+        //
+        // Solo el padre lo recorre. El Paso 1 no tiene pantalla propia: reusa
+        // `/consentimiento`, que ya existe y está bien hecha; por eso el destino
+        // del paso "permiso" apunta allí y no a una pantalla nueva.
+        if (sesion.rol === "PARENT" && estado.pasoCamino && !esExentaCamino(pathname)) {
+            const destino = destinoDePaso(estado.pasoCamino);
+            if (pathname.startsWith("/api/")) {
+                // SPEC-329: las /api/** gateadas responden JSON 403, no 302 —
+                // un fetch no puede seguir un redirect y confundiría el bloqueo
+                // con un éxito.
+                return NextResponse.json(
+                    {
+                        error: {
+                            message: "Termina de configurar tu cuenta para continuar.",
+                            code: "CAMINO_INCOMPLETO",
+                            redirectTo: destino,
+                        },
+                    },
+                    { status: 403 }
+                );
+            }
+            return aplicarCspSiCorresponde(request, redirect(request, destino));
         }
         // Paso 6: vigencia por rol.
         if (tieneVigencia(sesion.rol)) {
@@ -215,7 +242,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                     const destino = destinoVigencia(sesion.rol);
                     if (pathname.startsWith("/api/")) {
                         return NextResponse.json(
-                            { error: { message: "Tu servicio no está vigente. Renová para continuar.", code: "VIGENCIA_REQUERIDA", redirectTo: destino } },
+                            { error: { message: "Tu servicio no está vigente. Renueva para continuar.", code: "VIGENCIA_REQUERIDA", redirectTo: destino } },
                             { status: 403 }
                         );
                     }
@@ -223,6 +250,25 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 }
             }
         }
+    }
+
+    // SPEC-339 (A-67) — LA GRIETA DE LA FALLA-ABIERTA.
+    //
+    // Cuando la cookie de estado no se puede leer (venció a los 5 min, o es de
+    // antes de este despliegue), el bloque de arriba entero se salta y el
+    // middleware DEJA PASAR. Para vigencia esa ventana se tolera a propósito
+    // (no colgar la BD desde Edge). Para el camino NO: el brief §6 exige que el
+    // padre no pueda saltarse un paso "ni escribiendo la URL a mano", y con
+    // falla-abierta bastaba con esperar cinco minutos.
+    //
+    // Solución sin tocar la BD desde Edge: un rebote ÚNICO a una ruta de sesión
+    // (Node) que re-sella la cookie y devuelve al padre a su destino o a su paso.
+    // No puede ciclar: `/api/sesion/al-dia` es ruta de sesión, así que el
+    // middleware retorna antes de llegar a este punto cuando la pide.
+    if (!estado && sesion.rol === "PARENT" && !esExentaCamino(pathname) && !pathname.startsWith("/api/")) {
+        const alDia = new URL(G.caminoRebote, request.url);
+        alDia.searchParams.set("destino", pathname);
+        return aplicarCspSiCorresponde(request, NextResponse.redirect(alDia));
     }
 
     return aplicarCspSiCorresponde(request, NextResponse.next());

@@ -33,6 +33,9 @@ const EVENTOS_MIGRADOS = [
     "auth.cuenta_existente",
     // SPEC-322: aviso de seguridad al cambiar contraseña (obligatoria, todos los roles).
     "auth.password_cambiada",
+    // SPEC-339 (A-67): la puerta del padre — enlace de registro y bienvenida.
+    "auth.registro_enlace",
+    "auth.bienvenida_padre",
     "usuario.bienvenida.operador",
     "usuario.bienvenida.comite",
     "usuario.credenciales.padre",
@@ -41,6 +44,8 @@ const EVENTOS_MIGRADOS = [
     "reporte.revision.requerida",
     "reporte.score_critico",
     "padre.circulo_confianza.pendientes",
+    // SPEC-339: aviso al padre cuando una cuenta de su hijo aparece en un reporte.
+    "padre.hijo.reporte",
     "padre.circulo_confianza.reporte_enriquecido",
     "colegio.reporte_nuevo",
     "colegio.curso.umbral",
