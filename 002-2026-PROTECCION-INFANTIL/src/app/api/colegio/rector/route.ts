@@ -61,7 +61,7 @@ export async function PATCH(request: Request) {
         const sellado = await sellarCookieSesionEstado(res, user.id).catch(() => false);
         if (!sellado) {
             // Fallo silencioso — el próximo rebote sella. Informamos al cliente.
-            return NextResponse.json({ ok: true, aviso: "recarga la página para continuar" }, { status: 200 });
+            return NextResponse.json({ ok: true, aviso: "recargue la página para continuar" }, { status: 200 });
         }
         return res;
     } catch (error) {

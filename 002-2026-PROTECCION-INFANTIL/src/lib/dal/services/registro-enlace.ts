@@ -36,7 +36,7 @@ export type ResultadoSolicitudEnlace =
 
 export type ResultadoCompletarEnlace =
     | { ok: true; user: { id: string; email: string; nombre: string | null; rol: string } }
-    | { ok: false; tipo: "invalido" | "usado" | "vencido" | "email_existente" };
+    | { ok: false; tipo: "invalido" | "usado" | "vencido" | "email_existente" | "rol_incorrecto" };
 
 export class RegistroEnlaceService {
     private readonly tokens = new TokenRegistroRepository();
@@ -100,7 +100,14 @@ export class RegistroEnlaceService {
      * Consume el enlace y crea la cuenta del padre, en UNA transacción.
      * La ruta emite la sesión, sella la cookie de estado y manda la bienvenida.
      */
-    async completar(token: string, password: string): Promise<ResultadoCompletarEnlace> {
+    async completar(
+        token: string,
+        password: string,
+        // SPEC-344 (candado espejo · OBS-1 auditoría #222): cada flujo consume
+        // SOLO tokens de su rol. Un token SCHOOL_ADMIN por la ruta del padre
+        // crearía un rector sin colegio y quemaría el correo.
+        rolEsperado: RolUsuario = "PARENT",
+    ): Promise<ResultadoCompletarEnlace> {
         // Buscar el token entre los activos (comparación de hash, como recuperar).
         let encontrado: Awaited<ReturnType<TokenRegistroRepository["findActivos"]>>[number] | null = null;
         for (const registro of await this.tokens.findActivos()) {
@@ -115,6 +122,12 @@ export class RegistroEnlaceService {
             // email, y el token no lo trae. Se responde el genérico; la pantalla
             // ofrece pedir un enlace nuevo en los tres casos.
             return { ok: false, tipo: "invalido" };
+        }
+
+        // Candado espejo: el rol del token debe ser el del flujo que lo consume.
+        // NO se consume el token — el enlace sigue vivo para su flujo correcto.
+        if ((encontrado.rol ?? "PARENT") !== rolEsperado) {
+            return { ok: false, tipo: "rol_incorrecto" };
         }
 
         // Carrera posible: el mismo enlace abierto en dos pestañas/aparatos, o la

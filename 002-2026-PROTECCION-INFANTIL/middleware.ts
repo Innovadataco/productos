@@ -237,7 +237,11 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                     return NextResponse.json(
                         {
                             error: {
-                                message: "Termina de configurar tu cuenta para continuar.",
+                                // Voz por rol: al rector se le habla de usted (Colombia).
+                                message:
+                                    sesion.rol === "SCHOOL_ADMIN"
+                                        ? "Termine de configurar su cuenta para continuar."
+                                        : "Termina de configurar tu cuenta para continuar.",
                                 code: "CAMINO_INCOMPLETO",
                                 redirectTo: destino,
                             },

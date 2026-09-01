@@ -174,14 +174,20 @@ export const GUARDIAS_ACCESO = {
             // Paso 3 · profesores.
             "/api/colegio/profesores",
             "/api/colegio/carga-profesores",
-            // Paso 4 · cursos y materias.
+            // Paso 4 · cursos y materias. La sección /dashboard/colegio/cursos
+            // completa: el paso enlaza a la ficha del curso ([id] · materias) y
+            // al wizard unificado del paso 5 — sin la exención el enlace rebota
+            // al propio paso (auditoría #222 · punto 2).
             "/api/colegio/cursos",
-            // Paso 5 · estudiantes. Incluye el wizard unificado (I2 del analyze:
-            // vive en /dashboard/colegio/cursos/unificado y el rector debe poder
-            // usarlo desde el paso).
+            "/dashboard/colegio/cursos",
+            // Paso 5 · estudiantes.
             "/api/colegio/carga",
             "/api/colegio/alumnos",
-            "/dashboard/colegio/cursos/unificado",
+            // Auditoría #222 · punto 1: las alertas de menores NUNCA se bloquean
+            // por un paso perdido del camino (regla dura de Jelkin: proteger a
+            // un menor está por encima de la configuración y del cobro).
+            "/dashboard/colegio/alertas",
+            "/api/colegio/alertas",
             // Catálogos consumidos por los formularios del camino.
             "/api/colegio/tipos-documento",
             // Salidas y obligaciones que mandan sobre el camino.
@@ -249,7 +255,12 @@ export const GUARDIAS_ACCESO = {
                 "/api/colegio/carga",
                 "/api/colegio/alumnos",
                 "/api/colegio/tipos-documento",
-                "/dashboard/colegio/cursos/unificado",
+                // Sección de cursos completa (ficha [id] · materias + unificado):
+                // el camino la enlaza y corre ANTES de que exista vigencia.
+                "/dashboard/colegio/cursos",
+                // Auditoría #222 · punto 1: alertas de menores por encima del cobro.
+                "/dashboard/colegio/alertas",
+                "/api/colegio/alertas",
                 "/api/sesion/al-dia",
                 "/api/session/ping",
                 "/api/vigencia/refresh",

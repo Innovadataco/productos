@@ -376,10 +376,16 @@ describe("SPEC-344 · guardián del camino del colegio", () => {
         "/api/colegio/cursos",
         "/api/colegio/alumnos",
         "/dashboard/colegio/cursos/unificado",
+        // Auditoría #222 · punto 2: el paso 4 enlaza la ficha del curso (materias).
+        "/dashboard/colegio/cursos/cku_ficha_curso",
         "/camino/colegio/plan",
         "/api/sesion/al-dia",
         "/reportar",
         "/api/reportes",
+        // Auditoría #222 · punto 1: un rector que pierde un paso (p. ej. inactiva
+        // su único curso) JAMÁS pierde las alertas de menores. Regla dura.
+        "/dashboard/colegio/alertas",
+        "/api/colegio/alertas",
     ];
     for (const ruta of NUNCA_TAPADAS_COLEGIO) {
         it(`rector a mitad del camino alcanza ${ruta} (no lo tapa el guardián)`, async () => {

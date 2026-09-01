@@ -260,7 +260,7 @@ export const registroColegioCompletarSchema = z
             .refine((val) => val.length >= 8 && /[a-zA-Z]/.test(val) && /[0-9]/.test(val), {
                 message: "Contraseña: mínimo 8 caracteres, 1 letra y 1 número",
             }),
-        passwordConfirmacion: z.string({ error: "Confirma su contraseña" }).min(1, "Confirma su contraseña"),
+        passwordConfirmacion: z.string({ error: "Confirme su contraseña" }).min(1, "Confirme su contraseña"),
         // nombreColegio y nit vienen del TokenRegistro (no del cliente): más
         // seguro y evita re-pedirlos.
     })
