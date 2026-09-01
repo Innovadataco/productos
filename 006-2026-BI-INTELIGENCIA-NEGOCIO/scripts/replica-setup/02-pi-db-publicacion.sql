@@ -188,7 +188,6 @@ DECLARE
     ARRAY['Reporte', 'operadorId'], ARRAY['Reporte', 'comiteId'],
     ARRAY['Reporte', 'eliminadoPorId'], ARRAY['Reporte', 'anonimizacionValidadaPorId'],
     ARRAY['Reporte', 'processingError'], ARRAY['Reporte', 'notaBaja'],
-    ARRAY['Reporte', 'ciudad'], ARRAY['Reporte', 'pais'], ARRAY['Reporte', 'otraPlataforma'],
     ARRAY['Colegio', 'representanteLegalNombre'], ARRAY['Colegio', 'representanteLegalIdentificacion'],
     ARRAY['Colegio', 'representanteLegalEmail'], ARRAY['Colegio', 'representanteLegalTelefono'],
     ARRAY['AuditLog', 'ipAddress'], ARRAY['AuditLog', 'userAgent'],
