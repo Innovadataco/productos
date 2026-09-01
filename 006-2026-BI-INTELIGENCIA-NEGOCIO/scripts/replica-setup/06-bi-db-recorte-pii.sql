@@ -81,12 +81,14 @@ ALTER TABLE "AcudienteEstudiante"
     DROP COLUMN IF EXISTS "telefono",
     DROP COLUMN IF EXISTS "email";
 
--- Hijo (menor): sin nombre ni documento.
+-- Hijo (menor): sin nombre ni documento NI usuarioId (FK al padre — no se
+-- publica; el vínculo viaja por HijoPadre, que sí está completa).
 ALTER TABLE "Hijo"
     DROP COLUMN IF EXISTS "nombre",
     DROP COLUMN IF EXISTS "apellidos",
     DROP COLUMN IF EXISTS "documentoTipo",
-    DROP COLUMN IF EXISTS "documentoNumero";
+    DROP COLUMN IF EXISTS "documentoNumero",
+    DROP COLUMN IF EXISTS "usuarioId";
 
 -- ContactoConfianza: sin nombre, nota ni etiqueta libre.
 ALTER TABLE "ContactoConfianza"
