@@ -24,29 +24,31 @@ describe("informes-padre (SPEC-340)", { timeout: 30_000 }, () => {
         await resetDatabase();
     });
 
-    it("numera secuencial por expediente — dos generaciones en el mismo minuto no chocan", async () => {
+    it("numera secuencial por expediente — 8 generaciones concurrentes serializan 1..8 sin chocar (I-208 · carrera real)", async () => {
         const padre = await crearUsuario("PARENT");
         const exp = await crearExpediente(padre.id);
 
-        const [a, b] = await Promise.all([
-            servicio.registrarInformePadre({
-                expedienteId: exp.id,
-                generadoPorId: padre.id,
-                pdfHash: "hash-a".padEnd(64, "0"),
-                codigoVerificacion: "codigo-a",
-            }),
-            servicio.registrarInformePadre({
-                expedienteId: exp.id,
-                generadoPorId: padre.id,
-                pdfHash: "hash-b".padEnd(64, "0"),
-                codigoVerificacion: "codigo-b",
-            }),
-        ]);
+        // 8 concurrentes = presión suficiente para que la carrera aparezca si
+        // el advisory-lock no está: el max+1 sin serializar duplica al 2º hit.
+        const N = 8;
+        const resultados = await Promise.all(
+            Array.from({ length: N }, (_, i) =>
+                servicio.registrarInformePadre({
+                    expedienteId: exp.id,
+                    generadoPorId: padre.id,
+                    pdfHash: `hash-${i}`.padEnd(64, "0"),
+                    codigoVerificacion: `codigo-${i}`,
+                })
+            )
+        );
 
-        expect(new Set([a.numeroSecuencial, b.numeroSecuencial])).toEqual(new Set([1, 2]));
+        // Cada informe recibió un número distinto y la unión es exactamente {1..N}.
+        expect(new Set(resultados.map((r) => r.numeroSecuencial))).toEqual(
+            new Set(Array.from({ length: N }, (_, i) => i + 1))
+        );
         const lista = await servicio.listarInformesPadre(exp.id);
-        expect(lista).toHaveLength(2);
-        expect(lista[0].numeroSecuencial).toBe(2); // más reciente primero
+        expect(lista).toHaveLength(N);
+        expect(lista[0].numeroSecuencial).toBe(N); // más reciente primero
     });
 
     it("la búsqueda pública por hash encuentra el informe; un hash ajeno no", async () => {

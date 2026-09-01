@@ -22,8 +22,12 @@ export interface InformeRegistrado {
 
 /**
  * Registra una generación de informe. El número secuencial se calcula DENTRO
- * de la transacción (dos generaciones en el mismo minuto = #N y #N+1, jamás
- * un choque del unique).
+ * de la transacción y se SERIALIZA por expediente con un advisory-lock de
+ * transacción (`pg_advisory_xact_lock`): sin él, dos generaciones simultáneas
+ * leían el mismo `max(numeroSecuencial)` y disparaban el unique
+ * `(expedienteId, numeroSecuencial)` (I-208 · carrera real cazada por el test
+ * "dos generaciones en el mismo minuto no chocan"). El lock se libera solo al
+ * cerrar la transacción; mismo patrón que `reporte-repository.ts:320`.
  */
 export async function registrarInformePadre(input: {
     expedienteId: string;
@@ -32,6 +36,12 @@ export async function registrarInformePadre(input: {
     codigoVerificacion: string;
 }): Promise<InformeRegistrado> {
     return prisma.$transaction(async (tx) => {
+        // Serializar por expediente ANTES de leer el max: dos tx concurrentes
+        // sobre el mismo expediente se encolan; sobre expedientes distintos
+        // corren en paralelo (hashtext colisiona muy raro y el peor caso es
+        // serializar de más, jamás corromper).
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`informe-padre:${input.expedienteId}`}))`;
+
         const ultimo = await tx.informePadre.findFirst({
             where: { expedienteId: input.expedienteId },
             orderBy: { numeroSecuencial: "desc" },
