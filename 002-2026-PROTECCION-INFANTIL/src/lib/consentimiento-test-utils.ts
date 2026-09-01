@@ -21,10 +21,10 @@ export async function crearParametrosConsentimiento() {
 
     await prisma.parametroSistema.upsert({
         where: { clave: "consentimiento.padre.documento_ruta" },
-        update: { valor: "public/legal/POLITICA-TRATAMIENTO-DATOS-v0.4.md" },
+        update: { valor: "public/legal/POLITICA-TRATAMIENTO-DATOS-v1.0-publica.md" },
         create: {
             clave: "consentimiento.padre.documento_ruta",
-            valor: "public/legal/POLITICA-TRATAMIENTO-DATOS-v0.4.md",
+            valor: "public/legal/POLITICA-TRATAMIENTO-DATOS-v1.0-publica.md",
             tipo: TipoParametro.STRING,
             categoria: CategoriaParametro.LEGAL,
             esPublico: false,
@@ -34,10 +34,10 @@ export async function crearParametrosConsentimiento() {
 
     await prisma.parametroSistema.upsert({
         where: { clave: "consentimiento.colegio.documento_ruta" },
-        update: { valor: "public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS.md" },
+        update: { valor: "public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS-v1.0-publico.md" },
         create: {
             clave: "consentimiento.colegio.documento_ruta",
-            valor: "public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS.md",
+            valor: "public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS-v1.0-publico.md",
             tipo: TipoParametro.STRING,
             categoria: CategoriaParametro.LEGAL,
             esPublico: false,

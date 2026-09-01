@@ -171,14 +171,14 @@ async function seedConsentimiento() {
         },
         {
             clave: "consentimiento.padre.documento_ruta",
-            valor: "public/legal/POLITICA-TRATAMIENTO-DATOS-v0.4.md",
+            valor: "public/legal/POLITICA-TRATAMIENTO-DATOS-v1.0-publica.md",
             tipo: TipoParametro.STRING,
             categoria: CategoriaParametro.LEGAL,
             descripcion: "Ruta del documento legal para padres/tutores (SPEC-241)",
         },
         {
             clave: "consentimiento.colegio.documento_ruta",
-            valor: "public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS.md",
+            valor: "public/legal/CONVENIO-TRATAMIENTO-DATOS-COLEGIOS-v1.0-publico.md",
             tipo: TipoParametro.STRING,
             categoria: CategoriaParametro.LEGAL,
             descripcion: "Ruta del convenio institucional para colegios (SPEC-241)",

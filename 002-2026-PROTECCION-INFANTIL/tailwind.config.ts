@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import typography from "@tailwindcss/typography";
 
 /**
  * SPEC-157 — Sistema de diseño de Protección Infantil (BRIEF v3.0 §4).
@@ -77,6 +78,8 @@ const config: Config = {
             },
         },
     },
-    plugins: [],
+    /* SPEC-343: revive las clases `prose` del modal de consentimiento (muertas
+       desde SPEC-241 porque el plugin nunca se registró). */
+    plugins: [typography],
 };
 export default config;

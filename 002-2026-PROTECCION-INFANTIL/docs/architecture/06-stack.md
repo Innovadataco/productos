@@ -27,7 +27,9 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | react | 19.2.4 |
 | react-dom | 19.2.4 |
 | react-leaflet | ^5.0.0 |
+| react-markdown | ^10.1.0 |
 | recharts | 3.10.1 |
+| remark-gfm | ^4.0.1 |
 | resend | ^4.5.0 |
 | tailwindcss | ^3.4.17 |
 | tsx | ^4.19.4 |
@@ -38,6 +40,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | Dependencia | Versión |
 | --- | --- |
 | @playwright/test | ^1.61.1 |
+| @tailwindcss/typography | ^0.5.20 |
 | @testing-library/react | ^16.3.0 |
 | @types/bcryptjs | ^2.4.6 |
 | @types/leaflet | ^1.9.21 |
