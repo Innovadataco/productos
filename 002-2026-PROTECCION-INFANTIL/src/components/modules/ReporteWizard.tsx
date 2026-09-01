@@ -8,7 +8,7 @@ import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { ReporteBloqueoRol } from "./ReporteBloqueoRol";
 import { Button } from "@/components/ui/Button";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
-import { tomarHandoffReportar } from "@/lib/reportar-handoff";
+import { tomarHandoffReportar, guardarBorradorReporte, leerBorradorReporte, borrarBorradorReporte } from "@/lib/reportar-handoff";
 
 type WizardData = {
     identificador: string;
@@ -56,21 +56,43 @@ export function ReporteWizard({
     // sobre ESE identificador; el prellenado de la consulta vacía es editable.
     const [handoff] = useState(() => tomarHandoffReportar());
     const identificadorFijado = handoff?.fijar ? handoff.identificador : null;
-    const [data, setData] = useState<WizardData>({
-        identificador: handoff?.identificador ?? "",
-        plataforma: "",
-        otraPlataforma: "",
-        ciudad: "",
-        pais: "",
-        paisId: "",
-        ciudadId: "",
-        fechaIncidente: "",
-        edadVictima: "",
-        texto: "",
-        // SPEC-295: en modo autenticado el default es NO anónimo — el padre
-        // reporta con su identidad. Checkbox opcional para volver a anónimo.
-        esAnonimo: !modoAutenticado,
+    const [data, setData] = useState<WizardData>(() => {
+        const vacio: WizardData = {
+            identificador: handoff?.identificador ?? "",
+            plataforma: "",
+            otraPlataforma: "",
+            ciudad: "",
+            pais: "",
+            paisId: "",
+            ciudadId: "",
+            fechaIncidente: "",
+            edadVictima: "",
+            texto: "",
+            // SPEC-295: en modo autenticado el default es NO anónimo — el padre
+            // reporta con su identidad. Checkbox opcional para volver a anónimo.
+            esAnonimo: !modoAutenticado,
+        };
+        // A-70 · B1(d): el relato NO se pierde. Jelkin escribió el reporte
+        // completo, el envío falló con 400 y al recargar quedó la pantalla en
+        // blanco. El borrador vive en sessionStorage (misma pestaña, se borra
+        // al enviar bien) y el handoff manda sobre lo guardado si viene uno.
+        const guardado = leerBorradorReporte();
+        if (!guardado) return vacio;
+        return {
+            ...vacio,
+            ...guardado,
+            ...(handoff?.identificador ? { identificador: handoff.identificador } : {}),
+            esAnonimo: vacio.esAnonimo,
+        };
     });
+    // A-70 · B1(d): autoguardado del borrador en cada cambio. Solo los campos
+    // del formulario — nunca `esAnonimo` (lo decide el modo de la pantalla).
+    useEffect(() => {
+        const { esAnonimo: _descartado, ...campos } = data;
+        void _descartado;
+        guardarBorradorReporte(campos);
+    }, [data]);
+
     const [resultado, setResultado] = useState<{ numeroSeguimiento: string } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
@@ -154,6 +176,8 @@ export function ReporteWizard({
             }
             // SPEC-295 (002-PI-196 · I-146): en modo autenticado, redirect al
             // listado del padre en vez de mostrar ConfirmacionReporte inline.
+            // A-70 · B1(d): enviado con éxito → el borrador ya no hace falta.
+            borrarBorradorReporte();
             if (modoAutenticado) {
                 window.location.href = REDIRECT_PADRE_POST_ENVIO;
                 return;

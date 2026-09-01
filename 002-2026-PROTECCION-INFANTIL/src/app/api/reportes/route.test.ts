@@ -53,6 +53,38 @@ describe("POST /api/reportes", () => {
         expect(descifrarTextoReporte(reporte!.texto)).toBe(reporteValido.texto);
     });
 
+    // ─── A-70 · B1 · "Datos inválidos" mudo ────────────────────────────────
+    // Jelkin escribió el relato completo, el envío falló con 400 y el mensaje
+    // no decía QUÉ estaba mal. El servidor siempre sabe el motivo (regla 3 del
+    // brief): ahora lo nombra.
+    it("A-70 B1c: fecha FUTURA responde 400 nombrando el campo, no 'Datos inválidos'", async () => {
+        const manana = new Date();
+        manana.setDate(manana.getDate() + 1);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            fechaIncidente: manana.toISOString(),
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message, "el mensaje nombra el campo en palabras del padre").toContain("Fecha y hora del incidente");
+        expect(body.error.message, "y explica el motivo").toMatch(/futura/i);
+        expect(body.error.message).not.toBe("Datos inválidos");
+        expect(body.error.campo, "el cliente puede resaltar el campo exacto").toBe("fechaIncidente");
+    });
+
+    it("A-70 B1c: relato demasiado corto también nombra su campo", async () => {
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            texto: "",
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message).toContain("Descripción de lo ocurrido");
+        expect(body.error.campo).toBe("texto");
+    });
+
     it("crea un reporte anónimo y retorna 201 con número de seguimiento", async () => {
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido);
         const res = await POST(req);
