@@ -140,6 +140,14 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
         return fallo("filtros debe ser un arreglo (posiblemente vacío).");
     }
     for (const filtro of filtros) {
+        // Dedupe (I-03): si el plan trae período sobre una columna, los filtros
+        // sobre ESA MISMA columna se descartan — el período (ventana relativa
+        // NOW() - N días) manda. Caso real: "este mes" llegó del LLM como rango
+        // absoluto a medianoche + período; ANDados excluían los datos del día
+        // en curso y el motor respondía sin_datos habiendo datos.
+        if (plan.periodo !== undefined && filtro.columna_idx === plan.periodo.columna_idx) {
+            continue;
+        }
         const col = resolverColumna(tabla, filtro.columna_idx);
         if (!col) {
             return fallo(`filtro.columna_idx fuera de rango: ${String(filtro.columna_idx)} (tabla "${tabla.nombreFuente}").`);
