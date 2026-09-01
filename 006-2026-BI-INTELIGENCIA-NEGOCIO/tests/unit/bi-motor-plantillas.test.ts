@@ -297,6 +297,47 @@ describe("motor · clarificación por plan incompleto (candado 4, deny-by-defaul
         expect(r.texto).toContain("período");
         expect(mocks.construirSql).not.toHaveBeenCalled();
     });
+
+    it("I-08: la pregunta nombra un valor enum del catálogo pero el plan NO filtra → clarificación", async () => {
+        // Regresión del caso real: "SOLICITUD_MATERIAL" en la pregunta y el
+        // plan sin filtro → el motor respondía el total (2012) en vez de 153.
+        mocks.catalogoTablaFindMany.mockResolvedValue([
+            {
+                ...FILA_TABLA_REPORTE,
+                columnas: [
+                    ...FILA_TABLA_REPORTE.columnas.slice(0, 1),
+                    {
+                        ...FILA_TABLA_REPORTE.columnas[1],
+                        nombreFuente: "categoria",
+                        tipo: "CategoriaConducta",
+                        descripcion: "Valores reales: SOLICITUD_MATERIAL · CIBERACOSO · OTRO",
+                    },
+                    ...FILA_TABLA_REPORTE.columnas.slice(2),
+                ],
+            },
+        ]);
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama({ tabla_idx: 0, columnas_idx: [], agregacion: "conteo", periodo: { columna_idx: 2, dias: 365 } }),
+        );
+        const r = await preguntar("¿Cuántos reportes de la categoría SOLICITUD_MATERIAL hubo este año?", EMAIL);
+
+        expect(r.estado).toBe("clarificacion");
+        expect(r.texto).toContain("SOLICITUD_MATERIAL");
+        expect(mocks.construirSql).not.toHaveBeenCalled();
+
+        // Con el filtro presente, la misma pregunta fluye normal.
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama({
+                tabla_idx: 0,
+                columnas_idx: [],
+                agregacion: "conteo",
+                filtros: [{ columna_idx: 1, operador: "=", valor: "SOLICITUD_MATERIAL" }],
+                periodo: { columna_idx: 2, dias: 365 },
+            }),
+        );
+        const r2 = await preguntar("¿Cuántos reportes de la categoría SOLICITUD_MATERIAL hubo este año?", EMAIL);
+        expect(r2.estado).toBe("ok");
+    });
 });
 
 describe("motor · LLM con JSON inválido (candado 2: no se rescata)", () => {
