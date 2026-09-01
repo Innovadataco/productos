@@ -1,0 +1,136 @@
+// src/lib/bi/catalogo.ts · Catálogo BI como DATO de BD (candado 8)
+// Producto 006 · BI v2 · Fase 2 · motor NL→SQL
+// El catálogo NO vive en el prompt ni en el código: se lee de
+// BICatalogoTabla/BICatalogoColumna en cada consulta. Un cambio de esquema
+// expuesto al LLM es un UPDATE en BD, no un despliegue.
+// Candado 3: el catálogo se presenta al LLM ENUMERADO (tabla_idx /
+// columna_idx) y el LLM devuelve SOLO índices; el servidor traduce a
+// nombres reales. Candado 1: el JSON Schema es CERRADO
+// (additionalProperties:false) y acotado al catálogo vigente.
+
+import { prisma } from "@/lib/db";
+
+/** Rol del chat del motor: único consumidor del catálogo en Fase 2. */
+const ROL_MOTOR = "ADMIN_BI";
+
+export interface ColumnaCat {
+    nombreFuente: string;
+    tipo: string;
+}
+
+export interface TablaCat {
+    nombreFuente: string;
+    nombreLegible: string;
+    descripcion: string;
+    columnas: ColumnaCat[];
+}
+
+export interface Catalogo {
+    tablas: TablaCat[];
+}
+
+/**
+ * Carga el catálogo vigente desde BD: tablas activas visibles para el rol
+ * del motor (deny-by-default: una tabla sin 'ADMIN_BI' en rolesPermitidos
+ * NO aparece) y solo columnas no excluidas. Orden estable (creadoEn) para
+ * que los índices que ve el LLM no cambien entre llamadas salvo que el
+ * operador edite el catálogo.
+ */
+export async function cargarCatalogo(): Promise<Catalogo> {
+    const tablas = await prisma.bICatalogoTabla.findMany({
+        where: {
+            activo: true,
+            rolesPermitidos: { has: ROL_MOTOR },
+        },
+        include: {
+            columnas: {
+                where: { excluida: false },
+                orderBy: { creadoEn: "asc" },
+            },
+        },
+        orderBy: { creadoEn: "asc" },
+    });
+
+    return {
+        tablas: tablas.map((t) => ({
+            nombreFuente: t.nombreFuente,
+            nombreLegible: t.nombreLegible,
+            descripcion: t.descripcion,
+            columnas: t.columnas.map((c) => ({
+                nombreFuente: c.nombreFuente,
+                tipo: c.tipo,
+            })),
+        })),
+    };
+}
+
+/**
+ * Presenta el catálogo al LLM como lista ENUMERADA (candado 3): cada tabla
+ * y cada columna lleva su índice; el modelo responde con esos índices y el
+ * servidor traduce a nombres reales, eliminando paráfrasis y typos.
+ */
+export function presentarCatalogoParaLLM(cat: Catalogo): string {
+    const lineas: string[] = [];
+    cat.tablas.forEach((t, tablaIdx) => {
+        lineas.push(`[tabla_idx=${tablaIdx}] ${t.nombreLegible} (fuente: ${t.nombreFuente})`);
+        if (t.descripcion) {
+            lineas.push(`  Descripción: ${t.descripcion}`);
+        }
+        t.columnas.forEach((c, columnaIdx) => {
+            lineas.push(`  [columna_idx=${columnaIdx}] ${c.nombreFuente} · tipo ${c.tipo}`);
+        });
+    });
+    return lineas.join("\n");
+}
+
+/**
+ * JSON Schema CERRADO (candado 1) para el structured output del LLM: el
+ * modelo solo puede devolver índices dentro del rango del catálogo vigente
+ * (maximum = tablas.length - 1), agregaciones y operadores de un enum
+ * cerrado, y valores (nunca SQL). additionalProperties:false en todos los
+ * niveles: imposible inventar campos.
+ */
+export function esquemaJsonParaLLM(cat: Catalogo): Record<string, unknown> {
+    return {
+        type: "object",
+        properties: {
+            tabla_idx: {
+                type: "integer",
+                minimum: 0,
+                maximum: cat.tablas.length - 1,
+            },
+            columnas_idx: {
+                type: "array",
+                items: { type: "integer" },
+            },
+            agregacion: {
+                enum: ["conteo", "suma", "promedio", "maximo", "minimo", "lista"],
+            },
+            filtros: {
+                type: "array",
+                items: {
+                    type: "object",
+                    properties: {
+                        columna_idx: { type: "integer" },
+                        operador: { enum: ["=", "!=", "<", ">", "<=", ">=", "LIKE"] },
+                        valor: { type: ["string", "number"] },
+                    },
+                    required: ["columna_idx", "operador", "valor"],
+                    additionalProperties: false,
+                },
+            },
+            periodo: {
+                type: "object",
+                properties: {
+                    columna_idx: { type: "integer" },
+                    dias: { type: "integer", minimum: 1, maximum: 3650 },
+                },
+                required: ["columna_idx", "dias"],
+                additionalProperties: false,
+            },
+            limite: { type: "integer", minimum: 1 },
+        },
+        required: ["tabla_idx", "columnas_idx", "agregacion"],
+        additionalProperties: false,
+    };
+}
