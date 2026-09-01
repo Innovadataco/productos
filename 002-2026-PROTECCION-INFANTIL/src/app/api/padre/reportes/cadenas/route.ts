@@ -8,12 +8,19 @@ import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { listarCadenasPadre } from "@/lib/dal/services/cadenas-padre";
+import { getParametroSistemaValor } from "@/lib/parametros";
 
 export async function GET() {
     try {
         const usuario = await verifyAuth("PARENT");
-        const cadenas = await listarCadenasPadre(usuario.id);
-        return NextResponse.json({ cadenas });
+        const [cadenas, retapadoValor] = await Promise.all([
+            listarCadenasPadre(usuario.id),
+            getParametroSistemaValor("padre.texto.retapado_minutos"),
+        ]);
+        // SPEC-340 §3.3-bis: el minutero del re-tapado del texto sensible
+        // viaja con el listado para que TextoSensible use el parámetro real.
+        const retapadoMinutos = Number.parseInt(retapadoValor ?? "10", 10) || 10;
+        return NextResponse.json({ cadenas, retapadoMinutos });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

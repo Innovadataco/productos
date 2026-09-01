@@ -54,9 +54,13 @@ const fmtFechaHora = new Intl.DateTimeFormat("es-CO", {
     timeZone: "America/Bogota",
 });
 
-export function MisReportesCadenas({ retapadoMinutos = 10 }: { retapadoMinutos?: number }) {
+export function MisReportesCadenas() {
     const router = useRouter();
     const [cadenas, setCadenas] = useState<Cadena[] | null>(null);
+    // SPEC-340 §3.3-bis: minutos hasta que el texto revelado se re-tapa solo.
+    // Se recibe del servidor (parámetro `padre.texto.retapado_minutos`); 10 es
+    // el fallback que replica el default del propio ParametroSistema.
+    const [retapadoMinutos, setRetapadoMinutos] = useState(10);
     const [error, setError] = useState("");
     const [abierta, setAbierta] = useState<string | null>(null);
     const [agregandoEn, setAgregandoEn] = useState<string | null>(null);
@@ -66,7 +70,9 @@ export function MisReportesCadenas({ retapadoMinutos = 10 }: { retapadoMinutos?:
         try {
             const res = await fetch("/api/padre/reportes/cadenas", { credentials: "include" });
             if (!res.ok) throw new Error("No pudimos cargar tus reportes.");
-            setCadenas((await res.json()).cadenas);
+            const json = await res.json();
+            setCadenas(json.cadenas);
+            if (typeof json.retapadoMinutos === "number") setRetapadoMinutos(json.retapadoMinutos);
         } catch (err) {
             setError(err instanceof Error ? err.message : "No pudimos cargar tus reportes.");
         }

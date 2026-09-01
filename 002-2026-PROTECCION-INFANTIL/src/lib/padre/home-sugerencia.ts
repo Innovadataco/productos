@@ -36,7 +36,7 @@ export function calcularSugerenciaHome(input: DatosSugerenciaInput): SugerenciaH
         return {
             texto: `Tienes ${contactosRojo} ${plural} con nivel de atención alto. Entra a Mis reportes y míralo con calma.`,
             accionHref: "/mis-reportes",
-            accionTexto: "Ver expedientes",
+            accionTexto: "Ver mis reportes",
             prioridad: "alta",
         };
     }

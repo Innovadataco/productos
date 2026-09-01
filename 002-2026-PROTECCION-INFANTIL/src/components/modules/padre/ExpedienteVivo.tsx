@@ -76,6 +76,9 @@ export function ExpedienteVivo({
     const [visibleHasta, setVisibleHasta] = useState(hechos.length); // todos al abrir
     const [reproduciendo, setReproduciendo] = useState(false);
     const [lectura, setLectura] = useState<Lectura | null>(null);
+    // SPEC-340 §3.3-bis: minutos hasta re-tapar el texto revelado. Viene de la
+    // ruta /lectura (parámetro `padre.texto.retapado_minutos`); 10 es el fallback.
+    const [retapadoMinutos, setRetapadoMinutos] = useState(10);
     const relojRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const propios = hechos.filter((h) => h.origen === "mio").length;
@@ -85,7 +88,11 @@ export function ExpedienteVivo({
     useEffect(() => {
         fetch(`/api/padre/expedientes/${expedienteId}/lectura`, { credentials: "include" })
             .then((r) => (r.ok ? r.json() : null))
-            .then((j) => j && setLectura(j.lectura))
+            .then((j) => {
+                if (!j) return;
+                setLectura(j.lectura);
+                if (typeof j.retapadoMinutos === "number") setRetapadoMinutos(j.retapadoMinutos);
+            })
             .catch(() => null);
     }, [expedienteId]);
 
@@ -246,7 +253,7 @@ export function ExpedienteVivo({
                             </p>
                             {h.origen === "mio" && h.reporteId ? (
                                 <div className="mt-1">
-                                    <TextoSensible reporteId={h.reporteId} />
+                                    <TextoSensible reporteId={h.reporteId} retapadoMinutos={retapadoMinutos} />
                                 </div>
                             ) : (
                                 <p className="mt-1 text-sm text-muted">

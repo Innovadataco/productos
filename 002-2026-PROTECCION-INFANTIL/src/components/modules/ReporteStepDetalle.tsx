@@ -37,7 +37,8 @@ export function ReporteStepDetalle({
 }) {
     const [paises, setPaises] = useState<PaisOption[]>([]);
     const [otraCiudad, setOtraCiudad] = useState(ciudadId === "otra" ? ciudad : "");
-    const hoy = new Date().toISOString().split("T")[0];
+    // SPEC-340 §2 (T017): día Y hora del incidente. Formato datetime-local (YYYY-MM-DDTHH:mm).
+    const hoy = new Date().toISOString().slice(0, 16);
 
     useEffect(() => {
         fetch("/api/paises", { credentials: "include" })
@@ -149,8 +150,8 @@ export function ReporteStepDetalle({
                 />
 
                 <Input
-                    label="Fecha del incidente"
-                    type="date"
+                    label="Fecha y hora del incidente"
+                    type="datetime-local"
                     max={hoy}
                     value={fechaIncidente}
                     onChange={(e) =>
