@@ -28,12 +28,15 @@ jobs:
         with:
           node-version: 22
 
-      # npm install (no npm ci): el package-lock se genera y se commitea en Fase 1b
+      # npm ci con lockfile commiteado (D3a: builds reproducibles)
       - name: Instalar dependencias
-        run: npm install
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Tests unitarios
+        run: npm run test:unit
 
       - name: Build
         run: npm run build
@@ -43,3 +46,69 @@ jobs:
           BI_ADMIN_EMAIL: admin@example.com
           BI_ADMIN_PASSWORD: ci-build-password
           NEXT_PUBLIC_APP_URL: https://bi.innovadataco.com
+
+  # Fase 1b: verdad de la BD en Linux — migraciones aditivas aplican limpio
+  # en una BD vacía (T4) y el seed es idempotente (S3).
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Misma imagen que producción: pgvector para el cache semántico
+        image: pgvector/pgvector:pg16
+        env:
+          # Credenciales desechables de CI — no son secretos reales
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bi_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: 006-2026-BI-INTELIGENCIA-NEGOCIO
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bi_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # npm install (no npm ci): el package-lock se genera y se commitea en Fase 1b
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Aplicar migraciones (BD vacía)
+        run: npx prisma migrate deploy
+
+      - name: Seed (primera pasada)
+        run: npx tsx prisma/seed.ts
+
+      # S3: la 2ª pasada del seed NO debe crear ni alterar filas
+      # (upsert con update vacío). Se comparan conteos de todas las
+      # tablas bi_* antes y después; cualquier cambio rompe el CI.
+      - name: Verificar idempotencia del seed
+        run: |
+          set -euo pipefail
+          LISTA=$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -c "SELECT string_agg(format('SELECT ''%s'' AS tabla, count(*)::text AS n FROM %I', tablename, tablename), ' UNION ALL ') FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'bi\_%'")
+          if [ -z "$LISTA" ]; then
+            echo "FALLO: no existen tablas bi_* tras migrate deploy"
+            exit 1
+          fi
+          ANTES=$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -F'=' -c "$LISTA" | sort)
+          echo "== Conteos antes de la 2ª pasada =="
+          echo "$ANTES"
+          npx tsx prisma/seed.ts
+          DESPUES=$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -At -F'=' -c "$LISTA" | sort)
+          echo "== Conteos después de la 2ª pasada =="
+          echo "$DESPUES"
+          if [ "$ANTES" != "$DESPUES" ]; then
+            echo "FALLO: la 2ª pasada del seed modificó datos — violación S3 (upsert con update vacío)"
+            exit 1
+          fi
+          echo "OK: seed idempotente — la 2ª pasada no creó ni alteró filas"

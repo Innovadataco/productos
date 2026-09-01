@@ -77,7 +77,7 @@ describe("POST /api/consentimiento/aceptar (SPEC-241)", () => {
 
         await POST(requestAceptar(mockToken, { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: true }));
 
-        const expectedHash = await hashDocumento("public/legal/POLITICA-TRATAMIENTO-DATOS-v0.4.md");
+        const expectedHash = await hashDocumento("public/legal/POLITICA-TRATAMIENTO-DATOS-v1.0-publica.md");
         const usuario = await prisma.usuario.findUnique({ where: { id: padre.id } });
         expect(usuario?.consentimientoDocumentoHash).toBe(expectedHash);
     });

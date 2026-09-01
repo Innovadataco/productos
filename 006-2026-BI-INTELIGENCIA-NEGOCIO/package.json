@@ -2,13 +2,21 @@
   "name": "bi-006-inteligencia-negocio",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --import tsx ./node_modules/vitest/vitest.mjs run tests/unit",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:generate": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "5.22.0",
     "bcryptjs": "3.0.2",
     "jose": "6.0.10",
     "next": "16.2.10",
@@ -21,7 +29,10 @@
     "@types/react-dom": "^19.0.5",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
+    "prisma": "5.22.0",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3"
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3"
   }
 }
