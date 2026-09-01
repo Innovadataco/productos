@@ -1,5 +1,6 @@
 "use client";
 
+import { EscudoColegioUploader } from "@/components/modules/colegio/casos/EscudoColegioUploader";
 import { useCallback, useEffect, useState } from "react";
 import { Alerta } from "@/components/ui/Alerta";
 import { Button } from "@/components/ui/Button";
@@ -168,6 +169,9 @@ export default function ConfiguracionPageClient() {
                             {mensaje.text}
                         </Alerta>
                     )}
+
+                    {/* SPEC-351 (A-69 · D1): escudo institucional para el membrete de informes. */}
+                    <EscudoColegioUploader />
 
                     {loading ? (
                         <GlassCard>

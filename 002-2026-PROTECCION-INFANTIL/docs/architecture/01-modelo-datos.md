@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **103** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **104** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -210,6 +210,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | finServicio | DateTime | opcional |
 | tipoPeriodo | TipoPeriodoServicio | — |
 | estado | String | — |
+| escudoAssetKey | String | opcional |
 | tenantId | String | único |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
@@ -498,7 +499,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (55)
+### Otros (sin regla de dominio) (56)
 
 #### `AclaracionExpediente`
 
@@ -948,6 +949,25 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 
+#### `InformeCaso`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| casoId | String | — |
+| numeroCorrelativo | Int | — |
+| anio | Int | — |
+| pdfHash | String | único |
+| codigoVerificacion | String | único |
+| firmadoPorNombre | String | — |
+| firmadoPorDocumento | String | — |
+| firmadoPorId | String | — |
+| escudoAssetKey | String | opcional |
+| seccionesJson | Json | — |
+| generadoEn | DateTime | — |
+| caso | SeguimientoCaso | relación (FK) |
+| firmadoPor | Usuario | relación |
+
 #### `InformeConsolidado`
 
 | Campo | Tipo | Atributos |
@@ -1307,6 +1327,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | alerta | AlertaColegio | relación (FK) |
 | notas | NotaSeguimiento | lista, relación |
 | analisisIa | AnalisisExpediente | lista, relación |
+| informes | InformeCaso | lista, relación |
 
 #### `SenalComunitariaCache`
 
@@ -1968,6 +1989,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | simulacionesAbuso | SimulacionAbusoRun | lista, relación |
 | expedientes | Expediente | lista, relación |
 | informesPadre | InformePadre | lista, relación |
+| informesCasoFirmados | InformeCaso | lista, relación |
 | sesionesLog | SesionLog | lista, relación |
 | auditConsentimientos | AuditConsentimiento | lista, relación |
 | informesConsolidados | InformeConsolidado | lista, relación |
@@ -2088,6 +2110,7 @@ erDiagram
     Reporte ||--o{ SolicitudComite : "reporte"
     Reporte ||--o{ TransicionReporte : "reporte"
     SeguimientoCaso ||--o{ AnalisisExpediente : "seguimientoCaso (opcional)"
+    SeguimientoCaso ||--o{ InformeCaso : "caso"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"

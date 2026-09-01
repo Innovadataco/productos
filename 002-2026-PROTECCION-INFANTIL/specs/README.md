@@ -481,6 +481,7 @@
 | [354](354-should-skip-analisis/spec.md) | SPEC-354 · Análisis del "verde falso" en PRs — causa raíz: PR CONFLICTING no dispara workflows de pull_request (checks ausentes ≠ checks verdes); cerrada sin cambio de código, control = gate del CEO "checks de PI presentes" | ⚫ Cerrada |
 | [350](350-caso-colegio/spec.md) | SPEC-350 · El caso del colegio estilo expediente (A-69 · C3) — mapa+cronología reusadas del padre + capa 1 en vivo + análisis IA con `alcance=COLEGIO_BLINDADO` compartiendo cola pg-boss y worker de 341; voz USTED | 🟡 En desarrollo |
 | [344](344-camino-guiado-colegio/spec.md) | SPEC-344 · Camino guiado del colegio (A-69 · Fase C1) — registro por enlace + 5 pasos con guardián compartido con el padre + 11 grados sembrados + D3 candado servidor materia-profesor + puente D2 a Colegio.finServicio + Excel profesores fresco + I-245 plantilla alumnos | 🟡 En desarrollo |
+| [351](351-informe-firmado-rector/spec.md) | SPEC-351 · El informe firmado del rector (A-69 · C5) — PDF membreteado con escudo configurable + correlativo INF-AAAA-NNNN serializado + firma del rector + código de verificación pública (reusa sello 234/341) + historial inmutable | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 

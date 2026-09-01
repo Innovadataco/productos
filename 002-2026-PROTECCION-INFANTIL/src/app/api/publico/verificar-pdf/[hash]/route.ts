@@ -8,6 +8,7 @@ import { ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { InformeConsolidadoRepository } from "@/lib/dal/repositories/informe-consolidado-repository";
 import { buscarInformePadrePorHash, buscarInformePadrePorCodigo } from "@/lib/dal/services/informes-padre";
+import { buscarInformeCasoPorHash, buscarInformeCasoPorCodigo } from "@/lib/dal/services/informes-caso";
 
 export async function GET(request: Request, { params }: { params: Promise<{ hash: string }> }) {
     try {
@@ -56,6 +57,21 @@ export async function GET(request: Request, { params }: { params: Promise<{ hash
                 expedienteId: informePadre.expedienteId,
                 versionSecuencial: informePadre.numeroSecuencial,
                 pdfGeneradoEn: informePadre.generadoEn.toISOString(),
+            });
+        }
+
+        // SPEC-351: informe firmado del colegio — metadata segura, sin PII del sujeto.
+        const informeCaso =
+            (await buscarInformeCasoPorHash(hash)) ??
+            (hash.length === 16 ? await buscarInformeCasoPorCodigo(hash) : null);
+        if (informeCaso) {
+            return NextResponse.json({
+                tipo: "informe_colegio",
+                casoId: informeCaso.casoId,
+                numeroCorrelativo: informeCaso.numeroCorrelativo,
+                anio: informeCaso.anio,
+                pdfGeneradoEn: informeCaso.generadoEn.toISOString(),
+                firmadoPorNombre: informeCaso.firmadoPorNombre,
             });
         }
 
