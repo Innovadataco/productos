@@ -34,6 +34,8 @@ interface FakeModels {
     alertaColegio: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
     seguimientoCaso: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
     notaSeguimiento: { count: AnyFn; deleteMany: AnyFn };
+    // SPEC-351: InformeCaso sin Cascade — la limpieza lo borra explícito.
+    informeCaso: { count: AnyFn; deleteMany: AnyFn; findMany: AnyFn };
     integranteComite: { count: AnyFn; deleteMany: AnyFn };
     cursoMateria: { count: AnyFn; deleteMany: AnyFn };
     materia: { count: AnyFn; deleteMany: AnyFn };
@@ -90,6 +92,7 @@ function makeFakeClient(): { client: PrismaClient; tx: FakeModels } {
         alertaColegio: makeModel(),
         seguimientoCaso: makeModel(),
         notaSeguimiento: makeModel(),
+        informeCaso: makeModel(),
         integranteComite: makeModel(),
         cursoMateria: makeModel(),
         materia: makeModel(),
@@ -293,6 +296,24 @@ describe("borrarColegio — A-66 · subárbol A-58 + trampa cross-tenant AlertaC
         tx.expediente.findMany.mockResolvedValue([]);
         // Audit
         tx.auditLog.create.mockResolvedValue({});
+    });
+
+    it("confirm: InformeCaso se borra ANTES de SeguimientoCaso (SPEC-351 · FK RESTRICT, sin Cascade)", async () => {
+        const { borrarColegio } = await import("./borrar-colegio");
+        await borrarColegio("col1", "test", { confirm: true, client });
+
+        // Assert FUERTE del orden nuevo: nota → informe → caso.
+        const notaOrder = tx.notaSeguimiento.deleteMany.mock.invocationCallOrder[0];
+        const informeOrder = tx.informeCaso.deleteMany.mock.invocationCallOrder[0];
+        const casoOrder = tx.seguimientoCaso.deleteMany.mock.invocationCallOrder[0];
+        expect(informeOrder, "InformeCaso debe borrarse (la tabla existe y la FK es RESTRICT)").toBeDefined();
+        expect(notaOrder).toBeLessThan(informeOrder);
+        expect(informeOrder).toBeLessThan(casoOrder);
+
+        // Y con el filtro correcto: por los casos hallados, no un deleteMany({}) ciego.
+        expect(tx.informeCaso.deleteMany).toHaveBeenCalledWith({
+            where: { casoId: { in: ["seg1"] } },
+        });
     });
 
     it("confirm: SolicitudComite se borra ANTES de AlertaColegio (FK-safe)", async () => {
