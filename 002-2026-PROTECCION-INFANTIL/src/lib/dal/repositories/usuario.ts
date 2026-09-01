@@ -69,6 +69,10 @@ export class UsuarioRepository {
                 id: true,
                 nombre: true,
                 apellidos: true,
+                // SPEC-339 (A-67 §2.3): documento del padre, obligatorio en el Paso 2.
+                documentoTipo: true,
+                documentoNumero: true,
+                // SPEC-339 (D-2): se conserva en la BD y deja de pedirse en el camino.
                 fechaNacimiento: true,
                 telefono: true,
                 paisId: true,
@@ -82,7 +86,18 @@ export class UsuarioRepository {
     // SPEC-334: actualiza solo los campos del perfil del padre.
     actualizarPerfilPadre(
         id: string,
-        data: Pick<Prisma.UsuarioUncheckedUpdateInput, "nombre" | "apellidos" | "fechaNacimiento" | "telefono" | "paisId" | "ciudadId">
+        data: Pick<
+            Prisma.UsuarioUncheckedUpdateInput,
+            | "nombre"
+            | "apellidos"
+            // SPEC-339 (A-67 §2.3): documento del padre.
+            | "documentoTipo"
+            | "documentoNumero"
+            | "fechaNacimiento"
+            | "telefono"
+            | "paisId"
+            | "ciudadId"
+        >
     ) {
         return this.db.usuario.update({ where: { id }, data });
     }

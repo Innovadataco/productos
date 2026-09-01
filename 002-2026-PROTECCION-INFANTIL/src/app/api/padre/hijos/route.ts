@@ -9,7 +9,9 @@ import { registrarHijo, listarHijos, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/se
 // (verifyAuth PARENT) accede; el DAL acota por HijoPadre. Documento OBLIGATORIO.
 const createSchema = z.object({
     nombre: z.string().min(1).max(120),
-    apellidos: z.string().max(120).optional(),
+    // SPEC-339 (FR-019): obligatorios. Las fichas viejas sin apellidos se conservan;
+    // lo que cambia es la validación de las nuevas.
+    apellidos: z.string().min(1).max(120),
     documentoTipo: z.enum(DOCUMENTO_TIPOS),
     documentoNumero: z.string().min(1).max(40),
     anioNacimiento: z.number().int().min(1900).max(2100).optional(),
@@ -51,7 +53,9 @@ export async function POST(request: Request) {
             );
         }
         const res = await registrarHijo(usuario.id, parsed.data);
-        return NextResponse.json(res, { status: res.vinculadoAExistente ? 200 : 201 });
+        // SPEC-339 (D-4): siempre se crea una ficha nueva de ESTE padre; ya no
+        // existe el caso "vinculado a la ficha de otro padre" que devolvía 200.
+        return NextResponse.json(res, { status: 201 });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

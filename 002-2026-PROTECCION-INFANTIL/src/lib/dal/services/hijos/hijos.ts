@@ -1,23 +1,37 @@
 /**
  * SPEC-325 (002-PI-225) · "A quién protejo" — servicio de hijos/familiares.
  *
- * PII de menor (patrón `Estudiante`/`AcudienteEstudiante`): el acceso es SIEMPRE
- * a través del padre dueño (tabla puente `HijoPadre`), nunca por id suelto. Aquí
- * ninguna función recibe un `hijoId` sin exigir además el `usuarioId` del padre y
- * verificar la vinculación — un `hijoId` no acotado nunca llega a la BD.
+ * PII de menor: el acceso es SIEMPRE a través del padre dueño, nunca por id
+ * suelto. Ninguna función recibe un `hijoId` sin exigir además el `usuarioId` del
+ * padre y verificar la propiedad — un `hijoId` no acotado nunca llega a la BD.
  *
- * Dos-padres-un-niño (§3.1-bis): la detección es por documento. Registrar un
- * documento que ya existe NO duplica el `Hijo`; vincula al 2º padre. Los datos e
- * identificadores del niño son compartidos; los reportes/expediente siguen su ruta
- * propia por `usuarioId` (privados) — este servicio solo maneja la entidad del niño.
+ * SPEC-339 (A-67 · D-4, 31-08-2026) — CAMBIO DE REGLA. Antes: la ficha del menor
+ * era global y única por documento en todo el sistema; registrar un documento ya
+ * existente NO duplicaba el `Hijo`, vinculaba al 2º padre por la tabla puente, y
+ * los datos e interruptores del niño quedaban COMPARTIDOS.
+ *
+ * Eso tenía tres consecuencias, las tres verificadas en este mismo archivo:
+ *   1. `cambiarEstadoHijo` escribía un `estado` compartido → un padre le apagaba
+ *      los avisos al otro, sin que el otro se enterara.
+ *   2. `cambiarEstadoIdentificador` era un "flag global compartido" → lo mismo
+ *      con cada cuenta del menor.
+ *   3. Corregir los datos del menor le reescribía la ficha al otro padre.
+ *
+ * Regla de Jelkin (31-08-2026): *"si otro padre se registra con un correo
+ * diferente y quiere vincular los mismos hijos, no pasa absolutamente nada"*.
+ * Ahora cada padre tiene SU ficha (`Hijo.usuarioId`), sus interruptores y sus
+ * avisos. El documento es único DENTRO de la lista de cada padre, no en todo el
+ * sistema. `HijoPadre` e `IdentificadorHijoDesvinculado` quedan sin uso (no se
+ * borran: reversible si Jelkin revierte la regla).
  *
  * El identificador se guarda en forma canónica (mecanismo compartido · candado 22).
  */
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
-import type { AccionAudit, Prisma } from "@prisma/client";
+import { AppError, ERROR_CODES } from "@/lib/errors";
+import type { Prisma } from "@prisma/client";
 import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
-import type { RegistrarHijoInput, IdentificadorHijoInput } from "./tipos";
+import type { RegistrarHijoInput, ActualizarHijoInput, IdentificadorHijoInput } from "./tipos";
 
 function normalizarIdentificadores(identificadores: IdentificadorHijoInput[]) {
     const vistos = new Set<string>();
@@ -38,147 +52,121 @@ function normalizarIdentificadores(identificadores: IdentificadorHijoInput[]) {
 }
 
 /**
- * Registra un hijo/familiar del padre. Si el documento ya existe (mismo menor),
- * vincula a este padre al `Hijo` existente en vez de duplicar (§3.1-bis).
+ * Registra un menor en la lista de ESTE padre.
+ *
+ * SPEC-339 (D-4): ya no se engancha a la ficha de otro padre. Si el documento ya
+ * está en la lista de este mismo padre, es un duplicado y se rechaza; que exista
+ * en la lista de OTRO padre no es conflicto, es el caso normal.
  */
 export async function registrarHijo(usuarioId: string, data: RegistrarHijoInput) {
     const identificadores = normalizarIdentificadores(data.identificadores ?? []);
+    const documentoNumero = data.documentoNumero.trim();
 
     return prisma.$transaction(async (tx) => {
-        const existente = await tx.hijo.findUnique({
-            where: {
-                documentoTipo_documentoNumero: {
-                    documentoTipo: data.documentoTipo,
-                    documentoNumero: data.documentoNumero.trim(),
-                },
+        const duplicadoPropio = await tx.hijo.findFirst({
+            where: { usuarioId, documentoTipo: data.documentoTipo, documentoNumero },
+            select: { id: true },
+        });
+        if (duplicadoPropio) {
+            throw new AppError(
+                "Ese documento ya está en tu lista. Revisa los datos o busca al menor entre los que ya registraste.",
+                ERROR_CODES.CONFLICT,
+                409
+            );
+        }
+
+        const hijo = await tx.hijo.create({
+            data: {
+                usuarioId,
+                nombre: data.nombre.slice(0, 120),
+                apellidos: data.apellidos.slice(0, 120),
+                documentoTipo: data.documentoTipo,
+                documentoNumero,
+                ...(data.anioNacimiento !== undefined ? { anioNacimiento: data.anioNacimiento } : {}),
+                ...(data.sexo !== undefined ? { sexo: data.sexo } : {}),
+                ...(identificadores.length > 0
+                    ? { identificadores: { create: identificadores } }
+                    : {}),
             },
             select: { id: true },
         });
 
-        let hijoId: string;
-        let accion: AccionAudit;
-
-        if (existente) {
-            // Mismo menor: vincular a este padre (idempotente por @@unique).
-            hijoId = existente.id;
-            accion = "HIJO_PADRE_VINCULADO";
-            await tx.hijoPadre.upsert({
-                where: { hijoId_usuarioId: { hijoId, usuarioId } },
-                create: { hijoId, usuarioId },
-                update: {},
-            });
-            // Los identificadores nuevos que traiga el 2º padre se agregan al niño
-            // compartido (si no colisionan con los existentes).
-            if (identificadores.length > 0) {
-                const yaExisten = new Set(
-                    (
-                        await tx.identificadorHijo.findMany({
-                            where: { hijoId },
-                            select: { valor: true, plataformaId: true },
-                        })
-                    ).map((x) => `${x.valor}|${x.plataformaId ?? ""}`)
-                );
-                const nuevos = identificadores.filter(
-                    (i) => !yaExisten.has(`${i.valor}|${i.plataformaId ?? ""}`)
-                );
-                if (nuevos.length > 0) {
-                    await tx.identificadorHijo.createMany({
-                        data: nuevos.map((i) => ({ hijoId, ...i })),
-                    });
-                }
-            }
-        } else {
-            const hijo = await tx.hijo.create({
-                data: {
-                    nombre: data.nombre.slice(0, 120),
-                    apellidos: (data.apellidos ?? "").slice(0, 120),
-                    documentoTipo: data.documentoTipo,
-                    documentoNumero: data.documentoNumero.trim(),
-                    ...(data.anioNacimiento !== undefined ? { anioNacimiento: data.anioNacimiento } : {}),
-                    ...(data.sexo !== undefined ? { sexo: data.sexo } : {}),
-                    padres: { create: { usuarioId } },
-                    ...(identificadores.length > 0
-                        ? { identificadores: { create: identificadores } }
-                        : {}),
-                },
-                select: { id: true },
-            });
-            hijoId = hijo.id;
-            accion = "HIJO_CREATE";
-        }
-
         await logAudit({
-            accion,
+            accion: "HIJO_CREATE",
             tipoRecurso: "Hijo",
-            recursoId: hijoId,
+            recursoId: hijo.id,
             usuarioId,
             // PII: no se registra documento en claro en la auditoría.
-            valorNuevo: JSON.stringify({ vinculado: !!existente, identificadores: identificadores.length }),
+            valorNuevo: JSON.stringify({ identificadores: identificadores.length }),
             tx,
         });
 
-        return { hijoId, vinculadoAExistente: !!existente };
+        return { hijoId: hijo.id };
     });
 }
 
 /**
- * Lista los hijos del padre (solo los suyos, vía `HijoPadre`), con los
- * identificadores que ESTE padre no ha desvinculado de su vista (§3.1-bis).
+ * Lista los menores de ESTE padre.
+ *
+ * SPEC-339 (D-4): se acota por `Hijo.usuarioId`. Ya no hace falta filtrar los
+ * identificadores "desvinculados por este padre": con ficha propia, lo que el
+ * padre quita, queda quitado.
  */
 export async function listarHijos(usuarioId: string) {
-    const vinculos = await prisma.hijoPadre.findMany({
+    return prisma.hijo.findMany({
         where: { usuarioId },
         select: {
-            hijo: {
+            id: true,
+            nombre: true,
+            apellidos: true,
+            documentoTipo: true,
+            documentoNumero: true,
+            anioNacimiento: true,
+            sexo: true,
+            estado: true,
+            identificadores: {
+                // Se muestran activos e inactivos: el padre necesita ver ambos
+                // para poder encenderlos y apagarlos.
                 select: {
                     id: true,
-                    nombre: true,
-                    apellidos: true,
-                    documentoTipo: true,
-                    documentoNumero: true,
-                    anioNacimiento: true,
-                    sexo: true,
-                    estado: true,
-                    identificadores: {
-                        where: {
-                            // SPEC-325 (extensión): se muestran activos e inactivos para
-                            // poder activar/inactivar; se excluyen solo los desvinculados
-                            // por ESTE padre (§3.1-bis).
-                            desvinculado: { none: { usuarioId } },
-                        },
-                        select: {
-                            id: true,
-                            valor: true,
-                            tipo: true,
-                            activo: true,
-                            plataforma: { select: { id: true, nombre: true, clave: true } },
-                        },
-                        orderBy: { creadoEn: "asc" },
-                    },
+                    valor: true,
+                    tipo: true,
+                    activo: true,
+                    plataforma: { select: { id: true, nombre: true, clave: true } },
                 },
+                orderBy: { creadoEn: "asc" },
             },
         },
         orderBy: { creadoEn: "desc" },
     });
-    return vinculos.map((v) => v.hijo);
 }
 
-/** Verifica que el padre sea dueño del hijo (PII · acceso solo por dueño). */
+/**
+ * Verifica que el padre sea dueño del menor (PII · acceso solo por dueño).
+ * SPEC-339 (D-4): la propiedad vive en la ficha, no en la tabla puente.
+ */
 async function exigirDueno(
     tx: Prisma.TransactionClient | typeof prisma,
     usuarioId: string,
     hijoId: string
 ) {
-    const vinculo = await tx.hijoPadre.findUnique({
-        where: { hijoId_usuarioId: { hijoId, usuarioId } },
+    const propio = await tx.hijo.findFirst({
+        where: { id: hijoId, usuarioId },
         select: { id: true },
     });
-    if (!vinculo) throw new Error("Hijo no encontrado");
+    // Mensaje deliberadamente igual al de "no existe": un padre no debe poder
+    // averiguar si el menor de otro padre existe probando identificadores.
+    if (!propio) throw new Error("Hijo no encontrado");
 }
 
 /**
- * "Quitar" un identificador de la vista de ESTE padre: no borra la fila (es
- * compartida con el otro padre), solo la desvincula para este `usuarioId` (§3.1-bis).
+ * Quita un identificador del menor.
+ *
+ * SPEC-339 (D-4): antes la fila era compartida con el otro padre, así que
+ * "quitar" solo la ocultaba de la vista de quien la quitaba
+ * (`IdentificadorHijoDesvinculado`). Con ficha propia eso ya no tiene sentido:
+ * la fila es de este padre y quitarla es quitarla. El mecanismo de
+ * desvinculación queda sin uso, no se borra (reversible si Jelkin revierte D-4).
  */
 export async function desvincularIdentificador(
     usuarioId: string,
@@ -192,11 +180,7 @@ export async function desvincularIdentificador(
         if (!ident) throw new Error("Identificador no encontrado");
         await exigirDueno(tx, usuarioId, ident.hijoId);
 
-        await tx.identificadorHijoDesvinculado.upsert({
-            where: { identificadorId_usuarioId: { identificadorId, usuarioId } },
-            create: { identificadorId, usuarioId },
-            update: {},
-        });
+        await tx.identificadorHijo.delete({ where: { id: identificadorId } });
 
         await logAudit({
             accion: "HIJO_IDENTIFICADOR_DESVINCULADO",
@@ -205,6 +189,76 @@ export async function desvincularIdentificador(
             usuarioId,
             tx,
         });
+        return { ok: true };
+    });
+}
+
+/**
+ * Corrige los datos de un menor ya registrado (SPEC-339 · FR-022).
+ *
+ * Antes solo se podía activar o inactivar: si el padre escribía mal un apellido
+ * o un documento, no tenía forma de arreglarlo. Ahora sí — y es seguro hacerlo
+ * porque la ficha es suya (D-4): antes habría reescrito la ficha del otro padre.
+ */
+export async function actualizarHijo(
+    usuarioId: string,
+    hijoId: string,
+    data: ActualizarHijoInput
+) {
+    return prisma.$transaction(async (tx) => {
+        await exigirDueno(tx, usuarioId, hijoId);
+
+        const documentoNumero = data.documentoNumero?.trim();
+
+        // El documento solo choca DENTRO de la lista de este padre. Que el mismo
+        // documento exista en la lista de otro padre es el caso normal (D-4).
+        if (data.documentoTipo !== undefined || documentoNumero !== undefined) {
+            const actual = await tx.hijo.findUniqueOrThrow({
+                where: { id: hijoId },
+                select: { documentoTipo: true, documentoNumero: true },
+            });
+            const tipoFinal = data.documentoTipo ?? actual.documentoTipo;
+            const numeroFinal = documentoNumero ?? actual.documentoNumero;
+
+            const choque = await tx.hijo.findFirst({
+                where: {
+                    usuarioId,
+                    documentoTipo: tipoFinal,
+                    documentoNumero: numeroFinal,
+                    id: { not: hijoId },
+                },
+                select: { id: true },
+            });
+            if (choque) {
+                throw new AppError(
+                    "Ese documento ya está en tu lista, en otro de los menores que registraste.",
+                    ERROR_CODES.CONFLICT,
+                    409
+                );
+            }
+        }
+
+        const cambios: Prisma.HijoUncheckedUpdateInput = {};
+        if (data.nombre !== undefined) cambios.nombre = data.nombre.slice(0, 120);
+        if (data.apellidos !== undefined) cambios.apellidos = data.apellidos.slice(0, 120);
+        if (data.documentoTipo !== undefined) cambios.documentoTipo = data.documentoTipo;
+        if (documentoNumero !== undefined) cambios.documentoNumero = documentoNumero;
+        if (data.anioNacimiento !== undefined) cambios.anioNacimiento = data.anioNacimiento;
+        if (data.sexo !== undefined) cambios.sexo = data.sexo;
+        if (data.estado !== undefined) cambios.estado = data.estado;
+
+        await tx.hijo.update({ where: { id: hijoId }, data: cambios });
+
+        await logAudit({
+            accion: "HIJO_UPDATE",
+            tipoRecurso: "Hijo",
+            recursoId: hijoId,
+            usuarioId,
+            // PII: se registra QUÉ campos cambiaron, nunca el documento en claro.
+            valorNuevo: JSON.stringify({ campos: Object.keys(cambios) }),
+            tx,
+        });
+
         return { ok: true };
     });
 }

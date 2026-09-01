@@ -68,6 +68,36 @@ export async function enviarEmailCuentaExistente(email: string): Promise<void> {
     }
 }
 
+/**
+ * SPEC-339 (A-67 §2.1): el enlace de registro del padre. Reemplaza al código de
+ * 6 dígitos SOLO para el padre — el registro de colegio sigue con el código.
+ * Jelkin: "padres adultos que de pronto no son muy cercanos a la tecnología";
+ * un enlace que se abre pide menos que un código que se transcribe.
+ */
+export async function enviarEnlaceRegistro(email: string, token: string): Promise<void> {
+    const url = `${baseUrl()}/registro/crear-clave/${token}`;
+    const result = await programar({
+        evento: "auth.registro_enlace",
+        destinatarios: [{ email, variables: { url } }],
+    });
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para auth.registro_enlace");
+    }
+}
+
+/**
+ * SPEC-339 (A-67 §2.1): confirmación de que la cuenta del padre quedó creada.
+ */
+export async function enviarBienvenidaPadre(email: string): Promise<void> {
+    const result = await programar({
+        evento: "auth.bienvenida_padre",
+        destinatarios: [{ email, variables: { urlLogin: `${baseUrl()}/login` } }],
+    });
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para auth.bienvenida_padre");
+    }
+}
+
 export async function enviarTokenRecuperacion(email: string, token: string): Promise<void> {
     const url = `${baseUrl()}/recuperar/${token}`;
     const result = await programar({
