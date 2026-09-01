@@ -29,8 +29,8 @@ export default async function CaminoListoPage() {
         nombres.length === 1
             ? nombres[0]
             : nombres.length === 2
-              ? `${nombres[0]} y ${nombres[1]}`
-              : `${nombres[0]} y ${nombres.length - 1} más`;
+                ? `${nombres[0]} y ${nombres[1]}`
+                : `${nombres[0]} y ${nombres.length - 1} más`;
 
     return (
         <div className="animate-fadeIn text-center">
