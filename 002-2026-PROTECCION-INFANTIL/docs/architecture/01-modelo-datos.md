@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **102** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **103** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -496,7 +496,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (54)
+### Otros (sin regla de dominio) (55)
 
 #### `AclaracionExpediente`
 
@@ -515,6 +515,29 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | expediente | Expediente | relación (FK) |
 | informeConsolidado | InformeConsolidado | relación (FK) |
 | respondidaPorUsuario | Usuario | opcional, relación (FK) |
+
+#### `AnalisisExpediente`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| expedienteId | String | — |
+| versionSecuencial | Int | — |
+| alcance | AlcanceAnalisis | — |
+| hashCadena | String | — |
+| corteN | Int | — |
+| texto | String | — |
+| categoriaDominante | CategoriaConducta | opcional |
+| guiaAccionId | String | opcional |
+| modeloUsado | String | — |
+| promptSistemaHash | String | — |
+| latenciaMs | Int | — |
+| estado | EstadoAnalisis | — |
+| motivoFallo | String | opcional |
+| generadoEn | DateTime | — |
+| publicadoEn | DateTime | opcional |
+| expediente | Expediente | relación (FK) |
+| guiaAccion | GuiaAccionCategoria | opcional, relación (FK) |
 
 #### `Anomalia`
 
@@ -776,6 +799,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | slaEfectivoHoras | Int | opcional |
 | fechaEscaladoRojoEn | DateTime | opcional |
 | informesPadre | InformePadre | lista, relación |
+| analisisIa | AnalisisExpediente | lista, relación |
 
 #### `GuiaAccionCategoria`
 
@@ -799,6 +823,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | publicadaEn | DateTime | opcional |
 | reemplazadaEn | DateTime | opcional |
 | creadaPor | Usuario | relación (FK) |
+| analisisQueLaUsan | AnalisisExpediente | lista, relación |
 
 #### `HealthProbe`
 
@@ -2003,10 +2028,12 @@ erDiagram
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
     Expediente ||--o{ AclaracionExpediente : "expediente"
+    Expediente ||--o{ AnalisisExpediente : "expediente"
     Expediente ||--o{ EventoExpediente : "expediente"
     Expediente ||--o{ InformeConsolidado : "expediente"
     Expediente ||--o{ InformePadre : "expediente"
     Expediente ||--o{ PatronExpediente : "expediente"
+    GuiaAccionCategoria ||--o{ AnalisisExpediente : "guiaAccion (opcional)"
     Hijo ||--o{ HijoPadre : "hijo"
     Hijo ||--o{ IdentificadorHijo : "hijo"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
