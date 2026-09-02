@@ -346,6 +346,11 @@ const CONFIGS: Array<{ clave: string; valor: string; descripcion: string }> = [
     valor: "SOLICITUD_MATERIAL,COMPARTIMIENTO_SEXUAL,DIFUSION_NO_CONSENTIDA,SOLICITUD_ENCUENTRO,EXTORSION",
     descripcion: "Categorias (enum CategoriaConducta de PI, separadas por coma) que elevan el semaforo si se repiten",
   },
+  {
+    clave: "bi.capacidad.casos_max_operario",
+    valor: "25",
+    descripcion: "Cupo maximo de casos activos por operario: la demanda acumulada que supere operarios x cupo enciende el semaforo rubi de capacidad",
+  },
 ];
 
 async function seedConfig(): Promise<void> {

@@ -1,9 +1,11 @@
 import Topbar from "@/components/bi/Topbar";
 import { getPulso } from "@/lib/bi/pulso";
 import { getInsights } from "@/lib/bi/insights";
+import { getCapacidad } from "@/lib/bi/capacidad";
 import TickerVivo from "@/components/bi/pulso/TickerVivo";
 import HeroPulso from "@/components/bi/pulso/HeroPulso";
 import SeccionInsights from "@/components/bi/pulso/SeccionInsights";
+import TarjetaCapacidad from "@/components/bi/pulso/TarjetaCapacidad";
 import GridKpis from "@/components/bi/pulso/GridKpis";
 import GridKpisSecundario from "@/components/bi/pulso/GridKpisSecundario";
 import GraficoBarras from "@/components/bi/pulso/GraficoBarras";
@@ -19,18 +21,24 @@ export const dynamic = "force-dynamic";
 
 /**
  * Pulso (mockup-bi-v3 · pantalla 1) con datos REALES de la réplica de PI.
- * Server Component: trae todo con getPulso() + getInsights() (contratos de
- * la capa de datos) y compone secciones server; la única isla client es
- * CifraAnimada (count-up con requestAnimationFrame).
+ * Server Component: trae todo con getPulso() + getInsights() + getCapacidad()
+ * (contratos de la capa de datos) y compone secciones server; la única isla
+ * client es CifraAnimada (count-up con requestAnimationFrame).
  *
  * Candado 9: hayDatos=false apaga KPIs y gráficas — el vacío se dice en el
  * hero, no se disfraza de ceros; dentro de cada tarjeta, un hueco parcial
  * (sin alertas, sin estados, sin suscripciones) se muestra como "aún sin
- * datos". Candado 10: toda cifra renderizada salió de PulsoData/Insight;
- * esta página no calcula métricas.
+ * datos". La tarjeta de capacidad operativa vive FUERA del hayDatos: con
+ * cero operarios la brecha es un hecho visible, no un hueco. Candado 10:
+ * toda cifra renderizada salió de PulsoData/Insight/CapacidadData; esta
+ * página no calcula métricas.
  */
 export default async function DashboardPage() {
-    const [pulso, insights] = await Promise.all([getPulso(), getInsights()]);
+    const [pulso, insights, capacidad] = await Promise.all([
+        getPulso(),
+        getInsights(),
+        getCapacidad(),
+    ]);
     const enAtencion = insights.some((i) => i.severidad === "ambar");
 
     return (
@@ -49,6 +57,11 @@ export default async function DashboardPage() {
             />
 
             <SeccionInsights insights={insights} />
+
+            {/* Capacidad operativa: FUERA del hayDatos — con réplica vacía o
+                con CERO operarios la brecha es un hecho que se muestra, no un
+                hueco que se oculta (candado 9). */}
+            <TarjetaCapacidad capacidad={capacidad} />
 
             {pulso.hayDatos && (
                 <>

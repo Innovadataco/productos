@@ -21,6 +21,7 @@ import { validarSql } from "./validador-sql";
 import { cargarCatalogo, esquemaJsonParaLLM, presentarCatalogoParaLLM, valoresDeColumna, type Catalogo } from "./catalogo";
 import { buscarEnCache, normalizarPregunta } from "./cache";
 import { PLANTILLA_SIN_DATOS, renderRespuesta } from "./plantillas";
+import { crearTraza } from "@/lib/observabilidad/traza";
 
 export interface RespuestaMotor {
     estado: "ok" | "clarificacion" | "rechazada" | "sin_datos" | "error";
@@ -137,6 +138,8 @@ interface PatchLog {
     latenciaMs: number;
     sqlGenerado?: string | null;
     planJson?: string | null;
+    respuestaTexto?: string | null;
+    pasosJson?: string | null;
     fuenteCache?: boolean;
     error?: string | null;
 }
@@ -247,6 +250,10 @@ function textoParaCache(filas: Record<string, unknown>[]): string {
  */
 export async function preguntar(pregunta: string, usuarioEmail: string): Promise<RespuestaMotor> {
     const t0 = Date.now();
+    // Observabilidad: reloj de pasos del pipeline (se persiste en pasosJson
+    // al cerrar; el chat lo muestra como auditoría "Ver traza").
+    const traza = crearTraza();
+    traza.paso("recibida", pregunta);
     const logId = await crearLog(pregunta, usuarioEmail);
     // Plan del LLM capturado para la traza (candado 12): índices, filtros y
     // VALORES exactos — sin esto un filtro erróneo del LLM no era depurable.
@@ -259,6 +266,8 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             latenciaMs: Date.now() - t0,
             sqlGenerado: r.sql ?? null,
             planJson: planCapturado ? JSON.stringify(planCapturado) : null,
+            respuestaTexto: r.texto,
+            pasosJson: JSON.stringify(traza.pasos()),
             fuenteCache: r.fuenteCache ?? false,
             error: errorLog ?? null,
         });
@@ -268,6 +277,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
     try {
         // 1 · Pre-guard determinista ANTES del LLM (candado 6).
         const intencion = revisarIntencion(pregunta);
+        traza.paso("pre-guard", intencion.permitida ? "permitida" : `rechazada: ${intencion.motivo ?? "intencion_destructiva"}`);
         if (!intencion.permitida) {
             return await finalizar(
                 { estado: "rechazada", texto: TEXTO_RECHAZO_INTENCION },
@@ -278,6 +288,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
         // 2 · Catálogo como DATO de BD (candado 8): sin catálogo no hay
         // validación posible (el validador y el constructor lo exigen).
         const cat = await cargarCatalogo();
+        traza.paso("catalogo", `${cat.tablas.length} tablas cargadas`);
         if (cat.tablas.length === 0) {
             return await finalizar({ estado: "error", texto: TEXTO_CATALOGO_VACIO }, "catalogo_vacio");
         }
@@ -286,12 +297,22 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
         // normalizado. Un hit se re-valida contra el catálogo (candado 5)
         // y se ejecuta sin LLM.
         const hit = await buscarEnCache(normalizarPregunta(pregunta));
+        traza.paso("cache", hit ? "hit" : "miss");
         if (hit) {
             const veredictoCache = validarSql(cat, hit.sqlAprobado);
+            traza.paso(
+                "validador",
+                veredictoCache.valida
+                    ? "aprobada (cache)"
+                    : `rechazada (cache) · ${veredictoCache.violaciones.length} violaciones`,
+            );
             if (veredictoCache.valida) {
                 try {
+                    const tEjecCache = Date.now();
                     const filas = (await prisma.$queryRawUnsafe(hit.sqlAprobado)) as Record<string, unknown>[];
+                    traza.paso("ejecucion", `${filas.length} filas · ${Date.now() - tEjecCache} ms`);
                     if (filas.length === 0) {
+                        traza.paso("plantilla", "sin_datos");
                         return await finalizar({
                             estado: "sin_datos",
                             texto: PLANTILLA_SIN_DATOS,
@@ -300,6 +321,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
                             fuenteCache: true,
                         });
                     }
+                    traza.paso("plantilla", "respuesta de cache");
                     return await finalizar({
                         estado: "ok",
                         texto: textoParaCache(filas),
@@ -309,6 +331,8 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
                     });
                 } catch (e) {
                     if (esTablaInexistente(e)) {
+                        traza.paso("ejecucion", "falló: tabla inexistente (42P01)");
+                        traza.paso("plantilla", "sin_datos");
                         return await finalizar(
                             {
                                 estado: "sin_datos",
@@ -330,8 +354,10 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
         // 4 · LLM con structured output cerrado (candados 1, 2, 3): si el
         // JSON no parsea, llamarOllamaStructured lanza y NO se rescata.
         let plan: PlanLLM;
+        const tLlm = Date.now();
         try {
             const modelo = await getModeloSql();
+            traza.paso("llm-llamada", modelo);
             const prompt =
                 `Catálogo de datos disponibles (usa SOLO los índices):\n${presentarCatalogoParaLLM(cat)}\n\n` +
                 `Pregunta del usuario: ${pregunta}\n\n` +
@@ -344,8 +370,10 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
                 { temperature: 0, seed: 42 },
             );
             plan = res.data;
+            traza.paso("llm-respuesta", `${Date.now() - tLlm} ms · JSON parseado`);
             planCapturado = plan; // candado 12: el plan (con valores) va a la bitácora
         } catch (e) {
+            traza.paso("llm-respuesta", `${Date.now() - tLlm} ms · falló o no parseó`);
             console.error(`[BI-MOTOR] LLM falló o JSON inválido: ${mensajeDeError(e)}`);
             return await finalizar({ estado: "error", texto: TEXTO_ERROR_LLM }, mensajeDeError(e));
         }
@@ -366,8 +394,10 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             faltante = validarPlanAtomico(plan, cat, pregunta);
         }
         if (faltante) {
+            traza.paso("plan-atomico", "clarificación solicitada");
             return await finalizar({ estado: "clarificacion", texto: faltante }, "plan_incompleto");
         }
+        traza.paso("plan-atomico", "completo");
 
         // I-13: período espurio — si la pregunta NO tiene ninguna marca
         // temporal y el LLM aun así agregó un período, se descarta (caso
@@ -384,13 +414,19 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
         if (!construido.ok) {
             // Doble defensa tras validarPlanAtomico: el constructor también
             // es deny-by-default y su rechazo significa plan inválido.
+            traza.paso("sql-construido", `falló: ${construido.error}`);
             return await finalizar({ estado: "clarificacion", texto: TEXTO_PLAN_INVALIDO }, construido.error);
         }
         const { sql, params } = construido;
+        traza.paso("sql-construido", `límite ${limiteMaximo}`);
 
         // 7 · Validador post-LLM estricto (candado 5): si no aprueba, no se
         // ejecuta; se registra para revisión humana.
         const veredicto = validarSql(cat, sql);
+        traza.paso(
+            "validador",
+            veredicto.valida ? "aprobada" : `rechazada · ${veredicto.violaciones.length} violaciones`,
+        );
         if (!veredicto.valida) {
             return await finalizar(
                 { estado: "rechazada", texto: TEXTO_RECHAZO_VALIDADOR, sql },
@@ -400,11 +436,15 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
 
         // 8 · Ejecución parametrizada contra la réplica (solo lectura).
         let filas: Record<string, unknown>[];
+        const tEjec = Date.now();
         try {
             filas = (await prisma.$queryRawUnsafe(sql, ...params)) as Record<string, unknown>[];
+            traza.paso("ejecucion", `${filas.length} filas · ${Date.now() - tEjec} ms`);
         } catch (e) {
             if (esTablaInexistente(e)) {
                 // Réplica aún sin la tabla: candado 9, no se inventa.
+                traza.paso("ejecucion", "falló: tabla inexistente (42P01)");
+                traza.paso("plantilla", "sin_datos");
                 return await finalizar({ estado: "sin_datos", texto: PLANTILLA_SIN_DATOS, sql }, "42P01");
             }
             throw e;
@@ -412,9 +452,11 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
 
         // 9 · Plantilla determinista (candados 9 y 10): cifras del ResultSet.
         if (filas.length === 0) {
+            traza.paso("plantilla", "sin_datos");
             return await finalizar({ estado: "sin_datos", texto: PLANTILLA_SIN_DATOS, sql, filas: 0 });
         }
         const texto = renderRespuesta(plan, filas, cat);
+        traza.paso("plantilla", `agregación: ${plan.agregacion}`);
         return await finalizar({ estado: "ok", texto, sql, filas: filas.length });
     } catch (e) {
         console.error(`[BI-MOTOR] Error inesperado: ${mensajeDeError(e)}`);

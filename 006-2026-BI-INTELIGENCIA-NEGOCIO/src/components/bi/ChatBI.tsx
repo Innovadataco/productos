@@ -9,6 +9,12 @@ import { useEffect, useRef, useState } from "react";
  * - POST /api/bi/preguntar con el payload real del contrato (T1):
  *   body EXACTO { pregunta } → 200 RespuestaMotor tal cual.
  * - GET /api/bi/ejemplos → sugerencias verificadas del catálogo (clicables).
+ * - GET /api/bi/consultas → MI historial (últimas 50): al montar repuebla
+ *   la conversación (más reciente abajo). Una consulta mía en estado
+ *   'pendiente' se muestra "procesando…" con polling cada 3 s al detalle
+ *   (máx 3 min) hasta que resuelva.
+ * - GET /api/bi/consultas/[id] → auditoría paso a paso ("Ver traza") de
+ *   cada respuesta: hitos del pipeline con ms desde el inicio.
  *
  * Candados reflejados en UI:
  * - El texto narrativo y las cifras llegan del motor (plantillas deterministas
@@ -31,6 +37,45 @@ interface RespuestaMotor {
     consultaLogId?: string;
 }
 
+/* Paso de la auditoría del pipeline (espejo de PasoTraza de
+   src/lib/observabilidad/traza.ts — tipo local, mismo motivo). */
+interface PasoTraza {
+    paso: string;
+    detalle?: string;
+    ms: number;
+}
+
+/* Resumen de MI historial (lo que devuelve GET /api/bi/consultas). */
+interface ConsultaResumen {
+    id: string;
+    preguntaNL: string;
+    respuestaTexto: string | null;
+    estado: string;
+    creadoEn: string;
+    latenciaMs: number | null;
+}
+
+/* Detalle de UNA consulta mía (GET /api/bi/consultas/[id]). */
+interface ConsultaDetalle {
+    id: string;
+    preguntaNL: string;
+    respuestaTexto: string | null;
+    sqlGenerado: string | null;
+    plan: unknown;
+    pasos: PasoTraza[] | null;
+    estado: string;
+    latenciaMs: number | null;
+    fuenteCache: boolean;
+    error: string | null;
+    creadoEn: string;
+}
+
+const ESTADOS_MOTOR: readonly string[] = ["ok", "clarificacion", "rechazada", "sin_datos", "error"];
+
+function esEstadoMotor(v: string): v is RespuestaMotor["estado"] {
+    return ESTADOS_MOTOR.includes(v);
+}
+
 interface Mensaje {
     id: number;
     rol: "usuario" | "bi";
@@ -39,6 +84,10 @@ interface Mensaje {
     respuesta?: RespuestaMotor;
     /** Pregunta que quedó fallida (error del motor o de transporte): habilita Reintentar. */
     fallida?: string;
+    /** Id de la bitácora (habilita la auditoría "Ver traza"). */
+    consultaId?: string;
+    /** Consulta mía aún en proceso al cargar: puntos latiendo + polling. */
+    pendiente?: boolean;
 }
 
 // Largo máximo del input: espejo del contrato de la API (1..500 chars).
@@ -56,6 +105,14 @@ const MENSAJE_SESION_VENCIDA =
     "Tu sesión venció. Recargá la página y volvé a entrar para seguir preguntando.";
 const MENSAJE_ERROR_TRANSPORTE =
     "No pude contactar el motor — error de red o del servidor. Podés reintentar la pregunta.";
+const MENSAJE_SIN_RESPUESTA_REGISTRADA = "(sin respuesta registrada en la bitácora)";
+const MENSAJE_SIGUE_EN_PROCESO =
+    "La consulta sigue en proceso. Recargá la página para ver el resultado.";
+
+/* Polling de una consulta que quedó 'pendiente' al cargar el historial:
+   cada 3 s al detalle, máximo 3 minutos (después se informa y se para). */
+const POLLING_INTERVALO_MS = 3_000;
+const POLLING_MAX_MS = 180_000;
 
 /** Badge estándar del sistema de diseño (mismo patrón que dashboard/admin). */
 function Badge({ children, tono = "neutro" }: { children: React.ReactNode; tono?: "neutro" | "ok" | "ambar" | "rubi" }) {
@@ -81,8 +138,72 @@ function PuntosTipeo() {
     );
 }
 
-/** Mensaje del motor: render por estado (texto + SQL + badges + reintento). */
+/** Auditoría paso a paso de una consulta ("Ver traza"): carga perezosa del
+    detalle al primer despliegue; muestra hito, ms desde el inicio y detalle.
+    El SQL ya se muestra aparte (colapsable "Ver SQL validado"). */
+function TrazaConsulta({ consultaId }: { consultaId: string }) {
+    const [abierta, setAbierta] = useState(false);
+    const [cargando, setCargando] = useState(false);
+    const [pasos, setPasos] = useState<PasoTraza[] | null>(null);
+    const [fallo, setFallo] = useState(false);
+
+    async function alternar() {
+        const abre = !abierta;
+        setAbierta(abre);
+        if (abre && pasos === null && !cargando && !fallo) {
+            setCargando(true);
+            try {
+                const res = await fetch(`/api/bi/consultas/${consultaId}`, { credentials: "include" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const det = (await res.json()) as { pasos?: unknown };
+                setPasos(Array.isArray(det.pasos) ? (det.pasos as PasoTraza[]) : []);
+            } catch {
+                setFallo(true);
+            } finally {
+                setCargando(false);
+            }
+        }
+    }
+
+    return (
+        <div className="cb-traza">
+            <button type="button" onClick={() => void alternar()} className="cb-traza-boton">
+                {abierta ? "Ocultar traza" : "Ver traza"}
+            </button>
+            {abierta && (
+                <div className="cb-traza-lista">
+                    {cargando && <p className="cb-traza-nota">Cargando auditoría…</p>}
+                    {fallo && <p className="cb-traza-nota">No se pudo cargar la traza de esta consulta.</p>}
+                    {!cargando && !fallo && pasos !== null && pasos.length === 0 && (
+                        <p className="cb-traza-nota">Esta consulta no tiene pasos registrados.</p>
+                    )}
+                    {!cargando &&
+                        !fallo &&
+                        pasos?.map((p, i) => (
+                            <div key={`${p.paso}-${i}`} className="cb-traza-paso">
+                                <span className="cb-traza-ms">+{p.ms} ms</span>
+                                <span className="cb-traza-nombre">{p.paso}</span>
+                                {p.detalle && <span className="cb-traza-detalle">{p.detalle}</span>}
+                            </div>
+                        ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/** Mensaje del motor: render por estado (texto + SQL + badges + traza + reintento). */
 function MensajeBi({ msg, onReintentar }: { msg: Mensaje; onReintentar: (pregunta: string) => void }) {
+    // Consulta que quedó 'pendiente' al cargar el historial: puntos latiendo.
+    if (msg.pendiente) {
+        return (
+            <div className="cb-msg cb-msg-bi">
+                <p className="text-muted text-[13px] mb-1">Procesando tu pregunta anterior…</p>
+                <PuntosTipeo />
+            </div>
+        );
+    }
+
     const estado = msg.respuesta?.estado ?? "error";
     const clases = ["cb-msg", "cb-msg-bi"];
     if (estado === "clarificacion") clases.push("cb-msg-ambar");
@@ -115,6 +236,8 @@ function MensajeBi({ msg, onReintentar }: { msg: Mensaje; onReintentar: (pregunt
                 {estado === "clarificacion" && <Badge tono="ambar">Necesito un dato más</Badge>}
                 {estado === "rechazada" && <Badge tono="rubi">Consulta rechazada</Badge>}
             </div>
+
+            {msg.consultaId && <TrazaConsulta consultaId={msg.consultaId} />}
 
             {msg.fallida && (
                 <div className="mt-3">
@@ -157,6 +280,106 @@ export default function ChatBI() {
         return () => {
             vivo = false;
         };
+    }, []);
+
+    /* Historial persistente: al montar, MI bitácora repuebla la conversación
+       (la API trae más reciente primero; acá abajo va la más reciente).
+       Una consulta mía en estado 'pendiente' queda "procesando…" con
+       polling al detalle cada 3 s (máx 3 min) hasta que resuelva.
+       Fail-open: si el historial no carga, el chat funciona igual. */
+    useEffect(() => {
+        let vivo = true;
+        const temporizadores: ReturnType<typeof setInterval>[] = [];
+
+        function resolverPendiente(msgId: number, det: ConsultaDetalle) {
+            setMensajes((prev) =>
+                prev.map((m) =>
+                    m.id === msgId
+                        ? {
+                              ...m,
+                              pendiente: false,
+                              texto: det.respuestaTexto ?? MENSAJE_SIN_RESPUESTA_REGISTRADA,
+                              respuesta: {
+                                  estado: esEstadoMotor(det.estado) ? det.estado : "error",
+                                  texto: det.respuestaTexto ?? "",
+                                  ...(det.sqlGenerado ? { sql: det.sqlGenerado } : {}),
+                                  fuenteCache: det.fuenteCache,
+                              },
+                          }
+                        : m,
+                ),
+            );
+        }
+
+        function arrancarPolling(consultaId: string, msgId: number) {
+            const inicio = Date.now();
+            const timer = setInterval(() => {
+                void (async () => {
+                    if (!vivo) return;
+                    if (Date.now() - inicio > POLLING_MAX_MS) {
+                        clearInterval(timer);
+                        setMensajes((prev) =>
+                            prev.map((m) =>
+                                m.id === msgId ? { ...m, pendiente: false, texto: MENSAJE_SIGUE_EN_PROCESO } : m,
+                            ),
+                        );
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`/api/bi/consultas/${consultaId}`, { credentials: "include" });
+                        if (!res.ok) return; // reintenta en el próximo tick
+                        const det = (await res.json()) as ConsultaDetalle;
+                        if (det.estado === "pendiente") return;
+                        clearInterval(timer);
+                        resolverPendiente(msgId, det);
+                    } catch {
+                        /* error de transporte: reintenta en el próximo tick */
+                    }
+                })();
+            }, POLLING_INTERVALO_MS);
+            temporizadores.push(timer);
+        }
+
+        fetch("/api/bi/consultas", { credentials: "include" })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data: { consultas?: unknown } | null) => {
+                if (!vivo || !data || !Array.isArray(data.consultas)) return;
+                const cronologico = [...(data.consultas as ConsultaResumen[])].reverse();
+                const cargados: Mensaje[] = [];
+                const pendientes: { consultaId: string; msgId: number }[] = [];
+                for (const c of cronologico) {
+                    if (typeof c?.preguntaNL !== "string" || typeof c?.id !== "string") continue;
+                    cargados.push({ id: nuevoId(), rol: "usuario", texto: c.preguntaNL });
+                    const msgId = nuevoId();
+                    if (c.estado === "pendiente") {
+                        cargados.push({ id: msgId, rol: "bi", texto: "", consultaId: c.id, pendiente: true });
+                        pendientes.push({ consultaId: c.id, msgId });
+                    } else {
+                        const texto = c.respuestaTexto ?? MENSAJE_SIN_RESPUESTA_REGISTRADA;
+                        cargados.push({
+                            id: msgId,
+                            rol: "bi",
+                            texto,
+                            consultaId: c.id,
+                            respuesta: {
+                                estado: esEstadoMotor(c.estado) ? c.estado : "error",
+                                texto,
+                            },
+                        });
+                    }
+                }
+                if (cargados.length > 0) setMensajes((prev) => [...prev, ...cargados]);
+                for (const p of pendientes) arrancarPolling(p.consultaId, p.msgId);
+            })
+            .catch(() => {
+                /* historial fail-open: la conversación nueva funciona igual */
+            });
+
+        return () => {
+            vivo = false;
+            for (const t of temporizadores) clearInterval(t);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al montar
     }, []);
 
     /* Autoscroll al último mensaje (o a los puntos de tipeo). */
@@ -205,6 +428,8 @@ export default function ChatBI() {
                     rol: "bi",
                     texto: data.texto,
                     respuesta: data,
+                    // Traza de la bitácora disponible para esta respuesta.
+                    ...(data.consultaLogId ? { consultaId: data.consultaLogId } : {}),
                     // Error reportado por el motor: mensaje honesto + reintento.
                     ...(data.estado === "error" ? { fallida: pregunta } : {}),
                 },
@@ -325,6 +550,15 @@ export default function ChatBI() {
                 .cb-sql { margin-top: 12px; }
                 .cb-sql summary { cursor: pointer; font-size: 12.5px; color: rgb(var(--tinta-muted-rgb)); user-select: none; }
                 .cb-sql pre { margin-top: 8px; padding: 14px 16px; border-radius: 10px; background: #0b1311; color: #9fe8cf; font-size: 12.5px; line-height: 1.6; overflow-x: auto; white-space: pre; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+                .cb-traza { margin-top: 10px; }
+                .cb-traza-boton { font-size: 12px; color: rgb(var(--tinta-muted-rgb)); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; transition: color 0.2s; }
+                .cb-traza-boton:hover { color: rgb(var(--pino-rgb)); }
+                .cb-traza-lista { margin-top: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgb(var(--tinta-rgb) / 0.08); background: rgb(var(--tinta-rgb) / 0.03); display: flex; flex-direction: column; gap: 6px; }
+                .cb-traza-paso { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
+                .cb-traza-ms { flex-shrink: 0; min-width: 64px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: rgb(var(--tinta-subtle-rgb)); }
+                .cb-traza-nombre { font-weight: 600; color: rgb(var(--tinta-rgb)); }
+                .cb-traza-detalle { color: rgb(var(--tinta-muted-rgb)); overflow-wrap: anywhere; }
+                .cb-traza-nota { font-size: 12.5px; color: rgb(var(--tinta-muted-rgb)); margin: 0; }
                 .cb-input { display: flex; gap: 10px; padding: 16px; border-top: 1px solid rgb(var(--tinta-rgb) / 0.08); }
                 .cb-input input { flex: 1; border-radius: var(--radio-input); border: 1px solid rgb(var(--tinta-rgb) / 0.12); background: rgb(var(--tinta-rgb) / 0.04); padding: 10px 14px; font-size: 14px; color: rgb(var(--tinta-rgb)); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
                 .cb-input input::placeholder { color: rgb(var(--tinta-subtle-rgb)); }
