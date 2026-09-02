@@ -311,4 +311,5 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/api/colegio/cursos/unificado/plantilla/plantilla-lista-autoconsistente.test.ts",
     // SPEC-369: candados del poblador demo v2.
     "scripts/demo/demo-v2.test.ts",
+    "scripts/demo/demo-v3.test.ts",
 ];
