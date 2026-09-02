@@ -66,6 +66,27 @@ async function crearReporteClasificadoVisible(numeroSeguimiento: string, identif
     return reporte;
 }
 
+// A-71 (SPEC-366): un duplicado (SIEMPRE anónimo) apunta a un original por
+// `reporteOrigenId`. Su estado ALMACENADO queda DUPLICADO; el seguimiento lo
+// resuelve al estado y la categoría VIVOS del original en tiempo de lectura.
+async function crearDuplicadoDe(numeroSeguimiento: string, identificador: string, reporteOrigenId: string) {
+    const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+    return prisma.reporte.create({
+        data: {
+            identificador,
+            plataformaId: plataforma!.id,
+            texto: "Texto purgado del duplicado.",
+            fechaIncidente: new Date("2026-07-10T11:00:00Z"),
+            ciudad: "Bogotá",
+            pais: "Colombia",
+            esAnonimo: true,
+            numeroSeguimiento,
+            estado: "DUPLICADO",
+            reporteOrigenId,
+        },
+    });
+}
+
 describe("GET /api/reportes/seguimiento/[numero]", () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -126,6 +147,49 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         expect(body.clasificacion.confianza).toBeUndefined();
         expect(body.clasificacion.categoriasSecundarias).toEqual(["CONTACTO_INSISTENTE"]);
         expect(body.ranking).not.toBeNull();
+    });
+
+    it("A-71: un duplicado hereda 'Procesado' + la categoría VIVA del original clasificado", async () => {
+        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.report_threshold" }, data: { valor: "1" } });
+        await prisma.parametroSistema.updateMany({ where: { clave: "visibility.min_authenticated_ratio" }, data: { valor: "0" } });
+
+        const original = await crearReporteClasificadoVisible("RPT-ORIG01", "+57300DUP");
+        await crearDuplicadoDe("RPT-DUP001", "+57300DUP", original.id);
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-DUP001"),
+            { params: Promise.resolve({ numero: "RPT-DUP001" }) }
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json();
+
+        // El reportante ve "Procesado" + la categoría del original, igual que la primera vez.
+        expect(body.estadoVisual).toBe("Procesado");
+        expect(body.enProceso).toBe(false);
+        expect(body.badge).toBe("success");
+        expect(body.clasificacion).not.toBeNull();
+        expect(body.clasificacion.categoria).toBe("OFRECIMIENTO_REGALOS");
+        // El estado ALMACENADO sigue DUPLICADO (la señal lo excluye igual, sin doble conteo).
+        expect(body.estadoInterno).toBe("DUPLICADO");
+    });
+
+    it("A-71: si el original aún no clasifica, el duplicado muestra el estado honesto (no un 'en proceso' que no llega)", async () => {
+        const original = await crearReporteBase("RPT-ORIG02", "+57300DUP2", "PROCESANDO");
+        await crearDuplicadoDe("RPT-DUP002", "+57300DUP2", original.id);
+
+        const res = await GET(
+            new Request("http://localhost:5005/api/reportes/seguimiento/RPT-DUP002"),
+            { params: Promise.resolve({ numero: "RPT-DUP002" }) }
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json();
+
+        // Refleja el estado VIVO del original (en proceso), sin clasificación todavía.
+        // Cuando el original resuelva, el duplicado lo mostrará solo (read-time).
+        expect(body.estadoVisual).toBe("En proceso");
+        expect(body.enProceso).toBe(true);
+        expect(body.clasificacion).toBeNull();
+        expect(body.estadoInterno).toBe("DUPLICADO");
     });
 
     it("no expone piiDetectada en la respuesta y sí contienePii (I-28)", async () => {

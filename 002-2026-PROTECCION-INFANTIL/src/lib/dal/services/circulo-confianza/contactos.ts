@@ -6,7 +6,7 @@
 import type { Prisma } from "@prisma/client";
 import { getClient } from "./tipos";
 import type { DatosReporte } from "./tipos";
-import { calcularEstado, determinarEstadoContacto, whereReportesCirculo } from "./estado";
+import { calcularEstado, determinarEstadoContacto, obtenerTopeContactos, whereReportesCirculo } from "./estado";
 import { construirAgregado } from "./agregado";
 
 /**
@@ -89,7 +89,11 @@ export async function listarContactos(usuarioId: string, client?: Prisma.Transac
         inhabilitados: conEstado.filter((c) => !c.activo).length,
     };
 
-    return { contactos: conEstado, resumen };
+    // A-73 (SPEC-367): el cupo ("2 de 20") se muestra al padre, así que el tope
+    // viaja con la lista. Es aditivo: ningún consumidor previo lo lee.
+    const tope = await obtenerTopeContactos(client);
+
+    return { contactos: conEstado, resumen, tope };
 }
 
 /**
@@ -151,6 +155,13 @@ export async function obtenerDetalleContacto(id: string, usuarioId: string, clie
 
     return {
         id: contacto.id,
+        // I-264 (SPEC-370): el detalle devolvía SOLO `etiqueta` (deprecada), así que
+        // "Ver de qué se trata" mostraba "Sin nombre" para todo contacto creado con
+        // el campo nuevo. La LISTA sí traía nombre/parentesco/creadoEn (usa include);
+        // el detalle arma el objeto a mano y se habían quedado por fuera.
+        nombre: contacto.nombre,
+        parentesco: contacto.parentesco,
+        creadoEn: contacto.creadoEn,
         etiqueta: contacto.etiqueta,
         nota: contacto.nota,
         activo: contacto.activo,

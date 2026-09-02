@@ -86,8 +86,12 @@ describe("MisHijos", () => {
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
 
+        // SPEC-363 (rojo CI #241): payload REAL — documento válido para TI
+        // (>= 5 dígitos) y apellidos, que ahora se validan antes de enviar. Con
+        // "3003" (4 dígitos) la validación F7 cortaba el submit antes del POST.
         fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
-        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "3003" } });
+        fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
+        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "1030512345" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
 
         await waitFor(() => {
@@ -107,7 +111,8 @@ describe("MisHijos", () => {
         await waitFor(() => expect(screen.getByRole("option", { name: "Roblox" })).toBeDefined());
 
         fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
-        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "3003" } });
+        fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
+        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "1030512345" } });
 
         // 1º con plataforma → se acumula en la lista
         fireEvent.change(screen.getByLabelText("Identificador"), { target: { value: "anaroblox" } });

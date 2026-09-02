@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { MapContainer, Popup, GeoJSON, Marker, Tooltip } from "react-leaflet";
+import { MapContainer, Popup, GeoJSON, Marker, Tooltip, useMap } from "react-leaflet";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { GeoJSON as LeafletGeoJSON, PathOptions } from "leaflet";
+
+/** A-70 · G18: zoom de ciudad-región — ubica el punto sin perder el contexto. */
+const ZOOM_PUNTO_UNICO = 7;
 
 export type PuntoMapa = {
     lat: number;
@@ -13,6 +16,41 @@ export type PuntoMapa = {
     total: number;
 };
 
+/**
+ * A-70 · G18 — el mapa abre mostrando las ubicaciones EN CONTEXTO.
+ *
+ * Antes el zoom era un número fijo (10 con un punto, 5 con varios): con un
+ * solo reporte abría a nivel de barrio, sin referencia de dónde queda eso, y
+ * con varios podía dejar puntos fuera del encuadre. `fitBounds` calcula el
+ * encuadre que los contiene TODOS con margen; para un punto único usamos un
+ * zoom de ciudad-región, que ubica sin perder el contexto alrededor.
+ */
+function EncuadrarEnPuntos({ puntos }: { puntos: PuntoMapa[] }) {
+    const map = useMap();
+    // Firma estable: el efecto se vuelve a correr solo si cambian las coordenadas.
+    const firma = puntos.map((p) => `${p.lat},${p.lng}`).join("|");
+
+    useEffect(() => {
+        if (puntos.length === 0) return;
+        if (puntos.length === 1) {
+            const unico = puntos[0];
+            map.setView([unico.lat, unico.lng], ZOOM_PUNTO_UNICO);
+            return;
+        }
+        map.fitBounds(
+            puntos.map((p) => [p.lat, p.lng] as [number, number]),
+            // El padding evita que un marcador quede pegado al borde; el
+            // maxZoom impide que dos puntos casi juntos disparen el zoom al
+            // máximo y reaparezca el problema que reportó Jelkin.
+            { padding: [48, 48], maxZoom: ZOOM_PUNTO_UNICO }
+        );
+        // `firma` cubre el cambio real de puntos; `puntos` es una referencia nueva en cada render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [firma, map]);
+
+    return null;
+}
+
 export type PaisMapa = {
     pais: string;
     total: number;
@@ -20,6 +58,20 @@ export type PaisMapa = {
 
 const LATAM_CENTER: [number, number] = [4.5, -74];
 const LATAM_ZOOM = 3;
+
+/**
+ * SPEC-370 (I-265): el área del PADRE nunca pinta rojo. La escala de riesgo
+ * (rojo/naranja/verde) se queda para admin y consulta; para el padre se usa una
+ * paleta sin alarma — el mapa ahí responde "dónde", no "qué tan grave".
+ */
+const COLORES_PADRE = {
+    alto: "#a9700c", // ámbar del sistema
+    medio: "#c08a2e",
+    bajo: "#0b6e5a", // pino
+    sinDatos: "#e2e8f0",
+} as const;
+
+export type PaletaMapa = "riesgo" | "padre";
 
 const COLORES = {
     alto: "#ef4444", // rojo
@@ -131,11 +183,12 @@ function normalizarNombre(nombre: string) {
         .trim();
 }
 
-function colorPorCantidad(total: number, max: number) {
-    if (max <= 0) return COLORES.sinDatos;
-    if (total === max || total >= max * 0.75) return COLORES.alto;
-    if (total >= max * 0.25) return COLORES.medio;
-    return COLORES.bajo;
+function colorPorCantidad(total: number, max: number, paleta: PaletaMapa = "riesgo") {
+    const c = paleta === "padre" ? COLORES_PADRE : COLORES;
+    if (max <= 0) return c.sinDatos;
+    if (total === max || total >= max * 0.75) return c.alto;
+    if (total >= max * 0.25) return c.medio;
+    return c.bajo;
 }
 
 function geoJsonNameFor(pais: string): string {
@@ -168,11 +221,14 @@ export function MapaUbicaciones({
     center,
     zoom,
     sinUbicacion = 0,
+    paleta = "riesgo",
 }: {
     puntos: PuntoMapa[];
     paises?: PaisMapa[];
     center?: [number, number];
     zoom?: number;
+    /** SPEC-370 (I-265): "padre" = sin rojo. Por defecto se conserva la escala de riesgo. */
+    paleta?: PaletaMapa;
     /** SPEC-115: reportes que el mapa no puede pintar por falta de coordenadas. */
     sinUbicacion?: number;
 }) {
@@ -268,9 +324,10 @@ export function MapaUbicaciones({
                 className="h-96 w-full rounded-2xl"
                 style={{ zIndex: 0, background: "#e0f2fe" }}
             >
+                <EncuadrarEnPuntos puntos={validos} />
                 {geoData && <GeoJSON data={geoData} style={paisStyle} onEachFeature={onEachFeature} />}
                 {validos.map((p, idx) => {
-                    const color = colorPorCantidad(p.total, maxTotal);
+                    const color = colorPorCantidad(p.total, maxTotal, paleta);
                     const [ciudad, pais] = p.label.split(",").map((s) => s.trim());
                     return (
                         <Marker key={idx} position={[p.lat, p.lng]} icon={cityIcon(p.total, color)}>

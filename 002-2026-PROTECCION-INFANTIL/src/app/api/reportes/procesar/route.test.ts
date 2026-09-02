@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
+import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
 import { decryptParameter } from "@/lib/param-encryption";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
@@ -56,6 +56,15 @@ function crearRequestProcesar(reporteId: string) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-worker-secret": process.env.WORKER_SECRET || "worker-secret-test" },
         body: JSON.stringify({ reporteId }),
+    });
+}
+
+// A-72: en el camino real la FuenteReporte (con el hash del origen) se crea en el
+// POST de /api/reportes ANTES de encolar; estos tests entran directo al procesar,
+// así que el origen se siembra a mano para ejercer la ráfaga POR ORIGEN.
+async function sembrarOrigen(reporteId: string, origen: string) {
+    await prisma.fuenteReporte.create({
+        data: { reporteId, ipHash: `ip-${origen}`, fingerprintHash: `fp-${origen}`, pesoAplicado: 1.0 },
     });
 }
 
@@ -336,6 +345,65 @@ describe("POST /api/reportes/procesar", () => {
         expect(actualizado?.reporteOrigenId).toBe(origen.id);
     });
 
+    it("INVARIANTE A-71: un reporte CON CUENTA nunca queda DUPLICADO aunque sea idéntico (la dedup solo aplica a anónimos)", async () => {
+        // El diseño de A-71 (resolución read-time del duplicado SOLO en el
+        // seguimiento público) se apoya en que los duplicados son SIEMPRE anónimos.
+        // Si alguien quita el guard `if (!esAnonimo)` de duplicados.ts, este test
+        // se cae — y ahí "Mis reportes" y el detalle del padre también necesitarían
+        // resolver el estado del original en tiempo de lectura.
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const usuario = await crearUsuario("PARENT");
+        const origen = await prisma.reporte.create({
+            data: {
+                identificador: "+57300INV001",
+                plataformaId: plataforma!.id,
+                texto: "Este número contactó a mi hija ofreciendo regalos.",
+                fechaIncidente: new Date("2026-07-10T14:30:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-INV-01",
+                estado: "PENDIENTE",
+            },
+        });
+        mockClasificar.mockResolvedValue({
+            categoria: "OFRECIMIENTO_REGALOS" as CategoriaConducta,
+            confianza: 0.92,
+            posibleAgresorPar: false,
+            contienePii: false,
+            piiDetectada: [],
+            estado: "CLASIFICADO",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1200, promptTokens: 100, responseTokens: 20 },
+        });
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
+        await POST(crearRequestProcesar(origen.id));
+
+        // Segundo reporte IDÉNTICO (mismo identificador y embedding) pero CON CUENTA.
+        const conCuenta = await prisma.reporte.create({
+            data: {
+                identificador: "+57300INV001",
+                plataformaId: plataforma!.id,
+                texto: "Este número contactó a mi hija ofreciendo regalos otra vez.",
+                fechaIncidente: new Date("2026-07-10T15:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: false,
+                usuarioId: usuario.id,
+                numeroSeguimiento: "RPT-INV-02",
+                estado: "PENDIENTE",
+            },
+        });
+        const res = await POST(crearRequestProcesar(conCuenta.id));
+        expect(res.status).toBe(200);
+
+        const actualizado = await prisma.reporte.findUnique({ where: { id: conCuenta.id } });
+        // NUNCA duplicado: la dedup se salta para no anónimos → se procesa normal.
+        expect(actualizado?.estado).not.toBe("DUPLICADO");
+        expect(actualizado?.reporteOrigenId).toBeNull();
+        expect(actualizado?.estado).toBe("CLASIFICADO");
+    });
+
     it("no reprocesa reporte ya en estado final", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporte = await prisma.reporte.create({
@@ -609,6 +677,8 @@ describe("POST /api/reportes/procesar", () => {
                 },
             });
             reportes.push(reporte);
+            // A-72: los 3 vienen del MISMO origen → spam, sí es ráfaga.
+            await sembrarOrigen(reporte.id, "spammer-unico");
         }
 
         for (const reporte of reportes) {
@@ -621,6 +691,55 @@ describe("POST /api/reportes/procesar", () => {
             expect(actualizado?.estado).toBe("REVISION_MANUAL");
             expect(actualizado?.prioridadAlta).toBe(true);
             expect(actualizado?.esRafaga).toBe(true);
+        }
+    });
+
+    it("A-72: 3 reportes del mismo nick desde ORÍGENES DISTINTOS NO son ráfaga (corroboración)", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        mockClasificar.mockResolvedValue({
+            categoria: "CONTACTO_INSISTENTE" as CategoriaConducta,
+            confianza: 1.0,
+            categoriasSecundarias: [],
+            posibleAgresorPar: false,
+            estado: "CLASIFICADO",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1000 },
+            fallback: false,
+            votos: [{ categoria: "CONTACTO_INSISTENTE" as CategoriaConducta, confianza: 1.0, posibleAgresorPar: false }],
+        });
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
+
+        const identificador = "+57300CORROBORA";
+        const reportes = [];
+        for (let i = 0; i < 3; i++) {
+            const reporte = await prisma.reporte.create({
+                data: {
+                    identificador,
+                    plataformaId: plataforma!.id,
+                    texto: `Corroboración independiente ${i + 1}`,
+                    fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                    ciudad: "Bogotá",
+                    pais: "Colombia",
+                    esAnonimo: false,
+                    numeroSeguimiento: `RPT-CORR-${String(i + 1).padStart(2, "0")}`,
+                    estado: "PENDIENTE",
+                },
+            });
+            reportes.push(reporte);
+            // Personas independientes: cada una con su propio origen.
+            await sembrarOrigen(reporte.id, `persona-${i + 1}`);
+        }
+
+        for (const reporte of reportes) {
+            const res = await POST(crearRequestProcesar(reporte.id));
+            expect(res.status).toBe(200);
+        }
+
+        // Ninguno se marca ráfaga: distinto origen = corroboración, sigue su curso.
+        for (const reporte of reportes) {
+            const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
+            expect(actualizado?.esRafaga).toBe(false);
+            expect(actualizado?.estado).toBe("CLASIFICADO");
         }
     });
 
@@ -640,7 +759,9 @@ describe("POST /api/reportes/procesar", () => {
         mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
         const identificador = "+57300RAFBAJA";
-        await prisma.reporte.create({
+        // Mismo origen en los tres para aislar la variable bajo prueba (dado de baja):
+        // aun así no hay ráfaga porque el eliminado no cuenta → 2 < 3.
+        const activoPrevio = await prisma.reporte.create({
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -653,7 +774,7 @@ describe("POST /api/reportes/procesar", () => {
                 estado: "CLASIFICADO",
             },
         });
-        await prisma.reporte.create({
+        const eliminadoPrevio = await prisma.reporte.create({
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -681,6 +802,9 @@ describe("POST /api/reportes/procesar", () => {
                 estado: "PENDIENTE",
             },
         });
+        await sembrarOrigen(activoPrevio.id, "baja");
+        await sembrarOrigen(eliminadoPrevio.id, "baja");
+        await sembrarOrigen(nuevo.id, "baja");
 
         const res = await POST(crearRequestProcesar(nuevo.id));
         expect(res.status).toBe(200);
@@ -705,8 +829,10 @@ describe("POST /api/reportes/procesar", () => {
         mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
         const identificador = "+57300HISTORICO";
-        // Reporte previo fuera de la ventana de 24h
-        await prisma.reporte.create({
+        // Histórico y nuevo del MISMO origen: el historial previo (fuera de ventana)
+        // corta la ráfaga aunque el origen coincida — es una relación sostenida, no
+        // un pico súbito.
+        const historico = await prisma.reporte.create({
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -734,6 +860,8 @@ describe("POST /api/reportes/procesar", () => {
                 estado: "PENDIENTE",
             },
         });
+        await sembrarOrigen(historico.id, "historico");
+        await sembrarOrigen(nuevo.id, "historico");
 
         const res = await POST(crearRequestProcesar(nuevo.id));
         expect(res.status).toBe(200);

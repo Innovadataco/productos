@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { edadesReporte } from "@/lib/padre/documento-menor";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
+import { FechaHoraIncidente } from "./FechaHoraIncidente";
 
 type PaisOption = { id: string; nombre: string };
 
@@ -160,27 +162,31 @@ export function ReporteStepDetalle({
                     permitirOtra
                 />
 
-                <Input
-                    label="Fecha y hora del incidente"
-                    type="datetime-local"
-                    max={hoy}
+                {/* A-74 · P1: el `datetime-local` nativo pintaba el segmento de
+                    minutos aun con step=3600 ("02/09/2026, 02:00 p.m.") y vacío se
+                    veía "dd/mm/aaaa, --:-- ----". Se reemplaza por el control de
+                    día + hora 1-12 + a.m./p.m. Conserva los candados de B1: el tope
+                    va en hora LOCAL, es imposible elegir futuro (las horas de hoy
+                    que no han pasado quedan deshabilitadas) y siempre sale la hora
+                    en punto, así que el borrador del wizard no cambia. */}
+                <FechaHoraIncidente
                     value={fechaIncidente}
-                    // A-70 · B1(b): el `max` del navegador no cubre el tecleo directo
-                    // (Chrome deja escribir un valor fuera de rango). Recortamos al
-                    // presente para que sea IMPOSIBLE mandar futuro desde acá.
-                    onChange={(e) => {
-                        const elegido = e.target.value > hoy ? hoy : e.target.value;
-                        onChange({ ciudad, pais, fechaIncidente: elegido, paisId, ciudadId, edadVictima, texto });
-                    }}
+                    max={hoy}
+                    onChange={(elegido) =>
+                        onChange({ ciudad, pais, fechaIncidente: elegido, paisId, ciudadId, edadVictima, texto })
+                    }
                     error={fechaIncidente > hoy ? "El hecho no puede ser a futuro; ajustamos la hora al momento actual." : undefined}
                 />
 
-                <Input
+                {/* SPEC-361 (A-70 · F9): la edad se ELIGE de una lista de 4 a 17,
+                    el rango del producto. Antes era un campo libre de 1 a 120,
+                    donde cabía cualquier número que no describe a un menor. */}
+                <Select
                     label="Edad aproximada del menor (opcional)"
-                    type="number"
-                    min={1}
-                    max={120}
-                    placeholder="Ej: 12"
+                    options={[
+                        { value: "", label: "Sin especificar" },
+                        ...edadesReporte().map((e) => ({ value: String(e), label: `${e} años` })),
+                    ]}
                     value={edadVictima}
                     onChange={(e) =>
                         onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto })

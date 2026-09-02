@@ -379,6 +379,10 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                                             <span title={r.operador.email} className="truncate max-w-[12rem] inline-block">
                                                 {r.operador.email}
                                             </span>
+                                        ) : r.estado === "DUPLICADO" ? (
+                                            /* SPEC-368 (A-74 · P2): un duplicado no necesita operador. Decía
+                                               "Sin asignar" y parecía trabajo pendiente en la bandeja. */
+                                            <span className="text-subtle/70">Duplicado — sin acción</span>
                                         ) : (
                                             <span className="text-subtle/70">Sin asignar</span>
                                         )}

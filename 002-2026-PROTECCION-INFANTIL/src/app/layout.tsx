@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { PieGlobal } from "@/components/modules/PieGlobal";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
 
@@ -100,12 +101,15 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="es" className={`${instrumentSans.variable} ${instrumentSerif.variable} ${dmMono.variable}`} suppressHydrationWarning>
-            <body className="min-h-screen pt-14">
+            <body className="flex min-h-screen flex-col pt-14">
                 <ThemeProvider>
                     <AuthProvider>
                         <ServiceWorkerRegister />
                         <NavHeader />
-                        {children}
+                        {/* SPEC-362 (G21): el contenido empuja y el pie queda abajo
+                            en todas las pantallas, cortas o largas. */}
+                        <div className="flex-1">{children}</div>
+                        <PieGlobal />
                     </AuthProvider>
                 </ThemeProvider>
             </body>

@@ -79,7 +79,7 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
             update: {},
             create: {
                 clave: "padre.hijos.maximo_mensaje",
-                valor: "Puedes cuidar hasta {{maximo}} menores desde esta cuenta.",
+                valor: "Tienes {{activos}} de {{maximo}} menores activos. Si quieres registrar otro, primero inactiva uno.",
                 tipo: "STRING",
                 categoria: "SYSTEM",
                 descripcion: "mensaje test",
@@ -94,7 +94,10 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         const res = await POST(reqCrear(menor(6)));
         expect(res.status).toBe(409);
         const json = await res.json();
-        expect(json.error.message).toContain("hasta 5 menores");
+        // SPEC-361 (A-70 · F5): el mensaje dice el cupo real y qué hacer.
+        expect(json.error.message).toBe(
+            "Tienes 5 de 5 menores activos. Si quieres registrar otro, primero inactiva uno.",
+        );
     });
 
     it("cambiar el parámetro cambia el tope SIN desplegar (SC-005)", async () => {
@@ -103,7 +106,7 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         expect((await POST(reqCrear(menor(2)))).status).toBe(201);
         const res = await POST(reqCrear(menor(3)));
         expect(res.status).toBe(409);
-        expect((await res.json()).error.message).toContain("hasta 2 menores");
+        expect((await res.json()).error.message).toContain("2 de 2 menores activos");
     });
 
     // T074: cerrar el Paso 3 al instante.
@@ -120,6 +123,57 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         expect(res.status).toBe(201);
         expect((await res.json()).aviso).toContain("recárgala");
         expect(await prisma.hijo.count()).toBe(1);
+    });
+
+    // ── SPEC-361 (A-70 · F5 · F4 · F7) ──────────────────────────────────────
+    it("F5: inactivar un menor LIBERA cupo — el tope cuenta solo activos", async () => {
+        for (let i = 1; i <= 5; i++) {
+            expect((await POST(reqCrear(menor(i)))).status).toBe(201);
+        }
+        expect((await POST(reqCrear(menor(6)))).status, "lleno").toBe(409);
+
+        // El PADRE inactiva uno (el producto nunca lo hace por su cuenta).
+        const hijos = await prisma.hijo.findMany({ select: { id: true } });
+        await PATCH(...reqPatch(hijos[0]!.id, { estado: "inactivo" }));
+
+        const res = await POST(reqCrear(menor(6)));
+        expect(res.status, "el cupo liberado deja registrar otro").toBe(201);
+
+        // Y el inactivo sigue existiendo: liberar cupo no es borrar.
+        const total = await prisma.hijo.count();
+        expect(total).toBe(6);
+    });
+
+    it("F5: el mensaje del tope nombra el cupo real y qué hacer", async () => {
+        for (let i = 1; i <= 5; i++) await POST(reqCrear(menor(i)));
+        const json = await (await POST(reqCrear(menor(6)))).json();
+        expect(json.error.message).toBe(
+            "Tienes 5 de 5 menores activos. Si quieres registrar otro, primero inactiva uno.",
+        );
+        // Nunca sugiere a cuál inactivar ni lo hace por su cuenta.
+        expect(json.error.message).not.toMatch(/Menor \d/);
+    });
+
+    it("F7: el documento se valida por tipo — el caso de Jelkin (letras en una TI) se rechaza", async () => {
+        const res = await POST(reqCrear({ ...menor(1), documentoTipo: "TI", documentoNumero: "84opkioniby" }));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toContain("solo números");
+        expect(json.error.message).toContain("tarjeta de identidad");
+        expect(await prisma.hijo.count(), "no se guardó nada").toBe(0);
+    });
+
+    it("F7: el pasaporte SÍ admite letras (no se valida todo con la misma regla)", async () => {
+        const res = await POST(reqCrear({ ...menor(1), documentoTipo: "PASAPORTE", documentoNumero: "AV123456" }));
+        expect(res.status).toBe(201);
+    });
+
+    it("F4: un campo faltante responde nombrando el campo, no 'Datos inválidos'", async () => {
+        const res = await POST(reqCrear({ apellidos: "Sin Nombre", documentoTipo: "TI", documentoNumero: "1030999999" }));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toBe("Escribe el nombre del menor.");
+        expect(json.error.message).not.toBe("Datos inválidos");
     });
 
     it("apellidos ahora son obligatorios (FR-019)", async () => {
@@ -208,6 +262,70 @@ describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }
         const hijoId = await crearMenor();
         const [req, ctx] = reqPatch(hijoId, {});
         expect((await PATCH(req, ctx)).status).toBe(400);
+    });
+
+    // ── SPEC-363 · BUG1: el cupo NO es burlable al reactivar ─────────────────
+    it("BUG1: reactivar un menor con el cupo lleno → 409 con el texto aprobado", async () => {
+        // 5 activos (tope). El padre inactiva 1 y registra el 6º (queda 5 activos
+        // + 1 inactivo). Reactivar el inactivo daría 6 activos: debe rebotar.
+        const ids: string[] = [];
+        for (let i = 1; i <= 5; i++) ids.push(await crearMenor(i));
+        await PATCH(...reqPatch(ids[0]!, { estado: "inactivo" }));
+        expect((await POST(reqCrear(menor(6)))).status, "el 6º entra porque hay 4 activos").toBe(201);
+
+        const [req, ctx] = reqPatch(ids[0]!, { estado: "activo" });
+        const res = await PATCH(req, ctx);
+        expect(res.status, "reactivar sería el 6º activo").toBe(409);
+        const json = await res.json();
+        expect(json.error.message).toBe(
+            "Tienes 5 de 5 menores activos. Si quieres registrar otro, primero inactiva uno.",
+        );
+        // El menor sigue inactivo: el rebote no lo dejó a medias.
+        expect((await prisma.hijo.findUnique({ where: { id: ids[0]! } }))?.estado).toBe("inactivo");
+    });
+
+    it("BUG1: reactivar con cupo disponible SÍ funciona; reafirmar 'activo' sobre uno activo no consume cupo", async () => {
+        const a = await crearMenor(1);
+        const b = await crearMenor(2);
+        await PATCH(...reqPatch(a, { estado: "inactivo" }));
+        // 1 activo (b), tope 5 → reactivar a queda holgado.
+        expect((await PATCH(...reqPatch(a, { estado: "activo" }))).status).toBe(200);
+        // Reafirmar activo sobre uno ya activo no debe contar ni rebotar.
+        expect((await PATCH(...reqPatch(b, { estado: "activo" }))).status).toBe(200);
+    });
+
+    // ── SPEC-363 · BUG2: el PATCH de estado audita {estado} para la bitácora ──
+    it("BUG2: pausar/reactivar por la ruta real audita {estado} con el VALOR (no {campos})", async () => {
+        const hijoId = await crearMenor();
+
+        await PATCH(...reqPatch(hijoId, { estado: "inactivo" }));
+        await PATCH(...reqPatch(hijoId, { estado: "activo" }));
+
+        const audits = await prisma.auditLog.findMany({
+            where: { accion: "HIJO_UPDATE", recursoId: hijoId },
+            orderBy: { creadoEn: "asc" },
+        });
+        const valores = audits.map((a) => JSON.parse(a.valorNuevo ?? "{}"));
+        // La bitácora lee `valorNuevo.estado`: tiene que estar el valor, no un
+        // `{campos:["estado"]}` que la deja sin hito.
+        expect(valores).toContainEqual({ estado: "inactivo" });
+        expect(valores).toContainEqual({ estado: "activo" });
+        expect(valores.some((v) => Array.isArray(v.campos)), "no audita por 'campos' el cambio de estado").toBe(false);
+    });
+
+    it("BUG2: un PATCH mixto (datos + estado) corrige los datos Y audita el estado con valor", async () => {
+        const hijoId = await crearMenor();
+        const [req, ctx] = reqPatch(hijoId, { apellidos: "Corregido", estado: "inactivo" });
+        expect((await PATCH(req, ctx)).status).toBe(200);
+
+        const enBd = await prisma.hijo.findUnique({ where: { id: hijoId } });
+        expect(enBd?.apellidos).toBe("Corregido");
+        expect(enBd?.estado).toBe("inactivo");
+
+        const valores = (
+            await prisma.auditLog.findMany({ where: { accion: "HIJO_UPDATE", recursoId: hijoId } })
+        ).map((a) => JSON.parse(a.valorNuevo ?? "{}"));
+        expect(valores).toContainEqual({ estado: "inactivo" });
     });
 });
 

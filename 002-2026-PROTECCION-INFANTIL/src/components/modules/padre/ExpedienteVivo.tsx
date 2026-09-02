@@ -57,6 +57,10 @@ interface Lectura {
 
 const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" });
 
+/** A-70 · G19: ritmo base de la reproducción; las velocidades lo dividen. */
+const MS_POR_HECHO_BASE = 900;
+const VELOCIDADES = [0.5, 1, 2, 4] as const;
+
 const ORIGEN_LABEL: Record<HechoVivoDto["origen"], string> = {
     mio: "tuyo",
     otro_padre: "otro padre",
@@ -81,6 +85,9 @@ export function ExpedienteVivo({
     // ruta /lectura (parámetro `padre.texto.retapado_minutos`); 10 es el fallback.
     const [retapadoMinutos, setRetapadoMinutos] = useState(10);
     const relojRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // A-70 · G19: el padre elige qué tan rápido corre la historia. El valor es
+    // el multiplicador; el intervalo real sale de dividir la base entre él.
+    const [velocidad, setVelocidad] = useState(1);
 
     const propios = hechos.filter((h) => h.origen === "mio").length;
     const otros = hechos.filter((h) => h.origen === "otro_padre").length;
@@ -119,7 +126,28 @@ export function ExpedienteVivo({
                 }
                 return v + 1;
             });
-        }, 900);
+        }, MS_POR_HECHO_BASE / velocidad);
+    };
+
+    /**
+     * A-70 · G19: cambiar la velocidad en marcha reinicia el intervalo — sin
+     * esto el `setInterval` viejo sigue con el ritmo anterior hasta terminar.
+     * No reinicia la historia: conserva el punto donde va.
+     */
+    const cambiarVelocidad = (nueva: number) => {
+        setVelocidad(nueva);
+        if (!reproduciendo) return;
+        if (relojRef.current) clearInterval(relojRef.current);
+        relojRef.current = setInterval(() => {
+            setVisibleHasta((v) => {
+                if (v >= hechos.length) {
+                    if (relojRef.current) clearInterval(relojRef.current);
+                    setReproduciendo(false);
+                    return v;
+                }
+                return v + 1;
+            });
+        }, MS_POR_HECHO_BASE / nueva);
     };
 
     const pausar = () => {
@@ -163,6 +191,21 @@ export function ExpedienteVivo({
                                 {fmt.format(new Date(fechaActual))}
                             </span>
                         )}
+                        {/* A-70 · G19: el padre elige el ritmo. Cambiar la velocidad
+                            mientras corre reinicia el reloj con el nuevo intervalo. */}
+                        <label className="flex items-center gap-1 text-xs text-muted">
+                            <span className="sr-only">Velocidad de reproducción</span>
+                            <select
+                                className="rounded-lg border border-tinta/15 bg-papel/80 px-2 py-1 text-xs text-body dark:border-papel/15 dark:bg-tinta/60"
+                                value={velocidad}
+                                onChange={(e) => cambiarVelocidad(Number(e.target.value))}
+                                aria-label="Velocidad de reproducción"
+                            >
+                                {VELOCIDADES.map((v) => (
+                                    <option key={v} value={v}>{v}×</option>
+                                ))}
+                            </select>
+                        </label>
                         {reproduciendo ? (
                             <Button variant="ghost" onClick={pausar}>
                                 Pausar

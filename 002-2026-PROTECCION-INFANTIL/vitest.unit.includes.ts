@@ -181,6 +181,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/fechas-humano.test.ts",
     "src/lib/colegio/normalizacion.test.ts",
     "src/lib/colegio/periodo.test.ts",
+    // SPEC-361 (A-70 · F7/F8): documento por tipo y edad del menor.
+    "src/lib/padre/documento-menor.test.ts",
     // SPEC-353 (A-69 · C6): reglas puras de la frase "qué hacer hoy" del rector.
     "src/lib/colegio/que-hacer-hoy.test.ts",
     "src/lib/colegio/seguimiento.test.ts",
@@ -299,4 +301,14 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-240 (002-PI-143): pre-registro simplificado de colegio (sin BD).
     "src/app/dashboard/admin/colegios/nuevo/NuevoColegioPageClient.test.tsx",
     "src/components/modules/InvitacionEnviadaModal.test.tsx",
+    // SPEC-367 (A-73): los 3 estados del círculo de confianza (fetch mockeado, sin BD).
+    "src/components/modules/padre/circulo/CirculoConfianzaClient.test.tsx",
+    // SPEC-370 (I-264/I-265): nombre y bloque "Dónde" en el detalle del círculo.
+    "src/components/modules/padre/circulo/DetallePersona.test.tsx",
+    // SPEC-368 (A-74 · P1): control amable de la fecha del hecho (candados de B1).
+    "src/components/modules/FechaHoraIncidente.test.tsx",
+    // SPEC-368 (A-74): candado de la plantilla del camino guiado (autoconsistente con su validador).
+    "src/app/api/colegio/cursos/unificado/plantilla/plantilla-lista-autoconsistente.test.ts",
+    // SPEC-369: candados del poblador demo v2.
+    "scripts/demo/demo-v2.test.ts",
 ];
