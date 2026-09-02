@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
+import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
 import { decryptParameter } from "@/lib/param-encryption";
 import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
@@ -343,6 +343,65 @@ describe("POST /api/reportes/procesar", () => {
         const actualizado = await prisma.reporte.findUnique({ where: { id: duplicado.id } });
         expect(actualizado?.estado).toBe("DUPLICADO");
         expect(actualizado?.reporteOrigenId).toBe(origen.id);
+    });
+
+    it("INVARIANTE A-71: un reporte CON CUENTA nunca queda DUPLICADO aunque sea idéntico (la dedup solo aplica a anónimos)", async () => {
+        // El diseño de A-71 (resolución read-time del duplicado SOLO en el
+        // seguimiento público) se apoya en que los duplicados son SIEMPRE anónimos.
+        // Si alguien quita el guard `if (!esAnonimo)` de duplicados.ts, este test
+        // se cae — y ahí "Mis reportes" y el detalle del padre también necesitarían
+        // resolver el estado del original en tiempo de lectura.
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const usuario = await crearUsuario("PARENT");
+        const origen = await prisma.reporte.create({
+            data: {
+                identificador: "+57300INV001",
+                plataformaId: plataforma!.id,
+                texto: "Este número contactó a mi hija ofreciendo regalos.",
+                fechaIncidente: new Date("2026-07-10T14:30:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: "RPT-INV-01",
+                estado: "PENDIENTE",
+            },
+        });
+        mockClasificar.mockResolvedValue({
+            categoria: "OFRECIMIENTO_REGALOS" as CategoriaConducta,
+            confianza: 0.92,
+            posibleAgresorPar: false,
+            contienePii: false,
+            piiDetectada: [],
+            estado: "CLASIFICADO",
+            rawResponse: "{}",
+            metrics: { modelo: "ornith:9b", latenciaMs: 1200, promptTokens: 100, responseTokens: 20 },
+        });
+        mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
+        await POST(crearRequestProcesar(origen.id));
+
+        // Segundo reporte IDÉNTICO (mismo identificador y embedding) pero CON CUENTA.
+        const conCuenta = await prisma.reporte.create({
+            data: {
+                identificador: "+57300INV001",
+                plataformaId: plataforma!.id,
+                texto: "Este número contactó a mi hija ofreciendo regalos otra vez.",
+                fechaIncidente: new Date("2026-07-10T15:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: false,
+                usuarioId: usuario.id,
+                numeroSeguimiento: "RPT-INV-02",
+                estado: "PENDIENTE",
+            },
+        });
+        const res = await POST(crearRequestProcesar(conCuenta.id));
+        expect(res.status).toBe(200);
+
+        const actualizado = await prisma.reporte.findUnique({ where: { id: conCuenta.id } });
+        // NUNCA duplicado: la dedup se salta para no anónimos → se procesa normal.
+        expect(actualizado?.estado).not.toBe("DUPLICADO");
+        expect(actualizado?.reporteOrigenId).toBeNull();
+        expect(actualizado?.estado).toBe("CLASIFICADO");
     });
 
     it("no reprocesa reporte ya en estado final", async () => {

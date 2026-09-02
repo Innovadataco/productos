@@ -26,6 +26,14 @@ const SELECT_SEGUIMIENTO = {
     actualizadoEn: true,
     numeroSeguimiento: true,
     clasificacion: true,
+    // A-71 (SPEC-366): si el reporte es un duplicado, su seguimiento refleja el
+    // estado VIVO del original en tiempo de lectura (nunca un "en proceso" que no
+    // llega). El vínculo `reporteOrigenId` ya existe y hace de marcador; el estado
+    // del duplicado NO se materializa (sigue DUPLICADO → la señal lo excluye igual).
+    // Solo la clasificación (categoría) se hereda al display; NUNCA el texto del
+    // original (queda cifrado, admin-reveal).
+    reporteOrigenId: true,
+    reporteOrigen: { select: { estado: true, clasificacion: true } },
 } satisfies Prisma.ReporteSelect;
 
 /** E-8: select exacto de la bandeja de revisión del admin (con corrección anidada). */
