@@ -12,10 +12,13 @@ export const dynamic = "force-dynamic";
 /**
  * Geografía y reincidencia (mockup v3 pantalla 3): dónde pasa la operación
  * y quién repite — patrones agregados, no personas. El mapa es client-only
- * (react-leaflet vía dynamic import ssr:false).
+ * (react-leaflet vía dynamic import ssr:false) y desde el Pulso siguiente
+ * nivel es un MAPA DE CALOR: color por cuartil de intensidad y tamaño por
+ * total (calorCiudades del contrato GeoData).
  *
  * Candado 9: cada tarjeta dice su vacío con texto honesto; la reincidencia
- * con base delgada (fuente 'honesto_vacio') se anuncia en vez de inflarse.
+ * con base delgada (fuente 'honesto_vacio') se anuncia en vez de inflarse y
+ * el mapa de calor vacío se anuncia en vez de pintarse mudo.
  * Candado 10: toda cifra sale de GeoData; esta página no calcula métricas.
  */
 export default async function GeografiaPage() {
@@ -25,7 +28,7 @@ export default async function GeografiaPage() {
         <main className="relative z-10 mx-auto max-w-[1180px] px-6 pb-20 pt-8">
             <Topbar titulo="Geografía y" acento="reincidencia" activo="geografia" />
 
-            <TarjetaMapa topCiudades={geo.topCiudades} ciudadesConReportes={geo.ciudadesConReportes} />
+            <TarjetaMapa calorCiudades={geo.calorCiudades} ciudadesConReportes={geo.ciudadesConReportes} />
 
             <div className="mb-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
                 <BarrasTopCiudades

@@ -11,6 +11,8 @@
 // hayDatos=false), ticker con haceMin correcto y texto determinista.
 // Ampliación v3: alertas/anonimato/estados/comercial/cobertura del Pulso
 // (mapeo del ResultSet, ceros honestos en vacío y degradación por sección).
+// SPEC-006: semana contra semana (ventanas 7d vs. previas, NULL sin base)
+// y SLA vencido (solo estados abiertos, top 5 por colegio con nombre).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,6 +76,13 @@ const F = {
     estadosReporte: '"estado"::text AS estado',
     comercial: 'FROM "Suscripcion"',
     cobertura: "AS universo",
+    // SPEC-006 (pulso.ts) — fragmentos distintivos que NO colisionan con
+    // 'FROM "AlertaColegio"' (alertas v3): en los mapas van PRIMERO.
+    semanaReportes: "previos_7d",
+    semanaAlertas: "alertas_previas_7d",
+    semanaMedias: "media_7d_h",
+    slaPorColegio: 'JOIN "Colegio" c',
+    slaVencidas: '"vencimientoSla" < now()',
 } as const;
 
 const SERIE_14_REAL: Array<[string, number]> = [
@@ -345,6 +354,132 @@ describe("getPulso · datos reales mockeados", () => {
             { haceMin: 1, texto: "Reporte #0000FF marcado como posible spam" },
         ]);
         expect(pulso.saludOperativa).toBe(30); // solo réplica aporta
+    });
+});
+
+// ─── getPulso · SPEC-006: semana contra semana + SLA vencido ─────────────────
+
+describe("getPulso · semana contra semana (SPEC-006)", () => {
+    it("ventanas 7d vs. previas: cifras del ResultSet listas para el delta", async () => {
+        mockConsultas([
+            [F.semanaReportes, [{ actual_7d: 9, previos_7d: 6 }]],
+            [F.semanaAlertas, [{ alertas_7d: 14, alertas_previas_7d: 10 }]],
+            [F.semanaMedias, [{ media_7d_h: 2.44, media_7d_previas_h: 3.36 }]],
+        ]);
+
+        const pulso = await getPulso();
+
+        expect(pulso.semana).toEqual({
+            reportes7d: 9,
+            reportes7dPrevios: 6, // 9 vs. 6 → subió; el delta lo pinta la UI
+            alertasNuevas7d: 14,
+            alertasNuevas7dPrevias: 10,
+            clasificacionMediaHoras7d: 2.4, // redondear1, igual que el KPI mensual
+            clasificacionMediaHorasPrevias: 3.4,
+        });
+    });
+
+    it("ventana previa en 0 → previos NULL (sin base, candado 9); el actual sí es su 0 real", async () => {
+        mockConsultas([
+            [F.semanaReportes, [{ actual_7d: 3, previos_7d: 0 }]],
+            [F.semanaAlertas, [{ alertas_7d: 0, alertas_previas_7d: 0 }]],
+            [F.semanaMedias, [{ media_7d_h: null, media_7d_previas_h: null }]],
+        ]);
+
+        const pulso = await getPulso();
+
+        expect(pulso.semana).toEqual({
+            reportes7d: 3,
+            reportes7dPrevios: null, // 0 en la ventana previa = sin base, jamás inventada
+            alertasNuevas7d: 0,
+            alertasNuevas7dPrevias: null,
+            clasificacionMediaHoras7d: null, // AVG sin filas → NULL directo del ResultSet
+            clasificacionMediaHorasPrevias: null,
+        });
+    });
+
+    it("sondeos de semana rotos → ceros/NULL honestos sin tumbar el resto del Pulso", async () => {
+        mockConsultas([
+            [F.semanaReportes, new Error('relation "Reporte" does not exist')],
+            [F.semanaMedias, new Error("timeout de la réplica")],
+            [F.agregados, [{
+                total_historico: 10,
+                hoy: 1,
+                mes_actual: 4,
+                mes_anterior_mismo_tramo: 2,
+                reportes_7d: 3,
+                reportes_30d: 8,
+                clasificados_30d: 8,
+            }]],
+        ]);
+
+        const pulso = await getPulso();
+
+        expect(pulso.semana.reportes7d).toBe(0);
+        expect(pulso.semana.reportes7dPrevios).toBeNull();
+        expect(pulso.semana.clasificacionMediaHoras7d).toBeNull();
+        expect(pulso.kpis.reportesMes).toBe(4); // el resto vive
+    });
+});
+
+describe("getPulso · SLA vencido (SPEC-006)", () => {
+    it("total + top por colegio con nombre (join), tal cual el ResultSet", async () => {
+        // OJO: slaPorColegio primero — su SQL también contiene el fragmento
+        // de slaVencidas ('"vencimientoSla" < now()').
+        mockConsultas([
+            [F.slaPorColegio, [
+                { colegio: "I.E. San José", vencidas: 12 },
+                { colegio: "Col. Bellavista", vencidas: 9 },
+                { colegio: "Col. Nuevo Amanecer", vencidas: 4 },
+            ]],
+            [F.slaVencidas, [{ vencidas: 37 }]],
+        ]);
+
+        const pulso = await getPulso();
+
+        expect(pulso.sla).toEqual({
+            vencidas: 37,
+            porColegio: [
+                { colegio: "I.E. San José", vencidas: 12 },
+                { colegio: "Col. Bellavista", vencidas: 9 },
+                { colegio: "Col. Nuevo Amanecer", vencidas: 4 },
+            ],
+        });
+        // El filtro de estados ABIERTOS va en el SQL (nueva/vista/escalada):
+        // gestionada/cerrada no cuentan aunque su SLA hubiera vencido.
+        const sqlEnviados = queryRawMock.mock.calls.map((c) =>
+            (Array.isArray(c[0]) ? (c[0] as string[]).join(" ") : String(c[0])).replace(/\s+/g, " "),
+        );
+        const sqlSla = sqlEnviados.filter((s) => s.includes('"vencimientoSla"'));
+        expect(sqlSla.length).toBeGreaterThan(0);
+        for (const sql of sqlSla) {
+            expect(sql).toContain(`"estado" IN ('nueva', 'vista', 'escalada')`);
+        }
+    });
+
+    it("vacío honesto: sin vencidas → vencidas 0 y porColegio [] (nada inventado)", async () => {
+        mockConsultas([
+            [F.slaPorColegio, []],
+            [F.slaVencidas, [{ vencidas: 0 }]],
+        ]);
+
+        const pulso = await getPulso();
+
+        expect(pulso.sla).toEqual({ vencidas: 0, porColegio: [] });
+    });
+
+    it("consulta SLA rota → 0 y [] con warn; la semana sigue viva", async () => {
+        mockConsultas([
+            [F.slaPorColegio, new Error('column "vencimientoSla" does not exist')],
+            [F.slaVencidas, new Error('column "vencimientoSla" does not exist')],
+            [F.semanaReportes, [{ actual_7d: 5, previos_7d: 5 }]],
+        ]);
+
+        const pulso = await getPulso();
+
+        expect(pulso.sla).toEqual({ vencidas: 0, porColegio: [] });
+        expect(pulso.semana.reportes7d).toBe(5);
+        expect(pulso.semana.reportes7dPrevios).toBe(5);
     });
 });
 

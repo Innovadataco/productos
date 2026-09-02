@@ -290,3 +290,23 @@
 .dark .leaflet-control-attribution a {
     color: rgb(var(--tinta-muted-rgb));
 }
+
+/* ==========================================================================
+   Pulso siguiente nivel — mapa de calor por ciudad (Geografía).
+   ========================================================================== */
+
+/* Leyenda de la escala de calor bajo el mapa: gradiente pino→cielo→ambar→
+   rubí, las 4 bandas por cuartil de intensidad con que MapaReportes pinta
+   los CircleMarker. Escala estática: no hay animación involucrada, así que
+   prefers-reduced-motion no necesita tocarla. */
+.leyenda-calor {
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(
+        90deg,
+        rgb(var(--pino-rgb)),
+        rgb(var(--cielo-rgb)),
+        rgb(var(--ambar-rgb)),
+        rgb(var(--rubi-rgb))
+    );
+}

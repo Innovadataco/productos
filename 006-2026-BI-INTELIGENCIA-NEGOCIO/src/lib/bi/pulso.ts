@@ -23,6 +23,13 @@
 // anonimato, estados del pipeline, comercial (Suscripcion) y cobertura
 // de clasificación. Mismos candados: cada sección degrada a vacío/ceros
 // con warn si su consulta falla; % solo con base > 0 (si no, NULL).
+//
+// Pulso siguiente nivel (SPEC-006): comparativa semana contra semana
+// (ventanas móviles [NOW−7d, NOW) vs. [NOW−14d, NOW−7d)) y alertas de
+// colegio con SLA vencido. Mismo criterio candado 9 que deltaMesPct:
+// el valor de la ventana PREVIA es NULL cuando quedó en 0 (sin base de
+// comparación no hay contraste honesto); el JOIN a Colegio para el nombre
+// es SQL directo y parametrizado de este lib (no del motor de consulta).
 
 import { prisma } from "@/lib/db";
 
@@ -67,6 +74,30 @@ export interface PulsoData {
     coberturaClasificacionPct: number | null;
     /** Reportes no eliminados aún sin clasificación (universo − clasificados) */
     sinClasificar: number;
+    // ── Pulso siguiente nivel (SPEC-006) ────────────────────────────────
+    /**
+     * Semana contra semana: ventanas móviles [NOW−7d, NOW) vs.
+     * [NOW−14d, NOW−7d), calculadas EN SQL. Los *_previos son NULL cuando
+     * la ventana previa quedó en 0 (sin base de comparación, mismo
+     * criterio que deltaMesPct); las medias son NULL cuando la ventana no
+     * tiene clasificaciones (AVG sin filas). Jamás un valor inventado.
+     */
+    semana: {
+        reportes7d: number;
+        reportes7dPrevios: number | null;
+        alertasNuevas7d: number;
+        alertasNuevas7dPrevias: number | null;
+        clasificacionMediaHoras7d: number | null;
+        clasificacionMediaHorasPrevias: number | null;
+    };
+    /**
+     * Alertas de colegio con SLA vencido (vencimientoSla < NOW) en estado
+     * ABIERTO ('nueva' | 'vista' | 'escalada' — literales del enum de PI,
+     * documentados junto a TOP_SLA_COLEGIOS). porColegio: top 5 con el
+     * nombre vía JOIN a Colegio (SQL directo parametrizado del lib, no del
+     * motor). Vacío honesto: sin vencidas → vencidas 0 y porColegio [].
+     */
+    sla: { vencidas: number; porColegio: { colegio: string; vencidas: number }[] };
 }
 
 // ─── Filas crudas de las consultas ───────────────────────────────────────────
@@ -126,6 +157,26 @@ interface FilaCobertura {
     universo: number;
     con_clasificacion: number;
 }
+// ── SPEC-006: filas crudas de semana contra semana y SLA vencido ───────
+interface FilaSemanaConteo {
+    actual_7d: number;
+    previos_7d: number;
+}
+interface FilaSemanaAlertas {
+    alertas_7d: number;
+    alertas_previas_7d: number;
+}
+interface FilaSemanaMedias {
+    media_7d_h: number | null;
+    media_7d_previas_h: number | null;
+}
+interface FilaSlaTotal {
+    vencidas: number;
+}
+interface FilaSlaColegio {
+    colegio: string;
+    vencidas: number;
+}
 
 /** Medias de tiempo creación → clasificación, en horas (30 d vs. 30 previos). */
 export interface MediasClasificacion {
@@ -172,6 +223,24 @@ const COMERCIAL_VACIO: FilaComercial = {
     padres_freemium: 0,
 };
 const COBERTURA_VACIA: FilaCobertura = { universo: 0, con_clasificacion: 0 };
+
+// ── SPEC-006: constantes documentadas y fallbacks de degradación ────────
+// Estados ABIERTOS de AlertaColegio ('nueva' | 'vista' | 'escalada'): una
+// alerta gestionada o cerrada ya no exige acción aunque su SLA hubiera
+// vencido. Son literales del enum de PI en el SQL (mismo criterio que
+// 'ACTIVA' en el sondeo comercial): constante de negocio, no configurable.
+/** Tope del ranking de colegios con más SLA vencido (forma de la vista). */
+const TOP_SLA_COLEGIOS = 5;
+
+// Consulta rota → ceros/NULL honestos con warn (candado 9): sin respuesta
+// no hay base, así que los *_previos degradan a 0 → NULL en el contrato.
+const SEMANA_CONTEO_VACIO: FilaSemanaConteo = { actual_7d: 0, previos_7d: 0 };
+const SEMANA_ALERTAS_VACIA: FilaSemanaAlertas = { alertas_7d: 0, alertas_previas_7d: 0 };
+const SEMANA_MEDIAS_VACIAS: FilaSemanaMedias = {
+    media_7d_h: null,
+    media_7d_previas_h: null,
+};
+const SLA_TOTAL_VACIO: FilaSlaTotal = { vencidas: 0 };
 
 // ─── Helpers puros (también usados por el motor de insights) ─────────────────
 
@@ -298,6 +367,11 @@ export async function getPulso(): Promise<PulsoData> {
         filasEstados,
         filasComercial,
         filasCobertura,
+        filasSemanaReportes,
+        filasSemanaAlertas,
+        filasSemanaMedias,
+        filasSlaTotal,
+        filasSlaColegio,
     ] = await Promise.all([
         obtenerMediasClasificacion(),
         // Agregados del mes/día/semana + insumos de salud, en UN paso por la MV.
@@ -434,6 +508,70 @@ export async function getPulso(): Promise<PulsoData> {
                 LEFT JOIN "ClasificacionIA" c ON c."reporteId" = r."id"
                 WHERE r."eliminado" = false`,
         ),
+        // ── SPEC-006: semana contra semana (ventanas móviles en SQL) ──
+        // [NOW−7d, NOW) vs. [NOW−14d, NOW−7d). Un sondeo por fuente para
+        // que cada uno degrade por su cuenta.
+        intentar(
+            "semana-reportes",
+            prisma.$queryRaw<FilaSemanaConteo[]>`
+                SELECT count(*) FILTER (
+                         WHERE "creadoEn" >= now() - interval '7 days')::int AS actual_7d,
+                       count(*) FILTER (
+                         WHERE "creadoEn" >= now() - interval '14 days'
+                           AND "creadoEn" <  now() - interval '7 days')::int AS previos_7d
+                FROM "Reporte"
+                WHERE "eliminado" = false`,
+        ),
+        // AlertaColegio no tiene "eliminado": la ventana va sobre creadoEn.
+        intentar(
+            "semana-alertas",
+            prisma.$queryRaw<FilaSemanaAlertas[]>`
+                SELECT count(*) FILTER (
+                         WHERE "creadoEn" >= now() - interval '7 days')::int AS alertas_7d,
+                       count(*) FILTER (
+                         WHERE "creadoEn" >= now() - interval '14 days'
+                           AND "creadoEn" <  now() - interval '7 days')::int AS alertas_previas_7d
+                FROM "AlertaColegio"`,
+        ),
+        // Medias creación → clasificación por ventana semanal (AVG sin
+        // filas → NULL honesto directo del ResultSet).
+        intentar(
+            "semana-medias",
+            prisma.$queryRaw<FilaSemanaMedias[]>`
+                SELECT (avg(EXTRACT(EPOCH FROM (c."creadoEn" - r."creadoEn")) / 3600)
+                         FILTER (WHERE c."creadoEn" >= now() - interval '7 days'))::float AS media_7d_h,
+                       (avg(EXTRACT(EPOCH FROM (c."creadoEn" - r."creadoEn")) / 3600)
+                         FILTER (WHERE c."creadoEn" >= now() - interval '14 days'
+                                   AND c."creadoEn" <  now() - interval '7 days'))::float AS media_7d_previas_h
+                FROM "ClasificacionIA" c
+                JOIN "Reporte" r ON r."id" = c."reporteId"
+                WHERE r."eliminado" = false`,
+        ),
+        // ── SPEC-006: SLA vencido (solo estados abiertos) ──
+        intentar(
+            "sla-vencidas",
+            prisma.$queryRaw<FilaSlaTotal[]>`
+                SELECT count(*)::int AS vencidas
+                FROM "AlertaColegio"
+                WHERE "vencimientoSla" < now()
+                  AND "estado" IN ('nueva', 'vista', 'escalada')`,
+        ),
+        // Top colegios por SLA vencido con nombre (JOIN directo del lib,
+        // parametrizado). vencimientoSla NULL no satisface la comparación:
+        // queda fuera sin filtro extra.
+        intentar(
+            "sla-por-colegio",
+            prisma.$queryRaw<FilaSlaColegio[]>`
+                SELECT c."nombre" AS colegio,
+                       count(*)::int AS vencidas
+                FROM "AlertaColegio" a
+                JOIN "Colegio" c ON c."id" = a."colegioId"
+                WHERE a."vencimientoSla" < now()
+                  AND a."estado" IN ('nueva', 'vista', 'escalada')
+                GROUP BY c."id", c."nombre"
+                ORDER BY vencidas DESC, c."nombre"
+                LIMIT ${TOP_SLA_COLEGIOS}`,
+        ),
     ]);
 
     const agregados = filasAgregados[0] ?? AGREGADOS_VACIOS;
@@ -491,6 +629,14 @@ export async function getPulso(): Promise<PulsoData> {
             ? Math.round((cobertura.con_clasificacion / cobertura.universo) * 100)
             : null;
 
+    // ── SPEC-006: semana contra semana + SLA vencido ──
+    // *_previos NULL cuando la ventana previa quedó en 0: sin base no hay
+    // contraste honesto (mismo criterio candado 9 que deltaMesPct).
+    const semanaReportes = filasSemanaReportes[0] ?? SEMANA_CONTEO_VACIO;
+    const semanaAlertas = filasSemanaAlertas[0] ?? SEMANA_ALERTAS_VACIA;
+    const semanaMedias = filasSemanaMedias[0] ?? SEMANA_MEDIAS_VACIAS;
+    const slaTotal = filasSlaTotal[0] ?? SLA_TOTAL_VACIO;
+
     return {
         kpis: {
             reportesMes: agregados.mes_actual,
@@ -523,5 +669,26 @@ export async function getPulso(): Promise<PulsoData> {
         },
         coberturaClasificacionPct,
         sinClasificar: cobertura.universo - cobertura.con_clasificacion,
+        semana: {
+            reportes7d: semanaReportes.actual_7d,
+            reportes7dPrevios:
+                semanaReportes.previos_7d > 0 ? semanaReportes.previos_7d : null,
+            alertasNuevas7d: semanaAlertas.alertas_7d,
+            alertasNuevas7dPrevias:
+                semanaAlertas.alertas_previas_7d > 0 ? semanaAlertas.alertas_previas_7d : null,
+            clasificacionMediaHoras7d:
+                semanaMedias.media_7d_h != null ? redondear1(semanaMedias.media_7d_h) : null,
+            clasificacionMediaHorasPrevias:
+                semanaMedias.media_7d_previas_h != null
+                    ? redondear1(semanaMedias.media_7d_previas_h)
+                    : null,
+        },
+        sla: {
+            vencidas: slaTotal.vencidas,
+            porColegio: filasSlaColegio.map((f) => ({
+                colegio: f.colegio,
+                vencidas: f.vencidas,
+            })),
+        },
     };
 }
