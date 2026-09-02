@@ -10,6 +10,15 @@
 // Nota de orden: el catálogo se carga ANTES del cache porque validarSql
 // valida contra el catálogo vigente — sin catálogo no hay validación
 // posible, ni siquiera del SQL humano cacheado.
+// Motor v2 (multi-parte): el schema raíz del LLM es { planes: [...] } (1..5)
+// — la pregunta puede pedir varias métricas y el modelo descompone. CADA
+// plan recorre el pipeline completo (checks atómicos → constructor →
+// validador → ejecución → plantilla): un plan inválido aclara SU tramo sin
+// tirar los demás, y la respuesta se compone con una sección por sub-plan
+// (plantillas.renderRespuestaCompuesta, cifras siempre del ResultSet).
+// Bitácora: UNA fila por consulta — planJson guarda el primer plan (compat
+// con el historial) y pasosJson acumula TODO, incluido un paso por sub-plan
+// con el JSON completo de cada plan.
 
 import { prisma } from "@/lib/db";
 import { getConfig } from "@/lib/config";
@@ -20,7 +29,7 @@ import { construirSql, type PlanLLM } from "./constructor-sql";
 import { validarSql } from "./validador-sql";
 import { cargarCatalogo, esquemaJsonParaLLM, presentarCatalogoParaLLM, valoresDeColumna, type Catalogo } from "./catalogo";
 import { buscarEnCache, normalizarPregunta } from "./cache";
-import { PLANTILLA_SIN_DATOS, renderRespuesta } from "./plantillas";
+import { PLANTILLA_SIN_DATOS, renderRespuesta, renderRespuestaCompuesta } from "./plantillas";
 import { crearTraza } from "@/lib/observabilidad/traza";
 
 export interface RespuestaMotor {
@@ -35,7 +44,8 @@ export interface RespuestaMotor {
 /**
  * Prompt system del traductor NL→plan (candado 3): catálogo enumerado,
  * el modelo devuelve SOLO índices. Breve a propósito: el catálogo y el
- * schema cerrado hacen el trabajo pesado.
+ * schema cerrado hacen el trabajo pesado. Motor v2: enseña las tres
+ * capacidades nuevas (multi-parte, ventana absoluta, agrupación).
  */
 const SYSTEM_PROMPT =
     "Eres un traductor de preguntas en español a planes de consulta de solo lectura. " +
@@ -43,11 +53,25 @@ const SYSTEM_PROMPT =
     "de ese catálogo (tabla_idx, columnas_idx) junto con la agregación, los filtros, el " +
     "período y el límite. Nunca escribes SQL ni nombres de tablas o columnas: el servidor " +
     "traduce los índices. Si la pregunta es ambigua, devuelve el plan más simple y directo. " +
+    "Si la pregunta pide VARIAS métricas o temas, descomponla: devuelve UN plan por cada " +
+    "parte en el arreglo planes (máximo 5), cada uno con su propia tabla, agregación, filtros " +
+    "y período. Si la pregunta pide una sola cosa, devuelve planes con exactamente un plan. " +
     "El período es OPCIONAL: inclúyelo SOLO si la pregunta pide explícitamente una ventana " +
-    "temporal (hoy ≈ 1 día, esta semana ≈ 7, este mes ≈ 30, este año ≈ 365, últimos N días = N), " +
+    "temporal relativa (hoy ≈ 1 día, esta semana ≈ 7, este mes ≈ 30, este año ≈ 365, últimos N días = N), " +
     "siempre con una columna de fecha del catálogo y dias entero >= 1. Si la pregunta NO pide " +
-    "ventana temporal, omite el período por completo. NUNCA conviertas ventanas temporales a " +
-    "filtros de fecha absoluta: para eso existe el período. " +
+    "ventana temporal, omite el período por completo. " +
+    "Para ventanas con fechas o meses/años CONCRETOS usa ventanaAbsoluta (columna de fecha, " +
+    "desde y hasta en formato YYYY-MM-DD, hasta EXCLUSIVO): 'julio de 2025' → desde 2025-07-01 " +
+    "hasta 2025-08-01; 'el año 2025' → desde 2025-01-01 hasta 2026-01-01; 'del 10 al 15 de marzo " +
+    "de 2025' → desde 2025-03-10 hasta 2025-03-16. Para ventanas relativas ('hoy', 'últimos 30 " +
+    "días', 'este mes') usa SIEMPRE período, nunca ventanaAbsoluta. " +
+    "Cuando la pregunta pida una distribución o ranking por categoría ('por plataforma', 'por " +
+    "estado', 'qué colegios tienen más alertas', 'la categoría más frecuente', 'top N'), usa " +
+    "agruparPor_idx con la columna de grupo (debe ser de tipo texto o enum) y la agregación " +
+    "correspondiente: conteo para frecuencias (cuenta filas por grupo), o suma/promedio/" +
+    "maximo/minimo sobre columnas_idx[0]. NUNCA uses maximo/minimo sobre una columna de texto " +
+    "para responder 'el más frecuente': eso es conteo con agruparPor. La agregación lista no " +
+    "admite agruparPor. " +
     "No agregues filtros que la pregunta no pide explícitamente: cada filtro debe venir de una " +
     "condición dicha por el usuario. Cuando una columna lista 'Valores reales: a · b · c' en su " +
     "descripción, el valor del filtro debe ser EXACTAMENTE uno de esos valores (nunca una frase " +
@@ -60,6 +84,9 @@ const REGEX_MARCAS_TEMPORALES = /\b(hoy|ayer|semanas?|mes(?:es)?|años?|días?|�
 function tieneMarcasTemporales(pregunta: string): boolean {
     return REGEX_MARCAS_TEMPORALES.test(pregunta);
 }
+
+/** Tope de sub-planes por pregunta (espejo del maxItems del JSON Schema). */
+const MAX_PLANES = 5;
 
 /** Texto determinista cuando el catálogo en BD está vacío (candado 8). */
 const TEXTO_CATALOGO_VACIO =
@@ -119,6 +146,23 @@ function esTablaInexistente(e: unknown): boolean {
     return msg.includes("42P01") || msg.includes("42703");
 }
 
+/**
+ * Extrae los planes de la respuesta del LLM. El schema raíz vigente es
+ * { planes: [...] } (1..5, cerrado). Se acepta también el plan PELADO del
+ * schema anterior (objeto con tabla_idx + agregacion) como arreglo de un
+ * plan — compat con clientes y mocks previos al cambio de envoltura; cada
+ * plan sigue pasando por TODOS los checks atómicos, el constructor y el
+ * validador (la tolerancia es de envoltura, nunca de contenido). Devuelve
+ * null si la forma no es ninguna de las dos.
+ */
+function planesDeRespuesta(data: unknown): PlanLLM[] | null {
+    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+    const envoltura = (data as { planes?: unknown }).planes;
+    if (Array.isArray(envoltura)) return envoltura as PlanLLM[];
+    if ("tabla_idx" in data && "agregacion" in data) return [data as PlanLLM];
+    return null;
+}
+
 /** Crea la fila de traza (candado 12). Fail-open: devuelve "" si falla. */
 async function crearLog(preguntaNL: string, usuarioEmail: string): Promise<string> {
     try {
@@ -172,8 +216,17 @@ function mencionaValor(pregunta: string, valor: string): boolean {
  * el JSON puede traer índices fuera de rango o campos ausentes. Devuelve
  * null si el plan es completo o el texto determinista de clarificación
  * que pide exactamente lo que falta.
+ *
+ * `filtrosCubiertos` (multi-parte): claves "tabla:columna:valor" de TODOS
+ * los filtros de TODOS los sub-planes de la pregunta. I-08 no dispara si el
+ * valor enum mencionado ya lo filtra OTRO sub-plan (su parte sí lo pedía).
  */
-function validarPlanAtomico(plan: PlanLLM, cat: Catalogo, pregunta: string): string | null {
+function validarPlanAtomico(
+    plan: PlanLLM,
+    cat: Catalogo,
+    pregunta: string,
+    filtrosCubiertos?: Set<string>,
+): string | null {
     if (!esEntero(plan.tabla_idx) || plan.tabla_idx < 0 || plan.tabla_idx >= cat.tablas.length) {
         return "No pude identificar sobre qué datos quieres consultar. Reformula la pregunta indicando el tema (por ejemplo: reportes, colegios, suscripciones, facturación).";
     }
@@ -219,14 +272,43 @@ function validarPlanAtomico(plan: PlanLLM, cat: Catalogo, pregunta: string): str
         }
     }
 
+    // Ventana absoluta (motor v2): rango + formato YYYY-MM-DD + orden. La
+    // guarda de tipo (solo columnas de fecha) vive en el constructor (I-10).
+    if (plan.ventanaAbsoluta) {
+        const v = plan.ventanaAbsoluta;
+        const columnaOk = esEntero(v.columna_idx) && v.columna_idx >= 0 && v.columna_idx < tabla.columnas.length;
+        const formatoOk =
+            typeof v.desde === "string" &&
+            typeof v.hasta === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(v.desde) &&
+            /^\d{4}-\d{2}-\d{2}$/.test(v.hasta) &&
+            v.desde <= v.hasta;
+        if (!columnaOk || !formatoOk) {
+            return "La ventana de fechas absoluta no es válida. Indica el rango con fechas concretas (por ejemplo: del 2025-07-01 al 2025-08-01) o una ventana relativa (últimos 30 días).";
+        }
+    }
+
+    // Agrupación (motor v2): el índice de grupo debe existir en la tabla. La
+    // guarda de tipo (solo texto/enum) vive en el constructor.
+    if (plan.agruparPor_idx !== undefined) {
+        const grupoOk =
+            esEntero(plan.agruparPor_idx) && plan.agruparPor_idx >= 0 && plan.agruparPor_idx < tabla.columnas.length;
+        if (!grupoOk) {
+            return "No pude identificar por qué campo agrupar los resultados. Reformula la pregunta indicando la categoría (por ejemplo: por estado, por categoría, por plataforma).";
+        }
+    }
+
     // I-08: la pregunta nombra VERBATIM un valor enum del catálogo pero el
     // plan no filtra por esa columna → el LLM se tragó el filtro (caso real:
     // "SOLICITUD_MATERIAL" en la pregunta, plan sin filtro → respondía el
     // total 2012 en vez de 153). Deny-by-default: clarificar, no adivinar.
+    // Multi-parte: si OTRO sub-plan ya filtra ese valor en esa columna, la
+    // mención está cubierta (su tramo sí lo pedía) y no se aclara dos veces.
     const columnasConFiltro = new Set((plan.filtros ?? []).map((f) => f.columna_idx));
     for (const [colIdx, col] of tabla.columnas.entries()) {
         if (columnasConFiltro.has(colIdx)) continue;
         for (const valor of extraerValoresEnum(col.descripcion ?? "")) {
+            if (filtrosCubiertos?.has(`${plan.tabla_idx}:${colIdx}:${valor.toLowerCase()}`)) continue;
             if (mencionaValor(pregunta, valor)) {
                 return `Mencionaste "${valor}" pero no lo usé como filtro. ¿Quieres filtrar por ${col.nombreFuente} = ${valor}? Reformula la pregunta para confirmarlo.`;
             }
@@ -244,6 +326,14 @@ function textoParaCache(filas: Record<string, unknown>[]): string {
     return `La consulta devolvió ${filas.length} filas.`;
 }
 
+/** Estado agregado de una consulta multi-parte: con datos manda ok; sin datos pero con algo que aclarar, clarificacion; luego rechazada; al final sin_datos. */
+function estadoAgregado(hubo: { ok: boolean; clarificacion: boolean; rechazada: boolean }): RespuestaMotor["estado"] {
+    if (hubo.ok) return "ok";
+    if (hubo.clarificacion) return "clarificacion";
+    if (hubo.rechazada) return "rechazada";
+    return "sin_datos";
+}
+
 /**
  * Punto único del chat NL→SQL. Orquesta el pipeline completo y deja traza
  * en BIConsultaLog pase lo que pase (candado 12).
@@ -257,6 +347,8 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
     const logId = await crearLog(pregunta, usuarioEmail);
     // Plan del LLM capturado para la traza (candado 12): índices, filtros y
     // VALORES exactos — sin esto un filtro erróneo del LLM no era depurable.
+    // Multi-parte: planJson guarda el PRIMER plan (compat); todos los planes
+    // quedan en pasosJson (un paso "sub-plan N" con el JSON completo).
     let planCapturado: PlanLLM | null = null;
 
     /** Cierra la traza y devuelve la respuesta con su consultaLogId. */
@@ -351,9 +443,10 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             console.warn(`[BI-MOTOR] Entrada de cache rechazada por el validador: ${veredictoCache.violaciones.join("; ")}`);
         }
 
-        // 4 · LLM con structured output cerrado (candados 1, 2, 3): si el
-        // JSON no parsea, llamarOllamaStructured lanza y NO se rescata.
-        let plan: PlanLLM;
+        // 4 · LLM con structured output cerrado (candados 1, 2, 3): schema raíz
+        // { planes: [...] } (1..5). Si el JSON no parsea, llamarOllamaStructured
+        // lanza y NO se rescata.
+        let planes: PlanLLM[];
         const tLlm = Date.now();
         try {
             const modelo = await getModeloSql();
@@ -361,103 +454,190 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             const prompt =
                 `Catálogo de datos disponibles (usa SOLO los índices):\n${presentarCatalogoParaLLM(cat)}\n\n` +
                 `Pregunta del usuario: ${pregunta}\n\n` +
-                "Devuelve el plan de consulta según el esquema: solo índices numéricos del catálogo.";
-            const res = await llamarOllamaStructured<PlanLLM>(
+                "Devuelve los planes de consulta según el esquema: un plan por cada métrica pedida (máximo 5), solo índices numéricos del catálogo.";
+            const res = await llamarOllamaStructured<{ planes: PlanLLM[] }>(
                 modelo,
                 prompt,
                 esquemaJsonParaLLM(cat),
                 SYSTEM_PROMPT,
                 { temperature: 0, seed: 42 },
             );
-            plan = res.data;
+            const normalizados = planesDeRespuesta(res.data);
+            if (!normalizados) {
+                throw new Error("La respuesta del LLM no trae el arreglo planes del schema raíz.");
+            }
+            planes = normalizados;
             traza.paso("llm-respuesta", `${Date.now() - tLlm} ms · JSON parseado`);
-            planCapturado = plan; // candado 12: el plan (con valores) va a la bitácora
+            planCapturado = planes[0] ?? null; // candado 12 (compat): el primer plan va a planJson
         } catch (e) {
             traza.paso("llm-respuesta", `${Date.now() - tLlm} ms · falló o no parseó`);
             console.error(`[BI-MOTOR] LLM falló o JSON inválido: ${mensajeDeError(e)}`);
             return await finalizar({ estado: "error", texto: TEXTO_ERROR_LLM }, mensajeDeError(e));
         }
 
-        // 5 · Checks atómicos (candado 4): si falta algo, clarificación.
-        let faltante = validarPlanAtomico(plan, cat, pregunta);
-        // Fallback determinista (I-03): si el único problema es el período
-        // malformado por el LLM y la pregunta NO pedía ventana temporal, se
-        // descarta el período y se responde sin él — la consulta sin ventana
-        // es la respuesta correcta para esa pregunta.
-        if (
-            faltante &&
-            plan.periodo &&
-            faltante.startsWith("El período indicado") &&
-            !tieneMarcasTemporales(pregunta)
-        ) {
-            delete plan.periodo;
-            faltante = validarPlanAtomico(plan, cat, pregunta);
-        }
-        if (faltante) {
+        if (planes.length === 0) {
             traza.paso("plan-atomico", "clarificación solicitada");
-            return await finalizar({ estado: "clarificacion", texto: faltante }, "plan_incompleto");
+            return await finalizar({ estado: "clarificacion", texto: TEXTO_PLAN_INVALIDO }, "planes_vacios");
         }
-        traza.paso("plan-atomico", "completo");
-
-        // I-13: período espurio — si la pregunta NO tiene ninguna marca
-        // temporal y el LLM aun así agregó un período, se descarta (caso
-        // real: "alertas escaladas sin gestionar" llegó con 1 día espurio y
-        // respondía 0 habiendo 254). Simétrico al fallback de I-03.
-        if (plan.periodo && !tieneMarcasTemporales(pregunta)) {
-            delete plan.periodo;
+        // Tope del schema (maxItems 5): si el modelo se excede, se responden
+        // las primeras 5 partes y el exceso queda en la traza (fail-safe:
+        // jamás se ejecuta nada más allá del tope).
+        if (planes.length > MAX_PLANES) {
+            traza.paso("planes", `${planes.length} planes recibidos → se ejecutan los primeros ${MAX_PLANES}`);
+            planes = planes.slice(0, MAX_PLANES);
         }
 
-        // 6 · El SERVIDOR construye el SQL (candado 3) con límite de BD (B3).
+        // Límite de BD (B3), una sola lectura para todos los sub-planes.
         const limiteCfg = Number((await getConfig("bi.motor.limite_maximo")) ?? "500");
         const limiteMaximo = Number.isFinite(limiteCfg) && limiteCfg > 0 ? Math.floor(limiteCfg) : 500;
-        const construido = construirSql(cat, plan, limiteMaximo);
-        if (!construido.ok) {
-            // Doble defensa tras validarPlanAtomico: el constructor también
-            // es deny-by-default y su rechazo significa plan inválido.
-            traza.paso("sql-construido", `falló: ${construido.error}`);
-            return await finalizar({ estado: "clarificacion", texto: TEXTO_PLAN_INVALIDO }, construido.error);
-        }
-        const { sql, params } = construido;
-        traza.paso("sql-construido", `límite ${limiteMaximo}`);
 
-        // 7 · Validador post-LLM estricto (candado 5): si no aprueba, no se
-        // ejecuta; se registra para revisión humana.
-        const veredicto = validarSql(cat, sql);
-        traza.paso(
-            "validador",
-            veredicto.valida ? "aprobada" : `rechazada · ${veredicto.violaciones.length} violaciones`,
-        );
-        if (!veredicto.valida) {
-            return await finalizar(
-                { estado: "rechazada", texto: TEXTO_RECHAZO_VALIDADOR, sql },
-                veredicto.violaciones.join("; ") || "validador_sql",
-            );
-        }
-
-        // 8 · Ejecución parametrizada contra la réplica (solo lectura).
-        let filas: Record<string, unknown>[];
-        const tEjec = Date.now();
-        try {
-            filas = (await prisma.$queryRawUnsafe(sql, ...params)) as Record<string, unknown>[];
-            traza.paso("ejecucion", `${filas.length} filas · ${Date.now() - tEjec} ms`);
-        } catch (e) {
-            if (esTablaInexistente(e)) {
-                // Réplica aún sin la tabla: candado 9, no se inventa.
-                traza.paso("ejecucion", "falló: tabla inexistente (42P01)");
-                traza.paso("plantilla", "sin_datos");
-                return await finalizar({ estado: "sin_datos", texto: PLANTILLA_SIN_DATOS, sql }, "42P01");
+        // Cobertura global de filtros (I-08 multi-parte): un valor enum
+        // mencionado en la pregunta está cubierto si CUALQUIER sub-plan lo
+        // filtra en esa columna de esa tabla.
+        const filtrosCubiertos = new Set<string>();
+        for (const p of planes) {
+            for (const f of p?.filtros ?? []) {
+                if (typeof f?.valor === "string" || typeof f?.valor === "number") {
+                    filtrosCubiertos.add(`${p.tabla_idx}:${f.columna_idx}:${String(f.valor).trim().toLowerCase()}`);
+                }
             }
-            throw e;
         }
 
-        // 9 · Plantilla determinista (candados 9 y 10): cifras del ResultSet.
-        if (filas.length === 0) {
-            traza.paso("plantilla", "sin_datos");
-            return await finalizar({ estado: "sin_datos", texto: PLANTILLA_SIN_DATOS, sql, filas: 0 });
+        // 5-9 · Pipeline completo POR SUB-PLAN (candados 3, 4, 5, 9, 10): un
+        // plan inválido aclara SU tramo; no tira los demás.
+        const multi = planes.length > 1;
+        const secciones: string[] = [];
+        const sqls: string[] = [];
+        const errores: string[] = [];
+        const hubo = { ok: false, clarificacion: false, rechazada: false };
+        let huboEjecucion = false;
+        let filasTotal = 0;
+
+        for (const [i, planOriginal] of planes.entries()) {
+            const n = i + 1;
+            // Pasos nuevos DESPUÉS de los existentes: con un solo plan los
+            // hitos conservan su nombre de siempre; con varios van prefijados
+            // por sub-plan y cada sub-plan abre con un paso que lleva su JSON
+            // completo (bitácora: pasosJson acumula TODOS los planes).
+            const paso = (nombre: string, detalle?: string) =>
+                traza.paso(multi ? `sub-plan ${n} · ${nombre}` : nombre, detalle);
+            if (multi) {
+                traza.paso(`sub-plan ${n}`, JSON.stringify(planOriginal));
+            }
+            const plan: PlanLLM = { ...planOriginal };
+
+            // Precedencia ventana absoluta > período relativo sobre la MISMA
+            // columna (criterio I-03), resuelta ANTES de los checks: no tiene
+            // sentido pedir clarificación por un período que la ventana manda.
+            if (plan.periodo && plan.ventanaAbsoluta && plan.periodo.columna_idx === plan.ventanaAbsoluta.columna_idx) {
+                delete plan.periodo;
+            }
+
+            // 5 · Checks atómicos (candado 4): si falta algo, clarificación.
+            let faltante = validarPlanAtomico(plan, cat, pregunta, filtrosCubiertos);
+            // Fallback determinista (I-03): si el único problema es el período
+            // malformado por el LLM y la pregunta NO pedía ventana temporal, se
+            // descarta el período y se responde sin él — la consulta sin ventana
+            // es la respuesta correcta para esa pregunta.
+            if (
+                faltante &&
+                plan.periodo &&
+                faltante.startsWith("El período indicado") &&
+                !tieneMarcasTemporales(pregunta)
+            ) {
+                delete plan.periodo;
+                faltante = validarPlanAtomico(plan, cat, pregunta, filtrosCubiertos);
+            }
+            if (faltante) {
+                paso("plan-atomico", "clarificación solicitada");
+                hubo.clarificacion = true;
+                errores.push("plan_incompleto");
+                secciones.push(faltante);
+                continue;
+            }
+            paso("plan-atomico", "completo");
+
+            // I-13: período espurio — si la pregunta NO tiene ninguna marca
+            // temporal y el LLM aun así agregó un período, se descarta (caso
+            // real: "alertas escaladas sin gestionar" llegó con 1 día espurio y
+            // respondía 0 habiendo 254). Simétrico al fallback de I-03.
+            if (plan.periodo && !tieneMarcasTemporales(pregunta)) {
+                delete plan.periodo;
+            }
+
+            // 6 · El SERVIDOR construye el SQL (candado 3) con límite de BD (B3).
+            const construido = construirSql(cat, plan, limiteMaximo);
+            if (!construido.ok) {
+                // Doble defensa tras validarPlanAtomico: el constructor también
+                // es deny-by-default y su rechazo significa plan inválido.
+                paso("sql-construido", `falló: ${construido.error}`);
+                hubo.clarificacion = true;
+                errores.push(construido.error);
+                secciones.push(TEXTO_PLAN_INVALIDO);
+                continue;
+            }
+            const { sql, params } = construido;
+            paso("sql-construido", `límite ${limiteMaximo}`);
+
+            // 7 · Validador post-LLM estricto (candado 5): si no aprueba, no se
+            // ejecuta; se registra para revisión humana.
+            const veredicto = validarSql(cat, sql);
+            paso(
+                "validador",
+                veredicto.valida ? "aprobada" : `rechazada · ${veredicto.violaciones.length} violaciones`,
+            );
+            if (!veredicto.valida) {
+                hubo.rechazada = true;
+                errores.push(veredicto.violaciones.join("; ") || "validador_sql");
+                sqls.push(sql);
+                secciones.push(TEXTO_RECHAZO_VALIDADOR);
+                continue;
+            }
+
+            // 8 · Ejecución parametrizada contra la réplica (solo lectura).
+            let filas: Record<string, unknown>[];
+            const tEjec = Date.now();
+            try {
+                filas = (await prisma.$queryRawUnsafe(sql, ...params)) as Record<string, unknown>[];
+                paso("ejecucion", `${filas.length} filas · ${Date.now() - tEjec} ms`);
+            } catch (e) {
+                if (esTablaInexistente(e)) {
+                    // Réplica aún sin la tabla: candado 9, no se inventa.
+                    paso("ejecucion", "falló: tabla inexistente (42P01)");
+                    paso("plantilla", "sin_datos");
+                    huboEjecucion = true;
+                    errores.push("42P01");
+                    sqls.push(sql);
+                    secciones.push(PLANTILLA_SIN_DATOS);
+                    continue;
+                }
+                throw e;
+            }
+            huboEjecucion = true;
+            sqls.push(sql);
+            filasTotal += filas.length;
+
+            // 9 · Plantilla determinista (candados 9 y 10): cifras del ResultSet.
+            if (filas.length === 0) {
+                paso("plantilla", "sin_datos");
+                secciones.push(PLANTILLA_SIN_DATOS);
+                continue;
+            }
+            const texto = renderRespuesta(plan, filas, cat);
+            paso("plantilla", `agregación: ${plan.agregacion}`);
+            hubo.ok = true;
+            secciones.push(texto);
         }
-        const texto = renderRespuesta(plan, filas, cat);
-        traza.paso("plantilla", `agregación: ${plan.agregacion}`);
-        return await finalizar({ estado: "ok", texto, sql, filas: filas.length });
+
+        // 10 · Composición multi-parte: una sola respuesta, una sección por
+        // sub-plan (candado 10: cada cifra salió de su propio ResultSet).
+        const respuesta: RespuestaMotor = {
+            estado: estadoAgregado(hubo),
+            texto: renderRespuestaCompuesta(secciones),
+            ...(sqls.length > 0 ? { sql: sqls.join("\n") } : {}),
+            ...(huboEjecucion ? { filas: filasTotal } : {}),
+        };
+        return await finalizar(respuesta, errores.length > 0 ? errores.join("; ") : undefined);
     } catch (e) {
         console.error(`[BI-MOTOR] Error inesperado: ${mensajeDeError(e)}`);
         return await finalizar({ estado: "error", texto: TEXTO_ERROR_INTERNO }, mensajeDeError(e));

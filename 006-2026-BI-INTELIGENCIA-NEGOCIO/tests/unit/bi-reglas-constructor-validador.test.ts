@@ -450,6 +450,200 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         const v = validarSql(CATALOGO, r.sql);
         expect(v.valida).toBe(true);
     });
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Motor v2 · ventanaAbsoluta (fechas absolutas [desde, hasta), hasta EXCLUSIVO)
+    // ────────────────────────────────────────────────────────────────────────
+
+    it("ventanaAbsoluta: rango [desde, hasta) parametrizado con ::date — hasta EXCLUSIVO", () => {
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [],
+            ventanaAbsoluta: { columna_idx: 3, desde: "2025-07-01", hasta: "2025-08-01" },
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toBe(
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= $1::date AND "creadoEn" < $2::date LIMIT $3',
+        );
+        expect(r.params).toEqual(["2025-07-01", "2025-08-01", 100]);
+        // Candado 3: las fechas viajan en params, jamás interpoladas en el SQL.
+        expect(r.sql).not.toContain("2025-07-01");
+        expect(r.sql).not.toContain("2025-08-01");
+    });
+
+    it("ventanaAbsoluta + filtro en otra columna: params ordenados (filtros → desde → hasta → límite)", () => {
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [0],
+            agregacion: "lista",
+            filtros: [{ columna_idx: 1, operador: "=", valor: "CLASIFICADO" }],
+            ventanaAbsoluta: { columna_idx: 3, desde: "2025-01-01", hasta: "2026-01-01" },
+            limite: 25,
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toBe(
+            'SELECT "id" FROM "Reporte" WHERE LOWER("estado"::text) = LOWER($1) AND "creadoEn" >= $2::date AND "creadoEn" < $3::date LIMIT $4',
+        );
+        expect(r.params).toEqual(["CLASIFICADO", "2025-01-01", "2026-01-01", 25]);
+    });
+
+    it("ventanaAbsoluta manda sobre período y filtros de la MISMA columna (criterio I-03)", () => {
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [{ columna_idx: 3, operador: ">=", valor: "2025-06-01" }],
+            periodo: { columna_idx: 3, dias: 30 },
+            ventanaAbsoluta: { columna_idx: 3, desde: "2025-07-01", hasta: "2025-08-01" },
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        // Sin NOW() ni interval: el período relativo y el filtro de esa columna
+        // se descartaron — la ventana absoluta es la única cota temporal.
+        expect(r.sql).toBe(
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= $1::date AND "creadoEn" < $2::date LIMIT $3',
+        );
+        expect(r.params).toEqual(["2025-07-01", "2025-08-01", 100]);
+
+        // Un período sobre OTRA columna de fecha convive con la ventana.
+        const planDosCotas: PlanLLM = {
+            ...plan,
+            filtros: [],
+            periodo: { columna_idx: 4, dias: 7 }, // updatedAt
+        };
+        const r2 = construirSql(CATALOGO, planDosCotas, LIMITE_MAXIMO);
+        if (!r2.ok) throw new Error(`debía construir: ${r2.error}`);
+        expect(r2.sql).toBe(
+            `SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= $1::date AND "creadoEn" < $2::date AND "updatedAt" >= NOW() - ($3 || ' days')::interval LIMIT $4`,
+        );
+        expect(r2.params).toEqual(["2025-07-01", "2025-08-01", 7, 100]);
+    });
+
+    it("ventanaAbsoluta sobre columna NO-fecha → plan inválido (guarda I-10 reutilizada)", () => {
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [],
+            ventanaAbsoluta: { columna_idx: 1, desde: "2025-07-01", hasta: "2025-08-01" }, // estado: text
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        expect(r.ok).toBe(false);
+        if (r.ok) throw new Error("debía fallar");
+        expect(r.error).toContain("solo aplica a columnas de fecha");
+    });
+
+    it("ventanaAbsoluta con formato inválido, fecha imposible o rango invertido → plan inválido (guarda I-07 reutilizada)", () => {
+        const base: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [],
+        };
+        const casos: [string, PlanLLM["ventanaAbsoluta"]][] = [
+            ["formato DD/MM/AAAA", { columna_idx: 3, desde: "01/07/2025", hasta: "2025-08-01" }],
+            ["texto libre", { columna_idx: 3, desde: "julio", hasta: "2025-08-01" }],
+            ["fecha imposible (32)", { columna_idx: 3, desde: "2025-07-01", hasta: "2025-08-32" }],
+            ["rango invertido", { columna_idx: 3, desde: "2025-08-01", hasta: "2025-07-01" }],
+        ];
+        for (const [etiqueta, ventanaAbsoluta] of casos) {
+            const r = construirSql(CATALOGO, { ...base, ventanaAbsoluta }, LIMITE_MAXIMO);
+            expect(r.ok, etiqueta).toBe(false);
+            if (r.ok) throw new Error(`debía fallar: ${etiqueta}`);
+            expect(r.error).toContain("ventanaAbsoluta");
+        }
+        // desde == hasta es una ventana VACÍA pero válida ([d, d) = 0 filas).
+        const rVacia = construirSql(
+            CATALOGO,
+            { ...base, ventanaAbsoluta: { columna_idx: 3, desde: "2025-07-01", hasta: "2025-07-01" } },
+            LIMITE_MAXIMO,
+        );
+        if (!rVacia.ok) throw new Error(`debía construir: ${rVacia.error}`);
+    });
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Motor v2 · agruparPor (GROUP BY + ORDER BY valor DESC)
+    // ────────────────────────────────────────────────────────────────────────
+
+    it("agruparPor conteo: SELECT grupo + COUNT(*) AS valor, GROUP BY, ORDER BY valor DESC, LIMIT parametrizado", () => {
+        const plan: PlanLLM = { tabla_idx: 0, columnas_idx: [], agregacion: "conteo", filtros: [], agruparPor_idx: 1 };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toBe(
+            'SELECT "estado" AS grupo, COUNT(*) AS valor FROM "Reporte" GROUP BY "estado" ORDER BY valor DESC LIMIT $1',
+        );
+        expect(r.params).toEqual([100]);
+    });
+
+    it("agruparPor con agregación de columna y filtro: WHERE antes del GROUP BY y params en orden", () => {
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [0],
+            agregacion: "suma",
+            filtros: [{ columna_idx: 1, operador: "=", valor: "CLASIFICADO" }],
+            agruparPor_idx: 2,
+            limite: 10,
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toBe(
+            'SELECT "categoria" AS grupo, SUM("id") AS valor FROM "Reporte" WHERE LOWER("estado"::text) = LOWER($1) GROUP BY "categoria" ORDER BY valor DESC LIMIT $2',
+        );
+        expect(r.params).toEqual(["CLASIFICADO", 10]);
+    });
+
+    it("agruparPor sobre columna enum del catálogo (CategoriaConducta) también agrupa", () => {
+        // Los enums de PI (tipo con nombre propio, no 'text') son texto/enum a
+        // efectos de la guarda: ni id, ni fecha, ni numérico, ni booleano.
+        const plan: PlanLLM = { tabla_idx: 0, columnas_idx: [], agregacion: "conteo", filtros: [], agruparPor_idx: 2 };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toContain('GROUP BY "categoria"');
+    });
+
+    it("agruparPor solo aplica a texto/enum: id, fecha, numérica y fuera de rango se rechazan", () => {
+        const base = { tabla_idx: 0, columnas_idx: [], agregacion: "conteo" as Agregacion, filtros: [] };
+        // Identificador: cada grupo tendría una sola fila (no resume nada).
+        const rId = construirSql(CATALOGO, { ...base, agruparPor_idx: 0 }, LIMITE_MAXIMO);
+        expect(rId.ok).toBe(false);
+        if (rId.ok) throw new Error("debía fallar");
+        expect(rId.error).toContain("identificador");
+        // Fecha: agrupar por timestamp crudo requiere buckets (fuera de alcance).
+        const rFecha = construirSql(CATALOGO, { ...base, agruparPor_idx: 3 }, LIMITE_MAXIMO);
+        expect(rFecha.ok).toBe(false);
+        if (rFecha.ok) throw new Error("debía fallar");
+        expect(rFecha.error).toContain("texto o enum");
+        // Numérica (totalReportes de IdentificadorReportado):
+        const rNum = construirSql(CATALOGO, { ...base, tabla_idx: 1, agruparPor_idx: 1 }, LIMITE_MAXIMO);
+        expect(rNum.ok).toBe(false);
+        if (rNum.ok) throw new Error("debía fallar");
+        expect(rNum.error).toContain("texto o enum");
+        // Índice fuera de rango (deny-by-default):
+        const rRango = construirSql(CATALOGO, { ...base, agruparPor_idx: 99 }, LIMITE_MAXIMO);
+        expect(rRango.ok).toBe(false);
+        if (rRango.ok) throw new Error("debía fallar");
+        expect(rRango.error).toContain("agruparPor_idx fuera de rango");
+    });
+
+    it("lista + agruparPor → inválido: una lista proyecta filas, no las resume", () => {
+        const plan: PlanLLM = { tabla_idx: 0, columnas_idx: [1], agregacion: "lista", filtros: [], agruparPor_idx: 1 };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        expect(r.ok).toBe(false);
+        if (r.ok) throw new Error("debía fallar");
+        expect(r.error).toContain('"lista" no admite agruparPor');
+    });
+
+    it("I-12 sigue mandando con agruparPor: maximo sobre texto → inválido (la frecuencia se cuenta agrupando)", () => {
+        const plan: PlanLLM = { tabla_idx: 0, columnas_idx: [1], agregacion: "maximo", filtros: [], agruparPor_idx: 2 };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        expect(r.ok).toBe(false);
+        if (r.ok) throw new Error("debía fallar");
+        expect(r.error).toContain("máximo alfabético");
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -466,6 +660,18 @@ describe("validarSql (candados 5-6 post: solo lectura contra la réplica)", () =
         [
             "periodo con NOW() e interval (forma del constructor)",
             `SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= NOW() - ($1 || ' days')::interval LIMIT $2`,
+        ],
+        [
+            "ventana absoluta con ::date parametrizada (forma del constructor, motor v2)",
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= $1::date AND "creadoEn" < $2::date LIMIT $3',
+        ],
+        [
+            "GROUP BY con alias grupo/valor en ORDER BY (forma del constructor, motor v2)",
+            'SELECT "estado" AS grupo, COUNT(*) AS valor FROM "Reporte" GROUP BY "estado" ORDER BY valor DESC LIMIT $1',
+        ],
+        [
+            "GROUP BY con WHERE de filtro y período (forma del constructor, motor v2)",
+            `SELECT "categoria" AS grupo, SUM("id") AS valor FROM "Reporte" WHERE LOWER("estado"::text) = LOWER($1) AND "creadoEn" >= NOW() - ($2 || ' days')::interval GROUP BY "categoria" ORDER BY valor DESC LIMIT $3`,
         ],
     ])("válido: %s", (_etiqueta, sql) => {
         const r = validarSql(CATALOGO, sql);
@@ -489,6 +695,23 @@ describe("validarSql (candados 5-6 post: solo lectura contra la réplica)", () =
                 periodo: { columna_idx: 3, dias: 30 },
                 limite: 50,
             },
+            // Motor v2: las formas nuevas del constructor también validan.
+            {
+                tabla_idx: 0,
+                columnas_idx: [],
+                agregacion: "conteo",
+                filtros: [],
+                ventanaAbsoluta: { columna_idx: 3, desde: "2025-07-01", hasta: "2025-08-01" },
+            },
+            {
+                tabla_idx: 0,
+                columnas_idx: [],
+                agregacion: "conteo",
+                filtros: [],
+                agruparPor_idx: 1,
+                periodo: { columna_idx: 3, dias: 30 },
+            },
+            { tabla_idx: 0, columnas_idx: [0], agregacion: "suma", filtros: [], agruparPor_idx: 2 },
         ];
         for (const plan of planes) {
             const construido = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
@@ -570,6 +793,18 @@ describe("validarSql (candados 5-6 post: solo lectura contra la réplica)", () =
         const r = validarSql(CATALOGO, 'SELECT password FROM "Reporte" LIMIT 5');
         expect(r.valida).toBe(false);
         expect(r.violaciones.some((v) => v.includes("password"))).toBe(true);
+    });
+
+    it("rechaza 'valor'/'grupo' desnudos si NO fueron declarados con AS (los aliases no aflojan nada)", () => {
+        // Motor v2: el validador acepta ORDER BY valor SOLO porque el constructor
+        // declaró `AS valor`. Sin el AS, esas palabras siguen siendo
+        // identificadores ilegítimos.
+        const rValor = validarSql(CATALOGO, 'SELECT valor FROM "Reporte" LIMIT 5');
+        expect(rValor.valida).toBe(false);
+        expect(rValor.violaciones.some((v) => v.includes("valor"))).toBe(true);
+        const rGrupo = validarSql(CATALOGO, 'SELECT "id" FROM "Reporte" GROUP BY "estado" ORDER BY grupo DESC LIMIT 5');
+        expect(rGrupo.valida).toBe(false);
+        expect(rGrupo.violaciones.some((v) => v.includes("grupo"))).toBe(true);
     });
 
     it("rechaza SELECT sin FROM identificable", () => {

@@ -10,6 +10,14 @@
 //     agregación desconocida o valor no escalar → { ok: false, error }
 //   · UNA sola tabla por consulta (v1: sin JOINs)
 //   · LIMIT siempre presente, parametrizado y con clamp al máximo del servidor
+// Motor v2 (tres capacidades aprobadas):
+//   · ventanaAbsoluta: rango de fechas [desde, hasta) parametrizado con
+//     ::date, hasta EXCLUSIVO; manda sobre período/filtros de la misma
+//     columna (mismo criterio que I-03) y solo aplica a columnas de fecha
+//     (guarda I-10) con formato YYYY-MM-DD verificado (guarda I-07).
+//   · agruparPor_idx: GROUP BY sobre una columna de texto/enum —
+//     SELECT "grupo" AS grupo, AGG(...) AS valor … GROUP BY "grupo"
+//     ORDER BY valor DESC. Rechaza lista+agrupar, ids, fechas y números.
 // B3: el tope absoluto llega como parámetro `limiteMaximo` (lo lee el llamador
 // desde bi_config); aquí no hay umbrales hardcodeados salvo el default de
 // filas cuando el plan no pide límite (constante documentada abajo).
@@ -32,6 +40,10 @@ export interface PlanLLM {
     agregacion: Agregacion;
     filtros: FiltroLLM[];
     periodo?: { columna_idx: number; dias: number };
+    /** Ventana de fechas absoluta [desde, hasta) en YYYY-MM-DD; hasta EXCLUSIVO. Manda sobre período/filtros de la misma columna (criterio I-03). */
+    ventanaAbsoluta?: { columna_idx: number; desde: string; hasta: string };
+    /** GROUP BY sobre esta columna (solo texto/enum): SELECT "grupo" AS grupo + agregado AS valor, ORDER BY valor DESC. */
+    agruparPor_idx?: number;
     limite?: number;
 }
 
@@ -51,6 +63,28 @@ const FUNCION_POR_AGREGACION: Readonly<Record<Exclude<Agregacion, "conteo" | "li
     minimo: "MIN",
 };
 
+/** Tipos numéricos del catálogo (guarda I-12 y guarda de tipo de agruparPor). */
+const TIPOS_NUMERICOS: ReadonlySet<string> = new Set([
+    "int", "integer", "float", "bigint", "decimal", "number", "numeric", "double", "real",
+]);
+
+/** La columna es de fecha/tiempo (guarda I-10, reutilizada por ventanaAbsoluta). */
+function esColumnaFecha(col: ColumnaCat): boolean {
+    const tipo = col.tipo.toLowerCase();
+    return tipo.includes("date") || tipo.includes("time");
+}
+
+/**
+ * Fecha estricta YYYY-MM-DD (guarda I-07 reutilizada por ventanaAbsoluta):
+ * regex + parseo real del calendario (rechaza p.ej. 2025-02-31 o 2025-13-01).
+ */
+function esFechaIso(valor: unknown): valor is string {
+    if (typeof valor !== "string") return false;
+    const v = valor.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    return !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
+}
+
 function fallo(error: string): ResultadoConstructor {
     return { ok: false, error };
 }
@@ -69,7 +103,7 @@ function resolverColumna(tabla: TablaCat, idx: number): ColumnaCat | null {
 /**
  * Construye el SQL de solo lectura para un plan del LLM. El texto SQL solo
  * contiene identificadores del catálogo y placeholders $N; los valores van
- * en `params` en el mismo orden (filtros → periodo → límite).
+ * en `params` en el mismo orden (filtros → ventana absoluta → período → límite).
  */
 export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number): ResultadoConstructor {
     if (!cat || !Array.isArray(cat.tablas) || cat.tablas.length === 0) {
@@ -103,10 +137,48 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
         columnas.push(col);
     }
 
-    // --- SELECT según la agregación pedida ---
+    // --- agruparPor (GROUP BY): índice opcional a una columna de TEXTO/ENUM ---
+    // Criterio (determinista): agrupar solo tiene sentido sobre dimensiones
+    // categóricas. Se rechaza:
+    //   · "lista" con agruparPor (una lista proyecta filas, no las resume)
+    //   · identificadores (nombre "id" o sufijo "Id": cada grupo tendría 1 fila)
+    //   · fechas, números y booleanos (agrupar por valor crudo no agrega:
+    //     fechas/números requieren buckets — fuera de alcance; un booleano
+    //     son 2 grupos y la agregación simple responde mejor)
+    // I-12 sigue mandando abajo: MAX/MIN solo sobre numérica/fecha.
+    let colGrupo: ColumnaCat | null = null;
+    if (plan.agruparPor_idx !== undefined) {
+        if (plan.agregacion === "lista") {
+            return fallo(
+                'La agregación "lista" no admite agruparPor: una lista proyecta filas, no las resume. Usa conteo (o suma/promedio) con agruparPor.',
+            );
+        }
+        const resuelta = resolverColumna(tabla, plan.agruparPor_idx);
+        if (!resuelta) {
+            return fallo(
+                `agruparPor_idx fuera de rango: ${String(plan.agruparPor_idx)} (tabla "${tabla.nombreFuente}": 0..${tabla.columnas.length - 1}).`,
+            );
+        }
+        const nombre = resuelta.nombreFuente;
+        if (nombre === "id" || nombre.endsWith("Id")) {
+            return fallo(
+                `Agrupar por "${nombre}" no resume nada: es un identificador (cada grupo tendría una sola fila). Usa una columna de texto o enum (estado, categoria, plataforma...).`,
+            );
+        }
+        const tipoGrupo = resuelta.tipo.toLowerCase();
+        if (esColumnaFecha(resuelta) || TIPOS_NUMERICOS.has(tipoGrupo) || tipoGrupo === "boolean" || tipoGrupo === "bool") {
+            return fallo(
+                `agruparPor solo aplica a columnas de texto o enum: "${nombre}" es tipo ${resuelta.tipo}. Fechas y números requieren rangos/buckets, fuera del alcance actual.`,
+            );
+        }
+        colGrupo = resuelta;
+    }
+
+    // --- SELECT según la agregación pedida (con prefijo de grupo si aplica) ---
+    const prefijoGrupo = colGrupo ? `${citarIdentificador(colGrupo.nombreFuente)} AS grupo, ` : "";
     let selectList: string;
     if (plan.agregacion === "conteo") {
-        selectList = "COUNT(*) AS total";
+        selectList = colGrupo ? `${prefijoGrupo}COUNT(*) AS valor` : "COUNT(*) AS total";
     } else if (plan.agregacion === "lista") {
         const cols = columnas.length > 0 ? columnas : tabla.columnas;
         if (cols.length === 0) {
@@ -128,23 +200,58 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
         // frecuente" devolvió el MAX alfabético del enum = STALKING — confiado
         // y ERRADO; la frecuencia se calcula agrupando, no con MAX).
         if (plan.agregacion === "maximo" || plan.agregacion === "minimo") {
-            const tipoCol = col.tipo.toLowerCase();
-            const esNumericaOFecha =
-                ["int", "integer", "float", "bigint", "decimal", "number", "numeric", "double", "real"].includes(tipoCol) ||
-                tipoCol.includes("date") ||
-                tipoCol.includes("time");
+            const esNumericaOFecha = TIPOS_NUMERICOS.has(col.tipo.toLowerCase()) || esColumnaFecha(col);
             if (!esNumericaOFecha) {
                 return fallo(
-                    `"${plan.agregacion}" no aplica a "${col.nombreFuente}" (tipo ${col.tipo}): sería el máximo alfabético, no el más frecuente. Para eso pide el conteo de un valor concreto.`,
+                    `"${plan.agregacion}" no aplica a "${col.nombreFuente}" (tipo ${col.tipo}): sería el máximo alfabético, no el más frecuente. Para "el más frecuente" usa conteo con agruparPor sobre esa columna.`,
                 );
             }
         }
-        selectList = `${FUNCION_POR_AGREGACION[plan.agregacion]}(${citarIdentificador(col.nombreFuente)}) AS valor`;
+        selectList = `${prefijoGrupo}${FUNCION_POR_AGREGACION[plan.agregacion]}(${citarIdentificador(col.nombreFuente)}) AS valor`;
     } else {
         return fallo(`Agregación no soportada: ${String(plan.agregacion)}.`);
     }
 
-    // --- WHERE: filtros parametrizados + periodo opcional ---
+    // --- Ventana absoluta [desde, hasta): validación ANTES del WHERE ---
+    // Guardas reutilizadas: I-10 (solo columnas de fecha) e I-07 (formato de
+    // fecha verificado, nunca texto libre). Precedencia (mismo criterio que
+    // I-03): si el período relativo cae sobre la MISMA columna, manda la
+    // ventana absoluta — el período se descarta igual que los filtros de esa
+    // columna (ANDarlos re-abriría el bug de las ventanas que se pisan).
+    let ventana: { idx: number; col: ColumnaCat; desde: string; hasta: string } | null = null;
+    if (plan.ventanaAbsoluta !== undefined) {
+        const v = plan.ventanaAbsoluta;
+        if (!v || typeof v !== "object") {
+            return fallo("ventanaAbsoluta debe ser un objeto { columna_idx, desde, hasta }.");
+        }
+        const col = resolverColumna(tabla, v.columna_idx);
+        if (!col) {
+            return fallo(
+                `ventanaAbsoluta.columna_idx fuera de rango: ${String(v.columna_idx)} (tabla "${tabla.nombreFuente}").`,
+            );
+        }
+        if (!esColumnaFecha(col)) {
+            return fallo(
+                `La ventana absoluta solo aplica a columnas de fecha: "${col.nombreFuente}" es tipo ${col.tipo}. Usa la columna de fecha de la tabla (creadoEn/createdAt).`,
+            );
+        }
+        if (!esFechaIso(v.desde) || !esFechaIso(v.hasta)) {
+            return fallo(
+                `ventanaAbsoluta.desde/hasta deben ser fechas YYYY-MM-DD válidas (recibido: desde=${JSON.stringify(v.desde)} hasta=${JSON.stringify(v.hasta)}).`,
+            );
+        }
+        const desde = v.desde.trim();
+        const hasta = v.hasta.trim();
+        if (desde > hasta) {
+            return fallo(`ventanaAbsoluta.desde (${desde}) debe ser menor o igual que hasta (${hasta}).`);
+        }
+        ventana = { idx: v.columna_idx, col, desde, hasta };
+    }
+
+    const periodoEfectivo =
+        ventana && plan.periodo !== undefined && plan.periodo.columna_idx === ventana.idx ? undefined : plan.periodo;
+
+    // --- WHERE: filtros parametrizados + ventana/período opcionales ---
     const params: unknown[] = [];
     const condiciones: string[] = [];
 
@@ -161,7 +268,12 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
         // NOW() - N días) manda. Caso real: "este mes" llegó del LLM como rango
         // absoluto a medianoche + período; ANDados excluían los datos del día
         // en curso y el motor respondía sin_datos habiendo datos.
-        if (plan.periodo !== undefined && filtro.columna_idx === plan.periodo.columna_idx) {
+        // Mismo criterio para la ventana absoluta: si la columna ya quedó
+        // acotada por [desde, hasta), un filtro extra sobre ella se descarta.
+        if (periodoEfectivo !== undefined && filtro.columna_idx === periodoEfectivo.columna_idx) {
+            continue;
+        }
+        if (ventana && filtro.columna_idx === ventana.idx) {
             continue;
         }
         const col = resolverColumna(tabla, filtro.columna_idx);
@@ -222,23 +334,31 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
         }
     }
 
-    if (plan.periodo !== undefined) {
-        const col = resolverColumna(tabla, plan.periodo.columna_idx);
+    // Ventana absoluta: "col" >= $N::date AND "col" < $(N+1)::date — hasta
+    // EXCLUSIVO ([desde, hasta): julio 2025 = [2025-07-01, 2025-08-01)). Las
+    // fechas viajan parametrizadas; jamás interpoladas (candado 3).
+    if (ventana) {
+        const nombreCitado = citarIdentificador(ventana.col.nombreFuente);
+        params.push(ventana.desde, ventana.hasta);
+        condiciones.push(`${nombreCitado} >= $${params.length - 1}::date AND ${nombreCitado} < $${params.length}::date`);
+    }
+
+    if (periodoEfectivo !== undefined) {
+        const col = resolverColumna(tabla, periodoEfectivo.columna_idx);
         if (!col) {
             return fallo(
-                `periodo.columna_idx fuera de rango: ${String(plan.periodo.columna_idx)} (tabla "${tabla.nombreFuente}").`,
+                `periodo.columna_idx fuera de rango: ${String(periodoEfectivo.columna_idx)} (tabla "${tabla.nombreFuente}").`,
             );
         }
         // I-10: el período SOLO aplica a columnas de fecha. Caso real: el LLM
         // puso el período sobre `estado` (texto) → "text >= timestamp" (42883)
         // en runtime. Rechazo determinista antes de ejecutar.
-        const tipoPeriodo = col.tipo.toLowerCase();
-        if (!tipoPeriodo.includes("date") && !tipoPeriodo.includes("time")) {
+        if (!esColumnaFecha(col)) {
             return fallo(
                 `El período solo aplica a columnas de fecha: "${col.nombreFuente}" es tipo ${col.tipo}. Usa la columna de fecha de la tabla (creadoEn/createdAt).`,
             );
         }
-        const dias = plan.periodo.dias;
+        const dias = periodoEfectivo.dias;
         if (typeof dias !== "number" || !Number.isFinite(dias) || dias < 0) {
             return fallo(`periodo.dias debe ser un número finito >= 0: ${String(dias)}.`);
         }
@@ -259,6 +379,9 @@ export function construirSql(cat: Catalogo, plan: PlanLLM, limiteMaximo: number)
     params.push(limite);
 
     const where = condiciones.length > 0 ? ` WHERE ${condiciones.join(" AND ")}` : "";
-    const sql = `SELECT ${selectList} FROM ${citarIdentificador(tabla.nombreFuente)}${where} LIMIT $${params.length}`;
+    // GROUP BY + ORDER BY valor DESC: el ranking por grupo (top N) es la
+    // forma agrupada; `valor` es el alias del agregado declarado en el SELECT.
+    const groupOrder = colGrupo ? ` GROUP BY ${citarIdentificador(colGrupo.nombreFuente)} ORDER BY valor DESC` : "";
+    const sql = `SELECT ${selectList} FROM ${citarIdentificador(tabla.nombreFuente)}${where}${groupOrder} LIMIT $${params.length}`;
     return { ok: true, sql, params };
 }

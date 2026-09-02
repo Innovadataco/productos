@@ -86,6 +86,7 @@ const CAT: Catalogo = {
             columnas: [
                 { nombreFuente: "id", tipo: "String" },
                 { nombreFuente: "monto", tipo: "Float" },
+                { nombreFuente: "colegio", tipo: "String" },
             ],
         },
     ],
@@ -101,7 +102,7 @@ const PLAN_CONTEO = {
 };
 
 // Respuesta REAL de llamarOllamaStructured: { data, rawResponse, metrics }.
-function respuestaOllama(data: unknown) {
+function empaquetarOllama(data: unknown) {
     return {
         data,
         rawResponse: JSON.stringify(data),
@@ -114,6 +115,17 @@ function respuestaOllama(data: unknown) {
             loadDuration: 3,
         },
     };
+}
+
+// Motor v2: data lleva la envoltura del schema raíz { planes: [...] } (1..5).
+/** Envuelve 1..N planes en la raíz { planes: [...] } vigente. */
+function respuestaOllama(...planes: unknown[]) {
+    return empaquetarOllama({ planes });
+}
+
+/** Raíz cruda, para probar formas que el schema cerrado no debería emitir. */
+function respuestaOllamaCruda(data: unknown) {
+    return empaquetarOllama(data);
 }
 
 const SQL_REAL = 'SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= now() - interval \'30 days\' LIMIT $1';
@@ -148,13 +160,20 @@ describe("motor · flujo ok end-to-end (candados 3, 4, 5, 10, 12)", () => {
         expect(r.consultaLogId).toBe("log_01");
 
         // Candado 3: el LLM recibió el catálogo enumerado y el schema cerrado.
+        // Motor v2: la raíz del schema es { planes: [...] } (1..5); cada plan
+        // conserva el máximo acotado al catálogo y additionalProperties:false.
         const [, prompt, schema, system, options] = mocks.llamarOllama.mock.calls[0];
         expect(prompt).toContain("[tabla_idx=0]");
         expect(prompt).toContain("[columna_idx=2]");
         expect(prompt).toContain(PREGUNTA);
         expect(schema.additionalProperties).toBe(false);
-        expect(schema.properties.tabla_idx.maximum).toBe(0);
+        expect(schema.required).toEqual(["planes"]);
+        expect(schema.properties.planes.maxItems).toBe(5);
+        expect(schema.properties.planes.items.properties.tabla_idx.maximum).toBe(0);
+        expect(schema.properties.planes.items.additionalProperties).toBe(false);
         expect(system).toContain("SOLO índices");
+        expect(system).toContain("agruparPor_idx");
+        expect(system).toContain("ventanaAbsoluta");
         expect(options).toEqual({ temperature: 0, seed: 42 });
 
         // Candado 3: el SERVIDOR construye el SQL (catálogo, plan, límite).
@@ -173,12 +192,14 @@ describe("motor · flujo ok end-to-end (candados 3, 4, 5, 10, 12)", () => {
         // Ejecución con valores parametrizados (nunca interpolados).
         expect(mocks.queryRawUnsafe).toHaveBeenCalledWith(SQL_REAL, 30, 500);
 
-        // Candado 12: traza completa del desenlace.
+        // Candado 12: traza completa del desenlace. planJson guarda el PRIMER
+        // (y aquí único) plan — compat con el historial del chat.
         expect(mocks.consultaLogUpdate).toHaveBeenCalledWith({
             where: { id: "log_01" },
             data: expect.objectContaining({
                 estado: "ok",
                 sqlGenerado: SQL_REAL,
+                planJson: JSON.stringify(PLAN_CONTEO),
                 fuenteCache: false,
                 error: null,
                 latenciaMs: expect.any(Number),
@@ -548,20 +569,244 @@ describe("catálogo para el LLM (candados 1 y 3)", () => {
         expect(texto).toContain("Descripción: Ciclos de cobro por suscripción");
     });
 
-    it("el JSON Schema es CERRADO y acotado al catálogo vigente", () => {
+    it("el JSON Schema raíz es { planes: 1..5 } CERRADO en todos los niveles y acotado al catálogo vigente", () => {
         const schema = esquemaJsonParaLLM(CAT) as {
             additionalProperties: boolean;
             required: string[];
             properties: {
-                tabla_idx: { maximum: number };
-                agregacion: { enum: string[] };
-                filtros: { items: { additionalProperties: boolean } };
+                planes: {
+                    minItems: number;
+                    maxItems: number;
+                    items: {
+                        additionalProperties: boolean;
+                        required: string[];
+                        properties: {
+                            tabla_idx: { maximum: number };
+                            agregacion: { enum: string[] };
+                            filtros: { items: { additionalProperties: boolean } };
+                            periodo: { additionalProperties: boolean };
+                            ventanaAbsoluta: { additionalProperties: boolean; required: string[] };
+                            agruparPor_idx: { type: string; minimum: number };
+                        };
+                    };
+                };
             };
         };
         expect(schema.additionalProperties).toBe(false);
-        expect(schema.required).toEqual(["tabla_idx", "columnas_idx", "agregacion"]);
-        expect(schema.properties.tabla_idx.maximum).toBe(1);
-        expect(schema.properties.agregacion.enum).toEqual(["conteo", "suma", "promedio", "maximo", "minimo", "lista"]);
-        expect(schema.properties.filtros.items.additionalProperties).toBe(false);
+        expect(schema.required).toEqual(["planes"]);
+        expect(schema.properties.planes.minItems).toBe(1);
+        expect(schema.properties.planes.maxItems).toBe(5);
+        const plan = schema.properties.planes.items;
+        expect(plan.additionalProperties).toBe(false);
+        expect(plan.required).toEqual(["tabla_idx", "columnas_idx", "agregacion"]);
+        expect(plan.properties.tabla_idx.maximum).toBe(1);
+        expect(plan.properties.agregacion.enum).toEqual(["conteo", "suma", "promedio", "maximo", "minimo", "lista"]);
+        expect(plan.properties.filtros.items.additionalProperties).toBe(false);
+        expect(plan.properties.periodo.additionalProperties).toBe(false);
+        expect(plan.properties.ventanaAbsoluta.additionalProperties).toBe(false);
+        expect(plan.properties.ventanaAbsoluta.required).toEqual(["columna_idx", "desde", "hasta"]);
+        expect(plan.properties.agruparPor_idx).toEqual({ type: "integer", minimum: 0 });
+    });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Motor v2 · multi-parte (schema raíz { planes: [...] }, 1..5)
+// ────────────────────────────────────────────────────────────────────────────
+describe("motor v2 · multi-parte (varios planes por pregunta)", () => {
+    const PLAN_B = {
+        tabla_idx: 0,
+        columnas_idx: [],
+        agregacion: "conteo",
+        periodo: { columna_idx: 2, dias: 30 },
+        limite: 100,
+    };
+
+    it("2 planes válidos → respuesta compuesta con AMBAS cifras del ResultSet (candado 10)", async () => {
+        mocks.llamarOllama.mockResolvedValue(respuestaOllama(PLAN_CONTEO, PLAN_B));
+        mocks.queryRawUnsafe
+            .mockResolvedValueOnce([{ total: "128" }])
+            .mockResolvedValueOnce([{ total: "57" }]);
+
+        const r = await preguntar("¿Cuántos reportes hubo en los últimos 30 días y cuántos este mes?", EMAIL);
+
+        expect(r.estado).toBe("ok");
+        // Cada cifra salió de SU propio ResultSet, una sección por sub-plan.
+        expect(r.texto).toBe(
+            "En Reportes de riesgo hay 128 registros en los últimos 30 días.\n\n" +
+                "En Reportes de riesgo hay 57 registros en los últimos 30 días.",
+        );
+        expect(r.filas).toBe(2);
+        expect(mocks.construirSql).toHaveBeenCalledTimes(2);
+        expect(mocks.queryRawUnsafe).toHaveBeenCalledTimes(2);
+
+        // Candado 12: planJson guarda el PRIMER plan (compat) y pasosJson
+        // acumula TODOS los planes — un paso por sub-plan con su JSON.
+        const patch = mocks.consultaLogUpdate.mock.calls[0][0].data as Record<string, string>;
+        expect(patch.planJson).toBe(JSON.stringify(PLAN_CONTEO));
+        const pasos = JSON.parse(patch.pasosJson) as { paso: string; detalle?: string }[];
+        const sub1 = pasos.find((p) => p.paso === "sub-plan 1");
+        const sub2 = pasos.find((p) => p.paso === "sub-plan 2");
+        expect(JSON.parse(sub1?.detalle ?? "null")).toEqual(PLAN_CONTEO);
+        expect(JSON.parse(sub2?.detalle ?? "null")).toEqual(PLAN_B);
+        // Los hitos de cada sub-plan van prefijados, después de los globales.
+        expect(pasos.some((p) => p.paso === "sub-plan 1 · validador")).toBe(true);
+        expect(pasos.some((p) => p.paso === "sub-plan 2 · ejecucion")).toBe(true);
+    });
+
+    it("1 plan inválido de 2 → clarificación parcial del tramo SIN tirar el otro", async () => {
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama(PLAN_CONTEO, { tabla_idx: 9, columnas_idx: [], agregacion: "conteo" }),
+        );
+        mocks.queryRawUnsafe.mockResolvedValue([{ total: "128" }]);
+
+        const r = await preguntar("¿Cuántos reportes hubo en los últimos 30 días y cuántos colegios?", EMAIL);
+
+        expect(r.estado).toBe("ok"); // el tramo sano sí respondió con datos
+        expect(r.texto).toContain("En Reportes de riesgo hay 128 registros");
+        expect(r.texto).toContain("sobre qué datos"); // la otra parte pidió reformular
+        // El plan inválido jamás llegó al constructor ni a la BD.
+        expect(mocks.construirSql).toHaveBeenCalledTimes(1);
+        expect(mocks.queryRawUnsafe).toHaveBeenCalledTimes(1);
+        // La bitácora registra el éxito parcial con el motivo del tramo fallido.
+        const patch = mocks.consultaLogUpdate.mock.calls[0][0].data as Record<string, string>;
+        expect(patch.estado).toBe("ok");
+        expect(patch.error).toContain("plan_incompleto");
+    });
+
+    it("TODOS los planes inválidos → clarificación (no hay tramo sano que rescatar)", async () => {
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama({ tabla_idx: 9, columnas_idx: [], agregacion: "conteo" }, { tabla_idx: -1, columnas_idx: [], agregacion: "conteo" }),
+        );
+        const r = await preguntar(PREGUNTA, EMAIL);
+
+        expect(r.estado).toBe("clarificacion");
+        expect(mocks.queryRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("respuesta raíz sin arreglo planes → error honesto (candado 2: no se rescata)", async () => {
+        mocks.llamarOllama.mockResolvedValue(respuestaOllamaCruda({ foo: 1 }));
+        const r = await preguntar(PREGUNTA, EMAIL);
+
+        expect(r.estado).toBe("error");
+        expect(r.texto).toContain("modelo de lenguaje");
+        expect(mocks.construirSql).not.toHaveBeenCalled();
+    });
+
+    it("planes vacío → clarificación sin ejecutar nada", async () => {
+        mocks.llamarOllama.mockResolvedValue(respuestaOllamaCruda({ planes: [] }));
+        const r = await preguntar(PREGUNTA, EMAIL);
+
+        expect(r.estado).toBe("clarificacion");
+        expect(mocks.construirSql).not.toHaveBeenCalled();
+        expect(mocks.queryRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("más de 5 planes → se ejecutan solo los primeros 5 (espejo del maxItems del schema)", async () => {
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama(PLAN_CONTEO, PLAN_CONTEO, PLAN_CONTEO, PLAN_CONTEO, PLAN_CONTEO, PLAN_CONTEO),
+        );
+        mocks.queryRawUnsafe.mockResolvedValue([{ total: "1" }]);
+
+        const r = await preguntar(PREGUNTA, EMAIL);
+
+        expect(r.estado).toBe("ok");
+        expect(mocks.queryRawUnsafe).toHaveBeenCalledTimes(5);
+    });
+
+    it("I-08 multi-parte: valor enum filtrado por OTRO sub-plan no dispara clarificación espuria", async () => {
+        // "escalada" la filtra el plan 1; el plan 2 (otra parte de la pregunta)
+        // no la filtra y NO debe aclarar — la mención ya está cubierta.
+        mocks.catalogoTablaFindMany.mockResolvedValue([
+            {
+                ...FILA_TABLA_REPORTE,
+                columnas: [
+                    ...FILA_TABLA_REPORTE.columnas.slice(0, 1),
+                    {
+                        ...FILA_TABLA_REPORTE.columnas[1],
+                        descripcion: "Valores reales: escalada · cerrada · nueva",
+                    },
+                    ...FILA_TABLA_REPORTE.columnas.slice(2),
+                ],
+            },
+        ]);
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama(
+                { tabla_idx: 0, columnas_idx: [], agregacion: "conteo", filtros: [{ columna_idx: 1, operador: "=", valor: "escalada" }] },
+                { tabla_idx: 0, columnas_idx: [], agregacion: "conteo" },
+            ),
+        );
+        mocks.queryRawUnsafe.mockResolvedValue([{ total: "7" }]);
+
+        const r = await preguntar("¿Cuántos reportes escalada hubo y cuántos en total?", EMAIL);
+
+        expect(r.estado).toBe("ok");
+        expect(mocks.queryRawUnsafe).toHaveBeenCalledTimes(2);
+    });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Motor v2 · agrupación (GROUP BY) y ventana absoluta — plantillas + flujo
+// ────────────────────────────────────────────────────────────────────────────
+describe("motor v2 · agrupación y ventana absoluta", () => {
+    it("conteo agrupado → ranking determinista con cifras del ResultSet", () => {
+        const plan: PlanLLM = { tabla_idx: 0, columnas_idx: [], agregacion: "conteo", filtros: [], agruparPor_idx: 1 };
+        const texto = renderRespuesta(
+            plan,
+            [
+                { grupo: "CIBERACOSO", valor: "45" },
+                { grupo: "BULLYING", valor: 30 },
+            ],
+            CAT,
+        );
+        expect(texto).toBe("Top 2 de Reportes de riesgo por estado:\n1. CIBERACOSO: 45 registros\n2. BULLYING: 30 registros");
+    });
+
+    it("suma agrupada → encabezado con la función y la columna del plan", () => {
+        const plan: PlanLLM = { tabla_idx: 1, columnas_idx: [1], agregacion: "suma", filtros: [], agruparPor_idx: 2 };
+        const texto = renderRespuesta(plan, [{ grupo: "Colegio A", valor: "1500.5" }], CAT);
+        expect(texto).toBe("Top 1 por colegio en Ciclos de facturación (Suma de monto):\n1. Colegio A: 1500.5");
+    });
+
+    it("ranking agrupado se acota a 5 filas (slot acotado, candado 10)", () => {
+        const plan: PlanLLM = { tabla_idx: 0, columnas_idx: [], agregacion: "conteo", filtros: [], agruparPor_idx: 1 };
+        const filas = Array.from({ length: 7 }, (_, i) => ({ grupo: `E${i + 1}`, valor: String(10 - i) }));
+        const texto = renderRespuesta(plan, filas, CAT);
+
+        expect(texto).toContain("Top 5 de Reportes de riesgo por estado:");
+        expect(texto).toContain("5. E5: 6 registros");
+        expect(texto).not.toContain("E6");
+    });
+
+    it("conteo con ventanaAbsoluta → slot temporal [desde, hasta) en la plantilla", () => {
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [],
+            ventanaAbsoluta: { columna_idx: 2, desde: "2025-07-01", hasta: "2025-08-01" },
+        };
+        expect(renderRespuesta(plan, [{ total: "12" }], CAT)).toBe(
+            "En Reportes de riesgo hay 12 registros del 2025-07-01 al 2025-08-01 (hasta exclusivo).",
+        );
+    });
+
+    it("flujo end-to-end con agruparPor: el texto compone el ranking del ResultSet", async () => {
+        const SQL_GRUPO =
+            'SELECT "estado" AS grupo, COUNT(*) AS valor FROM "Reporte" GROUP BY "estado" ORDER BY valor DESC LIMIT $1';
+        mocks.llamarOllama.mockResolvedValue(
+            respuestaOllama({ tabla_idx: 0, columnas_idx: [], agregacion: "conteo", agruparPor_idx: 1 }),
+        );
+        mocks.construirSql.mockReturnValue({ ok: true, sql: SQL_GRUPO, params: [500] });
+        mocks.queryRawUnsafe.mockResolvedValue([
+            { grupo: "CIBERACOSO", valor: "45" },
+            { grupo: "BULLYING", valor: "30" },
+        ]);
+
+        const r = await preguntar("¿Qué estados tienen más reportes?", EMAIL);
+
+        expect(r.estado).toBe("ok");
+        expect(r.texto).toContain("Top 2 de Reportes de riesgo por estado:");
+        expect(r.texto).toContain("1. CIBERACOSO: 45 registros");
+        expect(mocks.queryRawUnsafe).toHaveBeenCalledWith(SQL_GRUPO, 500);
     });
 });
