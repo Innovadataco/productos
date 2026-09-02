@@ -2,6 +2,7 @@
 
 import type { DetalleReporte } from "./types";
 import { formatCategoria, formatEstado } from "./types";
+import { fechaHoraSinMinutos } from "@/lib/format/fecha";
 
 interface ReporteDetalleInfoProps {
     reporte: DetalleReporte;
@@ -33,7 +34,11 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                 </div>
                 <div>
                     <span className="font-medium text-subtle">Fecha del incidente</span>
-                    <p>{new Date(reporte.fechaIncidente).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}</p>
+                    {/* I-261 (SPEC-368): misma presentación que ve el padre — día y
+                        hora en a.m./p.m., SIN minutos. Antes esta vista mostraba
+                        solo la fecha, con un formateador propio; el minuto exacto
+                        de un hecho no se conoce y fingirlo es peor (G20). */}
+                    <p>{fechaHoraSinMinutos(reporte.fechaIncidente)}</p>
                 </div>
                 <div>
                     <span className="font-medium text-subtle">Origen</span>

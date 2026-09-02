@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fechaCorta, fechaHora, fechaISO, fechaHoraSinMinutos, aHoraEnPunto } from "./fecha";
+import { fechaCorta, fechaHora, fechaISO, fechaHoraSinMinutos, aHoraEnPunto, partesHoraLocal, desdePartesHoraLocal} from "./fecha";
 
 describe("SPEC-208: helpers de fecha centralizados", () => {
     it("devuelve '—' para null, undefined e inválido", () => {
@@ -98,5 +98,36 @@ describe("aHoraEnPunto (A-70 · G20 · minutos 00 en BD)", () => {
 
     it("valor sin parte de hora no se rompe", () => {
         expect(aHoraEnPunto("2026-08-30")).toBe("2026-08-30");
+    });
+});
+
+describe("piezas del control amable (A-74 · P1)", () => {
+    it("parte el valor en día, hora 1-12 y a.m./p.m.", () => {
+        expect(partesHoraLocal("2026-09-02T14:00")).toEqual({ fecha: "2026-09-02", hora12: 2, meridiano: "pm" });
+        expect(partesHoraLocal("2026-09-02T09:00")).toEqual({ fecha: "2026-09-02", hora12: 9, meridiano: "am" });
+    });
+
+    it("los bordes del reloj de 12: medianoche es 12 a.m. y mediodía es 12 p.m.", () => {
+        expect(partesHoraLocal("2026-09-02T00:00")).toEqual({ fecha: "2026-09-02", hora12: 12, meridiano: "am" });
+        expect(partesHoraLocal("2026-09-02T12:00")).toEqual({ fecha: "2026-09-02", hora12: 12, meridiano: "pm" });
+        expect(desdePartesHoraLocal("2026-09-02", 12, "am")).toBe("2026-09-02T00:00");
+        expect(desdePartesHoraLocal("2026-09-02", 12, "pm")).toBe("2026-09-02T12:00");
+    });
+
+    it("siempre arma la hora EN PUNTO (candado G20: minutos 00)", () => {
+        expect(desdePartesHoraLocal("2026-09-02", 3, "pm")).toBe("2026-09-02T15:00");
+        expect(desdePartesHoraLocal("2026-09-02", 3, "am")).toBe("2026-09-02T03:00");
+    });
+
+    it("a medio llenar no inventa una fecha: devuelve vacío", () => {
+        expect(desdePartesHoraLocal("", 3, "pm")).toBe("");
+        expect(desdePartesHoraLocal("2026-09-02", null, "pm")).toBe("");
+    });
+
+    it("ida y vuelta: lo que se parte se vuelve a armar igual", () => {
+        for (const valor of ["2026-09-02T00:00", "2026-09-02T11:00", "2026-09-02T12:00", "2026-09-02T23:00"]) {
+            const { fecha, hora12, meridiano } = partesHoraLocal(valor);
+            expect(desdePartesHoraLocal(fecha, hora12, meridiano)).toBe(valor);
+        }
     });
 });
