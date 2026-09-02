@@ -9,16 +9,20 @@ export default function Topbar({
     titulo,
     acento,
     activo,
+    sub = "Inteligencia de negocio sobre PI",
 }: {
     titulo: string;
     acento: string;
-    activo: "dashboard" | "chat" | "personas" | "geografia" | "operacion" | "admin-ia";
+    activo: "dashboard" | "chat" | "personas" | "geografia" | "analitica" | "operacion" | "admin-ia";
+    /** Bajada bajo el título; por defecto la del producto (Analítica trae la suya del mockup v4). */
+    sub?: string;
 }) {
     const tabs = [
         { id: "dashboard", href: "/dashboard", etiqueta: "Pulso" },
         { id: "chat", href: "/chat", etiqueta: "Chat IA" },
         { id: "personas", href: "/personas", etiqueta: "Personas" },
         { id: "geografia", href: "/geografia", etiqueta: "Geografía" },
+        { id: "analitica", href: "/analitica", etiqueta: "Analítica" },
         { id: "operacion", href: "/operacion", etiqueta: "Operación" },
         { id: "admin-ia", href: "/admin/ia", etiqueta: "Admin IA" },
     ] as const;
@@ -35,7 +39,7 @@ export default function Topbar({
                 <h1 className="text-xl font-semibold tracking-tight">
                     {titulo} <span className="font-serif italic text-gradient">{acento}</span>
                 </h1>
-                <div className="text-muted text-[13px]">Inteligencia de negocio sobre PI</div>
+                <div className="text-muted text-[13px]">{sub}</div>
             </div>
             <nav className="flex gap-1 ml-auto items-center">
                 {tabs.map((t) => (

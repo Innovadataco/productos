@@ -1,12 +1,21 @@
 "use client";
 
-import { MapContainer, CircleMarker, Tooltip, TileLayer } from "react-leaflet";
+import { useEffect, useState } from "react";
+import { MapContainer, CircleMarker, Tooltip, GeoJSON } from "react-leaflet";
+import type { PathOptions } from "leaflet";
+import type { GeoJsonObject } from "geojson";
 import "leaflet/dist/leaflet.css";
 
 /**
  * Mapa de calor de reportes por ciudad (Pulso siguiente nivel · mockup v3
  * pantalla 3). CLIENT-ONLY: react-leaflet toca window — se carga vía
  * MapaDinamico con dynamic import ssr:false.
+ *
+ * Base del mapa: GeoJSON LOCAL de países (/geo/world-countries.json) — la
+ * misma técnica del dashboard público de PI: SIN TileLayer ni tiles remotos,
+ * así que jamás pide API key ni muestra marcas de agua (defecto visto con
+ * las tiles de CARTO: "API KEY REQUIRED"). Los polígonos se pintan con los
+ * tokens del tema oscuro; el calor vive en los CircleMarkers encima.
  *
  * Un CircleMarker por ciudad del ResultSet:
  * · COLOR por CUARTIL de intensidad (constante de presentación, no un dato):
@@ -46,8 +55,26 @@ function cuartil(ordenados: number[], p: number): number {
     return ordenados[Math.floor(p * (ordenados.length - 1))];
 }
 
+/* Estilo de los polígonos de país (tema oscuro; Leaflet necesita colores
+   concretos, no vars CSS): relleno apenas más claro que el fondo, borde
+   sutil — la atención es de los círculos de calor, no del mapa base. */
+const ESTILO_PAIS: PathOptions = {
+    color: "rgb(242 247 244 / 0.28)",
+    weight: 1,
+    fillColor: "rgb(242 247 244 / 0.07)",
+    fillOpacity: 1,
+};
+
 export default function MapaReportes({ ciudades }: { ciudades: CiudadCalor[] }) {
     // La tarjeta ya decide el vacío honesto; guarda defensiva si llega [].
+    const [geoData, setGeoData] = useState<GeoJsonObject | null>(null);
+    useEffect(() => {
+        fetch("/geo/world-countries.json")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => setGeoData(j as GeoJsonObject))
+            .catch(() => setGeoData(null));
+    }, []);
+
     if (ciudades.length === 0) return null;
 
     const maxTotal = Math.max(...ciudades.map((c) => c.total), 1);
@@ -65,12 +92,9 @@ export default function MapaReportes({ ciudades }: { ciudades: CiudadCalor[] }) 
             minZoom={4}
             scrollWheelZoom={false}
             className="h-[420px] w-full rounded-xl"
-            style={{ zIndex: 0 }}
+            style={{ zIndex: 0, background: "rgb(6 11 10)" }}
         >
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            />
+            {geoData && <GeoJSON data={geoData} style={ESTILO_PAIS} />}
             {ciudades.map((c) => {
                 const banda = bandaDe(c.intensidad);
                 const color = COLORES_CALOR[banda];
