@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { edadesReporte } from "@/lib/padre/documento-menor";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
@@ -175,12 +176,15 @@ export function ReporteStepDetalle({
                     error={fechaIncidente > hoy ? "El hecho no puede ser a futuro; ajustamos la hora al momento actual." : undefined}
                 />
 
-                <Input
+                {/* SPEC-361 (A-70 · F9): la edad se ELIGE de una lista de 4 a 17,
+                    el rango del producto. Antes era un campo libre de 1 a 120,
+                    donde cabía cualquier número que no describe a un menor. */}
+                <Select
                     label="Edad aproximada del menor (opcional)"
-                    type="number"
-                    min={1}
-                    max={120}
-                    placeholder="Ej: 12"
+                    options={[
+                        { value: "", label: "Sin especificar" },
+                        ...edadesReporte().map((e) => ({ value: String(e), label: `${e} años` })),
+                    ]}
                     value={edadVictima}
                     onChange={(e) =>
                         onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto })

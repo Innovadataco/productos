@@ -79,7 +79,7 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
             update: {},
             create: {
                 clave: "padre.hijos.maximo_mensaje",
-                valor: "Puedes cuidar hasta {{maximo}} menores desde esta cuenta.",
+                valor: "Tienes {{activos}} de {{maximo}} menores activos. Si quieres registrar otro, primero inactiva uno.",
                 tipo: "STRING",
                 categoria: "SYSTEM",
                 descripcion: "mensaje test",
@@ -94,7 +94,10 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         const res = await POST(reqCrear(menor(6)));
         expect(res.status).toBe(409);
         const json = await res.json();
-        expect(json.error.message).toContain("hasta 5 menores");
+        // SPEC-361 (A-70 · F5): el mensaje dice el cupo real y qué hacer.
+        expect(json.error.message).toBe(
+            "Tienes 5 de 5 menores activos. Si quieres registrar otro, primero inactiva uno.",
+        );
     });
 
     it("cambiar el parámetro cambia el tope SIN desplegar (SC-005)", async () => {
@@ -103,7 +106,7 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         expect((await POST(reqCrear(menor(2)))).status).toBe(201);
         const res = await POST(reqCrear(menor(3)));
         expect(res.status).toBe(409);
-        expect((await res.json()).error.message).toContain("hasta 2 menores");
+        expect((await res.json()).error.message).toContain("2 de 2 menores activos");
     });
 
     // T074: cerrar el Paso 3 al instante.
@@ -120,6 +123,57 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         expect(res.status).toBe(201);
         expect((await res.json()).aviso).toContain("recárgala");
         expect(await prisma.hijo.count()).toBe(1);
+    });
+
+    // ── SPEC-361 (A-70 · F5 · F4 · F7) ──────────────────────────────────────
+    it("F5: inactivar un menor LIBERA cupo — el tope cuenta solo activos", async () => {
+        for (let i = 1; i <= 5; i++) {
+            expect((await POST(reqCrear(menor(i)))).status).toBe(201);
+        }
+        expect((await POST(reqCrear(menor(6)))).status, "lleno").toBe(409);
+
+        // El PADRE inactiva uno (el producto nunca lo hace por su cuenta).
+        const hijos = await prisma.hijo.findMany({ select: { id: true } });
+        await PATCH(...reqPatch(hijos[0]!.id, { estado: "inactivo" }));
+
+        const res = await POST(reqCrear(menor(6)));
+        expect(res.status, "el cupo liberado deja registrar otro").toBe(201);
+
+        // Y el inactivo sigue existiendo: liberar cupo no es borrar.
+        const total = await prisma.hijo.count();
+        expect(total).toBe(6);
+    });
+
+    it("F5: el mensaje del tope nombra el cupo real y qué hacer", async () => {
+        for (let i = 1; i <= 5; i++) await POST(reqCrear(menor(i)));
+        const json = await (await POST(reqCrear(menor(6)))).json();
+        expect(json.error.message).toBe(
+            "Tienes 5 de 5 menores activos. Si quieres registrar otro, primero inactiva uno.",
+        );
+        // Nunca sugiere a cuál inactivar ni lo hace por su cuenta.
+        expect(json.error.message).not.toMatch(/Menor \d/);
+    });
+
+    it("F7: el documento se valida por tipo — el caso de Jelkin (letras en una TI) se rechaza", async () => {
+        const res = await POST(reqCrear({ ...menor(1), documentoTipo: "TI", documentoNumero: "84opkioniby" }));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toContain("solo números");
+        expect(json.error.message).toContain("tarjeta de identidad");
+        expect(await prisma.hijo.count(), "no se guardó nada").toBe(0);
+    });
+
+    it("F7: el pasaporte SÍ admite letras (no se valida todo con la misma regla)", async () => {
+        const res = await POST(reqCrear({ ...menor(1), documentoTipo: "PASAPORTE", documentoNumero: "AV123456" }));
+        expect(res.status).toBe(201);
+    });
+
+    it("F4: un campo faltante responde nombrando el campo, no 'Datos inválidos'", async () => {
+        const res = await POST(reqCrear({ apellidos: "Sin Nombre", documentoTipo: "TI", documentoNumero: "1030999999" }));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toBe("Escribe el nombre del menor.");
+        expect(json.error.message).not.toBe("Datos inválidos");
     });
 
     it("apellidos ahora son obligatorios (FR-019)", async () => {
