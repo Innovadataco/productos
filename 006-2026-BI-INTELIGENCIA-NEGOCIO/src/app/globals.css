@@ -310,3 +310,52 @@
         rgb(var(--rubi-rgb))
     );
 }
+
+/* ==========================================================================
+   Mejoras BI v2 (SPEC-006) — mapa con números y puntos de carga.
+   ========================================================================== */
+
+/* Número permanente DENTRO de cada círculo del mapa de calor (pedido del
+   dueño, como el mapa público de PI): divIcon de Leaflet sin la caja blanca
+   por defecto — el número flota centrado sobre el círculo, en cifra tabular
+   y con sombra para leerse sobre cualquier banda de color en el tema oscuro.
+   Estático (sin animación): prefers-reduced-motion no necesita tocarlo. */
+.mapa-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    pointer-events: none;
+}
+.mapa-num-cifra {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: rgb(255 255 255);
+    text-shadow:
+        0 1px 4px rgb(0 0 0 / 0.65),
+        0 0 2px rgb(0 0 0 / 0.5);
+}
+
+/* Puntos de carga (proyección con filtro, detalle de mes): tres puntos que
+   laten en cascada. La regla global de prefers-reduced-motion apaga la
+   animación y los puntos quedan visibles y quietos. */
+.carga-puntos {
+    display: inline-flex;
+    gap: 4px;
+}
+.carga-puntos span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: latido-punto 1.2s var(--curva) infinite;
+}
+.carga-puntos span:nth-child(2) { animation-delay: 0.15s; }
+.carga-puntos span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes latido-punto {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 1; }
+}

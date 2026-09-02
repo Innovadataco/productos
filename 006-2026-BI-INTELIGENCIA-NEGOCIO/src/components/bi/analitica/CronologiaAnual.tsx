@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import type { AnaliticaData } from "@/lib/bi/analitica";
 import { fmtMiles } from "@/components/bi/pulso/formatos";
+import DetalleMes from "./DetalleMes";
 
 const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
@@ -14,17 +18,23 @@ function etiquetaMes(mes: string): string {
 }
 
 /**
- * Cronología del año con fenómenos (mockup v4, sección 6): 12 barras
- * mensuales (mismo patrón de `barra-crece` del Pulso) y un marcador rubí
- * latiendo sobre cada mes donde el detector disparó (`conFenomeno` del
- * contrato — aquí no se deduce nada, candado 10). Vacío → nota honesta
- * (candado 9), nunca un eje de ceros.
+ * Cronología del año con fenómenos (mockup v4, sección 6), ahora INTERACTIVA
+ * (mejora aprobada por el dueño): cada mes es un botón — tocarlo abre bajo
+ * la cronología un DetalleMes que cuenta qué pasó ese mes (vía
+ * /api/bi/analitica/detalle-mes). El mes seleccionado se marca con borde
+ * pino; tocarlo de nuevo lo cierra.
+ *
+ * 12 barras mensuales (mismo patrón de `barra-crece` del Pulso) y un
+ * marcador rubí latiendo sobre cada mes donde el detector disparó
+ * (`conFenomeno` del contrato — aquí no se deduce nada, candado 10).
+ * Vacío → nota honesta (candado 9), nunca un eje de ceros.
  */
 export default function CronologiaAnual({
     cronologia,
 }: {
     cronologia: AnaliticaData["cronologia"];
 }) {
+    const [mesSel, setMesSel] = useState<string | null>(null);
     const max = Math.max(...cronologia.map((m) => m.total), 1);
 
     return (
@@ -35,41 +45,52 @@ export default function CronologiaAnual({
             <h3 className="mb-1 text-[17px] font-semibold">Cronología del año con fenómenos</h3>
             <div className="mb-4 text-[13px] text-muted">
                 {cronologia.length} meses — cada punto rubí es un mes donde el detector disparó
+                · toca un mes para ver qué pasó
             </div>
             {cronologia.length === 0 ? (
                 <p className="py-10 text-center text-[13.5px] text-muted">
                     Aún no hay histórico mensual en la réplica para trazar la cronología.
                 </p>
             ) : (
-                <div className="flex h-[170px] items-end gap-1.5 pt-2.5">
-                    {cronologia.map((m, i) => (
-                        <div
-                            key={`${m.mes}-${i}`}
-                            className="relative flex h-full flex-1 flex-col items-center justify-end gap-1.5"
-                            title={`${fmtMiles(m.total)} ${m.total === 1 ? "reporte" : "reportes"} · ${m.mes}${m.conFenomeno ? " · mes con fenómeno detectado" : ""}`}
-                        >
-                            {m.conFenomeno && (
-                                <span
-                                    className="anim-pulso absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-[rgb(var(--rubi-rgb))] shadow-[0_0_10px_rgb(var(--rubi-rgb)/0.8)]"
-                                    aria-label="Mes con fenómeno detectado"
+                <>
+                    <div className="flex h-[170px] items-end gap-1.5 pt-2.5">
+                        {cronologia.map((m, i) => (
+                            <button
+                                key={`${m.mes}-${i}`}
+                                type="button"
+                                aria-pressed={m.mes === mesSel}
+                                onClick={() => setMesSel(m.mes === mesSel ? null : m.mes)}
+                                className={`relative flex h-full flex-1 cursor-pointer flex-col items-center justify-end gap-1.5 rounded-md px-0.5 ${
+                                    m.mes === mesSel
+                                        ? "ring-2 ring-[rgb(var(--pino-rgb))]"
+                                        : "hover:bg-[rgb(var(--tinta-rgb)/0.05)]"
+                                }`}
+                                title={`${fmtMiles(m.total)} ${m.total === 1 ? "reporte" : "reportes"} · ${m.mes}${m.conFenomeno ? " · mes con fenómeno detectado" : ""} · toca para ver el detalle`}
+                            >
+                                {m.conFenomeno && (
+                                    <span
+                                        className="anim-pulso absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-[rgb(var(--rubi-rgb))] shadow-[0_0_10px_rgb(var(--rubi-rgb)/0.8)]"
+                                        aria-label="Mes con fenómeno detectado"
+                                    />
+                                )}
+                                <span className="cifra text-[11px] font-semibold">{fmtMiles(m.total)}</span>
+                                <div
+                                    className="barra-crece min-h-[3px] w-full max-w-[34px] rounded-b-sm rounded-t-md"
+                                    style={
+                                        {
+                                            height: `${(m.total / max) * 100}%`,
+                                            backgroundImage:
+                                                "linear-gradient(to top, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)))",
+                                            "--anim-retardo": `${i * 50}ms`,
+                                        } as React.CSSProperties
+                                    }
                                 />
-                            )}
-                            <span className="cifra text-[11px] font-semibold">{fmtMiles(m.total)}</span>
-                            <div
-                                className="barra-crece min-h-[3px] w-full max-w-[34px] rounded-b-sm rounded-t-md"
-                                style={
-                                    {
-                                        height: `${(m.total / max) * 100}%`,
-                                        backgroundImage:
-                                            "linear-gradient(to top, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb)))",
-                                        "--anim-retardo": `${i * 50}ms`,
-                                    } as React.CSSProperties
-                                }
-                            />
-                            <span className="text-[10px] text-subtle">{etiquetaMes(m.mes)}</span>
-                        </div>
-                    ))}
-                </div>
+                                <span className="text-[10px] text-subtle">{etiquetaMes(m.mes)}</span>
+                            </button>
+                        ))}
+                    </div>
+                    {mesSel && <DetalleMes mes={mesSel} />}
+                </>
             )}
         </div>
     );

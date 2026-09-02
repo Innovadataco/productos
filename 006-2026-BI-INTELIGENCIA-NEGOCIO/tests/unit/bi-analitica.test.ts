@@ -11,18 +11,27 @@
 // proyección NULL sin base y exacta con tendencia lineal, severidades,
 // dedupe/orden/tope de fenómenos, ventanas de vencimientos, cronología con
 // marcadores, defaults B3 con config inválida y degradación por sección.
+// SPEC-006 (mejoras en vivo): getProyeccion con horizonte 4/8/12 (rangos
+// distintos, NULL sin base), getDetalleMes (mes con datos / sin datos →
+// null / formato inválido → null, fenómenos ráfaga + pico σ) y las rutas
+// GET detalle-mes / proyeccion (401 sin sesión, 400 formato/horizonte, 200
+// con datos, 404 sin_datos).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { queryRawMock, getConfigMock } = vi.hoisted(() => ({
+const { queryRawMock, getConfigMock, leerSesionMock } = vi.hoisted(() => ({
     queryRawMock: vi.fn(),
     getConfigMock: vi.fn(),
+    leerSesionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: { $queryRaw: queryRawMock } }));
 vi.mock("@/lib/config", () => ({ getConfig: getConfigMock }));
+vi.mock("@/lib/auth/sesion", () => ({ leerSesion: leerSesionMock }));
 
-import { getAnalitica } from "@/lib/bi/analitica";
+import { getAnalitica, getDetalleMes, getProyeccion } from "@/lib/bi/analitica";
+import { GET as GET_DETALLE_MES } from "@/app/api/bi/analitica/detalle-mes/route";
+import { GET as GET_PROYECCION } from "@/app/api/bi/analitica/proyeccion/route";
 
 // Medidos de septiembre: claveMes() es estable en cualquier TZ razonable.
 const AHORA = new Date("2026-09-15T12:00:00.000Z");
@@ -77,6 +86,17 @@ const F = {
     cronologia: "interval '11 months'",
 } as const;
 
+// Fragmentos distintivos de las 5 queries de getDetalleMes.
+const FD = {
+    totales: '"esAnonimo"',
+    categoria: "LIMIT 1",
+    alertas: 'FROM "AlertaColegio"',
+    rafaga: '"esRafaga"',
+    anio: "date_trunc('year'",
+} as const;
+
+const EMAIL_SESION = "jelkin@innovadataco.com";
+
 const SENSIBLES_PI =
     "SOLICITUD_MATERIAL,COMPARTIMIENTO_SEXUAL,DIFUSION_NO_CONSENTIDA,SOLICITUD_ENCUENTRO,EXTORSION";
 
@@ -113,6 +133,8 @@ beforeEach(() => {
     // Silencia los console.warn deliberados de degradación (no son fallos).
     vi.spyOn(console, "warn").mockImplementation(() => {});
     mockConfigEstandar();
+    // Sesión válida por defecto para los tests de rutas (SE2).
+    leerSesionMock.mockResolvedValue({ email: EMAIL_SESION });
 });
 
 afterEach(() => {
@@ -551,5 +573,226 @@ describe("candados · defaults B3 y degradación por sección", () => {
         });
         // Las demás secciones siguieron funcionando.
         expect(data.frentePadre.reportesPadres).toBe(2);
+    });
+});
+
+// ─── (b·ext) getProyeccion · horizonte parametrizable 4/8/12 ─────────────────
+
+describe("getProyeccion · horizonte 4/8/12 (filtro de tiempo)", () => {
+    it("4/8/12 semanas de historia producen rangos DISTINTOS con la misma pendiente", async () => {
+        // y = 10 + 2x en cada horizonte → ŷ_{N} = 10 + 2N, residuos 0:
+        // 4 → [18,18] · 8 → [26,26] · 12 → [34,34].
+        mockConsultas([[F.semanas, filasSemanas([10, 12, 14, 16])]]);
+        const p4 = await getProyeccion(4);
+        expect(p4.hayBase).toBe(true);
+        expect([p4.min, p4.max]).toEqual([18, 18]);
+        expect(p4.tendenciaSemanas).toHaveLength(4);
+
+        mockConsultas([[F.semanas, filasSemanas([10, 12, 14, 16, 18, 20, 22, 24])]]);
+        const p8 = await getProyeccion(8);
+        expect([p8.min, p8.max]).toEqual([26, 26]);
+        expect(p8.tendenciaSemanas).toHaveLength(8);
+
+        mockConsultas([
+            [F.semanas, filasSemanas([10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32])],
+        ]);
+        const p12 = await getProyeccion(12);
+        expect([p12.min, p12.max]).toEqual([34, 34]);
+        expect(p12.tendenciaSemanas).toHaveLength(12);
+
+        // Los tres rangos son distintos entre sí (el filtro cambia el resultado).
+        expect(new Set([p4.min, p8.min, p12.min]).size).toBe(3);
+    });
+
+    it("NULL honesto sin base: menos de 4 semanas con actividad", async () => {
+        mockConsultas([[F.semanas, filasSemanas([0, 0, 0, 5])]]);
+        const p = await getProyeccion(4);
+        expect(p.hayBase).toBe(false);
+        expect(p.min).toBeNull();
+        expect(p.max).toBeNull();
+        // La serie igual se expone con sus 0 reales (vacío honesto).
+        expect(p.tendenciaSemanas.map((s) => s.total)).toEqual([0, 0, 0, 5]);
+    });
+
+    it("sondeo degradado → hayBase false, min/max NULL, serie vacía", async () => {
+        mockConsultas([[F.semanas, new Error("réplica caída")]]);
+        const p = await getProyeccion(12);
+        expect(p).toEqual({ min: null, max: null, tendenciaSemanas: [], hayBase: false });
+    });
+});
+
+// ─── (h) getDetalleMes · drill-down de la timeline ───────────────────────────
+
+/** Los 12 meses del año calendario de `mes` (forma de la query detalle-mes-anio). */
+function filasAnioDe(mes: string, totales: number[]): Filas {
+    const anio = mes.slice(0, 4);
+    return totales.map((total, i) => ({
+        mes: `${anio}-${String(i + 1).padStart(2, "0")}`,
+        total,
+    }));
+}
+
+describe("getDetalleMes · qué pasó en un mes", () => {
+    it("mes válido con datos: total, categoría top, alertas, escaladas y anónimos", async () => {
+        mockConsultas([
+            [FD.totales, [{ total: 40, anonimos: 12 }]],
+            [FD.categoria, [{ categoria: "CIBERACOSO", total: 18 }]],
+            [FD.alertas, [{ total: 7, escaladas: 2 }]],
+            [FD.rafaga, [{ total: 0 }]],
+            // Año plano en 40 → desvío 0: sin dispersión no hay pico honesto.
+            [FD.anio, filasAnioDe("2026-03", Array(12).fill(40))],
+        ]);
+        const detalle = await getDetalleMes("2026-03");
+        expect(detalle).toEqual({
+            mes: "2026-03",
+            total: 40,
+            categoriaTop: { categoria: "CIBERACOSO", total: 18 },
+            alertasDelMes: 7,
+            escaladasDelMes: 2,
+            fenomenos: [],
+            anonimos: 12,
+        });
+    });
+
+    it("categoría top NULL si ningún reporte del mes quedó clasificado (candado 9)", async () => {
+        mockConsultas([
+            [FD.totales, [{ total: 5, anonimos: 5 }]],
+            [FD.categoria, []], // sin filas: nadie clasificado ese mes
+            [FD.alertas, [{ total: 0, escaladas: 0 }]],
+            [FD.rafaga, [{ total: 0 }]],
+            [FD.anio, filasAnioDe("2026-03", Array(12).fill(5))],
+        ]);
+        const detalle = await getDetalleMes("2026-03");
+        expect(detalle?.categoriaTop).toBeNull();
+        expect(detalle?.total).toBe(5);
+    });
+
+    it("fenómenos del mes: ráfaga esRafaga y pico σ sobre la media anual", async () => {
+        mockConsultas([
+            [FD.totales, [{ total: 40, anonimos: 0 }]],
+            [FD.categoria, []],
+            [FD.alertas, [{ total: 0, escaladas: 0 }]],
+            [FD.rafaga, [{ total: 3 }]],
+            // Marzo con 40 y el resto del año en 10 → media 12.5, desvío
+            // √75 ≈ 8.66 → 40 > 12.5 + 2·8.66 → pico de +3.2σ.
+            [FD.anio, filasAnioDe("2026-03", [10, 10, 40, 10, 10, 10, 10, 10, 10, 10, 10, 10])],
+        ]);
+        const detalle = await getDetalleMes("2026-03");
+        expect(detalle?.fenomenos).toEqual([
+            "3 reportes con marca de ráfaga (esRafaga) del antifraude en el mes",
+            "Pico del año: 40 reportes, +3.2σ sobre la media anual de 12.5",
+        ]);
+    });
+
+    it("mes sin reportes → null (la ruta lo traduce a 404 sin_datos)", async () => {
+        mockConsultas([[FD.totales, [{ total: 0, anonimos: 0 }]]]);
+        expect(await getDetalleMes("2026-03")).toBeNull();
+    });
+
+    it.each(["2026-13", "2026-00", "2026-3", "abc", "2026-03-15", ""])(
+        "formato inválido ('%s') → null SIN tocar la BD",
+        async (mes) => {
+            expect(await getDetalleMes(mes)).toBeNull();
+            expect(queryRawMock).not.toHaveBeenCalled();
+        },
+    );
+});
+
+// ─── Rutas · GET detalle-mes y proyeccion ────────────────────────────────────
+
+describe("GET /api/bi/analitica/detalle-mes", () => {
+    function req(query: string): Request {
+        return new Request(`http://localhost:3001/api/bi/analitica/detalle-mes${query}`);
+    }
+
+    it("sin sesión → 401 y la BD NO se toca", async () => {
+        leerSesionMock.mockResolvedValue(null);
+        const res = await GET_DETALLE_MES(req("?mes=2026-03"));
+        expect(res.status).toBe(401);
+        expect(await res.json()).toEqual({ error: "no_autorizado" });
+        expect(queryRawMock).not.toHaveBeenCalled();
+    });
+
+    it.each(["?mes=2026-13", "?mes=marzo", "?mes=", ""])(
+        "mes mal formado ('%s') → 400 formato_invalido",
+        async (query) => {
+            const res = await GET_DETALLE_MES(req(query));
+            expect(res.status).toBe(400);
+            expect(await res.json()).toEqual({ error: "formato_invalido" });
+            expect(queryRawMock).not.toHaveBeenCalled();
+        },
+    );
+
+    it("mes con datos → 200 con el DetalleMes", async () => {
+        mockConsultas([
+            [FD.totales, [{ total: 40, anonimos: 12 }]],
+            [FD.categoria, [{ categoria: "CIBERACOSO", total: 18 }]],
+            [FD.alertas, [{ total: 7, escaladas: 2 }]],
+            [FD.rafaga, [{ total: 0 }]],
+            [FD.anio, filasAnioDe("2026-03", Array(12).fill(40))],
+        ]);
+        const res = await GET_DETALLE_MES(req("?mes=2026-03"));
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            mes: "2026-03",
+            total: 40,
+            categoriaTop: { categoria: "CIBERACOSO", total: 18 },
+            alertasDelMes: 7,
+            escaladasDelMes: 2,
+            fenomenos: [],
+            anonimos: 12,
+        });
+    });
+
+    it("mes válido sin reportes → 404 sin_datos", async () => {
+        mockConsultas([[FD.totales, [{ total: 0, anonimos: 0 }]]]);
+        const res = await GET_DETALLE_MES(req("?mes=2026-03"));
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({ error: "sin_datos" });
+    });
+});
+
+describe("GET /api/bi/analitica/proyeccion", () => {
+    function req(query: string): Request {
+        return new Request(`http://localhost:3001/api/bi/analitica/proyeccion${query}`);
+    }
+
+    it("sin sesión → 401 y la BD NO se toca", async () => {
+        leerSesionMock.mockResolvedValue(null);
+        const res = await GET_PROYECCION(req("?semanas=4"));
+        expect(res.status).toBe(401);
+        expect(await res.json()).toEqual({ error: "no_autorizado" });
+        expect(queryRawMock).not.toHaveBeenCalled();
+    });
+
+    it.each(["?semanas=6", "?semanas=0", "?semanas=ocho"])(
+        "horizonte fuera de 4/8/12 ('%s') → 400 horizonte_invalido",
+        async (query) => {
+            const res = await GET_PROYECCION(req(query));
+            expect(res.status).toBe(400);
+            expect(await res.json()).toEqual({ error: "horizonte_invalido" });
+            expect(queryRawMock).not.toHaveBeenCalled();
+        },
+    );
+
+    it("semanas=4 → 200 con la proyección de 4 semanas", async () => {
+        mockConsultas([[F.semanas, filasSemanas([10, 12, 14, 16])]]);
+        const res = await GET_PROYECCION(req("?semanas=4"));
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            min: 18,
+            max: 18,
+            hayBase: true,
+            tendenciaSemanas: filasSemanas([10, 12, 14, 16]),
+        });
+    });
+
+    it("sin parámetro → horizonte default 8 (compatibilidad)", async () => {
+        mockConsultas([[F.semanas, filasSemanas([10, 12, 14, 16, 18, 20, 22, 24])]]);
+        const res = await GET_PROYECCION(req(""));
+        expect(res.status).toBe(200);
+        const cuerpo = await res.json();
+        expect(cuerpo.min).toBe(26);
+        expect(cuerpo.tendenciaSemanas).toHaveLength(8);
     });
 });

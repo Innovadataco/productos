@@ -3,6 +3,9 @@ import { getGeo } from "@/lib/bi/geo";
 import TarjetaMapa from "@/components/bi/geo/TarjetaMapa";
 import BarrasTopCiudades from "@/components/bi/geo/BarrasTopCiudades";
 import EmbudoReincidencia from "@/components/bi/geo/EmbudoReincidencia";
+import ComportamientoGeo, {
+    type ComportamientoGeoData,
+} from "@/components/bi/geo/ComportamientoGeo";
 import { BarrasEstacionalidad, BarrasPorMes } from "@/components/bi/geo/BarrasCronologia";
 
 // Datos vivos de la réplica en cada request: jamás prerender estático.
@@ -23,12 +26,16 @@ export const dynamic = "force-dynamic";
  */
 export default async function GeografiaPage() {
     const geo = await getGeo();
+    const comportamiento = geo.comportamiento ?? null;
 
     return (
         <main className="relative z-10 mx-auto max-w-[1180px] px-6 pb-20 pt-8">
             <Topbar titulo="Geografía y" acento="reincidencia" activo="geografia" />
 
             <TarjetaMapa calorCiudades={geo.calorCiudades} ciudadesConReportes={geo.ciudadesConReportes} />
+
+            {/* Comportamiento por país/ciudad (bajo el mapa, pedido del dueño) */}
+            <ComportamientoGeo comportamiento={comportamiento} />
 
             <div className="mb-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
                 <BarrasTopCiudades

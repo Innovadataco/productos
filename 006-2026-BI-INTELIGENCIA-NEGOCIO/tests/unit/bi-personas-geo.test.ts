@@ -14,6 +14,9 @@
 // móviles con huecos), y degradación por sección cuando una consulta falla.
 // SPEC-006: calorCiudades (intensidad 0..1 = total / máximo del top; la
 // ciudad líder marca 1.0; total 0 → 0, jamás NaN; vacío/degradado → []).
+// Mejoras en vivo: comportamiento por país/ciudad (top 8 con categoría más
+// frecuente; categoriaTop NULL honesto si el país/ciudad no tiene reportes
+// clasificados; sondeo roto → lista vacía sin reventar el resto).
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,6 +62,8 @@ const F = {
     reincidencia: 'FROM "IdentificadorReportado"',
     dow: "EXTRACT(ISODOW",
     porMes: "generate_series",
+    comportamientoPais: 'PARTITION BY r."paisId"',
+    comportamientoCiudad: 'PARTITION BY r."ciudadId"',
 } as const;
 
 beforeEach(() => {
@@ -350,5 +355,64 @@ describe("getGeo · calorCiudades (SPEC-006)", () => {
 
         mockConsultas([[F.topCiudades, new Error('relation "Ciudad" does not exist')]]);
         expect((await getGeo()).calorCiudades).toEqual([]);
+    });
+});
+
+// ─── getGeo · comportamiento por país/ciudad ─────────────────────────────────
+
+describe("getGeo · comportamiento por país/ciudad", () => {
+    it("top por volumen con la categoría más frecuente de cada uno", async () => {
+        mockConsultas([
+            [F.comportamientoPais, [
+                { pais: "Colombia", total: 900, categoria_top: "CIBERACOSO" },
+                { pais: "México", total: 120, categoria_top: "CONTACTO_INSISTENTE" },
+            ]],
+            [F.comportamientoCiudad, [
+                { ciudad: "Bogotá", total: 500, categoria_top: "CIBERACOSO" },
+                { ciudad: "Medellín", total: 320, categoria_top: "EXTORSION" },
+            ]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.comportamiento.porPais).toEqual([
+            { pais: "Colombia", total: 900, categoriaTop: "CIBERACOSO" },
+            { pais: "México", total: 120, categoriaTop: "CONTACTO_INSISTENTE" },
+        ]);
+        expect(geo.comportamiento.porCiudadTop).toEqual([
+            { ciudad: "Bogotá", total: 500, categoriaTop: "CIBERACOSO" },
+            { ciudad: "Medellín", total: 320, categoriaTop: "EXTORSION" },
+        ]);
+    });
+
+    it("categoriaTop NULL honesto cuando el país/ciudad no tiene reportes clasificados", async () => {
+        mockConsultas([
+            // LEFT JOIN sin fila en cats → categoria_top NULL del ResultSet.
+            [F.comportamientoPais, [{ pais: "Colombia", total: 40, categoria_top: null }]],
+            [F.comportamientoCiudad, [{ ciudad: "Cali", total: 25, categoria_top: null }]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.comportamiento.porPais).toEqual([
+            { pais: "Colombia", total: 40, categoriaTop: null },
+        ]);
+        expect(geo.comportamiento.porCiudadTop).toEqual([
+            { ciudad: "Cali", total: 25, categoriaTop: null },
+        ]);
+    });
+
+    it("vacío o sondeo roto → listas vacías, el resto de Geo vive", async () => {
+        mockConsultas([]);
+        const vacio = await getGeo();
+        expect(vacio.comportamiento).toEqual({ porPais: [], porCiudadTop: [] });
+
+        mockConsultas([
+            [F.comportamientoPais, new Error("réplica caída")],
+            [F.coberturaGeo, [{ ciudades: 4, paises: 1 }]],
+        ]);
+        const degradado = await getGeo();
+        expect(degradado.comportamiento.porPais).toEqual([]); // degradada
+        expect(degradado.paisesConReportes).toBe(1); // el resto vive
     });
 });
