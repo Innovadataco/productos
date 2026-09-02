@@ -378,6 +378,25 @@ describe("motor · clarificación por plan incompleto (candado 4, deny-by-defaul
         const planUsado = mocks.construirSql.mock.calls[0][1] as { periodo?: unknown };
         expect(planUsado.periodo).toBeUndefined();
     });
+
+    it("I-17: ventana absoluta VÁLIDA en pregunta con nombre de mes → NO se descarta", async () => {
+        // Regresión de MI corrección I-16: "septiembre de 2025" no tenía marca
+        // temporal (el regex no conocía meses) y se descartó la ventana buena,
+        // dejando filtros de fecha como texto → 42883 en runtime.
+        const planConVentana = {
+            tabla_idx: 0,
+            columnas_idx: [],
+            agregacion: "conteo",
+            filtros: [],
+            ventanaAbsoluta: { columna_idx: 2, desde: "2025-09-01", hasta: "2025-10-01" },
+        };
+        mocks.llamarOllama.mockResolvedValue(respuestaOllama(planConVentana));
+        const r = await preguntar("¿Cuántos reportes hubo en septiembre de 2025?", EMAIL);
+
+        expect(r.estado).toBe("ok");
+        const planUsado = mocks.construirSql.mock.calls[0][1] as { ventanaAbsoluta?: unknown; periodo?: unknown };
+        expect(planUsado.ventanaAbsoluta).toBeDefined();
+    });
 });
 
 describe("motor · LLM con JSON inválido (candado 2: no se rescata)", () => {

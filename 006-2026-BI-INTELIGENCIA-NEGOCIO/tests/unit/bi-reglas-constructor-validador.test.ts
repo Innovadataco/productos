@@ -418,6 +418,30 @@ describe("construirSql (candado 3: el servidor construye el SQL con nombres del 
         expect(r2.sql).toContain('LOWER("estado"::text) = LOWER($1)');
     });
 
+    it("I-17: plan REAL de producción (ventana + filtros de fecha en la misma columna) → solo la ventana, con casts ::date", () => {
+        // Plan exacto capturado en la bitácora de producción (bi_consulta_log):
+        // el LLM mandó la ventana Y filtros de fecha redundantes; la dedupe los
+        // descarta y el SQL lleva los casts ::date (nunca timestamp >= text).
+        const plan: PlanLLM = {
+            tabla_idx: 0,
+            columnas_idx: [3],
+            agregacion: "conteo",
+            filtros: [
+                { columna_idx: 3, operador: ">=", valor: "2025-09-01" },
+                { columna_idx: 3, operador: "<", valor: "2025-10-01" },
+            ],
+            ventanaAbsoluta: { columna_idx: 3, desde: "2025-09-01", hasta: "2025-10-01" },
+        };
+        const r = construirSql(CATALOGO, plan, LIMITE_MAXIMO);
+        if (!r.ok) throw new Error(`debía construir: ${r.error}`);
+        expect(r.sql).toBe(
+            'SELECT COUNT(*) AS total FROM "Reporte" WHERE "creadoEn" >= $1::date AND "creadoEn" < $2::date LIMIT $3',
+        );
+        expect(r.params).toEqual(["2025-09-01", "2025-10-01", 100]);
+        const v = validarSql(CATALOGO, r.sql);
+        expect(v.valida).toBe(true);
+    });
+
     it("I-10: período sobre columna NO-fecha (estado) → plan inválido (caso real: 'qué colegios tienen más alertas')", () => {
         const plan: PlanLLM = {
             tabla_idx: 0,

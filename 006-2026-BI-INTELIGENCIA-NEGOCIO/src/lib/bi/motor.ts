@@ -78,7 +78,10 @@ const SYSTEM_PROMPT =
     "como 'hace_un_ano' ni una paráfrasis).";
 
 /** Marcas temporales en la pregunta (para el fallback de período malformado). */
-const REGEX_MARCAS_TEMPORALES = /\b(hoy|ayer|semanas?|mes(?:es)?|años?|días?|últim[oa]s?|recientes?)\b/i;
+// I-17: incluye nombres de mes y años — sin ellos, "septiembre de 2025" no
+// tenía marca y la regla I-16 descartaba la ventana VÁLIDA del LLM (regresión
+// mía: quedaban los filtros de fecha como texto → 42883 en runtime).
+const REGEX_MARCAS_TEMPORALES = /\b(hoy|ayer|semanas?|mes(?:es)?|años?|días?|últim[oa]s?|recientes?|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|\d{4})\b/i;
 
 /** La pregunta pide explícitamente una ventana temporal. */
 function tieneMarcasTemporales(pregunta: string): boolean {
