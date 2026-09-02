@@ -5,11 +5,15 @@
 // gestionar, con escaladas sin gestión, reportes hoy), filtros funcionales
 // — incluido "Con escaladas sin gestión" — y tabla ampliada (alertas
 // activas, escaladas en rubí, profes, alumnos) con semáforo.
+// AGENTE C (capacidad operativa): banner rubí sobre la tabla cuando la
+// demanda acumulada supera la capacidad visible de gestión (demandaExcede)
+// y columna "Sin asignar" por colegio (alertas activas sin operario).
 // Candado 9: TODA cifra viene de props (ResultSet real); el vacío se muestra
 // como "—" / mensaje honesto, jamás se inventa un dato.
 
 import { useEffect, useMemo, useState } from "react";
 import type { FilaOperacion, ResumenOperacion } from "@/lib/bi/operacion";
+import type { CapacidadData } from "@/lib/bi/capacidad";
 
 type Filtro = "todos" | "hoy" | "atencion" | "escaladas" | "inactivos";
 
@@ -122,10 +126,20 @@ export default function OperacionBI({
     filas,
     resumen,
     minutosBadgeNuevo,
+    capacidad,
+    sinAsignarPorColegio,
 }: {
     filas: FilaOperacion[];
     resumen: ResumenOperacion;
     minutosBadgeNuevo: number;
+    /** Brecha demanda/capacidad en vivo (banner rubí cuando demandaExcede) */
+    capacidad: CapacidadData;
+    /**
+     * Alertas activas sin asignar por NOMBRE de colegio (la fila no expone
+     * id por contrato). Objeto plano: un Map no cruza la frontera
+     * server→client. Ausencia de la clave = 0 real.
+     */
+    sinAsignarPorColegio: Record<string, number>;
 }) {
     const [filtro, setFiltro] = useState<Filtro>("todos");
 
@@ -172,6 +186,30 @@ export default function OperacionBI({
                 ))}
             </div>
 
+            {/* Banner de capacidad (AGENTE C): la brecha demanda/capacidad en
+                la cara cuando la supera — rubí, con las cifras reales. Con
+                capacidad suficiente no estorba: no se renderiza. */}
+            {capacidad.demandaExcede && (
+                <div
+                    role="alert"
+                    className="glass anim-entrada relative mb-[18px] overflow-hidden border border-[rgb(var(--rubi-rgb)/0.35)] px-5 py-4 pl-6"
+                    style={{ "--anim-retardo": "330ms" } as React.CSSProperties}
+                >
+                    <span aria-hidden="true" className="absolute bottom-0 left-0 top-0 w-1 bg-[rgb(var(--rubi-rgb))]" />
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-estado-rubi">
+                        <span className="punto punto-bad anim-pulso" />
+                        Capacidad operativa insuficiente
+                    </div>
+                    <p className="mt-2 text-[13.5px] font-semibold leading-snug">{capacidad.mensaje}</p>
+                    <p className="cifra mt-1.5 text-[12.5px] text-muted">
+                        {capacidad.revisionManual.toLocaleString("es-CO")} en revisión manual
+                        · {capacidad.alertasSinAsignar.toLocaleString("es-CO")} alertas sin asignar
+                        · {capacidad.operariosConCasos.toLocaleString("es-CO")} operarios con casos
+                        · cupo {capacidad.capacidadMaxPorOperario.toLocaleString("es-CO")} casos/operario
+                    </p>
+                </div>
+            )}
+
             {/* Tabla de colegios ampliada (alertas, escaladas, profes, alumnos) */}
             <div
                 className="glass anim-entrada px-3 py-2 overflow-x-auto"
@@ -187,7 +225,7 @@ export default function OperacionBI({
                     <table className="w-full border-collapse text-sm">
                         <thead>
                             <tr>
-                                {["Colegio", "Rep. mes", "Alertas activas", "Escaladas", "Profes", "Alumnos", "Categoría top", "Último reporte", "Estado"].map(
+                                {["Colegio", "Rep. mes", "Alertas activas", "Sin asignar", "Escaladas", "Profes", "Alumnos", "Categoría top", "Último reporte", "Estado"].map(
                                     (th) => (
                                         <th
                                             key={th}
@@ -208,6 +246,9 @@ export default function OperacionBI({
                                 // (mockup v3): una escalada abierta pesa más
                                 // que el semáforo de actividad.
                                 const conEscaladas = f.escaladas > 0;
+                                // Alertas activas sin operario asignado en este
+                                // colegio (0 real cuando la clave no existe).
+                                const sinAsignar = sinAsignarPorColegio[f.colegio] ?? 0;
                                 return (
                                     <tr key={f.colegio} className="group">
                                         <td
@@ -228,6 +269,13 @@ export default function OperacionBI({
                                         </td>
                                         <td className="cifra px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
                                             {f.alertasActivas > 0 ? f.alertasActivas : "—"}
+                                        </td>
+                                        <td className="cifra px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
+                                            {sinAsignar > 0 ? (
+                                                <span className="font-bold text-estado-rubi">{sinAsignar}</span>
+                                            ) : (
+                                                "—"
+                                            )}
                                         </td>
                                         <td className="cifra px-3.5 py-3 border-b border-[rgb(var(--tinta-rgb)/0.06)] group-hover:bg-[rgb(var(--tinta-rgb)/0.04)] transition-colors">
                                             {conEscaladas ? (

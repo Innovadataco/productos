@@ -5,6 +5,8 @@
 // slots a filas reales. Candado 9: si no hay filas (o el agregado salió
 // NULL, p.ej. SUM sobre conjunto vacío), se responde con la plantilla
 // determinista de sin-datos; jamás se completa con supuestos.
+// Motor v2: render de planes agrupados (GROUP BY → ranking grupo/valor) y
+// composición multi-parte (una sección por sub-plan, misma regla de cifras).
 
 import type { PlanLLM } from "./constructor-sql";
 import type { Catalogo } from "./catalogo";
@@ -12,7 +14,7 @@ import type { Catalogo } from "./catalogo";
 export const PLANTILLA_SIN_DATOS =
     "No hay datos operativos para esa consulta. Puede ser que aún no se registren eventos de esa categoría o el criterio sea muy específico.";
 
-/** La lista resume como máximo 5 filas (slot acotado, candado 10). */
+/** La lista (y el ranking agrupado) resume como máximo 5 filas (slot acotado, candado 10). */
 const MAX_FILAS_LISTA = 5;
 
 /** Nombre legible de la función de agregación para la plantilla escalar. */
@@ -54,9 +56,12 @@ function extraerEscalar(filas: Record<string, unknown>[]): string | null {
     return formatearValor(v);
 }
 
-/** Texto del slot de período: solo si el plan trae ventana en días. */
+/** Texto del slot temporal: período relativo en días o ventana absoluta [desde, hasta). */
 function textoPeriodo(plan: PlanLLM): string {
-    return plan.periodo ? ` en los últimos ${plan.periodo.dias} días` : "";
+    if (plan.periodo) return ` en los últimos ${plan.periodo.dias} días`;
+    const v = plan.ventanaAbsoluta;
+    if (v) return ` del ${v.desde} al ${v.hasta} (hasta exclusivo)`;
+    return "";
 }
 
 /** Etiqueta de una columna del ResultSet: nombre del catálogo si existe. */
@@ -83,6 +88,23 @@ export function renderRespuesta(
     const tablaLegible = tabla?.nombreLegible ?? tabla?.nombreFuente ?? "la tabla consultada";
     const periodo = textoPeriodo(plan);
 
+    // Agrupado (GROUP BY): ranking determinista grupo → valor. Las filas del
+    // ResultSet llegan con los alias fijos del constructor: { grupo, valor }.
+    if (plan.agruparPor_idx !== undefined && plan.agregacion !== "lista") {
+        const grupoLegible = tabla?.columnas[plan.agruparPor_idx]?.nombreFuente ?? "grupo";
+        const hasta = Math.min(MAX_FILAS_LISTA, filas.length);
+        const lineas = filas.slice(0, hasta).map((fila, i) => {
+            const sufijo = plan.agregacion === "conteo" ? " registros" : "";
+            return `${i + 1}. ${formatearValor(fila.grupo)}: ${formatearValor(fila.valor)}${sufijo}`;
+        });
+        if (plan.agregacion === "conteo") {
+            return `Top ${hasta} de ${tablaLegible} por ${grupoLegible}${periodo}:\n${lineas.join("\n")}`;
+        }
+        const fn = NOMBRE_AGREGACION[plan.agregacion] ?? plan.agregacion;
+        const columnaLegible = tabla?.columnas[plan.columnas_idx[0]]?.nombreFuente ?? "la columna consultada";
+        return `Top ${hasta} por ${grupoLegible} en ${tablaLegible} (${fn} de ${columnaLegible})${periodo}:\n${lineas.join("\n")}`;
+    }
+
     if (plan.agregacion === "conteo") {
         const n = extraerEscalar(filas);
         if (n === null) return PLANTILLA_SIN_DATOS;
@@ -107,4 +129,16 @@ export function renderRespuesta(
     const columna = tabla?.columnas[plan.columnas_idx[0]];
     const columnaLegible = columna?.nombreFuente ?? "la columna consultada";
     return `${fn} de ${columnaLegible} en ${tablaLegible}${periodo}: ${valor}.`;
+}
+
+/**
+ * Compone UNA respuesta a partir de las secciones de cada sub-plan
+ * (multi-parte, motor v2): la pregunta puede pedir varias métricas y cada
+ * tramo ya viene resuelto con su plantilla (cifras del ResultSet) o con su
+ * texto determinista de clarificación/rechazo/sin-datos — un tramo fallido
+ * aclara su parte sin tirar las demás. Con una sola sección el texto es
+ * idéntico al de siempre.
+ */
+export function renderRespuestaCompuesta(secciones: string[]): string {
+    return secciones.filter((s) => s.trim().length > 0).join("\n\n");
 }

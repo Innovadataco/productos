@@ -107,6 +107,8 @@ model BIConsultaLog {
   preguntaNL  String
   sqlGenerado String?
   planJson    String?  // plan del LLM (índices, filtros, valores) — candado 12: traza completa
+  respuestaTexto String? // texto final que vio el usuario (historial persistente del chat)
+  pasosJson   String?  // array JSON de PasoTraza: auditoría paso a paso del pipeline (observabilidad)
   estado      String   @default("pendiente")
   latenciaMs  Int?
   fuenteCache Boolean  @default(false)

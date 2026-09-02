@@ -26,7 +26,7 @@ const PALABRAS_SQL: ReadonlySet<string> = new Set([
     "select", "from", "where", "and", "or", "not", "as", "distinct", "all",
     "like", "ilike", "in", "between", "is", "null", "exists",
     "count", "sum", "avg", "min", "max", "coalesce", "cast", "extract", "date_trunc",
-    "lower", "upper", "text",
+    "lower", "upper", "text", "date",
     "limit", "offset", "order", "by", "asc", "desc", "group", "having",
     "now", "interval", "day", "days", "week", "weeks", "month", "months", "year", "years",
     "hour", "hours", "minute", "minutes",
@@ -106,6 +106,16 @@ export function validarSql(cat: Catalogo, sql: string): ResultadoValidacion {
     // 6 · Columnas: todo identificador debe ser columna del catálogo de la(s)
     //    tabla(s) del FROM (se omite si el FROM ya falló: ruido redundante).
     if (columnasPermitidas.size > 0) {
+        // Aliases declarados con AS (p.ej. `AS valor` / `AS grupo` del GROUP BY
+        // del constructor): referenciarlos después (ORDER BY valor DESC) es SQL
+        // legítimo. Se aceptan SOLO los aliases efectivamente declarados — no
+        // se abre la puerta a palabras nuevas fuera del catálogo.
+        const aliases = new Set<string>();
+        const reAlias = /\bas\s+(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))/gi;
+        while ((m = reAlias.exec(sinLiterales)) !== null) {
+            aliases.add(m[1] ?? m[2]);
+        }
+
         // Referencias de tabla del FROM y aliases AS no son columnas.
         let texto = sinLiterales.replace(/\bfrom\s+(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_]*)/gi, " FROM ");
         texto = texto.replace(/\bas\s+(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_]*)/gi, " ");
@@ -114,7 +124,7 @@ export function validarSql(cat: Catalogo, sql: string): ResultadoValidacion {
         const reCitado = /"([^"]+)"/g;
         const citadasReportadas = new Set<string>();
         while ((m = reCitado.exec(texto)) !== null) {
-            if (!columnasPermitidas.has(m[1]) && !citadasReportadas.has(m[1])) {
+            if (!columnasPermitidas.has(m[1]) && !aliases.has(m[1]) && !citadasReportadas.has(m[1])) {
                 citadasReportadas.add(m[1]);
                 violaciones.push(`Columna fuera del catálogo: "${m[1]}".`);
             }
@@ -127,7 +137,7 @@ export function validarSql(cat: Catalogo, sql: string): ResultadoValidacion {
         while ((m = rePalabra.exec(sinCitados)) !== null) {
             const palabra = m[0];
             if (PALABRAS_SQL.has(palabra.toLowerCase())) continue;
-            if (!columnasPermitidas.has(palabra) && !desnudasReportadas.has(palabra)) {
+            if (!columnasPermitidas.has(palabra) && !aliases.has(palabra) && !desnudasReportadas.has(palabra)) {
                 desnudasReportadas.add(palabra);
                 violaciones.push(`Identificador no permitido (no es columna del catálogo): ${palabra}.`);
             }

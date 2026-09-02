@@ -111,14 +111,18 @@ export function presentarCatalogoParaLLM(cat: Catalogo): string {
 }
 
 /**
- * JSON Schema CERRADO (candado 1) para el structured output del LLM: el
- * modelo solo puede devolver índices dentro del rango del catálogo vigente
+ * JSON Schema CERRADO (candado 1) para el structured output del LLM. Raíz
+ * multi-parte (motor v2): { planes: PlanLLM[] } con 1..5 planes — una
+ * pregunta puede pedir varias métricas y el modelo descompone. Cada plan
+ * solo puede devolver índices dentro del rango del catálogo vigente
  * (maximum = tablas.length - 1), agregaciones y operadores de un enum
- * cerrado, y valores (nunca SQL). additionalProperties:false en todos los
- * niveles: imposible inventar campos.
+ * cerrado, y valores (nunca SQL). additionalProperties:false en TODOS los
+ * niveles (raíz, plan, filtros, periodo, ventanaAbsoluta): imposible
+ * inventar campos.
  */
 export function esquemaJsonParaLLM(cat: Catalogo): Record<string, unknown> {
-    return {
+    // Schema de UN plan (índices del catálogo, enums cerrados, valores).
+    const plan: Record<string, unknown> = {
         type: "object",
         properties: {
             tabla_idx: {
@@ -155,9 +159,36 @@ export function esquemaJsonParaLLM(cat: Catalogo): Record<string, unknown> {
                 required: ["columna_idx", "dias"],
                 additionalProperties: false,
             },
+            // Ventana de fechas absoluta (motor v2): [desde, hasta), hasta
+            // EXCLUSIVO, formato YYYY-MM-DD exigido por patrón.
+            ventanaAbsoluta: {
+                type: "object",
+                properties: {
+                    columna_idx: { type: "integer" },
+                    desde: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+                    hasta: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+                },
+                required: ["columna_idx", "desde", "hasta"],
+                additionalProperties: false,
+            },
+            // GROUP BY (motor v2): índice de la columna de grupo (texto/enum).
+            agruparPor_idx: { type: "integer", minimum: 0 },
             limite: { type: "integer", minimum: 1 },
         },
         required: ["tabla_idx", "columnas_idx", "agregacion"],
+        additionalProperties: false,
+    };
+    return {
+        type: "object",
+        properties: {
+            planes: {
+                type: "array",
+                minItems: 1,
+                maxItems: 5,
+                items: plan,
+            },
+        },
+        required: ["planes"],
         additionalProperties: false,
     };
 }
