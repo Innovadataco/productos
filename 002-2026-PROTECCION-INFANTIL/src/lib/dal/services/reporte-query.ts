@@ -154,8 +154,17 @@ export class ReporteQueryService {
         const slaRaw = await getParametroSistemaValor("ui.sla_horas_procesamiento");
         const actividadAltaMin = parseInt((await getParametroSistemaValor("visibility.actividad_alta_min")) ?? "5", 10);
         const slaHoras = parseSlaHoras(slaRaw);
-        const estadoUsuario = mapEstadoUsuario(reporte.estado);
-        const mensaje = getMensajeUsuario(reporte.estado, slaHoras);
+        // A-71 (SPEC-366): un duplicado hereda el estado y la clasificación VIVOS
+        // del original (`reporteOrigen`), resueltos en tiempo de lectura. Así el
+        // reportante ve "Procesado" + la categoría del original cuando este ya
+        // clasificó, y su estado honesto ("en proceso") mientras el original sigue
+        // en curso — nunca un mensaje que promete algo que no llega. Cuando el
+        // original resuelve, el duplicado lo refleja solo (cero propagación). El
+        // estado ALMACENADO del duplicado sigue DUPLICADO → la señal lo excluye
+        // igual (sin doble conteo). `estadoInterno` conserva el estado crudo.
+        const efectivo = reporte.reporteOrigen ?? reporte;
+        const estadoUsuario = mapEstadoUsuario(efectivo.estado);
+        const mensaje = getMensajeUsuario(efectivo.estado, slaHoras);
         const gruposCategoria = await obtenerGruposCategoria();
 
         return {
@@ -171,13 +180,13 @@ export class ReporteQueryService {
             identificador: reporte.identificador,
             plataforma: formatPlataforma(reporte.plataforma.nombre, reporte.otraPlataforma, reporte.plataforma.clave),
             clasificacion:
-                reporte.clasificacion && ESTADOS_CLASIFICACION_FINAL.includes(reporte.estado)
+                efectivo.clasificacion && ESTADOS_CLASIFICACION_FINAL.includes(efectivo.estado)
                     ? {
-                        categoria: reporte.clasificacion.categoria,
-                        categoriaLabel: formatCategoria(reporte.clasificacion.categoria),
-                        categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, reporte.clasificacion.categoria),
-                        categoriasSecundarias: categoriasDeSecundarias(reporte.clasificacion.categoriasSecundarias ?? []),
-                        contienePii: reporte.clasificacion.contienePii,
+                        categoria: efectivo.clasificacion.categoria,
+                        categoriaLabel: formatCategoria(efectivo.clasificacion.categoria),
+                        categoriaGrupo: nombreGrupoParaCategoria(gruposCategoria, efectivo.clasificacion.categoria),
+                        categoriasSecundarias: categoriasDeSecundarias(efectivo.clasificacion.categoriasSecundarias ?? []),
+                        contienePii: efectivo.clasificacion.contienePii,
                     }
                     : null,
             actividad: ranking ? (ranking.totalReportes >= actividadAltaMin ? "alta" : "baja") : null,
