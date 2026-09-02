@@ -307,4 +307,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/FechaHoraIncidente.test.tsx",
     // SPEC-368 (A-74): candado de la plantilla del camino guiado (autoconsistente con su validador).
     "src/app/api/colegio/cursos/unificado/plantilla/plantilla-lista-autoconsistente.test.ts",
+    // SPEC-369: candados del poblador demo v2.
+    "scripts/demo/demo-v2.test.ts",
 ];
