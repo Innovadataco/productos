@@ -34,21 +34,19 @@ míos resultaron falsos al leer `hijos/hijos.ts` y las rutas del padre:
 1. Los eventos de identificador se auditan con `recursoId = identificadorId`,
    no con el del menor. Filtrar solo por `hijoId` los dejaba todos afuera.
 2. `valorAnterior` no se escribe nunca en ese módulo: solo hay estado nuevo.
-3. El estado del HIJO cambia por `PATCH /api/padre/hijos/[id]` → `actualizarHijo`
-   (audita `{campos:["estado"]}`, **sin el valor**), NO por `cambiarEstadoHijo`
-   (que sí audita `{estado}` pero la UI del padre no llama). El hito de
-   pausa/reactivación por tanto no se puede atribuir hasta que el lado escritura
-   grabe el valor → **SPEC-363 (PI-2)**. Hallazgo confirmado por la auditoría del
-   CEO; el test que pasaba por `cambiarEstadoHijo` era un camino muerto y se
-   quitó.
-4. "Quitar" **borra** la fila del identificador, y su registro de auditoría no
-   deja de qué menor era. Necesita grabar `{ hijoId }` (solo eso; el valor es
-   PII). Ese cambio de escritura **no está en el scope estado de SPEC-363** →
-   escalado al CEO para dueño.
+3. El estado del HIJO se auditaba `{campos:["estado"]}` **sin el valor** cuando la
+   ruta pasaba por `actualizarHijo`. SPEC-363 cambió la ruta para enrutar el
+   estado por `cambiarEstadoHijo` (audita `{estado}` con valor · BUG2 + cupo al
+   reactivar · BUG1). El lector lo lee y enciende el hito de pausa/reactivación.
+4. "Quitar" **borra** la fila del identificador. SPEC-363 (I-259) graba `{hijoId}`
+   en la auditoría del borrado (solo eso; el valor es PII) para poder atar el
+   hito "quitaste una cuenta" al menor. El lector lo lee.
 
-**Reparto (CEO idc-71):** esta SPEC entrega el LADO LECTURA (servicio + ruta +
-UI + display). El lado escritura lo cubre SPEC-363; el merge de esta queda EN
-HOLD hasta que aquella entre, luego rebase y verificación punta a punta.
+**Reparto (CEO idc-71/idc-ab):** esta SPEC entregó el LADO LECTURA (servicio +
+ruta + UI + display); el lado escritura lo cubrió SPEC-363, hoy en main
+(`e98d937eb`). Tras el rebase de esta rama sobre ese main, los cuatro tipos de
+hito encienden y se verificó el recorrido punta a punta. En el rebase, main gana
+siempre en `hijos.ts` y `[id]/route.ts` (esta rama no los aporta).
 
 ### G20 · hora en punto
 
@@ -63,8 +61,8 @@ quedan en `00`.
 | Duplicar el hito de alta de una cuenta (viene por dos vías) | Descarte del `HIJO_UPDATE` sin `activo` + assert de conteo |
 | Un `AuditLog` con JSON roto tumba la pantalla | Test que inserta metadato inválido y espera que se omita |
 | La tarjeta muestra plantilla como si fuera análisis | Test de estado sin clasificar: `analisisIa` en `null` |
-| El hito de estado del hijo aparece por un camino que la UI no usa | Tripwire: `actualizarHijo({estado})` NO enciende hito hoy — se cae cuando SPEC-363 grabe el estado |
-| *(Atribución cruzada entre hermanos / PII del valor al quitar cuenta)* | Se cubre con el lado escritura (dueño del audit `{hijoId}`), no en esta SPEC |
+| El hito de estado aparece por un camino que la UI no usa | Test: `cambiarEstadoHijo` (lo que la ruta llama) enciende el hito; `actualizarHijo` con una corrección de dato NO |
+| PII del valor del identificador al quitar la cuenta | Test E2E: la fila se borra, el hito nombra el hecho y NINGÚN hito contiene el valor |
 
 ## Impacto en arquitectura: sí
 

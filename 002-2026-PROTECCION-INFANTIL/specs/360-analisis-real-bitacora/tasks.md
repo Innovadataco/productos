@@ -20,9 +20,9 @@
 - [x] T010 Ruta `GET /api/padre/hijos/[id]/bitacora`
 - [x] T011 Componente `src/components/modules/padre/BitacoraMenor.tsx`
 - [x] T012 Montarla bajo demanda en la tarjeta de `MisHijos.tsx`
-- [x] T013 [P] Tests en `src/lib/dal/services/bitacora-menor.test.ts` (6, caminos vivos + tripwire del lado escritura)
+- [x] T013 [P] Tests en `src/lib/dal/services/bitacora-menor.test.ts` (9, caminos vivos + pausa/reactivación + cuenta quitada + E2E de los 4 hitos sin PII)
 - [x] T014 Regresión de `hijos/` completo (candado 24v2): 24 verdes
-- [~] T015 **Lado ESCRITURA → PI-2 · SPEC-363** (estado del hijo) + hito "cuenta quitada" escalado al CEO. Esta SPEC no toca `hijos.ts` ni `[id]/route.ts`; el merge queda EN HOLD hasta que entre SPEC-363, luego rebase y verificación punta a punta.
+- [x] T015 **Lado ESCRITURA (PI-2 · SPEC-363, hoy en main `e98d937eb`)**: la ruta enruta el estado por `cambiarEstadoHijo` (audita `{estado}`) y `desvincularIdentificador` graba `{hijoId}`. Rebase de esta rama sobre ese main (main gana en `hijos.ts` y `[id]/route.ts`); tripwire convertido en assert real; recorrido E2E verde.
 
 ## Fase 3 · Detalles del expediente (G18, G19, G20)
 
