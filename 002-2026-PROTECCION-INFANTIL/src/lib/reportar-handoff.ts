@@ -54,3 +54,58 @@ export function tomarHandoffReportar(): ReportarHandoff | null {
         return null;
     }
 }
+
+// ─── A-70 · B1(d) · borrador del reporte ────────────────────────────────────
+//
+// El padre escribe el relato completo y el envío falla: el texto NO se pierde.
+// Vive en `sessionStorage` (misma pestaña, muere al cerrarla) y se borra en
+// cuanto el reporte se envía bien. Nunca va a la URL ni a localStorage: el
+// relato es lo más sensible que escribe el padre, y no debe sobrevivir a la
+// sesión del navegador ni quedar en un historial compartido.
+
+const LLAVE_BORRADOR = "pi:borrador-reporte";
+
+/** Campos del borrador — el mismo shape que el wizard, todos opcionales. */
+export type BorradorReporte = Partial<{
+    identificador: string;
+    plataforma: string;
+    otraPlataforma: string;
+    ciudad: string;
+    pais: string;
+    paisId: string;
+    ciudadId: string;
+    fechaIncidente: string;
+    edadVictima: string;
+    texto: string;
+}>;
+
+export function guardarBorradorReporte(borrador: BorradorReporte): void {
+    if (typeof window === "undefined") return;
+    try {
+        sessionStorage.setItem(LLAVE_BORRADOR, JSON.stringify(borrador));
+    } catch {
+        // Modo privado o cuota llena: el borrador es una red, no un requisito.
+    }
+}
+
+export function leerBorradorReporte(): BorradorReporte | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const crudo = sessionStorage.getItem(LLAVE_BORRADOR);
+        if (!crudo) return null;
+        const parsed: unknown = JSON.parse(crudo);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+        return parsed as BorradorReporte;
+    } catch {
+        return null;
+    }
+}
+
+export function borrarBorradorReporte(): void {
+    if (typeof window === "undefined") return;
+    try {
+        sessionStorage.removeItem(LLAVE_BORRADOR);
+    } catch {
+        // idem
+    }
+}

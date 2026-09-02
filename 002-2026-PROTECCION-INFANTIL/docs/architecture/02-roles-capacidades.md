@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 479 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3353 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 480 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3360 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -173,6 +173,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/clasificar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/confirmar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/reasignar` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/anonimizar` | api | permitir | permite | sí |
@@ -657,6 +658,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/clasificar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/confirmar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/reasignar` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/anonimizar` | api | permitir | permite | sí |
@@ -1141,6 +1143,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
+| `/api/admin/reportes-revision/[id]/clasificar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/confirmar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/reasignar` | api | permitir | permite | sí |
 | `/api/admin/reportes/[id]/anonimizar` | api | permitir | permite | sí |
@@ -1625,6 +1628,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/confirmar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/anonimizar` | api | HTTP 403 | no permite | sí |
@@ -2109,6 +2113,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/confirmar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/anonimizar` | api | HTTP 403 | no permite | sí |
@@ -2593,6 +2598,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/confirmar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes/[id]/anonimizar` | api | HTTP 403 | no permite | sí |
@@ -3077,6 +3083,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/permisos-modulos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision/[id]/confirmar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision/[id]/reasignar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes/[id]/anonimizar` | api | HTTP 401 | permite | **NO** |
@@ -3561,6 +3568,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/permisos-modulos` | HTTP 401 | permite |
 | `/api/admin/reportes-revision` | HTTP 401 | permite |
 | `/api/admin/reportes-revision/[id]` | HTTP 401 | permite |
+| `/api/admin/reportes-revision/[id]/clasificar` | HTTP 401 | permite |
 | `/api/admin/reportes-revision/[id]/confirmar` | HTTP 401 | permite |
 | `/api/admin/reportes-revision/[id]/reasignar` | HTTP 401 | permite |
 | `/api/admin/reportes/[id]/anonimizar` | HTTP 401 | permite |
