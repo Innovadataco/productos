@@ -165,8 +165,11 @@ export function esquemaJsonParaLLM(cat: Catalogo): Record<string, unknown> {
                 type: "object",
                 properties: {
                     columna_idx: { type: "integer" },
-                    desde: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
-                    hasta: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+                    // I-15: NUNCA `pattern` en el schema del LLM — el parser de
+                    // grammar de Ollama lo rechaza y rompe TODO el schema (400).
+                    // El formato YYYY-MM-DD se valida en el servidor (I-07).
+                    desde: { type: "string", description: "YYYY-MM-DD" },
+                    hasta: { type: "string", description: "YYYY-MM-DD" },
                 },
                 required: ["columna_idx", "desde", "hasta"],
                 additionalProperties: false,
