@@ -13,16 +13,16 @@
 - [x] T006 Estado honesto ("En revisión por una persona") cuando no hay clasificación
 - [x] T007 [P] Tests en `src/lib/dal/services/cadenas-padre.test.ts` (5)
 
-## Fase 2 · Bitácora del menor (F10)
+## Fase 2 · Bitácora del menor (F10) — LADO LECTURA
 
 - [x] T008 Leer en fuente `hijos/hijos.ts` la forma real de cada `logAudit` (candado 15v5)
-- [x] T009 Agregar `{ hijoId }` al metadato de `HIJO_IDENTIFICADOR_DESVINCULADO`
-- [x] T010 Servicio `src/lib/dal/services/bitacora-menor.ts` con boundary 404
-- [x] T011 Ruta `GET /api/padre/hijos/[id]/bitacora`
-- [x] T012 Componente `src/components/modules/padre/BitacoraMenor.tsx`
-- [x] T013 Montarla bajo demanda en la tarjeta de `MisHijos.tsx`
-- [x] T014 [P] Tests en `src/lib/dal/services/bitacora-menor.test.ts` (8)
-- [x] T015 Regresión de `hijos/` completo (candado 24v2): 24 verdes
+- [x] T009 Servicio `src/lib/dal/services/bitacora-menor.ts` (lector) con boundary 404
+- [x] T010 Ruta `GET /api/padre/hijos/[id]/bitacora`
+- [x] T011 Componente `src/components/modules/padre/BitacoraMenor.tsx`
+- [x] T012 Montarla bajo demanda en la tarjeta de `MisHijos.tsx`
+- [x] T013 [P] Tests en `src/lib/dal/services/bitacora-menor.test.ts` (6, caminos vivos + tripwire del lado escritura)
+- [x] T014 Regresión de `hijos/` completo (candado 24v2): 24 verdes
+- [~] T015 **Lado ESCRITURA → PI-2 · SPEC-363** (estado del hijo) + hito "cuenta quitada" escalado al CEO. Esta SPEC no toca `hijos.ts` ni `[id]/route.ts`; el merge queda EN HOLD hasta que entre SPEC-363, luego rebase y verificación punta a punta.
 
 ## Fase 3 · Detalles del expediente (G18, G19, G20)
 

@@ -11,10 +11,8 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import {
     registrarHijo,
-    cambiarEstadoHijo,
     agregarIdentificador,
     cambiarEstadoIdentificador,
-    desvincularIdentificador,
     actualizarHijo,
 } from "./hijos/hijos";
 import { bitacoraDelMenor } from "./bitacora-menor";
@@ -54,21 +52,16 @@ describe("bitacoraDelMenor", () => {
         expect(bitacora.nombre).toBe("Sofía");
     });
 
-    it("registra el alta, la pausa y la reactivación de la ficha en orden", async () => {
-        const padre = await crearPadre("estados");
+    it("el reloj del monitoreo no se reinicia: monitoreadoDesde es siempre el hito más antiguo", async () => {
+        const padre = await crearPadre("reloj");
         const hijoId = await crearMenor(padre.id);
-
-        await cambiarEstadoHijo(padre.id, hijoId, "inactivo");
-        await cambiarEstadoHijo(padre.id, hijoId, "activo");
+        // Agregar una cuenta después del alta crea un hito más nuevo; el
+        // monitoreo sigue contando desde el registro, no desde la cuenta.
+        await agregarIdentificador(padre.id, hijoId, { valor: "sofi_tiktok" });
 
         const { hitos, monitoreadoDesde } = await bitacoraDelMenor(hijoId, padre.id);
 
-        expect(hitos.map((h) => h.tipo)).toEqual([
-            "menor_registrado",
-            "menor_inactivado",
-            "menor_activado",
-        ]);
-        // El más antiguo manda: reactivar NO reinicia el reloj del monitoreo.
+        expect(hitos[0].tipo).toBe("menor_registrado");
         expect(monitoreadoDesde).toEqual(hitos[0].fecha);
         for (let i = 1; i < hitos.length; i++) {
             expect(hitos[i].fecha.getTime()).toBeGreaterThanOrEqual(hitos[i - 1].fecha.getTime());
@@ -102,51 +95,16 @@ describe("bitacoraDelMenor", () => {
         }
     });
 
-    it("una cuenta quitada deja hito atribuido al menor y sin exponer su valor", async () => {
-        const padre = await crearPadre("quitar");
-        const hijoId = await crearMenor(padre.id);
-        const { identificadorId } = await agregarIdentificador(padre.id, hijoId, {
-            valor: "sofi_correo@test.local",
-        });
-
-        await desvincularIdentificador(padre.id, identificadorId);
-
-        const { hitos } = await bitacoraDelMenor(hijoId, padre.id);
-        const quitada = hitos.filter((h) => h.tipo === "identificador_inactivado");
-        expect(quitada).toHaveLength(1);
-        // PII: el valor NO viaja en la auditoría, así que no puede aparecer.
-        expect(quitada[0].descripcion).not.toContain("sofi_correo@test.local");
-        expect(quitada[0].identificador).toBeUndefined();
-
-        // Y la atadura al menor existe de verdad en el metadato auditado.
-        const auditado = await prisma.auditLog.findFirst({
-            where: { accion: "HIJO_IDENTIFICADOR_DESVINCULADO", recursoId: identificadorId },
-            select: { valorNuevo: true },
-        });
-        expect(JSON.parse(auditado?.valorNuevo ?? "{}")).toEqual({ hijoId });
-    });
-
-    it("no atribuye a este menor la cuenta quitada de OTRO hijo del mismo padre", async () => {
-        const padre = await crearPadre("cruce");
-        const hijoA = await crearMenor(padre.id, "Ana");
-        const hijoB = await crearMenor(padre.id, "Beto");
-        const { identificadorId } = await agregarIdentificador(padre.id, hijoB, {
-            valor: "beto_roblox",
-        });
-
-        await desvincularIdentificador(padre.id, identificadorId);
-
-        const bitacoraA = await bitacoraDelMenor(hijoA, padre.id);
-        expect(bitacoraA.hitos.map((h) => h.tipo)).toEqual(["menor_registrado"]);
-
-        const bitacoraB = await bitacoraDelMenor(hijoB, padre.id);
-        expect(bitacoraB.hitos.some((h) => h.tipo === "identificador_inactivado")).toBe(true);
-    });
-
-    it("corregir los datos de la ficha no ensucia la línea de la protección", async () => {
-        const padre = await crearPadre("correccion");
+    it("cambiar el estado del hijo por `actualizarHijo` NO enciende hito todavía (espera SPEC-363)", async () => {
+        // Tripwire honesto del lado ESCRITURA: la UI cambia el estado del hijo
+        // por `PATCH /api/padre/hijos/[id]` → `actualizarHijo`, que audita
+        // `{campos:["estado"]}` sin el valor. Hasta que PI-2 (SPEC-363) grabe el
+        // estado, el hito de pausa/reactivación no puede existir. Cuando lo
+        // arregle, este test se cae y se convierte en el assert de la regla.
+        const padre = await crearPadre("estado-camino-real");
         const hijoId = await crearMenor(padre.id);
 
+        await actualizarHijo(padre.id, hijoId, { estado: "inactivo" });
         await actualizarHijo(padre.id, hijoId, { nombre: "Sofía Lucía" });
 
         const { hitos } = await bitacoraDelMenor(hijoId, padre.id);

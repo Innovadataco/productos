@@ -7,9 +7,20 @@
  * inventar una tabla de bitácora habría duplicado un registro que el sistema
  * ya lleva, y habría nacido vacía para los menores existentes.
  *
- * Los `creadoEn` cubren lo que la auditoría no alcanzó (altas anteriores a
- * que se auditaran) y el `AuditLog` cubre lo que el `creadoEn` no puede
- * contar: los cambios sucesivos de estado.
+ * Esto es el LADO LECTURA. Qué enciende con el estado ACTUAL de la escritura
+ * (verificado en fuente contra las rutas reales que usa la UI):
+ *   · alta del menor y de cada cuenta ........ SÍ (de `creadoEn`).
+ *   · cuenta activada / inactivada ........... SÍ (`cambiarEstadoIdentificador`
+ *     audita `{activo}`; la ruta la llama directo).
+ *   · menor pausado / reactivado ............. AÚN NO. La UI cambia el estado
+ *     del hijo por `PATCH /api/padre/hijos/[id]` → `actualizarHijo`, que audita
+ *     `{campos:["estado"]}` SIN el valor. El hito aparecerá cuando el lado
+ *     escritura grabe el estado (SPEC-363, a cargo de PI-2). El lector ya lo
+ *     espera: lee `estado` y, si no viene, no inventa el hito.
+ *   · cuenta quitada ......................... AÚN NO. `desvincularIdentificador`
+ *     BORRA la fila y hoy no deja en la auditoría de qué menor era. Necesita que
+ *     el lado escritura grabe `{hijoId}` (sin dueño en SPEC-363; escalado al
+ *     CEO). El lector ya lo espera por `{hijoId}` y omite lo inatribuible.
  */
 import { prisma } from "../../prisma";
 import { AppError, ERROR_CODES } from "../../errors";
