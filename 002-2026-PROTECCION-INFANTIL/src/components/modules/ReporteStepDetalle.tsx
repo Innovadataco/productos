@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
+import { aHoraEnPunto } from "@/lib/format/fecha";
 
 type PaisOption = { id: string; nombre: string };
 
@@ -164,13 +165,18 @@ export function ReporteStepDetalle({
                 <Input
                     label="Fecha y hora del incidente"
                     type="datetime-local"
+                    // A-70 · G20: paso de 1 hora — el selector no ofrece minutos.
+                    step={3600}
                     max={hoy}
                     value={fechaIncidente}
                     // A-70 · B1(b): el `max` del navegador no cubre el tecleo directo
                     // (Chrome deja escribir un valor fuera de rango). Recortamos al
                     // presente para que sea IMPOSIBLE mandar futuro desde acá.
                     onChange={(e) => {
-                        const elegido = e.target.value > hoy ? hoy : e.target.value;
+                        // B1(b) recorta el futuro; G20 deja la hora en punto (minutos 00
+                        // en BD) aunque el navegador permita teclear los minutos.
+                        const recortado = e.target.value > hoy ? hoy : e.target.value;
+                        const elegido = aHoraEnPunto(recortado);
                         onChange({ ciudad, pais, fechaIncidente: elegido, paisId, ciudadId, edadVictima, texto });
                     }}
                     error={fechaIncidente > hoy ? "El hecho no puede ser a futuro; ajustamos la hora al momento actual." : undefined}
