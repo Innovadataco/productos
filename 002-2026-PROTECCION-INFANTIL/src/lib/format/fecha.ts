@@ -78,3 +78,36 @@ export function aHoraEnPunto(valorLocal: string): string {
     const hh = hora.slice(0, 2);
     return `${dia}T${hh}:00`;
 }
+
+/**
+ * A-74 · P1 — piezas del control amable de fecha del hecho.
+ *
+ * Por qué existe: el `datetime-local` nativo, aun con `step=3600`, PINTA el
+ * segmento de minutos ("02/09/2026, 02:00 p.m.") y vacío se ve
+ * "dd/mm/aaaa, --:-- ----". A un padre eso le pide una precisión que no tiene.
+ * El control lo parte en día + hora 1-12 + a.m./p.m., sin minutos a la vista;
+ * el valor que viaja sigue siendo "YYYY-MM-DDTHH:00".
+ */
+export type Meridiano = "am" | "pm";
+
+/** "2026-09-02T14:00" → { fecha: "2026-09-02", hora12: 2, meridiano: "pm" } */
+export function partesHoraLocal(valorLocal: string): { fecha: string; hora12: number | null; meridiano: Meridiano } {
+    const [fecha = "", hora = ""] = (valorLocal || "").split("T");
+    const hh = Number.parseInt(hora.slice(0, 2), 10);
+    if (!fecha || Number.isNaN(hh)) return { fecha, hora12: null, meridiano: "am" };
+    const meridiano: Meridiano = hh >= 12 ? "pm" : "am";
+    const hora12 = hh % 12 === 0 ? 12 : hh % 12;
+    return { fecha, hora12, meridiano };
+}
+
+/**
+ * Arma el valor que viaja desde las tres piezas. Devuelve "" si falta algo
+ * (el campo a medio llenar no debe mandar una fecha inventada).
+ * 12 a.m. = medianoche (00) · 12 p.m. = mediodía (12).
+ */
+export function desdePartesHoraLocal(fecha: string, hora12: number | null, meridiano: Meridiano): string {
+    if (!fecha || hora12 === null || Number.isNaN(hora12)) return "";
+    const base = hora12 % 12;
+    const hh = meridiano === "pm" ? base + 12 : base;
+    return `${fecha}T${String(hh).padStart(2, "0")}:00`;
+}

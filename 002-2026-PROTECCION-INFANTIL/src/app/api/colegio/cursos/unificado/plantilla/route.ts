@@ -39,7 +39,11 @@ const FILA_EJEMPLO = [
     "laura@example.com",
 ].join(",");
 
-const CSV_PLANTILLA = [COLUMNAS_PLANTILLA.join(","), FILA_EJEMPLO].join("\n");
+// SPEC-368 (A-74): se exporta para el test-candado autoconsistente. La plantilla
+// de carga ya tenía el suyo desde I-245; esta —la del camino guiado, que es la
+// que descarga el rector— no, y podía divergir de su validador sin que nadie se
+// enterara hasta que un colegio subiera el archivo y no cargara ni una fila.
+export const CSV_PLANTILLA_LISTA = [COLUMNAS_PLANTILLA.join(","), FILA_EJEMPLO].join("\n");
 
 export async function GET(request: Request) {
     try {
@@ -61,7 +65,7 @@ export async function GET(request: Request) {
             );
         }
 
-        return new NextResponse(CSV_PLANTILLA, {
+        return new NextResponse(CSV_PLANTILLA_LISTA, {
             headers: {
                 "Content-Type": "text/csv; charset=utf-8",
                 "Content-Disposition": 'attachment; filename="plantilla-lista-estudiantes.csv"',

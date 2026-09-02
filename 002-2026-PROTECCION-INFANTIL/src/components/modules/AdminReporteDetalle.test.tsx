@@ -79,6 +79,28 @@ describe("AdminReporteDetalle - corrección de clasificación", () => {
         });
     });
 
+    it("I-261: la fecha del incidente se muestra con hora a.m./p.m. y SIN minutos", async () => {
+        // Antes esta vista usaba su propio `toLocaleDateString` y mostraba solo el
+        // día. Ahora usa el mismo formateador que ve el padre: el minuto exacto de
+        // un hecho no se conoce y fingirlo es peor (G20).
+        mockFetchDetalle({
+            reporte: baseReporte("CLASIFICADO"),
+            puedeRevelarOriginal: false,
+            puedeEscalar: false,
+        });
+
+        render(<AdminReporteDetalle reporteId="reporte-123" onClose={vi.fn()} onRefresh={vi.fn()} />);
+
+        await waitFor(() => {
+            const body = document.body.textContent || "";
+            expect(body).toContain("Fecha del incidente");
+            // 2026-07-10T10:00:00Z → 5 a. m. en Bogotá, sin minutos a la vista.
+            expect(body).toMatch(/5\s*a\.?\s?m\.?/i);
+            expect(body).not.toContain("10:00");
+            expect(body).not.toContain("05:00");
+        });
+    });
+
     it("no muestra el botón de corregir cuando el reporte ya está CORREGIDO", async () => {
         mockFetchDetalle({
             reporte: baseReporte("CORREGIDO", {
