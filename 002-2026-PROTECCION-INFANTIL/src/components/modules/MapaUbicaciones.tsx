@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { MapContainer, Popup, GeoJSON, Marker, Tooltip } from "react-leaflet";
+import { MapContainer, Popup, GeoJSON, Marker, Tooltip, useMap } from "react-leaflet";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { GeoJSON as LeafletGeoJSON, PathOptions } from "leaflet";
+
+/** A-70 · G18: zoom de ciudad-región — ubica el punto sin perder el contexto. */
+const ZOOM_PUNTO_UNICO = 7;
 
 export type PuntoMapa = {
     lat: number;
@@ -12,6 +15,41 @@ export type PuntoMapa = {
     label: string;
     total: number;
 };
+
+/**
+ * A-70 · G18 — el mapa abre mostrando las ubicaciones EN CONTEXTO.
+ *
+ * Antes el zoom era un número fijo (10 con un punto, 5 con varios): con un
+ * solo reporte abría a nivel de barrio, sin referencia de dónde queda eso, y
+ * con varios podía dejar puntos fuera del encuadre. `fitBounds` calcula el
+ * encuadre que los contiene TODOS con margen; para un punto único usamos un
+ * zoom de ciudad-región, que ubica sin perder el contexto alrededor.
+ */
+function EncuadrarEnPuntos({ puntos }: { puntos: PuntoMapa[] }) {
+    const map = useMap();
+    // Firma estable: el efecto se vuelve a correr solo si cambian las coordenadas.
+    const firma = puntos.map((p) => `${p.lat},${p.lng}`).join("|");
+
+    useEffect(() => {
+        if (puntos.length === 0) return;
+        if (puntos.length === 1) {
+            const unico = puntos[0];
+            map.setView([unico.lat, unico.lng], ZOOM_PUNTO_UNICO);
+            return;
+        }
+        map.fitBounds(
+            puntos.map((p) => [p.lat, p.lng] as [number, number]),
+            // El padding evita que un marcador quede pegado al borde; el
+            // maxZoom impide que dos puntos casi juntos disparen el zoom al
+            // máximo y reaparezca el problema que reportó Jelkin.
+            { padding: [48, 48], maxZoom: ZOOM_PUNTO_UNICO }
+        );
+        // `firma` cubre el cambio real de puntos; `puntos` es una referencia nueva en cada render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [firma, map]);
+
+    return null;
+}
 
 export type PaisMapa = {
     pais: string;
@@ -268,6 +306,7 @@ export function MapaUbicaciones({
                 className="h-96 w-full rounded-2xl"
                 style={{ zIndex: 0, background: "#e0f2fe" }}
             >
+                <EncuadrarEnPuntos puntos={validos} />
                 {geoData && <GeoJSON data={geoData} style={paisStyle} onEachFeature={onEachFeature} />}
                 {validos.map((p, idx) => {
                     const color = colorPorCantidad(p.total, maxTotal);

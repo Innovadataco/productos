@@ -22,8 +22,33 @@ export interface EventoCadenaDto {
     creadoEn: Date;
     estado: string;
     categoriaLabel: string | null;
-    /** SPEC-340 §3.3: la explicación en lenguaje de padre (parametrizada). */
+    /**
+     * SPEC-340 §3.3: la explicación parametrizada por categoría.
+     * A-70 · F11: DEJA de ser "el análisis" — baja a una línea rotulada
+     * "Qué significa". El análisis es el resultado real del motor (abajo).
+     */
     explicacion: string | null;
+    /**
+     * A-70 · F11 — el resultado REAL de la clasificación IA, lo que Jelkin
+     * pidió ver: "el resultado de la clasificación, como en el anónimo".
+     * `null` mientras el motor no terminó (el UI muestra estado honesto,
+     * nunca una plantilla haciéndose pasar por análisis).
+     */
+    analisisIa: {
+        categoriaLabel: string;
+        confianza: number;
+        secundarias: Array<{ categoriaLabel: string; confianza: number }>;
+        modeloUsado: string;
+        /** true cuando la clasificó una persona (SPEC-359 · B2), no el motor. */
+        esManual: boolean;
+    } | null;
+    /** A-70 · F11 · la ficha bajo el análisis. */
+    ficha: {
+        pais: string | null;
+        ciudad: string | null;
+        edadVictima: number | null;
+        origen: "anonimo" | "padre";
+    };
     textoDisponible: boolean;
     esPrincipal: boolean;
 }
@@ -52,7 +77,18 @@ export interface CadenaDto {
 const ESTADOS_FINALES = ["CLASIFICADO", "CORREGIDO"];
 
 type ReporteConDetalle = Prisma.ReporteGetPayload<{
-    include: { plataforma: { select: { nombre: true; clave: true } }; clasificacion: { select: { categoria: true } } };
+    include: {
+        plataforma: { select: { nombre: true; clave: true } };
+        // A-70 · F11: el resultado REAL del motor, no solo la categoría.
+        clasificacion: {
+            select: {
+                categoria: true;
+                confianza: true;
+                categoriasSecundarias: true;
+                modeloUsado: true;
+            };
+        };
+    };
 }>;
 
 function dominante(reportes: ReporteConDetalle[]): string | null {
@@ -75,12 +111,37 @@ function dominante(reportes: ReporteConDetalle[]): string | null {
     return mejor ? formatCategoria(mejor.cat) : null;
 }
 
+/**
+ * A-70 · F11 — `categoriasSecundarias` es Json libre en BD. Aceptamos la forma
+ * `[{categoria, confianza}]` y descartamos en silencio lo que no encaje: una
+ * fila vieja con otro shape no puede tumbar la pantalla del padre.
+ */
+function leerSecundarias(valor: unknown): Array<{ categoriaLabel: string; confianza: number }> {
+    if (!Array.isArray(valor)) return [];
+    const salida: Array<{ categoriaLabel: string; confianza: number }> = [];
+    for (const item of valor) {
+        if (!item || typeof item !== "object") continue;
+        const cat = (item as { categoria?: unknown }).categoria;
+        const conf = (item as { confianza?: unknown }).confianza;
+        if (typeof cat !== "string" || typeof conf !== "number") continue;
+        salida.push({ categoriaLabel: formatCategoria(cat as never), confianza: conf });
+    }
+    return salida;
+}
+
 export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]> {
     const reportes = await prisma.reporte.findMany({
         where: whereReporteVigente({ usuarioId }),
         include: {
             plataforma: { select: { nombre: true, clave: true } },
-            clasificacion: { select: { categoria: true } },
+            clasificacion: {
+                select: {
+                    categoria: true,
+                    confianza: true,
+                    categoriasSecundarias: true,
+                    modeloUsado: true,
+                },
+            },
         },
         orderBy: { creadoEn: "asc" },
     });
@@ -157,6 +218,26 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
                     r.clasificacion && ESTADOS_FINALES.includes(r.estado)
                         ? (explicaciones.get(r.clasificacion.categoria) ?? null)
                         : null,
+                // A-70 · F11: el resultado del motor solo cuando el proceso
+                // TERMINÓ. En REVISION_MANUAL u otro estado intermedio va null
+                // y el UI dice la verdad ("en revisión"), sin plantilla.
+                analisisIa:
+                    r.clasificacion && ESTADOS_FINALES.includes(r.estado)
+                        ? {
+                            categoriaLabel: formatCategoria(r.clasificacion.categoria),
+                            confianza: r.clasificacion.confianza,
+                            secundarias: leerSecundarias(r.clasificacion.categoriasSecundarias),
+                            modeloUsado: r.clasificacion.modeloUsado,
+                            // SPEC-359 · B2 dejó esta huella al clasificar a mano.
+                            esManual: r.clasificacion.modeloUsado.startsWith("manual"),
+                        }
+                        : null,
+                ficha: {
+                    pais: r.pais,
+                    ciudad: r.ciudad,
+                    edadVictima: r.edadVictima,
+                    origen: r.esAnonimo ? "anonimo" : "padre",
+                },
                 textoDisponible: true,
                 esPrincipal: r.id === principalId,
             })),

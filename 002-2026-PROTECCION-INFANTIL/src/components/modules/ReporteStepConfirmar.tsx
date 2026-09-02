@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { formatPlataforma } from "@/lib/plataforma";
+import { fechaHoraSinMinutos } from "@/lib/format/fecha";
 
 type WizardData = {
     identificador: string;
@@ -33,7 +34,8 @@ export function ReporteStepConfirmar({
     // SPEC-346 (I-234 · recorrido 340): fecha en formato Colombia, zona Bogotá.
     // Antes se mostraba el string crudo del `datetime-local` ("2026-08-30T21:15").
     const fechaMostrar = data.fechaIncidente
-        ? new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeStyle: "short", timeZone: "America/Bogota" }).format(new Date(data.fechaIncidente))
+        // A-70 · G20: día + hora con a.m./p.m., sin minutos.
+        ? fechaHoraSinMinutos(new Date(data.fechaIncidente).toISOString())
         : "No especificada";
 
     return (

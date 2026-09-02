@@ -30,6 +30,7 @@ import {
 import type { DocumentoTipo } from "@/lib/dal/services/hijos/tipos";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
+import { BitacoraMenor } from "./BitacoraMenor";
 
 const DOCUMENTO_TIPOS = [
     { value: "RC", label: "Registro civil" },
@@ -419,6 +420,7 @@ function HijoCard({
     onAgregarIdentificador: (hijoId: string, valor: string, plataformaId: string) => Promise<void>;
 }) {
     const [nuevo, setNuevo] = useState({ valor: "", plataformaId: "" });
+    const [verBitacora, setVerBitacora] = useState(false);
     const inactivo = hijo.estado === "inactivo";
 
     return (
@@ -516,6 +518,25 @@ function HijoCard({
                 >
                     Agregar
                 </Button>
+            </div>
+
+            {/* A-70 · F10 — la historia del cuidado, bajo demanda: si se cargara
+                sola, abrir "A quién protejo" dispararía una consulta por cada
+                menor de la lista para algo que casi nunca se mira. */}
+            <div className="mt-3 border-t border-tinta/10 pt-3 dark:border-papel/10">
+                <button
+                    type="button"
+                    className="text-xs text-muted underline hover:text-body"
+                    aria-expanded={verBitacora}
+                    onClick={() => setVerBitacora((v) => !v)}
+                >
+                    {verBitacora ? "Ocultar la bitácora" : "Ver la bitácora"}
+                </button>
+                {verBitacora && (
+                    <div className="mt-3">
+                        <BitacoraMenor hijoId={hijo.id} />
+                    </div>
+                )}
             </div>
         </GlassCard>
     );

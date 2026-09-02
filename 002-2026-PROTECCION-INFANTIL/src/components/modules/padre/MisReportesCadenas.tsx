@@ -9,12 +9,13 @@
  * está parado); «Otros reportes» blindados; y el botón Crear/Ver expediente.
  * Voz del mockup en tuteo. «Nada se cierra: puedes volver cuando lo necesites.»
  */
+import { fechaHoraSinMinutos } from "@/lib/format/fecha";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Cargando } from "@/components/ui/Cargando";
 import { TextoSensible } from "./TextoSensible";
-import { VerAnalisis } from "./VerAnalisis";
+import { VerAnalisis, type AnalisisIaDto, type FichaHechoDto } from "./VerAnalisis";
 import { AgregarEvento } from "./AgregarEvento";
 
 interface EventoCadena {
@@ -24,6 +25,9 @@ interface EventoCadena {
     estado: string;
     categoriaLabel: string | null;
     explicacion: string | null;
+    // A-70 · F11: resultado real del motor + ficha del hecho.
+    analisisIa: AnalisisIaDto | null;
+    ficha: FichaHechoDto;
     esPrincipal: boolean;
 }
 
@@ -133,7 +137,7 @@ export function MisReportesCadenas() {
                                         ? "1 evento"
                                         : `${cadena.cantidadEventos} eventos tuyos`}
                                     {" · el último "}
-                                    {fmtFechaHora.format(new Date(cadena.ultimoEventoEn))}
+                                    {fechaHoraSinMinutos(cadena.ultimoEventoEn)}
                                     {cadena.clasificacionDominante ? ` · ${cadena.clasificacionDominante}` : ""}
                                 </p>
                             </div>
@@ -171,7 +175,7 @@ export function MisReportesCadenas() {
                                 {cadena.eventos.map((ev) => (
                                     <div key={ev.id} className="rounded-xl bg-papel/80 p-3 dark:bg-tinta/60">
                                         <p className="text-xs text-muted">
-                                            {fmtFechaHora.format(new Date(ev.fechaIncidente))}
+                                            {fechaHoraSinMinutos(ev.fechaIncidente)}
                                             {ev.esPrincipal ? " · el primero" : ""}
                                             {ev.categoriaLabel ? ` · ${ev.categoriaLabel}` : ""}
                                         </p>
@@ -179,7 +183,14 @@ export function MisReportesCadenas() {
                                             <TextoSensible reporteId={ev.id} retapadoMinutos={retapadoMinutos} />
                                         </div>
                                         <div className="mt-2">
-                                            <VerAnalisis categoriaLabel={ev.categoriaLabel} explicacion={ev.explicacion} />
+                                            <VerAnalisis
+                                                categoriaLabel={ev.categoriaLabel}
+                                                explicacion={ev.explicacion}
+                                                analisisIa={ev.analisisIa}
+                                                ficha={ev.ficha}
+                                                fechaIncidente={ev.fechaIncidente}
+                                                estado={ev.estado}
+                                            />
                                         </div>
                                     </div>
                                 ))}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fechaCorta, fechaHora, fechaISO } from "./fecha";
+import { fechaCorta, fechaHora, fechaISO, fechaHoraSinMinutos, aHoraEnPunto } from "./fecha";
 
 describe("SPEC-208: helpers de fecha centralizados", () => {
     it("devuelve '—' para null, undefined e inválido", () => {
@@ -52,5 +52,51 @@ describe("SPEC-208: helpers de fecha centralizados", () => {
 
         // Fecha con offset explícito de Bogotá.
         expect(fechaISO("2026-08-22T23:00:00.000-05:00")).toBe("2026-08-22");
+    });
+});
+
+// ─── A-70 · G20 · la fecha del hecho sin minutos ────────────────────────────
+describe("fechaHoraSinMinutos (A-70 · G20)", () => {
+    it("muestra día + hora con a.m./p.m. y SIN minutos", () => {
+        // 2026-08-30 21:15 Bogotá = 2026-08-31T02:15Z
+        const salida = fechaHoraSinMinutos("2026-08-31T02:15:00.000Z");
+        expect(salida).toContain("30");
+        expect(salida).toContain("ago");
+        expect(salida).toContain("2026");
+        expect(salida, "la hora va en formato 12h").toMatch(/9\s*p/i);
+        expect(salida, "el minuto NO aparece").not.toContain("15");
+        expect(salida).not.toContain(":");
+    });
+
+    it("una hora de la mañana sale como a.m.", () => {
+        // 2026-08-30 09:40 Bogotá = 14:40Z
+        const salida = fechaHoraSinMinutos("2026-08-30T14:40:00.000Z");
+        expect(salida).toMatch(/9\s*a/i);
+        expect(salida).not.toContain("40");
+    });
+
+    it("valores vacíos o inválidos devuelven el guion, no una fecha falsa", () => {
+        expect(fechaHoraSinMinutos(null)).toBe("—");
+        expect(fechaHoraSinMinutos(undefined)).toBe("—");
+        expect(fechaHoraSinMinutos("no es fecha")).toBe("—");
+    });
+});
+
+describe("aHoraEnPunto (A-70 · G20 · minutos 00 en BD)", () => {
+    it("pone los minutos en 00 conservando día y hora", () => {
+        expect(aHoraEnPunto("2026-08-30T21:15")).toBe("2026-08-30T21:00");
+        expect(aHoraEnPunto("2026-08-30T09:59")).toBe("2026-08-30T09:00");
+    });
+
+    it("una hora ya en punto no cambia", () => {
+        expect(aHoraEnPunto("2026-08-30T21:00")).toBe("2026-08-30T21:00");
+    });
+
+    it("cadena vacía pasa tal cual (campo sin llenar)", () => {
+        expect(aHoraEnPunto("")).toBe("");
+    });
+
+    it("valor sin parte de hora no se rompe", () => {
+        expect(aHoraEnPunto("2026-08-30")).toBe("2026-08-30");
     });
 });

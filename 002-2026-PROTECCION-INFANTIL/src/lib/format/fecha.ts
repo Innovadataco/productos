@@ -48,3 +48,33 @@ export function fechaISO(iso: string | null | undefined): string {
     if (!y || !m || !d) return "—";
     return `${y}-${m}-${d}`;
 }
+
+/**
+ * A-70 · G20 — la fecha del HECHO se muestra sin minutos: "30 ago 2026 · 9 p. m."
+ *
+ * Decisión de Jelkin: al padre no le sirve el minuto exacto de algo que pasó
+ * (y fingir precisión que no tiene es peor). En BD los minutos quedan en `00`
+ * — el tipo de dato NO cambia, esto es presentación más el redondeo del campo
+ * al capturar.
+ */
+export function fechaHoraSinMinutos(iso: string | null | undefined): string {
+    const fecha = formatear(iso, { year: "numeric", month: "short", day: "numeric" });
+    if (fecha === "—") return "—";
+    // `hour12` con minute omitido da "9 p. m." en es-CO.
+    const hora = formatear(iso, { hour: "numeric", hour12: true });
+    if (hora === "—") return "—";
+    return `${fecha} · ${hora}`;
+}
+
+/**
+ * A-70 · G20 — normaliza a hora en punto para persistir. Recibe y devuelve el
+ * valor del input `datetime-local` ("YYYY-MM-DDTHH:mm"); si viene con minutos
+ * los pone en `00`. Cadena vacía pasa tal cual (campo sin llenar).
+ */
+export function aHoraEnPunto(valorLocal: string): string {
+    if (!valorLocal) return valorLocal;
+    const [dia, hora] = valorLocal.split("T");
+    if (!hora) return valorLocal;
+    const hh = hora.slice(0, 2);
+    return `${dia}T${hh}:00`;
+}
