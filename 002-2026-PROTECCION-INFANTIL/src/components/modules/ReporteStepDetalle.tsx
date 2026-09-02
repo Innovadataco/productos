@@ -38,7 +38,18 @@ export function ReporteStepDetalle({
     const [paises, setPaises] = useState<PaisOption[]>([]);
     const [otraCiudad, setOtraCiudad] = useState(ciudadId === "otra" ? ciudad : "");
     // SPEC-340 §2 (T017): día Y hora del incidente. Formato datetime-local (YYYY-MM-DDTHH:mm).
-    const hoy = new Date().toISOString().slice(0, 16);
+    //
+    // A-70 · B1 (causa raíz): esto era `toISOString().slice(0,16)` — hora UTC —
+    // mientras el input `datetime-local` opera en hora LOCAL del navegador. En
+    // Colombia (UTC−5) el desfase dejaba elegir hasta 5 horas en el FUTURO real
+    // sin que el input se quejara; el servidor lo rechazaba con 400 "Datos
+    // inválidos" y el padre perdía el relato. El `max` tiene que estar en la
+    // MISMA zona que el input: la local.
+    const hoy = (() => {
+        const ahora = new Date();
+        const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60_000);
+        return local.toISOString().slice(0, 16);
+    })();
 
     useEffect(() => {
         fetch("/api/paises", { credentials: "include" })
@@ -154,9 +165,14 @@ export function ReporteStepDetalle({
                     type="datetime-local"
                     max={hoy}
                     value={fechaIncidente}
-                    onChange={(e) =>
-                        onChange({ ciudad, pais, fechaIncidente: e.target.value, paisId, ciudadId, edadVictima, texto })
-                    }
+                    // A-70 · B1(b): el `max` del navegador no cubre el tecleo directo
+                    // (Chrome deja escribir un valor fuera de rango). Recortamos al
+                    // presente para que sea IMPOSIBLE mandar futuro desde acá.
+                    onChange={(e) => {
+                        const elegido = e.target.value > hoy ? hoy : e.target.value;
+                        onChange({ ciudad, pais, fechaIncidente: elegido, paisId, ciudadId, edadVictima, texto });
+                    }}
+                    error={fechaIncidente > hoy ? "El hecho no puede ser a futuro; ajustamos la hora al momento actual." : undefined}
                 />
 
                 <Input

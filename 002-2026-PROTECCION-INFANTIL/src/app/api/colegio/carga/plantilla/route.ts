@@ -3,7 +3,7 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
+import { verificarVigenciaColegioSalvoCamino } from "@/lib/colegio/vigencia-camino";
 import {
     COLUMNAS_REQUERIDAS,
     COLUMNA_OPCIONAL_APELLIDOS,
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
+        const vigencia = await verificarVigenciaColegioSalvoCamino(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },

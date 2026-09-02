@@ -429,3 +429,68 @@ export async function crearParametrosExpediente() {
         });
     }
 }
+
+/**
+ * SPEC-357 (I-254): completa los hechos que el camino guiado del colegio exige,
+ * de modo que `derivarPasoPendienteColegio` devuelva `null`.
+ *
+ * Se usa en los tests que necesitan distinguir las dos mitades de la regla de
+ * vigencia del colegio: EN el camino (vencido pero puede terminar) vs camino
+ * CERRADO (vencido y cortado). Sin esto, todo colegio de fixture está a mitad
+ * de camino y los dos escenarios se confunden.
+ */
+export async function terminarCaminoColegio(colegioId: string, usuarioId: string) {
+    await prisma.usuario.update({
+        where: { id: usuarioId },
+        data: {
+            nombre: "Rectora",
+            apellidos: "Prueba",
+            documentoTipo: "CC",
+            documentoNumero: `REC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            telefono: "+57 310 000 0000",
+            consentimientoAceptadoEn: new Date(),
+            consentimientoVersion: "v0.4",
+        },
+    });
+    const adminPlan = await prisma.usuario.create({
+        data: {
+            email: `admin-camino-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`,
+            passwordHash: "x",
+            rol: "ADMIN",
+        },
+    });
+    const plan = await prisma.plan.create({
+        data: {
+            tipoTitular: "COLEGIO",
+            duracion: "MES_12",
+            anio: 2026,
+            nombre: `Plan camino ${Date.now()}`,
+            precioBaseUSD: 100,
+            precio: 0,
+            creadoPorAdminId: adminPlan.id,
+        },
+    });
+    await prisma.suscripcion.create({
+        data: {
+            tipoTitular: "COLEGIO",
+            colegioId,
+            planActualId: plan.id,
+            estado: "ACTIVA",
+            fechaInicio: new Date(),
+            fechaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            codigoReferidoPropio: `REF-CAM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            monedaLocal: "COP",
+            paisCliente: "CO",
+        },
+    });
+    await crearProfesor(colegioId, { nombre: "Titular", apellidos: "Camino" });
+    const curso = await crearCurso(colegioId, { nombre: "Curso camino" });
+    await crearEstudiante(curso.id, colegioId, { nombre: "Estudiante camino" });
+}
+
+/** SPEC-357: deja la ventana de servicio del colegio vencida (finServicio = ayer). */
+export async function vencerColegio(colegioId: string) {
+    const ayer = new Date();
+    ayer.setDate(ayer.getDate() - 1);
+    await prisma.colegio.update({ where: { id: colegioId }, data: { finServicio: ayer } });
+}

@@ -57,23 +57,63 @@ export function ModalConsentimiento({
 
     const esColegio = documentoTipo === "CONVENIO_INSTITUCIONAL";
 
-    useEffect(() => {
-        if (!finalRef.current || !scrollRef.current) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        setScrollCompleto(true);
-                    }
-                });
-            },
-            { root: scrollRef.current, threshold: 0.5 }
-        );
-
-        observer.observe(finalRef.current);
-        return () => observer.disconnect();
+    /**
+     * SPEC-358 (A-70 · B3): la puerta de entrada NO puede depender de que un
+     * IntersectionObserver dispare.
+     *
+     * El gate original observaba un centinela de 8 px con `threshold: 0.5`. En
+     * el recorrido de Jelkin (prod `e137caab`) el botón "Acepto" quedó
+     * deshabilitado con el documento leído hasta el final y las dos casillas
+     * marcadas: el observer nunca reportó intersección, y el usuario quedó
+     * trabado en la primera pantalla del producto sin ninguna salida. El test
+     * de este componente no lo vio porque MOCKEABA el observer.
+     *
+     * Ahora la medida es directa y determinista (`scrollTop + clientHeight`
+     * contra `scrollHeight`), con tres entradas: al montar, en cada scroll y al
+     * cambiar el tamaño. El observer se conserva como refuerzo — si dispara,
+     * mejor; si no, ya no es la única llave.
+     */
+    const marcarSiLlegoAlFinal = useCallback(() => {
+        const cont = scrollRef.current;
+        // `clientHeight === 0` = el navegador todavía no midió (o el contenedor
+        // está oculto): NO se concluye nada. Sin este resguardo, una medición
+        // vacía abriría el candado sin que el documento se haya leído.
+        if (!cont || cont.clientHeight === 0) return;
+        // Margen de 24 px: subpíxeles, zoom del navegador y el padding inferior
+        // hacen que la igualdad exacta no se alcance en pantallas reales.
+        const llego = cont.scrollTop + cont.clientHeight >= cont.scrollHeight - 24;
+        // Documento corto o pantalla alta: no hay nada que bajar, ya está leído.
+        const sinScroll = cont.scrollHeight <= cont.clientHeight + 24;
+        if (llego || sinScroll) setScrollCompleto(true);
     }, []);
+
+    useEffect(() => {
+        marcarSiLlegoAlFinal();
+        window.addEventListener("resize", marcarSiLlegoAlFinal);
+
+        let observer: IntersectionObserver | undefined;
+        if (finalRef.current && scrollRef.current && typeof IntersectionObserver !== "undefined") {
+            observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) setScrollCompleto(true);
+                    });
+                },
+                { root: scrollRef.current, threshold: 0.5 },
+            );
+            observer.observe(finalRef.current);
+        }
+        return () => {
+            window.removeEventListener("resize", marcarSiLlegoAlFinal);
+            observer?.disconnect();
+        };
+    }, [marcarSiLlegoAlFinal]);
+
+    // El contenido del documento llega por props y se mide después de pintarlo.
+    useEffect(() => {
+        const id = setTimeout(marcarSiLlegoAlFinal, 150);
+        return () => clearTimeout(id);
+    }, [documentoContenido, marcarSiLlegoAlFinal]);
 
     const handleAceptar = useCallback(async () => {
         if (!scrollCompleto || !representanteLegal || !aceptaPolitica) return;
@@ -127,6 +167,8 @@ export function ModalConsentimiento({
 
                     <div
                         ref={scrollRef}
+                        onScroll={marcarSiLlegoAlFinal}
+                        data-testid="documento-scroll"
                         className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-papel/50 p-4 text-sm text-body dark:bg-tinta/50"
                     >
                         <div className="prose prose-sm max-w-none dark:prose-invert">

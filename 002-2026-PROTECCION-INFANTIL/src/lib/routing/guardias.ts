@@ -171,6 +171,12 @@ export const GUARDIAS_ACCESO = {
             // Paso 2 · plan (freemium, pagado, bono, referido).
             "/api/colegio/suscripcion",
             "/api/pagos",
+            // SPEC-357 (I-254): LA CAJA SIEMPRE ABIERTA. Un colegio que vence a
+            // mitad del camino tiene que poder ir a pagar; hasta hoy el guardián
+            // del camino le devolvía 307 al paso pendiente y le tapaba la única
+            // salida (verificado en vivo por Calidad). Sin esto, el rector solo
+            // sale llamando a un administrador.
+            "/dashboard/colegio/suscripcion",
             // Paso 3 · profesores. La sección /dashboard/colegio/profesores
             // completa: el paso enlaza "Agregar profesor" (?crear=1) — sin la
             // exención el enlace rebota al propio paso y solo sobrevive la vía

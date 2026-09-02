@@ -10,7 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
+import { verificarVigenciaColegioSalvoCamino } from "@/lib/colegio/vigencia-camino";
 import { withValidation } from "@/lib/validation";
 import { materiaIdParamsSchema, materiaUpdateBodySchema } from "@/lib/schemas";
 
@@ -25,7 +25,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
+        const vigencia = await verificarVigenciaColegioSalvoCamino(user.id);
         if (!vigencia.vigente) {
             return NextResponse.json(
                 { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },

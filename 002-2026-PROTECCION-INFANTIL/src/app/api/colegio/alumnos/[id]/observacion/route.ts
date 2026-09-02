@@ -4,7 +4,7 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
+import { verificarVigenciaColegioSalvoCamino } from "@/lib/colegio/vigencia-camino";
 import { withValidation } from "@/lib/validation";
 import { estudianteIdParamsSchema, observacionBodySchema } from "@/lib/schemas";
 import { verificarPropiedadEstudiante } from "@/lib/colegio/permisos";
@@ -30,7 +30,7 @@ interface UsuarioColegio {
 async function verificarAcceso(request: Request, scope: "admin_read" | "admin_write") {
     const user = await verifyAuth("SCHOOL_ADMIN");
     await assertModulo(user, "colegios_gestion");
-    const vigencia = await verificarVigenciaColegio(user.id);
+    const vigencia = await verificarVigenciaColegioSalvoCamino(user.id);
     if (!vigencia.vigente) {
         return {
             error: NextResponse.json(

@@ -5,7 +5,7 @@ import { PATCH as PATCHEstadoMateria } from "./[id]/estado/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
-import { crearTokenUsuario, crearColegioConAdmin, crearUsuario } from "@/lib/reporte-test-utils";
+import { crearTokenUsuario, crearColegioConAdmin, crearUsuario, terminarCaminoColegio, vencerColegio } from "@/lib/reporte-test-utils";
 import { MateriaRepository } from "@/lib/dal/repositories/materia";
 
 let mockToken: string | undefined;
@@ -159,15 +159,20 @@ describe("/api/colegio/materias", () => {
         expect(res.status).toBe(403);
     });
 
-    it("SCHOOL_ADMIN con colegio vencido recibe 403", async () => {
+    // SPEC-357 (I-254) · candado 24v2: este caso afirmaba "vencido → 403" con un
+    // colegio de fixture que está a MITAD del camino guiado — exactamente el
+    // encierro que Calidad reprodujo (el paso le exige terminar, el handler se lo
+    // niega). Ahora se afirma la regla completa: con el camino CERRADO la vigencia
+    // manda; con el camino a medias, el colegio puede terminar su configuración.
+    it("colegio vencido con el camino CERRADO recibe 403; a mitad del camino puede seguir", async () => {
         const { admin, colegio } = await setupSchoolAdmin();
-        const ayer = new Date();
-        ayer.setDate(ayer.getDate() - 1);
-        await prisma.colegio.update({
-            where: { id: colegio.id },
-            data: { finServicio: ayer },
-        });
 
+        await vencerColegio(colegio.id);
+        const enCamino = await GET(request("GET", "http://localhost:5005/api/colegio/materias", undefined, mockToken));
+        expect(enCamino.status, "el colegio en el camino no queda encerrado").toBe(200);
+
+        await terminarCaminoColegio(colegio.id, admin.id);
+        await vencerColegio(colegio.id);
         const res = await GET(request("GET", "http://localhost:5005/api/colegio/materias", undefined, mockToken));
         expect(res.status).toBe(403);
         const json = await res.json();

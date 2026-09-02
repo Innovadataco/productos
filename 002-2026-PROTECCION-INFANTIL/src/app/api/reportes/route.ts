@@ -12,14 +12,40 @@ import { validarSecretoSimulacion } from "@/lib/anti-abuso/simulador-secreto";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 
+/**
+ * A-70 · B1(c): nombre humano del campo para el mensaje de error. El padre lee
+ * "Fecha y hora del incidente: …", no "fechaIncidente: …".
+ */
+function etiquetaCampoReporte(campo: unknown): string {
+    const etiquetas: Record<string, string> = {
+        identificador: "Usuario o número reportado",
+        plataforma: "Plataforma",
+        texto: "Descripción de lo ocurrido",
+        fechaIncidente: "Fecha y hora del incidente",
+        ciudad: "Ciudad",
+        pais: "País",
+        edadVictima: "Edad aproximada del menor",
+        otraPlataforma: "Otra plataforma",
+    };
+    return (typeof campo === "string" && etiquetas[campo]) || "Datos del reporte";
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
         const parsed = crearReporteSchema.safeParse(body);
 
         if (!parsed.success) {
+            // A-70 · B1(c): "Datos inválidos" a secas dejaba al padre sin saber QUÉ
+            // corregir — escribía el relato entero y el error no nombraba el campo.
+            // El servidor SIEMPRE sabe el motivo (regla 3 del brief A-70): lo decimos.
+            const primero = parsed.error.issues[0];
+            const campo = primero?.path?.[0];
+            const mensaje = primero
+                ? `${etiquetaCampoReporte(campo)}: ${primero.message}`
+                : "Datos inválidos";
             return NextResponse.json(
-                { error: { message: "Datos inválidos", code: ERROR_CODES.VALIDATION_ERROR, details: parsed.error.format() } },
+                { error: { message: mensaje, code: ERROR_CODES.VALIDATION_ERROR, campo: campo ?? null, details: parsed.error.format() } },
                 { status: 400 }
             );
         }
