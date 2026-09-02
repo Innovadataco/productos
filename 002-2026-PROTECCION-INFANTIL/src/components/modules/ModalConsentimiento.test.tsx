@@ -200,3 +200,82 @@ describe("ModalConsentimiento · render markdown (SPEC-343)", () => {
         });
     });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// SPEC-358 (A-70 · B3): la puerta de entrada no depende del IntersectionObserver
+//
+// En el recorrido de Jelkin (prod `e137caab`) el botón "Acepto" quedó
+// deshabilitado con el documento leído hasta el final y las dos casillas
+// marcadas — el observer nunca reportó intersección y el usuario quedó trabado
+// en la primera pantalla del producto. Estos tests corren con un observer que
+// NO dispara nunca, que es justo lo que la suite anterior no podía ver: su mock
+// siempre disparaba.
+// ────────────────────────────────────────────────────────────────────────────
+describe("ModalConsentimiento · el gate no depende del observer (SPEC-358 · B3)", () => {
+    /** Observer que jamás reporta intersección: el escenario de Jelkin. */
+    function observerMudo() {
+        vi.stubGlobal(
+            "IntersectionObserver",
+            vi.fn(() => ({ observe: vi.fn(), disconnect: vi.fn(), unobserve: vi.fn() })),
+        );
+    }
+
+    /** jsdom no calcula layout: se fijan las medidas del contenedor a mano. */
+    function medirContenedor(el: HTMLElement, opts: { scrollHeight: number; clientHeight: number }) {
+        Object.defineProperty(el, "scrollHeight", { value: opts.scrollHeight, configurable: true });
+        Object.defineProperty(el, "clientHeight", { value: opts.clientHeight, configurable: true });
+    }
+
+    beforeEach(() => {
+        observerMudo();
+        push.mockClear();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    it("con el observer mudo, llegar al final del documento habilita Acepto", async () => {
+        renderModal();
+        const cont = screen.getByTestId("documento-scroll");
+        medirContenedor(cont, { scrollHeight: 1000, clientHeight: 300 });
+
+        fireEvent.click(screen.getByTestId("check-representante"));
+        fireEvent.click(screen.getByTestId("check-politica"));
+        // Aún arriba del documento: el botón espera.
+        cont.scrollTop = 0;
+        fireEvent.scroll(cont);
+        await waitFor(() => expect(getBoton().disabled).toBe(true));
+
+        // Hasta el fondo: se habilita sin que ningún observer dispare.
+        cont.scrollTop = 700;
+        fireEvent.scroll(cont);
+        await waitFor(() => expect(getBoton().disabled).toBe(false));
+    });
+
+    it("documento que no desborda: no hay nada que bajar, no se traba", async () => {
+        renderModal("Documento corto.");
+        const cont = screen.getByTestId("documento-scroll");
+        medirContenedor(cont, { scrollHeight: 200, clientHeight: 400 });
+        fireEvent.scroll(cont);
+
+        fireEvent.click(screen.getByTestId("check-representante"));
+        fireEvent.click(screen.getByTestId("check-politica"));
+
+        await waitFor(() => expect(getBoton().disabled).toBe(false));
+    });
+
+    it("scroll casi al final (subpíxeles del navegador) también cuenta como leído", async () => {
+        renderModal();
+        const cont = screen.getByTestId("documento-scroll");
+        medirContenedor(cont, { scrollHeight: 1000, clientHeight: 300 });
+
+        fireEvent.click(screen.getByTestId("check-representante"));
+        fireEvent.click(screen.getByTestId("check-politica"));
+        cont.scrollTop = 690; // 690 + 300 = 990, a 10 px del final
+        fireEvent.scroll(cont);
+
+        await waitFor(() => expect(getBoton().disabled).toBe(false));
+    });
+});
