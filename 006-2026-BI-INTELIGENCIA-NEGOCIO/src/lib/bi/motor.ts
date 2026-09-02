@@ -548,6 +548,19 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
                 delete plan.periodo;
                 faltante = validarPlanAtomico(plan, cat, pregunta, filtrosCubiertos);
             }
+            // I-16: fallback simétrico para ventanaAbsoluta malformada o
+            // inventada por el LLM (caso real: '¿cuántos reportes hay?' llegó
+            // con ventana basura → clarificaba una pregunta que no pedía
+            // fechas). Mismo criterio que I-03 para el período.
+            if (
+                faltante &&
+                plan.ventanaAbsoluta &&
+                faltante.startsWith("La ventana") &&
+                !tieneMarcasTemporales(pregunta)
+            ) {
+                delete plan.ventanaAbsoluta;
+                faltante = validarPlanAtomico(plan, cat, pregunta, filtrosCubiertos);
+            }
             if (faltante) {
                 paso("plan-atomico", "clarificación solicitada");
                 hubo.clarificacion = true;
@@ -563,6 +576,11 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
             // respondía 0 habiendo 254). Simétrico al fallback de I-03.
             if (plan.periodo && !tieneMarcasTemporales(pregunta)) {
                 delete plan.periodo;
+            }
+            // I-16: ventana espuria — simétrica a I-13. Una ventana con fechas
+            // VÁLIDAS pero no pedidas también se descarta.
+            if (plan.ventanaAbsoluta && !tieneMarcasTemporales(pregunta)) {
+                delete plan.ventanaAbsoluta;
             }
 
             // 6 · El SERVIDOR construye el SQL (candado 3) con límite de BD (B3).
