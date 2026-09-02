@@ -301,4 +301,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-240 (002-PI-143): pre-registro simplificado de colegio (sin BD).
     "src/app/dashboard/admin/colegios/nuevo/NuevoColegioPageClient.test.tsx",
     "src/components/modules/InvitacionEnviadaModal.test.tsx",
+    // SPEC-367 (A-73): los 3 estados del círculo de confianza (fetch mockeado, sin BD).
+    "src/components/modules/padre/circulo/CirculoConfianzaClient.test.tsx",
 ];
