@@ -351,6 +351,26 @@ const CONFIGS: Array<{ clave: string; valor: string; descripcion: string }> = [
     valor: "25",
     descripcion: "Cupo maximo de casos activos por operario: la demanda acumulada que supere operarios x cupo enciende el semaforo rubi de capacidad",
   },
+  {
+    clave: "bi.analitica.sigma",
+    valor: "2",
+    descripcion: "Umbral de z-score (sigma) sobre la media de 28 dias para declarar anomalia del dia y fenomeno geo en /analitica",
+  },
+  {
+    clave: "bi.analitica.riesgo_minimo",
+    valor: "50",
+    descripcion: "Total 12m minimo para que una categoria sensible llegue a severidad critica en /analitica",
+  },
+  {
+    clave: "bi.analitica.subida_pct",
+    valor: "100",
+    descripcion: "Subida % (14 dias vs 14 previos) para el fenomeno plataforma x categoria del detector de /analitica",
+  },
+  {
+    clave: "bi.analitica.rafaga_horas",
+    valor: "48",
+    descripcion: "Ventana en horas del fenomeno rafaga (esRafaga) del detector de /analitica",
+  },
 ];
 
 async function seedConfig(): Promise<void> {

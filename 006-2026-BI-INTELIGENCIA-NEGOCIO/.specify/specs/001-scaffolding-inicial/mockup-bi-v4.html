@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BI v2 · Mockup v4 — Analítica predictiva y proactiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Mockup BI v2 v3 — "Pulso total": todas las dimensiones del demo real
+   (colegios, profesores, alumnos, acudientes, identificadores, alertas,
+   geografía, reincidencia, anonimato, comercial). Datos REALES de la carga
+   demo del 01-09-2026. Tokens de PI (SPEC-157), oscuro por defecto.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+  --pino-rgb: 11 110 90; --cielo-rgb: 90 162 234; --ambar-rgb: 169 112 12; --rubi-rgb: 184 57 90;
+  --papel-rgb: 238 241 239; --tinta-rgb: 15 24 21;
+  --tinta-muted-rgb: 77 85 82; --tinta-subtle-rgb: 100 106 104;
+  --pino-ink-rgb: 11 110 90; --ambar-ink-rgb: 138 92 6; --rubi-ink-rgb: 184 57 90; --cielo-ink-rgb: 53 116 187;
+  --luz-a: 0.12; --luz-b: 0.1; --luz-c: 0.08;
+  --sombra-sm: 0 1px 2px rgb(var(--tinta-rgb) / 0.08);
+  --sombra-md: 0 4px 12px rgb(var(--tinta-rgb) / 0.12);
+  --curva: cubic-bezier(0.16, 1, 0.3, 1);
+  --radio-card: 16px; --radio-input: 12px; --orbe-op: 0.28;
+}
+.dark {
+  color-scheme: dark;
+  --pino-rgb: 79 224 184; --cielo-rgb: 111 182 245; --ambar-rgb: 240 180 85; --rubi-rgb: 245 128 155;
+  --papel-rgb: 6 11 10; --tinta-rgb: 242 247 244;
+  --tinta-muted-rgb: 176 181 178; --tinta-subtle-rgb: 148 153 150;
+  --pino-ink-rgb: 79 224 184; --ambar-ink-rgb: 240 180 85; --rubi-ink-rgb: 245 128 155; --cielo-ink-rgb: 111 182 245;
+  --luz-a: 0.18; --luz-b: 0.12; --luz-c: 0.08;
+  --sombra-sm: 0 1px 2px rgb(0 0 0 / 0.4); --sombra-md: 0 4px 12px rgb(0 0 0 / 0.5);
+  --orbe-op: 0.5;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-family: "Instrument Sans", system-ui, sans-serif; }
+body {
+  background:
+    radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+    radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+    radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+    rgb(var(--papel-rgb));
+  color: rgb(var(--tinta-rgb)); min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+.serif { font-family: "Instrument Serif", Georgia, serif; }
+.mono { font-family: "DM Mono", monospace; }
+.cifra { font-variant-numeric: tabular-nums; }
+.microetiqueta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: rgb(var(--tinta-subtle-rgb)); }
+.text-muted { color: rgb(var(--tinta-muted-rgb)); }
+.text-subtle { color: rgb(var(--tinta-subtle-rgb)); }
+.glass {
+  background: rgb(var(--papel-rgb) / 0.7); backdrop-filter: saturate(185%) blur(22px); -webkit-backdrop-filter: saturate(185%) blur(22px);
+  border: 1px solid rgb(var(--tinta-rgb) / 0.08); box-shadow: var(--sombra-sm); border-radius: var(--radio-card);
+}
+.dark .glass { background: rgb(var(--papel-rgb) / 0.55); border-color: rgb(var(--tinta-rgb) / 0.09); box-shadow: var(--sombra-sm), inset 0 1px 0 rgba(255,255,255,0.05); }
+.text-gradient { background-image: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.accent-gradient { background-image: linear-gradient(135deg, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); }
+.orbe { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; opacity: var(--orbe-op); }
+.orbe-1 { width: 540px; height: 540px; background: rgb(var(--cielo-rgb) / 0.5); top: -140px; left: -100px; animation: deriva1 26s ease-in-out infinite alternate; }
+.orbe-2 { width: 460px; height: 460px; background: rgb(var(--pino-rgb) / 0.45); bottom: -160px; right: -120px; animation: deriva2 32s ease-in-out infinite alternate; }
+.orbe-3 { width: 320px; height: 320px; background: rgb(var(--ambar-rgb) / 0.25); top: 40%; left: 55%; animation: deriva3 38s ease-in-out infinite alternate; }
+@keyframes deriva1 { to { transform: translate(140px, 90px) scale(1.18); } }
+@keyframes deriva2 { to { transform: translate(-120px, -100px) scale(1.12); } }
+@keyframes deriva3 { to { transform: translate(-160px, 60px) scale(0.85); } }
+.anim-entrada { animation: entrada 0.7s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); }
+@keyframes entrada { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+.anim-pulso { animation: pulso 3.4s var(--curva) infinite; }
+@keyframes pulso { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(0.82); } }
+.respira { animation: respirar 5s var(--curva) infinite; transform-origin: center; }
+@keyframes respirar { 0%,100% { transform: scale(1); } 44% { transform: scale(1.03); } }
+.brillo-nuevo { position: relative; overflow: hidden; }
+.brillo-nuevo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.14) 50%, transparent 60%); transform: translateX(-100%); animation: barrido 3.2s var(--curva) infinite; }
+@keyframes barrido { 60%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.marco { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 20px; background: rgb(4 8 7 / 0.94); color: #eef1ef; font-size: 13px; backdrop-filter: blur(12px); }
+.marco .marca-mockup { font-weight: 600; margin-right: 12px; opacity: 0.85; }
+.marco button { border: 1px solid rgb(255 255 255 / 0.18); background: transparent; color: inherit; padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; transition: all 0.3s var(--curva); }
+.marco button:hover { background: rgb(255 255 255 / 0.12); }
+.marco button.activo { background: rgb(var(--pino-rgb) / 0.9); border-color: transparent; font-weight: 600; color: #060b0a; }
+.marco .toggle-tema { margin-left: auto; }
+
+.pantalla { display: none; max-width: 1240px; margin: 0 auto; padding: 32px 24px 90px; position: relative; z-index: 1; }
+.pantalla.visible { display: block; }
+
+.topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.logo-punto { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: #060b0a; font-weight: 700; font-size: 15px; box-shadow: 0 0 24px rgb(var(--pino-rgb) / 0.45); }
+.topbar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.topbar .sub { font-size: 13px; }
+.reloj { margin-left: auto; text-align: right; }
+.reloj .hora { font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+nav.tabs { display: flex; gap: 4px; margin-left: 18px; flex-wrap: wrap; }
+nav.tabs a { padding: 8px 15px; border-radius: 999px; font-size: 13.5px; cursor: pointer; color: rgb(var(--tinta-muted-rgb)); text-decoration: none; transition: all 0.3s var(--curva); }
+nav.tabs a:hover { background: rgb(var(--tinta-rgb) / 0.06); }
+nav.tabs a.activo { background: rgb(var(--pino-rgb) / 0.14); color: rgb(var(--pino-ink-rgb)); font-weight: 600; }
+
+.ticker { overflow: hidden; border-radius: 999px; margin-bottom: 26px; border: 1px solid rgb(var(--tinta-rgb) / 0.08); background: rgb(var(--papel-rgb) / 0.5); display: flex; align-items: center; }
+.ticker .etiqueta { flex-shrink: 0; padding: 8px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; background: rgb(var(--pino-rgb) / 0.16); color: rgb(var(--pino-ink-rgb)); display: flex; align-items: center; gap: 7px; border-radius: 999px 0 0 999px; }
+.ticker-ventana { overflow: hidden; flex: 1; }
+.ticker-pista { display: inline-flex; gap: 56px; white-space: nowrap; padding: 8px 0; animation: rodar 40s linear infinite; }
+.ticker-pista span { font-size: 13px; color: rgb(var(--tinta-muted-rgb)); }
+.ticker-pista b { color: rgb(var(--tinta-rgb)); font-weight: 600; }
+@keyframes rodar { to { transform: translateX(-50%); } }
+
+.hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: center; margin-bottom: 24px; }
+@media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+.titular-estado { font-family: "Instrument Serif", Georgia, serif; font-size: clamp(32px, 4.6vw, 52px); letter-spacing: -0.022em; line-height: 1.05; }
+.palabra-estado { font-style: italic; transition: color 0.6s var(--curva); }
+.hero .sub-estado { margin-top: 12px; font-size: 15px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.gauge-wrap { display: flex; align-items: center; gap: 20px; padding: 20px 26px; }
+.gauge-num { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.gauge-svg circle.trazo { animation: dibujo 1.4s var(--curva) both; }
+@keyframes dibujo { from { stroke-dashoffset: var(--dash-inicial); } to { stroke-dashoffset: var(--dash-final); } }
+
+.chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+.chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 500; background: rgb(var(--papel-rgb) / 0.6); border: 1px solid rgb(var(--tinta-rgb) / 0.08); }
+.punto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.punto.ok { background: rgb(var(--pino-rgb)); box-shadow: 0 0 8px rgb(var(--pino-rgb) / 0.7); }
+.punto.warn { background: rgb(var(--ambar-rgb)); box-shadow: 0 0 8px rgb(var(--ambar-rgb) / 0.7); }
+.punto.bad { background: rgb(var(--rubi-rgb)); box-shadow: 0 0 8px rgb(var(--rubi-rgb) / 0.7); }
+
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 26px; }
+.insight { padding: 20px 22px; position: relative; overflow: hidden; transition: transform 0.35s var(--curva), box-shadow 0.35s var(--curva); }
+.insight:hover { transform: translateY(-3px); box-shadow: var(--sombra-md); }
+.insight::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.insight.sev-ambar::before { background: rgb(var(--ambar-rgb)); }
+.insight.sev-cielo::before { background: rgb(var(--cielo-rgb)); }
+.insight.sev-pino::before { background: rgb(var(--pino-rgb)); }
+.insight.sev-rubi::before { background: rgb(var(--rubi-rgb)); }
+.insight .tag-sev { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
+.sev-ambar .tag-sev { color: rgb(var(--ambar-ink-rgb)); }
+.sev-cielo .tag-sev { color: rgb(var(--cielo-ink-rgb)); }
+.sev-pino .tag-sev { color: rgb(var(--pino-ink-rgb)); }
+.sev-rubi .tag-sev { color: rgb(var(--rubi-ink-rgb)); }
+.insight h4 { font-size: 16.5px; font-weight: 600; margin: 7px 0 5px; line-height: 1.35; }
+.insight p { font-size: 13.5px; line-height: 1.55; }
+.insight .acciones { display: flex; gap: 8px; margin-top: 14px; }
+.btn-mini { padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid rgb(var(--tinta-rgb) / 0.14); background: transparent; color: rgb(var(--tinta-rgb)); transition: all 0.3s var(--curva); }
+.btn-mini:hover { background: rgb(var(--tinta-rgb) / 0.07); }
+.btn-mini.primario { background: rgb(var(--pino-rgb)); border-color: transparent; color: #060b0a; }
+
+.grid-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.kpi { padding: 18px 22px 14px; transition: transform 0.35s var(--curva); }
+.kpi:hover { transform: translateY(-3px); }
+.kpi .valor { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin: 5px 0 2px; }
+.kpi .delta { font-size: 12.5px; font-weight: 600; }
+.delta.up { color: rgb(var(--pino-ink-rgb)); }
+.delta.down { color: rgb(var(--rubi-ink-rgb)); }
+.delta.warn { color: rgb(var(--ambar-ink-rgb)); }
+.delta.flat { color: rgb(var(--tinta-subtle-rgb)); }
+.spark { margin-top: 10px; }
+.spark polyline { fill: none; stroke: rgb(var(--pino-rgb)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.seccion-titulo { display: flex; align-items: baseline; gap: 12px; margin: 30px 0 14px; }
+.seccion-titulo h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+.seccion-titulo .nota-lat { font-size: 12.5px; }
+
+.grid-2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-2i { display: grid; grid-template-columns: 1fr 1.6fr; gap: 16px; margin-bottom: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .grid-2, .grid-2i, .grid-3 { grid-template-columns: 1fr; } }
+.card { padding: 24px; }
+.card h3 { font-size: 16.5px; font-weight: 600; margin-bottom: 4px; }
+.card .nota { font-size: 13px; margin-bottom: 18px; }
+
+.barras { display: flex; align-items: flex-end; gap: 6px; height: 190px; padding-top: 10px; }
+.barra { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+.barra .col { width: 100%; max-width: 34px; border-radius: 6px 6px 2px 2px; background: linear-gradient(to top, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); min-height: 3px; transform-origin: bottom; animation: crece 0.8s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); transition: filter 0.25s var(--curva); }
+.barra:hover .col { filter: brightness(1.25); }
+@keyframes crece { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.barra .etq { font-size: 10px; color: rgb(var(--tinta-subtle-rgb)); }
+.barra .val { font-size: 11px; font-weight: 600; }
+
+.barras-h { display: flex; flex-direction: column; gap: 10px; }
+.barra-h { display: grid; grid-template-columns: 150px 1fr 52px; align-items: center; gap: 10px; font-size: 13px; }
+.barra-h .pista { height: 20px; border-radius: 6px; background: rgb(var(--tinta-rgb) / 0.06); overflow: hidden; }
+.barra-h .fill { height: 100%; border-radius: 6px; background: linear-gradient(to right, rgb(var(--pino-rgb)), rgb(var(--cielo-rgb))); transform-origin: left; animation: creceX 0.9s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); }
+@keyframes creceX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.barra-h .num { text-align: right; font-weight: 600; }
+
+.donut-wrap { display: flex; align-items: center; gap: 20px; }
+.donut-seg { animation: dibujo 1.2s var(--curva) both; }
+.leyenda { display: flex; flex-direction: column; gap: 8px; font-size: 13px; flex: 1; }
+.leyenda .fila { display: flex; align-items: center; gap: 8px; }
+.leyenda .sw { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.leyenda .pct { margin-left: auto; font-weight: 600; }
+
+.split { display: flex; height: 26px; border-radius: 999px; overflow: hidden; margin: 14px 0 10px; }
+.split .a { background: rgb(var(--cielo-rgb)); animation: creceX 1s var(--curva) both; transform-origin: left; }
+.split .b { background: rgb(var(--ambar-rgb)); animation: creceX 1s var(--curva) both; transform-origin: left; }
+.split-etq { display: flex; justify-content: space-between; font-size: 13px; }
+
+.embudo { display: flex; flex-direction: column; gap: 10px; }
+.embudo .paso { display: grid; grid-template-columns: 170px 1fr 60px; align-items: center; gap: 12px; font-size: 13.5px; }
+.embudo .pista { height: 26px; border-radius: 8px; background: rgb(var(--tinta-rgb) / 0.06); overflow: hidden; }
+.embudo .fill { height: 100%; border-radius: 8px; background: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb))); animation: creceX 1s var(--curva) both; animation-delay: var(--anim-retardo, 0ms); }
+.embudo .num { text-align: right; font-weight: 700; }
+.aviso-honesto { margin-top: 14px; padding: 12px 16px; border-radius: 12px; font-size: 12.5px; background: rgb(var(--cielo-rgb) / 0.1); color: rgb(var(--cielo-ink-rgb)); border: 1px solid rgb(var(--cielo-rgb) / 0.25); }
+
+.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla th { text-align: left; padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: rgb(var(--tinta-subtle-rgb)); border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.1); }
+.tabla td { padding: 13px 14px; border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.06); }
+.tabla tbody tr { transition: background 0.25s var(--curva); }
+.tabla tbody tr:hover td { background: rgb(var(--tinta-rgb) / 0.04); }
+.tabla tr[data-estado="warn"] td:first-child { border-left: 3px solid rgb(var(--ambar-rgb)); }
+.tabla tr[data-estado="bad"] td:first-child { border-left: 3px solid rgb(var(--rubi-rgb)); }
+.tabla tr[data-estado="ok"] td:first-child { border-left: 3px solid transparent; }
+.semaforo { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+.tag-nuevo { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 2px 8px; border-radius: 999px; background: rgb(var(--cielo-rgb) / 0.2); color: rgb(var(--cielo-ink-rgb)); margin-left: 8px; vertical-align: 1px; }
+.filtros { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.filtro { padding: 8px 16px; border-radius: 999px; font-size: 13px; cursor: pointer; border: 1px solid rgb(var(--tinta-rgb) / 0.12); background: transparent; color: rgb(var(--tinta-muted-rgb)); transition: all 0.3s var(--curva); }
+.filtro:hover { border-color: rgb(var(--pino-rgb) / 0.5); }
+.filtro.activo { background: rgb(var(--pino-rgb)); color: #060b0a; border-color: transparent; font-weight: 600; }
+.resumen-op { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.resumen-op .mini { padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
+.resumen-op .num { font-size: 30px; font-weight: 700; }
+</style>
+<style>
+/* ---- v4: capa predictiva/proactiva (sobre el sistema v3) ---- */
+.fenomeno { position: relative; overflow: hidden; }
+.fenomeno::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: rgb(var(--rubi-rgb)); }
+.fenomeno.sev-media::before { background: rgb(var(--ambar-rgb)); }
+.fenomeno.sev-informativa::before { background: rgb(var(--cielo-rgb)); }
+.fenomeno .evidencia { font-size: 12px; }
+.banda-sigma { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; font-weight: 700; font-size: 14px; }
+.banda-sigma.alta { background: rgb(var(--rubi-rgb) / 0.15); color: rgb(var(--rubi-ink-rgb)); border: 1px solid rgb(var(--rubi-rgb) / 0.4); }
+.proyeccion-nota { font-size: 12px; }
+.riesgo-fila { display: grid; grid-template-columns: 190px 1fr 70px 70px; gap: 10px; align-items: center; font-size: 13.5px; padding: 8px 0; border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.06); }
+.riesgo-pista { height: 22px; border-radius: 6px; background: rgb(var(--tinta-rgb) / 0.06); overflow: hidden; }
+.riesgo-fill { height: 100%; border-radius: 6px; animation: creceX 0.9s var(--curva) both; }
+.tag-sev-inline { font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.1em; }
+.tag-rubi { background: rgb(var(--rubi-rgb) / 0.16); color: rgb(var(--rubi-ink-rgb)); }
+.tag-ambar { background: rgb(var(--ambar-rgb) / 0.16); color: rgb(var(--ambar-ink-rgb)); }
+.tag-cielo { background: rgb(var(--cielo-rgb) / 0.16); color: rgb(var(--cielo-ink-rgb)); }
+.tag-pino { background: rgb(var(--pino-rgb) / 0.16); color: rgb(var(--pino-ink-rgb)); }
+.marcador-fenomeno { position: absolute; top: -8px; width: 12px; height: 12px; border-radius: 50%; background: rgb(var(--rubi-rgb)); box-shadow: 0 0 10px rgb(var(--rubi-rgb) / 0.8); }
+.crono-wrap { position: relative; }
+</style>
+</head>
+<body>
+
+<div class="orbe orbe-1"></div>
+<div class="orbe orbe-2"></div>
+<div class="orbe orbe-3"></div>
+
+<div class="marco">
+  <span class="marca-mockup">MOCKUP v4 · BI v2 (006) — analítica predictiva y proactiva</span>
+  <button data-ir="analitica" class="activo">Pantalla nueva · Analítica</button>
+  <button class="toggle-tema" id="btn-tema">☀️ Tema claro</button>
+</div>
+
+<section class="pantalla visible" id="p-analitica">
+  <div class="topbar anim-entrada">
+    <div class="logo-punto accent-gradient respira">BI</div>
+    <div>
+      <h1>Analítica <span class="serif text-gradient">predictiva</span></h1>
+      <div class="sub text-muted">Qué viene · qué se sale del patrón · qué mirar ya — siempre con evidencia</div>
+    </div>
+    <nav class="tabs">
+      <a>Pulso</a><a>Chat IA</a><a>Personas</a><a>Geografía</a><a>Operación</a><a class="activo">Analítica</a>
+    </nav>
+  </div>
+
+  <!-- 1 · Anomalía del día (viva) -->
+  <div class="chips anim-entrada" style="--anim-retardo:60ms">
+    <span class="banda-sigma alta"><span class="punto bad anim-pulso"></span> Hoy está +2.3σ por encima de lo normal</span>
+    <span class="chip"><span class="punto ok"></span> Réplica fresca · hace 31 s</span>
+    <span class="chip"><span class="punto warn"></span> 2 fenómenos activos bajo vigilancia</span>
+  </div>
+
+  <!-- 2 · Proyección (predictiva honesta: rango, jamás cifra puntual falsa) -->
+  <div class="grid-2">
+    <div class="card glass anim-entrada crono-wrap" style="--anim-retardo:120ms">
+      <h3>Proyección de la próxima semana</h3>
+      <div class="nota text-muted">Tendencia de las últimas 8 semanas + rango de confianza — la línea punteada es futuro</div>
+      <svg width="100%" height="220" viewBox="0 0 560 220" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="grad-linea" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#6fb6f5"/><stop offset="100%" stop-color="#4fe0b8"/>
+          </linearGradient>
+        </defs>
+        <!-- banda de confianza del futuro -->
+        <path d="M 392 150 L 448 138 L 504 128 L 504 158 L 448 172 L 392 178 Z" fill="rgb(111 182 245 / 0.15)"/>
+        <!-- histórico 8 semanas -->
+        <polyline points="56,150 112,142 168,146 224,132 280,138 336,120 392,152 392,152" fill="none" stroke="url(#grad-linea)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="600" class="anim-dibujo" style="--dash-inicial:600; --dash-final:0"/>
+        <!-- proyección punteada -->
+        <polyline points="392,152 448,155 504,143" fill="none" stroke="rgb(var(--cielo-rgb))" stroke-width="2.5" stroke-dasharray="6 6" stroke-linecap="round"/>
+        <circle cx="504" cy="143" r="5" fill="rgb(var(--cielo-rgb))" class="anim-pulso"/>
+        <!-- marcador de fenómeno en el histórico -->
+        <circle cx="336" cy="120" r="6" fill="rgb(var(--rubi-rgb))" class="anim-pulso"/>
+        <text x="336" y="105" text-anchor="middle" font-size="10" fill="rgb(var(--rubi-ink-rgb))">fenómeno</text>
+        <text x="504" y="180" text-anchor="middle" font-size="10.5" fill="rgb(var(--tinta-subtle-rgb))">próxima semana</text>
+      </svg>
+      <div class="proyeccion-nota text-muted">Si sigue el ritmo: <b class="cifra" style="color:rgb(var(--tinta-rgb))">118–134 reportes</b> la próxima semana (rango, no promesa). El punto rubí: la semana del fenómeno activo.</div>
+    </div>
+
+    <!-- 3 · Riesgo por categoría (diagnóstico) -->
+    <div class="card glass anim-entrada" style="--anim-retardo:180ms">
+      <h3>Riesgo por categoría</h3>
+      <div class="nota text-muted">Frecuencia × severidad — las sensibles primero</div>
+      <div>
+        <div class="riesgo-fila"><span>Solicitud de material</span><div class="riesgo-pista"><div class="riesgo-fill" style="width:92%; background:rgb(var(--rubi-rgb))"></div></div><span class="cifra" style="text-align:right">155</span><span><span class="tag-sev-inline tag-rubi">Crítica</span></span></div>
+        <div class="riesgo-fila"><span>Compartimiento sexual</span><div class="riesgo-pista"><div class="riesgo-fill" style="width:78%; background:rgb(var(--rubi-rgb))"></div></div><span class="cifra" style="text-align:right">131</span><span><span class="tag-sev-inline tag-rubi">Crítica</span></span></div>
+        <div class="riesgo-fila"><span>Solicitud de encuentro</span><div class="riesgo-pista"><div class="riesgo-fill" style="width:70%; background:rgb(var(--ambar-rgb))"></div></div><span class="cifra" style="text-align:right">118</span><span><span class="tag-sev-inline tag-ambar">Alta</span></span></div>
+        <div class="riesgo-fila"><span>Ciberacoso</span><div class="riesgo-pista"><div class="riesgo-fill" style="width:64%; background:rgb(var(--ambar-rgb))"></div></div><span class="cifra" style="text-align:right">108</span><span><span class="tag-sev-inline tag-ambar">Alta</span></span></div>
+        <div class="riesgo-fila"><span>Bullying</span><div class="riesgo-pista"><div class="riesgo-fill" style="width:60%; background:rgb(var(--cielo-rgb))"></div></div><span class="cifra" style="text-align:right">101</span><span><span class="tag-sev-inline tag-cielo">Vigilar</span></span></div>
+        <div class="riesgo-fila"><span>Spam / benigno</span><div class="riesgo-pista"><div class="riesgo-fill" style="width:34%; background:rgb(var(--tinta-subtle-rgb))"></div></div><span class="cifra" style="text-align:right">58</span><span><span class="tag-sev-inline tag-pino">Baja</span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 · Detector de fenómenos (proactivo — el corazón) -->
+  <div class="microetiqueta anim-entrada" style="--anim-retardo:240ms; margin-bottom:12px; display:flex; align-items:center; gap:8px">
+    <span class="punto bad anim-pulso"></span> Detector de fenómenos · cruces que rompen el patrón
+  </div>
+  <div class="insights">
+    <div class="insight glass fenomeno anim-entrada brillo-nuevo" style="--anim-retardo:280ms">
+      <span class="tag-sev" style="color:rgb(var(--rubi-ink-rgb))">⚡ Fenómeno · plataforma × tiempo</span>
+      <h4>Roblox × acoso digital: +240% en 14 días</h4>
+      <p class="text-muted">De 5 a 17 reportes semanales, concentrado en 3 ciudades. Evidencia: serie semanal Roblox vs media móvil de 8 semanas.</p>
+      <div class="acciones"><button class="btn-mini primario">Ver la serie →</button><button class="btn-mini">Vigilar</button></div>
+    </div>
+    <div class="insight glass fenomeno sev-media anim-entrada" style="--anim-retardo:340ms">
+      <span class="tag-sev">◆ Ráfaga · mismo origen</span>
+      <h4>12 reportes en 40 minutos, misma plataforma</h4>
+      <p class="text-muted">Ayer 21:40–22:20, Telegram. Marca <code class="mono">esRafaga</code> activa — posible campaña o ataque coordinado.</p>
+      <div class="acciones"><button class="btn-mini">Ver antifraude →</button></div>
+    </div>
+    <div class="insight glass fenomeno sev-informativa anim-entrada" style="--anim-retardo:400ms">
+      <span class="tag-sev">◆ Geografía fuera de rango</span>
+      <h4>Bucaramanga: +2.8σ sobre su histórico</h4>
+      <p class="text-muted">18 reportes esta semana frente a su media de 6. No es el volumen: es que rompe su propio patrón.</p>
+      <div class="acciones"><button class="btn-mini">Ver en el mapa →</button></div>
+    </div>
+  </div>
+
+  <!-- 5 · Frente padre + vencimientos -->
+  <div class="grid-2">
+    <div class="card glass anim-entrada" style="--anim-retardo:460ms">
+      <h3>El frente padre</h3>
+      <div class="nota text-muted">Padres como actores — sin identidades (Ley 1581)</div>
+      <div class="barras-h">
+        <div class="barra-h"><span>Reportes de padres</span><div class="pista"><div class="fill" style="width:8%"></div></div><span class="num cifra">4</span></div>
+        <div class="barra-h"><span>Reportes de colegios</span><div class="pista"><div class="fill" style="width:100%"></div></div><span class="num cifra">2.010</span></div>
+        <div class="barra-h"><span>Suscripciones padre</span><div class="pista"><div class="fill" style="width:10%"></div></div><span class="num cifra">5</span></div>
+        <div class="barra-h"><span>Hijos en círculo</span><div class="pista"><div class="fill" style="width:22%"></div></div><span class="num cifra">11</span></div>
+      </div>
+      <div class="aviso-honesto">El frente padre del demo casi no se sembró — cuando lo siembren, esta tarjeta cobra vida sola.</div>
+    </div>
+    <div class="card glass anim-entrada" style="--anim-retardo:520ms">
+      <h3>Vencimientos próximos</h3>
+      <div class="nota text-muted">Suscripciones que vencen — para llamar y motivar</div>
+      <div class="barras-h">
+        <div class="barra-h"><span>Esta semana</span><div class="pista"><div class="fill" style="width:18%; background:rgb(var(--rubi-rgb))"></div></div><span class="num cifra">3</span></div>
+        <div class="barra-h"><span>En 15 días</span><div class="pista"><div class="fill" style="width:36%; background:rgb(var(--ambar-rgb))"></div></div><span class="num cifra">6</span></div>
+        <div class="barra-h"><span>En 30 días</span><div class="pista"><div class="fill" style="width:64%"></div></div><span class="num cifra">11</span></div>
+        <div class="barra-h"><span>Freemium activo</span><div class="pista"><div class="fill" style="width:20%; background:rgb(var(--cielo-rgb))"></div></div><span class="num cifra">3</span></div>
+      </div>
+      <div class="aviso-honesto">Regla propuesta: a los 15 días del vencimiento → la alerta "llamar" entra en el BI detectó del Pulso.</div>
+    </div>
+  </div>
+
+  <!-- 6 · Cronología viva -->
+  <div class="card glass anim-entrada" style="--anim-retardo:580ms">
+    <h3>Cronología del año con fenómenos</h3>
+    <div class="nota text-muted">12 meses — cada punto rubí es una semana donde el detector disparó</div>
+    <div class="barras crono-wrap" style="height:170px" id="barras-crono"></div>
+  </div>
+</section>
+
+<script>
+const btnTema = document.getElementById('btn-tema');
+btnTema.addEventListener('click', () => {
+  document.documentElement.classList.toggle('dark');
+  btnTema.textContent = document.documentElement.classList.contains('dark') ? '☀️ Tema claro' : '🌙 Tema oscuro';
+});
+
+/* Cronología con marcadores de fenómeno */
+const meses = [['sep',95,0],['oct',140,0],['nov',158,1],['dic',121,0],['ene',167,0],['feb',172,0],['mar',181,0],['abr',176,0],['may',190,1],['jun',168,0],['jul',173,0],['ago',172,0]];
+const maxM = Math.max(...meses.map(m => m[1]));
+document.getElementById('barras-crono').innerHTML = meses.map(([m, v, f], i) => `
+  <div class="barra" title="${v} reportes${f ? ' · semana con fenómeno' : ''}" style="position:relative">
+    ${f ? '<span class="marcador-fenomeno anim-pulso" style="left:calc(50% - 6px)"></span>' : ''}
+    <span class="val cifra">${v}</span>
+    <div class="col" style="height:${Math.round(v / maxM * 100)}%; --anim-retardo:${i * 50}ms"></div>
+    <span class="etq">${m}</span>
+  </div>`).join('');
+</script>
+</body>
+</html>
