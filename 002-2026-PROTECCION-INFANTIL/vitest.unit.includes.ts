@@ -303,6 +303,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/InvitacionEnviadaModal.test.tsx",
     // SPEC-367 (A-73): los 3 estados del círculo de confianza (fetch mockeado, sin BD).
     "src/components/modules/padre/circulo/CirculoConfianzaClient.test.tsx",
+    // SPEC-370 (I-264/I-265): nombre y bloque "Dónde" en el detalle del círculo.
+    "src/components/modules/padre/circulo/DetallePersona.test.tsx",
     // SPEC-368 (A-74 · P1): control amable de la fecha del hecho (candados de B1).
     "src/components/modules/FechaHoraIncidente.test.tsx",
     // SPEC-368 (A-74): candado de la plantilla del camino guiado (autoconsistente con su validador).

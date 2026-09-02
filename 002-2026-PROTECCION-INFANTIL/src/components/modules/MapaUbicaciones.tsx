@@ -59,6 +59,20 @@ export type PaisMapa = {
 const LATAM_CENTER: [number, number] = [4.5, -74];
 const LATAM_ZOOM = 3;
 
+/**
+ * SPEC-370 (I-265): el área del PADRE nunca pinta rojo. La escala de riesgo
+ * (rojo/naranja/verde) se queda para admin y consulta; para el padre se usa una
+ * paleta sin alarma — el mapa ahí responde "dónde", no "qué tan grave".
+ */
+const COLORES_PADRE = {
+    alto: "#a9700c", // ámbar del sistema
+    medio: "#c08a2e",
+    bajo: "#0b6e5a", // pino
+    sinDatos: "#e2e8f0",
+} as const;
+
+export type PaletaMapa = "riesgo" | "padre";
+
 const COLORES = {
     alto: "#ef4444", // rojo
     medio: "#f97316", // naranja
@@ -169,11 +183,12 @@ function normalizarNombre(nombre: string) {
         .trim();
 }
 
-function colorPorCantidad(total: number, max: number) {
-    if (max <= 0) return COLORES.sinDatos;
-    if (total === max || total >= max * 0.75) return COLORES.alto;
-    if (total >= max * 0.25) return COLORES.medio;
-    return COLORES.bajo;
+function colorPorCantidad(total: number, max: number, paleta: PaletaMapa = "riesgo") {
+    const c = paleta === "padre" ? COLORES_PADRE : COLORES;
+    if (max <= 0) return c.sinDatos;
+    if (total === max || total >= max * 0.75) return c.alto;
+    if (total >= max * 0.25) return c.medio;
+    return c.bajo;
 }
 
 function geoJsonNameFor(pais: string): string {
@@ -206,11 +221,14 @@ export function MapaUbicaciones({
     center,
     zoom,
     sinUbicacion = 0,
+    paleta = "riesgo",
 }: {
     puntos: PuntoMapa[];
     paises?: PaisMapa[];
     center?: [number, number];
     zoom?: number;
+    /** SPEC-370 (I-265): "padre" = sin rojo. Por defecto se conserva la escala de riesgo. */
+    paleta?: PaletaMapa;
     /** SPEC-115: reportes que el mapa no puede pintar por falta de coordenadas. */
     sinUbicacion?: number;
 }) {
@@ -309,7 +327,7 @@ export function MapaUbicaciones({
                 <EncuadrarEnPuntos puntos={validos} />
                 {geoData && <GeoJSON data={geoData} style={paisStyle} onEachFeature={onEachFeature} />}
                 {validos.map((p, idx) => {
-                    const color = colorPorCantidad(p.total, maxTotal);
+                    const color = colorPorCantidad(p.total, maxTotal, paleta);
                     const [ciudad, pais] = p.label.split(",").map((s) => s.trim());
                     return (
                         <Marker key={idx} position={[p.lat, p.lng]} icon={cityIcon(p.total, color)}>

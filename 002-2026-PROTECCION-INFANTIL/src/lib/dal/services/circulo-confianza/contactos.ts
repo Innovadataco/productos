@@ -155,6 +155,13 @@ export async function obtenerDetalleContacto(id: string, usuarioId: string, clie
 
     return {
         id: contacto.id,
+        // I-264 (SPEC-370): el detalle devolvía SOLO `etiqueta` (deprecada), así que
+        // "Ver de qué se trata" mostraba "Sin nombre" para todo contacto creado con
+        // el campo nuevo. La LISTA sí traía nombre/parentesco/creadoEn (usa include);
+        // el detalle arma el objeto a mano y se habían quedado por fuera.
+        nombre: contacto.nombre,
+        parentesco: contacto.parentesco,
+        creadoEn: contacto.creadoEn,
         etiqueta: contacto.etiqueta,
         nota: contacto.nota,
         activo: contacto.activo,

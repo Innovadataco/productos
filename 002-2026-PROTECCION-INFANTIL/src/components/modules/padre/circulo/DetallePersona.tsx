@@ -142,12 +142,31 @@ export function DetallePersona({ detalle, guardando, onCerrar, onCambiarDato }: 
                         </div>
                     )}
 
-                    {puntos.length > 0 && (
+                    {/* I-265 (SPEC-370): el bloque aparece siempre que haya ciudades.
+                        Antes dependía de que hubiera COORDENADAS, así que un reporte
+                        con la ciudad en texto (sin vincular al catálogo) dejaba la
+                        sección invisible y parecía que faltaba el mapa. Ahora el mapa
+                        se pinta cuando se puede ubicar, y las ciudades se listan
+                        siempre. Paleta "padre": nunca rojo. */}
+                    {(a.ubicaciones?.length ?? 0) > 0 && (
                         <div className="flex flex-col gap-2">
                             <h3 className="text-sm font-semibold text-body">Dónde</h3>
-                            <div className="overflow-hidden rounded-xl border border-tinta/10">
-                                <MapaUbicaciones puntos={puntos} sinUbicacion={sinUbicacion} />
-                            </div>
+                            {puntos.length > 0 && (
+                                <div className="overflow-hidden rounded-xl border border-tinta/10">
+                                    <MapaUbicaciones puntos={puntos} sinUbicacion={sinUbicacion} paleta="padre" />
+                                </div>
+                            )}
+                            <ul className="flex flex-wrap gap-1.5">
+                                {a.ubicaciones.map((u) => (
+                                    <li
+                                        key={`${u.pais}-${u.ciudad}`}
+                                        className="rounded-lg bg-papel px-2 py-1 text-sm text-body"
+                                    >
+                                        {u.ciudad || u.pais}
+                                        <span className="text-muted"> · {u.total}</span>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     )}
                 </>
