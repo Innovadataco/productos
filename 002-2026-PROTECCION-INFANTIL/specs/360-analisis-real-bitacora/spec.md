@@ -27,22 +27,25 @@ duplicado un histórico que el sistema ya lleva y habría nacido vacía para los
 menores existentes.
 
 **Alcance de F10 en esta SPEC = LADO LECTURA.** La auditoría del CEO (idc-71,
-verificada en fuente) encontró que la UI cambia el estado del hijo por
+verificada en fuente) encontró que la UI cambiaba el estado del hijo por
 `PATCH /api/padre/hijos/[id]` → `actualizarHijo`, que audita `{campos:["estado"]}`
-**sin el valor** — así que el hito de pausa/reactivación no se puede atribuir
-todavía. Reparto acordado con el CEO:
-- El **lado escritura** del estado del hijo (route → `cambiarEstadoHijo` + cupo)
-  lo hace **PI-2 en SPEC-363**. Esta SPEC **no toca** `hijos.ts` ni
-  `[id]/route.ts`.
-- El lector (`bitacora-menor.ts`) ya espera ese dato: lee `estado` y, si no
-  viene, no inventa el hito. Cuando SPEC-363 grabe el estado, el hito enciende
-  solo.
-- **Merge de #242 EN HOLD** hasta que SPEC-363 entre; después rebase y
-  verificación punta a punta de la bitácora.
+**sin el valor**. Reparto acordado con el CEO: el **lado escritura** lo hizo
+**PI-2 en SPEC-363**, hoy en main (`e98d937eb`). Tras el rebase de esta rama
+sobre ese main:
+- La ruta enruta el estado por `cambiarEstadoHijo` (audita `{estado}` con valor ·
+  BUG2, y aplica el cupo al reactivar · BUG1). El lector lo lee y enciende el
+  hito de pausar/reactivar.
+- `desvincularIdentificador` graba `{hijoId}` al borrar la fila (I-259); el
+  lector ata el hito "quitaste una cuenta" al menor correcto, sin el valor (PII).
+- `cambiarEstadoIdentificador` graba `{hijoId, activo}`; el lector nombra la
+  cuenta activada/inactivada.
+- Esta SPEC **no toca** `hijos.ts` ni `[id]/route.ts` (los aporta SPEC-363; en el
+  rebase, main gana siempre en esos dos archivos).
 
-Qué enciende hoy (caminos vivos, verificados en fuente): alta del menor y de
-cada cuenta (de `creadoEn`), y cuenta activada/inactivada
-(`cambiarEstadoIdentificador`, que la ruta llama directo).
+Qué enciende hoy (caminos vivos, verificados en fuente y probados E2E): alta del
+menor y de cada cuenta viva (de `creadoEn`), pausa/reactivación del menor
+(`cambiarEstadoHijo`), cuenta activada/inactivada (`cambiarEstadoIdentificador`)
+y cuenta quitada (`desvincularIdentificador`, `{hijoId}`).
 
 ### G18 — El mapa no encuadraba los puntos
 
@@ -63,25 +66,25 @@ hora en punto.
 - **Nuevo servicio DAL** `bitacora-menor.ts` y **nueva ruta**
   `GET /api/padre/hijos/[id]/bitacora` (boundary: solo el padre dueño; 404 para
   cualquier otro, con el mismo mensaje que "no existe").
-- **NO se toca `hijos.ts` ni `[id]/route.ts`** (reparto con PI-2 · SPEC-363).
-  Dos hitos de la bitácora dependen del lado escritura, que no vive en esta SPEC:
-  - *pausa/reactivación del menor:* la UI va por `actualizarHijo`
-    (`{campos:["estado"]}`, sin valor). Lo graba SPEC-363.
-  - *cuenta quitada:* `desvincularIdentificador` BORRA la fila y no deja de qué
-    menor era; necesita grabar `{hijoId}`. **No está en el scope estado de
-    SPEC-363** → escalado al CEO para dueño.
-  El lector ya espera ambos y omite lo que aún no se graba.
+- **NO se toca `hijos.ts` ni `[id]/route.ts`** (reparto con PI-2 · SPEC-363, hoy
+  en main). El lado escritura del que dependen dos hitos ya vive ahí:
+  - *pausa/reactivación del menor:* la ruta enruta el estado por
+    `cambiarEstadoHijo`, que audita `{estado}` con valor. El lector lo lee.
+  - *cuenta quitada:* `desvincularIdentificador` graba `{hijoId}` al borrar la
+    fila; el lector ata el hito al menor sin filtrar el valor (PII).
 - El DTO de `listarCadenasPadre` crece con `analisisIa` y `ficha`. El texto del
   relato **sigue sin viajar** en el listado (research R-4): test que lo afirma.
 
 ## Cómo se probó
 
-- `bitacora-menor.test.ts` (6): los asserts van contra las llamadas reales de
+- `bitacora-menor.test.ts` (9): los asserts van contra las llamadas reales de
   `hijos/hijos.ts`, no contra filas de `AuditLog` escritas a mano — si cambia la
   forma del metadato, el test se cae, que es lo que debe pasar. Cubre los caminos
-  vivos (alta, cuenta on/off), el boundary 404 y el metadato con JSON roto, más
-  un tripwire que afirma que el estado del hijo por `actualizarHijo` NO enciende
-  hito todavía (se cae cuando SPEC-363 lo grabe).
+  vivos (alta, cuenta on/off, pausa/reactivación por `cambiarEstadoHijo`, cuenta
+  quitada por `desvincularIdentificador`), que corregir un dato por
+  `actualizarHijo` NO es hito, el boundary 404, el metadato con JSON roto, y el
+  recorrido E2E de Jelkin (alta → pausa → reactivación → cuenta quitada = 4
+  hitos, sin el valor del identificador).
 - `cadenas-padre.test.ts` (5): clasificación real, marca de clasificación
   manual, estado honesto sin clasificar, `categoriasSecundarias` con forma
   inesperada, y el relato que no viaja.
