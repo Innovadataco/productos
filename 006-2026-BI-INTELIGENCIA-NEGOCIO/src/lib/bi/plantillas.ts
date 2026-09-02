@@ -140,5 +140,9 @@ export function renderRespuesta(
  * idéntico al de siempre.
  */
 export function renderRespuestaCompuesta(secciones: string[]): string {
-    return secciones.filter((s) => s.trim().length > 0).join("\n\n");
+    // Dedupe: en multi-parte, varios sub-planes pueden producir la MISMA
+    // clarificación (caso real: la ventana espuria del LLM se repitió 3 veces
+    // en una respuesta). El usuario la lee una sola vez.
+    const unicas = [...new Set(secciones.filter((s) => s.trim().length > 0))];
+    return unicas.join("\n\n");
 }
