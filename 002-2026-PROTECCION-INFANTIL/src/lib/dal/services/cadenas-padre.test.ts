@@ -9,13 +9,14 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearPlataforma } from "@/lib/reporte-test-utils";
+import type { EstadoReporte } from "@prisma/client";
 import { listarCadenasPadre } from "./cadenas-padre";
 
 async function crearReporte(
     usuarioId: string,
     plataformaId: string,
     datos: {
-        estado: string;
+        estado: EstadoReporte;
         identificador?: string;
         pais?: string;
         ciudad?: string;
