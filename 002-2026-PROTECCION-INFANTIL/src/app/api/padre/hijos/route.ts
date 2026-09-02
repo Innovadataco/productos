@@ -4,8 +4,8 @@ import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { registrarHijo, listarHijos, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
-import { getParametroSistemaValor } from "@/lib/parametros";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
+import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
 import { validarDocumentoMenor } from "@/lib/padre/documento-menor";
 
 // SPEC-325 (002-PI-225) · "A quién protejo". PII de menor: solo el padre dueño
@@ -80,30 +80,15 @@ export async function POST(request: Request) {
         // SPEC-361 (A-70 · F5, aclaración de Jelkin): el tope cuenta SOLO los
         // menores ACTIVOS. Inactivar es decisión del padre y libera cupo solo;
         // el producto NUNCA inactiva por su cuenta ni sugiere a cuál.
-        const maximo = parseInt((await getParametroSistemaValor("padre.hijos.maximo")) ?? "5", 10);
+        // SPEC-363: el tope y su mensaje viven en un solo lugar (tope-hijos.ts),
+        // compartidos con la reactivación (PATCH). Cuenta SOLO los activos (F5).
+        const maximo = await maximoHijosActivos();
         const actuales = await listarHijos(usuario.id);
         const activos = actuales.filter((h) => h.estado === "activo").length;
         if (activos >= maximo) {
-            // El texto lo fijó Jelkin. El parámetro sigue siendo el override,
-            // pero SOLO si ya está en el formato nuevo (trae `{{activos}}`): el
-            // valor sembrado antes de SPEC-361 no nombra el cupo ni dice qué
-            // hacer, y en las bases ya desplegadas seguiría ganándole al texto
-            // aprobado. Un parámetro viejo no puede revivir el mensaje que este
-            // arreglo vino a reemplazar.
-            const parametrizado = await getParametroSistemaValor("padre.hijos.maximo_mensaje");
-            const plantilla =
-                parametrizado?.includes("{{activos}}")
-                    ? parametrizado
-                    : "Tienes {{activos}} de {{maximo}} menores activos. Si quieres registrar otro, primero inactiva uno.";
+            const plantilla = await plantillaMensajeTope();
             return NextResponse.json(
-                {
-                    error: {
-                        message: plantilla
-                            .replaceAll("{{maximo}}", String(maximo))
-                            .replaceAll("{{activos}}", String(activos)),
-                        code: ERROR_CODES.CONFLICT,
-                    },
-                },
+                { error: { message: resolverMensajeTope(plantilla, activos, maximo), code: ERROR_CODES.CONFLICT } },
                 { status: 409 }
             );
         }

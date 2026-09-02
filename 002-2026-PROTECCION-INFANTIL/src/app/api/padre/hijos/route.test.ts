@@ -263,6 +263,70 @@ describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }
         const [req, ctx] = reqPatch(hijoId, {});
         expect((await PATCH(req, ctx)).status).toBe(400);
     });
+
+    // ── SPEC-363 · BUG1: el cupo NO es burlable al reactivar ─────────────────
+    it("BUG1: reactivar un menor con el cupo lleno → 409 con el texto aprobado", async () => {
+        // 5 activos (tope). El padre inactiva 1 y registra el 6º (queda 5 activos
+        // + 1 inactivo). Reactivar el inactivo daría 6 activos: debe rebotar.
+        const ids: string[] = [];
+        for (let i = 1; i <= 5; i++) ids.push(await crearMenor(i));
+        await PATCH(...reqPatch(ids[0]!, { estado: "inactivo" }));
+        expect((await POST(reqCrear(menor(6)))).status, "el 6º entra porque hay 4 activos").toBe(201);
+
+        const [req, ctx] = reqPatch(ids[0]!, { estado: "activo" });
+        const res = await PATCH(req, ctx);
+        expect(res.status, "reactivar sería el 6º activo").toBe(409);
+        const json = await res.json();
+        expect(json.error.message).toBe(
+            "Tienes 5 de 5 menores activos. Si quieres registrar otro, primero inactiva uno.",
+        );
+        // El menor sigue inactivo: el rebote no lo dejó a medias.
+        expect((await prisma.hijo.findUnique({ where: { id: ids[0]! } }))?.estado).toBe("inactivo");
+    });
+
+    it("BUG1: reactivar con cupo disponible SÍ funciona; reafirmar 'activo' sobre uno activo no consume cupo", async () => {
+        const a = await crearMenor(1);
+        const b = await crearMenor(2);
+        await PATCH(...reqPatch(a, { estado: "inactivo" }));
+        // 1 activo (b), tope 5 → reactivar a queda holgado.
+        expect((await PATCH(...reqPatch(a, { estado: "activo" }))).status).toBe(200);
+        // Reafirmar activo sobre uno ya activo no debe contar ni rebotar.
+        expect((await PATCH(...reqPatch(b, { estado: "activo" }))).status).toBe(200);
+    });
+
+    // ── SPEC-363 · BUG2: el PATCH de estado audita {estado} para la bitácora ──
+    it("BUG2: pausar/reactivar por la ruta real audita {estado} con el VALOR (no {campos})", async () => {
+        const hijoId = await crearMenor();
+
+        await PATCH(...reqPatch(hijoId, { estado: "inactivo" }));
+        await PATCH(...reqPatch(hijoId, { estado: "activo" }));
+
+        const audits = await prisma.auditLog.findMany({
+            where: { accion: "HIJO_UPDATE", recursoId: hijoId },
+            orderBy: { creadoEn: "asc" },
+        });
+        const valores = audits.map((a) => JSON.parse(a.valorNuevo ?? "{}"));
+        // La bitácora lee `valorNuevo.estado`: tiene que estar el valor, no un
+        // `{campos:["estado"]}` que la deja sin hito.
+        expect(valores).toContainEqual({ estado: "inactivo" });
+        expect(valores).toContainEqual({ estado: "activo" });
+        expect(valores.some((v) => Array.isArray(v.campos)), "no audita por 'campos' el cambio de estado").toBe(false);
+    });
+
+    it("BUG2: un PATCH mixto (datos + estado) corrige los datos Y audita el estado con valor", async () => {
+        const hijoId = await crearMenor();
+        const [req, ctx] = reqPatch(hijoId, { apellidos: "Corregido", estado: "inactivo" });
+        expect((await PATCH(req, ctx)).status).toBe(200);
+
+        const enBd = await prisma.hijo.findUnique({ where: { id: hijoId } });
+        expect(enBd?.apellidos).toBe("Corregido");
+        expect(enBd?.estado).toBe("inactivo");
+
+        const valores = (
+            await prisma.auditLog.findMany({ where: { accion: "HIJO_UPDATE", recursoId: hijoId } })
+        ).map((a) => JSON.parse(a.valorNuevo ?? "{}"));
+        expect(valores).toContainEqual({ estado: "inactivo" });
+    });
 });
 
 describe("GET /api/padre/hijos", { timeout: 30_000 }, () => {
