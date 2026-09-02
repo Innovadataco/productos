@@ -12,6 +12,8 @@
 // coordenadas, conteo con fallback de texto, reincidencia 'agregado' vs
 // 'honesto_vacio' con <30 filas — candado 9, dow L..D con 0s, 12 meses
 // móviles con huecos), y degradación por sección cuando una consulta falla.
+// SPEC-006: calorCiudades (intensidad 0..1 = total / máximo del top; la
+// ciudad líder marca 1.0; total 0 → 0, jamás NaN; vacío/degradado → []).
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -305,5 +307,48 @@ describe("getGeo · datos reales mockeados", () => {
         expect(geo.topCiudades).toEqual([]); // degradada: mapa sin puntos
         expect(geo.ciudadesConReportes).toBe(4); // el resto vive
         expect(geo.reincidencia.fuente).toBe("agregado");
+    });
+});
+
+// ─── getGeo · calorCiudades (SPEC-006) ───────────────────────────────────────
+
+describe("getGeo · calorCiudades (SPEC-006)", () => {
+    it("intensidad normalizada: la ciudad líder marca 1.0 y el resto proporcional", async () => {
+        mockConsultas([
+            [F.topCiudades, [
+                { nombre: "Bogotá", total: 500, lat: 4.6097, lng: -74.0817 },
+                { nombre: "Medellín", total: 250, lat: 6.2442, lng: -75.5812 },
+                { nombre: "Cali", total: 125, lat: 3.4516, lng: -76.532 },
+            ]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.calorCiudades).toEqual([
+            { nombre: "Bogotá", lat: 4.6097, lng: -74.0817, total: 500, intensidad: 1 },
+            { nombre: "Medellín", lat: 6.2442, lng: -75.5812, total: 250, intensidad: 0.5 },
+            { nombre: "Cali", lat: 3.4516, lng: -76.532, total: 125, intensidad: 0.25 },
+        ]);
+    });
+
+    it("total 0 → intensidad 0 (jamás NaN); vacío → []", async () => {
+        // Defensivo: count(*) real nunca da 0, pero si llegara no se divide.
+        mockConsultas([
+            [F.topCiudades, [{ nombre: "Bogotá", total: 0, lat: 4.6097, lng: -74.0817 }]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.calorCiudades).toEqual([
+            { nombre: "Bogotá", lat: 4.6097, lng: -74.0817, total: 0, intensidad: 0 },
+        ]);
+    });
+
+    it("sin top de ciudades (vacío o consulta rota) → calorCiudades []", async () => {
+        mockConsultas([]);
+        expect((await getGeo()).calorCiudades).toEqual([]);
+
+        mockConsultas([[F.topCiudades, new Error('relation "Ciudad" does not exist')]]);
+        expect((await getGeo()).calorCiudades).toEqual([]);
     });
 });

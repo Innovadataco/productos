@@ -8,6 +8,8 @@ import SeccionInsights from "@/components/bi/pulso/SeccionInsights";
 import TarjetaCapacidad from "@/components/bi/pulso/TarjetaCapacidad";
 import GridKpis from "@/components/bi/pulso/GridKpis";
 import GridKpisSecundario from "@/components/bi/pulso/GridKpisSecundario";
+import SeccionSemana from "@/components/bi/pulso/SeccionSemana";
+import TarjetaSla from "@/components/bi/pulso/TarjetaSla";
 import GraficoBarras from "@/components/bi/pulso/GraficoBarras";
 import GraficoDonut from "@/components/bi/pulso/GraficoDonut";
 import SplitAnonimato from "@/components/bi/pulso/SplitAnonimato";
@@ -32,6 +34,13 @@ export const dynamic = "force-dynamic";
  * cero operarios la brecha es un hecho visible, no un hueco. Candado 10:
  * toda cifra renderizada salió de PulsoData/Insight/CapacidadData; esta
  * página no calcula métricas.
+ *
+ * Pulso siguiente nivel: tras los KPIs van la comparativa "Semana contra
+ * semana" y la tarjeta "SLA vencido" (PulsoData.semana / PulsoData.sla).
+ * Ambas viven DENTRO del hayDatos: las alertas de colegio nacen de reportes,
+ * así que sin histórico un "0 vencidas" sería un cero disfrazado. El criterio
+ * del delta (más reportes NO es "mejor": subir es warn; en clasificación
+ * media, bajar es la mejora) está documentado en SeccionSemana.
  */
 export default async function DashboardPage() {
     const [pulso, insights, capacidad] = await Promise.all([
@@ -73,6 +82,11 @@ export default async function DashboardPage() {
                         coberturaClasificacionPct={pulso.coberturaClasificacionPct}
                         sinClasificar={pulso.sinClasificar}
                     />
+                    {/* Pulso siguiente nivel: comparativa semanal + SLA vencido. */}
+                    <div className="mb-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+                        <SeccionSemana semana={pulso.semana} retardo={780} />
+                        <TarjetaSla sla={pulso.sla} retardo={840} />
+                    </div>
                     <div className="mb-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
                         <GraficoBarras serie={pulso.serieDiaria} />
                         <GraficoDonut categorias={pulso.porCategoria} totalMes={pulso.kpis.reportesMes} />

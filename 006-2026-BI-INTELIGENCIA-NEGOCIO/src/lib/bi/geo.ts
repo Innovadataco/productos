@@ -13,7 +13,8 @@
 //     pero sí cuenta en ciudadesConReportes/paisesConReportes, donde el
 //     fallback cuando ciudadId/paisId es NULL es el texto libre del reporte
 //     (normalizado: lower+btrim) con prefijo 'txt:' para que jamás colisione
-//     con un cuid real.
+//     con un cuid real. Del mismo ResultSet sale calorCiudades (SPEC-006):
+//     intensidad 0..1 = total / máximo del top, para el mapa de calor.
 //   · Reincidencia: IdentificadorReportado es el ÚNICO puente de
 //     reincidencia sin PII. Con menos de MIN_FILAS_REINCIDENCIA filas el
 //     agregado es demasiado delgado para mostrarse como estadística →
@@ -58,6 +59,15 @@ export interface GeoData {
     estacionalidadDow: { dia: string; total: number }[];
     /** Últimos 12 meses móviles (YYYY-MM), meses sin reportes con 0 */
     porMes: { mes: string; total: number }[];
+    /**
+     * Mapa de calor (SPEC-006): las topCiudades con `intensidad` 0..1
+     * normalizada — total / máximo del top (la ciudad líder marca 1.0).
+     * Solo ciudades con lat/lng REALES (las mismas que entran al mapa;
+     * sin coordenadas no hay punto, no se inventa). Si el top está vacío
+     * o degradado → []. La normalización es presentación pura sobre cifras
+     * del ResultSet (candado 10: no se crea ningún dato nuevo).
+     */
+    calorCiudades: { nombre: string; lat: number; lng: number; total: number; intensidad: number }[];
 }
 
 // ─── Constantes documentadas (no son datos: son forma de la vista) ───────────
@@ -219,6 +229,10 @@ export async function getGeo(): Promise<GeoData> {
         total: totalPorDow.get(i + 1) ?? 0,
     }));
 
+    // Calor (SPEC-006): intensidad = total / máximo del top → líder en 1.0.
+    // Sin filas (o máximo 0, caso defensivo) no hay división: 0, jamás NaN.
+    const maxTop = filasTop.reduce((acc, f) => Math.max(acc, f.total), 0);
+
     return {
         topCiudades: filasTop.map((f) => ({
             nombre: f.nombre,
@@ -240,5 +254,12 @@ export async function getGeo(): Promise<GeoData> {
         },
         estacionalidadDow,
         porMes: filasMes.map((f) => ({ mes: f.mes, total: f.total })),
+        calorCiudades: filasTop.map((f) => ({
+            nombre: f.nombre,
+            lat: f.lat,
+            lng: f.lng,
+            total: f.total,
+            intensidad: maxTop > 0 ? f.total / maxTop : 0,
+        })),
     };
 }
