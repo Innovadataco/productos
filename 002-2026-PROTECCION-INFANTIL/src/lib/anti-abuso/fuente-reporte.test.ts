@@ -156,6 +156,36 @@ describe("crearFuenteReporte", () => {
         const fuente2 = await prisma.fuenteReporte.findUnique({ where: { reporteId: r2.id } });
         expect(fuente2!.reportesPrevios).toBe(1);
     });
+
+    it("persiste aunque el global `prisma` no exista (regresión I-263: prod no setea globalThis.prisma)", async () => {
+        // La causa raíz: el módulo referenciaba un `prisma` GLOBAL sin importarlo.
+        // src/lib/prisma.ts solo asigna globalThis.prisma cuando NODE_ENV !== "production",
+        // así que en prod ese `prisma` no existe → ReferenceError en cada POST →
+        // FuenteReporte quedaba vacía. Este test reproduce prod borrando el global;
+        // los repositorios importan el singleton, así que el módulo arreglado ya no
+        // depende de él. Con el bug presente, esto lanza; arreglado, persiste.
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        const reporte = await crearReporte("+57300PROD", plataforma!.id, true);
+        const req = new Request("http://localhost/api/reportes", {
+            headers: { "user-agent": "Mozilla/5.0", "accept-language": "es-CO", "x-forwarded-for": "198.51.100.7" },
+        });
+
+        const guardado = globalThis.prisma;
+        Reflect.deleteProperty(globalThis, "prisma");
+        try {
+            await crearFuenteReporte(reporte.id, {
+                request: req,
+                identificador: reporte.identificador,
+                plataformaId: plataforma!.id,
+            });
+        } finally {
+            globalThis.prisma = guardado;
+        }
+
+        const fuente = await prisma.fuenteReporte.findUnique({ where: { reporteId: reporte.id } });
+        expect(fuente).not.toBeNull();
+        expect(fuente!.ipHash).toBe(calcularIpHash("198.51.100.7"));
+    });
 });
 
 describe("limpiarFuenteReporteAntiguas", () => {

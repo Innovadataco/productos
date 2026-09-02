@@ -90,7 +90,6 @@ export async function contarHistorialFuente(
     },
     tx?: Prisma.TransactionClient
 ): Promise<{ previos: number; confirmados: number; descartados: number }> {
-    const db = tx ?? prisma;
     const whereOR: Prisma.ReporteWhereInput["OR"] = [];
     if (opts.usuarioId) whereOR.push({ usuarioId: opts.usuarioId });
     if (opts.ipHash) whereOR.push({ fuente: { ipHash: opts.ipHash } });
@@ -127,7 +126,6 @@ export async function detectarRafagaFuente(
     },
     tx?: Prisma.TransactionClient
 ): Promise<boolean> {
-    const db = tx ?? prisma;
     const params = await getFuentePesoParams(tx);
     const ventanaMs = params.burstWindowHours * 60 * 60 * 1000;
     const desde = new Date(Date.now() - ventanaMs);
@@ -202,7 +200,6 @@ export async function crearFuenteReporte(
     },
     tx?: Prisma.TransactionClient
 ): Promise<void> {
-    const db = tx ?? prisma;
     const ipRaw = getClientIp(opts.request);
     const ipHash = calcularIpHash(ipRaw);
     const fingerprintHash = calcularFingerprintServerSide(opts.request);

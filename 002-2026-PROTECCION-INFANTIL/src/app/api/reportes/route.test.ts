@@ -94,6 +94,21 @@ describe("POST /api/reportes", () => {
         expect(body.reporte.estado).toBe("PENDIENTE");
     });
 
+    it("registra la señal de fuente anti-abuso (FuenteReporte) en un POST exitoso (I-263)", async () => {
+        // Hueco de cobertura que dejó pasar I-263: NINGÚN test del POST verificaba
+        // que se cree la FuenteReporte. El throw tragado en la ruta la dejaba sin
+        // crear en prod y el CI seguía verde. Ahora se afirma la fila.
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido);
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+        const body = await res.json();
+
+        const fuente = await prisma.fuenteReporte.findUnique({ where: { reporteId: body.reporte.id } });
+        expect(fuente).not.toBeNull();
+        expect(fuente!.ipHash).toBeTruthy();
+        expect(fuente!.pesoAplicado).toBeGreaterThan(0);
+    });
+
     it("crea un reporte autenticado vinculado al usuario", async () => {
         const user = await crearUsuario("PARENT");
         const token = await crearTokenUsuario(user.id, "PARENT");
