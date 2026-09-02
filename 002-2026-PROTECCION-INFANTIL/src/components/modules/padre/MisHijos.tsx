@@ -142,7 +142,22 @@ export function MisHijos({
 
     async function registrar(e: React.FormEvent) {
         e.preventDefault();
-        if (!form.nombre.trim() || !form.documentoNumero.trim()) return;
+        // SPEC-362 (A-70 · F4, hallazgo de Dev PI-1): el formulario dejaba enviar
+        // sin apellidos y el servidor respondía 400. Los apellidos son
+        // obligatorios desde SPEC-339 (FR-019) porque salen en el expediente y
+        // en los informes: se avisa acá, nombrando el campo, antes de enviar.
+        if (!form.nombre.trim()) {
+            setError("Escribe el nombre del menor.");
+            return;
+        }
+        if (!form.apellidos.trim()) {
+            setError("Escribe los apellidos del menor.");
+            return;
+        }
+        if (!form.documentoNumero.trim()) {
+            setError("Escribe el número de documento del menor.");
+            return;
+        }
 
         // SPEC-361 (F7/F8): avisar ANTES de enviar, nombrando el campo. El
         // servidor vuelve a validar: esto es cortesía, no la única defensa.
@@ -167,7 +182,7 @@ export function MisHijos({
         try {
             const body: Record<string, unknown> = {
                 nombre: form.nombre.trim(),
-                apellidos: form.apellidos.trim() || undefined,
+                apellidos: form.apellidos.trim(),
                 documentoTipo: form.documentoTipo,
                 documentoNumero: form.documentoNumero.trim(),
                 anioNacimiento: edadNum !== null ? anioDesdeEdad(edadNum) : undefined,
@@ -295,7 +310,7 @@ export function MisHijos({
                 <form onSubmit={registrar} className="space-y-3" data-testid="form-hijo">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <Input label="Nombres" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-                        <Input label="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
+                        <Input label="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} required />
                         <Select label="Tipo de documento" options={DOCUMENTO_TIPOS} value={form.documentoTipo} onChange={(e) => setForm({ ...form, documentoTipo: e.target.value })} />
                         <Input label="Número de documento" value={form.documentoNumero} onChange={(e) => setForm({ ...form, documentoNumero: e.target.value })} required />
                         <Select
@@ -414,7 +429,20 @@ function HijoCard({
                         <span className="font-medium text-body">
                             {hijo.nombre} {hijo.apellidos}
                         </span>
-                        {inactivo && <Badge variant="neutral">Inactivo</Badge>}
+                        {/* SPEC-362 (A-70 · G17 · regla 2 del brief): verde = activo,
+                            gris = inactivo. Nunca rojo — el rojo choca con la regla
+                            dura del producto y aquí no hay nada malo que señalar. */}
+                        {inactivo ? (
+                            <Badge variant="neutral">Inactivo</Badge>
+                        ) : (
+                            <span
+                                data-testid="estado-activo"
+                                className="inline-flex items-center gap-1.5 rounded-full bg-pino/10 px-2.5 py-0.5 text-xs font-semibold text-pino"
+                            >
+                                <span className="h-1.5 w-1.5 rounded-full bg-pino" aria-hidden="true" />
+                                Activo
+                            </span>
+                        )}
                     </div>
                     <div className="text-xs text-muted">
                         {hijo.documentoTipo} {hijo.documentoNumero}

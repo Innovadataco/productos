@@ -7,6 +7,7 @@ import { Alerta } from "@/components/ui/Alerta";
 import { ConfirmarPagoManual } from "./ConfirmarPagoManual";
 import type { PlanSelectorDTO, UsuarioSelector, ColorRolSelector } from "@/lib/pagos/planes-selector.types";
 import { calcularDesgloseVista, formatearCOP } from "@/lib/pagos/planes-selector.utils";
+import { nombrePlanHumano, descripcionPlanHumana } from "@/lib/pagos/nombre-plan-humano";
 
 interface PlanesSelectorProps {
     planes: PlanSelectorDTO[];
@@ -106,7 +107,11 @@ export function PlanesSelector({
 
             {errorFreemium && <Alerta tono="error">{errorFreemium}</Alerta>}
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* SPEC-362 (A-70 · G13): eran 4 columnas fijas. Con 4-5 tarjetas el
+                texto caía en columnas de una palabra y los botones quedaban
+                cortados (recorrido de Jelkin). Ahora las tarjetas tienen un ancho
+                mínimo y la grilla acomoda las que quepan. */}
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
                 {mostrarFreemium && (
                     <GlassCard className="flex flex-col" data-testid="plan-freemium">
                         <div className="mb-4">
@@ -155,10 +160,12 @@ export function PlanesSelector({
                                     <span className="text-xs font-semibold text-pino">{descuentoAnual}</span>
                                 )}
                             </div>
-                            <h3 className="text-lg font-semibold text-body">{plan.nombre}</h3>
-                            {plan.descripcion && <p className="mt-1 text-sm text-muted">{plan.descripcion}</p>}
+                            <h3 className="text-lg font-semibold text-body">{nombrePlanHumano(plan)}</h3>
+                            <p className="mt-1 text-sm text-muted">{descripcionPlanHumana(plan)}</p>
                             <div className="mt-4 flex-1">
-                                <p className="text-3xl font-bold text-body">{formatearCOP(desglose.total)}</p>
+                                <p className="text-2xl font-bold tabular-nums text-body sm:text-3xl">
+                                    {formatearCOP(desglose.total)}
+                                </p>
                                 <p className="text-sm text-muted">COP / {DURACION_LABEL[plan.duracion] ?? "periodo"}</p>
                                 <p className="mt-2 text-xs text-muted">
                                     Subtotal: {formatearCOP(desglose.subtotal)}
