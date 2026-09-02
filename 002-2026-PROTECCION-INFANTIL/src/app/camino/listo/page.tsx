@@ -10,7 +10,6 @@ import { verifyAuth } from "@/lib/auth";
 import { derivarPasoPendiente } from "@/lib/dal/services/camino/estado";
 import { listarHijos } from "@/lib/dal/services/hijos";
 import { destinoDePaso } from "@/lib/camino/pasos";
-import { Button } from "@/components/ui/Button";
 
 // La página depende de la sesión: nunca se pre-renderiza estática.
 export const dynamic = "force-dynamic";
@@ -41,19 +40,51 @@ export default async function CaminoListoPage() {
                 alarmas: solo lo que necesitas saber, cuando lo necesitas saber.
             </p>
 
-            <div className="mt-8 space-y-3">
-                <Link href="/dashboard/padre/circulo-confianza" className="block">
-                    <Button variant="secondary" className="w-full">
-                        Suma a tu círculo de confianza
-                    </Button>
+            {/* SPEC-362 (A-70 · G14): eran tres botones sueltos en una pantalla
+                vacía y no se entendía qué hacer con ellos. Ahora cada opción es
+                una tarjeta que dice qué es y para qué sirve, y el paso principal
+                (ir al panel) se distingue de los otros dos. */}
+            <div className="mx-auto mt-8 grid max-w-2xl gap-4 text-left sm:grid-cols-2">
+                <Link
+                    href="/dashboard/padre/circulo-confianza"
+                    className="group rounded-2xl border border-tinta/10 bg-papel/50 p-5 transition hover:border-cielo/50 dark:bg-tinta/40"
+                >
+                    <h2 className="text-base font-semibold text-body">Suma tu círculo de confianza</h2>
+                    <p className="mt-1 text-sm text-muted">
+                        Las cuentas de las personas que rodean a {quienes}: si alguna aparece en un
+                        reporte, lo sabrás antes.
+                    </p>
+                    <span className="mt-3 inline-block text-sm font-semibold text-cielo-600 group-hover:underline">
+                        Agregar personas →
+                    </span>
                 </Link>
-                <Link href="/dashboard/padre/notificaciones" className="block">
-                    <Button variant="secondary" className="w-full">
-                        Elige qué avisos quieres recibir
-                    </Button>
+
+                <Link
+                    href="/dashboard/padre/notificaciones"
+                    className="group rounded-2xl border border-tinta/10 bg-papel/50 p-5 transition hover:border-cielo/50 dark:bg-tinta/40"
+                >
+                    <h2 className="text-base font-semibold text-body">Elige qué avisos recibes</h2>
+                    <p className="mt-1 text-sm text-muted">
+                        Decide de qué te avisamos y a qué correo llega. Puedes cambiarlo cuando
+                        quieras.
+                    </p>
+                    <span className="mt-3 inline-block text-sm font-semibold text-cielo-600 group-hover:underline">
+                        Ajustar avisos →
+                    </span>
                 </Link>
-                <Link href="/dashboard/padre" className="block">
-                    <Button className="w-full">Ir a mi panel</Button>
+
+                <Link
+                    href="/dashboard/padre"
+                    className="group rounded-2xl border border-cielo/40 bg-cielo/5 p-5 transition hover:border-cielo sm:col-span-2"
+                >
+                    <h2 className="text-base font-semibold text-body">Ir a mi panel</h2>
+                    <p className="mt-1 text-sm text-muted">
+                        Ahí ves todo junto: quién está protegido, los avisos que llegan y tus
+                        reportes.
+                    </p>
+                    <span className="mt-3 inline-block text-sm font-semibold text-cielo-600 group-hover:underline">
+                        Entrar al panel →
+                    </span>
                 </Link>
             </div>
         </div>

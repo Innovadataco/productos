@@ -43,7 +43,7 @@ export function ReporteBloqueoRol({ onLogoutAndRetry, returnTo }: ReporteBloqueo
                 Las cuentas internas no pueden crear reportes
             </h2>
             <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
-                Los usuarios internos (colegio · admin · comités) no pueden reportar desde su cuenta institucional. Podés hacerlo de forma anónima o crear una cuenta de padre.
+                Los usuarios internos (colegio · admin · comités) no pueden reportar desde su cuenta institucional. Puedes hacerlo de forma anónima o crear una cuenta de padre.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button onClick={handleLogoutClick} data-testid="cta-logout-anonimo">

@@ -3,6 +3,16 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ModalConsentimiento } from "./ModalConsentimiento";
 
 const push = vi.fn();
+/**
+ * SPEC-362 (I-256): se espía `window.location.assign` — el mecanismo real de la
+ * navegación tras aceptar. jsdom no lo implementa, así que se reemplaza el
+ * objeto `location` completo por uno con el espía.
+ */
+const assign = vi.fn();
+Object.defineProperty(window, "location", {
+    configurable: true,
+    value: { ...window.location, assign },
+});
 
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push }),
@@ -62,6 +72,7 @@ describe("ModalConsentimiento (SPEC-241)", () => {
     beforeEach(() => {
         setupIntersectionObserverMock();
         push.mockClear();
+        assign.mockClear();
         currentObserver = null;
     });
 
@@ -118,7 +129,28 @@ describe("ModalConsentimiento (SPEC-241)", () => {
             );
         });
 
-        await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard/padre/suscripcion"));
+        // SPEC-362 (I-256) · candado 24v2: el mecanismo real es una navegación
+        // DURA. Espiar `router.push` tapaba justo lo que falló en prod — el 201
+        // llegaba y la pantalla no se movía.
+        await waitFor(() => expect(assign).toHaveBeenCalledWith("/dashboard/padre/suscripcion"));
+        expect(push, "ya no se navega por el router del cliente").not.toHaveBeenCalled();
+    });
+
+    // SPEC-362 (A-70 · I-256): el 201 tiene que MOVER la pantalla. En prod el
+    // consentimiento se guardaba y el padre se quedaba mirando la misma página,
+    // volviendo a hacer clic.
+    it("I-256: tras el 201 la pantalla navega de verdad al destino", async () => {
+        mockFetch({ ok: true, version: "v0.4" });
+        renderModal();
+        currentObserver?.trigger(true);
+        fireEvent.click(screen.getByTestId("check-representante"));
+        fireEvent.click(screen.getByTestId("check-politica"));
+        await waitFor(() => expect(getBoton().disabled).toBe(false));
+
+        fireEvent.click(getBoton());
+
+        await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+        expect(assign).toHaveBeenCalledWith("/dashboard/padre/suscripcion");
     });
 
     it("muestra error si el endpoint falla", async () => {
@@ -141,6 +173,7 @@ describe("ModalConsentimiento · render markdown (SPEC-343)", () => {
     beforeEach(() => {
         setupIntersectionObserverMock();
         push.mockClear();
+        assign.mockClear();
         currentObserver = null;
     });
 
@@ -229,6 +262,7 @@ describe("ModalConsentimiento · el gate no depende del observer (SPEC-358 · B3
     beforeEach(() => {
         observerMudo();
         push.mockClear();
+        assign.mockClear();
     });
 
     afterEach(() => {

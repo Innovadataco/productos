@@ -3,8 +3,9 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { actualizarHijo, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
+import { actualizarHijo, cambiarEstadoHijo, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
+import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
 
 // SPEC-325 · SPEC-339 (FR-022): antes este PATCH aceptaba SOLO { estado } — el
 // padre no podía corregir un apellido mal escrito. Ahora acepta la corrección
@@ -35,7 +36,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 { status: 400 }
             );
         }
-        const res = await actualizarHijo(usuario.id, id, parsed.data);
+        // SPEC-363: el cambio de estado va por `cambiarEstadoHijo` (audita
+        // `{estado}` para la bitácora · BUG2, y aplica el cupo al reactivar ·
+        // BUG1). Las correcciones de datos siguen por `actualizarHijo`. Un PATCH
+        // puede traer las dos cosas: se separan.
+        const { estado, ...correccion } = parsed.data;
+        let res: { ok: boolean; estado?: string } = { ok: true };
+        if (Object.keys(correccion).length > 0) {
+            res = await actualizarHijo(usuario.id, id, correccion);
+        }
+        if (estado !== undefined) {
+            const maximo = await maximoHijosActivos();
+            const plantilla = await plantillaMensajeTope();
+            res = await cambiarEstadoHijo(usuario.id, id, estado, {
+                maximoActivos: maximo,
+                mensajeSiExcede: (activos, max) => resolverMensajeTope(plantilla, activos, max),
+            });
+        }
         const respuesta = NextResponse.json(res);
         // T073: inactivar el ÚNICO menor activo reabre el Paso 3, y reactivarlo
         // lo cierra — re-sellar siempre que cambie el estado, al instante.

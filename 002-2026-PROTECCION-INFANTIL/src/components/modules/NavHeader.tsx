@@ -30,6 +30,23 @@ export function destinoLogo(user: { rol: string } | null, pathname: string | nul
     return "/dashboard";
 }
 
+/**
+ * SPEC-362 (A-70 · G16): entrada del menú apagada durante el camino. Se ve,
+ * dice por qué no responde y no navega a ninguna parte.
+ */
+function ItemApagado({ children }: { children: React.ReactNode }) {
+    return (
+        <span
+            data-testid="nav-item-apagado"
+            aria-disabled="true"
+            title="Disponible al terminar de configurar tu cuenta"
+            className="block cursor-not-allowed rounded-lg px-3 py-2 text-sm font-medium text-muted/60"
+        >
+            {children}
+        </span>
+    );
+}
+
 export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
     const pathname = usePathname();
@@ -133,8 +150,23 @@ export function NavHeader() {
     // todos los enlaces del header (botón Dashboard, menú de usuario, menú móvil).
     // La única excepción es el logo en "/" (la marca siempre se muestra; apuntar al
     // inicio estando en el inicio es convención universal y no hay destino alternativo).
+    /**
+     * SPEC-362 (A-70 · G16): durante el camino guiado el menú superior se apaga.
+     *
+     * Hasta hoy ofrecía "Mi panel", "Círculo" y "Mis reportes" mientras el
+     * usuario estaba a mitad del camino: el guardián lo devolvía al paso (o la
+     * pantalla fallaba), así que eran botones que prometían y no cumplían.
+     * Se pintan en gris, sin acción. Cambiar contraseña y cerrar sesión siguen
+     * vivos: son las dos salidas que nadie puede perder.
+     */
+    const enCamino = pathname?.startsWith("/camino") ?? false;
+    const SIEMPRE_VIVAS = ["/cambiar-password"];
+
     const esEnlaceNavegable = (href: string) =>
-        href !== pathname && esDestinoPermitidoPorRol(user?.rol, href);
+        href !== pathname &&
+        esDestinoPermitidoPorRol(user?.rol, href) &&
+        (!enCamino || SIEMPRE_VIVAS.includes(href));
+
 
     return (
         <header className={`fixed top-0 left-0 right-0 z-50 glass ${headerBorderClass}`}>
@@ -224,20 +256,31 @@ export function NavHeader() {
                                         )}
                                         {!esEmpleado && (
                                             <>
-                                                {esEnlaceNavegable("/dashboard/padre") && (
-                                                    <NavDropdownLink href="/dashboard/padre" onClick={() => setOpen(false)}>
-                                                        Mi panel
-                                                    </NavDropdownLink>
-                                                )}
-                                                {esEnlaceNavegable("/dashboard/padre/circulo-confianza") && (
-                                                    <NavDropdownLink href="/dashboard/padre/circulo-confianza" onClick={() => setOpen(false)}>
-                                                        Círculo de Confianza
-                                                    </NavDropdownLink>
-                                                )}
-                                                {esEnlaceNavegable("/mis-reportes") && (
-                                                    <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
-                                                        Mis reportes
-                                                    </NavDropdownLink>
+                                                {enCamino ? (
+                                                    // SPEC-362 (G16): en gris mientras el camino no termina.
+                                                    <>
+                                                        <ItemApagado>Mi panel</ItemApagado>
+                                                        <ItemApagado>Círculo de Confianza</ItemApagado>
+                                                        <ItemApagado>Mis reportes</ItemApagado>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {esEnlaceNavegable("/dashboard/padre") && (
+                                                            <NavDropdownLink href="/dashboard/padre" onClick={() => setOpen(false)}>
+                                                                Mi panel
+                                                            </NavDropdownLink>
+                                                        )}
+                                                        {esEnlaceNavegable("/dashboard/padre/circulo-confianza") && (
+                                                            <NavDropdownLink href="/dashboard/padre/circulo-confianza" onClick={() => setOpen(false)}>
+                                                                Círculo de Confianza
+                                                            </NavDropdownLink>
+                                                        )}
+                                                        {esEnlaceNavegable("/mis-reportes") && (
+                                                            <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
+                                                                Mis reportes
+                                                            </NavDropdownLink>
+                                                        )}
+                                                    </>
                                                 )}
                                             </>
                                         )}

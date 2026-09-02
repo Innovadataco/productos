@@ -181,6 +181,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/fechas-humano.test.ts",
     "src/lib/colegio/normalizacion.test.ts",
     "src/lib/colegio/periodo.test.ts",
+    // SPEC-361 (A-70 · F7/F8): documento por tipo y edad del menor.
+    "src/lib/padre/documento-menor.test.ts",
     // SPEC-353 (A-69 · C6): reglas puras de la frase "qué hacer hoy" del rector.
     "src/lib/colegio/que-hacer-hoy.test.ts",
     "src/lib/colegio/seguimiento.test.ts",

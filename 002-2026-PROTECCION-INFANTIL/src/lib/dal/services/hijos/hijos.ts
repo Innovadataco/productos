@@ -189,6 +189,10 @@ export async function desvincularIdentificador(
             tipoRecurso: "IdentificadorHijo",
             recursoId: identificadorId,
             usuarioId,
+            // SPEC-363 (I-259): la fila se borra, así que el hito "quitaste la
+            // cuenta" solo puede atarse al menor por este `hijoId`. NUNCA el
+            // valor del identificador: es PII y no vuelve al log.
+            valorNuevo: JSON.stringify({ hijoId: ident.hijoId }),
             tx,
         });
         return { ok: true };
@@ -265,14 +269,42 @@ export async function actualizarHijo(
     });
 }
 
-/** Activa/inactiva un hijo (solo el padre dueño · PII). */
+/**
+ * Activa/inactiva un hijo (solo el padre dueño · PII).
+ *
+ * SPEC-363:
+ * · BUG2 — es la ÚNICA función que audita `{ estado }` con el valor (la bitácora
+ *   del menor lo lee de ahí). El PATCH de estado DEBE pasar por acá; si pasa por
+ *   `actualizarHijo`, el audit sale como `{ campos: ["estado"] }` sin el valor y
+ *   la bitácora no anota el hito de pausar/reactivar.
+ * · BUG1 — al REACTIVAR (inactivo→activo) el menor cuenta contra el tope de
+ *   activos, igual que al registrar uno nuevo: sin esto el cupo era burlable
+ *   (inactivar 1 → registrar el 6º → reactivar el inactivo = 6 activos con tope
+ *   5). El tope y la plantilla del mensaje se INYECTAN desde la ruta (este
+ *   módulo no lee parámetros: cadena de workers, SPEC-197). Sin `cupo` no se
+ *   aplica —llamadas internas que no ejercen el límite.
+ */
 export async function cambiarEstadoHijo(
     usuarioId: string,
     hijoId: string,
-    estado: "activo" | "inactivo"
+    estado: "activo" | "inactivo",
+    cupo?: { maximoActivos: number; mensajeSiExcede: (activos: number, maximo: number) => string }
 ) {
     return prisma.$transaction(async (tx) => {
         await exigirDueno(tx, usuarioId, hijoId);
+
+        if (estado === "activo" && cupo) {
+            // Solo cuenta si el menor estaba inactivo: reafirmar "activo" sobre
+            // uno ya activo no consume un cupo nuevo.
+            const actual = await tx.hijo.findUniqueOrThrow({ where: { id: hijoId }, select: { estado: true } });
+            if (actual.estado !== "activo") {
+                const activos = await tx.hijo.count({ where: { usuarioId, estado: "activo" } });
+                if (activos >= cupo.maximoActivos) {
+                    throw new AppError(cupo.mensajeSiExcede(activos, cupo.maximoActivos), ERROR_CODES.CONFLICT, 409);
+                }
+            }
+        }
+
         await tx.hijo.update({ where: { id: hijoId }, data: { estado } });
         await logAudit({
             accion: "HIJO_UPDATE",
@@ -355,7 +387,11 @@ export async function cambiarEstadoIdentificador(
             tipoRecurso: "IdentificadorHijo",
             recursoId: identificadorId,
             usuarioId,
-            valorNuevo: JSON.stringify({ activo }),
+            // SPEC-363 (I-259): `hijoId` para que la bitácora del menor pueda
+            // atar el hito "activaste/pausaste la cuenta" al menor correcto —
+            // el recursoId es el del identificador, no el del hijo. Mismo lugar
+            // (valorNuevo) que el evento AGREGADO, que la bitácora ya lee.
+            valorNuevo: JSON.stringify({ hijoId: ident.hijoId, activo }),
             tx,
         });
         return { ok: true, activo };

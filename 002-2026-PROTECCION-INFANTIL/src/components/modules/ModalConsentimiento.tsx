@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -46,7 +45,6 @@ export function ModalConsentimiento({
     redirectUrl,
     indicadorPaso,
 }: ModalConsentimientoProps) {
-    const router = useRouter();
     const scrollRef = useRef<HTMLDivElement>(null);
     const finalRef = useRef<HTMLDivElement>(null);
     const [scrollCompleto, setScrollCompleto] = useState(false);
@@ -141,14 +139,28 @@ export function ModalConsentimiento({
                 return;
             }
 
-            router.push(redirectUrl);
+            // SPEC-362 (A-70 · I-256): navegación DURA del navegador, no
+            // `router.push`.
+            //
+            // Calidad lo reprodujo en prod (`1c47be7c`): el POST devuelve 201 y
+            // el consentimiento queda guardado, pero la pantalla no se movía —
+            // el padre no veía nada y volvía a hacer clic. Entrando a mano, la
+            // app funcionaba: el estado estaba sano, faltaba la reacción.
+            //
+            // La causa es el destino: `/dashboard/padre` lo evalúa el middleware
+            // con la cookie `sesion_estado` que ESTA respuesta acaba de renovar,
+            // y lo reenvía al paso del camino que corresponda. Una navegación de
+            // cliente puede resolverse contra el estado anterior y quedarse
+            // donde está; `location.assign` obliga a un request nuevo, con la
+            // cookie nueva, y el guardián decide con el estado ya actualizado.
+            window.location.assign(redirectUrl);
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Error de red";
             setError(msg);
         } finally {
             setLoading(false);
         }
-    }, [scrollCompleto, representanteLegal, aceptaPolitica, documentoTipo, redirectUrl, router]);
+    }, [scrollCompleto, representanteLegal, aceptaPolitica, documentoTipo, redirectUrl]);
 
     const puedeAceptar = scrollCompleto && representanteLegal && aceptaPolitica;
     const theme = THEME_POR_ROL[rol] ?? "theme-padre";
@@ -165,29 +177,56 @@ export function ModalConsentimiento({
                         Debes leer el documento completo y aceptar los términos para continuar.
                     </p>
 
-                    <div
-                        ref={scrollRef}
-                        onScroll={marcarSiLlegoAlFinal}
-                        data-testid="documento-scroll"
-                        className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-papel/50 p-4 text-sm text-body dark:bg-tinta/50"
-                    >
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                            {/* Sin rehype-raw: el HTML embebido se escapa como texto (FR-009).
+                    {/* SPEC-362 (A-70 · G15): la señal de bajar. El botón solo se
+                        enciende al final del documento, y nada lo decía: el
+                        usuario no sabía que le faltaba leer. Se apaga sola al
+                        llegar, y `prefers-reduced-motion` la deja quieta. */}
+                    <div className="relative">
+                        <div
+                            ref={scrollRef}
+                            onScroll={marcarSiLlegoAlFinal}
+                            data-testid="documento-scroll"
+                            className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-papel/50 p-4 text-sm text-body dark:bg-tinta/50"
+                        >
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                                {/* Sin rehype-raw: el HTML embebido se escapa como texto (FR-009).
                                 Tablas envueltas para scroll propio en móvil (FR-010). */}
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    table: ({ children }) => (
-                                        <div className="overflow-x-auto">
-                                            <table>{children}</table>
-                                        </div>
-                                    ),
-                                }}
-                            >
-                                {documentoContenido}
-                            </ReactMarkdown>
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                        table: ({ children }) => (
+                                            <div className="overflow-x-auto">
+                                                <table>{children}</table>
+                                            </div>
+                                        ),
+                                    }}
+                                >
+                                    {documentoContenido}
+                                </ReactMarkdown>
+                            </div>
+                            <div ref={finalRef} className="h-2" aria-hidden="true" />
                         </div>
-                        <div ref={finalRef} className="h-2" aria-hidden="true" />
+
+                        {!scrollCompleto && (
+                            <div
+                                data-testid="senal-scroll"
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 rounded-b-xl bg-gradient-to-t from-papel via-papel/80 to-transparent pb-2 pt-8 dark:from-tinta dark:via-tinta/80"
+                            >
+                                <span className="text-xs font-medium text-muted">Sigue bajando para poder aceptar</span>
+                                <svg
+                                    className="h-5 w-5 animate-bounce text-cielo motion-reduce:animate-none"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M12 5v14M5 12l7 7 7-7" />
+                                </svg>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-6 space-y-4">
