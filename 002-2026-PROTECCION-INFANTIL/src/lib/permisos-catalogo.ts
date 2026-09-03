@@ -72,6 +72,13 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "anti_abuso", nombre: "Anti-abuso", categoria: "admin", orden: 100 },
     { clave: "monitoreo_worker", nombre: "Monitoreo del worker", categoria: "admin", orden: 105 },
     { clave: "dataset_entrenamiento", nombre: "Dataset de entrenamiento", categoria: "admin", orden: 120 },
+    // SPEC-389 (Red de Profesionales · L2 · brief A-75): cola donde IDC verifica al
+    // psicólogo y le da/niega el sello (Ley 1918/2018 + 2375/2024). El resultado de
+    // antecedentes es información RESERVADA por ley — este módulo controla quién puede
+    // abrir la ficha y ver `checklist`/`autorizacionArchivoUrl`. Separación de poderes
+    // (criterio I-274): quien verifica NO es quien publica el perfil.
+    // Default: SOLO rol ADMIN (mismo criterio que `sistema_admin`, `comite_guias_accion`).
+    { clave: "admin_verificacion_profesionales", nombre: "Verificación de profesionales", categoria: "admin", esCritico: true, orden: 130 },
     // SPEC-291 (002-PI-191): acciones admin sobre servicios docker (start/stop/restart).
     // Default: SOLO rol ADMIN (por `ADMIN: modulosSeed.map(...)` en seed-modulos-grants.ts).
     // NUNCA otorgar a OPERADOR/COMITE/SCHOOL_ADMIN sin auditoría explícita de CEO.
