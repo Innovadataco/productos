@@ -52,6 +52,13 @@ export const GUARDIAS_ACCESO = {
         // SPEC-302 (002-PI-208): señal de monitoreo del motor de notificaciones,
         // mismo trato que /api/health — consumida por curl externo (tabla §6b).
         "/api/monitor/notif",
+        // SPEC-402 (I-289 · reincidencia I-283): webhook entrante de Resend. Su
+        // autenticación NO es el JWT de sesión sino la firma HMAC-Svix que valida
+        // el propio handler. Sin este exento, el middleware devuelve 401 del borde
+        // ANTES de que el handler pueda validar la firma; Resend reintenta ante
+        // cualquier no-2xx y termina descartando los eventos de rebote/entrega
+        // que necesitamos para diagnosticar la caída del correo.
+        "/api/webhooks/resend",
         // SPEC-017 · SPEC-286: /docs y /api/docs son semi-públicos; el gate real
         // vive en la propia página. /consulta ya no existe (SPEC-286).
         "/docs",
