@@ -60,6 +60,42 @@ describe("GET /api/admin/reportes-revision", () => {
         }
     });
 
+    // ── SPEC-384 · I-278 · la lista también la usa el comité ────────────────
+    // route.ts:89-90: `where.comiteId = user.id`. Antes el guardia exigía
+    // `bandeja_reportes` (del operador, I-274 lo separó del comité), así que
+    // el comité veía 403 y su bandeja unificada quedaba parcial.
+    async function desactivarBandejaReportesParaComite() {
+        const modulo = await prisma.moduloPermisible.findUnique({ where: { clave: "bandeja_reportes" } });
+        expect(modulo, "el módulo debería estar sembrado").not.toBeNull();
+        await prisma.permisoModulo.upsert({
+            where: { rol_moduloId: { rol: "COMITE_VALIDACION", moduloId: modulo!.id } },
+            update: { activo: false },
+            create: { rol: "COMITE_VALIDACION", moduloId: modulo!.id, activo: false },
+        });
+    }
+
+    it("SPEC-384/I-278: comité con comite_bandeja lista SUS casos aunque bandeja_reportes esté DESACTIVADO", async () => {
+        await desactivarBandejaReportesParaComite();
+        const comite = await crearUsuario("COMITE_VALIDACION");
+        const propio = await crearReporteDePrueba({ numeroSeguimiento: "RPT-COMIT001", identificador: "+57300COMI01" });
+        const ajeno = await crearReporteDePrueba({ numeroSeguimiento: "RPT-COMIT002", identificador: "+57300COMI02" });
+        await prisma.reporte.update({ where: { id: propio.id }, data: { comiteId: comite.id } });
+        // `ajeno` queda sin comite → no debe aparecer.
+        activeToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
+
+        const req = new Request(
+            "http://localhost:5005/api/admin/reportes-revision?pageSize=25",
+            { method: "GET", headers: { cookie: `token=${activeToken}` } }
+        );
+        const res = await GET(req);
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        const ids = (body.reporte ?? body.reportes ?? []).map((r: { id: string }) => r.id);
+        expect(ids, "solo el caso asignado a este comité aparece").toEqual([propio.id]);
+        // Aseguramos que el otro reporte SÍ existe en la BD (el filtro sí lo excluye).
+        expect(await prisma.reporte.findUnique({ where: { id: ajeno.id } })).not.toBeNull();
+    });
+
     it("filtra por número de seguimiento parcial", async () => {
         const admin = await crearUsuario("ADMIN");
         activeToken = await crearTokenUsuario(admin.id, "ADMIN");

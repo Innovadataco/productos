@@ -104,4 +104,61 @@ describe("GET /api/admin/reportes-revision/[id]", () => {
         const res = await GET(req, { params: Promise.resolve({ id: reporte.id }) });
         expect(res.status).toBe(403);
     });
+
+    // ── SPEC-384 · I-278 · el comité TAMBIÉN entra por acá ─────────────────
+    // En prod, COMITE_VALIDACION tiene `comite_bandeja` activo pero NO
+    // `bandeja_reportes` (I-274 · separación de poderes con el operador). El
+    // guardia antes exigía `bandeja_reportes` para todos y cortaba al comité
+    // con 403. Ahora enruta el módulo por rol.
+    async function desactivarBandejaReportesParaComite() {
+        const modulo = await prisma.moduloPermisible.findUnique({ where: { clave: "bandeja_reportes" } });
+        expect(modulo, "el módulo debería estar sembrado").not.toBeNull();
+        await prisma.permisoModulo.upsert({
+            where: { rol_moduloId: { rol: "COMITE_VALIDACION", moduloId: modulo!.id } },
+            update: { activo: false },
+            create: { rol: "COMITE_VALIDACION", moduloId: modulo!.id, activo: false },
+        });
+    }
+
+    it("SPEC-384/I-278: comité asignado al caso obtiene 200 aunque bandeja_reportes esté DESACTIVADO", async () => {
+        await desactivarBandejaReportesParaComite();
+        const comite = await crearUsuario("COMITE_VALIDACION");
+        const reporte = await crearReporteDePrueba();
+        // La rama de route.ts:51 autoriza al comité DUEÑO de la solicitud.
+        await prisma.reporte.update({ where: { id: reporte.id }, data: { comiteId: comite.id } });
+        activeToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
+
+        const req = new Request(
+            `http://localhost:5005/api/admin/reportes-revision/${reporte.id}`,
+            { method: "GET", headers: { cookie: `token=${activeToken}` } }
+        );
+        const res = await GET(req, { params: Promise.resolve({ id: reporte.id }) });
+        expect(res.status, "el comité entra por comite_bandeja, no por bandeja_reportes").toBe(200);
+        const body = await res.json();
+        expect(body.reporte).toBeDefined();
+        expect(body.puedeRevelarOriginal).toBe(true);
+    });
+
+    it("SPEC-384/I-278: comité con OTRO caso sigue en 403 (autorización fina por comiteId se mantiene)", async () => {
+        await desactivarBandejaReportesParaComite();
+        const comite = await crearUsuario("COMITE_VALIDACION");
+        const otroComite = await crearUsuario(
+            "COMITE_VALIDACION",
+            `otro-comite-${Date.now()}@test.local`
+        );
+        const reporte = await crearReporteDePrueba();
+        await prisma.reporte.update({ where: { id: reporte.id }, data: { comiteId: otroComite.id } });
+        activeToken = await crearTokenUsuario(comite.id, "COMITE_VALIDACION");
+
+        const req = new Request(
+            `http://localhost:5005/api/admin/reportes-revision/${reporte.id}`,
+            { method: "GET", headers: { cookie: `token=${activeToken}` } }
+        );
+        const res = await GET(req, { params: Promise.resolve({ id: reporte.id }) });
+        expect(res.status, "el comité sin el caso propio queda en 403 por la rama de comiteId").toBe(403);
+        const body = await res.json();
+        // Que el mensaje sea el de la autorización fina (no el de módulo) — así
+        // sabemos que llegamos a route.ts:51, no que assertModulo cortó antes.
+        expect(body.error.message.toLowerCase()).toContain("caso");
+    });
 });
