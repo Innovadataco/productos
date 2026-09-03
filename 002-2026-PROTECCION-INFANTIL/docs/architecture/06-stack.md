@@ -57,6 +57,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | postcss | ^8.5.6 |
 | typescript | ^5.8.3 |
 | vitest | ^3.2.3 |
+| wtfnode | ^0.10.1 |
 
 ## Scripts npm (package.json)
 
