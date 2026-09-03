@@ -29,7 +29,12 @@ import * as path from "node:path";
 // Medición tras rebase sobre SPEC-241: 1083 ocurrencias en 121 archivos.
 // 2026-09-03 SPEC-392: directorio del padre nace con tokens (cielo/ambar) desde
 // el primer commit, sin escala sky-*/amber-*. Medición: 1077 (123 archivos).
-const PISO = 1077;
+// 2026-09-03 SPEC-392 (corrección): el 1077 se midió antes de rebasar sobre L1b
+// (SPEC-391 · #299 mergeado con 1079). Al rebasar sobre main, el conteo real es
+// 1079 sin que este PR haya sumado nada — mis archivos siguen en 0 raws. Piso
+// vuelve a 1079 para reflejar el suelo real de main. Cuando alguien migre el
+// próximo bloque de sky-*/amber-* a tokens el piso vuelve a bajar.
+const PISO = 1079;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
