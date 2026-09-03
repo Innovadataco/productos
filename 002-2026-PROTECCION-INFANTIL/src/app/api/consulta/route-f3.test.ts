@@ -7,6 +7,7 @@ import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearParametrosReportes } from "@/lib/reporte-test-utils";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 
 const SENALES_F3 = [
     "Pide mantener la conversación en secreto",
@@ -32,7 +33,8 @@ async function sembrarParamsF3() {
 async function crearReporteVisible(identificador: string, plataformaId: string) {
     const reporte = await prisma.reporte.create({
         data: {
-            identificador,
+            // SPEC-377 (I-267): replica la canónica del write real (trim+lower).
+            identificador: normalizarIdentificador(identificador),
             plataformaId,
             texto: "Texto de prueba para consulta pública F3.",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),

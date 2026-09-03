@@ -6,6 +6,7 @@ import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { actualizarHijo, cambiarEstadoHijo, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
+import { validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
 
 // SPEC-325 · SPEC-339 (FR-022): antes este PATCH aceptaba SOLO { estado } — el
 // padre no podía corregir un apellido mal escrito. Ahora acepta la corrección
@@ -33,6 +34,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         if (!parsed.success) {
             return NextResponse.json(
                 { error: { message: "Datos inválidos", code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+        // SPEC-372 (A-74 P4 · I-262): mismo control de rango que en POST — si
+        // el PATCH trae anioNacimiento debe caer en la ventana 5-17 del año en
+        // curso. `undefined` (no lo tocan) pasa sin ruido.
+        const errorAnio = validarAnioNacimientoMenor(parsed.data.anioNacimiento);
+        if (errorAnio) {
+            return NextResponse.json(
+                { error: { message: errorAnio, code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }

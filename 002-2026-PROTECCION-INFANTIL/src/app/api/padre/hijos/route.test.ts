@@ -180,6 +180,38 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         const res = await POST(reqCrear({ nombre: "Sin", documentoTipo: "TI", documentoNumero: "999" }));
         expect(res.status).toBe(400);
     });
+
+    it("SPEC-372 (A-74 P4 · I-262): un año fuera de rango por API directa se rechaza en el servidor", async () => {
+        const anioActual = new Date().getFullYear();
+        const fueraViejo = anioActual - 30; // 30 años, muy fuera del 5-17
+        const res = await POST(
+            reqCrear({
+                ...menor(9),
+                anioNacimiento: fueraViejo,
+            })
+        );
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toContain("entre 5 y 17");
+        // Nada de fila creada en BD (el servidor cortó antes del DAL).
+        const enBd = await prisma.hijo.findFirst({ where: { documentoNumero: "10300000" + 9 } });
+        expect(enBd).toBeNull();
+    });
+
+    it("SPEC-372 (A-74 P4 · I-262): un año dentro del rango 5-17 sí queda registrado", async () => {
+        const anioActual = new Date().getFullYear();
+        const dentro = anioActual - 12; // 12 años, en el centro del rango
+        const res = await POST(
+            reqCrear({
+                ...menor(10),
+                anioNacimiento: dentro,
+            })
+        );
+        expect(res.status).toBe(201);
+        const json = await res.json();
+        const enBd = await prisma.hijo.findUnique({ where: { id: json.hijoId } });
+        expect(enBd?.anioNacimiento).toBe(dentro);
+    });
 });
 
 describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }, () => {
@@ -262,6 +294,20 @@ describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }
         const hijoId = await crearMenor();
         const [req, ctx] = reqPatch(hijoId, {});
         expect((await PATCH(req, ctx)).status).toBe(400);
+    });
+
+    it("SPEC-372 (A-74 P4 · I-262): corregir el año hacia uno fuera de rango → 400 y la fila no cambia", async () => {
+        const hijoId = await crearMenor();
+        const anioActual = new Date().getFullYear();
+        const fuera = anioActual - 30;
+        const antes = await prisma.hijo.findUnique({ where: { id: hijoId } });
+        const [req, ctx] = reqPatch(hijoId, { anioNacimiento: fuera });
+        const res = await PATCH(req, ctx);
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toContain("entre 5 y 17");
+        const despues = await prisma.hijo.findUnique({ where: { id: hijoId } });
+        expect(despues?.anioNacimiento).toBe(antes?.anioNacimiento);
     });
 
     // ── SPEC-363 · BUG1: el cupo NO es burlable al reactivar ─────────────────

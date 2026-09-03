@@ -28,10 +28,21 @@ type EstadoAsignacion = {
     cupoDefault: number;
 };
 
+type ResumenReconciliacion = {
+    encontrados: number;
+    asignados: number;
+    fallidos: number;
+    deshabilitado?: boolean;
+};
+
 export default function AdminOperadoresAsignarPage() {
     const [data, setData] = useState<EstadoAsignacion | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    // SPEC-372 (A-74 P3): estado del botón manual "Asignar huérfanos ahora".
+    const [reconciliando, setReconciliando] = useState(false);
+    const [reconciliacionMsg, setReconciliacionMsg] = useState("");
+    const [reconciliacionError, setReconciliacionError] = useState("");
 
     async function cargar() {
         setLoading(true);
@@ -48,6 +59,35 @@ export default function AdminOperadoresAsignarPage() {
             setError("Error de red cargando estado de asignación");
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function reconciliarAhora() {
+        setReconciliando(true);
+        setReconciliacionMsg("");
+        setReconciliacionError("");
+        try {
+            const res = await fetch("/api/admin/operadores/reconciliar-huerfanos", {
+                method: "POST",
+                credentials: "include",
+            });
+            const json = (await res.json().catch(() => ({}))) as ResumenReconciliacion | { error?: { message?: string } };
+            if (!res.ok) {
+                const msg = (json as { error?: { message?: string } }).error?.message || "No pudimos disparar la reconciliación.";
+                setReconciliacionError(msg);
+                return;
+            }
+            const r = json as ResumenReconciliacion;
+            if (r.deshabilitado) {
+                setReconciliacionMsg("La reconciliación está deshabilitada por parámetro. Revisá operadores.reconciliacion_enabled.");
+            } else {
+                setReconciliacionMsg(`Encontrados: ${r.encontrados} · Asignados: ${r.asignados} · Fallidos: ${r.fallidos}`);
+            }
+            await cargar();
+        } catch {
+            setReconciliacionError("Error de red disparando la reconciliación.");
+        } finally {
+            setReconciliando(false);
         }
     }
 
@@ -75,12 +115,32 @@ export default function AdminOperadoresAsignarPage() {
             )}
 
             <section className="space-y-4" aria-labelledby="asignacion-resumen-title">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
                     <h2 id="asignacion-resumen-title" className="text-lg font-semibold text-body">Resumen de la cola</h2>
-                    <Button variant="outline" onClick={cargar} isLoading={loading}>
-                        Actualizar
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={reconciliarAhora}
+                            isLoading={reconciliando}
+                            disabled={reconciliando}
+                        >
+                            Asignar huérfanos ahora
+                        </Button>
+                        <Button variant="outline" onClick={cargar} isLoading={loading}>
+                            Actualizar
+                        </Button>
+                    </div>
                 </div>
+                {reconciliacionMsg && (
+                    <p className="text-sm text-muted" role="status" aria-live="polite">
+                        {reconciliacionMsg}
+                    </p>
+                )}
+                {reconciliacionError && (
+                    <p className="text-sm text-amber-700 dark:text-amber-400" role="alert">
+                        {reconciliacionError}
+                    </p>
+                )}
                 <div className="text-sm text-muted">
                     Estrategia actual: <span className="font-medium text-body">{data?.estrategia ?? "—"}</span>
                     {" · "}

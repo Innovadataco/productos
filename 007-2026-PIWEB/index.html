@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protección Infantil</title>
+<meta name="description" content="Lo que la comunidad ya sabe, convertido en una alerta a tiempo. Reporta cuentas que ponen en riesgo a un menor; una IA local clasifica la conducta; el colegio actúa con su comité; el padre arma un expediente verificable. Sin vigilar a nadie.">
+<link rel="canonical" href="https://piweb.innovadataco.com/">
+<meta name="theme-color" content="#0b6e5a">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Protección Infantil">
+<meta property="og:locale" content="es_CO">
+<meta property="og:title" content="Protección Infantil — Lo que sabes ya cuenta">
+<meta property="og:description" content="Reporta cuentas que ponen en riesgo a un menor. Una IA local clasifica la conducta, los reportes se cruzan, el colegio actúa con su comité y el padre arma un expediente verificable. Sin vigilar a nadie.">
+<meta property="og:url" content="https://piweb.innovadataco.com/">
+<meta property="og:image" content="https://piweb.innovadataco.com/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:ital,wght@0,400..700;1,400&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<script>
+  // Marca "js" (el movimiento de entrada solo existe con JS) y aplica el tema guardado antes de pintar.
+  document.documentElement.classList.add('js');
+  try { var t = localStorage.getItem('pi-tema'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
+
+<header class="top">
+  <div class="top-in">
+    <a class="marca" href="#inicio" aria-label="Protección Infantil, inicio">
+      <svg viewBox="0 0 100 100" role="img" aria-label="El Guardián">
+        <defs>
+          <mask id="pi-hueco"><rect width="100" height="100" fill="#fff"/><g fill="#000"><circle cx="50" cy="44" r="7"/><path d="M50 53c-7.2 0-12.7 5.3-12.7 12.5v6.2c0 1.2 1 2.2 2.2 2.2h21c1.2 0 2.2-1 2.2-2.2v-6.2C62.7 58.3 57.2 53 50 53Z"/></g></mask>
+          <clipPath id="pi-dentro"><path d="M50 8 82 20v29C82 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/></clipPath>
+        </defs>
+        <g class="pi-cuerpo">
+          <path mask="url(#pi-hueco)" fill="var(--pino)" d="M50 8 82 20v29C82 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/>
+          <g clip-path="url(#pi-dentro)"><rect class="pi-scan" x="14" y="47" width="72" height="2.4" rx="1.2" fill="var(--cielo)"/></g>
+          <g fill="var(--cielo)"><circle class="pi-nd" cx="50" cy="8" r="3"/><circle class="pi-nd" cx="82" cy="20" r="3" style="animation-delay:.18s"/><circle class="pi-nd" cx="82" cy="42" r="3" style="animation-delay:.36s"/><circle class="pi-nd" cx="74" cy="70" r="3" style="animation-delay:.54s"/><circle class="pi-nd" cx="50" cy="91" r="3" style="animation-delay:.72s"/><circle class="pi-nd" cx="26" cy="70" r="3" style="animation-delay:.9s"/><circle class="pi-nd" cx="18" cy="42" r="3" style="animation-delay:1.08s"/><circle class="pi-nd" cx="18" cy="20" r="3" style="animation-delay:1.26s"/></g>
+        </g>
+      </svg>
+      <span class="g">Protección</span><span class="i">Infantil</span>
+    </a>
+    <nav class="principal" aria-label="Secciones">
+      <a href="#padres">Padres</a><a href="#colegios">Colegios</a><a href="#anonimo">Reporte anónimo</a><a href="#motor">Cómo funciona</a><a href="#privacidad">Privacidad</a><a href="#preguntas">Preguntas</a><a href="#precios">Precios</a><a href="#contacto">Contacto</a>
+    </nav>
+    <button class="tema" type="button" id="tema" aria-label="Cambiar entre tema claro y oscuro">
+      <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+    </button>
+    <a class="btn btn-pino btn-chico cta" href="https://pi.innovadataco.com/reportar">Reportar</a>
+    <details class="menu"><summary aria-label="Abrir menú">Menú</summary>
+      <div class="lista"><a href="#padres">Para padres</a><a href="#colegios">Para colegios</a><a href="#anonimo">Reporte anónimo</a><a href="#motor">Cómo funciona</a><a href="#privacidad">Privacidad</a><a href="#preguntas">Preguntas</a><a href="#precios">Precios</a><a href="#contacto">Contacto</a></div>
+    </details>
+  </div>
+</header>
+
+<main id="inicio">
+
+<!-- ================= HÉROE ================= -->
+<section class="hero">
+  <div class="wrap">
+    <div class="dos">
+      <div style="display:grid;gap:22px">
+        <p class="micro entra">Protección Infantil · Colombia</p>
+        <h1 class="titular entra" style="--retardo:60ms">Lo que sabes <em class="pino">ya cuenta.</em></h1>
+        <p class="bajada entra" style="--retardo:120ms">Si una cuenta le escribe a un niño lo que no debería, aquí se reporta en cinco minutos, una inteligencia artificial que nunca sale a internet dice qué conducta hay, y lo que cada familia sabe por separado se junta. Sin vigilar a nadie.</p>
+        <div class="acciones entra" style="--retardo:180ms">
+          <a class="btn btn-pino" href="https://pi.innovadataco.com/reportar">Reportar una cuenta</a>
+          <a class="btn btn-blanco" href="#colegios">Soy un colegio</a>
+        </div>
+        <div class="chips entra" style="--retardo:240ms"><span class="chip">IA 100 % local</span><span class="chip">Solo texto, nunca fotos</span><span class="chip">Clasifica conductas, no personas</span><span class="chip">Reportar siempre es gratis</span></div>
+      </div>
+      <figure class="hero-escudo entra" style="--retardo:120ms" aria-label="El Guardián, símbolo de Protección Infantil, en calma">
+        <svg viewBox="0 0 100 100" role="img" aria-hidden="true">
+          <defs>
+            <mask id="pi-hueco2"><rect width="100" height="100" fill="#fff"/><g fill="#000"><circle cx="50" cy="44" r="7"/><path d="M50 53c-7.2 0-12.7 5.3-12.7 12.5v6.2c0 1.2 1 2.2 2.2 2.2h21c1.2 0 2.2-1 2.2-2.2v-6.2C62.7 58.3 57.2 53 50 53Z"/></g></mask>
+            <clipPath id="pi-dentro2"><path d="M50 8 82 20v29C82 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/></clipPath>
+          </defs>
+          <g class="pi-cuerpo">
+            <path mask="url(#pi-hueco2)" fill="var(--pino)" d="M50 8 82 20v29C82 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/>
+            <g clip-path="url(#pi-dentro2)"><rect class="pi-scan" x="14" y="47" width="72" height="2.4" rx="1.2" fill="var(--cielo)"/></g>
+            <g fill="var(--cielo)"><circle class="pi-nd" cx="50" cy="8" r="3"/><circle class="pi-nd" cx="82" cy="20" r="3" style="animation-delay:.18s"/><circle class="pi-nd" cx="82" cy="42" r="3" style="animation-delay:.36s"/><circle class="pi-nd" cx="74" cy="70" r="3" style="animation-delay:.54s"/><circle class="pi-nd" cx="50" cy="91" r="3" style="animation-delay:.72s"/><circle class="pi-nd" cx="26" cy="70" r="3" style="animation-delay:.9s"/><circle class="pi-nd" cx="18" cy="42" r="3" style="animation-delay:1.08s"/><circle class="pi-nd" cx="18" cy="20" r="3" style="animation-delay:1.26s"/></g>
+          </g>
+        </svg>
+      </figure>
+    </div>
+
+    <div class="puertas grid c3">
+      <a class="tarjeta puerta padre entra" href="#padres">
+        <div class="ico cielo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>Soy padre o acudiente</h3>
+        <p class="cuerpo">Reporta con día y hora, entiende qué encontró la IA, arma tu expediente y vigila las cuentas de las personas cercanas a tus hijos.</p>
+        <span class="a-donde">Empieza gratis 30 días →</span>
+      </a>
+      <a class="tarjeta puerta entra" href="#colegios" style="--retardo:80ms">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 22v-4a2 2 0 1 0-4 0v4"/><path d="m18 10 4 2v10H2V12l4-2"/><path d="M18 5v17M6 5v17"/><path d="M12 2 6 5v17h12V5Z"/></svg></div>
+        <h3>Somos un colegio</h3>
+        <p class="cuerpo">Reciba alertas sobre cuentas de sus estudiantes, lleve el caso a su comité, resuélvalo con firma y deje constancia con un informe verificable.</p>
+        <span class="a-donde">Pruébelo 30 días →</span>
+      </a>
+      <a class="tarjeta puerta entra" href="#anonimo" style="--retardo:160ms">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></svg></div>
+        <h3>Quiero reportar sin cuenta</h3>
+        <p class="cuerpo">Cualquier persona puede reportar de forma anónima y recibe un número para seguir su reporte. Sin registro, sin costo, siempre.</p>
+        <span class="a-donde">Reportar ahora →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CINCO PASOS ================= -->
+<section class="bloque" id="como-funciona">
+  <div class="wrap">
+    <div class="cab entra"><p class="micro">Cómo funciona</p><h2 class="seccion">Cinco pasos, y en ninguno se vigila a nadie.</h2></div>
+    <ol class="pasos">
+      <li class="paso entra"><b>Alguien reporta</b><p>Una familia, un ciudadano o un estudiante describe en texto lo que pasó con una cuenta. Anónimo si quiere.</p></li>
+      <li class="paso entra" style="--retardo:70ms"><b>La IA clasifica</b><p>Corre en nuestro servidor, no en internet. Dice qué conducta describe el texto. Nunca juzga personas.</p></li>
+      <li class="paso entra" style="--retardo:140ms"><b>Los reportes se cruzan</b><p>Si otra familia reporta la misma cuenta, el caso se fortalece y las partes reciben aviso.</p></li>
+      <li class="paso entra" style="--retardo:210ms"><b>Decide una persona</b><p>Ante la duda, revisa un operador o un comité. Quien es reportado puede presentar su descargo.</p></li>
+      <li class="paso entra" style="--retardo:280ms"><b>Se actúa y se documenta</b><p>El padre arma su expediente con PDF sellado. El colegio lleva el caso a su comité y deja constancia.</p></li>
+    </ol>
+    <p class="nota entra" style="margin-top:18px">No reemplazamos la denuncia: cada reporte muestra la Línea 141 del ICBF, el CAI Virtual de la Policía y Te Protejo.</p>
+  </div>
+</section>
+
+<!-- ================= QUÉ LO HACE DISTINTO ================= -->
+<section class="bloque" id="distinto" style="padding-top:0">
+  <div class="wrap">
+    <div class="cab entra"><p class="micro">Qué lo hace distinto</p><h2 class="seccion">Seis reglas que no se negocian.</h2></div>
+    <div class="grid c3">
+      <div class="tarjeta entra"><div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg></div><div><b>IA 100 % local</b><p class="cuerpo" style="font-size:15px">Los relatos nunca salen a internet ni a servicios de terceros.</p></div></div></div>
+      <div class="tarjeta entra" style="--retardo:60ms"><div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg></div><div><b>Nunca vigilamos</b><p class="cuerpo" style="font-size:15px">Ni dispositivos, ni chats, ni redes. Solo lo que alguien decide reportar.</p></div></div></div>
+      <div class="tarjeta entra" style="--retardo:120ms"><div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg></div><div><b>Conductas, no personas</b><p class="cuerpo" style="font-size:15px">Sin puntajes de nadie. Presunción de inocencia. Descargo ante un comité.</p></div></div></div>
+      <div class="tarjeta entra" style="--retardo:180ms"><div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/></svg></div><div><b>Solo texto</b><p class="cuerpo" style="font-size:15px">Nunca fotos, videos ni audios. Es la forma más segura de hacer esto.</p></div></div></div>
+      <div class="tarjeta entra" style="--retardo:240ms"><div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></div><div><b>Los reportes se cruzan</b><p class="cuerpo" style="font-size:15px">Lo que cada familia sabe por separado, junto. Sin revelar relatos ni autores.</p></div></div></div>
+      <div class="tarjeta entra" style="--retardo:300ms"><div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg></div><div><b>Evidencia verificable</b><p class="cuerpo" style="font-size:15px">PDF con sello que cualquiera puede comprobar. Historiales que no se borran.</p></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PARA PADRES (tú) ================= -->
+<section class="bloque" id="padres">
+  <div class="wrap">
+    <div class="dos">
+      <div style="display:grid;gap:22px">
+        <p class="micro entra">Para padres y acudientes</p>
+        <h2 class="seccion entra" style="--retardo:60ms">Tú cuentas lo que viste. <em class="cielo">Nosotros lo convertimos en prueba.</em></h2>
+        <div class="lista-v entra" style="--retardo:120ms">
+          <div class="fila"><div class="ico cielo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><b>Reporta en cinco minutos</b><p>La cuenta (un nick, un número, un usuario de un juego), la plataforma, el día y la hora, y lo que pasó. Tu relato se guarda cifrado y aparece tapado en tu pantalla hasta que tú lo reveles.</p></div></div>
+          <div class="fila"><div class="ico cielo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div><div><b>Entiende qué encontró la IA</b><p>En tu lenguaje, no en claves técnicas. Y si otra familia reportó la misma cuenta, lo ves: la fecha, la ciudad y el tipo de conducta. Nunca su relato.</p></div></div>
+          <div class="fila"><div class="ico cielo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div><div><b>Arma tu expediente cuando tú decidas</b><p>Mapa con la historia paso a paso, línea de tiempo, un análisis detallado escrito sobre tu caso y un PDF con sello que una autoridad puede verificar. Lo generas las veces que quieras. Nada se cierra nunca.</p></div></div>
+          <div class="fila"><div class="ico cielo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><div><b>Tu círculo de confianza</b><p>El tío, la niñera, el entrenador: registra las cuentas de las personas cercanas a tus hijos. Si alguien las reporta, te avisamos a ti. Ellos nunca reciben nada.</p></div></div>
+        </div>
+        <div class="acciones entra" style="--retardo:180ms;display:flex;gap:12px;flex-wrap:wrap">
+          <a class="btn btn-cielo" href="https://pi.innovadataco.com/registro">Empieza gratis 30 días</a>
+          <a class="btn btn-fantasma" href="#precios">Ver planes</a>
+        </div>
+        <p class="nota entra" style="--retardo:220ms">Y si un día no puedes pagar, igual vas a poder reportar. Proteger está por encima del cobro.</p>
+      </div>
+
+      <div class="entra" style="--retardo:120ms;display:grid;gap:16px">
+        <!-- Mockup: expediente del padre -->
+        <div class="pantalla" role="img" aria-label="Pantalla de ejemplo del expediente del padre, con datos ficticios">
+          <div class="miga cielo"><i></i><span class="micro">Tu expediente · cuenta <span class="mono">juan_gamer_2014</span></span></div>
+          <h4>Así se ha movido esta cuenta, <em class="cielo">paso a paso.</em></h4>
+          <div class="mapa">
+            <svg viewBox="0 0 360 200" aria-hidden="true">
+              <g stroke="var(--pino-100)" stroke-width="1"><path d="M0 60H360M0 120H360M90 0V200M180 0V200M270 0V200"/></g>
+              <path d="M60 150 L120 80 L200 120 L260 60 L300 150" fill="none" stroke="var(--cielo)" stroke-width="2" stroke-dasharray="4 4" opacity=".8"/>
+              <g fill="var(--cielo)"><circle cx="60" cy="150" r="6"/><circle cx="120" cy="80" r="6"/><circle cx="200" cy="120" r="6"/><circle cx="260" cy="60" r="6"/></g>
+              <circle cx="300" cy="150" r="9" fill="var(--ambar)" class="pulso"/>
+              <g font-family="var(--sans)" font-size="9" fill="var(--subtle)"><text x="60" y="137" text-anchor="middle">3 mar</text><text x="120" y="67" text-anchor="middle">9 mar</text><text x="200" y="107" text-anchor="middle">21 mar</text><text x="260" y="47" text-anchor="middle">2 abr</text><text x="300" y="137" text-anchor="middle">14 abr</text></g>
+            </svg>
+          </div>
+          <div class="accion"><span class="btn btn-blanco btn-chico">▶ Reproducir la historia</span><span class="nota" style="align-self:center">Solo ciudades, nunca direcciones.</span></div>
+          <div class="crono">
+            <div class="ev mio"><span class="f">3 mar · 9:40 p. m.</span><span class="q"><b>Tuyo</b> · Solicitud de material · <span class="tapado">le pidió fotos y ofreció robux</span> <a href="#" onclick="return false" style="font-size:12.5px">revelar</a></span></div>
+            <div class="ev"><span class="f">21 mar · 8:15 p. m.</span><span class="q"><b>Otra familia</b> · Contacto insistente · Cali</span></div>
+            <div class="ev anon"><span class="f">14 abr · 10:02 p. m.</span><span class="q"><b>Anónimo</b> · Ofrecimiento de regalos · Riohacha</span></div>
+          </div>
+          <div class="sello">
+            <span class="ok"><i>✓</i> Informe auténtico · no fue alterado</span>
+            <span class="mono">INF-2026-0007 · sello 9f3a…c21e</span>
+            <span class="nota">Generado el 14 abr 2026, 10:31 p. m. · Verificable por cualquiera, sin cuenta.</span>
+          </div>
+          <div class="marca-demo">Datos de demostración · ciudades y nombres ficticios</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PARA COLEGIOS (usted) ================= -->
+<section class="bloque" id="colegios" style="background: linear-gradient(180deg, transparent, rgb(var(--pino-rgb) / .06) 30%, rgb(var(--pino-rgb) / .06) 70%, transparent)">
+  <div class="wrap">
+    <div class="dos inv">
+      <div style="display:grid;gap:22px">
+        <p class="micro entra">Para colegios</p>
+        <h2 class="seccion entra" style="--retardo:60ms">Entérese antes. Actúe con su comité. <em class="pino">Demuestre que lo hizo.</em></h2>
+        <p class="cuerpo entra" style="--retardo:100ms">Desde el 18 de julio de 2026, el Decreto 769 le pide a su colegio llevar la prevención digital al PEI y al Manual de Convivencia, tener protocolos frente al ciberacoso, hacer talleres a familias y que el Comité de Convivencia remita los casos que detecte. Protección Infantil es la herramienta que lo hace operativo, sin vigilar a nadie.</p>
+        <div class="lista-v entra" style="--retardo:140ms">
+          <div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><div><b>Alertas sobre sus estudiantes</b><p>Cuando una cuenta registrada de un estudiante aparece en un reporte de la comunidad: fecha, ciudad y tipo de conducta. Nunca el relato, nunca quién reportó.</p></div></div>
+          <div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><b>Comité de convivencia dentro de la plataforma</b><p>Escale el caso, resuélvalo con firma y conserve la historia completa. Cada paso queda con quién lo hizo y cuándo.</p></div></div>
+          <div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg></div><div><b>Informe firmado y verificable</b><p>PDF membreteado con el escudo de su colegio, firmado por el rector, con código de verificación pública e historial que no se puede borrar. Y el informe mensual para consejo directivo o Secretaría.</p></div></div>
+          <div class="fila"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div><div><b>Todo lo demás, en diez minutos de configuración</b><p>Once grados listos al crear el colegio, carga de estudiantes por Excel con validación fila por fila, cursos, comparativa entre grados, profesores con sus cuentas, auditoría y avisos por correo. Cada colegio aislado del resto.</p></div></div>
+        </div>
+        <div class="acciones entra" style="--retardo:180ms;display:flex;gap:12px;flex-wrap:wrap">
+          <a class="btn btn-pino" href="#contacto">Solicitar una demostración</a>
+          <a class="btn btn-blanco" href="https://pi.innovadataco.com/registro-colegio">Pruébelo 30 días</a>
+        </div>
+      </div>
+
+      <div class="entra" style="--retardo:120ms;display:grid;gap:16px">
+        <!-- Mockup: inicio del rector -->
+        <div class="pantalla" role="img" aria-label="Pantalla de ejemplo del inicio del rector, con datos ficticios">
+          <div class="miga"><i></i><span class="micro">Inicio · Colegio Los Cerezos</span></div>
+          <h4>Buenos días, rector. Hoy su colegio está <em>tranquilo</em>, y hay una cosa que mirar.</h4>
+          <div class="alerta">
+            <div class="aro"><div class="ping"></div><div class="ico-a"><i></i></div></div>
+            <div><div class="t1">Necesita su atención</div><div class="t2">Una cuenta de un estudiante de 7º-B fue reportada</div><div class="t3">2 reportes · Contacto insistente · Bogotá · 14 abr</div><div class="accion" style="margin-top:8px"><span class="btn btn-pino btn-chico">Llevar al comité</span><span class="btn btn-fantasma btn-chico">Ver la alerta</span></div></div>
+          </div>
+          <div class="anillos">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <circle cx="100" cy="100" r="84" fill="none" stroke="var(--pino)" stroke-opacity=".18" stroke-width="17"/>
+              <circle cx="100" cy="100" r="84" fill="none" stroke="var(--pino)" stroke-width="17" stroke-linecap="round" stroke-dasharray="380 148" transform="rotate(-90 100 100)"/>
+              <circle cx="100" cy="100" r="60" fill="none" stroke="var(--cielo)" stroke-opacity=".18" stroke-width="17"/>
+              <circle cx="100" cy="100" r="60" fill="none" stroke="var(--cielo)" stroke-width="17" stroke-linecap="round" stroke-dasharray="219 158" transform="rotate(-90 100 100)"/>
+              <text x="100" y="96" text-anchor="middle" font-family="Instrument Serif, Georgia, serif" font-size="30" fill="var(--tinta)">412</text>
+              <text x="100" y="116" text-anchor="middle" font-family="Instrument Sans, sans-serif" font-size="10" letter-spacing="1.5" fill="var(--subtle)">ESTUDIANTES</text>
+            </svg>
+            <div class="leyenda"><span class="punto">A 296 estudiantes podemos verlos: tienen cuentas registradas</span><span class="punto cielo">A 239 podemos llamar: tienen acudiente con teléfono</span><span class="nota">116 estudiantes sin cuentas registradas: a ellos no podemos verlos.</span></div>
+          </div>
+          <div class="kpis"><div class="kpi"><b class="cifra">3</b><span>alertas este mes</span></div><div class="kpi"><b class="cifra">1</b><span>caso en el comité</span></div><div class="kpi"><b class="cifra">2</b><span>informes firmados</span></div></div>
+          <div class="marca-demo">Datos de demostración · colegio y cifras ficticios</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta entra" style="margin-top:44px">
+      <p class="micro" style="margin-bottom:12px">Lo que el Decreto 769 de 2026 le pide a su colegio · y cómo lo apoyamos</p>
+      <div class="grid c4">
+        <div><b>Prevención digital en el PEI y el Manual de Convivencia</b><p class="cuerpo" style="font-size:15px">Un protocolo operativo real que su manual puede citar.</p></div>
+        <div><b>Protocolos frente al ciberacoso en la ruta de convivencia</b><p class="cuerpo" style="font-size:15px">Alerta → comité → resolución con firma → historia.</p></div>
+        <div><b>Talleres a familias sobre uso seguro</b><p class="cuerpo" style="font-size:15px">Las familias de su colegio tienen acceso a la plataforma para reportar y seguir sus casos. Charla para su escuela de padres: próximamente.</p></div>
+        <div><b>El comité remite a las autoridades</b><p class="cuerpo" style="font-size:15px">Cada alerta y cada informe muestran los canales oficiales; el informe documenta la remisión.</p></div>
+      </div>
+      <p class="nota" style="margin-top:16px">Protección Infantil no reemplaza su Manual de Convivencia, su comité ni la denuncia. Cubre con fuerza 5 de las 6 conductas de la Ley 2564 de 2026; sexting, de forma parcial.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= REPORTE ANÓNIMO ================= -->
+<section class="bloque" id="anonimo">
+  <div class="wrap">
+    <div class="dos">
+      <div style="display:grid;gap:22px">
+        <p class="micro entra">Reporte anónimo</p>
+        <h2 class="seccion entra" style="--retardo:60ms">Viste algo. <em class="pino">No necesitas una cuenta para decirlo.</em></h2>
+        <div class="lista-v entra" style="--retardo:120ms">
+          <div class="fila"><div class="ico"><span class="serif" style="font-size:22px">1</span></div><div><b>Describe lo que pasó</b><p>La cuenta, la plataforma, la ciudad, el día y la hora, y tu relato. Sin registrarte. Sin dejar tu nombre.</p></div></div>
+          <div class="fila"><div class="ico"><span class="serif" style="font-size:22px">2</span></div><div><b>Guarda tu número de seguimiento</b><p>Recibes un código como <span class="mono">RPT-9O0WSC</span>. Con él ves si tu reporte fue procesado y qué conducta se identificó. Nunca aparece en la dirección de la página.</p></div></div>
+          <div class="fila"><div class="ico"><span class="serif" style="font-size:22px">3</span></div><div><b>Tu reporte se suma a los demás</b><p>Si otras personas reportan la misma cuenta, el caso se fortalece. Si la cuenta está vinculada a un estudiante de un colegio conectado, el colegio recibe la alerta, sin tu relato y sin tu identidad.</p></div></div>
+        </div>
+        <div class="acciones entra" style="--retardo:180ms;display:flex;gap:12px;flex-wrap:wrap">
+          <a class="btn btn-pino" href="https://pi.innovadataco.com/reportar">Reportar ahora</a>
+          <a class="btn btn-blanco" href="https://pi.innovadataco.com/">Consultar una cuenta</a>
+        </div>
+        <p class="nota entra" style="--retardo:220ms">Hay un límite de reportes por hora desde el mismo lugar. Es la protección contra el abuso, no un error.</p>
+      </div>
+      <div class="entra" style="--retardo:120ms">
+        <div class="tarjeta" style="display:grid;gap:14px">
+          <p class="micro">Si hay un delito, denúncialo. Estos son los canales oficiales:</p>
+          <div class="canales">
+            <a class="canal" href="tel:141"><span class="cod">141</span><span><b>Línea 141 del ICBF</b><br><small>Gratuita, 24 horas, en todo el país.</small></span></a>
+            <a class="canal" href="https://caivirtual.policia.gov.co/" rel="noopener"><span class="cod">CAI</span><span><b>CAI Virtual de la Policía Nacional</b><br><small>Denuncias de delitos informáticos.</small></span></a>
+            <a class="canal" href="https://www.teprotejo.org/" rel="noopener"><span class="cod">TP</span><span><b>Te Protejo</b><br><small>Línea de denuncia de contenido ilegal contra menores.</small></span></a>
+          </div>
+          <p class="nota">Protección Infantil no es una autoridad ni reemplaza la denuncia. Es el lugar donde lo que sabes empieza a contar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EL MOTOR ================= -->
+<section class="bloque" id="motor" style="padding-top:0">
+  <div class="wrap">
+    <div class="cab entra"><p class="micro">Cómo funciona el motor</p><h2 class="seccion">Varios modelos leen tu relato y votan. <em class="pino">Ante la duda, decide una persona.</em></h2><p class="bajada">Sin jerga: así decide el sistema qué conducta hay en un texto.</p></div>
+    <div class="dos">
+      <div class="lista-v entra">
+        <div><b>1 · Lee el texto y responde preguntas concretas</b><p>Por cada conducta hay preguntas de hecho: ¿pide material?, ¿ofrece algo a cambio?, ¿insiste después de un no? No son opiniones: son cosas que están o no están en lo que escribiste.</p></div>
+        <div><b>2 · Varios modelos distintos votan, un voto cada uno</b><p>Si están de acuerdo, la conducta queda identificada. Si no, el caso pasa a una persona. El desacuerdo es la mejor señal de que hacen falta ojos humanos.</p></div>
+        <div><b>3 · Corre en nuestro servidor, no en internet</b><p>Tu relato nunca se envía a servicios de inteligencia artificial de terceros. Se guarda cifrado; los datos personales que contenga se anonimizan.</p></div>
+        <div><b>4 · Clasifica conductas, nunca personas</b><p>No existe un "puntaje de peligrosidad" de nadie. Se muestran todas las conductas encontradas, sin jerarquías. Quien es reportado puede presentar su descargo ante un comité.</p></div>
+        <div><b>5 · Lo barato filtra antes que lo caro</b><p>Publicidad, duplicados y ráfagas se detectan antes de gastar los modelos. Varias familias corroborando la misma cuenta no se confunden con una ráfaga.</p></div>
+      </div>
+      <div class="entra" style="--retardo:100ms;display:grid;gap:14px">
+        <div class="tarjeta scroll-x" style="padding:16px 18px">
+          <p class="micro" style="margin-bottom:8px">Ejemplo ficticio</p>
+          <p style="font-size:15px;margin-bottom:12px">"Un adulto le pidió fotos íntimas a mi hija de 12 años y le ofreció dinero."</p>
+          <table class="voto" aria-label="Ejemplo de votación de tres modelos por conducta">
+            <thead><tr><th>Conducta</th><th>Modelo A · B · C</th><th>Voto</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Solicitud de material</td><td><span class="v si">1</span><span class="v si">1</span><span class="v si">1</span></td><td class="cifra">100 %</td><td class="res si">presente</td></tr>
+              <tr><td>Ofrecimiento de regalos</td><td><span class="v si">1</span><span class="v">0</span><span class="v si">1</span></td><td class="cifra">67 %</td><td class="res si">presente</td></tr>
+              <tr><td>Contacto insistente</td><td><span class="v">0</span><span class="v">0</span><span class="v si">1</span></td><td class="cifra">33 %</td><td class="res no">descartada</td></tr>
+              <tr><td>Extorsión</td><td><span class="v">0</span><span class="v">0</span><span class="v">0</span></td><td class="cifra">0 %</td><td class="res no">descartada</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tarjeta" style="padding:18px 20px;background:var(--pino-50);border-color:var(--pino-100);box-shadow:none">
+          <p class="micro" style="margin-bottom:8px">Trece conductas que reconoce</p>
+          <div class="chips"><span class="chip">Contacto insistente</span><span class="chip">Solicitud de material</span><span class="chip">Ofrecimiento de regalos</span><span class="chip">Suplantación de identidad</span><span class="chip">Solicitud de encuentro</span><span class="chip">Comportamiento sexual</span><span class="chip">Extorsión</span><span class="chip">Contenido generado por IA</span><span class="chip">Difusión no consentida</span><span class="chip">Doxing</span><span class="chip">Ciberacoso</span><span class="chip">Happy slapping</span><span class="chip">Stalking</span></div>
+          <p class="nota" style="margin-top:10px">Los modelos, las preguntas y los umbrales son parámetros que se ajustan sin tocar código.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SEGURIDAD Y PRIVACIDAD ================= -->
+<section class="bloque" id="privacidad" style="background: linear-gradient(180deg, transparent, rgb(var(--cielo-rgb) / .07) 30%, rgb(var(--cielo-rgb) / .07) 70%, transparent)">
+  <div class="wrap">
+    <div class="cab entra"><p class="micro">Seguridad y privacidad</p><h2 class="seccion">No son un anexo. <em class="pino">Son el diseño.</em></h2></div>
+    <div class="grid c2">
+      <div class="tarjeta entra" style="display:grid;gap:14px">
+        <div class="fila" style="align-items:center"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Qué guardamos</h3></div>
+        <div class="lista-v">
+          <p>La cuenta reportada, la plataforma, la ciudad, la fecha y hora, y la conducta clasificada.</p>
+          <p>Tu relato, cifrado en reposo y anonimizado en pantalla. El original queda cifrado solo para auditoría.</p>
+          <p>Del colegio: nombre, curso y cuentas de estudiantes; docentes y administradores. Nunca fotos.</p>
+          <p>Cada cambio de estado, con quién lo hizo y por qué.</p>
+        </div>
+      </div>
+      <div class="tarjeta entra" style="--retardo:80ms;display:grid;gap:14px">
+        <div class="fila" style="align-items:center"><div class="ico ambar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></svg></div><h3>Qué no hacemos, nunca</h3></div>
+        <div class="lista-v">
+          <p>Subir fotos, videos ni audios. Solo texto.</p>
+          <p>Entrar a dispositivos, chats o redes de nadie. Solo procesamos lo que alguien decide reportar.</p>
+          <p>Mostrar tu relato o tu identidad a otros padres o al colegio. Ellos ven fecha, lugar y conducta.</p>
+          <p>Enviar datos a servicios de inteligencia artificial externos. La IA corre en nuestro servidor.</p>
+          <p>Vender, ceder o perfilar. Los datos se usan solo para el servicio.</p>
+        </div>
+      </div>
+    </div>
+    <div class="grid c3" style="margin-top:24px">
+      <div class="tarjeta entra"><b>Anonimato real</b><p class="cuerpo" style="font-size:15px">El reporte anónimo no pide cuenta. Tu número de seguimiento nunca viaja en la dirección de la página.</p></div>
+      <div class="tarjeta entra" style="--retardo:60ms"><b>Cifrado y aislamiento</b><p class="cuerpo" style="font-size:15px">Relatos cifrados en reposo. Cada colegio ve solo lo suyo. Accesos auditados.</p></div>
+      <div class="tarjeta entra" style="--retardo:120ms"><b>Marco colombiano</b><p class="cuerpo" style="font-size:15px">Ley 1581 de 2012 y Decreto 1377 de 2013: autorización del representante legal e interés superior del menor. <a href="https://pi.innovadataco.com/privacidad">Política de privacidad</a> · <a href="https://pi.innovadataco.com/terminos">Términos</a>.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PREGUNTAS ================= -->
+<section class="bloque" id="preguntas">
+  <div class="wrap" style="max-width:820px">
+    <div class="cab entra"><p class="micro">Preguntas frecuentes</p><h2 class="seccion">Lo que todos preguntan primero.</h2></div>
+    <div class="entra">
+      <details class="faq"><summary>¿Esto espía a mi hijo o a mis estudiantes?</summary><p>No. No entramos a celulares, chats ni redes de nadie. Solo analizamos lo que una persona decide reportar en un formulario. El Decreto 769 de 2026 prohíbe el monitoreo generalizado de comunicaciones; nosotros no lo hacemos por diseño, no por promesa.</p></details>
+      <details class="faq"><summary>¿Es legal manejar datos de menores?</summary><p>Sí, bajo la Ley 1581 de 2012 y el Decreto 1377 de 2013, cuando el tratamiento responde al interés superior del menor y la autorización la da el representante legal. Los padres autorizan al registrarse; el colegio acepta un convenio de tratamiento de datos al inscribirse.</p></details>
+      <details class="faq"><summary>¿Qué pasa si la inteligencia artificial se equivoca?</summary><p>Clasifica conductas descritas en un texto, nunca personas. Ante la duda decide una persona. Quien es reportado puede presentar su versión ante un comité. Nada llega a una autoridad de forma automática.</p></details>
+      <details class="faq"><summary>¿Por qué pagar si Te Protejo es gratis?</summary><p>Te Protejo es un canal de denuncia ciudadana que escala a la Policía; lo enlazamos en cada reporte. No tiene módulo para colegios, ni inteligencia artificial, ni comité, ni expediente. Somos complementarios, no lo mismo.</p></details>
+      <details class="faq"><summary>¿Sirve para denunciar?</summary><p>No reemplaza la denuncia. Te da el expediente en PDF con sello verificable para llevarlo a la Línea 141, al CAI Virtual o a la Fiscalía; los enlaces están en cada reporte.</p></details>
+      <details class="faq"><summary>¿Qué ve el colegio de un reporte?</summary><p>Solo la fecha, la ciudad y el tipo de conducta de una cuenta vinculada a uno de sus estudiantes. Nunca el relato ni quién reportó.</p></details>
+      <details class="faq"><summary>¿Cubre todo tipo de acoso escolar?</summary><p>Reconoce trece conductas, incluidas grooming, sextorsión, ciberacoso, stalking y happy slapping. Cubre con fuerza 5 de las 6 conductas de la Ley 2564 de 2026; sexting, de forma parcial. No es una plataforma general de convivencia: es la señal temprana de riesgo digital y su evidencia.</p></details>
+      <details class="faq"><summary>¿Qué pasa si dejo de pagar?</summary><p>Siempre vas a poder reportar. Lo que se pausa son los avisos y el expediente vivo. En el colegio, los datos se suprimen conforme al convenio; no quedan colgados.</p></details>
+      <details class="faq"><summary>¿Tienen aval del ICBF o del Ministerio de Educación?</summary><p>No existe una certificación para esta categoría de producto. Estamos construidos dentro del marco colombiano (Ley 1620, Ley 1581, Ley 2564, Decreto 769) y buscamos revisión técnica y pilotos con las instituciones.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRECIOS ================= -->
+<section class="bloque" id="precios" style="padding-top:0">
+  <div class="wrap">
+    <div class="cab entra"><p class="micro">Precios</p><h2 class="seccion">Gratis para empezar. <em class="pino">Gratis para reportar, siempre.</em></h2></div>
+    <div class="grid c3">
+      <div class="tarjeta plan entra"><p class="micro">Reportar y consultar</p><div class="precio">Gratis <small>siempre</small></div><ul><li>Reporte anónimo con número de seguimiento</li><li>Consulta pública de una cuenta</li><li>Verificación de informes con sello</li><li>Canales oficiales en cada reporte</li></ul><a class="btn btn-blanco" href="https://pi.innovadataco.com/reportar">Reportar</a></div>
+      <div class="tarjeta plan destacado entra" style="--retardo:60ms"><p class="micro">Padres y acudientes</p><div class="precio">30 días gratis <small>luego 6 meses o anual — consultar precio</small></div><ul><li>Hasta 5 hijos con su bitácora</li><li>Análisis de cada reporte en tu lenguaje</li><li>Expediente con mapa, cronología y PDF sellado</li><li>Círculo de confianza y avisos por correo</li><li>Descuento por pago anual · cupones por referidos</li></ul><a class="btn btn-cielo" href="https://pi.innovadataco.com/registro">Empieza gratis</a><p class="nota">Te confirmamos el precio por correo antes de que termine tu prueba gratis.</p></div>
+      <div class="tarjeta plan entra" style="--retardo:120ms"><p class="micro">Colegios</p><div class="precio">30 días gratis <small>luego 6 meses o anual según el tamaño del colegio — consultar</small></div><ul><li>Alertas, comité con firma, informe firmado y mensual</li><li>Cursos, Excel, comparativa, profesores, auditoría</li><li>Cada colegio aislado · avisos por correo</li><li>Plan de 6 meses o anual, con descuento por pago anual</li><li>Redes de colegios y asociaciones: plan colectivo (próximamente)</li></ul><a class="btn btn-pino" href="#contacto">Solicitar una demostración</a><p class="nota">Pago por transferencia, Nequi, Daviplata o PSE. IVA discriminado.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTACTO / DEMO ================= -->
+<section class="bloque" id="contacto" style="background: linear-gradient(180deg, transparent, rgb(var(--pino-rgb) / .07) 40%, rgb(var(--pino-rgb) / .07))">
+  <div class="wrap">
+    <div class="dos">
+      <div style="display:grid;gap:18px">
+        <p class="micro entra">Contacto · solicitar una demostración</p>
+        <h2 class="seccion entra" style="--retardo:60ms">Treinta minutos, con datos de demostración, <em class="pino">y usted decide.</em></h2>
+        <p class="cuerpo entra" style="--retardo:100ms">Le mostramos el inicio del rector, una alerta, el comité y el informe firmado. Después, si quiere, su coordinador de convivencia activa la prueba de 30 días con acompañamiento por WhatsApp.</p>
+        <div class="lista-v entra" style="--retardo:140ms">
+          <p><b>Contacto comercial:</b> Diana Cáceres · <a href="mailto:gerencia@innovadataco.com?subject=Demostraci%C3%B3n%20Protecci%C3%B3n%20Infantil">gerencia@innovadataco.com</a></p>
+          <p><b>Teléfono y WhatsApp:</b> <a href="tel:+573226427044">322 642 7044</a> · <a href="https://wa.me/573226427044" rel="noopener">Escribir por WhatsApp</a></p>
+          <p><b>Plataforma:</b> <a href="https://pi.innovadataco.com">pi.innovadataco.com</a></p>
+          <p class="nota">Innovadataco S.A.S. · Bogotá, Colombia</p>
+        </div>
+      </div>
+      <div class="tarjeta entra" style="--retardo:120ms;display:grid;gap:14px">
+        <p class="micro">Pedir una demostración</p>
+        <p class="cuerpo">Escríbanos un correo con el nombre de su colegio o entidad, su cargo y qué quiere ver. Le respondemos con dos opciones de fecha.</p>
+        <a class="btn btn-pino" href="mailto:gerencia@innovadataco.com?subject=Demostraci%C3%B3n%20de%20Protecci%C3%B3n%20Infantil&amp;body=Nombre%3A%20%0AColegio%20o%20entidad%3A%20%0ACargo%3A%20%0AQu%C3%A9%20quiero%20ver%3A%20%0A">Solicitar demostración por correo</a>
+        <a class="btn btn-blanco" href="https://wa.me/573226427044" rel="noopener">Escribir por WhatsApp</a>
+        <a class="btn btn-fantasma" href="https://pi.innovadataco.com/registro-colegio">O active la prueba de 30 días ahora</a>
+        <p class="nota">Esta página no guarda datos: el correo o el mensaje los envía usted desde su propio buzón o teléfono.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="pie">
+  <div class="wrap">
+    <div class="cols">
+      <div style="display:grid;gap:10px">
+        <a class="marca" href="#inicio" aria-label="Protección Infantil, inicio">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><defs><mask id="pi-hueco3"><rect width="100" height="100" fill="#fff"/><g fill="#000"><circle cx="50" cy="44" r="7"/><path d="M50 53c-7.2 0-12.7 5.3-12.7 12.5v6.2c0 1.2 1 2.2 2.2 2.2h21c1.2 0 2.2-1 2.2-2.2v-6.2C62.7 58.3 57.2 53 50 53Z"/></g></mask></defs><path mask="url(#pi-hueco3)" fill="var(--pino)" d="M50 8 82 20v29C82 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/><g fill="var(--cielo)"><circle cx="50" cy="8" r="3"/><circle cx="82" cy="42" r="3"/><circle cx="50" cy="91" r="3"/><circle cx="18" cy="42" r="3"/></g></svg>
+          <span class="g">Protección</span><span class="i" style="display:inline">Infantil</span>
+        </a>
+        <p style="max-width:44ch">Lo que la comunidad ya sabe, convertido en una alerta a tiempo. Construido en Colombia por Innovadataco S.A.S. para el marco legal colombiano.</p>
+      </div>
+      <div style="display:grid;gap:8px"><span class="micro">Producto</span><a href="#padres">Para padres</a><a href="#colegios">Para colegios</a><a href="#anonimo">Reporte anónimo</a><a href="#motor">Cómo funciona el motor</a><a href="#precios">Precios</a></div>
+      <div style="display:grid;gap:8px"><span class="micro">Confianza</span><a href="#privacidad">Seguridad y privacidad</a><a href="https://pi.innovadataco.com/privacidad">Política de privacidad</a><a href="https://pi.innovadataco.com/terminos">Términos</a><a href="https://pi.innovadataco.com/">Consultar una cuenta</a><a href="#preguntas">Preguntas frecuentes</a></div>
+    </div>
+    <p class="legal">© 2026 Innovadataco S.A.S. · NIT 902.033.085-1 · Bogotá, Colombia. Protección Infantil no es una autoridad ni reemplaza la denuncia: Línea 141 del ICBF · CAI Virtual de la Policía Nacional · Te Protejo. Todos los ejemplos de esta página son ficticios; no contiene datos de menores reales.</p>
+  </div>
+</footer>
+
+<script src="assets/site.js"></script>
+</body>
+</html>

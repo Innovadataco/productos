@@ -14,9 +14,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Mega-lote 002-PI: skip de CI en commits doc-only (specs/**, docs/**, *.md).
-  # Un job skipped reporta conclusión "skipped", que GitHub trata como éxito en
-  # required checks (a diferencia de paths-ignore, que deja el check pendiente).
+  # SPEC-107 (doc-only) + SPEC-374 (PRs que no tocan PI): un job skipped reporta
+  # conclusión "skipped", que GitHub trata como éxito en required checks. Por eso
+  # decidimos acá, NUNCA con `on: paths:` — un paths-ignore dejaría los checks de
+  # PI (requeridos) PENDIENTES y bloquearía los merges de otros productos (trampa
+  # I-249). La lógica vive en un módulo aparte (should-skip-pi.mjs) para tenerla
+  # bajo tests unitarios; en el runner solo la invocamos.
   should-skip:
     runs-on: ubuntu-latest
     outputs:
@@ -27,8 +30,9 @@ jobs:
       - id: detect
         run: |
           files_changed=$(git diff --name-only HEAD^ HEAD || true)
-          code_files=$(echo "$files_changed" | grep -vE '(^002-2026-PROTECCION-INFANTIL/(docs|specs)/|^docs/|^specs/|\.md$)' || true)
-          if [ -z "$code_files" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+          # ubuntu-latest ya trae node preinstalado; no hace falta setup-node acá.
+          skip=$(printf "%s" "$files_changed" | node 002-2026-PROTECCION-INFANTIL/scripts/ci/should-skip-pi.mjs)
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
   verificaciones:
     runs-on: ubuntu-latest
@@ -108,6 +112,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [should-skip]
     if: needs.should-skip.outputs.skip != 'true'
+    # SPEC-375: TOPE DURO por shard. Sin esto se aplica el default de 360 min
+    # de GitHub — cualquier fuga de handles en un test (pg-boss sin cerrar,
+    # timer sin unref, cliente pg reintentando) dejaba UN shard colgado 40+
+    # minutos hasta cancelación manual.
+    #
+    # Ancla numérica (medida sobre 6 corridas verdes recientes, `gh run view`):
+    # mediana ~16 min · máximo real 20.5 min. 35 min = mediana × 2 con margen
+    # para el más lento, y sigue cortando rápido las fugas (40+ min manual).
+    timeout-minutes: 35
     # Mega-lote 002-PI: shard 4 vías (~28min → ~7min por shard). Cada shard corre en
     # su propio runner con su propio Postgres: no hay BD compartida entre shards.
     # Los umbrales de cobertura se evalúan en el job agregador (test-integration-coverage).

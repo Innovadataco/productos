@@ -19,6 +19,7 @@ import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categori
 import type { EstadoReporte } from "@prisma/client";
 import { ReporteRepository } from "../repositories/reporte";
 import { ParametroRepository } from "../repositories/parametro";
+import { normalizarIdentificador } from "../identificadores/normalizar";
 import { logAudit } from "@/lib/audit";
 import type {
     ConsultaDetalleDto,
@@ -160,6 +161,14 @@ export class ConsultaPublicaService {
      * anónimo = resumen; autenticado = ciudad, timeline, plataformas completas.
      */
     async resumen(identificador: string, autenticado: boolean, contexto?: ContextoConsulta): Promise<ConsultaResumenDto> {
+        // SPEC-377 (I-267): la escritura de un Reporte NORMALIZA el identificador
+        // (trim + lowercase, `../identificadores/normalizar`); la lectura NO lo
+        // hacía y `NICK_COLEGIO_UNO` devolvía "sin reportes por ahora" contra
+        // `nick_colegio_uno` con 2 reportes — falso negativo. Se normaliza acá
+        // en la ENTRADA para que el cruce case-insensitive quede afirmado en un
+        // solo lugar (`../identificadores/normalizar`, candado 22v5).
+        identificador = normalizarIdentificador(identificador);
+
         // Parámetros de visibilidad (listado del dashboard; la consulta directa
         // siempre muestra detalle — spec 089-US5).
         const paramUmbral = await this.parametros.findByClave("visibility.report_threshold");
@@ -291,6 +300,10 @@ export class ConsultaPublicaService {
      * (módulo `src/lib/riesgo-consulta.ts`) y mapeo a DTOs de dominio.
      */
     async detalle(identificador: string, contexto?: ContextoConsulta): Promise<ConsultaDetalleDto> {
+        // SPEC-377 (I-267): idem `resumen()` — normalizar en la entrada para
+        // que la lectura empate con la forma canónica del write.
+        identificador = normalizarIdentificador(identificador);
+
         const reportes = await this.reportes.findVisiblesPorIdentificador(
             whereReporteEnEstados(ESTADOS_VISIBLES, { identificador })
         );
