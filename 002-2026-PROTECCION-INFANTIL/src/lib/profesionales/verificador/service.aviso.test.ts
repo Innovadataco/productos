@@ -104,9 +104,39 @@ describe("SPEC-418 · el motor sabe programar dentro de una transacción", () =>
 describe("SPEC-418 · el seed faltante se descubre AL DESPLEGAR, no al hacer clic", () => {
     const guardian = leerCodigo("scripts/verify-reglas-notificacion.ts");
 
-    it("el guardián declara los dos eventos que fallan en cerrado", () => {
+    it("el guardián declara los dos eventos de esta spec como BLOQUEANTES", () => {
         expect(guardian).toContain("profesional.verificacion.aprobada");
         expect(guardian).toContain("profesional.verificacion.devuelta");
+        const bloqueantes = guardian.match(/bloquea: true/g) ?? [];
+        expect(bloqueantes).toHaveLength(2);
+    });
+
+    it("declara TODOS los callsites que fallan en cerrado, aunque solo dos bloqueen", () => {
+        // Decisión del CEO: los otros avisan sin frenar el despliegue, para que
+        // una brecha preexistente se descubra con calma y no al desplegar.
+        for (const evento of [
+            "auth.codigo_verificacion",
+            "auth.registro_enlace_profesional",
+            "colegio.bienvenida_rector",
+            "padre.hijo.reporte",
+        ]) {
+            expect(guardian, `falta declarar ${evento}`).toContain(evento);
+        }
+        // Cuentas: 15 callsites con `programadas === 0`. Uno
+        // (`analisis/acciones/handlers/enviar-notificacion.ts`) dispara un evento
+        // DINÁMICO y no se puede declarar. Quedan 14 callsites estáticos, pero el
+        // del Verificador emite DOS eventos según el resultado (aprobada /
+        // devuelta) — por eso la lista tiene 15 eventos, no 14.
+        const total = (guardian.match(/evento: "/g) ?? []).length;
+        expect(total, "15 eventos: 13 de otros callsites + los 2 del Verificador").toBe(15);
+    });
+
+    it("solo un bloqueante ausente frena el despliegue; los avisos no", () => {
+        expect(guardian).toContain("faltan.filter((h) => h.bloquea)");
+        expect(guardian).toContain("faltan.filter((h) => !h.bloquea)");
+        expect(guardian).toContain("if (bloqueantes.length > 0)");
+        // El aviso se imprime, con su callsite, para poder actuar después.
+        expect(guardian).toContain('detallar("AVISO", h)');
     });
 
     it("no basta con la regla: la plantilla también tiene que estar activa", () => {

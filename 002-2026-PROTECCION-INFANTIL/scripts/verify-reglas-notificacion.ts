@@ -32,36 +32,69 @@ export interface ReglaRequerida {
     sostiene: string;
     /** Dónde está el callsite que falla en cerrado. */
     callsite: string;
+    /**
+     * `true` → su ausencia **para el despliegue**. `false` → solo avisa.
+     *
+     * Decisión del CEO (03-09 18:2x): hoy bloquean únicamente los dos eventos
+     * de SPEC-418. Los otros trece se declaran en modo aviso, porque volverlos
+     * bloqueantes de golpe significaría **enterarse de una brecha preexistente
+     * por no poder desplegar**, en el peor momento. En modo aviso la brecha se
+     * descubre con calma y él decide cuáles pasan a bloquear, con el dato en la
+     * mano. Es el mismo criterio del barrido de SPEC-415: inventario primero,
+     * decisión después.
+     */
+    bloquea: boolean;
 }
 
 /**
  * Lista declarada — fuente única de verdad del guardián.
  *
- * **Hoy tiene solo los dos eventos de SPEC-418.** En `src/` hay 15 callsites
- * que fallan en cerrado (`programadas === 0` → throw): `email.ts`,
- * `email-colegio.ts`, `email-padre.ts`, `email-profesional.ts` y el ejecutor de
- * acciones. Declararlos todos acá es lo correcto a futuro, pero es decisión del
- * CEO: si alguno tuviera hoy su regla ausente en producción, este guardián
- * pasaría a frenar el despliegue por una brecha que ya existía y que nadie
- * eligió atender en este momento. Se agregan cuando él lo diga.
+ * Son los **15 eventos** detrás de los callsites que fallan en cerrado
+ * (`programadas === 0` → throw). Las cuentas, porque no son obvias: hay 15
+ * callsites; uno —`analisis/acciones/handlers/enviar-notificacion.ts:62`—
+ * dispara un evento **dinámico** (`params.evento`, lo elige la regla de
+ * análisis) y no se puede declarar sin inventar la lista, así que queda fuera a
+ * propósito; y el del Verificador emite **dos** eventos según el resultado. 13
+ * de otros callsites + 2 del Verificador = 15.
+ *
+ * Agregar un `programadas === 0` nuevo en `src/` obliga a declarar su evento
+ * acá. Esa es la disciplina que este guardián quiere forzar.
  */
 export const REGLAS_REQUERIDAS: ReglaRequerida[] = [
+    // ── Bloquean el despliegue (SPEC-418) ───────────────────────────────────
     {
         evento: "profesional.verificacion.aprobada",
         sostiene: "avisarle al profesional que su perfil quedó activo — sin esto la aprobación no se puede guardar",
         callsite: "src/lib/profesionales/verificador/service.ts",
+        bloquea: true,
     },
     {
         evento: "profesional.verificacion.devuelta",
         sostiene: "avisarle al profesional QUÉ corregir — sin esto el ciclo de admisión se detiene (I-295)",
         callsite: "src/lib/profesionales/verificador/service.ts",
+        bloquea: true,
     },
+    // ── Solo avisan, por ahora ──────────────────────────────────────────────
+    { evento: "auth.codigo_verificacion", sostiene: "el código de verificación de la cuenta", callsite: "src/lib/email.ts:49", bloquea: false },
+    { evento: "auth.cuenta_existente", sostiene: "avisar que ese correo ya tiene cuenta (anti-enumeración)", callsite: "src/lib/email.ts:71", bloquea: false },
+    { evento: "auth.password_recuperacion", sostiene: "el enlace para recuperar la clave", callsite: "src/lib/email.ts:82", bloquea: false },
+    { evento: "padre.circulo_confianza.reporte_enriquecido", sostiene: "avisar al padre de un reporte sobre su círculo", callsite: "src/lib/email.ts:301", bloquea: false },
+    { evento: "colegio.registro_enlace", sostiene: "el enlace de registro del colegio", callsite: "src/lib/email-colegio.ts:27", bloquea: false },
+    { evento: "colegio.registro_enlace.cuenta_existente", sostiene: "registro de colegio con cuenta ya existente", callsite: "src/lib/email-colegio.ts:53", bloquea: false },
+    { evento: "colegio.registro_enlace.nit_ya_registrado", sostiene: "registro de colegio con NIT ya registrado", callsite: "src/lib/email-colegio.ts:79", bloquea: false },
+    { evento: "colegio.bienvenida_rector", sostiene: "la bienvenida al rector", callsite: "src/lib/email-colegio.ts:130", bloquea: false },
+    { evento: "auth.registro_enlace", sostiene: "el enlace de registro del padre", callsite: "src/lib/email-padre.ts:26", bloquea: false },
+    { evento: "auth.bienvenida_padre", sostiene: "la bienvenida al padre", callsite: "src/lib/email-padre.ts:39", bloquea: false },
+    { evento: "padre.hijo.reporte", sostiene: "avisar al padre de un reporte sobre su hijo", callsite: "src/lib/email-padre.ts:75", bloquea: false },
+    { evento: "auth.registro_enlace_profesional", sostiene: "el enlace de registro del profesional", callsite: "src/lib/email-profesional.ts:18", bloquea: false },
+    { evento: "auth.bienvenida_profesional", sostiene: "la bienvenida al profesional", callsite: "src/lib/email-profesional.ts:36", bloquea: false },
 ];
 
 export interface HallazgoRegla {
     evento: string;
     ok: boolean;
     motivo: string;
+    bloquea: boolean;
 }
 
 /**
@@ -77,7 +110,7 @@ export async function verificarReglas(requeridas = REGLAS_REQUERIDAS): Promise<H
             select: { plantillaClave: true, canal: true, obligatoria: true },
         });
         if (reglas.length === 0) {
-            hallazgos.push({ evento: req.evento, ok: false, motivo: "sin regla activa" });
+            hallazgos.push({ evento: req.evento, ok: false, motivo: "sin regla activa", bloquea: req.bloquea });
             continue;
         }
         const claves = [...new Set(reglas.map((r) => r.plantillaClave))];
@@ -92,6 +125,7 @@ export async function verificarReglas(requeridas = REGLAS_REQUERIDAS): Promise<H
                 evento: req.evento,
                 ok: false,
                 motivo: `plantilla ausente o inactiva: ${faltantes.join(", ")}`,
+                bloquea: req.bloquea,
             });
             continue;
         }
@@ -99,36 +133,53 @@ export async function verificarReglas(requeridas = REGLAS_REQUERIDAS): Promise<H
             evento: req.evento,
             ok: true,
             motivo: `${reglas.length} regla(s) activa(s) · plantilla(s) OK`,
+            bloquea: req.bloquea,
         });
     }
     return hallazgos;
+}
+
+function detallar(nivel: "ROJO" | "AVISO", h: HallazgoRegla): void {
+    const req = REGLAS_REQUERIDAS.find((r) => r.evento === h.evento);
+    const salida = nivel === "ROJO" ? console.error : console.warn;
+    salida(`[reglas:check] ${nivel}: falta "${h.evento}" (${h.motivo}).`);
+    salida(`[reglas:check]   sostiene: ${req?.sostiene}`);
+    salida(`[reglas:check]   callsite: ${req?.callsite}`);
 }
 
 async function main(): Promise<void> {
     const json = process.argv.includes("--json");
     const hallazgos = await verificarReglas();
     const faltan = hallazgos.filter((h) => !h.ok);
+    const bloqueantes = faltan.filter((h) => h.bloquea);
+    const avisos = faltan.filter((h) => !h.bloquea);
 
     if (json) {
-        console.log(JSON.stringify({ ok: faltan.length === 0, hallazgos }, null, 2));
+        console.log(JSON.stringify({ ok: bloqueantes.length === 0, hallazgos }, null, 2));
     } else {
         for (const h of hallazgos) {
-            console.log(`[reglas:check] ${h.ok ? "OK  " : "FALTA"} ${h.evento} — ${h.motivo}`);
+            const etiqueta = h.ok ? "OK   " : h.bloquea ? "FALTA" : "AVISO";
+            console.log(`[reglas:check] ${etiqueta} ${h.evento} — ${h.motivo}`);
         }
     }
 
-    if (faltan.length > 0) {
-        for (const h of faltan) {
-            const req = REGLAS_REQUERIDAS.find((r) => r.evento === h.evento);
-            console.error(`[reglas:check] ROJO: falta "${h.evento}" (${h.motivo}).`);
-            console.error(`[reglas:check]   sostiene: ${req?.sostiene}`);
-            console.error(`[reglas:check]   callsite:  ${req?.callsite}`);
-        }
+    for (const h of avisos) detallar("AVISO", h);
+    for (const h of bloqueantes) detallar("ROJO", h);
+
+    if (avisos.length > 0) {
+        console.warn(
+            `[reglas:check] ${avisos.length} evento(s) SIN regla que NO frenan el despliegue (decisión del CEO 03-09).`,
+        );
+        console.warn("[reglas:check] Su callsite falla en cerrado: si alguien los dispara, verá un error.");
+    }
+
+    if (bloqueantes.length > 0) {
         console.error("[reglas:check] Corré el seed (`node --import tsx prisma/seed.ts`) y volvé a verificar.");
         process.exitCode = 1;
         return;
     }
-    console.log(`[reglas:check] VERDE — ${hallazgos.length} evento(s) con regla y plantilla activas.`);
+    const ok = hallazgos.filter((h) => h.ok).length;
+    console.log(`[reglas:check] VERDE — ${ok}/${hallazgos.length} evento(s) con regla y plantilla activas.`);
 }
 
 if (process.argv[1]?.endsWith("verify-reglas-notificacion.ts")) {

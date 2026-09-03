@@ -51,7 +51,25 @@ Fallar en cerrado mueve el problema: un seed que no corrió deja de perder aviso
 
 Sigue el patrón del guardián de índices (SPEC-251): **solo observa y reporta**, nunca crea ni repara. Y no le alcanza con que la regla exista — verifica también que la **plantilla esté activa**, porque el motor con plantilla ausente registra un warning, sigue de largo y devuelve `programadas: 0`, que es indistinguible de no tener regla.
 
-La lista declarada tiene hoy **solo los dos eventos de esta spec**. En `src/` hay **15 callsites que fallan en cerrado** (`email.ts`, `email-colegio.ts`, `email-padre.ts`, `email-profesional.ts` y el ejecutor de acciones): declararlos todos es lo correcto a futuro, pero es decisión del CEO — si alguno tuviera hoy su regla ausente en producción, el guardián pasaría a frenar el despliegue por una brecha preexistente que nadie eligió atender ahora.
+**Se declaran los 15 eventos, pero solo dos bloquean** (decisión del CEO 18:2x). Los otros trece **avisan sin frenar el despliegue**: volverlos bloqueantes de golpe significaría enterarse de una brecha preexistente *por no poder desplegar*, en el peor momento. En modo aviso la brecha se descubre con calma y él decide cuáles pasan a bloquear con el dato en la mano — mismo criterio que el barrido de SPEC-415: inventario primero, decisión después.
+
+Las cuentas, porque no son obvias: 15 callsites con `programadas === 0`; uno (`analisis/acciones/handlers/enviar-notificacion.ts:62`) dispara un evento **dinámico** y no se puede declarar; el del Verificador emite **dos** eventos según el resultado. 13 + 2 = **15 eventos declarados**.
+
+### Y ya encontró algo
+
+Contra una base recién migrada y sembrada, el guardián avisa de **dos eventos sin regla**:
+
+```
+[reglas:check] AVISO auth.registro_enlace_profesional — sin regla activa
+                     callsite: src/lib/email-profesional.ts:18
+[reglas:check] AVISO auth.bienvenida_profesional — sin regla activa
+                     callsite: src/lib/email-profesional.ts:36
+[reglas:check] VERDE — 13/15 evento(s) con regla y plantilla activas.
+```
+
+SPEC-391 agregó `email-profesional.ts` con sus dos eventos **y el seed nunca recibió sus reglas ni sus plantillas**. Los dos callsites fallan en cerrado, así que `enviarEnlaceRegistroProfesional` lanza — y la ruta `registro-profesional/solicitar` lo atrapa, lo registra y **responde 202 «revisá tu correo» igual**. El profesional espera un enlace que no va a llegar: **no puede registrarse**, y del lado de adentro no hay más que una línea de log.
+
+Es la misma familia de I-295, en la **puerta de entrada** de la Red de Apoyo. Arreglarlo (sembrar esas dos reglas) queda **fuera de esta spec**: es de SPEC-391 y lo prioriza el CEO. Este guardián solo lo descubrió, que es para lo que se hizo.
 
 ---
 
