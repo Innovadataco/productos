@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 496 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3472 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 502 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3514 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -360,6 +360,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/profesionales` | api | permitir | permite | sí |
+| `/api/padre/profesionales/[id]` | api | permitir | permite | sí |
+| `/api/padre/profesionales/facetas` | api | permitir | permite | sí |
 | `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
 | `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
 | `/api/padre/step-up` | api | permitir | permite | sí |
@@ -498,6 +501,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/profesionales` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/profesionales/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/profesionales/directorio` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/perfil` | página | permitir | permite | sí |
@@ -861,6 +867,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/profesionales` | api | permitir | permite | sí |
+| `/api/padre/profesionales/[id]` | api | permitir | permite | sí |
+| `/api/padre/profesionales/facetas` | api | permitir | permite | sí |
 | `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
 | `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
 | `/api/padre/step-up` | api | permitir | permite | sí |
@@ -999,6 +1008,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/profesionales` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/profesionales/[id]` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/padre/profesionales/directorio` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/dashboard/perfil` | página | permitir | permite | sí |
@@ -1362,6 +1374,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/profesionales` | api | permitir | permite | sí |
+| `/api/padre/profesionales/[id]` | api | permitir | permite | sí |
+| `/api/padre/profesionales/facetas` | api | permitir | permite | sí |
 | `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
 | `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
 | `/api/padre/step-up` | api | permitir | permite | sí |
@@ -1500,6 +1515,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/profesionales` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/profesionales/[id]` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/padre/profesionales/directorio` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/dashboard/perfil` | página | permitir | permite | sí |
@@ -1863,6 +1881,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/perfil` | api | HTTP 403 | no permite | sí |
+| `/api/padre/profesionales` | api | HTTP 403 | no permite | sí |
+| `/api/padre/profesionales/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/padre/profesionales/facetas` | api | HTTP 403 | no permite | sí |
 | `/api/padre/reportes/[id]/texto` | api | HTTP 403 | no permite | sí |
 | `/api/padre/reportes/cadenas` | api | HTTP 403 | no permite | sí |
 | `/api/padre/step-up` | api | HTTP 403 | no permite | sí |
@@ -2001,6 +2022,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/profesionales` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/profesionales/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/padre/profesionales/directorio` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/perfil` | página | permitir | permite | sí |
@@ -2364,6 +2388,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | HTTP 403 | no permite | sí |
 | `/api/padre/home/sugerencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/perfil` | api | HTTP 403 | no permite | sí |
+| `/api/padre/profesionales` | api | HTTP 403 | no permite | sí |
+| `/api/padre/profesionales/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/padre/profesionales/facetas` | api | HTTP 403 | no permite | sí |
 | `/api/padre/reportes/[id]/texto` | api | HTTP 403 | no permite | sí |
 | `/api/padre/reportes/cadenas` | api | HTTP 403 | no permite | sí |
 | `/api/padre/step-up` | api | HTTP 403 | no permite | sí |
@@ -2502,6 +2529,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/notificaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/perfil` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/profesionales` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/profesionales/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/padre/profesionales/directorio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/padre/suscripcion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/perfil` | página | permitir | permite | sí |
@@ -2865,6 +2895,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | permitir | permite | sí |
 | `/api/padre/home/sugerencia` | api | permitir | permite | sí |
 | `/api/padre/perfil` | api | permitir | permite | sí |
+| `/api/padre/profesionales` | api | permitir | permite | sí |
+| `/api/padre/profesionales/[id]` | api | permitir | permite | sí |
+| `/api/padre/profesionales/facetas` | api | permitir | permite | sí |
 | `/api/padre/reportes/[id]/texto` | api | permitir | permite | sí |
 | `/api/padre/reportes/cadenas` | api | permitir | permite | sí |
 | `/api/padre/step-up` | api | permitir | permite | sí |
@@ -3003,6 +3036,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/identificador/[nick]` | página | permitir | permite | sí |
 | `/dashboard/padre/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/padre/perfil` | página | permitir | permite | sí |
+| `/dashboard/padre/profesionales` | página | permitir | permite | sí |
+| `/dashboard/padre/profesionales/[id]` | página | permitir | permite | sí |
+| `/dashboard/padre/profesionales/directorio` | página | permitir | permite | sí |
 | `/dashboard/padre/reportar` | página | permitir | permite | sí |
 | `/dashboard/padre/suscripcion` | página | permitir | permite | sí |
 | `/dashboard/perfil` | página | permitir | permite | sí |
@@ -3366,6 +3402,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/home` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/home/sugerencia` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/perfil` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/profesionales` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/profesionales/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/profesionales/facetas` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/reportes/[id]/texto` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/reportes/cadenas` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/step-up` | api | HTTP 401 | permite | **NO** |
@@ -3504,6 +3543,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/padre/identificador/[nick]` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/notificaciones` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/perfil` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/profesionales` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/profesionales/[id]` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/padre/profesionales/directorio` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/reportar` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/padre/suscripcion` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/perfil` | página | redirigir→/login | permite | **NO** |
@@ -3837,6 +3879,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/home` | HTTP 401 | permite |
 | `/api/padre/home/sugerencia` | HTTP 401 | permite |
 | `/api/padre/perfil` | HTTP 401 | permite |
+| `/api/padre/profesionales` | HTTP 401 | permite |
+| `/api/padre/profesionales/[id]` | HTTP 401 | permite |
+| `/api/padre/profesionales/facetas` | HTTP 401 | permite |
 | `/api/padre/reportes/[id]/texto` | HTTP 401 | permite |
 | `/api/padre/reportes/cadenas` | HTTP 401 | permite |
 | `/api/padre/step-up` | HTTP 401 | permite |
@@ -3908,6 +3953,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/padre/identificador/[nick]` | redirigir→/login | permite |
 | `/dashboard/padre/notificaciones` | redirigir→/login | permite |
 | `/dashboard/padre/perfil` | redirigir→/login | permite |
+| `/dashboard/padre/profesionales` | redirigir→/login | permite |
+| `/dashboard/padre/profesionales/[id]` | redirigir→/login | permite |
+| `/dashboard/padre/profesionales/directorio` | redirigir→/login | permite |
 | `/dashboard/padre/reportar` | redirigir→/login | permite |
 | `/dashboard/padre/suscripcion` | redirigir→/login | permite |
 | `/dashboard/perfil` | redirigir→/login | permite |

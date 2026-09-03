@@ -511,6 +511,7 @@
 | [381](381-inicio-admin-rutas-y-comite/spec.md) | SPEC-381 · Inicio del admin: la ruta `/notificaciones/salud` mandaba a 404 (redirigida a la pantalla que YA muestra los datos) + candado unit por ruta de `inicio-admin.ts` + log defensivo en el `catch {}` de `ComiteBandeja` (I-269 · I-270 confirmada como corte del deploy, no bug de código) | 🟡 En desarrollo |
 | [383](383-i277-enum-accion-audit-alertas/spec.md) | SPEC-383 · I-277 — asignar alerta en el colegio caía 500 porque `logAudit` casteaba `"COLEGIO_ALERTA_ASIGNADA" as AccionAudit` con un valor que no existía en el enum. Se agregan los 2 valores + migración idempotente, se quitan los 7 casts literales (los dinámicos siguen), y se borra la función muerta `escalarAlerta` de lib/colegio/alertas.ts. Test dirigido de asignar. | 🟡 En desarrollo |
 | [396](396-ci-concurrency/spec.md) | SPEC-396 · I-282 causa raíz — bloque `concurrency` en los 4 flujos de `.github/workflows/`. Un repush cancela la corrida vieja; en `main` no se cancela. Cierra la cadena shard-cancelado → coverage-sin-blob → pi-gate-rojo-fantasma que culpó a #279 y #298 esta noche. | 🟡 En desarrollo |
+| [392](392-directorio-profesionales-padre/spec.md) | SPEC-392 (L3 · A-75) · Directorio del padre — presentación + urgencia, baraja aleatoria sembrada por sesión, filtros por ciudad/especialidad/modalidad, perfil con la tarifa por delante. Exento del muro de vigencia (padre gratis también lo ve). Barrido de payload H-2 · Ley 2375/2024 en los tres endpoints (test central del PR) | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 
