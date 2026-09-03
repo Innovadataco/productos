@@ -4,6 +4,14 @@ on:
   push:
   pull_request:
 
+# SPEC-396 (I-282): cancela la corrida vieja al llegar un push nuevo. Salvo en
+# `main` — allí las corridas no se interrumpen. Este flujo SÍ dispara en pushes
+# a main (`on: push:` sin filtro de rama), por eso la excepción es real acá,
+# no defensiva.
+concurrency:
+  group: bi-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 defaults:
   run:
     working-directory: 005-2026-BI-INTELIGENCIA-NEGOCIO

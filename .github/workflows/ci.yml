@@ -13,6 +13,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+# SPEC-396 (I-282): cada repush cancela la corrida vieja. Sin esto, dos runs del
+# mismo commit peleaban por la BD compartida (`lock not available` en PermisoModulo,
+# shards que se cancelaban solos, coverage sin blob para fusionar). Sale más barato
+# y evita el rojo fantasma que ya cazó a #279 (shard) y #298 (colgada). Excepción
+# para `main`: aunque este flujo hoy no dispara en push a main (solo a
+# feature/001-scaffolding + pull_request), la condición está por defensa por si el
+# trigger cambia; en cualquier rama principal no queremos cancelar a mitad.
+concurrency:
+  group: ci-002-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   # SPEC-107 (doc-only) + SPEC-374 (PRs que no tocan PI): un job skipped reporta
   # conclusión "skipped", que GitHub trata como éxito en required checks. Por eso

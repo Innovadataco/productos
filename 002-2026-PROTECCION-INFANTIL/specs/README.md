@@ -509,6 +509,7 @@
 | [379a](379-decisiones-colegio-medias-a/spec.md) | SPEC-379 (PR A) · Decisiones del colegio a medias (D-100 · quick wins): membrete institucional del colegio en `pdf-informe-mensual` + `pdf-estadisticas`, candado UI "toda materia con profesor" y carga masiva de profesores desde la gestión diaria | 🟡 En desarrollo |
 | [381](381-inicio-admin-rutas-y-comite/spec.md) | SPEC-381 · Inicio del admin: la ruta `/notificaciones/salud` mandaba a 404 (redirigida a la pantalla que YA muestra los datos) + candado unit por ruta de `inicio-admin.ts` + log defensivo en el `catch {}` de `ComiteBandeja` (I-269 · I-270 confirmada como corte del deploy, no bug de código) | 🟡 En desarrollo |
 | [383](383-i277-enum-accion-audit-alertas/spec.md) | SPEC-383 · I-277 — asignar alerta en el colegio caía 500 porque `logAudit` casteaba `"COLEGIO_ALERTA_ASIGNADA" as AccionAudit` con un valor que no existía en el enum. Se agregan los 2 valores + migración idempotente, se quitan los 7 casts literales (los dinámicos siguen), y se borra la función muerta `escalarAlerta` de lib/colegio/alertas.ts. Test dirigido de asignar. | 🟡 En desarrollo |
+| [396](396-ci-concurrency/spec.md) | SPEC-396 · I-282 causa raíz — bloque `concurrency` en los 4 flujos de `.github/workflows/`. Un repush cancela la corrida vieja; en `main` no se cancela. Cierra la cadena shard-cancelado → coverage-sin-blob → pi-gate-rojo-fantasma que culpó a #279 y #298 esta noche. | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 
