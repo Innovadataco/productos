@@ -3712,6 +3712,11 @@ async function main() {
         { codigo: "HN", nombre: "Honduras", ciudades: ["Tegucigalpa", "San Pedro Sula", "La Ceiba", "Choluteca", "Comayagua", "El Progreso"] },
         { codigo: "SV", nombre: "El Salvador", ciudades: ["San Salvador", "Santa Ana", "San Miguel", "Soyapango", "Apopa", "Mejicanos"] },
         { codigo: "NI", nombre: "Nicaragua", ciudades: ["Managua", "León", "Masaya", "Matagalpa", "Chinandega", "Estelí"] },
+        // SPEC-382 (Jelkin): más países para la analítica de BI. El seed es
+        // idempotente (upsert por código), corre limpio en prod aunque ya haya
+        // ciudades sembradas antes.
+        { codigo: "ES", nombre: "España", ciudades: ["Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao", "Málaga", "Zaragoza", "Palma de Mallorca"] },
+        { codigo: "US", nombre: "Estados Unidos", ciudades: ["Miami", "Nueva York", "Los Ángeles", "Houston", "Chicago", "Orlando", "Boston", "San Francisco"] },
     ];
 
     // División político-administrativa de Colombia: 32 departamentos + Bogotá D.C.
