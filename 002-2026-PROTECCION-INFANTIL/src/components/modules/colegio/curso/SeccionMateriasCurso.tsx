@@ -141,19 +141,40 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
                 </div>
                 <div className="min-w-[200px] flex-1">
                     <Select
-                        label="Profesor (opcional)"
+                        // SPEC-379 (D3 · candado UI): "toda materia con profesor,
+                        // sin excepción" (SPEC-344 servidor). Antes el label decía
+                        // "(opcional)" y ofrecía "Sin profesor asignado" — el
+                        // rector solo se enteraba con el 400 al guardar. Ahora el
+                        // campo es OBLIGATORIO en la pantalla; el servidor sigue
+                        // rechazando por si alguien llega por API directa.
+                        label="Profesor a cargo"
                         options={[
-                            { value: "", label: "Sin profesor asignado" },
+                            {
+                                value: "",
+                                label:
+                                    profesores.length === 0
+                                        ? "Primero crea un profesor"
+                                        : "Elige un profesor",
+                            },
                             ...profesores.map((p) => ({ value: p.id, label: `${p.nombre} ${p.apellidos}` })),
                         ]}
                         value={profesorId}
                         onChange={(e) => setProfesorId(e.target.value)}
                     />
                 </div>
-                <Button onClick={asignar} isLoading={asignando} disabled={!materiaId}>
+                <Button
+                    onClick={asignar}
+                    isLoading={asignando}
+                    disabled={!materiaId || !profesorId}
+                >
                     Asignar
                 </Button>
             </div>
+            {materiaId && !profesorId && (
+                <p className="mt-2 text-xs text-muted" role="status">
+                    Toda materia debe llevar un profesor a cargo. Elige uno para poder asignarla.
+                </p>
+            )}
 
             {loading ? (
                 <div className="mt-6 flex items-center gap-3 text-muted">

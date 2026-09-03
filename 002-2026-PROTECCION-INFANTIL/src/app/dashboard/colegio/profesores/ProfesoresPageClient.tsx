@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import { CargaProfesoresExcel } from "@/components/modules/colegio/CargaProfesoresExcel";
 
 /**
  * SPEC-148 (US1, FR-001) — Pantalla de profesores: lista, crea, edita, da de
@@ -300,6 +301,16 @@ export default function ProfesoresPageClient() {
                             />
                         </div>
                     </div>
+
+                    {/* SPEC-379 (D5): carga masiva por Excel/CSV también desde
+                        la gestión diaria; antes solo vivía en el camino inicial
+                        y el rector no podía subir la lista después. Mismo
+                        componente que el wizard (`CargaProfesoresExcel`). */}
+                    <CargaProfesoresExcel
+                        titulo="Agregar varios profesores desde Excel/CSV"
+                        subtitulo="Útil cuando llega un profesor nuevo o hay que actualizar la lista"
+                        onCompletado={cargar}
+                    />
 
                     {loading ? (
                         <div className="glass rounded-2xl p-8">

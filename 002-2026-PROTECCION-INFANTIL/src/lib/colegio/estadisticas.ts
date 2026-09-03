@@ -27,6 +27,11 @@ export interface EstadisticasCurso {
 export interface EstadisticasColegio {
     colegioId: string;
     colegioNombre: string;
+    // SPEC-379 (D1): datos de identidad para el membrete del PDF exportado
+    // (el rector se lo lleva al consejo directivo o a la Secretaría).
+    colegioNit: string;
+    /** Clave del escudo institucional; `null` si el colegio no lo cargó. */
+    escudoAssetKey: string | null;
     totales: {
         cursos: number;
         profesores: number;
@@ -77,6 +82,8 @@ export async function calcularEstadisticasColegio(colegioId: string): Promise<Es
     return {
         colegioId: colegio.id,
         colegioNombre: colegio.nombre,
+        colegioNit: colegio.nit,
+        escudoAssetKey: colegio.escudoAssetKey,
         totales: totalesGenerales,
         porCurso,
     };

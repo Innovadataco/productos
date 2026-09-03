@@ -1,6 +1,7 @@
 import type { EstadisticasColegio, EstadisticasCurso } from "./estadisticas";
 import { formatoFechaHoraBogota } from "@/lib/fechas/formato-bogota";
 import { renderPdfBuffer } from "@/lib/pdf/pdfmake-node";
+import { armarMembreteColegio, estilosMembrete } from "./membrete-pdf";
 import type {
     TDocumentDefinitions,
     Content,
@@ -21,14 +22,19 @@ interface EstilosPdf extends StyleDictionary {
     valor: NonNullable<StyleDictionary["valor"]>;
     tablaHeader: NonNullable<StyleDictionary["tablaHeader"]>;
     nota: NonNullable<StyleDictionary["nota"]>;
+    membreteNombre: NonNullable<StyleDictionary["membreteNombre"]>;
+    membreteNit: NonNullable<StyleDictionary["membreteNit"]>;
 }
 
 const estilos: EstilosPdf = {
+    // SPEC-379 (D1): membrete institucional compartido con `pdf-informe-caso`
+    // vía `membrete-pdf.ts`. Sale ANTES del subtítulo estadístico.
+    ...estilosMembrete,
     titulo: {
         fontSize: 22,
         bold: true,
         color: COLOR_PRIMARIO,
-        margin: [0, 0, 0, 4],
+        margin: [0, 8, 0, 4],
     },
     subtitulo: {
         fontSize: 12,
@@ -70,17 +76,27 @@ function formatoFechaColombia(fecha: Date): string {
     });
 }
 
-export function generarPdfEstadisticas(datos: EstadisticasColegio): Promise<Buffer> {
-    const { colegioNombre, totales, porCurso } = datos;
+/**
+ * Genera el PDF de estadísticas del colegio. `escudoDataUri` es el escudo ya
+ * cargado (helper `leerEscudoDataUri`): pasar `null` si el colegio no lo cargó
+ * — el membrete sale igual, sin imagen.
+ */
+export function generarPdfEstadisticas(
+    datos: EstadisticasColegio,
+    escudoDataUri: string | null = null
+): Promise<Buffer> {
+    const { colegioNombre, colegioNit, totales, porCurso } = datos;
     const fechaGeneracion = formatoFechaColombia(new Date());
 
     const contenido: Content[] = [
+        // SPEC-379 (D1): membrete institucional — escudo (si hay) + nombre + NIT.
+        ...armarMembreteColegio({ nombre: colegioNombre, nit: colegioNit, escudoDataUri }),
         {
-            text: colegioNombre,
+            text: "Informe estadístico",
             style: "titulo",
         },
         {
-            text: `Informe estadístico · Generado el ${fechaGeneracion}`,
+            text: `Generado el ${fechaGeneracion}`,
             style: "subtitulo",
         },
         {

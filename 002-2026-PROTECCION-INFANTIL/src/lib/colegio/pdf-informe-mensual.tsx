@@ -3,7 +3,7 @@
  * `@react-pdf/renderer`. Se renderiza en el servidor (Node runtime) — sin
  * headless ni browser. Solo agregados, cero PII.
  */
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 import type { InformeMensualColegio } from "./informe-mensual";
 
 const COLOR_PRIMARIO = "#10b981"; // emerald-500
@@ -19,10 +19,30 @@ const estilos = StyleSheet.create({
         color: COLOR_TEXTO,
         fontFamily: "Helvetica",
     },
+    // SPEC-379 (D1): membrete institucional del rector — mismo layout que el
+    // helper `armarMembreteColegio` de pdfmake, en JSX para react-pdf.
+    escudo: {
+        width: 64,
+        height: 64,
+        marginBottom: 6,
+        objectFit: "contain",
+    },
+    membreteNombre: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#1f2937",
+        marginBottom: 2,
+    },
+    membreteNit: {
+        fontSize: 9,
+        color: "#6b7280",
+        marginBottom: 2,
+    },
     titulo: {
         fontSize: 22,
         fontWeight: "bold",
         color: COLOR_PRIMARIO,
+        marginTop: 8,
         marginBottom: 4,
     },
     subtitulo: {
@@ -144,15 +164,24 @@ interface InformeMensualPDFProps {
     datos: InformeMensualColegio;
     etiquetaMes: string;
     generadoEl: string;
+    /**
+     * SPEC-379 (D1): escudo del colegio como data URI (`data:image/...;base64,...`),
+     * ya cargado con `leerEscudoDataUri`. `null` cuando el colegio no lo subió —
+     * el membrete sale igual, sin imagen (nunca romperse por eso).
+     */
+    escudoDataUri?: string | null;
 }
 
-export function InformeMensualPDF({ datos, etiquetaMes, generadoEl }: InformeMensualPDFProps) {
+export function InformeMensualPDF({ datos, etiquetaMes, generadoEl, escudoDataUri = null }: InformeMensualPDFProps) {
     return (
         <Document>
             <Page size="A4" style={estilos.pagina}>
-                <Text style={estilos.titulo}>{datos.colegioNombre}</Text>
+                {escudoDataUri && <Image src={escudoDataUri} style={estilos.escudo} />}
+                <Text style={estilos.membreteNombre}>{datos.colegioNombre}</Text>
+                <Text style={estilos.membreteNit}>NIT {datos.colegioNit}</Text>
+                <Text style={estilos.titulo}>Informe mensual</Text>
                 <Text style={estilos.subtitulo}>
-                    Informe mensual · {etiquetaMes} · Generado el {generadoEl}
+                    {etiquetaMes} · Generado el {generadoEl}
                 </Text>
 
                 <View style={estilos.tarjetas}>
