@@ -203,6 +203,12 @@ jobs:
           fi
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          # SPEC-407 (I-282) · activar la medición de handles vivos SÓLO en las
+          # ramas de esa spec. En cualquier otra rama la variable queda vacía y
+          # el `afterAll` global se comporta idéntico a hoy (candado: cero
+          # cambios de comportamiento para las suites que ya pasan). Sale del
+          # workflow cuando se cierre la spec.
+          VITEST_DEBUG_HANDLES: ${{ startsWith(github.head_ref, 'work/pi-SPEC-407') && '1' || '' }}
       - uses: actions/upload-artifact@v4
         # Sube el blob incluso si el shard falló: el job agregador mergea los 4 y
         # reporta los tests fallidos con detalle (y el ratchet se evalúa sobre la

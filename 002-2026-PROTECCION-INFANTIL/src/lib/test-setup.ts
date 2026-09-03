@@ -236,14 +236,53 @@ afterEach(async () => {
 // módulo con recursos, el `Set` está vacío y no hace nada.
 afterAll(async () => {
     const registro = (globalThis as unknown as { __pi_test_disposers?: Set<() => Promise<void>> });
-    if (!registro.__pi_test_disposers) return;
-    for (const dispose of registro.__pi_test_disposers) {
-        try {
-            await dispose();
-        } catch {
-            // El error de shutdown NO debe reventar un fork que ya pasó los tests.
+    if (registro.__pi_test_disposers) {
+        for (const dispose of registro.__pi_test_disposers) {
+            try {
+                await dispose();
+            } catch {
+                // El error de shutdown NO debe reventar un fork que ya pasó los tests.
+            }
         }
+        registro.__pi_test_disposers.clear();
     }
-    registro.__pi_test_disposers.clear();
+
+    // SPEC-407 (I-282) · medición de handles vivos.
+    //
+    // Se activa solo con `VITEST_DEBUG_HANDLES=1`. Sin la flag, el afterAll
+    // se comporta exactamente igual que antes (candado: no afecta a las
+    // suites que hoy pasan). Con la flag: dumps EN DOS momentos:
+    //   1. Al final del afterAll global — línea base.
+    //   2. En `beforeExit` de Node — cuando Node está a punto de salir; si
+    //      NO se dispara, hay handles que impiden que llegue ahí (esos son
+    //      los que dejan el fork colgado en CI y GHA mata como orphan).
+    // También lista `process._getActiveHandles()`/`Requests()` en crudo,
+    // porque wtfnode a veces filtra su output.
+    if (process.env.VITEST_DEBUG_HANDLES === "1") {
+        const label = process.env.VITEST_DEBUG_LABEL ?? "SPEC-407";
+        const dumpActive = (etapa: string) => {
+            const anyProcess = process as unknown as {
+                _getActiveHandles?: () => unknown[];
+                _getActiveRequests?: () => unknown[];
+            };
+            const handles = anyProcess._getActiveHandles?.() ?? [];
+            const requests = anyProcess._getActiveRequests?.() ?? [];
+            const tipo = (h: unknown) =>
+                h && typeof h === "object"
+                    ? (h.constructor?.name ?? "Object") + (typeof (h as { fd?: unknown }).fd === "number" ? `(fd:${(h as { fd: number }).fd})` : "")
+                    : String(h);
+            console.error(`\n[${label}] ${etapa} · handles=${handles.length} requests=${requests.length}`);
+            console.error(`[${label}] ${etapa} · handles: ${handles.map(tipo).join(", ")}`);
+            console.error(`[${label}] ${etapa} · requests: ${requests.map(tipo).join(", ")}`);
+        };
+        try {
+            const wtf = await import("wtfnode");
+            (wtf as unknown as { dump: () => void }).dump();
+        } catch (e) {
+            console.warn(`[${label}] wtfnode no disponible:`, e);
+        }
+        dumpActive("afterAll");
+        process.once("beforeExit", () => dumpActive("beforeExit"));
+    }
 });
 
