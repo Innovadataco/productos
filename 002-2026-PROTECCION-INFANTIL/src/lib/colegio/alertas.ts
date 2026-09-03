@@ -11,7 +11,7 @@ import { registrarEventoAviso, evaluarUmbralesPorAlerta } from "./avisos";
 import { verificarVigenciaPorColegioId } from "./vigencia";
 import { calcularPrioridadYSLA } from "./alertas-prioridad";
 import { crearNotificacionDesdeAlerta } from "./notificaciones";
-import type { AccionAudit, EstadoReporte } from "@prisma/client";
+import type { EstadoReporte } from "@prisma/client";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
     "CLASIFICADO",
@@ -161,7 +161,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                 });
 
                 await logAudit({
-                    accion: "COLEGIO_ALERTA_CREADA" as AccionAudit,
+                    accion: "COLEGIO_ALERTA_CREADA",
                     tipoRecurso: "AlertaColegio",
                     recursoId: alerta.id,
                     usuarioId: undefined,
@@ -289,7 +289,7 @@ export async function cambiarEstadoAlerta(
     const userAgent = request?.headers.get("user-agent") || "unknown";
 
     await logAudit({
-        accion: "COLEGIO_ALERTA_ESTADO" as AccionAudit,
+        accion: "COLEGIO_ALERTA_ESTADO",
         tipoRecurso: "AlertaColegio",
         recursoId: alertaId,
         colegioId: alerta.colegioId,
@@ -380,7 +380,7 @@ export async function asignarAlerta(
     const userAgent = request?.headers.get("user-agent") || "unknown";
 
     await logAudit({
-        accion: "COLEGIO_ALERTA_ASIGNADA" as AccionAudit,
+        accion: "COLEGIO_ALERTA_ASIGNADA",
         tipoRecurso: "AlertaColegio",
         recursoId: alertaId,
         usuarioId: actorId,
@@ -394,36 +394,13 @@ export async function asignarAlerta(
     return alerta;
 }
 
-/** SPEC-166: escala una alerta a estado "escalada". */
-export async function escalarAlerta(colegioId: string, alertaId: string, actorId: string, request?: Request) {
-    const repoAlertas = new AlertaColegioRepository();
-    const alerta = await repoAlertas.obtenerPorId(colegioId, alertaId);
-    if (!alerta) {
-        throw new AppError("Alerta no encontrada", ERROR_CODES.NOT_FOUND, 404);
-    }
-    if (alerta.estado === "escalada") {
-        return alerta;
-    }
-
-    const actualizada = await repoAlertas.cambiarEstado(colegioId, alertaId, "escalada");
-
-    const ipAddress = request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown";
-    const userAgent = request?.headers.get("user-agent") || "unknown";
-
-    await logAudit({
-        accion: "COLEGIO_ALERTA_ESCALADA" as AccionAudit,
-        tipoRecurso: "AlertaColegio",
-        recursoId: alertaId,
-        usuarioId: actorId,
-        colegioId,
-        valorAnterior: JSON.stringify({ estado: alerta.estado }),
-        valorNuevo: JSON.stringify({ estado: "escalada" }),
-        ipAddress,
-        userAgent,
-    });
-
-    return actualizada;
-}
+// I-277 · SPEC-383: se eliminó la función `escalarAlerta` (SPEC-166) porque no
+// tenía callers — el escalado real vive en `ComiteConvivenciaBandejaService`
+// (`src/lib/dal/services/comite-convivencia-bandeja.ts:185`, audita
+// `COLEGIO_CASO_ESCALADO_A_COMITE`, ese sí existe en el enum). Confirmado por
+// grep contra src/ (candado 22v5). Se conserva el patrón en el servicio real
+// y en el historial de git; el enum tiene `COLEGIO_ALERTA_ESCALADA` disponible
+// por si un futuro caller lo necesita.
 
 export type AccionLote = "vista" | "gestionada" | "escalada" | "cerrada" | "asignar" | "desasignar";
 

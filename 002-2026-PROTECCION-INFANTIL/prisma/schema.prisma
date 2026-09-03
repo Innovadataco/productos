@@ -154,6 +154,12 @@ enum AccionAudit {
   COLEGIO_CARGA_MASIVA
   COLEGIO_ALERTA_CREADA
   COLEGIO_ALERTA_ESTADO
+  // I-277: hasta hoy `asignarAlerta` y `escalarAlerta` casteaban el string a
+  // `AccionAudit` (as AccionAudit). El enum no los tenía → Prisma tronaba en
+  // runtime con 500 y ningún test lo veía porque el cast silenciaba TS. Se
+  // agregan los dos valores + se quitan los casts (SPEC-383).
+  COLEGIO_ALERTA_ASIGNADA
+  COLEGIO_ALERTA_ESCALADA
   // SPEC-172 (Pilar D.5): recálculo bajo demanda de la deriva del motor.
   MOTOR_DERIVA_RECALCULO
   COLEGIO_ESTADISTICAS_PDF_DESCARGADO
