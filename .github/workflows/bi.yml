@@ -18,4 +18,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 005 retirado — BI activo en 006
-        run: echo "bi-gate: 005 eliminado del repo (2026-09-03). El BI vivo es el 006 (bi-006.yml)."
+        run: 'echo "bi-gate: 005 eliminado del repo (2026-09-03). El BI vivo es el 006 (bi-006.yml)."'
