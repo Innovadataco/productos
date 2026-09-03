@@ -82,7 +82,8 @@ Cuando el producto merge por primera vez el sentinel a `main`:
 | 001 · INNOVADATACO              | `001-2026-INNOVADATACO/`             | `ci-001.yml` (por crear) | `idc-gate`   |
 | 002 · PROTECCIÓN INFANTIL       | `002-2026-PROTECCION-INFANTIL/`      | `ci.yml`      | `pi-gate`           |
 | 003 · SICOV-OTPC                | `003-2026-SICOV-OTPC/`               | `ci-003.yml` (por crear) | `sicov-gate` |
-| 005 · BI                        | `005-2026-BI-INTELIGENCIA-NEGOCIO/`  | `bi.yml`      | `bi-gate`           |
+| 005 · BI (RETIRADO 2026-09-03)  | `005-2026-BI-INTELIGENCIA-NEGOCIO/` eliminada | `bi.yml` (sentinel trivial) | `bi-gate` |
+| 006 · BI v2                     | `006-2026-BI-INTELIGENCIA-NEGOCIO/`  | `bi-006.yml`  | checks `bi-006`     |
 | SARLAFT (futuro)                | por definir                          | `ci-sarlaft.yml` (por crear) | `sarlaft-gate` |
 
 ## Traza

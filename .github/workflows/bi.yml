@@ -1,9 +1,19 @@
-name: BI · CI
+name: BI · CI (005 retirado)
 
 on:
   push:
   pull_request:
 
+# Sentinel multi-producto histórico (SPEC-299 / BRIEF A-49). El producto 005
+# (BI Inteligencia de Negocio v1) fue ELIMINADO del repo el 2026-09-03 por
+# orden del CEO: Superset/Vanna quedaron apagados en el VPS y el BI activo es
+# el 006-2026-BI-INTELIGENCIA-NEGOCIO (workflow bi-006.yml).
+#
+# Este workflow queda a propósito como `bi-gate` trivial: el check "bi-gate"
+# figura en el ruleset "Gate CI - main" de TODOS los PR (patrón cross-producto
+# heredado), y retirarlo de golpe bloquearía los merges de PI. Cuando el
+# responsable ajuste la protección de rama, este archivo también se elimina.
+#
 # SPEC-396 (I-282): cancela la corrida vieja al llegar un push nuevo. Salvo en
 # `main` — allí las corridas no se interrumpen. Este flujo SÍ dispara en pushes
 # a main (`on: push:` sin filtro de rama), por eso la excepción es real acá,
@@ -11,120 +21,9 @@ on:
 concurrency:
   group: bi-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
-defaults:
-  run:
-    working-directory: 005-2026-BI-INTELIGENCIA-NEGOCIO
-
 jobs:
-  # SPEC-300 (002-PI-205): sentinel cross-producto — bi-gate debe aparecer en TODO PR
-  # aunque el PR no toque 005-*. Se elimina el filtro `paths:` del trigger `on:` y este
-  # job replica el patrón de `should-skip` de ci.yml para saltar jobs pesados cuando
-  # el PR no tiene archivos code fuera de docs/specs/*.md. `bi-gate` con `if: always()`
-  # reporta success trivial cuando todo queda `skipped`.
-  should-skip:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
-    outputs:
-      skip: ${{ steps.detect.outputs.skip }}
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 2 }
-      - id: detect
-        run: |
-          files_changed=$(git diff --name-only HEAD^ HEAD || true)
-          code_files=$(echo "$files_changed" | grep -vE '(^005-2026-BI-INTELIGENCIA-NEGOCIO/(docs|specs)/|^docs/|^specs/|\.md$)' || true)
-          if [ -z "$code_files" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
-
-  verify:
-    name: Ratchets grep-based
-    runs-on: ubuntu-latest
-    needs: [should-skip]
-    if: needs.should-skip.outputs.skip != 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run all ratchets
-        run: bash scripts/ratchets/run-all.sh
-
-  typecheck:
-    name: TypeScript
-    runs-on: ubuntu-latest
-    needs: [should-skip, verify]
-    if: needs.should-skip.outputs.skip != 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: 005-2026-BI-INTELIGENCIA-NEGOCIO/package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
-
-  test-unit:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    needs: [should-skip, verify]
-    if: needs.should-skip.outputs.skip != 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: 005-2026-BI-INTELIGENCIA-NEGOCIO/package-lock.json
-      - run: npm ci
-      - run: npm run test:unit
-        env:
-          JWT_SECRET: test-secret-local-bi-spec001
-          PI_BASE_URL: https://pi.innovadataco.com
-          PORT: "3001"
-
-  build:
-    name: Next.js build
-    runs-on: ubuntu-latest
-    needs: [should-skip, typecheck, test-unit]
-    if: needs.should-skip.outputs.skip != 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: 005-2026-BI-INTELIGENCIA-NEGOCIO/package-lock.json
-      - run: npm ci
-      - run: npm run build
-        env:
-          JWT_SECRET: test-secret-local-bi-spec001
-          PI_BASE_URL: https://pi.innovadataco.com
-          PORT: "3001"
-
-  # Sentinel multi-producto (SPEC-299 / BRIEF A-49). Ver .github/workflows/README.md.
-  # Reporta un veredicto agregado único al ruleset "Gate CI - main":
-  # - Cualquier `needs.*.result` == failure o cancelled  → sentinel falla.
-  # - Todos success o skipped (mezcla incluida)          → sentinel pasa.
   bi-gate:
     runs-on: ubuntu-latest
-    needs: [should-skip, verify, typecheck, test-unit, build]
-    if: always()
-    # Override del `defaults.run.working-directory` heredado del workflow.
-    # El sentinel no hace `actions/checkout`, así que la carpeta del producto no existe
-    # en el runner; sin este override, bash falla al iniciar (ENOENT en cwd).
-    defaults:
-      run:
-        working-directory: .
     steps:
-      - name: Evaluar veredicto agregado
-        run: |
-          set -euo pipefail
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
-            echo "❌ bi-gate: al menos un job requerido falló."
-            exit 1
-          fi
-          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "❌ bi-gate: al menos un job requerido fue cancelado."
-            exit 1
-          fi
-          echo "✅ bi-gate: todos los jobs requeridos pasaron o fueron skipped."
+      - name: 005 retirado — BI activo en 006
+        run: 'echo "bi-gate: 005 eliminado del repo (2026-09-03). El BI vivo es el 006 (bi-006.yml)."'
