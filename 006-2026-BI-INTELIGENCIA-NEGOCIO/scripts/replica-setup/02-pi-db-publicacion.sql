@@ -8,7 +8,7 @@
 --   verificado con SHOW wal_level el 2026-08-28).
 --
 -- REESCRITURA (2026-09-01 · SPEC-006): la publicación pasa de "23 tablas al
---   100% de las columnas" a 40 tablas con COLUMN LISTS (PostgreSQL >= 15; el
+--   100% de las columnas" a 37 tablas con COLUMN LISTS (PostgreSQL >= 15; el
 --   master es pg16) que CORTAN PII EN ORIGEN: las columnas vetadas (nombres,
 --   documentos y valores de identificadores de menores/acudientes/profesores,
 --   textos de reportes, IPs, user-agents, etc.) ni siquiera salen de pi-db
@@ -21,7 +21,9 @@
 --     · ADD TABLE para las canónicas que falten (con su column list);
 --     · DROP TABLE + ADD TABLE para las existentes cuya column list difiera
 --       de la canónica (incluye quitar la lista si la canónica es "completa");
---     · NUNCA quita tablas de forma permanente ni toca datos de PI.
+--     · DROP TABLE para las publicadas que YA NO son canónicas (paso 3b),
+--       con GUARD: solo si están vacías en el master — si tienen datos,
+--       aborta EN VOZ ALTA (nunca quita datos de PI).
 --
 --   ⚠️ TRAMPA PG16 (verificada en vivo 2026-09-01): NO usar
 --   `ALTER PUBLICATION ... SET TABLE t (cols)` para recortar — SET TABLE
@@ -47,9 +49,10 @@
 --   `eventos_match`. Queda VETADA como tabla completa (guard §4).
 --
 -- REGLA DE GOBIERNO (AGENTS.md §7): agregar una tabla nueva a la publicación
---   exige pedirla por nombre y autorización de Jelkin. Las 40 tablas de abajo
+--   exige pedirla por nombre y autorización de Jelkin. Las 37 tablas de abajo
 --   son la lista canónica autorizada (23 originales D-20 del 005 + 17 nuevas
---   autorizadas para BI v2 el 2026-09-01).
+--   autorizadas para BI v2 el 2026-09-01 − 3 legacy vacías retiradas el mismo
+--   día: Subscription, BillingCycle, AlertaSuscripcion).
 --
 -- HALLAZGO CANDADO 15 del 005 (se conserva): modelos Prisma con @@map a
 --   nombre snake_case/legacy en BD — la publicación usa el nombre REAL:
@@ -63,9 +66,14 @@
 --     SenalComunitariaCache    → senal_comunitaria_cache      (VETADA, arriba)
 --   Verificar futuros @@map con: grep '@@map' schema.prisma (en el repo PI).
 --
--- TABLAS LEGACY (se mantienen por compatibilidad con la réplica ya activa;
---   hoy vacías o placeholder en PI): Subscription, BillingCycle,
---   FuenteReporte, AlertaSuscripcion.
+-- TABLAS LEGACY RETIRADAS (2026-09-01 · Lote 3 higiene BI v2): Subscription,
+--   BillingCycle y AlertaSuscripcion salieron del canon y de la publicación
+--   (placeholder vacías del 005; verificado: 0 filas en PI y en la réplica).
+--   El reconciliador (paso 3b) las quita de bi_replica SOLO si están vacías
+--   en el master; si alguna tuviera datos, aborta EN VOZ ALTA. Las shells
+--   vacías en bi-db se dropean con 07-bi-db-limpieza-legacy.sql.
+--   NOTA: FuenteReporte iba en esta lista, pero el guard 3b la detectó con
+--   19 filas reales (antifraude de PI activo desde 2026-09-02) — se queda.
 -- ==========================================================================
 
 DO $recon$
@@ -78,8 +86,10 @@ DECLARE
   tiene_lista     boolean;
   cols_sql        text;
   n_tablas        integer;
+  pub_tabla       text;
+  n_filas         bigint;
 
-  -- ── LISTA CANÓNICA (40 tablas) ─────────────────────────────────────────
+  -- ── LISTA CANÓNICA (37 tablas) ─────────────────────────────────────────
   -- Cada fila: {tabla, columnas} · columnas = NULL → completa; si no, CSV
   -- exacto de columnas publicadas (orden libre; el script compara ordenado).
   canon text[][] := ARRAY[
@@ -100,9 +110,10 @@ DECLARE
     ARRAY['EmbeddingReporte', NULL],
     ARRAY['TransicionReporte', NULL],
     ARRAY['SolicitudComite', NULL],
-    ARRAY['FuenteReporte', NULL],                -- LEGACY (vacía/placeholder)
-    ARRAY['Subscription', NULL],                 -- LEGACY (vacía/placeholder)
-    ARRAY['BillingCycle', NULL],                 -- LEGACY (vacía/placeholder)
+    -- FuenteReporte: VIVA (antifraude de PI: ipHash/fingerprintHash/pesos).
+    -- Se creyó legacy vacía; el guard 3b la salvó el 2026-09-01 con 19 filas
+    -- reales — permanece en el canon (completa, como desde el 005).
+    ARRAY['FuenteReporte', NULL],
     ARRAY['Plan', NULL],
     ARRAY['Tenant', NULL],
     -- Colegio: sin representanteLegalNombre/Identificacion/Email/Telefono
@@ -115,7 +126,6 @@ DECLARE
     -- IdentificadorAlumno (@@map de IdentificadorEstudiante): NUNCA valor.
     ARRAY['IdentificadorAlumno', 'id,alumnoId,colegioId,tipo,plataformaId,etiquetaRelacion,estado,createdAt,updatedAt'],
     ARRAY['AlertaColegio', NULL],
-    ARRAY['AlertaSuscripcion', NULL],            -- LEGACY (vacía/placeholder)
     ARRAY['Plataforma', NULL],
     ARRAY['Pais', NULL],
     ARRAY['Departamento', NULL],
@@ -291,6 +301,28 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- 3b. Reconciliador inverso: DROP TABLE para las publicadas que YA NO son
+  --     canónicas (ej. legacy retiradas). GUARD B1: solo si la tabla está
+  --     VACÍA en el master; si tiene datos, aborta EN VOZ ALTA y no toca
+  --     nada — quitar una tabla con datos de la publicación es decisión
+  --     humana (implica decidir qué hacer con los datos ya replicados).
+  FOR pub_tabla IN
+    SELECT c.relname
+      FROM pg_publication p
+      JOIN pg_publication_rel pr ON pr.prpubid = p.oid
+      JOIN pg_class c ON c.oid = pr.prrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE p.pubname = 'bi_replica' AND n.nspname = 'public'
+       AND c.relname NOT IN (SELECT canon[i][1] FROM generate_subscripts(canon, 1) AS i)
+  LOOP
+    EXECUTE format('SELECT count(*) FROM public.%I', pub_tabla) INTO n_filas;
+    IF n_filas > 0 THEN
+      RAISE EXCEPTION '[02] La tabla % está publicada pero ya NO es canónica y tiene % filas en el master — abortando. Decisión humana: o vuelve al canon, o se retira a mano sabiendo qué pasa con sus datos.', pub_tabla, n_filas;
+    END IF;
+    EXECUTE format('ALTER PUBLICATION bi_replica DROP TABLE public.%I', pub_tabla);
+    RAISE NOTICE '[02] Tabla NO canónica retirada de bi_replica (vacía en master): %', pub_tabla;
+  END LOOP;
+
   -- 4. GUARD PII tablas (Ley 1581 · B2): falla EN VOZ ALTA si hay una tabla
   --    prohibida publicada. Este script NUNCA la quita — retirarla a mano.
   FOREACH tabla_pii IN ARRAY tablas_prohibidas LOOP
@@ -350,9 +382,10 @@ JOIN pg_class c ON c.oid = pr.prrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE p.pubname = 'bi_replica' AND n.nspname = 'public'
 ORDER BY 2;
--- Esperado: 40 filas · tiene_column_list = t en las 15 tablas con recorte
+-- Esperado: 37 filas · tiene_column_list = t en las 15 tablas con recorte
 -- (Reporte, Colegio, Alumno, IdentificadorAlumno, AuditLog, Profesor,
 --  AcudienteEstudiante, IdentificadorAcudiente, IdentificadorProfesor, Hijo,
 --  IdentificadorHijo, ContactoConfianza, IdentificadorContacto,
---  IdentificadorReportado, Suscripcion) · f en las 25 completas.
--- NUNCA deben aparecer las tablas prohibidas (ver cabecera §GUARDS).
+--  IdentificadorReportado, Suscripcion) · f en las 22 completas.
+-- NUNCA deben aparecer las tablas prohibidas (ver cabecera §GUARDS) ni las
+-- legacy retiradas (Subscription, BillingCycle, AlertaSuscripcion).
