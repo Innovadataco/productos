@@ -202,7 +202,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                             onClick={() => setEstado(r.clave, "CUMPLE")}
                                             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
                                                 item.estado === "CUMPLE"
-                                                    ? "bg-emerald-500/10 text-emerald-700 ring-2 ring-emerald-500/40 dark:text-emerald-300"
+                                                    ? "bg-pino/10 text-estado-pino ring-2 ring-pino/30"
                                                     : "bg-tinta/5 text-subtle hover:bg-tinta/10 hover:text-body"
                                             }`}
                                         >
@@ -216,7 +216,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                             onClick={() => setEstado(r.clave, "NO_CUMPLE")}
                                             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
                                                 item.estado === "NO_CUMPLE"
-                                                    ? "bg-rose-500/10 text-rose-700 ring-2 ring-rose-500/40 dark:text-rose-300"
+                                                    ? "bg-rubi/10 text-estado-rubi ring-2 ring-rubi/30"
                                                     : "bg-tinta/5 text-subtle hover:bg-tinta/10 hover:text-body"
                                             }`}
                                         >
@@ -232,7 +232,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                         </label>
                                         <textarea
                                             id={`obs-${r.clave}`}
-                                            className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/60 p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                            className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
                                             rows={2}
                                             value={item.observacion}
                                             onChange={(e) => setObservacion(r.clave, e.target.value)}
@@ -260,10 +260,10 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                     <span
                                         className={`font-semibold ${
                                             h.resultado === "APROBADO"
-                                                ? "text-emerald-700 dark:text-emerald-300"
+                                                ? "text-estado-pino"
                                                 : h.resultado === "MAS_INFORMACION"
-                                                    ? "text-amber-700 dark:text-amber-300"
-                                                    : "text-rose-700 dark:text-rose-300"
+                                                    ? "text-estado-ambar"
+                                                    : "text-estado-rubi"
                                         }`}
                                     >
                                         {h.resultado === "MAS_INFORMACION" ? "DEVUELTO" : h.resultado}
@@ -294,10 +294,10 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                     onClick={enviarDecision}
                     className={`rounded-full px-6 py-2 text-sm font-semibold text-white transition ${
                         puedeAprobar
-                            ? "bg-emerald-600 hover:bg-emerald-700"
+                            ? "bg-pino hover:bg-pino/90"
                             : puedeDevolver
-                                ? "bg-amber-600 hover:bg-amber-700"
-                                : "bg-slate-400 cursor-not-allowed"
+                                ? "bg-ambar hover:bg-ambar/90"
+                                : "bg-tinta/30 cursor-not-allowed"
                     }`}
                 >
                     {enviando ? "Enviando…" : puedeAprobar ? "Aprobar" : "Devolver con observaciones"}
@@ -308,7 +308,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                 <div
                     role="status"
                     className={`rounded-2xl p-4 anim-entrada ${
-                        mensaje.tipo === "ok" ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200" : "bg-rose-500/10 text-rose-800 dark:text-rose-200"
+                        mensaje.tipo === "ok" ? "bg-pino/10 text-estado-pino" : "bg-rubi/10 text-estado-rubi"
                     }`}
                 >
                     {mensaje.texto}

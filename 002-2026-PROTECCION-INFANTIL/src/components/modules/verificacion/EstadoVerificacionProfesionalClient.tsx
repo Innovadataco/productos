@@ -103,11 +103,11 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
                         type="button"
                         disabled={enviando}
                         onClick={reenviar}
-                        className="mt-4 rounded-full bg-emerald-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                        className="mt-4 rounded-full bg-pino px-6 py-2 text-sm font-semibold text-white transition hover:bg-pino/90 disabled:cursor-not-allowed disabled:bg-tinta/30"
                     >
                         {enviando ? "Enviando…" : "Reenviar para verificación"}
                     </button>
-                    {error && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+                    {error && <p className="mt-2 text-sm text-estado-rubi">{error}</p>}
                 </div>
             )}
         </div>
