@@ -12,6 +12,9 @@ export interface ModuloCatalogo {
 }
 
 export const CATALOGO_MODULOS: ModuloCatalogo[] = [
+    // SPEC-378: Inicio del administrador — alarma de la casa. Va primero para
+    // que el ADMIN aterrice acá y vea lo que se está rompiendo en silencio.
+    { clave: "inicio_admin", nombre: "Inicio del administrador", categoria: "admin", orden: 5 },
     { clave: "centro_control_ia", nombre: "Centro de Control IA", categoria: "admin", esCritico: true, orden: 10 },
     { clave: "ia_playground", nombre: "Playground y modelos", categoria: "admin", orden: 11, padre: "centro_control_ia" },
     { clave: "ia_simulaciones", nombre: "Simulaciones", categoria: "admin", orden: 12, padre: "centro_control_ia" },

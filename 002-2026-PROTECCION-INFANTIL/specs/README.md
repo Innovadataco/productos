@@ -499,6 +499,7 @@
 | [353](353-puesto-mando-colegio/spec.md) | SPEC-353 · Puesto de mando del colegio (A-69 · C6) — frase accionable "qué hacer hoy" en la home del rector (cruzado > sin abrir > comité > calma, solo conteos) + Configuración de avisos rediseñada al patrón A-62 (frases + Switch inmediato + umbrales en frase) | 🟡 En desarrollo |
 | [374](374-ci-skip-bi-only/spec.md) | SPEC-374 · CI de PI salta cuando el PR no toca 002 ni la raíz compartida — el `should-skip` decide por lógica pura testeada (17 casos), nunca por `on: paths:` (candado I-249) | 🟡 En desarrollo |
 | [375](375-shard-integracion-colgado/spec.md) | SPEC-375 · El shard de `test-integration` colgado — pg-boss singleton sin cierre dejaba handles vivos en el fork de vitest y el shard se quedaba 40+ min hasta cancelación manual; `disposeBoss()` + `afterAll` que lo invoca + `timeout-minutes: 20` como tope duro | 🟡 En desarrollo |
+| [378](378-inicio-administrador/spec.md) | SPEC-378 · Inicio del administrador — alarma de la casa: pantalla vacía cuando todo está bien, tarjetas ámbar cuando algo se rompió en silencio (correos, motor IA, huérfanos, workers, vigencias, comité). Nunca rojo (regla dura de Jelkin) | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 

@@ -6,6 +6,15 @@ import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 
 export default async function AdminBandejaPage() {
+    // SPEC-378: si el admin tiene el módulo del Inicio (alarma de la casa),
+    // aterrizamos ahí — la bandeja sigue viva en la misma URL para quien no lo
+    // tenga (a prueba de permisos, sin migración de bookmarks). El corte por
+    // rol lo hizo el middleware; acá solo elegimos el destino de la landing.
+    const accesoInicio = await verificarAccesoPagina("inicio_admin");
+    if (accesoInicio.permitido) {
+        redirect("/dashboard/admin/inicio");
+    }
+
     const acceso = await verificarAccesoPagina("bandeja_reportes");
 
     if (!acceso.permitido && acceso.rol) {
