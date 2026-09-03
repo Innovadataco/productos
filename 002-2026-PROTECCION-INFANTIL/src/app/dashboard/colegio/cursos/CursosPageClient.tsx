@@ -225,7 +225,11 @@ export default function CursosPageClient() {
                                                             Ver
                                                         </Button>
                                                         <Button
-                                                            variant={curso.estado === "activo" ? "danger" : "secondary"}
+                                                            // SPEC-377 (I-268): "Desactivar" NO es rojo — la regla
+                                                            // dura de Jelkin es "NUNCA rojo" (gris = inactivo,
+                                                            // ámbar = única alerta). Reversible + no destructivo →
+                                                            // outline neutro. "Activar" vuelve al verde secondary.
+                                                            variant={curso.estado === "activo" ? "outline" : "secondary"}
                                                             className="px-3 py-1.5 text-xs"
                                                             onClick={() => toggleEstado(curso)}
                                                         >
