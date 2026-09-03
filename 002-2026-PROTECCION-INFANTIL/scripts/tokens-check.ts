@@ -27,7 +27,9 @@ import * as path from "node:path";
 // 2026-08-25 SPEC-243: PlanesAdminCRUD migra text-emerald-600/text-red-600 → text-pino/text-rubi
 // y PlanesPagosTabs migra border-sky-600/text-sky-600 → border-ambar/text-ambar (Admin = ambar).
 // Medición tras rebase sobre SPEC-241: 1083 ocurrencias en 121 archivos.
-const PISO = 1083;
+// 2026-09-03 SPEC-392: directorio del padre nace con tokens (cielo/ambar) desde
+// el primer commit, sin escala sky-*/amber-*. Medición: 1077 (123 archivos).
+const PISO = 1077;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;

@@ -113,7 +113,7 @@ export function DirectorioProfesionales({
                     <select
                         value={ciudadId}
                         onChange={(e) => setCiudadId(e.target.value)}
-                        className="w-full rounded-lg border border-sky-200 bg-white px-2 py-2 text-sm dark:border-sky-900 dark:bg-sky-950/30"
+                        className="w-full rounded-lg border border-cielo/40 bg-white px-2 py-2 text-sm dark:border-cielo/30 dark:bg-cielo/10"
                     >
                         <option value="">Todas las ciudades</option>
                         {facetas?.ciudades.map((c) => (
@@ -128,7 +128,7 @@ export function DirectorioProfesionales({
                     <select
                         value={especialidad}
                         onChange={(e) => setEspecialidad(e.target.value)}
-                        className="w-full rounded-lg border border-sky-200 bg-white px-2 py-2 text-sm dark:border-sky-900 dark:bg-sky-950/30"
+                        className="w-full rounded-lg border border-cielo/40 bg-white px-2 py-2 text-sm dark:border-cielo/30 dark:bg-cielo/10"
                     >
                         <option value="">Todas</option>
                         {facetas?.especialidades.map((e) => (
@@ -143,7 +143,7 @@ export function DirectorioProfesionales({
                     <select
                         value={modalidad}
                         onChange={(e) => setModalidad(e.target.value as "" | "virtual" | "presencial")}
-                        className="w-full rounded-lg border border-sky-200 bg-white px-2 py-2 text-sm dark:border-sky-900 dark:bg-sky-950/30"
+                        className="w-full rounded-lg border border-cielo/40 bg-white px-2 py-2 text-sm dark:border-cielo/30 dark:bg-cielo/10"
                     >
                         <option value="">Ambas</option>
                         <option value="virtual">Virtual</option>
@@ -153,7 +153,7 @@ export function DirectorioProfesionales({
             </div>
 
             {error && (
-                <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-800 dark:text-amber-200">
+                <div className="rounded-xl bg-ambar/10 dark:bg-ambar/10 p-4 text-sm text-ambar dark:text-ambar">
                     {error}
                 </div>
             )}

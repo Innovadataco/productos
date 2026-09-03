@@ -54,7 +54,7 @@ export function PresentacionUrgenciaForm({ hrefDirectorio }: { hrefDirectorio: s
                         maxLength={PRESENTACION_MAX}
                         required
                         placeholder="Ej.: Soy mamá de un niño de 12 años. Hemos recibido mensajes que nos preocupan..."
-                        className="mt-1 w-full rounded-xl border border-sky-200 bg-white px-3 py-2 text-sm text-body focus:border-sky-500 focus:outline-none dark:border-sky-900 dark:bg-sky-950/30"
+                        className="mt-1 w-full rounded-xl border border-cielo/40 bg-white px-3 py-2 text-sm text-body focus:border-cielo focus:outline-none dark:border-cielo/30 dark:bg-cielo/10"
                     />
                     <span className="text-xs text-subtle">
                         {largo}/{PRESENTACION_MAX} caracteres · mínimo {PRESENTACION_MIN}
@@ -63,7 +63,7 @@ export function PresentacionUrgenciaForm({ hrefDirectorio }: { hrefDirectorio: s
 
                 <fieldset className="space-y-2">
                     <legend className="text-sm font-medium text-body">¿Qué tan urgente es?</legend>
-                    <label className="flex items-start gap-2 rounded-xl border border-sky-200 dark:border-sky-900 p-3 cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-950/30">
+                    <label className="flex items-start gap-2 rounded-xl border border-cielo/40 dark:border-cielo/30 p-3 cursor-pointer hover:bg-cielo/10 dark:hover:bg-cielo/10">
                         <input
                             type="radio"
                             name="urgencia"
@@ -79,7 +79,7 @@ export function PresentacionUrgenciaForm({ hrefDirectorio }: { hrefDirectorio: s
                             </span>
                         </span>
                     </label>
-                    <label className="flex items-start gap-2 rounded-xl border border-sky-200 dark:border-sky-900 p-3 cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-950/30">
+                    <label className="flex items-start gap-2 rounded-xl border border-cielo/40 dark:border-cielo/30 p-3 cursor-pointer hover:bg-cielo/10 dark:hover:bg-cielo/10">
                         <input
                             type="radio"
                             name="urgencia"
@@ -100,7 +100,7 @@ export function PresentacionUrgenciaForm({ hrefDirectorio }: { hrefDirectorio: s
                 <button
                     type="submit"
                     disabled={!listo}
-                    className="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sky-700 transition"
+                    className="w-full rounded-xl bg-cielo px-4 py-3 text-sm font-semibold text-white shadow-lg  disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cielo/90 transition"
                 >
                     Ver profesionales verificados
                 </button>

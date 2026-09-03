@@ -62,11 +62,11 @@ export function ProfesionalTarjeta({
                     <img
                         src={p.fotoUrl}
                         alt=""
-                        className="h-14 w-14 rounded-full object-cover bg-sky-100 dark:bg-sky-900"
+                        className="h-14 w-14 rounded-full object-cover bg-cielo/15 dark:bg-cielo/30"
                     />
                 ) : (
                     <div
-                        className="h-14 w-14 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center text-sky-700 dark:text-sky-200 text-lg font-semibold"
+                        className="h-14 w-14 rounded-full bg-cielo/15 dark:bg-cielo/30 flex items-center justify-center text-cielo dark:text-cielo text-lg font-semibold"
                         aria-hidden="true"
                     >
                         {p.nombreVisible.charAt(0).toUpperCase()}
@@ -79,13 +79,13 @@ export function ProfesionalTarjeta({
             </div>
 
             {/* Tarifa por delante (regla del brief: antes de reservar). */}
-            <div className="rounded-xl bg-sky-50 dark:bg-sky-950/40 p-3">
-                <p className="text-xs uppercase tracking-wide text-sky-700 dark:text-sky-300">
+            <div className="rounded-xl bg-cielo/10 dark:bg-cielo/10 p-3">
+                <p className="text-xs uppercase tracking-wide text-cielo dark:text-cielo">
                     Consulta
                 </p>
-                <p className="text-2xl font-bold text-sky-900 dark:text-sky-100">
+                <p className="text-2xl font-bold text-cielo dark:text-cielo">
                     {CURRENCY_COP.format(p.tarifaConsultaCOP)}
-                    <span className="text-sm font-normal text-sky-700 dark:text-sky-300"> · {p.duracionMinutos} min</span>
+                    <span className="text-sm font-normal text-cielo dark:text-cielo"> · {p.duracionMinutos} min</span>
                 </p>
             </div>
 
@@ -99,8 +99,8 @@ export function ProfesionalTarjeta({
 
             {/* "Nuevo en la red" (candado del brief: sin varias calificaciones,
                 las estrellas hunden a alguien injustamente). En L3 SIEMPRE. */}
-            <div className="mt-auto pt-2 border-t border-sky-100 dark:border-sky-900/40">
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
+            <div className="mt-auto pt-2 border-t border-cielo/20 dark:border-cielo/40">
+                <span className="inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-ambar dark:text-ambar">
                     ✨ Nuevo en la red
                 </span>
             </div>

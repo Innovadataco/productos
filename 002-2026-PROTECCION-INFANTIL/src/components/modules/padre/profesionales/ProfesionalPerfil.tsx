@@ -40,9 +40,9 @@ export function ProfesionalPerfil({
             <div className="flex items-start gap-4">
                 {p.fotoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.fotoUrl} alt="" className="h-20 w-20 rounded-full object-cover bg-sky-100 dark:bg-sky-900" />
+                    <img src={p.fotoUrl} alt="" className="h-20 w-20 rounded-full object-cover bg-cielo/15 dark:bg-cielo/30" />
                 ) : (
-                    <div className="h-20 w-20 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center text-sky-700 dark:text-sky-200 text-2xl font-semibold" aria-hidden="true">
+                    <div className="h-20 w-20 rounded-full bg-cielo/15 dark:bg-cielo/30 flex items-center justify-center text-cielo dark:text-cielo text-2xl font-semibold" aria-hidden="true">
                         {p.nombreVisible.charAt(0).toUpperCase()}
                     </div>
                 )}
@@ -56,17 +56,17 @@ export function ProfesionalPerfil({
             </div>
 
             {/* TARIFA por delante */}
-            <div className="glass rounded-2xl p-5 bg-sky-50/60 dark:bg-sky-950/40">
-                <p className="text-xs uppercase tracking-wide text-sky-700 dark:text-sky-300">
+            <div className="glass rounded-2xl p-5 bg-cielo/10 dark:bg-cielo/10">
+                <p className="text-xs uppercase tracking-wide text-cielo dark:text-cielo">
                     Costo de la consulta
                 </p>
-                <p className="mt-1 text-3xl font-bold text-sky-900 dark:text-sky-100">
+                <p className="mt-1 text-3xl font-bold text-cielo dark:text-cielo">
                     {CURRENCY_COP.format(p.tarifaConsultaCOP)}
                 </p>
                 <p className="mt-1 text-sm text-muted">
                     Sesión de {p.duracionMinutos} minutos{p.emiteFactura ? " · emite factura" : ""}.
                 </p>
-                <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
+                <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-ambar dark:text-ambar">
                     ✨ Nuevo en la red
                 </p>
             </div>
@@ -90,7 +90,7 @@ export function ProfesionalPerfil({
                     ) : (
                         <ul className="flex flex-wrap gap-2">
                             {p.especialidades.map((e) => (
-                                <li key={e} className="rounded-full bg-sky-100 dark:bg-sky-900/40 px-3 py-1 text-xs text-sky-800 dark:text-sky-200">
+                                <li key={e} className="rounded-full bg-cielo/15 dark:bg-cielo/20 px-3 py-1 text-xs text-cielo dark:text-cielo">
                                     {e}
                                 </li>
                             ))}
@@ -112,7 +112,7 @@ export function ProfesionalPerfil({
                     cuando esté disponible.
                 </p>
                 {(presentacionDelPadre || urgencia) && (
-                    <div className="mt-3 rounded-xl bg-sky-50 dark:bg-sky-950/40 p-3 text-xs">
+                    <div className="mt-3 rounded-xl bg-cielo/10 dark:bg-cielo/10 p-3 text-xs">
                         {urgencia && (
                             <p>
                                 <span className="font-medium">Tu urgencia:</span>{" "}
@@ -130,7 +130,7 @@ export function ProfesionalPerfil({
                 <button
                     type="button"
                     disabled
-                    className="mt-3 w-full rounded-xl bg-sky-600/40 px-4 py-3 text-sm font-semibold text-white cursor-not-allowed"
+                    className="mt-3 w-full rounded-xl bg-cielo/40 px-4 py-3 text-sm font-semibold text-white cursor-not-allowed"
                     aria-disabled="true"
                 >
                     Solicitar cita (próximamente)

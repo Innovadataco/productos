@@ -22,18 +22,20 @@ describe("PadreSideNav (SPEC-231)", () => {
     // no existe todavía — la página de perfil del padre es deuda pendiente. El ítem se
     // quita del menú lateral para no generar un enlace roto; cuando la página exista,
     // se reincorpora aquí y en nav-items.ts.
-    it("renderiza los 8 items del menú padre (Mi perfil retirado por SPEC-317; Mis reportes agregado por SPEC-324)", () => {
+    it("renderiza los 9 items del menú padre (Mi perfil retirado por SPEC-317; Mis reportes agregado por SPEC-324; Encontrar psicólogo agregado por SPEC-392)", () => {
         mockPathname.value = "/dashboard/padre";
         render(<PadreSideNav />);
 
-        const labels = ["Inicio", "Mis expedientes", "Mis reportes", "Reportar", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones"]; // SPEC-324 + SPEC-325
+        const labels = ["Inicio", "Mis expedientes", "Mis reportes", "Reportar", "Encontrar psicólogo", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones"]; // SPEC-324 + SPEC-325 + SPEC-392
         for (const label of labels) {
             expect(screen.getByRole("link", { name: label })).toBeDefined();
         }
         expect(screen.queryByRole("link", { name: "Mi perfil" })).toBeNull();
         // SPEC-324: "Mis reportes" apunta a la ruta top-level /mis-reportes (fuera del shell).
         expect(screen.getByRole("link", { name: "Mis reportes" }).getAttribute("href")).toBe("/mis-reportes");
-        expect(screen.getAllByRole("link")).toHaveLength(8); // SPEC-324 + SPEC-325
+        // SPEC-392 (L3): "Encontrar psicólogo" al directorio del padre.
+        expect(screen.getByRole("link", { name: "Encontrar psicólogo" }).getAttribute("href")).toBe("/dashboard/padre/profesionales");
+        expect(screen.getAllByRole("link")).toHaveLength(9);
     });
 
     it("marca Inicio como activo en la raíz", () => {
