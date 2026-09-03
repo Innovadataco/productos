@@ -8,7 +8,8 @@ import { verificarAccesoPagina } from "@/lib/permisos-modulos";
 // semántica es "a dónde mando a quien no tiene acceso a operadores", no "el landing del rol".
 function homeAccesoDenegado(rol: string | null): string {
     if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
-    return "/dashboard/admin";
+    // SPEC-404 (I-290): la bandeja tiene URL propia; `/dashboard/admin` es solo aterrizaje.
+    return "/dashboard/admin/bandeja";
 }
 
 export default async function OperadoresIndexPage() {

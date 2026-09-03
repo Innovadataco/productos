@@ -45,14 +45,18 @@ describe("NavHeader", () => {
     });
 
     it("logo va al panel del rol desde OTRA página del área (SPEC-106); en el home del rol va al home público (I-38, nunca clic muerto)", () => {
+        // SPEC-404 (I-290): el logo ADMIN aterriza en la bandeja (URL propia)
+        // porque `/dashboard/admin` quedó como aterrizaje que redirige a otro
+        // item del menú — usarlo como destino del logo era un clic muerto para
+        // admins con `inicio_admin`.
         mockPathname = "/dashboard/admin/reportes";
         mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
         const { unmount } = render(<NavHeader />);
         let logo = screen.getByText("Infantil").closest("a");
-        expect(logo?.getAttribute("href")).toBe("/dashboard/admin");
+        expect(logo?.getAttribute("href")).toBe("/dashboard/admin/bandeja");
         unmount();
 
-        mockPathname = "/dashboard/admin";
+        mockPathname = "/dashboard/admin/bandeja";
         render(<NavHeader />);
         logo = screen.getByText("Infantil").closest("a");
         expect(logo?.getAttribute("href")).toBe("/");

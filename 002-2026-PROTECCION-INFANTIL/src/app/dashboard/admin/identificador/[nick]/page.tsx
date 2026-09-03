@@ -34,7 +34,8 @@ export default async function AdminIdentificadorPage({ params }: { params: Promi
     const payload = await verifyToken(token);
     const rol = payload?.rol as string | undefined;
     if (!rol || !ROLES_PERMITIDOS.has(rol)) {
-        redirect("/dashboard/admin");
+        // SPEC-404 (I-290): a la bandeja, no a la raíz-aterrizaje.
+        redirect("/dashboard/admin/bandeja");
     }
 
     const identificador = decodificarIdentificadorParam(nick);

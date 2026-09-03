@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 513 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3591 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 514 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3598 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -425,6 +425,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/analisis/recomendaciones` | página | permitir | permite | sí |
 | `/dashboard/admin/analisis/reglas` | página | permitir | permite | sí |
 | `/dashboard/admin/anti-abuso` | página | permitir | permite | sí |
+| `/dashboard/admin/bandeja` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios/[id]/estructura` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios/nuevo` | página | permitir | permite | sí |
@@ -943,6 +944,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/analisis/recomendaciones` | página | permitir | permite | sí |
 | `/dashboard/admin/analisis/reglas` | página | permitir | permite | sí |
 | `/dashboard/admin/anti-abuso` | página | permitir | permite | sí |
+| `/dashboard/admin/bandeja` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios/[id]/estructura` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios/nuevo` | página | permitir | permite | sí |
@@ -1461,6 +1463,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/analisis/recomendaciones` | página | permitir | permite | sí |
 | `/dashboard/admin/analisis/reglas` | página | permitir | permite | sí |
 | `/dashboard/admin/anti-abuso` | página | permitir | permite | sí |
+| `/dashboard/admin/bandeja` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios/[id]/estructura` | página | permitir | permite | sí |
 | `/dashboard/admin/colegios/nuevo` | página | permitir | permite | sí |
@@ -1979,6 +1982,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/analisis/recomendaciones` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/analisis/reglas` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/anti-abuso` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/bandeja` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/colegios` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/colegios/[id]/estructura` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/colegios/nuevo` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2497,6 +2501,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/analisis/recomendaciones` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/analisis/reglas` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/anti-abuso` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/bandeja` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/colegios` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/colegios/[id]/estructura` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/colegios/nuevo` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -3015,6 +3020,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/analisis/recomendaciones` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/analisis/reglas` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/anti-abuso` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/bandeja` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/colegios` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/colegios/[id]/estructura` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/colegios/nuevo` | página | redirigir→/ | no permite | sí |
@@ -3533,6 +3539,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/analisis/recomendaciones` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/analisis/reglas` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/anti-abuso` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/bandeja` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/colegios` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/colegios/[id]/estructura` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/colegios/nuevo` | página | redirigir→/login | no permite | sí |
@@ -4063,7 +4070,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | analisis_admin | `/dashboard/admin/analisis/reglas` | ADMIN |
 | analisis_recomendaciones | `/dashboard/admin/analisis/recomendaciones` | ADMIN |
 | anti_abuso | `/dashboard/admin/anti-abuso` | ADMIN |
-| bandeja_reportes | `/dashboard/admin` | ADMIN, OPERADOR |
+| bandeja_reportes | `/dashboard/admin/bandeja` | ADMIN, OPERADOR |
 | centro_control_ia | `/dashboard/admin/ia` | ADMIN |
 | colegios | `/dashboard/colegio` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |
 | colegios | `/dashboard/colegio/suscripcion` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |

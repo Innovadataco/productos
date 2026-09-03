@@ -34,13 +34,21 @@ describe("AdminNav", () => {
         expect(activos[0].textContent).toContain("Revisión de spam");
     });
 
-    it("en la raíz solo se resalta la bandeja", () => {
-        mockPathname.value = "/dashboard/admin";
+    it("en la URL propia de la bandeja se resalta la bandeja (SPEC-404 · I-290)", () => {
+        mockPathname.value = "/dashboard/admin/bandeja";
         render(<AdminNav rol="ADMIN" modulosPermitidos={TODOS_MODULOS} />);
 
         const activos = linksActivos();
         expect(activos).toHaveLength(1);
         expect(activos[0].textContent).toContain("Bandeja de reportes");
+    });
+
+    it("en la raíz-aterrizaje `/dashboard/admin` no se resalta ningún item (SPEC-404)", () => {
+        // `/dashboard/admin` es aterrizaje que redirige a Inicio o Bandeja;
+        // ningún item del menú apunta ahí, así que ninguno queda activo.
+        mockPathname.value = "/dashboard/admin";
+        render(<AdminNav rol="ADMIN" modulosPermitidos={TODOS_MODULOS} />);
+        expect(linksActivos()).toHaveLength(0);
     });
 
     it("resalta subrutas anidadas de un módulo que no es la raíz", () => {

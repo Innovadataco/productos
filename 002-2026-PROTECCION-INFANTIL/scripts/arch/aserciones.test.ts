@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { ejecutarAsercionA } from "./asercion-puerta-predicado";
 import { ejecutarAsercionB } from "./asercion-menu-no-miente";
+import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
 
 describe("aserción A: puerta ≡ predicado (SPEC-126)", { timeout: 120_000 }, () => {
     it("sin desalineos reales en la sesión canónica; divergencias anónimas solo como nota", async () => {
@@ -28,6 +29,17 @@ describe("aserción B: el menú no miente (SPEC-126, regla de pintado D-41)", { 
         expect(
             resultado.muertos,
             resultado.muertos.map((m) => `${m.rol} · ${m.href} · ${m.origen} · proxy=${m.veredicto}`).join("\n")
+        ).toEqual([]);
+    });
+});
+
+describe("aserción B-bis: el ítem del menú no redirige a otro ítem (SPEC-404 · I-290)", () => {
+    it("ningún page.tsx de un href del menú contiene redirect() con literal de otro href del mismo menú", () => {
+        const resultado = ejecutarAsercionBBis();
+        expect(resultado.evaluados).toBeGreaterThan(10);
+        expect(
+            resultado.muertos,
+            resultado.muertos.map((m) => `${m.menu} · ${m.origen} → ${m.destino} · ${m.archivo}`).join("\n"),
         ).toEqual([]);
     });
 });

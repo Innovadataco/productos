@@ -9,12 +9,9 @@
  * redirigiendo al href de OTRO ítem del menú es un enlace MUERTO y este spec
  * es el candado que lo caza.
  *
- * TEST.FAIL A PROPÓSITO. Los dos tests entran con `test.fail` citando I-290 /
- * SPEC-404 — el CEO decidió mergear este candado ANTES del arreglo, para
- * dejar la falla probada en CI. Cuando Dev 01 despliegue SPEC-404 (la bandeja
- * en URL propia + los "volver" apuntando ahí), Playwright reportará
- * "unexpected pass" y el `test.fail` se quita como parte de esa spec — es
- * tarea de SPEC-404, no de este spec.
+ * TEST.FAIL RETIRADO. SPEC-404 (Dev 01) desplegó el arreglo: bandeja en URL
+ * propia + "volver" apuntando ahí. Los dos tests corren ahora afirmando el
+ * comportamiento correcto — si el bug reincide, truenan de verdad.
  *
  * DOS COSAS QUE ESTE SPEC ASEGURA, LAS DOS AL MISMO TIEMPO:
  *   1) Cada ítem del menú del admin lleva a UNA URL que sigue perteneciendo
@@ -156,8 +153,9 @@ test.describe.serial("Menú del admin — alcanzable y muestra lo prometido (SPE
      * Inicio), truena.
      */
     test("(A) I-290 · click en 'Bandeja de reportes' NO rebota a Inicio", async ({ page }) => {
-        // TEST.FAIL a propósito hasta SPEC-404 (I-290). Dev 01 lo quita cuando despliega.
-        test.fail(true, "I-290 vivo en prod hash d3057f3b; SPEC-404 (Dev 01) es el arreglo.");
+        // SPEC-404 aplicó el fix (Dev 01): bandeja tiene URL propia y el
+        // ítem del menú apunta ahí. Quitado el `test.fail` — el candado
+        // ahora afirma el comportamiento correcto, no la falla histórica.
         await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
         await page.goto("/dashboard/admin/inicio");
         // Click sobre el ítem del menú por label — mismo camino que Jelkin.
@@ -191,9 +189,9 @@ test.describe.serial("Menú del admin — alcanzable y muestra lo prometido (SPE
      * `test.step` por ítem para que la salida del CI enumere cuál falló.
      */
     test("(B) cada ítem del menú admin cae en su destino y muestra su etiqueta", async ({ page }) => {
-        // TEST.FAIL a propósito hasta SPEC-404 (I-290). El barrido reincide en la fila
-        // "Bandeja de reportes" porque su href actual redirige al ítem "Inicio".
-        test.fail(true, "SPEC-404 (Dev 01) corrige la fila 'Bandeja de reportes' + candado nuevo en arch:check (d).");
+        // SPEC-404 aplicó el fix (Dev 01): la fila "Bandeja de reportes"
+        // apunta a `/dashboard/admin/bandeja` y el barrido verifica que
+        // ningún ítem rebote al href de otro. Quitado el `test.fail`.
         await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
         // Aterrizaje conocido — desde Inicio se ve el menú entero.
         await page.goto("/dashboard/admin/inicio");
