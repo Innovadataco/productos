@@ -71,6 +71,53 @@ describe("ComiteBandeja", () => {
         expect(document.body.textContent).toContain("SOL-002");
     });
 
+    // SPEC-384 · I-279: si asignar falla, el banner ahora muestra el mensaje
+    // REAL del backend (antes se descartaba y se pintaba un texto fijo falso
+    // que decía «No pudimos cargar las solicitudes» mientras la lista estaba
+    // cargada). Además la lista NO se marca en error — se cargó bien.
+    it("I-279: cuando /asignar falla, el banner muestra el mensaje real del backend y la lista sigue visible", async () => {
+        vi.spyOn(global, "fetch").mockImplementation((input: RequestInfo | URL) => {
+            const url = input.toString();
+            if (url.includes("/api/admin/comite/solicitudes")) {
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        solicitudes: [
+                            { id: "s1", numero: "SOL-001", reporteId: "r1", estado: "PENDIENTE", motivo: "M1", creadoEn: new Date().toISOString(), comiteId: null },
+                        ],
+                        paginacion: { page: 1, limit: 20, total: 1, totalPages: 1 },
+                    }),
+                } as Response);
+            }
+            if (url.includes("/api/admin/comite/s1/asignar")) {
+                return Promise.resolve({
+                    ok: false,
+                    status: 403,
+                    json: async () => ({ error: { message: "El caso ya fue asignado a otro miembro del comité" } }),
+                } as Response);
+            }
+            return Promise.resolve({ ok: true, status: 200, json: async () => ({}) } as Response);
+        });
+
+        render(<ComiteBandeja />);
+        await waitFor(() => expect(document.body.textContent).not.toContain("Cargando..."));
+        // La lista está cargada — la fila existe.
+        expect(document.body.textContent).toContain("SOL-001");
+
+        screen.getByText("Ver").click();
+        await waitFor(() => {
+            // El mensaje real del backend llegó a pantalla — bajo el título de acción,
+            // no el título viejo «No pudimos cargar las solicitudes».
+            expect(document.body.textContent).toContain("El caso ya fue asignado a otro miembro del comité");
+            expect(document.body.textContent).toContain("No pudimos abrir el caso");
+        });
+        // Candado del banner viejo: NO decimos que la lista falló, porque no falló.
+        expect(document.body.textContent).not.toContain("Ocurrió un problema al consultar la bandeja del comité");
+        // Y la fila sigue visible.
+        expect(document.body.textContent).toContain("SOL-001");
+    });
+
     it("auto-asigna al abrir un caso PENDIENTE", async () => {
         const fetchSpy = vi.spyOn(global, "fetch").mockImplementation((input: RequestInfo | URL) => {
             const url = input.toString();

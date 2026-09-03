@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
-import { assertModulo } from "@/lib/permisos-modulos";
+import { assertAnyModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -12,7 +12,11 @@ import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        await assertModulo(user, "bandeja_reportes");
+        // SPEC-384 · I-278: `bandeja_reportes` (operador/admin) O
+        // `comite_bandeja` (comité) — nunca sustituir, para no romper la
+        // separación de poderes de I-274. La autorización fina por caso queda
+        // intacta más abajo (rama `comiteId`).
+        await assertAnyModulo(user, ["bandeja_reportes", "comite_bandeja"]);
         if (!esAdminRol(user.rol) && user.rol !== "OPERADOR" && !esComiteRol(user.rol)) {
             return NextResponse.json(
                 { error: { message: "Permisos insuficientes", code: ERROR_CODES.FORBIDDEN } },

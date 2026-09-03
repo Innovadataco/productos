@@ -113,14 +113,19 @@ export function ComiteBandeja() {
     const [consolidaciones, setConsolidaciones] = useState<ItemConsolidacion[]>([]);
     const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>("TODOS");
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    // SPEC-384 · I-279: dos errores distintos con banners y comportamientos
+    // distintos — antes había un único `error` que decía «no cargó la bandeja»
+    // aunque el que falló fuera un asignar sobre una solicitud, y el retry
+    // reintentaba lo que NO había fallado. Se separa carga vs acción.
+    const [errorLista, setErrorLista] = useState("");
+    const [errorAccion, setErrorAccion] = useState("");
     const [pagination, setPagination] = useState<Paginacion>({ page: 1, limit: 20, total: 0, totalPages: 0 });
     const [selectedSolicitud, setSelectedSolicitud] = useState<Solicitud | null>(null);
     const [assigningId, setAssigningId] = useState<string | null>(null);
 
     const fetchSolicitudes = useCallback(async () => {
         setLoading(true);
-        setError("");
+        setErrorLista("");
         try {
             const res = await fetch(`/api/admin/comite/solicitudes?page=${pagination.page}&limit=${pagination.limit}`, {
                 credentials: "include",
@@ -134,7 +139,7 @@ export function ComiteBandeja() {
             setSolicitudes(json.solicitudes || []);
             setPagination(json.paginacion || json.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
         } catch {
-            setError("Error cargando solicitudes");
+            setErrorLista("Error cargando solicitudes");
         } finally {
             setLoading(false);
         }
@@ -163,6 +168,9 @@ export function ComiteBandeja() {
     }, [fetchConsolidaciones]);
 
     const handleVer = async (solicitud: Solicitud) => {
+        // SPEC-384 · I-279: al abrir un caso limpiamos el error de acción previo —
+        // si el intento anterior falló y este funciona, el banner tiene que irse.
+        setErrorAccion("");
         if (solicitud.estado === "PENDIENTE") {
             setAssigningId(solicitud.id);
             try {
@@ -182,7 +190,7 @@ export function ComiteBandeja() {
                 await fetchSolicitudes();
                 setSelectedSolicitud({ ...solicitud, estado: "ASIGNADA", comiteId: user?.id || null });
             } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : "Error asignando solicitud");
+                setErrorAccion(err instanceof Error ? err.message : "Error asignando solicitud");
             } finally {
                 setAssigningId(null);
             }
@@ -223,11 +231,23 @@ export function ComiteBandeja() {
 
     return (
         <div className="space-y-6">
-            {error && (
+            {/* SPEC-384 · I-279: dos banners distintos.
+                · errorLista es de CARGA de la bandeja — el retry vuelve a cargar la lista.
+                · errorAccion es de una ACCIÓN sobre una solicitud (típicamente el POST
+                  de asignar). El texto es el mensaje REAL del backend (antes se descartaba
+                  y se mostraba un texto fijo falso). No lleva retry: la lista ya está bien,
+                  reintentar la lista no reintenta la acción. */}
+            {errorLista && (
                 <ErrorState
                     title="No pudimos cargar las solicitudes"
                     description="Ocurrió un problema al consultar la bandeja del comité. Intenta de nuevo."
                     onRetry={fetchSolicitudes}
+                />
+            )}
+            {errorAccion && (
+                <ErrorState
+                    title="No pudimos abrir el caso"
+                    description={errorAccion}
                 />
             )}
 

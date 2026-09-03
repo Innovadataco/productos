@@ -67,6 +67,20 @@ export async function assertModulo<T extends { rol: string }>(user: T, clave: st
 }
 
 /**
+ * SPEC-384 · I-278: variante «cualquiera de estos módulos alcanza». Se usa en
+ * rutas que sirven a más de un rol con módulos DISTINTOS (p. ej. la bandeja de
+ * reportes-revision: el operador entra por `bandeja_reportes`, el comité por
+ * `comite_bandeja`; I-274 los separó a propósito). Nunca sustituye, siempre
+ * suma. Devuelve al primer módulo que autorice para cortar consultas.
+ */
+export async function assertAnyModulo<T extends { rol: string }>(user: T, claves: readonly string[]): Promise<T> {
+    for (const clave of claves) {
+        if (await puedeAccederAModulo(user.rol, clave)) return user;
+    }
+    throw new AppError("Sin acceso al módulo", ERROR_CODES.FORBIDDEN, 403);
+}
+
+/**
  * Roles conocidos: los del enum RolUsuario más cualquier rol que ya tenga filas
  * en PermisoModulo (así se absorben roles futuros sin refactor, pero un typo
  * en un PATCH devuelve error en lugar de crear una fila fantasma).
