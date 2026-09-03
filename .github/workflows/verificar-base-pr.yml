@@ -2,6 +2,12 @@ name: Verificar rama base del PR
 on:
     pull_request:
         types: [opened, edited, synchronize, reopened]
+# SPEC-396 (I-282): dispara solo en pull_request → nunca corre en main, cancel-in-progress
+# a secas es seguro. Sin esto, cada `synchronize` (repush a la rama del PR) dejaba
+# vivo el check anterior compitiendo con el nuevo.
+concurrency:
+    group: verificar-base-${{ github.workflow }}-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
 jobs:
     verificar_base:
         runs-on: ubuntu-latest
