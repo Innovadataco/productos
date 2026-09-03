@@ -1,0 +1,10 @@
+services:
+  piweb:
+    image: nginx:alpine
+    container_name: piweb
+    restart: always
+    ports:
+      - "127.0.0.1:5017:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./assets:/usr/share/nginx/html/assets:ro
