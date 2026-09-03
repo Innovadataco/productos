@@ -23,6 +23,8 @@ const DASHBOARD_POR_ROL: Record<RolUsuario, string> = {
     ADMIN: "/dashboard/admin/bandeja",
     OPERADOR: "/dashboard/admin/bandeja",
     COMITE_VALIDACION: "/dashboard/admin",
+    // SPEC-408: el Verificador aterriza directo en su cola de trabajo (único módulo).
+    VERIFICADOR: "/dashboard/admin/verificacion",
     // SPEC-391 (L1b): el profesional cae a completar su perfil tras crear la
     // cuenta; L5 (panel del profesional) definirá la home real.
     PROFESIONAL: "/perfil-profesional/completar",

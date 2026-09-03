@@ -172,7 +172,10 @@ function redirectToLogin(request: NextRequest) {
     return res;
 }
 
-const INTERNAL_ROLES = new Set(["ADMIN", "OPERADOR", "COMITE_VALIDACION"]);
+// SPEC-408 (A-75 · brief §9): el VERIFICADOR es rol interno — vive dentro del
+// área /dashboard/admin/**, cortado por módulo (`admin_verificacion_profesionales`),
+// mismo patrón que el comité (I-274 · separación de poderes).
+const INTERNAL_ROLES = new Set(["ADMIN", "OPERADOR", "COMITE_VALIDACION", "VERIFICADOR"]);
 const ADMIN_ROLES = new Set(["ADMIN"]);
 
 function esRolInterno(rol: string) {
@@ -191,6 +194,9 @@ function esRutaAdminOnly(pathname: string) {
 
 function homeForRole(rol: string) {
     if (rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
+    // SPEC-408 (A-75 · brief §9): el Verificador aterriza en su cola de trabajo,
+    // no en la raíz-aterrizaje. Es el único módulo que tiene.
+    if (rol === "VERIFICADOR") return "/dashboard/admin/verificacion";
     // SPEC-173 (FASE-C): el Comité de Convivencia aterriza en su panel de inicio.
     if (rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite";
     if (rol === "SCHOOL_ADMIN") return "/dashboard/colegio";

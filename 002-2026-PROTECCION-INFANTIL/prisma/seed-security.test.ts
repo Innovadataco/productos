@@ -151,3 +151,30 @@ describe("seed de parámetros de monitoreo — idempotencia estructural", () => 
         expect(bloque).toMatch(/update:\s*\{\s*valor:\s*p\.valor,\s*descripcion:\s*p\.descripcion\s*\}/);
     });
 });
+
+// SPEC-389 (Red de Profesionales · L2): el resultado de antecedentes es información
+// reservada por ley (1918/2018 · art. 10). El módulo `admin_verificacion_profesionales`
+// controla quién puede abrir la ficha; su default es SOLO ADMIN. Si algún día se le
+// otorga por error a OPERADOR / COMITE_* / SCHOOL_ADMIN, este test lo caza.
+describe("módulo `admin_verificacion_profesionales` — reserva legal (SPEC-389)", () => {
+    it("existe en el catálogo, categoría admin y esCritico", () => {
+        const mod = CATALOGO_MODULOS.find((m) => m.clave === "admin_verificacion_profesionales");
+        expect(mod, "el módulo debe seguir en el catálogo").toBeTruthy();
+        expect(mod?.categoria).toBe("admin");
+        expect(mod?.esCritico).toBe(true);
+    });
+
+    it("solo el rol ADMIN lo recibe por defecto (ningún rol lo enlista explícitamente)", () => {
+        // ADMIN lo recibe vía `modulosSeed.map(...)` (todo el catálogo menos el
+        // exclusivo de COMITE_VALIDACION). Los demás roles lo reciben por lista;
+        // el candado afirma que ninguna lista lo menciona.
+        const bloque = bloqueClavesPorRol();
+        const listasExplicitas = ["SCHOOL_ADMIN", "COMITE_CONVIVENCIA", "COMITE_VALIDACION", "OPERADOR"];
+        for (const rol of listasExplicitas) {
+            const entrada = bloque.match(new RegExp(`${rol}:\\s*\\[([^\\]]*)\\]`))?.[1] ?? "";
+            expect(entrada, `${rol} NO puede tener admin_verificacion_profesionales (reserva legal)`).not.toMatch(
+                /"admin_verificacion_profesionales"/,
+            );
+        }
+    });
+});

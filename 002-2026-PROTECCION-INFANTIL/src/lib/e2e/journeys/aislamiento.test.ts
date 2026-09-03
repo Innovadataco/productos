@@ -57,6 +57,8 @@ const EMAILS: Record<RolUsuario, string> = {
     OPERADOR: `e2e-c${CICLO}-ais-op@test.local`,
     COMITE_VALIDACION: `e2e-c${CICLO}-ais-comite@test.local`,
     COMITE_CONVIVENCIA: "",
+    // SPEC-408: placeholder mientras SPEC-408 no arma su journey.
+    VERIFICADOR: "",
 };
 
 describe(`SPEC-114 · aislamiento por rol (ciclo ${CICLO})`, { timeout: 30_000 }, () => {

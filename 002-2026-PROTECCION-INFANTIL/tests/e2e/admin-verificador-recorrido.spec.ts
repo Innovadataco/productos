@@ -2,10 +2,10 @@
  * SPEC-410 · El Verificador admite y devuelve.
  *
  * Candado del recorrido §9 y §5-bis del brief A-75 v2.0 (`762b77f`), mockup
- * aprobado por Jelkin (15d8bf42). Este spec mergea ANTES que SPEC-408 (Dev 01)
- * — todo entra con `test.fail` citando SPEC-408. Cuando Dev 01 despliegue el
- * rol `VERIFICADOR`, los modelos y las URLs, Playwright reporta "unexpected
- * pass" y Dev 01 quita los `test.fail` como parte de esa spec.
+ * aprobado por Jelkin (15d8bf42). SPEC-408 (Dev 01) desplegó rol `VERIFICADOR`,
+ * modelos y URLs; los cinco `test.fail(...)` fueron retirados como parte de esa
+ * spec. Los tests ahora afirman el comportamiento correcto — si el bug
+ * reincide, truenan de verdad.
  *
  * Contrato de rutas fijado por el CEO 03-09 15:3x/15:4x, verificado contra
  * `origin/main` y pasado a Dev 01 como obligatorio (mismo patrón que el
@@ -137,7 +137,6 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
      * (1) Con un requisito en `NO CUMPLE`, aprobar está bloqueado.
      */
     test("(1) aprobar bloqueado si hay al menos un requisito NO CUMPLE", async ({ page }) => {
-        test.fail(true, "URLs y modelo aún no en origin/main; SPEC-408 (Dev 01) los crea. Este candado se quita en esa spec.");
         await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
         const res = await page.request.post(
             `/api/admin/verificacion-profesionales/${encodeURIComponent(profesionalId)}/decidir`,
@@ -154,7 +153,6 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
      * saber qué corregir (§5-bis).
      */
     test("(2) rechazar/devolver sin observación devuelve 4xx", async ({ page }) => {
-        test.fail(true, "SPEC-408 (Dev 01) define el schema de observación obligatoria en /decidir.");
         await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
         const res = await page.request.post(
             `/api/admin/verificacion-profesionales/${encodeURIComponent(profesionalId)}/decidir`,
@@ -176,7 +174,6 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
      * NO se recargan (§5-bis, §9 momento 2).
      */
     test("(3) devolver mantiene aprobados los ítems que ya cumplían", async ({ page }) => {
-        test.fail(true, "SPEC-408 (Dev 01) implementa la semántica de re-envío parcial.");
         await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
         // Devuelvo con observación en cédula (el único NO CUMPLE).
         const resDev = await page.request.post(
@@ -207,7 +204,6 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
      * — si el sistema pone un tope, truena.
      */
     test("(4) el ciclo de devolución no tiene tope de intentos", async ({ page }) => {
-        test.fail(true, "SPEC-408 (Dev 01) confirma que no hay `MAX_INTENTOS` bajo el capó.");
         for (let vuelta = 1; vuelta <= 3; vuelta++) {
             await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
             const resDev = await page.request.post(
@@ -234,7 +230,6 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
      * `datosFacturacion`, `autorizacionArchivoUrl`.
      */
     test("(5) resultado y checklist son reserva legal — barrido de fugas", async ({ page }) => {
-        test.fail(true, "SPEC-408 (Dev 01) tapa las fugas con DTO H-2 tipo directorio.");
         const CAMPOS_RESERVA = ["resultado", "checklist", "numeroTarjetaProfesional", "datosFacturacion", "autorizacionArchivoUrl"];
 
         // (a) Vista pública (padre): perfil del profesional en el directorio.

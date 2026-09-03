@@ -47,6 +47,8 @@ const RUTA_PRIVADA_POR_ROL: Record<RolUsuario, string> = {
     COMITE_CONVIVENCIA: "/dashboard/colegio/comite/casos",
     // SPEC-391 (L1b): home privada temporal — L5 la reemplazará por su dashboard.
     PROFESIONAL: "/perfil-profesional/completar",
+    // SPEC-408: Verificador aterriza directo en su cola.
+    VERIFICADOR: "/dashboard/admin/verificacion",
 };
 
 describe(`SPEC-114 · sesión de los 5 roles (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
