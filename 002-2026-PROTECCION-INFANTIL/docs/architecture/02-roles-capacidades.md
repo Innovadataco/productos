@@ -255,6 +255,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/analisis/comparativa/excel` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/validar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/validar` | api | permitir | permite | sí |
@@ -756,6 +759,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/analisis/comparativa/excel` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/validar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/validar` | api | permitir | permite | sí |
@@ -1257,6 +1263,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/analisis/comparativa/excel` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/validar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/validar` | api | permitir | permite | sí |
@@ -1758,6 +1767,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/analisis/comparativa/excel` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/validar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/validar` | api | permitir | permite | sí |
@@ -2259,6 +2271,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/analisis/comparativa/excel` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/auditoria` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/buscar` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/carga-cursos/confirmar` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/carga-cursos/plantilla` | api | HTTP 403 | no permite | sí |
+| `/api/colegio/carga-cursos/validar` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/carga-profesores/confirmar` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/carga-profesores/plantilla` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/carga-profesores/validar` | api | HTTP 403 | no permite | sí |
@@ -2760,6 +2775,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/analisis/comparativa/excel` | api | permitir | permite | sí |
 | `/api/colegio/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/buscar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/confirmar` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/plantilla` | api | permitir | permite | sí |
+| `/api/colegio/carga-cursos/validar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/confirmar` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/plantilla` | api | permitir | permite | sí |
 | `/api/colegio/carga-profesores/validar` | api | permitir | permite | sí |
@@ -3261,6 +3279,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/analisis/comparativa/excel` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/auditoria` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/buscar` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/carga-cursos/confirmar` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/carga-cursos/plantilla` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/carga-cursos/validar` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga-profesores/confirmar` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga-profesores/plantilla` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/carga-profesores/validar` | api | HTTP 401 | permite | **NO** |
@@ -3742,6 +3763,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/analisis/comparativa/excel` | HTTP 401 | permite |
 | `/api/colegio/auditoria` | HTTP 401 | permite |
 | `/api/colegio/buscar` | HTTP 401 | permite |
+| `/api/colegio/carga-cursos/confirmar` | HTTP 401 | permite |
+| `/api/colegio/carga-cursos/plantilla` | HTTP 401 | permite |
+| `/api/colegio/carga-cursos/validar` | HTTP 401 | permite |
 | `/api/colegio/carga-profesores/confirmar` | HTTP 401 | permite |
 | `/api/colegio/carga-profesores/plantilla` | HTTP 401 | permite |
 | `/api/colegio/carga-profesores/validar` | HTTP 401 | permite |
