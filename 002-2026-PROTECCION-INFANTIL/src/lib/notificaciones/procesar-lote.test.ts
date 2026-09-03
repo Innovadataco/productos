@@ -134,6 +134,45 @@ describe("SPEC-292 · procesarLote (I-147 no vuelve)", () => {
         expect(enviarEmail).not.toHaveBeenCalled();
     });
 
+    it("SPEC-401 (I-283): persiste el motivo REAL del proveedor en `ultimoError`, no un texto genérico", async () => {
+        const notif = await prisma.notificacion.create({
+            data: {
+                evento: "spec292.test",
+                destinatarioEmail: "test-spec401@innovadataco.com",
+                plantillaClave: PLANTILLA_CLAVE,
+                canal: "EMAIL",
+                variables: { nombre: "Test" },
+                enviarEn: new Date(Date.now() - 60_000),
+                estado: "ENCOLADA",
+                intentos: 0,
+            },
+        });
+
+        // Simulamos la forma del error del SDK de Resend: {name, message, statusCode}.
+        const { EmailProveedorError, resumirErrorProveedor } = await import("./motivo-error");
+        const enviarEmail = vi.fn().mockRejectedValue(
+            new EmailProveedorError(
+                resumirErrorProveedor({
+                    name: "rate_limit_exceeded",
+                    message: "You exceeded the rate limit — Recipient rector@example.com",
+                    statusCode: 429,
+                })
+            )
+        );
+
+        await procesarLote(armarDeps(enviarEmail), CONFIG);
+
+        const post = await prisma.notificacion.findUnique({ where: { id: notif.id } });
+        expect(post?.estado).toBe("REINTENTANDO");
+        // 1) trae el name real, 2) trae el statusCode, 3) NO trae el email del destinatario.
+        expect(post?.ultimoError).toContain("[rate_limit_exceeded]");
+        expect(post?.ultimoError).toContain("[429]");
+        expect(post?.ultimoError).not.toContain("rector@example.com");
+        expect(post?.ultimoError).toMatch(/<email:[0-9a-f]{8}>/);
+        // 4) sigue casando el regex de `senalCorreosFallidos`.
+        expect(/(quota|rate\s*limit|429|too\s*many\s*requests)/i.test(post?.ultimoError ?? "")).toBe(true);
+    });
+
     it("lote vacío devuelve `procesadas: 0` sin errores (poll vacío observable)", async () => {
         const enviarEmail = vi.fn();
         const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);

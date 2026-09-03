@@ -12,6 +12,7 @@ import { Resend } from "resend";
 // scripts/worker-notificaciones.mjs (SPEC-197 · I-88 · anti-alias @/lib/).
 import { requireEnv } from "../env";
 import { logger } from "../logger";
+import { EmailProveedorError, resumirErrorProveedor } from "./motivo-error";
 
 const resend = new Resend(requireEnv("RESEND_API_KEY", 10));
 const FROM = requireEnv("EMAIL_FROM", 5);
@@ -19,6 +20,15 @@ const FROM = requireEnv("EMAIL_FROM", 5);
 /**
  * SPEC-201: envío genérico del motor de notificaciones. Devuelve el id del
  * proveedor (Resend) para tracking de webhooks y deduplicación.
+ *
+ * SPEC-401 (I-283): en vez del `throw new Error("Error al enviar notificación
+ * por email")` genérico —el mismo texto para las 10.498 fallas que teníamos en
+ * prod, sin forma de distinguir cuota de dominio inválido—, ahora se lanza
+ * `EmailProveedorError` cuyo `.message` es `[<name>][<statusCode>] <mensaje
+ * sanitizado>`. `procesar-lote.ts` lo persiste tal cual en
+ * `Notificacion.ultimoError` (sigue leyendo `err.message`, cero cambios en el
+ * catch). El log completo con el objeto crudo del proveedor se mantiene para
+ * dev; a BD solo va la versión sin PII.
  */
 export async function enviarEmailNotificacion(
     email: string,
@@ -34,7 +44,7 @@ export async function enviarEmailNotificacion(
 
     if (result.error) {
         logger.error("Resend error notificación:", result.error);
-        throw new Error("Error al enviar notificación por email");
+        throw new EmailProveedorError(resumirErrorProveedor(result.error));
     }
 
     const id = result.data?.id;

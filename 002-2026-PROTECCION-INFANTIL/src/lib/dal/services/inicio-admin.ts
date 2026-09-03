@@ -83,6 +83,61 @@ async function senalCorreosFallidos(): Promise<SenalAlarma | null> {
     return null;
 }
 
+/**
+ * SPEC-401 (I-283) — proveedor de correo caído.
+ *
+ * `senalCorreosFallidos` mira volumen (5 en 24 h) y patrón de cuota
+ * (`PATRON_CUOTA`). Esta señal mira una pregunta distinta: **¿está saliendo
+ * ALGÚN correo por razones que NO sean cuota?** — porque cuota ya tiene su
+ * propia lectura de alta prioridad (`correos_no_salen`).
+ *
+ * Tomamos las últimas `ventana` notificaciones EMAIL con estado terminal
+ * (ENVIADA o FALLIDA) — `REINTENTANDO` no cuenta porque todavía puede
+ * terminar bien en el próximo backoff.
+ *
+ * Dispara SOLO si:
+ *  1. `length >= ventana` (sistema no está idle).
+ *  2. Todas son `FALLIDA`.
+ *  3. Al menos UNA de esas fallas NO es cuota (`PATRON_CUOTA` no casa) —
+ *     si TODAS fueran cuota, `senalCorreosFallidos.correos_no_salen` ya
+ *     está gritando eso mismo; no duplicamos ruido (CEO idc-59, 11:13:
+ *     "429 daily_quota_exceeded" confirmado en prod hoy).
+ *
+ * Convive con `senalCorreosFallidos`, no la reemplaza: la de cuota vigila
+ * el tope del plan; esta vigila la infraestructura del proveedor.
+ */
+async function senalProveedorEmailCaido(): Promise<SenalAlarma | null> {
+    const ventana = await paramInt("monitoreo.notif.proveedor_caido_ventana", 10);
+    // ventana <= 0 desactiva la señal (útil si algún colegio la quiere silenciar).
+    if (ventana <= 0) return null;
+    const ultimas = await prisma.notificacion.findMany({
+        where: {
+            canal: "EMAIL",
+            estado: { in: ["ENVIADA", "FALLIDA"] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { estado: true, ultimoError: true },
+        take: ventana,
+    });
+    if (ultimas.length < ventana) return null;
+    if (!ultimas.every((n) => n.estado === "FALLIDA")) return null;
+    // Si TODAS las fallas son por cuota (PATRON_CUOTA), no gritamos: eso lo
+    // dice mejor `senalCorreosFallidos.correos_no_salen`. Basta con que UNA
+    // sea distinta a cuota para saber que el problema es del proveedor.
+    const alMenosUnaNoEsCuota = ultimas.some(
+        (n) => !n.ultimoError || !PATRON_CUOTA.test(n.ultimoError)
+    );
+    if (!alMenosUnaNoEsCuota) return null;
+    return {
+        id: "proveedor_email_caido",
+        prioridad: "alta",
+        texto:
+            `El proveedor de correo no aceptó ninguna de las últimas ${ventana} notificaciones ` +
+            "(por razones distintas a cuota). Está caído — nadie está recibiendo avisos.",
+        ruta: "/dashboard/admin/estadisticas/salud-motor",
+    };
+}
+
 async function senalAnalisisRachaFallida(): Promise<SenalAlarma | null> {
     const umbral = await paramInt("monitoreo.analisis.fallidos_racha_umbral", 5);
     // Racha "en cola": los últimos N análisis TERMINADOS (FALLIDO o PUBLICADO)
@@ -346,6 +401,8 @@ export async function calcularEstadoInicio(): Promise<EstadoInicio> {
     const t0 = Date.now();
     const promesas: Array<Promise<SenalAlarma | SenalAlarma[] | null>> = [
         senalCorreosFallidos(),
+        // SPEC-401 (I-283): distingue "fallan TODOS" de "falla uno".
+        senalProveedorEmailCaido(),
         senalAnalisisRachaFallida(),
         senalReportesHuerfanos(),
         senalRevisionManualReales(),
