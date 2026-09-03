@@ -30,3 +30,17 @@ export function tituloDia(dia: string): string {
 export function fmtMiles(n: number): string {
     return n.toLocaleString("es-CO");
 }
+
+/**
+ * Dinero en COP legible: "$18.400.000" (sin decimales — el negocio cobra en
+ * pesos redondos). Solo formatea el número ya resuelto por la capa de datos
+ * (candado 10); null → "—" (ausencia, no cero).
+ */
+export function fmtCOP(n: number | null): string {
+    if (n === null) return "—";
+    return new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+    }).format(n);
+}

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup BI — Lotes A·B·C (datos ilustrativos)</title>
+<style>
+  :root{
+    --bg:#0a0f14; --panel:#101820; --panel2:#0d141b; --line:#1e2a35;
+    --txt:#e6edf3; --mut:#7d8a97; --acc:#34d399; --warn:#fbbf24; --bad:#f87171;
+    --info:#60a5fa; --chip:#16222d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:24px;line-height:1.45}
+  .banner{background:#3b2f0b;border:1px solid #8a6d1a;color:#fde68a;padding:10px 16px;border-radius:8px;margin-bottom:20px;font-size:13px}
+  nav{display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+  nav a{background:var(--chip);border:1px solid var(--line);color:var(--txt);text-decoration:none;padding:8px 16px;border-radius:8px;font-size:14px}
+  nav a:hover{border-color:var(--acc)}
+  h1{font-size:22px;margin-bottom:4px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:20px}
+  h2{font-size:17px;margin:36px 0 4px}
+  .tag{display:inline-block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:14px}
+  .grid{display:grid;gap:14px}
+  .g6{grid-template-columns:repeat(6,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+  .card .big{font-size:30px;font-weight:700;margin-top:6px}
+  .card .foot{font-size:12px;color:var(--mut);margin-top:6px}
+  .up{color:var(--acc)} .dn{color:var(--bad)} .wr{color:var(--warn)}
+  .alert{border-left:4px solid var(--warn);background:#1c1508;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px}
+  .alert.bad{border-color:var(--bad);background:#1d0f0f}
+  .alert b{color:var(--txt)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;color:var(--mut);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:8px 10px;border-bottom:1px solid #16202a}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600}
+  .p-g{background:#052e1c;color:var(--acc)} .p-y{background:#3a2c05;color:var(--warn)} .p-r{background:#3a0d0d;color:var(--bad)} .p-b{background:#0b2545;color:var(--info)}
+  .bars{display:flex;align-items:flex-end;gap:8px;height:140px;padding-top:10px}
+  .bar{flex:1;background:linear-gradient(180deg,#1f6f54,#123f30);border-radius:4px 4px 0 0;position:relative;min-width:14px}
+  .bar small{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);color:var(--mut);font-size:10px;white-space:nowrap}
+  .bar em{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-style:normal;color:var(--mut)}
+  .hbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12.5px}
+  .hbar .track{flex:1;background:var(--panel2);border-radius:6px;height:20px;overflow:hidden}
+  .hbar .fill{height:100%;border-radius:6px}
+  .hbar .val{width:90px;text-align:right;color:var(--mut)}
+  .legend{display:flex;gap:16px;font-size:11.5px;color:var(--mut);margin-top:8px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+  .health{display:flex;gap:14px;flex-wrap:wrap}
+  .svc{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:12px;min-width:150px}
+  .svc .st{font-weight:700}
+  .divider{border:none;border-top:1px solid var(--line);margin:34px 0}
+  @media(max-width:1000px){.g6,.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="banner">MOCKUP DE PROPUESTA — Datos 100% ilustrativos (no son cifras reales). Navegación: Comercial · Comité · Motor. Todo se alimenta de la réplica de PI; bonos y referidos quedan <b>fuera de alcance</b> hasta que PI cierre ese módulo.</div>
+
+<nav>
+  <a href="#comercial">💰 /comercial</a>
+  <a href="#comite">⚖️ /comite</a>
+  <a href="#motor">🧠 /motor</a>
+</nav>
+
+<!-- ══════════════════ LOTE A · COMERCIAL ══════════════════ -->
+<h1 id="comercial">Comercial · Plata y operación de cobro</h1>
+<div class="sub">Suscripciones y pagos manuales declarados — fuente: Suscripcion, Pago, Plan, Colegio · rango: últimos 12 meses</div>
+
+<div class="alert"><b>Acción esta semana:</b> 3 colegios vencen en los próximos 7 días — <b>Inst. San Mateo (jue)</b>, <b>Colegio Los Pinos (vie)</b>, <b>Gimnasio del Norte (sáb)</b>. Además 2 suscripciones en gracia vencen en 48 h y 5 freemium expiran sin conversión.</div>
+
+<div class="grid g6">
+  <div class="card"><div class="lbl">Recaudo del mes</div><div class="big">$18,4M</div><div class="foot up">COP · +12% vs mes previo</div></div>
+  <div class="card"><div class="lbl">Recaudo año</div><div class="big">$142M</div><div class="foot">COP · declarado+autorizado</div></div>
+  <div class="card"><div class="lbl">Suscripciones activas</div><div class="big">46</div><div class="foot">41 colegio · 5 padre</div></div>
+  <div class="card"><div class="lbl">En gracia / suspendidas</div><div class="big wr">4 / 3</div><div class="foot">gracia: 2 vencen &lt;48h</div></div>
+  <div class="card"><div class="lbl">Freemium activos</div><div class="big">8</div><div class="foot">5 expiran esta semana</div></div>
+  <div class="card"><div class="lbl">Conversión freemium→pago</div><div class="big">38%</div><div class="foot up">+6 pp vs trimestre previo</div></div>
+</div>
+
+<h2>Embudo comercial</h2>
+<span class="tag">De prospecto a cliente que paga</span>
+<div class="hbar"><span style="width:130px">Colegios registrados</span><div class="track"><div class="fill" style="width:100%;background:#1d4ed8"></div></div><span class="val">52</span></div>
+<div class="hbar"><span style="width:130px">Onboarding completado</span><div class="track"><div class="fill" style="width:65%;background:#0ea5e9"></div></div><span class="val">34</span></div>
+<div class="hbar"><span style="width:130px">Freemium / pilotos</span><div class="track"><div class="fill" style="width:35%;background:#f59e0b"></div></div><span class="val">18</span></div>
+<div class="hbar"><span style="width:130px">Suscripción pagante</span><div class="track"><div class="fill" style="width:27%;background:#34d399"></div></div><span class="val">14</span></div>
+<div class="hbar"><span style="width:130px">Renovaron al menos 1 vez</span><div class="track"><div class="fill" style="width:19%;background:#059669"></div></div><span class="val">10</span></div>
+
+<div class="grid g2" style="margin-top:34px">
+  <div class="card">
+    <div class="lbl">Recaudo real por mes (COP)</div>
+    <div class="bars">
+      <div class="bar" style="height:32%"><em>6,1</em><small>oct</small></div>
+      <div class="bar" style="height:40%"><em>7,8</em><small>nov</small></div>
+      <div class="bar" style="height:38%"><em>7,4</em><small>dic</small></div>
+      <div class="bar" style="height:52%"><em>10,2</em><small>ene</small></div>
+      <div class="bar" style="height:60%"><em>11,7</em><small>feb</small></div>
+      <div class="bar" style="height:72%"><em>14,1</em><small>mar</small></div>
+      <div class="bar" style="height:66%"><em>12,9</em><small>abr</small></div>
+      <div class="bar" style="height:78%"><em>15,3</em><small>may</small></div>
+      <div class="bar" style="height:84%"><em>16,6</em><small>jun</small></div>
+      <div class="bar" style="height:96%"><em>18,4</em><small>jul</small></div>
+    </div>
+    <div class="legend"><span><i class="dot" style="background:#34d399"></i>autorizado</span><span><i class="dot" style="background:#fbbf24"></i>pendiente de autorizar</span></div>
+  </div>
+  <div class="card">
+    <div class="lbl">Recaudo por método de pago</div>
+    <div class="hbar"><span style="width:110px">Transferencia</span><div class="track"><div class="fill" style="width:62%;background:#34d399"></div></div><span class="val">62%</span></div>
+    <div class="hbar"><span style="width:110px">Nequi</span><div class="track"><div class="fill" style="width:18%;background:#60a5fa"></div></div><span class="val">18%</span></div>
+    <div class="hbar"><span style="width:110px">PSE manual</span><div class="track"><div class="fill" style="width:11%;background:#a78bfa"></div></div><span class="val">11%</span></div>
+    <div class="hbar"><span style="width:110px">Daviplata</span><div class="track"><div class="fill" style="width:6%;background:#f59e0b"></div></div><span class="val">6%</span></div>
+    <div class="hbar"><span style="width:110px">Efectivo / otro</span><div class="track"><div class="fill" style="width:3%;background:#94a3b8"></div></div><span class="val">3%</span></div>
+    <div class="foot" style="margin-top:14px">Pagos pendientes de autorizar: <b class="wr">4</b> · rechazados este mes: 1 · reembolsados: 0</div>
+  </div>
+</div>
+
+<h2>Retención por cohorte (colegios pagantes)</h2>
+<span class="tag">% de cada cohorte que sigue pagando N meses después de activarse</span>
+<div class="card">
+  <table>
+    <tr><th>Cohorte</th><th>Activados</th><th>M0</th><th>M1</th><th>M2</th><th>M3</th><th>M6</th><th>M12</th></tr>
+    <tr><td>2025-08</td><td>6</td><td>100%</td><td>100%</td><td>83%</td><td>83%</td><td>67%</td><td class="dn">50%</td></tr>
+    <tr><td>2025-11</td><td>8</td><td>100%</td><td>100%</td><td>88%</td><td>75%</td><td class="up">75%</td><td>—</td></tr>
+    <tr><td>2026-02</td><td>10</td><td>100%</td><td>90%</td><td>80%</td><td class="wr">70%</td><td>—</td><td>—</td></tr>
+    <tr><td>2026-05</td><td>12</td><td>100%</td><td class="wr">83%</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+  </table>
+</div>
+
+<h2>Vencimientos y cartera</h2>
+<div class="grid g2">
+  <div class="card">
+    <div class="lbl">Próximos vencimientos (7 días)</div>
+    <table>
+      <tr><th>Colegio</th><th>Plan</th><th>Vence</th><th>Estado</th></tr>
+      <tr><td>Inst. San Mateo</td><td>ANUAL</td><td>jue 05</td><td><span class="pill p-y">en gracia</span></td></tr>
+      <tr><td>Colegio Los Pinos</td><td>MES_6</td><td>vie 06</td><td><span class="pill p-g">activa</span></td></tr>
+      <tr><td>Gimnasio del Norte</td><td>MES_12</td><td>sáb 07</td><td><span class="pill p-g">activa</span></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="lbl">Top clientes por valor acumulado</div>
+    <table>
+      <tr><th>Colegio</th><th>Acumulado</th><th>Antigüedad</th><th>Estado</th></tr>
+      <tr><td>Colegio Los Pinos</td><td>$24,6M</td><td>11 meses</td><td><span class="pill p-g">activa</span></td></tr>
+      <tr><td>Gimnasio del Norte</td><td>$21,0M</td><td>9 meses</td><td><span class="pill p-g">activa</span></td></tr>
+      <tr><td>Inst. San Mateo</td><td>$12,2M</td><td>8 meses</td><td><span class="pill p-y">en gracia</span></td></tr>
+    </table>
+    <div class="foot">Nombres en claro: visible solo para CEO/admin de BI (decisión ARQ_07).</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ══════════════════ LOTE B · COMITÉ ══════════════════ -->
+<h1 id="comite">Comité · Escalamientos, resolución y SLA legal</h1>
+<div class="sub">Solicitudes de comité, alertas escaladas y apelaciones — fuente: SolicitudComite, TransicionReporte, AlertaColegio, Apelacion*</div>
+
+<div class="alert bad"><b>12 solicitudes llevan más de 48 h</b> sin resolver (la mediana saludable es 9 h). <b>2 apelaciones están a 3 días del plazo legal</b> (Ley 1581) — requieren decisión esta semana.</div>
+
+<div class="grid g6">
+  <div class="card"><div class="lbl">Pendientes hoy</div><div class="big">34</div><div class="foot dn">12 con &gt;48h</div></div>
+  <div class="card"><div class="lbl">Resueltas este mes</div><div class="big">87</div><div class="foot up">+22% vs mes previo</div></div>
+  <div class="card"><div class="lbl">Tiempo mediano resolución</div><div class="big">9,2h</div><div class="foot">objetivo &lt; 24h</div></div>
+  <div class="card"><div class="lbl">Dentro de SLA</div><div class="big up">91%</div><div class="foot">de las resueltas en el mes</div></div>
+  <div class="card"><div class="lbl">Apelaciones abiertas</div><div class="big wr">7</div><div class="foot">2 cerca del plazo</div></div>
+  <div class="card"><div class="lbl">Apelaciones resueltas mes</div><div class="big">15</div><div class="foot">10 aceptadas · 5 rechazadas</div></div>
+</div>
+
+<h2>Embudo de escalamiento</h2>
+<span class="tag">Qué tan profundo llega un caso antes de resolverse</span>
+<div class="hbar"><span style="width:150px">Reportes clasificados</span><div class="track"><div class="fill" style="width:100%;background:#1d4ed8"></div></div><span class="val">1.820</span></div>
+<div class="hbar"><span style="width:150px">Revisión manual</span><div class="track"><div class="fill" style="width:24%;background:#f59e0b"></div></div><span class="val">438</span></div>
+<div class="hbar"><span style="width:150px">Escalados a comité</span><div class="track"><div class="fill" style="width:14%;background:#f97316"></div></div><span class="val">256</span></div>
+<div class="hbar"><span style="width:150px">Resueltos por comité</span><div class="track"><div class="fill" style="width:9%;background:#34d399"></div></div><span class="val">165</span></div>
+
+<div class="grid g2" style="margin-top:34px">
+  <div class="card">
+    <div class="lbl">Resoluciones por semana y tiempo mediano (h)</div>
+    <div class="bars">
+      <div class="bar" style="height:40%"><em>12</em><small>s1</small></div>
+      <div class="bar" style="height:55%"><em>18</em><small>s2</small></div>
+      <div class="bar" style="height:48%"><em>15</em><small>s3</small></div>
+      <div class="bar" style="height:70%"><em>22</em><small>s4</small></div>
+      <div class="bar" style="height:62%"><em>19</em><small>s5</small></div>
+      <div class="bar" style="height:85%"><em>26</em><small>s6</small></div>
+    </div>
+    <div class="foot">Línea superpuesta en la versión real: mediana de horas por semana (objetivo descendente).</div>
+  </div>
+  <div class="card">
+    <div class="lbl">Outcome de las resoluciones del mes</div>
+    <div class="hbar"><span style="width:150px">Confirmado (IA acertó)</span><div class="track"><div class="fill" style="width:64%;background:#34d399"></div></div><span class="val">56</span></div>
+    <div class="hbar"><span style="width:150px">Corregido (humano ajustó)</span><div class="track"><div class="fill" style="width:22%;background:#fbbf24"></div></div><span class="val">19</span></div>
+    <div class="hbar"><span style="width:150px">Dado de baja (falso/spam)</span><div class="track"><div class="fill" style="width:9%;background:#f87171"></div></div><span class="val">8</span></div>
+    <div class="hbar"><span style="width:150px">Escalado a otro nivel</span><div class="track"><div class="fill" style="width:5%;background:#60a5fa"></div></div><span class="val">4</span></div>
+    <div class="legend" style="margin-top:16px"><span><i class="dot" style="background:#34d399"></i>64% confirmación = el motor va bien</span><span><i class="dot" style="background:#fbbf24"></i>22% correcciones = insumo a /motor</span></div>
+  </div>
+</div>
+
+<h2>Carga por comité y alertas escaladas</h2>
+<div class="grid g2">
+  <div class="card">
+    <div class="lbl">Solicitudes activas por comité (cuenta compartida)</div>
+    <table>
+      <tr><th>Comité</th><th>Activas</th><th>Mediana h</th><th>Estado</th></tr>
+      <tr><td>Comité validación · central</td><td>21</td><td>14h</td><td><span class="pill p-y">cargado</span></td></tr>
+      <tr><td>Comité convivencia · Los Pinos</td><td>6</td><td>6h</td><td><span class="pill p-g">óptimo</span></td></tr>
+      <tr><td>Comité convivencia · San Mateo</td><td>4</td><td>4h</td><td><span class="pill p-g">óptimo</span></td></tr>
+      <tr><td>Comité validación · norte</td><td>3</td><td>2h</td><td><span class="pill p-g">libre</span></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="lbl">Alertas de colegio escaladas por estado</div>
+    <div class="hbar"><span style="width:110px">Nuevas</span><div class="track"><div class="fill" style="width:30%;background:#60a5fa"></div></div><span class="val">18</span></div>
+    <div class="hbar"><span style="width:110px">Vistas</span><div class="track"><div class="fill" style="width:24%;background:#94a3b8"></div></div><span class="val">14</span></div>
+    <div class="hbar"><span style="width:110px">Gestionadas</span><div class="track"><div class="fill" style="width:36%;background:#34d399"></div></div><span class="val">21</span></div>
+    <div class="hbar"><span style="width:110px">Escaladas</span><div class="track"><div class="fill" style="width:10%;background:#f97316"></div></div><span class="val">6</span></div>
+  </div>
+</div>
+<div class="foot" style="margin-top:14px;color:var(--mut);font-size:12px">*Apelaciones: requiere aprobar su inclusión en la publicación (hoy prohibida — decisión de gobierno). Mientras tanto, la fila legal se alimenta de conteos de SolicitudComite.</div>
+
+<hr class="divider">
+
+<!-- ══════════════════ LOTE C · MOTOR ══════════════════ -->
+<h1 id="motor">Motor IA · Salud del pipeline y de la infraestructura</h1>
+<div class="sub">Clasificación, latencias, cola y dependencias externas — fuente: ClasificacionIA, PasoProcesamiento*, ReintentoReporte*, HealthProbe*, WorkerLog*, IncidenteInfra*, cola pg-boss</div>
+
+<div class="health" style="margin-bottom:22px">
+  <div class="svc"><span class="dot" style="background:var(--acc)"></span> Ollama (Mac · Tailscale) <span class="st up">· sano</span><br><small style="color:var(--mut)">ping 41ms · smoke ok · hace 2 min</small></div>
+  <div class="svc"><span class="dot" style="background:var(--acc)"></span> Worker reportes <span class="st up">· activo</span><br><small style="color:var(--mut)">advisory lock ok · último job hace 40s</small></div>
+  <div class="svc"><span class="dot" style="background:var(--warn)"></span> Cola pg-boss <span class="st wr">· 23 pendientes</span><br><small style="color:var(--mut)">latencia prom 3,2s · 1 atascado &gt;10 min</small></div>
+  <div class="svc"><span class="dot" style="background:var(--acc)"></span> BD réplica <span class="st up">· al día</span><br><small style="color:var(--mut)">lag 0 s · MVs refrescadas hace 4 min</small></div>
+  <div class="svc"><span class="dot" style="background:var(--bad)"></span> Incidentes abiertos <span class="st dn">· 1</span><br><small style="color:var(--mut)">Ollama caído 22 min ayer 03:12</small></div>
+</div>
+
+<div class="grid g6">
+  <div class="card"><div class="lbl">Clasificaciones 24h</div><div class="big">142</div><div class="foot">98,6% exitosas</div></div>
+  <div class="card"><div class="lbl">Confianza media</div><div class="big">0,84</div><div class="foot dn">−0,03 vs semana previa</div></div>
+  <div class="card"><div class="lbl">Corrección humana</div><div class="big wr">7,2%</div><div class="foot">de lo clasificado en el mes</div></div>
+  <div class="card"><div class="lbl">Latencia media pipeline</div><div class="big">18,4s</div><div class="foot">guardas→decisión</div></div>
+  <div class="card"><div class="lbl">En cola ahora</div><div class="big wr">23</div><div class="foot">1 atascado &gt;10 min</div></div>
+  <div class="card"><div class="lbl">Reintentos 24h</div><div class="big">2</div><div class="foot">0 fallos definitivos</div></div>
+</div>
+
+<h2>Latencia por etapa del pipeline (s)</h2>
+<span class="tag">Dónde se gasta el tiempo — un reporte típico</span>
+<div class="card">
+  <div class="hbar"><span style="width:170px">Guardas / antifraude</span><div class="track"><div class="fill" style="width:5%;background:#60a5fa"></div></div><span class="val">0,9s</span></div>
+  <div class="hbar"><span style="width:170px">Embedding (nomic)</span><div class="track"><div class="fill" style="width:14%;background:#60a5fa"></div></div><span class="val">2,6s</span></div>
+  <div class="hbar"><span style="width:170px">Deduplicación semántica</span><div class="track"><div class="fill" style="width:12%;background:#60a5fa"></div></div><span class="val">2,2s</span></div>
+  <div class="hbar"><span style="width:170px">RAG (dataset corregido)</span><div class="track"><div class="fill" style="width:26%;background:#f59e0b"></div></div><span class="val">4,8s</span></div>
+  <div class="hbar"><span style="width:170px">Clasificación (votos)</span><div class="track"><div class="fill" style="width:100%;background:#f97316"></div></div><span class="val">18,4s</span></div>
+  <div class="hbar"><span style="width:170px">Detección PII / doxing</span><div class="track"><div class="fill" style="width:32%;background:#f59e0b"></div></div><span class="val">5,9s</span></div>
+  <div class="hbar"><span style="width:170px">Anonimización</span><div class="track"><div class="fill" style="width:8%;background:#60a5fa"></div></div><span class="val">1,5s</span></div>
+  <div class="foot">La etapa de votos domina el pipeline: candidata natural a revisar (rúbrica o modelo) si el volumen crece.</div>
+</div>
+
+<div class="grid g2" style="margin-top:30px">
+  <div class="card">
+    <div class="lbl">Deriva del motor: confianza vs correcciones (semanal)</div>
+    <div class="bars">
+      <div class="bar" style="height:88%"><em>,86</em><small>s27</small></div>
+      <div class="bar" style="height:86%"><em>,85</em><small>s28</small></div>
+      <div class="bar" style="height:90%"><em>,87</em><small>s29</small></div>
+      <div class="bar" style="height:82%"><em>,84</em><small>s30</small></div>
+      <div class="bar" style="height:84%"><em>,84</em><small>s31</small></div>
+      <div class="bar" style="height:80%;background:linear-gradient(180deg,#8a4b1f,#5c2f10)"><em class="wr">,82</em><small>s32</small></div>
+    </div>
+    <div class="legend"><span><i class="dot" style="background:#fbbf24"></i>corrección humana semanal: 6,1% → 6,8% → 7,2% (tres semanas al alza — vigilar)</span></div>
+  </div>
+  <div class="card">
+    <div class="lbl">Top categorías por correcciones humanas (mes)</div>
+    <div class="hbar"><span style="width:190px">Solicitud de citas</span><div class="track"><div class="fill" style="width:72%;background:#f87171"></div></div><span class="val">14 corr.</span></div>
+    <div class="hbar"><span style="width:190px">Contenido sexual</span><div class="track"><div class="fill" style="width:50%;background:#fbbf24"></div></div><span class="val">10 corr.</span></div>
+    <div class="hbar"><span style="width:190px">Grooming</span><div class="track"><div class="fill" style="width:32%;background:#fbbf24"></div></div><span class="val">6 corr.</span></div>
+    <div class="hbar"><span style="width:190px">Acoso escolar</span><div class="track"><div class="fill" style="width:20%;background:#34d399"></div></div><span class="val">4 corr.</span></div>
+    <div class="foot" style="margin-top:14px">Estas correcciones alimentan el dataset de reentrenamiento (CorreccionAdmin) — son el insumo más valioso de la página.</div>
+  </div>
+</div>
+
+<h2>Reportes atascados e incidentes recientes</h2>
+<div class="grid g2">
+  <div class="card">
+    <div class="lbl">Atascados en la cola</div>
+    <table>
+      <tr><th># seguimiento</th><th>En cola desde</th><th>Minutos</th><th>Estado</th></tr>
+      <tr><td>PI-8841</td><td>14:02</td><td class="dn">17</td><td><span class="pill p-r">atascado</span></td></tr>
+      <tr><td>PI-8837</td><td>14:10</td><td>9</td><td><span class="pill p-y">esperando worker</span></td></tr>
+      <tr><td>PI-8832</td><td>14:16</td><td>3</td><td><span class="pill p-b">procesando</span></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="lbl">Incidentes de infraestructura (últimos 14 días)</div>
+    <table>
+      <tr><th>Servicio</th><th>Cuándo</th><th>Duración</th><th>Estado</th></tr>
+      <tr><td>Ollama / Tailscale</td><td>ayer 03:12</td><td class="dn">22 min</td><td><span class="pill p-g">resuelto</span></td></tr>
+      <tr><td>Worker reportes</td><td>hace 6 días</td><td>8 min</td><td><span class="pill p-g">resuelto</span></td></tr>
+      <tr><td>Ollama / Tailscale</td><td>hace 11 días</td><td>35 min</td><td><span class="pill p-g">resuelto</span></td></tr>
+    </table>
+    <div class="foot">La Mac se cae de noche: patrón visible solo cruzando HealthProbe + IncidenteInfra en el tiempo.</div>
+  </div>
+</div>
+<div class="foot" style="margin-top:14px;color:var(--mut);font-size:12px">*Requieren ampliación de la publicación (ReintentoReporte, PasoProcesamiento, HealthProbe, WorkerLog, IncidenteInfra) — sin PII, solo metadatos y latencias.</div>
+
+</body>
+</html>

@@ -21,13 +21,15 @@
 -- personas, sin errores de proceso ni nota de baja libre.
 -- SE QUEDAN publicadas (y en el suscriptor): ciudad/pais/otraPlataforma —
 -- texto geográfico de respaldo (nombre de ciudad, no persona) del que DEPENDE
--- la MV mv_fact_reporte_diario; motivoBaja (enum administrativo).
+-- la MV mv_fact_reporte_diario; motivoBaja (enum administrativo);
+-- operadorId (cuid interno del operario — autorizado por Jelkin el 2026-09-02
+-- para la capacidad operativa, PR 006#295; la publicación lo envía desde esa
+-- fecha, ver 02).
 ALTER TABLE "Reporte"
     DROP COLUMN IF EXISTS "texto",
     DROP COLUMN IF EXISTS "textoOriginal",
     DROP COLUMN IF EXISTS "identificador",
     DROP COLUMN IF EXISTS "usuarioId",
-    DROP COLUMN IF EXISTS "operadorId",
     DROP COLUMN IF EXISTS "comiteId",
     DROP COLUMN IF EXISTS "eliminadoPorId",
     DROP COLUMN IF EXISTS "anonimizacionValidadaPorId",
@@ -37,6 +39,10 @@ ALTER TABLE "Reporte"
 -- Drift DDL de PI (pg_logical no replica DDL): el master agregó esta columna
 -- tras el vuelco inicial del schema. Aditiva y tolerante (IF NOT EXISTS).
 ALTER TABLE "Reporte" ADD COLUMN IF NOT EXISTS "reportePrincipalId" text;
+-- Igual: operadorId llegó a la publicación el 2026-09-02 (PR 006#295); un
+-- suscriptor creado del vuelco viejo puede no tenerla. Texto sin constraint:
+-- el backfill inicial se hace por COPY y la columna es libre en PI.
+ALTER TABLE "Reporte" ADD COLUMN IF NOT EXISTS "operadorId" text;
 
 -- Alumno (menor): sin nombre ni documento.
 ALTER TABLE "Alumno"
@@ -107,6 +113,36 @@ ALTER TABLE "Suscripcion"
     DROP COLUMN IF EXISTS "motivoCancelacion",
     DROP COLUMN IF EXISTS "referenciaPagoManual";
 
+-- ── Lotes A·B·C (2026-09-03): espejo de las 6 tablas nuevas de 02 ──────────
+-- Pago: sin el comprobante (URL/mime/hash del cliente), sin textos libres
+-- (motivos, notas, referencias) y sin FKs a personas ni código de referido.
+-- OJO: comprobante* llegan NOT NULL del vuelco — este DROP es lo que permite
+-- el backfill inicial por COPY (mismo problema NOT NULL de 2026-09-01).
+ALTER TABLE "Pago"
+    DROP COLUMN IF EXISTS "comprobanteAdjuntoUrl",
+    DROP COLUMN IF EXISTS "comprobanteMimeType",
+    DROP COLUMN IF EXISTS "comprobanteHashSha256",
+    DROP COLUMN IF EXISTS "motivoRechazo",
+    DROP COLUMN IF EXISTS "autorizadoPorAdminId",
+    DROP COLUMN IF EXISTS "codigoReferidoUsado",
+    DROP COLUMN IF EXISTS "motivoReembolso",
+    DROP COLUMN IF EXISTS "referenciaReembolso",
+    DROP COLUMN IF EXISTS "notasCliente";
+
+-- pasos_procesamiento: sin el Json de detalle (puede arrastrar texto).
+ALTER TABLE "pasos_procesamiento" DROP COLUMN IF EXISTS "detalle";
+-- ReintentoReporte: sin el mensaje de error (texto libre).
+ALTER TABLE "ReintentoReporte" DROP COLUMN IF EXISTS "error";
+-- HealthProbe: sin el detalle libre del monitor.
+ALTER TABLE "HealthProbe" DROP COLUMN IF EXISTS "detalle";
+-- worker_logs: sin el contexto Json libre (el mensaje VarChar(500) ya está
+-- garantizado sin PII por SPEC-193).
+ALTER TABLE "worker_logs" DROP COLUMN IF EXISTS "contextoJson";
+-- IncidenteInfra: sin detalle libre ni la marca de email interno.
+ALTER TABLE "IncidenteInfra"
+    DROP COLUMN IF EXISTS "detalle",
+    DROP COLUMN IF EXISTS "ultimoEmailEn";
+
 -- ── Verificación: en estas tablas no debe quedar NINGUNA columna vetada ──
 DO $$
 DECLARE
@@ -127,7 +163,11 @@ BEGIN
             ('AcudienteEstudiante','nombre'),('AcudienteEstudiante','email'),
             ('Hijo','nombre'),('Hijo','documentoNumero'),
             ('ContactoConfianza','nombre'),('IdentificadorReportado','identificador'),
-            ('Suscripcion','contratoPDFUrl')
+            ('Suscripcion','contratoPDFUrl'),
+            ('Pago','comprobanteAdjuntoUrl'),('Pago','notasCliente'),
+            ('pasos_procesamiento','detalle'),('ReintentoReporte','error'),
+            ('HealthProbe','detalle'),('worker_logs','contextoJson'),
+            ('IncidenteInfra','detalle')
           )
     LOOP
         RAISE EXCEPTION '[06] Columna PII aún presente en el suscriptor: %.%', vetada.table_name, vetada.column_name;
