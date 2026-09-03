@@ -46,8 +46,13 @@ export const DEMO5 = {
     nReportes: 4200,
     /** Padres con expediente propio (brief §5: hoy hay 4 en producción). */
     nPadres: 60,
-    /** Ventana de fechas: los últimos 12 meses (orden del CEO 03-09 16:0x). */
-    mesesAtras: 12,
+    /**
+     * Ventana de fechas: los últimos **36 meses** (veredicto del CEO 03-09 16:2x).
+     * Tres años CONTIENEN los doce meses, así que nada de lo que BI haga con un
+     * año se rompe, y además habilita la comparación año contra año — que era lo
+     * que Jelkin ya había pedido para v4.
+     */
+    mesesAtras: 36,
 
     /** Fracción de reportes que apunta a un sujeto sembrado → nace `AlertaColegio`. */
     reportesASujetoDemo: 0.83,
@@ -148,13 +153,12 @@ export function numeroSeguimientoV5(r: () => number): string {
 }
 
 /**
- * Fecha del incidente en los **últimos 12 meses** (orden del CEO 03-09 16:0x:
- * *"4.000+ reportes repartidos en 12 meses"*). Nunca futura; hora en punto
- * (G20: los minutos del hecho no se conocen).
+ * Fecha del incidente dentro de la ventana de `DEMO5.mesesAtras` (hoy 36 meses).
+ * Nunca futura; hora en punto (G20: los minutos del hecho no se conocen).
  *
- * Nota de trazabilidad: v4 repartía en 2024/2025/2026 por pedido de Jelkin para
- * aquella corrida. Esta ventana es la que pidió BI para la resiembra; se cambia
- * en un solo lugar (`DEMO5.mesesAtras`) si hiciera falta volver atrás.
+ * Trazabilidad: la primera orden fueron 12 meses; el CEO la corrigió a 3 años
+ * porque tres años contienen los doce y habilitan la comparación año contra año.
+ * Se mueve en un solo lugar, `DEMO5.mesesAtras`.
  */
 export function fechaEnVentanaV5(r: () => number, ahora: Date): Date {
     const rangoMs = DEMO5.mesesAtras * 30 * 24 * 3600 * 1000;

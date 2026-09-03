@@ -66,7 +66,7 @@ Kimi verificó que **BI no guarda ningún identificador de PI**, así que las ll
 | Qué | Cómo |
 |---|---|
 | Volumen | 50 colegios · 300 profesores · 2.000 alumnos · ~2.800 acudientes · 4.200 reportes |
-| Ventana | los **últimos 12 meses**. *(v4 repartía en 2024-2025-2026 por un pedido anterior de Jelkin; se cambia en un solo lugar, `DEMO5.mesesAtras`, si hiciera falta volver a esa forma.)* |
+| Ventana | los **últimos 36 meses** (veredicto del CEO 03-09 16:2x, corrigiendo los 12 iniciales). Tres años **contienen** los doce, así que nada de lo que BI haga con un año se rompe, y habilita la comparación año contra año — que es lo que Jelkin ya había pedido para v4. Se mueve en un solo lugar: `DEMO5.mesesAtras`. |
 | Geografía | 20 países · 120 ciudades, resueltas contra el catálogo real. Si una ciudad del catálogo no está en la BD, **se aborta antes de escribir**: ningún reporte puede quedar con `paisId` nulo. |
 | Plataformas y categorías | las 10 plataformas del catálogo y **las 14 categorías** de `CategoriaConducta` más SPAM. A los pesos de v2 les faltaba `OTRO`; se agregó, con sus propios relatos. |
 | **Reincidencia deliberada** | el 35 % de los reportes con sujeto reusa un sujeto ya reportado, y el 40 % de esos queda encadenado por `reportePrincipalId`. Sin esto los patrones institucionales quedan vacíos. |
@@ -162,7 +162,7 @@ obtenerDetalle(cmtm0yq700…) → ABRE
 - Reportes con id que empieza por `demo`: **0**.
 - Filas sembradas sin marcar (reportes, colegios, alertas, pagos, suscripciones): **0**.
 
-**Forma de los datos** — 15 categorías (las 14 de conducta + SPAM) · 20 países · 120 ciudades · 10 plataformas · 13 meses calendario cubiertos · **0 reportes con `paisId` nulo** · 1.076 identificadores con más de un reporte (reincidencia) · 672 reportes encadenados · asignación de alertas entre **13 % y 100 %** según el colegio (el semáforo tiene sus tres estados) · **0 suscripciones descuadradas** contra sus pagos autorizados.
+**Forma de los datos** — 15 categorías (las 14 de conducta + SPAM) · 20 países · 120 ciudades · 10 plataformas · 13 meses calendario cubiertos *(medido con la ventana de 12 meses; con los 36 vigentes el reparto cubre los tres años, comprobado en el test)* · **0 reportes con `paisId` nulo** · 1.076 identificadores con más de un reporte (reincidencia) · 672 reportes encadenados · asignación de alertas entre **13 % y 100 %** según el colegio (el semáforo tiene sus tres estados) · **0 suscripciones descuadradas** contra sus pagos autorizados.
 
 **Borrado** — con un testigo REAL sin marcar sembrado a propósito, incluido *un colegio llamado «Colegio Demo de Verdad»* para probar que el borrado no se guía por el nombre:
 

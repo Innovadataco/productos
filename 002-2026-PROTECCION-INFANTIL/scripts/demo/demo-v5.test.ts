@@ -266,7 +266,7 @@ describe("SPEC-412 · fechas", () => {
         }
     });
 
-    it("reparte dentro de la ventana de 12 meses que pidió BI", () => {
+    it("reparte dentro de la ventana de 3 años que pidió BI", () => {
         const r = rng(99);
         const minimo = AHORA.getTime() - DEMO5.mesesAtras * 30 * 24 * 3600 * 1000;
         for (let i = 0; i < 2000; i++) {
@@ -274,14 +274,18 @@ describe("SPEC-412 · fechas", () => {
         }
     });
 
-    it("cubre los 12 meses, no se apelmaza en uno solo", () => {
+    it("cubre toda la ventana mes a mes, no se apelmaza en uno solo", () => {
         const r = rng(412);
         const meses = new Set<string>();
+        const anios = new Set<number>();
         for (let i = 0; i < 4200; i++) {
             const f = fechaEnVentanaV5(r, AHORA);
             meses.add(`${f.getUTCFullYear()}-${f.getUTCMonth()}`);
+            anios.add(f.getUTCFullYear());
         }
-        expect(meses.size).toBeGreaterThanOrEqual(12);
+        expect(meses.size).toBeGreaterThanOrEqual(DEMO5.mesesAtras);
+        // Tres años completos: la comparación año contra año que pidió el CEO.
+        expect(anios.size).toBeGreaterThanOrEqual(3);
     });
 
     it("hora en punto (G20: los minutos del hecho no se conocen)", () => {
@@ -295,6 +299,10 @@ describe("SPEC-412 · fechas", () => {
 });
 
 describe("SPEC-412 · lo que BI pidió y la siembra vieja hacía bien (CEO 03-09 16:0x)", () => {
+    it("ventana de 3 años (veredicto CEO 03-09 16:2x), que contiene los 12 meses", () => {
+        expect(DEMO5.mesesAtras).toBe(36);
+    });
+
     it("volúmenes: ~50 colegios · ~300 profesores · ~2.000 alumnos · ~2.800 acudientes · 4.000+ reportes", () => {
         expect(DEMO5.nColegios).toBeGreaterThanOrEqual(50);
         expect(DEMO5.nColegios * DEMO5.profesoresPorColegio).toBeGreaterThanOrEqual(300);
