@@ -350,7 +350,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-401 (I-283): helper puro para resumir/sanitizar el motivo real del proveedor de correo.
     "src/lib/notificaciones/motivo-error.test.ts",
     // SPEC-408 (A-75 · brief §9): reader parametrizable + candado H-2 de la
-    // vista del profesional (nunca expone resultado/checklist).
+    // vista del profesional (nunca expone resultado/checklist) + candado
+    // permanente del emisor (solo APROBADO o MAS_INFORMACION — orden Jelkin).
     "src/lib/profesionales/verificador/requisitos.test.ts",
     "src/lib/profesionales/verificador/vista-profesional.test.ts",
+    "src/lib/profesionales/verificador/service.candado.test.ts",
 ];
