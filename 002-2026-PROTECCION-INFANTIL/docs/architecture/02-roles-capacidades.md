@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 484 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3388 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 486 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3402 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -272,7 +272,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | api | permitir | permite | sí |
 | `/api/colegio/confianza/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
@@ -761,7 +763,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | api | permitir | permite | sí |
 | `/api/colegio/confianza/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
@@ -1250,7 +1254,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | api | permitir | permite | sí |
 | `/api/colegio/confianza/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
@@ -1739,7 +1745,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | api | permitir | permite | sí |
 | `/api/colegio/confianza/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
@@ -2228,7 +2236,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite/integrantes/[id]/estado` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/comite/solicitudes` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | api | permitir | permite | sí |
 | `/api/colegio/confianza/auditoria` | api | HTTP 403 | no permite | sí |
 | `/api/colegio/confianza/documentos` | api | HTTP 403 | no permite | sí |
@@ -2717,7 +2727,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite/integrantes/[id]/estado` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | permitir | permite | sí |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | api | permitir | permite | sí |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | api | permitir | permite | sí |
 | `/api/colegio/confianza/auditoria` | api | permitir | permite | sí |
 | `/api/colegio/confianza/documentos` | api | permitir | permite | sí |
@@ -3206,7 +3218,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/colegio/comite/integrantes/[id]/estado` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/solicitudes` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/solicitudes/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/solicitudes/[id]/notas` | api | HTTP 401 | permite | **NO** |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/confianza/auditoria` | api | HTTP 401 | permite | **NO** |
 | `/api/colegio/confianza/documentos` | api | HTTP 401 | permite | **NO** |
@@ -3677,7 +3691,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/colegio/comite/integrantes/[id]/estado` | HTTP 401 | permite |
 | `/api/colegio/comite/solicitudes` | HTTP 401 | permite |
 | `/api/colegio/comite/solicitudes/[id]` | HTTP 401 | permite |
+| `/api/colegio/comite/solicitudes/[id]/analisis` | HTTP 401 | permite |
 | `/api/colegio/comite/solicitudes/[id]/notas` | HTTP 401 | permite |
+| `/api/colegio/comite/solicitudes/[id]/recomendar-informe` | HTTP 401 | permite |
 | `/api/colegio/comite/solicitudes/[id]/resolver` | HTTP 401 | permite |
 | `/api/colegio/confianza/auditoria` | HTTP 401 | permite |
 | `/api/colegio/confianza/documentos` | HTTP 401 | permite |

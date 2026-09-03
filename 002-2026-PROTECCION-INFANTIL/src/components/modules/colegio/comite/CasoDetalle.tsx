@@ -9,6 +9,14 @@ interface Props {
     puedeResolver: boolean;
 }
 
+interface EstadoAnalisis {
+    analisis: string | null;
+    analisisActualizadoEn: string | null;
+    analisisPor: { id: string; nombre: string | null; apellidos: string | null } | null;
+    recomendacionInformeEn: string | null;
+    recomendacionPor: { id: string; nombre: string | null; apellidos: string | null } | null;
+}
+
 export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
     const [detalle, setDetalle] = useState<DetalleSolicitudComiteDto | null>(null);
     const [loading, setLoading] = useState(true);
@@ -18,18 +26,35 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
     // SPEC-319 §2.4: integrante que firma el cierre (cuenta compartida).
     const [firmanteId, setFirmanteId] = useState("");
     const [accionLoading, setAccionLoading] = useState(false);
+    // SPEC-380 (PR A · C4): análisis persistente del comité + recomendación al
+    // rector. Se lee de `/analisis` (endpoint separado que también sirve al
+    // rector en su vista de lectura).
+    const [analisisEstado, setAnalisisEstado] = useState<EstadoAnalisis | null>(null);
+    const [analisisTexto, setAnalisisTexto] = useState("");
+    const [analisisMensaje, setAnalisisMensaje] = useState<string | null>(null);
+    const [analisisError, setAnalisisError] = useState<string | null>(null);
+    const [analisisSaving, setAnalisisSaving] = useState(false);
+    const [recomendando, setRecomendando] = useState(false);
 
     const cargar = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`/api/colegio/comite/solicitudes/${solicitudId}`);
-            const data = await res.json();
-            if (!res.ok) {
-                setError(data.error?.message || "Error al cargar el caso");
+            const [resDetalle, resAnalisis] = await Promise.all([
+                fetch(`/api/colegio/comite/solicitudes/${solicitudId}`),
+                fetch(`/api/colegio/comite/solicitudes/${solicitudId}/analisis`),
+            ]);
+            const dataDetalle = await resDetalle.json();
+            if (!resDetalle.ok) {
+                setError(dataDetalle.error?.message || "Error al cargar el caso");
                 return;
             }
-            setDetalle(data);
+            setDetalle(dataDetalle);
+            if (resAnalisis.ok) {
+                const dataAnalisis = (await resAnalisis.json()) as EstadoAnalisis;
+                setAnalisisEstado(dataAnalisis);
+                setAnalisisTexto(dataAnalisis.analisis ?? "");
+            }
         } catch {
             setError("Error de red al cargar el caso");
         } finally {
@@ -40,6 +65,54 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
     useEffect(() => {
         void cargar();
     }, [cargar]);
+
+    async function guardarAnalisis(event: React.FormEvent) {
+        event.preventDefault();
+        setAnalisisSaving(true);
+        setAnalisisMensaje(null);
+        setAnalisisError(null);
+        try {
+            const res = await fetch(`/api/colegio/comite/solicitudes/${solicitudId}/analisis`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ texto: analisisTexto.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setAnalisisError(data.error?.message || "No pudimos guardar el análisis.");
+                return;
+            }
+            setAnalisisEstado(data as EstadoAnalisis);
+            setAnalisisTexto((data.analisis as string | null) ?? "");
+            setAnalisisMensaje("Análisis guardado.");
+        } catch {
+            setAnalisisError("Error de red al guardar el análisis.");
+        } finally {
+            setAnalisisSaving(false);
+        }
+    }
+
+    async function recomendarInforme() {
+        setRecomendando(true);
+        setAnalisisMensaje(null);
+        setAnalisisError(null);
+        try {
+            const res = await fetch(`/api/colegio/comite/solicitudes/${solicitudId}/recomendar-informe`, {
+                method: "POST",
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setAnalisisError(data.error?.message || "No pudimos enviar la recomendación.");
+                return;
+            }
+            setAnalisisEstado((prev) => (prev ? { ...prev, ...data } : prev));
+            setAnalisisMensaje("Recomendación enviada al rector.");
+        } catch {
+            setAnalisisError("Error de red al enviar la recomendación.");
+        } finally {
+            setRecomendando(false);
+        }
+    }
 
     async function agregarNota(event: React.FormEvent) {
         event.preventDefault();
@@ -140,6 +213,112 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                         <dt className="text-xs uppercase tracking-wide text-muted">Resolución del comité</dt>
                         <dd className="mt-1 whitespace-pre-wrap text-body">{solicitud.resolucion}</dd>
                     </div>
+                )}
+            </section>
+
+            {/* SPEC-380 (PR A · C4): análisis persistente del comité +
+                "Recomendar generar informe al rector". El comité edita;
+                el rector lee (mismo panel, sin botones). Nunca rojo — la
+                recomendación se ve como una nota ámbar. */}
+            <section className="rounded-2xl glass p-6" aria-labelledby="analisis-comite-title">
+                <h2 id="analisis-comite-title" className="text-lg font-semibold text-body">
+                    Análisis del comité
+                </h2>
+                {analisisEstado?.recomendacionInformeEn && (
+                    <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-50/60 p-3 text-sm text-body dark:bg-amber-950/20">
+                        <p className="font-medium">Recomendación al rector · enviada.</p>
+                        <p className="mt-1 text-muted">
+                            El comité recomendó al rector emitir el informe del caso el{" "}
+                            {new Date(analisisEstado.recomendacionInformeEn).toLocaleString("es-CO", {
+                                timeZone: "America/Bogota",
+                            })}
+                            {analisisEstado.recomendacionPor && (
+                                <>
+                                    {" · "}
+                                    {analisisEstado.recomendacionPor.nombre ?? ""}{" "}
+                                    {analisisEstado.recomendacionPor.apellidos ?? ""}
+                                </>
+                            )}
+                            . La decisión y la firma siguen siendo del rector.
+                        </p>
+                    </div>
+                )}
+
+                {puedeResolver && solicitud.estado === "PENDIENTE" ? (
+                    <form onSubmit={guardarAnalisis} className="mt-4 space-y-3">
+                        <textarea
+                            maxLength={8000}
+                            value={analisisTexto}
+                            onChange={(e) => setAnalisisTexto(e.target.value)}
+                            placeholder="Escriba el análisis del comité — lo que estudió, lo que preocupa, lo que se recomienda…"
+                            className="min-h-[160px] w-full rounded-xl glass-input px-4 py-2 text-sm text-body placeholder-subtle ring-accent-input"
+                        />
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button type="submit" isLoading={analisisSaving} disabled={analisisSaving || !analisisTexto.trim()}>
+                                {analisisSaving ? "Guardando…" : "Guardar análisis"}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={recomendarInforme}
+                                isLoading={recomendando}
+                                // La recomendación necesita un análisis guardado y no
+                                // reenvía si ya se hizo (el endpoint también lo bloquea).
+                                disabled={
+                                    recomendando ||
+                                    !analisisEstado?.analisis ||
+                                    !!analisisEstado?.recomendacionInformeEn
+                                }
+                            >
+                                {analisisEstado?.recomendacionInformeEn
+                                    ? "Recomendación ya enviada"
+                                    : "Recomendar generar informe al rector"}
+                            </Button>
+                        </div>
+                        {analisisEstado?.analisisActualizadoEn && (
+                            <p className="text-xs text-muted">
+                                Última edición:{" "}
+                                {new Date(analisisEstado.analisisActualizadoEn).toLocaleString("es-CO", {
+                                    timeZone: "America/Bogota",
+                                })}
+                                {analisisEstado.analisisPor && (
+                                    <>
+                                        {" · "}
+                                        {analisisEstado.analisisPor.nombre ?? ""}{" "}
+                                        {analisisEstado.analisisPor.apellidos ?? ""}
+                                    </>
+                                )}
+                            </p>
+                        )}
+                        {analisisMensaje && (
+                            <p className="text-xs text-muted" role="status">
+                                {analisisMensaje}
+                            </p>
+                        )}
+                        {analisisError && (
+                            <p className="text-xs text-amber-700 dark:text-amber-400" role="alert">
+                                {analisisError}
+                            </p>
+                        )}
+                    </form>
+                ) : analisisEstado?.analisis ? (
+                    <div className="mt-4">
+                        <p className="whitespace-pre-wrap text-sm text-body">{analisisEstado.analisis}</p>
+                        {analisisEstado.analisisActualizadoEn && (
+                            <p className="mt-2 text-xs text-muted">
+                                Registrado por{" "}
+                                {analisisEstado.analisisPor?.nombre ?? ""}{" "}
+                                {analisisEstado.analisisPor?.apellidos ?? ""} · última edición{" "}
+                                {new Date(analisisEstado.analisisActualizadoEn).toLocaleString("es-CO", {
+                                    timeZone: "America/Bogota",
+                                })}
+                            </p>
+                        )}
+                    </div>
+                ) : (
+                    <p className="mt-4 text-sm text-muted">
+                        El comité aún no ha escrito su análisis.
+                    </p>
                 )}
             </section>
 

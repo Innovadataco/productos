@@ -112,6 +112,9 @@ enum AccionAudit {
   SPAM_PROCESADO_COMO_ACOSO
   CASO_ESCALADO
   CASO_RESUELTO_POR_COMITE
+  // SPEC-380 (PR A · C4): análisis persistente del comité y recomendación de emitir informe.
+  COMITE_ANALISIS_ACTUALIZADO
+  COMITE_RECOMENDACION_INFORME
   CASO_REASIGNADO
   CASO_NOTA_AGREGADA
   CONFIGURACION_ASIGNACION_ACTUALIZADA
@@ -628,6 +631,10 @@ model Usuario {
   solicitudesComite                SolicitudComite[]               @relation("SolicitudesComite")
   solicitudesEscaladas             SolicitudComite[]               @relation("SolicitudesEscaladas")
   solicitudesComiteCreadas         SolicitudComite[]               @relation("SolicitudesCreadasPorColegio")
+  // SPEC-380 (PR A): backrefs para el análisis del comité y la recomendación
+  // de emitir el informe (quién escribió / quién recomendó).
+  solicitudesAnalisisPor           SolicitudComite[]               @relation("SolicitudesAnalisisPor")
+  solicitudesRecomendacionPor      SolicitudComite[]               @relation("SolicitudesRecomendacionPor")
   notasSeguimiento                 NotaSeguimiento[]
   integrantesComite                IntegranteComite[]              @relation("IntegrantesComite")
   integrantesComiteCreados         IntegranteComite[]              @relation("IntegrantesComiteCreados")
@@ -1869,6 +1876,17 @@ model SolicitudComite {
   // trazabilidad de quién decidió). Nullable: cierres previos a la feature quedan sin firma.
   integranteFirmanteId String?
 
+  // SPEC-380 (PR A · C4): análisis del comité EDITABLE durante la deliberación,
+  // separado de `resolucion` (que solo se llena al cerrar y ya la lee el
+  // informe del caso en informes-caso.ts:193 — no se toca su semántica).
+  analisis              String?   @db.Text
+  analisisActualizadoEn DateTime?
+  analisisPorId         String?
+  // SPEC-380 (PR A): "el comité recomienda al rector emitir el informe" — marca
+  // temporal + quién la puso. La emisión sigue firmándola el rector.
+  recomendacionInformeEn DateTime?
+  recomendacionPorId     String?
+
   reporte            Reporte           @relation(fields: [reporteId], references: [id], onDelete: Cascade)
   comite             Usuario?          @relation(fields: [comiteId], references: [id], name: "SolicitudesComite")
   operador           Usuario?          @relation(fields: [operadorId], references: [id], name: "SolicitudesEscaladas")
@@ -1876,6 +1894,8 @@ model SolicitudComite {
   alerta             AlertaColegio?    @relation(fields: [alertaColegioId], references: [id])
   creadoPor          Usuario?          @relation(fields: [creadoPorId], references: [id], name: "SolicitudesCreadasPorColegio")
   integranteFirmante IntegranteComite? @relation(fields: [integranteFirmanteId], references: [id], name: "SolicitudesFirmadas")
+  analisisPor        Usuario?          @relation(fields: [analisisPorId], references: [id], name: "SolicitudesAnalisisPor")
+  recomendacionPor   Usuario?          @relation(fields: [recomendacionPorId], references: [id], name: "SolicitudesRecomendacionPor")
 
   @@index([estado])
   @@index([comiteId])
@@ -1885,6 +1905,8 @@ model SolicitudComite {
   @@index([creadoPorId])
   @@index([creadoEn])
   @@index([integranteFirmanteId])
+  // SPEC-380: consulta "casos con recomendación pendiente" del rector.
+  @@index([colegioId, recomendacionInformeEn])
 }
 
 model TransicionReporte {
