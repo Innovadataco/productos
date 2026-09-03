@@ -8,7 +8,6 @@ import { generarPdfEstadisticas } from "@/lib/colegio/pdf-estadisticas";
 import { leerEscudoDataUri } from "@/lib/colegio/escudo-storage";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import type { AccionAudit } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,7 +59,7 @@ export async function GET(request: Request) {
         const userAgent = request.headers.get("user-agent") || "unknown";
 
         await logAudit({
-            accion: "COLEGIO_ESTADISTICAS_PDF_DESCARGADO" as AccionAudit,
+            accion: "COLEGIO_ESTADISTICAS_PDF_DESCARGADO",
             tipoRecurso: "Colegio",
             recursoId: user.colegioId,
             usuarioId: user.id,

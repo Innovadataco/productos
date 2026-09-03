@@ -106,7 +106,7 @@ export async function agregarContacto(
         });
 
         await logAudit({
-            accion: "CIRCULO_CONTACT_CREATE" as AccionAudit,
+            accion: "CIRCULO_CONTACT_CREATE",
             tipoRecurso: "ContactoConfianza",
             recursoId: contacto.id,
             usuarioId,
@@ -290,7 +290,7 @@ export async function eliminarContacto(id: string, usuarioId: string, request?: 
             data: { activo: false },
         });
         await logAudit({
-            accion: "CIRCULO_CONTACT_DISABLE" as AccionAudit,
+            accion: "CIRCULO_CONTACT_DISABLE",
             tipoRecurso: "ContactoConfianza",
             recursoId: id,
             usuarioId,
