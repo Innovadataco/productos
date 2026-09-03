@@ -322,11 +322,11 @@ const CONFIGS: Array<{ clave: string; valor: string; descripcion: string }> = [
     valor: "SOLICITUD_MATERIAL,COMPARTIMIENTO_SEXUAL,DIFUSION_NO_CONSENTIDA,SOLICITUD_ENCUENTRO,EXTORSION",
     descripcion: "Categorias (enum CategoriaConducta de PI, separadas por coma) que elevan el semaforo si se repiten",
   },
-  {
-    clave: "bi.capacidad.casos_max_operario",
-    valor: "25",
-    descripcion: "Cupo maximo de casos activos por operario: la demanda acumulada que supere operarios x cupo enciende el semaforo rubi de capacidad",
-  },
+  // NOTA 2026-09-03: `bi.capacidad.casos_max_operario` fue RETIRADO del seed.
+  // La tarjeta de capacidad mide la cola de moderación con el cupo REAL de
+  // PerfilOperador (replicado desde PI); un cupo local quemado desvirtuaba la
+  // cifra frente al panel de PI. La fila muerta en BD se ignora y puede
+  // borrarse a mano (el seed nunca borra: update:{} vacío, S3).
   {
     clave: "bi.analitica.sigma",
     valor: "2",

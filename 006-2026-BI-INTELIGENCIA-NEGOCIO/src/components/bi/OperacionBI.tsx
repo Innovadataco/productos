@@ -202,10 +202,10 @@ export default function OperacionBI({
                     </div>
                     <p className="mt-2 text-[13.5px] font-semibold leading-snug">{capacidad.mensaje}</p>
                     <p className="cifra mt-1.5 text-[12.5px] text-muted">
-                        {capacidad.revisionManual.toLocaleString("es-CO")} en revisión manual
-                        · {capacidad.alertasSinAsignar.toLocaleString("es-CO")} alertas sin asignar
+                        {capacidad.sinAsignar.toLocaleString("es-CO")} sin asignar
                         · {capacidad.operariosConCasos.toLocaleString("es-CO")} operarios con casos
-                        · cupo {capacidad.capacidadMaxPorOperario.toLocaleString("es-CO")} casos/operario
+                        · cupo total {capacidad.cupoTotal.toLocaleString("es-CO")}
+                        ({capacidad.cupoLibre.toLocaleString("es-CO")} libres)
                     </p>
                 </div>
             )}
