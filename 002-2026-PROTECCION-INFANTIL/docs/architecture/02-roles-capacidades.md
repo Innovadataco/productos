@@ -3519,7 +3519,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/sesion/al-dia` | api | HTTP 401 | permite | **NO** |
 | `/api/session/ping` | api | HTTP 401 | permite | **NO** |
 | `/api/vigencia/refresh` | api | HTTP 401 | permite | **NO** |
-| `/api/webhooks/resend` | api | HTTP 401 | permite | **NO** |
+| `/api/webhooks/resend` | api | permitir | permite | sí |
 | `/cambiar-password` | página | redirigir→/login | permite | **NO** |
 | `/camino/colegio/cursos` | página | redirigir→/login | permite | **NO** |
 | `/camino/colegio/estudiantes` | página | redirigir→/login | permite | **NO** |
@@ -3995,7 +3995,6 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/sesion/al-dia` | HTTP 401 | permite |
 | `/api/session/ping` | HTTP 401 | permite |
 | `/api/vigencia/refresh` | HTTP 401 | permite |
-| `/api/webhooks/resend` | HTTP 401 | permite |
 | `/cambiar-password` | redirigir→/login | permite |
 | `/camino/colegio/cursos` | redirigir→/login | permite |
 | `/camino/colegio/estudiantes` | redirigir→/login | permite |
