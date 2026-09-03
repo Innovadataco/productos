@@ -435,8 +435,10 @@ export async function getProyeccion(
                    count(r."id")::int AS total
             FROM generate_series(
                    -- make_interval(weeks => $1) con parámetro de prisma falla
-                   // en runtime (42P08: no puede inferir el tipo del named
-                   // arg); interval * int parametrizado sí se resuelve.
+                   -- en runtime (42P08: no puede inferir el tipo del named
+                   -- arg); interval * int parametrizado sí se resuelve.
+                   -- OJO: dentro de un tagged template SOLO comentarios SQL (--)
+                   -- los "//" pasan al SQL y rompen (42601) — verificado en vivo.
                    date_trunc('week', now()) - (interval '1 week' * (${semanas}::int)),
                    date_trunc('week', now()) - interval '1 week',
                    interval '1 week'
