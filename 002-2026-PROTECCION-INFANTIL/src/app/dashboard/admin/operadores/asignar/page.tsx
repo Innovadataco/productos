@@ -28,10 +28,23 @@ type EstadoAsignacion = {
     cupoDefault: number;
 };
 
+// SPEC-372 (A-74 · P3): el mismo tipo que retorna `reconciliarHuerfanos`. Se
+// muestra en un aviso debajo del botón — no hace falta un modal para tres números.
+type ResumenReconciliacion = {
+    encontrados: number;
+    asignados: number;
+    fallidos: number;
+    deshabilitado?: boolean;
+};
+
 export default function AdminOperadoresAsignarPage() {
     const [data, setData] = useState<EstadoAsignacion | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    // SPEC-372 (A-74 · P3): estado del disparo manual de reconciliación.
+    const [reconciliando, setReconciliando] = useState(false);
+    const [ultimoResumen, setUltimoResumen] = useState<ResumenReconciliacion | null>(null);
+    const [errorReconciliar, setErrorReconciliar] = useState("");
 
     async function cargar() {
         setLoading(true);
@@ -55,6 +68,32 @@ export default function AdminOperadoresAsignarPage() {
         cargar();
     }, []);
 
+    // SPEC-372 (A-74 · P3): botón "Asignar huérfanos ahora". Dispara ya la misma
+    // tarea del cron cada 15 min (worker `operadores-reconciliacion-huerfanos`),
+    // para que el admin no tenga que esperar cuando la cola quedó atrás. Al
+    // terminar, refresca el resumen — así se ve cómo bajó "sin asignar".
+    async function reconciliarAhora() {
+        setReconciliando(true);
+        setErrorReconciliar("");
+        try {
+            const res = await fetch("/api/admin/operadores/reconciliacion", {
+                method: "POST",
+                credentials: "include",
+            });
+            const json = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setUltimoResumen(json);
+                await cargar();
+            } else {
+                setErrorReconciliar(json?.error?.message || "No se pudo asignar los huérfanos.");
+            }
+        } catch {
+            setErrorReconciliar("Error de red al intentar asignar los huérfanos.");
+        } finally {
+            setReconciliando(false);
+        }
+    }
+
     return (
         <div className="mx-auto max-w-6xl space-y-6">
             <div className="mb-2">
@@ -75,12 +114,51 @@ export default function AdminOperadoresAsignarPage() {
             )}
 
             <section className="space-y-4" aria-labelledby="asignacion-resumen-title">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 id="asignacion-resumen-title" className="text-lg font-semibold text-body">Resumen de la cola</h2>
-                    <Button variant="outline" onClick={cargar} isLoading={loading}>
-                        Actualizar
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {/* SPEC-372 (A-74 · P3): fuerza AHORA la reconciliación que
+                            corre cada 15 min. Deshabilitado si la cola ya está en 0. */}
+                        <Button
+                            variant="primary"
+                            onClick={reconciliarAhora}
+                            isLoading={reconciliando}
+                            disabled={loading || !data || data.sinAsignar === 0}
+                            title={
+                                data && data.sinAsignar === 0
+                                    ? "No hay reportes sin asignar."
+                                    : "Dispara ahora la asignación automática (idempotente con el cron)."
+                            }
+                        >
+                            Asignar huérfanos ahora
+                        </Button>
+                        <Button variant="outline" onClick={cargar} isLoading={loading}>
+                            Actualizar
+                        </Button>
+                    </div>
                 </div>
+                {(ultimoResumen || errorReconciliar) && (
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className="rounded-lg border border-slate-200 bg-white/70 p-3 text-sm text-body dark:border-slate-800 dark:bg-slate-900/60"
+                    >
+                        {errorReconciliar ? (
+                            <span className="text-body">{errorReconciliar}</span>
+                        ) : ultimoResumen?.deshabilitado ? (
+                            <span>La reconciliación está desactivada por parámetro (<span className="font-mono text-xs">operadores.reconciliacion_enabled</span>).</span>
+                        ) : ultimoResumen ? (
+                            <span>
+                                Último intento: <b>{ultimoResumen.encontrados}</b> reportes sin operador,{" "}
+                                <b>{ultimoResumen.asignados}</b> asignados,{" "}
+                                <Badge variant={ultimoResumen.fallidos > 0 ? "warning" : "neutral"}>
+                                    {ultimoResumen.fallidos} sin cupo
+                                </Badge>
+                                .
+                            </span>
+                        ) : null}
+                    </div>
+                )}
                 <div className="text-sm text-muted">
                     Estrategia actual: <span className="font-medium text-body">{data?.estrategia ?? "—"}</span>
                     {" · "}

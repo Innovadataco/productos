@@ -6,7 +6,13 @@ import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { registrarHijo, listarHijos, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
-import { validarDocumentoMenor } from "@/lib/padre/documento-menor";
+import {
+    validarDocumentoMenor,
+    validarEdadMenor,
+    edadDesdeAnio,
+    EDAD_MENOR_MIN,
+    EDAD_MENOR_MAX,
+} from "@/lib/padre/documento-menor";
 
 // SPEC-325 (002-PI-225) · "A quién protejo". PII de menor: solo el padre dueño
 // (verifyAuth PARENT) accede; el DAL acota por HijoPadre. Documento OBLIGATORIO.
@@ -18,7 +24,17 @@ const createSchema = z.object({
     apellidos: z.string({ error: "Escribe los apellidos del menor." }).min(1, "Escribe los apellidos del menor.").max(120, "Los apellidos son muy largos."),
     documentoTipo: z.enum(DOCUMENTO_TIPOS, { error: "Elige el tipo de documento del menor." }),
     documentoNumero: z.string({ error: "Escribe el número de documento del menor." }).min(1, "Escribe el número de documento del menor.").max(40, "El número de documento es muy largo."),
-    anioNacimiento: z.number().int().min(1900).max(2100).optional(),
+    // SPEC-372 (A-74 · P4 · I-262): el año se acota por EDAD (5-17), no por un
+    // rango absoluto. La UI (F8) ya deriva el año de la edad; el servidor —que es
+    // quien manda— valida lo mismo, con la misma constante, así saltarse la
+    // pantalla no permite pasar un año fuera de rango.
+    anioNacimiento: z
+        .number()
+        .int()
+        .refine((anio) => validarEdadMenor(edadDesdeAnio(anio)) === null, {
+            message: `El año de nacimiento del menor debe corresponder a una edad entre ${EDAD_MENOR_MIN} y ${EDAD_MENOR_MAX} años.`,
+        })
+        .optional(),
     sexo: z.enum(SEXOS).optional(),
     identificadores: z
         .array(

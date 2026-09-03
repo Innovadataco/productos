@@ -180,6 +180,32 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         const res = await POST(reqCrear({ nombre: "Sin", documentoTipo: "TI", documentoNumero: "999" }));
         expect(res.status).toBe(400);
     });
+
+    // ── SPEC-372 (A-74 · P4 · I-262) — la edad se valida en el SERVIDOR ───────
+    // Antes el schema aceptaba anioNacimiento de 1900 a 2100: un cliente que se
+    // saltara la pantalla registraba un menor de 300 años sin que nada rebotara.
+    // Ahora el servidor exige lo mismo que la UI (edad 5-17, derivada del año).
+    it("I-262: por API directa, un anioNacimiento fuera de 5-17 → 400 nombrando la edad", async () => {
+        const res = await POST(reqCrear({ ...menor(1), anioNacimiento: 1900 }));
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.message).toContain("entre 5 y 17");
+        expect(await prisma.hijo.count(), "no se guardó nada").toBe(0);
+    });
+
+    it("I-262: rebota también un año en el futuro (edad negativa)", async () => {
+        const res = await POST(reqCrear({ ...menor(1), anioNacimiento: new Date().getFullYear() + 1 }));
+        expect(res.status).toBe(400);
+        expect(await prisma.hijo.count()).toBe(0);
+    });
+
+    it("I-262: un anioNacimiento válido (edad 12) sí entra — no rompe el camino feliz", async () => {
+        const anioValido = new Date().getFullYear() - 12;
+        const res = await POST(reqCrear({ ...menor(1), anioNacimiento: anioValido }));
+        expect(res.status).toBe(201);
+        const enBd = await prisma.hijo.findFirst();
+        expect(enBd?.anioNacimiento).toBe(anioValido);
+    });
 });
 
 describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }, () => {
