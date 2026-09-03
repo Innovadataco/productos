@@ -3,7 +3,25 @@ import { MODELO_CLASIFICACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai
 
 export interface ParametrosClasificacion {
     modeloEmbedding: string;
+    /**
+     * Modelo de clasificación resuelto desde parámetros (para usos secundarios:
+     * el backfill de anonimización, la consulta del caché semántico, etc.).
+     *
+     * SPEC-398 (I-286): este campo NO se pasa al motor de la rúbrica. Antes
+     * `clasificacion.ts:74` lo pasaba SIEMPRE como override y el jurado
+     * colapsaba a un solo modelo aunque `ia.rubrica.modelos` declarase tres.
+     * El override intencional va por `overrideModeloClasificacion` (poblado
+     * solo cuando un caller pide un modelo puntual — A/B manual del admin).
+     */
     modeloClasificacion: string;
+    /**
+     * SPEC-398 (I-286): override QUIRÚRGICO del comité de votación. Solo se
+     * puebla si el caller (el body del worker en un A/B manual, o el sandbox
+     * antes de reutilizar `clasificarConMotorActivo`) pidió explícitamente
+     * "vota con este único modelo". `undefined` significa "jurado completo"
+     * — el pipeline real de producción SIEMPRE deja esto en `undefined`.
+     */
+    overrideModeloClasificacion?: string | undefined;
     umbralRevision: number;
     nVotos: number;
     temperaturaVotos: number;
@@ -65,7 +83,14 @@ export async function cargarParametrosClasificacion(override?: { modeloClasifica
 
     return {
         modeloEmbedding,
-        modeloClasificacion: override?.modeloClasificacion || modeloClasificacion,
+        // SPEC-398 (I-286): `modeloClasificacion` es SIEMPRE el resuelto desde
+        // parámetros (con fallback al default) — NO se aplica el override acá.
+        // Antes hacía `override?.modeloClasificacion || modeloClasificacion`,
+        // lo que confundía la ausencia de override con "usa este por default"
+        // y el motor terminaba con un solo votante. Ahora el override viaja
+        // en su propio campo, `undefined` cuando el caller no lo pidió.
+        modeloClasificacion,
+        overrideModeloClasificacion: override?.modeloClasificacion,
         modeloAnonimizacion,
         umbralRevision,
         nVotos,

@@ -2359,6 +2359,12 @@ model ClasificacionIA {
   usoCascada            Boolean           @default(false)
   modeloCascada         String?
   posibleAgresorPar     Boolean           @default(false)
+  // SPEC-398 (I-286): nombre del modelo si el caller pidió override intencional
+  // (sandbox/A-B del admin). `NULL` = pipeline real → jurado completo esperado.
+  // La alarma `senalJuradoReducido` filtra por `overrideModeloUsado IS NULL`
+  // para distinguir el degradado del comité del uso deliberado del sandbox.
+  // Se guarda el nombre (no un bool) para trazabilidad: sabemos qué se probó.
+  overrideModeloUsado   String?
   creadoEn              DateTime          @default(now())
 
   reporte      Reporte                    @relation(fields: [reporteId], references: [id], onDelete: Cascade)
