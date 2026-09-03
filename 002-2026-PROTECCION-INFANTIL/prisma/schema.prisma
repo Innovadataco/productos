@@ -110,6 +110,10 @@ enum AccionAudit {
   SPAM_CONFIRMADO
   SPAM_CORREGIDO
   SPAM_PROCESADO_COMO_ACOSO
+  // I-280 · SPEC-387: candado de repetición. El job de SLA de spam registra
+  // un aviso enviado y no vuelve a enviar hasta que el reporte cambie
+  // (updatedAt se mueve). Patrón espejo de `EXPEDIENTE_SLA_VENCIDO`.
+  SPAM_ALERTA_REVISION_ENVIADA
   CASO_ESCALADO
   CASO_RESUELTO_POR_COMITE
   CASO_REASIGNADO
