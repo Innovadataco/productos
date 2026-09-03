@@ -1,6 +1,6 @@
 # SPEC-401 · I-283 — guardar el motivo real del proveedor de correo
 
-**Status**: EN CURSO
+**Status**: DESARROLLO
 **Fecha**: 2026-09-03 · **Dev**: Infra (PI-2) · **Origen**: veredicto CEO idc-a6 10:55 (I-283)
 
 ## Para qué
@@ -27,14 +27,17 @@ Con este PR el próximo diagnóstico es de un minuto: cualquier fila `FALLIDA` c
 - `procesar-lote.ts` NO cambia su semántica: el `catch (err) { const mensaje = err.message; ... marcarFallida(id, mensaje, ...) }` ahora persiste el serializado con la info real, no el texto genérico.
 - Los callers directos (`admin-service.ts:199` preview, `notificacion-admin.ts:269` preview) también reciben el error con contexto — devuelven mejor motivo al admin.
 
-### 3) Señal admin: distinguir «fallan TODOS» de «falla uno»
+### 3) Señal admin: distinguir «cuota agotada» de «proveedor caído»
 
 Nueva `senalProveedorEmailCaido()` en `src/lib/dal/services/inicio-admin.ts`:
 
 - Toma las últimas `ventana` notificaciones EMAIL con estado terminal (`ENVIADA` / `FALLIDA`) ordenadas por `createdAt desc`. Excluye `REINTENTANDO` (todavía puede terminar bien).
-- Si `length >= ventana` **y todas son `FALLIDA`** → prioridad **alta**, texto: *"El proveedor de correo no aceptó ninguna de las últimas N notificaciones. Está caído."*
+- Dispara **prioridad alta** SOLO si:
+  1. `length >= ventana` (sistema no está idle).
+  2. Todas son `FALLIDA`.
+  3. **Al menos una** de esas fallas NO casa `PATRON_CUOTA` (es decir, hay algo distinto a cuota).
+- **Por qué la exclusión de cuota** (CEO idc-59, 11:13): en prod hoy Resend devolvió `429 daily_quota_exceeded` a todo. `senalCorreosFallidos.correos_no_salen` YA grita "cuota agotada" en ese caso — si esta señal también dispara, duplicamos ruido y confundimos el diagnóstico. Esta señal se reserva para "el proveedor está caído por razón distinta a que llegamos al tope" (5xx, connection refused, timeout, dominio no verificado).
 - Umbral: parámetro `monitoreo.notif.proveedor_caido_ventana` (default `10`).
-- Coexiste con `senalCorreosFallidos` — esa mira volumen y patrón de cuota; esta mira "totalidad". Un canal caído dispara ambas; una avalancha con reintentos exitosos solo dispara la de volumen.
 - Se ordena `alta` en la lista `calcularEstadoInicio` (después de las otras `alta`, empate por id).
 
 ### 4) Parámetro nuevo (seed idempotente)

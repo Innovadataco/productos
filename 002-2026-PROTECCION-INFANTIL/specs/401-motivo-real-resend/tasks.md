@@ -1,6 +1,6 @@
 # Tasks · SPEC-401 · I-283
 
-**Status**: EN CURSO
+**Status**: DESARROLLO
 **Fecha**: 2026-09-03 · **Dev**: Infra (PI-2)
 
 - [ ] T001 Análisis 15v5: leer `enviar-email.ts`, `procesar-lote.ts`, `inicio-admin.ts:senalCorreosFallidos`, `notificacion` repo, seed monitoreo; identificar callers directos y regex existente

@@ -1,6 +1,6 @@
 # Plan · SPEC-401 · I-283 — guardar el motivo real del proveedor de correo
 
-**Status**: EN CURSO
+**Status**: DESARROLLO
 **Fecha**: 2026-09-03 · **Dev**: Infra (PI-2)
 
 ## Decisiones

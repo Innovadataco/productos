@@ -140,7 +140,7 @@ describe("GET /api/admin/inicio/senales (SPEC-378)", () => {
         expect(alerta.prioridad).toBe("media");
     });
 
-    it("SPEC-401 (I-283): 10 FALLIDA seguidas en EMAIL → señal 'proveedor_email_caido' alta", async () => {
+    it("SPEC-401 (I-283): 10 FALLIDA seguidas en EMAIL (5xx / connection refused) → señal 'proveedor_email_caido' alta", async () => {
         await autenticarAdmin();
         // 10 FALLIDA sin ninguna ENVIADA intercalada — proveedor no acepta nada.
         for (let i = 0; i < 10; i++) {
@@ -159,9 +159,67 @@ describe("GET /api/admin/inicio/senales (SPEC-378)", () => {
         const res = await GET();
         const body = await res.json();
         const alerta = body.alertas.find((a: { id: string }) => a.id === "proveedor_email_caido");
-        expect(alerta, "10 FALLIDA seguidas = proveedor caído").toBeDefined();
+        expect(alerta, "10 FALLIDA seguidas (no-cuota) = proveedor caído").toBeDefined();
         expect(alerta.prioridad).toBe("alta");
         expect(alerta.texto).toMatch(/proveedor.*caído|caído|no aceptó/i);
+    });
+
+    it("SPEC-401 (I-283): 10 FALLIDA seguidas TODAS por cuota (429) → NO dispara 'proveedor_email_caido' (lo cubre 'correos_no_salen')", async () => {
+        await autenticarAdmin();
+        // Simula el escenario real del 03-09-2026: Resend devuelve 429 daily_quota_exceeded
+        // a todo. `correos_no_salen` ya grita eso; no duplicamos ruido.
+        for (let i = 0; i < 10; i++) {
+            await prisma.notificacion.create({
+                data: {
+                    evento: "TEST",
+                    destinatarioEmail: `dest${i}@test.local`,
+                    plantillaClave: "TEST",
+                    canal: "EMAIL",
+                    variables: {},
+                    estado: "FALLIDA",
+                    ultimoError: "[daily_quota_exceeded][429] You have reached your daily sending quota",
+                },
+            });
+        }
+        const res = await GET();
+        const body = await res.json();
+        expect(body.alertas.some((a: { id: string }) => a.id === "proveedor_email_caido")).toBe(false);
+        // Y en cambio SÍ dispara la de cuota (alta).
+        const cuota = body.alertas.find((a: { id: string }) => a.id === "correos_no_salen");
+        expect(cuota, "cuota agotada = correos_no_salen").toBeDefined();
+        expect(cuota.prioridad).toBe("alta");
+    });
+
+    it("SPEC-401 (I-283): 9 cuota + 1 no-cuota (última) → SÍ dispara 'proveedor_email_caido' (algo distinto a cuota está fallando)", async () => {
+        await autenticarAdmin();
+        // La una no-cuota rompe la homogeneidad — algo más que cuota está mal.
+        await prisma.notificacion.create({
+            data: {
+                evento: "TEST",
+                destinatarioEmail: "raro@test.local",
+                plantillaClave: "TEST",
+                canal: "EMAIL",
+                variables: {},
+                estado: "FALLIDA",
+                ultimoError: "[connection_refused][502] Provider unreachable",
+            },
+        });
+        for (let i = 0; i < 9; i++) {
+            await prisma.notificacion.create({
+                data: {
+                    evento: "TEST",
+                    destinatarioEmail: `dest${i}@test.local`,
+                    plantillaClave: "TEST",
+                    canal: "EMAIL",
+                    variables: {},
+                    estado: "FALLIDA",
+                    ultimoError: "[daily_quota_exceeded][429] Quota reached",
+                },
+            });
+        }
+        const res = await GET();
+        const body = await res.json();
+        expect(body.alertas.some((a: { id: string }) => a.id === "proveedor_email_caido")).toBe(true);
     });
 
     it("SPEC-401 (I-283): 9 FALLIDA + 1 ENVIADA intercalada → NO dispara 'proveedor_email_caido'", async () => {
