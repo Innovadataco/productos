@@ -107,7 +107,7 @@ export function validarAnioNacimientoMenor(
 ): string | null {
     if (anio === null || anio === undefined) return null;
     if (!Number.isInteger(anio)) {
-        return `El año de nacimiento del menor debe ser un número entero.`;
+        return "El año de nacimiento del menor debe ser un número entero.";
     }
     const anioMin = anioActual - EDAD_MENOR_MAX;
     const anioMax = anioActual - EDAD_MENOR_MIN;
