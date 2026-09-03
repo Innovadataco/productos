@@ -4,7 +4,6 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { alertaIdParamsSchema, escalarAlertaSchema } from "@/lib/schemas";
 import { ComiteConvivenciaBandejaService } from "@/lib/dal/services/comite-convivencia-bandeja";
@@ -21,13 +20,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_comite");
-        const vigencia = await verificarVigenciaColegio(user.id);
-        if (!vigencia.vigente) {
-            return NextResponse.json(
-                { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
+        // SPEC-373 · I-251: escalar al comité no se bloquea por vigencia — un
+        // caso abierto se sigue tramitando aunque el colegio esté en mora.
+        // El módulo `colegios_comite` (diferente al de la bandeja) sigue exigido.
         if (!user.colegioId) {
             return NextResponse.json(
                 { error: { message: "Usuario no vinculado a un colegio", code: ERROR_CODES.FORBIDDEN } },

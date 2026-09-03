@@ -4,7 +4,6 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { alertaEstadoSchema, alertaIdParamsSchema } from "@/lib/schemas";
 import { cambiarEstadoAlerta } from "@/lib/colegio/alertas";
@@ -13,13 +12,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
-        if (!vigencia.vigente) {
-            return NextResponse.json(
-                { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
+        // SPEC-373 · I-251: cambiar estado de una alerta no se bloquea por vigencia.
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {

@@ -4,7 +4,6 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
-import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { alertaQuerySchema, alertaBatchSchema } from "@/lib/schemas";
 import { listarBandejaAlertasColegio, aplicarAccionEnLote } from "@/lib/colegio/alertas";
@@ -13,13 +12,11 @@ export async function GET(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
-        if (!vigencia.vigente) {
-            return NextResponse.json(
-                { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
+        // SPEC-373 · I-251: las alertas de menores NUNCA se bloquean por vigencia
+        // (regla de Jelkin en `guardias.ts:202-206`; el middleware ya la aplica y
+        // este handler la contradecía). Aquí queda sólo `assertModulo` — un
+        // colegio sin el módulo sigue recibiendo 403; uno vencido con el módulo
+        // ve su bandeja con normalidad.
 
         const rate = await checkRateLimit(request, "admin_read", { identifier: user.id });
         if (!rate.allowed) {
@@ -63,13 +60,8 @@ export async function POST(request: Request) {
     try {
         const user = await verifyAuth("SCHOOL_ADMIN");
         await assertModulo(user, "colegios_gestion");
-        const vigencia = await verificarVigenciaColegio(user.id);
-        if (!vigencia.vigente) {
-            return NextResponse.json(
-                { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
-                { status: 403 }
-            );
-        }
+        // SPEC-373 · I-251: acciones en lote de alertas no se bloquean por
+        // vigencia (regla dura Jelkin, misma que el GET arriba).
 
         const rate = await checkRateLimit(request, "admin_write", { identifier: user.id });
         if (!rate.allowed) {
