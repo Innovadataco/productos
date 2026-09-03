@@ -9,6 +9,12 @@
  *
  * Orquesta borrar-colegio + borrar-padre + borrar-reporte + borrar-simulacion.
  *
+ * SPEC-412 (BRIEF A-76 §3.3) — modo quirúrgico:
+ *   ... --solo-sembrado
+ * Con esa bandera NO borra todo: borra **solo lo registrado en `demo_marcado`**
+ * y conserva intacto lo real, contándolo antes y después. Sin la bandera, el
+ * comportamiento es exactamente el de siempre.
+ *
  * PRESERVA SIEMPRE:
  *  - usuario `soporte@innovadataco.com`
  *  - reportes RPT-1RR278, RPT-2JFULR, RPT-FA1C23 (D-001 §5 evidencia viva)
@@ -29,6 +35,7 @@ import { borrarColegio } from "./borrar-colegio";
 import { borrarPadre } from "./borrar-padre";
 import { borrarReporte } from "./borrar-reporte";
 import { borrarSimulacion } from "./borrar-simulacion";
+import { planDeBorrado, ejecutarBorrado } from "../demo/_borrado-marcado";
 
 interface ResumenReset {
     backupSize: number;
@@ -49,6 +56,40 @@ function ejecutarBackup(rutaBackup: string): number {
     return size;
 }
 
+/**
+ * SPEC-412 · el reset quirúrgico. Se apoya en `demo_marcado`, no en nombres ni
+ * en prefijos de id: un colegio real llamado "Colegio Demo" no corre peligro.
+ * Si algo NO marcado cuelga de algo marcado, la transacción falla entera y lo
+ * dice — no se borra a ciegas para destrabar.
+ */
+async function resetSoloSembrado(motivo: string, backupSize: number): Promise<void> {
+    const antes = await planDeBorrado(prisma);
+    log("reset-piloto", `MODO --solo-sembrado — ${antes.totalMarcado} filas marcadas en demo_marcado.`);
+    for (const m of antes.marcadas) log("reset-piloto", `  · ${m.entidad}: ${m.cantidad}`);
+    log("reset-piloto", "NO se toca:");
+    for (const r of antes.reales) log("reset-piloto", `  · ${r.entidad} real: ${r.cantidad}`);
+
+    if (antes.totalMarcado === 0) {
+        log("reset-piloto", "Nada marcado: no hay nada que borrar. Corre antes scripts/demo/marcar-retroactivo.ts.");
+        return;
+    }
+
+    const res = await ejecutarBorrado(prisma, motivo);
+    const total = Object.values(res.borradas).reduce((a, b) => a + b, 0);
+
+    const despues = await planDeBorrado(prisma);
+    for (const a of antes.reales) {
+        const d = despues.reales.find((x) => x.entidad === a.entidad);
+        log("reset-piloto", `  ${d?.cantidad === a.cantidad ? "OK" : "REVISAR"} ${a.entidad} real: ${a.cantidad} → ${d?.cantidad ?? "?"}`);
+    }
+
+    await prisma.$transaction(async (tx) => {
+        await registrarAuditoria(tx, "reset_piloto", `${motivo} [solo-sembrado]`, total, Object.keys(res.borradas));
+    });
+
+    log("reset-piloto", `REALIZADO --solo-sembrado backup=${backupSize}B filas=${total} marcas=${res.marcadasLimpiadas}`);
+}
+
 async function main(): Promise<void> {
     const args = parseArgs(process.argv);
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
@@ -57,6 +98,13 @@ async function main(): Promise<void> {
     if (args.confirm !== true) throw new Error("[reset-piloto] Falta --confirm");
 
     const backupSize = ejecutarBackup(backup);
+
+    // SPEC-412: modo quirúrgico. Cae SOLO lo que está en `demo_marcado`; lo real
+    // se cuenta antes y después y tiene que quedar igual.
+    if (args["solo-sembrado"] === true) {
+        await resetSoloSembrado(motivo, backupSize);
+        return;
+    }
 
     // A-66 (b): pre-borrado global del subárbol identificadores+alertas en orden
     // FK-safe ANTES del loop por colegio. Necesario porque AlertaColegio cruza
