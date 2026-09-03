@@ -123,7 +123,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                 const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
                 throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
             }
-            const json = (await res.json()) as { data: { resultado: "APROBADO" | "RECHAZADO" } };
+            const json = (await res.json()) as { data: { resultado: "APROBADO" | "MAS_INFORMACION" } };
             setMensaje({
                 tipo: "ok",
                 texto:
@@ -259,10 +259,14 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                     </span>
                                     <span
                                         className={`font-semibold ${
-                                            h.resultado === "APROBADO" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"
+                                            h.resultado === "APROBADO"
+                                                ? "text-emerald-700 dark:text-emerald-300"
+                                                : h.resultado === "MAS_INFORMACION"
+                                                    ? "text-amber-700 dark:text-amber-300"
+                                                    : "text-rose-700 dark:text-rose-300"
                                         }`}
                                     >
-                                        {h.resultado}
+                                        {h.resultado === "MAS_INFORMACION" ? "DEVUELTO" : h.resultado}
                                     </span>
                                     <span className="text-subtle">— {h.revisadoPor}</span>
                                 </p>

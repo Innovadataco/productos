@@ -34,7 +34,10 @@ export async function verificacionParaProfesional(usuarioId: string): Promise<Vi
     }
     const observaciones: ObservacionParaProfesional[] = [];
     const ultima = perfil.verificaciones[0];
-    if (ultima && ultima.resultado === "RECHAZADO") {
+    // Brief §5-bis + veredicto CEO 16:2x: la devolución se escribe como
+    // MAS_INFORMACION (no rechazo terminal). El profesional que corrige y
+    // reenvía nunca queda "rechazado" ante la vista.
+    if (ultima && ultima.resultado === "MAS_INFORMACION") {
         const requisitos = await leerRequisitosVerificacion();
         const checklist = (ultima.checklist ?? {}) as unknown as Record<string, ItemChecklist>;
         for (const r of requisitos) {

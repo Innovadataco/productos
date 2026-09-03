@@ -35,8 +35,8 @@ El profesional carga sus documentos (SPEC-391) y queda en `EN_REVISION`. Sin est
 - **API:** `GET /api/admin/verificacion-profesionales/[id]` (audita `PROFESIONAL_VERIFICACION_CONSULTADO` cada apertura · brief §5).
 - **API única de decisión:** `POST /api/admin/verificacion-profesionales/[id]/decidir` con `{ checklist: { <clave>: { estado, observacion } } }`. El service `decidir()` calcula el resultado del checklist:
   - Todos CUMPLE → `APROBADO` → perfil pasa a `ACTIVO` (entra al directorio).
-  - Al menos uno NO_CUMPLE (con observación) → `RECHAZADO` → perfil vuelve a `BORRADOR` para corregir.
-- En ambos casos: fila nueva en `VerificacionProfesional` con `venceEn = revisadoEn + 4 meses` (Ley 2375/2024, `calcularVenceEn` de SPEC-389), `checklist` completo, `notaInterna` con resumen, y `AuditLog` (`_APROBADA` / `_RECHAZADA`).
+  - Al menos uno NO_CUMPLE (con observación) → `MAS_INFORMACION` (devolución, **no rechazo terminal**) → perfil vuelve a `BORRADOR` para corregir. Veredicto CEO 16:2x: devolver ≠ rechazar; el ciclo no tiene rechazo terminal. `ResultadoVerificacion.RECHAZADO` **queda sin uso en este flujo** — el enum lo conserva por si un caso adverso futuro lo requiere; hoy es huérfano y ningún emisor lo escribe.
+- En ambos casos: fila nueva en `VerificacionProfesional` con `venceEn = revisadoEn + 4 meses` (Ley 2375/2024, `calcularVenceEn` de SPEC-389), `checklist` completo, `notaInterna` con resumen, y `AuditLog` (`_APROBADA` / `_MAS_INFO`).
 - **Email al profesional** en ambos casos, vía `enviarEmailNotificacion`. Best-effort: un problema del proveedor NO revierte la decisión (motor de notificaciones tiene su propio reintento).
 
 ### 5) Cola 2 · Incidentes de citas

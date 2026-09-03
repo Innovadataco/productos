@@ -235,13 +235,19 @@ export async function decidir(
         );
     }
 
-    const resultado: ResultadoVerificacion = noCumple.length === 0 ? "APROBADO" : "RECHAZADO";
+    // Brief §5-bis + veredicto CEO 16:2x: **el ciclo no tiene rechazo terminal**.
+    // Devolver ≠ rechazar; el profesional corrige y reenvía sin límite hasta
+    // aprobar. Por eso la devolución se marca como MAS_INFORMACION, y
+    // `ResultadoVerificacion.RECHAZADO` queda SIN USO en este flujo (Verificador
+    // no lo emite jamás). El enum lo conserva por compatibilidad y por si un
+    // caso adverso futuro lo requiere; hoy es efectivamente huérfano acá.
+    const resultado: ResultadoVerificacion = noCumple.length === 0 ? "APROBADO" : "MAS_INFORMACION";
     const revisadoEn = new Date();
     const venceEn = calcularVenceEn(revisadoEn);
 
     const nuevoEstadoPerfil = resultado === "APROBADO" ? "ACTIVO" : "BORRADOR";
-    // La nota interna se usa como resumen indexable del rechazo (aparece en el
-    // historial); el detalle por ítem vive en `checklist`. Nunca sale por API pública.
+    // La nota interna se usa como resumen indexable de la devolución (aparece en
+    // el historial); el detalle por ítem vive en `checklist`. Nunca sale por API pública.
     const notaInterna =
         resultado === "APROBADO"
             ? "Verificación aprobada."
@@ -266,8 +272,10 @@ export async function decidir(
     // Audit + email fuera de la transacción — un problema del proveedor no
     // debe revertir la decisión clínica del Verificador (mismo criterio que
     // otras acciones con notificación).
+    // Devolver ≠ rechazar: emitimos _MAS_INFO, no _RECHAZADA. _RECHAZADA queda
+    // reservada para un caso terminal futuro que hoy no existe.
     const accionAudit =
-        resultado === "APROBADO" ? "PROFESIONAL_VERIFICACION_APROBADA" : "PROFESIONAL_VERIFICACION_RECHAZADA";
+        resultado === "APROBADO" ? "PROFESIONAL_VERIFICACION_APROBADA" : "PROFESIONAL_VERIFICACION_MAS_INFO";
     await logAudit({
         usuarioId: verificador.id,
         accion: accionAudit,
