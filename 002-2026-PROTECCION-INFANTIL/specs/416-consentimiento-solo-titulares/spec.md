@@ -11,31 +11,40 @@
 
 ## Qué trae
 
-### 1) Middleware — filtro por rol
+### 1) Fuente única — `src/lib/routing/roles-titulares.ts`
 
-En [`middleware.ts:194`](../../middleware.ts:194), el paso 4 pregunta primero por rol y solo después evalúa el flag:
+Dos constantes exportadas + dos helpers, cada uno con su propio significado y motivo escrito en su comentario:
 
-```ts
-const rolTitularConsentimiento = sesion.rol === "PARENT" || sesion.rol === "SCHOOL_ADMIN";
-if (rolTitularConsentimiento && estado.requiereConsentimiento && !esExentaConsentimiento(pathname)) { ... }
-```
+- `ROLES_TITULARES_DEL_DATO` + `esTitularDelDato(rol)` — quiénes deben consentir. Motivo legal detallado (Ley 1581/2012 · 1918/2018 · 2375/2024).
+- `ROLES_CON_CAMINO_GUIADO` + `tieneCaminoGuiado(rol)` — quiénes atraviesan el onboarding paso-a-paso (SPEC-339 · SPEC-344).
+
+Hoy coinciden en composición (PARENT + SCHOOL_ADMIN), pero **son criterios distintos**: pueden divergir cuando aparezca un titular sin onboarding, o un rol con camino que no aporta datos personales. Un test candado afirma que no comparten referencia (regresión contra un "optimizador").
+
+### 2) Middleware — importa las dos constantes
+
+En `middleware.ts` se reemplazaron **3 literales duplicados** por sus helpers:
+
+- **Paso 4 · consentimiento** (línea 194) → `esTitularDelDato(sesion.rol)`.
+- **Paso 5 · camino guiado con cookie** (línea 229) → `tieneCaminoGuiado(sesion.rol)`.
+- **Grieta de la falla-abierta · rebote a `/api/sesion/al-dia`** (línea 292) → `tieneCaminoGuiado(sesion.rol)`.
+
+La línea 249 (`sesion.rol === "SCHOOL_ADMIN" ? "usted" : "tú"`) **NO se unifica**: no es una allowlist, es un dispatch de voz por rol. Auditada explícitamente.
 
 **Titulares del dato:** `PARENT` (padre) y `SCHOOL_ADMIN` (rector) — son quienes generan/aportan los datos personales que la ley protege.
 
 **Exentos** (no titulares — no pueden consentir por otros): `VERIFICADOR`, `ADMIN`, `OPERADOR`, `COMITE_VALIDACION`, `COMITE_CONVIVENCIA` (empleados internos); `PROFESIONAL` (prestador de servicio).
 
-### 2) Defensa en profundidad — cookie emitter también filtra
+### 3) Defensa en profundidad — cookie emitter también filtra
 
 En [`sesion-estado-emitter.ts`](../../src/lib/routing/sesion-estado-emitter.ts), la marca `requiereConsentimiento` **ni siquiera se embebe en la cookie** para roles no titulares. Aunque mañana alguien olvide el filtro del middleware, el flag no existe en la sesión de un interno.
 
 ```ts
-const requiereConsentimiento =
-    rol === "PARENT" || rol === "SCHOOL_ADMIN" ? requiereConsentimientoRaw : false;
+const requiereConsentimiento = esTitularDelDato(rol) ? requiereConsentimientoRaw : false;
 ```
 
 Dos guardas independientes cierran el hueco por partida doble — I-211 nos enseñó que estos guardianes pueden estar muertos meses sin que nadie lo vea; el candado en cascada minimiza esa ventana.
 
-### 3) Test-candado bi-direccional (regla del CEO: no aflojar los titulares)
+### 4) Test-candado bi-direccional (regla del CEO: no aflojar los titulares)
 
 **En `middleware.test.ts`** (paso 4 del middleware):
 - `(g-416-parent)` — PARENT sin consentimiento → **sigue** redirect a `/consentimiento` (307). Titulares intactos.
