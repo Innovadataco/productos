@@ -5,17 +5,6 @@
 -- 1) Valor nuevo en enum existente (idempotente por si alguien ya lo agregó).
 ALTER TYPE "RolUsuario" ADD VALUE IF NOT EXISTS 'PROFESIONAL';
 
--- 1b) Valores de AccionAudit que consume L2 (aviso CEO 05:26): tienen que
--- llegar EN LA MISMA migración del modelo — con el fix de I-277, un
--- `logAudit({ accion: "PROFESIONAL_..." })` no compila hasta que el enum los
--- tenga. Si esta migración pasa sin los valores, L2 no puede arrancar.
-ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_VERIFICACION_CONSULTADO';
-ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_AUTORIZACION_ACCESO';
-ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_VERIFICACION_APROBADA';
-ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_VERIFICACION_RECHAZADA';
-ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_VERIFICACION_MAS_INFO';
-ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_VERIFICACION_VENCIDA';
-
 -- 2) Enums nuevos del dominio.
 CREATE TYPE "EstadoPerfilProfesional" AS ENUM ('BORRADOR', 'EN_REVISION', 'ACTIVO', 'RECHAZADO', 'VENCIDO', 'SUSPENDIDO');
 CREATE TYPE "ResultadoVerificacion" AS ENUM ('APROBADO', 'RECHAZADO', 'MAS_INFORMACION');
@@ -66,11 +55,6 @@ CREATE TABLE "VerificacionProfesional" (
   "resultado"              "ResultadoVerificacion" NOT NULL,
   "autorizacionArchivoUrl" TEXT NOT NULL,
   "venceEn"                TIMESTAMPTZ(6) NOT NULL,
-  -- Idempotencia del recordatorio 30-días-antes (L2). NULL = no avisado aún.
-  "avisoVencimientoEnviadoEn" TIMESTAMPTZ(6),
-  -- Motivo del rechazo / qué falta en MAS_INFORMACION. RESERVADO — nunca
-  -- por API pública (candado del test que llenará L1b/L2).
-  "notaInterna"            TEXT,
   "creadoEn"               TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "VerificacionProfesional_perfilProfesionalId_fkey" FOREIGN KEY ("perfilProfesionalId") REFERENCES "PerfilProfesional"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT "VerificacionProfesional_revisadoPorId_fkey"       FOREIGN KEY ("revisadoPorId")       REFERENCES "Usuario"("id")           ON DELETE RESTRICT ON UPDATE CASCADE

@@ -160,12 +160,6 @@ enum AccionAudit {
   COLEGIO_CARGA_MASIVA
   COLEGIO_ALERTA_CREADA
   COLEGIO_ALERTA_ESTADO
-  // I-277: hasta hoy `asignarAlerta` y `escalarAlerta` casteaban el string a
-  // `AccionAudit` (as AccionAudit). El enum no los tenía → Prisma tronaba en
-  // runtime con 500 y ningún test lo veía porque el cast silenciaba TS. Se
-  // agregan los dos valores + se quitan los casts (SPEC-383).
-  COLEGIO_ALERTA_ASIGNADA
-  COLEGIO_ALERTA_ESCALADA
   // SPEC-172 (Pilar D.5): recálculo bajo demanda de la deriva del motor.
   MOTOR_DERIVA_RECALCULO
   COLEGIO_ESTADISTICAS_PDF_DESCARGADO
@@ -345,18 +339,6 @@ enum AccionAudit {
   // SPEC-320 (§2.3): CRUD del catálogo de tipos de documento por el ADMIN.
   ADMIN_TIPO_DOCUMENTO_CREADO
   ADMIN_TIPO_DOCUMENTO_EDITADO
-  // SPEC-388 (L1a · aviso CEO 05:26): valores de auditoría de la Red de
-  // Profesionales que L2 va a usar. Se agregan EN LA MISMA migración del
-  // modelo — si llegaran después, quedaría una ventana con `main` roto
-  // (lección I-277: los `as AccionAudit` silenciaban al compilador y el
-  // fix de I-277 hace que ahora eso NO compile, así que L2 no puede
-  // arrancar sin estos valores).
-  PROFESIONAL_VERIFICACION_CONSULTADO
-  PROFESIONAL_AUTORIZACION_ACCESO
-  PROFESIONAL_VERIFICACION_APROBADA
-  PROFESIONAL_VERIFICACION_RECHAZADA
-  PROFESIONAL_VERIFICACION_MAS_INFO
-  PROFESIONAL_VERIFICACION_VENCIDA
 }
 
 enum TipoPeriodoServicio {
@@ -3481,16 +3463,6 @@ model VerificacionProfesional {
   autorizacionArchivoUrl String
   venceEn                DateTime               @db.Timestamptz(6)
   creadoEn               DateTime               @default(now()) @db.Timestamptz(6)
-
-  // SPEC-388 (aviso 05:26): idempotencia del recordatorio 30-días-antes que
-  // implementa L2. NULL = todavía no se avisó; el worker marca la fecha
-  // cuando envía, para no repetir en la siguiente vuelta (mismo patrón que
-  // I-280 en SPAM_ALERTA_REVISION_ENVIADA).
-  avisoVencimientoEnviadoEn DateTime?             @db.Timestamptz(6)
-  // SPEC-388 (aviso 05:26): motivo del rechazo o qué falta en MAS_INFORMACION.
-  // CANDADO DE RESERVA: NUNCA sale por API pública (agregar a la lista de
-  // campos prohibidos del test cuando L1b/L2 los agreguen).
-  notaInterna               String?               @db.Text
 
   perfilProfesional PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id])
   revisadoPor       Usuario           @relation("VerificacionesRevisadasPor", fields: [revisadoPorId], references: [id])
