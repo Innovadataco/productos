@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **109** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **110** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -91,6 +91,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
+| identificadoresIntegranteComite | IdentificadorIntegranteComite | lista, relación |
 | apelaciones | Apelacion | lista, relación |
 | patronesInstitucionales | PatronInstitucional | lista, relación |
 
@@ -173,6 +174,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadorEstudianteId | String | opcional |
 | identificadorProfesorId | String | opcional |
 | identificadorAcudienteId | String | opcional |
+| identificadorIntegranteComiteId | String | opcional |
 | tipoSujeto | String | — |
 | estado | String | — |
 | prioridad | String | — |
@@ -186,6 +188,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadorEstudiante | IdentificadorEstudiante | opcional, relación (FK) |
 | identificadorProfesor | IdentificadorProfesor | opcional, relación (FK) |
 | identificadorAcudiente | IdentificadorAcudiente | opcional, relación (FK) |
+| identificadorIntegranteComite | IdentificadorIntegranteComite | opcional, relación (FK) |
 | patronInstitucional | PatronInstitucional | opcional, relación (FK) |
 | asignadoA | Usuario | opcional, relación (FK) |
 | seguimiento | SeguimientoCaso | opcional, relación |
@@ -237,6 +240,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
 | identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
+| identificadoresIntegranteComite | IdentificadorIntegranteComite | lista, relación |
 | onboarding | OnboardingColegio | opcional, relación |
 | notificacionesInApp | NotificacionInApp | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
@@ -500,7 +504,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (61)
+### Otros (sin regla de dominio) (62)
 
 #### `AclaracionExpediente`
 
@@ -945,6 +949,24 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | identificador | IdentificadorHijo | relación (FK) |
 | usuario | Usuario | relación (FK) |
+
+#### `IdentificadorIntegranteComite`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| integranteId | String | — |
+| colegioId | String | — |
+| tipo | String | — |
+| valor | String | — |
+| plataformaId | String | opcional |
+| estado | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| integrante | IntegranteComite | relación (FK) |
+| colegio | Colegio | relación (FK) |
+| plataforma | Plataforma | opcional, relación (FK) |
+| alertas | AlertaColegio | lista, relación |
 
 #### `IdentificadorProfesor`
 
@@ -1989,6 +2011,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoPor | Usuario | relación (FK) |
 | modificadoPor | Usuario | opcional, relación (FK) |
 | solicitudesFirmadas | SolicitudComite | lista, relación |
+| identificadores | IdentificadorIntegranteComite | lista, relación |
 
 #### `PerfilOperador`
 
@@ -2153,6 +2176,7 @@ erDiagram
     Colegio ||--o{ Estudiante : "colegio"
     Colegio ||--o{ IdentificadorAcudiente : "colegio"
     Colegio ||--o{ IdentificadorEstudiante : "colegio"
+    Colegio ||--o{ IdentificadorIntegranteComite : "colegio"
     Colegio ||--o{ IdentificadorProfesor : "colegio"
     Colegio ||--o{ Materia : "colegio"
     Colegio ||--o{ NotaSeguimiento : "colegio"
@@ -2191,9 +2215,11 @@ erDiagram
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
     IdentificadorHijo ||--o{ IdentificadorHijoDesvinculado : "identificador"
+    IdentificadorIntegranteComite ||--o{ AlertaColegio : "identificadorIntegranteComite (opcional)"
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
     InformeConsolidado ||--o{ AclaracionExpediente : "informeConsolidado"
+    IntegranteComite ||--o{ IdentificadorIntegranteComite : "integrante"
     IntegranteComite ||--o{ SolicitudComite : "integranteFirmante (opcional)"
     Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
@@ -2214,6 +2240,7 @@ erDiagram
     Plataforma ||--o{ IdentificadorContacto : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorEstudiante : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorHijo : "plataforma (opcional)"
+    Plataforma ||--o{ IdentificadorIntegranteComite : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorProfesor : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorReportado : "plataforma"
     Plataforma ||--o{ PatronInstitucional : "plataforma"

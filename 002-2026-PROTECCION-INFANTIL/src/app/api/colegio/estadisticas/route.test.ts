@@ -204,7 +204,8 @@ describe("/api/colegio/estadisticas", () => {
             );
             expect(res.status).toBe(200);
             const json = await res.json();
-            expect(json.alertasPorTipoSujeto).toEqual({ ESTUDIANTE: 2, PROFESOR: 1, ACUDIENTE: 1 });
+            // SPEC-380 (PR B): INTEGRANTE_COMITE forma parte del map exhaustivo aunque el test no lo pueble.
+            expect(json.alertasPorTipoSujeto).toEqual({ ESTUDIANTE: 2, PROFESOR: 1, ACUDIENTE: 1, INTEGRANTE_COMITE: 0 });
         });
 
         it("SCHOOL_ADMIN de otro colegio ve totales en cero", async () => {

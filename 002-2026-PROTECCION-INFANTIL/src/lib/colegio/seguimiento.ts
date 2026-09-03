@@ -244,6 +244,13 @@ export async function obtenerDetalleCaso(colegioId: string, alertaId: string): P
         sujetoRelacion = acu.relacion;
         plataforma = alerta.identificadorAcudiente.plataforma?.nombre ?? null;
         tipoIdentificador = alerta.identificadorAcudiente.tipo;
+    } else if (alerta.tipoSujeto === "INTEGRANTE_COMITE" && alerta.identificadorIntegranteComite) {
+        // SPEC-380 (PR B): rama del integrante del comité en el detalle.
+        const integ = alerta.identificadorIntegranteComite.integrante;
+        sujetoNombre = `${integ.nombres} ${integ.apellidos}`.trim();
+        sujetoRelacion = integ.cargo ?? "INTEGRANTE_COMITE";
+        plataforma = alerta.identificadorIntegranteComite.plataforma?.nombre ?? null;
+        tipoIdentificador = alerta.identificadorIntegranteComite.tipo;
     } else {
         throw new AppError("Alerta con sujeto incompleto", ERROR_CODES.INTERNAL_ERROR, 500);
     }

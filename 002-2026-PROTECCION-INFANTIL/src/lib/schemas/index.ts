@@ -387,7 +387,8 @@ export const alertaIdParamsSchema = z.object({
 
 export const alertaQuerySchema = z.object({
     estado: z.enum(["nueva", "vista", "gestionada", "escalada", "cerrada"]).optional(),
-    tipoSujeto: z.enum(["ESTUDIANTE", "PROFESOR", "ACUDIENTE"]).optional(),
+    // SPEC-380 (PR B): 4º sujeto — INTEGRANTE_COMITE.
+    tipoSujeto: z.enum(["ESTUDIANTE", "PROFESOR", "ACUDIENTE", "INTEGRANTE_COMITE"]).optional(),
     prioridad: z.enum(["alta", "media", "baja"]).optional(),
     cursoId: cuidIdSchema.optional(),
     categoria: z.string().trim().optional(),

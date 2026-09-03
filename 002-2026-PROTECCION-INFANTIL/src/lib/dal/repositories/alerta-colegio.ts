@@ -14,14 +14,27 @@ import type { DbClient } from "../unit-of-work";
 /** Estados de la alerta (columna String con valores cerrados, como en lib/colegio/alertas). */
 export type EstadoAlertaColegio = "nueva" | "vista" | "gestionada" | "escalada" | "cerrada";
 
-/** Tipo de sujeto al que apunta la alerta (SPEC-165). */
-export type TipoSujeto = "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
+/**
+ * Tipo de sujeto al que apunta la alerta (SPEC-165 · ampliado SPEC-380 PR B con
+ * `INTEGRANTE_COMITE`). Es una UNIÓN cerrada: el compilador debe fallar si
+ * alguien agrega un valor sin cubrir todas las ramas (Records completos +
+ * `switch` exhaustivo con `never`). Un guardián que avisa vale más que uno
+ * que perdona — regla del CEO tras SPEC-165.
+ */
+export type TipoSujeto = "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE" | "INTEGRANTE_COMITE";
+export const TIPOS_SUJETO_VALIDOS: readonly TipoSujeto[] = [
+    "ESTUDIANTE",
+    "PROFESOR",
+    "ACUDIENTE",
+    "INTEGRANTE_COMITE",
+];
 
 /** Input discriminated para crear una alerta sobre un sujeto específico. */
 export type CrearAlertaInput =
     | { tipoSujeto: "ESTUDIANTE"; identificadorEstudianteId: string }
     | { tipoSujeto: "PROFESOR"; identificadorProfesorId: string }
-    | { tipoSujeto: "ACUDIENTE"; identificadorAcudienteId: string };
+    | { tipoSujeto: "ACUDIENTE"; identificadorAcudienteId: string }
+    | { tipoSujeto: "INTEGRANTE_COMITE"; identificadorIntegranteComiteId: string };
 
 const INCLUDE_LISTADO = {
     identificadorEstudiante: {
@@ -39,6 +52,13 @@ const INCLUDE_LISTADO = {
     identificadorAcudiente: {
         select: {
             acudiente: { select: { nombre: true, relacion: true } },
+        },
+    },
+    // SPEC-380 (PR B): 4ª relación en el include del listado.
+    identificadorIntegranteComite: {
+        select: {
+            valor: true,
+            integrante: { select: { nombres: true, apellidos: true, cargo: true } },
         },
     },
     asignadoA: { select: { id: true, nombre: true, email: true } },
@@ -92,37 +112,54 @@ export class AlertaColegioRepository {
      * Elige el índice único según el tipo de sujeto.
      */
     buscarExistente(colegioId: string, reporteId: string, input: CrearAlertaInput) {
-        if (input.tipoSujeto === "ESTUDIANTE") {
-            return this.db.alertaColegio.findUnique({
-                where: {
-                    colegioId_reporteId_identificadorEstudianteId: {
-                        colegioId,
-                        reporteId,
-                        identificadorEstudianteId: input.identificadorEstudianteId,
+        // Candado exhaustivo (SPEC-380 · CEO): `switch` con `never` en default
+        // — si mañana entra un 5º valor y olvidan una rama, el compilador falla.
+        switch (input.tipoSujeto) {
+            case "ESTUDIANTE":
+                return this.db.alertaColegio.findUnique({
+                    where: {
+                        colegioId_reporteId_identificadorEstudianteId: {
+                            colegioId,
+                            reporteId,
+                            identificadorEstudianteId: input.identificadorEstudianteId,
+                        },
                     },
-                },
-            });
-        }
-        if (input.tipoSujeto === "PROFESOR") {
-            return this.db.alertaColegio.findUnique({
-                where: {
-                    colegioId_reporteId_identificadorProfesorId: {
-                        colegioId,
-                        reporteId,
-                        identificadorProfesorId: input.identificadorProfesorId,
+                });
+            case "PROFESOR":
+                return this.db.alertaColegio.findUnique({
+                    where: {
+                        colegioId_reporteId_identificadorProfesorId: {
+                            colegioId,
+                            reporteId,
+                            identificadorProfesorId: input.identificadorProfesorId,
+                        },
                     },
-                },
-            });
+                });
+            case "ACUDIENTE":
+                return this.db.alertaColegio.findUnique({
+                    where: {
+                        colegioId_reporteId_identificadorAcudienteId: {
+                            colegioId,
+                            reporteId,
+                            identificadorAcudienteId: input.identificadorAcudienteId,
+                        },
+                    },
+                });
+            case "INTEGRANTE_COMITE":
+                return this.db.alertaColegio.findUnique({
+                    where: {
+                        colegioId_reporteId_identificadorIntegranteComiteId: {
+                            colegioId,
+                            reporteId,
+                            identificadorIntegranteComiteId: input.identificadorIntegranteComiteId,
+                        },
+                    },
+                });
+            default: {
+                const _exhaustive: never = input;
+                throw new Error(`TipoSujeto no cubierto: ${JSON.stringify(_exhaustive)}`);
+            }
         }
-        return this.db.alertaColegio.findUnique({
-            where: {
-                colegioId_reporteId_identificadorAcudienteId: {
-                    colegioId,
-                    reporteId,
-                    identificadorAcudienteId: input.identificadorAcudienteId,
-                },
-            },
-        });
     }
 
     /** Crea la alerta del colegio en estado "nueva" para el sujeto indicado. */
@@ -137,19 +174,32 @@ export class AlertaColegioRepository {
             prioridad: datos.prioridad ?? ("media" as const),
             vencimientoSla: datos.vencimientoSla ?? new Date(ahora.getTime() + 48 * 60 * 60 * 1000),
         };
-        if (datos.tipoSujeto === "ESTUDIANTE") {
-            return this.db.alertaColegio.create({
-                data: { ...base, tipoSujeto: "ESTUDIANTE", identificadorEstudianteId: datos.identificadorEstudianteId },
-            });
+        switch (datos.tipoSujeto) {
+            case "ESTUDIANTE":
+                return this.db.alertaColegio.create({
+                    data: { ...base, tipoSujeto: "ESTUDIANTE", identificadorEstudianteId: datos.identificadorEstudianteId },
+                });
+            case "PROFESOR":
+                return this.db.alertaColegio.create({
+                    data: { ...base, tipoSujeto: "PROFESOR", identificadorProfesorId: datos.identificadorProfesorId },
+                });
+            case "ACUDIENTE":
+                return this.db.alertaColegio.create({
+                    data: { ...base, tipoSujeto: "ACUDIENTE", identificadorAcudienteId: datos.identificadorAcudienteId },
+                });
+            case "INTEGRANTE_COMITE":
+                return this.db.alertaColegio.create({
+                    data: {
+                        ...base,
+                        tipoSujeto: "INTEGRANTE_COMITE",
+                        identificadorIntegranteComiteId: datos.identificadorIntegranteComiteId,
+                    },
+                });
+            default: {
+                const _exhaustive: never = datos;
+                throw new Error(`TipoSujeto no cubierto: ${JSON.stringify(_exhaustive)}`);
+            }
         }
-        if (datos.tipoSujeto === "PROFESOR") {
-            return this.db.alertaColegio.create({
-                data: { ...base, tipoSujeto: "PROFESOR", identificadorProfesorId: datos.identificadorProfesorId },
-            });
-        }
-        return this.db.alertaColegio.create({
-            data: { ...base, tipoSujeto: "ACUDIENTE", identificadorAcudienteId: datos.identificadorAcudienteId },
-        });
     }
 
     /** Cambia el estado de la alerta. 404 si el id no existe o es de OTRO colegio. */
@@ -177,11 +227,15 @@ export class AlertaColegioRepository {
         });
     }
 
-    /** SPEC-173 (H04): alertas visibles agrupadas por tipo de sujeto (groupBy, tenant-first). */
+    /**
+     * SPEC-173 (H04) · SPEC-380 (PR B): alertas visibles agrupadas por tipo de
+     * sujeto. El shape del retorno es `Record<TipoSujeto, number>` completo —
+     * agregar un 5º sujeto sin ampliar acá hace fallar el compilador.
+     */
     async contarPorTipoSujeto(
         colegioId: string,
         estadosVisibles: EstadoReporte[]
-    ): Promise<{ ESTUDIANTE: number; PROFESOR: number; ACUDIENTE: number }> {
+    ): Promise<Record<TipoSujeto, number>> {
         const grupos = await this.db.alertaColegio.groupBy({
             by: ["tipoSujeto"],
             where: {
@@ -193,10 +247,15 @@ export class AlertaColegioRepository {
             },
             _count: { _all: true },
         });
-        const totales = { ESTUDIANTE: 0, PROFESOR: 0, ACUDIENTE: 0 };
+        const totales: Record<TipoSujeto, number> = {
+            ESTUDIANTE: 0,
+            PROFESOR: 0,
+            ACUDIENTE: 0,
+            INTEGRANTE_COMITE: 0,
+        };
         for (const grupo of grupos) {
-            if (grupo.tipoSujeto === "ESTUDIANTE" || grupo.tipoSujeto === "PROFESOR" || grupo.tipoSujeto === "ACUDIENTE") {
-                totales[grupo.tipoSujeto] = grupo._count._all;
+            if ((TIPOS_SUJETO_VALIDOS as readonly string[]).includes(grupo.tipoSujeto)) {
+                totales[grupo.tipoSujeto as TipoSujeto] = grupo._count._all;
             }
         }
         return totales;
@@ -448,43 +507,9 @@ export class AlertaColegioRepository {
         return Array.from({ length: 24 }, (_, hora) => porHora.get(hora) ?? 0);
     }
 
-    /**
-     * SPEC-142 (F6) — EXCEPCIÓN cross-tenant (como buscarActivosPorValor): las
-     * alertas de UN reporte con su vínculo y el grado del curso, más antiguas
-     * primero (dedupe determinístico por colegio y snapshot del grado).
-     */
-    findPorReporteConVinculoYGrado(reporteId: string) {
-        return this.db.alertaColegio.findMany({
-            where: { reporteId, tipoSujeto: "ESTUDIANTE" },
-            orderBy: { creadoEn: "asc" },
-            select: {
-                id: true,
-                colegioId: true,
-                patronInstitucionalId: true,
-                identificadorEstudiante: {
-                    select: {
-                        estudiante: { select: { colegioId: true, curso: { select: { grado: true } } } },
-                    },
-                },
-            },
-        });
-    }
-
-    /** SPEC-142 (F6): marca la fila agregada que aportó esta alerta (idempotencia). */
-    marcarPatron(id: string, patronInstitucionalId: string) {
-        return this.db.alertaColegio.update({
-            where: { id },
-            data: { patronInstitucionalId },
-        });
-    }
-
-    /** SPEC-142 (F6): alertas del reporte con aporte al agregado (reversa en baja). */
-    findPorReporteConPatron(reporteId: string) {
-        return this.db.alertaColegio.findMany({
-            where: { reporteId, patronInstitucionalId: { not: null } },
-            select: { id: true, patronInstitucionalId: true },
-        });
-    }
+    // SPEC-380 (PR B): los 3 métodos de patrón institucional viven en
+    // `alerta-colegio-patron.ts` para respetar `max-lines` — el
+    // `AlertaColegioPatronRepository` mantiene el mismo contrato.
 
     /**
      * SPEC-149 (FR-003): colegio + estudiante + curso destino de la alerta
@@ -559,6 +584,14 @@ export class AlertaColegioRepository {
                         tipo: true,
                         plataforma: { select: { nombre: true } },
                         acudiente: { select: { nombre: true, relacion: true } },
+                    },
+                },
+                // SPEC-380 (PR B): 4º sujeto — integrante del comité.
+                identificadorIntegranteComite: {
+                    select: {
+                        tipo: true,
+                        plataforma: { select: { nombre: true } },
+                        integrante: { select: { nombres: true, apellidos: true, cargo: true } },
                     },
                 },
             },

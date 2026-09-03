@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { IntegranteComiteDto } from "@/lib/dal/types/comite-convivencia";
@@ -316,7 +317,14 @@ export function IntegrantesList({ integrantesIniciales }: Props) {
                                 {/* SPEC-319 §2.3: fecha con hora DD-MM-AAAA HH:MM (COT) */}
                                 <p className="text-xs text-subtle">Desde {formatearFechaHora(integrante.fechaInicio)}</p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
+                                {/* SPEC-380 (PR B · C4/D-100): las cuentas del integrante también se vigilan. */}
+                                <Link
+                                    href={`/dashboard/colegio/comite/integrantes/${integrante.id}/identificadores`}
+                                    className="rounded-xl px-4 py-2 text-sm font-semibold text-body ring-1 ring-tinta/20 transition hover:bg-tinta/5"
+                                >
+                                    Vigilar identificadores
+                                </Link>
                                 <button
                                     type="button"
                                     onClick={() => abrirEdicion(integrante)}
