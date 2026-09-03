@@ -9,6 +9,7 @@ import {
     crearPaisCiudad,
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
+import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
 import type { CategoriaConducta } from "@prisma/client";
 
 async function crearReporteVisible(
@@ -23,7 +24,12 @@ async function crearReporteVisible(
     });
     const reporte = await prisma.reporte.create({
         data: {
-            identificador,
+            // SPEC-377 (I-267): la creación real de un Reporte normaliza el
+            // identificador (`src/lib/dal/services/reporte-creation.ts`).
+            // El helper de test replica esa canónica para que el cruce con la
+            // consulta pública, que ahora también normaliza en la LECTURA,
+            // se comporte como en producción.
+            identificador: normalizarIdentificador(identificador),
             plataformaId,
             texto: "Texto de prueba para consulta pública.",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
@@ -57,7 +63,7 @@ async function crearReporteEnRevision(identificador: string, plataformaId: strin
     });
     return prisma.reporte.create({
         data: {
-            identificador,
+            identificador: normalizarIdentificador(identificador),
             plataformaId,
             texto: "Texto en revisión para consulta pública.",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
@@ -263,5 +269,34 @@ describe("GET /api/consulta", () => {
         expect(body.tieneReportes).toBe(true);
         expect(body.totalReportes).toBe(1);
         expect(body.plataformas).toHaveLength(1);
+    });
+
+    // SPEC-377 (I-267) · Case-insensitive: la escritura ya normalizaba, la
+    // lectura no — `NICK_COLEGIO_UNO` devolvía "sin reportes por ahora" contra
+    // `nick_colegio_uno` con 2 reportes. Falso negativo (Calidad, campaña 02-09).
+    // Este test afirma la regla: MAYÚSCULAS / minúsculas / mixto devuelven el
+    // MISMO resultado. Escrito con un `nick_colegio_uno` real (2 reportes) para
+    // reproducir la evidencia de la campaña.
+    it("SPEC-377 (I-267): MAYÚSCULAS / minúsculas / mixto devuelven EL MISMO resultado (case-insensitive)", async () => {
+        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
+        await crearReporteVisible("nick_colegio_uno", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
+        await crearReporteVisible("nick_colegio_uno", plataforma!.id, "OFRECIMIENTO_REGALOS", false);
+
+        const casos = ["nick_colegio_uno", "NICK_COLEGIO_UNO", "Nick_Colegio_Uno", "  nick_COLEGIO_uno  "];
+        const respuestas: Array<{ tieneReportes: boolean; totalReportes: number }> = [];
+        for (const variante of casos) {
+            const req = new Request(
+                `http://localhost:5005/api/consulta?identificador=${encodeURIComponent(variante)}`
+            );
+            const res = await GET(req);
+            expect(res.status).toBe(200);
+            const body = await res.json();
+            respuestas.push({ tieneReportes: body.tieneReportes, totalReportes: body.totalReportes });
+        }
+        // Todas las variantes deben empatar con la canónica: 2 reportes visibles.
+        for (const r of respuestas) {
+            expect(r.tieneReportes, "un ciudadano no puede recibir 'sin reportes' por escribir en MAYÚSCULA").toBe(true);
+            expect(r.totalReportes).toBe(2);
+        }
     });
 });

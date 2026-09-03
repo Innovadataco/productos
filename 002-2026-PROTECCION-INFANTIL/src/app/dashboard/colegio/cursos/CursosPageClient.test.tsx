@@ -53,6 +53,47 @@ describe("CursosPageClient — SPEC-176 (ver y reactivar desactivados)", () => {
         expect(screen.getByRole("button", { name: "Desactivar" })).toBeDefined();
     });
 
+    // SPEC-377 (I-268) — Regla dura de Jelkin: NUNCA rojo (gris = inactivo,
+    // ámbar = única alerta). Antes: "Desactivar" usaba `variant="danger"` →
+    // `bg-red-700` (rgb(185,28,28)) — Calidad lo marcó como el único rojo real
+    // del barrido integral. Este test barre TODOS los elementos renderizados y
+    // afirma cero clases con `red-`, cero `bg-red`/`text-red`/`border-red`, y
+    // cero estilos inline con "rgb(185,28,28)" en la pantalla completa (no solo
+    // el botón). Si alguien vuelve a meter rojo, el test lo bloquea.
+    it("SPEC-377 (I-268): la pantalla de cursos NO tiene ningún rojo (barrido de clases y estilos)", async () => {
+        mockFetchPorUrl();
+        const { container } = render(<CursosPageClient />);
+        // Espera a que la lista pinte tanto activos como inactivos.
+        fireEvent.click(await screen.findByLabelText("Mostrar desactivados"));
+        await waitFor(() => expect(screen.getByText("Curso DEMO 010")).toBeDefined());
+
+        const patronesRojos = [
+            /\bbg-red-/,
+            /\btext-red-/,
+            /\bborder-red-/,
+            /\bring-red-/,
+            /\bfrom-red-/,
+            /\bto-red-/,
+            /\bhover:bg-red-/,
+        ];
+
+        for (const el of container.querySelectorAll("*")) {
+            const cls = el.className;
+            const className = typeof cls === "string" ? cls : (cls as SVGAnimatedString | undefined)?.baseVal ?? "";
+            for (const patron of patronesRojos) {
+                expect(className, `elemento con clase roja: ${className}`).not.toMatch(patron);
+            }
+            const inline = (el as HTMLElement).getAttribute("style") ?? "";
+            expect(inline.toLowerCase(), `elemento con rgb(185,28,28) inline: ${inline}`).not.toMatch(
+                /rgb\s*\(\s*185\s*,\s*28\s*,\s*28\s*\)/
+            );
+        }
+        // Y evidencia positiva: el botón "Desactivar" existe (no fue eliminado
+        // por accidente al quitar el rojo) y ya no tiene la clase `bg-red-*`.
+        const btn = screen.getByRole("button", { name: "Desactivar" });
+        expect(btn.className).not.toMatch(/red-/);
+    });
+
     it("Activar llama al PATCH de estado con 'activo' y recarga la lista", async () => {
         const fetchMock = vi.fn().mockImplementation((url: string, opts?: { method?: string; body?: string }) => {
             if (opts?.method === "PATCH") {
