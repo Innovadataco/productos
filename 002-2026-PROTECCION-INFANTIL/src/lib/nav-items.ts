@@ -93,6 +93,10 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     // Ruta top-level (fuera del shell /dashboard/padre) reutilizada, no hay página nueva.
     { href: "/mis-reportes", label: "Mis reportes" },
     { href: "/dashboard/padre/reportar", label: "Reportar" },
+    // SPEC-392 (L3 · brief A-75): el directorio de psicólogos verificados. Va
+    // arriba de "Suscripción" porque es el frente nuevo y el que arma la red;
+    // exento del guardián de vigencia (padre sin suscripción también lo ve).
+    { href: "/dashboard/padre/profesionales", label: "Encontrar psicólogo" },
     { href: "/dashboard/padre/suscripcion", label: "Suscripción" },
     { href: "/dashboard/padre/hijos", label: "A quién protejo" }, // SPEC-325
     { href: "/dashboard/padre/circulo-confianza", label: "A quién vigilo" }, // SPEC-325 (antes "Círculo confianza")

@@ -249,6 +249,13 @@ export const GUARDIAS_ACCESO = {
                 // regla de Jelkin: proteger a un menor está por encima del cobro.
                 "/dashboard/padre/reportar",
                 "/mis-reportes",
+                // SPEC-392 (L3 · brief A-75 §1): el directorio de profesionales
+                // es abierto — no se esconde detrás del pago. Un padre SIN_SUSCRIPCION
+                // debe poder ver la lista, filtrar y abrir un perfil sin toparse
+                // con el muro. La suscripción cierra la puerta a *reservar* la cita
+                // (L4), no a *conocer* a quién existe.
+                "/dashboard/padre/profesionales",
+                "/api/padre/profesionales",
             ],
         },
         SCHOOL_ADMIN: {
