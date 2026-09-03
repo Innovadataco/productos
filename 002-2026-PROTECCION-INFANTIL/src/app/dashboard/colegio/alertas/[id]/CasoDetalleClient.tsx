@@ -33,10 +33,15 @@ interface CasoDetalleClientProps {
     caso: DetalleCaso;
 }
 
-const TIPO_SUJETO_LABELS: Record<string, string> = {
+// SPEC-380 (PR B · CEO): Record COMPLETO por la unión — antes tenía fallback
+// `?? tipoSujeto` que escondía el olvido de un valor nuevo. Ahora el compilador
+// avisa si mañana entra un 5º sujeto sin label.
+type TipoSujetoAlerta = "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE" | "INTEGRANTE_COMITE";
+const TIPO_SUJETO_LABELS: Record<TipoSujetoAlerta, string> = {
     ESTUDIANTE: "Estudiante",
     PROFESOR: "Profesor",
     ACUDIENTE: "Acudiente",
+    INTEGRANTE_COMITE: "Integrante del comité",
 };
 
 export default function CasoDetalleClient({ caso }: CasoDetalleClientProps) {
@@ -66,7 +71,7 @@ export default function CasoDetalleClient({ caso }: CasoDetalleClientProps) {
                         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                             <div>
                                 <dt className="microetiqueta">Tipo de sujeto</dt>
-                                <dd className="mt-0.5 text-body">{TIPO_SUJETO_LABELS[alerta.tipoSujeto] ?? alerta.tipoSujeto}</dd>
+                                <dd className="mt-0.5 text-body">{TIPO_SUJETO_LABELS[alerta.tipoSujeto as TipoSujetoAlerta]}</dd>
                             </div>
                             <div>
                                 <dt className="microetiqueta">{alerta.tipoSujeto === "ESTUDIANTE" ? "Estudiante" : "Nombre"}</dt>

@@ -31,6 +31,13 @@ const INCLUDE_BANDEJA = {
     },
     identificadorProfesor: { select: { profesor: { select: { nombre: true, apellidos: true } } } },
     identificadorAcudiente: { select: { acudiente: { select: { nombre: true, relacion: true } } } },
+    // SPEC-380 (PR B): 4º sujeto en la bandeja.
+    identificadorIntegranteComite: {
+        select: {
+            valor: true,
+            integrante: { select: { nombres: true, apellidos: true, cargo: true } },
+        },
+    },
     asignadoA: { select: { id: true, nombre: true, email: true } },
     reporte: {
         select: {

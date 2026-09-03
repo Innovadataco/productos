@@ -14,9 +14,13 @@ import { ResolverAlertaModal } from "@/components/modules/colegio/alertas/Resolv
 
 type AsignadoA = { id: string; nombre: string | null; email: string };
 
+// SPEC-380 (PR B): 4º sujeto — INTEGRANTE_COMITE. La unión cerrada mantiene
+// la disciplina exhaustiva (Record<TipoSujeto, X> abajo).
+type TipoSujetoAlerta = "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE" | "INTEGRANTE_COMITE";
+
 type Alerta = {
     id: string;
-    tipoSujeto: "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
+    tipoSujeto: TipoSujetoAlerta;
     identificador: string | null;
     relacion: string | null;
     sujetoNombre: string | null;
@@ -30,7 +34,7 @@ type Alerta = {
 };
 
 type FiltroEstado = "todas" | "nueva" | "vista" | "gestionada" | "escalada" | "cerrada";
-type FiltroTipoSujeto = "todos" | "ESTUDIANTE" | "PROFESOR" | "ACUDIENTE";
+type FiltroTipoSujeto = "todos" | TipoSujetoAlerta;
 type FiltroPrioridad = "todas" | "alta" | "media" | "baja";
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -70,17 +74,23 @@ const PRIORIDAD_VARIANTS: Record<string, "danger" | "warning" | "success"> = {
     baja: "success",
 };
 
+// SPEC-380 (PR B · CEO): Records completos por `TipoSujetoAlerta`. El fallback
+// `?? tipoSujeto` de la versión anterior escondía olvidos — ahora agregar un
+// 5º sujeto sin label/variant hace fallar el compilador (los guardianes que
+// avisan valen más que los que perdonan).
 const TIPO_SUJETO_LABELS: Record<FiltroTipoSujeto, string> = {
     todos: "Todos los sujetos",
     ESTUDIANTE: "Estudiante",
     PROFESOR: "Profesor",
     ACUDIENTE: "Acudiente",
+    INTEGRANTE_COMITE: "Integrante del comité",
 };
 
-const TIPO_SUJETO_VARIANTS: Record<string, "default" | "info" | "warning" | "neutral"> = {
+const TIPO_SUJETO_VARIANTS: Record<TipoSujetoAlerta, "default" | "info" | "warning" | "neutral"> = {
     ESTUDIANTE: "default",
     PROFESOR: "info",
     ACUDIENTE: "warning",
+    INTEGRANTE_COMITE: "neutral",
 };
 
 function estaVencida(vencimientoSla: string): boolean {
@@ -251,6 +261,8 @@ export default function AlertasColegioPageClient() {
                                         { value: "ESTUDIANTE", label: "Estudiante" },
                                         { value: "PROFESOR", label: "Profesor" },
                                         { value: "ACUDIENTE", label: "Acudiente" },
+                                        // SPEC-380 (PR B): 4º sujeto.
+                                        { value: "INTEGRANTE_COMITE", label: "Integrante del comité" },
                                     ]}
                                 />
                             </div>
@@ -336,8 +348,8 @@ export default function AlertasColegioPageClient() {
                                                         onChange={() => toggleSeleccion(alerta.id)}
                                                         aria-label={`Seleccionar alerta ${alerta.id}`}
                                                     />
-                                                    <Badge variant={TIPO_SUJETO_VARIANTS[alerta.tipoSujeto] || "neutral"}>
-                                                        {TIPO_SUJETO_LABELS[alerta.tipoSujeto] || alerta.tipoSujeto}
+                                                    <Badge variant={TIPO_SUJETO_VARIANTS[alerta.tipoSujeto]}>
+                                                        {TIPO_SUJETO_LABELS[alerta.tipoSujeto]}
                                                     </Badge>
                                                     <span title={ESTADO_TOOLTIPS[alerta.estadoAlerta] || alerta.estadoAlerta}>
                                                         <Badge variant={ESTADO_VARIANTS[alerta.estadoAlerta] || "neutral"}>

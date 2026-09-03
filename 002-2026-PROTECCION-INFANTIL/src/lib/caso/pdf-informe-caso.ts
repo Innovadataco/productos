@@ -53,6 +53,15 @@ export interface NotaInforme {
 
 export type SeccionInforme = "hechos" | "actuacion" | "analisis_comite" | "contexto_curso";
 
+// SPEC-380 (PR B): tipoSujeto para el PDF (mismo shape que en el DAL). No se
+// importa el tipo del repo para no acoplar el módulo pdfmake al DAL.
+const mapaEtiquetaSujeto: Record<string, string> = {
+    ESTUDIANTE: "estudiante",
+    PROFESOR: "profesor",
+    ACUDIENTE: "acudiente",
+    INTEGRANTE_COMITE: "integrante del comité de convivencia",
+};
+
 export interface PdfInformeCasoInput {
     colegio: { nombre: string; nit: string };
     escudoDataUri: string | null;
@@ -86,8 +95,12 @@ export async function generarPdfInformeCaso(input: PdfInformeCasoInput): Promise
     // "contexto_curso" fue marcada — antes la casilla era un no-op y el
     // curso salía siempre en esta línea.
     const incluirCurso = input.secciones.includes("contexto_curso") && input.curso;
+    // SPEC-380 (PR B): mapa legible para el PDF que va a una autoridad —
+    // "integrante del comité" en vez de "integrante_comite". El resto también
+    // pasa por el mapa para que el registro sea consistente.
+    const etiquetaSujeto = mapaEtiquetaSujeto[input.tipoSujeto] ?? input.tipoSujeto.toLowerCase();
     contenido.push({
-        text: `Sujeto del caso: ${input.tipoSujeto.toLowerCase()}${incluirCurso ? ` · curso ${input.curso}` : ""}. ` +
+        text: `Sujeto del caso: ${etiquetaSujeto}${incluirCurso ? ` · curso ${input.curso}` : ""}. ` +
             "Este informe describe hechos y actuaciones; no constituye acusación ni veredicto.",
         style: "cuerpo",
     });
