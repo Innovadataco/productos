@@ -224,3 +224,26 @@ afterEach(async () => {
     }
     await releaseTestLock();
 });
+
+// SPEC-375 · cerrar recursos al final de cada fork.
+//
+// Cuando un fork de vitest termina sus tests, cualquier handle activo (pool
+// de pg-boss, timer sin `.unref()`, cliente pg con reintentos) mantiene vivo
+// el proceso Node y el shard queda colgado en CI hasta el timeout general
+// (40+ min, cancelación manual). Cada módulo que crea un recurso persistente
+// se registra en `globalThis.__pi_test_disposers` al ser importado; acá los
+// invocamos en orden. Silencioso e idempotente: si un fork no tocó ningún
+// módulo con recursos, el `Set` está vacío y no hace nada.
+afterAll(async () => {
+    const registro = (globalThis as unknown as { __pi_test_disposers?: Set<() => Promise<void>> });
+    if (!registro.__pi_test_disposers) return;
+    for (const dispose of registro.__pi_test_disposers) {
+        try {
+            await dispose();
+        } catch {
+            // El error de shutdown NO debe reventar un fork que ya pasó los tests.
+        }
+    }
+    registro.__pi_test_disposers.clear();
+});
+

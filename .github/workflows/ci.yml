@@ -112,6 +112,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [should-skip]
     if: needs.should-skip.outputs.skip != 'true'
+    # SPEC-375: TOPE DURO por shard. Sin esto se aplica el default de 360 min
+    # de GitHub — cualquier fuga de handles en un test (pg-boss sin cerrar,
+    # timer sin unref, cliente pg reintentando) dejaba UN shard colgado 40+
+    # minutos hasta cancelación manual.
+    #
+    # Ancla numérica (medida sobre 6 corridas verdes recientes, `gh run view`):
+    # mediana ~16 min · máximo real 20.5 min. 35 min = mediana × 2 con margen
+    # para el más lento, y sigue cortando rápido las fugas (40+ min manual).
+    timeout-minutes: 35
     # Mega-lote 002-PI: shard 4 vías (~28min → ~7min por shard). Cada shard corre en
     # su propio runner con su propio Postgres: no hay BD compartida entre shards.
     # Los umbrales de cobertura se evalúan en el job agregador (test-integration-coverage).
