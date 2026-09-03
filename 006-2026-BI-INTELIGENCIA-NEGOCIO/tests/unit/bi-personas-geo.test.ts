@@ -17,6 +17,10 @@
 // Mejoras en vivo: comportamiento por país/ciudad (top 8 con categoría más
 // frecuente; categoriaTop NULL honesto si el país/ciudad no tiene reportes
 // clasificados; sondeo roto → lista vacía sin reventar el resto).
+// Mejoras del dueño (KPIs + choropleth): totales (reportes, identificadores
+// visibles y % autenticados de UN ResultSet; % null con 0 reportes — NULLIF
+// en SQL, jamás NaN; sondeo roto → los 3 en null, candado 9) y porPais
+// (todos los países resueltos con su total para el relleno del mapa).
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -50,6 +54,9 @@ function mockConsultas(mapa: Array<[string, Respuesta]>): void {
 }
 
 // Fragmentos distintivos de cada query (ver personas.ts / geo.ts).
+// OJO al orden: el sondeo de 'totales' también toca "IdentificadorReportado"
+// y el de 'porPais' comparte JOIN "Pais" con comportamiento-*; el despachador
+// toma el PRIMER match, así que los fragmentos más específicos van primero.
 const F = {
     base: "AS profesores_vigilados",
     identificadores: 'SELECT count(*) FROM "IdentificadorAlumno"',
@@ -59,11 +66,13 @@ const F = {
     circulo: "AS hijos_vinculados",
     topCiudades: 'JOIN "Ciudad"',
     coberturaGeo: "'txt:'",
-    reincidencia: 'FROM "IdentificadorReportado"',
+    reincidencia: '"totalReportes"',
     dow: "EXTRACT(ISODOW",
     porMes: "generate_series",
     comportamientoPais: 'PARTITION BY r."paisId"',
     comportamientoCiudad: 'PARTITION BY r."ciudadId"',
+    totales: '"esVisiblePublicamente"',
+    porPais: 'JOIN "Pais"',
 } as const;
 
 beforeEach(() => {
@@ -221,6 +230,11 @@ describe("getGeo · datos reales mockeados", () => {
                 { mes: "2025-11", total: 120 },
                 { mes: "2025-12", total: 140 },
             ]],
+            [F.totales, [{ reportes: 8296, identificadores_visibles: 43, pct_autenticados: 40.2 }]],
+            [F.porPais, [
+                { pais: "Colombia", total: 8100 },
+                { pais: "México", total: 120 },
+            ]],
         ]);
 
         const geo = await getGeo();
@@ -254,6 +268,17 @@ describe("getGeo · datos reales mockeados", () => {
             { mes: "2025-10", total: 0 },
             { mes: "2025-11", total: 120 },
             { mes: "2025-12", total: 140 },
+        ]);
+        // KPIs generales: un solo ResultSet con las 3 subconsultas
+        expect(geo.totales).toEqual({
+            reportes: 8296,
+            identificadoresVisibles: 43,
+            pctAutenticados: 40.2,
+        });
+        // Choropleth: todos los países resueltos, mayor → menor
+        expect(geo.porPais).toEqual([
+            { pais: "Colombia", total: 8100 },
+            { pais: "México", total: 120 },
         ]);
     });
 
@@ -414,5 +439,90 @@ describe("getGeo · comportamiento por país/ciudad", () => {
         const degradado = await getGeo();
         expect(degradado.comportamiento.porPais).toEqual([]); // degradada
         expect(degradado.paisesConReportes).toBe(1); // el resto vive
+    });
+});
+
+// ─── getGeo · totales generales (KPIs, como el dashboard público de PI) ──────
+
+describe("getGeo · totales generales (KPIs)", () => {
+    it("reportes, identificadores visibles y % autenticados desde un solo ResultSet", async () => {
+        mockConsultas([
+            [F.totales, [{ reportes: 8296, identificadores_visibles: 43, pct_autenticados: 40.2 }]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.totales).toEqual({
+            reportes: 8296,
+            identificadoresVisibles: 43,
+            pctAutenticados: 40.2,
+        });
+    });
+
+    it("0 reportes → pctAutenticados null del ResultSet (NULLIF en SQL, jamás NaN)", async () => {
+        // Réplica viva sin reportes: el % no existe, no es 0 ni división por cero.
+        mockConsultas([
+            [F.totales, [{ reportes: 0, identificadores_visibles: 0, pct_autenticados: null }]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.totales).toEqual({
+            reportes: 0,
+            identificadoresVisibles: 0,
+            pctAutenticados: null,
+        });
+    });
+
+    it("sondeo roto → los 3 en null (candado 9: se anuncia, nunca un 0 inventado)", async () => {
+        mockConsultas([
+            [F.totales, new Error('column "esVisiblePublicamente" does not exist')],
+            [F.coberturaGeo, [{ ciudades: 4, paises: 1 }]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.totales).toEqual({
+            reportes: null,
+            identificadoresVisibles: null,
+            pctAutenticados: null,
+        });
+        // El resto de la pestaña vive
+        expect(geo.ciudadesConReportes).toBe(4);
+    });
+});
+
+// ─── getGeo · porPais (choropleth del mapa) ──────────────────────────────────
+
+describe("getGeo · porPais (choropleth)", () => {
+    it("todos los países resueltos con su total, mayor → menor", async () => {
+        mockConsultas([
+            [F.porPais, [
+                { pais: "Colombia", total: 8100 },
+                { pais: "México", total: 120 },
+                { pais: "España", total: 3 },
+            ]],
+        ]);
+
+        const geo = await getGeo();
+
+        expect(geo.porPais).toEqual([
+            { pais: "Colombia", total: 8100 },
+            { pais: "México", total: 120 },
+            { pais: "España", total: 3 },
+        ]);
+    });
+
+    it("vacío o sondeo roto → [] y el resto de Geo vive", async () => {
+        mockConsultas([]);
+        expect((await getGeo()).porPais).toEqual([]);
+
+        mockConsultas([
+            [F.porPais, new Error("réplica caída")],
+            [F.coberturaGeo, [{ ciudades: 4, paises: 1 }]],
+        ]);
+        const geo = await getGeo();
+        expect(geo.porPais).toEqual([]); // degradada: países con relleno base
+        expect(geo.ciudadesConReportes).toBe(4); // el resto vive
     });
 });
