@@ -886,6 +886,31 @@ async function seedEventosEmailMigrados() {
                 "Hola,\n\nTu cuenta quedó creada. Desde acá te avisamos si alguno de los tuyos aparece en un reporte.\n\nEntra cuando quieras:\n{{urlLogin}}\n\nTe faltan unos pocos pasos para terminar de configurarla. Con calma, toma un minuto.",
             variablesSchema: { type: "object", properties: { urlLogin: { type: "string" } } },
         },
+        // ── SPEC-419 (I-296) · la puerta del profesional ────────────────────
+        // SPEC-391 creó `email-profesional.ts` con estos dos eventos y el seed
+        // NUNCA recibió sus reglas ni sus plantillas. Los dos callsites fallan
+        // en cerrado, la ruta atrapa el throw y responde 202 "revisá tu correo"
+        // igual — así que el psicólogo llenaba el formulario y esperaba un
+        // enlace que no existía. Leíamos "cero profesionales inscritos" como
+        // desinterés; era que no podían. Lo cazó `reglas:check` (SPEC-418) en
+        // su primer uso, antes de desplegar.
+        {
+            clave: "auth.registro_enlace_profesional.email",
+            asunto: "Crea tu contraseña y empecemos",
+            cuerpoMarkdown:
+                "Hola,\n\nGracias por querer sumarte a la red de profesionales de Protección Infantil.\n\nAbre este enlace y crea tu contraseña:\n{{url}}\n\nEl enlace vence en 24 horas y solo se puede usar una vez.\n\nSi no fuiste tú quien lo pidió, no tienes que hacer nada.",
+            variablesSchema: { type: "object", properties: { url: { type: "string" } } },
+        },
+        {
+            clave: "auth.bienvenida_profesional.email",
+            asunto: "Tu cuenta está lista — falta un paso",
+            cuerpoMarkdown:
+                "Hola,\n\nTu cuenta quedó creada.\n\nEntra cuando quieras:\n{{urlLogin}}\n\nPara aparecer en el directorio de familias falta que completes tu perfil y subas la autorización firmada. Hasta ese momento tu perfil queda en borrador y no llega a revisión:\n{{urlCompletarPerfil}}",
+            variablesSchema: {
+                type: "object",
+                properties: { urlLogin: { type: "string" }, urlCompletarPerfil: { type: "string" } },
+            },
+        },
         // ── SPEC-344 (A-69 · C1) · registro por enlace del colegio ──────────
         {
             clave: "colegio.registro_enlace.email",
@@ -1143,6 +1168,11 @@ async function seedEventosEmailMigrados() {
         // entrar, así que no admiten opt-out.
         { evento: "auth.registro_enlace", plantillaClave: "auth.registro_enlace.email", rol: "PARENT", obligatoria: true },
         { evento: "auth.bienvenida_padre", plantillaClave: "auth.bienvenida_padre.email", rol: "PARENT", obligatoria: true },
+        // SPEC-419 (I-296): la puerta del profesional. Obligatorias por la misma
+        // razón que las del padre — sin ellas no puede entrar, así que no
+        // admiten opt-out. Su ausencia es lo que tenía el registro roto.
+        { evento: "auth.registro_enlace_profesional", plantillaClave: "auth.registro_enlace_profesional.email", rol: "PROFESIONAL", obligatoria: true },
+        { evento: "auth.bienvenida_profesional", plantillaClave: "auth.bienvenida_profesional.email", rol: "PROFESIONAL", obligatoria: true },
         // SPEC-344 (A-69 · C1): reglas del registro por enlace del colegio.
         { evento: "colegio.registro_enlace", plantillaClave: "colegio.registro_enlace.email", rol: "SCHOOL_ADMIN", obligatoria: true },
         { evento: "colegio.registro_enlace.cuenta_existente", plantillaClave: "colegio.registro_enlace.cuenta_existente.email", rol: "SCHOOL_ADMIN", obligatoria: true },
