@@ -15,6 +15,10 @@
  *     desalineo real; las divergencias del eje anónimo son nota documentada.
  * (d) ASERCIÓN B (el menú no miente): ROJO por href muerto o no resoluble,
  *     listándolo. Regla de pintado D-41: módulo de BD ∧ predicado del proxy.
+ * (d-bis) ASERCIÓN B-bis (SPEC-404 · I-290): el page.tsx de un item de menú
+ *     NO puede `redirect("Y")` con `Y` literal de otro item del mismo menú —
+ *     alcanzable ≠ funcional, la puerta pasa pero la página no muestra lo
+ *     prometido.
  *
  * Exit 0 solo si las seis están en VERDE. Uso: `npx tsx scripts/arch/arch-check.ts`.
  */
@@ -23,6 +27,7 @@ import * as path from "node:path";
 import { ARTEFACTOS } from "./artefactos";
 import { ejecutarAsercionA } from "./asercion-puerta-predicado";
 import { ejecutarAsercionB } from "./asercion-menu-no-miente";
+import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
 import { buscarInfractores } from "./no-prisma-mocks";
 import { buscarInfractores as buscarAliasWorker } from "./no-worker-alias";
 import { RUTA_DOCS_ARCH, RUTA_EXCEPCIONES, RUTA_SCHEMA } from "./lib/paths";
@@ -112,6 +117,21 @@ async function main() {
         rojo = true;
         console.error(`[Arch:check] (d) ROJO: ${b.muertos.length} hrefs muertos (pintados pero bloqueados por la puerta):`);
         for (const m of b.muertos) console.error(`  - ${m.rol} · ${m.href} · ${m.origen} · proxy=${m.veredicto}`);
+    }
+
+    // SPEC-404 (I-290): la aserción B corta puerta-vs-predicado (alcanzable), no
+    // "el page.tsx muestra lo que promete el href". El caso real: /dashboard/admin
+    // era alcanzable para ADMIN pero su page.tsx hacía redirect() a /inicio, así
+    // que el clic en "Bandeja de reportes" nunca abría la bandeja. Esta aserción
+    // adicional caza cualquier redirect() literal cross-item del mismo menú.
+    console.log("[Arch:check] (d-bis) Aserción B-bis (item no redirige a otro item del menú, SPEC-404)…");
+    const bBis = ejecutarAsercionBBis();
+    if (bBis.muertos.length === 0) {
+        console.log(`[Arch:check] (d-bis) VERDE: ${bBis.evaluados} page.tsx de items del menú evaluados, cero redirects cross-item.`);
+    } else {
+        rojo = true;
+        console.error(`[Arch:check] (d-bis) ROJO: ${bBis.muertos.length} redirects cross-item (el item promete X y aterriza en Y del mismo menú):`);
+        for (const m of bBis.muertos) console.error(`  - ${m.menu} · ${m.origen} → ${m.destino} · ${m.archivo}`);
     }
 
     console.log("[Arch:check] (e) Anti-mocks del singleton de Prisma en tests de integration (SPEC-174, I-55)…");

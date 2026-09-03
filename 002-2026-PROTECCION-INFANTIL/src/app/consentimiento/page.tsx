@@ -11,9 +11,11 @@ const DASHBOARD_POR_ROL: Record<RolUsuario, string> = {
     PARENT: "/dashboard/padre",
     SCHOOL_ADMIN: "/dashboard/colegio",
     COMITE_CONVIVENCIA: "/dashboard/colegio",
-    ADMIN: "/dashboard/admin",
-    OPERADOR: "/dashboard/admin",
-    COMITE_VALIDACION: "/dashboard/admin",
+    // SPEC-404 (I-290): la bandeja tiene URL propia; el "volver" tras aceptar
+    // consentimiento aterriza directo en trabajo real, no en la raíz-aterrizaje.
+    ADMIN: "/dashboard/admin/bandeja",
+    OPERADOR: "/dashboard/admin/bandeja",
+    COMITE_VALIDACION: "/dashboard/admin/bandeja",
     // SPEC-391 (L1b): el profesional cae a completar su perfil tras crear la
     // cuenta; L5 (panel del profesional) definirá la home real.
     PROFESIONAL: "/perfil-profesional/completar",

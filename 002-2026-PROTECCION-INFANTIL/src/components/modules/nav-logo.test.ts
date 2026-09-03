@@ -26,9 +26,11 @@ describe("destinoLogo (SPEC-129, O-1)", () => {
 
     it("roles internos en /dashboard-publico: la lógica original ya los enviaba a su panel (se preserva)", () => {
         // /dashboard-publico empieza por /dashboard: la regla SPEC-106 siempre la
-        // trató como zona autenticada. Se preserva tal cual para no-SCHOOL_ADMIN.
-        expect(destinoLogo({ rol: "ADMIN" }, "/dashboard-publico")).toBe("/dashboard/admin");
-        expect(destinoLogo({ rol: "OPERADOR" }, "/dashboard-publico")).toBe("/dashboard/admin");
+        // trató como zona autenticada. SPEC-404 (I-290) redirige ADMIN y
+        // OPERADOR a la bandeja (URL propia); `/dashboard/admin` era aterrizaje
+        // que redirigía a Inicio y dejaba el logo muerto.
+        expect(destinoLogo({ rol: "ADMIN" }, "/dashboard-publico")).toBe("/dashboard/admin/bandeja");
+        expect(destinoLogo({ rol: "OPERADOR" }, "/dashboard-publico")).toBe("/dashboard/admin/bandeja");
         expect(destinoLogo({ rol: "COMITE_VALIDACION" }, "/dashboard-publico")).toBe("/dashboard/admin/comite");
     });
 
@@ -37,9 +39,9 @@ describe("destinoLogo (SPEC-129, O-1)", () => {
         expect(destinoLogo({ rol: "PARENT" }, "/seguimiento")).toBe("/");
     });
 
-    it("zona autenticada: cada rol a su panel (sin cambio)", () => {
-        expect(destinoLogo({ rol: "ADMIN" }, "/dashboard/admin")).toBe("/dashboard/admin");
-        expect(destinoLogo({ rol: "OPERADOR" }, "/dashboard/admin")).toBe("/dashboard/admin");
+    it("zona autenticada: cada rol a su panel (SPEC-404: ADMIN/OPERADOR van a la bandeja)", () => {
+        expect(destinoLogo({ rol: "ADMIN" }, "/dashboard/admin")).toBe("/dashboard/admin/bandeja");
+        expect(destinoLogo({ rol: "OPERADOR" }, "/dashboard/admin")).toBe("/dashboard/admin/bandeja");
         expect(destinoLogo({ rol: "COMITE_VALIDACION" }, "/dashboard/admin/comite")).toBe("/dashboard/admin/comite");
         expect(destinoLogo({ rol: "PARENT" }, "/dashboard")).toBe("/dashboard");
     });

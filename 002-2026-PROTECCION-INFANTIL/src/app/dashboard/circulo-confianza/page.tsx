@@ -31,12 +31,14 @@ export default function CirculoConfianzaPage() {
             return;
         }
         if (["ADMIN", "OPERADOR", "COMITE_VALIDACION"].includes(user.rol)) {
+            // SPEC-404 (I-290): ADMIN cae en la bandeja (URL propia), no en la
+            // raíz-aterrizaje. OPERADOR y COMITE_VALIDACION conservan destino.
             const target =
                 user.rol === "COMITE_VALIDACION"
                     ? "/dashboard/admin/comite"
                     : user.rol === "OPERADOR"
                         ? "/dashboard/admin/operadores"
-                        : "/dashboard/admin";
+                        : "/dashboard/admin/bandeja";
             router.push(target);
             return;
         }

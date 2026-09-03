@@ -25,7 +25,9 @@ export function destinoLogo(user: { rol: string } | null, pathname: string | nul
     // SPEC-168: el comité de convivencia siempre va a su bandeja (su única área).
     if (user?.rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
     if (!user || !enAreaAutenticada) return "/";
-    if (user.rol === "ADMIN" || user.rol === "OPERADOR") return "/dashboard/admin";
+    // SPEC-404 (I-290): el logo aterriza en la bandeja; el raíz `/dashboard/admin`
+    // se reservó como aterrizaje que respeta marcadores viejos y no como destino click.
+    if (user.rol === "ADMIN" || user.rol === "OPERADOR") return "/dashboard/admin/bandeja";
     if (user.rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
     return "/dashboard";
 }
