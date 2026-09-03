@@ -28,6 +28,15 @@
 -- 1. La suscripción deja de seguir las tablas retiradas del canon.
 ALTER SUBSCRIPTION bi006_replica_sub REFRESH PUBLICATION;
 
+-- 2. Retiro de 2 MVs muertas que dependen de las legacy (ambas construidas sobre tablas legacy
+--    vacías y NO usadas por la app ni por el catálogo NL→SQL):
+--      · mv_fact_comercial_mensual  (FROM BillingCycle LEFT JOIN Subscription …)
+--      · mv_fact_salud_sistema     (LEFT JOIN AlertaSuscripcion)
+--    Guard: solo si existen (idempotente). Si en el futuro se quiere analítica comercial,
+--    se reconstruye sobre Suscripcion (viva) — decisión de diseño propia, no Lote 3.
+DROP MATERIALIZED VIEW IF EXISTS mv_fact_comercial_mensual;
+DROP MATERIALIZED VIEW IF EXISTS mv_fact_salud_sistema;
+
 DO $limpieza$
 DECLARE
   t       text;

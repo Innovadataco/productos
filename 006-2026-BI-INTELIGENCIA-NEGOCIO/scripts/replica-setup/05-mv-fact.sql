@@ -1,8 +1,12 @@
 -- ==========================================================================
 -- 05-mv-fact.sql · Producto 006 · BI v2
--- 5 vistas materializadas mv_fact_* sobre las tablas REPLICADAS de PI.
--- Port de la migración 20260828120100_mv_fact_bi del 005 (contenido idéntico),
--- convertida en SCRIPT OPERATIVO, no migración Prisma.
+-- 3 vistas materializadas mv_fact_* sobre las tablas REPLICADAS de PI
+-- (reporte_diario · motor_ia_diario · operativo). Port de la migración
+-- 20260828120100_mv_fact_bi del 005 (contenido idéntico), convertida en
+-- SCRIPT OPERATIVO, no migración Prisma. Las 2 MVs legacy
+-- (comercial_mensual · salud_sistema) se RETIRARON el 2026-09-01 (Lote 3):
+-- vivían sobre las tablas legacy vacías del 005 que salieron de la
+-- publicación (02) — ver notas de retiro más abajo y script 07.
 --
 -- ⚠️ CUÁNDO CORRE: SOLO después de que la suscripción bi006_replica_sub esté
 --   activa y la copia inicial completa (script 04: 23 tablas en 'r'/'s').
@@ -33,12 +37,12 @@ DO $$
 DECLARE
   tabla text;
   faltantes text[] := ARRAY[]::text[];
-  -- Tablas referenciadas por las 5 MVs (fuente: publicación bi_replica)
+  -- Tablas referenciadas por las MVs (fuente: publicación bi_replica)
   requeridas text[] := ARRAY[
     'Reporte', 'ClasificacionIA', 'CorreccionAdmin',
     'TransicionReporte', 'SolicitudComite',
-    'BillingCycle', 'Subscription', 'Plan',
-    'AuditLog', 'AlertaColegio', 'AlertaSuscripcion'
+    'Plan',
+    'AuditLog', 'AlertaColegio'
   ];
 BEGIN
   FOREACH tabla IN ARRAY requeridas LOOP
@@ -118,38 +122,16 @@ GROUP BY 1, 2, 3, 4;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_operativo_uniq
   ON mv_fact_operativo (dia, estado_anterior, estado_nuevo, responsable_tipo);
 
--- ── mv_fact_comercial_mensual ──────────────────────────────────────────────
-CREATE MATERIALIZED VIEW IF NOT EXISTS mv_fact_comercial_mensual AS
-SELECT
-  date_trunc('month', bc."periodoInicio")              AS mes,
-  COALESCE(p.nombre, 'desconocido')                    AS plan_nombre,
-  COALESCE(bc.estado, 'desconocido')                   AS ciclo_estado,
-  count(*)                                             AS total_ciclos,
-  sum(bc.monto)                                        AS monto_total,
-  avg(bc.monto)                                        AS monto_promedio
-FROM "BillingCycle" bc
-LEFT JOIN "Subscription" s ON s.id  = bc."subscriptionId"
-LEFT JOIN "Plan" p         ON p.id = s."planId"
-GROUP BY 1, 2, 3;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_comercial_mensual_uniq
-  ON mv_fact_comercial_mensual (mes, plan_nombre, ciclo_estado);
-
--- ── mv_fact_salud_sistema ──────────────────────────────────────────────────
-CREATE MATERIALIZED VIEW IF NOT EXISTS mv_fact_salud_sistema AS
-SELECT
-  date_trunc('day', al."creadoEn")                     AS dia,
-  COALESCE(al.accion::text, 'desconocida')             AS accion,
-  count(*)                                             AS total_eventos_audit,
-  count(ace.id)                                        AS total_alertas_colegio,
-  count(ase.id)                                        AS total_alertas_suscripcion
-FROM "AuditLog" al
-LEFT JOIN "AlertaColegio"      ace ON date_trunc('day', ace."creadoEn") = date_trunc('day', al."creadoEn")
-LEFT JOIN "AlertaSuscripcion"  ase ON date_trunc('day', ase."creadoEn") = date_trunc('day', al."creadoEn")
-GROUP BY 1, 2;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_salud_sistema_uniq
-  ON mv_fact_salud_sistema (dia, accion);
+-- ── mv_fact_comercial_mensual — RETIRADA (2026-09-01 · Lote 3): vivía sobre
+--   BillingCycle/Subscription, tablas legacy vacías del 005 que salieron de la
+--   publicación (02) y cuyas shells dropea 07-bi-db-limpieza-legacy.sql en
+--   bi-db. Si el negocio pide analítica comercial mensual, se reconstruye
+--   sobre Suscripcion (viva) — diseño propio, fuera del Lote 3.
+--
+-- ── mv_fact_salud_sistema — RETIRADA (2026-09-01 · Lote 3): hacía LEFT JOIN a
+--   AlertaSuscripcion, legacy vacía retirada de la publicación. La salud del
+--   sistema la cubre el módulo de vigilancia (src/lib/bi/vigilancia.ts)
+--   leyendo las tablas vivas directamente.
 
 -- ─── REFRESH inicial ───────────────────────────────────────────────────────
 -- REFRESH simple (no CONCURRENTLY): las MVs acaban de crearse y el volumen es
@@ -159,31 +141,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_salud_sistema_uniq
 REFRESH MATERIALIZED VIEW mv_fact_reporte_diario;
 REFRESH MATERIALIZED VIEW mv_fact_motor_ia_diario;
 REFRESH MATERIALIZED VIEW mv_fact_operativo;
-REFRESH MATERIALIZED VIEW mv_fact_comercial_mensual;
-REFRESH MATERIALIZED VIEW mv_fact_salud_sistema;
 
 -- ─── Verificación ──────────────────────────────────────────────────────────
 SELECT matviewname, ispopulated
 FROM pg_matviews
 WHERE schemaname = 'public' AND matviewname LIKE 'mv\_fact\_%'
 ORDER BY matviewname;
--- Esperado: 5 filas · ispopulated = t
+-- Esperado: 3 filas · ispopulated = t (las 2 retiradas NO deben aparecer)
 
 -- ==========================================================================
 -- AMPLIACION V2 (2026-09-01 · SPEC-006 · catálogo BI ampliado): 2 MVs nuevas
--- sobre tablas de la publicación ampliada (40 tablas, 02-pi-db-publicacion).
+-- sobre tablas de la publicación ampliada (37 tablas, 02-pi-db-publicacion).
 --
--- ADITIVO (regla dura): las 5 mv_fact_* originales de arriba YA VIVEN EN
+-- ADITIVO (regla dura): las 3 mv_fact_* originales de arriba YA VIVEN EN
 -- PRODUCCION — NUNCA re-crearlas ni re-refrescarlas desde este bloque (su
 -- REFRESH inicial ya corrió; la rutina es scripts/refresh-mv.sh CONCURRENTLY).
 -- Por eso este bloque trae su propio pre-flight, sus propios REFRESH inicial
 -- y su propia verificación, y NO toca nada de lo anterior.
 --
---   ⚠️ OPERACION: scripts/refresh-mv.sh tiene la lista de MVs quemada (5).
---      Para que el cron refresque estas 2 nuevas cada 15 min hay que
---      agregarlas al `for` de ese script (fuera del alcance de este SQL).
---      Hasta entonces: refresco manual con
---      REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fact_alerta_diario; etc.
+--   ⚠️ OPERACION: scripts/refresh-mv.sh tiene la lista de MVs quemada.
+--      Actualizada el 2026-09-01 (Lote 3): 5 MVs (3 originales + las 2 de
+--      este bloque); las 2 retiradas ya no están en la lista.
 --
 -- Mismo estilo idempotente (D-26): CREATE ... IF NOT EXISTS + un UNIQUE INDEX
 -- por MV (habilita REFRESH CONCURRENTLY) + COALESCE en columnas NULLables del
@@ -210,7 +188,7 @@ BEGIN
   END LOOP;
 
   IF array_length(faltantes, 1) IS NOT NULL THEN
-    RAISE EXCEPTION '[05·v2] Faltan tablas replicadas de PI en bi-db: % — la réplica ampliada (40 tablas) no está activa. Ver INSTRUCTIVO-REPLICA-006.md. NUNCA correr 05 en una BD vacía.', faltantes;
+    RAISE EXCEPTION '[05·v2] Faltan tablas replicadas de PI en bi-db: % — la réplica ampliada (37 tablas) no está activa. Ver INSTRUCTIVO-REPLICA-006.md. NUNCA correr 05 en una BD vacía.', faltantes;
   END IF;
 
   RAISE NOTICE '[05·v2] Pre-flight OK: % tablas replicadas presentes', array_length(requeridas, 1);
