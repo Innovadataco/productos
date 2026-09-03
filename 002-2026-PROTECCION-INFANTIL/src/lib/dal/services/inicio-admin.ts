@@ -69,7 +69,7 @@ async function senalCorreosFallidos(): Promise<SenalAlarma | null> {
             id: "correos_no_salen",
             prioridad: "alta",
             texto: `Los correos no están saliendo: cuota del proveedor agotada (${fallidas.length} fallidos en 24 h). Nadie está recibiendo avisos.`,
-            ruta: "/dashboard/admin/notificaciones/salud",
+            ruta: "/dashboard/admin/estadisticas/salud-motor",
         };
     }
     if (fallidas.length >= umbral) {
@@ -77,7 +77,7 @@ async function senalCorreosFallidos(): Promise<SenalAlarma | null> {
             id: "correos_fallidos_volumen",
             prioridad: "media",
             texto: `${fallidas.length} correos fallaron en las últimas 24 h. Revisa el proveedor y los reintentos.`,
-            ruta: "/dashboard/admin/notificaciones/salud",
+            ruta: "/dashboard/admin/estadisticas/salud-motor",
         };
     }
     return null;

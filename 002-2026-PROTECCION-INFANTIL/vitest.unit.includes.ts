@@ -23,6 +23,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/resumen.test.mjs",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
     "scripts/ci/reparto-shards.test.mjs",
+    // SPEC-381 (I-269): cada ruta de inicio-admin.ts DEBE tener page.tsx.
+    "src/lib/dal/services/inicio-admin.ratchet.test.ts",
+    // SPEC-381 (I-276): la barra <ComiteSubNav> la monta solo el layout compartido.
+    "src/app/dashboard/admin/comite/layout.ratchet.test.ts",
     // SPEC-374: decisión should-skip (saltar CI en PRs que no tocan PI ni raíz compartida).
     "scripts/ci/should-skip-pi.test.mjs",
     // SPEC-375: dispose limpio del singleton pg-boss (cierra el event loop del fork).

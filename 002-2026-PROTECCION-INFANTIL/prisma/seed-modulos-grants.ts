@@ -43,7 +43,12 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
 
     // Backfill: reproduce el acceso implícito actual por rol (denegar por defecto al resto).
     const clavesPorRol: Record<string, string[]> = {
-        ADMIN: modulosSeed.map((m) => m.clave),
+        // SPEC-381 (I-274 · separación de poderes): quien modera NO aprueba sus
+        // propias guías. `comite_guias_accion` es exclusivo del rol
+        // COMITE_VALIDACION; sacarlo de la lista del ADMIN evita el descuadre
+        // que dejaba la pestaña Guías visible para él y el endpoint le
+        // respondía 403.
+        ADMIN: modulosSeed.map((m) => m.clave).filter((c) => c !== "comite_guias_accion"),
         SCHOOL_ADMIN: ["colegios", "colegios_gestion", "colegios_auditoria", "colegios_comite", "colegios_comite_bandeja", "colegios_onboarding", "colegios_notificaciones"],
         // SPEC-168 (Fase F): el Comité de Convivencia accede solo a su bandeja de casos.
         // I-57 (SPEC-175): la jerarquía de módulos es AND (padre ∧ hijo) y

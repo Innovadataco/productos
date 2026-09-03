@@ -78,6 +78,15 @@ describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", (
     it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {
         expect(bloqueClavesPorRol()).toMatch(/ADMIN:\s*modulosSeed\.map/);
     });
+    // SPEC-381 (I-274): quien modera NO aprueba sus propias guías. `comite_guias_accion`
+    // es exclusivo del rol COMITE_VALIDACION; sacar al ADMIN de esa clave evita el
+    // descuadre que dejaba la pestaña Guías visible para él y respondía 403 al abrirla.
+    it("ADMIN NO recibe `comite_guias_accion` (separación de poderes SPEC-381 · I-274)", () => {
+        const bloque = bloqueClavesPorRol();
+        // Con el filter, la línea del ADMIN nombra explícitamente la exclusión.
+        expect(bloque).toMatch(/ADMIN:\s*modulosSeed\.map\(\(m\) => m\.clave\)\.filter\(\(c\) => c !== "comite_guias_accion"\)/);
+    });
+
 });
 
 describe("grants por rol — jerarquía AND completa (I-57, SPEC-175)", () => {

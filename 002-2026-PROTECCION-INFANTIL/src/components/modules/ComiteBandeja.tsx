@@ -138,7 +138,14 @@ export function ComiteBandeja() {
             const json = await res.json();
             setSolicitudes(json.solicitudes || []);
             setPagination(json.paginacion || json.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
-        } catch {
+        } catch (err) {
+            // SPEC-381 (I-270): el `catch {}` mudo original se comía la causa —
+            // Jelkin vio "No pudimos cargar las solicitudes" en la ventana de
+            // un deploy (`6136af5d`, 05:48:18-05:48:29 UTC) y no había rastro
+            // en logs de servidor porque el proceso murió antes de logear.
+            // Ahora sí queda evidencia para el próximo diagnóstico. El nombre
+            // del state (`errorLista`) lo dejó SPEC-384 (#286).
+            console.error("[ComiteBandeja] fetchSolicitudes:", err);
             setErrorLista("Error cargando solicitudes");
         } finally {
             setLoading(false);
@@ -154,8 +161,10 @@ export function ComiteBandeja() {
             if (!res.ok) return; // la tabla de solicitudes sigue funcionando
             const json = await res.json();
             setConsolidaciones(json.items || []);
-        } catch {
-            // Fail-open: las revisiones de reporte no se bloquean por esto.
+        } catch (err) {
+            // Fail-open: las revisiones de reporte no se bloquean por esto,
+            // pero SPEC-381 (I-270): que quede la traza para el próximo diagnóstico.
+            console.error("[ComiteBandeja] fetchConsolidaciones:", err);
         }
     }, []);
 
