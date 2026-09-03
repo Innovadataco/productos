@@ -20,7 +20,8 @@ import { errorToResponse } from "@/lib/api-handler";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { cuidIdSchema } from "@/lib/schemas";
-import { prisma } from "@/lib/prisma";
+import { ComiteConvivenciaSolicitudesRepository } from "@/lib/dal/repositories/comite-convivencia-solicitudes";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { enviarRecomendacionInformeAlRector } from "@/lib/email-colegio";
@@ -53,18 +54,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         const { id } = withValidation.params(z.object({ id: cuidIdSchema }))(await params);
 
-        const solicitud = await prisma.solicitudComite.findFirst({
-            where: { id, colegioId: user.comiteColegioId },
-            select: {
-                id: true,
-                estado: true,
-                numero: true,
-                analisis: true,
-                recomendacionInformeEn: true,
-                colegio: { select: { id: true, nombre: true } },
-                alerta: { select: { id: true } },
-            },
-        });
+        const repo = new ComiteConvivenciaSolicitudesRepository();
+        const solicitud = await repo.obtenerParaRecomendacion(id, user.comiteColegioId);
         if (!solicitud) {
             return NextResponse.json(
                 { error: { message: "Caso no encontrado.", code: ERROR_CODES.NOT_FOUND } },
@@ -85,17 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
 
         const ahora = new Date();
-        const actualizada = await prisma.solicitudComite.update({
-            where: { id },
-            data: {
-                recomendacionInformeEn: ahora,
-                recomendacionPorId: user.id,
-            },
-            select: {
-                recomendacionInformeEn: true,
-                recomendacionPor: { select: { id: true, nombre: true, apellidos: true } },
-            },
-        });
+        const actualizada = await repo.marcarRecomendacion(id, ahora, user.id);
 
         const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
         const userAgent = request.headers.get("user-agent") || "unknown";
@@ -116,14 +97,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // razón), la acción NO se rompe — la recomendación quedó en la BD y
         // el aviso in-app se registra igual.
         try {
-            const rectores = await prisma.usuario.findMany({
-                where: {
-                    colegioId: user.comiteColegioId,
-                    rol: "SCHOOL_ADMIN",
-                    estado: "activo",
-                },
-                select: { id: true, email: true },
-            });
+            const rectores = await new UsuarioRepository().listarAdminsColegioActivos(user.comiteColegioId);
             if (rectores.length > 0) {
                 await enviarRecomendacionInformeAlRector(rectores, {
                     nombreColegio: solicitud.colegio?.nombre ?? "su colegio",

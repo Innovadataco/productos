@@ -18,7 +18,7 @@ import { errorToResponse } from "@/lib/api-handler";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { withValidation } from "@/lib/validation";
 import { cuidIdSchema } from "@/lib/schemas";
-import { prisma } from "@/lib/prisma";
+import { ComiteConvivenciaSolicitudesRepository } from "@/lib/dal/repositories/comite-convivencia-solicitudes";
 import { logAudit } from "@/lib/audit";
 
 const analisisSchema = z.object({
@@ -61,16 +61,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         }
 
         const { id } = withValidation.params(z.object({ id: cuidIdSchema }))(await params);
-        const solicitud = await prisma.solicitudComite.findFirst({
-            where: { id, colegioId },
-            select: {
-                analisis: true,
-                analisisActualizadoEn: true,
-                analisisPor: { select: { id: true, nombre: true, apellidos: true } },
-                recomendacionInformeEn: true,
-                recomendacionPor: { select: { id: true, nombre: true, apellidos: true } },
-            },
-        });
+        const repo = new ComiteConvivenciaSolicitudesRepository();
+        const solicitud = await repo.obtenerAnalisis(id, colegioId);
         if (!solicitud) {
             return NextResponse.json(
                 { error: { message: "Caso no encontrado.", code: ERROR_CODES.NOT_FOUND } },
@@ -113,10 +105,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const { id } = withValidation.params(z.object({ id: cuidIdSchema }))(await params);
         const body = await withValidation.body(analisisSchema)(request);
 
-        const solicitud = await prisma.solicitudComite.findFirst({
-            where: { id, colegioId: user.comiteColegioId },
-            select: { id: true, estado: true },
-        });
+        const repo = new ComiteConvivenciaSolicitudesRepository();
+        const solicitud = await repo.obtenerEstadoBasico(id, user.comiteColegioId);
         if (!solicitud) {
             return NextResponse.json(
                 { error: { message: "Caso no encontrado.", code: ERROR_CODES.NOT_FOUND } },
@@ -131,21 +121,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        const actualizada = await prisma.solicitudComite.update({
-            where: { id },
-            data: {
-                analisis: body.texto,
-                analisisActualizadoEn: new Date(),
-                analisisPorId: user.id,
-            },
-            select: {
-                analisis: true,
-                analisisActualizadoEn: true,
-                analisisPor: { select: { id: true, nombre: true, apellidos: true } },
-                recomendacionInformeEn: true,
-                recomendacionPor: { select: { id: true, nombre: true, apellidos: true } },
-            },
-        });
+        const actualizada = await repo.actualizarAnalisis(id, body.texto, user.id);
 
         const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
         const userAgent = request.headers.get("user-agent") || "unknown";

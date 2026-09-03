@@ -126,6 +126,78 @@ export class ComiteConvivenciaSolicitudesRepository {
         return { casosAbiertos, misCasosAsignados, proximosSla };
     }
 
+    /** SPEC-380 (PR A · C4): análisis vigente + firmas para GET y respuesta de PUT. */
+    obtenerAnalisis(id: string, colegioId: string) {
+        return this.db.solicitudComite.findFirst({
+            where: { id, colegioId },
+            select: {
+                analisis: true,
+                analisisActualizadoEn: true,
+                analisisPor: { select: { id: true, nombre: true, apellidos: true } },
+                recomendacionInformeEn: true,
+                recomendacionPor: { select: { id: true, nombre: true, apellidos: true } },
+            },
+        });
+    }
+
+    /** SPEC-380 (PR A · C4): estado mínimo para candados de análisis y recomendación. */
+    obtenerEstadoBasico(id: string, colegioId: string) {
+        return this.db.solicitudComite.findFirst({
+            where: { id, colegioId },
+            select: { id: true, estado: true },
+        });
+    }
+
+    /** SPEC-380 (PR A · C4): PUT análisis + firma del integrante que escribió. */
+    actualizarAnalisis(id: string, texto: string, usuarioId: string) {
+        return this.db.solicitudComite.update({
+            where: { id },
+            data: {
+                analisis: texto,
+                analisisActualizadoEn: new Date(),
+                analisisPorId: usuarioId,
+            },
+            select: {
+                analisis: true,
+                analisisActualizadoEn: true,
+                analisisPor: { select: { id: true, nombre: true, apellidos: true } },
+                recomendacionInformeEn: true,
+                recomendacionPor: { select: { id: true, nombre: true, apellidos: true } },
+            },
+        });
+    }
+
+    /** SPEC-380 (PR A · C4): payload para el POST recomendar-informe (colegio + alerta). */
+    obtenerParaRecomendacion(id: string, colegioId: string) {
+        return this.db.solicitudComite.findFirst({
+            where: { id, colegioId },
+            select: {
+                id: true,
+                estado: true,
+                numero: true,
+                analisis: true,
+                recomendacionInformeEn: true,
+                colegio: { select: { id: true, nombre: true } },
+                alerta: { select: { id: true } },
+            },
+        });
+    }
+
+    /** SPEC-380 (PR A · C4): marca la recomendación de informe + integrante firmante. */
+    marcarRecomendacion(id: string, ahora: Date, usuarioId: string) {
+        return this.db.solicitudComite.update({
+            where: { id },
+            data: {
+                recomendacionInformeEn: ahora,
+                recomendacionPorId: usuarioId,
+            },
+            select: {
+                recomendacionInformeEn: true,
+                recomendacionPor: { select: { id: true, nombre: true, apellidos: true } },
+            },
+        });
+    }
+
     /**
      * SPEC-353 (A-69 · C6): casos abiertos del comité + antigüedad del más
      * viejo, para la frase "El comité tiene un caso desde hace N días" del
