@@ -14,9 +14,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Mega-lote 002-PI: skip de CI en commits doc-only (specs/**, docs/**, *.md).
-  # Un job skipped reporta conclusión "skipped", que GitHub trata como éxito en
-  # required checks (a diferencia de paths-ignore, que deja el check pendiente).
+  # SPEC-107 (doc-only) + SPEC-374 (PRs que no tocan PI): un job skipped reporta
+  # conclusión "skipped", que GitHub trata como éxito en required checks. Por eso
+  # decidimos acá, NUNCA con `on: paths:` — un paths-ignore dejaría los checks de
+  # PI (requeridos) PENDIENTES y bloquearía los merges de otros productos (trampa
+  # I-249). La lógica vive en un módulo aparte (should-skip-pi.mjs) para tenerla
+  # bajo tests unitarios; en el runner solo la invocamos.
   should-skip:
     runs-on: ubuntu-latest
     outputs:
@@ -27,8 +30,9 @@ jobs:
       - id: detect
         run: |
           files_changed=$(git diff --name-only HEAD^ HEAD || true)
-          code_files=$(echo "$files_changed" | grep -vE '(^002-2026-PROTECCION-INFANTIL/(docs|specs)/|^docs/|^specs/|\.md$)' || true)
-          if [ -z "$code_files" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+          # ubuntu-latest ya trae node preinstalado; no hace falta setup-node acá.
+          skip=$(printf "%s" "$files_changed" | node 002-2026-PROTECCION-INFANTIL/scripts/ci/should-skip-pi.mjs)
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
   verificaciones:
     runs-on: ubuntu-latest
