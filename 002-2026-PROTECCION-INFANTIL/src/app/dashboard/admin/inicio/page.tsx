@@ -20,6 +20,11 @@ import type { EstadoInicio, SenalAlarma, SenalDegradada } from "@/lib/dal/servic
  * degradada. El admin tiene que poder distinguir «no hay nada» de «no pude
  * mirar»: antes un fallo desaparecía y la pantalla mentía calma.
  *
+ * Color: lo NUEVO de esta spec (interruptor y bloque de degradadas) usa tokens
+ * (`ambar`, `tinta`), no la escala cruda de Tailwind — candado SPEC-157 FR-007,
+ * `npm run tokens:check`. `TarjetaSenal` conserva sus clases crudas de SPEC-378:
+ * migrarlas baja el piso del ratchet y es un cambio de otro PR.
+ *
  * Rendimiento: `calcularEstadoInicio` corre ~9 consultas en paralelo. Devuelve
  * `latenciaMs` para que el mismo endpoint reporte cuánto tardó — si crece,
  * mover S3/S4 a sondas en `monitor-probes.mjs` (fuera de alcance de este PR).
@@ -115,7 +120,7 @@ function InterruptorDatosPrueba({ estado }: { estado: EstadoInicio }) {
             </div>
             <Link
                 href={incluyeSembrados ? "/dashboard/admin/inicio" : "/dashboard/admin/inicio?prueba=1"}
-                className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                className="rounded-lg border border-tinta/15 px-3 py-1 text-xs font-medium text-body transition hover:bg-tinta/5"
             >
                 {incluyeSembrados ? "Ver solo lo real" : "Incluir datos de prueba"}
             </Link>
@@ -130,7 +135,7 @@ function InterruptorDatosPrueba({ estado }: { estado: EstadoInicio }) {
  */
 function BloqueDegradadas({ degradadas }: { degradadas: SenalDegradada[] }) {
     return (
-        <GlassCard className="border-l-4 border-amber-500 p-4">
+        <GlassCard className="border-l-4 border-ambar p-4">
             <p className="text-sm font-semibold text-body">
                 No pudimos calcular {degradadas.length} señal{degradadas.length === 1 ? "" : "es"}.
             </p>
