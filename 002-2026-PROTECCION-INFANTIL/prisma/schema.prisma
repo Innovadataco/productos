@@ -357,6 +357,20 @@ enum AccionAudit {
   PROFESIONAL_VERIFICACION_RECHAZADA
   PROFESIONAL_VERIFICACION_MAS_INFO
   PROFESIONAL_VERIFICACION_VENCIDA
+  // SPEC-395 (L4 · veredicto CEO 09:50): valores de la cita profesional.
+  // El worker de 48h usa CITA_PROFESIONAL_AVISO_48H_ENVIADO como candado de
+  // repetición (patrón I-280 SPAM_ALERTA_REVISION_ENVIADA — no volver a
+  // avisar hasta que la solicitud cambie).
+  CITA_PROFESIONAL_PAGO_APROBADO
+  CITA_PROFESIONAL_PAGO_EXPIRADA
+  CITA_PROFESIONAL_AVISO_48H_ENVIADO
+  CITA_PROFESIONAL_CONFIRMADA
+  CITA_PROFESIONAL_RECHAZADA_PROFESIONAL
+  CITA_PROFESIONAL_REPROGRAMADA
+  CITA_PROFESIONAL_REASIGNADA
+  CITA_PROFESIONAL_VENCIDA_PROFESIONAL
+  CITA_PROFESIONAL_ALARMA_TASA_VENCIMIENTOS
+  CITA_PROFESIONAL_SUSPENDIDO_POR_VENCIMIENTOS
 }
 
 enum TipoPeriodoServicio {
@@ -3527,10 +3541,18 @@ model SolicitudCita {
   franjaId               String              @unique
   presentacion           String              @db.Text
   urgencia               UrgenciaSolicitud
-  estado                 EstadoSolicitudCita @default(PAGADA_PENDIENTE)
-  // 48 h desde la solicitud — si el profesional no confirma, se devuelve al
-  // padre y se abre el contacto directo (brief §3).
+  estado                 EstadoSolicitudCita @default(SIN_CONFIRMAR)
+  // SPEC-395 (L4 · veredicto CEO 09:50):
+  //   · `venceEn` es el PLAZO DEL PADRE para completar el pago manual
+  //     (72 h por default). Si vence sin aprobación, la solicitud EXPIRA
+  //     y la franja se libera para que otro padre la tome.
+  //   · `pagoAprobadoEn` (aditivo) es el momento en que el admin activó
+  //     el pago. **A partir de acá arranca el reloj de 48 h del profesional**:
+  //     el worker calcula `pagoAprobadoEn + 48h` en tiempo real. Antes de
+  //     este PR no había fecha porque el brief no decía que el pago era
+  //     manual; §4 v1.3 lo dejó explícito.
   venceEn                DateTime            @db.Timestamptz(6)
+  pagoAprobadoEn         DateTime?           @db.Timestamptz(6)
   expedienteCompartidoId String?
   // SPEC-388a · brief v1.3: reprogramación como FILA NUEVA (no transición) —
   // conserva el historial del primer intento. La nueva fila apunta a la

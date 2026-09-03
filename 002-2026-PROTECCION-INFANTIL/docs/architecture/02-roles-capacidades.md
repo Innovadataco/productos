@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 502 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3514 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 513 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3591 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -157,6 +157,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/bonos` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cita/[id]/activar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cita/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
@@ -343,6 +345,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
+| `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -380,8 +385,14 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/franjas` | api | permitir | permite | sí |
+| `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/perfil` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/confirmar` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/rechazar` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
+| `/api/publico/profesionales/[id]/franjas` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/[id]/evento` | api | permitir | permite | sí |
@@ -664,6 +675,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/bonos` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cita/[id]/activar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cita/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
@@ -850,6 +863,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
+| `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -887,8 +903,14 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/franjas` | api | permitir | permite | sí |
+| `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/perfil` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/confirmar` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/rechazar` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
+| `/api/publico/profesionales/[id]/franjas` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/[id]/evento` | api | permitir | permite | sí |
@@ -1171,6 +1193,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/bonos` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cita/[id]/activar` | api | permitir | permite | sí |
+| `/api/admin/pagos/cita/pendientes` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | permitir | permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | permitir | permite | sí |
 | `/api/admin/pagos/mora` | api | permitir | permite | sí |
@@ -1357,6 +1381,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
+| `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -1394,8 +1421,14 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/franjas` | api | permitir | permite | sí |
+| `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/perfil` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/confirmar` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/rechazar` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
+| `/api/publico/profesionales/[id]/franjas` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/[id]/evento` | api | permitir | permite | sí |
@@ -1678,6 +1711,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cita/[id]/activar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cita/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
@@ -1864,6 +1899,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/semaforo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas/[id]/reasignar` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas/[id]/reprogramar` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
@@ -1901,8 +1939,14 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/perfil` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/solicitudes` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/solicitudes/[id]/confirmar` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/solicitudes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 403 | no permite | sí |
+| `/api/publico/profesionales/[id]/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/[id]/evento` | api | HTTP 403 | no permite | sí |
@@ -2185,6 +2229,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cita/[id]/activar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cita/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
@@ -2371,6 +2417,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/semaforo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas/[id]/reasignar` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas/[id]/reprogramar` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 403 | no permite | sí |
@@ -2408,8 +2457,14 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/perfil` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/solicitudes` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/solicitudes/[id]/confirmar` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/solicitudes/[id]/rechazar` | api | HTTP 403 | no permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 403 | no permite | sí |
+| `/api/publico/profesionales/[id]/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
 | `/api/reportes/[id]/evento` | api | HTTP 403 | no permite | sí |
@@ -2692,6 +2747,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/bonos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cita/[id]/activar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/pagos/cita/pendientes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/mora` | api | HTTP 403 | no permite | sí |
@@ -2878,6 +2935,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/resumen` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
+| `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia/[id]` | api | permitir | permite | sí |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | permitir | permite | sí |
@@ -2915,8 +2975,14 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/franjas` | api | permitir | permite | sí |
+| `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/perfil` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/confirmar` | api | permitir | permite | sí |
+| `/api/profesional/solicitudes/[id]/rechazar` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
+| `/api/publico/profesionales/[id]/franjas` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/[id]/evento` | api | permitir | permite | sí |
@@ -3199,6 +3265,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/bonos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/bonos/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/bonos/[id]/desactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/cita/[id]/activar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/pagos/cita/pendientes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/cliente/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/cliente/[id]/extender` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/mora` | api | HTTP 401 | permite | **NO** |
@@ -3385,6 +3453,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/notificaciones/resumen` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/circulo-confianza/semaforo` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/circulo-confianza/timeline` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/citas` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/citas/[id]/reasignar` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/citas/[id]/reprogramar` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/contacto-emergencia` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/contacto-emergencia/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | api | HTTP 401 | permite | **NO** |
@@ -3422,8 +3493,14 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/franjas` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/franjas/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/perfil` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/solicitudes` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/solicitudes/[id]/confirmar` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/solicitudes/[id]/rechazar` | api | HTTP 401 | permite | **NO** |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
+| `/api/publico/profesionales/[id]/franjas` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
 | `/api/reportes/[id]/evento` | api | permitir | permite | sí |
@@ -3706,6 +3783,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/pagos/bonos` | HTTP 401 | permite |
 | `/api/admin/pagos/bonos/[id]` | HTTP 401 | permite |
 | `/api/admin/pagos/bonos/[id]/desactivar` | HTTP 401 | permite |
+| `/api/admin/pagos/cita/[id]/activar` | HTTP 401 | permite |
+| `/api/admin/pagos/cita/pendientes` | HTTP 401 | permite |
 | `/api/admin/pagos/cliente/[id]` | HTTP 401 | permite |
 | `/api/admin/pagos/cliente/[id]/extender` | HTTP 401 | permite |
 | `/api/admin/pagos/mora` | HTTP 401 | permite |
@@ -3862,6 +3941,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/notificaciones/resumen` | HTTP 401 | permite |
 | `/api/padre/circulo-confianza/semaforo` | HTTP 401 | permite |
 | `/api/padre/circulo-confianza/timeline` | HTTP 401 | permite |
+| `/api/padre/citas` | HTTP 401 | permite |
+| `/api/padre/citas/[id]/reasignar` | HTTP 401 | permite |
+| `/api/padre/citas/[id]/reprogramar` | HTTP 401 | permite |
 | `/api/padre/contacto-emergencia` | HTTP 401 | permite |
 | `/api/padre/contacto-emergencia/[id]` | HTTP 401 | permite |
 | `/api/padre/expediente/[id]/cerrar-forzoso` | HTTP 401 | permite |
@@ -3897,7 +3979,12 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/pagos/suscripcion/estado` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/validar-bono` | HTTP 401 | permite |
 | `/api/profesional/autorizacion` | HTTP 401 | permite |
+| `/api/profesional/franjas` | HTTP 401 | permite |
+| `/api/profesional/franjas/[id]` | HTTP 401 | permite |
 | `/api/profesional/perfil` | HTTP 401 | permite |
+| `/api/profesional/solicitudes` | HTTP 401 | permite |
+| `/api/profesional/solicitudes/[id]/confirmar` | HTTP 401 | permite |
+| `/api/profesional/solicitudes/[id]/rechazar` | HTTP 401 | permite |
 | `/api/sesion/al-dia` | HTTP 401 | permite |
 | `/api/session/ping` | HTTP 401 | permite |
 | `/api/vigencia/refresh` | HTTP 401 | permite |

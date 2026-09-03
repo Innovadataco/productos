@@ -128,6 +128,20 @@ export class AuditLogRepository {
     }
 
     /**
+     * SPEC-395 (L4): último audit registrado para un par (accion, recursoId).
+     * Sirve como candado de repetición del patrón I-280: el worker compara
+     * `ultimo.creadoEn` con `recurso.actualizadoEn` y salta si el aviso ya
+     * quedó despues del último cambio.
+     */
+    ultimoPorAccionYRecurso(accion: AccionAudit, recursoId: string): Promise<{ creadoEn: Date } | null> {
+        return this.db.auditLog.findFirst({
+            where: { accion, recursoId },
+            orderBy: { creadoEn: "desc" },
+            select: { creadoEn: true },
+        });
+    }
+
+    /**
      * SPEC-134 (E-1): listado paginado con el actor (nombre/email) para la auditoría
      * del colegio — el `where` lo construye el llamador SIEMPRE con su tenant
      * (`colegioId`). Devuelve [items, total] en una pasada.

@@ -1476,6 +1476,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | urgencia | UrgenciaSolicitud | — |
 | estado | EstadoSolicitudCita | — |
 | venceEn | DateTime | — |
+| pagoAprobadoEn | DateTime | opcional |
 | expedienteCompartidoId | String | opcional |
 | solicitudPreviaId | String | opcional |
 | pagoHeredadoDeId | String | opcional |
