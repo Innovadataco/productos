@@ -115,8 +115,8 @@ async function login(page: Page, email: string, password: string) {
 async function limpiarSembrados() {
     // Orden: filas dependientes primero (Verificación y Perfil pertenecen al
     // profesional). SQL raw para no depender de tipos aún ausentes.
-    await prisma.$executeRawUnsafe(`DELETE FROM "VerificacionProfesional" WHERE "profesionalId" = $1`, profesionalId).catch(() => undefined);
-    await prisma.$executeRawUnsafe(`DELETE FROM "PerfilProfesional" WHERE "usuarioId" = $1`, profesionalId).catch(() => undefined);
+    await prisma.$executeRawUnsafe("DELETE FROM \"VerificacionProfesional\" WHERE \"profesionalId\" = $1", profesionalId).catch(() => undefined);
+    await prisma.$executeRawUnsafe("DELETE FROM \"PerfilProfesional\" WHERE \"usuarioId\" = $1", profesionalId).catch(() => undefined);
     const idsU = [...sembrados.usuarios];
     if (idsU.length > 0) await prisma.usuario.deleteMany({ where: { id: { in: idsU } } });
     sembrados.usuarios.clear();
