@@ -7,8 +7,8 @@
  * a través de TODOS los colegios).
  */
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { prisma } from "../../prisma";
+import { AppError, ERROR_CODES } from "../../errors";
 import type { DbClient } from "../unit-of-work";
 import type { EstadoActivo } from "./curso";
 
