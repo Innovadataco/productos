@@ -14,10 +14,9 @@ const DASHBOARD_POR_ROL: Record<RolUsuario, string> = {
     ADMIN: "/dashboard/admin",
     OPERADOR: "/dashboard/admin",
     COMITE_VALIDACION: "/dashboard/admin",
-    // SPEC-388a (A-75 · L1a · aditivo): el destino del profesional lo define
-    // L1b cuando exista el dashboard; por ahora envía a la puerta de entrada
-    // para no romper el compilador ni redirigir a una ruta inexistente.
-    PROFESIONAL: "/",
+    // SPEC-391 (L1b): el profesional cae a completar su perfil tras crear la
+    // cuenta; L5 (panel del profesional) definirá la home real.
+    PROFESIONAL: "/perfil-profesional/completar",
 };
 
 /**

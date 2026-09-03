@@ -1283,6 +1283,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | estado | EstadoPerfilProfesional | — |
 | numeroTarjetaProfesional | String | opcional |
 | datosFacturacion | Json | opcional |
+| autorizacionArchivoUrl | String | opcional |
+| autorizacionSubidaEn | DateTime | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | usuario | Usuario | relación (FK) |

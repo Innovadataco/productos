@@ -3441,6 +3441,15 @@ model PerfilProfesional {
   // documento se reusan de Usuario; acá van los que NO viven allá.
   numeroTarjetaProfesional String?
   datosFacturacion         Json?
+  // SPEC-391 (L1b · veredicto CEO 08:40): la autorización firmada por el
+  // profesional (Ley 2375/2024 — previa, expresa, escrita y archivada) es
+  // del profesional, no de una revisión. Cada VerificacionProfesional
+  // referencia la que estaba vigente al momento. `autorizacionSubidaEn`
+  // se compara con `VerificacionProfesional.revisadoEn` para demostrar que
+  // la autorización fue PREVIA a la consulta de antecedentes — sin fecha
+  // no se puede probar. Ambos INTERNOS: nunca por API pública.
+  autorizacionArchivoUrl   String?
+  autorizacionSubidaEn     DateTime?                @db.Timestamptz(6)
   creadoEn                 DateTime                 @default(now()) @db.Timestamptz(6)
   actualizadoEn            DateTime                 @updatedAt @db.Timestamptz(6)
 
