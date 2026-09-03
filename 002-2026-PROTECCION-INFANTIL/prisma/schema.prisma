@@ -730,11 +730,41 @@ model IntegranteComite {
   modificadoPor       Usuario?          @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
   // SPEC-319 §2.4: casos cuyo cierre firmó este integrante.
   solicitudesFirmadas SolicitudComite[] @relation(name: "SolicitudesFirmadas")
+  // SPEC-380 (PR B · C4/D-100): identificadores del integrante que se vigilan
+  // igual que los de estudiantes/profesores/acudientes — 4º sujeto.
+  identificadores     IdentificadorIntegranteComite[]
 
   @@unique([comiteId, hashIdentificacion])
   @@index([comiteId])
   @@index([estado])
   @@index([tipoIdentificacion])
+}
+
+// SPEC-380 (PR B · C4/D-100): identificadores del integrante del comité de
+// convivencia. Mismo patrón que `IdentificadorProfesor` — soft delete por
+// estado, tenant por colegio. Aviso al colegio, jamás a la persona vigilada.
+model IdentificadorIntegranteComite {
+  id           String   @id @default(cuid())
+  integranteId String
+  colegioId    String
+  tipo         String
+  valor        String
+  plataformaId String?
+  estado       String   @default("activo") // activo | inactivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  integrante IntegranteComite @relation(fields: [integranteId], references: [id], onDelete: Cascade)
+  colegio    Colegio          @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma?      @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
+
+  // El único parcial WHERE estado='activo' vive en la migración (Prisma no lo
+  // expresa) — misma red dura que estudiante/profesor/acudiente contra I-213.
+  @@index([colegioId, estado])
+  @@index([integranteId, estado])
+  @@index([tipo, valor])
+  @@index([plataformaId])
 }
 
 model CodigoVerificacion {
@@ -1184,6 +1214,8 @@ model Colegio {
   identificadoresAcudiente  IdentificadorAcudiente[]
   identificadoresProfesor   IdentificadorProfesor[]
   identificadoresEstudiante IdentificadorEstudiante[] // SPEC-320: colegioId denormalizado en el identificador de estudiante
+  // SPEC-380 (PR B · C4): identificadores del comité vigilados por colegio.
+  identificadoresIntegranteComite IdentificadorIntegranteComite[]
   onboarding                OnboardingColegio?
   notificacionesInApp       NotificacionInApp[]
   // SPEC-210 (002-PI-110): módulo de pagos.
@@ -1507,7 +1539,10 @@ model AlertaColegio {
   identificadorEstudianteId String?  @map("identificadorAlumnoId")
   identificadorProfesorId   String?
   identificadorAcudienteId  String?
-  tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
+  // SPEC-380 (PR B · C4/D-100): 4º sujeto — integrante del comité de convivencia.
+  // Adulto, no menor, pero se vigila igual: aviso al colegio, jamás a la persona.
+  identificadorIntegranteComiteId String?
+  tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE | INTEGRANTE_COMITE
   estado                    String   @default("nueva") // nueva | vista | gestionada | escalada | cerrada
   prioridad                 String   @default("media") // alta | media | baja
   vencimientoSla            DateTime @db.Timestamptz(6)
@@ -1523,6 +1558,8 @@ model AlertaColegio {
   identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId], references: [id])
   identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
   identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
+  // SPEC-380 (PR B): 4ª relación al identificador del integrante del comité.
+  identificadorIntegranteComite IdentificadorIntegranteComite? @relation(fields: [identificadorIntegranteComiteId], references: [id])
   patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
   asignadoA               Usuario?                 @relation(fields: [asignadoAId], references: [id])
   seguimiento             SeguimientoCaso?
@@ -1532,6 +1569,8 @@ model AlertaColegio {
   @@unique([colegioId, reporteId, identificadorEstudianteId])
   @@unique([colegioId, reporteId, identificadorProfesorId])
   @@unique([colegioId, reporteId, identificadorAcudienteId])
+  // SPEC-380 (PR B): mismo patrón — evita duplicar la alerta por integrante.
+  @@unique([colegioId, reporteId, identificadorIntegranteComiteId])
   @@index([colegioId, estado])
   @@index([colegioId, prioridad, vencimientoSla])
   @@index([colegioId, asignadoAId])
@@ -1675,6 +1714,8 @@ model Plataforma {
   identificadoresEstudiante IdentificadorEstudiante[]
   identificadoresAcudiente  IdentificadorAcudiente[]
   identificadoresProfesor   IdentificadorProfesor[]
+  // SPEC-380 (PR B · C4): backref para reportes/matching por plataforma.
+  identificadoresIntegranteComite IdentificadorIntegranteComite[]
   apelaciones               Apelacion[]
   patronesInstitucionales   PatronInstitucional[]
 
