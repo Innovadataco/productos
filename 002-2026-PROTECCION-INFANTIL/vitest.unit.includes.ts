@@ -358,6 +358,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesionales/verificador/requisitos.test.ts",
     "src/lib/profesionales/verificador/vista-profesional.test.ts",
     "src/lib/profesionales/verificador/service.candado.test.ts",
+    // SPEC-418 (I-295): el Verificador no vuelve a mandar el aviso por su cuenta;
+    // se encola en el motor DENTRO de la transacción de la decisión.
+    "src/lib/profesionales/verificador/service.aviso.test.ts",
     // SPEC-415 (tras I-294): los 8 sitios que dejaron de tragarse el error no
     // pueden volver a enmudecer — 5 avisos de cambio de clave + 3 pantallas que
     // confundían "no hay nada" con "no pude mirar".

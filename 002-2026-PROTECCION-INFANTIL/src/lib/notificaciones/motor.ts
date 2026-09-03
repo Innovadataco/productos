@@ -57,6 +57,43 @@ export interface ProgramarInput {
 export interface ProgramarResult {
     programadas: number;
     canceladasPorReemplazo: number;
+    /**
+     * SPEC-418 (I-295): despachos a pg-boss que quedaron PENDIENTES porque se
+     * programó dentro de una transacción.
+     *
+     * pg-boss corre por **otra conexión**: si se despachara adentro y la
+     * transacción revirtiera, quedaría un job apuntando a una fila de
+     * `Notificacion` que no existe. Se devuelven acá para llamar
+     * `despacharEnvios()` DESPUÉS del commit.
+     *
+     * Y si ese despacho falla, **no se pierde nada**: la fila ya está
+     * `ENCOLADA` en la base y el worker tiene polling de respaldo
+     * (`worker-notificaciones.mjs`, "Polling de respaldo para reintentos y
+     * jobs perdidos"). El despacho solo adelanta el envío; no lo condiciona.
+     *
+     * Sin `tx` viene vacío: el despacho va en línea, como siempre. Es opcional
+     * en el tipo porque solo tiene sentido en el camino transaccional — los
+     * llamadores de siempre no lo miran ni lo construyen.
+     */
+    envios?: EnvioPendiente[];
+}
+
+/** Un envío ya persistido que todavía no se le avisó al worker. */
+export interface EnvioPendiente {
+    notificacionId: string;
+    enviarEn: Date;
+}
+
+export interface ProgramarOpciones {
+    /**
+     * SPEC-418 (I-295): programa DENTRO de la transacción del llamador, para
+     * que el aviso y la decisión que lo origina se guarden o se pierdan juntos.
+     * Nace del Verificador: la devolución al profesional se enviaba fuera de
+     * transacción y con el error tragado — si el proveedor estaba caído, el
+     * profesional nunca se enteraba y no quedaba rastro. El ciclo de admisión
+     * se detenía en silencio.
+     */
+    tx?: Prisma.TransactionClient | undefined;
 }
 
 export interface CancelarInput {
@@ -88,29 +125,74 @@ const repoRegla = new NotificacionReglaRepository();
 const repoPref = new NotificacionPreferenciaRepository();
 const repoUsuario = new UsuarioRepository();
 
+/**
+ * Los repositorios de esta corrida. Sin `tx` son los singletons de siempre
+ * (cero cambio de conducta para los llamadores actuales); con `tx`, todos
+ * escriben y leen dentro de la transacción del llamador.
+ */
+function reposDe(tx: Prisma.TransactionClient | undefined) {
+    if (!tx) {
+        return { repoNotif, repoPlantilla, repoRegla, repoPref, repoUsuario };
+    }
+    return {
+        repoNotif: new NotificacionRepository(tx),
+        repoPlantilla: new NotificacionPlantillaRepository(tx),
+        repoRegla: new NotificacionReglaRepository(tx),
+        repoPref: new NotificacionPreferenciaRepository(tx),
+        repoUsuario: new UsuarioRepository(tx),
+    };
+}
+
 async function resolverEmail(
-    destinatario: ProgramarInput["destinatarios"][number]
+    destinatario: ProgramarInput["destinatarios"][number],
+    repo: UsuarioRepository
 ): Promise<string | null> {
     if (destinatario.email) return destinatario.email;
     if (destinatario.usuarioId) {
-        const usuario = await repoUsuario.findEmailById(destinatario.usuarioId);
+        const usuario = await repo.findEmailById(destinatario.usuarioId);
         return usuario?.email ?? null;
     }
     return null;
 }
 
 /**
+ * SPEC-418: avisa al worker de los envíos que quedaron pendientes al programar
+ * dentro de una transacción. Se llama DESPUÉS del commit.
+ *
+ * No lanza: un fallo acá solo significa que el envío esperará al próximo poll
+ * del worker en vez de salir al instante. La fila ya está a salvo en la base —
+ * que es justamente lo que I-295 no tenía.
+ */
+export async function despacharEnvios(envios: readonly EnvioPendiente[]): Promise<void> {
+    for (const envio of envios) {
+        await sendNotificacionEnvio(envio.notificacionId, envio.enviarEn).catch((err: unknown) => {
+            logMotor(
+                "warn",
+                `[MotorNotificaciones] No se pudo encolar envío para notificación ${envio.notificacionId} (el polling lo recoge):`,
+                err instanceof Error ? err.message : err
+            );
+        });
+    }
+}
+
+/**
  * Programa notificaciones según las reglas activas del evento.
  * Reemplaza programaciones futuras duplicadas por (evento, sujeto, destinatario, canal).
  */
-export async function programar(input: ProgramarInput): Promise<ProgramarResult> {
-    const reglas = await repoRegla.findByEventoActivo(input.evento);
+export async function programar(
+    input: ProgramarInput,
+    opciones: ProgramarOpciones = {}
+): Promise<ProgramarResult> {
+    const tx = opciones.tx;
+    const repos = reposDe(tx);
+    const reglas = await repos.repoRegla.findByEventoActivo(input.evento);
     if (reglas.length === 0) {
         logMotor("info", `[MotorNotificaciones] Sin reglas activas para evento=${input.evento}`);
-        return { programadas: 0, canceladasPorReemplazo: 0 };
+        return { programadas: 0, canceladasPorReemplazo: 0, envios: [] };
     }
 
     const base = input.enviarEn ?? new Date();
+    const envios: EnvioPendiente[] = [];
     let programadas = 0;
     let canceladasPorReemplazo = 0;
 
@@ -121,7 +203,7 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
     const filtrarPorRol = new Set(reglas.map((r) => r.rol)).size > 1;
 
     for (const destinatario of input.destinatarios) {
-        const email = await resolverEmail(destinatario);
+        const email = await resolverEmail(destinatario, repos.repoUsuario);
         if (!email) {
             logMotor("warn", `[MotorNotificaciones] Destinatario sin email para evento=${input.evento}`);
             continue;
@@ -131,7 +213,7 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
         if (filtrarPorRol) {
             const rolEfectivo =
                 destinatario.rol ??
-                (destinatario.usuarioId ? (await repoUsuario.findById(destinatario.usuarioId))?.rol : undefined);
+                (destinatario.usuarioId ? (await repos.repoUsuario.findById(destinatario.usuarioId))?.rol : undefined);
             if (!rolEfectivo) {
                 logMotor(
                     "warn",
@@ -150,7 +232,7 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
             const eventoRegla = `${input.evento}.${regla.canal.toLowerCase()}`;
             // Sin usuarioId no hay preferencia de opt-out; la notificación es habilitada.
             const habilitada = destinatario.usuarioId
-                ? await repoPref.estaHabilitada(destinatario.usuarioId, eventoRegla, regla.obligatoria)
+                ? await repos.repoPref.estaHabilitada(destinatario.usuarioId, eventoRegla, regla.obligatoria)
                 : true;
             if (!habilitada) {
                 logMotor(
@@ -160,7 +242,7 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
                 continue;
             }
 
-            const plantilla = await repoPlantilla.findByClaveYCanal(regla.plantillaClave, regla.canal);
+            const plantilla = await repos.repoPlantilla.findByClaveYCanal(regla.plantillaClave, regla.canal);
             if (!plantilla) {
                 logMotor(
                     "warn",
@@ -171,7 +253,7 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
 
             // Reemplazo: cancelar programaciones futuras duplicadas por
             // (evento, sujeto, destinatario, canal) para no pisar el otro canal.
-            const reemplazo = await repoNotif.cancelar({
+            const reemplazo = await repos.repoNotif.cancelar({
                 evento: input.evento,
                 sujetoTipo: input.sujetoTipo,
                 sujetoId: input.sujetoId,
@@ -194,7 +276,7 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
                 ...destinatario.variables,
             } as Record<string, unknown>;
 
-            const notificacion = await repoNotif.crear({
+            const notificacion = await repos.repoNotif.crear({
                 evento: input.evento,
                 destinatarioUsuarioId: destinatario.usuarioId,
                 destinatarioEmail: email,
@@ -207,18 +289,19 @@ export async function programar(input: ProgramarInput): Promise<ProgramarResult>
                 estado: "ENCOLADA",
             });
             // Disparar el worker de envío en el momento programado (o inmediato).
-            await sendNotificacionEnvio(notificacion.id, enviarEn).catch((err: unknown) => {
-                logMotor(
-                    "warn",
-                    `[MotorNotificaciones] No se pudo encolar envío para notificación ${notificacion.id}:`,
-                    err instanceof Error ? err.message : err
-                );
-            });
+            // SPEC-418: dentro de una transacción NO se despacha acá — pg-boss usa
+            // otra conexión y un rollback dejaría un job huérfano. Se acumula y el
+            // llamador despacha después del commit con `despacharEnvios()`.
+            if (tx) {
+                envios.push({ notificacionId: notificacion.id, enviarEn });
+            } else {
+                await despacharEnvios([{ notificacionId: notificacion.id, enviarEn }]);
+            }
             programadas++;
         }
     }
 
-    return { programadas, canceladasPorReemplazo };
+    return { programadas, canceladasPorReemplazo, envios };
 }
 
 /**
