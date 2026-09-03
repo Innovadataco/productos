@@ -29,6 +29,8 @@ BI v2 tiene **UN solo Postgres propio** (contenedor `bi-db`, imagen
 | `03-bi-db-replica-suscripcion.sql` | **bi-db** (suscriptor) | Activación |
 | `04-verificar-replica.sql` | **bi-db** (suscriptor) | Verificación (Tests 7/8) |
 | `05-mv-fact.sql` | **bi-db** (suscriptor) | Tras la sincronización inicial |
+| `06-bi-db-recorte-pii.sql` | **bi-db** (suscriptor) | Defensa en profundidad PII |
+| `07-bi-db-limpieza-legacy.sql` | **bi-db** (suscriptor) | Tras retirar legacy del canon (02) |
 
 ## Estado heredado del 005 (Fase A · 2026-08-28 · verificado con CEO)
 
@@ -38,9 +40,11 @@ En el Postgres de PI **YA EXISTE** (no hace falta recrearlo; los scripts 01 y
 - `wal_level=logical` activo en pi-db.
 - Rol `bi_replica` con atributo REPLICATION (password en el gestor IDC).
 - Publicación `bi_replica` con las 23 tablas originales SIN column lists. El
-  script 02 (reescrito 2026-09-01) la reconcilia a la lista canónica de **40
+  script 02 (reescrito 2026-09-01) la reconcilia a la lista canónica de **36
   tablas**, 15 de ellas con **column list que corta PII en origen** (ver §
-  Prohibición PII).
+  Prohibición PII). El mismo día salieron del canon las 4 legacy vacías
+  (`Subscription`, `BillingCycle`, `FuenteReporte`, `AlertaSuscripcion`) —
+  el script 07 dropea sus shells en bi-db.
 
 El **slot del 005 ya fue eliminado**: BI v2 crea suscripción y slot NUEVOS
 (`bi006_replica_sub` / `bi006_replica_slot`). No reutilizar nada del stack del
@@ -300,14 +304,18 @@ profundidad sobre el REVOKE del script 01).
 | `IdentificadorReportado` | `identificador` (nick en claro; viajan solo los agregados: conteos, scores, `nivelRiesgo`, `ultimoReporteEn`, …) |
 | `Suscripcion` | `contratoPDFUrl`, `codigoReferidoPropio`, `codigoReferidoUsado`, `motivoCancelacion`, `referenciaPagoManual` |
 
-**25 completas** (sin PII por diseño): `ClasificacionIA`,
+**21 completas** (sin PII por diseño): `ClasificacionIA`,
 `clasificacion_rubrica_votos`, `CorreccionAdmin`, `EmbeddingReporte`,
 `TransicionReporte`, `SolicitudComite`, `Plan`, `Tenant`, `Curso`,
 `AlertaColegio`, `Plataforma`, `Pais`, `Departamento`, `Ciudad`, `HijoPadre`,
 `patrones_institucionales`, `eventos_match`, `score_clientes`,
-`DerivaMotorSnapshot`, `OnboardingColegio`, `TipoDocumento`, más las 4
-**legacy** que se mantienen por compatibilidad (hoy vacías/placeholder):
-`Subscription`, `BillingCycle`, `FuenteReporte`, `AlertaSuscripcion`.
+`DerivaMotorSnapshot`, `OnboardingColegio`, `TipoDocumento`.
+
+Las 4 **legacy** del 005 (`Subscription`, `BillingCycle`, `FuenteReporte`,
+`AlertaSuscripcion`) fueron **retiradas del canon el 2026-09-01** (vacías en
+PI y en la réplica; verificado). El reconciliador del script 02 (paso 3b) las
+quita de la publicación solo si siguen vacías; el script 07 dropea sus shells
+en bi-db tras el `REFRESH PUBLICATION`.
 
 ### Tablas JAMÁS publicadas (ni con column list)
 
