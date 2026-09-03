@@ -3,9 +3,14 @@ import Embudo from "../pulso/Embudo";
 
 /**
  * Círculo de confianza de los padres (mockup v3 pantalla 2): embudo del
- * frente familia — hijos registrados → con vínculo → contactos de confianza
- * → identificadores de hijo. Los anchos son proporción de los hijos
+ * frente familia — hijos registrados → contactos de confianza →
+ * identificadores de hijo. Los anchos son proporción de los hijos
  * registrados (base del embudo).
+ *
+ * Contexto: el paso "Con vínculo a padre" se eliminó el 03-09-2026
+ * (auditoría DEFECTO 1): su fuente (HijoPadre) quedó obsoleta en PI desde
+ * SPEC-339 y medía 2 de 25 cuando la verdad era 25 de 25; el vínculo real
+ * (Hijo.usuarioId) no se publica en la réplica.
  *
  * Candado 9 con texto del mockup aprobado: si la réplica no tiene familias
  * (hijos = 0) el embudo no se pinta; en su lugar se dice que el demo no
@@ -36,17 +41,12 @@ export default function EmbudoCirculo({
                     <Embudo
                         pasos={[
                             { etiqueta: "Hijos registrados", total: circulo.hijos },
-                            { etiqueta: "Con vínculo a padre", total: circulo.hijosVinculados },
                             { etiqueta: "Contactos de confianza", total: circulo.contactos },
                             { etiqueta: "Identificadores de hijo", total: circulo.identificadoresHijo },
                         ]}
                         base={circulo.hijos}
                         retardoBase={retardo}
                     />
-                    <p className="aviso-honesto">
-                        Este embudo refleja únicamente los vínculos reales cargados en la réplica;
-                        si se ve flaco es porque así está el dato, no por un error del tablero.
-                    </p>
                 </>
             )}
         </div>

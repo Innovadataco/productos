@@ -63,7 +63,7 @@ const F = {
     porSujeto: '"tipoSujeto" AS sujeto',
     porEstado: '"estado" AS estado',
     porPlataforma: "AS plataforma",
-    circulo: "AS hijos_vinculados",
+    circulo: "AS identificadores_hijo",
     topCiudades: 'JOIN "Ciudad"',
     coberturaGeo: "'txt:'",
     reincidencia: '"totalReportes"',
@@ -112,7 +112,6 @@ describe("getPersonas · datos reales mockeados", () => {
             ]],
             [F.circulo, [{
                 hijos: 150,
-                hijos_vinculados: 140,
                 contactos: 60,
                 identificadores_hijo: 210,
             }]],
@@ -150,7 +149,6 @@ describe("getPersonas · datos reales mockeados", () => {
             ],
             circulo: {
                 hijos: 150,
-                hijosVinculados: 140,
                 contactos: 60,
                 identificadoresHijo: 210,
             },
@@ -176,7 +174,6 @@ describe("getPersonas · datos reales mockeados", () => {
         expect(personas.identificadoresPorPlataforma).toEqual([]);
         expect(personas.circulo).toEqual({
             hijos: 0,
-            hijosVinculados: 0,
             contactos: 0,
             identificadoresHijo: 0,
         });
@@ -195,7 +192,6 @@ describe("getPersonas · datos reales mockeados", () => {
             }]],
             [F.circulo, [{
                 hijos: 3,
-                hijos_vinculados: 3,
                 contactos: 1,
                 identificadores_hijo: 5,
             }]],
