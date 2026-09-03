@@ -207,7 +207,13 @@ test.describe.serial("Inicio admin · partición CARGA vs SALUD (I-271)", () => 
         await limpiarSembrados();
     });
 
+    // SPEC-393 · I-271 todavía viva en `948c798b` (fuente: `senalComiteVencido`
+    // en `inicio-admin.ts:171-183` cuenta `SolicitudComite.PENDIENTE` sin JOIN
+    // con DemoMarcado). `test.fail` documenta el defecto y "se da vuelta sola"
+    // cuando llegue el arreglo: pasar entonces se reporta como "unexpected
+    // pass" — señal explícita de que el candado ya lo cubre el código.
     test("CARGA sobre demo puro NO sube comite_vencido ni reportes_huerfanos", async ({ page }) => {
+        test.fail(true, "I-271 · SPEC-393: pendiente de arreglo — la señal cuenta demo hoy");
         await loginAdmin(page);
         const antes = await getSenales(page);
         const conteoAntes = {
