@@ -7,10 +7,18 @@
  * rol `VERIFICADOR`, los modelos y las URLs, Playwright reporta "unexpected
  * pass" y Dev 01 quita los `test.fail` como parte de esa spec.
  *
- * Nota sobre URLs: las rutas HTTP que aparecen abajo son las asumidas por
- * convención del proyecto (patrón `admin/<recurso>/[id]/<acción>` de los
- * endpoints existentes). Si SPEC-408 elige otras, se ajustan cuando se quiten
- * los `test.fail` — el candado de las 5 invariantes queda igual.
+ * Contrato de rutas fijado por el CEO 03-09 15:3x y pasado a Dev 01 como
+ * obligatorio (mismo patrón que el comité — rol interno no-ADMIN bajo
+ * `/api/admin/` cortado por módulo):
+ *   · pantalla   `/dashboard/admin/verificacion` (+ `/incidentes`)
+ *   · GET        `/api/admin/verificacion-profesionales`
+ *   · GET        `/api/admin/verificacion-profesionales/[id]`
+ *   · POST       `/api/admin/verificacion-profesionales/[id]/decidir`
+ *   · GET        `/api/admin/verificacion-profesionales/incidentes`
+ * El endpoint `decidir` acepta los 3 resultados: APROBADO, RECHAZADO,
+ * MAS_INFORMACION. La vista propia del profesional aún no está fijada — este
+ * spec asume `/api/profesional/mi-verificacion` (patrón existente
+ * `mi-perfil`); si SPEC-408 elige otra, se ajusta al quitar los `test.fail`.
  *
  * Aislamiento como C12 (SPEC-393): usuarios efímeros por corrida, cero
  * mutación de rol real, limpieza en `afterAll`. Los modelos `PerfilProfesional`
@@ -130,8 +138,8 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
         test.fail(true, "URLs y modelo aún no en origin/main; SPEC-408 (Dev 01) los crea. Este candado se quita en esa spec.");
         await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
         const res = await page.request.post(
-            `/api/admin/verificador/${encodeURIComponent(profesionalId)}/aprobar`,
-            { data: {} }
+            `/api/admin/verificacion-profesionales/${encodeURIComponent(profesionalId)}/decidir`,
+            { data: { resultado: "APROBADO" } }
         );
         expect(
             [400, 409, 422].includes(res.status()),
@@ -144,15 +152,20 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
      * saber qué corregir (§5-bis).
      */
     test("(2) rechazar/devolver sin observación devuelve 4xx", async ({ page }) => {
-        test.fail(true, "SPEC-408 (Dev 01) define el endpoint devolver y el schema de observación obligatoria.");
+        test.fail(true, "SPEC-408 (Dev 01) define el schema de observación obligatoria en /decidir.");
         await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
         const res = await page.request.post(
-            `/api/admin/verificador/${encodeURIComponent(profesionalId)}/devolver`,
-            { data: { checklist: [{ id: "cedula", estado: "NO_CUMPLE" /* sin observacion */ }] } }
+            `/api/admin/verificacion-profesionales/${encodeURIComponent(profesionalId)}/decidir`,
+            {
+                data: {
+                    resultado: "MAS_INFORMACION",
+                    checklist: [{ id: "cedula", estado: "NO_CUMPLE" /* sin observacion */ }],
+                },
+            }
         );
         expect(
             [400, 422].includes(res.status()),
-            `devolver sin observación debe rechazar con 4xx; devolvió ${res.status()}`
+            `MAS_INFORMACION sin observación debe rechazar con 4xx; devolvió ${res.status()}`
         ).toBe(true);
     });
 
@@ -165,10 +178,15 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
         await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
         // Devuelvo con observación en cédula (el único NO CUMPLE).
         const resDev = await page.request.post(
-            `/api/admin/verificador/${encodeURIComponent(profesionalId)}/devolver`,
-            { data: { checklist: [{ id: "cedula", estado: "NO_CUMPLE", observacion: "Foto ilegible, subir otra" }] } }
+            `/api/admin/verificacion-profesionales/${encodeURIComponent(profesionalId)}/decidir`,
+            {
+                data: {
+                    resultado: "MAS_INFORMACION",
+                    checklist: [{ id: "cedula", estado: "NO_CUMPLE", observacion: "Foto ilegible, subir otra" }],
+                },
+            }
         );
-        expect(resDev.status(), "devolver con observación debe cerrar con 200").toBe(200);
+        expect(resDev.status(), "MAS_INFORMACION con observación debe cerrar con 200").toBe(200);
 
         // Ahora el profesional entra y consulta su vista de re-envío — debe
         // ver SOLO el ítem `cedula` como pendiente de corregir; los otros 3
@@ -191,8 +209,13 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
         for (let vuelta = 1; vuelta <= 3; vuelta++) {
             await login(page, VERIFICADOR_EMAIL, VERIFICADOR_PASSWORD);
             const resDev = await page.request.post(
-                `/api/admin/verificador/${encodeURIComponent(profesionalId)}/devolver`,
-                { data: { checklist: [{ id: "cedula", estado: "NO_CUMPLE", observacion: `Vuelta ${vuelta}: aún ilegible` }] } }
+                `/api/admin/verificacion-profesionales/${encodeURIComponent(profesionalId)}/decidir`,
+                {
+                    data: {
+                        resultado: "MAS_INFORMACION",
+                        checklist: [{ id: "cedula", estado: "NO_CUMPLE", observacion: `Vuelta ${vuelta}: aún ilegible` }],
+                    },
+                }
             );
             expect(resDev.status(), `vuelta ${vuelta} debe cerrar con 200`).toBe(200);
 
