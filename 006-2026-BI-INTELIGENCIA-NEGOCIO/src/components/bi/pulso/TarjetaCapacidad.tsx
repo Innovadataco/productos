@@ -52,14 +52,15 @@ function Cifra({
 }
 
 /**
- * Capacidad operativa (mockup v3 · Pulso, tras "BI detectó"): la brecha entre
- * la demanda acumulada (revisión manual + alertas sin asignar) y la capacidad
- * VISIBLE de gestión, en la cara. Candado 9 llevado al extremo: con CERO
- * operarios la tarjeta lo dice en rubí con todas las cifras — no se disimula.
+ * Capacidad operativa (Pulso): la cola de MODERACIÓN en vivo, espejo del
+ * panel de asignación de PI — mismos estados (revisión manual + posible
+ * spam), mismos operarios (operadorId) y mismo cupo (PerfilOperador
+ * replicado). Candado 9 llevado al extremo: cola sin operarios o cupo aún
+ * sin sincronizar se dice en la cara, no se disimula con un default.
  * Candado 10: toda cifra y el mensaje vienen de CapacidadData; aquí solo se
  * elige color vía semaforoCapacidad (función pura de la capa de datos).
- * Se renderiza SIEMPRE (también con la réplica vacía: 0 operarios y demanda 0
- * es un hecho, no un hueco a ocultar).
+ * Se renderiza SIEMPRE (también con la réplica vacía: es un hecho, no un
+ * hueco a ocultar).
  */
 export default function TarjetaCapacidad({
     capacidad,
@@ -77,7 +78,7 @@ export default function TarjetaCapacidad({
                 style={{ "--anim-retardo": `${retardo}ms` } as React.CSSProperties}
             >
                 <span className={`punto anim-pulso ${sem.clasePunto}`} />
-                Capacidad operativa · demanda vs. gestión
+                Capacidad operativa · cola de moderación
             </div>
             <div
                 className="glass anim-entrada relative overflow-hidden p-6 pl-7"
@@ -91,18 +92,22 @@ export default function TarjetaCapacidad({
                     </span>
                 </div>
                 <p className="mb-5 mt-1 text-[13px] text-muted">
-                    Demanda acumulada frente a la capacidad visible de gestión
+                    Cola de moderación: casos activos frente al cupo real de los operarios
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                    <Cifra valor={capacidad.revisionManual} etiqueta="En revisión manual" />
-                    <Cifra valor={capacidad.alertasSinAsignar} etiqueta="Alertas sin asignar" />
+                    <Cifra valor={capacidad.casosEnGestion} etiqueta="Casos en gestión" />
+                    <Cifra
+                        valor={capacidad.sinAsignar}
+                        etiqueta="Sin asignar"
+                        claseValor={capacidad.sinAsignar > 0 ? sem.claseTexto : ""}
+                    />
                     <Cifra
                         valor={capacidad.operariosConCasos}
                         etiqueta="Operarios con casos"
                         claseValor={sem.claseTexto}
                     />
-                    <Cifra valor={capacidad.capacidadMaxPorOperario} etiqueta="Cupo máx. por operario" />
+                    <Cifra valor={capacidad.cupoTotal} etiqueta="Cupo total" />
                 </div>
 
                 <p className={`mt-5 rounded-xl border px-4 py-3 text-[12.5px] leading-relaxed ${sem.claseAviso}`}>
@@ -115,18 +120,32 @@ export default function TarjetaCapacidad({
                         <p className="text-[13px] text-muted">Ningún operario con casos asignados</p>
                     ) : (
                         <ul className="space-y-1.5">
-                            {capacidad.casosPorOperario.map((o) => (
-                                <li key={o.id} className="flex items-center justify-between text-[13.5px]">
-                                    <span className="font-semibold">{o.id}</span>
-                                    <span className="cifra text-muted">
-                                        {o.activos} {o.activos === 1 ? "caso activo" : "casos activos"}
-                                    </span>
-                                </li>
-                            ))}
+                            {capacidad.casosPorOperario.map((o) => {
+                                const uso = o.cupo !== null && o.cupo > 0 ? Math.min(100, Math.round((o.activos / o.cupo) * 100)) : null;
+                                return (
+                                    <li key={o.id} className="flex items-center justify-between gap-3 text-[13.5px]">
+                                        <span className="font-semibold">{o.id}</span>
+                                        <span className="flex items-center gap-2">
+                                            {uso !== null && (
+                                                <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[rgb(var(--tinta-rgb)/0.1)]">
+                                                    <span
+                                                        className={`block h-full rounded-full ${uso >= 90 ? "bg-[rgb(var(--rubi-rgb))]" : uso >= 70 ? "bg-[rgb(var(--ambar-rgb))]" : "bg-[rgb(var(--pino-rgb))]"}`}
+                                                        style={{ width: `${uso}%` }}
+                                                    />
+                                                </span>
+                                            )}
+                                            <span className="cifra text-muted">
+                                                {o.activos} / {o.cupo ?? "cupo n/d"}
+                                            </span>
+                                        </span>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                     <p className="mt-3 text-[11.5px] text-subtle">
                         Seudónimos deterministas: la identidad de los operarios no se replica (Ley 1581).
+                        Cupo real por operario según PerfilOperador de PI.
                     </p>
                 </div>
             </div>

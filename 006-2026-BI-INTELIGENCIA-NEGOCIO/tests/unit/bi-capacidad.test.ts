@@ -1,19 +1,19 @@
 // tests/unit/bi-capacidad.test.ts · Contrato de src/lib/bi/capacidad.ts
-// Producto 006 · BI v2 · AGENTE C (capacidad operativa)
-// Unitarios puros: prisma.$queryRaw y getConfig mockeados — sin BD, sin red.
-// Cubre la situación REAL de la réplica demo (candado 9): 135 reportes en
-// REVISION_MANUAL + 846 alertas sin asignar con CERO operarios con casos —
-// la brecha se muestra (demandaExcede + mensaje honesto), no se disimula.
+// Producto 006 · BI v2 · Rediseño 2026-09-03 (cola de moderación, espejo PI)
+// Unitarios puros: prisma.$queryRaw mockeado — sin BD, sin red.
+// Cubre: la cola real de moderación (REVISION_MANUAL + POSIBLE_SPAM), cupo
+// SOLO desde PerfilOperador replicado (jamás un default quemado), candado 9
+// (cupo desconocido / operarios sin perfil se dicen, no se inventan) y la
+// pseudonimización (Ley 1581). Situación real de producción verificada el
+// 2026-09-03: 474 casos en gestión, 0 sin asignar, 8 operarios, cupo 500 c/u.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { queryRawMock, getConfigMock } = vi.hoisted(() => ({
+const { queryRawMock } = vi.hoisted(() => ({
     queryRawMock: vi.fn(),
-    getConfigMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({ prisma: { $queryRaw: queryRawMock } }));
-vi.mock("@/lib/config", () => ({ getConfig: getConfigMock }));
 
 import {
     alertasSinAsignarPorColegio,
@@ -23,117 +23,139 @@ import {
     type CapacidadData,
 } from "@/lib/bi/capacidad";
 
-/** getConfig devuelve null (defaults) salvo los overrides dados. */
-function configCon(overrides: Record<string, string> = {}) {
-    getConfigMock.mockImplementation(async (clave: string) => overrides[clave] ?? null);
-}
+const OP_A = "cmabc1234defgh0001aaaa";
+const OP_B = "cmabc1234defgh0001bbbb";
+const OP_C = "cmabc1234defgh0001cccc";
 
 /**
  * Encola las tres respuestas de $queryRaw en el orden fijo de getCapacidad:
- * revisión manual → alertas agregadas → casos por operario.
+ * cola agregada → casos por operario → cupos PerfilOperador.
  */
 function bdCon(
-    revisionManual: number,
-    alertas: { sin_asignar: number; operarios_con_casos: number },
+    cola: { en_gestion: number; sin_asignar: number },
     porOperario: { operario_id: string; activos: number }[] = [],
+    cupos: { operario_id: string; cupo: number }[] = [],
 ) {
     queryRawMock.mockReset();
     queryRawMock
-        .mockResolvedValueOnce([{ total: revisionManual }])
-        .mockResolvedValueOnce([alertas])
-        .mockResolvedValueOnce(porOperario);
+        .mockResolvedValueOnce([cola])
+        .mockResolvedValueOnce(porOperario)
+        .mockResolvedValueOnce(cupos);
 }
 
 beforeEach(() => {
     vi.clearAllMocks();
-    configCon();
 });
 
-describe("getCapacidad · situación real de la demo (candado 9)", () => {
-    it("0 operarios con 135 en revisión manual y 846 sin asignar: la brecha se dice en la cara", async () => {
-        bdCon(135, { sin_asignar: 846, operarios_con_casos: 0 });
-        const c = await getCapacidad();
-
-        expect(c.revisionManual).toBe(135);
-        expect(c.alertasSinAsignar).toBe(846);
-        expect(c.operariosConCasos).toBe(0);
-        expect(c.casosPorOperario).toEqual([]);
-        expect(c.capacidadMaxPorOperario).toBe(25); // default B3 sin config
-        expect(c.demandaExcede).toBe(true); // 981 > 0 × 25
-        expect(c.mensaje).toBe(
-            "No hay operarios asignados: 981 casos activos acumulados sin capacidad de gestión",
+describe("getCapacidad · situación real de producción (espejo del panel de PI)", () => {
+    it("474 en gestión, 0 sin asignar, 8 operarios × cupo 500: capacidad suficiente", async () => {
+        const ocho = Array.from({ length: 8 }, (_, i) => ({
+            operario_id: `cmoper00000000000000000${i}`,
+            activos: 52 + i,
+        }));
+        bdCon(
+            { en_gestion: 474, sin_asignar: 0 },
+            ocho,
+            ocho.map((o) => ({ operario_id: o.operario_id, cupo: 500 })),
         );
-        expect(semaforoCapacidad(c)).toBe("rubi");
-    });
-
-    it("vacío total (réplica sin demanda): honesto, sin brecha inventada", async () => {
-        bdCon(0, { sin_asignar: 0, operarios_con_casos: 0 });
         const c = await getCapacidad();
 
+        expect(c.casosEnGestion).toBe(474);
+        expect(c.sinAsignar).toBe(0);
+        expect(c.operariosConCasos).toBe(8);
+        expect(c.cupoTotal).toBe(4000); // suma REAL de PerfilOperador, no quemado
+        expect(c.cupoLibre).toBe(3526);
+        expect(c.operariosSinPerfil).toBe(0);
         expect(c.demandaExcede).toBe(false);
         expect(c.mensaje).toBe(
-            "Sin casos activos acumulados: no hay demanda pendiente de gestión.",
+            "Capacidad suficiente: 3526 cupos libres de 4000 (8 operarios, 474 casos en gestión, 0 sin asignar)",
         );
         expect(semaforoCapacidad(c)).toBe("pino");
     });
 });
 
-describe("getCapacidad · brecha demanda vs. capacidad visible", () => {
-    it("con operarios y holgura: demandaExcede=false y mensaje de capacidad suficiente", async () => {
-        bdCon(10, { sin_asignar: 5, operarios_con_casos: 2 }, [
-            { operario_id: "cmabc1234defgh0001aaaa", activos: 8 },
-            { operario_id: "cmabc1234defgh0001bbbb", activos: 4 },
-        ]);
+describe("getCapacidad · candado 9: la brecha se dice en la cara", () => {
+    it("casos sin asignar y cero operarios con casos: rubí, brecha total", async () => {
+        bdCon({ en_gestion: 0, sin_asignar: 30 });
         const c = await getCapacidad();
 
-        expect(c.demandaExcede).toBe(false); // 15 ≤ 2 × 25
-        expect(c.mensaje).toBe(
-            "Capacidad visible suficiente: 15 casos activos frente a un cupo de 50 (2 operarios)",
-        );
-        expect(semaforoCapacidad(c)).toBe("pino");
-        expect(c.casosPorOperario.map((o) => o.activos)).toEqual([8, 4]);
+        expect(c.operariosConCasos).toBe(0);
+        expect(c.cupoTotal).toBe(0);
+        expect(c.demandaExcede).toBe(false); // cupo desconocido: no se afirma excedente
+        expect(c.mensaje).toContain("Cupo no disponible en la réplica");
+        expect(c.mensaje).toContain("30");
+        expect(semaforoCapacidad(c)).toBe("ambar"); // no se afirma suficiencia sin cupo
     });
 
-    it("demanda por encima del cupo con operarios: excede y mensaje de superación", async () => {
-        bdCon(20, { sin_asignar: 11, operarios_con_casos: 1 }, [
-            { operario_id: "cmabc1234defgh0001aaaa", activos: 25 },
-        ]);
+    it("cupo conocido pero la cola sin asignar supera el libre: rubí", async () => {
+        bdCon(
+            { en_gestion: 20, sin_asignar: 15 },
+            [{ operario_id: OP_A, activos: 20 }],
+            [{ operario_id: OP_A, cupo: 30 }],
+        );
         const c = await getCapacidad();
 
-        expect(c.demandaExcede).toBe(true); // 31 > 1 × 25
+        expect(c.cupoTotal).toBe(30);
+        expect(c.cupoLibre).toBe(10);
+        expect(c.demandaExcede).toBe(true); // 15 > 10
         expect(c.mensaje).toBe(
-            "La demanda (31 casos activos) supera la capacidad visible: 1 operario con cupo para 25 casos",
+            "La cola sin asignar (15 casos) supera el cupo libre (10): 1 operario con cupo total de 30 casos",
         );
         expect(semaforoCapacidad(c)).toBe("rubi");
     });
 
-    it("cerca del límite (≥80% del cupo sin superarlo): ambar, no rubí", async () => {
-        bdCon(0, { sin_asignar: 22, operarios_con_casos: 1 }, [
-            { operario_id: "cmabc1234defgh0001aaaa", activos: 3 },
-        ]);
-        const c = await getCapacidad();
-
-        expect(c.demandaExcede).toBe(false); // 22 ≤ 25
-        expect(c.mensaje).toBe(
-            "Capacidad visible al límite: 22 casos activos frente a un cupo de 25 (1 operario)",
+    it("operarios con casos sin perfil en la réplica: cupo parcial, jamás inventado", async () => {
+        bdCon(
+            { en_gestion: 12, sin_asignar: 0 },
+            [
+                { operario_id: OP_A, activos: 7 },
+                { operario_id: OP_B, activos: 5 },
+            ],
+            [{ operario_id: OP_A, cupo: 500 }], // OP_B sin perfil
         );
-        expect(semaforoCapacidad(c)).toBe("ambar");
-    });
-
-    it("cupo desde bi_config pisa el default (B3)", async () => {
-        configCon({ "bi.capacidad.casos_max_operario": "10" });
-        bdCon(0, { sin_asignar: 25, operarios_con_casos: 2 });
         const c = await getCapacidad();
 
-        expect(c.capacidadMaxPorOperario).toBe(10);
-        expect(c.demandaExcede).toBe(true); // 25 > 2 × 10
+        expect(c.operariosSinPerfil).toBe(1);
+        expect(c.cupoTotal).toBe(500); // solo lo confirmado: OP_B NO suma
+        expect(c.mensaje).toContain("Cupo parcialmente visible");
+        expect(c.mensaje).toContain("1 operario(s) sin perfil");
+        // OP_B aparece en la lista con cupo null (honesto, no 25 quemado)
+        const opB = c.casosPorOperario.find((o) => o.id === pseudonimoOperario(OP_B));
+        expect(opB?.cupo).toBeNull();
+        expect(opB?.activos).toBe(5);
     });
 
-    it("config inválida cae al default documentado (25)", async () => {
-        configCon({ "bi.capacidad.casos_max_operario": "cero" });
-        bdCon(0, { sin_asignar: 0, operarios_con_casos: 1 });
+    it("cerca del límite (≥80% del cupo en uso + cola): ambar", async () => {
+        bdCon(
+            { en_gestion: 44, sin_asignar: 2 },
+            [
+                { operario_id: OP_A, activos: 24 },
+                { operario_id: OP_B, activos: 20 },
+            ],
+            [
+                { operario_id: OP_A, cupo: 25 },
+                { operario_id: OP_B, cupo: 25 },
+            ],
+        );
         const c = await getCapacidad();
-        expect(c.capacidadMaxPorOperario).toBe(25);
+
+        expect(c.cupoTotal).toBe(50);
+        expect(c.cupoLibre).toBe(6);
+        expect(c.demandaExcede).toBe(false); // 2 ≤ 6
+        expect(c.mensaje).toBe(
+            "Cupo al límite: 6 libres de 50 (2 operarios, 44 casos en gestión)",
+        );
+        expect(semaforoCapacidad(c)).toBe("ambar"); // 44+2=46 ≥ 80% de 50
+    });
+
+    it("cola vacía total: honesto, pino", async () => {
+        bdCon({ en_gestion: 0, sin_asignar: 0 });
+        const c = await getCapacidad();
+
+        expect(c.mensaje).toBe(
+            "Cola de moderación vacía: sin casos activos en gestión ni esperando asignación.",
+        );
+        expect(semaforoCapacidad(c)).toBe("pino");
     });
 
     it("un sondeo roto degrada a ceros con warn, sin inventar datos ni reventar", async () => {
@@ -141,12 +163,15 @@ describe("getCapacidad · brecha demanda vs. capacidad visible", () => {
         queryRawMock.mockReset();
         queryRawMock
             .mockRejectedValueOnce(new Error("réplica caída"))
-            .mockResolvedValueOnce([{ sin_asignar: 7, operarios_con_casos: 1 }])
-            .mockResolvedValueOnce([{ operario_id: "cmabc1234defgh0001aaaa", activos: 2 }]);
+            .mockResolvedValueOnce([{ operario_id: OP_A, activos: 2 }])
+            .mockResolvedValueOnce([{ operario_id: OP_A, cupo: 500 }]);
         const c = await getCapacidad();
 
-        expect(c.revisionManual).toBe(0); // degradado, no inventado
-        expect(c.alertasSinAsignar).toBe(7);
+        expect(c.casosEnGestion).toBe(0); // degradado, no inventado
+        expect(c.sinAsignar).toBe(0);
+        expect(c.operariosConCasos).toBe(1);
+        expect(c.mensaje).toContain("No se pudo leer la cola de moderación");
+        expect(c.mensaje).not.toContain("vacía");
         expect(warn).toHaveBeenCalledOnce();
         warn.mockRestore();
     });
@@ -155,8 +180,8 @@ describe("getCapacidad · brecha demanda vs. capacidad visible", () => {
 describe("pseudonimización de operarios (Ley 1581 · PII)", () => {
     it("el seudónimo jamás contiene el cuid completo ni resuelve identidad", async () => {
         const cuid = "cmabc1234defgh0001wxyz";
-        bdCon(0, { sin_asignar: 0, operarios_con_casos: 1 }, [
-            { operario_id: cuid, activos: 3 },
+        bdCon({ en_gestion: 3, sin_asignar: 0 }, [{ operario_id: cuid, activos: 3 }], [
+            { operario_id: cuid, cupo: 500 },
         ]);
         const c = await getCapacidad();
 
@@ -203,23 +228,34 @@ describe("alertasSinAsignarPorColegio", () => {
 
 describe("semaforoCapacidad · función pura", () => {
     const base: CapacidadData = {
-        revisionManual: 0,
-        alertasSinAsignar: 0,
+        casosEnGestion: 0,
+        sinAsignar: 0,
         operariosConCasos: 0,
+        cupoTotal: 0,
+        cupoLibre: 0,
+        operariosSinPerfil: 0,
         casosPorOperario: [],
-        capacidadMaxPorOperario: 25,
         demandaExcede: false,
         mensaje: "",
     };
 
-    it("rubi solo cuando demandaExcede; ambar cerca; pino en el resto", () => {
-        expect(semaforoCapacidad({ ...base, demandaExcede: true, alertasSinAsignar: 1 })).toBe("rubi");
-        expect(
-            semaforoCapacidad({ ...base, operariosConCasos: 1, alertasSinAsignar: 20 }),
-        ).toBe("ambar"); // 20 = 80% de 25
-        expect(
-            semaforoCapacidad({ ...base, operariosConCasos: 1, alertasSinAsignar: 19 }),
-        ).toBe("pino");
+    it("rubi solo cuando la cola supera el cupo libre", () => {
+        expect(semaforoCapacidad({ ...base, demandaExcede: true, cupoTotal: 100 })).toBe("rubi");
+        expect(semaforoCapacidad({ ...base, cupoTotal: 100, cupoLibre: 100 })).toBe("pino");
+    });
+
+    it("cupo desconocido (0) con actividad: ambar — no se afirma suficiencia", () => {
+        expect(semaforoCapacidad({ ...base, casosEnGestion: 5 })).toBe("ambar");
+        expect(semaforoCapacidad({ ...base, sinAsignar: 3 })).toBe("ambar");
         expect(semaforoCapacidad(base)).toBe("pino"); // vacío total
+    });
+
+    it("ambar cerca del límite (≥80% en uso + cola), pino con holgura", () => {
+        expect(
+            semaforoCapacidad({ ...base, cupoTotal: 100, cupoLibre: 15, casosEnGestion: 85 }), // uso 85%
+        ).toBe("ambar");
+        expect(
+            semaforoCapacidad({ ...base, cupoTotal: 100, cupoLibre: 85, casosEnGestion: 15 }),
+        ).toBe("pino");
     });
 });
