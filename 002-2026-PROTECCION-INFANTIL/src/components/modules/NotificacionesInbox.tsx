@@ -53,7 +53,13 @@ export function NotificacionesInbox({
     onArchivar,
 }: NotificacionesInboxProps) {
     const [abierto, setAbierto] = useState(false);
-    const [noLeidas, setNoLeidas] = useState(0);
+    /**
+     * SPEC-415: `null` = **no se pudo preguntar**, distinto de `0` = no hay nuevas.
+     * Antes un fallo del resumen dejaba el contador en 0 y el badge escondido:
+     * el usuario leía "no tengo nada" cuando en realidad nadie había podido
+     * mirar. Un aviso de este producto puede ser el de un caso de su hijo.
+     */
+    const [noLeidas, setNoLeidas] = useState<number | null>(0);
     const [notificaciones, setNotificaciones] = useState<NotificacionItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [accionando, setAccionando] = useState<string | null>(null);
@@ -64,8 +70,10 @@ export function NotificacionesInbox({
         try {
             const json = await cargarResumen();
             setNoLeidas(json.noLeidas ?? 0);
-        } catch {
-            // fail-silently: el badge no bloquea la UI
+        } catch (error) {
+            // No bloquea la UI, pero tampoco miente: el badge pasa a "no sé".
+            console.error("[NotificacionesInbox] resumen:", error);
+            setNoLeidas(null);
         }
     }
 
@@ -86,7 +94,7 @@ export function NotificacionesInbox({
             setNotificaciones((prev) =>
                 prev.map((n) => (n.id === id ? { ...n, leidaEn: new Date().toISOString() } : n))
             );
-            setNoLeidas((n) => Math.max(0, n - 1));
+            setNoLeidas((n) => (n === null ? null : Math.max(0, n - 1)));
         } finally {
             setAccionando(null);
         }
@@ -109,7 +117,7 @@ export function NotificacionesInbox({
         try {
             await onArchivar(id);
             setNotificaciones((prev) => prev.filter((n) => n.id !== id));
-            setNoLeidas((n) => Math.max(0, n - 1));
+            setNoLeidas((n) => (n === null ? null : Math.max(0, n - 1)));
         } finally {
             setAccionando(null);
         }
@@ -147,14 +155,27 @@ export function NotificacionesInbox({
                 type="button"
                 onClick={() => setAbierto((v) => !v)}
                 className="relative flex h-10 w-10 items-center justify-center rounded-xl text-body transition hover:bg-tinta/5"
-                aria-label={`Notificaciones${noLeidas > 0 ? `, ${noLeidas} no leídas` : ""}`}
+                aria-label={
+                    noLeidas === null
+                        ? "Notificaciones, no se pudo consultar si hay nuevas"
+                        : `Notificaciones${noLeidas > 0 ? `, ${noLeidas} no leídas` : ""}`
+                }
                 aria-expanded={abierto}
             >
                 <Bell className="h-5 w-5" aria-hidden="true" />
-                {noLeidas > 0 && (
-                    <span className={`absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full ${tema.badge} px-1 text-[10px] font-bold text-white`}>
-                        {noLeidas > 99 ? "99+" : noLeidas}
+                {noLeidas === null ? (
+                    <span
+                        className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-ambar px-1 text-[10px] font-bold text-white"
+                        title="No se pudo consultar si hay notificaciones nuevas"
+                    >
+                        ?
                     </span>
+                ) : (
+                    noLeidas > 0 && (
+                        <span className={`absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full ${tema.badge} px-1 text-[10px] font-bold text-white`}>
+                            {noLeidas > 99 ? "99+" : noLeidas}
+                        </span>
+                    )
                 )}
             </button>
 

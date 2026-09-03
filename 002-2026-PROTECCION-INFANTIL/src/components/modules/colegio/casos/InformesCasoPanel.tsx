@@ -36,15 +36,29 @@ export function InformesCasoPanel({ casoId }: { casoId: string }) {
     );
     const [generando, setGenerando] = useState(false);
     const [mensaje, setMensaje] = useState("");
+    /**
+     * SPEC-415: antes esto era un `catch {}` con el comentario "el historial
+     * vacío ya comunica". Comunicaba lo contrario: un 500 o una red caída se
+     * veían igual que "aún no se han generado informes". El historial de
+     * informes tiene valor legal — decir que está vacío cuando no se pudo leer
+     * es la peor de las dos mentiras posibles.
+     */
+    const [errorHistorial, setErrorHistorial] = useState(false);
 
     const cargar = useCallback(async () => {
         try {
             const res = await fetch(`/api/colegio/casos/${casoId}/informes`, { credentials: "include" });
-            if (!res.ok) return;
+            if (!res.ok) {
+                console.error(`[InformesCasoPanel] historial ${casoId}: HTTP ${res.status}`);
+                setErrorHistorial(true);
+                return;
+            }
             const body = await res.json();
             setInformes(body.informes ?? []);
-        } catch {
-            // silencioso: el historial vacío ya comunica
+            setErrorHistorial(false);
+        } catch (error) {
+            console.error("[InformesCasoPanel] historial:", error);
+            setErrorHistorial(true);
         }
     }, [casoId]);
 
@@ -130,7 +144,15 @@ export function InformesCasoPanel({ casoId }: { casoId: string }) {
             {/* ── Historial inmutable ── */}
             <div className="mt-6">
                 <h3 className="text-sm font-medium text-body">Informes generados</h3>
-                {informes.length === 0 ? (
+                {errorHistorial ? (
+                    <div className="mt-1 rounded-xl border border-ambar/40 bg-ambar/5 p-3">
+                        <p className="text-sm font-semibold text-body">No pudimos leer el historial.</p>
+                        <p className="mt-1 text-sm text-muted">
+                            Esto <strong>no</strong> quiere decir que no haya informes: quiere decir
+                            que no se pudieron consultar. Recargue antes de generar uno nuevo.
+                        </p>
+                    </div>
+                ) : informes.length === 0 ? (
                     <p className="mt-1 text-sm text-muted">Aún no se han generado informes de este caso.</p>
                 ) : (
                     <ul className="mt-2 space-y-2">

@@ -7,6 +7,7 @@ import { ComiteConvivenciaService } from "@/lib/dal/services/comite-convivencia"
 import { ComiteConvivenciaIntegrantesService } from "@/lib/dal/services/comite-convivencia-integrantes";
 import { ComiteCuentaCard } from "@/components/modules/colegio/comite/ComiteCuentaCard";
 import { IntegrantesList } from "@/components/modules/colegio/comite/IntegrantesList";
+import { logger } from "@/lib/logger";
 
 export default async function ComiteIntegrantesPage() {
     const cookieStore = await cookies();
@@ -45,9 +46,19 @@ export default async function ComiteIntegrantesPage() {
     }
 
     const colegioId = usuario.colegioId;
+    // SPEC-415: el `.catch(() => [])` que había acá convertía un fallo de lectura
+    // en "este comité no tiene integrantes". El rector no puede distinguir las
+    // dos cosas, y la decisión que toma es cara: volver a documentar personas
+    // que YA están registradas. Ahora el fallo se distingue, se registra y se
+    // dice en pantalla.
     const [cuenta, integrantes] = await Promise.all([
         new ComiteConvivenciaService().obtenerCuenta(colegioId),
-        new ComiteConvivenciaIntegrantesService().listar(colegioId).catch(() => []),
+        new ComiteConvivenciaIntegrantesService()
+            .listar(colegioId)
+            .catch((error: unknown) => {
+                logger.error("[ComiteIntegrantes] No se pudo listar los integrantes", error);
+                return null;
+            }),
     ]);
 
     return (
@@ -62,7 +73,20 @@ export default async function ComiteIntegrantesPage() {
 
                 <ComiteCuentaCard cuenta={cuenta} />
 
-                {cuenta && <IntegrantesList integrantesIniciales={integrantes} />}
+                {cuenta && integrantes === null && (
+                    <div className="rounded-xl border border-ambar/40 bg-ambar/5 p-4">
+                        <p className="text-sm font-semibold text-body">
+                            No pudimos leer los integrantes del comité.
+                        </p>
+                        <p className="mt-1 text-sm text-muted">
+                            Esto <strong>no</strong> significa que no haya ninguno: significa que no
+                            se pudieron consultar. Recarga la página antes de volver a registrarlos,
+                            para no duplicar personas que ya están documentadas.
+                        </p>
+                    </div>
+                )}
+
+                {cuenta && integrantes !== null && <IntegrantesList integrantesIniciales={integrantes} />}
             </div>
         </main>
     );
