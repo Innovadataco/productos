@@ -6,7 +6,7 @@ import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { registrarHijo, listarHijos, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
-import { validarDocumentoMenor } from "@/lib/padre/documento-menor";
+import { validarDocumentoMenor, validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
 
 // SPEC-325 (002-PI-225) · "A quién protejo". PII de menor: solo el padre dueño
 // (verifyAuth PARENT) accede; el DAL acota por HijoPadre. Documento OBLIGATORIO.
@@ -72,6 +72,17 @@ export async function POST(request: Request) {
         if (errorDocumento) {
             return NextResponse.json(
                 { error: { message: errorDocumento, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 }
+            );
+        }
+
+        // SPEC-372 (A-74 P4 · I-262): defensa en profundidad — el schema deja
+        // pasar 1900-2100; el rango real (5-17 años el año en curso) se valida
+        // acá para bloquear un POST directo con un año fuera de rango.
+        const errorAnio = validarAnioNacimientoMenor(parsed.data.anioNacimiento);
+        if (errorAnio) {
+            return NextResponse.json(
+                { error: { message: errorAnio, code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }

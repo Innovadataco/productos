@@ -5,6 +5,7 @@ import { describe, it, expect } from "vitest";
 import {
     validarDocumentoMenor,
     validarEdadMenor,
+    validarAnioNacimientoMenor,
     anioDesdeEdad,
     edadDesdeAnio,
     edadesMenor,
@@ -59,6 +60,27 @@ describe("edad del menor (F8) — el año se deriva, no se escribe", () => {
         expect(validarEdadMenor(4)).toContain("entre 5 y 17");
         expect(validarEdadMenor(18)).toContain("entre 5 y 17");
         expect(validarEdadMenor(12.5)).toContain("entre 5 y 17");
+    });
+
+    it("SPEC-372 (A-74 P4 · I-262) — el año se valida en el servidor contra la ventana 5-17 del año en curso", () => {
+        // En 2026: rango 2009-2021.
+        expect(validarAnioNacimientoMenor(2009, 2026)).toBeNull();
+        expect(validarAnioNacimientoMenor(2021, 2026)).toBeNull();
+        expect(validarAnioNacimientoMenor(2008, 2026)).toContain("entre 5 y 17");
+        expect(validarAnioNacimientoMenor(2022, 2026)).toContain("entre 5 y 17");
+        // El schema deja pasar 1900-2100; acá se corta.
+        expect(validarAnioNacimientoMenor(1900, 2026)).toContain("entre 5 y 17");
+        expect(validarAnioNacimientoMenor(2100, 2026)).toContain("entre 5 y 17");
+        // Opcional: null y undefined pasan sin ruido.
+        expect(validarAnioNacimientoMenor(null, 2026)).toBeNull();
+        expect(validarAnioNacimientoMenor(undefined, 2026)).toBeNull();
+        // No entero.
+        expect(validarAnioNacimientoMenor(2015.5, 2026)).toContain("entero");
+        // El rango SE MUEVE con el año: en 2030 la ventana es 2013-2025 y
+        // 2009 (que era válido en 2026) ya no lo es.
+        expect(validarAnioNacimientoMenor(2013, 2030)).toBeNull();
+        expect(validarAnioNacimientoMenor(2025, 2030)).toBeNull();
+        expect(validarAnioNacimientoMenor(2009, 2030)).toContain("entre 5 y 17");
     });
 
     it("las listas ofrecidas son 5-17 en el camino y 4-17 al reportar (F9)", () => {
