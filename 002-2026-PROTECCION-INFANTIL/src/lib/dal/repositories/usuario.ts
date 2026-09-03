@@ -193,6 +193,14 @@ export class UsuarioRepository {
         });
     }
 
+    /** SPEC-380 (PR A · C4): TODOS los SCHOOL_ADMIN activos del colegio (para el aviso al rector). */
+    listarAdminsColegioActivos(colegioId: string) {
+        return this.db.usuario.findMany({
+            where: { colegioId, rol: "SCHOOL_ADMIN", estado: "activo" },
+            select: { id: true, email: true },
+        });
+    }
+
     /** SPEC-134 (E-1): SCHOOL_ADMIN activo del colegio para la notificación ciega de alertas. */
     findAdminColegioParaNotificacion(colegioId: string) {
         return this.db.usuario.findFirst({

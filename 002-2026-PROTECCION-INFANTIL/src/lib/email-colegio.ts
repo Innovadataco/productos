@@ -82,6 +82,36 @@ export async function enviarNitYaRegistradoColegio(
 }
 
 /**
+ * SPEC-380 (PR A · C4) — El comité recomienda al rector emitir el informe del
+ * caso. Se llama SIEMPRE con el `usuarioId` del rector para que el motor
+ * (SPEC-201) le respete sus preferencias por canal (in-app / correo) y las
+ * quiet hours. Correo va SOLO si sus reglas lo permiten. El caller debe
+ * envolver esta llamada en try/catch — un fallo no debe romper la acción de
+ * recomendar (regla dura CEO: aviso vs. acción de negocio).
+ */
+export async function enviarRecomendacionInformeAlRector(
+    rectores: Array<{ id: string; email: string }>,
+    variables: { nombreColegio: string; numeroCaso: string; solicitudId: string },
+): Promise<void> {
+    if (rectores.length === 0) return;
+    const urlCaso = `${baseUrl()}/dashboard/colegio/comite/casos/${variables.solicitudId}`;
+    await programar({
+        evento: "colegio.comite.recomendacion_informe",
+        sujetoTipo: "SolicitudComite",
+        sujetoId: variables.solicitudId,
+        destinatarios: rectores.map((r) => ({
+            usuarioId: r.id,
+            email: r.email,
+            variables: {
+                nombreColegio: variables.nombreColegio,
+                numeroCaso: variables.numeroCaso,
+                urlCaso,
+            },
+        })),
+    });
+}
+
+/**
  * SPEC-344 · confirmación de cuenta creada, tras completar el enlace.
  */
 export async function enviarBienvenidaRector(email: string, nombreColegio: string): Promise<void> {

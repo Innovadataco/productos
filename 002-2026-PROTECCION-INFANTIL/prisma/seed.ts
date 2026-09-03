@@ -937,6 +937,25 @@ async function seedEventosEmailMigrados() {
             cuerpoMarkdown:
                 "Hola,\n\nSe creó tu cuenta de operador en Protección Infantil.\n\nUsuario: {{email}}\nContraseña temporal: {{tempPassword}}\n\nIngresa en {{urlLogin}} y cambia tu contraseña lo antes posible desde tu perfil o usando \"Olvidé mi contraseña\".\n\nEsta contraseña temporal no se volverá a mostrar.",
         },
+        // SPEC-380 (PR A · C4): el comité de convivencia le RECOMIENDA al
+        // rector emitir el informe del caso. Voz: usted, tono recomendación
+        // (nunca orden). El correo va en este bucle (canal EMAIL); la
+        // plantilla IN_APP hermana se sella aparte más abajo (el bucle
+        // asume EMAIL).
+        {
+            clave: "colegio.comite.recomendacion_informe.email",
+            asunto: "El comité de convivencia recomienda emitir el informe del caso {{numeroCaso}}",
+            cuerpoMarkdown:
+                "Hola,\n\nEl Comité de Convivencia de **{{nombreColegio}}** revisó el caso **{{numeroCaso}}** y le recomienda emitir el informe firmado.\n\nEsto es una recomendación — la decisión y la firma siguen siendo suyas.\n\nAbra el caso y revise el análisis del comité antes de emitir:\n{{urlCaso}}",
+            variablesSchema: {
+                type: "object",
+                properties: {
+                    nombreColegio: { type: "string" },
+                    numeroCaso: { type: "string" },
+                    urlCaso: { type: "string" },
+                },
+            },
+        },
         {
             clave: "usuario.bienvenida.comite.email",
             asunto: "Tu cuenta de comité de validación está lista",
@@ -1094,6 +1113,23 @@ async function seedEventosEmailMigrados() {
         },
     });
 
+    // SPEC-380 (PR A · C4): plantilla IN_APP para la recomendación del comité.
+    // Aviso corto que aparece en la bandeja in-app del rector cuando el comité
+    // recomienda emitir el informe. Va junto con el correo (con reglas hermanas).
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: "colegio.comite.recomendacion_informe.in_app" },
+        update: {},
+        create: {
+            clave: "colegio.comite.recomendacion_informe.in_app",
+            canal: "IN_APP",
+            asunto: null,
+            cuerpoMarkdown:
+                "El comité de convivencia revisó el caso **{{numeroCaso}}** y recomienda emitir el informe. Abra el caso para leer el análisis y decidir: {{urlCaso}}",
+            variablesSchema: { type: "object" } as Prisma.InputJsonValue,
+            activa: true,
+        },
+    });
+
     // Mapeo evento → (plantilla, rol representativo, obligatoria).
     // El `rol` es metadata para el panel admin; el motor no filtra por él en programar().
     // `obligatoria=true`: auth/credenciales/bienvenida/infra/deriva (no se permite opt-out).
@@ -1112,6 +1148,11 @@ async function seedEventosEmailMigrados() {
         { evento: "colegio.registro_enlace.cuenta_existente", plantillaClave: "colegio.registro_enlace.cuenta_existente.email", rol: "SCHOOL_ADMIN", obligatoria: true },
         { evento: "colegio.registro_enlace.nit_ya_registrado", plantillaClave: "colegio.registro_enlace.nit_ya_registrado.email", rol: "SCHOOL_ADMIN", obligatoria: true },
         { evento: "colegio.bienvenida_rector", plantillaClave: "colegio.bienvenida_rector.email", rol: "SCHOOL_ADMIN", obligatoria: true },
+        // SPEC-380 (PR A · C4): correo de la recomendación del comité. Respeta
+        // preferencias del rector + quiet hours (motor SPEC-201). No es
+        // obligatoria — el rector puede optar por solo in-app. La regla IN_APP
+        // hermana va aparte porque el bucle asume canal EMAIL.
+        { evento: "colegio.comite.recomendacion_informe", plantillaClave: "colegio.comite.recomendacion_informe.email", rol: "SCHOOL_ADMIN", obligatoria: false },
         { evento: "usuario.bienvenida.operador", plantillaClave: "usuario.bienvenida.operador.email", rol: "OPERADOR", obligatoria: true },
         { evento: "usuario.bienvenida.comite", plantillaClave: "usuario.bienvenida.comite.email", rol: "COMITE_VALIDACION", obligatoria: true },
         { evento: "usuario.credenciales.padre", plantillaClave: "usuario.credenciales.padre.email", rol: "PARENT", obligatoria: true },
@@ -1156,6 +1197,18 @@ async function seedEventosEmailMigrados() {
         plantillaClave: "padre.circulo_confianza.reporte_enriquecido.in_app",
         offset: "+0m",
         obligatoria: false,
+    });
+
+    // SPEC-380 (PR A · C4): regla IN_APP hermana de la recomendación del comité.
+    // Obligatoria: el aviso in-app queda registrado siempre, aunque el rector
+    // haya desactivado el correo.
+    await upsertNotificacionRegla({
+        evento: "colegio.comite.recomendacion_informe",
+        rol: "SCHOOL_ADMIN",
+        canal: "IN_APP",
+        plantillaClave: "colegio.comite.recomendacion_informe.in_app",
+        offset: "+0m",
+        obligatoria: true,
     });
 
     console.log(`[SEED] ${plantillas.length} plantillas + ${reglas.length} reglas de email migradas listas (SPEC-296)`);
