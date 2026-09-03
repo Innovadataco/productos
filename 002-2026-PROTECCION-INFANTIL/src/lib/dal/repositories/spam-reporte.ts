@@ -14,6 +14,21 @@ export class SpamReporteRepository {
         this.db = tx ?? prisma;
     }
 
+    /**
+     * I-280 (SPEC-387): último aviso de SLA de spam registrado para el reporte.
+     * El job compara `creadoEn` con `Reporte.updatedAt` — si el aviso es tan
+     * reciente o más que la última modificación del reporte, ya avisamos por
+     * este mismo estado y no se manda otro correo. Mismo patrón que
+     * `ExpedienteMotorRepository.obtenerUltimoAvisoSla` (candado hermano).
+     */
+    obtenerUltimoAvisoSlaSpam(reporteId: string): Promise<{ creadoEn: Date } | null> {
+        return this.db.auditLog.findFirst({
+            where: { accion: "SPAM_ALERTA_REVISION_ENVIADA", recursoId: reporteId },
+            orderBy: { creadoEn: "desc" },
+            select: { creadoEn: true },
+        });
+    }
+
     /** Reportes POSIBLE_SPAM vencidos para alerta de SLA. */
     findSpamVencidos(limite: Date, take: number) {
         return this.db.reporte.findMany({
@@ -27,6 +42,10 @@ export class SpamReporteRepository {
                 numeroSeguimiento: true,
                 identificador: true,
                 creadoEn: true,
+                // I-280 (SPEC-387): el candado de repetición compara la fecha
+                // del último aviso contra `actualizadoEn` del reporte — si no
+                // cambió desde el aviso previo, no se vuelve a enviar.
+                actualizadoEn: true,
             },
             orderBy: { creadoEn: "asc" },
             take,
