@@ -30,6 +30,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/dal/services/reporte-processing/pipeline-jurado.test.ts",
     // SPEC-381 (I-276): la barra <ComiteSubNav> la monta solo el layout compartido.
     "src/app/dashboard/admin/comite/layout.ratchet.test.ts",
+    // SPEC-389 (Red de Profesionales · L2): reserva legal del sello público + vigencia (Ley 2375/2024).
+    "src/lib/profesionales/vigencia.test.ts",
+    // SPEC-389: idempotencia del worker de vencimiento (candado I-280).
+    "src/lib/profesionales/cron-vencimiento.test.ts",
     // SPEC-374: decisión should-skip (saltar CI en PRs que no tocan PI ni raíz compartida).
     "scripts/ci/should-skip-pi.test.mjs",
     // SPEC-375: dispose limpio del singleton pg-boss (cierra el event loop del fork).
