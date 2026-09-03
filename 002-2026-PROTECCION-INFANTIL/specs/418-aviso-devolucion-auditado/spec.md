@@ -45,6 +45,14 @@ Si el envío después falla, la fila queda `FALLIDA` **con el motivo real del pr
 
 `seedVerificacionProfesional()` en `prisma/seed.ts`: plantilla + regla por evento, idempotente (patrón I-100). Las dos reglas son **`obligatoria: true`** a propósito — no son marketing, son el paso que hace avanzar el ciclo, y nadie puede quedarse sin ellas por una preferencia. Como además el service falla en cerrado, una regla desactivada **bloquea** la decisión en vez de perderla en silencio.
 
+### 4) El seed faltante se descubre al desplegar, no al hacer clic
+
+Fallar en cerrado mueve el problema: un seed que no corrió deja de perder avisos y pasa a dar **un 500 en la cara del Verificador**. Por eso `scripts/verify-reglas-notificacion.ts` (`npm run reglas:check`) corre en `deploy-prod.sh` **justo después del seed** y para el despliegue si falta una regla o su plantilla.
+
+Sigue el patrón del guardián de índices (SPEC-251): **solo observa y reporta**, nunca crea ni repara. Y no le alcanza con que la regla exista — verifica también que la **plantilla esté activa**, porque el motor con plantilla ausente registra un warning, sigue de largo y devuelve `programadas: 0`, que es indistinguible de no tener regla.
+
+La lista declarada tiene hoy **solo los dos eventos de esta spec**. En `src/` hay **15 callsites que fallan en cerrado** (`email.ts`, `email-colegio.ts`, `email-padre.ts`, `email-profesional.ts` y el ejecutor de acciones): declararlos todos es lo correcto a futuro, pero es decisión del CEO — si alguno tuviera hoy su regla ausente en producción, el guardián pasaría a frenar el despliegue por una brecha preexistente que nadie eligió atender ahora.
+
 ---
 
 ## Verificación
@@ -70,6 +78,14 @@ Se simuló la conducta vieja (la decisión commitea, el aviso no deja fila) y se
 ```
 
 **Ese cuarto test pasó con el defecto vivo.** Es la lección: un test que solo mira que el perfil quedó `ACTIVO` habría estado en verde todo este tiempo con I-295 abierta. Lo que caza el defecto es preguntar por la fila del aviso.
+
+### El guardián, probado en sus tres estados
+
+| Estado de la base | Resultado |
+|---|---|
+| Migrada, **sin seed** | `exit 1` · nombra los dos eventos, qué sostiene cada uno y en qué callsite |
+| **Con seed** | `exit 0` · «2 evento(s) con regla y plantilla activas» |
+| Con seed pero **plantilla desactivada** | `exit 1` · «plantilla ausente o inactiva» — el caso que la regla sola no ve |
 
 ### Gate
 

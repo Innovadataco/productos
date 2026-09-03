@@ -101,6 +101,40 @@ describe("SPEC-418 · el motor sabe programar dentro de una transacción", () =>
     });
 });
 
+describe("SPEC-418 · el seed faltante se descubre AL DESPLEGAR, no al hacer clic", () => {
+    const guardian = leerCodigo("scripts/verify-reglas-notificacion.ts");
+
+    it("el guardián declara los dos eventos que fallan en cerrado", () => {
+        expect(guardian).toContain("profesional.verificacion.aprobada");
+        expect(guardian).toContain("profesional.verificacion.devuelta");
+    });
+
+    it("no basta con la regla: la plantilla también tiene que estar activa", () => {
+        // Con la plantilla ausente el motor loguea, sigue de largo y devuelve
+        // `programadas: 0` — indistinguible de no tener regla. El guardián lo mira.
+        expect(guardian).toContain("notificacionPlantilla.findMany");
+        expect(guardian).toContain("activa: true");
+        expect(guardian).toContain("plantilla ausente o inactiva");
+    });
+
+    it("solo observa: nunca crea ni repara una regla", () => {
+        expect(guardian).not.toMatch(/notificacionRegla\.(create|upsert|update)/);
+        expect(guardian).not.toMatch(/notificacionPlantilla\.(create|upsert|update)/);
+    });
+
+    it("corre en el deploy DESPUÉS del seed — antes no tendría nada que verificar", () => {
+        const deploy = leer("scripts/deploy-prod.sh");
+        expect(deploy).toContain("npm run reglas:check");
+        expect(deploy.indexOf("npm run reglas:check")).toBeGreaterThan(
+            deploy.indexOf("node --import tsx prisma/seed.ts"),
+        );
+    });
+
+    it("está cableado como script de npm", () => {
+        expect(leer("package.json")).toContain('"reglas:check"');
+    });
+});
+
 describe("SPEC-418 · el catálogo del motor está sembrado", () => {
     const seed = leerCodigo("prisma/seed.ts");
 

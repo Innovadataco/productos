@@ -66,6 +66,13 @@ $COMPOSE exec -T app npm run indices:check
 echo "==> Seed idempotente (params + catálogos, respeta valor custom si existe)"
 $COMPOSE exec -T app node --import tsx prisma/seed.ts
 
+# SPEC-418 (I-295): guardián de las reglas del motor que el producto necesita
+# para fallar en cerrado. Corre DESPUÉS del seed: si una regla o su plantilla
+# faltan, el deploy para acá. Descubrir un seed faltante al desplegar es barato;
+# descubrirlo cuando alguien hace clic y recibe un 500 es caro.
+echo "==> Guardián de reglas de notificación (SPEC-418)"
+$COMPOSE exec -T app npm run reglas:check
+
 # 002-PI-048: propagar módulos/grants nuevos a la BD existente (aditivo e
 # idempotente: crea faltantes, nunca revoca). Evita que un módulo nuevo quede
 # invisible por grants sembrados antes de su spec (clase I-39/D-43).

@@ -8,7 +8,8 @@
 - [x] T006 `decidir/route.test.ts` (4) contra BD real: fila encolada en devolución y en aprobación, y atomicidad — sin regla, ni decisión ni aviso.
 - [x] T007 `service.aviso.test.ts` (13) candados estáticos, ignorando comentarios, con contraprueba.
 - [x] T008 **Prueba negativa**: simular la conducta vieja → 3 de 4 tests caen con «sin fila, el aviso se perdió». El cuarto pasa, y por eso está anotado en la spec.
-- [x] T009 Gate (`tsc`, `lint`, `tokens:check`, 2.242 unitarios) + seed ejecutado de verdad + fila en `specs/README.md` + PR.
+- [x] T009 `scripts/verify-reglas-notificacion.ts` + `npm run reglas:check` + paso en `deploy-prod.sh` después del seed (pedido del CEO 18:1x). Probado en sus tres estados: sin seed → rojo; con seed → verde; plantilla desactivada → rojo.
+- [x] T010 Gate (`tsc`, `lint`, `tokens:check`, 2.242 unitarios) + seed ejecutado de verdad + fila en `specs/README.md` + PR.
 
 ## Anotado para el CEO
 
