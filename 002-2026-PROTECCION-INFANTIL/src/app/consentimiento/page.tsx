@@ -12,10 +12,17 @@ const DASHBOARD_POR_ROL: Record<RolUsuario, string> = {
     SCHOOL_ADMIN: "/dashboard/colegio",
     COMITE_CONVIVENCIA: "/dashboard/colegio",
     // SPEC-404 (I-290): la bandeja tiene URL propia; el "volver" tras aceptar
-    // consentimiento aterriza directo en trabajo real, no en la raíz-aterrizaje.
+    // consentimiento aterriza directo en trabajo real. ADMIN y OPERADOR tienen
+    // `bandeja_reportes` (grants por defecto en `seed-modulos-grants.ts:52,68`),
+    // así que van directo. COMITE_VALIDACION NO tiene ese módulo (:65 — solo
+    // `comite`, `comite_bandeja`, `comite_guias_accion`, `expediente_revelar_original`),
+    // por eso queda apuntando a la raíz-aterrizaje: `/dashboard/admin` enruta a
+    // `/dashboard/admin/comite` por el paso 3 de `AdminAterrizajePage` (primer
+    // ítem permitido por rol). Sin este candado el consentimiento del comité
+    // aterrizaba en `<SinAccesoModulo/>`.
     ADMIN: "/dashboard/admin/bandeja",
     OPERADOR: "/dashboard/admin/bandeja",
-    COMITE_VALIDACION: "/dashboard/admin/bandeja",
+    COMITE_VALIDACION: "/dashboard/admin",
     // SPEC-391 (L1b): el profesional cae a completar su perfil tras crear la
     // cuenta; L5 (panel del profesional) definirá la home real.
     PROFESIONAL: "/perfil-profesional/completar",
