@@ -434,7 +434,10 @@ export async function getProyeccion(
             SELECT to_char(s."semana", 'YYYY-MM-DD') AS semana,
                    count(r."id")::int AS total
             FROM generate_series(
-                   date_trunc('week', now()) - make_interval(weeks => ${semanas}),
+                   -- make_interval(weeks => $1) con parámetro de prisma falla
+                   // en runtime (42P08: no puede inferir el tipo del named
+                   // arg); interval * int parametrizado sí se resuelve.
+                   date_trunc('week', now()) - (interval '1 week' * (${semanas}::int)),
                    date_trunc('week', now()) - interval '1 week',
                    interval '1 week'
                  ) AS s("semana")
