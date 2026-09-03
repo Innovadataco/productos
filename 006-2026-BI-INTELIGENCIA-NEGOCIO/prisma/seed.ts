@@ -6,14 +6,15 @@
 // Regla dura S3: upsert({ create, update: {} }) — update VACÍO, NUNCA
 // sobreescribir customizaciones del operador. La 2ª pasada crea 0 filas.
 
+import { pathToFileURL } from "node:url";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 // ────────────────────────────────────────────────────────────────────────────
-// 15 tablas del catálogo (subset OPERATIVO de D-20)
+// 13 tablas del catálogo (subset OPERATIVO de D-20)
 // ────────────────────────────────────────────────────────────────────────────
-const TABLAS: Array<{
+export const TABLAS: Array<{
   nombreFuente: string;
   nombreLegible: string;
   descripcion: string;
@@ -21,13 +22,11 @@ const TABLAS: Array<{
 }> = [
   { nombreFuente: "Reporte", nombreLegible: "Reportes de riesgo", descripcion: "Reportes de conducta potencialmente peligrosa detectados por PI", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "ClasificacionIA", nombreLegible: "Clasificaciones motor IA", descripcion: "Resultados del clasificador de conducta (categoria · confianza · latencia)", rolesPermitidos: ["ADMIN_BI"] },
-  { nombreFuente: "ClasificacionRubricaVoto", nombreLegible: "Votos rubrica humana", descripcion: "Votos de validacion humana sobre clasificaciones IA", rolesPermitidos: ["ADMIN_BI"] },
+  { nombreFuente: "clasificacion_rubrica_votos", nombreLegible: "Votos del jurado IA", descripcion: "Votos de la rubrica del jurado de IA por clasificacion (modelo · categoria · cumple). Nombre real en BD (@@map de PI)", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "CorreccionAdmin", nombreLegible: "Correcciones admin", descripcion: "Correcciones manuales de clasificacion IA por admin", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "TransicionReporte", nombreLegible: "Transiciones de estado", descripcion: "Historial de cambios de estado de reportes", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "SolicitudComite", nombreLegible: "Solicitudes de comite", descripcion: "Solicitudes de revision por comite de un reporte", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "Colegio", nombreLegible: "Colegios", descripcion: "Instituciones educativas registradas en PI", rolesPermitidos: ["ADMIN_BI"] },
-  { nombreFuente: "Subscription", nombreLegible: "Suscripciones", descripcion: "Suscripciones de tenants al plan PI", rolesPermitidos: ["ADMIN_BI"] },
-  { nombreFuente: "BillingCycle", nombreLegible: "Ciclos de facturacion", descripcion: "Ciclos de cobro por suscripcion (monto · estado)", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "Plan", nombreLegible: "Planes comerciales", descripcion: "Planes de servicio disponibles (precio · nombre)", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "Tenant", nombreLegible: "Tenants", descripcion: "Clientes multi-tenant del sistema PI", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "Alumno", nombreLegible: "Alumnos", descripcion: "Estudiantes monitoreados por PI", rolesPermitidos: ["ADMIN_BI"] },
@@ -40,12 +39,12 @@ const TABLAS: Array<{
 // Columnas por tabla (>= 80 total · campos verificados candado 15)
 // ────────────────────────────────────────────────────────────────────────────
 type Col = { tabla: string; nombreFuente: string; nombreLegible: string; descripcion: string; tipo: string; sinonimos?: string[] };
-const COLUMNAS: Col[] = [
+export const COLUMNAS: Col[] = [
   // Reporte (10)
   { tabla: "Reporte", nombreFuente: "id", nombreLegible: "ID reporte", descripcion: "Identificador unico del reporte", tipo: "String" },
   { tabla: "Reporte", nombreFuente: "pais", nombreLegible: "Pais", descripcion: "Pais del reporte", tipo: "String", sinonimos: ["country", "nacion"] },
   { tabla: "Reporte", nombreFuente: "ciudad", nombreLegible: "Ciudad", descripcion: "Ciudad del reporte", tipo: "String", sinonimos: ["city", "municipio"] },
-  { tabla: "Reporte", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Estado del reporte (PENDIENTE · REVISION · CERRADO · RECHAZADO · COMITE)", tipo: "EstadoReporte", sinonimos: ["status"] },
+  { tabla: "Reporte", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Estado del reporte. Valores reales: CLASIFICADO · REVISION_MANUAL · POSIBLE_SPAM · DUPLICADO", tipo: "EstadoReporte", sinonimos: ["status"] },
   { tabla: "Reporte", nombreFuente: "prioridadAlta", nombreLegible: "Prioridad alta", descripcion: "Marcado como prioridad alta", tipo: "Boolean", sinonimos: ["urgente"] },
   { tabla: "Reporte", nombreFuente: "esRafaga", nombreLegible: "Es rafaga", descripcion: "Parte de una rafaga detectada", tipo: "Boolean" },
   { tabla: "Reporte", nombreFuente: "esAnonimo", nombreLegible: "Es anonimo", descripcion: "Reporte enviado anonimamente", tipo: "Boolean" },
@@ -62,16 +61,18 @@ const COLUMNAS: Col[] = [
   { tabla: "ClasificacionIA", nombreFuente: "modeloUsado", nombreLegible: "Modelo LLM", descripcion: "Nombre del modelo usado (qwen2.5:14b · etc)", tipo: "String", sinonimos: ["modelo"] },
   { tabla: "ClasificacionIA", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de la clasificacion", tipo: "DateTime" },
 
-  // ClasificacionRubricaVoto (4)
-  { tabla: "ClasificacionRubricaVoto", nombreFuente: "id", nombreLegible: "ID voto", descripcion: "ID del voto humano", tipo: "String" },
-  { tabla: "ClasificacionRubricaVoto", nombreFuente: "clasificacionId", nombreLegible: "Clasificacion", descripcion: "FK a ClasificacionIA votada", tipo: "String" },
-  { tabla: "ClasificacionRubricaVoto", nombreFuente: "votanteId", nombreLegible: "Votante", descripcion: "ID del usuario que voto", tipo: "String" },
-  { tabla: "ClasificacionRubricaVoto", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp del voto", tipo: "DateTime" },
+  // clasificacion_rubrica_votos (6)
+  { tabla: "clasificacion_rubrica_votos", nombreFuente: "id", nombreLegible: "ID voto", descripcion: "ID del voto", tipo: "String" },
+  { tabla: "clasificacion_rubrica_votos", nombreFuente: "clasificacionIAId", nombreLegible: "Clasificacion", descripcion: "FK a ClasificacionIA votada (nombre real en BD)", tipo: "String" },
+  { tabla: "clasificacion_rubrica_votos", nombreFuente: "modelo", nombreLegible: "Modelo jurado", descripcion: "Nombre del modelo del jurado que emitio el voto", tipo: "String" },
+  { tabla: "clasificacion_rubrica_votos", nombreFuente: "categoria", nombreLegible: "Categoria votada", descripcion: "Categoria de conducta evaluada por el voto", tipo: "String" },
+  { tabla: "clasificacion_rubrica_votos", nombreFuente: "cumple", nombreLegible: "Cumple rubrica", descripcion: "Si el voto marco que la clasificacion cumple la rubrica", tipo: "Boolean" },
+  { tabla: "clasificacion_rubrica_votos", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp del voto", tipo: "DateTime" },
 
   // CorreccionAdmin (5)
   { tabla: "CorreccionAdmin", nombreFuente: "id", nombreLegible: "ID correccion", descripcion: "ID de la correccion", tipo: "String" },
-  { tabla: "CorreccionAdmin", nombreFuente: "reporteId", nombreLegible: "Reporte", descripcion: "FK al reporte corregido", tipo: "String" },
-  { tabla: "CorreccionAdmin", nombreFuente: "categoriaCorrecta", nombreLegible: "Categoria correcta", descripcion: "Categoria correcta segun admin", tipo: "CategoriaConducta" },
+  { tabla: "CorreccionAdmin", nombreFuente: "clasificacionId", nombreLegible: "Clasificacion", descripcion: "FK a ClasificacionIA corregida (el reporte se resuelve via ClasificacionIA.reporteId)", tipo: "String" },
+  { tabla: "CorreccionAdmin", nombreFuente: "categoriaCorregida", nombreLegible: "Categoria corregida", descripcion: "Categoria corregida por el admin segun su criterio", tipo: "CategoriaConducta" },
   { tabla: "CorreccionAdmin", nombreFuente: "adminId", nombreLegible: "Admin", descripcion: "ID del admin que corrigio", tipo: "String" },
   { tabla: "CorreccionAdmin", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de la correccion", tipo: "DateTime" },
 
@@ -93,25 +94,9 @@ const COLUMNAS: Col[] = [
   // Colegio (5)
   { tabla: "Colegio", nombreFuente: "id", nombreLegible: "ID colegio", descripcion: "ID del colegio", tipo: "String" },
   { tabla: "Colegio", nombreFuente: "nombre", nombreLegible: "Nombre", descripcion: "Nombre del colegio", tipo: "String" },
-  { tabla: "Colegio", nombreFuente: "pais", nombreLegible: "Pais", descripcion: "Pais del colegio", tipo: "String" },
-  { tabla: "Colegio", nombreFuente: "ciudad", nombreLegible: "Ciudad", descripcion: "Ciudad del colegio", tipo: "String" },
+  { tabla: "Colegio", nombreFuente: "paisId", nombreLegible: "Pais", descripcion: "FK Pais (id; no texto — sin JOIN la app no resuelve nombres)", tipo: "String" },
+  { tabla: "Colegio", nombreFuente: "ciudadId", nombreLegible: "Ciudad", descripcion: "FK Ciudad (id; no texto — sin JOIN la app no resuelve nombres)", tipo: "String" },
   { tabla: "Colegio", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de registro", tipo: "DateTime" },
-
-  // Subscription (6)
-  { tabla: "Subscription", nombreFuente: "id", nombreLegible: "ID suscripcion", descripcion: "ID de la suscripcion", tipo: "String" },
-  { tabla: "Subscription", nombreFuente: "tenantId", nombreLegible: "Tenant", descripcion: "FK Tenant", tipo: "String" },
-  { tabla: "Subscription", nombreFuente: "planId", nombreLegible: "Plan", descripcion: "FK Plan", tipo: "String" },
-  { tabla: "Subscription", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Estado (ACTIVA · CANCELADA · SUSPENDIDA)", tipo: "String" },
-  { tabla: "Subscription", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de creacion", tipo: "DateTime" },
-  { tabla: "Subscription", nombreFuente: "canceladaEn", nombreLegible: "Cancelada en", descripcion: "Timestamp de cancelacion (null si activa)", tipo: "DateTime" },
-
-  // BillingCycle (6)
-  { tabla: "BillingCycle", nombreFuente: "id", nombreLegible: "ID ciclo", descripcion: "ID del ciclo de cobro", tipo: "String" },
-  { tabla: "BillingCycle", nombreFuente: "tenantId", nombreLegible: "Tenant", descripcion: "FK Tenant", tipo: "String" },
-  { tabla: "BillingCycle", nombreFuente: "monto", nombreLegible: "Monto", descripcion: "Monto cobrado", tipo: "Float", sinonimos: ["amount"] },
-  { tabla: "BillingCycle", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "Estado del ciclo (PAGADO · PENDIENTE · FALLIDO)", tipo: "String" },
-  { tabla: "BillingCycle", nombreFuente: "periodoInicio", nombreLegible: "Periodo inicio", descripcion: "Inicio del periodo facturado", tipo: "DateTime" },
-  { tabla: "BillingCycle", nombreFuente: "periodoFin", nombreLegible: "Periodo fin", descripcion: "Fin del periodo facturado", tipo: "DateTime" },
 
   // Plan (4)
   { tabla: "Plan", nombreFuente: "id", nombreLegible: "ID plan", descripcion: "ID del plan", tipo: "String" },
@@ -122,27 +107,26 @@ const COLUMNAS: Col[] = [
   // Tenant (4)
   { tabla: "Tenant", nombreFuente: "id", nombreLegible: "ID tenant", descripcion: "ID del tenant", tipo: "String" },
   { tabla: "Tenant", nombreFuente: "nombre", nombreLegible: "Nombre", descripcion: "Nombre del tenant", tipo: "String" },
-  { tabla: "Tenant", nombreFuente: "activo", nombreLegible: "Activo", descripcion: "Si el tenant esta activo", tipo: "Boolean" },
+  { tabla: "Tenant", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica)", tipo: "String" },
   { tabla: "Tenant", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de registro", tipo: "DateTime" },
 
   // Alumno (5)
   { tabla: "Alumno", nombreFuente: "id", nombreLegible: "ID alumno", descripcion: "ID del alumno", tipo: "String" },
   { tabla: "Alumno", nombreFuente: "colegioId", nombreLegible: "Colegio", descripcion: "FK Colegio", tipo: "String" },
   { tabla: "Alumno", nombreFuente: "cursoId", nombreLegible: "Curso", descripcion: "FK Curso", tipo: "String" },
-  { tabla: "Alumno", nombreFuente: "activo", nombreLegible: "Activo", descripcion: "Si el alumno esta activo", tipo: "Boolean" },
+  { tabla: "Alumno", nombreFuente: "estado", nombreLegible: "Estado", descripcion: "activo | inactivo (baja logica; filtrar estado='activo')", tipo: "String" },
   { tabla: "Alumno", nombreFuente: "createdAt", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
 
   // AuditLog (5)
   { tabla: "AuditLog", nombreFuente: "id", nombreLegible: "ID audit", descripcion: "ID del evento auditado", tipo: "String" },
   { tabla: "AuditLog", nombreFuente: "accion", nombreLegible: "Accion", descripcion: "Accion realizada (crear · editar · eliminar · etc)", tipo: "String" },
   { tabla: "AuditLog", nombreFuente: "usuarioId", nombreLegible: "Usuario", descripcion: "ID del usuario que ejecuto la accion", tipo: "String" },
-  { tabla: "AuditLog", nombreFuente: "recurso", nombreLegible: "Recurso", descripcion: "Recurso afectado", tipo: "String" },
+  { tabla: "AuditLog", nombreFuente: "tipoRecurso", nombreLegible: "Recurso", descripcion: "Tipo de recurso afectado (nombre real en BD; recursoId lleva el id)", tipo: "String" },
   { tabla: "AuditLog", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp del evento", tipo: "DateTime" },
 
-  // FuenteReporte (4)
+  // FuenteReporte (3)
   { tabla: "FuenteReporte", nombreFuente: "id", nombreLegible: "ID fuente", descripcion: "ID de la fuente", tipo: "String" },
   { tabla: "FuenteReporte", nombreFuente: "reporteId", nombreLegible: "Reporte", descripcion: "FK al reporte", tipo: "String" },
-  { tabla: "FuenteReporte", nombreFuente: "plataforma", nombreLegible: "Plataforma", descripcion: "Plataforma origen (app · extension · web)", tipo: "String" },
   { tabla: "FuenteReporte", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp del registro", tipo: "DateTime" },
 
   // AlertaColegio (5) — corregido 2026-09-01: las columnas fantasma v1
@@ -156,20 +140,17 @@ const COLUMNAS: Col[] = [
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// 15 metricas de negocio
+// 12 metricas de negocio
 // ────────────────────────────────────────────────────────────────────────────
-const METRICAS: Array<{ nombre: string; nombreLegible: string; descripcion: string; formulaSQL: string; categoria: string }> = [
+export const METRICAS: Array<{ nombre: string; nombreLegible: string; descripcion: string; formulaSQL: string; categoria: string }> = [
   { nombre: "reportes_hoy", nombreLegible: "Reportes hoy", descripcion: "Total de reportes creados hoy", formulaSQL: `SELECT count(*) FROM "Reporte" WHERE date_trunc('day',"creadoEn")=current_date AND "eliminado"=false`, categoria: "operativo" },
   { nombre: "reportes_semana", nombreLegible: "Reportes ultima semana", descripcion: "Reportes creados en los ultimos 7 dias", formulaSQL: `SELECT count(*) FROM "Reporte" WHERE "creadoEn" >= now() - interval '7 days' AND "eliminado"=false`, categoria: "operativo" },
-  { nombre: "reportes_prioridad_alta", nombreLegible: "Reportes prioridad alta", descripcion: "Reportes activos con prioridad alta", formulaSQL: `SELECT count(*) FROM "Reporte" WHERE "prioridadAlta"=true AND "eliminado"=false AND "estado"!='CERRADO'`, categoria: "operativo" },
-  { nombre: "tasa_correccion_ia", nombreLegible: "Tasa correccion IA", descripcion: "Proporcion de clasificaciones corregidas por admin (ultimos 30d)", formulaSQL: `SELECT count(ca.id)::float / NULLIF(count(c.id),0) FROM "ClasificacionIA" c LEFT JOIN "CorreccionAdmin" ca ON ca."reporteId"=c."reporteId" WHERE c."creadoEn" >= now() - interval '30 days'`, categoria: "motor_ia" },
+  { nombre: "reportes_prioridad_alta", nombreLegible: "Reportes prioridad alta", descripcion: "Reportes activos con prioridad alta", formulaSQL: `SELECT count(*) FROM "Reporte" WHERE "prioridadAlta"=true AND "eliminado"=false`, categoria: "operativo" },
+  { nombre: "tasa_correccion_ia", nombreLegible: "Tasa correccion IA", descripcion: "Proporcion de clasificaciones corregidas por admin (ultimos 30d)", formulaSQL: `SELECT count(ca.id)::float / NULLIF(count(c.id),0) FROM "ClasificacionIA" c LEFT JOIN "CorreccionAdmin" ca ON ca."clasificacionId"=c.id WHERE c."creadoEn" >= now() - interval '30 days'`, categoria: "motor_ia" },
   { nombre: "confianza_promedio_ia", nombreLegible: "Confianza promedio IA", descripcion: "Confianza promedio del clasificador", formulaSQL: `SELECT avg("confianza") FROM "ClasificacionIA" WHERE "creadoEn" >= now() - interval '30 days'`, categoria: "motor_ia" },
   { nombre: "latencia_p95_ia", nombreLegible: "Latencia p95 IA", descripcion: "Percentil 95 de latencia del clasificador (ms)", formulaSQL: `SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY "latenciaMs") FROM "ClasificacionIA" WHERE "creadoEn" >= now() - interval '30 days'`, categoria: "motor_ia" },
   { nombre: "clasificaciones_por_modelo", nombreLegible: "Clasificaciones por modelo", descripcion: "Total de clasificaciones agrupadas por modelo LLM", formulaSQL: `SELECT "modeloUsado", count(*) FROM "ClasificacionIA" GROUP BY "modeloUsado"`, categoria: "motor_ia" },
-  { nombre: "mrr_actual", nombreLegible: "MRR actual", descripcion: "Monthly Recurring Revenue del mes en curso", formulaSQL: `SELECT sum(monto) FROM "BillingCycle" WHERE "estado"='PAGADO' AND date_trunc('month',"periodoInicio")=date_trunc('month',now())`, categoria: "comercial" },
-  { nombre: "churn_mes", nombreLegible: "Churn del mes", descripcion: "Suscripciones canceladas en el mes actual", formulaSQL: `SELECT count(*) FROM "Subscription" WHERE "estado"='CANCELADA' AND date_trunc('month',"canceladaEn")=date_trunc('month',now())`, categoria: "comercial" },
-  { nombre: "tenants_activos", nombreLegible: "Tenants activos", descripcion: "Tenants con al menos una suscripcion activa", formulaSQL: `SELECT count(DISTINCT s."tenantId") FROM "Subscription" s WHERE s."estado"='ACTIVA'`, categoria: "comercial" },
-  { nombre: "tiempo_medio_resolucion_h", nombreLegible: "Tiempo medio resolucion (h)", descripcion: "Horas promedio entre creacion y cierre de reporte", formulaSQL: `SELECT avg(EXTRACT(EPOCH FROM (tr."creadoEn" - r."creadoEn"))/3600) FROM "Reporte" r JOIN "TransicionReporte" tr ON tr."reporteId"=r.id WHERE tr."estadoNuevo"='CERRADO'`, categoria: "operativo" },
+  { nombre: "tiempo_medio_resolucion_h", nombreLegible: "Tiempo medio resolucion (h)", descripcion: "Horas promedio entre creacion y cierre de reporte", formulaSQL: `SELECT avg(EXTRACT(EPOCH FROM (tr."creadoEn" - r."creadoEn"))/3600) FROM "Reporte" r JOIN "TransicionReporte" tr ON tr."reporteId"=r.id WHERE tr."estadoNuevo"='CLASIFICADO'`, categoria: "operativo" },
   { nombre: "solicitudes_comite_abiertas", nombreLegible: "Solicitudes comite abiertas", descripcion: "Solicitudes a comite sin resolver", formulaSQL: `SELECT count(*) FROM "SolicitudComite" WHERE "resueltoEn" IS NULL`, categoria: "operativo" },
   { nombre: "audit_events_dia", nombreLegible: "Eventos audit hoy", descripcion: "Eventos registrados hoy en AuditLog", formulaSQL: `SELECT count(*) FROM "AuditLog" WHERE date_trunc('day',"creadoEn")=current_date`, categoria: "salud" },
   { nombre: "alertas_colegio_abiertas", nombreLegible: "Alertas colegio abiertas", descripcion: "Alertas de colegio sin cerrar (nueva · vista · escalada)", formulaSQL: `SELECT count(*) FROM "AlertaColegio" WHERE "estado" IN ('nueva','vista','escalada')`, categoria: "salud" },
@@ -177,36 +158,31 @@ const METRICAS: Array<{ nombre: string; nombreLegible: string; descripcion: stri
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
-// 30 ejemplos NL→SQL curados
+// 25 ejemplos NL→SQL curados
 // ────────────────────────────────────────────────────────────────────────────
-const EJEMPLOS: Array<{ preguntaNL: string; sql: string; categoriaConsulta: string }> = [
+export const EJEMPLOS: Array<{ preguntaNL: string; sql: string; categoriaConsulta: string }> = [
   { preguntaNL: "Cuantos reportes se crearon hoy?", sql: `SELECT count(*) FROM "Reporte" WHERE date_trunc('day',"creadoEn")=current_date AND "eliminado"=false`, categoriaConsulta: "reportes" },
   { preguntaNL: "Cuantos reportes tuvimos la semana pasada?", sql: `SELECT count(*) FROM "Reporte" WHERE "creadoEn" >= now() - interval '7 days' AND "eliminado"=false`, categoriaConsulta: "reportes" },
   { preguntaNL: "Top 5 paises con mas reportes este mes", sql: `SELECT pais, count(*) as total FROM "Reporte" WHERE date_trunc('month',"creadoEn")=date_trunc('month',now()) AND "eliminado"=false GROUP BY pais ORDER BY total DESC LIMIT 5`, categoriaConsulta: "reportes" },
   { preguntaNL: "Top 10 colegios con mas reportes activos", sql: `SELECT c.nombre, count(r.id) as total FROM "Colegio" c JOIN "Reporte" r ON r."colegioId"=c.id WHERE r."eliminado"=false GROUP BY c.nombre ORDER BY total DESC LIMIT 10`, categoriaConsulta: "reportes" },
   { preguntaNL: "Reportes por estado actualmente", sql: `SELECT estado, count(*) FROM "Reporte" WHERE "eliminado"=false GROUP BY estado ORDER BY count(*) DESC`, categoriaConsulta: "reportes" },
-  { preguntaNL: "Reportes de prioridad alta abiertos", sql: `SELECT count(*) FROM "Reporte" WHERE "prioridadAlta"=true AND "eliminado"=false AND "estado"!='CERRADO'`, categoriaConsulta: "reportes" },
+  { preguntaNL: "Reportes de prioridad alta abiertos", sql: `SELECT count(*) FROM "Reporte" WHERE "prioridadAlta"=true AND "eliminado"=false`, categoriaConsulta: "reportes" },
   { preguntaNL: "Reportes anonimos vs identificados en el mes", sql: `SELECT "esAnonimo", count(*) FROM "Reporte" WHERE date_trunc('month',"creadoEn")=date_trunc('month',now()) AND "eliminado"=false GROUP BY "esAnonimo"`, categoriaConsulta: "reportes" },
   { preguntaNL: "Reportes en rafaga esta semana", sql: `SELECT count(*) FROM "Reporte" WHERE "esRafaga"=true AND "creadoEn" >= now() - interval '7 days' AND "eliminado"=false`, categoriaConsulta: "reportes" },
-  { preguntaNL: "Cual es la precision del motor IA?", sql: `SELECT 1 - (count(ca.id)::float / NULLIF(count(c.id),0)) FROM "ClasificacionIA" c LEFT JOIN "CorreccionAdmin" ca ON ca."reporteId"=c."reporteId" WHERE c."creadoEn" >= now() - interval '30 days'`, categoriaConsulta: "motor_ia" },
+  { preguntaNL: "Cual es la precision del motor IA?", sql: `SELECT 1 - (count(ca.id)::float / NULLIF(count(c.id),0)) FROM "ClasificacionIA" c LEFT JOIN "CorreccionAdmin" ca ON ca."clasificacionId"=c.id WHERE c."creadoEn" >= now() - interval '30 days'`, categoriaConsulta: "motor_ia" },
   { preguntaNL: "Latencia promedio del clasificador ultimo mes", sql: `SELECT avg("latenciaMs") FROM "ClasificacionIA" WHERE "creadoEn" >= now() - interval '30 days'`, categoriaConsulta: "motor_ia" },
   { preguntaNL: "Latencia p95 del clasificador", sql: `SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY "latenciaMs") FROM "ClasificacionIA" WHERE "creadoEn" >= now() - interval '30 days'`, categoriaConsulta: "motor_ia" },
   { preguntaNL: "Distribucion de categorias detectadas", sql: `SELECT categoria, count(*) FROM "ClasificacionIA" WHERE "creadoEn" >= now() - interval '30 days' GROUP BY categoria ORDER BY count(*) DESC`, categoriaConsulta: "motor_ia" },
   { preguntaNL: "Cuantas correcciones hicimos hoy?", sql: `SELECT count(*) FROM "CorreccionAdmin" WHERE date_trunc('day',"creadoEn")=current_date`, categoriaConsulta: "motor_ia" },
   { preguntaNL: "Clasificaciones agrupadas por modelo LLM", sql: `SELECT "modeloUsado", count(*), avg("confianza") FROM "ClasificacionIA" GROUP BY "modeloUsado" ORDER BY count(*) DESC`, categoriaConsulta: "motor_ia" },
-  { preguntaNL: "MRR del mes actual", sql: `SELECT sum(monto) FROM "BillingCycle" WHERE "estado"='PAGADO' AND date_trunc('month',"periodoInicio")=date_trunc('month',now())`, categoriaConsulta: "comercial" },
-  { preguntaNL: "Cuanto facturamos el mes pasado?", sql: `SELECT sum(monto) FROM "BillingCycle" WHERE "estado"='PAGADO' AND date_trunc('month',"periodoInicio")=date_trunc('month',now() - interval '1 month')`, categoriaConsulta: "comercial" },
-  { preguntaNL: "Cuantas suscripciones canceladas este mes?", sql: `SELECT count(*) FROM "Subscription" WHERE "estado"='CANCELADA' AND date_trunc('month',"canceladaEn")=date_trunc('month',now())`, categoriaConsulta: "comercial" },
-  { preguntaNL: "Suscripciones activas por plan", sql: `SELECT p.nombre, count(s.id) FROM "Subscription" s JOIN "Plan" p ON p.id=s."planId" WHERE s."estado"='ACTIVA' GROUP BY p.nombre ORDER BY count(s.id) DESC`, categoriaConsulta: "comercial" },
-  { preguntaNL: "Tenants activos totales", sql: `SELECT count(DISTINCT "tenantId") FROM "Subscription" WHERE "estado"='ACTIVA'`, categoriaConsulta: "comercial" },
-  { preguntaNL: "Tiempo medio de resolucion de reportes", sql: `SELECT avg(EXTRACT(EPOCH FROM (tr."creadoEn" - r."creadoEn"))/3600) FROM "Reporte" r JOIN "TransicionReporte" tr ON tr."reporteId"=r.id WHERE tr."estadoNuevo"='CERRADO'`, categoriaConsulta: "operativo" },
+  { preguntaNL: "Tiempo medio de resolucion de reportes", sql: `SELECT avg(EXTRACT(EPOCH FROM (tr."creadoEn" - r."creadoEn"))/3600) FROM "Reporte" r JOIN "TransicionReporte" tr ON tr."reporteId"=r.id WHERE tr."estadoNuevo"='CLASIFICADO'`, categoriaConsulta: "operativo" },
   { preguntaNL: "Transiciones por responsable ultima semana", sql: `SELECT "responsableTipo", count(*) FROM "TransicionReporte" WHERE "creadoEn" >= now() - interval '7 days' GROUP BY "responsableTipo"`, categoriaConsulta: "operativo" },
   { preguntaNL: "Solicitudes a comite pendientes", sql: `SELECT count(*) FROM "SolicitudComite" WHERE "resueltoEn" IS NULL`, categoriaConsulta: "operativo" },
   { preguntaNL: "Solicitudes a comite resueltas este mes", sql: `SELECT count(*) FROM "SolicitudComite" WHERE "resueltoEn" IS NOT NULL AND date_trunc('month',"resueltoEn")=date_trunc('month',now())`, categoriaConsulta: "operativo" },
   { preguntaNL: "Eventos de audit por accion hoy", sql: `SELECT accion, count(*) FROM "AuditLog" WHERE date_trunc('day',"creadoEn")=current_date GROUP BY accion ORDER BY count(*) DESC`, categoriaConsulta: "salud" },
   { preguntaNL: "Alertas de colegio no resueltas", sql: `SELECT count(*) FROM "AlertaColegio" WHERE "estado" IN ('nueva','vista','escalada')`, categoriaConsulta: "salud" },
   { preguntaNL: "Colegios con mas alertas este mes", sql: `SELECT c.nombre, count(a.id) FROM "Colegio" c JOIN "AlertaColegio" a ON a."colegioId"=c.id WHERE date_trunc('month',a."creadoEn")=date_trunc('month',now()) GROUP BY c.nombre ORDER BY count(a.id) DESC LIMIT 10`, categoriaConsulta: "salud" },
-  { preguntaNL: "Reportes creados por fuente esta semana", sql: `SELECT fr.plataforma, count(*) FROM "FuenteReporte" fr JOIN "Reporte" r ON r.id=fr."reporteId" WHERE r."creadoEn" >= now() - interval '7 days' AND r."eliminado"=false GROUP BY fr.plataforma`, categoriaConsulta: "reportes" },
+  { preguntaNL: "Reportes creados por fuente esta semana", sql: `SELECT p."nombre", count(*) FROM "FuenteReporte" fr JOIN "Reporte" r ON r.id=fr."reporteId" JOIN "Plataforma" p ON p."id"=r."plataformaId" WHERE r."creadoEn" >= now() - interval '7 days' AND r."eliminado"=false GROUP BY p."nombre"`, categoriaConsulta: "reportes" },
   { preguntaNL: "Total de colegios registrados", sql: `SELECT count(*) FROM "Colegio"`, categoriaConsulta: "general" },
   { preguntaNL: "Total de reportes en la base", sql: `SELECT count(*) FROM "Reporte" WHERE "eliminado"=false`, categoriaConsulta: "general" },
   { preguntaNL: "Reportes por ciudad top 10 este mes", sql: `SELECT ciudad, count(*) FROM "Reporte" WHERE date_trunc('month',"creadoEn")=date_trunc('month',now()) AND "eliminado"=false GROUP BY ciudad ORDER BY count(*) DESC LIMIT 10`, categoriaConsulta: "reportes" },
@@ -405,7 +381,7 @@ async function seedConfig(): Promise<void> {
 
 // ────────────────────────────────────────────────────────────────────────────
 // ── AMPLIACION V2 (2026-09-01 · catálogo sobre la publicación de 40 tablas) ─
-// Extiende el catálogo con las 12 tablas de negocio de las "17 nuevas
+// Extiende el catálogo con las 11 tablas de negocio de las "17 nuevas
 // autorizadas BI v2" en scripts/replica-setup/02-pi-db-publicacion.sql.
 // TODO es ADITIVO: misma regla S3 (upsert update:{} vacio, NUNCA pisar
 // customizaciones del operador). No toca ninguna fila de la seccion v1.
@@ -444,7 +420,6 @@ const TABLAS_V2: Array<{
   { nombreFuente: "Suscripcion", nombreLegible: "Suscripciones SaaS", descripcion: "Suscripciones de colegios y padres al servicio (vigencia, estado, plan, freemium). Sinonimos: suscripcion · plan · vigencia", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "IdentificadorReportado", nombreLegible: "Identificadores reportados", descripcion: "Agregado publico por identificador reportado (SIN el nick en claro: cortado en origen). Contadores, scores y visibilidad. Sinonimos: vigilado · reportado", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "Hijo", nombreLegible: "Hijos", descripcion: "Hijos que los padres protegen desde la app (sin nombres ni documentos: cortados en origen). Sinonimos: hijo · menor · circulo", rolesPermitidos: ["ADMIN_BI"] },
-  { nombreFuente: "HijoPadre", nombreLegible: "Vinculos padre-hijo", descripcion: "Puente padre<->hijo (un menor puede tener dos padres). Sinonimos: hijo · circulo · vinculo", rolesPermitidos: ["ADMIN_BI"] },
   { nombreFuente: "ContactoConfianza", nombreLegible: "Contactos de confianza", descripcion: "Personas del circulo de confianza que el padre vigila (sin nombres ni notas: cortados en origen). Sinonimos: contacto de confianza · circulo", rolesPermitidos: ["ADMIN_BI"] },
 ];
 
@@ -576,12 +551,6 @@ const COLUMNAS_V2: ColV2[] = [
   { tabla: "Hijo", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp de registro (UTC)", tipo: "DateTime" },
   { tabla: "Hijo", nombreFuente: "actualizadoEn", nombreLegible: "Actualizado en", descripcion: "Tecnica interna de sync; sin valor analitico", tipo: "DateTime", excluida: true },
 
-  // HijoPadre (publicada completa = 4 columnas)
-  { tabla: "HijoPadre", nombreFuente: "id", nombreLegible: "ID vinculo", descripcion: "Identificador unico del vinculo padre-hijo", tipo: "String", sinonimos: ["vinculo", "circulo"] },
-  { tabla: "HijoPadre", nombreFuente: "hijoId", nombreLegible: "Hijo", descripcion: "FK Hijo", tipo: "String", sinonimos: ["hijo"] },
-  { tabla: "HijoPadre", nombreFuente: "usuarioId", nombreLegible: "Padre", descripcion: "FK Usuario padre (tabla jamas publicada: el cuid no resuelve en bi-db)", tipo: "String", excluida: true },
-  { tabla: "HijoPadre", nombreFuente: "creadoEn", nombreLegible: "Creado en", descripcion: "Timestamp del vinculo (UTC)", tipo: "DateTime" },
-
   // ContactoConfianza (6 publicadas)
   { tabla: "ContactoConfianza", nombreFuente: "id", nombreLegible: "ID contacto", descripcion: "Identificador unico del contacto de confianza", tipo: "String", sinonimos: ["contacto de confianza", "circulo"] },
   { tabla: "ContactoConfianza", nombreFuente: "usuarioId", nombreLegible: "Usuario", descripcion: "FK Usuario dueno del circulo (tabla jamas publicada: el cuid no resuelve en bi-db)", tipo: "String", excluida: true },
@@ -619,7 +588,7 @@ const EJEMPLOS_V2: Array<{ preguntaNL: string; sql: string; categoriaConsulta: s
 ];
 
 async function seedCatalogoV2(): Promise<void> {
-  console.log("Seed catalogo BI v2 (ampliacion 2026-09-01 · 12 tablas del dominio)");
+  console.log("Seed catalogo BI v2 (ampliacion 2026-09-01 · 11 tablas del dominio)");
 
   const antesT = await prisma.bICatalogoTabla.count();
   for (const t of TABLAS_V2) {
@@ -694,9 +663,16 @@ async function main(): Promise<void> {
   console.log("Seed COMPLETO (idempotente: update:{} — la 2ª pasada crea 0 filas)");
 }
 
-main()
-  .catch((e: unknown) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+// Solo ejecuta cuando corre como script (npm run db:seed / prisma db seed /
+// CI). Los tests importan los arrays del catálogo sin tocar la base.
+const esEntrypoint =
+    process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (esEntrypoint) {
+    main()
+        .catch((e: unknown) => {
+            console.error(e);
+            process.exit(1);
+        })
+        .finally(() => prisma.$disconnect());
+}

@@ -13,7 +13,8 @@
     "test:unit": "node --import tsx ./node_modules/vitest/vitest.mjs run tests/unit",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "verify:catalogo": "tsx scripts/verify-catalogo.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

@@ -54,6 +54,12 @@ echo "== [4/6] Seed (idempotente, upsert con update vacío — S3) =="
 # Mismo servicio tools; el comando sobreescribe el CMD por defecto.
 $COMPOSE --profile tools run --rm bi-migrate npx prisma db seed
 
+echo "== [4b/6] Guardián del catálogo: contrato ↔ esquema + frescura de tablas de flujo =="
+# Auditoría BI vs PI 2026-09-03 (DEFECTO 2/1): si el catálogo del chat declara
+# tablas/columnas que no existen, o una tabla de flujo se congeló, el deploy
+# falla EN VOZ ALTA en vez de dejar un chat que miente con ceros.
+$COMPOSE --profile tools run --rm bi-migrate npm run verify:catalogo -- --frescura
+
 echo "== [5/6] Levantando stack =="
 $COMPOSE up -d
 
