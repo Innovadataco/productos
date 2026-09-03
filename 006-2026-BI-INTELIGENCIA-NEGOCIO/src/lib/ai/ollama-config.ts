@@ -100,6 +100,14 @@ export interface OllamaModelInfo {
     size: number;
     modifiedAt: string;
     esEmbedding: boolean;
+    /**
+     * Capacidades declaradas por el servidor (Ollama ≥ 0.6), p.ej.
+     * ["completion"] · ["embedding"]. Vacío si el servidor no las reporta.
+     * DEFECTO 3 (auditoría 2026-09-03): guardar el modelo de chat exige
+     * "completion" explícito cuando está disponible — no basta con "no es
+     * embedding" para saber que conversa.
+     */
+    capabilities: string[];
 }
 
 function parseModelName(name: string): { name: string; tag: string } {
@@ -108,6 +116,16 @@ function parseModelName(name: string): { name: string; tag: string } {
     return { name: name.slice(0, idx), tag: name.slice(idx + 1) };
 }
 
+/**
+ * Detección de embedding por NOMBRE — fallback para servidores Ollama que no
+ * reportan `capabilities` en /api/tags. La fuente primaria de verdad es el
+ * campo `capabilities` del servidor (lo lee listOllamaModels): por nombre
+ * solo se detectan los que contienen "embed" (nomic-embed-text,
+ * snowflake-arctic-embed2), y se cuelan bge-m3 o paraphrase-multilingual —
+ * DEFECTO 3 de la auditoría 2026-09-03: aparecían 8 modelos de chat en el
+ * selector cuando servían 6, y elegir uno de embedding rompía el chat en
+ * silencio.
+ */
 export function isEmbeddingModel(name: string): boolean {
     const lower = name.toLowerCase();
     return lower.includes("embed") || lower === MODELO_EMBEDDING_DEFAULT;
@@ -129,17 +147,33 @@ export async function listOllamaModels(baseUrl?: string): Promise<OllamaModelInf
         throw new Error(`Ollama no responde (${res.status}): ${text}`);
     }
     const data = (await res.json()) as {
-        models?: { name: string; size?: number; modified_at?: string; digest?: string }[];
+        models?: {
+            name: string;
+            size?: number;
+            modified_at?: string;
+            digest?: string;
+            /** Ollama ≥ 0.6: capacidades del modelo (p.ej. ["embedding"], ["completion"]). */
+            capabilities?: string[];
+        }[];
     };
     const models = data.models || [];
     return models.map((m) => {
         const parsed = parseModelName(m.name);
+        // DEFECTO 3 (auditoría 2026-09-03): la fuente de verdad es el campo
+        // `capabilities` del servidor — un embedding se reconoce SOLO por
+        // declarar "embedding" ahí, sin depender del nombre. Solo si el
+        // servidor no lo reporta (versiones viejas) se recae al heuristico
+        // por nombre, que deja pasar bge-m3 y paraphrase-multilingual.
+        const esEmbedding = Array.isArray(m.capabilities)
+            ? m.capabilities.includes("embedding")
+            : isEmbeddingModel(parsed.name);
         return {
             name: parsed.name,
             tag: parsed.tag,
             size: m.size ?? 0,
             modifiedAt: m.modified_at ?? new Date().toISOString(),
-            esEmbedding: isEmbeddingModel(parsed.name),
+            esEmbedding,
+            capabilities: Array.isArray(m.capabilities) ? m.capabilities : [],
         };
     });
 }

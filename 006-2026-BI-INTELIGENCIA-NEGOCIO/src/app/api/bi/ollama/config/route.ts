@@ -59,11 +59,16 @@ export async function PUT(request: NextRequest) {
         );
     }
 
-    const instalado = modelos.some(
-        (m) => !m.esEmbedding && `${m.name}:${m.tag}` === modelo
-    );
-    if (!instalado) {
+    const elegido = modelos.find((m) => `${m.name}:${m.tag}` === modelo);
+    if (!elegido || elegido.esEmbedding) {
         return NextResponse.json({ error: "modelo_no_instalado" }, { status: 404 });
+    }
+    // DEFECTO 3 (auditoría 2026-09-03): si el servidor declara capacidades,
+    // exigir "completion" explícito — un modelo que no genera texto rompe el
+    // chat en silencio aunque no sea de embeddings. Si el servidor no las
+    // reporta (versión vieja), el chequeo !esEmbedding de arriba es el piso.
+    if (elegido.capabilities.length > 0 && !elegido.capabilities.includes("completion")) {
+        return NextResponse.json({ error: "modelo_no_genera_texto" }, { status: 400 });
     }
 
     await setConfig(CLAVE_MODELO_SQL, modelo);
