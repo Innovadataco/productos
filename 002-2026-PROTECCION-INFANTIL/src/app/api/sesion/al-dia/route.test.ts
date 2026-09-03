@@ -70,6 +70,12 @@ describe("GET /api/sesion/al-dia (SPEC-339)", () => {
 
     // SPEC-342 (BUG3): defensa contra redirección abierta POR URL — incluye la
     // barra invertida que el chequeo de prefijos dejaba pasar.
+    // SPEC-397 (I-237): los 4 casos con `..//` que quedaban vivos en prod —
+    // tras normalizar, `resuelta.pathname` empezaba con `//` y el segundo
+    // `new URL(haciaDonde, base)` lo interpretaba como URL relativa al
+    // protocolo (escape a otro dominio). Cerrados por clase: `destinoSeguro`
+    // devuelve el URL absoluto ya resuelto Y rechaza pathname que empiece
+    // con `//` (cinturón).
     for (const malo of [
         "https://evil.example.com",
         "//evil.example.com",
@@ -77,6 +83,11 @@ describe("GET /api/sesion/al-dia (SPEC-339)", () => {
         "/\\evil.example.com",
         "/\\/evil.example.com",
         "/\\@evil.example.com",
+        // SPEC-397 · I-237 · reproducidos en prod, no teoría:
+        "/..//evil.example.com",
+        "/../..//evil.example.com",
+        "/x/..//evil.example.com",
+        "/.//evil.example.com",
     ]) {
         it(`destino externo "${malo}" se descarta y cae al panel`, async () => {
             mocks.buildSesionEstadoValue.mockResolvedValue(await cookieFirmada(null));
