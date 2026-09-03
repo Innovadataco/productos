@@ -5,12 +5,29 @@
 
 ## Para qué
 
-El post-mortem de idc-f5 y el diagnóstico de SPEC-396 declararon que la causa raíz de I-282 era la falta de `concurrency` en los workflows. **Fue causa raíz parcial**: hoy 03-09, con `concurrency` ya activo y `disposeBoss` en test-setup, los shards **volvieron a caer** con "GitHub Actions internal error" a los 16m34s. La evidencia dura (comparación de logs de shard rojo vs verde del run `33777723622`) muestra el mecanismo real:
+El post-mortem de idc-f5 y el diagnóstico de SPEC-396 declararon que la causa raíz de I-282 era la falta de `concurrency` en los workflows. **Fue causa raíz parcial**: hoy 03-09, con `concurrency` ya activo y `disposeBoss` en test-setup, los shards **volvieron a caer** al menos **5 veces**:
+
+| Run | Shards que cayeron | Timing | Diagnóstico GHA |
+|---|---|---|---|
+| `33777723622` | (1), (2) | 16m34s exacto ambos | "internal error" |
+| (idc-f5 §4)   | (2)      | 35m       | timeout           |
+| `33791642493` | (2), (4) | 35m21s exacto ambos | timeout       |
+| PR #312       | (4)      | 35m20s    | timeout           |
+
+**Los timings gemelos** (dos shards muriendo al mismo segundo) descartan "test lento": si fuera un test que cuelga, caería uno. Que caigan dos a la vez apunta a algo **compartido en el cierre** que se sincroniza — todos los shards arrancan a la vez, todos terminan sus tests ~a la vez, todos golpean el mismo mecanismo defectuoso a la vez.
+
+Evidencia dura del `33777723622` (comparación de logs shard rojo vs verde):
 
 - **Shard 1 (rojo)**: `Test Files 120 passed (120)` @ 17:28:56 → `Cleaning up orphan processes` @ 17:29:01 → GHA reporta "internal error".
 - **Shard 3 (verde)**: `Test Files 121 passed (121)` @ 16:34:30 → `Cleaning up orphan processes` @ 16:34:34 → step exit 0.
 
 Mismo cierre exacto. La única diferencia es **suerte** — si Node terminó de salir antes de que Actions matara el orphan, verde; si no, rojo. **El fork de vitest deja handles vivos al terminar** y `disposeBoss` solo cierra pg-boss.
+
+### Fabrica evidencia falsa — no solo tiempo perdido
+
+Al morir un shard, `test-integration-coverage` recibe **blobs incompletos** (los del shard caído no llegan) y reporta cobertura falsamente baja. Caso medido hoy: PR #312 con `test-integration (4)` cancelado a 35m20s → coverage reportó **35,44 % contra un umbral de 36 %** → `pi-gate` cae en cascada. **Un solo cuelgue = tres checks rojos** (`test-integration (N)` + `test-integration-coverage` + `pi-gate`), y dos de los tres **parecen defectos de calidad reales**.
+
+Consecuencia: alguien puede leer "cobertura por debajo del umbral" y salir a escribir tests para tapar un agujero que no existe, o —peor— **bajar el umbral**. Esto convierte a I-282 de "cuello de botella de tiempo" en "fuente de decisiones incorrectas sobre el estado real del código". Argumento más fuerte que tenemos para arreglarlo, no solo tolerarlo.
 
 ## Qué trae
 
