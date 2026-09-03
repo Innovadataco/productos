@@ -1716,6 +1716,11 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | resueltoEn | DateTime | opcional |
 | integranteFirmanteId | String | opcional |
+| analisis | String | opcional |
+| analisisActualizadoEn | DateTime | opcional |
+| analisisPorId | String | opcional |
+| recomendacionInformeEn | DateTime | opcional |
+| recomendacionPorId | String | opcional |
 | reporte | Reporte | relación (FK) |
 | comite | Usuario | opcional, relación (FK) |
 | operador | Usuario | opcional, relación (FK) |
@@ -1723,6 +1728,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | alerta | AlertaColegio | opcional, relación (FK) |
 | creadoPor | Usuario | opcional, relación (FK) |
 | integranteFirmante | IntegranteComite | opcional, relación (FK) |
+| analisisPor | Usuario | opcional, relación (FK) |
+| recomendacionPor | Usuario | opcional, relación (FK) |
 
 #### `TransicionReporte`
 
@@ -1975,6 +1982,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | solicitudesComite | SolicitudComite | lista, relación |
 | solicitudesEscaladas | SolicitudComite | lista, relación |
 | solicitudesComiteCreadas | SolicitudComite | lista, relación |
+| solicitudesAnalisisPor | SolicitudComite | lista, relación |
+| solicitudesRecomendacionPor | SolicitudComite | lista, relación |
 | notasSeguimiento | NotaSeguimiento | lista, relación |
 | integrantesComite | IntegranteComite | lista, relación |
 | integrantesComiteCreados | IntegranteComite | lista, relación |
@@ -2163,9 +2172,11 @@ erDiagram
     Usuario ||--o{ SesionLog : "usuario"
     Usuario ||--o{ SimulacionAbusoRun : "creadoPor"
     Usuario ||--o{ SimulacionRun : "creadoPor"
+    Usuario ||--o{ SolicitudComite : "analisisPor (opcional)"
     Usuario ||--o{ SolicitudComite : "comite (opcional)"
     Usuario ||--o{ SolicitudComite : "creadoPor (opcional)"
     Usuario ||--o{ SolicitudComite : "operador (opcional)"
+    Usuario ||--o{ SolicitudComite : "recomendacionPor (opcional)"
     Usuario ||--o{ Suscripcion : "autorizadoPor (opcional)"
     Usuario ||--o{ Suscripcion : "usuario (opcional)"
     Usuario ||--o{ TasaCambio : "ingresadoPor (opcional)"
