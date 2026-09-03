@@ -77,7 +77,46 @@ Cambio local en el afterAll global de test-setup, protegido por flag. Nueva devD
 - [ ] `specs-discipline` verde: Status DESARROLLO + fila en `specs/README.md` + `plan.md` + `tasks.md`.
 - [ ] CI del shard 1 corre con la flag activa y **hay dump de handles en el log**.
 
+## Hallazgo confirmado con evidencia del caso B (runner GHA lento)
+
+Después de instrumentar en CI, se capturó un shard 3 cancelado (`33807417116`) con la flag activa. Comparado contra un shard 3 sano (`33793162640`) de la misma rama y el mismo reparto de 121 archivos:
+
+| medida                                                | sano (33793162640) | caído (33807417116)    |
+|---|---|---|
+| Archivos ejecutados                                   | 121                | 53                     |
+| Tiempo agregado por vitest en esos archivos           | 17.2 min           | **33.2 min en 53**     |
+| Media/mediana del ratio caído/sano por archivo común  | —                  | **2.96× / 2.83×**      |
+| Archivos con menor duración en el caído               | —                  | **cero**               |
+| Handles vivos por archivo en el caído (53 dumps)      | —                  | `handles=3 requests=0` (base) en TODOS |
+
+Top 5 archivos con mayor ratio (todos crecidos, sin outlier singular):
+
+```
+6.38× probe-indices.test.ts                       (1.4s → 9s)
+5.25× identificador-profesor.test.ts             (12.4s → 65s)
+5.14× bitacora-menor.test.ts                     (12.5s → 64s)
+4.58× dinero-vs-valor route.test.ts              (9.7s → 44.5s)
+4.47× recomendaciones route.test.ts              (8.8s → 39.3s)
+```
+
+**Lectura definitiva del caso B**: ni un archivo fue más rápido, ni un outlier singular. El runner de GHA iba **~3× más lento parejo para TODO**. Vecinos ruidosos, VM contendida, hardware compartido. **No es código del proyecto, no es reparto, no es TestMutex** (cada shard tiene su Postgres service container separado, verificado en `ci.yml`).
+
+Esta comparación es el argumento que impide que dentro de un mes alguien vuelva a diagnosticar mal: si un shard tarda >2× la media, la respuesta ya está.
+
+## Fix del caso B (aprobado por CEO 17:3x): reintento por timeout, con traza
+
+Se envuelve el step "Correr shard N/4" en un shell wrapper con `timeout 28m`. Si el comando muere por timeout de shell (**exit 124**, y solo 124), el step corre una segunda vez la misma orden. Cualquier otro exit code (0 = pass, 1 = test fallido, otro) NO reintenta. `timeout-minutes` del job sube a 60 para dar aire a los dos intentos + overhead; **el tope del intento individual sigue siendo 28 min** (más bajo que 35 antes, no se relaja la exigencia por corrida).
+
+Tres candados duros del CEO:
+
+1. **Sólo por timeout, NUNCA por test fallido.** El wrapper mira `exit 124` textual; un test rojo (exit 1) tumba el step sin retry.
+2. **El reintento se ve.** `echo "::warning title=Shard N reintentado por timeout::..."` y línea en `$GITHUB_STEP_SUMMARY`. Aparece en el resumen del run, no se disimula.
+3. **La tasa se cuenta.** El resumen registra `spec-407-retry: shard N` en `$GITHUB_STEP_SUMMARY`, y el job `resumen` (siguiente PR) puede fallar si la tasa mensual supera un umbral — para que "runner lento" no se convierta en excusa perpetua.
+
+Sin retry silencioso: un reintento que no deja huella oculta el día en que la lentitud SÍ sea culpa nuestra.
+
 ## Fuera de alcance (siguiente PR — solo con luz verde del CEO)
 
-- Fix de `disposeBoss`: `prisma.$disconnect()` en `afterAll`, disposers para ollama-client y cache-semantico, auditoría de `setInterval`/`setTimeout` sin `.unref()`.
-- Criterio de cierre del CEO: **20 corridas seguidas sin "internal error"**. Se definirá cómo medirlo (workflow_dispatch con matrix de 20, o script que analice N últimos runs) en el PR de fix.
+- Caso A · fix de handles al cerrar: `prisma.$disconnect()` en `afterAll`, disposers para ollama-client y cache-semantico, auditoría de `setInterval`/`setTimeout` sin `.unref()`. La instrumentación queda puesta esperando cazar un caso A por aparición natural (paciencia, no forzar).
+- Ratchet de tasa de retry (SPEC-407-b): script que analice N últimos runs y falle CI si la tasa supera un umbral (~5%).
+- Criterio de cierre del CEO: **20 corridas seguidas sin "internal error"** después de que caso A esté cerrado.
