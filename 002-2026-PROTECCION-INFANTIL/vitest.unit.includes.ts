@@ -25,6 +25,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/reparto-shards.test.mjs",
     // SPEC-374: decisión should-skip (saltar CI en PRs que no tocan PI ni raíz compartida).
     "scripts/ci/should-skip-pi.test.mjs",
+    // SPEC-375: dispose limpio del singleton pg-boss (cierra el event loop del fork).
+    "src/lib/queue-dispose.test.ts",
     // SPEC-290 (002-PI-190): heartbeat de vida del worker-sesiones (helper puro).
     "scripts/worker-sesiones.test.mjs",
     // SPEC-290 (002-PI-190): mapeo sesion.* → sección "sesiones" del ConfigPanel.

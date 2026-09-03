@@ -16,6 +16,39 @@ export async function ensureStarted() {
     }
 }
 
+/**
+ * SPEC-375 · Cerrar pg-boss al terminar la suite de tests.
+ *
+ * Sin esto: el pool y los schedulers internos de pg-boss mantienen el event
+ * loop abierto → el fork de vitest no puede salir → el shard queda colgado
+ * hasta el timeout general del runner (40+ min, cancelación manual). Se veía
+ * en el log de CI como `Terminate orphan process: pid (…) (node (vitest 1))`.
+ *
+ * Es idempotente y silencioso: si `ensureStarted` nunca corrió, no hay nada
+ * que apagar. Si el stop falla (por ejemplo, pool ya cerrado), no propaga.
+ */
+export async function disposeBoss(): Promise<void> {
+    if (!started) return;
+    started = false;
+    try {
+        await boss.stop({ graceful: false, close: true });
+    } catch {
+        // Silencioso: el shutdown de la suite no debe fallar el test que ya
+        // pasó; y el proceso de todos modos está por terminar.
+    }
+}
+
+// SPEC-375: al importar este módulo desde un test, dejamos anotado su
+// disposer en un registro global — el `afterAll` de `test-setup.ts` lo
+// invoca. No usamos `process.on('exit', …)` porque en workers de vitest los
+// listeners de proceso a veces no se disparan antes del kill del runner.
+{
+    const registro = (globalThis as unknown as { __pi_test_disposers?: Set<() => Promise<void>> });
+    if (!registro.__pi_test_disposers) registro.__pi_test_disposers = new Set();
+    registro.__pi_test_disposers.add(disposeBoss);
+}
+
+
 export async function ensureQueue(name: string) {
     await ensureStarted();
     try {
