@@ -343,4 +343,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/membrete-pdf.test.ts",
     "src/components/modules/colegio/curso/SeccionMateriasCurso.test.tsx",
     "src/components/modules/colegio/CargaProfesoresExcel.test.tsx",
+    // SPEC-400 (I-236 · PR 1): interceptor cliente para refresco silencioso de
+    // la cookie sesion_estado (jsdom, sin BD, fetch mockeado).
+    "src/lib/http/sesion-refresh-interceptor.test.ts",
 ];

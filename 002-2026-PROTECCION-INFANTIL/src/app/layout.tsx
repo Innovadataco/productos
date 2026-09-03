@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { PieGlobal } from "@/components/modules/PieGlobal";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
+import { SesionRefreshInterceptor } from "@/components/modules/SesionRefreshInterceptor";
 
 // SPEC-157 (D1/D3): un solo mecanismo — next/font/local con woff2 vendoreados en
 // public/fonts (latin + latin-ext, SIL OFL). Cero descargas de Google en build/runtime.
@@ -105,6 +106,7 @@ export default function RootLayout({
                 <ThemeProvider>
                     <AuthProvider>
                         <ServiceWorkerRegister />
+                        <SesionRefreshInterceptor />
                         <NavHeader />
                         {/* SPEC-362 (G21): el contenido empuja y el pie queda abajo
                             en todas las pantallas, cortas o largas. */}
