@@ -28,8 +28,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-398 (I-286): candado del jurado del pipeline real — sin override,
     // el motor recibe {} (jurado completo). Con override, {modeloClasificacion:X}.
     "src/lib/dal/services/reporte-processing/pipeline-jurado.test.ts",
-    // SPEC-398 (I-286): helper puro que decodifica el modeloUsado para la alarma en vivo.
-    "src/lib/dal/services/inicio-admin.jurado.test.ts",
     // SPEC-381 (I-276): la barra <ComiteSubNav> la monta solo el layout compartido.
     "src/app/dashboard/admin/comite/layout.ratchet.test.ts",
     // SPEC-374: decisión should-skip (saltar CI en PRs que no tocan PI ni raíz compartida).

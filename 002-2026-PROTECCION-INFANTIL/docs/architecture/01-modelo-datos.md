@@ -433,6 +433,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | usoCascada | Boolean | — |
 | modeloCascada | String | opcional |
 | posibleAgresorPar | Boolean | — |
+| overrideModeloUsado | String | opcional |
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 | correccion | CorreccionAdmin | opcional, relación |

@@ -117,6 +117,10 @@ export async function clasificarReporte({
                 promptTokens: clasificacion.promptTokens ?? null,
                 responseTokens: clasificacion.responseTokens ?? null,
                 rawResponse: String(clasificacion.rawResponse),
+                // SPEC-398 (I-286): audita si esta clasificación se pidió con
+                // override intencional (sandbox/A-B). `null` en el pipeline
+                // real → la alarma de jurado reducido puede aislar el defecto.
+                overrideModeloUsado: parametros.overrideModeloClasificacion ?? null,
             },
         });
 

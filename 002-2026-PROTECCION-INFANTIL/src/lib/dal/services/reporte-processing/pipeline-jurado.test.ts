@@ -172,4 +172,27 @@ describe("clasificarReporte — candado del jurado del pipeline real (SPEC-398 �
         expect(modelosPersistidos.size).toBe(3);
         expect(modelosPersistidos).toEqual(new Set(["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"]));
     });
+
+    // ── Bandera de override (SPEC-398 · reintro CEO 2026-09-03 12:55) ──────
+    it("pipeline real (sin override) persiste `overrideModeloUsado: null`", async () => {
+        await clasificarReporte({
+            reporteId: "r5",
+            texto: "texto",
+            parametros: parametrosBase(),
+            ejemplosRag: [],
+        });
+        const dataCreate = mocks.create.mock.calls[0]![0]!.data as { overrideModeloUsado: string | null };
+        expect(dataCreate.overrideModeloUsado).toBeNull();
+    });
+
+    it("A/B intencional (con override) persiste `overrideModeloUsado: <modelo>` — así la alarma no chilla", async () => {
+        await clasificarReporte({
+            reporteId: "r6",
+            texto: "texto",
+            parametros: parametrosBase({ overrideModeloClasificacion: "ornith:9b" }),
+            ejemplosRag: [],
+        });
+        const dataCreate = mocks.create.mock.calls[0]![0]!.data as { overrideModeloUsado: string | null };
+        expect(dataCreate.overrideModeloUsado).toBe("ornith:9b");
+    });
 });
