@@ -12,6 +12,9 @@ export interface NavItem {
 }
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
+    // SPEC-378: Inicio del administrador — alarma de la casa (primero del nav).
+    // Cuando el admin lo tiene, `/dashboard/admin` (raíz) redirige acá.
+    { href: "/dashboard/admin/inicio", label: "Inicio", modulo: "inicio_admin" },
     { href: "/dashboard/admin", label: "Bandeja de reportes", modulo: "bandeja_reportes" },
     { href: "/dashboard/admin/spam", label: "Revisión de spam", modulo: "revision_spam" },
     { href: "/dashboard/admin/comite", label: "Comité", modulo: "comite_bandeja" },

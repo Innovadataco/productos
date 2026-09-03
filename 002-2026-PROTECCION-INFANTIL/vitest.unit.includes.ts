@@ -316,4 +316,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-369: candados del poblador demo v2.
     "scripts/demo/demo-v2.test.ts",
     "scripts/demo/demo-v3.test.ts",
+    // SPEC-378: Inicio del administrador (server component + tarjetas ámbar).
+    "src/app/dashboard/admin/inicio/page.test.tsx",
 ];

@@ -2178,6 +2178,25 @@ async function main() {
         },
     });
 
+    // SPEC-378 (Inicio del administrador): umbrales del agregador de señales.
+    // Patrón anti-I-100: `update: {}` — nunca pisamos lo que el CEO ajuste en
+    // runtime; solo garantizamos que la fila EXISTE con el default.
+    const inicioAdminParams = [
+        { clave: "monitoreo.notif.fallidas_24h_umbral", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Correos FALLIDA en 24 h que disparan alerta en el Inicio del admin (una sola con patrón de cuota ya es alta prioridad)" },
+        { clave: "monitoreo.analisis.fallidos_racha_umbral", valor: "5", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Racha mínima de AnalisisExpediente FALLIDO consecutivos para gritar 'motor rechazando' (el caso real fue 44)" },
+        { clave: "monitoreo.reportes.sin_dueno_horas", valor: "24", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Antigüedad en horas para considerar un reporte 'huérfano' (Reporte sin operadorId)" },
+        { clave: "monitoreo.reportes.sin_dueno_umbral", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cantidad de reportes huérfanos que disparan alerta en el Inicio del admin" },
+        { clave: "monitoreo.reportes.revision_manual_umbral", valor: "20", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Reportes REALES (sin DemoMarcado) en REVISION_MANUAL que disparan alerta de cola saturada" },
+        { clave: "monitoreo.vigencia.aviso_dias", valor: "7", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de anticipación con los que el Inicio avisa vigencias por vencer (colegios + familias)" },
+    ];
+    for (const p of inicioAdminParams) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: {},
+            create: p,
+        });
+    }
+
     // SPEC-193 (Fase 1): parámetros de la bitácora de logs de workers.
     const monitoreoLogsParams = [
         { clave: "monitoreo.logs.enabled", valor: "true", tipo: TipoParametro.BOOLEAN, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Activar la persistencia de logs de worker en base de datos" },
