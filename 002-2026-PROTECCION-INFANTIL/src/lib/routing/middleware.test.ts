@@ -143,6 +143,43 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
         expect(res.headers.get("x-middleware-next")).toBe("1");
     });
 
+    // SPEC-402 (I-289) — el webhook de Resend se autentica por firma HMAC-Svix
+    // en su handler, no por el JWT del borde. El middleware NUNCA debe cortarlo
+    // porque Resend reintenta ante cualquier no-2xx y perdemos los eventos.
+    it("(j-webhook-post) POST /api/webhooks/resend sin JWT → NO 401 del middleware", async () => {
+        const req = new NextRequest("http://localhost:5005/api/webhooks/resend", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+        });
+        const res = await middleware(req);
+        expect(res.status, "middleware NO debe cortar el webhook").not.toBe(401);
+        expect(res.status).not.toBe(307);
+        expect(res.headers.get("x-middleware-next"), "middleware debe dejar pasar al handler").toBe("1");
+    });
+
+    it("(j-webhook-get) GET /api/webhooks/resend sin JWT → NO 401 del middleware (lo maneja el handler con 405)", async () => {
+        const req = new NextRequest("http://localhost:5005/api/webhooks/resend");
+        const res = await middleware(req);
+        expect(res.status).not.toBe(401);
+        expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+
+    it("(j-webhook-firmas) POST /api/webhooks/resend con cabeceras Svix inválidas → NO 401 del middleware (que decida el handler)", async () => {
+        const req = new NextRequest("http://localhost:5005/api/webhooks/resend", {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                "svix-id": "msg_invalido",
+                "svix-timestamp": "0",
+                "svix-signature": "v1,firma-falsa",
+            },
+        });
+        const res = await middleware(req);
+        // Un 400/401 legítimo por firma inválida es responsabilidad del handler,
+        // no del borde. Acá afirmamos que el middleware lo dejó pasar.
+        expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+
     // SC-06 · SPEC-318: cookie sesion_estado ausente → fail-open (no expulsa)
     it("(k) SC-06 autenticado sin cookie sesion_estado → next() (guards inactivos, no expulsa)", async () => {
         const token = await jwtParaRol("PARENT");
