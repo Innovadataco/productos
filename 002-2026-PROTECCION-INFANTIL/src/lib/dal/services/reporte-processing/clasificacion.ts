@@ -41,7 +41,7 @@ export async function clasificarReporte({
     texto: string;
     parametros: Pick<
         ParametrosClasificacion,
-        "modeloClasificacion" | "modeloAnonimizacion" | "umbralRevision" | "nVotos" | "temperaturaVotos" | "minScoreCategoria" | "ollamaNumParallel" | "modeloDesempate"
+        "modeloClasificacion" | "overrideModeloClasificacion" | "modeloAnonimizacion" | "umbralRevision" | "nVotos" | "temperaturaVotos" | "minScoreCategoria" | "ollamaNumParallel" | "modeloDesempate"
     >;
     ejemplosRag: EjemploRecuperado[];
 }): Promise<{ clasificacion: ClasificacionResult; piiResult: Awaited<ReturnType<typeof detectarPiiCombinado>> | undefined }> {
@@ -66,12 +66,24 @@ export async function clasificarReporte({
     // SPEC-138 (E-7): el único motor activo es la rúbrica, configurada desde
     // los parámetros ia.rubrica.*. El mismo selector vive en src/lib/ai/motor.ts
     // y lo ejercita el sandbox.
-    // SPEC-298 (I-163): propagar `parametros.modeloClasificacion` al motor para que la rúbrica
-    // vote con ese único modelo (mono-voz). El fallback en parametros.ts:68 garantiza cadena
-    // no vacía; sin este pase, el override del sandbox se descartaba y toda simulación votaba
-    // con el mismo comité → misma accuracy.
+    //
+    // SPEC-398 (I-286): SOLO se pasa `modeloClasificacion` al motor cuando el
+    // caller pidió un override explícito (`overrideModeloClasificacion`).
+    // Sin override → jurado completo (`ia.rubrica.modelos`).
+    //
+    // Historia: SPEC-298 (I-163, commit 52accefcf del 28-08) propagaba
+    // `parametros.modeloClasificacion` SIEMPRE — arregló el sandbox pero
+    // rompió el pipeline real: `parametros.modeloClasificacion` nunca es vacío
+    // (cae al parámetro legado o al default), así que el motor tomaba SIEMPRE
+    // la rama de override y votaba mono-modelo. Seis días de clasificaciones
+    // en producción con UN votante en lugar de tres, silenciosas.
     const [resultado, piiResult] = await Promise.all([
-        clasificarConMotorActivo(texto, { modeloClasificacion: parametros.modeloClasificacion }),
+        clasificarConMotorActivo(
+            texto,
+            parametros.overrideModeloClasificacion
+                ? { modeloClasificacion: parametros.overrideModeloClasificacion }
+                : {},
+        ),
         detectarPiiCombinado(parametros.modeloAnonimizacion, texto),
     ]);
 
@@ -105,6 +117,10 @@ export async function clasificarReporte({
                 promptTokens: clasificacion.promptTokens ?? null,
                 responseTokens: clasificacion.responseTokens ?? null,
                 rawResponse: String(clasificacion.rawResponse),
+                // SPEC-398 (I-286): audita si esta clasificación se pidió con
+                // override intencional (sandbox/A-B). `null` en el pipeline
+                // real → la alarma de jurado reducido puede aislar el defecto.
+                overrideModeloUsado: parametros.overrideModeloClasificacion ?? null,
             },
         });
 

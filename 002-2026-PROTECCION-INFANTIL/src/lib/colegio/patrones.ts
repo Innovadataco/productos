@@ -22,6 +22,7 @@ import { logger } from "@/lib/logger";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
+import { AlertaColegioPatronRepository } from "@/lib/dal/repositories/alerta-colegio-patron";
 import { PatronInstitucionalRepository } from "@/lib/dal/repositories/patron-institucional";
 import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
 import { verificarVigenciaPorColegioId } from "./vigencia";
@@ -59,7 +60,9 @@ export async function agregarPatronPorReporte(reporteId: string): Promise<void> 
     }
     const conducta = reporte.clasificacion!.categoria;
 
-    const alertas = await new AlertaColegioRepository().findPorReporteConVinculoYGrado(reporteId);
+    // SPEC-380 (PR B): el `findPorReporteConVinculoYGrado` y `marcarPatron`
+    // se movieron a `AlertaColegioPatronRepository` (extracto por max-lines).
+    const alertas = await new AlertaColegioPatronRepository().findPorReporteConVinculoYGrado(reporteId);
     // La lista viene ordenada por creadoEn asc: la primera por colegio ES la más antigua.
     const masAntiguaPorColegio = new Map<string, (typeof alertas)[number]>();
     for (const alerta of alertas) {
@@ -83,7 +86,7 @@ export async function agregarPatronPorReporte(reporteId: string): Promise<void> 
                     conducta,
                     plataformaId: reporte.plataformaId,
                 });
-                await new AlertaColegioRepository(tx).marcarPatron(alerta.id, patron.id);
+                await new AlertaColegioPatronRepository(tx).marcarPatron(alerta.id, patron.id);
             });
         } catch (err) {
             // Fail-open por colegio: un error de agregación NUNCA rompe el disparo.
@@ -99,8 +102,9 @@ export async function agregarPatronPorReporte(reporteId: string): Promise<void> 
  */
 export async function revertirPatronPorReporte(reporteId: string, tx?: Prisma.TransactionClient): Promise<void> {
     const alertasRepo = new AlertaColegioRepository(tx);
+    const patronRepo = new AlertaColegioPatronRepository(tx);
     const patronesRepo = new PatronInstitucionalRepository(tx);
-    const marcadas = await alertasRepo.findPorReporteConPatron(reporteId);
+    const marcadas = await patronRepo.findPorReporteConPatron(reporteId);
     for (const marcada of marcadas) {
         if (!marcada.patronInstitucionalId) continue;
         await patronesRepo.decrementarConPiso(marcada.patronInstitucionalId);

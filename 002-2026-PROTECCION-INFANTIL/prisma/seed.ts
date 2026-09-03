@@ -2241,6 +2241,12 @@ async function main() {
         { clave: "monitoreo.reportes.sin_dueno_umbral", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cantidad de reportes huérfanos que disparan alerta en el Inicio del admin" },
         { clave: "monitoreo.reportes.revision_manual_umbral", valor: "20", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Reportes REALES (sin DemoMarcado) en REVISION_MANUAL que disparan alerta de cola saturada" },
         { clave: "monitoreo.vigencia.aviso_dias", valor: "7", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Días de anticipación con los que el Inicio avisa vigencias por vencer (colegios + familias)" },
+        // SPEC-398 (I-286): alarma en vivo del jurado del motor. La ventana es
+        // cuántas de las últimas clasificaciones (con `modeloUsado LIKE 'rubrica:%'`
+        // y sin `DemoMarcado`) se comparan contra el comité configurado; el umbral
+        // es cuántas de esas pueden haber votado con menos modelos antes de gritar.
+        { clave: "monitoreo.jurado.ventana_clasificaciones", valor: "20", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cantidad de últimas ClasificacionIA (rubrica:*, no-demo) que se miran para detectar jurado reducido" },
+        { clave: "monitoreo.jurado.max_reducidas_umbral", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cantidad de clasificaciones con menos votantes que ia.rubrica.modelos que disparan la alarma en el Inicio del admin" },
     ];
     for (const p of inicioAdminParams) {
         await prisma.parametroSistema.upsert({

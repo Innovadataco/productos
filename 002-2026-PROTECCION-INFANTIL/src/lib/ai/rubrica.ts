@@ -288,11 +288,19 @@ export async function clasificarConRubrica(
     // SPEC-298 (I-163): lista efectiva de votantes. Sin override = comité (comportamiento actual);
     // con override = mono-modelo (el sandbox/simulación pide un modelo puntual y el pipeline debe
     // respetarlo). El override no muta cfg.modelos: cambia sólo el conjunto de votantes de esta llamada.
+    //
+    // SPEC-398 (I-286): el aviso salta SIEMPRE que el jurado se reduzca, esté
+    // el modelo en la lista o no. Un degradado silencioso es peor que un error:
+    // el bug I-286 vivió 6 días en producción precisamente porque `gemma2:27b`
+    // estaba en `cfg.modelos` y el `logger.warn` anterior no disparaba. El
+    // sandbox también lo dispara (es evaluación deliberada); la operación
+    // normal ya no dispara nada porque `clasificacion.ts:74` solo pasa el
+    // override cuando el caller lo pidió — no más falsos positivos.
     let modelosVotantes: string[] = cfg.modelos;
     if (override?.modeloClasificacion) {
-        if (!cfg.modelos.includes(override.modeloClasificacion)) {
-            logger.warn(`[RUBRICA] modelo override no listado en cfg.modelos: ${override.modeloClasificacion}`);
-        }
+        logger.warn(
+            `[RUBRICA] jurado reducido a 1 modelo (${override.modeloClasificacion}); comité configurado: ${cfg.modelos.join(", ")}. Uso legítimo: sandbox/evaluación. En pipeline real es un degradado — revisar callsite.`,
+        );
         modelosVotantes = [override.modeloClasificacion];
     }
 

@@ -18,6 +18,12 @@ enum RolUsuario {
   OPERADOR
   COMITE_VALIDACION
   COMITE_CONVIVENCIA
+  // SPEC-388 (A-75): séptimo actor · psicólogo verificado. Registro por la
+  // misma puerta que Familia/Colegio; visible en el directorio abierto solo
+  // con `PerfilProfesional.estado = ACTIVO`. Los internos (tarjeta profesional,
+  // documento, facturación, fecha de nacimiento) se REUSAN de `Usuario` para
+  // los que ya viven ahí; nunca salen por API pública.
+  PROFESIONAL
 }
 
 enum EstadoUsuario {
@@ -154,6 +160,12 @@ enum AccionAudit {
   COLEGIO_CARGA_MASIVA
   COLEGIO_ALERTA_CREADA
   COLEGIO_ALERTA_ESTADO
+  // I-277: hasta hoy `asignarAlerta` y `escalarAlerta` casteaban el string a
+  // `AccionAudit` (as AccionAudit). El enum no los tenía → Prisma tronaba en
+  // runtime con 500 y ningún test lo veía porque el cast silenciaba TS. Se
+  // agregan los dos valores + se quitan los casts (SPEC-383).
+  COLEGIO_ALERTA_ASIGNADA
+  COLEGIO_ALERTA_ESCALADA
   // SPEC-172 (Pilar D.5): recálculo bajo demanda de la deriva del motor.
   MOTOR_DERIVA_RECALCULO
   COLEGIO_ESTADISTICAS_PDF_DESCARGADO
@@ -333,6 +345,32 @@ enum AccionAudit {
   // SPEC-320 (§2.3): CRUD del catálogo de tipos de documento por el ADMIN.
   ADMIN_TIPO_DOCUMENTO_CREADO
   ADMIN_TIPO_DOCUMENTO_EDITADO
+  // SPEC-388 (L1a · aviso CEO 05:26): valores de auditoría de la Red de
+  // Profesionales que L2 va a usar. Se agregan EN LA MISMA migración del
+  // modelo — si llegaran después, quedaría una ventana con `main` roto
+  // (lección I-277: los `as AccionAudit` silenciaban al compilador y el
+  // fix de I-277 hace que ahora eso NO compile, así que L2 no puede
+  // arrancar sin estos valores).
+  PROFESIONAL_VERIFICACION_CONSULTADO
+  PROFESIONAL_AUTORIZACION_ACCESO
+  PROFESIONAL_VERIFICACION_APROBADA
+  PROFESIONAL_VERIFICACION_RECHAZADA
+  PROFESIONAL_VERIFICACION_MAS_INFO
+  PROFESIONAL_VERIFICACION_VENCIDA
+  // SPEC-395 (L4 · veredicto CEO 09:50): valores de la cita profesional.
+  // El worker de 48h usa CITA_PROFESIONAL_AVISO_48H_ENVIADO como candado de
+  // repetición (patrón I-280 SPAM_ALERTA_REVISION_ENVIADA — no volver a
+  // avisar hasta que la solicitud cambie).
+  CITA_PROFESIONAL_PAGO_APROBADO
+  CITA_PROFESIONAL_PAGO_EXPIRADA
+  CITA_PROFESIONAL_AVISO_48H_ENVIADO
+  CITA_PROFESIONAL_CONFIRMADA
+  CITA_PROFESIONAL_RECHAZADA_PROFESIONAL
+  CITA_PROFESIONAL_REPROGRAMADA
+  CITA_PROFESIONAL_REASIGNADA
+  CITA_PROFESIONAL_VENCIDA_PROFESIONAL
+  CITA_PROFESIONAL_ALARMA_TASA_VENCIMIENTOS
+  CITA_PROFESIONAL_SUSPENDIDO_POR_VENCIMIENTOS
 }
 
 enum TipoPeriodoServicio {
@@ -687,6 +725,10 @@ model Usuario {
   // SPEC-334: país/ciudad del perfil del padre (catálogo geográfico existente).
   paisPerfil                       Pais?                           @relation("UsuariosPorPais", fields: [paisId], references: [id])
   ciudadPerfil                     Ciudad?                         @relation("UsuariosPorCiudad", fields: [ciudadId], references: [id])
+  // SPEC-388 (A-75 · L1a): back-refs de la Red de Profesionales.
+  perfilProfesional                PerfilProfesional?
+  verificacionesProfesionalRevisadas VerificacionProfesional[]     @relation("VerificacionesRevisadasPor")
+  solicitudesCitaComoPadre         SolicitudCita[]                 @relation("SolicitudesCitaPadre")
 
   @@index([email])
   @@index([rol])
@@ -741,11 +783,41 @@ model IntegranteComite {
   modificadoPor       Usuario?          @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
   // SPEC-319 §2.4: casos cuyo cierre firmó este integrante.
   solicitudesFirmadas SolicitudComite[] @relation(name: "SolicitudesFirmadas")
+  // SPEC-380 (PR B · C4/D-100): identificadores del integrante que se vigilan
+  // igual que los de estudiantes/profesores/acudientes — 4º sujeto.
+  identificadores     IdentificadorIntegranteComite[]
 
   @@unique([comiteId, hashIdentificacion])
   @@index([comiteId])
   @@index([estado])
   @@index([tipoIdentificacion])
+}
+
+// SPEC-380 (PR B · C4/D-100): identificadores del integrante del comité de
+// convivencia. Mismo patrón que `IdentificadorProfesor` — soft delete por
+// estado, tenant por colegio. Aviso al colegio, jamás a la persona vigilada.
+model IdentificadorIntegranteComite {
+  id           String   @id @default(cuid())
+  integranteId String
+  colegioId    String
+  tipo         String
+  valor        String
+  plataformaId String?
+  estado       String   @default("activo") // activo | inactivo
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  integrante IntegranteComite @relation(fields: [integranteId], references: [id], onDelete: Cascade)
+  colegio    Colegio          @relation(fields: [colegioId], references: [id])
+  plataforma Plataforma?      @relation(fields: [plataformaId], references: [id])
+  alertas    AlertaColegio[]
+
+  // El único parcial WHERE estado='activo' vive en la migración (Prisma no lo
+  // expresa) — misma red dura que estudiante/profesor/acudiente contra I-213.
+  @@index([colegioId, estado])
+  @@index([integranteId, estado])
+  @@index([tipo, valor])
+  @@index([plataformaId])
 }
 
 model CodigoVerificacion {
@@ -1195,6 +1267,8 @@ model Colegio {
   identificadoresAcudiente  IdentificadorAcudiente[]
   identificadoresProfesor   IdentificadorProfesor[]
   identificadoresEstudiante IdentificadorEstudiante[] // SPEC-320: colegioId denormalizado en el identificador de estudiante
+  // SPEC-380 (PR B · C4): identificadores del comité vigilados por colegio.
+  identificadoresIntegranteComite IdentificadorIntegranteComite[]
   onboarding                OnboardingColegio?
   notificacionesInApp       NotificacionInApp[]
   // SPEC-210 (002-PI-110): módulo de pagos.
@@ -1518,7 +1592,10 @@ model AlertaColegio {
   identificadorEstudianteId String?  @map("identificadorAlumnoId")
   identificadorProfesorId   String?
   identificadorAcudienteId  String?
-  tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE
+  // SPEC-380 (PR B · C4/D-100): 4º sujeto — integrante del comité de convivencia.
+  // Adulto, no menor, pero se vigila igual: aviso al colegio, jamás a la persona.
+  identificadorIntegranteComiteId String?
+  tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE | INTEGRANTE_COMITE
   estado                    String   @default("nueva") // nueva | vista | gestionada | escalada | cerrada
   prioridad                 String   @default("media") // alta | media | baja
   vencimientoSla            DateTime @db.Timestamptz(6)
@@ -1534,6 +1611,8 @@ model AlertaColegio {
   identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId], references: [id])
   identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
   identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
+  // SPEC-380 (PR B): 4ª relación al identificador del integrante del comité.
+  identificadorIntegranteComite IdentificadorIntegranteComite? @relation(fields: [identificadorIntegranteComiteId], references: [id])
   patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
   asignadoA               Usuario?                 @relation(fields: [asignadoAId], references: [id])
   seguimiento             SeguimientoCaso?
@@ -1543,6 +1622,8 @@ model AlertaColegio {
   @@unique([colegioId, reporteId, identificadorEstudianteId])
   @@unique([colegioId, reporteId, identificadorProfesorId])
   @@unique([colegioId, reporteId, identificadorAcudienteId])
+  // SPEC-380 (PR B): mismo patrón — evita duplicar la alerta por integrante.
+  @@unique([colegioId, reporteId, identificadorIntegranteComiteId])
   @@index([colegioId, estado])
   @@index([colegioId, prioridad, vencimientoSla])
   @@index([colegioId, asignadoAId])
@@ -1686,6 +1767,8 @@ model Plataforma {
   identificadoresEstudiante IdentificadorEstudiante[]
   identificadoresAcudiente  IdentificadorAcudiente[]
   identificadoresProfesor   IdentificadorProfesor[]
+  // SPEC-380 (PR B · C4): backref para reportes/matching por plataforma.
+  identificadoresIntegranteComite IdentificadorIntegranteComite[]
   apelaciones               Apelacion[]
   patronesInstitucionales   PatronInstitucional[]
 
@@ -1766,6 +1849,8 @@ model Ciudad {
   usuariosPerfil Usuario[]     @relation("UsuariosPorCiudad")
   colegios       Colegio[]
   reportes       Reporte[]
+  // SPEC-388 (A-75 · L1a): profesionales que dicen atender en esta ciudad.
+  perfilesProfesionales PerfilProfesional[]
 
   @@unique([nombre, paisId])
   @@index([paisId])
@@ -2288,6 +2373,12 @@ model ClasificacionIA {
   usoCascada            Boolean           @default(false)
   modeloCascada         String?
   posibleAgresorPar     Boolean           @default(false)
+  // SPEC-398 (I-286): nombre del modelo si el caller pidió override intencional
+  // (sandbox/A-B del admin). `NULL` = pipeline real → jurado completo esperado.
+  // La alarma `senalJuradoReducido` filtra por `overrideModeloUsado IS NULL`
+  // para distinguir el degradado del comité del uso deliberado del sandbox.
+  // Se guarda el nombre (no un bool) para trazabilidad: sabemos qué se probó.
+  overrideModeloUsado   String?
   creadoEn              DateTime          @default(now())
 
   reporte      Reporte                    @relation(fields: [reporteId], references: [id], onDelete: Cascade)
@@ -2629,6 +2720,9 @@ model Expediente {
   informesPadre          InformePadre[]
   // SPEC-341 (A-68 §4.4 capa 2): análisis IA en fila del expediente.
   analisisIa             AnalisisExpediente[]
+  // SPEC-388 (A-75 · L1a): solicitudes de cita que compartieron este expediente
+  // con un profesional (opcional; el padre lo comparte y puede revocarlo).
+  solicitudesCitaCompartidas SolicitudCita[]
 
   @@index([padreUsuarioId, estado])
   @@index([identificadorReportado])
@@ -3282,4 +3376,233 @@ model InformeCaso {
 
   @@unique([casoId, anio, numeroCorrelativo])
   @@index([casoId, generadoEn(sort: Desc)])
+}
+
+// ── SPEC-388 (A-75 · L1a) · Red de Profesionales ──────────────────────────
+// Séptimo actor. El modelo entero se define acá para que los lotes L1b/L2/L3
+// arranquen en paralelo sin bloquearse. Ningún endpoint ni UI se toca en L1a
+// — este archivo y la migración son todo lo que trae ese PR.
+//
+// Reutilización deliberada con `Usuario` (candado del CEO 03-09 04:32):
+//  · `fechaNacimiento`, `documentoTipo`, `documentoNumero` YA viven en Usuario
+//    (SPEC-334/339) y se reusan tal cual — «interno» se cumple en la capa DTO
+//    (nunca serializar), no duplicando la tabla.
+// Estados y candados que vienen del brief §2/§3:
+//  · `EstadoPerfilProfesional.BORRADOR` — inicial, entre «creó la cuenta» y
+//    «subió la autorización» (aviso del CEO: sin esto la cola de IDC se llena
+//    de fichas vacías). Solo pasa a EN_REVISION cuando el perfil está completo
+//    Y hay una `VerificacionProfesional` con autorización subida.
+//  · `venceEn` de la verificación = `revisadoEn + 4 meses` (Ley 2375/2024 —
+//    no es anual; L2 hará el recordatorio con 30 días de anticipación).
+//  · Solicitudes: `venceEn` = creado + 48 h (§3 «devuelve todo al padre»).
+//  · Autorización: `autorizacionArchivoUrl` guarda la ruta en un storage
+//    PROTEGIDO (no `escudo-storage`, que es público). El servicio de storage
+//    lo implementa L1b siguiendo el patrón de informes/apelaciones.
+
+enum EstadoPerfilProfesional {
+  BORRADOR
+  EN_REVISION
+  ACTIVO
+  RECHAZADO
+  VENCIDO
+  SUSPENDIDO
+}
+
+enum ResultadoVerificacion {
+  APROBADO
+  RECHAZADO
+  MAS_INFORMACION
+}
+
+enum ModalidadCita {
+  VIRTUAL
+  PRESENCIAL
+}
+
+enum UrgenciaSolicitud {
+  ESTA_SEMANA
+  SIN_APURO
+}
+
+enum EstadoSolicitudCita {
+  PAGADA_PENDIENTE
+  CONFIRMADA
+  CUMPLIDA
+  NO_ASISTIO_PADRE
+  NO_ASISTIO_PROFESIONAL
+  VENCIDA_SIN_RESPUESTA
+  REEMBOLSADA
+  SIN_CONFIRMAR
+  // SPEC-388a · brief v1.3 (aviso Calidad): una reprogramación es FILA NUEVA
+  // que HEREDA el pago, no una transición. La solicitud original queda como
+  // REPROGRAMADA (terminal) y el rastro del primer intento se conserva.
+  REPROGRAMADA
+}
+
+model PerfilProfesional {
+  id                       String                   @id @default(cuid())
+  usuarioId                String                   @unique
+  nombreVisible            String
+  fotoUrl                  String?
+  tituloProfesional        String
+  // `String[]` en Postgres se guarda como text[] — L3 filtra por especialidad
+  // con `has` de Prisma sin necesitar una tabla puente.
+  especialidades           String[]
+  ciudadId                 String
+  atiendeVirtual           Boolean                  @default(false)
+  atiendePresencial        Boolean                  @default(false)
+  aniosExperiencia         Int
+  presentacion             String                   @db.Text
+  tarifaConsultaCOP        Int
+  duracionMinutos          Int
+  emiteFactura             Boolean                  @default(false)
+  estado                   EstadoPerfilProfesional  @default(BORRADOR)
+  // Internos, NUNCA públicos (candado del brief §2). fechaNacimiento y
+  // documento se reusan de Usuario; acá van los que NO viven allá.
+  numeroTarjetaProfesional String?
+  datosFacturacion         Json?
+  // SPEC-391 (L1b · veredicto CEO 08:40): la autorización firmada por el
+  // profesional (Ley 2375/2024 — previa, expresa, escrita y archivada) es
+  // del profesional, no de una revisión. Cada VerificacionProfesional
+  // referencia la que estaba vigente al momento. `autorizacionSubidaEn`
+  // se compara con `VerificacionProfesional.revisadoEn` para demostrar que
+  // la autorización fue PREVIA a la consulta de antecedentes — sin fecha
+  // no se puede probar. Ambos INTERNOS: nunca por API pública.
+  autorizacionArchivoUrl   String?
+  autorizacionSubidaEn     DateTime?                @db.Timestamptz(6)
+  creadoEn                 DateTime                 @default(now()) @db.Timestamptz(6)
+  actualizadoEn            DateTime                 @updatedAt @db.Timestamptz(6)
+
+  usuario        Usuario                   @relation(fields: [usuarioId], references: [id])
+  ciudad         Ciudad                    @relation(fields: [ciudadId], references: [id])
+  verificaciones VerificacionProfesional[]
+  franjas        FranjaDisponible[]
+  solicitudes    SolicitudCita[]
+
+  // L3 filtra el directorio abierto por estado ACTIVO + ciudad; el índice
+  // compuesto sirve al listado. La búsqueda por especialidad no lo necesita
+  // (usa `has` sobre el array).
+  @@index([estado, ciudadId])
+}
+
+// N por profesional — el HISTORIAL importa: si venció y hay una nueva
+// aprobación, la anterior queda para auditoría. `venceEn` se calcula al
+// insertar (revisadoEn + 4 meses) y el worker de L2 avisa un mes antes.
+model VerificacionProfesional {
+  id                     String                 @id @default(cuid())
+  perfilProfesionalId    String
+  revisadoPorId          String
+  revisadoEn             DateTime               @default(now()) @db.Timestamptz(6)
+  checklist              Json
+  resultado              ResultadoVerificacion
+  // Ruta a la autorización firmada por el profesional (Ley 2375/2024 exige
+  // documento archivado). Storage PROTEGIDO — se sirve tras auth + módulo de
+  // admin, nunca por URL adivinable. El servicio de storage lo trae L1b.
+  autorizacionArchivoUrl String
+  venceEn                DateTime               @db.Timestamptz(6)
+  creadoEn               DateTime               @default(now()) @db.Timestamptz(6)
+
+  // SPEC-388 (aviso 05:26): idempotencia del recordatorio 30-días-antes que
+  // implementa L2. NULL = todavía no se avisó; el worker marca la fecha
+  // cuando envía, para no repetir en la siguiente vuelta (mismo patrón que
+  // I-280 en SPAM_ALERTA_REVISION_ENVIADA).
+  avisoVencimientoEnviadoEn DateTime?             @db.Timestamptz(6)
+  // SPEC-388 (aviso 05:26): motivo del rechazo o qué falta en MAS_INFORMACION.
+  // CANDADO DE RESERVA: NUNCA sale por API pública (agregar a la lista de
+  // campos prohibidos del test cuando L1b/L2 los agreguen).
+  notaInterna               String?               @db.Text
+
+  perfilProfesional PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id])
+  revisadoPor       Usuario           @relation("VerificacionesRevisadasPor", fields: [revisadoPorId], references: [id])
+
+  // L2 lista las verificaciones vigentes por profesional en orden descendente
+  // y consulta la próxima que vence para el aviso de 30 días.
+  @@index([perfilProfesionalId, revisadoEn(sort: Desc)])
+  @@index([venceEn])
+}
+
+model FranjaDisponible {
+  id             String        @id @default(cuid())
+  profesionalId  String
+  inicio         DateTime      @db.Timestamptz(6)
+  fin            DateTime      @db.Timestamptz(6)
+  modalidad      ModalidadCita
+  tomada         Boolean       @default(false)
+  creadoEn       DateTime      @default(now()) @db.Timestamptz(6)
+
+  profesional PerfilProfesional @relation(fields: [profesionalId], references: [id])
+  // 1:0..1 — al confirmar una solicitud se marca `tomada = true` y se guarda
+  // la solicitud; si se libera (48 h sin confirmar), la franja vuelve a
+  // `tomada = false` y la solicitud queda VENCIDA_SIN_RESPUESTA.
+  solicitud   SolicitudCita?
+
+  // L3 lista franjas libres del profesional ordenadas por inicio.
+  @@index([profesionalId, tomada, inicio])
+}
+
+model SolicitudCita {
+  id                     String              @id @default(cuid())
+  padreUsuarioId         String
+  profesionalId          String
+  franjaId               String              @unique
+  presentacion           String              @db.Text
+  urgencia               UrgenciaSolicitud
+  estado                 EstadoSolicitudCita @default(SIN_CONFIRMAR)
+  // SPEC-395 (L4 · veredicto CEO 09:50):
+  //   · `venceEn` es el PLAZO DEL PADRE para completar el pago manual
+  //     (72 h por default). Si vence sin aprobación, la solicitud EXPIRA
+  //     y la franja se libera para que otro padre la tome.
+  //   · `pagoAprobadoEn` (aditivo) es el momento en que el admin activó
+  //     el pago. **A partir de acá arranca el reloj de 48 h del profesional**:
+  //     el worker calcula `pagoAprobadoEn + 48h` en tiempo real. Antes de
+  //     este PR no había fecha porque el brief no decía que el pago era
+  //     manual; §4 v1.3 lo dejó explícito.
+  venceEn                DateTime            @db.Timestamptz(6)
+  pagoAprobadoEn         DateTime?           @db.Timestamptz(6)
+  expedienteCompartidoId String?
+  // SPEC-388a · brief v1.3: reprogramación como FILA NUEVA (no transición) —
+  // conserva el historial del primer intento. La nueva fila apunta a la
+  // solicitud anterior y hereda el pago de otra: los dos campos son opcionales
+  // porque la mayoría de las solicitudes son la PRIMERA (sin previa) y pagan
+  // de cero (sin herencia). Se auto-referencian.
+  solicitudPreviaId      String?
+  pagoHeredadoDeId       String?
+  // Denormalizado en pesos colombianos al momento de la solicitud (la tarifa
+  // del profesional o el porcentaje pueden cambiar después; la cita se cobra
+  // con el número que vio el padre cuando aceptó).
+  montoConsulta          Int
+  montoServicio          Int
+  montoTotal             Int
+  porcentajeServicio     Int
+  creadoEn               DateTime            @default(now()) @db.Timestamptz(6)
+  actualizadoEn          DateTime            @updatedAt @db.Timestamptz(6)
+
+  padreUsuario         Usuario                @relation("SolicitudesCitaPadre", fields: [padreUsuarioId], references: [id])
+  profesional          PerfilProfesional      @relation(fields: [profesionalId], references: [id])
+  franja               FranjaDisponible       @relation(fields: [franjaId], references: [id])
+  expedienteCompartido Expediente?            @relation(fields: [expedienteCompartidoId], references: [id])
+  solicitudPrevia      SolicitudCita?         @relation("SolicitudReprogramada", fields: [solicitudPreviaId], references: [id])
+  reprogramaciones     SolicitudCita[]        @relation("SolicitudReprogramada")
+  pagoHeredadoDe       SolicitudCita?         @relation("PagoHeredado", fields: [pagoHeredadoDeId], references: [id])
+  pagosQueHereda       SolicitudCita[]        @relation("PagoHeredado")
+  encuesta             EncuestaPrimeraCita?
+
+  // L4/L5: bandeja del profesional (sus solicitudes por estado) y del padre.
+  @@index([profesionalId, estado, creadoEn(sort: Desc)])
+  @@index([padreUsuarioId, estado, creadoEn(sort: Desc)])
+  // L6: worker que devuelve al padre a las 48 h y autocierra a los 5 días.
+  @@index([estado, venceEn])
+}
+
+model EncuestaPrimeraCita {
+  id           String   @id @default(cuid())
+  solicitudId  String   @unique
+  seDioLaCita  Boolean
+  // 1..5 — se valida en la capa de aplicación (Zod), Postgres no restringe.
+  puntaje      Int
+  volveria     Boolean
+  comentario   String?  @db.Text
+  respondidaEn DateTime @db.Timestamptz(6)
+
+  solicitud SolicitudCita @relation(fields: [solicitudId], references: [id])
 }

@@ -25,6 +25,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/reparto-shards.test.mjs",
     // SPEC-381 (I-269): cada ruta de inicio-admin.ts DEBE tener page.tsx.
     "src/lib/dal/services/inicio-admin.ratchet.test.ts",
+    // SPEC-398 (I-286): candado del jurado del pipeline real — sin override,
+    // el motor recibe {} (jurado completo). Con override, {modeloClasificacion:X}.
+    "src/lib/dal/services/reporte-processing/pipeline-jurado.test.ts",
     // SPEC-381 (I-276): la barra <ComiteSubNav> la monta solo el layout compartido.
     "src/app/dashboard/admin/comite/layout.ratchet.test.ts",
     // SPEC-374: decisión should-skip (saltar CI en PRs que no tocan PI ni raíz compartida).
@@ -62,6 +65,13 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/PadreSideNav.test.tsx",
     // I-261: el expediente vivo pinta fecha + hora sin minutos (helper compartido).
     "src/components/modules/padre/ExpedienteVivo.test.tsx",
+    // SPEC-392 (L3): tarjeta del directorio (tarifa por delante, "Nuevo en la red").
+    "src/components/modules/padre/profesionales/ProfesionalTarjeta.test.tsx",
+    // SPEC-392 (L3 · H-4): baraja determinística por semilla.
+    "src/lib/padre/directorio-shuffle.test.ts",
+    // SPEC-392 (L3 · H-2 · veredicto CEO 13:30): candado de TIPO — la intersección
+    // del DTO público con los campos prohibidos DEBE ser never. Si no, no compila.
+    "src/lib/dal/repositories/perfil-profesional-dto.test.ts",
     "src/components/modules/ComiteBandeja.test.tsx",
     "src/components/modules/ComiteSolicitudDetalle.test.tsx",
     "src/components/modules/ConsultaEnriquecidaClient.test.tsx",
@@ -193,6 +203,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/periodo.test.ts",
     // SPEC-361 (A-70 · F7/F8): documento por tipo y edad del menor.
     "src/lib/padre/documento-menor.test.ts",
+    "src/lib/profesional/dto.test.ts",
+    "src/lib/profesional/autorizacion-storage.test.ts",
+    "src/lib/profesional/cita/dto.test.ts",
     // SPEC-353 (A-69 · C6): reglas puras de la frase "qué hacer hoy" del rector.
     "src/lib/colegio/que-hacer-hoy.test.ts",
     "src/lib/colegio/seguimiento.test.ts",

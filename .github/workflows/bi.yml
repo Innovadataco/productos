@@ -13,6 +13,14 @@ on:
 # figura en el ruleset "Gate CI - main" de TODOS los PR (patrón cross-producto
 # heredado), y retirarlo de golpe bloquearía los merges de PI. Cuando el
 # responsable ajuste la protección de rama, este archivo también se elimina.
+#
+# SPEC-396 (I-282): cancela la corrida vieja al llegar un push nuevo. Salvo en
+# `main` — allí las corridas no se interrumpen. Este flujo SÍ dispara en pushes
+# a main (`on: push:` sin filtro de rama), por eso la excepción es real acá,
+# no defensiva.
+concurrency:
+  group: bi-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   bi-gate:
     runs-on: ubuntu-latest

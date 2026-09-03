@@ -15,6 +15,13 @@ on:
     paths:
       - "006-2026-BI-INTELIGENCIA-NEGOCIO/**"
 
+# SPEC-396 (I-282): mismo patrón que ci.yml/bi.yml — un repush cancela la corrida
+# vieja. Este flujo hoy no dispara en push a main (`branches: [work/bi-SPEC-006-bi-v2]`),
+# pero mantengo la excepción defensiva por si el trigger se abre en el futuro.
+concurrency:
+  group: bi006-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -4,6 +4,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
 import { IdentificadorEstudianteRepository } from "@/lib/dal/repositories/identificador-estudiante";
 import { IdentificadorProfesorRepository } from "@/lib/dal/repositories/identificador-profesor";
+import { IdentificadorIntegranteComiteRepository } from "@/lib/dal/repositories/identificador-integrante-comite";
 import { IdentificadorAcudienteRepository } from "@/lib/dal/repositories/identificador-acudiente";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { EventoMatchRepository } from "@/lib/dal/repositories/evento-match";
@@ -11,7 +12,7 @@ import { registrarEventoAviso, evaluarUmbralesPorAlerta } from "./avisos";
 import { verificarVigenciaPorColegioId } from "./vigencia";
 import { calcularPrioridadYSLA } from "./alertas-prioridad";
 import { crearNotificacionDesdeAlerta } from "./notificaciones";
-import type { AccionAudit, EstadoReporte } from "@prisma/client";
+import type { EstadoReporte } from "@prisma/client";
 
 const ESTADOS_VISIBLES: EstadoReporte[] = [
     "CLASIFICADO",
@@ -84,9 +85,15 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
             eventoMatch ? { conteoAcumulado: eventoMatch.conteoAcumulado, interCiudad: eventoMatch.interCiudad } : null
         );
 
-        // SPEC-165: búsqueda cross-tenant a propósito en los tres tipos de sujeto.
-        // Cada repo documenta la excepción; fallo en uno no impide los otros.
-        const [identificadoresEstudiante, identificadoresProfesor, identificadoresAcudiente] = await Promise.all([
+        // SPEC-165 · ampliado SPEC-380 PR B: búsqueda cross-tenant en los CUATRO
+        // tipos de sujeto. Cada repo documenta su excepción; fallo en uno no
+        // impide los otros. El integrante del comité entra igual que los demás.
+        const [
+            identificadoresEstudiante,
+            identificadoresProfesor,
+            identificadoresAcudiente,
+            identificadoresIntegrante,
+        ] = await Promise.all([
             new IdentificadorEstudianteRepository().buscarActivosPorValor(identificadorNormalizado).catch((err) => {
                 logger.error("[COLEGIO] Error buscando identificadores de estudiante:", err);
                 return [];
@@ -99,12 +106,17 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                 logger.error("[COLEGIO] Error buscando identificadores de acudiente:", err);
                 return [];
             }),
+            new IdentificadorIntegranteComiteRepository().buscarActivosPorValor(identificadorNormalizado).catch((err) => {
+                logger.error("[COLEGIO] Error buscando identificadores de integrante del comité:", err);
+                return [];
+            }),
         ]);
 
         if (
             identificadoresEstudiante.length === 0 &&
             identificadoresProfesor.length === 0 &&
-            identificadoresAcudiente.length === 0
+            identificadoresAcudiente.length === 0 &&
+            identificadoresIntegrante.length === 0
         ) {
             logger.info(`[COLEGIO] Notificación omitida: sin identificadores activos para ${reporte.identificador}`);
             return;
@@ -137,6 +149,17 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                 input: { tipoSujeto: "ACUDIENTE", identificadorAcudienteId: identificador.id },
             });
         }
+        for (const identificador of identificadoresIntegrante) {
+            // El colegioId del integrante viene por su cuenta del comité
+            // (`Usuario.comiteColegioId`). Si un integrante quedó sin colegio
+            // (borde raro), se ignora — no se emite alerta en el vacío.
+            const colegioId = identificador.integrante.comite.comiteColegioId;
+            if (!colegioId) continue;
+            candidatos.push({
+                colegioId,
+                input: { tipoSujeto: "INTEGRANTE_COMITE", identificadorIntegranteComiteId: identificador.id },
+            });
+        }
 
         for (const candidato of candidatos) {
             const { colegioId, input } = candidato;
@@ -161,7 +184,7 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                 });
 
                 await logAudit({
-                    accion: "COLEGIO_ALERTA_CREADA" as AccionAudit,
+                    accion: "COLEGIO_ALERTA_CREADA",
                     tipoRecurso: "AlertaColegio",
                     recursoId: alerta.id,
                     usuarioId: undefined,
@@ -175,6 +198,9 @@ export async function notificarColegioSiCorresponde(reporteId: string) {
                         identificadorProfesorId: alerta.tipoSujeto === "PROFESOR" ? alerta.identificadorProfesorId : null,
                         identificadorAcudienteId:
                             alerta.tipoSujeto === "ACUDIENTE" ? alerta.identificadorAcudienteId : null,
+                        // SPEC-380 (PR B): 4º sujeto — el FK correspondiente.
+                        identificadorIntegranteComiteId:
+                            alerta.tipoSujeto === "INTEGRANTE_COMITE" ? alerta.identificadorIntegranteComiteId : null,
                         estado: alerta.estado,
                     }),
                     ipAddress: "worker",
@@ -243,6 +269,11 @@ export async function listarAlertasColegio(
         } else if (alerta.tipoSujeto === "ACUDIENTE" && alerta.identificadorAcudiente) {
             relacion = alerta.identificadorAcudiente.acudiente.relacion;
             sujetoNombre = alerta.identificadorAcudiente.acudiente.nombre;
+        } else if (alerta.tipoSujeto === "INTEGRANTE_COMITE" && alerta.identificadorIntegranteComite) {
+            // SPEC-380 (PR B): integrante adulto — nombre + cargo (si lo tiene).
+            identificador = alerta.identificadorIntegranteComite.valor;
+            relacion = alerta.identificadorIntegranteComite.integrante.cargo ?? "INTEGRANTE_COMITE";
+            sujetoNombre = `${alerta.identificadorIntegranteComite.integrante.nombres} ${alerta.identificadorIntegranteComite.integrante.apellidos}`.trim();
         }
 
         return {
@@ -289,7 +320,7 @@ export async function cambiarEstadoAlerta(
     const userAgent = request?.headers.get("user-agent") || "unknown";
 
     await logAudit({
-        accion: "COLEGIO_ALERTA_ESTADO" as AccionAudit,
+        accion: "COLEGIO_ALERTA_ESTADO",
         tipoRecurso: "AlertaColegio",
         recursoId: alertaId,
         colegioId: alerta.colegioId,
@@ -342,6 +373,11 @@ export async function listarBandejaAlertasColegio(
         } else if (alerta.tipoSujeto === "ACUDIENTE" && alerta.identificadorAcudiente) {
             relacion = alerta.identificadorAcudiente.acudiente.relacion;
             sujetoNombre = alerta.identificadorAcudiente.acudiente.nombre;
+        } else if (alerta.tipoSujeto === "INTEGRANTE_COMITE" && alerta.identificadorIntegranteComite) {
+            // SPEC-380 (PR B): integrante adulto — nombre + cargo (si lo tiene).
+            identificador = alerta.identificadorIntegranteComite.valor;
+            relacion = alerta.identificadorIntegranteComite.integrante.cargo ?? "INTEGRANTE_COMITE";
+            sujetoNombre = `${alerta.identificadorIntegranteComite.integrante.nombres} ${alerta.identificadorIntegranteComite.integrante.apellidos}`.trim();
         }
 
         return {
@@ -380,7 +416,7 @@ export async function asignarAlerta(
     const userAgent = request?.headers.get("user-agent") || "unknown";
 
     await logAudit({
-        accion: "COLEGIO_ALERTA_ASIGNADA" as AccionAudit,
+        accion: "COLEGIO_ALERTA_ASIGNADA",
         tipoRecurso: "AlertaColegio",
         recursoId: alertaId,
         usuarioId: actorId,
@@ -394,36 +430,13 @@ export async function asignarAlerta(
     return alerta;
 }
 
-/** SPEC-166: escala una alerta a estado "escalada". */
-export async function escalarAlerta(colegioId: string, alertaId: string, actorId: string, request?: Request) {
-    const repoAlertas = new AlertaColegioRepository();
-    const alerta = await repoAlertas.obtenerPorId(colegioId, alertaId);
-    if (!alerta) {
-        throw new AppError("Alerta no encontrada", ERROR_CODES.NOT_FOUND, 404);
-    }
-    if (alerta.estado === "escalada") {
-        return alerta;
-    }
-
-    const actualizada = await repoAlertas.cambiarEstado(colegioId, alertaId, "escalada");
-
-    const ipAddress = request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown";
-    const userAgent = request?.headers.get("user-agent") || "unknown";
-
-    await logAudit({
-        accion: "COLEGIO_ALERTA_ESCALADA" as AccionAudit,
-        tipoRecurso: "AlertaColegio",
-        recursoId: alertaId,
-        usuarioId: actorId,
-        colegioId,
-        valorAnterior: JSON.stringify({ estado: alerta.estado }),
-        valorNuevo: JSON.stringify({ estado: "escalada" }),
-        ipAddress,
-        userAgent,
-    });
-
-    return actualizada;
-}
+// I-277 · SPEC-383: se eliminó la función `escalarAlerta` (SPEC-166) porque no
+// tenía callers — el escalado real vive en `ComiteConvivenciaBandejaService`
+// (`src/lib/dal/services/comite-convivencia-bandeja.ts:185`, audita
+// `COLEGIO_CASO_ESCALADO_A_COMITE`, ese sí existe en el enum). Confirmado por
+// grep contra src/ (candado 22v5). Se conserva el patrón en el servicio real
+// y en el historial de git; el enum tiene `COLEGIO_ALERTA_ESCALADA` disponible
+// por si un futuro caller lo necesita.
 
 export type AccionLote = "vista" | "gestionada" | "escalada" | "cerrada" | "asignar" | "desasignar";
 

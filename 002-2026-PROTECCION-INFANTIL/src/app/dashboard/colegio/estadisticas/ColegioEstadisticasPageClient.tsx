@@ -26,11 +26,14 @@ const TARJETAS = [
     { key: "alertas", label: "Alertas", icon: "🚨" },
 ] as const;
 
+// SPEC-380 (PR B): tipada como `Record<TipoSujeto, ...>` a través del
+// `satisfies` para que agregar un 5º sujeto sin card falle el compilador.
 const TARJETAS_TIPO_SUJETO = [
-    { key: "ESTUDIANTE", label: "Estudiantes", icon: "🎓" },
-    { key: "PROFESOR", label: "Profesores", icon: "👨‍🏫" },
-    { key: "ACUDIENTE", label: "Acudientes", icon: "👪" },
-] as const;
+    { key: "ESTUDIANTE" as const, label: "Estudiantes", icon: "🎓" },
+    { key: "PROFESOR" as const, label: "Profesores", icon: "👨‍🏫" },
+    { key: "ACUDIENTE" as const, label: "Acudientes", icon: "👪" },
+    { key: "INTEGRANTE_COMITE" as const, label: "Comité de convivencia", icon: "🛡️" },
+];
 
 function mesAnteriorDefault(): string {
     const hoy = new Date();

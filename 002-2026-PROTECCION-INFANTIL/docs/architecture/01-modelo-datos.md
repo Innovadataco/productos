@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **104** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **110** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -91,6 +91,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
+| identificadoresIntegranteComite | IdentificadorIntegranteComite | lista, relación |
 | apelaciones | Apelacion | lista, relación |
 | patronesInstitucionales | PatronInstitucional | lista, relación |
 
@@ -173,6 +174,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadorEstudianteId | String | opcional |
 | identificadorProfesorId | String | opcional |
 | identificadorAcudienteId | String | opcional |
+| identificadorIntegranteComiteId | String | opcional |
 | tipoSujeto | String | — |
 | estado | String | — |
 | prioridad | String | — |
@@ -186,6 +188,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadorEstudiante | IdentificadorEstudiante | opcional, relación (FK) |
 | identificadorProfesor | IdentificadorProfesor | opcional, relación (FK) |
 | identificadorAcudiente | IdentificadorAcudiente | opcional, relación (FK) |
+| identificadorIntegranteComite | IdentificadorIntegranteComite | opcional, relación (FK) |
 | patronInstitucional | PatronInstitucional | opcional, relación (FK) |
 | asignadoA | Usuario | opcional, relación (FK) |
 | seguimiento | SeguimientoCaso | opcional, relación |
@@ -237,6 +240,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | identificadoresAcudiente | IdentificadorAcudiente | lista, relación |
 | identificadoresProfesor | IdentificadorProfesor | lista, relación |
 | identificadoresEstudiante | IdentificadorEstudiante | lista, relación |
+| identificadoresIntegranteComite | IdentificadorIntegranteComite | lista, relación |
 | onboarding | OnboardingColegio | opcional, relación |
 | notificacionesInApp | NotificacionInApp | lista, relación |
 | suscripciones | Suscripcion | lista, relación |
@@ -375,6 +379,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | usuariosPerfil | Usuario | lista, relación |
 | colegios | Colegio | lista, relación |
 | reportes | Reporte | lista, relación |
+| perfilesProfesionales | PerfilProfesional | lista, relación |
 
 #### `Departamento`
 
@@ -428,6 +433,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | usoCascada | Boolean | — |
 | modeloCascada | String | opcional |
 | posibleAgresorPar | Boolean | — |
+| overrideModeloUsado | String | opcional |
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 | correccion | CorreccionAdmin | opcional, relación |
@@ -499,7 +505,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (56)
+### Otros (sin regla de dominio) (62)
 
 #### `AclaracionExpediente`
 
@@ -739,6 +745,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | createdAt | DateTime | — |
 | recomendacion | Recomendacion | relación (FK) |
 
+#### `EncuestaPrimeraCita`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| solicitudId | String | único |
+| seDioLaCita | Boolean | — |
+| puntaje | Int | — |
+| volveria | Boolean | — |
+| comentario | String | opcional |
+| respondidaEn | DateTime | — |
+| solicitud | SolicitudCita | relación (FK) |
+
 #### `EventoExpediente`
 
 | Campo | Tipo | Atributos |
@@ -805,6 +824,21 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | fechaEscaladoRojoEn | DateTime | opcional |
 | informesPadre | InformePadre | lista, relación |
 | analisisIa | AnalisisExpediente | lista, relación |
+| solicitudesCitaCompartidas | SolicitudCita | lista, relación |
+
+#### `FranjaDisponible`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| profesionalId | String | — |
+| inicio | DateTime | — |
+| fin | DateTime | — |
+| modalidad | ModalidadCita | — |
+| tomada | Boolean | — |
+| creadoEn | DateTime | — |
+| profesional | PerfilProfesional | relación (FK) |
+| solicitud | SolicitudCita | opcional, relación |
 
 #### `GuiaAccionCategoria`
 
@@ -916,6 +950,24 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | identificador | IdentificadorHijo | relación (FK) |
 | usuario | Usuario | relación (FK) |
+
+#### `IdentificadorIntegranteComite`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| integranteId | String | — |
+| colegioId | String | — |
+| tipo | String | — |
+| valor | String | — |
+| plataformaId | String | opcional |
+| estado | String | — |
+| createdAt | DateTime | — |
+| updatedAt | DateTime | — |
+| integrante | IntegranteComite | relación (FK) |
+| colegio | Colegio | relación (FK) |
+| plataforma | Plataforma | opcional, relación (FK) |
+| alertas | AlertaColegio | lista, relación |
 
 #### `IdentificadorProfesor`
 
@@ -1211,6 +1263,37 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | plataforma | Plataforma | relación (FK) |
 | alertas | AlertaColegio | lista, relación |
 
+#### `PerfilProfesional`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| usuarioId | String | único |
+| nombreVisible | String | — |
+| fotoUrl | String | opcional |
+| tituloProfesional | String | — |
+| especialidades | String | lista |
+| ciudadId | String | — |
+| atiendeVirtual | Boolean | — |
+| atiendePresencial | Boolean | — |
+| aniosExperiencia | Int | — |
+| presentacion | String | — |
+| tarifaConsultaCOP | Int | — |
+| duracionMinutos | Int | — |
+| emiteFactura | Boolean | — |
+| estado | EstadoPerfilProfesional | — |
+| numeroTarjetaProfesional | String | opcional |
+| datosFacturacion | Json | opcional |
+| autorizacionArchivoUrl | String | opcional |
+| autorizacionSubidaEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| usuario | Usuario | relación (FK) |
+| ciudad | Ciudad | relación (FK) |
+| verificaciones | VerificacionProfesional | lista, relación |
+| franjas | FranjaDisponible | lista, relación |
+| solicitudes | SolicitudCita | lista, relación |
+
 #### `PreferenciaAlertaColegio`
 
 | Campo | Tipo | Atributos |
@@ -1382,6 +1465,38 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | actualizadoEn | DateTime | — |
 | creadoPor | Usuario | relación (FK) |
 
+#### `SolicitudCita`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| padreUsuarioId | String | — |
+| profesionalId | String | — |
+| franjaId | String | único |
+| presentacion | String | — |
+| urgencia | UrgenciaSolicitud | — |
+| estado | EstadoSolicitudCita | — |
+| venceEn | DateTime | — |
+| pagoAprobadoEn | DateTime | opcional |
+| expedienteCompartidoId | String | opcional |
+| solicitudPreviaId | String | opcional |
+| pagoHeredadoDeId | String | opcional |
+| montoConsulta | Int | — |
+| montoServicio | Int | — |
+| montoTotal | Int | — |
+| porcentajeServicio | Int | — |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| padreUsuario | Usuario | relación |
+| profesional | PerfilProfesional | relación (FK) |
+| franja | FranjaDisponible | relación (FK) |
+| expedienteCompartido | Expediente | opcional, relación (FK) |
+| solicitudPrevia | SolicitudCita | opcional, relación |
+| reprogramaciones | SolicitudCita | lista, relación |
+| pagoHeredadoDe | SolicitudCita | opcional, relación |
+| pagosQueHereda | SolicitudCita | lista, relación |
+| encuesta | EncuestaPrimeraCita | opcional, relación |
+
 #### `Suscripcion`
 
 | Campo | Tipo | Atributos |
@@ -1466,6 +1581,24 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | nit | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
+
+#### `VerificacionProfesional`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| perfilProfesionalId | String | — |
+| revisadoPorId | String | — |
+| revisadoEn | DateTime | — |
+| checklist | Json | — |
+| resultado | ResultadoVerificacion | — |
+| autorizacionArchivoUrl | String | — |
+| venceEn | DateTime | — |
+| creadoEn | DateTime | — |
+| avisoVencimientoEnviadoEn | DateTime | opcional |
+| notaInterna | String | opcional |
+| perfilProfesional | PerfilProfesional | relación (FK) |
+| revisadoPor | Usuario | relación |
 
 #### `WorkerLog`
 
@@ -1882,6 +2015,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoPor | Usuario | relación (FK) |
 | modificadoPor | Usuario | opcional, relación (FK) |
 | solicitudesFirmadas | SolicitudComite | lista, relación |
+| identificadores | IdentificadorIntegranteComite | lista, relación |
 
 #### `PerfilOperador`
 
@@ -2018,6 +2152,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reglasHistorialCambiadas | ReglaRecomendacionHistorial | lista, relación |
 | paisPerfil | Pais | opcional, relación |
 | ciudadPerfil | Ciudad | opcional, relación |
+| perfilProfesional | PerfilProfesional | opcional, relación |
+| verificacionesProfesionalRevisadas | VerificacionProfesional | lista, relación |
+| solicitudesCitaComoPadre | SolicitudCita | lista, relación |
 
 ## Diagrama ER (Mermaid)
 
@@ -2031,6 +2168,7 @@ erDiagram
     Apelacion ||--o{ DocumentoApelacion : "apelacion"
     BonoPromocional ||--o{ BonoAplicado : "bono"
     Ciudad ||--o{ Colegio : "ciudad"
+    Ciudad ||--o{ PerfilProfesional : "ciudad"
     Ciudad ||--o{ Reporte : "ciudadRel (opcional)"
     ClasificacionIA ||--o{ ClasificacionRubricaVoto : "clasificacionIA"
     ClasificacionIA ||--o{ CorreccionAdmin : "clasificacion"
@@ -2042,6 +2180,7 @@ erDiagram
     Colegio ||--o{ Estudiante : "colegio"
     Colegio ||--o{ IdentificadorAcudiente : "colegio"
     Colegio ||--o{ IdentificadorEstudiante : "colegio"
+    Colegio ||--o{ IdentificadorIntegranteComite : "colegio"
     Colegio ||--o{ IdentificadorProfesor : "colegio"
     Colegio ||--o{ Materia : "colegio"
     Colegio ||--o{ NotaSeguimiento : "colegio"
@@ -2072,15 +2211,19 @@ erDiagram
     Expediente ||--o{ InformeConsolidado : "expediente"
     Expediente ||--o{ InformePadre : "expediente"
     Expediente ||--o{ PatronExpediente : "expediente"
+    Expediente ||--o{ SolicitudCita : "expedienteCompartido (opcional)"
+    FranjaDisponible ||--o{ SolicitudCita : "franja"
     GuiaAccionCategoria ||--o{ AnalisisExpediente : "guiaAccion (opcional)"
     Hijo ||--o{ HijoPadre : "hijo"
     Hijo ||--o{ IdentificadorHijo : "hijo"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
     IdentificadorHijo ||--o{ IdentificadorHijoDesvinculado : "identificador"
+    IdentificadorIntegranteComite ||--o{ AlertaColegio : "identificadorIntegranteComite (opcional)"
     IdentificadorProfesor ||--o{ AlertaColegio : "identificadorProfesor (opcional)"
     IdentificadorReportado ||--o{ EventoMatch : "identificador"
     InformeConsolidado ||--o{ AclaracionExpediente : "informeConsolidado"
+    IntegranteComite ||--o{ IdentificadorIntegranteComite : "integrante"
     IntegranteComite ||--o{ SolicitudComite : "integranteFirmante (opcional)"
     Materia ||--o{ CursoMateria : "materia"
     ModuloPermisible ||--o{ PermisoModulo : "modulo"
@@ -2091,6 +2234,9 @@ erDiagram
     Pais ||--o{ Reporte : "paisRel (opcional)"
     ParametroSistema ||--o{ AuditLog : "parametro (opcional)"
     PatronInstitucional ||--o{ AlertaColegio : "patronInstitucional (opcional)"
+    PerfilProfesional ||--o{ FranjaDisponible : "profesional"
+    PerfilProfesional ||--o{ SolicitudCita : "profesional"
+    PerfilProfesional ||--o{ VerificacionProfesional : "perfilProfesional"
     Plan ||--o{ Suscripcion : "planActual"
     Plataforma ||--o{ AlertaSuscripcion : "plataforma"
     Plataforma ||--o{ Apelacion : "plataforma"
@@ -2098,6 +2244,7 @@ erDiagram
     Plataforma ||--o{ IdentificadorContacto : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorEstudiante : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorHijo : "plataforma (opcional)"
+    Plataforma ||--o{ IdentificadorIntegranteComite : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorProfesor : "plataforma (opcional)"
     Plataforma ||--o{ IdentificadorReportado : "plataforma"
     Plataforma ||--o{ PatronInstitucional : "plataforma"
@@ -2122,6 +2269,7 @@ erDiagram
     SeguimientoCaso ||--o{ InformeCaso : "caso"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
+    SolicitudCita ||--o{ EncuestaPrimeraCita : "solicitud"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"
     Suscripcion ||--o{ CodigoReferidoUso : "referida"
     Suscripcion ||--o{ CodigoReferidoUso : "referidor"
@@ -2160,6 +2308,7 @@ erDiagram
     Usuario ||--o{ ParametroSistema : "actualizadoPor (opcional)"
     Usuario ||--o{ PerfilOperador : "creadoPor"
     Usuario ||--o{ PerfilOperador : "usuario"
+    Usuario ||--o{ PerfilProfesional : "usuario"
     Usuario ||--o{ PermisoModulo : "actualizadoPor (opcional)"
     Usuario ||--o{ Plan : "creadoPor"
     Usuario ||--o{ Recomendacion : "resueltaPor (opcional)"

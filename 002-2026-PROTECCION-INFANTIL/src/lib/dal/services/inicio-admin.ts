@@ -166,6 +166,93 @@ async function senalVigenciasPorVencer(): Promise<SenalAlarma | null> {
     };
 }
 
+/**
+ * SPEC-398 (I-286) — Alarma en vivo del jurado del motor.
+ *
+ * SALUD DEL SISTEMA: mira las últimas N clasificaciones del pipeline REAL
+ * (sin override intencional) y compara los votantes reales —contados con
+ * `ClasificacionRubricaVoto`, no inferidos de una cadena de texto— contra el
+ * comité configurado (`ia.rubrica.modelos`). Si más de `umbral` de las
+ * últimas N votó con menos modelos de los declarados, el motor está
+ * degradando en silencio — la señal grita.
+ *
+ * Por qué existe: I-286 vivió 6 días en producción con el jurado colapsado
+ * a un modelo porque **no había nada mirando**. Un test caza la regresión el
+ * día que alguien la escribe; esta señal vigila la realidad después.
+ * Complementa el candado del código (`pipeline-jurado.test.ts`) — la prueba
+ * vigila el código, la señal vigila la realidad (idea del CEO idc-14 ·
+ * 2026-09-03 12:25).
+ *
+ * ¿Por qué `overrideModeloUsado IS NULL`?
+ *   El sandbox A/B del admin corre sobre reportes reales y pide un modelo
+ *   puntual — no está marcado como demo. Sin el filtro por override, tres
+ *   A/B seguidas cantan un falso positivo alto. La bandera `overrideModelo-
+ *   Usado` (poblada en `clasificacion.ts` cuando el caller pide override
+ *   explícito) distingue los dos casos y hace la alarma **exacta**, no
+ *   aproximada.
+ *
+ * ¿Por qué contar `ClasificacionRubricaVoto` en vez de parsear `modeloUsado`?
+ *   Es la medición directa: las filas del voto reflejan los modelos que
+ *   REALMENTE opinaron. Parsear el string es una inferencia, y las
+ *   inferencias mienten cuando el formato cambia.
+ *
+ * Al desplegar por primera vez la alarma va a sonar por las 52 clasifica-
+ * ciones históricas de I-286 (todas `overrideModeloUsado = NULL`, todas con
+ * un solo voto). Eso es correcto: es la alarma probándose sola en vivo. Va
+ * a callarse cuando entren ~ventana clasificaciones nuevas con el jurado
+ * completo y las viejas salgan del rango.
+ */
+async function senalJuradoReducido(): Promise<SenalAlarma | null> {
+    const ventana = await paramInt("monitoreo.jurado.ventana_clasificaciones", 20);
+    const umbral = await paramInt("monitoreo.jurado.max_reducidas_umbral", 3);
+
+    // Comité configurado (fuente de verdad: `ia.rubrica.modelos`). Si el
+    // parámetro no está seteado o es una lista de 1, no hay comparación
+    // posible; mejor no gritar que gritar sin sentido.
+    const paramComite = await getParametroSistemaValor("ia.rubrica.modelos");
+    if (!paramComite) return null;
+    let comite: string[];
+    try {
+        const parsed = JSON.parse(paramComite);
+        if (!Array.isArray(parsed) || parsed.length === 0) return null;
+        comite = parsed.map((m: unknown) => String(m));
+    } catch {
+        return null;
+    }
+    const tamanoComite = comite.length;
+    if (tamanoComite <= 1) return null;
+
+    // Últimas N clasificaciones del pipeline real (SIN override intencional)
+    // con la cuenta de modelos distintos que efectivamente votaron.
+    // `COUNT(DISTINCT crv.modelo)` porque un mismo modelo puede tener varias
+    // filas (una por categoría) — importa cuántos modelos distintos opinaron.
+    const rows = await prisma.$queryRaw<Array<{ votantes: bigint }>>`
+        SELECT COALESCE(v.votantes, 0)::bigint AS votantes
+        FROM "ClasificacionIA" c
+        LEFT JOIN LATERAL (
+            SELECT COUNT(DISTINCT crv."modelo") AS votantes
+            FROM "clasificacion_rubrica_votos" crv
+            WHERE crv."clasificacionIAId" = c.id
+        ) v ON true
+        WHERE c."overrideModeloUsado" IS NULL
+        ORDER BY c."creadoEn" DESC
+        LIMIT ${ventana}
+    `;
+    if (rows.length === 0) return null;
+
+    const reducidas = rows.filter((r) => Number(r.votantes) > 0 && Number(r.votantes) < tamanoComite).length;
+    if (reducidas < umbral) return null;
+
+    return {
+        id: "jurado_reducido",
+        prioridad: "alta",
+        texto:
+            `El motor votó con menos modelos de los configurados en ${reducidas} de las últimas ${rows.length} clasificaciones ` +
+            `(comité: ${tamanoComite} modelos). El jurado está degradando en silencio — revisar el pipeline.`,
+        ruta: "/dashboard/admin/estadisticas/salud-motor",
+    };
+}
+
 async function senalComiteVencido(): Promise<SenalAlarma | null> {
     // El SLA "normal" ya está parametrizado; usamos ese como corte simple.
     const slaHoras = await paramInt("padre.comite.sla_horas_normal", 48);
@@ -264,6 +351,10 @@ export async function calcularEstadoInicio(): Promise<EstadoInicio> {
         senalRevisionManualReales(),
         senalVigenciasPorVencer(),
         senalComiteVencido(),
+        // SPEC-398 (I-286): alarma en vivo — el jurado del motor no se degrada
+        // sin que la casa lo grite. La prueba vigila el código; esta vigila
+        // la realidad.
+        senalJuradoReducido(),
         senalesDeInfra(),
     ];
     const settled = await Promise.allSettled(promesas);

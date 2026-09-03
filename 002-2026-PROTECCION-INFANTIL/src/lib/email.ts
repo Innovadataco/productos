@@ -59,6 +59,7 @@ export async function enviarCodigoVerificacion(email: string, codigo: string): P
 // SPEC-339: los correos del camino del padre viven en `email-padre.ts` (este
 // adaptador tocó el techo de 500 líneas). Re-export: ningún consumidor cambia.
 export { enviarEnlaceRegistro, enviarBienvenidaPadre, enviarAlertaHijoReporte } from "./email-padre";
+export { enviarEnlaceRegistroProfesional, enviarBienvenidaProfesional } from "./email-profesional";
 
 export async function enviarEmailCuentaExistente(email: string): Promise<void> {
     const result = await programar({

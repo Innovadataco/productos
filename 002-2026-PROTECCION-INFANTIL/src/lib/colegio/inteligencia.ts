@@ -3,7 +3,7 @@
  * estadísticas, tendencia, reloj 24 h, patrones institucionales y comparativa
  * por grado. No expone PII; todos los agregados son colegio-scoped.
  */
-import { AlertaColegioRepository } from "@/lib/dal/repositories/alerta-colegio";
+import { AlertaColegioRepository, type TipoSujeto } from "@/lib/dal/repositories/alerta-colegio";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import type { PuntoTendencia } from "@/lib/dal/repositories/colegio-resumen";
 import { calcularComparativaCursos, type ComparativaCursos } from "./comparativa";
@@ -56,7 +56,9 @@ export interface EstadisticasInteligenciaColegio {
         alertas: number;
     };
     porCurso: EstadisticasCurso[];
-    alertasPorTipoSujeto: { ESTUDIANTE: number; PROFESOR: number; ACUDIENTE: number };
+    // SPEC-380 (PR B): shape derivado del enum `TipoSujeto` — el compilador
+    // fuerza a agregar la nueva key si mañana entra un 5º sujeto.
+    alertasPorTipoSujeto: Record<TipoSujeto, number>;
     tendencia: TendenciaInteligencia;
     reloj24h: number[];
     patrones: PatronesColegioDto;

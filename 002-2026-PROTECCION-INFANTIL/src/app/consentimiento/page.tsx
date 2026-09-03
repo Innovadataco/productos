@@ -14,6 +14,9 @@ const DASHBOARD_POR_ROL: Record<RolUsuario, string> = {
     ADMIN: "/dashboard/admin",
     OPERADOR: "/dashboard/admin",
     COMITE_VALIDACION: "/dashboard/admin",
+    // SPEC-391 (L1b): el profesional cae a completar su perfil tras crear la
+    // cuenta; L5 (panel del profesional) definirá la home real.
+    PROFESIONAL: "/perfil-profesional/completar",
 };
 
 /**

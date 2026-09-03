@@ -25,6 +25,9 @@ export const HOME_POR_ROL: Record<RolUsuario, string> = {
     OPERADOR: "/dashboard/admin",
     COMITE_VALIDACION: "/dashboard/admin/comite",
     COMITE_CONVIVENCIA: "/dashboard/colegio/comite/casos",
+    // SPEC-391 (L1b): tras completar registro, el profesional cae en
+    // /perfil-profesional/completar (L5 definirá su dashboard).
+    PROFESIONAL: "/perfil-profesional/completar",
 };
 
 /** Crea un usuario por rol y hace LOGIN REAL (el camino de entrada, no un token regalado). */
