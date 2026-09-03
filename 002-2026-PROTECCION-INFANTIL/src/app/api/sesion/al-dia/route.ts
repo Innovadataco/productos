@@ -28,19 +28,36 @@ import { destinoParaRol } from "@/lib/camino/pasos";
 import { requireEnv } from "@/lib/env";
 import { baseUrlPublica } from "@/lib/routing/base-url-publica";
 
-// SPEC-342 (BUG3 · seguridad): defensa contra redirección abierta POR URL, no
-// por parcheo de strings. El chequeo de prefijos ("//") dejaba pasar la barra
-// invertida: los navegadores normalizan "\\" como "/", así que "/\\evil.com"
-// terminaba en Location: https://evil.com/ (reproducido en vivo por Calidad).
-// La única autoridad válida es el ORIGIN resultante de resolver el destino
-// contra nuestra base: si cambió, el destino intentaba escaparse.
-function destinoSeguro(destino: string | null, base: string): string {
-    const fallback = "/dashboard/padre";
+// SPEC-397 (I-237 · seguridad · open redirect vivo en prod): defensa por CLASE,
+// no por lista de cadenas. Historia:
+//  · SPEC-339 abrió la superficie.
+//  · SPEC-342 (BUG3) cerró la barra invertida (`/\\evil.com`) chequeando que el
+//    origin resuelto no cambie contra la base.
+//  · I-237 encontró la clase que sobrevivía: entradas como "/..//evil.example.com"
+//    saturan el chequeo de origin (origin sigue siendo el nuestro) porque el
+//    pathname resuelto queda `//evil.example.com`. `pathname + search` se
+//    devolvía como string; la llamada `new URL(haciaDonde, base)` de más abajo
+//    lo reinterpretaba y `//host` es URL relativa al protocolo → escape.
+//
+// El arreglo cierra dos huecos a la vez:
+//  1. Se devuelve el URL ABSOLUTO ya resuelto (no un string relativo) — el
+//     redirect no vuelve a parsear y la clase entera de "protocol-relative
+//     smuggling" muere ahí.
+//  2. Como cinturón, se rechaza cualquier pathname que empiece con `//`
+//     (defensa en profundidad — si mañana algún callsite volviera a serializar
+//     el pathname y a reparsear, el candado igual dispara).
+function destinoSeguro(destino: string | null, base: string): URL {
+    const fallback = new URL("/dashboard/padre", base);
     if (!destino || !destino.startsWith("/")) return fallback;
     try {
         const resuelta = new URL(destino, base);
         if (resuelta.origin !== new URL(base).origin) return fallback;
-        return resuelta.pathname + resuelta.search;
+        // Cinturón anti-protocol-relative: tras normalizar, el pathname NO
+        // puede empezar con "//" — reparsear eso como URL relativa cambia el
+        // origin (I-237). No debería llegar acá si el chequeo de origin cerró
+        // el caso, pero cierra la clase contra reintroducciones futuras.
+        if (resuelta.pathname.startsWith("//")) return fallback;
+        return resuelta;
     } catch {
         return fallback;
     }
@@ -67,13 +84,17 @@ export async function GET(request: Request) {
 
         // SPEC-344 (A-69 · C1): padre Y rector comparten la misma cadena. El
         // registry `destinoParaRol` despacha por rol; roles sin camino guiado
-        // siempre reciben `null` y caen al `destino` solicitado.
+        // siempre reciben `null` y caen al `destino` solicitado. El registry
+        // devuelve rutas literales del código (nunca user input) así que se
+        // pueden resolver directamente contra la base.
         const destinoPaso = destinoParaRol(usuario.rol, estado.pasoCamino);
-        const haciaDonde = destinoPaso ?? destino;
+        const haciaDonde = destinoPaso ? new URL(destinoPaso, base) : destino;
 
         // SPEC-342 (candado 22v3): JAMÁS request.url como base de un redirect en
         // Docker — sale 0.0.0.0 y el navegador muere. Base pública de 3 niveles.
-        const res = NextResponse.redirect(new URL(haciaDonde, base));
+        // SPEC-397: el URL absoluto entra tal cual — no se reparsea ni se serializa
+        // como string por el camino, para que ninguna capa lo reinterprete.
+        const res = NextResponse.redirect(haciaDonde);
         res.cookies.set(NOMBRE_COOKIE, value, {
             httpOnly: true,
             sameSite: "lax",
