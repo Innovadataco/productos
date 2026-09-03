@@ -341,6 +341,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/demo/demo-v3.test.ts",
     // SPEC-382: candados del poblador demo v4 (5000 reportes, +11 países).
     "scripts/demo/demo-v4.test.ts",
+    // SPEC-412 (BRIEF A-76 · I-292): el poblador v5 no fabrica llaves primarias,
+    // marca en `demo_marcado`, y el validador NO se ablanda para los ids viejos.
+    "scripts/demo/demo-v5.test.ts",
     // SPEC-378: Inicio del administrador (server component + tarjetas ámbar).
     "src/app/dashboard/admin/inicio/page.test.tsx",
     // SPEC-379: membrete institucional compartido + candado UI materia-profesor.
