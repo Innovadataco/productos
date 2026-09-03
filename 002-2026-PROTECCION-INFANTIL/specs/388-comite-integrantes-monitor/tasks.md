@@ -1,4 +1,4 @@
-# SPEC-380 (PR B) · Tasks
+# SPEC-388 (PR B de SPEC-380) · Tasks
 
 - [X] T001 Enumerar los 16 consumidores de `tipoSujeto` (archivo:línea).
 - [X] T002 Verificar BI (`grep -rn tipoSujeto` en 005-BI): vacío.
