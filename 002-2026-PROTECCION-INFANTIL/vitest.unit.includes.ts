@@ -66,6 +66,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/profesionales/ProfesionalTarjeta.test.tsx",
     // SPEC-392 (L3 · H-4): baraja determinística por semilla.
     "src/lib/padre/directorio-shuffle.test.ts",
+    // SPEC-392 (L3 · H-2 · veredicto CEO 13:30): candado de TIPO — la intersección
+    // del DTO público con los campos prohibidos DEBE ser never. Si no, no compila.
+    "src/lib/dal/repositories/perfil-profesional-dto.test.ts",
     "src/components/modules/ComiteBandeja.test.tsx",
     "src/components/modules/ComiteSolicitudDetalle.test.tsx",
     "src/components/modules/ConsultaEnriquecidaClient.test.tsx",

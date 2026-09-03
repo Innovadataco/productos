@@ -8,21 +8,16 @@
  * en la red».
  */
 import Link from "next/link";
+import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
 
-export interface ProfesionalTarjetaData {
-    id: string;
-    nombreVisible: string;
-    fotoUrl: string | null;
-    tituloProfesional: string;
-    especialidades: string[];
-    ciudad: { nombre: string } | null;
-    atiendeVirtual: boolean;
-    atiendePresencial: boolean;
-    tarifaConsultaCOP: number;
-    duracionMinutos: number;
-    emiteFactura: boolean;
-    aniosExperiencia: number;
-}
+/**
+ * SPEC-392 · H-2 · protección de tipo, no convención.
+ *
+ * La tarjeta consume el DTO público del DAL. Si alguien intenta pasarle un
+ * `email`/`telefono`/`numeroTarjetaProfesional`, el compilador rechaza — el
+ * DTO no los tiene por diseño (ver `perfil-profesional.ts` · `PerfilPublicoDTO`).
+ */
+export type ProfesionalTarjetaData = PerfilPublicoDTO;
 
 /** Formato oficial COP sin decimales — "$120.000". */
 const CURRENCY_COP = new Intl.NumberFormat("es-CO", {

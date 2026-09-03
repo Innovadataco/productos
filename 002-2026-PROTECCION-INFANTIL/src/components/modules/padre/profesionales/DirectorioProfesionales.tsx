@@ -14,7 +14,8 @@
  * nunca queda muda.
  */
 import { useEffect, useMemo, useState } from "react";
-import { ProfesionalTarjeta, type ProfesionalTarjetaData } from "./ProfesionalTarjeta";
+import { ProfesionalTarjeta } from "./ProfesionalTarjeta";
+import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
 
 interface Facetas {
     ciudades: Array<{ id: string; nombre: string }>;
@@ -50,7 +51,7 @@ export function DirectorioProfesionales({
 }) {
     const [seed, setSeed] = useState<string | null>(null);
     const [facetas, setFacetas] = useState<Facetas | null>(null);
-    const [items, setItems] = useState<ProfesionalTarjetaData[] | null>(null);
+    const [items, setItems] = useState<PerfilPublicoDTO[] | null>(null);
     const [ciudadId, setCiudadId] = useState<string>("");
     const [especialidad, setEspecialidad] = useState<string>("");
     const [modalidad, setModalidad] = useState<"" | "virtual" | "presencial">("");
@@ -80,7 +81,7 @@ export function DirectorioProfesionales({
         fetch(`/api/padre/profesionales?${q.toString()}`, { credentials: "include" })
             .then(async (r) => {
                 if (!r.ok) throw new Error(String(r.status));
-                return r.json() as Promise<{ items: ProfesionalTarjetaData[] }>;
+                return r.json() as Promise<{ items: PerfilPublicoDTO[] }>;
             })
             .then((j) => setItems(j.items))
             .catch(() => {

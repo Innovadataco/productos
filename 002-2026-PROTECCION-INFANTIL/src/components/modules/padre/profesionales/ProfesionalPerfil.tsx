@@ -10,7 +10,7 @@
  * la urgencia le desborda antes de reservar, tiene la salida a la mano.
  */
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
-import type { ProfesionalTarjetaData } from "./ProfesionalTarjeta";
+import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
 
 const CURRENCY_COP = new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -30,7 +30,7 @@ export function ProfesionalPerfil({
     presentacionDelPadre,
     urgencia,
 }: {
-    p: ProfesionalTarjetaData & { presentacion: string };
+    p: PerfilPublicoDTO;
     presentacionDelPadre?: string | undefined;
     urgencia?: "ESTA_SEMANA" | "SIN_APURO" | undefined;
 }) {

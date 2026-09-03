@@ -6,21 +6,24 @@
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { ProfesionalTarjeta, type ProfesionalTarjetaData } from "./ProfesionalTarjeta";
+import { ProfesionalTarjeta } from "./ProfesionalTarjeta";
+import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
 
-const perfil: ProfesionalTarjetaData = {
+const perfil: PerfilPublicoDTO = {
     id: "prof-1",
     nombreVisible: "Dra. Ana Pérez",
     fotoUrl: null,
     tituloProfesional: "Psicóloga clínica",
     especialidades: ["Ansiedad", "Adolescencia"],
-    ciudad: { nombre: "Bogotá" },
+    ciudadId: "ciudad-bog",
+    ciudad: { id: "ciudad-bog", nombre: "Bogotá" },
     atiendeVirtual: true,
     atiendePresencial: false,
     tarifaConsultaCOP: 120000,
     duracionMinutos: 50,
     emiteFactura: true,
     aniosExperiencia: 8,
+    presentacion: "Hola, soy visible sin problemas.",
 };
 
 describe("ProfesionalTarjeta", () => {

@@ -34,10 +34,35 @@ const INCLUDE_CIUDAD = { ciudad: { select: { id: true, nombre: true } } } as con
 export type PerfilConCiudad = PerfilProfesional & { ciudad: { id: string; nombre: string } };
 
 /**
- * L3 (SPEC-392): allowlist de tarjeta pública. Fields "seguros" del propio
- * perfil + `ciudad` REDUCIDA a `{id, nombre}`. Los internos
- * (`numeroTarjetaProfesional`, `datosFacturacion`) están AUSENTES por omisión.
+ * L3 (SPEC-392) · H-2 · protección de tipo, no convención.
+ *
+ * `PerfilPublicoDTO` es una interface EXPLÍCITA con la lista finita de campos
+ * que el padre puede ver. La allowlist del `select` es la primera línea; el
+ * DTO es la segunda: aunque alguien mañana agregue un campo prohibido al
+ * `select`, el mapeo `toPublicoDTO` no lo copia y el tipo devuelto no lo
+ * carga — el compilador rechaza la fuga antes de que un test tenga que verla.
+ *
+ * Regla: agregar un campo a este DTO requiere **tres** cambios coordinados
+ * (interface + select + `toPublicoDTO`). Quitar uno también. Cualquier
+ * descoordinación no compila.
  */
+export interface PerfilPublicoDTO {
+    id: string;
+    nombreVisible: string;
+    fotoUrl: string | null;
+    tituloProfesional: string;
+    especialidades: string[];
+    ciudadId: string;
+    atiendeVirtual: boolean;
+    atiendePresencial: boolean;
+    aniosExperiencia: number;
+    presentacion: string;
+    tarifaConsultaCOP: number;
+    duracionMinutos: number;
+    emiteFactura: boolean;
+    ciudad: { id: string; nombre: string };
+}
+
 const SELECT_TARJETA_PUBLICA = {
     id: true,
     nombreVisible: true,
@@ -55,9 +80,32 @@ const SELECT_TARJETA_PUBLICA = {
     ciudad: { select: { id: true, nombre: true } },
 } satisfies Prisma.PerfilProfesionalSelect;
 
-export type PerfilProfesionalPublicoRow = Prisma.PerfilProfesionalGetPayload<{
-    select: typeof SELECT_TARJETA_PUBLICA;
-}>;
+/**
+ * Mapeo del payload de Prisma al DTO. **Único punto de conversión** — si el
+ * `select` traspasa campos nuevos, no aparecen acá y quedan fuera del DTO;
+ * si el DTO gana un campo, el compilador exige agregarlo abajo.
+ * `ciudad` es no-nulo en el DTO pero opcional en el join (relación obligatoria
+ * del schema `ciudadId String`); el fallback cae al `ciudadId` que sí es
+ * obligatorio, y no expone contacto.
+ */
+function toPublicoDTO(row: Prisma.PerfilProfesionalGetPayload<{ select: typeof SELECT_TARJETA_PUBLICA }>): PerfilPublicoDTO {
+    return {
+        id: row.id,
+        nombreVisible: row.nombreVisible,
+        fotoUrl: row.fotoUrl,
+        tituloProfesional: row.tituloProfesional,
+        especialidades: row.especialidades,
+        ciudadId: row.ciudadId,
+        atiendeVirtual: row.atiendeVirtual,
+        atiendePresencial: row.atiendePresencial,
+        aniosExperiencia: row.aniosExperiencia,
+        presentacion: row.presentacion,
+        tarifaConsultaCOP: row.tarifaConsultaCOP,
+        duracionMinutos: row.duracionMinutos,
+        emiteFactura: row.emiteFactura,
+        ciudad: row.ciudad ?? { id: row.ciudadId, nombre: "" },
+    };
+}
 
 export interface FiltrosDirectorio {
     ciudadId?: string | undefined;
@@ -125,16 +173,17 @@ export class PerfilProfesionalRepository {
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
      * (candado H-4 · «da turno a todos» sin marear al padre al filtrar).
      */
-    listarActivos(filtros: FiltrosDirectorio): Promise<PerfilProfesionalPublicoRow[]> {
+    async listarActivos(filtros: FiltrosDirectorio): Promise<PerfilPublicoDTO[]> {
         const where: Prisma.PerfilProfesionalWhereInput = { estado: "ACTIVO" };
         if (filtros.ciudadId) where.ciudadId = filtros.ciudadId;
         if (filtros.especialidad) where.especialidades = { has: filtros.especialidad };
         if (filtros.modalidad === "virtual") where.atiendeVirtual = true;
         if (filtros.modalidad === "presencial") where.atiendePresencial = true;
-        return this.db.perfilProfesional.findMany({
+        const rows = await this.db.perfilProfesional.findMany({
             where,
             select: SELECT_TARJETA_PUBLICA,
         });
+        return rows.map(toPublicoDTO);
     }
 
     /**
@@ -142,11 +191,12 @@ export class PerfilProfesionalRepository {
      * detalle no destapa campos internos. El contacto se entrega en L4, al
      * confirmar la cita, no acá.
      */
-    obtenerPublicoPorId(id: string): Promise<PerfilProfesionalPublicoRow | null> {
-        return this.db.perfilProfesional.findFirst({
+    async obtenerPublicoPorId(id: string): Promise<PerfilPublicoDTO | null> {
+        const row = await this.db.perfilProfesional.findFirst({
             where: { id, estado: "ACTIVO" },
             select: SELECT_TARJETA_PUBLICA,
         });
+        return row ? toPublicoDTO(row) : null;
     }
 
     /**
