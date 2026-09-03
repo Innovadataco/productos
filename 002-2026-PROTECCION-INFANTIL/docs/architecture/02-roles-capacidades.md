@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 489 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3423 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 496 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3472 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -221,6 +221,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/auth/register` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/completar` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/solicitar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/completar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/solicitar` | api | permitir | permite | sí |
 | `/api/auth/registro/completar` | api | permitir | permite | sí |
 | `/api/auth/registro/solicitar` | api | permitir | permite | sí |
 | `/api/auth/verificar/completar` | api | permitir | permite | sí |
@@ -374,6 +376,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/perfil` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -504,12 +508,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
+| `/perfil-profesional/completar` | página | permitir | permite | sí |
 | `/privacidad` | página | permitir | permite | sí |
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | permitir | permite | sí |
+| `/registro-profesional` | página | permitir | permite | sí |
+| `/registro-profesional/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -715,6 +722,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/auth/register` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/completar` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/solicitar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/completar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/solicitar` | api | permitir | permite | sí |
 | `/api/auth/registro/completar` | api | permitir | permite | sí |
 | `/api/auth/registro/solicitar` | api | permitir | permite | sí |
 | `/api/auth/verificar/completar` | api | permitir | permite | sí |
@@ -868,6 +877,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/perfil` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -998,12 +1009,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
+| `/perfil-profesional/completar` | página | permitir | permite | sí |
 | `/privacidad` | página | permitir | permite | sí |
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | permitir | permite | sí |
+| `/registro-profesional` | página | permitir | permite | sí |
+| `/registro-profesional/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin | no permite | sí |
@@ -1209,6 +1223,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/auth/register` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/completar` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/solicitar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/completar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/solicitar` | api | permitir | permite | sí |
 | `/api/auth/registro/completar` | api | permitir | permite | sí |
 | `/api/auth/registro/solicitar` | api | permitir | permite | sí |
 | `/api/auth/verificar/completar` | api | permitir | permite | sí |
@@ -1362,6 +1378,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/perfil` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -1492,12 +1510,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
+| `/perfil-profesional/completar` | página | permitir | permite | sí |
 | `/privacidad` | página | permitir | permite | sí |
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | permitir | permite | sí |
+| `/registro-profesional` | página | permitir | permite | sí |
+| `/registro-profesional/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | redirigir→/dashboard/admin/comite | no permite | sí |
@@ -1703,6 +1724,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/auth/register` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro-colegio/completar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro-colegio/solicitar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/registro-profesional/completar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/registro-profesional/solicitar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro/completar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro/solicitar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/verificar/completar` | api | HTTP 403 | no permite | sí |
@@ -1856,6 +1879,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/perfil` | api | HTTP 403 | no permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 403 | no permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
@@ -1986,12 +2011,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/login` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/offline` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/perfil-profesional/completar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/privacidad` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/recuperar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/recuperar/[token]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro-colegio` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/registro-profesional` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/registro-profesional/crear-clave/[token]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro/crear-clave/[token]` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/registro/inicio` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/reportar` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2197,6 +2225,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/auth/register` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro-colegio/completar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro-colegio/solicitar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/registro-profesional/completar` | api | HTTP 403 | no permite | sí |
+| `/api/auth/registro-profesional/solicitar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro/completar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/registro/solicitar` | api | HTTP 403 | no permite | sí |
 | `/api/auth/verificar/completar` | api | HTTP 403 | no permite | sí |
@@ -2350,6 +2380,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | HTTP 403 | no permite | sí |
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/perfil` | api | HTTP 403 | no permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | HTTP 403 | no permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | HTTP 403 | no permite | sí |
 | `/api/reportes` | api | HTTP 403 | no permite | sí |
@@ -2480,12 +2512,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/login` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/offline` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/perfil-profesional/completar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/privacidad` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/recuperar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/recuperar/[token]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro-colegio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/registro-profesional` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/registro-profesional/crear-clave/[token]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro/crear-clave/[token]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/registro/inicio` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/reportar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2691,6 +2726,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/auth/register` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/completar` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/solicitar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/completar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/solicitar` | api | permitir | permite | sí |
 | `/api/auth/registro/completar` | api | permitir | permite | sí |
 | `/api/auth/registro/solicitar` | api | permitir | permite | sí |
 | `/api/auth/verificar/completar` | api | permitir | permite | sí |
@@ -2844,6 +2881,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | permitir | permite | sí |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/perfil` | api | permitir | permite | sí |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -2974,12 +3013,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | permitir | permite | sí |
 | `/offline` | página | permitir | permite | sí |
+| `/perfil-profesional/completar` | página | permitir | permite | sí |
 | `/privacidad` | página | permitir | permite | sí |
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | permitir | permite | sí |
+| `/registro-profesional` | página | permitir | permite | sí |
+| `/registro-profesional/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | permitir | permite | sí |
@@ -3185,6 +3227,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/auth/register` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/completar` | api | permitir | permite | sí |
 | `/api/auth/registro-colegio/solicitar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/completar` | api | permitir | permite | sí |
+| `/api/auth/registro-profesional/solicitar` | api | permitir | permite | sí |
 | `/api/auth/registro/completar` | api | permitir | permite | sí |
 | `/api/auth/registro/solicitar` | api | permitir | permite | sí |
 | `/api/auth/verificar/completar` | api | permitir | permite | sí |
@@ -3338,6 +3382,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/pagos/suscripcion/validar-bono` | api | HTTP 401 | permite | **NO** |
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
+| `/api/profesional/autorizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/perfil` | api | HTTP 401 | permite | **NO** |
 | `/api/publico/guia-accion/categoria/[cat]` | api | permitir | permite | sí |
 | `/api/publico/verificar-pdf/[hash]` | api | permitir | permite | sí |
 | `/api/reportes` | api | permitir | permite | sí |
@@ -3468,12 +3514,15 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/login | permite | **NO** |
 | `/offline` | página | permitir | permite | sí |
+| `/perfil-profesional/completar` | página | redirigir→/login | permite | **NO** |
 | `/privacidad` | página | permitir | permite | sí |
 | `/recuperar` | página | permitir | permite | sí |
 | `/recuperar/[token]` | página | permitir | permite | sí |
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | permitir | permite | sí |
+| `/registro-profesional` | página | redirigir→/login | permite | **NO** |
+| `/registro-profesional/crear-clave/[token]` | página | redirigir→/login | permite | **NO** |
 | `/registro/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | permitir | permite | sí |
@@ -3802,6 +3851,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/pagos/suscripcion/cancelar` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/estado` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/validar-bono` | HTTP 401 | permite |
+| `/api/profesional/autorizacion` | HTTP 401 | permite |
+| `/api/profesional/perfil` | HTTP 401 | permite |
 | `/api/sesion/al-dia` | HTTP 401 | permite |
 | `/api/session/ping` | HTTP 401 | permite |
 | `/api/vigencia/refresh` | HTTP 401 | permite |
@@ -3862,6 +3913,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/perfil` | redirigir→/login | permite |
 | `/dashboard/perfil/notificaciones` | redirigir→/login | permite |
 | `/mis-reportes` | redirigir→/login | permite |
+| `/perfil-profesional/completar` | redirigir→/login | permite |
+| `/registro-profesional` | redirigir→/login | permite |
+| `/registro-profesional/crear-clave/[token]` | redirigir→/login | permite |
 
 ## Eje de módulos (BD): módulo → ruta → rol
 

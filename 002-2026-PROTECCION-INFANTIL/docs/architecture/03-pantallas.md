@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-128 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+131 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -140,12 +140,15 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/login` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/mis-reportes` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/offline` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
+| `/perfil-profesional/completar` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/privacidad` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/recuperar` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/recuperar/[token]` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/registro` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/registro-colegio` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/registro-colegio/crear-clave/[token]` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
+| `/registro-profesional` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
+| `/registro-profesional/crear-clave/[token]` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/registro/crear-clave/[token]` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/registro/inicio` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/reportar` | PARENT, ANONIMO | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |

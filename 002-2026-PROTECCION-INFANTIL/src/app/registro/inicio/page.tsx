@@ -9,12 +9,13 @@ export default function RegistroInicioPage() {
                         ¿Quién eres?
                     </h1>
                     <p className="mt-3 font-sans text-base text-muted">
-                        Protección Infantil tiene un espacio para familias y otro para colegios.
-                        Elige el tuyo para comenzar.
+                        Protección Infantil tiene un espacio para familias, otro para colegios y
+                        otro para los psicólogos que atienden a los padres. Elige el tuyo para
+                        comenzar.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                     {/* Tarjeta Familia */}
                     <div className="group relative overflow-hidden rounded-2xl border border-cielo/30 bg-cielo/5 p-6 transition hover:border-cielo/60 hover:bg-cielo/10 dark:border-cielo/20 dark:bg-cielo/5 dark:hover:border-cielo/40 dark:hover:bg-cielo/10" style={{ borderRadius: "16px" }}>
                         <div className="mb-4 flex justify-center" aria-hidden="true">
@@ -74,6 +75,41 @@ export default function RegistroInicioPage() {
                             aria-label="Registrar mi colegio"
                         >
                             Registrar colegio →
+                        </Link>
+                    </div>
+
+                    {/* SPEC-391 (A-75 · L1b) — Tarjeta Profesional. La Red de
+                        Profesionales es el séptimo actor: psicólogos verificados
+                        que atienden al padre después del reporte. Solo aparecen
+                        en el directorio cuando IDC aprueba su verificación. */}
+                    <div className="group relative overflow-hidden rounded-2xl border border-ambar/30 bg-ambar/5 p-6 transition hover:border-ambar/60 hover:bg-ambar/10 dark:border-ambar/20 dark:bg-ambar/5 dark:hover:border-ambar/40 dark:hover:bg-ambar/10" style={{ borderRadius: "16px" }}>
+                        <div className="mb-4 flex justify-center" aria-hidden="true">
+                            <svg
+                                width="72"
+                                height="72"
+                                viewBox="0 0 72 72"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                role="img"
+                                aria-label="Anillo de acompañamiento profesional"
+                            >
+                                <circle cx="36" cy="36" r="29.5" className="stroke-ambar opacity-20" strokeWidth="8" />
+                                <circle cx="36" cy="36" r="29.5" className="stroke-ambar" strokeWidth="8" strokeLinecap="round" strokeDasharray="185.35" strokeDashoffset="46.34" transform="rotate(-90 36 36)" />
+                                <circle cx="36" cy="36" r="16.5" className="stroke-ambar opacity-20" strokeWidth="8" />
+                                <circle cx="36" cy="36" r="16.5" className="stroke-ambar" strokeWidth="8" strokeLinecap="round" strokeDasharray="103.67" strokeDashoffset="25.92" transform="rotate(-90 36 36)" />
+                            </svg>
+                        </div>
+                        <h2 className="font-serif text-2xl font-normal text-body">Soy profesional</h2>
+                        <p className="mt-2 font-sans text-sm text-muted" style={{ borderRadius: "12px" }}>
+                            Psicólogos y acompañantes verificados. Recibí solicitudes de padres que buscan
+                            ayuda tras un reporte.
+                        </p>
+                        <Link
+                            href="/registro-profesional"
+                            className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-[22px] bg-ambar px-6 py-2.5 font-sans text-sm font-semibold text-white shadow-md shadow-ambar/25 transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ambar"
+                            aria-label="Registrarme como profesional"
+                        >
+                            Postularme →
                         </Link>
                     </div>
                 </div>
