@@ -163,6 +163,57 @@ describe("POST /api/colegio/casos/[id]/informes (SPEC-351)", { timeout: 30_000 }
         const res = await POST(req("POST", caso.id, { secciones: ["hechos"] }), { params: Promise.resolve({ id: caso.id }) });
         expect(res.status).toBe(400);
     });
+
+    // ── SPEC-373 · I-266 · colegio vencido NO puede EMITIR ───────────────────
+    // El sello (SPEC-234) es una promesa de vigencia futura: el rector firma un
+    // documento que un tercero podrá verificar mañana. Emitirlo desde un colegio
+    // con la ventana vencida rompe esa promesa. Antes de este SPEC no había
+    // guard — solo `verifyAuth` — y un colegio vencido firmaba con normalidad
+    // (INF-2026-0002 emitido en el hallazgo de Calidad).
+    it("I-266: colegio VENCIDO → 403 con mensaje claro, y NO se creó InformeCaso", async () => {
+        const { colegio, admin, caso } = await seedCaso();
+        const ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        await prisma.colegio.update({ where: { id: colegio.id }, data: { finServicio: ayer } });
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+
+        const res = await POST(req("POST", caso.id, { secciones: ["hechos"] }), { params: Promise.resolve({ id: caso.id }) });
+        expect(res.status).toBe(403);
+        const body = await res.json();
+        expect(body.error.message.toLowerCase()).toContain("vencido");
+        // Assert fuerte: el 403 no puede ser cosmético — nada debió quedar en la BD.
+        const filas = await prisma.informeCaso.count({ where: { casoId: caso.id } });
+        expect(filas, "colegio vencido no crea filas de informe").toBe(0);
+    });
+});
+
+// ── SPEC-373 · I-266 · la LECTURA nunca se bloquea por vigencia ─────────────
+// Candado del CEO: quien verifica un informe ya emitido es un tercero ajeno al
+// cobro del colegio; bloquearlo rompe la promesa. Este test cubre el GET del
+// historial (lectura autenticada) — el endpoint público `/verificar-pdf/[hash]`
+// no importa por rol y ya no tiene guard, así que no requiere test acá.
+describe("SPEC-373 · I-266 · lectura de informes con colegio VENCIDO", { timeout: 30_000 }, () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    it("colegio VENCIDO puede seguir LEYENDO el historial de informes ya emitidos (GET 200)", async () => {
+        const { colegio, admin, caso } = await seedCaso();
+        mockToken = await crearTokenUsuario(admin.id, "SCHOOL_ADMIN");
+        // Emitir un informe MIENTRAS estamos vigentes (el post-emisión no requiere vigencia para leerlo).
+        const emitir = await POST(req("POST", caso.id, { secciones: ["hechos"] }), { params: Promise.resolve({ id: caso.id }) });
+        expect(emitir.status).toBe(201);
+
+        // Ahora el colegio vence.
+        const ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        await prisma.colegio.update({ where: { id: colegio.id }, data: { finServicio: ayer } });
+
+        const res = await GET(req("GET", caso.id), { params: Promise.resolve({ id: caso.id }) });
+        expect(res.status, "leer el historial no se bloquea por vigencia").toBe(200);
+        const body = await res.json();
+        expect(body.informes.length).toBeGreaterThanOrEqual(1);
+    });
 });
 
 describe("GET /api/colegio/casos/[id]/informes (SPEC-351 · historial)", { timeout: 30_000 }, () => {

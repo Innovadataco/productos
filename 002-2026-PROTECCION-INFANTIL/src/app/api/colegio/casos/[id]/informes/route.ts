@@ -17,6 +17,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { cargarCasoConHechos } from "@/lib/caso/hechos-caso";
 import { generarPdfInformeCaso, type SeccionInforme } from "@/lib/caso/pdf-informe-caso";
 import { leerEscudoDataUri } from "@/lib/colegio/escudo-storage";
@@ -42,6 +43,19 @@ async function guardRector() {
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await guardRector();
+        // SPEC-373 · I-266: bloquear SOLO la emisión. Un colegio con la vigencia
+        // vencida no puede firmar un informe forense verificable — es una promesa
+        // de vigencia futura del sello — pero SÍ puede seguir viendo (GET) los ya
+        // emitidos, y el endpoint público `/verificar-pdf/[hash]` sigue abierto a
+        // cualquiera (el que verifica es un tercero ajeno al cobro del colegio).
+        // Mismo helper que `alertas/[id]/asignar` y `alertas/[id]/escalar`.
+        const vigencia = await verificarVigenciaColegio(user.id);
+        if (!vigencia.vigente) {
+            return NextResponse.json(
+                { error: { message: vigencia.mensaje, code: ERROR_CODES.FORBIDDEN } },
+                { status: 403 }
+            );
+        }
         const { id } = await params;
         const parsed = bodySchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) {
