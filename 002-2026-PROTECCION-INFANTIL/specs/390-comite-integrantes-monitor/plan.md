@@ -1,4 +1,4 @@
-# SPEC-388 (PR B de SPEC-380) · Plan
+# SPEC-390 (PR B de SPEC-380) · Plan
 
 1. **Diagnóstico 15v5**: enumerar los 16 consumidores de `tipoSujeto`
    (archivo:línea) y clasificarlos en escritura vs. lectura vs. UI vs. BI.

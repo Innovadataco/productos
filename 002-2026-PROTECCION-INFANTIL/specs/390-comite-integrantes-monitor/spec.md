@@ -1,4 +1,4 @@
-# SPEC-388 (PR B de SPEC-380 · C4/D-100) · Integrantes del comité monitoreados
+# SPEC-390 (PR B de SPEC-380 · C4/D-100) · Integrantes del comité monitoreados
 
 **Status**: IMPLEMENTADO
 **Fecha**: 2026-09-03 · **Dev**: PI-1 · **Origen**: D-100 (Jelkin, 31-08),
