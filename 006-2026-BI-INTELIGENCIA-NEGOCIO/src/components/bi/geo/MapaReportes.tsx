@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MapContainer, CircleMarker, Tooltip, GeoJSON } from "react-leaflet";
-import type { PathOptions } from "leaflet";
+import { Fragment, useEffect, useState } from "react";
+import { MapContainer, CircleMarker, Tooltip, GeoJSON, Marker } from "react-leaflet";
+import { divIcon, type PathOptions } from "leaflet";
 import type { GeoJsonObject } from "geojson";
 import "leaflet/dist/leaflet.css";
 
@@ -23,6 +23,12 @@ import "leaflet/dist/leaflet.css";
  *   cae en una de 4 bandas pino→cielo→ambar→rubí, la misma escala que
  *   muestra la leyenda `.leyenda-calor` bajo el mapa.
  * · RADIO proporcional a √total (percepción de área honesta).
+ * · NÚMERO ADENTRO (pedido del dueño, como el mapa público de PI): un Marker
+ *   con divIcon `.mapa-num` centrado sobre el círculo muestra el total en
+ *   cifra tabular. Es un icono HTML (no un Tooltip permanente) porque Leaflet
+ *   admite UN solo tooltip por capa y el de hover ya lleva el detalle; el
+ *   divIcon no captura eventos (interactive:false) así que el hover sigue
+ *   llegando al círculo de abajo.
  * Tooltip con nombre + total exacto + banda de intensidad; nunca se pinta
  * una ciudad sin coordenadas (la capa de datos ya las filtró — candado 9).
  */
@@ -99,28 +105,42 @@ export default function MapaReportes({ ciudades }: { ciudades: CiudadCalor[] }) 
                 const banda = bandaDe(c.intensidad);
                 const color = COLORES_CALOR[banda];
                 return (
-                    <CircleMarker
-                        key={c.nombre}
-                        center={[c.lat, c.lng]}
-                        radius={6 + Math.sqrt(c.total / maxTotal) * 20}
-                        pathOptions={{
-                            color,
-                            weight: 2,
-                            fillColor: color,
-                            fillOpacity: 0.35,
-                        }}
-                    >
-                        <Tooltip direction="top" offset={[0, -8]} opacity={1}>
-                            <div className="text-[13px] font-semibold">{c.nombre}</div>
-                            <div className="cifra text-[12px]">
-                                {c.total.toLocaleString("es-CO")}{" "}
-                                {c.total === 1 ? "reporte" : "reportes"}
-                            </div>
-                            <div className="text-[11px]">
-                                Intensidad {ETIQUETAS_CALOR[banda]}
-                            </div>
-                        </Tooltip>
-                    </CircleMarker>
+                    <Fragment key={c.nombre}>
+                        <CircleMarker
+                            center={[c.lat, c.lng]}
+                            radius={6 + Math.sqrt(c.total / maxTotal) * 20}
+                            pathOptions={{
+                                color,
+                                weight: 2,
+                                fillColor: color,
+                                fillOpacity: 0.35,
+                            }}
+                        >
+                            <Tooltip direction="top" offset={[0, -8]} opacity={1}>
+                                <div className="text-[13px] font-semibold">{c.nombre}</div>
+                                <div className="cifra text-[12px]">
+                                    {c.total.toLocaleString("es-CO")}{" "}
+                                    {c.total === 1 ? "reporte" : "reportes"}
+                                </div>
+                                <div className="text-[11px]">
+                                    Intensidad {ETIQUETAS_CALOR[banda]}
+                                </div>
+                            </Tooltip>
+                        </CircleMarker>
+                        {/* Total permanente dentro del círculo (mapa público de
+                            PI): divIcon sin caja, el número flota centrado. */}
+                        <Marker
+                            position={[c.lat, c.lng]}
+                            interactive={false}
+                            keyboard={false}
+                            icon={divIcon({
+                                className: "mapa-num",
+                                html: `<span class="mapa-num-cifra">${c.total.toLocaleString("es-CO")}</span>`,
+                                iconSize: [56, 18],
+                                iconAnchor: [28, 9],
+                            })}
+                        />
+                    </Fragment>
                 );
             })}
         </MapContainer>

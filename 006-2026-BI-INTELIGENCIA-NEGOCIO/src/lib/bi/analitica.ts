@@ -20,12 +20,16 @@
 //
 // Reglas deterministas (cada una con su fórmula documentada junto al código):
 //   (a) anomaliaHoy    · z-score del día contra los 28 días completos previos
-//   (b) proyeccion     · tendencia 8 semanas + regresión lineal ± desvío residual
+//   (b) proyeccion     · tendencia N semanas (4/8/12) + regresión lineal
+//                        ± desvío residual · getProyeccion reutilizable
 //   (c) riesgoCategorias · frecuencia 12 m × sensibilidad (lista en bi_config)
 //   (d) fenomenos      · plataforma×categoría / ráfaga / geografía fuera de rango
 //   (e) frentePadre    · padres como actores (agregados, sin identidades · Ley 1581)
 //   (f) vencimientos   · Suscripcion ACTIVA por ventana de fechaFin + freemium
 //   (g) cronologia     · 12 meses móviles con marcador de mes con fenómeno activo
+//   (h) detalleMes     · drill-down de un mes 'YYYY-MM' (timeline interactiva):
+//                        total, categoría top, alertas/escaladas del mes,
+//                        anónimos y fenómenos detectados EN ese mes
 
 import { prisma } from "@/lib/db";
 import { getConfig } from "@/lib/config";
@@ -50,11 +54,13 @@ export interface AnaliticaData {
         esAnomalo: boolean;
     };
     /**
-     * Proyección de la próxima semana: 8 semanas COMPLETAS cerradas (la en
-     * curso está incompleta y sesgaría la tendencia), huecos rellenados con 0
-     * en SQL. min/max = ŷ de la regresión lineal simple ± desvío de residuos
-     * (fórmula junto a proyectarSemana). hayBase=false si <4 semanas con
-     * actividad → min/max NULL (la serie igual se expone, con sus 0 reales).
+     * Proyección de la próxima semana con el horizonte default de 8 semanas
+     * COMPLETAS cerradas (la en curso está incompleta y sesgaría la
+     * tendencia), huecos rellenados con 0 en SQL. min/max = ŷ de la regresión
+     * lineal simple ± desvío de residuos (fórmula junto a proyectarSemana).
+     * hayBase=false si <4 semanas con actividad → min/max NULL (la serie
+     * igual se expone, con sus 0 reales). La lógica vive en getProyeccion,
+     * reutilizable con horizonte 4/8/12 (filtro de tiempo de la UI).
      */
     proyeccion: {
         semanaProximaMin: number | null;
@@ -175,6 +181,14 @@ interface FilaCronologia {
     mes: string;
     total: number;
 }
+interface FilaDetalleTotales {
+    total: number;
+    anonimos: number;
+}
+interface FilaDetalleAlertas {
+    total: number;
+    escaladas: number;
+}
 
 // ─── Constantes documentadas ─────────────────────────────────────────────────
 /** Tope de fenómenos visibles (forma de la vista del mockup v4). */
@@ -191,6 +205,10 @@ const MIN_SEMANAS_PREVIAS_GEO = 3;
 const TOP_VIGILAR = 5;
 const MS_DIA = 86_400_000;
 const DIAS_BASE_ANOMALIA = 28;
+/** Horizonte por defecto de la proyección semanal (el histórico del mockup v4). */
+const SEMANAS_PROYECCION_DEFAULT = 8;
+/** Formato canónico del parámetro mes de la timeline interactiva. */
+export const MES_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 // Defaults B3: solo se usan si la clave falta en bi_config o no parsea (warn).
 const DEFAULT_SIGMA = 2;
@@ -383,6 +401,229 @@ interface FenomenoInterno {
     ventanaDesdeMs: number;
 }
 
+// ─── Proyección semanal con horizonte parametrizable ─────────────────────────
+
+/** Horizontes de historia permitidos (filtro de tiempo de la UI: 4/8/12). */
+export type HorizonteProyeccion = 4 | 8 | 12;
+
+/** Contrato de la proyección (lo consume getAnalitica y GET .../proyeccion). */
+export interface ProyeccionSemanal {
+    /** min/max = ŷ ± desvío residual; NULL si hayBase=false (candado 9). */
+    min: number | null;
+    max: number | null;
+    tendenciaSemanas: { semana: string; total: number }[];
+    hayBase: boolean;
+}
+
+/**
+ * (b) Proyección de la próxima semana sobre N semanas COMPLETAS cerradas
+ * (la en curso, incompleta, sesgaría la tendencia), huecos rellenados con 0
+ * en SQL. Misma regresión lineal simple ± desvío residual de siempre (la
+ * fórmula está junto a proyectarSemana); solo cambia N. hayBase=false si
+ * faltan semanas en la serie o hay menos de MIN_SEMANAS_BASE con actividad
+ * → min/max NULL y la serie igual se expone con sus 0 reales.
+ * La consulta degrada a vacío con warn si la réplica falla (misma regla
+ * `intentar` que el resto de secciones).
+ */
+export async function getProyeccion(
+    semanas: HorizonteProyeccion,
+): Promise<ProyeccionSemanal> {
+    const filasSemanas = await intentar(
+        "proyeccion-semanas",
+        prisma.$queryRaw<FilaSemana[]>`
+            SELECT to_char(s."semana", 'YYYY-MM-DD') AS semana,
+                   count(r."id")::int AS total
+            FROM generate_series(
+                   date_trunc('week', now()) - make_interval(weeks => ${semanas}),
+                   date_trunc('week', now()) - interval '1 week',
+                   interval '1 week'
+                 ) AS s("semana")
+            LEFT JOIN "Reporte" r
+              ON r."creadoEn" >= s."semana"
+             AND r."creadoEn" <  s."semana" + interval '1 week'
+             AND r."eliminado" = false
+            GROUP BY s."semana"
+            ORDER BY s."semana"`,
+    );
+    const tendenciaSemanas = filasSemanas.map((f) => ({
+        semana: f.semana,
+        total: f.total,
+    }));
+    const semanasConActividad = tendenciaSemanas.filter((s) => s.total > 0).length;
+    const hayBase =
+        tendenciaSemanas.length === semanas && semanasConActividad >= MIN_SEMANAS_BASE;
+    const rango = hayBase
+        ? proyectarSemana(tendenciaSemanas.map((s) => s.total))
+        : null;
+    return {
+        min: rango ? rango.min : null,
+        max: rango ? rango.max : null,
+        tendenciaSemanas,
+        hayBase,
+    };
+}
+
+// ─── Detalle de un mes (timeline interactiva) ────────────────────────────────
+
+/** Contrato del drill-down de un mes 'YYYY-MM' (GET .../detalle-mes). */
+export interface DetalleMes {
+    mes: string;
+    /** Reportes del mes (eliminados excluidos). */
+    total: number;
+    /** Categoría más frecuente del mes (join ClasificacionIA); NULL si ningún
+     * reporte del mes quedó clasificado (candado 9: no se presume categoría). */
+    categoriaTop: { categoria: string; total: number } | null;
+    /** Alertas de colegio CREADAS en el mes. */
+    alertasDelMes: number;
+    /** De esas, las que quedaron en estado 'escalada'. */
+    escaladasDelMes: number;
+    /**
+     * Fenómenos detectados EN el mes, como texto determinista:
+     *   · ráfaga: reportes con marca esRafaga del antifraude en el mes;
+     *   · pico: total del mes supera media + σ·desvío de los 12 meses de su
+     *     año calendario (σ = bi.analitica.sigma, default 2; mismo umbral que
+     *     anomaliaHoy). Los meses futuros del año en curso cuentan 0 real —
+     *     se documenta, no se recorta historia que no existe.
+     * Sin detecciones → [] (jamás se fabrica uno).
+     */
+    fenomenos: string[];
+    /** Reportes anónimos del mes. */
+    anonimos: number;
+}
+
+/**
+ * (h) Detalle de un mes. Formato inválido → null; mes sin reportes → null
+ * (la ruta lo traduce a 404 'sin_datos': no hay nada honesto que contar).
+ * Los 5 sondeos corren en paralelo y cada uno degrada a vacío por su cuenta
+ * (mismo patrón `intentar`); las ventanas del mes se calculan EN SQL a
+ * partir del parámetro 'YYYY-MM' ya validado (TZ de sesión, como todo lo
+ * demás del módulo).
+ */
+export async function getDetalleMes(mes: string): Promise<DetalleMes | null> {
+    if (!MES_REGEX.test(mes)) return null;
+
+    const sigmaUmbral = await umbralNumerico("bi.analitica.sigma", DEFAULT_SIGMA);
+
+    const [filasTotales, filasCategoria, filasAlertas, filasRafaga, filasAnio] =
+        await Promise.all([
+            // Total del mes + anónimos (esAnonimo).
+            intentar(
+                "detalle-mes-totales",
+                prisma.$queryRaw<FilaDetalleTotales[]>`
+                    SELECT count(*)::int AS total,
+                           count(*) FILTER (WHERE "esAnonimo" = true)::int AS anonimos
+                    FROM "Reporte"
+                    WHERE "eliminado" = false
+                      AND "creadoEn" >= (${mes} || '-01')::date
+                      AND "creadoEn" <  (${mes} || '-01')::date + interval '1 month'`,
+            ),
+            // Categoría top del mes: solo reportes CLASIFICADOS (sin
+            // clasificación no hay categoría honesta que asignar).
+            intentar(
+                "detalle-mes-categoria",
+                prisma.$queryRaw<FilaRiesgo[]>`
+                    SELECT c."categoria"::text AS categoria,
+                           count(*)::int AS total
+                    FROM "Reporte" r
+                    JOIN "ClasificacionIA" c ON c."reporteId" = r."id"
+                    WHERE r."eliminado" = false
+                      AND r."creadoEn" >= (${mes} || '-01')::date
+                      AND r."creadoEn" <  (${mes} || '-01')::date + interval '1 month'
+                    GROUP BY c."categoria"
+                    ORDER BY total DESC, c."categoria"
+                    LIMIT 1`,
+            ),
+            // Alertas creadas en el mes y cuántas quedaron escaladas.
+            intentar(
+                "detalle-mes-alertas",
+                prisma.$queryRaw<FilaDetalleAlertas[]>`
+                    SELECT count(*)::int AS total,
+                           count(*) FILTER (WHERE "estado" = 'escalada')::int AS escaladas
+                    FROM "AlertaColegio"
+                    WHERE "creadoEn" >= (${mes} || '-01')::date
+                      AND "creadoEn" <  (${mes} || '-01')::date + interval '1 month'`,
+            ),
+            // Marca esRafaga del antifraude activada en el mes.
+            intentar(
+                "detalle-mes-rafaga",
+                prisma.$queryRaw<FilaRafaga[]>`
+                    SELECT count(*)::int AS total
+                    FROM "Reporte"
+                    WHERE "eliminado" = false
+                      AND "esRafaga" = true
+                      AND "creadoEn" >= (${mes} || '-01')::date
+                      AND "creadoEn" <  (${mes} || '-01')::date + interval '1 month'`,
+            ),
+            // Los 12 meses del año calendario del mes pedido (huecos a 0):
+            // base del pico σ. La media/desvío se computan en JS SOBRE estas
+            // filas (candado 10: ninguna cifra fuera del ResultSet).
+            intentar(
+                "detalle-mes-anio",
+                prisma.$queryRaw<FilaCronologia[]>`
+                    SELECT to_char(m."mes", 'YYYY-MM') AS mes,
+                           count(r."id")::int AS total
+                    FROM generate_series(
+                           date_trunc('year', (${mes} || '-01')::date),
+                           date_trunc('year', (${mes} || '-01')::date) + interval '11 months',
+                           interval '1 month'
+                         ) AS m("mes")
+                    LEFT JOIN "Reporte" r
+                      ON r."creadoEn" >= m."mes"
+                     AND r."creadoEn" <  m."mes" + interval '1 month'
+                     AND r."eliminado" = false
+                    GROUP BY m."mes"
+                    ORDER BY m."mes"`,
+            ),
+        ]);
+
+    const totales = filasTotales[0] ?? { total: 0, anonimos: 0 };
+    // Mes sin reportes: nada que detallar (la ruta responde 404 sin_datos).
+    if (totales.total === 0) return null;
+
+    const alertas = filasAlertas[0] ?? { total: 0, escaladas: 0 };
+
+    // Fenómenos del mes (texto determinista; solo cifras del ResultSet y
+    // estadísticos calculados sobre ellas).
+    const fenomenos: string[] = [];
+
+    const totalRafaga = filasRafaga[0]?.total ?? 0;
+    if (totalRafaga > 0) {
+        fenomenos.push(
+            `${totalRafaga} reportes con marca de ráfaga (esRafaga) del antifraude en el mes`,
+        );
+    }
+
+    // Pico: total del mes contra media + σ·desvío (muestral, n−1) de los 12
+    // meses de su año. Sin dispersión (desvío 0) no hay σ honesto → no pico.
+    if (filasAnio.length >= 2) {
+        const totalesAnio = filasAnio.map((f) => f.total);
+        const media =
+            totalesAnio.reduce((acc, t) => acc + t, 0) / totalesAnio.length;
+        const varianza =
+            totalesAnio.reduce((acc, t) => acc + (t - media) ** 2, 0) /
+            (totalesAnio.length - 1);
+        const desvio = Math.sqrt(varianza);
+        if (desvio > 0 && totales.total > media + sigmaUmbral * desvio) {
+            const sigmaMes = (totales.total - media) / desvio;
+            fenomenos.push(
+                `Pico del año: ${totales.total} reportes, +${redondear1(sigmaMes)}σ sobre la media anual de ${redondear1(media)}`,
+            );
+        }
+    }
+
+    return {
+        mes,
+        total: totales.total,
+        categoriaTop: filasCategoria[0]
+            ? { categoria: filasCategoria[0].categoria, total: filasCategoria[0].total }
+            : null,
+        alertasDelMes: alertas.total,
+        escaladasDelMes: alertas.escaladas,
+        fenomenos,
+        anonimos: totales.anonimos,
+    };
+}
+
 // ─── Función principal ───────────────────────────────────────────────────────
 
 /**
@@ -404,9 +645,9 @@ export async function getAnalitica(): Promise<AnaliticaData> {
         ]);
 
     const [
+        proyeccionBase,
         filasBaseAnomalia,
         filasHoyPrimer,
-        filasSemanas,
         filasRiesgo,
         filasPlataforma,
         filasRafaga,
@@ -417,6 +658,9 @@ export async function getAnalitica(): Promise<AnaliticaData> {
         filasVencimientos,
         filasCronologia,
     ] = await Promise.all([
+        // (b) Proyección: misma regla de siempre con el horizonte default de
+        // 8 semanas (getProyeccion ya degrada a vacío por su cuenta).
+        getProyeccion(SEMANAS_PROYECCION_DEFAULT),
         // (a) Base estadística del día: 28 días COMPLETOS previos, huecos a 0
         // (generate_series). La jornada en curso queda fuera: comparar hoy
         // contra una media que lo incluye diluiría la señal.
@@ -449,25 +693,6 @@ export async function getAnalitica(): Promise<AnaliticaData> {
                        min("creadoEn") AS primer_reporte
                 FROM "Reporte"
                 WHERE "eliminado" = false`,
-        ),
-        // (b) 8 semanas COMPLETAS cerradas (la en curso, incompleta, sesgaría
-        // la regresión), huecos a 0. Etiqueta = inicio de semana ISO.
-        intentar(
-            "proyeccion-semanas",
-            prisma.$queryRaw<FilaSemana[]>`
-                SELECT to_char(s."semana", 'YYYY-MM-DD') AS semana,
-                       count(r."id")::int AS total
-                FROM generate_series(
-                       date_trunc('week', now()) - interval '8 weeks',
-                       date_trunc('week', now()) - interval '1 week',
-                       interval '1 week'
-                     ) AS s("semana")
-                LEFT JOIN "Reporte" r
-                  ON r."creadoEn" >= s."semana"
-                 AND r."creadoEn" <  s."semana" + interval '1 week'
-                 AND r."eliminado" = false
-                GROUP BY s."semana"
-                ORDER BY s."semana"`,
         ),
         // (c) Frecuencia 12 m por categoría (join ClasificacionIA; el
         // reporte sin clasificar no entra: no hay categoría honesta que
@@ -683,19 +908,12 @@ export async function getAnalitica(): Promise<AnaliticaData> {
         esAnomalo: sigmaCrudo !== null && sigmaCrudo >= sigmaUmbral,
     };
 
-    // ── (b) Proyección: regresión sobre 8 semanas, NULL sin base ──
-    const tendenciaSemanas = filasSemanas.map((f) => ({ semana: f.semana, total: f.total }));
-    const semanasConActividad = tendenciaSemanas.filter((s) => s.total > 0).length;
-    const hayBaseProyeccion =
-        tendenciaSemanas.length === 8 && semanasConActividad >= MIN_SEMANAS_BASE;
-    const rango = hayBaseProyeccion
-        ? proyectarSemana(tendenciaSemanas.map((s) => s.total))
-        : null;
+    // ── (b) Proyección: getProyeccion(8) mapeado al contrato de Analítica ──
     const proyeccion: AnaliticaData["proyeccion"] = {
-        semanaProximaMin: rango ? rango.min : null,
-        semanaProximaMax: rango ? rango.max : null,
-        tendenciaSemanas,
-        hayBase: hayBaseProyeccion,
+        semanaProximaMin: proyeccionBase.min,
+        semanaProximaMax: proyeccionBase.max,
+        tendenciaSemanas: proyeccionBase.tendenciaSemanas,
+        hayBase: proyeccionBase.hayBase,
     };
 
     // ── (c) Riesgo por categoría: frecuencia × sensibilidad ──

@@ -23,6 +23,8 @@
 //   · porMes: 12 meses móviles con huecos rellenados a 0 EN SQL
 //     (generate_series); estacionalidadDow: 7 días L..D, los días sin
 //     reportes quedan en 0 en JS a partir del mapa devuelto.
+//   · comportamiento: top 8 países/ciudades con su categoría más frecuente;
+//     sin clasificación → categoriaTop NULL, nunca una supuesta.
 //
 // Candado 10: ningún número quemado (los únicos literales son etiquetas de
 // día y los umbrales/límites documentados como constantes).
@@ -68,11 +70,26 @@ export interface GeoData {
      * del ResultSet (candado 10: no se crea ningún dato nuevo).
      */
     calorCiudades: { nombre: string; lat: number; lng: number; total: number; intensidad: number }[];
+    /**
+     * Comportamiento por país/ciudad (SPEC-006): top 8 países y top 8
+     * ciudades por volumen de reportes, cada uno con su categoría más
+     * frecuente (join ClasificacionIA sobre SUS reportes). categoriaTop es
+     * NULL cuando el país/ciudad no tiene ningún reporte clasificado
+     * (candado 9: no se presume categoría). Solo países/ciudades RESUELTOS
+     * (paisId/ciudadId → catálogo); el texto libre sin resolver no entra
+     * (mismo criterio que topCiudades). Vacío o sondeo roto → [].
+     */
+    comportamiento: {
+        porPais: { pais: string; total: number; categoriaTop: string | null }[];
+        porCiudadTop: { ciudad: string; total: number; categoriaTop: string | null }[];
+    };
 }
 
 // ─── Constantes documentadas (no son datos: son forma de la vista) ───────────
 /** Tope del ranking de ciudades del mapa. */
 const TOP_CIUDADES_LIMITE = 12;
+/** Tope del ranking de países/ciudades del bloque "comportamiento". */
+const TOP_COMPORTAMIENTO_LIMITE = 8;
 /**
  * Mínimo de filas de IdentificadorReportado para mostrar reincidencia como
  * estadística. Debajo, el agregado es anecdótico (candado 9): fuente
@@ -106,6 +123,16 @@ interface FilaDow {
 interface FilaMes {
     mes: string;
     total: number;
+}
+interface FilaComportamientoPais {
+    pais: string;
+    total: number;
+    categoria_top: string | null;
+}
+interface FilaComportamientoCiudad {
+    ciudad: string;
+    total: number;
+    categoria_top: string | null;
 }
 
 // Fallbacks de degradación (consulta rota → ceros/vacío con warn; candado 9).
@@ -141,8 +168,15 @@ async function intentar<T>(seccion: string, consulta: Promise<T[]>): Promise<T[]
  * conteos casteados a ::int y coordenadas a ::float en SQL.
  */
 export async function getGeo(): Promise<GeoData> {
-    const [filasTop, filasCobertura, filasReincidencia, filasDow, filasMes] =
-        await Promise.all([
+    const [
+        filasTop,
+        filasCobertura,
+        filasReincidencia,
+        filasDow,
+        filasMes,
+        filasCompPais,
+        filasCompCiudad,
+    ] = await Promise.all([
             // Top de ciudades RESUELTAS con coordenadas (las únicas que
             // entran al mapa). Sin lat/lng no hay punto — no se inventa.
             intentar(
@@ -216,6 +250,73 @@ export async function getGeo(): Promise<GeoData> {
                     GROUP BY m."mes"
                     ORDER BY m."mes"`,
             ),
+            // Comportamiento por país: top 8 por reportes con su categoría
+            // más frecuente (row_number por país sobre SUS clasificaciones;
+            // desempate alfabético estable). LEFT JOIN: sin clasificación →
+            // categoria_top NULL honesto. Solo paisId resueltos a catálogo.
+            intentar(
+                "comportamiento-pais",
+                prisma.$queryRaw<FilaComportamientoPais[]>`
+                    WITH paises AS (
+                      SELECT p."id", p."nombre", count(*)::int AS total
+                      FROM "Reporte" r
+                      JOIN "Pais" p ON p."id" = r."paisId"
+                      WHERE r."eliminado" = false
+                      GROUP BY p."id", p."nombre"
+                      ORDER BY total DESC, p."nombre"
+                      LIMIT ${TOP_COMPORTAMIENTO_LIMITE}
+                    ),
+                    cats AS (
+                      SELECT r."paisId", c."categoria"::text AS categoria,
+                             row_number() OVER (
+                               PARTITION BY r."paisId"
+                               ORDER BY count(*) DESC, c."categoria"
+                             ) AS rn
+                      FROM "Reporte" r
+                      JOIN "ClasificacionIA" c ON c."reporteId" = r."id"
+                      WHERE r."eliminado" = false
+                        AND r."paisId" IN (SELECT "id" FROM paises)
+                      GROUP BY r."paisId", c."categoria"
+                    )
+                    SELECT pa."nombre" AS pais,
+                           pa.total,
+                           ca.categoria AS categoria_top
+                    FROM paises pa
+                    LEFT JOIN cats ca ON ca."paisId" = pa."id" AND ca.rn = 1
+                    ORDER BY pa.total DESC, pa."nombre"`,
+            ),
+            // Comportamiento por ciudad: idéntica regla sobre ciudadId.
+            intentar(
+                "comportamiento-ciudad",
+                prisma.$queryRaw<FilaComportamientoCiudad[]>`
+                    WITH ciudades AS (
+                      SELECT c."id", c."nombre", count(*)::int AS total
+                      FROM "Reporte" r
+                      JOIN "Ciudad" c ON c."id" = r."ciudadId"
+                      WHERE r."eliminado" = false
+                      GROUP BY c."id", c."nombre"
+                      ORDER BY total DESC, c."nombre"
+                      LIMIT ${TOP_COMPORTAMIENTO_LIMITE}
+                    ),
+                    cats AS (
+                      SELECT r."ciudadId", c."categoria"::text AS categoria,
+                             row_number() OVER (
+                               PARTITION BY r."ciudadId"
+                               ORDER BY count(*) DESC, c."categoria"
+                             ) AS rn
+                      FROM "Reporte" r
+                      JOIN "ClasificacionIA" c ON c."reporteId" = r."id"
+                      WHERE r."eliminado" = false
+                        AND r."ciudadId" IN (SELECT "id" FROM ciudades)
+                      GROUP BY r."ciudadId", c."categoria"
+                    )
+                    SELECT ci."nombre" AS ciudad,
+                           ci.total,
+                           ca.categoria AS categoria_top
+                    FROM ciudades ci
+                    LEFT JOIN cats ca ON ca."ciudadId" = ci."id" AND ca.rn = 1
+                    ORDER BY ci.total DESC, ci."nombre"`,
+            ),
         ]);
 
     const cobertura = filasCobertura[0] ?? COBERTURA_VACIA;
@@ -261,5 +362,17 @@ export async function getGeo(): Promise<GeoData> {
             total: f.total,
             intensidad: maxTop > 0 ? f.total / maxTop : 0,
         })),
+        comportamiento: {
+            porPais: filasCompPais.map((f) => ({
+                pais: f.pais,
+                total: f.total,
+                categoriaTop: f.categoria_top,
+            })),
+            porCiudadTop: filasCompCiudad.map((f) => ({
+                ciudad: f.ciudad,
+                total: f.total,
+                categoriaTop: f.categoria_top,
+            })),
+        },
     };
 }
