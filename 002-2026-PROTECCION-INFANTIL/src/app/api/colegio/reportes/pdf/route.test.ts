@@ -155,7 +155,15 @@ describe("GET /api/colegio/reportes/pdf", () => {
 
     it("SCHOOL_ADMIN de otro colegio no ve datos ajenos (A/B)", async () => {
         const { colegio } = await setupSchoolAdmin();
-        const curso = await crearCurso(colegio.id, { nombre: "5A", grado: "Quinto" });
+        // SPEC-399 (I-284): el fixture usa un nombre de curso distintivo. La
+        // versión anterior probaba `not.toContain("5A")` sobre el binario del
+        // PDF, y dos caracteres cualquiera aparecen por azar en los streams de
+        // fuentes o el xref (el test flakeó dos veces en un día, la segunda
+        // frenando un fix crítico). Con un token de 12+ caracteres únicos, la
+        // probabilidad de colisión aleatoria en el binario es efectivamente
+        // cero, y la aserción sigue vigilando lo mismo: que el informe del
+        // colegio B no contenga el nombre del curso del colegio A.
+        const curso = await crearCurso(colegio.id, { nombre: "5A-CursoAisladoAB", grado: "Quinto" });
         const alumno = await crearEstudiante(curso.id, colegio.id, { nombre: "Ana Pérez" });
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         await crearIdentificadorEstudiante(alumno.id, {
@@ -175,7 +183,11 @@ describe("GET /api/colegio/reportes/pdf", () => {
         const blob = await res.blob();
         const arrayBuffer = await blob.arrayBuffer();
         const text = new TextDecoder("latin1").decode(arrayBuffer);
-        expect(text).not.toContain("5A");
+        // "5A-CursoAisladoAB" · "Quinto" · "Ofrecimiento" son palabras/tokens
+        // de 6+ caracteres — su aparición por azar en un stream binario es
+        // efectivamente cero. Si alguna aparece, es porque un fix del filtro
+        // por colegio se rompió y este candado se está pagando su comida.
+        expect(text).not.toContain("5A-CursoAisladoAB");
         expect(text).not.toContain("Quinto");
         expect(text).not.toContain("Ofrecimiento");
     });
