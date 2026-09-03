@@ -12,6 +12,15 @@ on:
     branches: [feature/001-scaffolding]
   pull_request:
   workflow_dispatch:
+    inputs:
+      # SPEC-407 (I-282 caso A): palanca on-demand para activar la medición de
+      # handles vivos con wtfnode + dumps en el `afterAll` global. Sin depender
+      # de una rama viva. Alternativa dormida: setear la variable de repo
+      # `SPEC_407_DEBUG_HANDLES` en `1` para dejarla activa por un período.
+      debug_handles:
+        description: "SPEC-407 · activar wtfnode + dumps en test-integration para cazar caso A"
+        type: boolean
+        default: false
 
 # SPEC-396 (I-282): cada repush cancela la corrida vieja. Sin esto, dos runs del
 # mismo commit peleaban por la BD compartida (`lock not available` en PermisoModulo,
@@ -232,12 +241,16 @@ jobs:
           exit $EXIT
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
-          # SPEC-407 (I-282) · activar la medición de handles vivos SÓLO en las
-          # ramas de esa spec. En cualquier otra rama la variable queda vacía y
-          # el `afterAll` global se comporta idéntico a hoy (candado: cero
-          # cambios de comportamiento para las suites que ya pasan). Sale del
-          # workflow cuando se cierre la spec.
-          VITEST_DEBUG_HANDLES: ${{ startsWith(github.head_ref, 'work/pi-SPEC-407') && '1' || '' }}
+          # SPEC-407 (I-282 caso A) · palanca on-demand para la medición de
+          # handles vivos. DEFAULT: vacío (afterAll global se comporta idéntico
+          # a hoy — cero cambios de comportamiento para las suites que pasan).
+          # Se activa por DOS caminos, cualquiera de los dos alcanza:
+          # (1) `gh workflow run ci-002-proteccion-infantil.yml -f debug_handles=true`
+          #     (disparo manual, controlado por PR o quien lance).
+          # (2) Variable de repo `SPEC_407_DEBUG_HANDLES = 1` (Settings → Variables),
+          #     que la deja activa por un período sin necesidad de disparar nada.
+          # No depende de ninguna rama viva — sobrevive al merge del PR SPEC-407.
+          VITEST_DEBUG_HANDLES: ${{ (inputs.debug_handles && '1') || vars.SPEC_407_DEBUG_HANDLES || '' }}
       - uses: actions/upload-artifact@v4
         # Sube el blob incluso si el shard falló: el job agregador mergea los 4 y
         # reporta los tests fallidos con detalle (y el ratchet se evalúa sobre la

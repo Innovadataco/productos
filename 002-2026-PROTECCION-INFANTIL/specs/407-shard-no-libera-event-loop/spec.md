@@ -43,9 +43,17 @@ Después de correr los disposers registrados en `globalThis.__pi_test_disposers`
 
 **Sin la flag, el bloque no ejecuta ni un `console.error`.** El comportamiento es literalmente el mismo del `afterAll` de hoy. Candado del CEO: cero cambios de comportamiento para las suites que hoy pasan.
 
-### 2) Activación en CI solo para esta rama
+### 2) Activación en CI on-demand — sobrevive al merge
 
-En `.github/workflows/ci.yml` step "Correr shard N/4", nueva env `VITEST_DEBUG_HANDLES` que se activa **exclusivamente cuando `github.head_ref` empieza con `work/pi-SPEC-407`** (usando `startsWith(...) && '1' || ''`). Cualquier otra rama recibe env vacío → mismo comportamiento de hoy. Se retira del workflow al cerrar la spec.
+En `.github/workflows/ci.yml`, la env `VITEST_DEBUG_HANDLES` se alimenta de dos palancas (cualquiera alcanza, ambas apagadas por default):
+
+1. **workflow_dispatch input** `debug_handles: boolean, default false`. Disparo manual:
+   ```bash
+   gh workflow run ci-002-proteccion-infantil.yml -f debug_handles=true
+   ```
+2. **Variable de repo** `SPEC_407_DEBUG_HANDLES = 1` (Settings → Variables). La deja activa por un período (hasta que alguien la borre o la ponga en `0`).
+
+**No depende de una rama viva.** El PR de SPEC-407 se puede mergear a `main` y la instrumentación queda disponible a voluntad para cazar el caso A. Se cerró la trampa de la condición `startsWith(head_ref, ...)` original (mergeando se perdería la herramienta justo cuando se necesita).
 
 ### 3) `wtfnode` como devDep
 
@@ -125,8 +133,17 @@ Ese es exactamente el error de diagnóstico que este mismo problema ya nos hizo 
 
 Al revisar la métrica: primero mirar `test-durations.json` y ver si la mediana de duración por shard subió. Solo si esa mediana está estable y aún así los retries suben, entonces sí es el proveedor.
 
+## Nota de observación (03-09-2026, cierre del día)
+
+Las 5 caídas medidas hoy 03-09 fueron **todas del tipo B** (timeout de 35 min por runner lento). **Ni una del tipo A** (16m34s "internal error" por handles al cerrar). Dos lecturas posibles:
+
+1. El caso A es más raro de lo que parecía inicialmente (la muestra del post-mortem de idc-f5 era chica).
+2. Algo que ya entró (SPEC-396 `concurrency`, `disposeBoss` de SPEC-375, o un cambio de otro PR) lo tapó parcialmente sin que nos dimos cuenta.
+
+Cualquiera de las dos, el criterio se mantiene: instrumentación disponible on-demand, y cuando aparezca uno, se compara el dump contra la lista de sospechosos (Prisma pool, ollama-client, cache-semantico, timers sin `unref`).
+
 ## Fuera de alcance (siguiente PR — solo con luz verde del CEO)
 
-- Caso A · fix de handles al cerrar: `prisma.$disconnect()` en `afterAll`, disposers para ollama-client y cache-semantico, auditoría de `setInterval`/`setTimeout` sin `.unref()`. La instrumentación queda puesta esperando cazar un caso A por aparición natural (paciencia, no forzar).
+- Caso A · fix de handles al cerrar (cuando se cace uno): `prisma.$disconnect()` en `afterAll`, disposers para ollama-client y cache-semantico, auditoría de `setInterval`/`setTimeout` sin `.unref()`.
 - Ratchet de tasa de retry (SPEC-407-b): script que analice N últimos runs y falle CI si la tasa supera un umbral (~5%).
 - Criterio de cierre del CEO: **20 corridas seguidas sin "internal error"** después de que caso A esté cerrado.
