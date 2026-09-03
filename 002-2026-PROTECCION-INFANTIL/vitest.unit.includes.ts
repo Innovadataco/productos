@@ -316,4 +316,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-369: candados del poblador demo v2.
     "scripts/demo/demo-v2.test.ts",
     "scripts/demo/demo-v3.test.ts",
+    // SPEC-379 (PR B · D5a · I-245): la plantilla de cursos pasa su validador.
+    "src/lib/colegio/carga-cursos/plantilla-autoconsistente.test.ts",
 ];

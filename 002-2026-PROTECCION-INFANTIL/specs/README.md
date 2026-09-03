@@ -498,6 +498,7 @@
 | [351](351-informe-firmado-rector/spec.md) | SPEC-351 · El informe firmado del rector (A-69 · C5) — PDF membreteado con escudo configurable + correlativo INF-AAAA-NNNN serializado + firma del rector + código de verificación pública (reusa sello 234/341) + historial inmutable | 🟡 En desarrollo |
 | [353](353-puesto-mando-colegio/spec.md) | SPEC-353 · Puesto de mando del colegio (A-69 · C6) — frase accionable "qué hacer hoy" en la home del rector (cruzado > sin abrir > comité > calma, solo conteos) + Configuración de avisos rediseñada al patrón A-62 (frases + Switch inmediato + umbrales en frase) | 🟡 En desarrollo |
 | [374](374-ci-skip-bi-only/spec.md) | SPEC-374 · CI de PI salta cuando el PR no toca 002 ni la raíz compartida — el `should-skip` decide por lógica pura testeada (17 casos), nunca por `on: paths:` (candado I-249) | 🟡 En desarrollo |
+| [379b](379-decisiones-colegio-medias-b/spec.md) | SPEC-379 (PR B) · Excel de CURSOS (D5a) — plantilla + validador + endpoints + panel `CargaCursosExcel` en `/dashboard/colegio/cursos`, con test-candado de autoconsistencia (I-245 aplicado a cursos) | 🟡 En desarrollo |
 | [375](375-shard-integracion-colgado/spec.md) | SPEC-375 · El shard de `test-integration` colgado — pg-boss singleton sin cierre dejaba handles vivos en el fork de vitest y el shard se quedaba 40+ min hasta cancelación manual; `disposeBoss()` + `afterAll` que lo invoca + `timeout-minutes: 20` como tope duro | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos

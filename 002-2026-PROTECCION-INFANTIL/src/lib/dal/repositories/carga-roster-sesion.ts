@@ -71,6 +71,26 @@ export type SesionRosterProfesores = {
     expiraEn: Date;
 };
 
+// SPEC-379 (D5a): tercer roster que comparte el mismo modelo de sesión —
+// una fila = un curso listo para crear. `profesorTitularId` ya está resuelto
+// contra la BD del colegio en el validador; el importer solo lo guarda.
+const filaCursoJsonSchema = z.object({
+    nombre: z.string(),
+    grado: z.string().nullable(),
+    anioLectivo: z.string().nullable(),
+    profesorTitularId: z.string().nullable(),
+});
+const filasRosterCursosSchema = z.array(filaCursoJsonSchema);
+
+export type FilaRosterCurso = z.infer<typeof filaCursoJsonSchema>;
+
+export type SesionRosterCursos = {
+    id: string;
+    colegioId: string;
+    filas: FilaRosterCurso[];
+    expiraEn: Date;
+};
+
 export type SesionRoster = {
     id: string;
     colegioId: string;
@@ -127,6 +147,28 @@ export class CargaRosterSesionRepository {
             id: sesion.id,
             colegioId: sesion.colegioId,
             filas: filasRosterProfesoresSchema.parse(sesion.filas),
+            expiraEn: sesion.expiraEn,
+        };
+    }
+
+    /**
+     * SPEC-379 (D5a): variante para el roster de CURSOS. Mismas guardas que
+     * `obtenerValida` / `obtenerValidaProfesores`; el shape que valida Zod es
+     * el del `CursoNormalizado` del validador de cursos (profesorTitularId ya
+     * resuelto contra la BD del colegio).
+     */
+    async obtenerValidaCursos(
+        sesionId: string,
+        colegioId: string,
+    ): Promise<SesionRosterCursos | null> {
+        const sesion = await this.db.cargaRosterSesion.findUnique({ where: { id: sesionId } });
+        if (!sesion) return null;
+        if (sesion.colegioId !== colegioId) return null;
+        if (sesion.expiraEn <= new Date()) return null;
+        return {
+            id: sesion.id,
+            colegioId: sesion.colegioId,
+            filas: filasRosterCursosSchema.parse(sesion.filas),
             expiraEn: sesion.expiraEn,
         };
     }

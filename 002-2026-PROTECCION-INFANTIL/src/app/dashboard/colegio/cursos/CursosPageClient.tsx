@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Modal } from "@/components/ui/Modal";
 import { GRADO_OPTIONS } from "@/lib/colegio/grados";
+import { CargaCursosExcel } from "@/components/modules/colegio/CargaCursosExcel";
 
 type Curso = {
     id: string;
@@ -136,6 +137,17 @@ export default function CursosPageClient() {
                             Subir lista
                         </Button>
                     </div>
+
+                    {/* SPEC-379 (D5a): carga masiva de CURSOS por Excel/CSV.
+                        Jelkin pidió los tres (profesores, cursos, alumnos) —
+                        el de cursos no existía y era el que faltaba. Mismo
+                        patrón que profesores; endpoints propios en
+                        `/api/colegio/carga-cursos/*`. */}
+                    <CargaCursosExcel
+                        titulo="Cargar varios cursos desde Excel/CSV"
+                        subtitulo="Útil al abrir año lectivo o cuando llega una tanda"
+                        onCompletado={cargar}
+                    />
 
                     <label className="flex items-center gap-2 text-sm text-muted cursor-pointer select-none w-fit">
                         <input
