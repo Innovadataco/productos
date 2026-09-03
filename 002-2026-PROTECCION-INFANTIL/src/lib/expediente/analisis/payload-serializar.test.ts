@@ -8,11 +8,11 @@ import { payloadParaModelo } from "./ejecutar-analisis";
 import { armarPayload, type HechoPadre } from "./armar-payload";
 
 describe("SPEC-349 · payload serializado para el modelo (audit 615 chars)", () => {
-    it("fecha del hecho en TZ Bogota, no UTC (fix nº1)", () => {
+    it("fecha del hecho en TZ Bogota (candado SPEC-349), hora sin minutos (I-261)", () => {
         // 30/08/2026 21:15 hora Bogota = 30/08/2026 02:15 UTC (siguiente día)
         // = "2026-08-31T02:15:00.000Z" en ISO.
-        // Verificamos que el string serializado NO diga 02:15 ni "9:19 AM";
-        // debe reflejar "21:15" o "9:15 p." en la localización es-CO Bogota.
+        // Verificamos que el string serializado NO diga "02:15" ni "9:19 AM"
+        // y sí diga "9 p. m." — franja nocturna Bogota, sin fingir el minuto exacto.
         const hecho: HechoPadre = {
             fecha: new Date("2026-08-31T02:15:00.000Z"),
             ciudad: "Bogotá",
@@ -24,8 +24,11 @@ describe("SPEC-349 · payload serializado para el modelo (audit 615 chars)", () 
         const payload = armarPayload({ alcance: "PADRE_COMPLETO", hechos: [hecho], hijoCruzado: null });
         const serializado = JSON.stringify(payloadParaModelo(payload));
 
-        // Contiene la hora local Bogota (9:15 p.m. o 21:15)
-        expect(serializado, "el payload debe llevar la fecha en TZ Bogota").toMatch(/9:15/);
+        // I-261: la hora vive (candado SPEC-349 · el modelo la necesita para saber
+        // que fue "noche" y no "mañana"), pero sin minutos. En es-CO da "9 p. m.".
+        expect(serializado, "el payload debe llevar la hora Bogota sin minutos").toMatch(/9\s?p\.?\s?m\.?/);
+        // Y el candado dual: no aparece minuto ninguno, ni "9:15" ni "21:15".
+        expect(serializado, "sin minutos en la fecha del hecho").not.toMatch(/\b\d{1,2}:\d{2}\b/);
         // NO contiene el ISO UTC ni "02:15"
         expect(serializado).not.toContain("2026-08-31T02:15:00.000Z");
         expect(serializado).not.toMatch(/T\d\d:\d\d/); // sin marcador ISO Z

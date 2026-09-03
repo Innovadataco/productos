@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/Button";
+import { fechaHoraSinMinutos } from "@/lib/format/fecha";
 import { TextoSensible } from "./TextoSensible";
 import { AnalisisExpediente } from "./AnalisisExpediente";
 
@@ -55,7 +56,9 @@ interface Lectura {
     ciudades: { lista: { ciudad: string; conteo: number }[]; masReciente: { ciudad: string | null; fecha: string } | null };
 }
 
-const fmt = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" });
+// I-261 · fecha del hecho SIN MINUTOS (regla dura de Jelkin: fingir el minuto
+// exacto es peor que no darlo). Se centraliza en `fechaHoraSinMinutos` (SPEC-208 · A-70).
+const fmtFecha = (iso: string) => fechaHoraSinMinutos(iso);
 
 /** A-70 · G19: ritmo base de la reproducción; las velocidades lo dividen. */
 const MS_POR_HECHO_BASE = 900;
@@ -188,7 +191,7 @@ export function ExpedienteVivo({
                     <div className="flex items-center gap-2">
                         {fechaActual && reproduciendo && (
                             <span className="text-xs text-muted" aria-live="polite">
-                                {fmt.format(new Date(fechaActual))}
+                                {fmtFecha(fechaActual)}
                             </span>
                         )}
                         {/* A-70 · G19: el padre elige el ritmo. Cambiar la velocidad
@@ -247,7 +250,7 @@ export function ExpedienteVivo({
                             <li>
                                 {lectura.ciudades.lista.map((c) => `${c.ciudad} ${c.conteo}`).join(" · ")}
                                 {lectura.ciudades.masReciente?.ciudad
-                                    ? ` — el más reciente: ${lectura.ciudades.masReciente.ciudad}, ${fmt.format(new Date(lectura.ciudades.masReciente.fecha))}`
+                                    ? ` — el más reciente: ${lectura.ciudades.masReciente.ciudad}, ${fmtFecha(lectura.ciudades.masReciente.fecha)}`
                                     : ""}
                             </li>
                         )}
@@ -293,7 +296,7 @@ export function ExpedienteVivo({
                     {hechos.map((h, i) => (
                         <li key={`${h.reporteId ?? "ajeno"}-${i}`}>
                             <p className="text-xs text-muted">
-                                {fmt.format(new Date(h.fecha))}
+                                {fmtFecha(h.fecha)}
                                 {h.ciudad ? ` · ${h.ciudad}` : ""} ·{" "}
                                 <span className={h.origen === "mio" ? "text-pino" : ""}>{ORIGEN_LABEL[h.origen]}</span>
                                 {h.categoriaLabel ? ` · ${h.categoriaLabel}` : ""}
@@ -327,7 +330,7 @@ export function ExpedienteVivo({
                     <ul className="mt-2 space-y-1 text-sm text-muted">
                         {informes.map((inf) => (
                             <li key={inf.numeroSecuencial}>
-                                Informe #{inf.numeroSecuencial} · generado el {fmt.format(new Date(inf.generadoEn))} ·
+                                Informe #{inf.numeroSecuencial} · generado el {fmtFecha(inf.generadoEn)} ·
                                 código {inf.codigoVerificacion}
                             </li>
                         ))}

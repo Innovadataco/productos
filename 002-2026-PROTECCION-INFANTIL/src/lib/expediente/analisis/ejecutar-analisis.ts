@@ -172,12 +172,28 @@ async function ejecutarJobPadre(expedienteId: string, hashCadena: string, alcanc
  * ocurrió a las 21:15 hora Bogota (noche). Devuelve un objeto plano listo
  * para stringify — el shape es igual al `PayloadAnalisis` original pero con
  * `fecha: string`.
+ *
+ * I-261 · sin minutos. Regla dura de Jelkin: fecha y hora sí, minutos NO —
+ * fingir la precisión del minuto en un hecho reportado es peor que no darla,
+ * y el modelo la copia literal al informe («ocurrió a las 12:36 a.m.»).
+ * Mantiene la HORA (candado SPEC-349: la franja horaria en Bogotá sigue
+ * llegando al modelo) pero omite los minutos. En `es-CO` con
+ * `{ hour: "numeric", hour12: true }` sale "9 p. m.".
  */
-const fmtFechaBogota = new Intl.DateTimeFormat("es-CO", {
+const fmtFechaSoloDia = new Intl.DateTimeFormat("es-CO", {
     dateStyle: "long",
-    timeStyle: "short",
     timeZone: "America/Bogota",
 });
+const fmtHoraSinMinutos = new Intl.DateTimeFormat("es-CO", {
+    hour: "numeric",
+    hour12: true,
+    timeZone: "America/Bogota",
+});
+const fmtFechaBogota = {
+    format(f: Date): string {
+        return `${fmtFechaSoloDia.format(f)}, ${fmtHoraSinMinutos.format(f)}`;
+    },
+};
 
 export function payloadParaModelo(payload: PayloadAnalisis): unknown {
     if (payload.alcance === "PADRE_COMPLETO") {
