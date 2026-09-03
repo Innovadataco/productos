@@ -371,6 +371,23 @@ const CONFIGS: Array<{ clave: string; valor: string; descripcion: string }> = [
     valor: "48",
     descripcion: "Ventana en horas del fenomeno rafaga (esRafaga) del detector de /analitica",
   },
+  // ── Marco de vigilancia (src/lib/bi/vigilancia.ts · Lote 1) ──
+  // La ventana de rafagas REUSA bi.analitica.rafaga_horas (arriba): no se duplica.
+  {
+    clave: "bi.vigilancia.atascado_dias",
+    valor: "3",
+    descripcion: "Dias sin movimiento (TransicionReporte) para declarar atascado un reporte en REVISION_MANUAL",
+  },
+  {
+    clave: "bi.vigilancia.motor_caido_horas",
+    valor: "6",
+    descripcion: "Horas desde la ultima ClasificacionIA para sospechar motor de clasificacion detenido (sintoma, no certeza)",
+  },
+  {
+    clave: "bi.vigilancia.atascados_alerta",
+    valor: "5",
+    descripcion: "Minimo de reportes atascados en revision manual para disparar el insight ambar del marco de vigilancia",
+  },
 ];
 
 async function seedConfig(): Promise<void> {

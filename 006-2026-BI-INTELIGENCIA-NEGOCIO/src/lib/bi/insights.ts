@@ -15,10 +15,15 @@
 // B3: los umbrales viven en bi_config (editables sin despliegue, seed en
 // prisma/seed.ts), NUNCA quemados. Patrón de lectura: BD → default.
 //
-// Salida: máximo 3 insights, ordenados por severidad ambar → cielo → pino.
+// Marco de vigilancia (Lote 1): getInsights() concatena además los insights
+// de vigilancia (getInsightsVigilancia de '@/lib/bi/vigilancia' — mismo
+// contrato Insight), ordena todo por severidad y recorta al máximo total.
+//
+// Salida: máximo 4 insights, ordenados por severidad ambar → cielo → pino.
 
 import { prisma } from "@/lib/db";
 import { getConfig } from "@/lib/config";
+import { getInsightsVigilancia } from "@/lib/bi/vigilancia";
 import {
     formatearCategoria,
     obtenerMediasClasificacion,
@@ -38,7 +43,7 @@ const CLAVE_DIAS_SIN_REPORTES = "bi.insights.dias_sin_reportes";
 const DEFAULT_SUBIDA_SEMANAL_PCT = 50;
 const DEFAULT_DIAS_SIN_REPORTES = 30;
 
-const MAX_INSIGHTS = 3;
+const MAX_INSIGHTS = 4;
 const MS_DIA = 86_400_000;
 
 interface FilaTendencia {
@@ -173,8 +178,12 @@ async function insightMejoraClasificacion(): Promise<Insight | null> {
 
 /**
  * Motor proactivo del Pulso: evalúa las tres reglas en paralelo con los
- * umbrales vigentes de bi_config y devuelve máximo 3 insights ordenados por
- * severidad. Sin disparos → [] (la UI muestra su estado de calma honesto).
+ * umbrales vigentes de bi_config, concatena los insights del marco de
+ * vigilancia (getInsightsVigilancia, mismo contrato Insight) y devuelve
+ * máximo 4 ordenados por severidad. Si la vigilancia falla NO tumba el
+ * motor: se loguea y se sigue solo con las reglas locales (mismo criterio
+ * que intentarInsight). Sin disparos → [] (la UI muestra su estado de calma
+ * honesto).
  */
 export async function getInsights(): Promise<Insight[]> {
     const [valorUmbral, valorDias] = await Promise.all([
@@ -184,15 +193,31 @@ export async function getInsights(): Promise<Insight[]> {
     const umbralSubida = parseEnteroPositivo(valorUmbral, DEFAULT_SUBIDA_SEMANAL_PCT);
     const diasSinReportes = parseEnteroPositivo(valorDias, DEFAULT_DIAS_SIN_REPORTES);
 
-    const resultados = await Promise.all([
-        intentarInsight("tendencia", () => insightTendencia(umbralSubida)),
-        intentarInsight("colegios_silenciosos", () => insightColegiosSilenciosos(diasSinReportes)),
-        intentarInsight("mejora_clasificacion", () => insightMejoraClasificacion()),
+    const [resultados, vigilancia] = await Promise.all([
+        Promise.all([
+            intentarInsight("tendencia", () => insightTendencia(umbralSubida)),
+            intentarInsight("colegios_silenciosos", () => insightColegiosSilenciosos(diasSinReportes)),
+            intentarInsight("mejora_clasificacion", () => insightMejoraClasificacion()),
+        ]),
+        (async (): Promise<Insight[]> => {
+            try {
+                return await getInsightsVigilancia();
+            } catch (error) {
+                console.warn(
+                    `[Insights] Vigilancia sin resultado: consulta falló — ${
+                        error instanceof Error ? error.message : String(error)
+                    }`,
+                );
+                return [];
+            }
+        })(),
     ]);
 
     const orden: Record<Insight["severidad"], number> = { ambar: 0, cielo: 1, pino: 2 };
-    return resultados
-        .filter((i): i is Insight => i !== null)
+    return [
+        ...resultados.filter((i): i is Insight => i !== null),
+        ...vigilancia,
+    ]
         .sort((a, b) => orden[a.severidad] - orden[b.severidad])
         .slice(0, MAX_INSIGHTS);
 }
