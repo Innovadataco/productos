@@ -1593,6 +1593,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | autorizacionArchivoUrl | String | — |
 | venceEn | DateTime | — |
 | creadoEn | DateTime | — |
+| avisoVencimientoEnviadoEn | DateTime | opcional |
+| notaInterna | String | opcional |
 | perfilProfesional | PerfilProfesional | relación (FK) |
 | revisadoPor | Usuario | relación |
 
