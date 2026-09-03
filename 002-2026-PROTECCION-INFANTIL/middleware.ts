@@ -190,8 +190,15 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
             : null;
 
     if (estado) {
-        // Paso 4: consentimiento.
-        if (estado.requiereConsentimiento && !esExentaConsentimiento(pathname)) {
+        // Paso 4: consentimiento. SPEC-416 (I-118 · orden CEO 03-09-2026):
+        // el guard se le pide SOLO a titulares del dato (PARENT y SCHOOL_ADMIN).
+        // Los internos (VERIFICADOR/ADMIN/OPERADOR/COMITE_*), el profesional
+        // (prestador de servicio, no titular) y cualquier rol futuro NO
+        // titular quedan exentos. No es sólo un bloqueo molesto: meter firmas
+        // de empleados internos contamina la evidencia legal del audit de
+        // consentimientos, que existe para demostrar que el TITULAR consintió.
+        const rolTitularConsentimiento = sesion.rol === "PARENT" || sesion.rol === "SCHOOL_ADMIN";
+        if (rolTitularConsentimiento && estado.requiereConsentimiento && !esExentaConsentimiento(pathname)) {
             // SPEC-329 (002-PI-229): las /api/** gateadas responden JSON 403 (no 302 HTML),
             // igual que el Paso 2 con su 401 — un fetch NO puede seguir un redirect y
             // confundir el bloqueo con éxito. Las pantallas (no-api) siguen redirigiendo.

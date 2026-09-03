@@ -22,7 +22,7 @@ import type { PasoPendienteColegio } from "@/lib/camino/pasos-colegio";
  */
 export async function buildSesionEstadoValue(userId: string): Promise<string> {
     const repo = new UsuarioRepository();
-    const [suscripcion, requiereConsentimiento, flag, usuarioVigencia] = await Promise.all([
+    const [suscripcion, requiereConsentimientoRaw, flag, usuarioVigencia] = await Promise.all([
         new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(userId),
         requiereConsentimientoActual(userId),
         repo.findDebeCambiarPassword(userId),
@@ -30,6 +30,15 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
     ]);
 
     const rol = usuarioVigencia?.rol;
+    // SPEC-416 (I-118 · orden CEO 03-09-2026): el consentimiento se le pide
+    // SOLO a titulares del dato (PARENT y SCHOOL_ADMIN). Defensa en profundidad:
+    // ni siquiera embebemos la marca en la cookie para no titulares, así si
+    // mañana alguien olvida el filtro del middleware, el flag ni siquiera está.
+    // El motivo de fondo es de valor probatorio: `audit_consentimientos` existe
+    // para demostrar que el TITULAR consintió; firmas de empleados internos o
+    // del prestador contaminan la prueba legal.
+    const requiereConsentimiento =
+        rol === "PARENT" || rol === "SCHOOL_ADMIN" ? requiereConsentimientoRaw : false;
     let vigencia: EstadoVigenciaEfectivo;
 
     if (rol === "SCHOOL_ADMIN" || rol === "COMITE_CONVIVENCIA") {

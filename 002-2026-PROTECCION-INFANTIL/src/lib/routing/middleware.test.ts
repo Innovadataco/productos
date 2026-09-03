@@ -122,6 +122,76 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
         expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/consentimiento");
     });
 
+    // SPEC-416 (I-118) — el consentimiento se pide SOLO a titulares del dato.
+    // Bi-direccional: PARENT y SCHOOL_ADMIN siguen bloqueados sin consentimiento
+    // (audit legal); VERIFICADOR/ADMIN/OPERADOR/COMITE_*/PROFESIONAL pasan sin
+    // redirect (meter sus firmas al audit contamina la prueba legal).
+
+    it("(g-416-parent) PARENT sin consentimiento → sigue bloqueado (candado no aflojado, I-211)", async () => {
+        const token = await jwtParaRol("PARENT");
+        const cookie = await firmarSesionEstado(
+            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+            JWT_SECRET_TEST,
+        );
+        const req = new NextRequest("http://localhost:5005/dashboard/padre", {
+            headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=${cookie}` },
+        });
+        const res = await middleware(req);
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/consentimiento");
+    });
+
+    it("(g-416-school) SCHOOL_ADMIN sin consentimiento → sigue bloqueado", async () => {
+        const token = await jwtParaRol("SCHOOL_ADMIN");
+        const cookie = await firmarSesionEstado(
+            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+            JWT_SECRET_TEST,
+        );
+        const req = new NextRequest("http://localhost:5005/dashboard/colegio", {
+            headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=${cookie}` },
+        });
+        const res = await middleware(req);
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/consentimiento");
+    });
+
+    for (const rol of ["VERIFICADOR", "ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA", "PROFESIONAL"]) {
+        it(`(g-416-exento) ${rol} con requiereConsentimiento=true → next() (no titular del dato)`, async () => {
+            const token = await jwtParaRol(rol);
+            const cookie = await firmarSesionEstado(
+                { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+                JWT_SECRET_TEST,
+            );
+            const rutaProbada = rol === "SCHOOL_ADMIN" || rol === "COMITE_CONVIVENCIA"
+                ? "/dashboard/colegio"
+                : rol === "PROFESIONAL"
+                    ? "/perfil-profesional/completar"
+                    : "/dashboard/admin";
+            const req = new NextRequest(`http://localhost:5005${rutaProbada}`, {
+                headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=${cookie}` },
+            });
+            const res = await middleware(req);
+            // El middleware NO debe redirigir a consentimiento para este rol.
+            const location = res.headers.get("location") ?? "";
+            expect(location, `${rol} no debe ir a /consentimiento`).not.toContain("/consentimiento");
+        });
+    }
+
+    it("(g-416-api) VERIFICADOR sin consentimiento sobre /api/admin/verificacion-profesionales → NO 403 CONSENTIMIENTO_REQUERIDO", async () => {
+        const token = await jwtParaRol("VERIFICADOR");
+        const cookie = await firmarSesionEstado(
+            { vigencia: "ACTIVA", requiereConsentimiento: true, debeCambiarPassword: false, pasoCamino: null },
+            JWT_SECRET_TEST,
+        );
+        const req = new NextRequest("http://localhost:5005/api/admin/verificacion-profesionales", {
+            headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=${cookie}` },
+        });
+        const res = await middleware(req);
+        // El middleware NO corta con CONSENTIMIENTO_REQUERIDO para este rol.
+        expect(res.status).not.toBe(403);
+        expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+
     it("(h) anónimo en /dashboard/padre → redirect a /login", async () => {
         const req = new NextRequest("http://localhost:5005/dashboard/padre");
         const res = await middleware(req);
