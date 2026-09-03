@@ -10,6 +10,7 @@ import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { randomBytes } from "crypto";
 import { enviarEmailCambioPassword } from "@/lib/email";
+import { logger } from "@/lib/logger";
 
 function getClientInfo(request: Request) {
     return {
@@ -70,8 +71,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // El rector es el dueño de la cuenta; sin este aviso no se enteraría del cambio.
         try {
             await enviarEmailCambioPassword(colegio.admin.email);
-        } catch {
-            // fallo silencioso — el aviso no es bloqueante
+        } catch (error) {
+            // SPEC-415: sigue sin bloquear —el cambio de clave ya ocurrió— pero
+            // deja de ser MUDO. Este es un aviso de seguridad: si el proveedor
+            // está caído (I-283), nadie le dijo al dueño de la cuenta que se la
+            // cambiaron, y sin esta línea tampoco quedaba rastro para saberlo.
+            logger.error(
+                "[Seguridad] No se pudo avisar el cambio de clave (ADMIN regenera la clave del rector)",
+                error,
+            );
         }
 
         return NextResponse.json({

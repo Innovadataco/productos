@@ -7,6 +7,7 @@ import { withValidation } from "@/lib/validation";
 import { operadorIdParamsSchema } from "@/lib/schemas";
 import { OperadorService } from "@/lib/dal/services/operadores";
 import { enviarEmailCambioPassword } from "@/lib/email";
+import { logger } from "@/lib/logger";
 
 function getClientInfo(request: Request) {
     return {
@@ -44,8 +45,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // SPEC-322 (camino 4): aviso al dueño de la cuenta cuando un admin le regenera la clave.
         try {
             await enviarEmailCambioPassword(operador.email);
-        } catch {
-            // fallo silencioso — el aviso no es bloqueante
+        } catch (error) {
+            // SPEC-415: sigue sin bloquear —el cambio de clave ya ocurrió— pero
+            // deja de ser MUDO. Este es un aviso de seguridad: si el proveedor
+            // está caído (I-283), nadie le dijo al dueño de la cuenta que se la
+            // cambiaron, y sin esta línea tampoco quedaba rastro para saberlo.
+            logger.error(
+                "[Seguridad] No se pudo avisar el cambio de clave (ADMIN regenera la clave de un operador)",
+                error,
+            );
         }
 
         const esComite = operador.rol === "COMITE_VALIDACION";

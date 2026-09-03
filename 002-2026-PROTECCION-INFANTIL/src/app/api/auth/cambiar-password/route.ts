@@ -5,6 +5,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { getParametroSistema } from "@/lib/parametros";
 import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 import { enviarEmailCambioPassword } from "@/lib/email";
+import { logger } from "@/lib/logger";
 import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
 import { NOMBRE_COOKIE, TTL_SEG } from "@/lib/routing/vigencia-cookie";
 import { logAudit } from "@/lib/audit";
@@ -58,8 +59,15 @@ export async function POST(request: Request) {
         // try/catch: un fallo de correo no debe romper el cambio de clave.
         try {
             await enviarEmailCambioPassword(user.email);
-        } catch {
-            // fallo silencioso — el aviso no es bloqueante
+        } catch (error) {
+            // SPEC-415: sigue sin bloquear —el cambio de clave ya ocurrió— pero
+            // deja de ser MUDO. Este es un aviso de seguridad: si el proveedor
+            // está caído (I-283), nadie le dijo al dueño de la cuenta que se la
+            // cambiaron, y sin esta línea tampoco quedaba rastro para saberlo.
+            logger.error(
+                "[Seguridad] No se pudo avisar el cambio de clave (el usuario cambia su clave)",
+                error,
+            );
         }
 
         // US5 · SPEC-318: auditar cambio de contraseña (enum USUARIO_CAMBIO_PASSWORD requiere T003-T005)
