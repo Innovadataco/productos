@@ -51,6 +51,8 @@ const CASOS_BLOQUEO: Caso[] = [
 const EMAILS: Record<RolUsuario, string> = {
     PARENT: `e2e-c${CICLO}-ais-padre@test.local`,
     SCHOOL_ADMIN: "",
+    // SPEC-388a · L1a: placeholder mientras L1b arma el journey del profesional.
+    PROFESIONAL: "",
     ADMIN: `e2e-c${CICLO}-ais-admin@test.local`,
     OPERADOR: `e2e-c${CICLO}-ais-op@test.local`,
     COMITE_VALIDACION: `e2e-c${CICLO}-ais-comite@test.local`,

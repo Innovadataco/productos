@@ -25,6 +25,8 @@ export const HOME_POR_ROL: Record<RolUsuario, string> = {
     OPERADOR: "/dashboard/admin",
     COMITE_VALIDACION: "/dashboard/admin/comite",
     COMITE_CONVIVENCIA: "/dashboard/colegio/comite/casos",
+    // SPEC-388a · L1a: placeholder — L1b/L5 definirán la home del profesional.
+    PROFESIONAL: "/",
 };
 
 /** Crea un usuario por rol y hace LOGIN REAL (el camino de entrada, no un token regalado). */

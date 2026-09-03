@@ -43,6 +43,15 @@ const TEMA_POR_ROL: Record<
         barra: "bg-ambar-600",
         tema: "theme-admin",
     },
+    // SPEC-388a (A-75 · L1a · aditivo): el tema real del profesional lo
+    // define L1b (Panel del profesional en L5). Placeholder mínimo para no
+    // romper el compilador ni pintar algo raro si un profesional llegara acá.
+    PROFESIONAL: {
+        titulo: "Preferencias de notificaciones",
+        subtitulo: "Configura los avisos de tus solicitudes de cita.",
+        barra: "bg-ambar-600",
+        tema: "theme-admin",
+    },
 };
 
 export default async function PerfilNotificacionesPage() {
