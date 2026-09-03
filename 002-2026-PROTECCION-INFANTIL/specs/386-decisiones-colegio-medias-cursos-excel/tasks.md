@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:002-2026-PROTECCION-INFANTIL/specs/379-decisiones-colegio-medias-b/tasks.md
 # SPEC-379 (PR B) · Tasks
+========
+# SPEC-386 · Tasks (continúa SPEC-379 D5a)
+>>>>>>>> 4f45add68 (chore(specs): renumerar 384 → 386 (colisión con #286 Guardianes)):002-2026-PROTECCION-INFANTIL/specs/386-decisiones-colegio-medias-cursos-excel/tasks.md
 
 - [X] T001 Diagnóstico 15v5: patrón de carga-profesores + modelo Curso + grados.
 - [X] T002 `src/lib/colegio/carga-cursos/parser.ts` con `PLANTILLA_CURSOS_CSV`.

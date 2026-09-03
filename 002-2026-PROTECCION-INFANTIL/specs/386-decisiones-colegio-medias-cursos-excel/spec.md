@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:002-2026-PROTECCION-INFANTIL/specs/379-decisiones-colegio-medias-b/spec.md
 # SPEC-379 (PR B) · Excel de CURSOS
+========
+# SPEC-386 · Excel de CURSOS (continúa SPEC-379 · D5a)
+>>>>>>>> 4f45add68 (chore(specs): renumerar 384 → 386 (colisión con #286 Guardianes)):002-2026-PROTECCION-INFANTIL/specs/386-decisiones-colegio-medias-cursos-excel/spec.md
 
 **Status**: IMPLEMENTADO
 **Fecha**: 2026-09-02 · **Dev**: PI-1 · **Origen**: D-100 (Jelkin, 31-08) · sigue el

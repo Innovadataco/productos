@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:002-2026-PROTECCION-INFANTIL/specs/379-decisiones-colegio-medias-b/plan.md
 # SPEC-379 (PR B) · Plan
+========
+# SPEC-386 · Plan (continúa SPEC-379 D5a)
+>>>>>>>> 4f45add68 (chore(specs): renumerar 384 → 386 (colisión con #286 Guardianes)):002-2026-PROTECCION-INFANTIL/specs/386-decisiones-colegio-medias-cursos-excel/plan.md
 
 1. **Diagnóstico 15v5**: leer parser + validator + importer de profesores,
    y las rutas `plantilla`/`validar`/`confirmar` — el patrón se copia limpio.
