@@ -100,12 +100,12 @@ describe("demo v4 · geografía (Jelkin: más países, más ciudades)", () => {
     });
 
     it("suma países NUEVOS respecto a v2 (BR VE PY BO CR PA GT DO HN SV NI ES US)", () => {
-        const paisesV2 = new Set(["CO", "MX", "AR", "PE", "CL", "EC", "UY"]);
-        const nuevos = PAISES_DEMO4.filter((p) => !paisesV2.has(p));
-        expect(nuevos.length).toBeGreaterThanOrEqual(11);
+        const paisesV2 = new Set<string>(["CO", "MX", "AR", "PE", "CL", "EC", "UY"]);
+        const nuevos = new Set<string>(PAISES_DEMO4.filter((p) => !paisesV2.has(p)));
+        expect(nuevos.size).toBeGreaterThanOrEqual(11);
         // Los pedidos expresos por Jelkin están todos.
         for (const p of ["ES", "US", "BR", "CR", "PA", "DO", "GT", "BO", "PY", "VE", "HN"]) {
-            expect(nuevos.includes(p), `falta país nuevo ${p}`).toBe(true);
+            expect(nuevos.has(p), `falta país nuevo ${p}`).toBe(true);
         }
     });
 
