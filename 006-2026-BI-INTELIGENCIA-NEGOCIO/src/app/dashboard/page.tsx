@@ -2,6 +2,7 @@ import Topbar from "@/components/bi/Topbar";
 import { getPulso } from "@/lib/bi/pulso";
 import { getInsights } from "@/lib/bi/insights";
 import { getCapacidad } from "@/lib/bi/capacidad";
+import { getVigilancia } from "@/lib/bi/vigilancia";
 import TickerVivo from "@/components/bi/pulso/TickerVivo";
 import HeroPulso from "@/components/bi/pulso/HeroPulso";
 import SeccionInsights from "@/components/bi/pulso/SeccionInsights";
@@ -15,6 +16,7 @@ import GraficoDonut from "@/components/bi/pulso/GraficoDonut";
 import SplitAnonimato from "@/components/bi/pulso/SplitAnonimato";
 import BarrasEstadosReporte from "@/components/bi/pulso/BarrasEstadosReporte";
 import TarjetaComercial from "@/components/bi/pulso/TarjetaComercial";
+import SeccionVigilancia from "@/components/bi/vigilancia/SeccionVigilancia";
 
 // Los datos vienen de la réplica en CADA request: jamás prerender estático
 // (Prisma corre en runtime Node, no en edge ni en build).
@@ -24,16 +26,18 @@ export const dynamic = "force-dynamic";
 /**
  * Pulso (mockup-bi-v3 · pantalla 1) con datos REALES de la réplica de PI.
  * Server Component: trae todo con getPulso() + getInsights() + getCapacidad()
- * (contratos de la capa de datos) y compone secciones server; la única isla
- * client es CifraAnimada (count-up con requestAnimationFrame).
+ * + getVigilancia() (contratos de la capa de datos) y compone secciones
+ * server; la única isla client es CifraAnimada (count-up con
+ * requestAnimationFrame).
  *
  * Candado 9: hayDatos=false apaga KPIs y gráficas — el vacío se dice en el
  * hero, no se disfraza de ceros; dentro de cada tarjeta, un hueco parcial
  * (sin alertas, sin estados, sin suscripciones) se muestra como "aún sin
- * datos". La tarjeta de capacidad operativa vive FUERA del hayDatos: con
- * cero operarios la brecha es un hecho visible, no un hueco. Candado 10:
- * toda cifra renderizada salió de PulsoData/Insight/CapacidadData; esta
- * página no calcula métricas.
+ * datos". La tarjeta de capacidad operativa y la sección de vigilancia viven
+ * FUERA del hayDatos: con cero operarios la brecha es un hecho visible, y un
+ * motor frenado o un atasco son señales que importan incluso sin histórico.
+ * Candado 10: toda cifra renderizada salió de PulsoData/Insight/
+ * CapacidadData/VigilanciaData; esta página no calcula métricas.
  *
  * Pulso siguiente nivel: tras los KPIs van la comparativa "Semana contra
  * semana" y la tarjeta "SLA vencido" (PulsoData.semana / PulsoData.sla).
@@ -43,10 +47,21 @@ export const dynamic = "force-dynamic";
  * media, bajar es la mejora) está documentado en SeccionSemana.
  */
 export default async function DashboardPage() {
-    const [pulso, insights, capacidad] = await Promise.all([
+    const [pulso, insights, capacidad, vigilancia] = await Promise.all([
         getPulso(),
         getInsights(),
         getCapacidad(),
+        // La vigilancia degrada sola: si la réplica no responde, la sección
+        // lo dice honesto en vez de tumbar el Pulso entero (mismo criterio
+        // de degradación por sección que getPulso).
+        getVigilancia().catch((error: unknown) => {
+            console.warn(
+                `[Dashboard] Vigilancia sin datos: la réplica no respondió — ${
+                    error instanceof Error ? error.message : String(error)
+                }`,
+            );
+            return null;
+        }),
     ]);
     const enAtencion = insights.some((i) => i.severidad === "ambar");
 
@@ -71,6 +86,12 @@ export default async function DashboardPage() {
                 con CERO operarios la brecha es un hecho que se muestra, no un
                 hueco que se oculta (candado 9). */}
             <TarjetaCapacidad capacidad={capacidad} />
+
+            {/* Vigilancia (marco Lote 1): también FUERA del hayDatos — las
+                señales del sistema (motor frenado, atascos, ráfagas) importan
+                incluso con la réplica vacía; cada tarjeta dice su vacío
+                honesto en vez de desaparecer. */}
+            <SeccionVigilancia vigilancia={vigilancia} />
 
             {pulso.hayDatos && (
                 <>
