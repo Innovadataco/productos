@@ -318,4 +318,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/demo/demo-v3.test.ts",
     // SPEC-378: Inicio del administrador (server component + tarjetas ámbar).
     "src/app/dashboard/admin/inicio/page.test.tsx",
+    // SPEC-379: membrete institucional compartido + candado UI materia-profesor.
+    "src/lib/colegio/membrete-pdf.test.ts",
+    "src/components/modules/colegio/curso/SeccionMateriasCurso.test.tsx",
+    "src/components/modules/colegio/CargaProfesoresExcel.test.tsx",
 ];

@@ -17,6 +17,11 @@ const SELECT_VIGENCIA = {
 const SELECT_RESUMEN = {
     id: true,
     nombre: true,
+    // SPEC-379 (D1): los PDF que van fuera del colegio (informe mensual,
+    // estadísticas) llevan el NIT y el escudo en el membrete. Datos estáticos
+    // de identidad, se traen junto al nombre — un solo query.
+    nit: true,
+    escudoAssetKey: true,
 } satisfies Prisma.ColegioSelect;
 
 const SELECT_FICHA_HOME = {

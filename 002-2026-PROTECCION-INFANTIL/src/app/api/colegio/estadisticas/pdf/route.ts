@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { verificarVigenciaColegio } from "@/lib/colegio/vigencia";
 import { calcularEstadisticasColegio } from "@/lib/colegio/estadisticas";
 import { generarPdfEstadisticas } from "@/lib/colegio/pdf-estadisticas";
+import { leerEscudoDataUri } from "@/lib/colegio/escudo-storage";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { AccionAudit } from "@prisma/client";
@@ -51,7 +52,9 @@ export async function GET(request: Request) {
         }
 
         const estadisticas = await calcularEstadisticasColegio(user.colegioId);
-        const pdfBuffer = await generarPdfEstadisticas(estadisticas);
+        // SPEC-379 (D1): escudo institucional en el membrete del PDF exportado.
+        const escudoDataUri = await leerEscudoDataUri(estadisticas.escudoAssetKey);
+        const pdfBuffer = await generarPdfEstadisticas(estadisticas, escudoDataUri);
 
         const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
         const userAgent = request.headers.get("user-agent") || "unknown";

@@ -22,6 +22,10 @@ export interface CategoriaInformeMensual {
 export interface InformeMensualColegio {
     colegioId: string;
     colegioNombre: string;
+    // SPEC-379 (D1): membrete institucional del informe mensual (rector lo
+    // lleva al consejo directivo / Secretaría, necesita autoría clara).
+    colegioNit: string;
+    escudoAssetKey: string | null;
     mes: string; // YYYY-MM
     reportesDistintos: number;
     alertasTotales: number;
@@ -67,6 +71,8 @@ export async function calcularInformeMensual(colegioId: string, mes: string): Pr
     return {
         colegioId,
         colegioNombre: colegio.nombre,
+        colegioNit: colegio.nit,
+        escudoAssetKey: colegio.escudoAssetKey,
         mes,
         reportesDistintos: resumen.reportesDistintos,
         alertasTotales: resumen.alertasTotales,

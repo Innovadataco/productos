@@ -500,6 +500,7 @@
 | [374](374-ci-skip-bi-only/spec.md) | SPEC-374 · CI de PI salta cuando el PR no toca 002 ni la raíz compartida — el `should-skip` decide por lógica pura testeada (17 casos), nunca por `on: paths:` (candado I-249) | 🟡 En desarrollo |
 | [375](375-shard-integracion-colgado/spec.md) | SPEC-375 · El shard de `test-integration` colgado — pg-boss singleton sin cierre dejaba handles vivos en el fork de vitest y el shard se quedaba 40+ min hasta cancelación manual; `disposeBoss()` + `afterAll` que lo invoca + `timeout-minutes: 20` como tope duro | 🟡 En desarrollo |
 | [378](378-inicio-administrador/spec.md) | SPEC-378 · Inicio del administrador — alarma de la casa: pantalla vacía cuando todo está bien, tarjetas ámbar cuando algo se rompió en silencio (correos, motor IA, huérfanos, workers, vigencias, comité). Nunca rojo (regla dura de Jelkin) | 🟡 En desarrollo |
+| [379a](379-decisiones-colegio-medias-a/spec.md) | SPEC-379 (PR A) · Decisiones del colegio a medias (D-100 · quick wins): membrete institucional del colegio en `pdf-informe-mensual` + `pdf-estadisticas`, candado UI "toda materia con profesor" y carga masiva de profesores desde la gestión diaria | 🟡 En desarrollo |
 
 ## Incidencias de calidad de datos
 
