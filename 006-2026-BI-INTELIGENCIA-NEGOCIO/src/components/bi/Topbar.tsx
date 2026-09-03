@@ -13,7 +13,17 @@ export default function Topbar({
 }: {
     titulo: string;
     acento: string;
-    activo: "dashboard" | "chat" | "personas" | "geografia" | "analitica" | "operacion" | "admin-ia";
+    activo:
+        | "dashboard"
+        | "chat"
+        | "personas"
+        | "geografia"
+        | "analitica"
+        | "operacion"
+        | "comercial"
+        | "comite"
+        | "motor"
+        | "admin-ia";
     /** Bajada bajo el título; por defecto la del producto (Analítica trae la suya del mockup v4). */
     sub?: string;
 }) {
@@ -24,6 +34,9 @@ export default function Topbar({
         { id: "geografia", href: "/geografia", etiqueta: "Geografía" },
         { id: "analitica", href: "/analitica", etiqueta: "Analítica" },
         { id: "operacion", href: "/operacion", etiqueta: "Operación" },
+        { id: "comercial", href: "/comercial", etiqueta: "Comercial" },
+        { id: "comite", href: "/comite", etiqueta: "Comité" },
+        { id: "motor", href: "/motor", etiqueta: "Motor" },
         { id: "admin-ia", href: "/admin/ia", etiqueta: "Admin IA" },
     ] as const;
 

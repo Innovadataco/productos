@@ -49,10 +49,13 @@
 --   `eventos_match`. Queda VETADA como tabla completa (guard §4).
 --
 -- REGLA DE GOBIERNO (AGENTS.md §7): agregar una tabla nueva a la publicación
---   exige pedirla por nombre y autorización de Jelkin. Las 37 tablas de abajo
+--   exige pedirla por nombre y autorización de Jelkin. Las 44 tablas de abajo
 --   son la lista canónica autorizada (23 originales D-20 del 005 + 17 nuevas
 --   autorizadas para BI v2 el 2026-09-01 − 3 legacy vacías retiradas el mismo
---   día: Subscription, BillingCycle, AlertaSuscripcion).
+--   día: Subscription, BillingCycle, AlertaSuscripcion + 7 autorizadas el
+--   2026-09-03 para los Lotes A·B·C: Pago, pasos_procesamiento,
+--   ReintentoReporte, HealthProbe, worker_logs, IncidenteInfra, y
+--   PerfilOperador canonizada tras su publicación manual del 2026-09-02).
 --
 -- HALLAZGO CANDADO 15 del 005 (se conserva): modelos Prisma con @@map a
 --   nombre snake_case/legacy en BD — la publicación usa el nombre REAL:
@@ -89,21 +92,23 @@ DECLARE
   pub_tabla       text;
   n_filas         bigint;
 
-  -- ── LISTA CANÓNICA (37 tablas) ─────────────────────────────────────────
+  -- ── LISTA CANÓNICA (44 tablas) ─────────────────────────────────────────
   -- Cada fila: {tabla, columnas} · columnas = NULL → completa; si no, CSV
   -- exacto de columnas publicadas (orden libre; el script compara ordenado).
   canon text[][] := ARRAY[
     -- ── 23 originales (D-20 del 005) · 5 con recorte anti-PII ────────────
     -- Reporte: sin texto/textoOriginal (evidencia cifrada), sin identificador
     -- (nick del reportado = PII del presunto; la reincidencia agrega vía
-    -- IdentificadorReportado), sin usuarioId/operadorId/comiteId/
-    -- eliminadoPorId/anonimizacionValidadaPorId (personas), sin
-    -- processingError/notaBaja (texto libre). ciudad/pais/otraPlataforma SÍ
-    -- se publican: son texto geográfico de respaldo (ciudad, no persona) y la
-    -- MV mv_fact_reporte_diario depende de ellas.
+    -- IdentificadorReportado), sin usuarioId/comiteId/eliminadoPorId/
+    -- anonimizacionValidadaPorId (personas), sin processingError/notaBaja
+    -- (texto libre). operadorId SÍ se publica (cuid interno del operario,
+    -- mismo tratamiento que Suscripcion.usuarioId): autorizado por Jelkin el
+    -- 2026-09-02 para la capacidad operativa (PR 006#295). ciudad/pais/
+    -- otraPlataforma SÍ se publican: son texto geográfico de respaldo (ciudad,
+    -- no persona) y la MV mv_fact_reporte_diario depende de ellas.
     -- Nota schema: Reporte usa `actualizadoEn` (no updatedAt) y NO tiene
     -- departamentoId ni colegioId.
-    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,paisId,ciudadId,ciudad,pais,otraPlataforma,estado,esAnonimo,edadVictima,origenRol,reporteOrigenId,numeroSeguimiento,tenantId,prioridadAlta,keywordsDetectadas,esRafaga,fuenteConfianza,eliminado,motivoBaja,eliminadoEn,anonimizacionValidadaEn,creadoEn,actualizadoEn'],
+    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,paisId,ciudadId,ciudad,pais,otraPlataforma,estado,esAnonimo,edadVictima,origenRol,operadorId,reporteOrigenId,numeroSeguimiento,tenantId,prioridadAlta,keywordsDetectadas,esRafaga,fuenteConfianza,eliminado,motivoBaja,eliminadoEn,anonimizacionValidadaEn,creadoEn,actualizadoEn'],
     ARRAY['ClasificacionIA', NULL],
     ARRAY['clasificacion_rubrica_votos', NULL],  -- @@map · nombre real en BD
     ARRAY['CorreccionAdmin', NULL],
@@ -162,12 +167,40 @@ DECLARE
     -- al titular persona), sin motivoCancelacion/referenciaPagoManual (texto
     -- libre). usuarioId/autorizadoPorAdminId son cuids internos.
     ARRAY['Suscripcion', 'id,tipoTitular,colegioId,usuarioId,estado,planActualId,fechaInicio,fechaFin,fechaCorteProgramado,esFreemium,freemiumFechaFin,monedaLocal,paisCliente,suspendidaEn,canceladaEn,canceladaPorUsuario,createdAt,updatedAt,origen,autorizadoPorAdminId,autorizadoEn,metodoPagoManual,montoRealPagado,fechaPagoReal'],
+    -- PerfilOperador: autorizada por Jelkin el 2026-09-02 (capacidad operativa,
+    -- semáforo de cupos — PR 006#295). Publicada a mano ese día con esta
+    -- column list; se incorpora al canon para que el reconciliador 3b no la
+    -- trate como drift. VETADAS: notas (texto libre) y creadoPor (persona).
+    ARRAY['PerfilOperador', 'id,usuarioId,cupoMaximo,esComite,esRevisorDeApelaciones,actualizadoEn'],
     ARRAY['patrones_institucionales', NULL],     -- @@map de PatronInstitucional
     ARRAY['eventos_match', NULL],                -- @@map de EventoMatch (solo metadatos agregados)
     ARRAY['score_clientes', NULL],               -- @@map de ScoreCliente
     ARRAY['DerivaMotorSnapshot', NULL],
     ARRAY['OnboardingColegio', NULL],
-    ARRAY['TipoDocumento', NULL]
+    ARRAY['TipoDocumento', NULL],
+    -- ── 6 nuevas autorizadas (Lotes A·B·C · 2026-09-03 · orden CEO) ────────
+    -- Pago (SPEC-210+): recaudo real declarado/autorizado. VETADAS en origen:
+    -- comprobante* (URL/mime/hash del comprobante del cliente), motivoRechazo/
+    -- motivoReembolso/referenciaReembolso/notasCliente (texto libre),
+    -- autorizadoPorAdminId/codigoReferidoUsado (identifican personas; los
+    -- referidos además siguen en desarrollo en PI — fuera de alcance).
+    ARRAY['Pago', 'id,suscripcionId,duracionCubierta,montoBaseUSD,descuentoAplicadoUSD,montoNetoUSD,tasaCambioAplicada,montoLocalPagado,monedaLocal,metodoDeclarado,fechaReporte,fechaAutorizacion,estado,montoReembolsoUSD,createdAt,updatedAt'],
+    -- pasos_procesamiento (@@map de PasoProcesamiento): telemetría del
+    -- pipeline (etapa, veredicto, latencia). VETADA: detalle (Json que puede
+    -- arrastrar fragmentos del texto del reporte).
+    ARRAY['pasos_procesamiento', 'id,reporteId,etapa,veredicto,latenciaMs,creadoEn'],
+    -- ReintentoReporte: VETADA: error (texto de la excepción, puede arrastrar
+    -- contexto sensible).
+    ARRAY['ReintentoReporte', 'id,reporteId,intento,exitoso,creadoEn'],
+    -- HealthProbe: señales de salud de app/worker/bd/ollama/tailscale.
+    -- VETADA: detalle (texto libre del monitor).
+    ARRAY['HealthProbe', 'id,senal,ok,latenciaMs,metodo,creadoEn'],
+    -- worker_logs (@@map de WorkerLog): SPEC-193 garantiza que no guarda PII
+    -- ni texto de reportes. VETADO: contextoJson (Json libre — minimización).
+    ARRAY['worker_logs', 'id,servicio,nivel,mensaje,creadoEn'],
+    -- IncidenteInfra: apertura/resolución de incidentes de infraestructura.
+    -- VETADAS: detalle (texto libre) y ultimoEmailEn (operativo interno).
+    ARRAY['IncidenteInfra', 'id,senal,estado,inicio,fin,creadoEn,actualizadoEn']
   ];
 
   -- ── TABLAS PROHIBIDAS (Ley 1581 · jamás en la publicación) ─────────────
@@ -175,15 +208,18 @@ DECLARE
     'Usuario', 'Password', 'Session', 'TokenRecuperacion', 'CodigoVerificacion',
     'ParametroSistema', 'CargaRosterSesion', 'DatasetEntrenamiento',
     'DocumentoApelacion', 'AccesoDocumentoApelacion', 'block_list',
-    'IntegranteComite', 'PerfilOperador', 'ContactoEmergencia',
+    'IntegranteComite', 'ContactoEmergencia',
     'contactos_emergencia', 'EventoExpediente', 'NotaSeguimiento',
     'AclaracionExpediente', 'aclaracion_expediente', 'InformeConsolidado',
     'informes_consolidados', 'Apelacion', 'AnalisisExpediente', 'InformePadre',
-    'TokenRegistro', 'notificaciones', 'HealthProbe', 'worker_logs',
-    'RateLimit', 'demo_marcado', 'simulacion_runs', 'simulacion_reportes',
+    'TokenRegistro', 'notificaciones', 'RateLimit', 'demo_marcado',
+    'simulacion_runs', 'simulacion_reportes',
     'simulacion_abuso_runs', 'sesiones_log', 'audit_consentimientos',
     -- PK = nick en claro del reportado: impublicable sin PII (ver cabecera).
     'senal_comunitaria_cache'
+    -- NOTA (2026-09-03): HealthProbe, worker_logs, Pago, pasos_procesamiento,
+    -- ReintentoReporte e IncidenteInfra SALIERON de esta lista — autorizadas
+    -- por Jelkin para los Lotes A·B·C (publicadas con column list, arriba).
   ];
 
   -- ── COLUMNAS VETADAS (tabla, columna) · defensa final anti-PII ─────────
@@ -196,7 +232,7 @@ DECLARE
     ARRAY['IdentificadorAlumno', 'valor'],
     ARRAY['Reporte', 'identificador'], ARRAY['Reporte', 'texto'],
     ARRAY['Reporte', 'textoOriginal'], ARRAY['Reporte', 'usuarioId'],
-    ARRAY['Reporte', 'operadorId'], ARRAY['Reporte', 'comiteId'],
+    ARRAY['Reporte', 'comiteId'],
     ARRAY['Reporte', 'eliminadoPorId'], ARRAY['Reporte', 'anonimizacionValidadaPorId'],
     ARRAY['Reporte', 'processingError'], ARRAY['Reporte', 'notaBaja'],
     ARRAY['Colegio', 'representanteLegalNombre'], ARRAY['Colegio', 'representanteLegalIdentificacion'],
@@ -220,6 +256,20 @@ DECLARE
     ARRAY['Suscripcion', 'contratoPDFUrl'], ARRAY['Suscripcion', 'codigoReferidoPropio'],
     ARRAY['Suscripcion', 'codigoReferidoUsado'], ARRAY['Suscripcion', 'motivoCancelacion'],
     ARRAY['Suscripcion', 'referenciaPagoManual'],
+    -- PerfilOperador (canonizada 2026-09-03): no publicar texto libre ni quién
+    -- creó el perfil.
+    ARRAY['PerfilOperador', 'notas'], ARRAY['PerfilOperador', 'creadoPor'],
+    -- Lotes A·B·C (2026-09-03): vetadas de las 6 tablas nuevas.
+    ARRAY['Pago', 'comprobanteAdjuntoUrl'], ARRAY['Pago', 'comprobanteMimeType'],
+    ARRAY['Pago', 'comprobanteHashSha256'], ARRAY['Pago', 'autorizadoPorAdminId'],
+    ARRAY['Pago', 'codigoReferidoUsado'], ARRAY['Pago', 'motivoRechazo'],
+    ARRAY['Pago', 'motivoReembolso'], ARRAY['Pago', 'referenciaReembolso'],
+    ARRAY['Pago', 'notasCliente'],
+    ARRAY['pasos_procesamiento', 'detalle'],
+    ARRAY['ReintentoReporte', 'error'],
+    ARRAY['HealthProbe', 'detalle'],
+    ARRAY['worker_logs', 'contextoJson'],
+    ARRAY['IncidenteInfra', 'detalle'], ARRAY['IncidenteInfra', 'ultimoEmailEn'],
     ARRAY['senal_comunitaria_cache', 'identificadorReportado']
   ];
 
@@ -382,10 +432,12 @@ JOIN pg_class c ON c.oid = pr.prrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE p.pubname = 'bi_replica' AND n.nspname = 'public'
 ORDER BY 2;
--- Esperado: 37 filas · tiene_column_list = t en las 15 tablas con recorte
+-- Esperado: 44 filas · tiene_column_list = t en las 22 tablas con recorte
 -- (Reporte, Colegio, Alumno, IdentificadorAlumno, AuditLog, Profesor,
 --  AcudienteEstudiante, IdentificadorAcudiente, IdentificadorProfesor, Hijo,
 --  IdentificadorHijo, ContactoConfianza, IdentificadorContacto,
---  IdentificadorReportado, Suscripcion) · f en las 22 completas.
+--  IdentificadorReportado, Suscripcion, Pago, pasos_procesamiento,
+--  ReintentoReporte, HealthProbe, worker_logs, IncidenteInfra, PerfilOperador) · f en las 22
+-- completas.
 -- NUNCA deben aparecer las tablas prohibidas (ver cabecera §GUARDS) ni las
 -- legacy retiradas (Subscription, BillingCycle, AlertaSuscripcion).
