@@ -166,6 +166,93 @@ async function senalVigenciasPorVencer(): Promise<SenalAlarma | null> {
     };
 }
 
+/**
+ * SPEC-398 (I-286) — Alarma en vivo del jurado del motor.
+ *
+ * SALUD DEL SISTEMA (el demo SÍ cuenta acá si sirviera): mira las últimas N
+ * clasificaciones que pasaron por la rúbrica y compara los votantes reales
+ * contra el comité configurado (`ia.rubrica.modelos`). Si más de `umbral` de
+ * las últimas N votó con menos modelos de los declarados, el motor está
+ * degradando en silencio — la señal grita.
+ *
+ * Por qué existe: I-286 vivió 6 días en producción con el jurado colapsado a
+ * un modelo porque **no había nada mirando**. Un test caza la regresión el
+ * día que alguien la escribe; esta señal vigila la realidad después.
+ *
+ * Complementa el candado del código (`pipeline-jurado.test.ts`) — la
+ * prueba vigila el código, la señal vigila la realidad (idea del CEO idc-14
+ * · 2026-09-03 12:25).
+ *
+ * Modelo del texto en `ClasificacionIA.modeloUsado`:
+ *  · Rúbrica: `rubrica:m1+m2+m3` (o `rubrica:m1` cuando hay override).
+ *  · Caché humano: `cache:humano:<uuid>` — NO cuenta (no pasa por el motor).
+ *  · Guardas previas: `guardas-previas` — NO cuenta.
+ *  · Cascada legacy: `cascada:*` — NO cuenta acá.
+ *
+ * Filtramos solo `rubrica:*` para tener universo comparable, y contamos
+ * cuántas de esas tienen menos votantes que el comité configurado.
+ *
+ * Excluye `DemoMarcado` en la muestra: no lo hacemos porque no cuente para
+ * salud (una degradación del motor con un demo también es degradación), sino
+ * porque el sandbox de simulación graba clasificaciones con override
+ * intencional que se marcan como demo — sin excluirlas, la señal chillaría
+ * cada vez que alguien juega con el simulador.
+ */
+async function senalJuradoReducido(): Promise<SenalAlarma | null> {
+    const ventana = await paramInt("monitoreo.jurado.ventana_clasificaciones", 20);
+    const umbral = await paramInt("monitoreo.jurado.max_reducidas_umbral", 3);
+
+    // Comité configurado (fuente de verdad: `ia.rubrica.modelos`). Si el
+    // parámetro no está seteado, no hay comparación posible; mejor no gritar
+    // que gritar sin sentido.
+    const paramComite = await getParametroSistemaValor("ia.rubrica.modelos");
+    if (!paramComite) return null;
+    let comite: string[];
+    try {
+        const parsed = JSON.parse(paramComite);
+        if (!Array.isArray(parsed) || parsed.length === 0) return null;
+        comite = parsed.map((m: unknown) => String(m));
+    } catch {
+        return null;
+    }
+    const tamanoComite = comite.length;
+    if (tamanoComite <= 1) return null; // Comité de un solo modelo — nada que degradar.
+
+    const rows = await prisma.$queryRaw<Array<{ modeloUsado: string }>>`
+        SELECT c."modeloUsado"
+        FROM "ClasificacionIA" c
+        LEFT JOIN "DemoMarcado" dm
+          ON dm."entidad" = 'Reporte' AND dm."entidadId" = c."reporteId"
+        WHERE c."modeloUsado" LIKE 'rubrica:%' AND dm.id IS NULL
+        ORDER BY c."creadoEn" DESC
+        LIMIT ${ventana}
+    `;
+    if (rows.length === 0) return null;
+
+    const reducidas = rows.filter((r) => votantesDe(r.modeloUsado) < tamanoComite).length;
+    if (reducidas < umbral) return null;
+
+    return {
+        id: "jurado_reducido",
+        prioridad: "alta",
+        texto:
+            `El motor votó con menos modelos de los configurados en ${reducidas} de las últimas ${rows.length} clasificaciones ` +
+            `(comité: ${tamanoComite} modelos). El jurado está degradando en silencio — revisar el pipeline.`,
+        ruta: "/dashboard/admin/estadisticas/salud-motor",
+    };
+}
+
+/**
+ * Cuenta los votantes en un `modeloUsado` con formato `rubrica:m1+m2+m3`.
+ * Sin `rubrica:` devuelve 0 (no aplica la comparación).
+ */
+export function votantesDe(modeloUsado: string): number {
+    if (!modeloUsado.startsWith("rubrica:")) return 0;
+    const cuerpo = modeloUsado.slice("rubrica:".length);
+    if (cuerpo.length === 0) return 0;
+    return cuerpo.split("+").length;
+}
+
 async function senalComiteVencido(): Promise<SenalAlarma | null> {
     // El SLA "normal" ya está parametrizado; usamos ese como corte simple.
     const slaHoras = await paramInt("padre.comite.sla_horas_normal", 48);
@@ -264,6 +351,10 @@ export async function calcularEstadoInicio(): Promise<EstadoInicio> {
         senalRevisionManualReales(),
         senalVigenciasPorVencer(),
         senalComiteVencido(),
+        // SPEC-398 (I-286): alarma en vivo — el jurado del motor no se degrada
+        // sin que la casa lo grite. La prueba vigila el código; esta vigila
+        // la realidad.
+        senalJuradoReducido(),
         senalesDeInfra(),
     ];
     const settled = await Promise.allSettled(promesas);
