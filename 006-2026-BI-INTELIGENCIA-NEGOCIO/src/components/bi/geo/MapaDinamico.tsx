@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { CiudadCalor } from "./MapaReportes";
+import type { CiudadCalor, PaisCoropleta } from "./MapaReportes";
 
 /**
  * Puente SSR → mapa. react-leaflet es client-only: el dynamic import con
@@ -18,6 +18,12 @@ const MapaReportes = dynamic(() => import("./MapaReportes"), {
     ),
 });
 
-export default function MapaDinamico({ ciudades }: { ciudades: CiudadCalor[] }) {
-    return <MapaReportes ciudades={ciudades} />;
+export default function MapaDinamico({
+    ciudades,
+    paises,
+}: {
+    ciudades: CiudadCalor[];
+    paises: PaisCoropleta[];
+}) {
+    return <MapaReportes ciudades={ciudades} paises={paises} />;
 }

@@ -25,6 +25,13 @@
 //     reportes quedan en 0 en JS a partir del mapa devuelto.
 //   · comportamiento: top 8 países/ciudades con su categoría más frecuente;
 //     sin clasificación → categoriaTop NULL, nunca una supuesta.
+//   · totales (KPIs del encabezado, como el dashboard público de PI): un
+//     solo ResultSet con 3 subconsultas; % autenticados con NULLIF(count,0)
+//     → NULL con 0 reportes (jamás NaN). Sondeo roto → los 3 en null y la
+//     UI dice "sin datos" (candado 9), nunca un 0 inventado.
+//   · porPais (choropleth): TODOS los países resueltos con su total, nombre
+//     ES del catálogo; la traducción ES→EN al GeoJSON vive en
+//     src/components/bi/geo/nombres-pais.ts.
 //
 // Candado 10: ningún número quemado (los únicos literales son etiquetas de
 // día y los umbrales/límites documentados como constantes).
@@ -83,6 +90,27 @@ export interface GeoData {
         porPais: { pais: string; total: number; categoriaTop: string | null }[];
         porCiudadTop: { ciudad: string; total: number; categoriaTop: string | null }[];
     };
+    /**
+     * KPIs generales (encabezado de la página, como el dashboard público de
+     * PI). Un solo ResultSet con 3 subconsultas. `null` = el sondeo degrado
+     * o el dato no existe (0 reportes en el % autenticados): la UI muestra
+     * "—"/"sin datos" en vez de un 0 inventado (candado 9).
+     */
+    totales: {
+        /** count(*) de Reporte no eliminados · null si el sondeo degrado */
+        reportes: number | null;
+        /** count(*) de IdentificadorReportado visible públicamente */
+        identificadoresVisibles: number | null;
+        /** 100 · no anónimos / total · null con total 0 o sondeo roto */
+        pctAutenticados: number | null;
+    };
+    /**
+     * Choropleth de países (relleno del polígono según reportes del país):
+     * TODOS los países RESUELTOS (paisId → catálogo "Pais"), nombre en
+     * español, mayor → menor. Vacío o sondeo roto → []: el mapa queda con el
+     * relleno base y la leyenda lo dice (candado 9).
+     */
+    porPais: { pais: string; total: number }[];
 }
 
 // ─── Constantes documentadas (no son datos: son forma de la vista) ───────────
@@ -98,6 +126,11 @@ const TOP_COMPORTAMIENTO_LIMITE = 8;
 const MIN_FILAS_REINCIDENCIA = 30;
 /** Etiquetas de día por ISODOW (1 = lunes … 7 = domingo). */
 const ETIQUETAS_DOW = ["L", "M", "X", "J", "V", "S", "D"] as const;
+/**
+ * Tope del ranking de países del choropleth: con el volumen de la réplica
+ * 100 sobra de sobra; es solo un tope defensivo contra catálogos gigantes.
+ */
+const PAISES_COROPLETA_LIMITE = 100;
 
 // ─── Filas crudas de las consultas ───────────────────────────────────────────
 interface FilaCiudadTop {
@@ -133,6 +166,15 @@ interface FilaComportamientoCiudad {
     ciudad: string;
     total: number;
     categoria_top: string | null;
+}
+interface FilaTotales {
+    reportes: number;
+    identificadores_visibles: number;
+    pct_autenticados: number | null;
+}
+interface FilaPais {
+    pais: string;
+    total: number;
 }
 
 // Fallbacks de degradación (consulta rota → ceros/vacío con warn; candado 9).
@@ -176,6 +218,8 @@ export async function getGeo(): Promise<GeoData> {
         filasMes,
         filasCompPais,
         filasCompCiudad,
+        filasTotales,
+        filasPais,
     ] = await Promise.all([
             // Top de ciudades RESUELTAS con coordenadas (las únicas que
             // entran al mapa). Sin lat/lng no hay punto — no se inventa.
@@ -317,10 +361,43 @@ export async function getGeo(): Promise<GeoData> {
                     LEFT JOIN cats ca ON ca."ciudadId" = ci."id" AND ca.rn = 1
                     ORDER BY ci.total DESC, ci."nombre"`,
             ),
+            // KPIs generales (dashboard público de PI): UN ResultSet con las
+            // 3 subconsultas. El % autenticados usa NULLIF(count(*), 0): con
+            // 0 reportes devuelve NULL (la UI dice "sin datos"), jamás NaN
+            // ni división por cero (candado 9).
+            intentar(
+                "totales",
+                prisma.$queryRaw<FilaTotales[]>`
+                    SELECT (SELECT count(*) FROM "Reporte"
+                             WHERE "eliminado" = false)::int AS reportes,
+                           (SELECT count(*) FROM "IdentificadorReportado"
+                             WHERE "esVisiblePublicamente" = true)::int AS identificadores_visibles,
+                           (SELECT 100.0 * count(*) FILTER (WHERE "esAnonimo" = false)
+                                   / NULLIF(count(*), 0)
+                              FROM "Reporte"
+                             WHERE "eliminado" = false)::float AS pct_autenticados`,
+            ),
+            // Choropleth: TODOS los países resueltos con su total (nombre en
+            // español del catálogo; la traducción al GeoJSON es del cliente).
+            intentar(
+                "por-pais",
+                prisma.$queryRaw<FilaPais[]>`
+                    SELECT p."nombre" AS pais,
+                           count(*)::int AS total
+                    FROM "Reporte" r
+                    JOIN "Pais" p ON p."id" = r."paisId"
+                    WHERE r."eliminado" = false
+                    GROUP BY p."id", p."nombre"
+                    ORDER BY total DESC, p."nombre"
+                    LIMIT ${PAISES_COROPLETA_LIMITE}`,
+            ),
         ]);
 
     const cobertura = filasCobertura[0] ?? COBERTURA_VACIA;
     const reincidencia = filasReincidencia[0] ?? REINCIDENCIA_VACIA;
+    // Totales: sin fila (sondeo roto → []) los tres valores quedan en null:
+    // la UI anuncia "sin datos" en vez de mostrar un 0 inventado (candado 9).
+    const totales = filasTotales[0] ?? null;
 
     // Días L..D siempre presentes; el día sin filas en el ResultSet queda en
     // 0 (el hueco existe de verdad, no se disimula).
@@ -374,5 +451,11 @@ export async function getGeo(): Promise<GeoData> {
                 categoriaTop: f.categoria_top,
             })),
         },
+        totales: {
+            reportes: totales?.reportes ?? null,
+            identificadoresVisibles: totales?.identificadores_visibles ?? null,
+            pctAutenticados: totales?.pct_autenticados ?? null,
+        },
+        porPais: filasPais.map((f) => ({ pais: f.pais, total: f.total })),
     };
 }

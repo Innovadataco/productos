@@ -1,5 +1,6 @@
 import Topbar from "@/components/bi/Topbar";
 import { getGeo } from "@/lib/bi/geo";
+import KpisGeografia from "@/components/bi/geo/KpisGeografia";
 import TarjetaMapa from "@/components/bi/geo/TarjetaMapa";
 import BarrasTopCiudades from "@/components/bi/geo/BarrasTopCiudades";
 import EmbudoReincidencia from "@/components/bi/geo/EmbudoReincidencia";
@@ -32,7 +33,14 @@ export default async function GeografiaPage() {
         <main className="relative z-10 mx-auto max-w-[1180px] px-6 pb-20 pt-8">
             <Topbar titulo="Geografía y" acento="reincidencia" activo="geografia" />
 
-            <TarjetaMapa calorCiudades={geo.calorCiudades} ciudadesConReportes={geo.ciudadesConReportes} />
+            {/* KPIs generales (como el dashboard público de PI), encima del mapa */}
+            <KpisGeografia totales={geo.totales} />
+
+            <TarjetaMapa
+                calorCiudades={geo.calorCiudades}
+                ciudadesConReportes={geo.ciudadesConReportes}
+                paises={geo.porPais}
+            />
 
             {/* Comportamiento por país/ciudad (bajo el mapa, pedido del dueño) */}
             <ComportamientoGeo comportamiento={comportamiento} />
