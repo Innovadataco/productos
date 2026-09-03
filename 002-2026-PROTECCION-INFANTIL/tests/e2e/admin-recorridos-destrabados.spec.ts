@@ -38,6 +38,7 @@ const PADRE_PASSWORD = "Padre123!Secure";
 const sembrados = {
     usuarios: new Set<string>(),
     colegios: new Set<string>(),
+    tenants: new Set<string>(),
 };
 
 async function asegurarUsuario(email: string, rol: string, password: string, nombre: string): Promise<string> {
@@ -57,16 +58,43 @@ async function asegurarUsuario(email: string, rol: string, password: string, nom
 }
 
 async function crearColegioEfimero(rectorId: string): Promise<string> {
-    // Colegio mínimo — el detalle de escuela viva no importa aquí; el spec
-    // solo verifica que el rector alcanza su bandeja del comité.
+    // Colegio mínimo con Tenant propio. El schema exige nit único global,
+    // representante legal, país/ciudad y tenant; usamos país/ciudad reales
+    // (el seed los tiene garantizados). El rector se une con
+    // `Usuario.colegioId` (@unique) — no hay `Colegio.rectorId` directo.
+    const tenant = await prisma.tenant.create({
+        data: { nombre: `Tenant E2E ${CORRIDA}`, estado: "activo" },
+    });
+    sembrados.tenants.add(tenant.id);
+
+    const pais = await prisma.pais.findFirst({ select: { id: true } });
+    const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
+    if (!pais || !ciudad) {
+        throw new Error("prod/pruebas debe tener País y Ciudad sembrados (corre `prisma db seed`)");
+    }
+
     const c = await prisma.colegio.create({
         data: {
             nombre: `Colegio E2E ${CORRIDA}`,
-            rectorId,
-            estado: "activo",
+            nit: `E2E-${CORRIDA}`,
+            paisId: pais.id,
+            ciudadId: ciudad.id,
+            representanteLegalNombre: "Rector E2E 406",
+            representanteLegalIdentificacion: `E2E-${CORRIDA}`,
+            representanteLegalEmail: RECTOR_EMAIL,
+            inicioServicio: new Date(),
+            tipoPeriodo: "ANUAL",
+            tenantId: tenant.id,
         },
     });
     sembrados.colegios.add(c.id);
+
+    // Enlazar el rector al colegio recién creado.
+    await prisma.usuario.update({
+        where: { id: rectorId },
+        data: { colegioId: c.id, tenantId: tenant.id },
+    });
+
     return c.id;
 }
 
@@ -78,10 +106,14 @@ async function login(page: Page, email: string, password: string) {
 async function limpiarSembrados() {
     const idsC = [...sembrados.colegios];
     const idsU = [...sembrados.usuarios];
-    if (idsC.length > 0) await prisma.colegio.deleteMany({ where: { id: { in: idsC } } });
+    const idsT = [...sembrados.tenants];
+    // Orden FK-safe: Usuario (que apunta a Colegio y Tenant) → Colegio → Tenant.
     if (idsU.length > 0) await prisma.usuario.deleteMany({ where: { id: { in: idsU } } });
+    if (idsC.length > 0) await prisma.colegio.deleteMany({ where: { id: { in: idsC } } });
+    if (idsT.length > 0) await prisma.tenant.deleteMany({ where: { id: { in: idsT } } });
     sembrados.colegios.clear();
     sembrados.usuarios.clear();
+    sembrados.tenants.clear();
 }
 
 async function urlFinalPathname(page: Page): Promise<string> {
