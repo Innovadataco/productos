@@ -3949,13 +3949,43 @@ async function main() {
     // ── SPEC-224: parámetros del test SQL del panel de reglas ──
     await seedParametrosReglasAdmin();
 
+    // ── SPEC-408 (A-75 · brief §9): lista parametrizable de requisitos del Verificador ──
+    await seedRequisitosVerificacion();
+
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
     await prisma.$disconnect();
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion };
+
+// ── SPEC-408 (A-75 · brief §9): la lista de 4 requisitos que el Verificador chequea ──
+// Orden permanente de Jelkin: NO quemar en código. Se siembra idempotente
+// (`update: {}`) — agregar/quitar/renombrar un requisito NO cuesta un despliegue,
+// se edita desde el admin en el ConfigPanel (parámetro clave = valor JSON).
+async function seedRequisitosVerificacion() {
+    const requisitos = [
+        { clave: "tarjeta_profesional", nombre: "Tarjeta profesional vigente", descripcion: "Imagen o PDF de la tarjeta profesional emitida por el ente competente." },
+        { clave: "antecedentes", nombre: "Antecedentes del profesional", descripcion: "Certificado de antecedentes (Ley 1918/2018 · 2375/2024, §5). El resultado es reservado por ley." },
+        { clave: "cedula", nombre: "Cédula de ciudadanía", descripcion: "Documento de identidad vigente." },
+        { clave: "otro", nombre: "Otro documento de soporte", descripcion: "Cuarto espacio libre — pendiente de definir por Jelkin. El Verificador lo trata como los demás." },
+    ];
+    await prisma.parametroSistema.upsert({
+        where: { clave: "verificacion.requisitos" },
+        update: {},
+        create: {
+            clave: "verificacion.requisitos",
+            valor: JSON.stringify(requisitos),
+            tipo: TipoParametro.JSON,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "Lista de requisitos que el Verificador chequea al admitir un profesional. Editable desde el admin (JSON con { clave, nombre, descripcion }). SPEC-408.",
+        },
+    });
+    console.log("[SEED] verificacion.requisitos listo (4 requisitos por defecto)");
+}
 
 // ── SPEC-244 (002-PI-147): catálogo Motor Notif del ciclo de vida de suscripción ──
 // Idempotente: plantillas con upsert por clave; reglas con upsertNotificacionRegla

@@ -52,6 +52,14 @@ const TEMA_POR_ROL: Record<
         barra: "bg-ambar-600",
         tema: "theme-admin",
     },
+    // SPEC-408 (A-75 · brief §9): rol interno del Verificador; usa el tema admin
+    // porque su área es /dashboard/admin/verificacion.
+    VERIFICADOR: {
+        titulo: "Preferencias de notificaciones",
+        subtitulo: "Configura los avisos de solicitudes por revisar e incidentes de citas.",
+        barra: "bg-ambar-600",
+        tema: "theme-admin",
+    },
 };
 
 export default async function PerfilNotificacionesPage() {

@@ -33,6 +33,10 @@ export function homeParaRol(rol: string | undefined): string {
             return "/dashboard/admin/comite";
         case "COMITE_CONVIVENCIA":
             return "/dashboard/colegio/comite";
+        // SPEC-408 (A-75 · brief §9): el Verificador aterriza en su cola de
+        // trabajo — es el único módulo que tiene.
+        case "VERIFICADOR":
+            return "/dashboard/admin/verificacion";
         case "PARENT":
             // Decisión A: el padre aterriza en su dashboard, no en la lista vieja.
             return "/dashboard/padre";

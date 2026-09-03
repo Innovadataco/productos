@@ -1,6 +1,10 @@
 # SPEC-389 · Red de Profesionales · L2 — IDC verifica
 
-**Autor:** Dev PI-2 · **Fecha:** 2026-09-03 · **Brief:** `BRIEF-A-75-RED-DE-PROFESIONALES.md` (§7 · L2) · **Status:** 🟡 En desarrollo · **Depende de:** SPEC-388 · L1a (modelo Prisma compartido, hecho por Dev Guardianes) · **Coordina con:** SPEC-388 (L1 completo), SPEC-390 (L3, el padre encuentra) · **Impacto en arquitectura:** módulo nuevo `admin_verificacion_profesionales`, tabla `VerificacionProfesional` con historial N:1, worker cron nuevo, patrón de archivo protegido copiado de apelaciones (SPEC-110).
+**Status**: DESARROLLO
+
+**Autor:** Dev PI-2 · **Fecha:** 2026-09-03 · **Brief:** `BRIEF-A-75-RED-DE-PROFESIONALES.md` (§7 · L2) · **Depende de:** SPEC-388 · L1a (modelo Prisma compartido, hecho por Dev Guardianes) · **Coordina con:** SPEC-388 (L1 completo), SPEC-390 (L3, el padre encuentra).
+
+**Impacto en arquitectura:** módulo nuevo `admin_verificacion_profesionales`, tabla `VerificacionProfesional` con historial N:1, worker cron nuevo, patrón de archivo protegido copiado de apelaciones (SPEC-110). Cherry-picked al SPEC-408 (dc-32) mientras la rama origen no mergea.
 
 ## 1 · Qué entrega este lote
 

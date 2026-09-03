@@ -66,6 +66,10 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
         // SPEC-263 (002-PI-164): pagos_admin quitado de OPERADOR (la revocación en BD viva requiere scripts/revocar-grants-pagos-operador.ts).
         // expediente_revelar_original añadido para que el operador valide spam o dudas de contexto.
         OPERADOR: ["bandeja_reportes", "expediente_revelar_original"],
+        // SPEC-408 (A-75 · brief §9): el Verificador tiene perfil equivalente al
+        // Operador — un SOLO módulo cubre solicitudes por revisar + incidentes
+        // de citas (Jelkin: un rol, una persona, un trabajo — lección I-278).
+        VERIFICADOR: ["admin_verificacion_profesionales"],
     };
     let permisosCreados = 0;
     for (const [rol, claves] of Object.entries(clavesPorRol)) {

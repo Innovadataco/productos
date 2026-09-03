@@ -78,6 +78,10 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // abrir la ficha y ver `checklist`/`autorizacionArchivoUrl`. Separación de poderes
     // (criterio I-274): quien verifica NO es quien publica el perfil.
     // Default: SOLO rol ADMIN (mismo criterio que `sistema_admin`, `comite_guias_accion`).
+    // SPEC-408 (A-75 · brief §9): un SOLO módulo cubre ambas colas del
+    // Verificador (solicitudes por revisar + incidentes de citas). Un
+    // Verificador, una persona, un trabajo — dos módulos duplicaban la
+    // superficie de falla en BD viva (lección I-278).
     { clave: "admin_verificacion_profesionales", nombre: "Verificación de profesionales", categoria: "admin", esCritico: true, orden: 130 },
     // SPEC-291 (002-PI-191): acciones admin sobre servicios docker (start/stop/restart).
     // Default: SOLO rol ADMIN (por `ADMIN: modulosSeed.map(...)` en seed-modulos-grants.ts).

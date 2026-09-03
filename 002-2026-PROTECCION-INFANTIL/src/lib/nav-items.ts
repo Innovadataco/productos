@@ -38,6 +38,11 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     // La ruta redirige a /dashboard/admin/estadisticas/operacion.
     { href: "/dashboard/admin/dataset-entrenamiento", label: "Dataset", modulo: "dataset_entrenamiento" },
     { href: "/dashboard/admin/configuracion", label: "Configuración", modulo: "configuracion_sistema" },
+    // SPEC-408 (A-75 · brief §9): dos colas del Verificador — solicitudes por
+    // revisar (raíz) e incidentes de citas. Ambas están gateadas por el mismo
+    // módulo `admin_verificacion_profesionales`, así que el nav las pinta juntas.
+    { href: "/dashboard/admin/verificacion", label: "Verificación", modulo: "admin_verificacion_profesionales" },
+    { href: "/dashboard/admin/verificacion/incidentes", label: "Incidentes de citas", modulo: "admin_verificacion_profesionales" },
 ];
 
 export const COMITE_NAV_TABS: NavItem[] = [

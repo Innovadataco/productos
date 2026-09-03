@@ -28,6 +28,8 @@ export const HOME_POR_ROL: Record<RolUsuario, string> = {
     // SPEC-391 (L1b): tras completar registro, el profesional cae en
     // /perfil-profesional/completar (L5 definirá su dashboard).
     PROFESIONAL: "/perfil-profesional/completar",
+    // SPEC-408 (A-75 · brief §9): el Verificador aterriza en su cola de trabajo.
+    VERIFICADOR: "/dashboard/admin/verificacion",
 };
 
 /** Crea un usuario por rol y hace LOGIN REAL (el camino de entrada, no un token regalado). */
