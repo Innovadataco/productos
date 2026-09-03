@@ -154,3 +154,22 @@ model BIConfig {
 
   @@map("bi_config")
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// BIAuditLog · bitácora general de BI (Lote: bitácora general, 2026-09-02)
+// Eventos de gobierno del producto, distintos del log de consultas del chat
+// (BIConsultaLog): quién ingresó (login OK/fallido), qué config cambió, qué
+// se exportó. detalle es JSON chico en String (misma convención que
+// pasosJson/planJson). JAMÁS passwords ni secretos en detalle.
+// ────────────────────────────────────────────────────────────────────────────
+model BIAuditLog {
+  id       String   @id @default(cuid())
+  accion   String // LOGIN_OK · LOGIN_FALLIDO · CONFIG_CAMBIO · EXPORTACION
+  email    String // email del admin BI (en login fallido: el email intentado)
+  detalle  String? // JSON chico: {clave, valorNuevo} · {recurso, formato}
+  creadoEn DateTime @default(now())
+
+  @@index([accion, creadoEn])
+  @@index([creadoEn])
+  @@map("bi_audit_log")
+}

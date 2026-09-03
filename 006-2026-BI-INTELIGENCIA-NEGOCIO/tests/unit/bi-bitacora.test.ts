@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
     leerSesion: vi.fn(),
     consultaLogFindMany: vi.fn(),
     consultaLogCount: vi.fn(),
+    auditLogFindMany: vi.fn(),
+    auditLogCount: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/sesion", () => ({ leerSesion: mocks.leerSesion }));
@@ -20,6 +22,10 @@ vi.mock("@/lib/db", () => ({
         bIConsultaLog: {
             findMany: mocks.consultaLogFindMany,
             count: mocks.consultaLogCount,
+        },
+        bIAuditLog: {
+            findMany: mocks.auditLogFindMany,
+            count: mocks.auditLogCount,
         },
     },
 }));
@@ -120,6 +126,7 @@ describe("GET /api/bi/bitacora · filtros y paginación", () => {
 
         const cuerpo = await res.json();
         expect(cuerpo).toEqual({
+            tipo: "chat",
             filas: [
                 {
                     id: "clg_01",
@@ -177,6 +184,97 @@ describe("GET /api/bi/bitacora · filtros y paginación", () => {
         const res = await GET(requestGet("?estado=ok"));
         expect(res.status).toBe(200);
         const cuerpo = await res.json();
-        expect(cuerpo).toEqual({ filas: [], total: 0, pagina: 1, paginas: 0 });
+        expect(cuerpo).toEqual({ tipo: "chat", filas: [], total: 0, pagina: 1, paginas: 0 });
+    });
+});
+
+// Fila REAL de bi_audit_log tal como la devuelve Prisma con el select de la
+// ruta (bitácora general: logins, cambios de config, exportaciones).
+const EVENTO = {
+    id: "aud_01",
+    accion: "LOGIN_OK",
+    email: EMAIL_SESION,
+    detalle: null,
+    creadoEn: new Date("2026-09-02T10:00:00.000Z"),
+};
+
+describe("GET /api/bi/bitacora?tipo=eventos · bitácora general", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mocks.leerSesion.mockResolvedValue({ email: EMAIL_SESION });
+    });
+
+    it("tipo inválido → 400 y NO toca la BD", async () => {
+        const res = await GET(requestGet("?tipo=todo"));
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ error: "tipo_invalido" });
+        expect(mocks.consultaLogFindMany).not.toHaveBeenCalled();
+        expect(mocks.auditLogFindMany).not.toHaveBeenCalled();
+    });
+
+    it("accion fuera de la lista → 400 y NO toca la BD", async () => {
+        const res = await GET(requestGet("?tipo=eventos&accion=BORRADO"));
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ error: "accion_invalida" });
+        expect(mocks.auditLogFindMany).not.toHaveBeenCalled();
+    });
+
+    it("tipo=eventos sin filtros → bi_audit_log, NO toca bi_consulta_log", async () => {
+        mocks.auditLogFindMany.mockResolvedValue([EVENTO]);
+        mocks.auditLogCount.mockResolvedValue(1);
+
+        const res = await GET(requestGet("?tipo=eventos"));
+        expect(res.status).toBe(200);
+        expect(mocks.auditLogFindMany).toHaveBeenCalledWith(
+            expect.objectContaining({ where: {}, orderBy: { creadoEn: "desc" }, skip: 0, take: 25 }),
+        );
+        expect(mocks.auditLogCount).toHaveBeenCalledWith({ where: {} });
+        expect(mocks.consultaLogFindMany).not.toHaveBeenCalled();
+        expect(mocks.consultaLogCount).not.toHaveBeenCalled();
+
+        const cuerpo = await res.json();
+        expect(cuerpo).toEqual({
+            tipo: "eventos",
+            filas: [
+                {
+                    id: "aud_01",
+                    accion: "LOGIN_OK",
+                    email: EMAIL_SESION,
+                    detalle: null,
+                    creadoEn: "2026-09-02T10:00:00.000Z",
+                },
+            ],
+            total: 1,
+            pagina: 1,
+            paginas: 1,
+        });
+    });
+
+    it("tipo=eventos con accion + fechas → where con accion y rango, MISMO where en count", async () => {
+        mocks.auditLogFindMany.mockResolvedValue([EVENTO]);
+        mocks.auditLogCount.mockResolvedValue(1);
+
+        const res = await GET(requestGet("?tipo=eventos&accion=LOGIN_FALLIDO&desde=2026-09-01&hasta=2026-09-02"));
+        expect(res.status).toBe(200);
+
+        const esperado = {
+            accion: "LOGIN_FALLIDO",
+            creadoEn: {
+                gte: new Date("2026-09-01T00:00:00.000Z"),
+                lte: new Date("2026-09-02T23:59:59.999Z"),
+            },
+        };
+        expect(mocks.auditLogFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: esperado }));
+        expect(mocks.auditLogCount).toHaveBeenCalledWith({ where: esperado });
+    });
+
+    it("tipo=chat (default) NO toca bi_audit_log", async () => {
+        mocks.consultaLogFindMany.mockResolvedValue([FILA]);
+        mocks.consultaLogCount.mockResolvedValue(1);
+
+        const res = await GET(requestGet());
+        expect(res.status).toBe(200);
+        expect(mocks.auditLogFindMany).not.toHaveBeenCalled();
+        expect(mocks.auditLogCount).not.toHaveBeenCalled();
     });
 });

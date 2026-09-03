@@ -7,6 +7,8 @@ import {
     type OllamaModelInfo,
 } from "@/lib/ai/ollama-config";
 import { setConfig } from "@/lib/config";
+import { leerSesion } from "@/lib/auth/sesion";
+import { registrarEventoAudit, ACCION_AUDIT } from "@/lib/bitacora/audit";
 
 // Lee/escribe bi_config y sondea Ollama: siempre dinámico y en runtime Node.
 export const runtime = "nodejs";
@@ -65,5 +67,14 @@ export async function PUT(request: NextRequest) {
     }
 
     await setConfig(CLAVE_MODELO_SQL, modelo);
+
+    // Bitácora general: quién cambió el modelo y a cuál (fail-open).
+    const sesion = await leerSesion();
+    await registrarEventoAudit({
+        accion: ACCION_AUDIT.CONFIG_CAMBIO,
+        email: sesion?.email ?? "desconocido",
+        detalle: { clave: CLAVE_MODELO_SQL, valorNuevo: modelo },
+    });
+
     return NextResponse.json({ ok: true, modelo });
 }
