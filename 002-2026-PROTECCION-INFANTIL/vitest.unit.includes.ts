@@ -343,4 +343,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/membrete-pdf.test.ts",
     "src/components/modules/colegio/curso/SeccionMateriasCurso.test.tsx",
     "src/components/modules/colegio/CargaProfesoresExcel.test.tsx",
+    // SPEC-401 (I-283): helper puro para resumir/sanitizar el motivo real del proveedor de correo.
+    "src/lib/notificaciones/motivo-error.test.ts",
 ];

@@ -140,6 +140,81 @@ describe("GET /api/admin/inicio/senales (SPEC-378)", () => {
         expect(alerta.prioridad).toBe("media");
     });
 
+    it("SPEC-401 (I-283): 10 FALLIDA seguidas en EMAIL → señal 'proveedor_email_caido' alta", async () => {
+        await autenticarAdmin();
+        // 10 FALLIDA sin ninguna ENVIADA intercalada — proveedor no acepta nada.
+        for (let i = 0; i < 10; i++) {
+            await prisma.notificacion.create({
+                data: {
+                    evento: "TEST",
+                    destinatarioEmail: `dest${i}@test.local`,
+                    plantillaClave: "TEST",
+                    canal: "EMAIL",
+                    variables: {},
+                    estado: "FALLIDA",
+                    ultimoError: "[connection_refused][502] Provider unreachable",
+                },
+            });
+        }
+        const res = await GET();
+        const body = await res.json();
+        const alerta = body.alertas.find((a: { id: string }) => a.id === "proveedor_email_caido");
+        expect(alerta, "10 FALLIDA seguidas = proveedor caído").toBeDefined();
+        expect(alerta.prioridad).toBe("alta");
+        expect(alerta.texto).toMatch(/proveedor.*caído|caído|no aceptó/i);
+    });
+
+    it("SPEC-401 (I-283): 9 FALLIDA + 1 ENVIADA intercalada → NO dispara 'proveedor_email_caido'", async () => {
+        await autenticarAdmin();
+        // La ENVIADA más reciente rompe la racha.
+        await prisma.notificacion.create({
+            data: {
+                evento: "TEST",
+                destinatarioEmail: "ok@test.local",
+                plantillaClave: "TEST",
+                canal: "EMAIL",
+                variables: {},
+                estado: "ENVIADA",
+            },
+        });
+        for (let i = 0; i < 9; i++) {
+            await prisma.notificacion.create({
+                data: {
+                    evento: "TEST",
+                    destinatarioEmail: `dest${i}@test.local`,
+                    plantillaClave: "TEST",
+                    canal: "EMAIL",
+                    variables: {},
+                    estado: "FALLIDA",
+                    ultimoError: "algo falló",
+                },
+            });
+        }
+        const res = await GET();
+        const body = await res.json();
+        expect(body.alertas.some((a: { id: string }) => a.id === "proveedor_email_caido")).toBe(false);
+    });
+
+    it("SPEC-401 (I-283): menos de la ventana (5 FALLIDA) → NO dispara 'proveedor_email_caido' (sistema idle)", async () => {
+        await autenticarAdmin();
+        for (let i = 0; i < 5; i++) {
+            await prisma.notificacion.create({
+                data: {
+                    evento: "TEST",
+                    destinatarioEmail: `dest${i}@test.local`,
+                    plantillaClave: "TEST",
+                    canal: "EMAIL",
+                    variables: {},
+                    estado: "FALLIDA",
+                    ultimoError: "algo falló",
+                },
+            });
+        }
+        const res = await GET();
+        const body = await res.json();
+        expect(body.alertas.some((a: { id: string }) => a.id === "proveedor_email_caido")).toBe(false);
+    });
+
     it("las alertas se ordenan: prioridad ALTA primero, luego MEDIA (empate por id)", async () => {
         await autenticarAdmin();
         // Cuota (alta)

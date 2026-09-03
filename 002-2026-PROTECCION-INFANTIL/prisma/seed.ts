@@ -2247,6 +2247,11 @@ async function main() {
         // es cuántas de esas pueden haber votado con menos modelos antes de gritar.
         { clave: "monitoreo.jurado.ventana_clasificaciones", valor: "20", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cantidad de últimas ClasificacionIA (rubrica:*, no-demo) que se miran para detectar jurado reducido" },
         { clave: "monitoreo.jurado.max_reducidas_umbral", valor: "3", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Cantidad de clasificaciones con menos votantes que ia.rubrica.modelos que disparan la alarma en el Inicio del admin" },
+        // SPEC-401 (I-283): ventana de últimas notificaciones EMAIL terminadas
+        // (ENVIADA/FALLIDA) que se miran para gritar 'proveedor caído' cuando
+        // TODAS son FALLIDA. Complementa `monitoreo.notif.fallidas_24h_umbral`
+        // (esa mira volumen; esta mira 'ni una sale').
+        { clave: "monitoreo.notif.proveedor_caido_ventana", valor: "10", tipo: TipoParametro.INTEGER, categoria: CategoriaParametro.SYSTEM, esPublico: false, descripcion: "Últimas N notificaciones EMAIL terminadas que se miran para gritar 'proveedor caído' cuando todas fallan (0 desactiva la señal)" },
     ];
     for (const p of inicioAdminParams) {
         await prisma.parametroSistema.upsert({

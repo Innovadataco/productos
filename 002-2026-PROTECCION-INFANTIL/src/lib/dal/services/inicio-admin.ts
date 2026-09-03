@@ -83,6 +83,46 @@ async function senalCorreosFallidos(): Promise<SenalAlarma | null> {
     return null;
 }
 
+/**
+ * SPEC-401 (I-283) — proveedor de correo caído.
+ *
+ * `senalCorreosFallidos` mira volumen (5 en 24 h) y patrón de cuota. Esta
+ * señal mira una pregunta distinta: **¿está saliendo ALGÚN correo?**
+ *
+ * Tomamos las últimas `ventana` notificaciones EMAIL con estado terminal
+ * (ENVIADA o FALLIDA) — `REINTENTANDO` no cuenta porque todavía puede
+ * terminar bien en el próximo backoff. Si `length >= ventana` y **todas
+ * son FALLIDA**, el proveedor no está aceptando nada.
+ *
+ * Convive con `senalCorreosFallidos`: un canal caído dispara ambas —
+ * lecturas distintas ("hay volumen" vs "no salió ni uno"). Si el sistema
+ * está idle (menos de `ventana` intentos terminales), la señal calla.
+ */
+async function senalProveedorEmailCaido(): Promise<SenalAlarma | null> {
+    const ventana = await paramInt("monitoreo.notif.proveedor_caido_ventana", 10);
+    // ventana <= 0 desactiva la señal (útil si algún colegio la quiere silenciar).
+    if (ventana <= 0) return null;
+    const ultimas = await prisma.notificacion.findMany({
+        where: {
+            canal: "EMAIL",
+            estado: { in: ["ENVIADA", "FALLIDA"] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { estado: true, ultimoError: true },
+        take: ventana,
+    });
+    if (ultimas.length < ventana) return null;
+    if (!ultimas.every((n) => n.estado === "FALLIDA")) return null;
+    return {
+        id: "proveedor_email_caido",
+        prioridad: "alta",
+        texto:
+            `El proveedor de correo no aceptó ninguna de las últimas ${ventana} notificaciones. ` +
+            "Está caído — nadie está recibiendo avisos.",
+        ruta: "/dashboard/admin/estadisticas/salud-motor",
+    };
+}
+
 async function senalAnalisisRachaFallida(): Promise<SenalAlarma | null> {
     const umbral = await paramInt("monitoreo.analisis.fallidos_racha_umbral", 5);
     // Racha "en cola": los últimos N análisis TERMINADOS (FALLIDO o PUBLICADO)
@@ -346,6 +386,8 @@ export async function calcularEstadoInicio(): Promise<EstadoInicio> {
     const t0 = Date.now();
     const promesas: Array<Promise<SenalAlarma | SenalAlarma[] | null>> = [
         senalCorreosFallidos(),
+        // SPEC-401 (I-283): distingue "fallan TODOS" de "falla uno".
+        senalProveedorEmailCaido(),
         senalAnalisisRachaFallida(),
         senalReportesHuerfanos(),
         senalRevisionManualReales(),
