@@ -7,18 +7,20 @@
  * rol `VERIFICADOR`, los modelos y las URLs, Playwright reporta "unexpected
  * pass" y Dev 01 quita los `test.fail` como parte de esa spec.
  *
- * Contrato de rutas fijado por el CEO 03-09 15:3x y pasado a Dev 01 como
- * obligatorio (mismo patrón que el comité — rol interno no-ADMIN bajo
- * `/api/admin/` cortado por módulo):
+ * Contrato de rutas fijado por el CEO 03-09 15:3x/15:4x, verificado contra
+ * `origin/main` y pasado a Dev 01 como obligatorio (mismo patrón que el
+ * comité — rol interno no-ADMIN bajo `/api/admin/` cortado por módulo; cara
+ * del profesional bajo `/api/profesional/{recurso}` sin prefijo `mi-`):
  *   · pantalla   `/dashboard/admin/verificacion` (+ `/incidentes`)
  *   · GET        `/api/admin/verificacion-profesionales`
  *   · GET        `/api/admin/verificacion-profesionales/[id]`
  *   · POST       `/api/admin/verificacion-profesionales/[id]/decidir`
  *   · GET        `/api/admin/verificacion-profesionales/incidentes`
+ *   · GET        `/api/profesional/perfil`            (YA existe en origin/main)
+ *   · GET        `/api/profesional/verificacion`      (SPEC-408)
+ *   · POST       `/api/profesional/verificacion/reenviar` (SPEC-408)
  * El endpoint `decidir` acepta los 3 resultados: APROBADO, RECHAZADO,
- * MAS_INFORMACION. La vista propia del profesional aún no está fijada — este
- * spec asume `/api/profesional/mi-verificacion` (patrón existente
- * `mi-perfil`); si SPEC-408 elige otra, se ajusta al quitar los `test.fail`.
+ * MAS_INFORMACION.
  *
  * Aislamiento como C12 (SPEC-393): usuarios efímeros por corrida, cero
  * mutación de rol real, limpieza en `afterAll`. Los modelos `PerfilProfesional`
@@ -192,7 +194,7 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
         // ver SOLO el ítem `cedula` como pendiente de corregir; los otros 3
         // quedan cerrados desde la corrida previa.
         await login(page, PROFESIONAL_EMAIL, PROFESIONAL_PASSWORD);
-        const resMi = await page.request.get("/api/profesional/mi-verificacion");
+        const resMi = await page.request.get("/api/profesional/verificacion");
         expect(resMi.status(), "profesional lee su verificación en curso").toBe(200);
         const body = (await resMi.json()) as { pendientes?: Array<{ id: string }> };
         const pendientes = body.pendientes ?? [];
@@ -220,7 +222,7 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
             expect(resDev.status(), `vuelta ${vuelta} debe cerrar con 200`).toBe(200);
 
             await login(page, PROFESIONAL_EMAIL, PROFESIONAL_PASSWORD);
-            const resReenvio = await page.request.post("/api/profesional/mi-verificacion/reenviar", { data: {} });
+            const resReenvio = await page.request.post("/api/profesional/verificacion/reenviar", { data: {} });
             expect(resReenvio.status(), `reenvío ${vuelta} debe cerrar con 200`).toBe(200);
         }
     });
@@ -246,10 +248,28 @@ test.describe.serial("El Verificador admite y devuelve (SPEC-410 candado)", () =
         // tarjeta (son suyos), NUNCA el `resultado` o el `checklist` (eso es
         // evaluación de IDC sobre él).
         await login(page, PROFESIONAL_EMAIL, PROFESIONAL_PASSWORD);
-        const resMi = await page.request.get("/api/profesional/mi-perfil");
-        const bodyMi = resMi.status() === 200 ? await resMi.text() : "";
+        const resPerfil = await page.request.get("/api/profesional/perfil");
+        const bodyPerfil = resPerfil.status() === 200 ? await resPerfil.text() : "";
         for (const campo of ["resultado", "checklist"]) {
-            expect(bodyMi, `campo '${campo}' es evaluación de IDC — el profesional NO lo puede ver`).not.toContain(`"${campo}"`);
+            expect(bodyPerfil, `campo '${campo}' es evaluación de IDC — el profesional NO lo puede ver en /perfil`).not.toContain(`"${campo}"`);
+        }
+
+        // (c) La vista `/api/profesional/verificacion` es el punto MÁS delicado
+        // (aviso del CEO 15:4x): el profesional DEBE ver las observaciones que
+        // le dejaron para poder corregir, pero NUNCA el `resultado` ni el
+        // `checklist` — esa es la evaluación de IDC sobre él, no un dato suyo
+        // (brief §5). Este es el assert que más importa del test.
+        const resVer = await page.request.get("/api/profesional/verificacion");
+        const bodyVer = resVer.status() === 200 ? await resVer.text() : "";
+        expect(
+            bodyVer,
+            "el profesional SÍ debe ver las observaciones que le escribieron (para poder corregir)"
+        ).toMatch(/observacion|ilegible/i);
+        for (const campo of ["resultado", "checklist"]) {
+            expect(
+                bodyVer,
+                `RESERVA LEGAL — /api/profesional/verificacion NUNCA puede exponer '${campo}' (evaluación de IDC sobre el profesional, brief §5)`
+            ).not.toContain(`"${campo}"`);
         }
     });
 });
