@@ -173,3 +173,22 @@ model BIAuditLog {
   @@index([creadoEn])
   @@map("bi_audit_log")
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// BIRateLimit · ventanas fijas de rate limiting en PostgreSQL
+// (auditoría de seguridad 2026-09-03: el login de BI no tenía freno a los
+// intentos — port del patrón de PI, 002 src/lib/rate-limit.ts, sobre tabla
+// PROPIA. La tabla "RateLimit" que existe en bi-db es RÉPLICA de solo lectura
+// de PI — jamás escribir en ella.)
+// ────────────────────────────────────────────────────────────────────────────
+model BIRateLimit {
+  key         String   @id // "{scope}:{identifier}:{windowStartMs}"
+  scope       String
+  identifier  String // IP del cliente (x-forwarded-for → x-real-ip)
+  windowStart DateTime // inicio de la ventana fija
+  count       Int      @default(0)
+  creadoEn    DateTime @default(now())
+
+  @@index([scope, identifier, windowStart])
+  @@map("bi_rate_limit")
+}

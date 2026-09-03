@@ -38,7 +38,7 @@ vi.mock("@/lib/bi/reglas-pre", () => ({ revisarIntencion: mocks.revisarIntencion
 vi.mock("@/lib/bi/constructor-sql", () => ({ construirSql: mocks.construirSql }));
 vi.mock("@/lib/bi/validador-sql", () => ({ validarSql: mocks.validarSql }));
 
-import { preguntar } from "@/lib/bi/motor";
+import { preguntar, TEXTO_ERROR_ESQUEMA } from "@/lib/bi/motor";
 import { normalizarPregunta } from "@/lib/bi/cache";
 import { PLANTILLA_SIN_DATOS, renderRespuesta } from "@/lib/bi/plantillas";
 import { esquemaJsonParaLLM, presentarCatalogoParaLLM, type Catalogo } from "@/lib/bi/catalogo";
@@ -470,17 +470,18 @@ describe("motor · sin datos (candado 9: no se inventa)", () => {
         expect(r.filas).toBe(0);
     });
 
-    it("SQLSTATE 42P01 (réplica sin la tabla) → sin_datos con PLANTILLA_SIN_DATOS", async () => {
+    it("SQLSTATE 42P01 (tabla/columna inexistente) → ERROR visible, jamás 'sin datos' (DEFECTO 2)", async () => {
         mocks.queryRawUnsafe.mockRejectedValue(
             Object.assign(new Error('relation "Reporte" does not exist'), { code: "42P01" }),
         );
         const r = await preguntar(PREGUNTA, EMAIL);
 
-        expect(r.estado).toBe("sin_datos");
-        expect(r.texto).toBe(PLANTILLA_SIN_DATOS);
+        expect(r.estado).toBe("error");
+        expect(r.texto).toBe(TEXTO_ERROR_ESQUEMA);
+        expect(r.texto).not.toBe(PLANTILLA_SIN_DATOS);
         expect(mocks.consultaLogUpdate).toHaveBeenCalledWith({
             where: { id: "log_01" },
-            data: expect.objectContaining({ estado: "sin_datos", error: "42P01" }),
+            data: expect.objectContaining({ estado: "error", error: "42P01" }),
         });
     });
 

@@ -7,7 +7,7 @@
 // "IdentificadorAcudiente", "IdentificadorProfesor" — SIN `valor`, cortado en
 // origen por la publicación, ver 02-pi-db-publicacion.sql), alertas por
 // sujeto/estado ("AlertaColegio") y el círculo familiar del lado padre
-// ("Hijo", "HijoPadre", "ContactoConfianza", "IdentificadorHijo").
+// ("Hijo", "ContactoConfianza", "IdentificadorHijo").
 //
 // PII: en el suscriptor NO existen nombres, documentos ni valores de
 // identificadores. Aquí solo se CUENTA — jamás se intenta leer una columna
@@ -27,9 +27,11 @@
 //   · Identificadores por plataforma: union de las tres tablas de
 //     identificadores con LEFT JOIN a "Plataforma" (nombre legible);
 //     plataformaId NULL → cubo honesto "Sin plataforma".
-//   · Círculo: hijos activos, hijos con al menos un padre vinculado
-//     (HijoPadre), contactos de confianza activos e identificadores de hijo
-//     activos.
+//   · Círculo: hijos activos, contactos de confianza activos e
+//     identificadores de hijo activos. El vínculo padre-hijo real
+//     (Hijo.usuarioId) no está publicado en la réplica por decisión de
+//     producto (SPEC-339) y "HijoPadre" quedó obsoleta en PI: el embudo ya
+//     no intenta medir ese paso (auditoría DEFECTO 1, 03-09-2026).
 
 import { prisma } from "@/lib/db";
 
@@ -57,8 +59,6 @@ export interface PersonasData {
     identificadoresPorPlataforma: { plataforma: string; total: number }[];
     circulo: {
         hijos: number;
-        /** Hijos con ≥1 vínculo en HijoPadre (distinct hijoId) */
-        hijosVinculados: number;
         contactos: number;
         identificadoresHijo: number;
     };
@@ -92,7 +92,6 @@ interface FilaPlataforma {
 }
 interface FilaCirculo {
     hijos: number;
-    hijos_vinculados: number;
     contactos: number;
     identificadores_hijo: number;
 }
@@ -109,7 +108,6 @@ const BASE_VACIA: FilaBase = {
 const IDS_VACIOS: FilaIdentificadores = { alumnos: 0, acudientes: 0, profesores: 0 };
 const CIRCULO_VACIO: FilaCirculo = {
     hijos: 0,
-    hijos_vinculados: 0,
     contactos: 0,
     identificadores_hijo: 0,
 };
@@ -221,8 +219,6 @@ export async function getPersonas(): Promise<PersonasData> {
                 SELECT
                   (SELECT count(*) FROM "Hijo" WHERE "estado" = 'activo')::int
                     AS hijos,
-                  (SELECT count(DISTINCT "hijoId") FROM "HijoPadre")::int
-                    AS hijos_vinculados,
                   (SELECT count(*) FROM "ContactoConfianza" WHERE "activo" = true)::int
                     AS contactos,
                   (SELECT count(*) FROM "IdentificadorHijo" WHERE "activo" = true)::int
@@ -255,7 +251,6 @@ export async function getPersonas(): Promise<PersonasData> {
         })),
         circulo: {
             hijos: circulo.hijos,
-            hijosVinculados: circulo.hijos_vinculados,
             contactos: circulo.contactos,
             identificadoresHijo: circulo.identificadores_hijo,
         },

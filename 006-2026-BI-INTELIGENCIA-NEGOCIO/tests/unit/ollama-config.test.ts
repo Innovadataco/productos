@@ -4,8 +4,12 @@
 // isEmbeddingModel. La URL real de la Mac Studio (100.91.87.86, Tailscale)
 // está cubierta como caso de aceptación.
 
-import { describe, expect, it } from "vitest";
-import { isEmbeddingModel, isLocalOllamaUrl } from "@/lib/ai/ollama-config";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isEmbeddingModel, isLocalOllamaUrl, listOllamaModels } from "@/lib/ai/ollama-config";
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
 
 describe("isLocalOllamaUrl (R2: solo localhost · IPs privadas · Tailscale)", () => {
     it.each([
@@ -47,5 +51,57 @@ describe("isEmbeddingModel", () => {
         ["llama3.1:8b (modelo de chat)", "llama3.1:8b", false],
     ])("%s → %s", (_etiqueta, nombre, esperado) => {
         expect(isEmbeddingModel(nombre)).toBe(esperado);
+    });
+});
+
+describe("listOllamaModels · capabilities del servidor (DEFECTO 3, auditoría 2026-09-03)", () => {
+    function mockTags(modelos: Array<{ name: string; capabilities?: string[] }>) {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                ok: true,
+                json: async () => ({ models: modelos }),
+            })) as unknown as typeof fetch,
+        );
+    }
+
+    it("detecta embeddings SOLO por capabilities — bge-m3 y paraphrase-multilingual quedan fuera del selector", async () => {
+        mockTags([
+            { name: "qwen2.5:14b", capabilities: ["completion"] },
+            { name: "bge-m3:latest", capabilities: ["embedding"] },
+            { name: "paraphrase-multilingual:latest", capabilities: ["embedding"] },
+            { name: "nomic-embed-text:latest", capabilities: ["embedding"] },
+            { name: "snowflake-arctic-embed2:latest", capabilities: ["embedding"] },
+            { name: "llama3.1:8b", capabilities: ["completion"] },
+        ]);
+        const modelos = await listOllamaModels("http://localhost:11435");
+        const etiqueta = (m: { name: string; tag: string }): string => `${m.name}:${m.tag}`;
+        const deChat = modelos.filter((m) => !m.esEmbedding).map(etiqueta);
+        const embeddings = modelos.filter((m) => m.esEmbedding).map(etiqueta);
+        // Los 4 embeddings de la Mac se excluyen — los 2 que el nombre no
+        // detectaba (bge-m3, paraphrase-multilingual) ahora sí.
+        expect(embeddings).toHaveLength(4);
+        expect(deChat.sort()).toEqual(["llama3.1:8b", "qwen2.5:14b"]);
+    });
+
+    it("fallback por nombre cuando el servidor no reporta capabilities (versiones viejas)", async () => {
+        mockTags([
+            { name: "qwen2.5:14b" },
+            { name: "nomic-embed-text:latest" },
+            { name: "bge-m3:latest" }, // el fallback por nombre lo deja pasar: limitación documentada
+        ]);
+        const modelos = await listOllamaModels("http://localhost:11435");
+        expect(modelos.find((m) => m.name === "nomic-embed-text")?.esEmbedding).toBe(true);
+        expect(modelos.find((m) => m.name === "qwen2.5")?.esEmbedding).toBe(false);
+    });
+
+    it("expone capabilities para que el guard de guardado exija 'completion'", async () => {
+        mockTags([
+            { name: "qwen2.5:14b", capabilities: ["completion"] },
+            { name: "bge-m3:latest", capabilities: ["embedding"] },
+        ]);
+        const modelos = await listOllamaModels("http://localhost:11435");
+        expect(modelos.find((m) => m.name === "qwen2.5")?.capabilities).toContain("completion");
+        expect(modelos.find((m) => m.name === "bge-m3")?.capabilities).not.toContain("completion");
     });
 });

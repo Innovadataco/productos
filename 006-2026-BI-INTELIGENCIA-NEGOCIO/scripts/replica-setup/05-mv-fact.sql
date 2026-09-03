@@ -105,18 +105,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_motor_ia_diario_uniq
   ON mv_fact_motor_ia_diario (dia, categoria, modelo);
 
 -- ── mv_fact_operativo ──────────────────────────────────────────────────────
+-- Auditoría BI vs PI 2026-09-03 (DEFECTO 4): la columna
+-- total_solicitudes_comite se ELIMINÓ. Su fórmula estaba mal armada por dos
+-- lados (solo contaba la solicitud si cayó el mismo día que la transición:
+-- dejaba fuera 172 de 256; y multiplicaba las que coincidían). Nadie la leía
+-- en src — era una mina enterrada. El LEFT JOIN que la alimentaba también
+-- multiplicaba total_transiciones, así que la MV queda SIN join: una fila por
+-- (día, estado_anterior, estado_nuevo, responsable_tipo) real.
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_fact_operativo AS
 SELECT
   date_trunc('day', t."creadoEn")                      AS dia,
   t."estadoAnterior"::text                             AS estado_anterior,
   t."estadoNuevo"::text                                AS estado_nuevo,
   t."responsableTipo"::text                            AS responsable_tipo,
-  count(*)                                             AS total_transiciones,
-  count(sc.id)                                         AS total_solicitudes_comite
+  count(*)                                             AS total_transiciones
 FROM "TransicionReporte" t
-LEFT JOIN "SolicitudComite" sc
-  ON sc."reporteId" = t."reporteId"
- AND date_trunc('day', sc."creadoEn") = date_trunc('day', t."creadoEn")
 GROUP BY 1, 2, 3, 4;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_fact_operativo_uniq

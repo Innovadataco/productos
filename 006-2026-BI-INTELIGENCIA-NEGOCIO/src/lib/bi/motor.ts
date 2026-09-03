@@ -111,6 +111,18 @@ const TEXTO_RECHAZO_VALIDADOR =
 const TEXTO_PLAN_INVALIDO =
     "No pude armar una consulta válida con lo que pediste. Reformula la pregunta indicando qué datos quieres consultar.";
 
+/**
+ * Texto determinista cuando la tabla o columna consultada NO existe en la base
+ * (SQLSTATE 42P01/42703). Auditoría BI vs PI 2026-09-03 · DEFECTO 2: antes se
+ * respondía la plantilla de "sin datos" con tono normal — un cero por esquema
+ * desactualizado es indistinguible de "no ha pasado nada" y es SIEMPRE falso
+ * (la tabla declarada no resolvió). Un error visible es infinitamente mejor
+ * que un cero silencioso: el "sin datos" queda reservado para ResultSet vacío
+ * sobre una consulta que SÍ resolvió (candado 9).
+ */
+export const TEXTO_ERROR_ESQUEMA =
+    "No pude consultar eso: la tabla o columna ya no existe en la base de datos (el esquema cambió). Quedó registrado para revisión del catálogo.";
+
 /** Texto determinista de error interno (sin detalles técnicos al usuario). */
 const TEXTO_ERROR_INTERNO =
     "Ocurrió un error interno al procesar la consulta. Quedó registrada para revisión.";
@@ -329,11 +341,12 @@ function textoParaCache(filas: Record<string, unknown>[]): string {
     return `La consulta devolvió ${filas.length} filas.`;
 }
 
-/** Estado agregado de una consulta multi-parte: con datos manda ok; sin datos pero con algo que aclarar, clarificacion; luego rechazada; al final sin_datos. */
-function estadoAgregado(hubo: { ok: boolean; clarificacion: boolean; rechazada: boolean }): RespuestaMotor["estado"] {
+/** Estado agregado de una consulta multi-parte: con datos manda ok; sin datos pero con algo que aclarar, clarificacion; luego rechazada; un fallo de esquema (42P01/42703) se expone como error; al final sin_datos. */
+function estadoAgregado(hubo: { ok: boolean; clarificacion: boolean; rechazada: boolean; error: boolean }): RespuestaMotor["estado"] {
     if (hubo.ok) return "ok";
     if (hubo.clarificacion) return "clarificacion";
     if (hubo.rechazada) return "rechazada";
+    if (hubo.error) return "error";
     return "sin_datos";
 }
 
@@ -426,12 +439,14 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
                     });
                 } catch (e) {
                     if (esTablaInexistente(e)) {
-                        traza.paso("ejecucion", "falló: tabla inexistente (42P01)");
-                        traza.paso("plantilla", "sin_datos");
+                        // Catálogo desactualizado (tabla/columna que ya no
+                        // existe): DEFECTO 2 — error visible, jamás "sin datos".
+                        traza.paso("ejecucion", "falló: tabla/columna inexistente (42P01/42703)");
+                        traza.paso("plantilla", "error_esquema");
                         return await finalizar(
                             {
-                                estado: "sin_datos",
-                                texto: PLANTILLA_SIN_DATOS,
+                                estado: "error",
+                                texto: TEXTO_ERROR_ESQUEMA,
                                 sql: hit.sqlAprobado,
                                 fuenteCache: true,
                             },
@@ -512,7 +527,7 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
         const secciones: string[] = [];
         const sqls: string[] = [];
         const errores: string[] = [];
-        const hubo = { ok: false, clarificacion: false, rechazada: false };
+        const hubo = { ok: false, clarificacion: false, rechazada: false, error: false };
         let huboEjecucion = false;
         let filasTotal = 0;
 
@@ -623,13 +638,16 @@ export async function preguntar(pregunta: string, usuarioEmail: string): Promise
                 paso("ejecucion", `${filas.length} filas · ${Date.now() - tEjec} ms`);
             } catch (e) {
                 if (esTablaInexistente(e)) {
-                    // Réplica aún sin la tabla: candado 9, no se inventa.
-                    paso("ejecucion", "falló: tabla inexistente (42P01)");
-                    paso("plantilla", "sin_datos");
+                    // Catálogo desactualizado (tabla/columna que ya no existe):
+                    // DEFECTO 2 — error visible, jamás "sin datos" (un cero por
+                    // esquema roto es indistinguible de la verdad y es falso).
+                    paso("ejecucion", "falló: tabla/columna inexistente (42P01/42703)");
+                    paso("plantilla", "error_esquema");
                     huboEjecucion = true;
+                    hubo.error = true;
                     errores.push("42P01");
                     sqls.push(sql);
-                    secciones.push(PLANTILLA_SIN_DATOS);
+                    secciones.push(TEXTO_ERROR_ESQUEMA);
                     continue;
                 }
                 throw e;
