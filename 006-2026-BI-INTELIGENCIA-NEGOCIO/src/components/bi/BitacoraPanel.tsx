@@ -3,14 +3,15 @@
 import { Fragment, useEffect, useState } from "react";
 
 /**
- * BitacoraPanel — panel admin de la bitácora del chat (SPEC-006 · Lote 3).
+ * BitacoraPanel — panel admin de la bitácora de BI (SPEC-006 · Lote 3 +
+ * bitácora general 2026-09-02). Dos vistas:
  *
- * Consume:
- * - GET /api/bi/bitacora?desde&hasta&estado&pagina → filas + paginación
- *   (payload real: los query params son exactamente los filtros activos, T1).
- * - GET /api/bi/consultas/[id] → traza completa al expandir una fila (carga
- *   perezosa, solo al primer despliegue). Si el detalle no es de MI sesión la
- *   API responde 403 (defensa tenancy) y el panel lo dice sin inventar.
+ * - Chat: consume GET /api/bi/bitacora?tipo=chat (default) → consultas del
+ *   motor con filtros de fecha/estado y paginación; drill-down perezoso con
+ *   GET /api/bi/consultas/[id] (403 de tenancy se anuncia sin inventar).
+ * - Eventos: GET /api/bi/bitacora?tipo=eventos → bitácora general
+ *   (logins, cambios de config, exportaciones) con filtro por acción.
+ *   Sin drill-down: el evento ya trae su detalle en la fila.
  *
  * Candados: latencias y totales llegan del API tal cual (candado 10); los
  * vacíos y errores se anuncian con texto honesto (candado 9). Sin animaciones
@@ -18,7 +19,7 @@ import { Fragment, useEffect, useState } from "react";
  * prefers-reduced-motion.
  */
 
-/* Fila del listado (lo que devuelve GET /api/bi/bitacora). */
+/* Fila del listado de chat (GET /api/bi/bitacora?tipo=chat). */
 interface FilaBitacora {
     id: string;
     preguntaNL: string;
@@ -29,12 +30,32 @@ interface FilaBitacora {
     usuarioId: string;
 }
 
-interface RespuestaBitacora {
+/* Fila de la bitácora general (GET /api/bi/bitacora?tipo=eventos). */
+interface FilaEvento {
+    id: string;
+    accion: string;
+    email: string;
+    detalle: string | null;
+    creadoEn: string;
+}
+
+interface RespuestaChat {
+    tipo: "chat";
     filas: FilaBitacora[];
     total: number;
     pagina: number;
     paginas: number;
 }
+
+interface RespuestaEventos {
+    tipo: "eventos";
+    filas: FilaEvento[];
+    total: number;
+    pagina: number;
+    paginas: number;
+}
+
+type RespuestaBitacora = RespuestaChat | RespuestaEventos;
 
 /* Paso de la auditoría del pipeline (espejo de PasoTraza — tipo local para
    no arrastrar módulos de servidor al bundle del cliente). */
@@ -59,7 +80,15 @@ interface ConsultaDetalle {
     creadoEn: string;
 }
 
-/** Chips de filtro por estado ("" = sin filtro). */
+/** Vistas del panel. */
+const TIPOS = [
+    { id: "chat", etiqueta: "Chat" },
+    { id: "eventos", etiqueta: "Eventos" },
+] as const;
+
+type TipoBitacora = (typeof TIPOS)[number]["id"];
+
+/** Chips de filtro por estado ("" = sin filtro). Solo en la vista Chat. */
 const FILTROS_ESTADO = [
     { id: "", etiqueta: "Todos" },
     { id: "ok", etiqueta: "ok" },
@@ -67,6 +96,15 @@ const FILTROS_ESTADO = [
     { id: "clarificacion", etiqueta: "clarificación" },
     { id: "rechazada", etiqueta: "rechazada" },
     { id: "error", etiqueta: "error" },
+] as const;
+
+/** Chips de filtro por acción ("" = sin filtro). Solo en la vista Eventos. */
+const FILTROS_ACCION = [
+    { id: "", etiqueta: "Todas" },
+    { id: "LOGIN_OK", etiqueta: "ingresos" },
+    { id: "LOGIN_FALLIDO", etiqueta: "ingresos fallidos" },
+    { id: "CONFIG_CAMBIO", etiqueta: "cambios de config" },
+    { id: "EXPORTACION", etiqueta: "exportaciones" },
 ] as const;
 
 const MENSAJE_SESION_VENCIDA = "Tu sesión venció. Recargá la página y volvé a entrar.";
@@ -108,6 +146,53 @@ function PildoraEstado({ estado }: { estado: string }) {
             {etiqueta}
         </span>
     );
+}
+
+/** Píldora de acción de la bitácora general:
+    LOGIN_OK pino · LOGIN_FALLIDO rubí · CONFIG_CAMBIO cielo · EXPORTACION ámbar. */
+function PildoraAccion({ accion }: { accion: string }) {
+    let clases: string;
+    let etiqueta: string;
+    switch (accion) {
+        case "LOGIN_OK":
+            clases = "text-estado-pino bg-[rgb(var(--pino-rgb)/0.12)] border-[rgb(var(--pino-rgb)/0.3)]";
+            etiqueta = "ingreso";
+            break;
+        case "LOGIN_FALLIDO":
+            clases = "text-estado-rubi bg-[rgb(var(--rubi-rgb)/0.12)] border-[rgb(var(--rubi-rgb)/0.3)]";
+            etiqueta = "ingreso fallido";
+            break;
+        case "CONFIG_CAMBIO":
+            clases = "text-[rgb(var(--cielo-ink-rgb))] bg-[rgb(var(--cielo-rgb)/0.12)] border-[rgb(var(--cielo-rgb)/0.3)]";
+            etiqueta = "config";
+            break;
+        case "EXPORTACION":
+            clases = "text-estado-ambar bg-[rgb(var(--ambar-rgb)/0.12)] border-[rgb(var(--ambar-rgb)/0.3)]";
+            etiqueta = "exportación";
+            break;
+        default:
+            clases = "text-muted bg-[rgb(var(--tinta-rgb)/0.05)] border-[rgb(var(--tinta-rgb)/0.12)]";
+            etiqueta = accion;
+    }
+    return (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium border ${clases}`}>
+            {etiqueta}
+        </span>
+    );
+}
+
+/** Detalle JSON chico → "clave: valor · clave: valor". Si no parsea, se
+    muestra el texto tal cual (nunca se oculta información de auditoría). */
+function formatoDetalle(detalle: string | null): string {
+    if (!detalle) return "—";
+    try {
+        const obj = JSON.parse(detalle) as Record<string, unknown>;
+        return Object.entries(obj)
+            .map(([k, v]) => `${k}: ${String(v)}`)
+            .join(" · ");
+    } catch {
+        return detalle;
+    }
 }
 
 /** Fecha/hora legible es-CO (solo formatea el ISO que llegó del API). */
@@ -209,9 +294,11 @@ function DetalleConsulta({ id }: { id: string }) {
 }
 
 export default function BitacoraPanel() {
+    const [tipo, setTipo] = useState<TipoBitacora>("chat");
     const [desde, setDesde] = useState("");
     const [hasta, setHasta] = useState("");
     const [estado, setEstado] = useState("");
+    const [accion, setAccion] = useState("");
     const [pagina, setPagina] = useState(1);
     const [data, setData] = useState<RespuestaBitacora | null>(null);
     const [cargando, setCargando] = useState(true);
@@ -224,9 +311,11 @@ export default function BitacoraPanel() {
     useEffect(() => {
         let vivo = true;
         const params = new URLSearchParams();
+        params.set("tipo", tipo);
         if (desde) params.set("desde", desde);
         if (hasta) params.set("hasta", hasta);
-        if (estado) params.set("estado", estado);
+        if (tipo === "chat" && estado) params.set("estado", estado);
+        if (tipo === "eventos" && accion) params.set("accion", accion);
         params.set("pagina", String(pagina));
 
         fetch(`/api/bi/bitacora?${params.toString()}`, { credentials: "include" })
@@ -250,10 +339,18 @@ export default function BitacoraPanel() {
         return () => {
             vivo = false;
         };
-    }, [desde, hasta, estado, pagina]);
+    }, [tipo, desde, hasta, estado, accion, pagina]);
 
     /* Todo cambio de filtro vuelve a la página 1 (los setState van en el
        handler del evento, nunca sincrónicos dentro del effect). */
+    function cambiarTipo(valor: TipoBitacora) {
+        setCargando(true);
+        setPagina(1);
+        setExpandida(null);
+        setEstado("");
+        setAccion("");
+        setTipo(valor);
+    }
     function cambiarDesde(valor: string) {
         setCargando(true);
         setPagina(1);
@@ -272,6 +369,12 @@ export default function BitacoraPanel() {
         setExpandida(null);
         setEstado(valor);
     }
+    function cambiarAccion(valor: string) {
+        setCargando(true);
+        setPagina(1);
+        setExpandida(null);
+        setAccion(valor);
+    }
     function irAPagina(n: number) {
         setCargando(true);
         setExpandida(null);
@@ -282,8 +385,27 @@ export default function BitacoraPanel() {
         <section
             className="glass anim-entrada p-6"
             style={{ "--anim-retardo": "80ms" } as React.CSSProperties}
-            aria-label="Bitácora del chat"
+            aria-label="Bitácora de BI"
         >
+            {/* ======= Selector de vista (Chat / Eventos) ======= */}
+            <div className="flex flex-wrap gap-1.5 mb-5" role="group" aria-label="Vista de la bitácora">
+                {TIPOS.map((t) => (
+                    <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => cambiarTipo(t.id)}
+                        aria-pressed={tipo === t.id}
+                        className={
+                            tipo === t.id
+                                ? "px-4 py-1.5 rounded-full text-[13px] font-semibold text-estado-pino bg-[rgb(var(--pino-rgb)/0.14)] transition-colors"
+                                : "px-4 py-1.5 rounded-full text-[13px] text-muted border border-[rgb(var(--tinta-rgb)/0.1)] transition-colors hover:bg-[rgb(var(--tinta-rgb)/0.06)]"
+                        }
+                    >
+                        {t.etiqueta}
+                    </button>
+                ))}
+            </div>
+
             {/* ======= Filtros ======= */}
             <div className="flex flex-wrap items-end gap-4 mb-5">
                 <label className="flex flex-col gap-1 text-[12.5px] text-muted">
@@ -306,26 +428,47 @@ export default function BitacoraPanel() {
                         aria-label="Filtrar hasta fecha"
                     />
                 </label>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por estado">
-                    {FILTROS_ESTADO.map((f) => (
-                        <button
-                            key={f.id || "todos"}
-                            type="button"
-                            onClick={() => cambiarEstado(f.id)}
-                            aria-pressed={estado === f.id}
-                            className={
-                                estado === f.id
-                                    ? "px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold text-estado-pino bg-[rgb(var(--pino-rgb)/0.14)] transition-colors"
-                                    : "px-3.5 py-1.5 rounded-full text-[12.5px] text-muted border border-[rgb(var(--tinta-rgb)/0.1)] transition-colors hover:bg-[rgb(var(--tinta-rgb)/0.06)]"
-                            }
-                        >
-                            {f.etiqueta}
-                        </button>
-                    ))}
-                </div>
+                {tipo === "chat" && (
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por estado">
+                        {FILTROS_ESTADO.map((f) => (
+                            <button
+                                key={f.id || "todos"}
+                                type="button"
+                                onClick={() => cambiarEstado(f.id)}
+                                aria-pressed={estado === f.id}
+                                className={
+                                    estado === f.id
+                                        ? "px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold text-estado-pino bg-[rgb(var(--pino-rgb)/0.14)] transition-colors"
+                                        : "px-3.5 py-1.5 rounded-full text-[12.5px] text-muted border border-[rgb(var(--tinta-rgb)/0.1)] transition-colors hover:bg-[rgb(var(--tinta-rgb)/0.06)]"
+                                }
+                            >
+                                {f.etiqueta}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                {tipo === "eventos" && (
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por acción">
+                        {FILTROS_ACCION.map((f) => (
+                            <button
+                                key={f.id || "todas"}
+                                type="button"
+                                onClick={() => cambiarAccion(f.id)}
+                                aria-pressed={accion === f.id}
+                                className={
+                                    accion === f.id
+                                        ? "px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold text-estado-pino bg-[rgb(var(--pino-rgb)/0.14)] transition-colors"
+                                        : "px-3.5 py-1.5 rounded-full text-[12.5px] text-muted border border-[rgb(var(--tinta-rgb)/0.1)] transition-colors hover:bg-[rgb(var(--tinta-rgb)/0.06)]"
+                                }
+                            >
+                                {f.etiqueta}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 {data && (
                     <span className="ml-auto text-[12.5px] text-muted">
-                        {data.total} {data.total === 1 ? "consulta" : "consultas"}
+                        {data.total} {tipo === "chat" ? (data.total === 1 ? "consulta" : "consultas") : (data.total === 1 ? "evento" : "eventos")}
                     </span>
                 )}
             </div>
@@ -337,12 +480,14 @@ export default function BitacoraPanel() {
             )}
             {!cargando && !fallo && data && data.filas.length === 0 && (
                 <p className="text-muted text-[13.5px] py-6 text-center">
-                    No hay consultas registradas con estos filtros.
+                    {tipo === "chat"
+                        ? "No hay consultas registradas con estos filtros."
+                        : "No hay eventos registrados con estos filtros."}
                 </p>
             )}
 
-            {/* ======= Tabla ======= */}
-            {!cargando && !fallo && data && data.filas.length > 0 && (
+            {/* ======= Tabla Chat ======= */}
+            {!cargando && !fallo && data && data.tipo === "chat" && data.filas.length > 0 && (
                 <>
                     <div className="overflow-x-auto">
                         <table className="bb-tabla">
@@ -432,6 +577,65 @@ export default function BitacoraPanel() {
                 </>
             )}
 
+            {/* ======= Tabla Eventos ======= */}
+            {!cargando && !fallo && data && data.tipo === "eventos" && data.filas.length > 0 && (
+                <>
+                    <div className="overflow-x-auto">
+                        <table className="bb-tabla">
+                            <thead>
+                                <tr>
+                                    <th>Evento</th>
+                                    <th>Email</th>
+                                    <th>Detalle</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.filas.map((f) => (
+                                    <tr key={f.id}>
+                                        <td>
+                                            <PildoraAccion accion={f.accion} />
+                                        </td>
+                                        <td className="whitespace-nowrap">{f.email}</td>
+                                        <td className="bb-detalle-evento" title={f.detalle ?? undefined}>
+                                            {formatoDetalle(f.detalle)}
+                                        </td>
+                                        <td className="whitespace-nowrap" title={f.creadoEn}>
+                                            {formatoFechaHora(f.creadoEn)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ======= Paginación ======= */}
+                    <div className="flex items-center justify-between mt-5 text-[13px]">
+                        <span className="text-muted">
+                            Página {data.pagina} de {data.paginas}
+                        </span>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                disabled={data.pagina <= 1}
+                                onClick={() => irAPagina(data.pagina - 1)}
+                                className="px-4 py-1.5 rounded-full border border-[rgb(var(--tinta-rgb)/0.1)] transition-colors hover:bg-[rgb(var(--tinta-rgb)/0.06)] disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                ← Anterior
+                            </button>
+                            <button
+                                type="button"
+                                disabled={data.pagina >= data.paginas}
+                                onClick={() => irAPagina(data.pagina + 1)}
+                                className="px-4 py-1.5 rounded-full border border-[rgb(var(--tinta-rgb)/0.1)] transition-colors hover:bg-[rgb(var(--tinta-rgb)/0.06)] disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Siguiente →
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
             {/* Estilos propios del panel (mismo lenguaje que el chat).
                 Sin animaciones: no requieren regla reduced-motion adicional. */}
             <style>{`
@@ -441,6 +645,7 @@ export default function BitacoraPanel() {
                 .bb-tabla th { text-align: left; font-size: 12px; font-weight: 600; color: rgb(var(--tinta-muted-rgb)); padding: 8px 12px; border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.1); }
                 .bb-tabla td { padding: 10px 12px; border-bottom: 1px solid rgb(var(--tinta-rgb) / 0.06); vertical-align: middle; }
                 .bb-pregunta { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .bb-detalle-evento { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgb(var(--tinta-muted-rgb)); }
                 .bb-traza-boton { font-size: 12px; color: rgb(var(--tinta-muted-rgb)); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; transition: color 0.2s; white-space: nowrap; }
                 .bb-traza-boton:hover { color: rgb(var(--pino-rgb)); }
                 .bb-detalle-fila td { background: rgb(var(--tinta-rgb) / 0.03); padding: 14px 16px; }
