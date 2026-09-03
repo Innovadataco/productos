@@ -39,7 +39,7 @@ Ya estaba decidido en el brief §3.1 y acá se implementa, señal por señal:
 
 | Familia | Señales | Trato |
 |---|---|---|
-| **CARGA** — colas de trabajo | `reportes_huerfanos` · `revision_manual_saturada` · `vigencias_por_vencer` · `comite_vencido` | **Descuentan lo sembrado.** Nadie debe atender un caso de mentira. |
+| **CARGA** — colas de trabajo | `reportes_huerfanos` · `revision_manual_saturada` · `vigencias_por_vencer` · `comite_vencido` | **Descuentan lo sembrado**, y las dos de reportes descuentan también las **simulaciones**. Nadie debe atender un caso de mentira. |
 | **SALUD** — el sistema | `correos_fallidos` · `proveedor_email` · `analisis_racha` · `jurado_reducido` · `infra` | **Cuentan todo.** La falla es real aunque la dispare una prueba: si el correo se cae sembrando, se cayó — y `correos_fallidos` fue justamente la pista que destapó I-280. |
 
 Las cuatro de CARGA pasan a una consulta que trae los dos números de una vez:
@@ -51,6 +51,18 @@ FROM "Reporte" r
 LEFT JOIN demo_marcado dm ON dm."entidad" = 'Reporte' AND dm."entidadId" = r.id
 WHERE …
 ```
+
+### 1-bis) La simulación del motor también es dato de prueba, y llega por otra puerta
+
+Adenda del CEO (18:2x), verificada en fuente: [`simulacion/executor.ts:44`](../../src/lib/simulacion/executor.ts) crea **`Reporte` REALES** con `ReporteRepository` y los encola al motor con `sendReporte` — corren los tres modelos de verdad. Solo después los anota en `simulacion_reportes`, que es una tabla de enlace.
+
+Esos reportes **nunca pasan por `demo_marcado`**, porque no son siembra: son ejercicio del motor y tienen su propia tabla. Sin excluirlos, las **100 o 200 simulaciones** que Jelkin va a lanzar para medir el motor aparecerían como 200 casos «reales» en las colas — el mismo problema que esta spec cierra, entrando por otro lado.
+
+Por eso el criterio de CARGA es **«tiene marca de demo O pertenece a una simulación»**: dos orígenes, una sola definición de «no es trabajo real». No se los marca en `demo_marcado` — no lo son.
+
+En **SALUD** siguen contando: si el motor se cae simulando, se cayó de verdad. Mismo corte.
+
+(El nombre de la tabla en SQL crudo es el **físico**, `simulacion_reportes`, con su candado propio. Es la lección de I-294 aplicada a la tabla siguiente.)
 
 ### 2) El interruptor · el default invertido ES el arreglo
 
@@ -90,12 +102,15 @@ WHERE …
 
 ### Contra una base de datos de verdad
 
-`src/app/api/admin/inicio/senales/route.test.ts` → **19 tests verdes** (los 13 de SPEC-378 más 6 nuevos), corridos contra una base propia (`pi_spec414_test`, creada y destruida — nunca producción ni la base compartida):
+`src/app/api/admin/inicio/senales/route.test.ts` → **22 tests verdes** (los 13 de SPEC-378 más 9 nuevos), corridos contra una base propia (`pi_spec414_test`, creada y destruida — nunca producción ni la base compartida):
 
 - 5 reportes huérfanos, 4 marcados como sembrados → la señal **no** dispara (queda 1 real, bajo el umbral de 3), `sembrados.total = 4`, `degradadas = []`.
 - Los mismos datos con `?prueba=1` → la señal **sí** dispara y dice «5 reportes».
 - El conteo viaja en las dos lecturas, con y sin interruptor.
 - El desglose por cola suma más de 4 y el total sigue siendo 4.
+- **Simulaciones**: 5 huérfanos, 4 atados a una corrida (sin marca de demo) → la señal no dispara, `sembrados.total = 4`; con `?prueba=1` vuelve a decir «5 reportes»; y un reporte que es sembrado **y** de simulación se cuenta **una** vez.
+
+**Prueba negativa de la exclusión de simulaciones**: se quitó el `AND sr.id IS NULL` y el test cae con *«4 de 5 son simulación: queda 1 real, bajo el umbral: expected { id: 'reportes_huerfanos' … } to be undefined»*. Restaurado, los 22 vuelven a verde.
 
 ### La prueba negativa de I-294
 

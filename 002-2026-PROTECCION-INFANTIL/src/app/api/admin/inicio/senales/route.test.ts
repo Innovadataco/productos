@@ -342,6 +342,25 @@ describe("GET /api/admin/inicio/senales · SPEC-414 (I-271, I-294)", () => {
         await prisma.demoMarcado.create({ data: { entidad, entidadId } });
     }
 
+    /**
+     * Ata un reporte a una corrida de simulación, como hace
+     * `simulacion/executor.ts`. NO lo marca en `demo_marcado` a propósito: el
+     * simulador crea reportes REALES y solo los anota en su tabla de enlace.
+     */
+    async function atarASimulacion(reporteId: string, indice: number) {
+        const autor =
+            (await prisma.usuario.findFirst({ where: { rol: "ADMIN" } })) ??
+            (await crearUsuario("ADMIN", `autor.sim.${Date.now()}@ejemplo.local`));
+        const run =
+            (await prisma.simulacionRun.findFirst()) ??
+            (await prisma.simulacionRun.create({
+                data: { modelo: "modelo-de-prueba", estado: "EN_PROGRESO", creadoPorId: autor.id },
+            }));
+        await prisma.simulacionReporte.create({
+            data: { simulacionRunId: run.id, reporteId, indice },
+        });
+    }
+
     it("CARGA: los reportes huérfanos SEMBRADOS no cuentan como trabajo pendiente", async () => {
         await autenticarAdmin();
         // Umbral default 3: sembramos 5, marcamos 4 → quedan 1 real, por debajo.
@@ -409,6 +428,46 @@ describe("GET /api/admin/inicio/senales · SPEC-414 (I-271, I-294)", () => {
         const body = await (await GET(req())).json();
         expect(body.degradadas).toEqual([]);
         expect(body.sembrados.total).toBe(0);
+    });
+
+    it("los reportes de SIMULACIÓN tampoco cuentan como trabajo real (adenda CEO 18:2x)", async () => {
+        // El simulador crea reportes REALES por otra puerta: no pasan por
+        // `demo_marcado`. Sin esta exclusión, 200 simulaciones se verían como
+        // 200 casos reales — el mismo problema entrando por otro lado.
+        await autenticarAdmin();
+        const reportes = [];
+        for (let i = 0; i < 5; i++) reportes.push(await crearReporteHuerfanoViejo(48));
+        for (const [i, r] of reportes.slice(0, 4).entries()) await atarASimulacion(r.id, i);
+
+        const body = await (await GET(req())).json();
+        expect(body.degradadas).toEqual([]);
+        expect(
+            body.alertas.find((a: { id: string }) => a.id === "reportes_huerfanos"),
+            "4 de 5 son simulación: queda 1 real, bajo el umbral",
+        ).toBeUndefined();
+        expect(body.sembrados.total, "y se cuentan como dato de prueba").toBe(4);
+    });
+
+    it("con ?prueba=1 los de simulación vuelven a contar", async () => {
+        await autenticarAdmin();
+        const reportes = [];
+        for (let i = 0; i < 5; i++) reportes.push(await crearReporteHuerfanoViejo(48));
+        for (const [i, r] of reportes.slice(0, 4).entries()) await atarASimulacion(r.id, i);
+
+        const body = await (await GET(reqConPrueba())).json();
+        const senal = body.alertas.find((a: { id: string }) => a.id === "reportes_huerfanos");
+        expect(senal).toBeDefined();
+        expect(senal.texto).toContain("5 reportes");
+    });
+
+    it("un reporte sembrado Y de simulación se cuenta UNA vez", async () => {
+        await autenticarAdmin();
+        const reporte = await crearReporteHuerfanoViejo(48);
+        await marcarComoSembrado("Reporte", reporte.id);
+        await atarASimulacion(reporte.id, 0);
+
+        const body = await (await GET(req())).json();
+        expect(body.sembrados.total, "los dos orígenes no suman dos veces la misma fila").toBe(1);
     });
 
     it("SALUD: una señal de salud NO descuenta lo sembrado (la falla es real igual)", async () => {

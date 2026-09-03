@@ -79,6 +79,42 @@ describe("SPEC-414 · I-294 (b) · una señal que truena NO desaparece", () => {
     });
 });
 
+describe("SPEC-414 · la simulación del motor también es dato de prueba", () => {
+    // `simulacion/executor.ts` crea Reporte REALES y los encola al motor; solo
+    // los anota en `simulacion_reportes`. No pasan por `demo_marcado`, así que
+    // sin esta exclusión 200 simulaciones se verían como 200 casos reales.
+    it("las colas de reportes excluyen también los reportes de simulación", () => {
+        expect(fuente).toContain('Prisma.raw("simulacion_reportes")');
+        const ocurrencias = fuente.match(/LEFT JOIN \$\{TABLA_SIMULACION\}/g) ?? [];
+        expect(ocurrencias.length, "las DOS colas de reportes deben excluirla").toBeGreaterThanOrEqual(2);
+        expect(fuente).toContain("dm.id IS NULL AND sr.id IS NULL");
+    });
+
+    it("usa el nombre FÍSICO de la tabla, como enseñó I-294", () => {
+        // El modelo Prisma es `SimulacionReporte` con @@map("simulacion_reportes").
+        const codigo = fuente
+            .split("\n")
+            .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+            .join("\n");
+        expect(codigo).not.toContain('"SimulacionReporte"');
+    });
+
+    it("el conteo suma los dos orígenes sin contar dos veces la misma fila", () => {
+        expect(fuente).toContain("WHERE dm.id IS NULL");
+        expect(fuente).toContain("return marcados + Number(");
+    });
+
+    it("SALUD no las excluye: si el motor se cae simulando, se cayó", () => {
+        // La exclusión vive solo en las consultas de CARGA. Ninguna señal de
+        // SALUD nombra la tabla de simulación.
+        const salud = fuente.slice(
+            fuente.indexOf("async function senalCorreosFallidos"),
+            fuente.indexOf("async function senalReportesHuerfanos"),
+        );
+        expect(salud).not.toContain("TABLA_SIMULACION");
+    });
+});
+
 describe("SPEC-414 · el corte CARGA / SALUD queda declarado en el código", () => {
     it("las 4 señales de CARGA reciben el interruptor", () => {
         for (const senal of [

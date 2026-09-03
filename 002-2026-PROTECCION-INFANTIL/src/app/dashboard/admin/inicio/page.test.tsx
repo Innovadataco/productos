@@ -171,7 +171,7 @@ describe("/dashboard/admin/inicio · SPEC-414 · el interruptor de datos de prue
         render(await abrir({ prueba: "1" }));
         expect(mocks.calcularEstadoInicio).toHaveBeenCalledWith({ incluirSembrados: true });
         expect(screen.getByText("Viendo datos reales y de prueba.")).toBeDefined();
-        expect(screen.getByText(/250 registro\(s\) de prueba están contando/i)).toBeDefined();
+        expect(screen.getByText(/250 registro\(s\) de prueba \(sembrados y de simulación\) están contando/i)).toBeDefined();
     });
 
     it("el conteo de lo sembrado SIEMPRE se ve — nada queda oculto", async () => {
@@ -180,7 +180,7 @@ describe("/dashboard/admin/inicio · SPEC-414 · el interruptor de datos de prue
             sembrados: { total: 250, porSenal: [{ id: "comite_vencido", sembrados: 250 }] },
         }));
         render(await abrir());
-        expect(screen.getByText(/250 registro\(s\) de prueba quedaron fuera/i)).toBeDefined();
+        expect(screen.getByText(/250 registro\(s\) de prueba \(sembrados y de simulación\) quedaron fuera/i)).toBeDefined();
     });
 
     it("el interruptor es un enlace que alterna el modo en la URL", async () => {

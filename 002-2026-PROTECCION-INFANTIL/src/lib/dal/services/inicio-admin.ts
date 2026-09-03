@@ -26,12 +26,14 @@
  * las señales se parten en dos familias y se tratan distinto:
  *
  *  · **CARGA** (S3 huérfanos, S4 revisión manual, S6 vigencias, S7 comité) son
- *    COLAS DE TRABAJO → **descuentan lo sembrado**. Nadie debe atender un caso
- *    de mentira. Por defecto el admin ve solo lo real.
+ *    COLAS DE TRABAJO → **descuentan lo sembrado Y los reportes de simulación**
+ *    (dos orígenes de dato de prueba, un solo criterio). Nadie debe atender un
+ *    caso de mentira. Por defecto el admin ve solo lo real.
  *  · **SALUD** (S1 correos, S1-bis proveedor, S2 racha IA, S5 jurado, infra)
- *    **cuentan todo**, sembrado incluido: la falla es real aunque la dispare una
- *    prueba. Si el correo se cae sembrando, se cayó — `correos_fallidos` fue
- *    justamente la pista que destapó I-280.
+ *    **cuentan todo**, sembrado y simulaciones incluidas: la falla es real
+ *    aunque la dispare una prueba. Si el correo se cae sembrando, se cayó — y si
+ *    el motor se cae simulando, se cayó. `correos_fallidos` fue justamente la
+ *    pista que destapó I-280.
  *
  * Nada queda oculto: `EstadoInicio.sembrados` lleva cuántas filas se
  * descontaron, y `calcularEstadoInicio({ incluirSembrados: true })` las trae de
@@ -127,6 +129,26 @@ const PATRON_CUOTA = /(quota|rate\s*limit|429|too\s*many\s*requests)/i;
  */
 const TABLA_MARCADO = Prisma.raw("demo_marcado");
 
+/**
+ * SPEC-414 (adenda del CEO 18:2x) · **la simulación del motor también es dato
+ * de prueba, y llega por otra puerta.**
+ *
+ * `simulacion/executor.ts:44` crea `Reporte` **REALES** con `ReporteRepository`
+ * y los encola al motor con `sendReporte` — corren los tres modelos de verdad.
+ * Solo después los anota en `simulacion_reportes`, que es tabla de enlace. Esos
+ * reportes **nunca pasan por `demo_marcado`**, porque no son siembra: son
+ * ejercicio del motor y tienen su propia tabla.
+ *
+ * Sin esto, 200 simulaciones aparecerían como 200 casos "reales" en las colas
+ * de trabajo — exactamente el problema que esta spec cierra, entrando por otro
+ * lado. Por eso el criterio de CARGA es **«tiene marca de demo O pertenece a
+ * una simulación»**: dos orígenes, una sola definición de "no es trabajo real".
+ *
+ * (Mismo cuidado que con `demo_marcado`: acá va el nombre FÍSICO de la tabla,
+ * no el del modelo Prisma — es la lección de I-294.)
+ */
+const TABLA_SIMULACION = Prisma.raw("simulacion_reportes");
+
 /** Lo que devuelve una cola de trabajo: cuánto hay en total y cuánto es real. */
 interface ConteoCarga {
     total: number;
@@ -156,14 +178,25 @@ const ENTIDADES_DE_CARGA = ["Reporte", "Colegio", "Usuario", "SolicitudComite"] 
 
 /**
  * Cuántos registros de prueba DISTINTOS hay en las tablas que alimentan las
- * colas. Una sola consulta indexada por `entidad`; no suma descuentos, cuenta
- * filas — por eso no se puede inflar contando dos veces el mismo reporte.
+ * colas. No suma descuentos, cuenta filas — por eso no se puede inflar
+ * contando dos veces el mismo reporte que está en dos colas.
+ *
+ * Son los dos orígenes: lo sembrado (`demo_marcado`) y los reportes de
+ * simulación. Los de simulación se cuentan **descontando** los que además
+ * estuvieran marcados, para no sumar la misma fila por dos caminos.
  */
 async function contarSembradosDeCarga(): Promise<number> {
-    const total = await prisma.demoMarcado.count({
-        where: { entidad: { in: [...ENTIDADES_DE_CARGA] } },
-    });
-    return total;
+    const [marcados, filas] = await Promise.all([
+        prisma.demoMarcado.count({ where: { entidad: { in: [...ENTIDADES_DE_CARGA] } } }),
+        prisma.$queryRaw<Array<{ n: bigint }>>`
+            SELECT COUNT(*)::bigint AS n
+            FROM ${TABLA_SIMULACION} sr
+            LEFT JOIN ${TABLA_MARCADO} dm
+              ON dm."entidad" = 'Reporte' AND dm."entidadId" = sr."reporteId"
+            WHERE dm.id IS NULL
+        `,
+    ]);
+    return marcados + Number(filas[0]?.n ?? 0);
 }
 
 async function senalCorreosFallidos(): Promise<SenalAlarma | null> {
@@ -280,10 +313,11 @@ async function senalReportesHuerfanos(incluirSembrados: boolean): Promise<Result
     const desde = new Date(Date.now() - horas * 60 * 60 * 1000);
     const filas = await prisma.$queryRaw<Array<{ total: bigint; reales: bigint }>>`
         SELECT COUNT(*)::bigint AS total,
-               COUNT(*) FILTER (WHERE dm.id IS NULL)::bigint AS reales
+               COUNT(*) FILTER (WHERE dm.id IS NULL AND sr.id IS NULL)::bigint AS reales
         FROM "Reporte" r
         LEFT JOIN ${TABLA_MARCADO} dm
           ON dm."entidad" = 'Reporte' AND dm."entidadId" = r.id
+        LEFT JOIN ${TABLA_SIMULACION} sr ON sr."reporteId" = r.id
         WHERE r."estado" IN ('REVISION_MANUAL', 'PENDIENTE')
           AND r."operadorId" IS NULL
           AND r."eliminado" = false
@@ -316,10 +350,11 @@ async function senalRevisionManual(incluirSembrados: boolean): Promise<Resultado
     const umbral = await paramInt("monitoreo.reportes.revision_manual_umbral", 20);
     const filas = await prisma.$queryRaw<Array<{ total: bigint; reales: bigint }>>`
         SELECT COUNT(*)::bigint AS total,
-               COUNT(*) FILTER (WHERE dm.id IS NULL)::bigint AS reales
+               COUNT(*) FILTER (WHERE dm.id IS NULL AND sr.id IS NULL)::bigint AS reales
         FROM "Reporte" r
         LEFT JOIN ${TABLA_MARCADO} dm
           ON dm."entidad" = 'Reporte' AND dm."entidadId" = r.id
+        LEFT JOIN ${TABLA_SIMULACION} sr ON sr."reporteId" = r.id
         WHERE r."estado" = 'REVISION_MANUAL' AND r."eliminado" = false
     `;
     const conteo = conteoDesde(filas[0]);

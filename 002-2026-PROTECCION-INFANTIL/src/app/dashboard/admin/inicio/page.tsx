@@ -115,7 +115,7 @@ function InterruptorDatosPrueba({ estado }: { estado: EstadoInicio }) {
                 <p className="text-xs text-muted">
                     {sembrados.total === 0
                         ? "No hay datos de prueba en las colas de trabajo."
-                        : `${sembrados.total} registro(s) de prueba ${incluyeSembrados ? "están contando" : "quedaron fuera"} de las colas de trabajo.`}
+                        : `${sembrados.total} registro(s) de prueba (sembrados y de simulación) ${incluyeSembrados ? "están contando" : "quedaron fuera"} de las colas de trabajo.`}
                 </p>
             </div>
             <Link

@@ -12,6 +12,7 @@
 - [x] T010 Tests de pantalla: 5 del interruptor + 3 de degradadas (12 en total en el archivo).
 - [x] T011 Integración contra BD real: 6 casos nuevos, 19 verdes en el archivo.
 - [x] T012 **Prueba negativa de I-294**: reintroducir el nombre viejo y verificar que las 4 señales de CARGA aparecen en `degradadas` en vez de desaparecer.
+- [x] T012-bis (adenda CEO 18:2x) Excluir de las dos colas de reportes los que pertenecen a una simulación: el simulador crea `Reporte` reales por otra puerta y no pasan por `demo_marcado`. Verificado en fuente antes de tocar. Cuenta en el total sin duplicar; SALUD no los excluye. Probado contra BD y con reproducción negativa.
 - [x] T013 Gate (`tsc`, `lint`, unit) + fila en `specs/README.md` + PR.
 
 ## Fuera de esta spec, anotado
