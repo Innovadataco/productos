@@ -40,10 +40,10 @@ En el Postgres de PI **YA EXISTE** (no hace falta recrearlo; los scripts 01 y
 - `wal_level=logical` activo en pi-db.
 - Rol `bi_replica` con atributo REPLICATION (password en el gestor IDC).
 - Publicación `bi_replica` con las 23 tablas originales SIN column lists. El
-  script 02 (reescrito 2026-09-01) la reconcilia a la lista canónica de **36
+  script 02 (reescrito 2026-09-01) la reconcilia a la lista canónica de **37
   tablas**, 15 de ellas con **column list que corta PII en origen** (ver §
-  Prohibición PII). El mismo día salieron del canon las 4 legacy vacías
-  (`Subscription`, `BillingCycle`, `FuenteReporte`, `AlertaSuscripcion`) —
+  Prohibición PII). El mismo día salieron del canon las 3 legacy vacías
+  (`Subscription`, `BillingCycle`, `AlertaSuscripcion`) —
   el script 07 dropea sus shells en bi-db.
 
 El **slot del 005 ya fue eliminado**: BI v2 crea suscripción y slot NUEVOS
@@ -304,18 +304,20 @@ profundidad sobre el REVOKE del script 01).
 | `IdentificadorReportado` | `identificador` (nick en claro; viajan solo los agregados: conteos, scores, `nivelRiesgo`, `ultimoReporteEn`, …) |
 | `Suscripcion` | `contratoPDFUrl`, `codigoReferidoPropio`, `codigoReferidoUsado`, `motivoCancelacion`, `referenciaPagoManual` |
 
-**21 completas** (sin PII por diseño): `ClasificacionIA`,
+**22 completas** (sin PII por diseño): `ClasificacionIA`,
 `clasificacion_rubrica_votos`, `CorreccionAdmin`, `EmbeddingReporte`,
-`TransicionReporte`, `SolicitudComite`, `Plan`, `Tenant`, `Curso`,
+`TransicionReporte`, `SolicitudComite`, `Plan`, `Tenant`, `Curso`, `FuenteReporte`,
 `AlertaColegio`, `Plataforma`, `Pais`, `Departamento`, `Ciudad`, `HijoPadre`,
 `patrones_institucionales`, `eventos_match`, `score_clientes`,
 `DerivaMotorSnapshot`, `OnboardingColegio`, `TipoDocumento`.
 
-Las 4 **legacy** del 005 (`Subscription`, `BillingCycle`, `FuenteReporte`,
+Las 3 **legacy** del 005 (`Subscription`, `BillingCycle`,
 `AlertaSuscripcion`) fueron **retiradas del canon el 2026-09-01** (vacías en
 PI y en la réplica; verificado). El reconciliador del script 02 (paso 3b) las
 quita de la publicación solo si siguen vacías; el script 07 dropea sus shells
-en bi-db tras el `REFRESH PUBLICATION`.
+en bi-db tras el `REFRESH PUBLICATION`. `FuenteReporte` iba en esa lista, pero el
+guard del 02 la detectó con 19 filas reales (antifraude de PI activo) y se quedó
+en el canon.
 
 ### Tablas JAMÁS publicadas (ni con column list)
 

@@ -1,20 +1,22 @@
 -- ==========================================================================
 -- 07-bi-db-limpieza-legacy.sql · Producto 006 · BI v2
 -- Limpieza de shells LEGACY en la RÉPLICA (bi-db), después de que el script
--- 02 retiró Subscription, BillingCycle, FuenteReporte y AlertaSuscripcion
--- de la publicación bi_replica en el master.
+-- 02 retiró Subscription, BillingCycle y AlertaSuscripcion de la publicación
+-- bi_replica en el master.
 --
 -- DÓNDE CORRE: en bi-db (SUSCRIPTOR), DESPUÉS de:
---   1) correr 02-pi-db-publicacion.sql en pi-db (quita las 4 del canon y de
+--   1) correr 02-pi-db-publicacion.sql en pi-db (quita las 3 del canon y de
 --      la publicación);
 --   2) correr ALTER SUBSCRIPTION bi006_replica_sub REFRESH PUBLICATION en
 --      bi-db (la suscripción deja de recibir esas tablas).
 -- Este script hace AMBAS cosas: el REFRESH y el DROP de las shells.
 --
--- CONTEXTO: esas 4 tablas eran placeholder vacías del 005 (0 filas en PI y
+-- CONTEXTO: esas 3 tablas eran placeholder vacías del 005 (0 filas en PI y
 --   en la réplica — verificado 2026-09-01). Al salir de la publicación, en
 --   bi-db quedan como tablas huérfanas que ya no reciben cambios: shells
 --   vacíos que solo confunden. Aquí se dropean.
+--   (FuenteReporte iba en esta lista, pero el guard del 02 la detectó con 19
+--   filas reales — antifraude de PI activo — y se quedó en el canon.)
 --
 -- GUARD B1 (falla EN VOZ ALTA): cada tabla se dropea SOLO si tiene 0 filas.
 --   Si alguna tuviera datos, aborta sin tocar nada — conservar o migrar esos
@@ -30,7 +32,7 @@ DO $limpieza$
 DECLARE
   t       text;
   n_filas bigint;
-  legacy  text[] := ARRAY['Subscription', 'BillingCycle', 'FuenteReporte', 'AlertaSuscripcion'];
+  legacy  text[] := ARRAY['Subscription', 'BillingCycle', 'AlertaSuscripcion'];
 BEGIN
   FOREACH t IN ARRAY legacy LOOP
     IF to_regclass(format('public.%I', t)) IS NULL THEN
@@ -48,10 +50,11 @@ BEGIN
   END LOOP;
 END $limpieza$;
 
--- Resumen: ya NO deben aparecer las 4 legacy.
+-- Resumen: ya NO deben aparecer las 3 legacy.
 SELECT tablename
   FROM pg_tables
  WHERE schemaname = 'public'
-   AND tablename IN ('Subscription', 'BillingCycle', 'FuenteReporte', 'AlertaSuscripcion')
+   AND tablename IN ('Subscription', 'BillingCycle', 'AlertaSuscripcion')
  ORDER BY 1;
 -- Esperado: 0 filas.
+

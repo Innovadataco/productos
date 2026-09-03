@@ -8,7 +8,7 @@
 --   verificado con SHOW wal_level el 2026-08-28).
 --
 -- REESCRITURA (2026-09-01 · SPEC-006): la publicación pasa de "23 tablas al
---   100% de las columnas" a 36 tablas con COLUMN LISTS (PostgreSQL >= 15; el
+--   100% de las columnas" a 37 tablas con COLUMN LISTS (PostgreSQL >= 15; el
 --   master es pg16) que CORTAN PII EN ORIGEN: las columnas vetadas (nombres,
 --   documentos y valores de identificadores de menores/acudientes/profesores,
 --   textos de reportes, IPs, user-agents, etc.) ni siquiera salen de pi-db
@@ -49,10 +49,10 @@
 --   `eventos_match`. Queda VETADA como tabla completa (guard §4).
 --
 -- REGLA DE GOBIERNO (AGENTS.md §7): agregar una tabla nueva a la publicación
---   exige pedirla por nombre y autorización de Jelkin. Las 36 tablas de abajo
+--   exige pedirla por nombre y autorización de Jelkin. Las 37 tablas de abajo
 --   son la lista canónica autorizada (23 originales D-20 del 005 + 17 nuevas
---   autorizadas para BI v2 el 2026-09-01 − 4 legacy vacías retiradas el mismo
---   día: Subscription, BillingCycle, FuenteReporte, AlertaSuscripcion).
+--   autorizadas para BI v2 el 2026-09-01 − 3 legacy vacías retiradas el mismo
+--   día: Subscription, BillingCycle, AlertaSuscripcion).
 --
 -- HALLAZGO CANDADO 15 del 005 (se conserva): modelos Prisma con @@map a
 --   nombre snake_case/legacy en BD — la publicación usa el nombre REAL:
@@ -67,11 +67,13 @@
 --   Verificar futuros @@map con: grep '@@map' schema.prisma (en el repo PI).
 --
 -- TABLAS LEGACY RETIRADAS (2026-09-01 · Lote 3 higiene BI v2): Subscription,
---   BillingCycle, FuenteReporte y AlertaSuscripcion salieron del canon y de la
---   publicación. Eran placeholder vacías del 005 (verificado: 0 filas en PI y
---   en la réplica). El reconciliador (paso 3b) las quita de bi_replica SOLO si
---   están vacías en el master; si alguna tuviera datos, aborta EN VOZ ALTA.
---   Las shells vacías en bi-db se dropean con 04-bi-db-limpieza-legacy.sql.
+--   BillingCycle y AlertaSuscripcion salieron del canon y de la publicación
+--   (placeholder vacías del 005; verificado: 0 filas en PI y en la réplica).
+--   El reconciliador (paso 3b) las quita de bi_replica SOLO si están vacías
+--   en el master; si alguna tuviera datos, aborta EN VOZ ALTA. Las shells
+--   vacías en bi-db se dropean con 07-bi-db-limpieza-legacy.sql.
+--   NOTA: FuenteReporte iba en esta lista, pero el guard 3b la detectó con
+--   19 filas reales (antifraude de PI activo desde 2026-09-02) — se queda.
 -- ==========================================================================
 
 DO $recon$
@@ -87,7 +89,7 @@ DECLARE
   pub_tabla       text;
   n_filas         bigint;
 
-  -- ── LISTA CANÓNICA (36 tablas) ─────────────────────────────────────────
+  -- ── LISTA CANÓNICA (37 tablas) ─────────────────────────────────────────
   -- Cada fila: {tabla, columnas} · columnas = NULL → completa; si no, CSV
   -- exacto de columnas publicadas (orden libre; el script compara ordenado).
   canon text[][] := ARRAY[
@@ -108,6 +110,10 @@ DECLARE
     ARRAY['EmbeddingReporte', NULL],
     ARRAY['TransicionReporte', NULL],
     ARRAY['SolicitudComite', NULL],
+    -- FuenteReporte: VIVA (antifraude de PI: ipHash/fingerprintHash/pesos).
+    -- Se creyó legacy vacía; el guard 3b la salvó el 2026-09-01 con 19 filas
+    -- reales — permanece en el canon (completa, como desde el 005).
+    ARRAY['FuenteReporte', NULL],
     ARRAY['Plan', NULL],
     ARRAY['Tenant', NULL],
     -- Colegio: sin representanteLegalNombre/Identificacion/Email/Telefono
@@ -376,11 +382,10 @@ JOIN pg_class c ON c.oid = pr.prrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE p.pubname = 'bi_replica' AND n.nspname = 'public'
 ORDER BY 2;
--- Esperado: 36 filas · tiene_column_list = t en las 15 tablas con recorte
+-- Esperado: 37 filas · tiene_column_list = t en las 15 tablas con recorte
 -- (Reporte, Colegio, Alumno, IdentificadorAlumno, AuditLog, Profesor,
 --  AcudienteEstudiante, IdentificadorAcudiente, IdentificadorProfesor, Hijo,
 --  IdentificadorHijo, ContactoConfianza, IdentificadorContacto,
---  IdentificadorReportado, Suscripcion) · f en las 21 completas.
+--  IdentificadorReportado, Suscripcion) · f en las 22 completas.
 -- NUNCA deben aparecer las tablas prohibidas (ver cabecera §GUARDS) ni las
--- legacy retiradas (Subscription, BillingCycle, FuenteReporte,
--- AlertaSuscripcion).
+-- legacy retiradas (Subscription, BillingCycle, AlertaSuscripcion).
