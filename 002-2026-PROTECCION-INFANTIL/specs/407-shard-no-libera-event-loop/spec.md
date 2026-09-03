@@ -115,6 +115,16 @@ Tres candados duros del CEO:
 
 Sin retry silencioso: un reintento que no deja huella oculta el día en que la lentitud SÍ sea culpa nuestra.
 
+### Cómo leer el contador de reintentos — importante para no diagnosticar al revés
+
+**El tope de 28 min por intento deja poco margen.** En la tabla del §"Hallazgo confirmado" la corrida sana más lenta de shard 4 fue **26.3 min** (`33760868129`) — quedan **1.7 min de aire** sobre 28. Consecuencia:
+
+> **Si la tasa de reintentos sube con el tiempo, la primera hipótesis NO es "los runners de GHA empeoraron". La primera hipótesis es "la suite creció y hay que revisar el tope de 28 min".**
+
+Ese es exactamente el error de diagnóstico que este mismo problema ya nos hizo cometer una vez (SPEC-396 declaró causa raíz parcial). Con la suite creciendo cada semana y el margen tan chico, un cambio ordinario (una spec nueva con 10 tests de integration lentos) puede empujar la corrida sana promedio a 27-29 min → **retries que no son runner lento, son suite crecida** dispuestos a leerse mal.
+
+Al revisar la métrica: primero mirar `test-durations.json` y ver si la mediana de duración por shard subió. Solo si esa mediana está estable y aún así los retries suben, entonces sí es el proveedor.
+
 ## Fuera de alcance (siguiente PR — solo con luz verde del CEO)
 
 - Caso A · fix de handles al cerrar: `prisma.$disconnect()` en `afterAll`, disposers para ollama-client y cache-semantico, auditoría de `setInterval`/`setTimeout` sin `.unref()`. La instrumentación queda puesta esperando cazar un caso A por aparición natural (paciencia, no forzar).
