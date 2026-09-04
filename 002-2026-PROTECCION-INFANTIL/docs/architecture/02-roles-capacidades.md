@@ -3717,8 +3717,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/registro` | página | permitir | permite | sí |
 | `/registro-colegio` | página | permitir | permite | sí |
 | `/registro-colegio/crear-clave/[token]` | página | permitir | permite | sí |
-| `/registro-profesional` | página | redirigir→/login | permite | **NO** |
-| `/registro-profesional/crear-clave/[token]` | página | redirigir→/login | permite | **NO** |
+| `/registro-profesional` | página | permitir | permite | sí |
+| `/registro-profesional/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/crear-clave/[token]` | página | permitir | permite | sí |
 | `/registro/inicio` | página | permitir | permite | sí |
 | `/reportar` | página | permitir | permite | sí |
@@ -4132,8 +4132,6 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/mis-reportes` | redirigir→/login | permite |
 | `/perfil-profesional/completar` | redirigir→/login | permite |
 | `/perfil-profesional/verificacion` | redirigir→/login | permite |
-| `/registro-profesional` | redirigir→/login | permite |
-| `/registro-profesional/crear-clave/[token]` | redirigir→/login | permite |
 
 ## Eje de módulos (BD): módulo → ruta → rol
 

@@ -4,6 +4,8 @@
  * Cobertura: invariante crítica (destino ∈ exentas), helpers puros de matching.
  */
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import {
     GUARDIAS_ACCESO,
     matcheaRuta,
@@ -190,5 +192,65 @@ describe("SPEC-344 · camino del colegio (esExentaCamino por rol)", () => {
         ]) {
             expect(esExentaVigencia(destino, "SCHOOL_ADMIN"), `${destino} sin exención de vigencia = bucle`).toBe(true);
         }
+    });
+});
+
+/**
+ * SPEC-422 (I-297) · **toda puerta de registro tiene que ser pública, y las
+ * futuras también.**
+ *
+ * Tercera aparición de la misma clase en un día: I-289 (webhook fuera de la
+ * allowlist), I-290 (ítem de menú que rebotaba) y esta — `/registro-profesional`
+ * existía, la tarjeta apuntaba bien, y el middleware la cortaba con 307 → /login.
+ * Nadie podía inscribirse como psicólogo.
+ *
+ * Por eso este candado **no lista las tres puertas a mano: las descubre en el
+ * disco**. El día que nazca `/registro-<loquesea>` con su `page.tsx`, este test
+ * la exige en `publicas` sin que nadie se acuerde de venir a agregarla. Un
+ * candado escrito a mano solo protege lo que ya se rompió; este protege la
+ * cuarta puerta.
+ */
+describe("SPEC-422 (I-297) · las puertas de registro son públicas", () => {
+    const RAIZ_APP = path.resolve(__dirname, "../../app");
+
+    /** Directorios `src/app/registro*` que son páginas de verdad. */
+    const puertas = fs
+        .readdirSync(RAIZ_APP, { withFileTypes: true })
+        .filter((e) => e.isDirectory() && e.name.startsWith("registro"))
+        .filter((e) => fs.existsSync(path.join(RAIZ_APP, e.name, "page.tsx")))
+        .map((e) => `/${e.name}`)
+        .sort();
+
+    it("hay al menos las tres puertas conocidas (padre, colegio, profesional)", () => {
+        expect(puertas).toEqual(
+            expect.arrayContaining(["/registro", "/registro-colegio", "/registro-profesional"]),
+        );
+    });
+
+    it("cada puerta encontrada en el disco es alcanzable sin sesión", () => {
+        const cerradas = puertas.filter((p) => !esRutaPublica(p));
+        expect(
+            cerradas,
+            `puertas de registro que rebotan al login: ${cerradas.join(", ")}. ` +
+            "Agregalas a GUARDIAS_ACCESO.publicas — una puerta de registro que exige sesión es un enlace muerto (I-297).",
+        ).toEqual([]);
+    });
+
+    it("el enlace del correo (`/crear-clave/<token>`) también es alcanzable", () => {
+        // Si rebota, el enlace del correo es tan muerto como la tarjeta.
+        const cerradas = puertas.filter((p) => !esRutaPublica(`${p}/crear-clave/tok`));
+        expect(cerradas, `enlaces de correo que rebotan: ${cerradas.join(", ")}`).toEqual([]);
+    });
+
+    it("cada puerta está por su cuenta: `/registro` NO cubre a las otras", () => {
+        // La trampa exacta que causó I-297: `matcheaRuta` es prefijo POR SEGMENTO.
+        expect(matcheaRuta("/registro-profesional", "/registro")).toBe(false);
+        expect(matcheaRuta("/registro-colegio", "/registro")).toBe(false);
+    });
+
+    it("el candado detecta una puerta ausente (contraprueba)", () => {
+        // Sin esto, un `esRutaPublica` que devolviera siempre true dejaría el
+        // test en verde para siempre.
+        expect(esRutaPublica("/registro-inventado")).toBe(false);
     });
 });

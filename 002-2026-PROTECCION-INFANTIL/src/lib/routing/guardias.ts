@@ -20,6 +20,14 @@ export const GUARDIAS_ACCESO = {
         "/login",
         "/registro",
         "/registro-colegio",
+        // SPEC-422 (I-297 · tercera aparición de la clase I-289/I-290): la
+        // puerta del profesional. La tarjeta «Soy profesional» de /registro/inicio
+        // apunta bien y la página existe, pero sin esta línea el middleware la
+        // corta con 307 → /login: nadie podía inscribirse como psicólogo.
+        // `matcheaRuta` es prefijo POR SEGMENTO, así que "/registro" NO cubre
+        // "/registro-profesional" — cada puerta necesita su propia entrada, y
+        // esta cubre además su `/crear-clave/<token>`.
+        "/registro-profesional",
         "/activar",
         "/recuperar",
         "/seguimiento",
