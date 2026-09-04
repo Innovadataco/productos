@@ -126,6 +126,7 @@ Comando por defecto: `["node", "server.js"]`.
 | pi-analisis-reglas | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-reglas` | — |
 | pi-analisis-score | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-score` | — |
 | pi-anomalias | `pi-app:${PI_APP_TAG:-latest}` | `pi-anomalias` | — |
+| pi-citas | `pi-app:${PI_APP_TAG:-latest}` | `pi-citas` | — |
 | pi-expediente-motor | `pi-app:${PI_APP_TAG:-latest}` | `pi-expediente-motor` | — |
 | pi-notificaciones | `pi-app:${PI_APP_TAG:-latest}` | `pi-notificaciones` | — |
 | pi-senal-comunitaria | `pi-app:${PI_APP_TAG:-latest}` | `pi-senal-comunitaria` | — |

@@ -23,6 +23,10 @@ import { contarPendientesVencidas } from "../notificaciones/metricas.ts";
 export const SENALES_TICK_VIDA = [
     "notificaciones", "senal_comunitaria", "analisis_score",
     "vigencia", "analisis_reglas", "expediente_motor", "anomalias",
+    // SPEC-427 (I-301): el worker de citas. La lista está quemada a propósito
+    // —el monitor no descubre contenedores— así que un worker nuevo que no se
+    // agregue acá queda sin vigilancia y nadie se entera de que murió.
+    "citas",
 ] as const;
 export type SenalTickVida = (typeof SENALES_TICK_VIDA)[number];
 
@@ -34,6 +38,7 @@ const NOMBRE_CONTENEDOR_POR_SENAL: Record<SenalTickVida, string> = {
     analisis_reglas: "pi-analisis-reglas",
     expediente_motor: "pi-expediente-motor",
     anomalias: "pi-anomalias",
+    citas: "pi-citas",
 };
 
 export const SENALES_MONITOREO = [

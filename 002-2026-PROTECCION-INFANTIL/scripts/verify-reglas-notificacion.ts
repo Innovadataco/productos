@@ -74,6 +74,24 @@ export const REGLAS_REQUERIDAS: ReglaRequerida[] = [
         callsite: "src/lib/profesionales/verificador/service.ts",
         bloquea: true,
     },
+    {
+        evento: "cita.codigo.recordatorio",
+        sostiene: "llevarle al padre el código con el que se cierra la cita — sin esto NINGUNA cita puede quedar CUMPLIDA (SPEC-427)",
+        callsite: "src/lib/profesional/cita/cierre.service.ts",
+        bloquea: true,
+    },
+    {
+        evento: "cita.no_asistio.padre",
+        sostiene: "avisarle al padre que el profesional declaró que no se presentó — es una declaración sobre él y tiene que poder responderla (SPEC-427)",
+        callsite: "src/lib/profesional/cita/cierre.service.ts",
+        bloquea: false,
+    },
+    {
+        evento: "cita.autocerrada.padre",
+        sostiene: "avisarle al padre que su cita murió sin confirmar — es su única señal de que algo salió mal (SPEC-427)",
+        callsite: "src/lib/profesional/cita/cierre.service.ts",
+        bloquea: true,
+    },
     // ── Solo avisan, por ahora ──────────────────────────────────────────────
     { evento: "auth.codigo_verificacion", sostiene: "el código de verificación de la cuenta", callsite: "src/lib/email.ts:49", bloquea: false },
     { evento: "auth.cuenta_existente", sostiene: "avisar que ese correo ya tiene cuenta (anti-enumeración)", callsite: "src/lib/email.ts:71", bloquea: false },

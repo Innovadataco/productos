@@ -13,10 +13,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **349** |
+| **Total de specs** | **347** |
 | 🔵 PLANEADO | 59 |
 | 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 164 |
+| 🟢 IMPLEMENTADO | 162 |
 | 🧪 PENDIENTE DE PRUEBA | 0 |
 | ✅ FINALIZADO | 38 |
 | 📁 CERRADA | 63 |
@@ -374,10 +374,8 @@
 | [420](420-borrado-por-lotes/spec.md) | SPEC-420 · El borrado por lotes — PostgreSQL admite 32.767 parámetros, producción tenía 37.176 | 🟢 IMPLEMENTADO |
 | [421](421-gestion-profesionales-admin/spec.md) | SPEC-421 · El admin gestiona psicólogos igual que gestiona padres (mirror `/admin/padres`) + reenvía solicitudes de registro cuando el correo se cae | 🟢 IMPLEMENTADO |
 | [422](422-registro-profesional-publico/spec.md) | SPEC-422 · «Soy profesional» era un enlace muerto — cierra I-297 | 🟢 IMPLEMENTADO |
-| [423](423-credencial-siempre-visible/spec.md) | SPEC-423 · La credencial de respaldo se muestra SIEMPRE — cierra I-298 | 🟢 IMPLEMENTADO |
 | [425](425-panel-profesional/spec.md) | SPEC-425 · El panel del profesional (A-75 · lote L5) | 🟢 IMPLEMENTADO |
-| [428](428-padre-agenda-cita/spec.md) | SPEC-428 · El padre agenda una cita con un profesional — brief A-75 v2.1 §9 | 🟢 IMPLEMENTADO |
-| [431](431-franja-nocturna-payload/spec.md) | SPEC-431 · La franja horaria le mentía al modelo — cierra I-247 b | 🟢 IMPLEMENTADO |
+| [427](427-codigos-y-cierre-de-la-cita/spec.md) | SPEC-427 · Los dos códigos y el cierre de la cita — A-75 · L6 | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 
 ## Incidencias de calidad de datos

@@ -51,6 +51,18 @@ export class NotificacionRepository {
         return this.db.notificacion.findUnique({ where: { id } });
     }
 
+    /**
+     * SPEC-427: el estado de envío de varias notificaciones de una consulta.
+     * La traza de códigos no copia el envío — lo lee de acá, que es donde vive.
+     */
+    listarEstadosPorIds(ids: string[]) {
+        if (ids.length === 0) return Promise.resolve([]);
+        return this.db.notificacion.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, estado: true, enviarEn: true, sentAt: true },
+        });
+    }
+
     findByProveedorId(proveedorId: string) {
         return this.db.notificacion.findFirst({ where: { proveedorId } });
     }

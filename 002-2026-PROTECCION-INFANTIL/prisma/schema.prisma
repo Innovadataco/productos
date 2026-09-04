@@ -376,6 +376,16 @@ enum AccionAudit {
   CITA_PROFESIONAL_VENCIDA_PROFESIONAL
   CITA_PROFESIONAL_ALARMA_TASA_VENCIMIENTOS
   CITA_PROFESIONAL_SUSPENDIDO_POR_VENCIMIENTOS
+  // SPEC-427 (L6 · brief §9 momento 6): los dos códigos del cierre. La traza
+  // que el brief exige vive en `CodigoCita`; estas acciones son el rastro de
+  // QUIÉN hizo qué, que es lo que `CodigoCita` no puede contar por sí solo.
+  CITA_PROFESIONAL_CODIGO_EMITIDO
+  CITA_PROFESIONAL_CODIGO_DIGITADO
+  CITA_PROFESIONAL_CODIGO_FALLIDO
+  CITA_PROFESIONAL_CUMPLIDA
+  CITA_PROFESIONAL_EXPEDIENTE_ABIERTO
+  CITA_PROFESIONAL_AUTOCERRADA
+  CITA_PROFESIONAL_NO_ASISTIO_PADRE
 }
 
 enum TipoPeriodoServicio {
@@ -636,104 +646,104 @@ model Usuario {
   creadoEn                    DateTime         @default(now())
   actualizadoEn               DateTime         @updatedAt
 
-  tenant                           Tenant?                         @relation(fields: [tenantId], references: [id])
-  colegio                          Colegio?                        @relation(fields: [colegioId], references: [id])
-  comiteConvivenciaColegio         Colegio?                        @relation(name: "ComiteConvivenciaColegio", fields: [comiteColegioId], references: [id])
-  parametros                       ParametroSistema[]
-  auditLogs                        AuditLog[]
-  permisosModuloActualizados       PermisoModulo[]
-  codigos                          CodigoVerificacion[]
-  tokensRecuperacion               TokenRecuperacion[]
-  reportes                         Reporte[]
-  reportesDadosDeBaja              Reporte[]                       @relation("ReportesDadosDeBaja")
-  correcciones                     CorreccionAdmin[]
-  alertasSuscripcion               AlertaSuscripcion[]
-  simulaciones                     SimulacionRun[]
-  casosAsignados                   Reporte[]                       @relation("CasosOperador")
-  casosComiteAsignados             Reporte[]                       @relation("CasosComite")
-  anonimizacionesValidadas         Reporte[]                       @relation("AnonimizacionesValidadas")
-  perfilOperador                   PerfilOperador?
-  operadoresCreados                PerfilOperador[]                @relation("OperadoresCreados")
+  tenant                             Tenant?                         @relation(fields: [tenantId], references: [id])
+  colegio                            Colegio?                        @relation(fields: [colegioId], references: [id])
+  comiteConvivenciaColegio           Colegio?                        @relation(name: "ComiteConvivenciaColegio", fields: [comiteColegioId], references: [id])
+  parametros                         ParametroSistema[]
+  auditLogs                          AuditLog[]
+  permisosModuloActualizados         PermisoModulo[]
+  codigos                            CodigoVerificacion[]
+  tokensRecuperacion                 TokenRecuperacion[]
+  reportes                           Reporte[]
+  reportesDadosDeBaja                Reporte[]                       @relation("ReportesDadosDeBaja")
+  correcciones                       CorreccionAdmin[]
+  alertasSuscripcion                 AlertaSuscripcion[]
+  simulaciones                       SimulacionRun[]
+  casosAsignados                     Reporte[]                       @relation("CasosOperador")
+  casosComiteAsignados               Reporte[]                       @relation("CasosComite")
+  anonimizacionesValidadas           Reporte[]                       @relation("AnonimizacionesValidadas")
+  perfilOperador                     PerfilOperador?
+  operadoresCreados                  PerfilOperador[]                @relation("OperadoresCreados")
   // SPEC-245 (002-PI-148): suscripciones que este admin autorizó manualmente.
-  suscripcionesAutorizadas         Suscripcion[]                   @relation("SuscripcionesAutorizadasPorAdmin")
+  suscripcionesAutorizadas           Suscripcion[]                   @relation("SuscripcionesAutorizadasPorAdmin")
   // SPEC-246 (002-PI-149): cupones de recompensa de los que este usuario es beneficiario.
-  bonosBeneficiario                BonoPromocional[]               @relation("BonosBeneficiario")
-  contactosConfianza               ContactoConfianza[]
+  bonosBeneficiario                  BonoPromocional[]               @relation("BonosBeneficiario")
+  contactosConfianza                 ContactoConfianza[]
   // SPEC-339: los menores de este padre (ficha propia, no compartida).
-  hijosPropios                     Hijo[]                          @relation("HijosDelPadre")
+  hijosPropios                       Hijo[]                          @relation("HijosDelPadre")
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
-  hijos                            HijoPadre[]
-  identificadoresHijoDesvinculados IdentificadorHijoDesvinculado[]
-  notificacionesCirculo            Boolean                         @default(true)
-  ultimaNotificacionCirculoEn      DateTime?
+  hijos                              HijoPadre[]
+  identificadoresHijoDesvinculados   IdentificadorHijoDesvinculado[]
+  notificacionesCirculo              Boolean                         @default(true)
+  ultimaNotificacionCirculoEn        DateTime?
   // SPEC-339 (A-67 · punto 4 Calidad): interruptor y enfriamiento PROPIOS de los
   // avisos sobre hijos. NO se comparten con los del círculo: un aviso sobre un
   // contacto vigilado no puede silenciar el aviso sobre un hijo, ni apagar los
   // del círculo puede apagar los del hijo (regla de Jelkin: cada padre — y cada
   // frente — con sus interruptores).
-  notificacionesHijos              Boolean                         @default(true)
-  ultimaNotificacionHijosEn        DateTime?
-  ultimaNotificacionColegioEn      DateTime?
-  transicionesReporte              TransicionReporte[]
-  solicitudesComite                SolicitudComite[]               @relation("SolicitudesComite")
-  solicitudesEscaladas             SolicitudComite[]               @relation("SolicitudesEscaladas")
-  solicitudesComiteCreadas         SolicitudComite[]               @relation("SolicitudesCreadasPorColegio")
+  notificacionesHijos                Boolean                         @default(true)
+  ultimaNotificacionHijosEn          DateTime?
+  ultimaNotificacionColegioEn        DateTime?
+  transicionesReporte                TransicionReporte[]
+  solicitudesComite                  SolicitudComite[]               @relation("SolicitudesComite")
+  solicitudesEscaladas               SolicitudComite[]               @relation("SolicitudesEscaladas")
+  solicitudesComiteCreadas           SolicitudComite[]               @relation("SolicitudesCreadasPorColegio")
   // SPEC-380 (PR A): backrefs para el análisis del comité y la recomendación
   // de emitir el informe (quién escribió / quién recomendó).
-  solicitudesAnalisisPor           SolicitudComite[]               @relation("SolicitudesAnalisisPor")
-  solicitudesRecomendacionPor      SolicitudComite[]               @relation("SolicitudesRecomendacionPor")
-  notasSeguimiento                 NotaSeguimiento[]
-  integrantesComite                IntegranteComite[]              @relation("IntegrantesComite")
-  integrantesComiteCreados         IntegranteComite[]              @relation("IntegrantesComiteCreados")
-  integrantesComiteModificados     IntegranteComite[]              @relation("IntegrantesComiteModificados")
-  apelaciones                      Apelacion[]                     @relation("ApelacionesUsuario")
-  apelacionesAsignadas             Apelacion[]                     @relation("ApelacionesAsignadasComite")
-  apelacionesResueltas             Apelacion[]                     @relation("ApelacionesResueltas")
-  accesosDocumentoApelacion        AccesoDocumentoApelacion[]
-  alertasAsignadas                 AlertaColegio[]
-  notificacionesInApp              NotificacionInApp[]
+  solicitudesAnalisisPor             SolicitudComite[]               @relation("SolicitudesAnalisisPor")
+  solicitudesRecomendacionPor        SolicitudComite[]               @relation("SolicitudesRecomendacionPor")
+  notasSeguimiento                   NotaSeguimiento[]
+  integrantesComite                  IntegranteComite[]              @relation("IntegrantesComite")
+  integrantesComiteCreados           IntegranteComite[]              @relation("IntegrantesComiteCreados")
+  integrantesComiteModificados       IntegranteComite[]              @relation("IntegrantesComiteModificados")
+  apelaciones                        Apelacion[]                     @relation("ApelacionesUsuario")
+  apelacionesAsignadas               Apelacion[]                     @relation("ApelacionesAsignadasComite")
+  apelacionesResueltas               Apelacion[]                     @relation("ApelacionesResueltas")
+  accesosDocumentoApelacion          AccesoDocumentoApelacion[]
+  alertasAsignadas                   AlertaColegio[]
+  notificacionesInApp                NotificacionInApp[]
   // SPEC-184 (002-PI-079): blocklist y simulador de abusos.
-  bloqueosCreados                  BlockList[]
-  simulacionesAbuso                SimulacionAbusoRun[]
+  bloqueosCreados                    BlockList[]
+  simulacionesAbuso                  SimulacionAbusoRun[]
   // SPEC-230 (002-PI-130): expedientes del padre.
-  expedientes                      Expediente[]
+  expedientes                        Expediente[]
   // SPEC-340: informes del expediente generados por este padre.
-  informesPadre                    InformePadre[]                  @relation("InformesPadreGenerados")
+  informesPadre                      InformePadre[]                  @relation("InformesPadreGenerados")
   // SPEC-351: informes de caso del colegio firmados por este usuario (rector).
-  informesCasoFirmados             InformeCaso[]                   @relation("InformesCasoFirmados")
+  informesCasoFirmados               InformeCaso[]                   @relation("InformesCasoFirmados")
   // SPEC-206 (002-PI-120): sesiones activas del usuario.
-  sesionesLog                      SesionLog[]
+  sesionesLog                        SesionLog[]
   // SPEC-241 (002-PI-144): traza inmutable de aceptaciones de consentimiento.
-  auditConsentimientos             AuditConsentimiento[]
+  auditConsentimientos               AuditConsentimiento[]
   // SPEC-234 (002-PI-134): informes consolidados generados por el usuario/worker.
-  informesConsolidados             InformeConsolidado[]
+  informesConsolidados               InformeConsolidado[]
   // SPEC-235 (002-PI-135): guías de acción creadas por el admin.
-  guiasAccionCreadas               GuiaAccionCategoria[]
+  guiasAccionCreadas                 GuiaAccionCategoria[]
   // SPEC-210 (002-PI-110): módulo de pagos.
-  suscripciones                    Suscripcion[]
-  planesCreados                    Plan[]                          @relation("PlanesCreados")
-  bonosCreados                     BonoPromocional[]               @relation("BonosCreados")
-  pagosAutorizados                 Pago[]                          @relation("PagosAutorizados")
-  referidosRevisados               CodigoReferidoUso[]             @relation("ReferidosRevisados")
-  tasasIngresadas                  TasaCambio[]                    @relation("TasasIngresadas")
+  suscripciones                      Suscripcion[]
+  planesCreados                      Plan[]                          @relation("PlanesCreados")
+  bonosCreados                       BonoPromocional[]               @relation("BonosCreados")
+  pagosAutorizados                   Pago[]                          @relation("PagosAutorizados")
+  referidosRevisados                 CodigoReferidoUso[]             @relation("ReferidosRevisados")
+  tasasIngresadas                    TasaCambio[]                    @relation("TasasIngresadas")
   // SPEC-220 (002-PI-121): dominio Análisis (reglas, recomendaciones, anomalías, digest).
-  reglasRecomendacionCreadas       ReglaRecomendacion[]
-  recomendacionesResueltas         Recomendacion[]
-  anomaliasResueltas               Anomalia[]
-  digestsSemanal                   DigestSemanal[]
+  reglasRecomendacionCreadas         ReglaRecomendacion[]
+  recomendacionesResueltas           Recomendacion[]
+  anomaliasResueltas                 Anomalia[]
+  digestsSemanal                     DigestSemanal[]
   // SPEC-238 (002-PI-mega-cola): aclaraciones respondidas por el miembro del comité.
-  aclaracionesRespondidas          AclaracionExpediente[]
+  aclaracionesRespondidas            AclaracionExpediente[]
   // SPEC-239 (002-PI-mega-cola): contactos de emergencia administrados por el padre.
-  contactosEmergencia              ContactoEmergencia[]
+  contactosEmergencia                ContactoEmergencia[]
   // SPEC-224 (002-PI-125): versiones de reglas de recomendación cambiadas por el admin.
-  reglasHistorialCambiadas         ReglaRecomendacionHistorial[]
+  reglasHistorialCambiadas           ReglaRecomendacionHistorial[]
   // SPEC-334: país/ciudad del perfil del padre (catálogo geográfico existente).
-  paisPerfil                       Pais?                           @relation("UsuariosPorPais", fields: [paisId], references: [id])
-  ciudadPerfil                     Ciudad?                         @relation("UsuariosPorCiudad", fields: [ciudadId], references: [id])
+  paisPerfil                         Pais?                           @relation("UsuariosPorPais", fields: [paisId], references: [id])
+  ciudadPerfil                       Ciudad?                         @relation("UsuariosPorCiudad", fields: [ciudadId], references: [id])
   // SPEC-388 (A-75 · L1a): back-refs de la Red de Profesionales.
-  perfilProfesional                PerfilProfesional?
-  verificacionesProfesionalRevisadas VerificacionProfesional[]     @relation("VerificacionesRevisadasPor")
-  solicitudesCitaComoPadre         SolicitudCita[]                 @relation("SolicitudesCitaPadre")
+  perfilProfesional                  PerfilProfesional?
+  verificacionesProfesionalRevisadas VerificacionProfesional[]       @relation("VerificacionesRevisadasPor")
+  solicitudesCitaComoPadre           SolicitudCita[]                 @relation("SolicitudesCitaPadre")
 
   @@index([email])
   @@index([rol])
@@ -783,11 +793,11 @@ model IntegranteComite {
   creadoEn             DateTime                     @default(now())
   actualizadoEn        DateTime                     @updatedAt
 
-  comite              Usuario           @relation(fields: [comiteId], references: [id], name: "IntegrantesComite", onDelete: Cascade)
-  creadoPor           Usuario           @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
-  modificadoPor       Usuario?          @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
+  comite              Usuario                         @relation(fields: [comiteId], references: [id], name: "IntegrantesComite", onDelete: Cascade)
+  creadoPor           Usuario                         @relation(fields: [creadoPorId], references: [id], name: "IntegrantesComiteCreados")
+  modificadoPor       Usuario?                        @relation(fields: [modificadoPorId], references: [id], name: "IntegrantesComiteModificados")
   // SPEC-319 §2.4: casos cuyo cierre firmó este integrante.
-  solicitudesFirmadas SolicitudComite[] @relation(name: "SolicitudesFirmadas")
+  solicitudesFirmadas SolicitudComite[]               @relation(name: "SolicitudesFirmadas")
   // SPEC-380 (PR B · C4/D-100): identificadores del integrante que se vigilan
   // igual que los de estudiantes/profesores/acudientes — 4º sujeto.
   identificadores     IdentificadorIntegranteComite[]
@@ -1249,35 +1259,35 @@ model Colegio {
   creadoEn                         DateTime            @default(now())
   actualizadoEn                    DateTime            @updatedAt
 
-  pais                      Pais                       @relation(fields: [paisId], references: [id])
-  departamento              Departamento?              @relation(fields: [departamentoId], references: [id])
-  ciudad                    Ciudad                     @relation(fields: [ciudadId], references: [id])
-  tenant                    Tenant                     @relation(fields: [tenantId], references: [id])
-  admin                     Usuario?
-  comiteConvivencia         Usuario?                   @relation(name: "ComiteConvivenciaColegio")
-  cursos                    Curso[]
-  estudiantes               Estudiante[]
-  profesores                Profesor[]
-  alertas                   AlertaColegio[]
-  solicitudesComite         SolicitudComite[]
-  patrones                  PatronInstitucional[]
-  preferenciasAvisos        PreferenciaAlertaColegio[]
-  registrosAvisos           RegistroAvisoColegio[]
-  seguimientosCaso          SeguimientoCaso[]
-  notasSeguimiento          NotaSeguimiento[]
-  auditLogs                 AuditLog[]
-  sesionesCarga             CargaRosterSesion[]
-  Materia                   Materia[]
-  CursoMateria              CursoMateria[]
-  identificadoresAcudiente  IdentificadorAcudiente[]
-  identificadoresProfesor   IdentificadorProfesor[]
-  identificadoresEstudiante IdentificadorEstudiante[] // SPEC-320: colegioId denormalizado en el identificador de estudiante
+  pais                            Pais                            @relation(fields: [paisId], references: [id])
+  departamento                    Departamento?                   @relation(fields: [departamentoId], references: [id])
+  ciudad                          Ciudad                          @relation(fields: [ciudadId], references: [id])
+  tenant                          Tenant                          @relation(fields: [tenantId], references: [id])
+  admin                           Usuario?
+  comiteConvivencia               Usuario?                        @relation(name: "ComiteConvivenciaColegio")
+  cursos                          Curso[]
+  estudiantes                     Estudiante[]
+  profesores                      Profesor[]
+  alertas                         AlertaColegio[]
+  solicitudesComite               SolicitudComite[]
+  patrones                        PatronInstitucional[]
+  preferenciasAvisos              PreferenciaAlertaColegio[]
+  registrosAvisos                 RegistroAvisoColegio[]
+  seguimientosCaso                SeguimientoCaso[]
+  notasSeguimiento                NotaSeguimiento[]
+  auditLogs                       AuditLog[]
+  sesionesCarga                   CargaRosterSesion[]
+  Materia                         Materia[]
+  CursoMateria                    CursoMateria[]
+  identificadoresAcudiente        IdentificadorAcudiente[]
+  identificadoresProfesor         IdentificadorProfesor[]
+  identificadoresEstudiante       IdentificadorEstudiante[] // SPEC-320: colegioId denormalizado en el identificador de estudiante
   // SPEC-380 (PR B · C4): identificadores del comité vigilados por colegio.
   identificadoresIntegranteComite IdentificadorIntegranteComite[]
-  onboarding                OnboardingColegio?
-  notificacionesInApp       NotificacionInApp[]
+  onboarding                      OnboardingColegio?
+  notificacionesInApp             NotificacionInApp[]
   // SPEC-210 (002-PI-110): módulo de pagos.
-  suscripciones             Suscripcion[]
+  suscripciones                   Suscripcion[]
 
   @@index([paisId])
   @@index([departamentoId])
@@ -1451,22 +1461,22 @@ model Estudiante {
 // siempre a través del estudiante ya acotado por colegioId (patrón E-1/SPEC-134).
 // SPEC-163: estado (activo/inactivo) como baja lógica aditiva.
 model AcudienteEstudiante {
-  id           String   @id @default(cuid())
-  estudianteId String
-  orden        Int // 1 = principal, 2 = secundario
-  nombre       String
-  relacion     String // "madre" | "padre" | "tía" | … (texto libre corto)
-  telefono     String?
-  email        String?
+  id              String   @id @default(cuid())
+  estudianteId    String
+  orden           Int // 1 = principal, 2 = secundario
+  nombre          String
+  relacion        String // "madre" | "padre" | "tía" | … (texto libre corto)
+  telefono        String?
+  email           String?
   // SPEC-344 (A-69 · C1) · D-acud: documento del acudiente OPCIONAL (mockup 1.6).
   // Sin unicidad nueva — el mismo documento puede repetirse (padre con varios
   // hijos). El tipo se valida contra el catálogo TipoDocumento activo cuando
   // viene; ausente = ausente.
   documentoTipo   String?
   documentoNumero String?
-  estado       String   @default("activo") // activo | inactivo
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  estado          String   @default("activo") // activo | inactivo
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   estudiante      Estudiante               @relation(fields: [estudianteId], references: [id])
   identificadores IdentificadorAcudiente[]
@@ -1591,38 +1601,38 @@ model IdentificadorEstudiante {
 // SPEC-165: alerta extendida a estudiante/profesor/acudiente. Una sola FK
 // poblada según tipoSujeto; constraint única por tipo evita duplicados.
 model AlertaColegio {
-  id                        String   @id @default(cuid())
-  colegioId                 String
-  reporteId                 String
-  identificadorEstudianteId String?  @map("identificadorAlumnoId")
-  identificadorProfesorId   String?
-  identificadorAcudienteId  String?
+  id                              String   @id @default(cuid())
+  colegioId                       String
+  reporteId                       String
+  identificadorEstudianteId       String?  @map("identificadorAlumnoId")
+  identificadorProfesorId         String?
+  identificadorAcudienteId        String?
   // SPEC-380 (PR B · C4/D-100): 4º sujeto — integrante del comité de convivencia.
   // Adulto, no menor, pero se vigila igual: aviso al colegio, jamás a la persona.
   identificadorIntegranteComiteId String?
-  tipoSujeto                String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE | INTEGRANTE_COMITE
-  estado                    String   @default("nueva") // nueva | vista | gestionada | escalada | cerrada
-  prioridad                 String   @default("media") // alta | media | baja
-  vencimientoSla            DateTime @db.Timestamptz(6)
-  asignadoAId               String?
+  tipoSujeto                      String   @default("ESTUDIANTE") // ESTUDIANTE | PROFESOR | ACUDIENTE | INTEGRANTE_COMITE
+  estado                          String   @default("nueva") // nueva | vista | gestionada | escalada | cerrada
+  prioridad                       String   @default("media") // alta | media | baja
+  vencimientoSla                  DateTime @db.Timestamptz(6)
+  asignadoAId                     String?
   // SPEC-142 (F6): fila agregada que ESTA alerta aportó (idempotencia + reversa
   // exacta en baja). Nullable: las alertas previas a F6 no aportan al agregado.
-  patronInstitucionalId     String?
-  creadoEn                  DateTime @default(now()) @db.Timestamptz(6)
-  actualizadoEn             DateTime @updatedAt @db.Timestamptz(6)
+  patronInstitucionalId           String?
+  creadoEn                        DateTime @default(now()) @db.Timestamptz(6)
+  actualizadoEn                   DateTime @updatedAt @db.Timestamptz(6)
 
-  colegio                 Colegio                  @relation(fields: [colegioId], references: [id])
-  reporte                 Reporte                  @relation(fields: [reporteId], references: [id])
-  identificadorEstudiante IdentificadorEstudiante? @relation(fields: [identificadorEstudianteId], references: [id])
-  identificadorProfesor   IdentificadorProfesor?   @relation(fields: [identificadorProfesorId], references: [id])
-  identificadorAcudiente  IdentificadorAcudiente?  @relation(fields: [identificadorAcudienteId], references: [id])
+  colegio                       Colegio                        @relation(fields: [colegioId], references: [id])
+  reporte                       Reporte                        @relation(fields: [reporteId], references: [id])
+  identificadorEstudiante       IdentificadorEstudiante?       @relation(fields: [identificadorEstudianteId], references: [id])
+  identificadorProfesor         IdentificadorProfesor?         @relation(fields: [identificadorProfesorId], references: [id])
+  identificadorAcudiente        IdentificadorAcudiente?        @relation(fields: [identificadorAcudienteId], references: [id])
   // SPEC-380 (PR B): 4ª relación al identificador del integrante del comité.
   identificadorIntegranteComite IdentificadorIntegranteComite? @relation(fields: [identificadorIntegranteComiteId], references: [id])
-  patronInstitucional     PatronInstitucional?     @relation(fields: [patronInstitucionalId], references: [id])
-  asignadoA               Usuario?                 @relation(fields: [asignadoAId], references: [id])
-  seguimiento             SeguimientoCaso?
+  patronInstitucional           PatronInstitucional?           @relation(fields: [patronInstitucionalId], references: [id])
+  asignadoA                     Usuario?                       @relation(fields: [asignadoAId], references: [id])
+  seguimiento                   SeguimientoCaso?
   // SPEC-168: una alerta escalada genera una única solicitud al Comité de Convivencia.
-  solicitudComite         SolicitudComite?
+  solicitudComite               SolicitudComite?
 
   @@unique([colegioId, reporteId, identificadorEstudianteId])
   @@unique([colegioId, reporteId, identificadorProfesorId])
@@ -1764,18 +1774,18 @@ model Plataforma {
   esActiva  Boolean  @default(true)
   creadoEn  DateTime @default(now())
 
-  reportes                  Reporte[]
-  identificadores           IdentificadorReportado[]
-  alertasSuscripcion        AlertaSuscripcion[]
-  identificadoresContacto   IdentificadorContacto[]
-  identificadoresHijo       IdentificadorHijo[]
-  identificadoresEstudiante IdentificadorEstudiante[]
-  identificadoresAcudiente  IdentificadorAcudiente[]
-  identificadoresProfesor   IdentificadorProfesor[]
+  reportes                        Reporte[]
+  identificadores                 IdentificadorReportado[]
+  alertasSuscripcion              AlertaSuscripcion[]
+  identificadoresContacto         IdentificadorContacto[]
+  identificadoresHijo             IdentificadorHijo[]
+  identificadoresEstudiante       IdentificadorEstudiante[]
+  identificadoresAcudiente        IdentificadorAcudiente[]
+  identificadoresProfesor         IdentificadorProfesor[]
   // SPEC-380 (PR B · C4): backref para reportes/matching por plataforma.
   identificadoresIntegranteComite IdentificadorIntegranteComite[]
-  apelaciones               Apelacion[]
-  patronesInstitucionales   PatronInstitucional[]
+  apelaciones                     Apelacion[]
+  patronesInstitucionales         PatronInstitucional[]
 
   @@index([clave])
   @@index([esActiva])
@@ -1849,11 +1859,11 @@ model Ciudad {
   nombreNormalizado String   @default("")
   poblacion         Int?
 
-  pais           Pais          @relation(fields: [paisId], references: [id])
-  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
-  usuariosPerfil Usuario[]     @relation("UsuariosPorCiudad")
-  colegios       Colegio[]
-  reportes       Reporte[]
+  pais                  Pais                @relation(fields: [paisId], references: [id])
+  departamento          Departamento?       @relation(fields: [departamentoId], references: [id])
+  usuariosPerfil        Usuario[]           @relation("UsuariosPorCiudad")
+  colegios              Colegio[]
+  reportes              Reporte[]
   // SPEC-388 (A-75 · L1a): profesionales que dicen atender en esta ciudad.
   perfilesProfesionales PerfilProfesional[]
 
@@ -1973,9 +1983,9 @@ model SolicitudComite {
   // SPEC-380 (PR A · C4): análisis del comité EDITABLE durante la deliberación,
   // separado de `resolucion` (que solo se llena al cerrar y ya la lee el
   // informe del caso en informes-caso.ts:193 — no se toca su semántica).
-  analisis              String?   @db.Text
-  analisisActualizadoEn DateTime?
-  analisisPorId         String?
+  analisis               String?   @db.Text
+  analisisActualizadoEn  DateTime?
+  analisisPorId          String?
   // SPEC-380 (PR A): "el comité recomienda al rector emitir el informe" — marca
   // temporal + quién la puso. La emisión sigue firmándola el rector.
   recomendacionInformeEn DateTime?
@@ -2709,22 +2719,22 @@ model Expediente {
   createdAt                       DateTime         @default(now()) @db.Timestamptz(6)
   updatedAt                       DateTime         @updatedAt @db.Timestamptz(6)
 
-  padre                  Usuario?              @relation(fields: [padreUsuarioId], references: [id])
-  eventos                EventoExpediente[]
+  padre                      Usuario?              @relation(fields: [padreUsuarioId], references: [id])
+  eventos                    EventoExpediente[]
   // SPEC-234 (002-PI-134): informes consolidados y patrones N1 del expediente.
-  informes               InformeConsolidado[]
-  patrones               PatronExpediente[]
-  expedienteAnterior     Expediente?           @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
-  expedientesPosteriores Expediente[]          @relation("ExpedienteRelacionado")
+  informes                   InformeConsolidado[]
+  patrones                   PatronExpediente[]
+  expedienteAnterior         Expediente?           @relation("ExpedienteRelacionado", fields: [expedienteRelacionadoAnteriorId], references: [id])
+  expedientesPosteriores     Expediente[]          @relation("ExpedienteRelacionado")
   // SPEC-238 (002-PI-mega-cola): aclaración padre-comité (máx. una por expediente).
-  aclaracion             AclaracionExpediente?
+  aclaracion                 AclaracionExpediente?
   // SPEC-239 (002-PI-mega-cola): SLA efectivo y marca de escalamiento a ROJO.
-  slaEfectivoHoras       Int?
-  fechaEscaladoRojoEn    DateTime?             @db.Timestamptz(6)
+  slaEfectivoHoras           Int?
+  fechaEscaladoRojoEn        DateTime?             @db.Timestamptz(6)
   // SPEC-340: historial inmutable de informes del padre.
-  informesPadre          InformePadre[]
+  informesPadre              InformePadre[]
   // SPEC-341 (A-68 §4.4 capa 2): análisis IA en fila del expediente.
-  analisisIa             AnalisisExpediente[]
+  analisisIa                 AnalisisExpediente[]
   // SPEC-388 (A-75 · L1a): solicitudes de cita que compartieron este expediente
   // con un profesional (opcional; el padre lo comparte y puede revocarlo).
   solicitudesCitaCompartidas SolicitudCita[]
@@ -3445,8 +3455,8 @@ enum EstadoSolicitudCita {
 }
 
 model PerfilProfesional {
-  id                       String                   @id @default(cuid())
-  usuarioId                String                   @unique
+  id                       String                  @id @default(cuid())
+  usuarioId                String                  @unique
   nombreVisible            String
   fotoUrl                  String?
   tituloProfesional        String
@@ -3454,14 +3464,14 @@ model PerfilProfesional {
   // con `has` de Prisma sin necesitar una tabla puente.
   especialidades           String[]
   ciudadId                 String
-  atiendeVirtual           Boolean                  @default(false)
-  atiendePresencial        Boolean                  @default(false)
+  atiendeVirtual           Boolean                 @default(false)
+  atiendePresencial        Boolean                 @default(false)
   aniosExperiencia         Int
-  presentacion             String                   @db.Text
+  presentacion             String                  @db.Text
   tarifaConsultaCOP        Int
   duracionMinutos          Int
-  emiteFactura             Boolean                  @default(false)
-  estado                   EstadoPerfilProfesional  @default(BORRADOR)
+  emiteFactura             Boolean                 @default(false)
+  estado                   EstadoPerfilProfesional @default(BORRADOR)
   // Internos, NUNCA públicos (candado del brief §2). fechaNacimiento y
   // documento se reusan de Usuario; acá van los que NO viven allá.
   numeroTarjetaProfesional String?
@@ -3474,9 +3484,9 @@ model PerfilProfesional {
   // la autorización fue PREVIA a la consulta de antecedentes — sin fecha
   // no se puede probar. Ambos INTERNOS: nunca por API pública.
   autorizacionArchivoUrl   String?
-  autorizacionSubidaEn     DateTime?                @db.Timestamptz(6)
-  creadoEn                 DateTime                 @default(now()) @db.Timestamptz(6)
-  actualizadoEn            DateTime                 @updatedAt @db.Timestamptz(6)
+  autorizacionSubidaEn     DateTime?               @db.Timestamptz(6)
+  creadoEn                 DateTime                @default(now()) @db.Timestamptz(6)
+  actualizadoEn            DateTime                @updatedAt @db.Timestamptz(6)
 
   usuario        Usuario                   @relation(fields: [usuarioId], references: [id])
   ciudad         Ciudad                    @relation(fields: [ciudadId], references: [id])
@@ -3494,28 +3504,28 @@ model PerfilProfesional {
 // aprobación, la anterior queda para auditoría. `venceEn` se calcula al
 // insertar (revisadoEn + 4 meses) y el worker de L2 avisa un mes antes.
 model VerificacionProfesional {
-  id                     String                 @id @default(cuid())
+  id                     String                @id @default(cuid())
   perfilProfesionalId    String
   revisadoPorId          String
-  revisadoEn             DateTime               @default(now()) @db.Timestamptz(6)
+  revisadoEn             DateTime              @default(now()) @db.Timestamptz(6)
   checklist              Json
   resultado              ResultadoVerificacion
   // Ruta a la autorización firmada por el profesional (Ley 2375/2024 exige
   // documento archivado). Storage PROTEGIDO — se sirve tras auth + módulo de
   // admin, nunca por URL adivinable. El servicio de storage lo trae L1b.
   autorizacionArchivoUrl String
-  venceEn                DateTime               @db.Timestamptz(6)
-  creadoEn               DateTime               @default(now()) @db.Timestamptz(6)
+  venceEn                DateTime              @db.Timestamptz(6)
+  creadoEn               DateTime              @default(now()) @db.Timestamptz(6)
 
   // SPEC-388 (aviso 05:26): idempotencia del recordatorio 30-días-antes que
   // implementa L2. NULL = todavía no se avisó; el worker marca la fecha
   // cuando envía, para no repetir en la siguiente vuelta (mismo patrón que
   // I-280 en SPAM_ALERTA_REVISION_ENVIADA).
-  avisoVencimientoEnviadoEn DateTime?             @db.Timestamptz(6)
+  avisoVencimientoEnviadoEn DateTime? @db.Timestamptz(6)
   // SPEC-388 (aviso 05:26): motivo del rechazo o qué falta en MAS_INFORMACION.
   // CANDADO DE RESERVA: NUNCA sale por API pública (agregar a la lista de
   // campos prohibidos del test cuando L1b/L2 los agreguen).
-  notaInterna               String?               @db.Text
+  notaInterna               String?   @db.Text
 
   perfilProfesional PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id])
   revisadoPor       Usuario           @relation("VerificacionesRevisadasPor", fields: [revisadoPorId], references: [id])
@@ -3527,13 +3537,13 @@ model VerificacionProfesional {
 }
 
 model FranjaDisponible {
-  id             String        @id @default(cuid())
-  profesionalId  String
-  inicio         DateTime      @db.Timestamptz(6)
-  fin            DateTime      @db.Timestamptz(6)
-  modalidad      ModalidadCita
-  tomada         Boolean       @default(false)
-  creadoEn       DateTime      @default(now()) @db.Timestamptz(6)
+  id            String        @id @default(cuid())
+  profesionalId String
+  inicio        DateTime      @db.Timestamptz(6)
+  fin           DateTime      @db.Timestamptz(6)
+  modalidad     ModalidadCita
+  tomada        Boolean       @default(false)
+  creadoEn      DateTime      @default(now()) @db.Timestamptz(6)
 
   profesional PerfilProfesional @relation(fields: [profesionalId], references: [id])
   // 1:0..1 — al confirmar una solicitud se marca `tomada = true` y se guarda
@@ -3564,6 +3574,12 @@ model SolicitudCita {
   //     manual; §4 v1.3 lo dejó explícito.
   venceEn                DateTime            @db.Timestamptz(6)
   pagoAprobadoEn         DateTime?           @db.Timestamptz(6)
+  // SPEC-427 (I-300) · el autocierre a 5 días deja MARCA PROPIA. `SIN_CONFIRMAR`
+  // carga dos intenciones —«recién creada, nadie pagó» y «la cita pasó y nadie
+  // la cerró»— y la cola 2 del Verificador no las distinguía: mostraba como
+  // incidente cualquier solicitud impaga. La separación va en columna, no en
+  // inferencia (regla de SPEC-398 / I-278).
+  autocerradaEn          DateTime?           @db.Timestamptz(6)
   expedienteCompartidoId String?
   // SPEC-388a · brief v1.3: reprogramación como FILA NUEVA (no transición) —
   // conserva el historial del primer intento. La nueva fila apunta a la
@@ -3582,21 +3598,65 @@ model SolicitudCita {
   creadoEn               DateTime            @default(now()) @db.Timestamptz(6)
   actualizadoEn          DateTime            @updatedAt @db.Timestamptz(6)
 
-  padreUsuario         Usuario                @relation("SolicitudesCitaPadre", fields: [padreUsuarioId], references: [id])
-  profesional          PerfilProfesional      @relation(fields: [profesionalId], references: [id])
-  franja               FranjaDisponible       @relation(fields: [franjaId], references: [id])
-  expedienteCompartido Expediente?            @relation(fields: [expedienteCompartidoId], references: [id])
-  solicitudPrevia      SolicitudCita?         @relation("SolicitudReprogramada", fields: [solicitudPreviaId], references: [id])
-  reprogramaciones     SolicitudCita[]        @relation("SolicitudReprogramada")
-  pagoHeredadoDe       SolicitudCita?         @relation("PagoHeredado", fields: [pagoHeredadoDeId], references: [id])
-  pagosQueHereda       SolicitudCita[]        @relation("PagoHeredado")
+  padreUsuario         Usuario              @relation("SolicitudesCitaPadre", fields: [padreUsuarioId], references: [id])
+  profesional          PerfilProfesional    @relation(fields: [profesionalId], references: [id])
+  franja               FranjaDisponible     @relation(fields: [franjaId], references: [id])
+  expedienteCompartido Expediente?          @relation(fields: [expedienteCompartidoId], references: [id])
+  solicitudPrevia      SolicitudCita?       @relation("SolicitudReprogramada", fields: [solicitudPreviaId], references: [id])
+  reprogramaciones     SolicitudCita[]      @relation("SolicitudReprogramada")
+  pagoHeredadoDe       SolicitudCita?       @relation("PagoHeredado", fields: [pagoHeredadoDeId], references: [id])
+  pagosQueHereda       SolicitudCita[]      @relation("PagoHeredado")
   encuesta             EncuestaPrimeraCita?
+  codigos              CodigoCita[]
 
   // L4/L5: bandeja del profesional (sus solicitudes por estado) y del padre.
   @@index([profesionalId, estado, creadoEn(sort: Desc)])
   @@index([padreUsuarioId, estado, creadoEn(sort: Desc)])
   // L6: worker que devuelve al padre a las 48 h y autocierra a los 5 días.
   @@index([estado, venceEn])
+}
+
+// SPEC-427 (A-75 · L6 · brief §9 momento 6) — los dos códigos del cierre.
+//
+// Uno solo por fila; el TIPO los distingue en una COLUMNA DEDICADA, no por el
+// contenido ni por la longitud. Son dos cosas distintas y en algún momento van
+// a divergir (vigencias, quién los pide): inferirlos de la forma sería el error
+// que ya se pagó en I-278 y en SPEC-398.
+//
+// Cada emisión es una FILA, y ese conjunto **es la traza** que el brief exige
+// que vean los tres —administrador, padre y profesional—: cuántas veces se
+// pidió cada código sale de contar filas, y si el profesional lo digitó sale de
+// `usadoEn`.
+//
+// El envío NO se copia acá. `notificacionId` apunta a la fila del motor, que es
+// la única que sabe si salió, a qué hora y si falló (SPEC-418 · I-295). Copiar
+// un `enviadoEn` propio sería inventar un dato que puede ser mentira: la fila
+// del código se crea antes de que el correo exista.
+enum TipoCodigoCita {
+  // Certifica que la sesión OCURRIÓ. Al digitarlo, la cita queda CUMPLIDA.
+  CITA
+  // Autoriza al profesional a ABRIR el expediente. Solo si el padre lo compartió.
+  EXPEDIENTE
+}
+
+model CodigoCita {
+  id               String         @id @default(cuid())
+  solicitudId      String
+  tipo             TipoCodigoCita
+  // bcrypt, igual que `CodigoVerificacion.codigoHash` — nunca en claro.
+  codigoHash       String
+  expiraEn         DateTime       @db.Timestamptz(6)
+  intentosFallidos Int            @default(0)
+  // Cuándo lo digitó el profesional. Null = no lo usó. Un solo uso.
+  usadoEn          DateTime?      @db.Timestamptz(6)
+  // Fila de `notificaciones` que lo lleva al padre; ahí vive el estado del envío.
+  notificacionId   String?
+  creadoEn         DateTime       @default(now()) @db.Timestamptz(6)
+
+  solicitud SolicitudCita @relation(fields: [solicitudId], references: [id])
+
+  // La traza y la validación piden lo mismo: el último código de un tipo.
+  @@index([solicitudId, tipo, creadoEn(sort: Desc)])
 }
 
 model EncuestaPrimeraCita {

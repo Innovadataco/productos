@@ -3,6 +3,10 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { fechaCorta, fechaHora } from "@/lib/format/fecha";
 import type { PanelProfesionalDto } from "@/lib/profesional/panel/panel.service";
 import { SolicitudAcciones } from "./SolicitudAcciones";
+import { CerrarConCodigo } from "./CerrarConCodigo";
+
+/** Días del autocierre (brief §3). Lo dice el servidor; acá solo se muestra. */
+const DIAS_AUTOCIERRE_UI = 5;
 
 /**
  * SPEC-425 (A-75 · L5) · El inicio del profesional.
@@ -162,15 +166,18 @@ function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
                                     <strong className="text-body">{pesos(c.montoRetenido)}</strong> queda
                                     retenido hasta que la cierres.
                                 </p>
+                                <CerrarConCodigo solicitudId={c.id} />
                             </div>
                         </li>
                     ))}
                 </ul>
             )}
-            {/* Honestidad sobre el alcance: el cierre es de L6, no de este lote. */}
+            {/* SPEC-427: el cierre ya existe. Liberar el pago sigue siendo de L7. */}
             <p className="mt-4 border-t border-tinta/8 pt-3 text-xs text-subtle">
-                Cerrar la cita y liberar el pago todavía no está disponible. Llega con el cierre y la
-                encuesta; hasta entonces esta lista es para que sepas cuáles te faltan.
+                Cerrás la cita con el código que te dicta el padre. Si pasan {DIAS_AUTOCIERRE_UI} días sin
+                cerrarla, queda sin confirmar y no entra en el pago.
+                <br />
+                El giro de la plata todavía no está disponible: por ahora cerrar deja la constancia.
             </p>
         </Bloque>
     );

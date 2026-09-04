@@ -395,6 +395,35 @@ services:
       timeout: 5s
       retries: 3
 
+  # SPEC-427 (I-301) · los barredores de la cita profesional. Antes de este
+  # servicio, `barrerAvisoVencimiento48h` y `barrerPlazoPagoDelPadre` (SPEC-395)
+  # estaban escritos y probados pero NADIE los llamaba: el reloj de 48 h del
+  # brief §3 no corría en producción. Arranque liviano — solo Postgres, sin
+  # Ollama: si el motor de IA está caído, las citas se siguen cerrando.
+  pi-citas:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-citas
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-citas.mjs
+    environment:
+      TZ: America/Bogota
+      # SPEC-291: WORKER_RUN_DIR + pi_worker_run para el tick-vida "pi-citas".
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      # El proceso principal del contenedor ES el worker (PID 1).
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   pi_postgres_data:
   pi_worker_run:

@@ -202,4 +202,103 @@ export class SolicitudCitaRepository {
     marcarNoAsistioProfesional(id: string) {
         return this.db.solicitudCita.update({ where: { id }, data: { estado: "NO_ASISTIO_PROFESIONAL" } });
     }
+
+    /**
+     * SPEC-427 · el profesional digitó el código de cita: la sesión ocurrió.
+     * `updateMany` con el estado esperado en el WHERE para que dos peticiones
+     * simultáneas no cierren dos veces (devuelve cuántas filas movió).
+     */
+    async marcarCumplidaSiConfirmada(id: string): Promise<SolicitudCita | null> {
+        const r = await this.db.solicitudCita.updateMany({
+            where: { id, estado: "CONFIRMADA" },
+            data: { estado: "CUMPLIDA" },
+        });
+        // Devuelve la fila, no un booleano: quien cierra le informa al padre y a
+        // la pantalla el estado REAL que quedó en la base, no el que supone.
+        if (r.count !== 1) return null;
+        return this.db.solicitudCita.findUnique({ where: { id } });
+    }
+
+    /**
+     * SPEC-427 · el profesional declara que la familia no se presentó.
+     *
+     * Mismo molde que `marcarCumplidaSiConfirmada` y a propósito: son los DOS
+     * estados de cierre y los escribe el mismo actor desde la misma pantalla.
+     * Que vivan juntos es lo que permite custodiar con un candado que ninguno
+     * tenga un segundo escritor por ahí suelto.
+     */
+    async marcarNoAsistioPadreSiConfirmada(id: string): Promise<SolicitudCita | null> {
+        const r = await this.db.solicitudCita.updateMany({
+            where: { id, estado: "CONFIRMADA" },
+            data: { estado: "NO_ASISTIO_PADRE" },
+        });
+        if (r.count !== 1) return null;
+        return this.db.solicitudCita.findUnique({ where: { id } });
+    }
+
+    /**
+     * SPEC-427 (I-300) · autocierre a los 5 días sin código.
+     * Deja `autocerradaEn` además del estado: es la MARCA que separa «la cita
+     * pasó y nadie la cerró» de «recién creada y nadie pagó», que comparten
+     * `SIN_CONFIRMAR`. La cola 2 del Verificador filtra por esta columna.
+     */
+    marcarAutocerrada(id: string, autocerradaEn: Date) {
+        return this.db.solicitudCita.update({
+            where: { id },
+            data: { estado: "SIN_CONFIRMAR", autocerradaEn },
+        });
+    }
+
+    /**
+     * SPEC-427 · citas confirmadas que arrancan dentro de la ventana y que
+     * todavía no tienen código de cita emitido. El recordatorio con el código
+     * sale de acá: se emite CERCA de la hora, no días antes.
+     */
+    listarConfirmadasPorArrancar(desde: Date, hasta: Date) {
+        return this.db.solicitudCita.findMany({
+            where: {
+                estado: "CONFIRMADA",
+                franja: { inicio: { gte: desde, lte: hasta } },
+                codigos: { none: { tipo: "CITA" } },
+            },
+            include: {
+                franja: { select: { inicio: true, fin: true } },
+                padreUsuario: { select: { id: true, email: true, nombre: true } },
+                profesional: { select: { id: true, nombreVisible: true } },
+            },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
+
+    /** SPEC-427 · una solicitud con lo que hace falta para emitir y avisar. */
+    findParaCodigo(id: string) {
+        return this.db.solicitudCita.findUnique({
+            where: { id },
+            include: {
+                franja: { select: { inicio: true, fin: true } },
+                padreUsuario: { select: { id: true, email: true, nombre: true } },
+                profesional: { select: { id: true, nombreVisible: true } },
+            },
+        });
+    }
+
+    /**
+     * SPEC-427 · candidatas al autocierre: confirmadas cuya franja terminó hace
+     * más de N días y que nadie cerró todavía.
+     */
+    listarConfirmadasVencidasParaAutocierre(limite: Date) {
+        return this.db.solicitudCita.findMany({
+            where: {
+                estado: "CONFIRMADA",
+                autocerradaEn: null,
+                franja: { fin: { lt: limite } },
+            },
+            include: {
+                franja: { select: { inicio: true, fin: true } },
+                padreUsuario: { select: { id: true, email: true, nombre: true } },
+                profesional: { select: { id: true, nombreVisible: true } },
+            },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
 }
