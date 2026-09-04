@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 524 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3668 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 531 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3717 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -175,6 +175,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/tasas` | api | permitir | permite | sí |
 | `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
+| `/api/admin/profesionales` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/restablecer-password` | api | permitir | permite | sí |
+| `/api/admin/profesionales/solicitudes` | api | permitir | permite | sí |
+| `/api/admin/profesionales/solicitudes/reenviar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/clasificar` | api | permitir | permite | sí |
@@ -474,6 +480,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
+| `/dashboard/admin/profesionales/gestion` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
@@ -704,6 +711,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/tasas` | api | permitir | permite | sí |
 | `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
+| `/api/admin/profesionales` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/restablecer-password` | api | permitir | permite | sí |
+| `/api/admin/profesionales/solicitudes` | api | permitir | permite | sí |
+| `/api/admin/profesionales/solicitudes/reenviar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/clasificar` | api | permitir | permite | sí |
@@ -1003,6 +1016,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
+| `/dashboard/admin/profesionales/gestion` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
@@ -1233,6 +1247,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/tasas` | api | permitir | permite | sí |
 | `/api/admin/pagos/vencimientos` | api | permitir | permite | sí |
 | `/api/admin/permisos-modulos` | api | permitir | permite | sí |
+| `/api/admin/profesionales` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/restablecer-password` | api | permitir | permite | sí |
+| `/api/admin/profesionales/solicitudes` | api | permitir | permite | sí |
+| `/api/admin/profesionales/solicitudes/reenviar` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | permitir | permite | sí |
 | `/api/admin/reportes-revision/[id]/clasificar` | api | permitir | permite | sí |
@@ -1532,6 +1552,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/reembolsos` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/sin-suscripcion` | página | permitir | permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | permitir | permite | sí |
+| `/dashboard/admin/profesionales/gestion` | página | permitir | permite | sí |
 | `/dashboard/admin/spam` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios` | página | permitir | permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | permitir | permite | sí |
@@ -1762,6 +1783,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/solicitudes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 403 | no permite | sí |
@@ -2061,6 +2088,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/admin/profesionales/gestion` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2291,6 +2319,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/solicitudes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 403 | no permite | sí |
@@ -2590,6 +2624,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/admin/profesionales/gestion` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -2820,6 +2855,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/tasas` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/vencimientos` | api | HTTP 403 | no permite | sí |
 | `/api/admin/permisos-modulos` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/solicitudes` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 403 | no permite | sí |
@@ -3119,6 +3160,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/ | no permite | sí |
+| `/dashboard/admin/profesionales/gestion` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/ | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/ | no permite | sí |
@@ -3349,6 +3391,12 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/pagos/tasas` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/vencimientos` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/permisos-modulos` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/profesionales` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/profesionales/[id]` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/profesionales/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/profesionales/solicitudes` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/reportes-revision/[id]/clasificar` | api | HTTP 401 | permite | **NO** |
@@ -3648,6 +3696,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/admin/pagos/reembolsos` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/pagos/sin-suscripcion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/pagos/vencimientos` | página | redirigir→/login | no permite | sí |
+| `/dashboard/admin/profesionales/gestion` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/spam` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/usuarios` | página | redirigir→/login | no permite | sí |
 | `/dashboard/admin/usuarios/[id]` | página | redirigir→/login | no permite | sí |
@@ -3878,6 +3927,12 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/pagos/tasas` | HTTP 401 | permite |
 | `/api/admin/pagos/vencimientos` | HTTP 401 | permite |
 | `/api/admin/permisos-modulos` | HTTP 401 | permite |
+| `/api/admin/profesionales` | HTTP 401 | permite |
+| `/api/admin/profesionales/[id]` | HTTP 401 | permite |
+| `/api/admin/profesionales/[id]/reactivar` | HTTP 401 | permite |
+| `/api/admin/profesionales/[id]/restablecer-password` | HTTP 401 | permite |
+| `/api/admin/profesionales/solicitudes` | HTTP 401 | permite |
+| `/api/admin/profesionales/solicitudes/reenviar` | HTTP 401 | permite |
 | `/api/admin/reportes-revision` | HTTP 401 | permite |
 | `/api/admin/reportes-revision/[id]` | HTTP 401 | permite |
 | `/api/admin/reportes-revision/[id]/clasificar` | HTTP 401 | permite |
@@ -4171,6 +4226,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | operadores | `/dashboard/admin/operadores` | ADMIN |
 | padres | `/dashboard/admin/padres` | ADMIN |
 | pagos_admin | `/dashboard/admin/pagos` | ADMIN |
+| profesionales_admin | `/dashboard/admin/profesionales/gestion` | ADMIN |
 | revision_spam | `/dashboard/admin/spam` | ADMIN |
 | usuarios_admin | `/dashboard/admin/usuarios` | ADMIN |
 

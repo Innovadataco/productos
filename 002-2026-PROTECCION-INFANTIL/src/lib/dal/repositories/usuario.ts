@@ -284,6 +284,44 @@ export class UsuarioRepository {
         });
     }
 
+    /**
+     * SPEC-421 · listado paginado de cuentas de profesionales con filtro q.
+     * Espejo de `findPadresPaginados` sin `inicioServicio`/`finServicio` (el
+     * profesional no tiene vigencia — a él lo elige el padre).
+     */
+    findProfesionalesPaginados(
+        where: Prisma.UsuarioWhereInput,
+        paginacion: { skip: number; take: number }
+    ) {
+        const select = {
+            id: true,
+            email: true,
+            nombre: true,
+            estado: true,
+            debeCambiarPassword: true,
+            creadoEn: true,
+            ultimaSesion: true,
+        } satisfies Prisma.UsuarioSelect;
+        return Promise.all([
+            this.db.usuario.findMany({
+                where,
+                orderBy: { creadoEn: "desc" },
+                skip: paginacion.skip,
+                take: paginacion.take,
+                select,
+            }),
+            this.db.usuario.count({ where }),
+        ]);
+    }
+
+    /** SPEC-421 · cuenta PROFESIONAL por id (para gestión admin). */
+    findProfesionalById(id: string) {
+        return this.db.usuario.findFirst({
+            where: { id, rol: "PROFESIONAL" },
+            select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true, creadoEn: true, ultimaSesion: true },
+        });
+    }
+
     /** E-8: ventana de servicio de una cuenta PARENT (gestión de vigencia, SPEC-119). */
     findPadreVigencia(id: string) {
         return this.db.usuario.findFirst({
