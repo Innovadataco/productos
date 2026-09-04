@@ -75,15 +75,31 @@ const PREFIJOS_EXENTOS_FAIL_CLOSED = [
     "/api/consentimiento",
 ];
 
-// Familias donde el CEO dijo "no decidas": pagos (¿deben tener vigencia?),
-// suscripción (misma pregunta). Se marcan "decidir" con las dos opciones.
-const PREFIJOS_DECIDIR_FAIL_CLOSED = [
+// SPEC-400b · decisión CEO 02:12 sobre las 12 rutas de pagos/suscripción:
+// exenta SELECTIVA — por guardián, NO en bloque. Candado lógico: pagar es la
+// única salida del estado vencido; exigir vigencia para renovar encierra al
+// usuario fuera de su cuenta sin camino de vuelta (abrazo mortal). El paso
+// "plan" del camino guiado está en `src/lib/camino/pasos.ts:22` (PARENT) y
+// `pasos-colegio.ts:20` (SCHOOL_ADMIN) — verificado positivamente: el paso
+// del plan cuelga del camino, así que un guardián de camino bloqueante
+// tapa el propio camino. Consentimiento y cambio-de-clave siguen exigidos:
+// quien no aceptó el tratamiento de datos no debe transar; una cuenta con
+// cambio de clave forzado es señal de compromiso — menos que nunca se mueve
+// plata ahí.
+const PREFIJOS_EXENTA_SELECTIVA_FAIL_CLOSED = [
     "/api/pagos/",
     "/api/padre/suscripcion",
     "/api/colegio/suscripcion",
 ];
 
-type Veredicto = "bloquear" | "exenta" | "decidir";
+type Veredicto = "bloquear" | "exenta" | "exenta_selectiva";
+
+interface DetalleExentaSelectiva {
+    /** Guardianes exentos (fail-closed NO los aplica). */
+    exenta: Array<"consentimiento" | "cambio-de-clave" | "camino" | "vigencia">;
+    /** Guardianes que siguen bloqueando incluso sin cookie. */
+    bloquea: Array<"consentimiento" | "cambio-de-clave" | "camino" | "vigencia">;
+}
 
 interface RutaAPI {
     ruta: string;              // ej: /api/admin/reportes/[id]/expediente
@@ -106,6 +122,8 @@ interface RutaAPI {
     failOpenSinCookie: "PASA" | "REBOTE_CAMINO";
     // Recomendación fail-closed:
     failClosed: Veredicto;
+    // Detalle cuando failClosed === "exenta_selectiva".
+    detalleSelectiva?: DetalleExentaSelectiva;
     // Motivo humano cuando failClosed !== "bloquear".
     motivo: string;
 }
@@ -132,6 +150,7 @@ function evaluarRuta(rutaEval: string, archivo: string, rutaMostrable: string): 
     // Decisión fail-closed:
     let failClosed: Veredicto;
     let motivo = "";
+    let detalleSelectiva: DetalleExentaSelectiva | undefined;
     if (esPub) {
         failClosed = "exenta";
         motivo = "pública por diseño (sin JWT)";
@@ -141,9 +160,13 @@ function evaluarRuta(rutaEval: string, archivo: string, rutaMostrable: string): 
     } else if (PREFIJOS_EXENTOS_FAIL_CLOSED.some((p) => rutaEval.startsWith(p))) {
         failClosed = "exenta";
         motivo = "familia explícita (health/webhooks/auth/vigencia/publico/catálogos)";
-    } else if (PREFIJOS_DECIDIR_FAIL_CLOSED.some((p) => rutaEval.startsWith(p))) {
-        failClosed = "decidir";
-        motivo = "pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida";
+    } else if (PREFIJOS_EXENTA_SELECTIVA_FAIL_CLOSED.some((p) => rutaEval.startsWith(p))) {
+        failClosed = "exenta_selectiva";
+        detalleSelectiva = {
+            exenta: ["vigencia", "camino"],
+            bloquea: ["consentimiento", "cambio-de-clave"],
+        };
+        motivo = "pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso)";
     } else {
         failClosed = "bloquear";
         motivo = "cae en el catálogo genérico";
@@ -161,6 +184,7 @@ function evaluarRuta(rutaEval: string, archivo: string, rutaMostrable: string): 
         aplicaVigencia,
         failOpenSinCookie,
         failClosed,
+        detalleSelectiva,
         motivo,
     };
 }
@@ -198,14 +222,14 @@ function encabezado(): string[] {
 function renderResumen(apis: RutaAPI[]): string[] {
     const bloquear = apis.filter((r) => r.failClosed === "bloquear").length;
     const exenta = apis.filter((r) => r.failClosed === "exenta").length;
-    const decidir = apis.filter((r) => r.failClosed === "decidir").length;
+    const selectivas = apis.filter((r) => r.failClosed === "exenta_selectiva").length;
     return [
         "## Resumen",
         "",
         `- Total de rutas \`/api/**\`: **${apis.length}**`,
         `- Recomendación **bloquear** en fail-closed: **${bloquear}**`,
-        `- Recomendación **exenta** en fail-closed: **${exenta}**`,
-        `- **Decidir** (requiere decisión CEO/Jelkin): **${decidir}**`,
+        `- Recomendación **exenta** en fail-closed (por catálogo): **${exenta}**`,
+        `- Recomendación **exenta selectiva por guardián** (pagos/suscripción): **${selectivas}** — exentas de vigencia y camino; bloqueadas por consentimiento y cambio-de-clave.`,
         "",
     ];
 }
@@ -236,21 +260,28 @@ function renderTablaGuardianes(apis: RutaAPI[]): string[] {
     return lineas;
 }
 
+function veredictoConDetalle(r: RutaAPI): string {
+    if (r.failClosed === "exenta_selectiva" && r.detalleSelectiva) {
+        return `**exenta selectiva** — exenta de: ${r.detalleSelectiva.exenta.join(", ")}; bloquea por: ${r.detalleSelectiva.bloquea.join(", ")}`;
+    }
+    return `**${r.failClosed}**`;
+}
+
 function renderTablaFailClosed(apis: RutaAPI[]): string[] {
     const lineas: string[] = [
         "## Recomendación fail-closed por ruta",
         "",
         "**Regla de lectura**:",
         "",
-        "- `exenta`: entra en el catálogo explícito de rutas que deben responder sin cookie de estado (login, health, webhooks, catálogos, rebotes de sesión, pagos-si-eso-es-lo-que-decide-CEO).",
-        "- `decidir`: hay dos lecturas legítimas; SPEC-400b implementación decide con el CEO.",
+        "- `exenta`: entra en el catálogo explícito de rutas que deben responder sin cookie de estado (login, health, webhooks, catálogos, rebotes de sesión).",
+        "- `exenta selectiva`: exención POR GUARDIÁN, no en bloque. Pagos y suscripción son exentos de VIGENCIA y CAMINO (candado lógico: pagar es la única salida del vencido; el paso `plan` cuelga del camino), pero SIGUEN bloqueados por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso). Decisión CEO 04-09 02:12.",
         "- `bloquear`: si el fail-closed se activa, esta ruta responde `401`/`403` cuando la cookie está ausente (default de «cualquier /api/ regular»).",
         "",
         "| Ruta | Fail-open hoy | Fail-closed propuesto | Motivo |",
         "|------|---------------|-----------------------|--------|",
     ];
     for (const r of apis) {
-        lineas.push(`| \`${r.ruta}\` | ${r.failOpenSinCookie} | **${r.failClosed}** | ${r.motivo} |`);
+        lineas.push(`| \`${r.ruta}\` | ${r.failOpenSinCookie} | ${veredictoConDetalle(r)} | ${r.motivo} |`);
     }
     lineas.push("");
     return lineas;
@@ -283,19 +314,25 @@ function renderMatrizPruebas(apis: RutaAPI[]): string[] {
     return lineas;
 }
 
-function renderDecisionesAbiertas(apis: RutaAPI[]): string[] {
-    const decidir = apis.filter((r) => r.failClosed === "decidir");
-    if (decidir.length === 0) return [];
+function renderExentasSelectivas(apis: RutaAPI[]): string[] {
+    const selectivas = apis.filter((r) => r.failClosed === "exenta_selectiva");
+    if (selectivas.length === 0) return [];
     const lineas: string[] = [
-        "## Decisiones abiertas (`decidir`)",
+        "## Exentas selectivas (decisión CEO 04-09 02:12)",
         "",
-        `${decidir.length} rutas caen fuera del catálogo «exenta obvia» pero cuya exención es discutible. Las dos opciones se listan aquí para que Jelkin/CEO decida antes de codificar.`,
+        `${selectivas.length} rutas de pagos y suscripción. **La exención es POR GUARDIÁN, no en bloque** — leerlas como «exentas planas» sería barra libre, que es exactamente lo contrario del cierre. Motivación textual:`,
         "",
-        "| Ruta | Opciones |",
-        "|------|----------|",
+        "- **Exentas de VIGENCIA**: pagar es la única salida del estado vencido. Exigir vigencia para renovar encierra al usuario fuera de su propia cuenta sin camino de vuelta — abrazo mortal, no decisión de gusto.",
+        "- **Exentas de CAMINO**: el paso `plan` **es parte del camino guiado** (verificado en `src/lib/camino/pasos.ts:22` para PARENT y `src/lib/camino/pasos-colegio.ts:20` para SCHOOL_ADMIN — la lista es `[\"permiso\", \"datos\", \"hijos\", \"plan\"]` y `[\"rector\", \"plan\", …]` respectivamente). Si el camino bloquea las rutas de pago, el propio camino no se puede terminar.",
+        "- **BLOQUEADAS por CONSENTIMIENTO**: quien no aceptó el tratamiento de datos no debe transar.",
+        "- **BLOQUEADAS por CAMBIO-DE-CLAVE**: es una señal de cuenta comprometida — ahí menos que nunca se mueve plata.",
+        "",
+        "| Ruta | Exenta de | Bloquea por |",
+        "|------|-----------|-------------|",
     ];
-    for (const r of decidir) {
-        lineas.push(`| \`${r.ruta}\` | ${r.motivo} |`);
+    for (const r of selectivas) {
+        const d = r.detalleSelectiva!;
+        lineas.push(`| \`${r.ruta}\` | ${d.exenta.join(", ")} | ${d.bloquea.join(", ")} |`);
     }
     lineas.push("");
     return lineas;
@@ -308,7 +345,7 @@ export function generar(): string {
         ...renderResumen(apis),
         ...renderTablaGuardianes(apis),
         ...renderTablaFailClosed(apis),
-        ...renderDecisionesAbiertas(apis),
+        ...renderExentasSelectivas(apis),
         ...renderMatrizPruebas(apis),
     ];
     if (lineas[lineas.length - 1] !== "") lineas.push("");

@@ -23,8 +23,8 @@ Candado 22 v5: enumeración completa, no muestreo.
 
 - Total de rutas `/api/**`: **385**
 - Recomendación **bloquear** en fail-closed: **325**
-- Recomendación **exenta** en fail-closed: **48**
-- **Decidir** (requiere decisión CEO/Jelkin): **12**
+- Recomendación **exenta** en fail-closed (por catálogo): **48**
+- Recomendación **exenta selectiva por guardián** (pagos/suscripción): **12** — exentas de vigencia y camino; bloqueadas por consentimiento y cambio-de-clave.
 
 ## Guardianes que aplican HOY (con cookie `sesion_estado`)
 
@@ -424,8 +424,8 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 
 **Regla de lectura**:
 
-- `exenta`: entra en el catálogo explícito de rutas que deben responder sin cookie de estado (login, health, webhooks, catálogos, rebotes de sesión, pagos-si-eso-es-lo-que-decide-CEO).
-- `decidir`: hay dos lecturas legítimas; SPEC-400b implementación decide con el CEO.
+- `exenta`: entra en el catálogo explícito de rutas que deben responder sin cookie de estado (login, health, webhooks, catálogos, rebotes de sesión).
+- `exenta selectiva`: exención POR GUARDIÁN, no en bloque. Pagos y suscripción son exentos de VIGENCIA y CAMINO (candado lógico: pagar es la única salida del vencido; el paso `plan` cuelga del camino), pero SIGUEN bloqueados por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso). Decisión CEO 04-09 02:12.
 - `bloquear`: si el fail-closed se activa, esta ruta responde `401`/`403` cuando la cookie está ausente (default de «cualquier /api/ regular»).
 
 | Ruta | Fail-open hoy | Fail-closed propuesto | Motivo |
@@ -725,8 +725,8 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/colegio/profesores/[id]/identificadores` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/colegio/rector` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/colegio/reportes/pdf` | PASA | **bloquear** | cae en el catálogo genérico |
-| `/api/colegio/suscripcion/activar-freemium` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/colegio/suscripcion/solicitar-plan` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
+| `/api/colegio/suscripcion/activar-freemium` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/colegio/suscripcion/solicitar-plan` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
 | `/api/colegio/tipos-documento` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/colegio/usuarios` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/config/parametros` | PASA | **bloquear** | cae en el catálogo genérico |
@@ -779,16 +779,16 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/padre/reportes/[id]/texto` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/padre/reportes/cadenas` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/padre/step-up` | PASA | **bloquear** | cae en el catálogo genérico |
-| `/api/padre/suscripcion/activar-freemium` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/padre/suscripcion/solicitar-plan` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/aplicar-bono` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/aplicar-referido` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/planes` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/renovacion` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion/cancelar` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion/estado` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion/validar-bono` | PASA | **decidir** | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
+| `/api/padre/suscripcion/activar-freemium` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/padre/suscripcion/solicitar-plan` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/aplicar-bono` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/aplicar-referido` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/planes` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/renovacion` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/suscripcion` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/suscripcion/cancelar` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/suscripcion/estado` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
+| `/api/pagos/suscripcion/validar-bono` | PASA | **exenta selectiva** — exenta de: vigencia, camino; bloquea por: consentimiento, cambio-de-clave | pagos/suscripción · decisión CEO 04-09 02:12 — exenta de VIGENCIA y CAMINO (pagar es la única salida del vencido; el paso `plan` cuelga del camino, ver `src/lib/camino/pasos.ts:22` y `pasos-colegio.ts:20`), pero SIGUE BLOQUEADA por CONSENTIMIENTO y CAMBIO-DE-CLAVE (quien no aceptó tratamiento de datos no transa; cuenta con clave forzada = señal de compromiso) |
 | `/api/paises` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/plataformas` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/profesional/autorizacion` | PASA | **bloquear** | cae en el catálogo genérico |
@@ -816,24 +816,29 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/vigencia/refresh` | PASA | **exenta** | ruta de sesión (necesaria para salir del bloqueo) |
 | `/api/webhooks/resend` | PASA | **exenta** | pública por diseño (sin JWT) |
 
-## Decisiones abiertas (`decidir`)
+## Exentas selectivas (decisión CEO 04-09 02:12)
 
-12 rutas caen fuera del catálogo «exenta obvia» pero cuya exención es discutible. Las dos opciones se listan aquí para que Jelkin/CEO decida antes de codificar.
+12 rutas de pagos y suscripción. **La exención es POR GUARDIÁN, no en bloque** — leerlas como «exentas planas» sería barra libre, que es exactamente lo contrario del cierre. Motivación textual:
 
-| Ruta | Opciones |
-|------|----------|
-| `/api/colegio/suscripcion/activar-freemium` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/colegio/suscripcion/solicitar-plan` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/padre/suscripcion/activar-freemium` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/padre/suscripcion/solicitar-plan` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/aplicar-bono` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/aplicar-referido` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/planes` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/renovacion` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion/cancelar` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion/estado` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
-| `/api/pagos/suscripcion/validar-bono` | pagos/suscripción: opciones (a) tratar como cualquier /api/ y exigir vigencia; (b) exenta explícita porque pagar SIN vigencia es cómo se sale de la vencida |
+- **Exentas de VIGENCIA**: pagar es la única salida del estado vencido. Exigir vigencia para renovar encierra al usuario fuera de su propia cuenta sin camino de vuelta — abrazo mortal, no decisión de gusto.
+- **Exentas de CAMINO**: el paso `plan` **es parte del camino guiado** (verificado en `src/lib/camino/pasos.ts:22` para PARENT y `src/lib/camino/pasos-colegio.ts:20` para SCHOOL_ADMIN — la lista es `["permiso", "datos", "hijos", "plan"]` y `["rector", "plan", …]` respectivamente). Si el camino bloquea las rutas de pago, el propio camino no se puede terminar.
+- **BLOQUEADAS por CONSENTIMIENTO**: quien no aceptó el tratamiento de datos no debe transar.
+- **BLOQUEADAS por CAMBIO-DE-CLAVE**: es una señal de cuenta comprometida — ahí menos que nunca se mueve plata.
+
+| Ruta | Exenta de | Bloquea por |
+|------|-----------|-------------|
+| `/api/colegio/suscripcion/activar-freemium` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/colegio/suscripcion/solicitar-plan` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/padre/suscripcion/activar-freemium` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/padre/suscripcion/solicitar-plan` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/aplicar-bono` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/aplicar-referido` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/planes` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/renovacion` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/suscripcion` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/suscripcion/cancelar` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/suscripcion/estado` | vigencia, camino | consentimiento, cambio-de-clave |
+| `/api/pagos/suscripcion/validar-bono` | vigencia, camino | consentimiento, cambio-de-clave |
 
 ## Matriz de pruebas de cookie-ausente por guardián × rol
 
