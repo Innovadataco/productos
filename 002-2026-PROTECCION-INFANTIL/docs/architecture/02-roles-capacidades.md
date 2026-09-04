@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 533 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3731 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 535 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3745 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -151,6 +151,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
 | `/api/admin/pagos/activar-manual` | api | permitir | permite | sí |
@@ -178,6 +179,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/profesionales` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/profesionales/solicitudes` | api | permitir | permite | sí |
 | `/api/admin/profesionales/solicitudes/reenviar` | api | permitir | permite | sí |
@@ -689,6 +691,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
 | `/api/admin/pagos/activar-manual` | api | permitir | permite | sí |
@@ -716,6 +719,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/profesionales` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/profesionales/solicitudes` | api | permitir | permite | sí |
 | `/api/admin/profesionales/solicitudes/reenviar` | api | permitir | permite | sí |
@@ -1227,6 +1231,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/padres/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | permitir | permite | sí |
 | `/api/admin/pagos/activar-manual` | api | permitir | permite | sí |
@@ -1254,6 +1259,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/profesionales` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]/reactivar` | api | permitir | permite | sí |
+| `/api/admin/profesionales/[id]/reenviar-email` | api | permitir | permite | sí |
 | `/api/admin/profesionales/[id]/restablecer-password` | api | permitir | permite | sí |
 | `/api/admin/profesionales/solicitudes` | api | permitir | permite | sí |
 | `/api/admin/profesionales/solicitudes/reenviar` | api | permitir | permite | sí |
@@ -1765,6 +1771,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/activar-manual` | api | HTTP 403 | no permite | sí |
@@ -1792,6 +1799,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/profesionales` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/solicitudes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 403 | no permite | sí |
@@ -2303,6 +2311,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/activar-manual` | api | HTTP 403 | no permite | sí |
@@ -2330,6 +2339,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/profesionales` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/solicitudes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 403 | no permite | sí |
@@ -2841,6 +2851,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/padres/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 403 | no permite | sí |
 | `/api/admin/pagos/activar-manual` | api | HTTP 403 | no permite | sí |
@@ -2868,6 +2879,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/profesionales` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]/reactivar` | api | HTTP 403 | no permite | sí |
+| `/api/admin/profesionales/[id]/reenviar-email` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/solicitudes` | api | HTTP 403 | no permite | sí |
 | `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 403 | no permite | sí |
@@ -3379,6 +3391,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/padres/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/circulo-confianza` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/padres/[id]/reenviar-email` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/restablecer-password` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/padres/[id]/vigencia` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/pagos/activar-manual` | api | HTTP 401 | permite | **NO** |
@@ -3406,6 +3419,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/profesionales` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/profesionales/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/profesionales/[id]/reactivar` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/profesionales/[id]/reenviar-email` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/profesionales/[id]/restablecer-password` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/profesionales/solicitudes` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/profesionales/solicitudes/reenviar` | api | HTTP 401 | permite | **NO** |
@@ -3917,6 +3931,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/padres/[id]` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/circulo-confianza` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/reactivar` | HTTP 401 | permite |
+| `/api/admin/padres/[id]/reenviar-email` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/restablecer-password` | HTTP 401 | permite |
 | `/api/admin/padres/[id]/vigencia` | HTTP 401 | permite |
 | `/api/admin/pagos/activar-manual` | HTTP 401 | permite |
@@ -3944,6 +3959,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/profesionales` | HTTP 401 | permite |
 | `/api/admin/profesionales/[id]` | HTTP 401 | permite |
 | `/api/admin/profesionales/[id]/reactivar` | HTTP 401 | permite |
+| `/api/admin/profesionales/[id]/reenviar-email` | HTTP 401 | permite |
 | `/api/admin/profesionales/[id]/restablecer-password` | HTTP 401 | permite |
 | `/api/admin/profesionales/solicitudes` | HTTP 401 | permite |
 | `/api/admin/profesionales/solicitudes/reenviar` | HTTP 401 | permite |

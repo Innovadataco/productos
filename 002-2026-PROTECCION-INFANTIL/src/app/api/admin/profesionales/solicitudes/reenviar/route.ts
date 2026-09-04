@@ -91,18 +91,17 @@ export async function POST(request: Request) {
             logger.error("[PROFESIONALES/SOLICITUDES] Error enviando enlace de registro", err);
         }
 
-        // Si el correo no salió, la URL viaja en la respuesta para copia manual.
-        // Nunca se persiste en claro (el token solo vive hashed en TokenRegistro).
-        const enlace = emailEnviado
-            ? undefined
-            : `${baseUrl()}/registro-profesional/crear-clave/${token}`;
+        // SPEC-423 (I-298): el enlace SIEMPRE viaja en la respuesta —
+        // `emailEnviado` mide encolado, no entrega real. Nunca se persiste en
+        // claro (el token solo vive hashed en TokenRegistro).
+        const enlace = `${baseUrl()}/registro-profesional/crear-clave/${token}`;
 
         return NextResponse.json({
-            emailEnviado,
+            encolado: emailEnviado,
             enlace,
             mensaje: emailEnviado
-                ? "Enlace de registro enviado por email al profesional."
-                : "No se pudo enviar el email. Copie el enlace y compártalo manualmente (se muestra una sola vez).",
+                ? "Enlace de registro generado. Envío por correo al profesional encolado — puede no llegar (proveedor asíncrono). El enlace está abajo (se muestra una sola vez)."
+                : "Enlace de registro generado. No se pudo encolar el envío por correo. Copie el enlace y compártalo manualmente (se muestra una sola vez).",
         });
     } catch (error) {
         return errorToResponse(error, "[ADMIN/PROFESIONALES/SOLICITUDES/REENVIAR]");

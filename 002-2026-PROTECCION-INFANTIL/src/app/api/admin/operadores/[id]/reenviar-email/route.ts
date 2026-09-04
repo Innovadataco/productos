@@ -59,8 +59,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 estado: operador.estado,
                 debeCambiarPassword: true,
             },
-            passwordTemporal: emailEnviado ? undefined : password,
+            // Contrato Jelkin (dos botones): «reenviar» NUNCA devuelve la
+            // contraseña cuando el envío se encoló bien — el admin la lee del
+            // correo o del botón «restablecer», que sí SIEMPRE la muestra.
+            // Único fallback: si ni siquiera se pudo encolar, devolvemos la
+            // temporal para que el admin no quede atascado (copia manual).
             emailEnviado,
+            passwordTemporal: emailEnviado ? undefined : password,
             mensaje: emailEnviado
                 ? `Email de bienvenida reenviado al ${esComite ? "comité de validación" : "operador"}.`
                 : "No se pudo reenviar el email. Copie la contraseña temporal mostrada arriba.",

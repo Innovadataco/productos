@@ -13,10 +13,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **346** |
+| **Total de specs** | **347** |
 | 🔵 PLANEADO | 59 |
 | 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 161 |
+| 🟢 IMPLEMENTADO | 162 |
 | 🧪 PENDIENTE DE PRUEBA | 0 |
 | ✅ FINALIZADO | 38 |
 | 📁 CERRADA | 63 |
@@ -374,6 +374,7 @@
 | [420](420-borrado-por-lotes/spec.md) | SPEC-420 · El borrado por lotes — PostgreSQL admite 32.767 parámetros, producción tenía 37.176 | 🟢 IMPLEMENTADO |
 | [421](421-gestion-profesionales-admin/spec.md) | SPEC-421 · El admin gestiona psicólogos igual que gestiona padres (mirror `/admin/padres`) + reenvía solicitudes de registro cuando el correo se cae | 🟢 IMPLEMENTADO |
 | [422](422-registro-profesional-publico/spec.md) | SPEC-422 · «Soy profesional» era un enlace muerto — cierra I-297 | 🟢 IMPLEMENTADO |
+| [423](423-credencial-siempre-visible/spec.md) | SPEC-423 · La credencial de respaldo se muestra SIEMPRE — cierra I-298 | 🟢 IMPLEMENTADO |
 | [425](425-panel-profesional/spec.md) | SPEC-425 · El panel del profesional (A-75 · lote L5) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 
