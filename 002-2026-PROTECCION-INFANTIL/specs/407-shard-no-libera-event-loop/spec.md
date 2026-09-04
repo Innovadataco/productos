@@ -145,6 +145,14 @@ Corrección aplicada: **45 min por intento** (33 max sano + margen), `timeout-mi
 
 El `test-durations.json` solo tenía 8 archivos con duración medida — los otros ~470 recibían la mediana y LPT los repartía a ciegas. Después del rebalance (fusionando los datos de los 4 shards del run `33793162640` en el archivo) todos los shards quedan con **peso estimado 863s** (14.4 min) parejo. El `registro/completar` (27.6s, el más pesado de auth) migró de shard 3 a otro, y los 4 tests auth se dispersan 7/4/2/2 por shard en vez de 3/4/4/4 mal balanceado por peso.
 
+### Candado para que el archivo de pesos no se olvide
+
+`scripts/ci/reparto-shards.mjs` ahora verifica la cobertura: si el `test-durations.json` cubre **menos del 80 %** de los archivos de test, imprime a stderr `[reparto-shards] ⚠️ test-durations.json cubre X/Y archivos (P%) — bajo el umbral 80%. Regenerar con actualizar-duraciones.mjs`, y además emite `::warning title=SPEC-407 cobertura de pesos::...` para que aparezca como anotación oficial del step en GitHub Actions.
+
+Esto cierra el ciclo del problema encontrado hoy: **el repartidor nunca se quejó** de que le faltaba el 98 % de los datos. Producía un reparto igual, solo que malo. Sin este candado, dentro de tres meses el archivo se queda viejo, los pesados vuelven a amontonarse en el mismo shard, y no hay señal. Con el candado, el warning aparece en cada corrida hasta que alguien regenere el archivo con datos frescos.
+
+Es la misma familia de fallas del día: el panel del admin que apagaba sus alarmas (I-294), el candado que apuntaba a una ruta inexistente, el respaldo de credenciales que solo se activaba cuando no hacía falta. **Todos funcionaban lo suficiente para no avisar.**
+
 ## Nota de observación (03-09-2026, cierre del día)
 
 Las 5 caídas medidas hoy 03-09 fueron **todas del tipo B** (timeout de 35 min por runner lento). **Ni una del tipo A** (16m34s "internal error" por handles al cerrar). Dos lecturas posibles:
