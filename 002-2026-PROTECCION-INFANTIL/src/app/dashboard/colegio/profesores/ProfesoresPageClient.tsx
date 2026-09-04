@@ -54,6 +54,17 @@ type EstadoModal = { modo: "crear" } | { modo: "editar"; profesor: Profesor } | 
 
 const DEBOUNCE_MS = 280;
 
+/**
+ * SPEC-442 (I-307 · Jelkin vivo 04-09): rango de años de nacimiento del
+ * profesor calculado desde el año actual. Un profesor debe tener entre 18 y
+ * 80 años; el selector no puede permitir años futuros ni menores de edad.
+ * Aplica al form individual y a cualquier form que reciba `anioNacimiento`.
+ */
+const RANGO_ANIO_NACIMIENTO = (() => {
+    const ahora = new Date().getFullYear();
+    return { minAnio: ahora - 80, maxAnio: ahora - 18 };
+})();
+
 const FILTRO_OPTIONS = [
     { value: "activo", label: "Activos" },
     { value: "inactivo", label: "Inactivos" },
@@ -182,6 +193,15 @@ export default function ProfesoresPageClient() {
         if (esCrear) {
             if (!form.tipoDocumento || !form.numeroDocumento.trim() || !form.anioNacimiento.trim() || !form.sexo || !email || !telefono) {
                 setFormError("Completa la identidad del profesor: tipo y número de documento, año de nacimiento, sexo, email y teléfono");
+                return;
+            }
+            // SPEC-442 (I-307 · Jelkin vivo 04-09): el input permitía años
+            // mayores al actual. Rango real: [ahora - 80, ahora - 18]. Sin
+            // esto, un profesor con año 2050 pasa el schema.
+            const anio = Number(form.anioNacimiento);
+            const { minAnio, maxAnio } = RANGO_ANIO_NACIMIENTO;
+            if (!Number.isInteger(anio) || anio < minAnio || anio > maxAnio) {
+                setFormError(`Año de nacimiento fuera de rango. Debe estar entre ${minAnio} y ${maxAnio}.`);
                 return;
             }
         } else if (!email || !telefono) {
@@ -449,6 +469,10 @@ export default function ProfesoresPageClient() {
                             label="Año de nacimiento"
                             type="number"
                             required
+                            min={RANGO_ANIO_NACIMIENTO.minAnio}
+                            max={RANGO_ANIO_NACIMIENTO.maxAnio}
+                            step={1}
+                            placeholder={`${RANGO_ANIO_NACIMIENTO.minAnio}–${RANGO_ANIO_NACIMIENTO.maxAnio}`}
                             value={form.anioNacimiento}
                             disabled={modal?.modo === "editar"}
                             onChange={(e) => setForm({ ...form, anioNacimiento: e.target.value })}

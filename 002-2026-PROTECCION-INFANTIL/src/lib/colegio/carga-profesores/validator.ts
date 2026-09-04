@@ -83,8 +83,13 @@ export function validarFilasProfesores(
         }
 
         const anio = parseInt(fila.anio_nacimiento, 10);
-        if (!Number.isFinite(anio) || anio < 1900 || anio > anioActual) {
-            marcarError("anio_nacimiento", `Año inválido: "${fila.anio_nacimiento}".`);
+        // SPEC-442 (I-307 · Jelkin vivo 04-09): mismo rango de edad que el form
+        // individual — 18 a 80 años. Antes aceptaba desde 1900 hasta el año
+        // actual, que dejaba pasar profesores de 5 años y del futuro.
+        const minAnio = anioActual - 80;
+        const maxAnio = anioActual - 18;
+        if (!Number.isFinite(anio) || anio < minAnio || anio > maxAnio) {
+            marcarError("anio_nacimiento", `Año inválido: "${fila.anio_nacimiento}" (debe estar entre ${minAnio} y ${maxAnio}).`);
             continue;
         }
 

@@ -35,10 +35,23 @@ export default function CaminoLayout({ children }: { children: React.ReactNode }
     const paso = pasoActual(pathname);
     const definicion = paso ? DEFINICION_PASOS[paso] : null;
 
+    // SPEC-442 (I-307 · Jelkin vivo 04-09): el flujo del colegio tiene su
+    // propio layout anidado con header + footer. Si este layout padre pinta
+    // TAMBIÉN el header y el footer, el rector ve el par «Salir · Este no es
+    // mi correo» DOS VECES. Cuando el pathname es del colegio, el padre se
+    // reduce a shell mínimo (el hijo pinta todo lo visual).
+    const esColegio = pathname?.startsWith("/camino/colegio") ?? false;
+
     const salir = async (destino: string) => {
         await logout();
         router.push(destino);
     };
+
+    if (esColegio) {
+        // El hijo `/camino/colegio/layout.tsx` es la fuente única del chrome
+        // (header, ancho, footer). Devolvemos los children sin envolver.
+        return <>{children}</>;
+    }
 
     return (
         <div className="theme-padre min-h-screen bg-page">

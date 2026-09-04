@@ -47,6 +47,12 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { RolUsuario } from "@prisma/client";
+// SPEC-442 (I-307): TODO camino que crea `Colegio` en prod pasa por el helper.
+// El smoke crea colegios efímeros y los borra al final, pero si el proceso se
+// interrumpe entre create y delete, quedaba huérfano y SIN cursos — mismo bug
+// que dejó a «sagrado corazon» trabado en el paso 4. Ahora nunca queda huérfano
+// sin semilla.
+import { sembrarSemillaColegio } from "@/lib/colegio/semilla-colegio";
 
 const DOMINIO_SMOKE = "@test.invalid";
 const PREFIJO_SMOKE = "smoke-";
@@ -174,6 +180,52 @@ async function fetchHttp(url: string, init: RequestInit = {}): Promise<Response>
     return fetch(url, { ...init, redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_HTTP_MS) });
 }
 
+// ------------------------------------------------------- creación del colegio smoke
+
+/**
+ * SPEC-442 (I-307 · CEO 04-09 13:31): la creación del colegio del smoke se
+ * extrajo a esta función para (a) ejercitarla desde el candado de comportamiento
+ * (`semilla-colegio.test.ts`) sin correr todo el smoke contra producción, y
+ * (b) marcarla con un prefijo estable «[SMOKE]» que permita a un operador
+ * identificar y barrer huérfanos si el proceso se interrumpe entre el create
+ * y la limpieza. El helper `sembrarSemillaColegio` garantiza que un colegio
+ * huérfano nunca queda sin cursos (bug I-307 originario del smoke).
+ */
+export interface OpcionesColegioSmoke {
+    cliente: typeof prisma;
+    ts: number;
+    paisId: string;
+    ciudadId: string;
+    tenantId: string;
+    inicioServicio: Date;
+    finServicio: Date;
+}
+
+export const PREFIJO_NOMBRE_SMOKE = "[SMOKE]";
+
+export async function crearColegioParaSmoke(opts: OpcionesColegioSmoke) {
+    const colegio = await opts.cliente.colegio.create({
+        data: {
+            nombre: `${PREFIJO_NOMBRE_SMOKE} Colegio ${opts.ts}`,
+            nit: `SMK-NIT-${opts.ts}`, // SPEC-320 (§2.2-bis)
+            paisId: opts.paisId,
+            ciudadId: opts.ciudadId,
+            representanteLegalNombre: "Smoke Representante",
+            representanteLegalIdentificacion: `SMK-${opts.ts}`,
+            representanteLegalEmail: `smoke-${opts.ts}-rep${DOMINIO_SMOKE}`,
+            inicioServicio: opts.inicioServicio,
+            finServicio: opts.finServicio,
+            tipoPeriodo: "ANUAL",
+            estado: "activo",
+            tenantId: opts.tenantId,
+        },
+    });
+    // SPEC-442 · semilla obligatoria. Sin esto, un smoke interrumpido deja
+    // un colegio huérfano SIN cursos en producción (bug I-307).
+    await sembrarSemillaColegio(colegio.id, opts.cliente);
+    return colegio;
+}
+
 // ------------------------------------------------------- cuentas efímeras (BD)
 
 async function crearCuentasEfimeras(): Promise<CuentasEfimeras> {
@@ -211,21 +263,19 @@ async function crearCuentasEfimeras(): Promise<CuentasEfimeras> {
     const tenant = await prisma.tenant.create({
         data: { nombre: `smoke-${ts}`, estado: "activo" },
     });
-    const colegio = await prisma.colegio.create({
-        data: {
-            nombre: `Smoke Colegio ${ts}`,
-            nit: `SMK-NIT-${ts}`, // SPEC-320 (§2.2-bis)
-            paisId: pais.id,
-            ciudadId: ciudad.id,
-            representanteLegalNombre: "Smoke Representante",
-            representanteLegalIdentificacion: `SMK-${ts}`,
-            representanteLegalEmail: `smoke-${ts}-rep${DOMINIO_SMOKE}`,
-            inicioServicio: inicio,
-            finServicio: fin,
-            tipoPeriodo: "ANUAL",
-            estado: "activo",
-            tenantId: tenant.id,
-        },
+    // SPEC-442 (I-307 · CEO 04-09 13:31): la creación del colegio del smoke
+    // vive en `crearColegioParaSmoke`, exportada y testeable. El helper
+    // garantiza la semilla obligatoria (materias + cursos + onboarding) y
+    // el prefijo estable «[SMOKE]» permite identificar huérfanos si el
+    // proceso se interrumpe.
+    const colegio = await crearColegioParaSmoke({
+        cliente: prisma,
+        ts,
+        paisId: pais.id,
+        ciudadId: ciudad.id,
+        tenantId: tenant.id,
+        inicioServicio: inicio,
+        finServicio: fin,
     });
 
     const usuarios = new Map<RolUsuario, { id: string; email: string }>();
@@ -275,7 +325,15 @@ async function borrarCuentasEfimeras(c: CuentasEfimeras): Promise<void> {
     await prisma.rateLimit.deleteMany({ where: { identifier: { in: usuarioIds } } });
     await prisma.perfilOperador.deleteMany({ where: { usuarioId: { in: usuarioIds } } });
     await prisma.usuario.deleteMany({ where: { id: { in: usuarioIds } } });
-    if (c.colegioId) await prisma.colegio.deleteMany({ where: { id: c.colegioId } });
+    // SPEC-442: `sembrarSemillaColegio` deja cursos + materias + onboarding
+    // — hay que borrarlos antes del `Colegio` para no violar FKs.
+    if (c.colegioId) {
+        await prisma.cursoMateria.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.curso.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.materia.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.onboardingColegio.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.colegio.deleteMany({ where: { id: c.colegioId } });
+    }
     if (c.tenantId) await prisma.tenant.deleteMany({ where: { id: c.tenantId } });
     if (c.ciudadIdCreada) await prisma.ciudad.deleteMany({ where: { id: c.ciudadIdCreada } });
     if (c.paisIdCreado) await prisma.pais.deleteMany({ where: { id: c.paisIdCreado } });
@@ -534,12 +592,18 @@ async function main(): Promise<number> {
     return 0;
 }
 
-main()
-    .then((codigo) => {
-        process.exitCode = codigo;
-    })
-    .catch(async (error) => {
-        console.error(`[Smoke] Error inesperado: ${(error as Error).message}`);
-        await prisma.$disconnect().catch(() => undefined);
-        process.exitCode = 1;
-    });
+// SPEC-442 (CEO 04-09 13:31): el candado importa `crearColegioParaSmoke` desde
+// esta fuente. NO ejecutar `main()` cuando el módulo se carga como import
+// (vitest, cualquier otro consumidor de la función exportada). Solo cuando
+// se invoca directamente por el CLI.
+if (!process.env.VITEST) {
+    main()
+        .then((codigo) => {
+            process.exitCode = codigo;
+        })
+        .catch(async (error) => {
+            console.error(`[Smoke] Error inesperado: ${(error as Error).message}`);
+            await prisma.$disconnect().catch(() => undefined);
+            process.exitCode = 1;
+        });
+}

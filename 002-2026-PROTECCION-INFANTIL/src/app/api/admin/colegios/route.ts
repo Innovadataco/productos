@@ -12,14 +12,13 @@ import { adminColegioNuevoSchema } from "@/lib/validators";
 import { colegioBodySchema } from "@/lib/schemas";
 import { calcularFinServicio, esRangoServicioValido } from "@/lib/colegio/periodo";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
-import { seedMateriasPorDefecto } from "@/lib/colegio/materias-seed";
+import { sembrarSemillaColegio } from "@/lib/colegio/semilla-colegio";
 import { RegistroColegioService } from "@/lib/dal/services/registro-colegio";
 import { ColegioRepository } from "@/lib/dal/repositories/colegio";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PaisRepository } from "@/lib/dal/repositories/pais";
 import { CiudadRepository } from "@/lib/dal/repositories/ciudad";
 import { DepartamentoRepository } from "@/lib/dal/repositories/departamento";
-import { OnboardingColegioRepository } from "@/lib/dal/repositories/onboarding-colegio";
 import { programar as programarNotificacion } from "@/lib/notificaciones";
 
 function tempPassword() {
@@ -262,7 +261,12 @@ async function crearColegioLegacy(request: Request, adminId: string, bodyRaw: un
             tenantId: tenant.id,
         });
 
-        await seedMateriasPorDefecto(tx, creado.id);
+        // SPEC-442 (I-307 · fix del hueco vivo): antes acá se llamaba solo a
+        // `seedMateriasPorDefecto`. El alta por administración quedaba SIN
+        // cursos porque no invocaba `crearCursosPorDefecto` — la pantalla de
+        // paso 4 afirmaba «11 grados» y mostraba 0. El helper cubre las tres
+        // semillas obligatorias (materias + cursos + onboarding).
+        await sembrarSemillaColegio(creado.id, tx);
 
         const schoolAdmin = await new UsuarioRepository(tx).crear({
             email: adminEmail.toLowerCase(),
@@ -275,11 +279,7 @@ async function crearColegioLegacy(request: Request, adminId: string, bodyRaw: un
             colegioId: creado.id,
         });
 
-        await new OnboardingColegioRepository(tx).crear({
-            colegioId: creado.id,
-            estado: "activo",
-            pasoActual: 1,
-        });
+        // Onboarding ya lo dejó `sembrarSemillaColegio` (línea arriba).
 
         return { ...creado, admin: schoolAdmin, tenant };
     });
