@@ -15,7 +15,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { desglosarTarifa, PORCENTAJE_SERVICIO_DEFAULT } from "../cita/comision";
+import { desglosarTarifa, CLAVE_COMISION } from "../cita/comision";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 
 const RAIZ = path.resolve(__dirname, "../../../..");
@@ -122,8 +122,12 @@ describe("SPEC-425 · el desglose de la tarifa sale de un solo lugar", () => {
         expect(desglosarTarifa(99999, 15).servicioRed).toBe(Math.round((99999 * 15) / 100));
     });
 
-    it("el default es el que aplica el producto hoy", () => {
-        expect(PORCENTAJE_SERVICIO_DEFAULT).toBe(15);
+    it("SPEC-403: el porcentaje ya no es una constante del código", () => {
+        // El número correcto es 10 y lo edita el admin sin desplegar (I-288).
+        expect(CLAVE_COMISION).toBe("comision.porcentaje");
+        const comision = leerCodigo("src/lib/profesional/cita/comision.ts");
+        expect(comision).not.toMatch(/=\s*1[05]\s*;/);
+        expect(comision).toContain("getParametroSistemaValor");
     });
 });
 

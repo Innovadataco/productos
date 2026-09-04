@@ -26,7 +26,7 @@ import type { EstadoSolicitudCita } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
-import { desglosarTarifa, PORCENTAJE_SERVICIO_DEFAULT, type DesgloseTarifa } from "../cita/comision";
+import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
 
 /** Estados que esperan una respuesta del profesional dentro de las 48 h. */
 const ESPERAN_RESPUESTA: EstadoSolicitudCita[] = ["SIN_CONFIRMAR", "PAGADA_PENDIENTE"];
@@ -124,9 +124,10 @@ export async function panelDelProfesional(
     const porCerrar = confirmadas.filter((s) => yaOcurrio(s.franja.inicio, ahora));
     const agenda = confirmadas.filter((s) => !yaOcurrio(s.franja.inicio, ahora));
 
-    // El porcentaje que se le cobró de verdad manda sobre el default: una
-    // solicitud vieja conserva el suyo aunque el número global cambie.
-    const porcentaje = solicitudes[0]?.porcentajeServicio ?? PORCENTAJE_SERVICIO_DEFAULT;
+    // SPEC-403: el porcentaje que se le cobró de verdad manda sobre el vigente
+    // — una solicitud ya creada conserva el suyo aunque el parámetro cambie
+    // después. Sin solicitudes todavía, se le muestra el que se aplicaría hoy.
+    const porcentaje = solicitudes[0]?.porcentajeServicio ?? (await obtenerPorcentajeServicio());
 
     const retenidas = solicitudes.filter((s) => RETIENEN_PAGO.includes(s.estado));
 
