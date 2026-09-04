@@ -197,8 +197,15 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
                 data: { email: EMAIL_RECTOR_ENLACE, nombreColegio: `Colegio E2E ${CORRIDA}`, nit: NIT_ENLACE },
             });
             expect(solicitar.status(), "SPEC-344: solicitar responde 202 anti-enumeración").toBe(202);
+            // El 202 es anti-enumeración: responde igual haga lo que haga por
+            // dentro (aviso CEO). Afirmar que `/solicitar` creó SU propia fila
+            // en `TokenRegistro` cubre el camino real del token — si mañana
+            // deja de crearla, este assert truena y no pasa desapercibido.
+            const tokensCreados = await prisma.tokenRegistro.count({ where: { email: EMAIL_RECTOR_ENLACE } });
+            expect(tokensCreados, "SPEC-344/391: el POST solicitar debe crear al menos un TokenRegistro real").toBeGreaterThanOrEqual(1);
 
-            // Paso 2 · fabricar el enlace que Resend enviaría al buzón.
+            // Paso 2 · fabricar el enlace que Resend enviaría al buzón (el token
+            // en claro solo existe en el correo; con Resend caído, lo sustituimos).
             const token = await fabricarEnlace(EMAIL_RECTOR_ENLACE, "SCHOOL_ADMIN" as RolUsuario, { nombreColegio: `Colegio E2E ${CORRIDA}`, nit: NIT_ENLACE });
 
             // Paso 3 · la pantalla `/registro-colegio/crear-clave/[token]` dispara completar.
@@ -294,6 +301,11 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
                 data: { email: EMAIL_PROF },
             });
             expect(solicitar.status(), "SPEC-391: solicitar profesional responde 202 anti-enumeración").toBe(202);
+            // Mismo candado que en (A): 202 es anti-enumeración; afirmamos que
+            // el endpoint SÍ creó su fila en TokenRegistro. Si mañana deja de
+            // crearla, el registro está muerto y este assert lo caza.
+            const tokensProf = await prisma.tokenRegistro.count({ where: { email: EMAIL_PROF } });
+            expect(tokensProf, "SPEC-391: el POST solicitar profesional debe crear al menos un TokenRegistro real").toBeGreaterThanOrEqual(1);
 
             const token = await fabricarEnlace(EMAIL_PROF, "PROFESIONAL" as RolUsuario);
 
