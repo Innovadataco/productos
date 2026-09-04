@@ -27,6 +27,13 @@ export interface SesionEstadoPayload {
     vigencia: EstadoVigenciaEfectivo;
     requiereConsentimiento: boolean;
     debeCambiarPassword: boolean;
+    // SPEC-429 (brief §9-bis · orden CEO 23:5x): guardia nueva. `alCumplirCita`
+    // marca `Usuario.encuestaPendiente = true` para padre y profesional; el
+    // middleware los redirige a `/encuesta` en la próxima navegación. Del
+    // mismo estilo (y con el mismo riesgo abierto I-236 que SPEC-400b cierra)
+    // que `debeCambiarPassword`. Aceptar `undefined` para leer cookies viejas
+    // (sesiones activas antes del despliegue): el valor efectivo es `false`.
+    encuestaPendiente?: boolean;
     // SPEC-339 (A-67) + SPEC-344 (A-69): paso pendiente del camino guiado.
     // Acepta valores del padre (`PasoPendiente`) o del colegio
     // (`PasoPendienteColegio`). `null` = camino terminado, o el usuario

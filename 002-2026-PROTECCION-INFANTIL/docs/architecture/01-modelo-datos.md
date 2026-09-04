@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **110** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **111** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -505,7 +505,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (62)
+### Otros (sin regla de dominio) (63)
 
 #### `AclaracionExpediente`
 
@@ -745,16 +745,18 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | createdAt | DateTime | — |
 | recomendacion | Recomendacion | relación (FK) |
 
-#### `EncuestaPrimeraCita`
+#### `EncuestaCita`
 
 | Campo | Tipo | Atributos |
 | --- | --- | --- |
 | id | String | id |
-| solicitudId | String | único |
-| seDioLaCita | Boolean | — |
-| puntaje | Int | — |
-| volveria | Boolean | — |
-| comentario | String | opcional |
+| solicitudId | String | — |
+| origen | OrigenEncuestaCita | — |
+| r1 | String | — |
+| r2 | String | — |
+| r3 | String | — |
+| r4 | String | — |
+| r5 | String | — |
 | respondidaEn | DateTime | — |
 | solicitud | SolicitudCita | relación (FK) |
 
@@ -986,6 +988,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
+
+#### `IncidenteContradiccionEncuesta`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| solicitudId | String | — |
+| pregunta | String | — |
+| padreValor | String | — |
+| profesionalValor | String | — |
+| detectadoEn | DateTime | — |
+| resueltoEn | DateTime | opcional |
+| resueltoPor | String | opcional |
+| solicitud | SolicitudCita | relación (FK) |
 
 #### `IncidenteInfra`
 
@@ -1495,7 +1511,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reprogramaciones | SolicitudCita | lista, relación |
 | pagoHeredadoDe | SolicitudCita | opcional, relación |
 | pagosQueHereda | SolicitudCita | lista, relación |
-| encuesta | EncuestaPrimeraCita | opcional, relación |
+| encuestas | EncuestaCita | lista, relación |
+| incidentesEncuesta | IncidenteContradiccionEncuesta | lista, relación |
 
 #### `Suscripcion`
 
@@ -2069,6 +2086,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | tokenInvitacion | String | único, opcional |
 | tokenInvitacionExpiraEn | DateTime | opcional |
 | debeCambiarPassword | Boolean | — |
+| encuestaPendiente | Boolean | — |
 | intentosFallidos | Int | — |
 | bloqueadoHasta | DateTime | opcional |
 | ultimaSesion | DateTime | opcional |
@@ -2269,7 +2287,8 @@ erDiagram
     SeguimientoCaso ||--o{ InformeCaso : "caso"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
-    SolicitudCita ||--o{ EncuestaPrimeraCita : "solicitud"
+    SolicitudCita ||--o{ EncuestaCita : "solicitud"
+    SolicitudCita ||--o{ IncidenteContradiccionEncuesta : "solicitud"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"
     Suscripcion ||--o{ CodigoReferidoUso : "referida"
     Suscripcion ||--o{ CodigoReferidoUso : "referidor"

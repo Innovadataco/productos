@@ -118,6 +118,33 @@ export const GUARDIAS_ACCESO = {
     } as const,
 
     /**
+     * SPEC-429 (A-75 · brief §9-bis · orden CEO 23:5x) · Guardián de encuesta
+     * post-cita. Quien tiene una cita CUMPLIDA sin responder queda encerrado
+     * en `/encuesta`, salvo el par «cambiar contraseña» y la sesión (misma
+     * lógica que `cambiarPassword`).
+     *
+     * RIESGO I-236 (CEO 23:5x): el bloque del middleware que aplica ESTA
+     * guardia vive dentro de `if (estado)` — sin cookie `sesion_estado` cae
+     * abierto (permisivo). SPEC-400b cierra el hueco por debajo; acá no lo
+     * empeoramos: usamos exactamente el mismo estilo que `debeCambiarPassword`,
+     * así el fix de SPEC-400b beneficia a las dos guardias sin cambios.
+     */
+    encuesta: {
+        destino: "/encuesta",
+        exentas: [
+            "/encuesta",
+            "/api/encuesta",
+            // Salidas y obligaciones que mandan sobre la guardia (idénticas
+            // a `cambiarPassword`): no queremos encerrar al usuario y dejarle
+            // sin poder cambiar contraseña o cerrar sesión.
+            "/cambiar-password",
+            "/api/auth/cambiar-password",
+            "/api/auth/logout",
+            "/api/me",
+        ],
+    } as const,
+
+    /**
      * Guardián del camino guiado del padre (SPEC-339 · A-67).
      *
      * Corre DESPUÉS de consentimiento y ANTES de vigencia. El Paso 1 no tiene
@@ -336,6 +363,12 @@ export const GUARDIAS_ACCESO = {
             `[GUARDIAS_ACCESO] Invariante rota: cambiarPassword.destino "${GUARDIAS_ACCESO.cambiarPassword.destino}" NO está en exentas.`,
         );
     }
+    // SPEC-429 · encuesta.destino ∈ encuesta.exentas
+    if (!GUARDIAS_ACCESO.encuesta.exentas.some((r) => r === GUARDIAS_ACCESO.encuesta.destino)) {
+        throw new Error(
+            `[GUARDIAS_ACCESO] Invariante rota: encuesta.destino "${GUARDIAS_ACCESO.encuesta.destino}" NO está en exentas.`,
+        );
+    }
     // vigencia[rol].destino ∈ vigencia[rol].exentas
     for (const [rol, cfg] of Object.entries(GUARDIAS_ACCESO.vigencia)) {
         if (!cfg.exentas.some((r) => r === cfg.destino)) {
@@ -478,6 +511,16 @@ export function esExentaCamino(pathname: string, rol?: string): boolean {
 
 export function esExentaCambiarPassword(pathname: string): boolean {
     return GUARDIAS_ACCESO.cambiarPassword.exentas.some((r) => matcheaRuta(pathname, r));
+}
+
+/**
+ * SPEC-429 · rutas que la guardia de encuesta post-cita NUNCA puede tapar:
+ * la propia pantalla, su API, el cambio de contraseña (obligatorio pisa a
+ * encuesta) y la salida por logout. Sin esto, quien tenga la guardia activa
+ * NO puede ni cambiar contraseña ni cerrar sesión.
+ */
+export function esExentaEncuesta(pathname: string): boolean {
+    return GUARDIAS_ACCESO.encuesta.exentas.some((r) => matcheaRuta(pathname, r));
 }
 
 export type RolConVigencia = keyof typeof GUARDIAS_ACCESO.vigencia;

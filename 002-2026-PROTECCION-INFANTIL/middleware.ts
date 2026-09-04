@@ -23,6 +23,7 @@ import {
     esRutaSesion,
     esExentaConsentimiento,
     esExentaCambiarPassword,
+    esExentaEncuesta,
     esExentaCamino,
     esExentaVigencia,
     tieneVigencia,
@@ -217,6 +218,21 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 );
             }
             return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.cambiarPassword.destino));
+        }
+        // SPEC-429 (A-75 · brief §9-bis · orden CEO 23:5x): encuesta pendiente
+        // — misma forma que `debeCambiarPassword`. Corre DESPUÉS del cambio de
+        // password para que un usuario con las dos guardias active primero la
+        // más obligatoria (contraseña temporal). RIESGO I-236: sin cookie
+        // `sesion_estado` este bloque no corre y la guardia cae abierta —
+        // SPEC-400b cierra ese hueco por debajo; no lo empeoramos acá.
+        if (estado.encuestaPendiente && !esExentaEncuesta(pathname)) {
+            if (pathname.startsWith("/api/")) {
+                return NextResponse.json(
+                    { error: { message: "Respondé tu encuesta de la última cita para continuar.", code: "ENCUESTA_REQUERIDA", redirectTo: GUARDIAS_ACCESO.encuesta.destino } },
+                    { status: 403 }
+                );
+            }
+            return aplicarCspSiCorresponde(request, redirect(request, GUARDIAS_ACCESO.encuesta.destino));
         }
         // Paso 5 (SPEC-339 · A-67 + SPEC-344 · A-69 · C1): el camino guiado.
         //
