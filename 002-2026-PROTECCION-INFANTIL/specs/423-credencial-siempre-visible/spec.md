@@ -2,6 +2,7 @@
 
 **Status**: IMPLEMENTADO
 **Fecha**: 2026-09-03 · **Dev**: PI-1 (`idc-32`) · **Origen**: I-298 verificado por CEO en fuente + BD 22:0x/22:1x — dejó a Jelkin trabado dos veces en producción.
+**Actualizado 22:5x**: contrato Jelkin refinado — dos botones con semántica distinta (ver §Diseño elegido).
 
 ## Para qué
 
@@ -13,10 +14,12 @@ El `emailEnviado` medía si el motor de notificaciones logró **ENCOLAR**, no si
 
 **Origen histórico**: SPEC-117/I-37 · `admin/padres/[id]/restablecer-password:80`, cuando el envío era directo. Al pasar al motor de notificaciones (SPEC-201/296), nadie actualizó la pregunta. El mismo código se copió a padres, colegios, operadores y profesionales.
 
-**Diseño elegido (CEO 22:1x, patrón colegios)**: **dos acciones separadas**, no una que adivina. El admin decide el canal.
+**Diseño elegido (Jelkin 22:5x, refina CEO 22:1x)**: **dos acciones separadas** con **semántica distinta**:
 
-- **`Restablecer contraseña`** → genera + muestra en pantalla **siempre**. No consulta el correo.
-- **`Reenviar por correo`** → acción aparte, explícita: regenera + encola envío + muestra la credencial en pantalla como respaldo. Mensaje dice *«encolado»*, nunca *«enviado»*.
+- **`Restablecer contraseña` / `Regenerar contraseña`** → genera + muestra en pantalla **siempre**. No toca el correo. Es la salida cuando el admin necesita la credencial en la mano.
+- **`Reenviar por correo`** → acción aparte, explícita: regenera + encola envío. **NUNCA devuelve la credencial** cuando el envío se encoló bien — para eso está el otro botón. Único fallback: si ni siquiera se pudo ENCOLAR, la credencial viaja como copia manual para no dejar al admin atascado. Mensaje dice *«encolado»*, nunca *«enviado»* (SPEC-201/296 es asíncrono).
+
+**Por qué dos botones y no uno «adivinador»** (Jelkin): un botón que muestra u oculta según flags convierte la respuesta en un misterio; dos botones dan control explícito y hacen la auditoría legible (un `reenviar` sin credencial en el body es prueba de que se disparó por correo).
 
 CEO desactivó en prod `auth.registro_enlace_profesional` y `auth.bienvenida_profesional` como rodeo hasta que este PR entre; los reactiva al mergear.
 
@@ -25,31 +28,36 @@ CEO desactivó en prod `auth.registro_enlace_profesional` y `auth.bienvenida_pro
 ### 1) Padres y Profesionales — split en dos endpoints
 
 - **`POST /api/admin/padres/[id]/restablecer-password`** — reescrito: genera + persiste + audita + **devuelve `passwordTemporal: password` SIEMPRE**. NO toca el correo. Mensaje: *«Contraseña temporal generada. Se muestra abajo una sola vez… Para reenviarla por correo, use la acción "Reenviar por correo".»*
-- **NUEVO `POST /api/admin/padres/[id]/reenviar-email`** — regenera + encola `enviarEmailCredencialesPadre` + audita + **devuelve `passwordTemporal: password` SIEMPRE** + `encolado: boolean`. Mensaje según encolado: *«Envío por correo encolado — puede no llegar (proveedor asíncrono). La temporal está abajo…»* / *«No se pudo encolar el envío…»*.
-- Mismo par para `profesionales`: `restablecer-password` reescrito + `reenviar-email` nuevo.
+- **NUEVO `POST /api/admin/padres/[id]/reenviar-email`** — regenera + encola `enviarEmailCredencialesPadre` + audita. Devuelve `encolado: boolean` y **`passwordTemporal` SOLO como fallback** cuando `encolado === false` (Jelkin 22:5x: «reenviar NUNCA la devuelve»; el único fallback existe para no atascar al admin si ni siquiera se encoló).
+- Mismo par para `profesionales`: `restablecer-password` reescrito + `reenviar-email` nuevo con el mismo contrato.
 
-### 2) Operadores y Colegios — fix quirúrgico del `reenviar-email` existente
+### 2) Operadores y Colegios — reenviar-email respeta el contrato Jelkin
 
-- **`POST /api/admin/operadores/[id]/reenviar-email`**: el condicional `emailEnviado ? undefined : password` se **borra**. `passwordTemporal: password` siempre; se agrega `encolado`; mensaje honesto sobre asíncrono.
+- **`POST /api/admin/operadores/[id]/reenviar-email`**: mantiene `passwordTemporal: emailEnviado ? undefined : password` — happy path NO devuelve, fallback SÍ. Los tests viejos (I-37) codificaban ya ese contrato; los mensajes se aclaran para hablar de «encolado» en vez de «enviado».
 - **`POST /api/admin/colegios/[id]/reenviar-email`**: mismo tratamiento.
 
-### 3) Enlace de registro — mismo criterio
+### 3) Enlace de registro — sigue «SIEMPRE muestra»
 
-- **`POST /api/admin/profesionales/solicitudes/reenviar`**: el enlace SIEMPRE viaja en la respuesta. Antes solo salía si el correo falló (mismo bug).
+- **`POST /api/admin/profesionales/solicitudes/reenviar`**: el enlace SIEMPRE viaja en la respuesta. Antes solo salía si el correo falló (mismo bug I-298). Este endpoint es contrato «SIEMPRE muestra» —el equivalente a «restablecer» para el flujo de solicitud— porque el admin necesita el enlace en pantalla para pasárselo al profesional por otro canal si el correo llega tarde.
 
 ### 4) Client
 
 - **`ProfesionalesGestionClient.tsx`** — nuevo botón "Reenviar por correo" junto a "Restablecer contraseña". El banner que ya mostraba `passwordTemporal` cuando venía se activa siempre ahora.
 - **`PadresPageClient.tsx`** — misma pareja de botones (nueva función `reenviarPorCorreo`).
 
-### 5) Candado permanente
+### 5) Candado permanente — foco en endpoints «SIEMPRE muestra»
 
-- **`src/app/api/admin/credencial-siempre-visible.candado.test.ts`** — recorre `src/app/api/admin/**/route.ts`, elimina comentarios y busca el patrón
+- **`src/app/api/admin/credencial-siempre-visible.candado.test.ts`** — recorre `src/app/api/admin/**/route.ts` pero SOLO evalúa los que caen en el contrato «SIEMPRE muestra»:
+  - `**/restablecer-password/route.ts`
+  - `**/regenerar-password/route.ts`
+  - `**/solicitudes/reenviar/route.ts` (enlace de registro)
+
+  En esos archivos, elimina comentarios y busca el patrón
   ```
   \b(passwordTemporal|enlace|password|token)\s*:\s*[^,{}]*\?\s*undefined\s*:
   ```
-  Con violaciones lista archivo + match y falla con la razón del CEO. Contraprueba: hay ≥20 archivos escaneados para que un mueve-carpetas no lo esconda.
-- **Regresión probada**: `sed 's/passwordTemporal: password,/passwordTemporal: encolado ? undefined : password,/'` en un endpoint → 1 test candado ROJO listando la fuga. Restaurado.
+  Con violaciones lista archivo + match y falla con la razón del CEO. Contraprueba: hoy hay 5 endpoints alcanzados (piso duro); si desaparece uno, el candado avisa.
+- **`reenviar-email/**` queda fuera del scan a propósito**: ahí el condicional ES el contrato Jelkin («reenviar NUNCA la devuelve» salvo fallback de encolado).
 
 ## Candados
 
@@ -67,9 +75,13 @@ CEO desactivó en prod `auth.registro_enlace_profesional` y `auth.bienvenida_pro
 
 ## Impacto en arquitectura:
 
-Formaliza el par **`restablecer-password` + `reenviar-email`** para cuentas gestionadas por admin (padres, profesionales; colegios ya lo tenía en `regenerar-password` + `reenviar-email`; operadores queda con `regenerar-password` + `reenviar-email`). El primero NO envía; el segundo SIEMPRE regenera + encolla + muestra la credencial. **Un solo formato de respuesta**: `passwordTemporal: password` (o `enlace: url`) siempre en la respuesta, más `encolado: boolean` explícito.
+Formaliza el par **`restablecer-password` + `reenviar-email`** para cuentas gestionadas por admin (padres, profesionales; colegios y operadores siguen con `regenerar-password` + `reenviar-email`, misma semántica).
 
-El candado `credencial-siempre-visible.candado.test.ts` protege el patrón hacia adelante en TODOS los endpoints admin — cualquier nuevo endpoint que introduzca el condicional buggy queda ROJO en CI.
+**Semántica de respuestas — contrato Jelkin**:
+- `restablecer-password` / `regenerar-password` / `solicitudes/reenviar`: **la credencial (o el enlace) SIEMPRE viaja en el body**. `passwordTemporal: password` incondicional; `enlace: url` incondicional.
+- `reenviar-email/*`: **la credencial NUNCA viaja cuando el envío se encoló bien**. `passwordTemporal: encolado ? undefined : password`. Fallback existe para no atascar al admin si el motor de notif ni siquiera acepta la tarea.
+
+El candado `credencial-siempre-visible.candado.test.ts` protege el primer contrato hacia adelante en los endpoints listados — cualquier nuevo endpoint «SIEMPRE muestra» que introduzca el condicional buggy queda ROJO en CI. Los endpoints `reenviar-email` quedan explícitamente fuera del scan (el condicional ahí es el contrato).
 
 ## Fuera de alcance
 

@@ -92,14 +92,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         return NextResponse.json({
             colegio: { id: colegio.id, nombre: colegio.nombre },
             admin: { id: colegio.admin.id, email: colegio.admin.email, debeCambiarPassword: true },
-            // SPEC-423 (I-298): la temporal SIEMPRE viaja en la respuesta —
-            // `emailEnviado` mide encolado en el motor de notif (SPEC-296),
-            // no entrega real, así que no puede decidir si mostrar la clave.
-            passwordTemporal: password,
-            encolado: emailEnviado,
+            // Contrato Jelkin (dos botones): «reenviar» NUNCA devuelve la
+            // contraseña cuando el envío se encoló bien — el admin la lee del
+            // correo o del botón «restablecer», que sí SIEMPRE la muestra.
+            // Único fallback: si ni siquiera se pudo encolar, devolvemos la
+            // temporal para que el admin no quede atascado (copia manual).
+            emailEnviado,
+            passwordTemporal: emailEnviado ? undefined : password,
             mensaje: emailEnviado
-                ? "Contraseña temporal regenerada. Envío por correo al administrador del colegio encolado — puede no llegar (proveedor asíncrono). La temporal está abajo (se muestra una sola vez)."
-                : "Contraseña temporal regenerada. No se pudo encolar el envío por correo. Copie la temporal y compártala manualmente (se muestra una sola vez).",
+                ? "Email de credenciales reenviado al administrador del colegio."
+                : "No se pudo enviar el email. Copie la contraseña temporal y compártala manualmente (se muestra una sola vez).",
         });
     } catch (error) {
         if (error instanceof AppError) {

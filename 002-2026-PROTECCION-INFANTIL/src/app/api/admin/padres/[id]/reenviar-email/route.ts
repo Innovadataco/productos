@@ -79,13 +79,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         return NextResponse.json({
             padre: { ...padre, debeCambiarPassword: true },
-            // SPEC-423 · la temporal SIEMPRE se muestra. La entrega efectiva
-            // del correo es asíncrona; el sistema no la conoce.
-            passwordTemporal: password,
+            // Contrato Jelkin (dos botones): «reenviar» NUNCA devuelve la
+            // contraseña cuando el envío se encoló bien — para eso está el
+            // botón «restablecer», que sí SIEMPRE la muestra en pantalla.
+            // Único fallback: si ni siquiera se pudo encolar, devolvemos la
+            // temporal para que el admin no quede atascado (copia manual).
             encolado,
+            passwordTemporal: encolado ? undefined : password,
             mensaje: encolado
-                ? "Contraseña temporal regenerada. Envío por correo encolado — puede no llegar (proveedor asíncrono). La temporal está abajo por si necesita compartirla a mano (se muestra una sola vez)."
-                : "Contraseña temporal regenerada. No se pudo encolar el envío por correo. Copie la temporal y compártala manualmente (se muestra una sola vez).",
+                ? "Envío por correo encolado — puede no llegar (proveedor asíncrono). Para ver la contraseña, use el botón «Restablecer contraseña»."
+                : "No se pudo encolar el envío por correo. Copie la contraseña temporal y compártala manualmente (se muestra una sola vez).",
         });
     } catch (error) {
         if (error instanceof AppError) {

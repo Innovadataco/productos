@@ -1,24 +1,39 @@
 /**
- * SPEC-423 (I-298) · Candado permanente: la credencial de respaldo se muestra
- * SIEMPRE en las respuestas admin que la generan.
+ * SPEC-423 (I-298) · Candado permanente: los endpoints admin del contrato
+ * "SIEMPRE muestra" no pueden esconder la credencial detrás de un flag.
  *
- * El defecto que este candado caza — verificado en producción por CEO:
+ * El defecto que este candado caza — verificado en producción por CEO en I-298:
  *   `passwordTemporal: emailEnviado ? undefined : password`
- * evaluaba si el motor de notificaciones había ENCOLADO, no si el correo
- * había llegado. Encolar siempre funciona (SPEC-201/296), así que
- * `emailEnviado` era siempre true → la credencial nunca se revelaba, ni
- * siquiera cuando el envío real fallaba en el worker (`[daily_quota_exceeded]`).
- * Se propagó copiando cuatro veces el mismo error.
+ * en `restablecer-password` (y análogos). El `emailEnviado` medía si el motor
+ * de notificaciones había ENCOLADO, no si el correo había llegado. Encolar
+ * siempre funciona (SPEC-201/296), así que la credencial nunca se revelaba.
+ * Se propagó copiando el mismo error a padres/colegios/operadores/profesionales
+ * y a `solicitudes/reenviar` (donde el "enlace" era la credencial).
  *
- * Regla: en `/api/admin/**` **ningún** endpoint puede tener el patrón
- * `passwordTemporal|enlace: <cond> ? undefined : <credencial>`. La credencial
- * viaja SIEMPRE. Los comentarios que documentan la lección están permitidos.
+ * Contrato Jelkin (22:5x) — DOS BOTONES DISTINTOS, cada uno con su semántica:
+ *   · «restablecer contraseña» / «regenerar contraseña»
+ *     → SIEMPRE muestra la credencial en pantalla (este candado la protege).
+ *   · «reenviar por correo»
+ *     → NUNCA la devuelve cuando el envío se encoló bien; único fallback es
+ *       el fallo de encolado (copia manual). El patrón condicional ES el
+ *       contrato correcto ahí, así que reenviar-email queda FUERA del scan.
+ *
+ * Regla: en los endpoints listados abajo, NINGUNO puede tener el patrón
+ * `passwordTemporal|enlace|password|token: <cond> ? undefined : <credencial>`.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 const RUTA_ADMIN = path.resolve(__dirname);
+
+// Endpoints cuyo contrato es "SIEMPRE muestra" — únicos alcanzados por el
+// candado. Coincide con path relativo a `/api/admin/**` (POSIX-normalizado).
+const RUTAS_SIEMPRE_MUESTRA = [
+    /(^|\/)restablecer-password\/route\.ts$/,
+    /(^|\/)regenerar-password\/route\.ts$/,
+    /(^|\/)solicitudes\/reenviar\/route\.ts$/,
+];
 
 function* recorrer(directorio: string): Generator<string> {
     for (const entrada of fs.readdirSync(directorio, { withFileTypes: true })) {
@@ -40,38 +55,44 @@ function sinComentarios(contenido: string): string {
         .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
-// Cazamos `<field>: <expr> ? undefined : <credencial-like>` para los tres
+// Cazamos `<field>: <expr> ? undefined : <credencial-like>` para los cuatro
 // nombres que hoy usa la app.
 const PATRON_FUGA = /\b(passwordTemporal|enlace|password|token)\s*:\s*[^,{}]*\?\s*undefined\s*:/g;
 
-describe("SPEC-423 · credencial siempre visible en /api/admin/** (candado I-298)", () => {
-    const archivos = [...recorrer(RUTA_ADMIN)];
-
-    it("hay archivos de rutas admin escaneados (contraprueba del scanner)", () => {
-        // Contraprueba mínima: si algún día alguien mueve la carpeta o el
-        // recorrer falla en silencio, este test avisa. 20 es un piso holgado.
-        expect(archivos.length).toBeGreaterThan(20);
+describe("SPEC-423 · credencial siempre visible en endpoints admin «SIEMPRE muestra» (I-298)", () => {
+    const todosRoute = [...recorrer(RUTA_ADMIN)];
+    const alcanzados = todosRoute.filter((abs) => {
+        const rel = path.relative(RUTA_ADMIN, abs).split(path.sep).join("/");
+        return RUTAS_SIEMPRE_MUESTRA.some((re) => re.test(rel));
     });
 
-    it("ningún endpoint condiciona `passwordTemporal|enlace|password|token` a `undefined` según un flag de correo", () => {
+    it("cubre los endpoints «SIEMPRE muestra» conocidos (contraprueba)", () => {
+        // Piso: hoy hay 5 (padres/prof restablecer-password, colegios/prof
+        // regenerar-password, solicitudes/reenviar). Si desaparece uno, avisa.
+        expect(alcanzados.length).toBeGreaterThanOrEqual(5);
+    });
+
+    it("ningún endpoint «SIEMPRE muestra» condiciona la credencial a `undefined` según un flag de correo", () => {
         const violaciones: string[] = [];
-        for (const archivo of archivos) {
+        for (const archivo of alcanzados) {
             const codigo = sinComentarios(fs.readFileSync(archivo, "utf-8"));
             const matches = codigo.match(PATRON_FUGA);
             if (matches && matches.length > 0) {
-                const relativo = path.relative(RUTA_ADMIN, archivo);
+                const relativo = path.relative(RUTA_ADMIN, archivo).split(path.sep).join("/");
                 for (const m of matches) violaciones.push(`${relativo}: ${m.trim()}`);
             }
         }
         expect(
             violaciones,
             [
-                "SPEC-423 (I-298) — credencial escondida por condicional de encolado:",
+                "SPEC-423 (I-298) — credencial escondida por condicional de encolado en un endpoint «SIEMPRE muestra»:",
                 ...violaciones,
                 "",
                 "El motor de notif encolla siempre, así que ese flag no mide entrega real.",
-                "La credencial de respaldo tiene que viajar SIEMPRE y el mensaje debe",
-                "decir «encolado», no «enviado». Ver SPEC-423/spec.md.",
+                "En restablecer-password / regenerar-password / solicitudes/reenviar la credencial",
+                "TIENE que viajar SIEMPRE. Si el endpoint es «reenviar por correo», el patrón",
+                "condicional es válido (contrato Jelkin: «reenviar» NUNCA la devuelve).",
+                "Ver SPEC-423/spec.md.",
             ].join("\n"),
         ).toEqual([]);
     });
