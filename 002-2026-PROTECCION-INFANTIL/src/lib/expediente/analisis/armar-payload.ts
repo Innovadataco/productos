@@ -57,9 +57,24 @@ export interface PayloadColegio {
 
 export type PayloadAnalisis = PayloadPadre | PayloadColegio;
 
-/** Franja horaria en 4 bloques de 6h; 0-6 = madrugada, 18-24 = noche. */
+/**
+ * SPEC-431 (I-247 b) · America/Bogota = UTC-5 fijo, sin horario de verano.
+ * Mismo criterio que `lectura-capa1.ts` — no se calcula franja sobre UTC.
+ */
+const OFFSET_BOGOTA_MS = 5 * 60 * 60 * 1000;
+
+/**
+ * Franja horaria en 4 bloques de 6 h, **en hora de Bogotá**; 0-6 = madrugada,
+ * 18-24 = noche.
+ *
+ * Antes de SPEC-431 esto usaba `getUTCHours()` a secas, y como Colombia va cinco
+ * horas atrás, **la noche entera se le presentaba al modelo como madrugada**: un
+ * hecho de las 21:00 en Bogotá es 02:00 UTC del día siguiente. La franja horaria
+ * es una de las señales que el modelo pesa para leer un patrón; darle la noche
+ * cambiada de bloque le cambia la lectura sin que nadie lo note.
+ */
 function franjaDe(fecha: Date): string {
-    const h = fecha.getUTCHours();
+    const h = new Date(fecha.getTime() - OFFSET_BOGOTA_MS).getUTCHours();
     if (h < 6) return "0-6";
     if (h < 12) return "6-12";
     if (h < 18) return "12-18";

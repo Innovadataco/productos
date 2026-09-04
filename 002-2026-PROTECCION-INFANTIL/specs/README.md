@@ -376,6 +376,7 @@
 | [422](422-registro-profesional-publico/spec.md) | SPEC-422 · «Soy profesional» era un enlace muerto — cierra I-297 | 🟢 IMPLEMENTADO |
 | [423](423-credencial-siempre-visible/spec.md) | SPEC-423 · La credencial de respaldo se muestra SIEMPRE — cierra I-298 | 🟢 IMPLEMENTADO |
 | [425](425-panel-profesional/spec.md) | SPEC-425 · El panel del profesional (A-75 · lote L5) | 🟢 IMPLEMENTADO |
+| [431](431-franja-nocturna-payload/spec.md) | SPEC-431 · La franja horaria le mentía al modelo — cierra I-247 b | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 
 ## Incidencias de calidad de datos

@@ -8,12 +8,20 @@
  */
 import { describe, it, expect } from "vitest";
 import { armarPayload, armarPayloadColegio, armarPayloadPadre } from "./armar-payload";
+import { franjaBogota } from "@/lib/caso/hechos-caso";
 import type { CategoriaConducta } from "@prisma/client";
 
 describe("armarPayload · PADRE_COMPLETO", () => {
+    // SPEC-431 (I-247 b) · el fixture está escrito en UTC pero PENSADO en hora
+    // de Bogotá, que es la única que significa algo acá: «de noche» es un dato
+    // del caso, no un detalle de formato. Las dos primeras son de NOCHE en
+    // Riohacha —22:30 y 21:15— y por eso viven en la madrugada UTC del día
+    // siguiente. Antes de SPEC-431 el armador las etiquetaba "0-6" (madrugada)
+    // y este mismo fixture, escrito en UTC crudo, le daba la razón al defecto.
     const hechos = [
         {
-            fecha: new Date("2026-08-01T22:30:00Z"),
+            // 2026-08-01 22:30 Bogotá
+            fecha: new Date("2026-08-02T03:30:00Z"),
             ciudad: "Riohacha",
             pais: "CO",
             plataforma: "whatsapp",
@@ -21,7 +29,8 @@ describe("armarPayload · PADRE_COMPLETO", () => {
             edadReportada: 12,
         },
         {
-            fecha: new Date("2026-08-15T21:15:00Z"),
+            // 2026-08-15 21:15 Bogotá
+            fecha: new Date("2026-08-16T02:15:00Z"),
             ciudad: "Riohacha",
             pais: "CO",
             plataforma: "whatsapp",
@@ -29,7 +38,8 @@ describe("armarPayload · PADRE_COMPLETO", () => {
             edadReportada: 12,
         },
         {
-            fecha: new Date("2026-08-20T09:00:00Z"),
+            // 2026-08-20 09:00 Bogotá
+            fecha: new Date("2026-08-20T14:00:00Z"),
             ciudad: "Valledupar",
             pais: "CO",
             plataforma: "instagram",
@@ -39,6 +49,22 @@ describe("armarPayload · PADRE_COMPLETO", () => {
     ];
     const hijoCruzado = { edad: 12, sexo: "F" };
 
+    /** La franja de UN hecho: con uno solo, el dominante ES su franja. */
+    const franjaDeUnHecho = (fecha: Date): string | null =>
+        armarPayloadPadre({
+            hechos: [
+                {
+                    fecha,
+                    ciudad: "Riohacha",
+                    pais: "CO",
+                    plataforma: "whatsapp",
+                    categoria: "CONTACTO_INSISTENTE" as CategoriaConducta,
+                    edadReportada: 12,
+                },
+            ],
+            hijoCruzado: null,
+        }).franjaHorariaDominante;
+
     it("incluye la lista completa de hechos y el hijo cruzado", () => {
         const p = armarPayloadPadre({ hechos, hijoCruzado });
         expect(p.alcance).toBe("PADRE_COMPLETO");
@@ -47,11 +73,51 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         expect(p.hijoCruzado).toEqual({ edad: 12, sexo: "F" });
     });
 
-    it("calcula categoría, franja y ciudad dominantes", () => {
+    it("calcula categoría y ciudad dominantes", () => {
         const p = armarPayloadPadre({ hechos, hijoCruzado });
         expect(p.categoriaDominante).toBe("CONTACTO_INSISTENTE");
-        expect(p.franjaHorariaDominante).toBe("18-24"); // 2 hechos entre 21 y 23
         expect(p.ciudadDominante).toBe("Riohacha");
+    });
+
+    it("SPEC-431 · la franja dominante es la NOCHE de Bogotá, no la madrugada UTC", () => {
+        const p = armarPayloadPadre({ hechos, hijoCruzado });
+        // Los dos hechos son de las 22:30 y las 21:15 en Bogotá. Con el defecto
+        // de I-247 b —`getUTCHours()` sin restar el offset— esto daba "0-6" y le
+        // contaba al modelo una historia de madrugada que nunca pasó.
+        expect(p.franjaHorariaDominante).toBe("18-24");
+        expect(p.franjaHorariaDominante, "el defecto devolvía madrugada").not.toBe("0-6");
+    });
+
+    it("SPEC-431 · cada hecho cae en su franja de Bogotá, uno por uno", () => {
+        // Uno por uno, para que un empate de conteos no pueda tapar un error:
+        // el dominante del conjunto podría acertar por casualidad.
+        expect(hechos.map((h) => franjaDeUnHecho(h.fecha))).toEqual(["18-24", "18-24", "6-12"]);
+    });
+
+    it("SPEC-431 · los bordes del día caen donde deben", () => {
+        // Los bordes son donde un offset mal aplicado se nota primero.
+        const casos: Array<[string, string]> = [
+            ["2026-08-02T05:00:00Z", "0-6"], //  00:00 Bogotá — recién empieza el día
+            ["2026-08-02T10:59:00Z", "0-6"], //  05:59 Bogotá — último minuto de madrugada
+            ["2026-08-02T11:00:00Z", "6-12"], // 06:00 Bogotá
+            ["2026-08-02T23:00:00Z", "18-24"], // 18:00 Bogotá — arranca la noche
+            ["2026-08-03T04:59:00Z", "18-24"], // 23:59 Bogotá — el filo del día
+        ];
+        for (const [iso, esperada] of casos) {
+            expect(franjaDeUnHecho(new Date(iso)), `${iso} debía caer en ${esperada}`).toBe(esperada);
+        }
+    });
+
+    it("SPEC-431 · coincide con la franja que ya calculaba bien el caso del colegio", () => {
+        // `hechos-caso.ts` resuelve lo mismo con `Intl` y zona horaria real.
+        // Dos implementaciones que discrepen son un defecto esperando su turno,
+        // así que se comparan las 24 horas del día, no una muestra.
+        for (let h = 0; h < 24; h++) {
+            const fecha = new Date(Date.UTC(2026, 7, 2, h, 30));
+            expect(franjaDeUnHecho(fecha), `discrepan en ${fecha.toISOString()}`).toBe(
+                franjaBogota(fecha),
+            );
+        }
     });
 
     it("tolera lista vacía sin colgar", () => {
