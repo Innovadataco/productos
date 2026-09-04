@@ -45,6 +45,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/dashboard/admin/comite/layout.ratchet.test.ts",
     // SPEC-389 (Red de Profesionales · L2): reserva legal del sello público + vigencia (Ley 2375/2024).
     "src/lib/profesionales/vigencia.test.ts",
+    // SPEC-449 (I-313): el reloj de vencimiento. Candado de CABLEADO — la
+    // lógica existía desde SPEC-389 y nadie la llamaba.
+    "src/lib/profesionales/vencimiento.candado.test.ts",
     // SPEC-389: idempotencia del worker de vencimiento (candado I-280).
     "src/lib/profesionales/cron-vencimiento.test.ts",
     // SPEC-374: decisión should-skip (saltar CI en PRs que no tocan PI ni raíz compartida).

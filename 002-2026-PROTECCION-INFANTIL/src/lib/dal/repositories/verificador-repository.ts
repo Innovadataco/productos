@@ -69,6 +69,75 @@ export class VerificadorRepository {
         });
     }
 
+    /**
+     * SPEC-449 (I-313) · lo que el reloj de vencimiento necesita leer.
+     *
+     * Trae los perfiles que PUEDEN vencer —`ACTIVO`— con sus verificaciones, en
+     * la forma exacta que consume `decidirAcciones` (`cron-vencimiento.ts:56`),
+     * que hasta esta spec no tenía quién lo alimentara: era lógica escrita,
+     * probada y sin una sola consulta detrás.
+     *
+     * Solo `ACTIVO` porque es el único estado desde el que `MARCAR_VENCIDO`
+     * tiene sentido; los demás ya están fuera del directorio.
+     */
+    async perfilesParaCorridaDeVencimiento(): Promise<
+        Array<{
+            id: string;
+            estado: EstadoPerfilProfesional;
+            verificaciones: Array<{
+                id: string;
+                perfilProfesionalId: string;
+                resultado: ResultadoVerificacion;
+                revisadoEn: Date;
+                venceEn: Date;
+                avisoVencimientoEnviadoEn: Date | null;
+            }>;
+        }>
+    > {
+        return this.db.perfilProfesional.findMany({
+            where: { estado: "ACTIVO" },
+            select: {
+                id: true,
+                estado: true,
+                verificaciones: {
+                    select: {
+                        id: true,
+                        perfilProfesionalId: true,
+                        resultado: true,
+                        revisadoEn: true,
+                        venceEn: true,
+                        avisoVencimientoEnviadoEn: true,
+                    },
+                },
+            },
+        });
+    }
+
+    /**
+     * SPEC-449 · marca el perfil `VENCIDO` **solo si sigue `ACTIVO`** (CAS).
+     * Devuelve `false` si otra corrida ya lo transitó — dos corridas
+     * simultáneas no pueden escribir dos veces ni pisarse.
+     */
+    async marcarVencidoSiActivo(perfilProfesionalId: string): Promise<boolean> {
+        const r = await this.db.perfilProfesional.updateMany({
+            where: { id: perfilProfesionalId, estado: "ACTIVO" },
+            data: { estado: "VENCIDO" },
+        });
+        return r.count > 0;
+    }
+
+    /**
+     * SPEC-449 · sella el aviso **solo si no se envió antes** (CAS).
+     * Es lo que impide que la corrida de mañana repita el correo de hoy.
+     */
+    async marcarAvisoVencimientoEnviado(verificacionId: string, cuando: Date): Promise<boolean> {
+        const r = await this.db.verificacionProfesional.updateMany({
+            where: { id: verificacionId, avisoVencimientoEnviadoEn: null },
+            data: { avisoVencimientoEnviadoEn: cuando },
+        });
+        return r.count > 0;
+    }
+
     /** Cambia el estado del perfil (solo transiciones válidas en el service). */
     cambiarEstadoPerfil(id: string, estado: EstadoPerfilProfesional, tx?: Prisma.TransactionClient) {
         const client = tx ?? this.db;

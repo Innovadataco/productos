@@ -21,10 +21,11 @@ esta tabla y los `scripts/*.mjs` estén 1:1.
 | `123456797` | `scripts/worker-sesiones.mjs` | `pi-sesiones` | Corte de sesiones expiradas | SPEC-284 · SPEC-290 |
 | `123456798` | `scripts/worker-tasas.mjs` | — sin servicio (I-132 pendiente) | Actualización periódica de tasas (latente) | SPEC-284 (antes `123456790`) |
 | `123456799` | `scripts/worker-analisis-expediente.mjs` | `pi-analisis-expediente` | Análisis IA capa 2 del expediente (fila de a uno) | SPEC-341 |
+| `123456800` | `scripts/worker-verificacion-vencimiento.mjs` | `pi-verificacion-vencimiento` | Reloj de vencimiento de la verificación del profesional (Ley 2375/2024) | SPEC-449 |
 | `923456789` | `scripts/simulador-abuso.mjs` | `simulador-abuso` | Simulador de abuso (banco de pruebas) | inicial |
 | `987654321` | `scripts/worker-notificaciones.mjs` | `pi-notificaciones` | Envío diferido de notificaciones | SPEC-186 |
 
-**Total: 13 IDs · 13 archivos · sin colisiones.**
+**Total: 14 IDs · 14 archivos · sin colisiones.**
 
 ## Regla operativa
 
@@ -50,8 +51,8 @@ esta tabla y los `scripts/*.mjs` estén 1:1.
 
 ## Rango asignado
 
-- **`123456789..123456798`**: pool principal de PI (workers de negocio).
+- **`123456789..123456800`**: pool principal de PI (workers de negocio).
 - **`923456789`**: simulador de abuso (rango de banco de pruebas, no producción).
 - **`987654321`**: notificaciones (histórico, se conserva por identidad).
 
-El siguiente ID libre para un worker nuevo del pool principal es **`123456800`**.
+El siguiente ID libre para un worker nuevo del pool principal es **`123456801`**.
