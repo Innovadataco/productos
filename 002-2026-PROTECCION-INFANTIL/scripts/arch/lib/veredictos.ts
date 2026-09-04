@@ -14,7 +14,10 @@ import { SignJWT } from "jose";
 import { proxy, esDestinoPermitidoPorRol } from "../../../src/lib/proxy";
 import { RUTA_PROXY } from "./paths";
 
-export const ROLES_AUTENTICADOS = ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA", "PARENT"] as const;
+// SPEC-424: `PROFESIONAL` entra al barrido como cualquier otro rol autenticado —
+// el proxy ya lo enruta a `/perfil-profesional/*`; el barrido cierra la coartada
+// «no lo miré porque no estaba en el tipo» (TS2367 en las guardas de nav-fuentes).
+export const ROLES_AUTENTICADOS = ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA", "PARENT", "PROFESIONAL"] as const;
 export type RolAutenticado = (typeof ROLES_AUTENTICADOS)[number];
 export type RolBarrido = RolAutenticado | "ANONIMO";
 export const ROLES_BARRIDO: RolBarrido[] = [...ROLES_AUTENTICADOS, "ANONIMO"];
