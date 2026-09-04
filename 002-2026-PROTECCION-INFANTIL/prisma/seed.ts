@@ -4084,13 +4084,18 @@ async function main() {
     //    adelante (informativa acá, informativa allá).
     await seedParametrosPrimeraCita();
 
+    // ── SPEC-439: el aviso al padre que YA reportó ese identificador ──────
+    //    Plantilla y regla sembradas (no quemadas): el admin edita el texto y
+    //    puede apagar la regla desde el panel, sin desplegar.
+    await seedCorroboracionPadre();
+
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
     await prisma.$disconnect();
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion, seedParametrosPrimeraCita };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion, seedParametrosPrimeraCita, seedCorroboracionPadre };
 
 // ── SPEC-428 (A-75 · brief §9 M4 §4): precio estándar de la primera cita ──
 // Orden permanente de Jelkin (§4): nada quemado. Se siembra idempotente
@@ -4441,4 +4446,53 @@ if (isMainModule()) {
         .finally(async () => {
             await prisma.$disconnect();
         });
+}
+// ── SPEC-439: aviso al padre que ya había reportado el mismo identificador ──
+// La promesa central del producto: más gente reportando la misma cuenta = señal
+// más fuerte. RESERVA: el correo lleva plataforma, ciudad, conducta y conteo —
+// NUNCA el texto del otro reporte ni quién lo hizo (A-60 · criterio 5).
+async function seedCorroboracionPadre() {
+    const clave = "reporte_corroborado_por_otro";
+    const asunto = "Alguien más reportó un contacto que tú ya habías reportado";
+    const cuerpoMarkdown = [
+        "Hola,",
+        "",
+        "Otra persona reportó un contacto en **{{plataforma}}** que tú ya habías reportado.",
+        "",
+        "- Dónde: {{ciudad}}",
+        "- Conducta identificada: {{conducta}}",
+        "- Personas que lo han reportado: {{totalReportes}}",
+        "",
+        "Cuando varias personas reportan el mismo contacto, la señal es más fuerte.",
+        "Puedes ver el detalle en tu expediente.",
+        "",
+        "Por privacidad no te decimos quién reportó ni qué escribió: solo cuándo, dónde y qué conducta se identificó.",
+    ].join("\n");
+    const variablesSchema = {
+        type: "object",
+        properties: {
+            plataforma: { type: "string" },
+            ciudad: { type: "string" },
+            conducta: { type: "string" },
+            totalReportes: { type: "number" },
+        },
+    };
+
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave },
+        update: { canal: "EMAIL", asunto, cuerpoMarkdown, variablesSchema, activa: true },
+        create: { clave, canal: "EMAIL", asunto, cuerpoMarkdown, variablesSchema, activa: true },
+    });
+
+    await upsertNotificacionRegla({
+        evento: "reporte.corroborado_por_otro",
+        rol: "PARENT",
+        canal: "EMAIL",
+        plantillaClave: clave,
+        // No es obligatoria: el padre puede apagarla desde sus preferencias
+        // (`NotificacionPreferencia`), sin columna nueva ni migración.
+        obligatoria: false,
+    });
+
+    console.log("[SEED] SPEC-439 plantilla+regla reporte.corroborado_por_otro listas");
 }

@@ -18,6 +18,7 @@ import { registrarPaso } from "@/lib/expediente/pasos";
 import { ReporteRepository } from "../repositories/reporte";
 import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
 import { EventoMatchRepository } from "../repositories/evento-match";
+import { avisarPadresQueReportaronSinFallar } from "./corroboracion-padre";
 
 export interface ResultadoDeteccionMatch {
     registrado: boolean;
@@ -120,6 +121,21 @@ export async function detectarYRegistrarMatch(reporteId: string): Promise<Result
         }
         throw err;
     }
+
+    // SPEC-439: el aviso al padre que YA había reportado este identificador.
+    // Va DESPUÉS de `eventos.crear`: esa creación es única por `reporteNuevoId`
+    // (FR-004), así que un reintento no puede mandar el aviso dos veces. Nunca
+    // lleva identidad ni texto del otro reportante. Fail-open (FR-005): un aviso
+    // caído no puede tumbar la detección del match.
+    await avisarPadresQueReportaronSinFallar({
+        reporteNuevoId: reporteId,
+        plataformaId: reporte.plataformaId,
+        ciudad: reporte.ciudad,
+        categoria: reporte.clasificacion?.categoria ?? null,
+        conteoAcumulado,
+        usuariosPrevios: previos.map((r) => r.usuarioId),
+        autorNuevoId: reporte.usuarioId,
+    });
 
     // Auditoría de la mutación (convención): solo metadatos agregados, nunca texto.
     await logAudit({

@@ -407,4 +407,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-438 (I-305): el sistema no puede volver a inventar la hora del hecho.
     "src/lib/reportes/fecha-hecho.candado.test.ts",
     "src/lib/reportes/franja-aproximada.test.ts",
+    // SPEC-439: el aviso al padre. El defecto era código MUERTO (SPEC-135/308
+    // construido y sin llamador), así que el candado mira el CABLEADO.
+    "src/lib/dal/services/corroboracion-padre.candado.test.ts",
 ];

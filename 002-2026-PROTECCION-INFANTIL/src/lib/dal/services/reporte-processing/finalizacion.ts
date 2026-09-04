@@ -6,6 +6,7 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { enviarAlertaRevision, enviarAlertaScoreCritico, enviarAlertasSuscriptores } from "@/lib/email";
 import { asignarOperadorAReporte } from "@/lib/operadores/asignador";
+import { notificarCambioCirculoSiCorresponde } from "@/lib/dal/services/circulo-confianza";
 import { ESTADOS_FINALES } from "./errors";
 import { ERROR_CODES } from "@/lib/errors";
 import type { EstadoReporte } from "@prisma/client";
@@ -116,6 +117,17 @@ export async function finalizarReporte({
                 plataformaId: reporte.plataformaId,
                 totalReportes: scoreResult.totalReportes,
             }).catch((err) => console.error("[ALERTA] Error enviando alertas a suscriptores", err));
+
+            // SPEC-439: el aviso al padre que VIGILA el identificador en su
+            // círculo. La función existía desde SPEC-135 (E-2), enriquecida por
+            // SPEC-308 (A-50) — y NUNCA tuvo un llamador. Su propia spec decía
+            // «el punto de disparo es este flujo, ya invocado cuando un reporte
+            // pasa a estado visible»: nunca lo estuvo. Este es ese punto.
+            // Ella misma respeta interruptor (`notificacionesCirculo`) y
+            // enfriamiento, y se traga sus errores; el `.catch` es cinturón.
+            notificarCambioCirculoSiCorresponde(reporteId).catch((err) =>
+                console.error("[ALERTA] Error notificando al círculo de confianza", err)
+            );
         }
     }
 

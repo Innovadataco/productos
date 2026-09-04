@@ -36,6 +36,8 @@ type OtroReporte = {
     pais: string | null;
     ciudad: string | null;
     categoriaLabel: string | null;
+    // SPEC-439: el TIPO de autor, nunca su identidad.
+    esAnonimo: boolean;
 };
 
 type SeguimientoData = {
@@ -268,7 +270,10 @@ export function SeguimientoClient() {
                                             <p className="font-medium text-body">{fechaHoraColombia(r.creadoEn)}</p>
                                             <p className="text-subtle">{lugarDe(r)}</p>
                                         </div>
-                                        {r.categoriaLabel && <Badge variant="info">{r.categoriaLabel}</Badge>}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-subtle">{r.esAnonimo ? "anónimo" : "otro padre"}</span>
+                                            {r.categoriaLabel && <Badge variant="info">{r.categoriaLabel}</Badge>}
+                                        </div>
                                     </li>
                                 ))}
                             </ul>

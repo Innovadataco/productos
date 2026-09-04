@@ -367,8 +367,20 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
             expect(otro.ciudad).toBe("Medellín");
             expect(otro.categoriaLabel).toBeTruthy();
             expect(new Date(otro.creadoEn).toString()).not.toBe("Invalid Date");
-            // El límite duro: SOLO esos 5 campos salen del backend.
-            expect(Object.keys(otro).sort()).toEqual(["categoriaLabel", "ciudad", "creadoEn", "id", "pais"]);
+            // SPEC-439: el sexto campo es el TIPO de autor, que Jelkin pidió ver.
+            // Este reporte lo hizo un padre autenticado, así que NO es anónimo.
+            // Es una clase de reportante, jamás una identidad: las afirmaciones
+            // de abajo (id y email del otro padre) siguen siendo el límite real.
+            expect(otro.esAnonimo).toBe(false);
+            // El límite duro: SOLO esos 6 campos salen del backend.
+            expect(Object.keys(otro).sort()).toEqual([
+                "categoriaLabel",
+                "ciudad",
+                "creadoEn",
+                "esAnonimo",
+                "id",
+                "pais",
+            ]);
 
             // Ley 1581: ni el texto ni el autor pueden aparecer en NINGÚN nivel del payload.
             const serializado = JSON.stringify(body);

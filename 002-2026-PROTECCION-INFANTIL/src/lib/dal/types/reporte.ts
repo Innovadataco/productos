@@ -93,6 +93,8 @@ export interface OtroReporteDto {
     pais: string | null;
     ciudad: string | null;
     categoriaLabel: string | null;
+    /** SPEC-439: tipo de autor, NUNCA su identidad. `true` = anónimo; `false` = padre autenticado. */
+    esAnonimo: boolean;
 }
 
 export interface ReporteDetallePadreDto {
