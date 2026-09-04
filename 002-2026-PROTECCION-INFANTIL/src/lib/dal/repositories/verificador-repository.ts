@@ -93,7 +93,7 @@ export class VerificadorRepository {
                 avisoVencimientoEnviadoEn: Date | null;
             }>;
         }>
-    > {
+        > {
         return this.db.perfilProfesional.findMany({
             where: { estado: "ACTIVO" },
             select: {
