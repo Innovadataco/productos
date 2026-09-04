@@ -142,11 +142,10 @@ export function NavHeader() {
             ? "/dashboard/colegio/comite/casos"
             : user?.rol === "PARENT"
                 ? "/dashboard/padre" // SPEC-317: zona canónica del padre
-                // SPEC-424 (I-299): sin este case, el botón "Dashboard" del
-                // profesional caía a `/dashboard-publico` (el genérico del anónimo).
-                // La línea se mueve a `/dashboard/profesional` cuando SPEC-425 mergee.
+                // SPEC-424 (I-299) + SPEC-425 (A-75 L5): el «Dashboard» del
+                // profesional aterriza en el panel del rol, ya vivo en main.
                 : user?.rol === "PROFESIONAL"
-                    ? "/perfil-profesional/verificacion"
+                    ? "/dashboard/profesional"
                     : "/dashboard-publico";
 
     // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).

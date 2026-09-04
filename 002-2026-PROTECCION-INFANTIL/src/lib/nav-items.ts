@@ -126,13 +126,12 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
  * fallaba con «No pudimos cargar tus reportes» porque `/api/reportes/*`
  * responde vacío para un usuario sin reportes propios.
  *
- * ACTUALIZAR cuando SPEC-425 (Dev 02 · panel L5) mergee: agregar la entrada
- * al nuevo `/dashboard/profesional` como primer ítem. El resto queda igual.
+ * SPEC-425 (Dev 02 · panel L5) trajo `/dashboard/profesional`: entra como
+ * primer ítem del menú. Verificación y Mi ficha se quedan como accesos
+ * directos hasta que el panel absorba esas dos superficies.
  */
 export const PROFESIONAL_NAV_ITEMS: PadreNavItem[] = [
-    // Verificación de la ficha — lo único que hoy tiene el profesional.
-    // Cuando SPEC-425 traiga `/dashboard/profesional`, ese va primero y este
-    // queda como sub-entrada del panel.
+    { href: "/dashboard/profesional", label: "Panel" },
     { href: "/perfil-profesional/verificacion", label: "Verificación" },
     { href: "/perfil-profesional/completar", label: "Mi ficha" },
 ];

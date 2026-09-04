@@ -29,6 +29,8 @@ export function dashboardHrefPorRol(rol: RolBarrido): string {
     if (rol === "COMITE_CONVIVENCIA") return "/dashboard/colegio/comite/casos";
     // SPEC-317: zona canónica del padre.
     if (rol === "PARENT") return "/dashboard/padre";
+    // SPEC-424 + SPEC-425: el profesional aterriza en su panel.
+    if (rol === "PROFESIONAL") return "/dashboard/profesional";
     return "/dashboard-publico";
 }
 
@@ -70,8 +72,8 @@ const GUARDAS_HEADER: Record<string, (rol: RolBarrido) => boolean> = {
     // SPEC-168: menú del Comité de Convivencia.
     "/dashboard/colegio/comite": (rol) => rol === "SCHOOL_ADMIN",
     "/dashboard/colegio/comite/casos": (rol) => rol === "COMITE_CONVIVENCIA" || rol === "SCHOOL_ADMIN",
-    // SPEC-424 (I-299): items del profesional en el header (hasta que SPEC-425
-    // traiga `/dashboard/profesional`, estos son los suyos).
+    // SPEC-424 (I-299) + SPEC-425 (A-75 L5): items del profesional en el header.
+    "/dashboard/profesional": (rol) => rol === "PROFESIONAL",
     "/perfil-profesional/verificacion": (rol) => rol === "PROFESIONAL",
     "/perfil-profesional/completar": (rol) => rol === "PROFESIONAL",
 };
