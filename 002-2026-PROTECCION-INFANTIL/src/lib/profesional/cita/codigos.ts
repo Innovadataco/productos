@@ -31,17 +31,14 @@ import { NotificacionRepository } from "@/lib/dal/repositories/notificacion";
 export const VIGENCIA_CODIGO_MS = 30 * 60 * 1000;
 /** El recordatorio con el código sale 10 minutos antes de la hora agendada. */
 export const ANTICIPACION_RECORDATORIO_MS = 10 * 60 * 1000;
+/**
+ * SPEC-427 (B1) · cuánto sigue valiendo el código DESPUÉS de que la franja
+ * termina. El profesional cierra al terminar la sesión; el código tiene que
+ * seguir vivo un rato más para el cierre y para un imprevisto.
+ */
+export const MARGEN_TRAS_SESION_MS = 60 * 60 * 1000;
 /** Mismo tope que el código de verificación del registro. */
 export const MAX_INTENTOS_CODIGO = 5;
-/**
- * Tope de reemisiones por ventana. El brief dice «las veces que haga falta», y
- * eso se respeta: el tope no es un castigo al padre, es el freno a que un
- * tercero use la pantalla de «pedir otro» como máquina de mandar correos.
- * Generoso a propósito.
- */
-export const MAX_REEMISIONES = 10;
-export const VENTANA_REEMISIONES_MS = 60 * 60 * 1000;
-
 /** 6 dígitos, CSPRNG. Se dicta en voz alta: más largo no se recuerda. */
 export function generarCodigo(): string {
     return randomInt(100000, 1000000).toString();
@@ -59,7 +56,12 @@ export type ResultadoCodigo =
     | { ok: false; motivo: MotivoRechazo };
 
 export interface CodigoEmitido {
-    /** El código EN CLARO. Solo viaja al correo del padre; nunca se persiste así. */
+    /**
+     * El código EN CLARO. No se persiste hasheado sí, pero SÍ viaja al padre y
+     * queda en `Notificacion.variables` del motor (como el código de
+     * verificación del registro). Riesgo aceptado y acotado: vigencia corta y
+     * un solo uso. Ver el plan de la spec.
+     */
     codigo: string;
     codigoId: string;
     expiraEn: Date;
@@ -74,7 +76,24 @@ export interface EmitirCodigoInput {
      * programa con `enviarEn` y el motor lo suelta a esa hora).
      */
     vigenteDesde: Date;
+    /**
+     * SPEC-427 (B1) · el FIN de la franja de la cita. La vigencia se ancla a él,
+     * no a la emisión: una consulta dura 45–60 min y el profesional cierra al
+     * TERMINAR, así que un código que muere a los 30 min de emitido (≈inicio+20)
+     * siempre le daría «expirado» en el camino normal. Se calcula
+     * `max(vigenteDesde + 30 min, franjaFin + 60 min)`. Si falta, cae al viejo
+     * comportamiento (solo para llamadores sin franja, como un test unitario).
+     */
+    franjaFin?: Date | undefined;
     tx?: Prisma.TransactionClient | undefined;
+}
+
+/** SPEC-427 (B1) · la vigencia real: cubre hasta pasada la sesión. */
+export function calcularExpiraEn(vigenteDesde: Date, franjaFin?: Date): Date {
+    const minimo = new Date(vigenteDesde.getTime() + VIGENCIA_CODIGO_MS);
+    if (!franjaFin) return minimo;
+    const trasLaSesion = new Date(franjaFin.getTime() + MARGEN_TRAS_SESION_MS);
+    return trasLaSesion > minimo ? trasLaSesion : minimo;
 }
 
 /**
@@ -90,23 +109,9 @@ export async function emitirCodigo(input: EmitirCodigoInput): Promise<CodigoEmit
         solicitudId: input.solicitudId,
         tipo: input.tipo,
         codigoHash: await bcrypt.hash(codigo, 12),
-        expiraEn: new Date(input.vigenteDesde.getTime() + VIGENCIA_CODIGO_MS),
+        expiraEn: calcularExpiraEn(input.vigenteDesde, input.franjaFin),
     });
     return { codigo, codigoId: fila.id, expiraEn: fila.expiraEn };
-}
-
-/** ¿Puede el padre pedir otro, o alguien está usando el botón de máquina? */
-export async function puedeReemitir(
-    solicitudId: string,
-    tipo: TipoCodigoCita,
-    ahora: Date
-): Promise<boolean> {
-    const emitidos = await new CodigoCitaRepository().contarEmitidosDesde(
-        solicitudId,
-        tipo,
-        new Date(ahora.getTime() - VENTANA_REEMISIONES_MS)
-    );
-    return emitidos < MAX_REEMISIONES;
 }
 
 /**
@@ -146,7 +151,12 @@ export async function validarCodigo(
     return { ok: true, codigoId: fila.id };
 }
 
-/** Una emisión, como la ven los tres: administrador, padre y profesional. */
+/**
+ * Una emisión de la traza. El brief la quiere visible para los tres
+ * (administrador, padre, profesional); HOY solo la consume la cola 2 del
+ * Verificador (autocerradas). Las vistas del padre y del profesional son de
+ * specs posteriores.
+ */
 export interface EmisionEnTraza {
     tipo: TipoCodigoCita;
     pedidoEn: string;

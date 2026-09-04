@@ -3,7 +3,7 @@
 **Status**: IMPLEMENTADO
 **Fecha**: 2026-09-04 · **Dev**: Dev 02 (`idc-80`) · **Origen**: brief A-75 §9 momento 6 · §3 · cierra **I-300** y **I-301**
 
-**Impacto en arquitectura:** migración aditiva (`CodigoCita`, `TipoCodigoCita`, `SolicitudCita.autocerradaEn`, 7 acciones de auditoría). **Un servicio nuevo en producción**: `pi-citas`, el worker que corre los barredores de la cita. Tres endpoints nuevos y dos eventos del motor de notificaciones que **bloquean el despliegue** si les falta la regla.
+**Impacto en arquitectura:** migración aditiva (`CodigoCita`, `TipoCodigoCita`, `SolicitudCita.autocerradaEn`, 5 acciones de auditoría). **Un servicio nuevo en producción**: `pi-citas`, el worker que corre los barredores de la cita. Dos endpoints nuevos (cerrar, no-asistió) y varios eventos del motor de notificaciones; los del cierre **bloquean el despliegue** si les falta la regla.
 
 ---
 
@@ -62,7 +62,7 @@ Es degradación silenciosa de manual: funcionaba lo suficiente para no avisar. E
 
 ## Verificación
 
-**9 tests de integración contra una base propia**, creada y destruida para esto:
+**17 tests de integración contra una base propia**, creada y destruida para esto:
 
 - El barrido emite el código **una vez**: una segunda corrida no le manda otro correo al padre.
 - El código correcto cierra; **el mismo código no cierra dos veces**.

@@ -183,9 +183,12 @@ export function IncidentesColaClient() {
                         <span className="text-subtle">→</span>
                         <span className="font-mono text-subtle">{f.profesional.email}</span>
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-3">
+                        {/* SPEC-427b agrega el panel del código de expediente cuando
+                            exista quien lo emita. En 427 no se pinta: mostrar
+                            «Nunca se pidió» sobre algo que no puede pedirse sería
+                            un hecho falso ante quien adjudica el incidente (B6). */}
                         <Traza titulo="Código de cita" emisiones={f.trazaCodigos.cita} />
-                        <Traza titulo="Código de expediente" emisiones={f.trazaCodigos.expediente} />
                     </div>
                 </li>
             ))}

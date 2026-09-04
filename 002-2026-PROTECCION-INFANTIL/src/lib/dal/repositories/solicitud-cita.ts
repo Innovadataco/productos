@@ -77,9 +77,35 @@ export class SolicitudCitaRepository {
      * solicitud 101 el contador empezaría a mentir sin avisar. Un número que
      * se ve bien y no lo está es peor que no mostrarlo.
      */
-    contarPorProfesional(profesionalId: string, estados?: EstadoSolicitudCita[]): Promise<number> {
+    /**
+     * SPEC-427 (B3): `soloVigentes` excluye las autocerradas (`autocerradaEn`
+     * no nulo). Una cita que el barrido cerró a los 5 días quedó en
+     * `SIN_CONFIRMAR`, pero NO está esperando respuesta del profesional: contarla
+     * en el marcador «sin confirmar» le mostraría un pendiente que ya no lo es.
+     */
+    contarPorProfesional(
+        profesionalId: string,
+        estados?: EstadoSolicitudCita[],
+        soloVigentes = false,
+    ): Promise<number> {
         return this.db.solicitudCita.count({
-            where: { profesionalId, ...(estados ? { estado: { in: estados } } : {}) },
+            where: {
+                profesionalId,
+                ...(estados ? { estado: { in: estados } } : {}),
+                ...(soloVigentes ? { autocerradaEn: null } : {}),
+            },
+        });
+    }
+
+    /** SPEC-427 (B3): las autocerradas del profesional, para su propio bloque. */
+    listarAutocerradasPorProfesional(profesionalId: string) {
+        return this.db.solicitudCita.findMany({
+            where: { profesionalId, estado: "SIN_CONFIRMAR", autocerradaEn: { not: null } },
+            include: {
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+                padreUsuario: { select: { nombre: true } },
+            },
+            orderBy: { autocerradaEn: "desc" },
         });
     }
 
@@ -195,8 +221,18 @@ export class SolicitudCitaRepository {
         return this.db.solicitudCita.update({ where: { id }, data: { estado: "VENCIDA_SIN_RESPUESTA" } });
     }
 
-    marcarReprogramadaOriginal(id: string) {
-        return this.db.solicitudCita.update({ where: { id }, data: { estado: "REPROGRAMADA" } });
+    /**
+     * SPEC-427 (radicado v3): guardia de estado en el WHERE. Solo una cita ACTIVA
+     * (CONFIRMADA o PAGADA_PENDIENTE) se reprograma; sin la guardia, en cuanto L4
+     * construya la pantalla de reprogramación, una carrera pisaría una CUMPLIDA o
+     * una autocerrada. Mismo molde `updateMany` que los dos cierres.
+     */
+    async marcarReprogramadaOriginal(id: string): Promise<boolean> {
+        const r = await this.db.solicitudCita.updateMany({
+            where: { id, estado: { in: ["CONFIRMADA", "PAGADA_PENDIENTE"] } },
+            data: { estado: "REPROGRAMADA" },
+        });
+        return r.count === 1;
     }
 
     marcarNoAsistioProfesional(id: string) {

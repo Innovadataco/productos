@@ -107,15 +107,17 @@ describe("SPEC-418 · el seed faltante se descubre AL DESPLEGAR, no al hacer cli
     it("el guardián declara como BLOQUEANTES los avisos sin los cuales el flujo se detiene", () => {
         expect(guardian).toContain("profesional.verificacion.aprobada");
         expect(guardian).toContain("profesional.verificacion.devuelta");
-        // SPEC-427 sumó dos: sin el código, NINGUNA cita puede cerrarse; y sin
-        // el aviso de autocierre el padre no se entera de que su cita murió.
+        // SPEC-427 sumó tres bloqueantes del cierre: sin el código NINGUNA cita
+        // puede cerrarse; sin el aviso de autocierre el padre no se entera; y la
+        // inasistencia (B5) también falla en cerrado (declaración sobre el padre).
         expect(guardian).toContain("cita.codigo.recordatorio");
         expect(guardian).toContain("cita.autocerrada.padre");
+        expect(guardian).toContain("cita.no_asistio.padre");
         const bloqueantes = guardian.match(/bloquea: true/g) ?? [];
-        expect(bloqueantes, "4 bloqueantes: 2 del Verificador + 2 del cierre de la cita").toHaveLength(4);
+        expect(bloqueantes, "5 bloqueantes: 2 del Verificador + 3 del cierre de la cita").toHaveLength(5);
     });
 
-    it("declara TODOS los callsites que fallan en cerrado, aunque solo dos bloqueen", () => {
+    it("declara TODOS los callsites que fallan en cerrado, no solo los bloqueantes", () => {
         // Decisión del CEO: los otros avisan sin frenar el despliegue, para que
         // una brecha preexistente se descubra con calma y no al desplegar.
         for (const evento of [

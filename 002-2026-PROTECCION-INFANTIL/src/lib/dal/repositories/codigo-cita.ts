@@ -31,14 +31,6 @@ export class CodigoCitaRepository {
         });
     }
 
-    /** Toda la traza de una solicitud, del más nuevo al más viejo. */
-    listarPorSolicitud(solicitudId: string): Promise<CodigoCita[]> {
-        return this.db.codigoCita.findMany({
-            where: { solicitudId },
-            orderBy: { creadoEn: "desc" },
-        });
-    }
-
     /** La traza de varias solicitudes de una sola consulta (cola 2 del Verificador). */
     listarPorSolicitudes(solicitudIds: string[]): Promise<CodigoCita[]> {
         if (solicitudIds.length === 0) return Promise.resolve([]);

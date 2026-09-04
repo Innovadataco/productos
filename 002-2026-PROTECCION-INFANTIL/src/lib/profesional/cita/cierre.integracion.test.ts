@@ -13,6 +13,7 @@ import { crearUsuario } from "@/lib/reporte-test-utils";
 import { CodigoCitaRepository } from "@/lib/dal/repositories/codigo-cita";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { validarCodigo, emitirCodigo, trazaDeCodigos, MAX_INTENTOS_CODIGO } from "./codigos";
+import { barrerAvisoVencimiento48h } from "./worker";
 import {
     cerrarConCodigoDeCita,
     marcarNoAsistioElPadre,
@@ -121,6 +122,16 @@ async function sembrarCitaConfirmada(opciones: { inicioEnHoras?: number } = {}) 
     return { solicitud, perfil, profeUsuario, padre, franja };
 }
 
+async function sembrarCita48hVencida() {
+    const base = await sembrarCitaConfirmada();
+    const hace49h = new Date(Date.now() - 49 * HORA);
+    await prisma.solicitudCita.update({
+        where: { id: base.solicitud.id },
+        data: { estado: "PAGADA_PENDIENTE", pagoAprobadoEn: hace49h },
+    });
+    return base;
+}
+
 describe("SPEC-427 · los dos códigos y el cierre", () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -139,11 +150,18 @@ describe("SPEC-427 · los dos códigos y el cierre", () => {
         expect(primera.emitidos).toBe(1);
         expect(segunda.emitidos, "una segunda corrida no puede volver a mandarle el código").toBe(0);
 
-        const codigos = await new CodigoCitaRepository().listarPorSolicitud(solicitud.id);
+        const codigos = await new CodigoCitaRepository().listarPorSolicitudes([solicitud.id]);
         expect(codigos).toHaveLength(1);
         expect(codigos[0].tipo).toBe("CITA");
         // El envío no se copia: se apunta a la fila del motor.
         expect(codigos[0].notificacionId).not.toBeNull();
+
+        // Y la traza LEE ese envío del motor (no un dato copiado): con el
+        // notificacionId poblado, `listarEstadosPorIds` trae estado y fecha.
+        const traza = (await trazaDeCodigos([solicitud.id])).get(solicitud.id)!;
+        expect(traza.cita, "una emisión a la vista").toHaveLength(1);
+        expect(traza.cita[0].envio, "el envío se leyó del motor").not.toBeNull();
+        expect(traza.cita[0].envio?.estado).toBeTruthy();
     });
 
     it("el código correcto cierra la cita, y el mismo código NO cierra dos veces", async () => {
@@ -157,12 +175,74 @@ describe("SPEC-427 · los dos códigos y el cierre", () => {
         const r = await cerrarConCodigoDeCita(solicitud.id, profeUsuario.id, emitido.codigo);
         expect(r.estado).toBe("CUMPLIDA");
 
+        // La segunda vez aborta en el precheck de estado (ya no está CONFIRMADA),
+        // con 409. El un-solo-uso a nivel de fila se prueba aparte, más abajo.
         await expect(
             cerrarConCodigoDeCita(solicitud.id, profeUsuario.id, emitido.codigo),
-        ).rejects.toThrow();
+        ).rejects.toMatchObject({ statusCode: 409 });
 
         const fresca = await prisma.solicitudCita.findUnique({ where: { id: solicitud.id } });
         expect(fresca?.estado).toBe("CUMPLIDA");
+    });
+
+    it("SPEC-427 · un código YA USADO no vuelve a servir (un-solo-uso de fila)", async () => {
+        // Llega DE VERDAD a la barrera del un-solo-uso: se consume el código a
+        // mano y, con la cita todavía CONFIRMADA, se intenta cerrar. El repo
+        // (`marcarUsadoSiLibre` = updateMany WHERE usadoEn IS NULL) es lo que lo
+        // impide; sin esa cláusula, dos cierres simultáneos cerrarían dos veces.
+        const { solicitud, profeUsuario } = await sembrarCitaConfirmada();
+        const emitido = await emitirCodigo({ solicitudId: solicitud.id, tipo: "CITA", vigenteDesde: new Date() });
+        const repo = new CodigoCitaRepository();
+        const fila = await repo.findVigente(solicitud.id, "CITA");
+        // Primer uso: gana. Segundo: la cláusula del WHERE lo bloquea.
+        expect(await repo.marcarUsadoSiLibre(fila!.id, new Date())).toBe(true);
+        expect(await repo.marcarUsadoSiLibre(fila!.id, new Date())).toBe(false);
+        // Y cerrar con ese código ya no encuentra vigente → rechazo, cita intacta.
+        await expect(
+            cerrarConCodigoDeCita(solicitud.id, profeUsuario.id, emitido.codigo),
+        ).rejects.toMatchObject({ statusCode: 409 });
+        const fresca = await prisma.solicitudCita.findUnique({ where: { id: solicitud.id } });
+        expect(fresca?.estado).toBe("CONFIRMADA");
+    });
+
+    it("SPEC-427 · el cierre exitoso deja su fila de auditoría, y NO el valor del código", async () => {
+        // El candado del código-en-claro leía el TEXTO fuente; esto lee la fila
+        // persistida (precedente worker.test.ts:144).
+        const { solicitud, profeUsuario } = await sembrarCitaConfirmada();
+        const emitido = await emitirCodigo({ solicitudId: solicitud.id, tipo: "CITA", vigenteDesde: new Date() });
+        await cerrarConCodigoDeCita(solicitud.id, profeUsuario.id, emitido.codigo);
+
+        const cumplida = await prisma.auditLog.findFirst({
+            where: { accion: "CITA_PROFESIONAL_CUMPLIDA", recursoId: solicitud.id },
+        });
+        expect(cumplida, "el cierre se audita").not.toBeNull();
+        expect(JSON.stringify(cumplida?.metadatos ?? {}), "el valor del código no queda en el audit")
+            .not.toContain(emitido.codigo);
+    });
+
+    it("SPEC-427 · el código errado deja fila FALLIDO con el motivo, sin el valor", async () => {
+        const { solicitud, profeUsuario } = await sembrarCitaConfirmada();
+        await emitirCodigo({ solicitudId: solicitud.id, tipo: "CITA", vigenteDesde: new Date() });
+        await expect(
+            cerrarConCodigoDeCita(solicitud.id, profeUsuario.id, "000000"),
+        ).rejects.toBeDefined();
+        const fallido = await prisma.auditLog.findFirst({
+            where: { accion: "CITA_PROFESIONAL_CODIGO_FALLIDO", recursoId: solicitud.id },
+        });
+        expect(fallido, "el intento fallido se audita").not.toBeNull();
+        expect(JSON.stringify(fallido?.metadatos ?? {})).toContain("incorrecto");
+        expect(JSON.stringify(fallido?.metadatos ?? {})).not.toContain("000000");
+    });
+
+    it("SPEC-427 · un profesional no puede cerrar la cita de OTRO (403), y la cita queda intacta", async () => {
+        const { solicitud } = await sembrarCitaConfirmada();
+        const emitido = await emitirCodigo({ solicitudId: solicitud.id, tipo: "CITA", vigenteDesde: new Date() });
+        const intruso = await crearUsuario("PROFESIONAL", `intruso.${Date.now()}@ejemplo.local`);
+        await expect(
+            cerrarConCodigoDeCita(solicitud.id, intruso.id, emitido.codigo),
+        ).rejects.toMatchObject({ statusCode: 403 });
+        const fresca = await prisma.solicitudCita.findUnique({ where: { id: solicitud.id } });
+        expect(fresca?.estado).toBe("CONFIRMADA");
     });
 
     it("un código vencido no cierra nada y NO gasta intentos", async () => {
@@ -181,15 +261,18 @@ describe("SPEC-427 · los dos códigos y el cierre", () => {
         expect(fila?.intentosFallidos, "vencer no es fallar: el intento no se gasta").toBe(0);
     });
 
-    it("el código equivocado gasta intentos y a los cinco se cierra la puerta", async () => {
+    it("el código equivocado gasta intentos y a los cinco se cierra la puerta, incluso al acertar", async () => {
         const { solicitud } = await sembrarCitaConfirmada();
-        await emitirCodigo({ solicitudId: solicitud.id, tipo: "CITA", vigenteDesde: new Date() });
+        const emitido = await emitirCodigo({ solicitudId: solicitud.id, tipo: "CITA", vigenteDesde: new Date() });
 
         for (let i = 0; i < MAX_INTENTOS_CODIGO; i++) {
             const r = await validarCodigo(solicitud.id, "CITA", "000000", new Date());
             expect(r).toEqual({ ok: false, motivo: "incorrecto" });
         }
-        const r = await validarCodigo(solicitud.id, "CITA", "000000", new Date());
+        // El 6.º intento usa el código REAL: aun así rebota por max_intentos. Es
+        // el invariante del módulo — el tope se evalúa ANTES del bcrypt.compare —,
+        // y con "000000" pasaría igual aunque alguien invirtiera ese orden.
+        const r = await validarCodigo(solicitud.id, "CITA", emitido.codigo, new Date());
         expect(r).toEqual({ ok: false, motivo: "max_intentos" });
     });
 
@@ -294,19 +377,58 @@ describe("SPEC-427 · los dos códigos y el cierre", () => {
         expect(fresca?.autocerradaEn).toBeNull();
     });
 
-    it("SPEC-427 fix e · una cita rota en el barrido no frena a las demás", async () => {
-        // Dos citas vencidas; una tiene la franja intacta, a la otra le
-        // rompemos el vínculo del padre para que su aviso truene. La sana debe
-        // autocerrarse igual y el barrido cuenta el error.
-        const sana = await sembrarCitaConfirmada();
-        await prisma.franjaDisponible.update({
-            where: { id: sana.franja.id },
-            data: { fin: new Date(Date.now() - (DIAS_AUTOCIERRE + 2) * DIA) },
-        });
+    it("SPEC-427 fix e · el autocierre procesa TODAS las vencidas, no solo la primera", async () => {
+        // Dos vencidas sanas: el barrido tiene que cerrar las dos. Antes el test
+        // sembraba una sola y no afirmaba `errores`.
+        const a = await sembrarCitaConfirmada();
+        const b = await sembrarCitaConfirmada();
+        for (const c of [a, b]) {
+            await prisma.franjaDisponible.update({
+                where: { id: c.franja.id },
+                data: { fin: new Date(Date.now() - (DIAS_AUTOCIERRE + 2) * DIA) },
+            });
+        }
         const r = await barrerAutocierre();
-        expect(r.autocerradas).toBeGreaterThanOrEqual(1);
-        const fresca = await prisma.solicitudCita.findUnique({ where: { id: sana.solicitud.id } });
-        expect(fresca?.estado).toBe("SIN_CONFIRMAR");
+        expect(r).toMatchObject({ autocerradas: 2, errores: 0, saltadas: 0 });
+    });
+
+    it("SPEC-427 B4 · el barrido de 48h procesa TODAS las vencidas y lleva la cuenta de errores", async () => {
+        // Este PR enciende `barrerAvisoVencimiento48h` en producción por primera
+        // vez. Se prueba que recorre el lote entero (dos vencidas → dos avisadas)
+        // y que el resumen trae `errores`: el molde que aísla una fila mala del
+        // resto. La franja no se puede borrar para forzar un error (la FK de la
+        // solicitud lo impide en una BD consistente), así que la reproducción del
+        // aislamiento vive en el candado estático del try/catch por ítem.
+        const a = await sembrarCita48hVencida();
+        const b = await sembrarCita48hVencida();
+
+        const r = await barrerAvisoVencimiento48h();
+        expect(r.encontradas).toBe(2);
+        expect(r.avisadas).toBe(2);
+        expect(r.errores).toBe(0);
+
+        for (const c of [a, b]) {
+            const fresca = await prisma.solicitudCita.findUnique({ where: { id: c.solicitud.id } });
+            expect(fresca?.estado).toBe("VENCIDA_SIN_RESPUESTA");
+        }
+    });
+
+
+    it("SPEC-427 (B1) · cerrar al TERMINAR la sesión funciona: la vigencia cubre hasta pasada la franja", async () => {
+        // El caso normal que antes fallaba: la consulta dura ~50 min y el
+        // profesional cierra cuando termina. El código se emite ~10 min antes y,
+        // con el ancla al fin de la franja, sigue vivo al cerrar.
+        const { solicitud, profeUsuario, franja } = await sembrarCitaConfirmada({ inicioEnHoras: 0.2 });
+        const emitido = await emitirCodigo({
+            solicitudId: solicitud.id,
+            tipo: "CITA",
+            vigenteDesde: new Date(franja.inicio.getTime() - 10 * 60 * 1000),
+            franjaFin: franja.fin,
+        });
+        // El profesional cierra 10 minutos DESPUÉS de que la franja terminó.
+        const alTerminar = new Date(franja.fin.getTime() + 10 * 60 * 1000);
+        const r = await cerrarConCodigoDeCita(solicitud.id, profeUsuario.id, emitido.codigo, alTerminar);
+        expect(r.estado).toBe("CUMPLIDA");
     });
 
 });

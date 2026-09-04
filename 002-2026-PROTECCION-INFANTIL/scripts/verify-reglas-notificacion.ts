@@ -82,9 +82,9 @@ export const REGLAS_REQUERIDAS: ReglaRequerida[] = [
     },
     {
         evento: "cita.no_asistio.padre",
-        sostiene: "avisarle al padre que el profesional declaró que no se presentó — es una declaración sobre él y tiene que poder responderla (SPEC-427)",
+        sostiene: "avisarle al padre que el profesional declaró que no se presentó — la inasistencia falla en cerrado sin esta regla (SPEC-427 · B5)",
         callsite: "src/lib/profesional/cita/cierre.service.ts",
-        bloquea: false,
+        bloquea: true,
     },
     {
         evento: "cita.autocerrada.padre",

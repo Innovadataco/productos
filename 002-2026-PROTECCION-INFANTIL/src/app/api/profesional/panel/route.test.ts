@@ -239,4 +239,26 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
         const res = await GET();
         expect([401, 403]).toContain(res.status);
     });
+
+    it("SPEC-427 (B3): una cita AUTOCERRADA no aparece como sin responder ni suma al marcador", async () => {
+        const { perfil } = await sembrarProfesional();
+        // Una autocerrada: quedó SIN_CONFIRMAR pero con `autocerradaEn` puesto.
+        const cerrada = await sembrarSolicitud(perfil.id, "CONFIRMADA", { horasDesdeAhora: -240 });
+        await prisma.solicitudCita.update({
+            where: { id: cerrada.id },
+            data: { estado: "SIN_CONFIRMAR", autocerradaEn: new Date() },
+        });
+        // Y una SIN_CONFIRMAR genuina (impaga, esperando respuesta).
+        await sembrarSolicitud(perfil.id, "SIN_CONFIRMAR");
+
+        const panel = await leerPanel();
+
+        // La autocerrada NO está entre las que esperan respuesta...
+        expect(panel.solicitudes.map((x: { id: string }) => x.id)).not.toContain(cerrada.id);
+        // ...y NO suma al marcador (solo la genuina cuenta).
+        expect(panel.marcador.sinConfirmar).toBe(1);
+        // Pero SÍ está en su propio bloque, para que el profesional la vea.
+        expect(panel.autocerradas.map((x: { id: string }) => x.id)).toContain(cerrada.id);
+    });
+
 });

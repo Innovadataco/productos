@@ -5,6 +5,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import * as auth from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { SENALES_MONITOREO } from "@/lib/monitoreo/probes";
 
 const URL = "http://localhost:5005/api/admin/monitoreo/estado";
 
@@ -39,34 +40,20 @@ describe("GET /api/admin/monitoreo/estado (SPEC-171)", () => {
         expect(res.status).toBe(403);
     });
 
-    it("devuelve las 16 señales en verde (tailscale no-aplica sin URL) y metadatos del tablero", async () => {
+    it("devuelve TODAS las señales del contrato en verde (tailscale no-aplica sin URL) y metadatos del tablero", async () => {
         await autenticarAdmin();
 
         const res = await GET(new Request(URL));
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        // SPEC-291 (002-PI-191): 7 heredadas + 8 nuevas por tick-vida (workers propios).
-        // SPEC-302 (002-PI-208): + notif_pendientes_vencidas (métrica R-022 §1.3 punto a).
-        // SPEC-427 (I-301): + citas (worker pi-citas de los barredores de la cita).
-        expect(Object.keys(body.senales).sort()).toEqual([
-            "analisis_reglas",
-            "analisis_score",
-            "anomalias",
-            "app",
-            "bd",
-            "citas",
-            "expediente_motor",
-            "indices",
-            "notif_pendientes_vencidas",
-            "notificaciones",
-            "ollama_ping",
-            "ollama_smoke",
-            "senal_comunitaria",
-            "tailscale",
-            "vigencia",
-            "worker",
-        ]);
+        // El tablero devuelve EXACTAMENTE las señales del contrato. Se afirma
+        // contra la fuente (`SENALES_MONITOREO`) y no un literal, para que
+        // agregar la señal 17 no vuelva a partir este test — lo que importa es
+        // que la respuesta cubra el contrato, no un número escrito a mano.
+        expect(Object.keys(body.senales).sort()).toEqual([...SENALES_MONITOREO].sort());
+        // Y que la señal del worker de citas (SPEC-427 · I-301) esté en el contrato.
+        expect(SENALES_MONITOREO).toContain("citas");
         expect(body.senales.app).toEqual({ estado: "verde", ultimoProbeEn: null, detalle: null });
         expect(body.senales.ollama_ping.estado).toBe("verde");
         expect(body.senales.tailscale.estado).toBe("no-aplica");

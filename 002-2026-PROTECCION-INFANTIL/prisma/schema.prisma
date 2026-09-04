@@ -3633,8 +3633,8 @@ model SolicitudCita {
 enum TipoCodigoCita {
   // Certifica que la sesión OCURRIÓ. Al digitarlo, la cita queda CUMPLIDA.
   CITA
-  // Autoriza al profesional a ABRIR el expediente. Solo si el padre lo compartió.
-  EXPEDIENTE
+  // SPEC-427b agrega EXPEDIENTE (el código que abre el expediente): viaja con
+  // su emisor, no antes (I-277). En 427 no hay quién lo emita.
 }
 
 model CodigoCita {

@@ -2,7 +2,7 @@
 -- Aditiva: una tabla nueva, un enum nuevo y una columna nullable. Nada que
 -- reescriba filas existentes, así que no necesita ventana de mantenimiento.
 
-CREATE TYPE "TipoCodigoCita" AS ENUM ('CITA', 'EXPEDIENTE');
+CREATE TYPE "TipoCodigoCita" AS ENUM ('CITA');
 
 CREATE TABLE "CodigoCita" (
     "id" TEXT NOT NULL,

@@ -3,7 +3,7 @@
  *
  * Guardas (los 3 obligatorios, verificados por tests):
  *  1. Whitelist HARD-CODED de comandos: solo `start | stop | restart`.
- *  2. Whitelist HARD-CODED de contenedores: 11 servicios (los 13 menos `db` y `pi-app`).
+ *  2. Whitelist HARD-CODED de contenedores: 13 servicios (los 15 menos `db` y `pi-app`).
  *  3. Habla con la Docker Engine API por HTTP sobre `/var/run/docker.sock` —
  *     NUNCA shell, NUNCA `docker` CLI (evita interpolación y no requiere binary
  *     en la imagen `app`, que solo tenía Node/Next.js).
@@ -34,6 +34,11 @@ export const CONTENEDORES_PERMITIDOS = [
     "pi-anomalias",
     // SPEC-427 (I-301): el worker de los barredores de la cita.
     "pi-citas",
+    // SPEC-427 (radicado v3): estaban en el compose y faltaban en la whitelist,
+    // así que el admin no podía reiniciarlos y el panel mostraba menos filas
+    // que servicios sin decir que faltaban.
+    "pi-analisis-expediente",
+    "pi-sesiones",
 ] as const;
 export type ContenedorPermitido = (typeof CONTENEDORES_PERMITIDOS)[number];
 

@@ -23,6 +23,7 @@ import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { evaluarSuspensionYAlarma } from "./cita.service";
+import { logger } from "@/lib/logger";
 
 /**
  * @internal — expuesto para el test. Idempotencia del aviso 48h.
@@ -37,6 +38,8 @@ export interface ResumenBarridoAviso48h {
     avisadas: number;
     saltadas: number;
     profesionalesEvaluados: number;
+    /** SPEC-427 (B4): citas cuyo procesamiento falló; una NO frena a las demás. */
+    errores: number;
 }
 
 export async function barrerAvisoVencimiento48h(
@@ -49,38 +52,55 @@ export async function barrerAvisoVencimiento48h(
         avisadas: 0,
         saltadas: 0,
         profesionalesEvaluados: 0,
+        errores: 0,
     };
     const profesionalesTocados = new Set<string>();
     for (const solicitud of candidatas) {
-        // Candado I-280: si ya avisamos DESPUÉS del último cambio de la
-        // solicitud, no repetimos hasta que el estado se mueva.
-        const prev = await ultimoAviso48h(solicitud.id);
-        if (prev && prev.creadoEn.getTime() >= solicitud.actualizadoEn.getTime()) {
-            resumen.saltadas += 1;
-            continue;
+        // SPEC-427 (B4): una fila envenenada (p. ej. franja ya borrada → P2025 en
+        // `liberar`) NO puede matar el lote. Se registra, se cuenta y se sigue.
+        try {
+            // Candado I-280: si ya avisamos DESPUÉS del último cambio de la
+            // solicitud, no repetimos hasta que el estado se mueva.
+            const prev = await ultimoAviso48h(solicitud.id);
+            if (prev && prev.creadoEn.getTime() >= solicitud.actualizadoEn.getTime()) {
+                resumen.saltadas += 1;
+                continue;
+            }
+            // Mueve el estado y libera la franja, atómico.
+            await withUnitOfWork(async (tx) => {
+                await new SolicitudCitaRepository(tx).marcarVencida48h(solicitud.id);
+                await new FranjaDisponibleRepository(tx).liberar(solicitud.franjaId);
+            });
+            await logAudit({
+                accion: "CITA_PROFESIONAL_AVISO_48H_ENVIADO",
+                tipoRecurso: "SolicitudCita",
+                recursoId: solicitud.id,
+                ipAddress: "worker",
+                userAgent: "cita/aviso-48h",
+            });
+            resumen.avisadas += 1;
+            profesionalesTocados.add(solicitud.profesionalId);
+        } catch (e) {
+            resumen.errores += 1;
+            logger.error("[SPEC-395/B4] No se pudo vencer/avisar una cita a las 48h", {
+                solicitudId: solicitud.id,
+                error: e instanceof Error ? e.message : String(e),
+            });
         }
-        // Mueve el estado y libera la franja, atómico.
-        await withUnitOfWork(async (tx) => {
-            await new SolicitudCitaRepository(tx).marcarVencida48h(solicitud.id);
-            await new FranjaDisponibleRepository(tx).liberar(solicitud.franjaId);
-        });
-        // El audit se registra SOLO tras el cambio; el candado se compara con
-        // `solicitud.actualizadoEn` que Prisma recalculó al marcar vencida.
-        await logAudit({
-            accion: "CITA_PROFESIONAL_AVISO_48H_ENVIADO",
-            tipoRecurso: "SolicitudCita",
-            recursoId: solicitud.id,
-            ipAddress: "worker",
-            userAgent: "cita/aviso-48h",
-        });
-        resumen.avisadas += 1;
-        profesionalesTocados.add(solicitud.profesionalId);
     }
-    // Después de cada barrido, evalúa suspensión y alarma por profesional
-    // que quedó con al menos una vencida nueva (evita evaluar a todos).
+    // Suspensión y alarma por profesional tocado, cada una protegida: la
+    // evaluación de uno no puede tumbar la de los demás ni el resumen.
     for (const profesionalId of profesionalesTocados) {
-        await evaluarSuspensionYAlarma(profesionalId);
-        resumen.profesionalesEvaluados += 1;
+        try {
+            await evaluarSuspensionYAlarma(profesionalId);
+            resumen.profesionalesEvaluados += 1;
+        } catch (e) {
+            resumen.errores += 1;
+            logger.error("[SPEC-395/B4] Falló evaluar suspensión/alarma de un profesional", {
+                profesionalId,
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
     }
     return resumen;
 }
@@ -89,6 +109,8 @@ export interface ResumenBarridoPlazoPago {
     encontradas: number;
     expiradas: number;
     franjasLiberadas: number;
+    /** SPEC-427 (B4): citas cuyo procesamiento falló; una NO frena a las demás. */
+    errores: number;
 }
 
 export async function barrerPlazoPagoDelPadre(
@@ -100,21 +122,31 @@ export async function barrerPlazoPagoDelPadre(
         encontradas: candidatas.length,
         expiradas: 0,
         franjasLiberadas: 0,
+        errores: 0,
     };
     for (const solicitud of candidatas) {
-        await withUnitOfWork(async (tx) => {
-            await new SolicitudCitaRepository(tx).marcarVencida48h(solicitud.id);
-            await new FranjaDisponibleRepository(tx).liberar(solicitud.franjaId);
-        });
-        await logAudit({
-            accion: "CITA_PROFESIONAL_PAGO_EXPIRADA",
-            tipoRecurso: "SolicitudCita",
-            recursoId: solicitud.id,
-            ipAddress: "worker",
-            userAgent: "cita/plazo-pago",
-        });
-        resumen.expiradas += 1;
-        resumen.franjasLiberadas += 1;
+        // SPEC-427 (B4): aislamiento por cita, igual que el barrido de 48h.
+        try {
+            await withUnitOfWork(async (tx) => {
+                await new SolicitudCitaRepository(tx).marcarVencida48h(solicitud.id);
+                await new FranjaDisponibleRepository(tx).liberar(solicitud.franjaId);
+            });
+            await logAudit({
+                accion: "CITA_PROFESIONAL_PAGO_EXPIRADA",
+                tipoRecurso: "SolicitudCita",
+                recursoId: solicitud.id,
+                ipAddress: "worker",
+                userAgent: "cita/plazo-pago",
+            });
+            resumen.expiradas += 1;
+            resumen.franjasLiberadas += 1;
+        } catch (e) {
+            resumen.errores += 1;
+            logger.error("[SPEC-395/B4] No se pudo expirar el plazo de pago de una cita", {
+                solicitudId: solicitud.id,
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
     }
     return resumen;
 }

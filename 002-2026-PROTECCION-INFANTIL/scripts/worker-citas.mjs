@@ -99,16 +99,24 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
 /**
- * Un barredor que truena NO puede tumbar a los otros tres: el reloj de 48 h y
- * el autocierre son independientes. Se registra el error y se sigue; el job
- * termina en rojo solo si fallaron todos.
+ * Un barredor que truena NO puede tumbar a los otros: el reloj de 48 h y el
+ * autocierre son independientes, así que se corren TODOS y después se decide.
+ *
+ * SPEC-427 (radicado v3): el job se pone en ROJO si CUALQUIER barredor lanzó o
+ * si alguno reportó `errores > 0` (una fila envenenada), no solo si fallaron
+ * todos. Antes, con tres barredores en la cola, uno roto dejaba el job pg-boss
+ * en verde y su rastro moría en stdout. Los barredores son idempotentes, así
+ * que el reintento de pg-boss no duplica trabajo. (Abrir un incidente en el
+ * monitor pide una señal dedicada del tablero — va en la spec de monitoreo.)
  */
 async function correrBarredores(nombre, barredores) {
     const resultados = [];
     let fallas = 0;
+    let erroresDeItems = 0;
     for (const [etiqueta, fn] of barredores) {
         try {
             const r = await fn();
+            erroresDeItems += r?.errores ?? 0;
             resultados.push(`${etiqueta}=${JSON.stringify(r)}`);
         } catch (err) {
             fallas += 1;
@@ -118,10 +126,12 @@ async function correrBarredores(nombre, barredores) {
         }
     }
     console.log(`[WORKER-CITAS] ${nombre}: ${resultados.join(" · ")}`);
-    if (fallas === barredores.length) {
-        throw new Error(`[WORKER-CITAS] ${nombre}: fallaron los ${fallas} barredores`);
+    if (fallas > 0 || erroresDeItems > 0) {
+        throw new Error(
+            `[WORKER-CITAS] ${nombre}: ${fallas} barredor(es) rotos, ${erroresDeItems} fila(s) con error`,
+        );
     }
-    return { resultados, fallas };
+    return { resultados, fallas, erroresDeItems };
 }
 
 async function start() {

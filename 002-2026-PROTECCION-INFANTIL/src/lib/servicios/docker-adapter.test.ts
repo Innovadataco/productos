@@ -13,6 +13,8 @@ import {
     type DockerRunner,
 } from "./docker-adapter";
 import { AppError } from "../errors";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 let mockRunner: ReturnType<typeof vi.fn>;
 
@@ -36,13 +38,13 @@ describe("docker-adapter · whitelist", () => {
         expect(mockRunner.mock.calls[0][1]).toBe("/containers/pi-analisis-score/restart");
     });
 
-    it("acepta las 33 combinaciones de whitelist (3 cmds × 11 contenedores)", async () => {
+    it("acepta las 39 combinaciones de whitelist (3 cmds × 13 contenedores)", async () => {
         for (const cmd of COMANDOS_SERVICIO) {
             for (const cont of CONTENEDORES_PERMITIDOS) {
                 await ejecutarAccionDocker(cmd, cont);
             }
         }
-        expect(mockRunner).toHaveBeenCalledTimes(33);
+        expect(mockRunner).toHaveBeenCalledTimes(39);
     });
 
     it("rechaza comandos peligrosos (kill, rm, exec, up, down, cadenas vacías, interpolación)", async () => {
@@ -102,5 +104,25 @@ describe("docker-adapter · whitelist", () => {
             expect(err).toBeInstanceOf(AppError);
             expect((err as AppError).statusCode).toBe(502);
         }
+    });
+});
+
+
+describe("SPEC-427 (radicado v3) · la whitelist coincide con los servicios del compose", () => {
+    it("todo container_name del compose (menos db y pi-app) está en la whitelist, y nada sobra", () => {
+        // El único guard hasta ahora era un `toHaveBeenCalledTimes` quemado. Este
+        // cruza la FUENTE: si alguien agrega un servicio al compose y no a la
+        // whitelist, el admin no puede reiniciarlo y el panel miente por omisión.
+        const compose = readFileSync(join(process.cwd(), "docker-compose.prod.yml"), "utf-8");
+        const enCompose = new Set(
+            [...compose.matchAll(/container_name:\s*(pi-[a-z-]+)/g)].map((m) => m[1]),
+        );
+        enCompose.delete("pi-db");
+        enCompose.delete("pi-app");
+        const whitelist = new Set(CONTENEDORES_PERMITIDOS);
+        const faltan = [...enCompose].filter((c) => !whitelist.has(c as never)).sort();
+        const sobran = [...whitelist].filter((c) => !enCompose.has(c)).sort();
+        expect(faltan, "servicios en el compose que la whitelist no cubre").toEqual([]);
+        expect(sobran, "servicios en la whitelist que no existen en el compose").toEqual([]);
     });
 });

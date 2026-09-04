@@ -23,9 +23,7 @@ import { programar, despacharEnvios } from "@/lib/notificaciones/motor";
 import {
     emitirCodigo,
     validarCodigo,
-    puedeReemitir,
     ANTICIPACION_RECORDATORIO_MS,
-    VIGENCIA_CODIGO_MS,
     type MotivoRechazo,
 } from "./codigos";
 
@@ -39,9 +37,11 @@ export const EVENTO_NO_ASISTIO = "cita.no_asistio.padre";
 
 /** Qué le decimos al profesional cuando el código no sirve. */
 const MENSAJE_RECHAZO: Record<MotivoRechazo, string> = {
-    sin_codigo: "Todavía no hay un código para esta cita. El padre puede pedirlo desde su cuenta.",
-    expirado: "Ese código venció. Pedile al padre que solicite otro: llega al instante.",
-    max_intentos: "Se agotaron los intentos con ese código. Pedile al padre que solicite otro.",
+    sin_codigo: "Todavía no le llegó el código al padre. El correo sale 10 minutos antes de la cita.",
+    // El código vive hasta pasada la sesión (B1), así que vencer es raro; si
+    // pasa, no se promete un botón que hoy no existe: se resuelve con soporte.
+    expirado: "Ese código venció. Escribí a soporte para reprogramar el cierre.",
+    max_intentos: "Se agotaron los intentos con ese código. Revisalo con el padre o escribí a soporte.",
     incorrecto: "El código no coincide. Revisá los seis dígitos con el padre.",
     ya_usado: "Ese código ya se usó. Si la cita no quedó cerrada, avisá a soporte.",
 };
@@ -201,12 +201,17 @@ export async function marcarNoAsistioElPadre(
                 },
                 { tx }
             );
-            // Falta la regla activa: no se frena el cierre (no es bloqueante),
-            // pero NO se traga en silencio — I-294/295.
+            // SPEC-427 (B5): si el aviso no se encoló, la tx ABORTA. Es una
+            // declaración sobre el padre; moverla sin avisarle es exactamente
+            // I-294/295. `cita.no_asistio.padre` es bloqueante en el guardián,
+            // así que un deploy sin la regla se detiene en la compuerta; y si
+            // igual faltara en runtime, esto revierte en vez de mentir.
             if (aviso.programadas === 0) {
-                logger.error("[SPEC-427] Inasistencia marcada sin aviso al padre: falta la regla activa", {
-                    solicitudId,
-                });
+                throw new AppError(
+                    "No se pudo encolar el aviso al padre: falta la regla activa del motor. La inasistencia no se marcó.",
+                    ERROR_CODES.INTERNAL_ERROR,
+                    500,
+                );
             }
             envios = aviso.envios ?? [];
         }
@@ -254,6 +259,8 @@ interface DatosParaAvisar {
     padre: { id: string; email: string; nombre: string | null };
     profesionalNombre: string;
     inicio: Date;
+    /** SPEC-427 (B1): la vigencia del código se ancla al fin de la franja. */
+    fin: Date;
 }
 
 /**
@@ -281,6 +288,7 @@ async function emitirYProgramarRecordatorio(d: DatosParaAvisar, ahora: Date) {
             solicitudId: d.solicitudId,
             tipo: "CITA",
             vigenteDesde,
+            franjaFin: d.fin,
             tx,
         });
 
@@ -300,7 +308,6 @@ async function emitirYProgramarRecordatorio(d: DatosParaAvisar, ahora: Date) {
                             nombreProfesional: d.profesionalNombre,
                             horaCita: horaLegible(d.inicio),
                             codigo: emitido.codigo,
-                            minutosVigencia: VIGENCIA_CODIGO_MS / 60000,
                         },
                     },
                 ],
@@ -362,6 +369,7 @@ export async function barrerRecordatoriosDeCita(ahora = new Date()) {
                     padre: c.padreUsuario,
                     profesionalNombre: c.profesional.nombreVisible,
                     inicio: c.franja.inicio,
+                    fin: c.franja.fin,
                 },
                 ahora
             );
@@ -375,52 +383,9 @@ export async function barrerRecordatoriosDeCita(ahora = new Date()) {
             });
         }
     }
-    return { emitidos, errores };
-}
-
-/**
- * El padre pide otro código. El brief lo permite «las veces que haga falta».
- *
- * El tope de reemisiones no castiga al padre: frena que la pantalla se use como
- * máquina de mandar correos. Por eso es alto y por ventana.
- */
-export async function pedirOtroCodigoDeCita(
-    solicitudId: string,
-    padreUsuarioId: string,
-    ahora = new Date()
-) {
-    const solicitud = await new SolicitudCitaRepository().findParaCodigo(solicitudId);
-    if (!solicitud) throw new AppError("Solicitud no encontrada", ERROR_CODES.NOT_FOUND, 404);
-    if (solicitud.padreUsuarioId !== padreUsuarioId) {
-        throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
-    }
-    if (solicitud.estado !== "CONFIRMADA") {
-        throw new AppError(
-            "Solo se piden códigos de una cita confirmada.",
-            ERROR_CODES.CONFLICT,
-            409
-        );
-    }
-    if (!(await puedeReemitir(solicitudId, "CITA", ahora))) {
-        throw new AppError(
-            "Pediste muchos códigos en la última hora. Esperá un momento y volvé a intentar.",
-            ERROR_CODES.RATE_LIMITED,
-            429
-        );
-    }
-
-    const { aviso } = await emitirYProgramarRecordatorio(
-        {
-            solicitudId,
-            padre: solicitud.padreUsuario,
-            profesionalNombre: solicitud.profesional.nombreVisible,
-            // Pedido a mano: vale desde ya, no desde la hora agendada.
-            inicio: new Date(ahora.getTime() + ANTICIPACION_RECORDATORIO_MS),
-        },
-        ahora
-    );
-    await despacharEnvios(aviso.envios ?? []);
-    return { programadas: aviso.programadas };
+    // `encontradas` distingue «no había trabajo» de «falló todo»: cero emitidos
+    // con cero encontradas es un barrido sano; con encontradas>0 es una alarma.
+    return { encontradas: citas.length, emitidos, errores };
 }
 
 /**
@@ -444,6 +409,7 @@ export async function barrerAutocierre(ahora = new Date()) {
     const vencidas = await repo.listarConfirmadasVencidasParaAutocierre(limite);
 
     let autocerradas = 0;
+    let saltadas = 0;
     let errores = 0;
     for (const c of vencidas) {
         // SPEC-427 (fix e) · una cita rota no frena el barrido.
@@ -478,14 +444,24 @@ export async function barrerAutocierre(ahora = new Date()) {
                     { tx }
                 );
                 if (aviso.programadas === 0) {
-                    logger.error("[SPEC-427] Cita autocerrada sin aviso al padre: falta la regla activa", {
-                        solicitudId: c.id,
-                    });
+                    // SPEC-427 (B5): NO se commitea un autocierre sin avisar al
+                    // padre. Se lanza dentro de la tx → el estado revierte a
+                    // CONFIRMADA, el barrido diario lo reintenta, y el `errores`
+                    // del try/catch lo cuenta (nada de resumen verde sobre un
+                    // padre sin avisar). La regla es bloqueante en el guardián.
+                    throw new AppError(
+                        "Cita autocerrada sin aviso al padre: falta la regla activa del motor.",
+                        ERROR_CODES.INTERNAL_ERROR,
+                        500,
+                    );
                 }
                 return { movida: true, envios: aviso.envios ?? [] };
             });
 
-            if (!movida) continue; // la cerró alguien antes; no es un error
+            if (!movida) {
+                saltadas += 1; // la cerró alguien antes; no es un error, pero se cuenta
+                continue;
+            }
 
             autocerradas += 1;
             await logAudit({
@@ -511,5 +487,5 @@ export async function barrerAutocierre(ahora = new Date()) {
             });
         }
     }
-    return { autocerradas, errores };
+    return { encontradas: vencidas.length, autocerradas, saltadas, errores };
 }

@@ -3,12 +3,11 @@
  *
  * Dos cosas que se rompen por descuido y que este lote decidió a propósito:
  *
- *  1. **No se pintan botones sin motor.** El mockup dibuja cinco controles;
- *     solo dos tienen implementación (`Confirmar`, `No puedo`, los de L4).
- *     «Proponer otro horario», «Se dio, cerrar y cobrar» y «No se presentó»
- *     **no existen** — nada en `src/` escribe `CUMPLIDA` ni `NO_ASISTIO_PADRE`.
- *     El brief §7 los pone en L6/L7. Pintar el botón igual sería la cuarta
- *     repetición de I-289/I-290/I-297 en el mismo día, puesta por nosotros.
+ *  1. **No se pintan botones sin motor.** SPEC-427 (L6) ya implementó el cierre,
+ *     así que `Confirmar`, `No puedo`, `Cerrar cita`, `No se presentó` y
+ *     `Abrir expediente` (427b) SÍ tienen motor. Lo que sigue sin él —«Proponer
+ *     otro horario», el COBRO (L7)— no se pinta. Y los dos estados de cierre
+ *     (`CUMPLIDA`, `NO_ASISTIO_PADRE`) tienen un ÚNICO escritor: el repositorio.
  *  2. **El porcentaje de servicio vive en un solo lugar.** Si la pantalla y el
  *     cobro sacan el número de sitios distintos, un día dicen cosas distintas.
  */

@@ -8,19 +8,18 @@
  * ## Las dos reglas del brief que se hacen cumplir acá
  *
  *  1. **§3 · el marcador NO cuenta las citas `SIN_CONFIRMAR`.** Ni en familias
- *     atendidas ni en lo que se gira. Se muestran aparte, como lo que son:
- *     solicitudes que el profesional todavía no respondió.
- *  2. **§9 · los expedientes compartidos son de SOLO LECTURA** y se abren con
- *     el código que el padre entrega en la sesión. El panel los **lista**;
- *     no los abre ni expone su contenido.
+ *     atendidas ni en lo que se gira. Y las AUTOCERRADAS (SPEC-427 · B3), que
+ *     también quedan `SIN_CONFIRMAR`, van a su propio bloque: no esperan
+ *     respuesta y no suman al marcador.
+ *  2. **§9 · los expedientes compartidos** se abren con el código que el padre
+ *     entrega en la sesión (SPEC-427b). El panel los lista y, con el código,
+ *     los abre en solo lectura.
  *
  * ## Lo que este lote NO hace, a propósito
  *
- * El §7 del brief pone **el cierre en L6** y **la plata en L7**. Por eso
- * «casos por cerrar» se **lista** pero no se cierra, y «por cobrar» muestra lo
- * retenido sin poder girarlo. Nada en `src/` escribe hoy `CUMPLIDA` ni
- * `NO_ASISTIO_PADRE`: el panel refleja esa realidad en vez de pintar un botón
- * que no hace nada.
+ * SPEC-427 ya escribe `CUMPLIDA` y `NO_ASISTIO_PADRE` (el cierre de L6). Lo que
+ * sigue faltando es **la plata de L7**: «por cobrar» muestra lo retenido sin
+ * poder girarlo.
  */
 import type { EstadoSolicitudCita } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -97,6 +96,19 @@ export interface PanelProfesionalDto {
     marcador: MarcadorDto;
     verificacion: VerificacionPanelDto | null;
     expedientesCompartidos: ExpedienteCompartidoDto[];
+    /**
+     * SPEC-427 (B3): citas que el autocierre a 5 días cerró sin confirmar. NO
+     * están esperando respuesta y NO tienen botones: es un cierre en frío que
+     * el profesional debe VER (perdió el giro), pero no una tarea pendiente.
+     */
+    autocerradas: AutocerradaDto[];
+}
+
+export interface AutocerradaDto {
+    id: string;
+    padreNombre: string;
+    inicio: string;
+    modalidad: string;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -119,7 +131,13 @@ export async function panelDelProfesional(
     const repo = new SolicitudCitaRepository();
     const solicitudes = await repo.listarPorProfesional(perfil.id);
 
-    const esperandoRespuesta = solicitudes.filter((s) => ESPERAN_RESPUESTA.includes(s.estado));
+    // SPEC-427 (B3): una autocerrada quedó en SIN_CONFIRMAR pero NO espera
+    // respuesta — `autocerradaEn` la separa de la que sí. Sin este filtro
+    // reaparece con botones que revientan con 409 y suma al marcador.
+    const esperandoRespuesta = solicitudes.filter(
+        (s) => ESPERAN_RESPUESTA.includes(s.estado) && s.autocerradaEn === null,
+    );
+    const autocerradas = solicitudes.filter((s) => s.autocerradaEn !== null);
     const confirmadas = solicitudes.filter((s) => s.estado === "CONFIRMADA");
     const porCerrar = confirmadas.filter((s) => yaOcurrio(s.franja.inicio, ahora));
     const agenda = confirmadas.filter((s) => !yaOcurrio(s.franja.inicio, ahora));
@@ -137,7 +155,7 @@ export async function panelDelProfesional(
     const [familiasAtendidas, solicitudesRecibidas, sinConfirmar] = await Promise.all([
         repo.contarFamiliasAtendidas(perfil.id, CUENTAN_EN_EL_MARCADOR),
         repo.contarPorProfesional(perfil.id),
-        repo.contarPorProfesional(perfil.id, ESPERAN_RESPUESTA),
+        repo.contarPorProfesional(perfil.id, ESPERAN_RESPUESTA, true),
     ]);
     const marcador: MarcadorDto = { familiasAtendidas, solicitudesRecibidas, sinConfirmar };
 
@@ -186,6 +204,12 @@ export async function panelDelProfesional(
                 solicitudId: s.id,
                 padreNombre: s.padreUsuario.nombre ?? "Una familia",
             })),
+        autocerradas: autocerradas.map((s) => ({
+            id: s.id,
+            padreNombre: s.padreUsuario.nombre ?? "Una familia",
+            inicio: s.franja.inicio.toISOString(),
+            modalidad: s.franja.modalidad,
+        })),
     };
 }
 

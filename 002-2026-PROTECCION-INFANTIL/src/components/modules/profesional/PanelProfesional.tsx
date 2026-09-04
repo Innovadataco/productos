@@ -4,9 +4,9 @@ import { fechaCorta, fechaHora } from "@/lib/format/fecha";
 import type { PanelProfesionalDto } from "@/lib/profesional/panel/panel.service";
 import { SolicitudAcciones } from "./SolicitudAcciones";
 import { CerrarConCodigo } from "./CerrarConCodigo";
+import { DIAS_AUTOCIERRE } from "@/lib/profesional/cita/cierre.service";
 
-/** Días del autocierre (brief §3). Lo dice el servidor; acá solo se muestra. */
-const DIAS_AUTOCIERRE_UI = 5;
+
 
 /**
  * SPEC-425 (A-75 · L5) · El inicio del profesional.
@@ -44,6 +44,7 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
                     <Marcador data={data} />
                     <Verificacion data={data} />
                     <ExpedientesCompartidos data={data} />
+                    <Autocerradas data={data} />
                 </div>
             </div>
         </div>
@@ -174,7 +175,7 @@ function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
             )}
             {/* SPEC-427: el cierre ya existe. Liberar el pago sigue siendo de L7. */}
             <p className="mt-4 border-t border-tinta/8 pt-3 text-xs text-subtle">
-                Cerrás la cita con el código que te dicta el padre. Si pasan {DIAS_AUTOCIERRE_UI} días sin
+                Cerrás la cita con el código que te dicta el padre. Si pasan {DIAS_AUTOCIERRE} días sin
                 cerrarla, queda sin confirmar y no entra en el pago.
                 <br />
                 El giro de la plata todavía no está disponible: por ahora cerrar deja la constancia.
@@ -312,6 +313,29 @@ function Verificacion({ data }: { data: PanelProfesionalDto }) {
                     </Link>
                 </>
             )}
+        </Bloque>
+    );
+}
+
+function Autocerradas({ data }: { data: PanelProfesionalDto }) {
+    const n = data.autocerradas.length;
+    if (n === 0) return null; // no se muestra un bloque vacío: es un cierre en frío, no una tarea
+    return (
+        <Bloque titulo="Cerradas sin confirmar" cuenta={`${n}`} calma>
+            <p className="cuerpo text-xs text-subtle">
+                Pasaron {DIAS_AUTOCIERRE} días y no se digitó el código. Estas citas quedaron sin
+                confirmar: no entran en el pago. Si creés que fue un error, escribí a soporte.
+            </p>
+            <ul className="mt-2 space-y-2">
+                {data.autocerradas.map((c) => (
+                    <li key={c.id} className="rounded-xl bg-tinta/5 p-3">
+                        <p className="text-sm font-medium text-body">{c.padreNombre}</p>
+                        <p className="text-xs text-muted">
+                            Cita del {fechaHora(c.inicio)} · {c.modalidad.toLowerCase()}
+                        </p>
+                    </li>
+                ))}
+            </ul>
         </Bloque>
     );
 }

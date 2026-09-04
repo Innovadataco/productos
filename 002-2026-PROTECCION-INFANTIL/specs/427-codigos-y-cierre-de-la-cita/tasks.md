@@ -1,8 +1,8 @@
 # Tareas · SPEC-427 — Los dos códigos y el cierre de la cita
 
-- [x] T001 Modelo `CodigoCita` + `TipoCodigoCita` + `SolicitudCita.autocerradaEn` + 7 acciones de auditoría, en **una** migración aditiva (lección I-277: enum y código que lo emite viajan juntos).
+- [x] T001 Modelo `CodigoCita` + `TipoCodigoCita` + `SolicitudCita.autocerradaEn` + 5 acciones de auditoría (los 2 del expediente viajan a 427b con su emisor), en **una** migración aditiva (lección I-277: enum y código que lo emite viajan juntos).
 - [x] T002 `codigos.ts`: emitir (bcrypt), verificar en el orden vencimiento → intentos → comparación, consumo de un solo uso con `WHERE usadoEn IS NULL`, y la traza que leen los tres.
-- [x] T003 `cierre.service.ts`: cerrar con código → `CUMPLIDA`; abrir expediente con código; «no se presentó» → `NO_ASISTIO_PADRE`; pedir otro código; barredor de recordatorio; barredor de autocierre.
+- [x] T003 `cierre.service.ts`: cerrar con código → `CUMPLIDA`; «no se presentó» → `NO_ASISTIO_PADRE`; barredor de recordatorio; barredor de autocierre. (El código de EXPEDIENTE va a 427b.)
 - [x] T004 El código y su aviso **en la misma transacción**, fallando en cerrado si no hay regla activa (I-295).
 - [x] T005 **I-300**: `autocerradaEn` como marca dedicada y la cola 2 filtrando por ella. Con contraprueba.
 - [x] T006 **I-301**: `scripts/worker-citas.mjs` con los CUATRO barredores, lock `123456800` registrado en `ADVISORY-LOCKS.md`, servicio `pi-citas` en el compose de producción y señal en el monitor.
@@ -10,7 +10,7 @@
 - [x] T008 Panel del profesional: input de 6 dígitos para cerrar y control «No se presentó». El candado de SPEC-425 cayó y se **actualizó**, no se borró.
 - [x] T009 `al-cumplir.ts`: punto de unión con SPEC-429, llamado en los dos cierres, fuera de transacción y con el error registrado.
 - [x] T010 Seed de las tres plantillas/reglas + declaración en `verify-reglas-notificacion.ts` (dos **bloquean** el despliegue).
-- [x] T011 39 candados estáticos + 9 tests de integración contra base propia, y **dos reproducciones negativas**.
+- [x] T011 candados estáticos (de CONDUCTA, no de palabras) + 17 tests de integración contra base propia, con reproducciones negativas.
 - [x] T012 Gate, fila en `specs/README.md` y PR.
 
 ## Anotado
@@ -31,3 +31,14 @@
 - [x] R8 (i) · candado del worker: descubre por disco, ignora comentarios; contraprueba.
 - [x] R9 · código de EXPEDIENTE → SPEC-427b; `EXPEDIENTE_ABIERTO` y `CODIGO_DIGITADO` se mudan a su migración (I-277).
 - [x] R10 · los 5 valores de enum de 427 documentados para Kimi (BI · `bi_replica`).
+
+## Radicado v3 (7 bloqueantes + menores)
+
+- [x] B1 La vigencia del código se ancla al fin de la franja (`max(vigenteDesde+30, fin+60)`); antes moría a mitad de sesión.
+- [x] B2 Fuera `pedirOtroCodigoDeCita` + su ruta + `puedeReemitir`/`MAX_REEMISIONES` (no hay pantalla del padre); cuatro textos honestos.
+- [x] B3 La autocerrada sale del «esperando respuesta» y del marcador; tiene su propio bloque.
+- [x] B4 `try/catch` por cita en los dos barredores de `worker.ts` + `errores` en sus resúmenes.
+- [x] B5 Autocierre e inasistencia fallan en cerrado si el aviso no se programó; `cita.no_asistio.padre` pasa a bloqueante.
+- [x] B6 `EXPEDIENTE` sale del enum de 427 (va a 427b con su emisor); la cola 2 deja de afirmar «Nunca se pidió»; candado de emisor por tipo.
+- [x] B7 El test del tablero afirma contra `[...SENALES_MONITOREO]`, no un literal.
+- [x] Menores: candados vueltos a conducta (ensureQueue, `tx` en los repos, slice acotado, `.test.mjs` excluido, auditoría leída en BD, ownership 403, un-solo-uso real, traza con envío); whitelist docker == compose; `marcarReprogramadaOriginal` con guardia; `DIAS_AUTOCIERRE` importado; docblocks al día.

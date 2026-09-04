@@ -1855,16 +1855,13 @@ async function seedCodigosCita() {
                 "Hola {{nombrePadre}},\n\n" +
                 "Tu cita con {{nombreProfesional}} es {{horaCita}}.\n\n" +
                 "**Tu código es {{codigo}}.** Dáselo al profesional durante la sesión: con eso queda " +
-                "constancia de que la cita ocurrió.\n\n" +
-                "**Vence en {{minutosVigencia}} minutos.** Si se te pasa, pedí otro desde tu cuenta las " +
-                "veces que haga falta.\n\n" +
+                "constancia de que la cita ocurrió. Vale durante toda la cita.\n\n" +
                 "— Protección Infantil",
             propiedades: {
                 nombrePadre: { type: "string" },
                 nombreProfesional: { type: "string" },
                 horaCita: { type: "string" },
                 codigo: { type: "string" },
-                minutosVigencia: { type: "number" },
             },
         },
         {

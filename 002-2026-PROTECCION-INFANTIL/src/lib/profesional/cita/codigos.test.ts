@@ -11,10 +11,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {
     generarCodigo,
+    calcularExpiraEn,
     VIGENCIA_CODIGO_MS,
     ANTICIPACION_RECORDATORIO_MS,
     MAX_INTENTOS_CODIGO,
-    MAX_REEMISIONES,
 } from "./codigos";
 
 const RAIZ = path.resolve(__dirname, "../../../..");
@@ -69,11 +69,22 @@ describe("SPEC-427 · los números que dictó el brief", () => {
         expect(minutos * 60 * 1000).toBeLessThan(ANTICIPACION_RECORDATORIO_MS);
     });
 
-    it("el tope de intentos es el mismo del registro, y el de reemisiones es generoso", () => {
+    it("el tope de intentos es el mismo del registro", () => {
         expect(MAX_INTENTOS_CODIGO).toBe(5);
-        // El brief dice «las veces que haga falta»: el tope frena una máquina de
-        // correos, no a un padre que pide dos o tres.
-        expect(MAX_REEMISIONES).toBeGreaterThanOrEqual(10);
+    });
+
+    it("SPEC-427 (B1) · la vigencia se ancla al fin de la franja, no a la emisión", () => {
+        // Una consulta dura 45–60 min y el profesional cierra al terminar. El
+        // código tiene que seguir vivo entonces, no morir a los 30 min de emitido.
+        const inicio = new Date("2026-09-10T15:00:00Z");
+        const fin = new Date("2026-09-10T15:50:00Z"); // franja de 50 min
+        const vigenteDesde = new Date(inicio.getTime() - ANTICIPACION_RECORDATORIO_MS);
+        const expira = calcularExpiraEn(vigenteDesde, fin);
+        // Cerrar 10 min DESPUÉS de terminar la sesión sigue dentro de la vigencia.
+        expect(expira.getTime()).toBeGreaterThan(fin.getTime() + 10 * 60 * 1000);
+        // Sin franja, cae al mínimo de 30 min (llamadores sin sesión, p.ej. tests).
+        const sinFranja = calcularExpiraEn(vigenteDesde);
+        expect(sinFranja.getTime()).toBe(vigenteDesde.getTime() + 30 * 60 * 1000);
     });
 });
 
@@ -140,8 +151,13 @@ describe("SPEC-427 · el código y su aviso nacen juntos", () => {
         // VARIAS transacciones ahora (cierre, inasistencia, autocierre), así
         // que un índice global apuntaría a la primera que aparezca.
         const i = cierre.indexOf("async function emitirYProgramarRecordatorio");
-        const j = cierre.indexOf("\nasync function ", i + 1);
-        const cuerpo = cierre.slice(i, j === -1 ? undefined : j);
+        // Acotar a la PRÓXIMA función, sea `async function` o `export async
+        // function`: la que sigue a emitir es exportada, así que buscar solo
+        // `\nasync function ` devolvía -1 y el cuerpo llegaba hasta el fin del
+        // archivo, donde otro `aviso.programadas === 0` podía satisfacer el orden.
+        const resto = cierre.slice(i + 1);
+        const rel = resto.search(/\n(?:export )?async function /);
+        const cuerpo = rel === -1 ? cierre.slice(i) : cierre.slice(i, i + 1 + rel);
         expect(cuerpo).toContain("withUnitOfWork");
         expect(cuerpo).toContain("aviso.programadas === 0");
         // Dentro de la transacción: si el aviso no se encola, el código no queda.
@@ -171,30 +187,99 @@ describe("SPEC-427 fix a · consumir el código y CUMPLIDA, en una sola transacc
      */
     const cierre = leerCodigo(CIERRE);
 
-    /** El cuerpo de la función de cierre, desde su nombre hasta el próximo `\nexport`. */
+    /** El cuerpo de la función de cierre, acotado al próximo `export async function`. */
     function cuerpoDeCerrar(src: string): string {
         const i = src.indexOf("export async function cerrarConCodigoDeCita");
-        const j = src.indexOf("\nexport ", i + 1);
+        const j = src.indexOf("\nexport async function ", i + 1);
         return src.slice(i, j === -1 ? undefined : j);
     }
 
-    /** ¿El consumo y el CUMPLIDA están dentro de un `withUnitOfWork`? */
+    /**
+     * ¿El consumo y el CUMPLIDA están en el mismo `withUnitOfWork` Y ambos
+     * repositorios reciben el `tx`? Mirar solo los nombres no basta: quitarle el
+     * `tx` a `new CodigoCitaRepository()` deja el candado en verde y devuelve el
+     * bug —el repo cae al singleton y la escritura sobrevive al rollback—. El
+     * cableado del `tx` es lo que hace atómica la operación, así que es lo que se
+     * exige.
+     */
     function ambosEnLaMismaTx(cuerpo: string): boolean {
         const tx = /withUnitOfWork\(async \(tx\) => \{([\s\S]*?)\n    \}\);/.exec(cuerpo);
         if (!tx) return false;
         const dentro = tx[1];
-        return dentro.includes("marcarUsadoSiLibre") && dentro.includes("marcarCumplidaSiConfirmada");
+        return (
+            /new CodigoCitaRepository\(tx\)\s*\.\s*marcarUsadoSiLibre/.test(dentro) &&
+            /new SolicitudCitaRepository\(tx\)\s*\.\s*marcarCumplidaSiConfirmada/.test(dentro)
+        );
     }
 
-    it("los dos writes viven en el mismo withUnitOfWork", () => {
+    it("los dos writes viven en el mismo withUnitOfWork Y reciben el tx", () => {
         expect(ambosEnLaMismaTx(cuerpoDeCerrar(cierre))).toBe(true);
     });
 
     it("CONTRAPRUEBA · la forma vieja (dos statements sueltos) se detecta como el bug", () => {
         const viejo = `export async function cerrarConCodigoDeCita() {
-            const consumido = await repo.marcarUsadoSiLibre(id, ahora);
-            const cerrada = await repo.marcarCumplidaSiConfirmada(id);
-        }`;
+            const consumido = await new CodigoCitaRepository().marcarUsadoSiLibre(id, ahora);
+            const cerrada = await new SolicitudCitaRepository().marcarCumplidaSiConfirmada(id);
+        }
+        export async function otra() {}`;
         expect(ambosEnLaMismaTx(cuerpoDeCerrar(viejo))).toBe(false);
+    });
+
+    it("CONTRAPRUEBA · quitarle el tx a un repo dentro de la tx también se detecta", () => {
+        // La mutación exacta del radicado: el withUnitOfWork sigue, pero el repo
+        // del consumo pierde el `tx` y su escritura ya no revierte con el rollback.
+        const conBug = `export async function cerrarConCodigoDeCita() {
+            await withUnitOfWork(async (tx) => {
+                const consumido = await new CodigoCitaRepository().marcarUsadoSiLibre(v.codigoId, ahora);
+                const fila = await new SolicitudCitaRepository(tx).marcarCumplidaSiConfirmada(solicitudId);
+                return fila;
+            });
+        }
+        export async function otra() {}`;
+        expect(ambosEnLaMismaTx(cuerpoDeCerrar(conBug))).toBe(false);
+    });
+});
+
+describe("SPEC-427 (B6) · ningún tipo de código queda sin quien lo emita", () => {
+    // Lección I-277 con pantalla encima: un valor de `TipoCodigoCita` sin
+    // emisor deja la cola 2 del Verificador afirmando «Nunca se pidió» sobre algo
+    // que no puede pedirse — un hecho falso ante quien adjudica el incidente.
+    function valoresDeTipoCodigo(): string[] {
+        const schema = fs.readFileSync(path.join(RAIZ, "prisma/schema.prisma"), "utf-8");
+        const m = /enum TipoCodigoCita \{([\s\S]*?)\}/.exec(schema);
+        if (!m) return [];
+        return m[1]
+            .split("\n")
+            .map((l) => l.replace(/\/\/.*$/, "").trim())
+            .filter((l) => /^[A-Z_]+$/.test(l));
+    }
+
+    /** El código de todo src/ productivo (sin tests), sin comentarios. */
+    function fuenteProductiva(): string {
+        const out: string[] = [];
+        const rec = (dir: string) => {
+            for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+                const r = path.join(dir, e.name);
+                if (e.isDirectory()) rec(r);
+                else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) {
+                    out.push(leerCodigo(path.relative(RAIZ, r)));
+                }
+            }
+        };
+        rec(path.join(RAIZ, "src"));
+        return out.join("\n");
+    }
+
+    it("cada valor de TipoCodigoCita aparece emitido en algún `emitirCodigo`", () => {
+        const src = fuenteProductiva();
+        const huerfanos = valoresDeTipoCodigo().filter(
+            (v) => !new RegExp(`emitirCodigo\\([^)]*tipo:\\s*"${v}"`, "s").test(src),
+        );
+        expect(huerfanos, "un tipo de código sin emisor es I-277 con UI encima").toEqual([]);
+    });
+
+    it("CONTRAPRUEBA · el candado detecta un tipo sin emisor", () => {
+        const src = 'emitirCodigo({ solicitudId, tipo: "CITA", vigenteDesde });';
+        expect(new RegExp('emitirCodigo\\([^)]*tipo:\\s*"EXPEDIENTE"', "s").test(src)).toBe(false);
     });
 });
