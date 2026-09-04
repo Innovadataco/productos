@@ -33,6 +33,25 @@
  *   · Aceptación del consentimiento por el flujo real (mismo patrón que
  *     SPEC-410) — NUNCA se inserta en `audit_consentimientos` a mano.
  *   · Limpieza FK-safe en `afterAll`.
+ *
+ * QUÉ **NO** CUBRE ESTE TRAMO (aviso del CEO 04-09 12:47 · leer el verde con
+ * pinzas):
+ *
+ *   · La pantalla `/perfil-profesional/completar` — hoy revienta con HTTP 500
+ *     al primer render (I-302, cero fichas en la historia de producción). Este
+ *     spec la SALTA: escribe el `PerfilProfesional` directo por Prisma en
+ *     `crearPerfilProfesionalEnRevision`, cablea el estado `EN_REVISION` y
+ *     sigue. Un verde acá NO dice nada del flujo real del profesional para
+ *     llenar su ficha — SPEC-435 es lo que lo destraba.
+ *
+ *   · La forma real de `autorizacionArchivoUrl` — en producción es un UUID
+ *     pelado (I-303: el DTO/DAO asume string opaco y explota si le llega una
+ *     ruta). Este spec siembra una ruta larga (`protected/e2e/<uuid>.pdf`)
+ *     por comodidad; NO reproduce I-303. Un verde acá tampoco dice nada del
+ *     path del archivo.
+ *
+ *   · SPEC-436 (cargar y ver los documentos antes de aprobar) — hasta que
+ *     entre, el test (2) queda con `test.fail` citando I-304 (ver abajo).
  */
 import { test, expect, request as playwrightRequest, type APIRequestContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
@@ -203,6 +222,22 @@ test.describe.serial("Recorrido psicólogo tramo 1 (SPEC-430)", () => {
     });
 
     test("(2) verificador aprueba → panel del profesional muestra verificación al día", async () => {
+        // TEST.FAIL a propósito citando SPEC-436 e I-304 — aviso del CEO 04-09 12:47:
+        //
+        //   «este candado hoy PASA porque no existe ni un documento cargado. El
+        //    profesional nunca sube los 4 requisitos y el verificador aprueba a
+        //    ciegas. SPEC-436 va a prohibir exactamente eso: no se puede
+        //    aprobar sin haber visto documento. Cuando 436 entre, este test se
+        //    pone rojo y va a parecer una regresión del Dev — no lo es.
+        //    Dejarlo como está sería CERTIFICAR el defecto de I-304.»
+        //
+        // Al mergear SPEC-436, este `test.fail` se convierte en "unexpected
+        // pass" y hay que partir el test en dos: (2a) `aprobar sin ver
+        // documentos → 4xx` como el candado real, y (2b) el flujo feliz con
+        // documentos cargados en Storage. Quitar el `test.fail` es parte de
+        // esa spec, no de este PR.
+        test.fail(true, "SPEC-436 (Dev 01) prohibirá aprobar sin haber visto documentos — I-304. Este candado se parte cuando esa spec despliegue.");
+
         const ctxVer = await contexto();
         try {
             await login(ctxVer, VERIFICADOR_EMAIL);
@@ -220,11 +255,11 @@ test.describe.serial("Recorrido psicólogo tramo 1 (SPEC-430)", () => {
             const decidir = await ctxVer.post(`/api/admin/verificacion-profesionales/${perfilProfesionalId}/decidir`, {
                 data: { checklist: todosCumple },
             });
-            expect(decidir.status(), `decidir APROBAR body=${await decidir.text().catch(() => "")}`).toBe(200);
+            // Hoy pasa; SPEC-436 lo hará devolver 4xx porque no hay documentos cargados.
+            expect(decidir.status(), `decidir APROBAR sin documentos cargados — hoy PASA (I-304); SPEC-436 lo prohíbe. body=${await decidir.text().catch(() => "")}`).toBe(200);
             const resultado = (await decidir.json())?.data?.resultado;
-            expect(resultado, "todo CUMPLE debe cerrar con APROBADO").toBe("APROBADO");
+            expect(resultado, "todo CUMPLE debe cerrar con APROBADO (bajo I-304)").toBe("APROBADO");
 
-            // Estado del perfil quedó activo.
             const perfilTrasAprobar = await prisma.perfilProfesional.findUnique({
                 where: { id: perfilProfesionalId },
                 select: { estado: true },
@@ -234,7 +269,6 @@ test.describe.serial("Recorrido psicólogo tramo 1 (SPEC-430)", () => {
             await ctxVer.dispose();
         }
 
-        // Panel del profesional muestra verificación al día.
         const ctxProf = await contexto();
         try {
             await login(ctxProf, PROFESIONAL_EMAIL);
@@ -297,17 +331,26 @@ test.describe.serial("Recorrido psicólogo tramo 1 (SPEC-430)", () => {
             expect(montoTotal, "el monto debe salir del parámetro precio-primera-cita").toBe(precioParametro);
 
             // H-2: el body al padre NO expone contacto del profesional.
+            //
+            // Probado muriendo (aviso CEO 04-09 12:47): al comentar
+            // `if (!debeExponerContacto(...)) return dto;` en
+            // `src/lib/profesional/cita/dto.ts:toCitaParaPadre`, el DTO devuelve
+            // `contactoProfesional: {email, telefono}` incondicionalmente. El
+            // assert de abajo detecta la subcadena `"telefono"` dentro del
+            // objeto y se pone rojo — el candado MUERE con el defecto.
+            //
+            // La lista incluye `contactoProfesional` como candado estructural:
+            // si un día el DTO renombra las claves internas (por ejemplo
+            // `contactoProfesional.correo` en vez de `.email`), la presencia
+            // del envoltorio ya es fuga.
             const detalle = await ctxPadre.get(`/api/padre/citas/${solicitudId}`);
             const detalleTxt = await detalle.text();
-            for (const campo of ["telefono", "whatsapp", "correoProfesional", "emailProfesional"]) {
+            for (const campo of ["contactoProfesional", "telefono", "whatsapp", "correoProfesional", "emailProfesional"]) {
                 expect(
                     detalleTxt.includes(`"${campo}"`),
                     `H-2: '${campo}' NO puede viajar al padre antes de la confirmación`,
                 ).toBe(false);
             }
-            // Nota: el email del profesional también es contacto — cae en el candado.
-            // Si el DTO lo lista con otro nombre, el barrido queda parcial y sirve
-            // como pista para radicar.
         } finally {
             await ctxPadre.dispose();
         }
