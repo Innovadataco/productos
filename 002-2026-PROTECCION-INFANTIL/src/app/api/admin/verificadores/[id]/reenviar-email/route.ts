@@ -16,6 +16,13 @@ import { verificadorIdParamsSchema } from "@/lib/schemas/verificador";
 import { VerificadorService } from "@/lib/dal/services/verificadores";
 import { enviarEmailBienvenidaOperador } from "@/lib/email";
 
+function getClientInfo(request: Request) {
+    return {
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+    };
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
@@ -29,7 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
         const { id } = withValidation.params(verificadorIdParamsSchema)(await params);
 
-        const { email, password } = await new VerificadorService().prepararReenvioEmail(id, admin.id);
+        const { email, password } = await new VerificadorService().prepararReenvioEmail(id, admin.id, getClientInfo(request));
 
         let emailEnviado = false;
         try {

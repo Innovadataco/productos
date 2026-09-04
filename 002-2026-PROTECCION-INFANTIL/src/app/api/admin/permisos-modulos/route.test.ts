@@ -116,6 +116,52 @@ describe("/api/admin/permisos-modulos", () => {
         expect(conflict.status).toBe(409);
     });
 
+    // SPEC-435 (Jelkin vivo 04-09) · anti-crecimiento para roles cerrados. La
+    // refutación adversarial cazó que el candado `verificador-modulos` era
+    // cosmético — el ADMIN podía contaminar VERIFICADOR desde la UI. Este par
+    // de tests bloquea el vector en runtime.
+    it("PATCH · 409 si intenta activar un módulo prohibido a un rol cerrado (VERIFICADOR)", async () => {
+        const admin = await crearUsuario("ADMIN");
+        vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
+        // `resetDatabase` ya siembra el catálogo completo con `otorgarTodosLosPermisos`,
+        // así que reutilizamos la fila (no la recreamos).
+        const operadores = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "operadores" } });
+        // Baseline: tras el reset el ADMIN otorgó todo a todos. Empezamos limpiando
+        // el permiso de VERIFICADOR sobre "operadores" para probar el guard puro.
+        await prisma.permisoModulo.update({
+            where: { rol_moduloId: { rol: "VERIFICADOR", moduloId: operadores.id } },
+            data: { activo: false },
+        });
+
+        const res = await PATCH(patchReq([{ rol: "VERIFICADOR", moduloId: operadores.id, activo: true }]));
+        expect(res.status).toBe(409);
+        const body = await res.json();
+        expect(body.error.message).toContain("VERIFICADOR");
+        expect(body.error.message).toContain("operadores");
+
+        const fila = await prisma.permisoModulo.findUnique({
+            where: { rol_moduloId: { rol: "VERIFICADOR", moduloId: operadores.id } },
+        });
+        // El guard rechazó ANTES del upsert: el permiso quedó apagado.
+        expect(fila?.activo).toBe(false);
+    });
+
+    it("PATCH · 409 si intenta desactivar el único módulo permitido de un rol cerrado", async () => {
+        const admin = await crearUsuario("ADMIN");
+        vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
+        const suyo = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "admin_verificacion_profesionales" } });
+
+        const res = await PATCH(patchReq([{ rol: "VERIFICADOR", moduloId: suyo.id, activo: false }]));
+        expect(res.status).toBe(409);
+        const body = await res.json();
+        expect(body.error.message).toContain("VERIFICADOR");
+
+        const fila = await prisma.permisoModulo.findUnique({
+            where: { rol_moduloId: { rol: "VERIFICADOR", moduloId: suyo.id } },
+        });
+        expect(fila?.activo).toBe(true);
+    });
+
     it("GET/PATCH rechazan no-ADMIN", async () => {
         const operador = await crearUsuario("OPERADOR");
         vi.spyOn(auth, "verifyAuth").mockRejectedValue(new (await import("@/lib/errors")).AppError("Permisos insuficientes", "FORBIDDEN" as never, 403));

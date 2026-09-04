@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-143 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+144 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 

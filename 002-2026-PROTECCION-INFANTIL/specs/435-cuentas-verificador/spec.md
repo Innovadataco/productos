@@ -49,3 +49,15 @@ SPEC-408 introdujo el rol `VERIFICADOR` como puesto de trabajo aparte, pero solo
 - «la cuenta nace con `admin_verificacion_profesionales` y nada más: no hereda módulos de admin».
 - «el menú del verificador no muestra ítems de operador, comité ni padre» (candado I-299).
 - «restablecer SIEMPRE muestra la contraseña · reenviar por email NUNCA la devuelve».
+
+## Refuerzos tras refutación adversarial (04-09 16:5x — orden ultracode CEO idc-04)
+
+Cuatro refutadores en paralelo cazaron 4 huecos y se aplicaron todos en este PR:
+
+1. **Anti-crecimiento del PATCH `/api/admin/permisos-modulos`** — refutador 1 y 4 demostraron que el candado de fuente (`verificador-modulos.candado.test.ts`) era cosmético: el ADMIN podía activar `(VERIFICADOR, "operadores")` desde `PermisosRolPanel.tsx` sin que el candado se enterara. Fix: el PATCH ahora define `ROLES_CERRADOS = ["VERIFICADOR", "COMITE_CONVIVENCIA"]` y rechaza con 409 cualquier activación fuera de `CLAVES_POR_ROL[rol]` o cualquier desactivación del único módulo del rol. 2 tests de integración nuevos (`route.test.ts` de permisos-modulos) verifican los dos vectores.
+
+2. **Alta de cuentas cubierta por candado credencial** — refutador 2 mostró que las altas (verificadores/operadores/colegios) devolvían `passwordTemporal` incondicional pero estaban FUERA del scope del candado permanente. Fix: la allowlist `RUTAS_SIEMPRE_MUESTRA` ahora incluye `(verificadores|operadores|colegios)/route.ts`. Piso 6 → 9.
+
+3. **Regex del candado credencial endurecido** — refutador 2 enumeró vectores que evadían `? undefined :`: ternario invertido `? password : undefined`, sentinels `null`/`""`/`void 0`, `delete respuesta.password`, y nombres de campo nuevos (`clave`, `credencial`, …). Fix: vocabulario ampliado, 3 patrones (`? sentinel :`, `? expr : sentinel`, `delete X.<campo>`). Verificado por mutación: ternario invertido en `verificadores/route.ts` hace caer el candado.
+
+4. **Auditoría con IP/UA reales** — refutador 3 encontró que el service `VerificadorService` hardcodeaba `ipAddress: "admin"` y `userAgent: "verificadores.service"` en vez de recibirlos de la request (patrón SPEC-322/415 que sí siguen operador/profesional/colegio). Fix: los 4 métodos del service reciben `info: InfoClienteAudit`; las 4 rutas pasan `getClientInfo(request)`. El test de integración existente no se vio afectado.

@@ -31,6 +31,17 @@ export interface CrearVerificadorInput {
     nombre: string;
 }
 
+/**
+ * IP y UA que la ruta captura de la request con `getClientInfo` (patrón
+ * operador/profesional/colegio). Antes de SPEC-435 (16:5x) el service pasaba
+ * `"admin"` / `"verificadores.service"` hardcodeados; la refutación adversarial
+ * cazó que rompía la trazabilidad de SPEC-322/415.
+ */
+export interface InfoClienteAudit {
+    ipAddress: string;
+    userAgent: string;
+}
+
 export interface VerificadorListItem {
     id: string;
     email: string;
@@ -62,6 +73,7 @@ export class VerificadorService {
     async crear(
         input: CrearVerificadorInput,
         adminId: string,
+        info: InfoClienteAudit,
     ): Promise<{ verificador: VerificadorListItem; password: string }> {
         const emailLower = input.email.toLowerCase();
         const existente = await this.usuarios.findByEmail(emailLower);
@@ -88,8 +100,8 @@ export class VerificadorService {
             recursoId: nuevo.id,
             usuarioId: adminId,
             valorNuevo: JSON.stringify({ email: nuevo.email, nombre: nuevo.nombre, rol: "VERIFICADOR" }),
-            ipAddress: "admin",
-            userAgent: "verificadores.service",
+            ipAddress: info.ipAddress,
+            userAgent: info.userAgent,
         });
         return {
             verificador: {
@@ -104,7 +116,7 @@ export class VerificadorService {
         };
     }
 
-    async cambiarEstado(id: string, estado: "activo" | "inactivo", adminId: string): Promise<VerificadorListItem> {
+    async cambiarEstado(id: string, estado: "activo" | "inactivo", adminId: string, info: InfoClienteAudit): Promise<VerificadorListItem> {
         const usuario = await this.usuarios.findById(id);
         if (!usuario || usuario.rol !== "VERIFICADOR") {
             throw new AppError("Verificador no encontrado", ERROR_CODES.NOT_FOUND, 404);
@@ -117,8 +129,8 @@ export class VerificadorService {
             usuarioId: adminId,
             valorAnterior: JSON.stringify({ estado: usuario.estado }),
             valorNuevo: JSON.stringify({ estado }),
-            ipAddress: "admin",
-            userAgent: "verificadores.service",
+            ipAddress: info.ipAddress,
+            userAgent: info.userAgent,
         });
         return {
             id: actualizado.id,
@@ -135,7 +147,7 @@ export class VerificadorService {
      * el endpoint que llama a este método SIEMPRE muestra la password en
      * la respuesta (mismo patrón que padres/profesionales).
      */
-    async restablecerPassword(id: string, adminId: string): Promise<{ email: string; password: string }> {
+    async restablecerPassword(id: string, adminId: string, info: InfoClienteAudit): Promise<{ email: string; password: string }> {
         const usuario = await this.usuarios.findById(id);
         if (!usuario || usuario.rol !== "VERIFICADOR") {
             throw new AppError("Verificador no encontrado", ERROR_CODES.NOT_FOUND, 404);
@@ -149,8 +161,8 @@ export class VerificadorService {
             recursoId: id,
             usuarioId: adminId,
             valorNuevo: JSON.stringify({ debeCambiarPassword: true, motivo: "SPEC-435 restablecer-password" }),
-            ipAddress: "admin",
-            userAgent: "verificadores.service",
+            ipAddress: info.ipAddress,
+            userAgent: info.userAgent,
         });
         return { email: usuario.email, password };
     }
@@ -161,7 +173,7 @@ export class VerificadorService {
      * Único fallback: si el motor de notif no aceptó la tarea, la password
      * viaja como copia manual para no atascar al admin.
      */
-    async prepararReenvioEmail(id: string, adminId: string): Promise<{ email: string; password: string }> {
+    async prepararReenvioEmail(id: string, adminId: string, info: InfoClienteAudit): Promise<{ email: string; password: string }> {
         const usuario = await this.usuarios.findById(id);
         if (!usuario || usuario.rol !== "VERIFICADOR") {
             throw new AppError("Verificador no encontrado", ERROR_CODES.NOT_FOUND, 404);
@@ -175,8 +187,8 @@ export class VerificadorService {
             recursoId: id,
             usuarioId: adminId,
             valorNuevo: JSON.stringify({ debeCambiarPassword: true, motivo: "SPEC-435 reenviar-email" }),
-            ipAddress: "admin",
-            userAgent: "verificadores.service",
+            ipAddress: info.ipAddress,
+            userAgent: info.userAgent,
         });
         return { email: usuario.email, password };
     }

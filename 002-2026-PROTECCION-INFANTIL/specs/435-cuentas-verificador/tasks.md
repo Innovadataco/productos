@@ -20,4 +20,9 @@
 - [x] Piso del candado `credencial-siempre-visible` subido a 6.
 - [x] Test integración `route.test.ts` — 4 casos (verificado por mutación).
 - [x] Preflight: tsc + eslint + arch:check (regenerando docs) + tokens:check + unit + integración.
-- [ ] Commit + push + PR + reportar al CEO.
+- [x] PR #356 abierta.
+- [x] Refutación adversarial (ultracode, orden CEO idc-04): 4 agentes en paralelo — refutadores de los 2 candados, barrido enumerativo de grants, comparación de moldes.
+- [x] Fix H1: PATCH `/api/admin/permisos-modulos` rechaza `activar/desactivar` sobre `ROLES_CERRADOS` (VERIFICADOR, COMITE_CONVIVENCIA) fuera de `CLAVES_POR_ROL`. 2 tests de integración nuevos.
+- [x] Fix H2+H3: candado credencial cubre altas (`verificadores|operadores|colegios`/route.ts), piso 6→9, regex endurecido (ternario invertido, sentinels, delete). Verificado por mutación.
+- [x] Fix H4: `VerificadorService` recibe `info: {ipAddress, userAgent}` en los 4 métodos; las 4 rutas pasan `getClientInfo(request)`.
+- [ ] Commit del refuerzo + push + reportar al CEO idc-04.

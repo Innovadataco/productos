@@ -12,6 +12,13 @@ import { withValidation } from "@/lib/validation";
 import { verificadorIdParamsSchema, verificadorEstadoBodySchema } from "@/lib/schemas/verificador";
 import { VerificadorService } from "@/lib/dal/services/verificadores";
 
+function getClientInfo(request: Request) {
+    return {
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+    };
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
@@ -26,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         const { id } = withValidation.params(verificadorIdParamsSchema)(await params);
         const { estado } = await withValidation.body(verificadorEstadoBodySchema)(request);
 
-        const verificador = await new VerificadorService().cambiarEstado(id, estado, admin.id);
+        const verificador = await new VerificadorService().cambiarEstado(id, estado, admin.id, getClientInfo(request));
         return NextResponse.json({ verificador });
     } catch (error) {
         if (error instanceof AppError) {

@@ -29,10 +29,16 @@ const RUTA_ADMIN = path.resolve(__dirname);
 
 // Endpoints cuyo contrato es "SIEMPRE muestra" — únicos alcanzados por el
 // candado. Coincide con path relativo a `/api/admin/**` (POSIX-normalizado).
+// SPEC-435 (refutación adversarial 04-09): el ALTA de cuentas (verificadores,
+// operadores, colegios) también devuelve `passwordTemporal` incondicional y
+// estaba fuera del candado — un copy-paste del defecto I-298 en esos endpoints
+// habría pasado invisible. Los sumamos: piso 5 → 9.
 const RUTAS_SIEMPRE_MUESTRA = [
     /(^|\/)restablecer-password\/route\.ts$/,
     /(^|\/)regenerar-password\/route\.ts$/,
     /(^|\/)solicitudes\/reenviar\/route\.ts$/,
+    // Altas de cuentas admin que muestran el password inicial (SIEMPRE en respuesta).
+    /(^|\/)(verificadores|operadores|colegios)\/route\.ts$/,
 ];
 
 function* recorrer(directorio: string): Generator<string> {
@@ -55,9 +61,37 @@ function sinComentarios(contenido: string): string {
         .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
-// Cazamos `<field>: <expr> ? undefined : <credencial-like>` para los cuatro
-// nombres que hoy usa la app.
-const PATRON_FUGA = /\b(passwordTemporal|enlace|password|token)\s*:\s*[^,{}]*\?\s*undefined\s*:/g;
+// SPEC-435 (refutación adversarial 04-09): endurecemos el vocabulario y el
+// patrón. Antes solo se cazaba `<field>: <expr> ? undefined : <cred>` con 4
+// nombres — evadible con ternario invertido, otros sentinels (`null`, `""`,
+// `void 0`), `delete respuesta.password`, o campos con nombres nuevos
+// (`clave`, `credencial`, …). Ahora:
+//   · Vocabulario ampliado a nombres razonables de credencial.
+//   · Cazamos AMBOS lados del ternario: `? undefined :` y `: undefined` (invertido).
+//   · Cazamos sentinels equivalentes: `undefined`, `null`, `""`, `void 0`.
+//   · Alarma `delete respuesta.<credencial>` sobre los mismos archivos.
+const CAMPOS_CREDENCIAL = "passwordTemporal|enlace|password|token|clave\\w*|credencial|contrasena|secretoInicial|otp|newPassword";
+const SENTINEL = "(?:undefined|null|\"\"|''|void\\s*0)";
+// Ternario directo:   passwordTemporal: <cond> ? undefined : <expr>
+const PATRON_FUGA_DIRECTO = new RegExp(
+    `\\b(${CAMPOS_CREDENCIAL})\\s*:\\s*[^,{}]*\\?\\s*${SENTINEL}\\s*:`,
+    "g"
+);
+// Ternario invertido:  passwordTemporal: <cond> ? <expr> : undefined
+const PATRON_FUGA_INVERTIDO = new RegExp(
+    `\\b(${CAMPOS_CREDENCIAL})\\s*:\\s*[^,{}]*\\?[^,{}]*:\\s*${SENTINEL}\\b`,
+    "g"
+);
+// Eliminación imperativa: delete respuesta.passwordTemporal
+const PATRON_DELETE = new RegExp(
+    `\\bdelete\\s+\\w+\\.(${CAMPOS_CREDENCIAL})\\b`,
+    "g"
+);
+const PATRONES_FUGA: Array<{ nombre: string; regex: RegExp }> = [
+    { nombre: "ternario ? sentinel :", regex: PATRON_FUGA_DIRECTO },
+    { nombre: "ternario invertido ? expr : sentinel", regex: PATRON_FUGA_INVERTIDO },
+    { nombre: "delete respuesta.<credencial>", regex: PATRON_DELETE },
+];
 
 describe("SPEC-423 · credencial siempre visible en endpoints admin «SIEMPRE muestra» (I-298)", () => {
     const todosRoute = [...recorrer(RUTA_ADMIN)];
@@ -67,33 +101,39 @@ describe("SPEC-423 · credencial siempre visible en endpoints admin «SIEMPRE mu
     });
 
     it("cubre los endpoints «SIEMPRE muestra» conocidos (contraprueba)", () => {
-        // Piso: hoy hay 6 (padres/prof/verificadores restablecer-password,
-        // colegios/prof regenerar-password, solicitudes/reenviar). Si
-        // desaparece uno, avisa. SPEC-435 sumó verificadores.
-        expect(alcanzados.length).toBeGreaterThanOrEqual(6);
+        // Piso: 9 endpoints tras SPEC-435:
+        //   3 restablecer-password (padres, profesionales, verificadores)
+        //   2 regenerar-password (colegios, operadores)
+        //   1 solicitudes/reenviar (profesionales)
+        //   3 altas de cuentas (verificadores, operadores, colegios) — SPEC-435
+        // Si desaparece uno, avisa.
+        expect(alcanzados.length).toBeGreaterThanOrEqual(9);
     });
 
-    it("ningún endpoint «SIEMPRE muestra» condiciona la credencial a `undefined` según un flag de correo", () => {
+    it("ningún endpoint «SIEMPRE muestra» esconde la credencial (ternario, sentinel o delete)", () => {
         const violaciones: string[] = [];
         for (const archivo of alcanzados) {
             const codigo = sinComentarios(fs.readFileSync(archivo, "utf-8"));
-            const matches = codigo.match(PATRON_FUGA);
-            if (matches && matches.length > 0) {
-                const relativo = path.relative(RUTA_ADMIN, archivo).split(path.sep).join("/");
-                for (const m of matches) violaciones.push(`${relativo}: ${m.trim()}`);
+            const relativo = path.relative(RUTA_ADMIN, archivo).split(path.sep).join("/");
+            for (const { nombre, regex } of PATRONES_FUGA) {
+                const matches = codigo.match(regex);
+                if (matches && matches.length > 0) {
+                    for (const m of matches) violaciones.push(`${relativo} [${nombre}]: ${m.trim()}`);
+                }
             }
         }
         expect(
             violaciones,
             [
-                "SPEC-423 (I-298) — credencial escondida por condicional de encolado en un endpoint «SIEMPRE muestra»:",
+                "SPEC-423 (I-298) / SPEC-435 — credencial escondida en un endpoint «SIEMPRE muestra»:",
                 ...violaciones,
                 "",
-                "El motor de notif encolla siempre, así que ese flag no mide entrega real.",
-                "En restablecer-password / regenerar-password / solicitudes/reenviar la credencial",
-                "TIENE que viajar SIEMPRE. Si el endpoint es «reenviar por correo», el patrón",
-                "condicional es válido (contrato Jelkin: «reenviar» NUNCA la devuelve).",
-                "Ver SPEC-423/spec.md.",
+                "Formas cazadas: `X: cond ? undefined : password`, `X: cond ? password : undefined`,",
+                "sentinels equivalentes (`null`, `\"\"`, `void 0`), y `delete respuesta.X`.",
+                "En restablecer-password / regenerar-password / solicitudes/reenviar / altas de cuentas",
+                "la credencial TIENE que viajar SIEMPRE. Si el endpoint es «reenviar por correo», el",
+                "patrón condicional es válido (contrato Jelkin: «reenviar» NUNCA la devuelve).",
+                "Ver SPEC-423/spec.md y SPEC-435/spec.md.",
             ].join("\n"),
         ).toEqual([]);
     });

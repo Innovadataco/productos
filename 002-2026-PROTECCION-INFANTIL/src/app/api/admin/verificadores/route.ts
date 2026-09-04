@@ -21,6 +21,13 @@ import { errorToResponse } from "@/lib/api-handler";
 import { enviarEmailBienvenidaOperador } from "@/lib/email";
 import { VerificadorService } from "@/lib/dal/services/verificadores";
 
+function getClientInfo(request: Request) {
+    return {
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+    };
+}
+
 const crearSchema = z.object({
     email: z.string().email(),
     nombre: z.string().min(2).max(100),
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const { verificador, password } = await new VerificadorService().crear(parsed.data, admin.id);
+        const { verificador, password } = await new VerificadorService().crear(parsed.data, admin.id, getClientInfo(request));
 
         let emailEnviado = false;
         try {
