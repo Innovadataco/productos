@@ -99,13 +99,18 @@ export function NavHeader() {
         ? (user.nombre?.[0] || user.email[0]).toUpperCase()
         : "";
 
-    // SPEC-319 §2.6: COMITE_CONVIVENCIA es empleado — sin esto, el bloque !esEmpleado le
-    // ofrecía "Mi panel"/"Círculo de Confianza"/"Mis reportes" (opciones de padre).
+    // SPEC-319 §2.6 + SPEC-424 (I-299): "empleado" es el flag histórico que
+    // controla si el usuario ve items del padre en el menú. VERIFICADOR y
+    // PROFESIONAL entran acá porque tampoco son "el padre" — el primero es
+    // interno, el segundo es prestador externo — y sin este check, ambos
+    // heredaban "Mi panel"/"Círculo de Confianza"/"Mis reportes" del padre.
     const esEmpleado =
         user?.rol === "ADMIN" ||
         user?.rol === "OPERADOR" ||
         user?.rol === "COMITE_VALIDACION" ||
-        user?.rol === "COMITE_CONVIVENCIA";
+        user?.rol === "COMITE_CONVIVENCIA" ||
+        user?.rol === "VERIFICADOR" ||
+        user?.rol === "PROFESIONAL";
 
     const headerBorderClass = user?.rol === "ADMIN"
         ? "border-b-amber-500/40 dark:border-b-amber-400/30"
@@ -137,7 +142,12 @@ export function NavHeader() {
             ? "/dashboard/colegio/comite/casos"
             : user?.rol === "PARENT"
                 ? "/dashboard/padre" // SPEC-317: zona canónica del padre
-                : "/dashboard-publico";
+                // SPEC-424 (I-299): sin este case, el botón "Dashboard" del
+                // profesional caía a `/dashboard-publico` (el genérico del anónimo).
+                // La línea se mueve a `/dashboard/profesional` cuando SPEC-425 mergee.
+                : user?.rol === "PROFESIONAL"
+                    ? "/perfil-profesional/verificacion"
+                    : "/dashboard-publico";
 
     // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
     // En rutas públicas va al home público aunque haya sesión (SPEC-106), EXCEPTO
@@ -256,6 +266,23 @@ export function NavHeader() {
                                                 Gestión de casos
                                             </NavDropdownLink>
                                         )}
+                                        {/* SPEC-424 (I-299): items del profesional. Hasta SPEC-425
+                                            (Dev 02 · panel L5), la entrada principal es la
+                                            verificación — lo único que hoy tiene su propia pantalla. */}
+                                        {user.rol === "PROFESIONAL" && (
+                                            <>
+                                                {esEnlaceNavegable("/perfil-profesional/verificacion") && (
+                                                    <NavDropdownLink href="/perfil-profesional/verificacion" onClick={() => setOpen(false)}>
+                                                        Verificación
+                                                    </NavDropdownLink>
+                                                )}
+                                                {esEnlaceNavegable("/perfil-profesional/completar") && (
+                                                    <NavDropdownLink href="/perfil-profesional/completar" onClick={() => setOpen(false)}>
+                                                        Mi ficha
+                                                    </NavDropdownLink>
+                                                )}
+                                            </>
+                                        )}
                                         {!esEmpleado && (
                                             <>
                                                 {enCamino ? (
@@ -361,6 +388,17 @@ export function NavHeader() {
                                 )}
                                 {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
                                     <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Gestión de casos</MobileLink>
+                                )}
+                                {/* SPEC-424 (I-299): items del profesional. */}
+                                {user.rol === "PROFESIONAL" && (
+                                    <>
+                                        {esEnlaceNavegable("/perfil-profesional/verificacion") && (
+                                            <MobileLink href="/perfil-profesional/verificacion" onClick={() => setMobileOpen(false)}>Verificación</MobileLink>
+                                        )}
+                                        {esEnlaceNavegable("/perfil-profesional/completar") && (
+                                            <MobileLink href="/perfil-profesional/completar" onClick={() => setMobileOpen(false)}>Mi ficha</MobileLink>
+                                        )}
+                                    </>
                                 )}
                                 <button
                                     onClick={async () => {

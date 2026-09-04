@@ -70,6 +70,10 @@ const GUARDAS_HEADER: Record<string, (rol: RolBarrido) => boolean> = {
     // SPEC-168: menú del Comité de Convivencia.
     "/dashboard/colegio/comite": (rol) => rol === "SCHOOL_ADMIN",
     "/dashboard/colegio/comite/casos": (rol) => rol === "COMITE_CONVIVENCIA" || rol === "SCHOOL_ADMIN",
+    // SPEC-424 (I-299): items del profesional en el header (hasta que SPEC-425
+    // traiga `/dashboard/profesional`, estos son los suyos).
+    "/perfil-profesional/verificacion": (rol) => rol === "PROFESIONAL",
+    "/perfil-profesional/completar": (rol) => rol === "PROFESIONAL",
 };
 
 /** href={x} que sabemos resolver estáticamente; cualquier otro falla ruidoso (ZEUS 2).

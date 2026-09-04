@@ -46,6 +46,13 @@ export function homeParaRol(rol: string | undefined): string {
         case "PARENT":
             // Decisión A: el padre aterriza en su dashboard, no en la lista vieja.
             return "/dashboard/padre";
+        // SPEC-424 (I-299): el profesional aterriza en su propia área. Su panel
+        // (SPEC-425 · lote L5, Dev 02) todavía no existe; hasta que exista,
+        // aterriza en su pantalla de verificación (la única que ya tiene).
+        // **Cuando SPEC-425 mergee, cambiá esta línea a `/dashboard/profesional`.**
+        // Es UNA línea — no hay más callsites que actualizar acá.
+        case "PROFESIONAL":
+            return "/perfil-profesional/verificacion";
         default:
             // Rol desconocido/futuro: fallback neutro que no dispara rebote (sin loop).
             return "/mis-reportes";
