@@ -16,6 +16,19 @@
 > ```
 > npx tsx scripts/specs/generar-readme.ts --resumen
 > ```
+<!-- SPEC-413:BEGIN resumen -->
+<!-- Generado por `npx tsx scripts/specs/generar-readme.ts`. NO editar a mano. -->
+
+| Métrica | Valor |
+|---------|-------|
+| **Total de specs** | **355** |
+| 🔵 PLANEADO | 59 |
+| 🟡 DESARROLLO | 25 |
+| 🟢 IMPLEMENTADO | 170 |
+| 🧪 PENDIENTE DE PRUEBA | 0 |
+| ✅ FINALIZADO | 38 |
+| 📁 CERRADA | 63 |
+<!-- SPEC-413:END resumen -->
 
 ## Backlog activo (no cerradas)
 
@@ -380,6 +393,7 @@
 | [436](436-documentos-del-profesional/spec.md) | SPEC-436 · Los documentos del profesional: se cargan, se guardan y SE PUEDEN LEER | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
 | [444](444-identificadores-cuid/spec.md) | SPEC-444 · Los identificadores del padre se validaban como uuid — cierra I-310 | 🟢 IMPLEMENTADO |
+| [447](447-calendario-del-profesional/spec.md) | SPEC-447 · El profesional publica su disponibilidad — cierra I-311 | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 
 ## Incidencias de calidad de datos

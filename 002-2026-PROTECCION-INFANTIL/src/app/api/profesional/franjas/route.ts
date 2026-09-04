@@ -40,7 +40,26 @@ export async function POST(request: Request) {
         if (fin.getTime() <= inicio.getTime()) {
             throw new AppError("El fin debe ser posterior al inicio", ERROR_CODES.VALIDATION_ERROR, 400);
         }
-        const creada = await new FranjaDisponibleRepository().crear({
+        // SPEC-447 (I-311): dos validaciones que la ruta no tenía y que la
+        // pantalla nueva vuelve alcanzables por primera vez de verdad.
+        //
+        // 1) Modalidad que el profesional NO atiende. Publicarla es prometerle
+        //    a una familia algo que no va a poder cumplir; el directorio del
+        //    padre filtra por estos mismos dos campos.
+        if (body.modalidad === "VIRTUAL" && !perfil.atiendeVirtual) {
+            throw new AppError("No atiende de forma virtual", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        if (body.modalidad === "PRESENCIAL" && !perfil.atiendePresencial) {
+            throw new AppError("No atiende de forma presencial", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        const repo = new FranjaDisponibleRepository();
+        // 2) Solape con una franja suya. Una agenda con dos franjas encimadas
+        //    puede comprometer dos citas en el mismo rato.
+        const solapada = await repo.existeSolapada(perfil.id, inicio, fin);
+        if (solapada) {
+            throw new AppError("Ya tiene una franja en ese horario", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        const creada = await repo.crear({
             profesional: { connect: { id: perfil.id } },
             inicio,
             fin,

@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 8 roles (7 autenticados + anónimo) × 541 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4328 combinaciones.
+Inventario: 8 roles (7 autenticados + anónimo) × 542 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4336 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -546,6 +546,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | permitir | permite | sí |
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/profesional/calendario` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -1092,6 +1093,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | permitir | permite | sí |
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | redirigir→/dashboard/admin | no permite | sí |
+| `/dashboard/profesional/calendario` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -1638,6 +1640,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | permitir | permite | sí |
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | redirigir→/dashboard/admin/comite | no permite | sí |
+| `/dashboard/profesional/calendario` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -2184,6 +2187,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | permitir | permite | sí |
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/dashboard/profesional/calendario` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2730,6 +2734,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | permitir | permite | sí |
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/dashboard/profesional/calendario` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -3276,6 +3281,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | permitir | permite | sí |
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | permitir | permite | sí |
+| `/dashboard/profesional/calendario` | página | permitir | permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -3822,6 +3828,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | permitir | permite | sí |
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | permitir | permite | sí |
+| `/dashboard/profesional/calendario` | página | permitir | permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -4368,6 +4375,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/perfil/notificaciones` | página | redirigir→/login | permite | **NO** |
 | `/dashboard/profesional` | página | redirigir→/login | permite | **NO** |
+| `/dashboard/profesional/calendario` | página | redirigir→/login | permite | **NO** |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -4809,6 +4817,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/perfil` | redirigir→/login | permite |
 | `/dashboard/perfil/notificaciones` | redirigir→/login | permite |
 | `/dashboard/profesional` | redirigir→/login | permite |
+| `/dashboard/profesional/calendario` | redirigir→/login | permite |
 | `/mis-reportes` | redirigir→/login | permite |
 | `/perfil-profesional/completar` | redirigir→/login | permite |
 | `/perfil-profesional/verificacion` | redirigir→/login | permite |

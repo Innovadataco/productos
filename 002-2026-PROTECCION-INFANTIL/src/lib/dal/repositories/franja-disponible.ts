@@ -38,6 +38,27 @@ export class FranjaDisponibleRepository {
         });
     }
 
+    /**
+     * SPEC-447 (I-311): ¿hay ya una franja del profesional que se pise con
+     * `[inicio, fin)`? Dos franjas se solapan cuando cada una empieza antes de
+     * que termine la otra. Se comparan en UTC —que es como se guardan— así que
+     * no hay zona horaria de por medio.
+     *
+     * Incluye las TOMADAS a propósito: una franja reservada ocupa la agenda
+     * igual que una libre, y publicar encima sería prometer dos citas a la vez.
+     */
+    existeSolapada(profesionalId: string, inicio: Date, fin: Date, excluirId?: string) {
+        return this.db.franjaDisponible.findFirst({
+            where: {
+                profesionalId,
+                ...(excluirId ? { id: { not: excluirId } } : {}),
+                inicio: { lt: fin },
+                fin: { gt: inicio },
+            },
+            select: { id: true, inicio: true, fin: true },
+        });
+    }
+
     marcarTomadaSiLibre(id: string) {
         return this.db.franjaDisponible.updateMany({
             where: { id, tomada: false },
