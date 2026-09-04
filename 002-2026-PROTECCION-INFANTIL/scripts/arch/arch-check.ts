@@ -25,6 +25,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ARTEFACTOS } from "./artefactos";
+import { diferenciasTolerandoOrden } from "./lib/comparar-tolerando-orden";
 import { ejecutarAsercionA } from "./asercion-puerta-predicado";
 import { ejecutarAsercionB } from "./asercion-menu-no-miente";
 import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
@@ -53,13 +54,25 @@ async function verificarDrift(): Promise<string[]> {
         const regenerado = await generar();
         const destino = path.join(RUTA_DOCS_ARCH, artefacto.archivo);
         const commiteado = fs.existsSync(destino) ? fs.readFileSync(destino, "utf-8") : null;
-        if (commiteado !== regenerado) {
-            fallos.push(
-                commiteado === null
-                    ? `${artefacto.archivo} no existe en docs/architecture/ (falta generarlo y commitearlo)`
-                    : `${artefacto.archivo} difiere de la regeneración (drift: regenerar con \`npx tsx ${artefacto.generador}\` y commitear)`
-            );
+        if (commiteado === null) {
+            fallos.push(`${artefacto.archivo} no existe en docs/architecture/ (falta generarlo y commitearlo)`);
+            continue;
         }
+        if (commiteado === regenerado) continue;
+
+        // SPEC-432b: en los artefactos de tabla se tolera el ORDEN de las filas
+        // —`merge=union` no lo garantiza— y NUNCA el contenido. En los demás la
+        // comparación sigue siendo byte a byte.
+        if (artefacto.toleraOrdenDeFilas) {
+            const diferencias = diferenciasTolerandoOrden(commiteado, regenerado);
+            if (diferencias.length === 0) continue;
+            for (const d of diferencias) fallos.push(`${artefacto.archivo}: ${d}`);
+            fallos.push(`${artefacto.archivo} → regenerar con \`npx tsx ${artefacto.generador}\` y commitear`);
+            continue;
+        }
+        fallos.push(
+            `${artefacto.archivo} difiere de la regeneración (drift: regenerar con \`npx tsx ${artefacto.generador}\` y commitear)`
+        );
     }
     return fallos;
 }

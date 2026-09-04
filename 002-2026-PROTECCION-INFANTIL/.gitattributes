@@ -1,0 +1,40 @@
+# SPEC-432 (04-09-2026) · los archivos generados dejan de ser terreno de conflicto.
+#
+# El 04-09 cinco PRs abiertos a la vez chocaron en estos dos archivos, y cada
+# choque costó un rebase más un CI completo (20-35 min). No es mala suerte: son
+# listas a las que **toda** spec nueva le agrega una línea en el mismo sitio.
+#
+# `merge=union` le dice a git que, cuando dos ramas agregan líneas distintas en
+# la misma región, se queden con las DOS en vez de parar. Medido antes de
+# escribir esto: dos ramas que agregan una entrada cada una mergean sin
+# intervención y el resultado es válido.
+#
+# Los dos límites, dichos en voz alta:
+#  1. Union puede dejar las filas en otro ORDEN. Por eso `--check` del generador
+#     compara el CONJUNTO de filas, no los bytes (SPEC-432), y la siguiente
+#     regeneración normaliza sola.
+#  2. Union puede DUPLICAR una línea si las dos ramas agregan la misma. El
+#     `--check` del generador y el candado de la lista de unit lo detectan y lo
+#     dicen con nombre propio.
+#
+# Lo que NO se arregla con union: un bloque de contadores. Dos ramas escriben el
+# mismo total sobre la misma base, git funde sin conflicto y el número queda
+# callado y falso. Ese bloque se sacó del archivo commiteado, no se parcheó.
+specs/README.md merge=union
+vitest.unit.includes.ts merge=union
+
+# SPEC-432b · los artefactos de arquitectura, misma clase y mismo día.
+# `02-roles-capacidades.md` y `03-pantallas.md` son tablas a las que **cada ruta
+# nueva** le agrega una fila: SPEC-447 y SPEC-437 los tocan las dos, así que el
+# choque ya estaba en camino cuando se escribió esto.
+#
+# Acá union necesitaba además aflojar `arch:check (a)`, que comparaba byte a
+# byte. Se aflojó **solo el orden**: `lib/comparar-tolerando-orden.ts` compara
+# el armazón del archivo en orden y byte a byte, y las filas de **cada tabla**
+# como multiconjunto. Una fila que falta, que sobra, que se repite o que salta
+# de sección sigue siendo ROJA.
+#
+# `00-INDICE.md`, `01-modelo-datos.md` y `06-stack.md` NO entran: no son
+# tablas de append por spec y su comparación sigue siendo byte a byte.
+docs/architecture/02-roles-capacidades.md merge=union
+docs/architecture/03-pantallas.md merge=union

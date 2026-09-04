@@ -8,6 +8,17 @@ export interface ArtefactoLineaBase {
     titulo: string;
     fuentes: string[];
     generador: string;
+    /**
+     * SPEC-432b: este artefacto es una TABLA a la que cada ruta nueva le agrega
+     * una fila, así que dos ramas chocaban ahí sin excepción. Con `merge=union`
+     * ya no chocan, pero union no garantiza el ORDEN de las dos filas nuevas.
+     *
+     * Con esta marca, `arch:check (a)` tolera el orden **dentro de cada tabla**
+     * y sigue siendo estricto con todo lo demás: una fila que falta, que sobra,
+     * que se repite o que salta de sección **es rojo**. Ver
+     * `lib/comparar-tolerando-orden.ts`.
+     */
+    toleraOrdenDeFilas?: boolean;
 }
 
 export const ARTEFACTOS: ArtefactoLineaBase[] = [
@@ -35,12 +46,14 @@ export const ARTEFACTOS: ArtefactoLineaBase[] = [
             "src/app/**",
         ],
         generador: "scripts/arch/generar-roles-capacidades.ts",
+        toleraOrdenDeFilas: true,
     },
     {
         archivo: "03-pantallas.md",
         titulo: "Pantallas por rol y transiciones",
         fuentes: ["src/app/**", "src/lib/proxy.ts", "src/lib/nav-items.ts"],
         generador: "scripts/arch/generar-pantallas.ts",
+        toleraOrdenDeFilas: true,
     },
     {
         archivo: "06-stack.md",

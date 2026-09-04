@@ -8,19 +8,14 @@
 
 ## Resumen
 
-<!-- SPEC-413:BEGIN resumen -->
-<!-- Generado por `npx tsx scripts/specs/generar-readme.ts`. NO editar a mano. -->
-
-| Métrica | Valor |
-|---------|-------|
-| **Total de specs** | **354** |
-| 🔵 PLANEADO | 59 |
-| 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 169 |
-| 🧪 PENDIENTE DE PRUEBA | 0 |
-| ✅ FINALIZADO | 38 |
-| 📁 CERRADA | 63 |
-<!-- SPEC-413:END resumen -->
+> **Los contadores no viven acá (SPEC-432).** Un total commiteado es un número
+> que dos ramas pisan sin avisar: las dos suman uno sobre la misma base, escriben
+> el mismo valor, git las funde sin conflicto y queda **una spec de menos** en la
+> cuenta. Se piden cuando se quieren:
+>
+> ```
+> npx tsx scripts/specs/generar-readme.ts --resumen
+> ```
 
 ## Backlog activo (no cerradas)
 
@@ -379,7 +374,9 @@
 | [425](425-panel-profesional/spec.md) | SPEC-425 · El panel del profesional (A-75 · lote L5) | 🟢 IMPLEMENTADO |
 | [428](428-padre-agenda-cita/spec.md) | SPEC-428 · El padre agenda una cita con un profesional — brief A-75 v2.1 §9 | 🟢 IMPLEMENTADO |
 | [431](431-franja-nocturna-payload/spec.md) | SPEC-431 · La franja horaria le mentía al modelo — cierra I-247 b | 🟢 IMPLEMENTADO |
+| [432](432-generados-sin-conflicto/spec.md) | SPEC-432 · Los archivos generados dejan de ser terreno de conflicto | 🟢 IMPLEMENTADO |
 | [434](434-ficha-profesional-usable/spec.md) | SPEC-434 · La ficha del profesional, usable de verdad — cierra I-302 | 🟢 IMPLEMENTADO |
+| [432](432b-artefactos-arquitectura-sin-conflicto/spec.md) | SPEC-432b · Los artefactos de arquitectura dejan de ser terreno de conflicto | 🟢 IMPLEMENTADO |
 | [436](436-documentos-del-profesional/spec.md) | SPEC-436 · Los documentos del profesional: se cargan, se guardan y SE PUEDEN LEER | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
 | [444](444-identificadores-cuid/spec.md) | SPEC-444 · Los identificadores del padre se validaban como uuid — cierra I-310 | 🟢 IMPLEMENTADO |
