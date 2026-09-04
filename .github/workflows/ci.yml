@@ -98,6 +98,12 @@ jobs:
               exit 1
           fi
           echo "✅ Cero bypasses Resend fuera del motor."
+      # SPEC-413: el índice `specs/README.md` se genera desde cada spec.md.
+      # El check compara el archivo commiteado con la regeneración fresca; si
+      # difiere, el mensaje indica el comando exacto para arreglarlo. Corta el
+      # ciclo de "conflictos de rebase" que hacía de specs/README.md el archivo
+      # que más chocaba en el repo (03-09-2026: #324, #327/#329, #308).
+      - run: npx tsx scripts/specs/generar-readme.ts --check
 
   test-unit:
     runs-on: ubuntu-latest
