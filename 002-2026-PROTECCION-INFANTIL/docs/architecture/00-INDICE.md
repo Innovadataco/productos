@@ -13,6 +13,7 @@ se regenera; si lo commiteado difiere de la regeneración, `arch:check` falla.
 | [01-modelo-datos.md](01-modelo-datos.md) | Modelo de datos (Prisma) | `prisma/schema.prisma`<br>`scripts/arch/excepciones.json` | `npx tsx scripts/arch/generar-modelo-datos.ts` |
 | [02-roles-capacidades.md](02-roles-capacidades.md) | Roles y capacidades (puerta y permisos) | `src/lib/proxy.ts`<br>`src/lib/nav-items.ts`<br>`src/lib/permisos-catalogo.ts`<br>`src/components/modules/NavHeader.tsx`<br>`prisma/seed.ts`<br>`src/app/**` | `npx tsx scripts/arch/generar-roles-capacidades.ts` |
 | [03-pantallas.md](03-pantallas.md) | Pantallas por rol y transiciones | `src/app/**`<br>`src/lib/proxy.ts`<br>`src/lib/nav-items.ts` | `npx tsx scripts/arch/generar-pantallas.ts` |
+| [04-guardias-api.md](04-guardias-api.md) | Guardianes de /api/** (fase de análisis · SPEC-400b · I-236 · I-239) | `src/app/api/**`<br>`src/lib/routing/guardias.ts`<br>`src/lib/routing/roles-titulares.ts`<br>`middleware.ts` | `npx tsx scripts/arch/generar-guardias-api.ts` |
 | [06-stack.md](06-stack.md) | Stack, contenedores y puertos | `package.json`<br>`Dockerfile`<br>`docker-compose.prod.yml`<br>`docker-compose.yml` | `npx tsx scripts/arch/generar-stack.ts` |
 
 ## Compuerta

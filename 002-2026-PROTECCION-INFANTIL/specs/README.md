@@ -13,10 +13,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **347** |
+| **Total de specs** | **349** |
 | 🔵 PLANEADO | 59 |
-| 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 162 |
+| 🟡 DESARROLLO | 26 |
+| 🟢 IMPLEMENTADO | 163 |
 | 🧪 PENDIENTE DE PRUEBA | 0 |
 | ✅ FINALIZADO | 38 |
 | 📁 CERRADA | 63 |
@@ -358,6 +358,7 @@
 | [392](392-directorio-profesionales-padre/spec.md) | SPEC-392 · L3 · Directorio de profesionales — la vista del padre | 🟢 IMPLEMENTADO |
 | [395](395-cita-profesional/spec.md) | SPEC-395 · Red de Profesionales · L4 — la cita (agendar, pagar, confirmar, reprogramar) | 🟢 IMPLEMENTADO |
 | [396](396-ci-concurrency/spec.md) | SPEC-396 · `concurrency` en los flujos de CI · causa raíz de I-282 | 🟢 IMPLEMENTADO |
+| [400](400b-analisis-guardias-api/spec.md) | SPEC-400b · FASE DE ANÁLISIS — el borde que se abre solo cada 5 minutos (I-236 · I-239) | 🟡 DESARROLLO |
 | [401](401-motivo-real-resend/spec.md) | SPEC-401 · I-283 — guardar el motivo real del proveedor de correo | 🟡 DESARROLLO |
 | [402](402-webhook-resend-allowlist/spec.md) | SPEC-402 · Webhook de Resend en la allowlist del middleware — cierra I-289 | 🟢 IMPLEMENTADO |
 | [403](403-comision-parametrizable/spec.md) | SPEC-403 · La comisión de la red es un parámetro — cierra I-288 | 🟢 IMPLEMENTADO |
