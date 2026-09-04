@@ -387,6 +387,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-432: prueba con DOS RAMAS DE VERDAD que los generados dejaron de
     // ser terreno de conflicto, con contraprueba sin .gitattributes.
     "scripts/specs/merge-sin-conflicto.candado.test.ts",
+    // SPEC-432b: lo mismo para los artefactos de arquitectura, con la matriz
+    // que demuestra que aflojar el orden no aflojó el contenido.
+    "scripts/arch/artefactos-sin-conflicto.candado.test.ts",
     "src/components/modules/NotificacionesInbox.test.tsx",
     // SPEC-436 (I-303): la función que descifra el documento no puede volver a
     // quedar sin llamador, y el enlace no puede volver a ser el id crudo.
