@@ -1,4 +1,20 @@
-// SPEC-413 · Generador de specs/README.md.
+// SPEC-413 · Generador de specs/README.md · endurecido por SPEC-432.
+//
+// SPEC-432 (04-09-2026): el generador bajó los conflictos pero NO los eliminó.
+// En un solo día, cinco PRs chocaron acá. Medido en git, no supuesto:
+//
+//  - **El bloque de contadores no se puede mergear NUNCA.** Dos ramas que
+//    agregan una spec cada una escriben el MISMO número (353 → 354 las dos).
+//    Git ve dos cambios idénticos y los funde sin conflicto… dejando 354 donde
+//    debía decir 355. No es un choque ruidoso: es un número callado y falso.
+//    Por eso el resumen **dejó de vivir en el archivo commiteado** y se imprime
+//    con `--resumen`. Lo que no se commitea no se puede desincronizar.
+//  - **La tabla sí se puede mergear**, con `merge=union` en `.gitattributes`:
+//    dos filas nuevas entran las dos, sin tocar nada a mano. Lo que union no
+//    garantiza es el ORDEN, así que `--check` compara el CONJUNTO de filas y no
+//    los bytes: el invariante que importa es «el índice lista exactamente las
+//    specs que existen», no en qué orden quedaron. La siguiente regeneración
+//    normaliza sola.
 //
 // Motivo: specs/README.md era el archivo con más conflictos de rebase del repo.
 // Cada spec nueva añadía una fila a la MISMA tabla, y tres PRs abiertos a la vez
@@ -203,29 +219,98 @@ export function generarReadme(): string {
     const carpetas = listarCarpetasSpec();
     const specs = ordenar(carpetas.map(cargarSpec));
     const tabla = renderTabla(specs);
-    const resumen = renderResumen(specs);
     let readme = readFileSync(RUTA_README, "utf-8");
-    readme = reemplazarBloque(readme, MARCA_INICIO_RESUMEN, MARCA_FIN_RESUMEN, resumen);
+    // SPEC-432: el bloque de resumen ya no se escribe en el archivo. Ver cabecera.
     readme = reemplazarBloque(readme, MARCA_INICIO_TABLA, MARCA_FIN_TABLA, tabla);
     if (!readme.endsWith("\n")) readme += "\n";
     return readme;
 }
 
+/** El bloque entre marcadores, o `null` si no está. */
+function extraerBloque(texto: string, inicio: string, fin: string): string | null {
+    const i = texto.indexOf(inicio);
+    const f = texto.indexOf(fin);
+    if (i === -1 || f === -1 || f < i) return null;
+    return texto.slice(i + inicio.length, f);
+}
+
+/** Las filas de la tabla, sin encabezado ni separador ni líneas vacías. */
+function filasDeTabla(bloque: string): string[] {
+    return bloque
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith("|") && !/^\|\s*-+/.test(l) && !/^\| Spec \|/i.test(l));
+}
+
+/**
+ * SPEC-432 · verificación tolerante al ORDEN y estricta en el CONTENIDO.
+ *
+ * Todo lo que está fuera de la tabla se compara byte a byte —ahí no hay merges
+ * concurrentes—. Las filas se comparan como CONJUNTO, porque `merge=union` las
+ * puede dejar en otro orden y eso no es un defecto: el índice sigue listando
+ * exactamente las specs que existen. Lo que sí es defecto y se reporta: una
+ * spec que falta, una fila que sobra, o una fila DUPLICADA (que es lo único
+ * feo que union puede producir, cuando dos ramas agregan la misma).
+ */
+export function verificarReadme(): string[] {
+    const problemas: string[] = [];
+    const actual = readFileSync(RUTA_README, "utf-8");
+    const nuevo = generarReadme();
+
+    const bloqueActual = extraerBloque(actual, MARCA_INICIO_TABLA, MARCA_FIN_TABLA);
+    const bloqueNuevo = extraerBloque(nuevo, MARCA_INICIO_TABLA, MARCA_FIN_TABLA);
+    if (bloqueActual === null || bloqueNuevo === null) {
+        return ["specs/README.md no tiene los marcadores de la tabla (SPEC-413:BEGIN/END tabla)."];
+    }
+
+    const fueraActual = actual.replace(bloqueActual, "");
+    const fueraNuevo = nuevo.replace(bloqueNuevo, "");
+    if (fueraActual !== fueraNuevo) {
+        problemas.push("El texto fuera de la tabla difiere del generado.");
+    }
+
+    const filasActual = filasDeTabla(bloqueActual);
+    const filasNuevo = filasDeTabla(bloqueNuevo);
+
+    const vistas = new Set<string>();
+    for (const fila of filasActual) {
+        if (vistas.has(fila)) problemas.push(`Fila DUPLICADA en la tabla: ${fila}`);
+        vistas.add(fila);
+    }
+    for (const fila of filasNuevo) {
+        if (!vistas.has(fila)) problemas.push(`Falta en la tabla: ${fila}`);
+    }
+    const esperadas = new Set(filasNuevo);
+    for (const fila of vistas) {
+        if (!esperadas.has(fila)) problemas.push(`Sobra en la tabla: ${fila}`);
+    }
+    return problemas;
+}
+
 function main(): void {
     const argv = process.argv.slice(2);
-    const check = argv.includes("--check");
-    const nuevo = generarReadme();
-    if (check) {
-        const actual = readFileSync(RUTA_README, "utf-8");
-        if (actual !== nuevo) {
-            console.error("[SPEC-413] specs/README.md está desactualizado.");
+
+    // SPEC-432: los contadores ya no viven en el archivo; se piden cuando se
+    // quieren. Un número que se commitea es un número que dos ramas pisan.
+    if (argv.includes("--resumen")) {
+        const specs = ordenar(listarCarpetasSpec().map(cargarSpec));
+        console.log(renderResumen(specs).split("\n").filter((l) => !l.startsWith("<!--")).join("\n").trim());
+        return;
+    }
+
+    if (argv.includes("--check")) {
+        const problemas = verificarReadme();
+        if (problemas.length > 0) {
+            console.error("[SPEC-413] specs/README.md no refleja las specs que existen:");
+            for (const p of problemas) console.error(`  - ${p}`);
             console.error("[SPEC-413] Regenerar con: `npx tsx scripts/specs/generar-readme.ts` y commitear.");
             process.exit(1);
         }
-        console.log("[SPEC-413] specs/README.md al día.");
+        console.log("[SPEC-413] specs/README.md al día (orden de filas tolerado — SPEC-432).");
         return;
     }
-    writeFileSync(RUTA_README, nuevo);
+
+    writeFileSync(RUTA_README, generarReadme());
     console.log("[SPEC-413] specs/README.md reescrito.");
 }
 

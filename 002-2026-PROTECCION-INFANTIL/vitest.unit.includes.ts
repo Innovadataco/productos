@@ -384,6 +384,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // pueden volver a enmudecer — 5 avisos de cambio de clave + 3 pantallas que
     // confundían "no hay nada" con "no pude mirar".
     "src/lib/errores-no-mudos.test.ts",
+    // SPEC-432: prueba con DOS RAMAS DE VERDAD que los generados dejaron de
+    // ser terreno de conflicto, con contraprueba sin .gitattributes.
+    "scripts/specs/merge-sin-conflicto.candado.test.ts",
     "src/components/modules/NotificacionesInbox.test.tsx",
     // SPEC-436 (I-303): la función que descifra el documento no puede volver a
     // quedar sin llamador, y el enlace no puede volver a ser el id crudo.
