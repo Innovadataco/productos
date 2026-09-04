@@ -16,7 +16,6 @@
 > ```
 > npx tsx scripts/specs/generar-readme.ts --resumen
 > ```
-
 ## Backlog activo (no cerradas)
 
 <!-- SPEC-413:BEGIN tabla -->
@@ -383,6 +382,7 @@
 | [438](438-fecha-hora-obligatorias/spec.md) | SPEC-438 · La fecha y la hora del hecho son obligatorias, y el sistema nunca las inventa | 🟢 IMPLEMENTADO |
 | [439](439-corroboracion-y-aviso-al-padre/spec.md) | SPEC-439 · El aviso al padre cuando alguien más reporta lo mismo | 🟢 IMPLEMENTADO |
 | [440](440-area-del-padre/spec.md) | SPEC-440 · Correcciones del área del padre — punto 1 primero (I-306) + puntos 2/4/5 (ola 2) | 🟢 IMPLEMENTADO |
+| [437](437-menu-y-modulos-del-profesional/spec.md) | SPEC-437 · El profesional trabaja con menú lateral, como el operador | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
 | [444](444-identificadores-cuid/spec.md) | SPEC-444 · Los identificadores del padre se validaban como uuid — cierra I-310 | 🟢 IMPLEMENTADO |
 | [447](447-calendario-del-profesional/spec.md) | SPEC-447 · El profesional publica su disponibilidad — cierra I-311 | 🟢 IMPLEMENTADO |
