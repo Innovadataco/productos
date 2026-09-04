@@ -12,12 +12,15 @@
  *    registra y completa su ficha por la pantalla. Si algo no se puede hacer
  *    por la interfaz, eso ES el hallazgo.»
  *
- * ESTADO DE LOS ARREGLOS (aviso CEO 04-09 17:0x):
- *   · SPEC-442 y SPEC-434 desplegadas a producción — el spec ahora afirma
- *     el comportamiento BUENO: (B) el alta por admin trae cursos, (C) la
- *     ficha rechaza texto humano con 4xx y guarda con cuid válido. Antes de
- *     esas dos specs, los dos tests entraban con `test.fail`.
- *   · SPEC-447 (I-311) sigue pendiente — (D) sigue con `test.fail`.
+ * ESTADO DE LOS ARREGLOS (aviso CEO 04-09 17:0x → 18:2x):
+ *   · SPEC-442 · SPEC-434 · SPEC-447 desplegadas a producción — los cuatro
+ *     tests afirman el comportamiento BUENO. Antes de esas tres, los tests
+ *     (B) (C) (D) entraban con `test.fail`. Ahora:
+ *     (B) alta por admin trae los 11 grados por defecto.
+ *     (C) ficha rechaza texto humano LIMPIO (4xx, no 5xx) y guarda con cuid.
+ *     (D) calendario del profesional existe: anónimo → 307 al login; sesión
+ *         profesional con perfil ACTIVO → 200 con marcador del calendario;
+ *         POST franja crea la fila y GET la devuelve.
  *
  * QUÉ CUBRE (los 4 tests corren contra los ENDPOINTS que las pantallas
  * disparan; el spec no siembra Usuario/Colegio directo por Prisma, pasa por
@@ -362,42 +365,145 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
         }
     });
 
-    test("(D) Psicólogo publica franja disponible — I-311 · SPEC-447", async () => {
-        // TEST.FAIL a propósito citando SPEC-447 / I-311.
+    test("(D) Psicólogo publica franja disponible — cierre de I-311 (SPEC-447)", async () => {
+        // SPEC-447 desplegado (aviso CEO 18:2x): la pantalla del calendario
+        // del profesional ya existe. Antes: cero pantalla + cero franjas
+        // en prod (I-311). Ahora el candado afirma CONDUCTA en tres
+        // direcciones — un 3xx anónimo solo prueba que la ruta existe,
+        // que ya se probaba con el 307:
         //
-        // Aviso del CEO 04-09 14:15: el profesional NO tiene pantalla para
-        // publicar franjas y en prod hay 0. Si el recorrido llega a «el padre
-        // reserva», va a morir ahí por una causa distinta de I-310 — el
-        // profesional aprobado nunca puede publicar disponibilidad desde su
-        // panel.
-        //
-        // Cuando SPEC-447 despliegue, existirá `/dashboard/profesional/calendario`
-        // (contrato fijado por el CEO 04-09 14:22: es área de TRABAJO del
-        // profesional, no configuración de su ficha; `/perfil-profesional/*`
-        // queda reservado a completar y verificar el perfil). Un GET responderá
-        // 200 con el formulario, y publicar por esa pantalla creará al menos
-        // una `FranjaDisponible`. Hoy el endpoint `POST /api/profesional/franjas`
-        // existe (verificado en `src/app/api/profesional/franjas/route.ts`),
-        // pero sin pantalla que lo dispare: I-311 es el hueco de UI.
-        //
-        // Este candado NO ejercita el endpoint — cae en el punto donde el
-        // recorrido REAL muere: no hay pantalla. Cuando SPEC-447 la traiga,
-        // el `test.fail` se convierte en "unexpected pass" y se parte en dos:
-        // (D1) `GET /dashboard/profesional/calendario` → 200; (D2) submit crea una
-        // franja y aparece en `GET /api/profesional/franjas`.
-        test.fail(true, "SPEC-447 (Dev X) trae la pantalla de franjas del profesional — I-311. Se quita cuando esa spec despliegue.");
-
-        const request = await ctx();
+        //   (a) Anónimo → 307 al login.
+        //   (b) Profesional con perfil ACTIVO → 200 y HTML con marcador
+        //       del calendario (título o formulario de publicar franja).
+        //   (c) POST /api/profesional/franjas desde esa sesión crea una
+        //       fila y GET la devuelve — criterio de cierre del radicado.
+        const requestAnon = await ctx();
         try {
-            // Sin sesión: la ruta puede redirigir al login (307) o dar 404 si
-            // no existe. La afirmación es que exista — hoy responde 404.
-            const pantalla = await request.get("/dashboard/profesional/calendario", { maxRedirects: 0 });
+            const anon = await requestAnon.get("/dashboard/profesional/calendario", { maxRedirects: 0 });
+            expect(anon.status(), "anónimo → 307 al login").toBe(307);
             expect(
-                pantalla.status() === 200 || (pantalla.status() >= 300 && pantalla.status() < 400),
-                `I-311: /dashboard/profesional/calendario debe existir (200 o 3xx al login), no 404. status=${pantalla.status()}`,
+                (anon.headers()["location"] ?? "").includes("/login"),
+                `location debe apuntar al login. location=${anon.headers()["location"] ?? ""}`,
             ).toBe(true);
         } finally {
+            await requestAnon.dispose();
+        }
+
+        // (b) + (c) requieren un profesional con perfil ACTIVO. El único
+        // camino honesto es el flujo real: registrar → PUT perfil → cargar
+        // documentos → aprobar por admin (SPEC-436). Reusamos el patrón
+        // del recorrido-verificacion-documentos.
+        const EMAIL_PROF_CAL = `${CORRIDA}-prof-cal@proteccion.local`;
+        const request = await ctx();
+        try {
+            // Registro por la pantalla.
+            const solicitar = await request.post("/api/auth/registro-profesional/solicitar", {
+                data: { email: EMAIL_PROF_CAL },
+            });
+            expect(solicitar.status(), "solicitar profesional 202").toBe(202);
+            const token = await fabricarEnlace(EMAIL_PROF_CAL, "PROFESIONAL" as RolUsuario);
+            const completar = await request.post("/api/auth/registro-profesional/completar", {
+                data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
+            });
+            expect(completar.status(), "completar profesional 200").toBe(200);
+            await aceptarConsentimiento(request);
+            await login(request, EMAIL_PROF_CAL);
+
+            // Perfil por la pantalla.
+            const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
+            expect(ciudad, "prod debe tener Ciudad sembrada").not.toBeNull();
+            const putPerfil = await request.put("/api/profesional/perfil", {
+                data: {
+                    nombreVisible: `Psi Cal E2E ${CORRIDA}`,
+                    tituloProfesional: "Psicóloga clínica",
+                    especialidades: ["Familia"],
+                    ciudadId: ciudad!.id,
+                    atiendeVirtual: true,
+                    atiendePresencial: false,
+                    aniosExperiencia: 5,
+                    presentacion: "Presentación efímera SPEC-445 calendario.",
+                    tarifaConsultaCOP: 120_000,
+                    duracionMinutos: 60,
+                    emiteFactura: false,
+                },
+            });
+            expect(putPerfil.status(), `PUT perfil body=${await putPerfil.text().catch(() => "")}`).toBeLessThan(300);
+
+            // Documentos (SPEC-436): sin ellos, el admin no puede aprobar.
+            const perfilRow = await prisma.perfilProfesional.findFirst({
+                where: { usuario: { email: EMAIL_PROF_CAL } },
+                select: { id: true },
+            });
+            expect(perfilRow, "PUT perfil crea PerfilProfesional").not.toBeNull();
+            const perfilId = perfilRow!.id;
+            const estadoDocs = await request.get("/api/profesional/documentos");
+            const items: Array<{ clave: string }> = (await estadoDocs.json())?.data ?? [];
+            expect(items.length, "parámetro verificacion.requisitos con al menos 1 item").toBeGreaterThan(0);
+            for (const it of items) {
+                const subir = await request.post("/api/profesional/documentos", { multipart: {
+                    requisito: it.clave,
+                    archivo: {
+                        name: `${it.clave}.pdf`,
+                        mimeType: "application/pdf",
+                        buffer: Buffer.from(`%PDF-1.4\n% E2E ${CORRIDA} ${it.clave}\n%%EOF\n`, "utf8"),
+                    },
+                } });
+                expect(subir.status(), `subir ${it.clave} body=${await subir.text().catch(() => "")}`).toBeLessThan(300);
+            }
+        } finally {
             await request.dispose();
+        }
+
+        // Admin aprueba (usa el efímero de asegurarAdmin() que ya sembró test B).
+        await asegurarAdmin();
+        const perfilRow2 = await prisma.perfilProfesional.findFirst({
+            where: { usuario: { email: EMAIL_PROF_CAL } },
+            select: { id: true },
+        });
+        expect(perfilRow2, "perfil sigue existiendo tras el setup del profesional").not.toBeNull();
+        const perfilId = perfilRow2!.id;
+        const requestAdmin = await ctx();
+        try {
+            await login(requestAdmin, EMAIL_ADMIN);
+            await aceptarConsentimiento(requestAdmin);
+            await login(requestAdmin, EMAIL_ADMIN);
+            const ficha = await requestAdmin.get(`/api/admin/verificacion-profesionales/${perfilId}`);
+            const items: Array<{ clave?: string; id?: string; key?: string }> = ((await ficha.json())?.data?.checklist) ?? [];
+            const claves = items.map((it) => it.clave ?? it.id ?? it.key ?? "").filter(Boolean);
+            const checklist = Object.fromEntries(claves.map((k) => [k, { estado: "CUMPLE" }]));
+            const decidir = await requestAdmin.post(`/api/admin/verificacion-profesionales/${perfilId}/decidir`, {
+                data: { checklist },
+            });
+            expect(decidir.status(), `admin aprueba body=${await decidir.text().catch(() => "")}`).toBe(200);
+        } finally {
+            await requestAdmin.dispose();
+        }
+
+        // (b) Con sesión PROFESIONAL activa → 200 y marcador del calendario.
+        const requestProf = await ctx();
+        try {
+            await login(requestProf, EMAIL_PROF_CAL);
+            const pantalla = await requestProf.get("/dashboard/profesional/calendario");
+            expect(pantalla.status(), "sesión profesional → 200 en /calendario").toBe(200);
+            const html = await pantalla.text();
+            expect(
+                /calendario|franja|disponibilidad|agenda|publicar/i.test(html),
+                `HTML debe contener marcador del calendario (calendario|franja|disponibilidad|agenda|publicar). html=${html.slice(0, 300).replace(/\s+/g, " ")}`,
+            ).toBe(true);
+
+            // (c) POST franja + GET la devuelve.
+            const inicio = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+            const fin    = new Date(Date.now() + 7 * 24 * 3600 * 1000 + 3600 * 1000).toISOString();
+            const crear = await requestProf.post("/api/profesional/franjas", {
+                data: { inicio, fin, modalidad: "VIRTUAL" },
+            });
+            expect(crear.status(), `POST franja body=${await crear.text().catch(() => "")}`).toBeLessThan(300);
+            const listar = await requestProf.get("/api/profesional/franjas");
+            expect(listar.status(), "GET franjas").toBe(200);
+            const franjas: Array<{ inicio?: string }> = ((await listar.json())?.data) ?? [];
+            expect(franjas.length, "la franja recién creada aparece en el listado").toBeGreaterThan(0);
+        } finally {
+            await requestProf.dispose();
         }
     });
 });
