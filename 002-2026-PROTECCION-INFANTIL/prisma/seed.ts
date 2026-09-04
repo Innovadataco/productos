@@ -1841,6 +1841,33 @@ async function seedVerificacionProfesional() {
     console.log("[SEED] Catálogo Motor Notif de la verificación profesional listo (SPEC-418)");
 }
 
+// ── SPEC-403 (I-288 · brief A-75 §4) · la comisión de la red es PARÁMETRO ────
+// Vivía como `const PORCENTAJE_SERVICIO_DEFAULT = 15` dentro de
+// `api/padre/citas/route.ts`. El número correcto es 10 y lo cambia Jelkin sin
+// desplegar, así que baja a `ParametroSistema`.
+//
+// `update: {}` A PROPÓSITO: si el admin lo ajusta, un despliegue posterior NO
+// puede pisarle el valor. Es el default documentado de `deploy-prod.sh`
+// («respeta los valores custom»); sembrar con `update` explícito acá le
+// reescribiría la decisión en silencio, que es justo lo que no queremos con
+// un número que mueve plata.
+async function seedComisionRed() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "comision.porcentaje" },
+        update: {},
+        create: {
+            clave: "comision.porcentaje",
+            valor: "10",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion:
+                "Porcentaje que la red cobra sobre la tarifa del profesional (brief A-75 §4). El padre paga tarifa + este porcentaje.",
+        },
+    });
+    console.log("[SEED] Parámetro comision.porcentaje listo (SPEC-403)");
+}
+
 // ── SPEC-226 (002-PI-mega-cola): parámetros del ejecutor de acciones automáticas
 // (rate-limit por regla, scope `analisis_accion`) + catálogo Motor Notif de los
 // eventos `analisis.alerta.admin` y `analisis.operador.asignacion` (FR-014).
@@ -4040,6 +4067,7 @@ async function main() {
     // ── SPEC-239: catálogo Motor Notif de expediente.emergencia.activada ──
     await seedEmergenciaExpediente();
     await seedVerificacionProfesional();
+    await seedComisionRed();
 
     // ── SPEC-226: parámetros del ejecutor + eventos Motor Notif de acciones ──
     await seedEjecucionAcciones();

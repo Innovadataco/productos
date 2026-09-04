@@ -10,9 +10,9 @@ import { verifyAuth } from "@/lib/auth";
 import { errorToResponse } from "@/lib/api-handler";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
-// SPEC-425: el porcentaje vive en un solo lugar — el panel del profesional
-// muestra este mismo número y no puede divergir del que se cobra.
-import { PORCENTAJE_SERVICIO_DEFAULT } from "@/lib/profesional/cita/comision";
+// SPEC-403 (I-288): el porcentaje es PARÁMETRO, no constante. El admin lo
+// cambia sin desplegar y el panel del profesional lee el mismo número.
+import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
 import { crearSolicitudCita } from "@/lib/profesional/cita/cita.service";
 
 /** Porcentaje de comisión del sistema (aviso CEO: parametrizable después). */
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
             presentacion: body.presentacion,
             urgencia: body.urgencia,
             expedienteCompartidoId: body.expedienteCompartidoId ?? null,
-            porcentajeServicio: PORCENTAJE_SERVICIO_DEFAULT,
+            porcentajeServicio: await obtenerPorcentajeServicio(),
             ...(body.pagoHeredadoDeId ? { pagoHeredadoDeId: body.pagoHeredadoDeId } : {}),
         });
         return NextResponse.json({ data: toCitaParaPadre(solicitud) });

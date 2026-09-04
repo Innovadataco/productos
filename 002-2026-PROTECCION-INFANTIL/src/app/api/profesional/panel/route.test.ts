@@ -90,6 +90,21 @@ async function sembrarSolicitud(
     });
 }
 
+async function sembrarComision(porcentaje: number) {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "comision.porcentaje" },
+        update: { valor: String(porcentaje) },
+        create: {
+            clave: "comision.porcentaje",
+            valor: String(porcentaje),
+            tipo: "INTEGER",
+            categoria: "SYSTEM",
+            esPublico: false,
+            descripcion: "Comisión de la red (test)",
+        },
+    });
+}
+
 async function leerPanel() {
     const res = await GET();
     expect(res.status).toBe(200);
@@ -100,6 +115,9 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
     beforeEach(async () => {
         await resetDatabase();
         mockToken = undefined;
+        // SPEC-403: la comisión es parámetro y el panel falla en cerrado sin
+        // ella. `resetDatabase` no siembra parámetros, así que la pone el test.
+        await sembrarComision(15);
     });
 
     afterAll(async () => prisma.$disconnect());
@@ -152,16 +170,46 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
         expect(panel.porCobrar.citasEsperandoCierre).toBe(2);
     });
 
-    it("el desglose de la tarifa es el que se le cobra al padre, no uno inventado", async () => {
+    it("el desglose de la tarifa es el que se le cobró al padre, no uno inventado", async () => {
         const { perfil } = await sembrarProfesional();
-        await sembrarSolicitud(perfil.id, "CONFIRMADA");
+        await sembrarSolicitud(perfil.id, "CONFIRMADA"); // se cobró al 15 %
         const panel = await leerPanel();
-        expect(panel.porCobrar.desglose).toEqual({
+        expect(
+            panel.porCobrar.desglose,
+            "una solicitud ya creada conserva el porcentaje con el que se cobró",
+        ).toEqual({
             tarifaProfesional: 180000,
             pagaElPadre: 207000,
             servicioRed: 27000,
             porcentajeServicio: 15,
         });
+    });
+
+    it("SPEC-403: sin solicitudes, muestra el porcentaje VIGENTE del parámetro", async () => {
+        const { perfil } = await sembrarProfesional();
+        await sembrarComision(10);
+        expect((await leerPanel()).porCobrar.desglose).toEqual({
+            tarifaProfesional: 180000,
+            pagaElPadre: 198000,
+            servicioRed: 18000,
+            porcentajeServicio: 10,
+        });
+
+        // El admin lo cambia y la pantalla cambia con él, sin desplegar.
+        await sembrarComision(20);
+        expect((await leerPanel()).porCobrar.desglose.porcentajeServicio).toBe(20);
+        expect(perfil.tarifaConsultaCOP).toBe(180000);
+    });
+
+    it("SPEC-403: sin el parámetro NO se inventa un número — falla en cerrado", async () => {
+        // Es plata. Cobrar un porcentaje inventado porque el seed no corrió es
+        // peor que no poder mostrar el panel.
+        await sembrarProfesional();
+        await prisma.parametroSistema.delete({ where: { clave: "comision.porcentaje" } });
+        const res = await GET();
+        expect(res.status).toBe(500);
+        const cuerpo = await res.json();
+        expect(JSON.stringify(cuerpo)).toContain("comision.porcentaje");
     });
 
     it("el plazo de 48 h solo existe cuando el pago ya fue aprobado", async () => {
