@@ -22,9 +22,13 @@
  * reporte nuevo, ante cualquier reintento. El opt-out por usuario lo resuelve el
  * motor con `NotificacionPreferencia` — sin columna nueva ni migración.
  */
-import { prisma } from "@/lib/prisma";
-import { programar, despacharEnvios } from "@/lib/notificaciones/motor";
-import { logger } from "@/lib/logger";
+// SPEC-197 (I-88): imports RELATIVOS, no `@/lib/...`. Este archivo entra en la
+// cadena de `scripts/worker-reportes.mjs` vía `evento-match.ts`, y ahí el alias
+// no resuelve. La allowlist de `arch:check` es deuda declarada que solo se
+// encoge: un archivo nuevo no se suma a ella.
+import { prisma } from "../../prisma";
+import { programar, despacharEnvios } from "../../notificaciones/motor";
+import { logger } from "../../logger";
 
 export const EVENTO_CORROBORACION = "reporte.corroborado_por_otro";
 
