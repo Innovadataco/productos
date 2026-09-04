@@ -41,7 +41,9 @@ export function ProfesionalTarjeta({
     p: ProfesionalTarjetaData;
     /** Prefijo del enlace sin id ni query. */
     hrefBase: string;
-    /** Query string ya armado (`?u=…&pres=…`), o cadena vacía. */
+    /** Query string ya armado. Desde SPEC-440 solo trae IDs opacos
+     *  (`?expedienteId=…&heredarDe=…`); presentación y urgencia van
+     *  por `sessionStorage`, no por URL (I-306). */
     queryString: string;
 }) {
     const modal = modalidadesTexto(p.atiendeVirtual, p.atiendePresencial);

@@ -28,8 +28,6 @@ function modalidadesTexto(virtual: boolean, presencial: boolean): string {
 
 export function ProfesionalPerfil({
     p,
-    presentacionDelPadre,
-    urgencia,
     // SPEC-428: se paga el PRECIO ESTÁNDAR (§4). La tarifa del profesional
     // aplica desde la 2ª cita en adelante; ambas se muestran al padre.
     precioEstandarPrimeraCitaCOP,
@@ -39,12 +37,12 @@ export function ProfesionalPerfil({
     heredarDeSolicitudId,
 }: {
     p: PerfilPublicoDTO;
-    presentacionDelPadre?: string | undefined;
-    urgencia?: "ESTA_SEMANA" | "SIN_APURO" | undefined;
     precioEstandarPrimeraCitaCOP: number;
     expedienteIdSugerido?: string | undefined;
     heredarDeSolicitudId?: string | undefined;
 }) {
+    // SPEC-440 (I-306): la presentación y urgencia las lee `SolicitarCitaPanel`
+    // del `sessionStorage` — no vienen por props ni por URL.
     return (
         <div className="mx-auto max-w-3xl p-4 space-y-6">
             {/* Cabecera */}
@@ -125,8 +123,6 @@ export function ProfesionalPerfil({
                 tarifaProfesionalCOP={p.tarifaConsultaCOP}
                 precioEstandarPrimeraCitaCOP={precioEstandarPrimeraCitaCOP}
                 duracionMinutos={p.duracionMinutos}
-                {...(presentacionDelPadre !== undefined ? { presentacionInicial: presentacionDelPadre } : {})}
-                {...(urgencia !== undefined ? { urgenciaInicial: urgencia } : {})}
                 {...(expedienteIdSugerido !== undefined ? { expedienteIdSugerido } : {})}
                 {...(heredarDeSolicitudId !== undefined ? { heredarDeSolicitudId } : {})}
             />

@@ -4,13 +4,17 @@
  * marca urgencia». Los canales oficiales (141, CAI Virtual, Te Protejo) están
  * a la vista aquí mismo por si el momento pide una respuesta ya (brief §7).
  *
- * `presentacion` y `urgencia` son estado del cliente — no se persisten en L3.
- * Se llevan al detalle del profesional como query (`?u=ESTA_SEMANA&pres=…`)
- * y de ahí a la solicitud real que se materializará en L4.
+ * SPEC-440 (I-306 · Jelkin vivo 04-09): `presentacion` y `urgencia`
+ * **NO viajan en la URL**. Antes iban como `?u=&pres=` — nombre completo y
+ * edades de los menores en la barra de direcciones, historial e ID logs.
+ * Ahora se guardan en `sessionStorage` (helper `borrador-consulta`); el
+ * directorio y el perfil los leen del cliente. Los IDs opacos (`expedienteId`,
+ * `heredarDe`) sí pueden ir por query — no son PII y no arrastran narrativa.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
+import { guardarBorradorConsulta, leerBorradorConsulta } from "@/lib/padre/borrador-consulta";
 
 const URGENCIA_MIN = 0;
 const URGENCIA_MAX = 500;
@@ -38,16 +42,30 @@ export function PresentacionUrgenciaForm({
     const [presentacion, setPresentacion] = useState("");
     const [urgencia, setUrgencia] = useState<Urgencia>("SIN_APURO");
 
+    // SPEC-440: si el padre ya empezó a escribir y navegó atrás, recupera lo
+    // suyo del sessionStorage. No hacerle contar dos veces la misma historia.
+    useEffect(() => {
+        const borrador = leerBorradorConsulta();
+        if (borrador) {
+            setPresentacion(borrador.presentacion);
+            setUrgencia(borrador.urgencia);
+        }
+    }, []);
+
     const largo = presentacion.trim().length;
     const listo = largo >= PRESENTACION_MIN && largo <= PRESENTACION_MAX;
 
     function continuar(e: React.FormEvent) {
         e.preventDefault();
         if (!listo) return;
-        const q = new URLSearchParams({ u: urgencia, pres: presentacion.trim() });
+        // SPEC-440 (I-306): el borrador va a sessionStorage, no a la URL.
+        guardarBorradorConsulta({ presentacion: presentacion.trim(), urgencia });
+        // Solo los IDs opacos (no PII) viajan por query.
+        const q = new URLSearchParams();
         if (expedienteIdInicial) q.set("expedienteId", expedienteIdInicial);
         if (heredarDeInicial) q.set("heredarDe", heredarDeInicial);
-        router.push(`${hrefDirectorio}?${q.toString()}`);
+        const qs = q.toString();
+        router.push(qs ? `${hrefDirectorio}?${qs}` : hrefDirectorio);
     }
 
     return (
