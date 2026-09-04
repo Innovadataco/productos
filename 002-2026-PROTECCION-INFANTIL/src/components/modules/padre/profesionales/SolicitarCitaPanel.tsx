@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { leerBorradorConsulta, borrarBorradorConsulta } from "@/lib/padre/borrador-consulta";
 
 interface Franja {
     id: string;
@@ -26,8 +27,6 @@ interface Props {
     tarifaProfesionalCOP: number;
     precioEstandarPrimeraCitaCOP: number;
     duracionMinutos: number;
-    presentacionInicial?: string | undefined;
-    urgenciaInicial?: "ESTA_SEMANA" | "SIN_APURO" | undefined;
     /** Si el padre viene de un expediente, se propone compartirlo. */
     expedienteIdSugerido?: string | undefined;
     /**
@@ -65,8 +64,6 @@ export function SolicitarCitaPanel({
     tarifaProfesionalCOP,
     precioEstandarPrimeraCitaCOP,
     duracionMinutos,
-    presentacionInicial,
-    urgenciaInicial,
     expedienteIdSugerido,
     heredarDeSolicitudId,
 }: Props) {
@@ -75,8 +72,11 @@ export function SolicitarCitaPanel({
     const [franjas, setFranjas] = useState<Franja[] | null>(null);
     const [cargaError, setCargaError] = useState<string | null>(null);
     const [franjaSel, setFranjaSel] = useState<Franja | null>(null);
-    const [presentacion, setPresentacion] = useState(presentacionInicial ?? "");
-    const [urgencia, setUrgencia] = useState<"ESTA_SEMANA" | "SIN_APURO">(urgenciaInicial ?? "SIN_APURO");
+    // SPEC-440 (I-306): estado inicial vacío; el useEffect al montar rellena
+    // desde `sessionStorage` (el borrador que dejó el paso previo). No viene
+    // por props ni por URL.
+    const [presentacion, setPresentacion] = useState("");
+    const [urgencia, setUrgencia] = useState<"ESTA_SEMANA" | "SIN_APURO">("SIN_APURO");
     const [compartirExpediente, setCompartirExpediente] = useState(Boolean(expedienteIdSugerido));
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
@@ -97,6 +97,18 @@ export function SolicitarCitaPanel({
     useEffect(() => {
         void cargarFranjas();
     }, [cargarFranjas]);
+
+    // SPEC-440 (I-306): al montar, rellenar desde el borrador de sessionStorage
+    // (dejado por `PresentacionUrgenciaForm`). Solo aplica al alta nueva; en
+    // reasignación la presentación viaja desde la solicitud original.
+    useEffect(() => {
+        if (esReasignacion) return;
+        const borrador = leerBorradorConsulta();
+        if (borrador) {
+            setPresentacion(borrador.presentacion);
+            setUrgencia(borrador.urgencia);
+        }
+    }, [esReasignacion]);
 
     // En reasignación la presentación ya está en la solicitud original —
     // el service la propaga y la cita nueva la hereda; el panel no la exige.
@@ -135,6 +147,10 @@ export function SolicitarCitaPanel({
             if (!res.ok || !json.data?.id) {
                 throw new Error(json.error?.message ?? `HTTP ${res.status}`);
             }
+            // SPEC-440 (I-306): la solicitud quedó registrada — el borrador
+            // ya cumplió su misión. Lo limpiamos para no arrastrarlo a la
+            // próxima búsqueda (ni dejar PII rondando en sessionStorage).
+            borrarBorradorConsulta();
             router.push(`/dashboard/padre/citas/${json.data.id}`);
         } catch (e) {
             setErrorEnvio(e instanceof Error ? e.message : String(e));

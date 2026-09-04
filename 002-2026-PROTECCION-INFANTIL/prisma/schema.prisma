@@ -633,6 +633,15 @@ model Usuario {
   consentimientoVersion       String?
   consentimientoDocumentoHash String?
   consentimientoIP            String?
+  // SPEC-440 P5 (Jelkin vivo 04-09): presentación estándar del padre para el
+  // flujo de búsqueda de psicólogo. Se guarda al enviar el form de
+  // /dashboard/padre/profesionales y prellena la próxima vez — «que no le
+  // vuelva a pedir la presentación en cada ingreso». La caché rápida sigue en
+  // sessionStorage (borrador-consulta.ts); esta es la persistencia
+  // duradera. Sin enum: `urgenciaEstandar` acepta "ESTA_SEMANA" | "SIN_APURO"
+  // (validado app-side; sin enum evitamos atascar `bi_replica`).
+  presentacionEstandar        String?
+  urgenciaEstandar            String?
   creadoEn                    DateTime         @default(now())
   actualizadoEn               DateTime         @updatedAt
 

@@ -17,22 +17,88 @@ const TRAZO = "rgb(var(--tinta-rgb) / 0.18)";
 const APAGADO = "rgb(var(--tinta-subtle-rgb))";
 const PAPEL = "rgb(var(--papel-rgb))";
 
-/** Las cuatro posiciones del anillo, en el orden en que se van llenando. */
-const PUESTOS = [
+/**
+ * Cuatro posiciones fijas del anillo — usadas SOLO cuando hay ≤ 4 personas.
+ * A partir de 5 el anillo pasa a modo generado (ver `puestosParaN` abajo).
+ * SPEC-440 P2 (Jelkin vivo 04-09): antes se dibujaban SIEMPRE estos 4, aunque
+ * hubiera 5, 10 o 20 personas — «el círculo con 4 teniendo 5» fue el bug
+ * reportado. El brief tope 20 marca el máximo a acomodar.
+ */
+const PUESTOS_FIJOS = [
     { x: 245, y: 45, etiquetaY: 20 },
     { x: 115, y: 45, etiquetaY: 20 },
     { x: 245, y: 175, etiquetaY: 205 },
     { x: 115, y: 175, etiquetaY: 205 },
 ] as const;
 
+/** Centro visual del svg (viewBox 360×220). */
+const CENTRO = { x: 180, y: 110 };
+/** Radio del anillo donde se acomodan las personas. */
+const RADIO_ANILLO = 92;
+
+interface Puesto { x: number; y: number; etiquetaY: number }
+
+/**
+ * Devuelve N puestos equidistantes en el anillo. N ≤ 4 usa los 4 fijos para
+ * conservar la composición «doble diagonal» que la ilustración tenía en v1.
+ * A partir de N=5 se generan en anillo circular. La etiqueta se ubica por
+ * fuera del círculo (etiquetaY = y ± 25, según cuadrante) y solo se pinta
+ * cuando hay pocos (se apaga con N alto para no pisarse).
+ */
+function puestosParaN(n: number): Puesto[] {
+    if (n <= PUESTOS_FIJOS.length) return PUESTOS_FIJOS.slice(0, Math.max(n, PUESTOS_FIJOS.length));
+    const puestos: Puesto[] = [];
+    for (let i = 0; i < n; i++) {
+        const angulo = (2 * Math.PI * i) / n - Math.PI / 2;
+        const x = CENTRO.x + RADIO_ANILLO * Math.cos(angulo);
+        const y = CENTRO.y + RADIO_ANILLO * Math.sin(angulo);
+        // Etiqueta hacia afuera: arriba del círculo si el puesto está en la
+        // mitad superior, abajo si está en la inferior.
+        const etiquetaY = y < CENTRO.y ? Math.round(y - 25) : Math.round(y + 32);
+        puestos.push({ x: Math.round(x), y: Math.round(y), etiquetaY });
+    }
+    return puestos;
+}
+
+/** Radio del avatar según cuántas personas comparten el anillo. */
+function radioAvatar(n: number): number {
+    if (n <= 4) return 18;
+    if (n <= 8) return 15;
+    if (n <= 12) return 12;
+    return 10;
+}
+
+/** Fuente de las iniciales, coordinada con el radio del avatar. */
+function fontIniciales(n: number): number {
+    if (n <= 4) return 12;
+    if (n <= 8) return 10.5;
+    if (n <= 12) return 9;
+    return 8;
+}
+
+/** Con más de 6 personas la etiqueta del nombre se pisa, la apagamos. */
+function pintarEtiquetaNombre(n: number): boolean {
+    return n <= 6;
+}
+
 export function IlustracionCirculo({ contactos }: { contactos: Contacto[] }) {
-    // Se muestran hasta cuatro; los de atención primero para que se vean.
+    // Los de atención primero (ámbar antes que verde antes que gris) para que
+    // cuando la composición es apretada, el ojo caiga en ellos.
     const orden = [...contactos].sort((a, b) => {
         const peso = (c: Contacto) => (tonoDeContacto(c) === "ambar" ? 0 : tonoDeContacto(c) === "verde" ? 1 : 2);
         return peso(a) - peso(b);
     });
-    const enElAnillo = orden.slice(0, PUESTOS.length);
-    const libres = PUESTOS.slice(enElAnillo.length);
+    // Con 0 contactos, mostramos 4 lugares libres invitando a agregar. Con 1..3
+    // completamos hasta 4 puestos con lugares libres. Con 4 exactos, todos
+    // ocupados. Con 5+, el anillo se distribuye entero: sin lugares libres.
+    const puestos = puestosParaN(Math.max(orden.length, PUESTOS_FIJOS.length));
+    const enElAnillo = orden.slice(0, puestos.length);
+    const libres = orden.length < PUESTOS_FIJOS.length
+        ? puestos.slice(enElAnillo.length)
+        : [];
+    const rAvatar = radioAvatar(orden.length);
+    const fIniciales = fontIniciales(orden.length);
+    const conEtiqueta = pintarEtiquetaNombre(orden.length);
 
     const descripcion =
         enElAnillo.length === 0
@@ -50,7 +116,7 @@ export function IlustracionCirculo({ contactos }: { contactos: Contacto[] }) {
 
             {/* Un hilo del centro a cada puesto ocupado */}
             {enElAnillo.map((c, i) => {
-                const p = PUESTOS[i]!;
+                const p = puestos[i]!;
                 const enAtencion = tonoDeContacto(c) === "ambar";
                 return (
                     <line
@@ -82,48 +148,50 @@ export function IlustracionCirculo({ contactos }: { contactos: Contacto[] }) {
 
             {/* Las personas del anillo */}
             {enElAnillo.map((c, i) => {
-                const p = PUESTOS[i]!;
+                const p = puestos[i]!;
                 const tono = tonoDeContacto(c);
                 const nombre = nombreVisible(c);
                 const corto = nombre.split(/\s+/)[0] ?? nombre;
                 return (
                     <g key={c.id}>
                         {tono === "ambar" && (
-                            <circle cx={p.x} cy={p.y} r="24" fill="none" stroke={AMBAR} strokeWidth="2" opacity="0.45" />
+                            <circle cx={p.x} cy={p.y} r={rAvatar + 6} fill="none" stroke={AMBAR} strokeWidth="2" opacity="0.45" />
                         )}
                         <circle
                             cx={p.x}
                             cy={p.y}
-                            r="18"
+                            r={rAvatar}
                             fill={tono === "ambar" ? AMBAR_SUAVE : PAPEL}
                             stroke={tono === "ambar" ? AMBAR : tono === "gris" ? APAGADO : PINO}
                             strokeWidth={tono === "ambar" ? 2.4 : 2.2}
                         />
                         <text
                             x={p.x}
-                            y={p.y + 4.5}
+                            y={p.y + fIniciales * 0.36}
                             textAnchor="middle"
-                            fontSize="12"
+                            fontSize={fIniciales}
                             fontWeight="700"
                             fill={tono === "ambar" ? AMBAR_INK : tono === "gris" ? APAGADO : PINO}
                         >
                             {iniciales(nombre)}
                         </text>
-                        <text
-                            x={p.x}
-                            y={p.etiquetaY}
-                            textAnchor="middle"
-                            fontSize="11"
-                            fontWeight="600"
-                            fill={tono === "ambar" ? AMBAR_INK : APAGADO}
-                        >
-                            {corto}
-                        </text>
+                        {conEtiqueta && (
+                            <text
+                                x={p.x}
+                                y={p.etiquetaY}
+                                textAnchor="middle"
+                                fontSize="11"
+                                fontWeight="600"
+                                fill={tono === "ambar" ? AMBAR_INK : APAGADO}
+                            >
+                                {corto}
+                            </text>
+                        )}
                     </g>
                 );
             })}
 
-            {/* Lugares libres: el "+" invita a seguir */}
+            {/* Lugares libres: el "+" invita a seguir (solo aparece con 0..3 contactos). */}
             {libres.map((p) => (
                 <g key={`libre-${p.x}-${p.y}`}>
                     <circle cx={p.x} cy={p.y} r="17" fill={PAPEL} stroke={TRAZO} strokeWidth="1.6" strokeDasharray="3 3" />

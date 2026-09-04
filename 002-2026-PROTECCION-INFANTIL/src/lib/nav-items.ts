@@ -115,9 +115,11 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     { href: "/dashboard/padre/hijos", label: "A quién protejo" }, // SPEC-325
     { href: "/dashboard/padre/circulo-confianza", label: "A quién vigilo" }, // SPEC-325 (antes "Círculo confianza")
     { href: "/dashboard/padre/notificaciones", label: "Notificaciones" },
-    // SPEC-317: perfil retirado del menú — no existe página de perfil real en el sistema.
-    // La ruta /dashboard/padre/perfil queda viva con placeholder para enlaces externos.
-    // Deuda: construir la página de perfil del padre.
+    // SPEC-440 P4 (Jelkin vivo 04-09) · «el perfil del padre no deja editar sus datos».
+    // La pantalla existe desde SPEC-334 (formulario completo con los campos del brief
+    // A-67 §59: nombres, apellidos, tipo/número documento, teléfono, país, ciudad) pero
+    // SPEC-317 la había retirado del menú por hueco temporal. Se reincorpora acá.
+    { href: "/dashboard/padre/perfil", label: "Mi perfil" },
 ];
 
 /**

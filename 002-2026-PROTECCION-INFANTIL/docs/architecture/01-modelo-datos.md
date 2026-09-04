@@ -2096,6 +2096,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | consentimientoVersion | String | opcional |
 | consentimientoDocumentoHash | String | opcional |
 | consentimientoIP | String | opcional |
+| presentacionEstandar | String | opcional |
+| urgenciaEstandar | String | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | tenant | Tenant | opcional, relación (FK) |

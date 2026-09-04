@@ -35,6 +35,11 @@ const perfilSchema = z.object({
         .nullable(),
     paisId: z.string().trim().min(1).optional().nullable(),
     ciudadId: z.string().trim().min(1).optional().nullable(),
+    // SPEC-440 P5 (Jelkin vivo 04-09): presentación/urgencia estándar del
+    // padre, guardadas al enviar el form de búsqueda de psicólogo — para no
+    // volver a pedirlas la próxima. Rangos alineados con `PresentacionUrgenciaForm`.
+    presentacionEstandar: z.string().trim().min(10, "La presentación debe tener al menos 10 caracteres").max(500).optional().nullable(),
+    urgenciaEstandar: z.enum(["ESTA_SEMANA", "SIN_APURO"]).optional().nullable(),
 });
 
 export async function GET() {
@@ -77,6 +82,8 @@ export async function PATCH(request: Request) {
         if (d.fechaNacimiento !== undefined) {
             data.fechaNacimiento = d.fechaNacimiento ? new Date(`${d.fechaNacimiento}T00:00:00.000Z`) : null;
         }
+        if (d.presentacionEstandar !== undefined) data.presentacionEstandar = d.presentacionEstandar;
+        if (d.urgenciaEstandar !== undefined) data.urgenciaEstandar = d.urgenciaEstandar;
         await new UsuarioRepository().actualizarPerfilPadre(user.id, data);
         const perfil = await new UsuarioRepository().obtenerPerfilPadre(user.id);
         const res = NextResponse.json({ perfil });

@@ -340,6 +340,15 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/InvitacionEnviadaModal.test.tsx",
     // SPEC-367 (A-73): los 3 estados del círculo de confianza (fetch mockeado, sin BD).
     "src/components/modules/padre/circulo/CirculoConfianzaClient.test.tsx",
+    // SPEC-440 P2 (Jelkin 04-09): el círculo pinta 4 con 5+ personas; candado
+    // valida el conteo de puestos con 0/3/4/5/10/20 (tope brief).
+    "src/components/modules/padre/circulo/IlustracionCirculo.test.tsx",
+    // SPEC-440 P5 (Jelkin 04-09): el form persiste presentación en el perfil
+    // para no volver a pedirla en cada ingreso.
+    "src/components/modules/padre/profesionales/PresentacionUrgenciaForm.test.tsx",
+    // SPEC-440 P3 (Jelkin 04-09): /mis-reportes trae el mismo shell del área
+    // del padre (PadreSideNav + PadreNavMovil).
+    "src/app/mis-reportes/layout.candado.test.ts",
     // SPEC-370 (I-264/I-265): nombre y bloque "Dónde" en el detalle del círculo.
     "src/components/modules/padre/circulo/DetallePersona.test.tsx",
     // SPEC-368 (A-74 · P1): control amable de la fecha del hecho (candados de B1).
