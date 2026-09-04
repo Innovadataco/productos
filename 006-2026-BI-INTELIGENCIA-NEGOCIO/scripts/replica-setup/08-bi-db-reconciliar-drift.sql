@@ -50,6 +50,18 @@ ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_VERIFICACION_RECHA
 ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'PROFESIONAL_VERIFICACION_VENCIDA';
 ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'SPAM_ALERTA_REVISION_ENVIADA';
 
+-- Preventivo SPEC-427/427b (cierre de citas · 2026-09-04): 7 valores nuevos
+-- del enum que escribirá la spec del cierre de citas. Agregados ANTES del
+-- deploy para que el apply worker no aborte al replicar las primeras filas
+-- (AccionAudit es enum en el suscriptor — confirmado por Kimi).
+ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'CITA_PROFESIONAL_CODIGO_EMITIDO';
+ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'CITA_PROFESIONAL_CODIGO_DIGITADO';
+ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'CITA_PROFESIONAL_CODIGO_FALLIDO';
+ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'CITA_PROFESIONAL_CUMPLIDA';
+ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'CITA_PROFESIONAL_EXPEDIENTE_ABIERTO';
+ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'CITA_PROFESIONAL_AUTOCERRADA';
+ALTER TYPE "AccionAudit" ADD VALUE IF NOT EXISTS 'CITA_PROFESIONAL_NO_ASISTIO_PADRE';
+
 -- Tras correr este script, los workers de sync reintentan solos (cada ~5 s).
 -- Verificar con 04-verificar-replica.sql: todas las tablas deben quedar en
 -- srsubstate = 'r'.
