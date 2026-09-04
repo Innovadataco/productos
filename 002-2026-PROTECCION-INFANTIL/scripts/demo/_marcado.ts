@@ -26,6 +26,66 @@ export const CORRIDA_V5 = "spec-412-v5";
 /** Lotes de escritura. 1.000 filas por viaje: cómodo para el pool y para el planner. */
 const LOTE_MARCADO = 1000;
 
+/**
+ * SPEC-420 · **PostgreSQL admite como máximo 32.767 parámetros por sentencia
+ * preparada.** Un `where: { id: { in: [...] } }` los gasta de a uno, así que
+ * una lista larga revienta con:
+ *
+ * ```
+ * too many bind variables in prepared statement,
+ * expected maximum of 32767, received 37176
+ * ```
+ *
+ * Pasó de verdad, en producción, borrando lo sembrado: 37.176 marcas. **La
+ * corrida de ensayo había escrito 30.254 y pasó** — no estaba mal probada,
+ * estaba probada a otra escala, y esa escala caía justo por debajo del límite.
+ * De ahí la lección que vale para cualquiera que pruebe con datos propios:
+ * **un volumen de prueba menor que producción no prueba el límite.**
+ *
+ * 2.000 va sobrado y deja margen para consultas que además lleven otros
+ * parámetros.
+ */
+export const LOTE_IDS = 2000;
+
+/**
+ * Parte una lista de ids en tandas y acumula lo que devuelva cada una.
+ *
+ * Se usa en TODA consulta con `in:` sobre una lista de ids de tamaño no
+ * acotado. La alternativa —confiar en que la lista sea corta— es la que nos
+ * costó una corrida de borrado en producción.
+ */
+export async function enLotes<T>(
+    ids: readonly string[],
+    fn: (trozo: string[]) => Promise<T>,
+    tamano: number = LOTE_IDS,
+): Promise<T[]> {
+    const salidas: T[] = [];
+    for (let i = 0; i < ids.length; i += tamano) {
+        salidas.push(await fn(ids.slice(i, i + tamano)));
+    }
+    return salidas;
+}
+
+/** Suma los resultados de un `count()` hecho por tandas. */
+export async function contarEnLotes(
+    ids: readonly string[],
+    fn: (trozo: string[]) => Promise<number>,
+): Promise<number> {
+    if (ids.length === 0) return 0;
+    const partes = await enLotes(ids, fn);
+    return partes.reduce((suma, n) => suma + n, 0);
+}
+
+/** Azúcar para el caso más común: sumar los `count` de varios `deleteMany`. */
+export async function borrarEnLotes(
+    ids: readonly string[],
+    fn: (trozo: string[]) => Promise<{ count: number }>,
+): Promise<number> {
+    if (ids.length === 0) return 0;
+    const partes = await enLotes(ids, fn);
+    return partes.reduce((suma, p) => suma + p.count, 0);
+}
+
 export interface OpcionesMarcado {
     corrida?: string;
     script?: string;
