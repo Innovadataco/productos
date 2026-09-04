@@ -43,11 +43,19 @@ export function DirectorioProfesionales({
     urgenciaInicial,
     presentacionInicial,
     hrefPerfil,
+    // SPEC-428: si el padre entró desde su expediente, se pasa por acá al
+    // perfil para ofrecer «compartir expediente» al pagar (§9 M4).
+    expedienteIdInicial,
+    // SPEC-428 (M7): flujo «elegir otro sin volver a pagar» — el perfil
+    // hará POST a /citas/[id]/reasignar en vez del alta normal.
+    heredarDeInicial,
 }: {
     urgenciaInicial?: "ESTA_SEMANA" | "SIN_APURO" | undefined;
     presentacionInicial?: string | undefined;
     /** Prefijo del enlace al perfil individual, sin id. */
     hrefPerfil: string;
+    expedienteIdInicial?: string | undefined;
+    heredarDeInicial?: string | undefined;
 }) {
     const [seed, setSeed] = useState<string | null>(null);
     const [facetas, setFacetas] = useState<Facetas | null>(null);
@@ -95,9 +103,14 @@ export function DirectorioProfesionales({
         const q = new URLSearchParams();
         if (urgenciaInicial) q.set("u", urgenciaInicial);
         if (presentacionInicial) q.set("pres", presentacionInicial);
+        // SPEC-428: propaga `expedienteId` para que el perfil lo ofrezca al pagar.
+        if (expedienteIdInicial) q.set("expedienteId", expedienteIdInicial);
+        // SPEC-428 (M7): propaga `heredarDe` para que el perfil use el flujo
+        // de reasignación (POST /citas/[id]/reasignar) en vez de crear cita.
+        if (heredarDeInicial) q.set("heredarDe", heredarDeInicial);
         const qs = q.toString();
         return qs ? `?${qs}` : "";
-    }, [urgenciaInicial, presentacionInicial]);
+    }, [urgenciaInicial, presentacionInicial, expedienteIdInicial, heredarDeInicial]);
 
     return (
         <div className="mx-auto max-w-5xl p-4 space-y-5">
