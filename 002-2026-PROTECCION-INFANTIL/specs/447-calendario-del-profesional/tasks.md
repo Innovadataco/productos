@@ -10,6 +10,8 @@
 - [x] T008 Regenerar `02-roles-capacidades.md` y `03-pantallas.md` (`arch:check` los exige con una ruta nueva).
 - [x] T009 Gate: `tsc`, lint, `arch:check`, unit, integración de lo tocado, `specs/README.md`, PR.
 
+- [x] T010 **SPEC-449 · tope de horizonte** (decisión del CEO 17:06: vive acá, no en 449). Una franja no puede terminar después del `venceEn` vigente del profesional, y sin verificación aprobada no se publica. Candados en las dos direcciones, probados muriendo.
+
 ## Anotado
 
 - **«Editar» = retirar + publicar.** La API no tiene `PATCH` y el radicado prohíbe reescribirla. Dicho, no sobreentendido.

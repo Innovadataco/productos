@@ -43,7 +43,17 @@ No es una preferencia de estilo: **Calidad ya tenía un candado apuntando a `/pe
 
 ---
 
-## Candados · 15, probados muriendo
+## El tope de horizonte (SPEC-449, alojado acá por decisión del CEO)
+
+Una franja **no puede terminar después del `venceEn`** de la verificación vigente del profesional, y **sin verificación aprobada no se publica** ninguna.
+
+La Ley 2375/2024 mide la obligación en el momento de la **atención**, no en el de la reserva: agendar para después del vencimiento es agendar para cuando los antecedentes ya no valen. Antes de esto, `POST /api/profesional/franjas` solo validaba `fin > inicio`, así que una cita confirmada podía caer **meses** después del vencimiento.
+
+**Vive en 447 y no en 449** porque es alcance natural de «el profesional publica su disponibilidad», evita un conflicto de código real en este mismo archivo, y la protección entra **un despliegue antes**.
+
+Y es la pieza que **disuelve el dilema del punto 4 de SPEC-449** —qué hacer con las citas confirmadas de un profesional que vence—: con el tope, ninguna cita nueva puede caer del otro lado del vencimiento. **Prevenir en vez de cortar.**
+
+## Candados · 18, probados muriendo
 
 **Conducta contra la base (11).** Cada uno pega en el endpoint que dispara la pantalla y afirma **la fila**, no el texto del código: la franja queda en base a la hora correcta de Bogotá (10:00 Bogotá = 15:00 UTC), el `GET` se la devuelve, un rango invertido no deja fila, un solape se rechaza, una pegada sí entra, el solape se mira **por profesional**, una modalidad no atendida se rechaza, sin sesión no se publica, la libre se retira, **la tomada no**, y un profesional no retira la de otro.
 
@@ -54,6 +64,7 @@ No es una preferencia de estilo: **Calidad ya tenía un candado apuntando a `/pe
 | Mutación en la fuente | Rojos |
 |---|---|
 | Quitar la validación de solape y la de modalidad | **2**, y solo esas dos |
+| Quitar el tope de horizonte | **2** — la franja pasada de fecha y la que no tiene verificación |
 | Que la pantalla deje de llamar al endpoint | **1** — el candado de clase, el que nadie tenía |
 
 `tsc` limpio · lint 0 errores · **`arch:check` VERDE** (con los dos artefactos regenerados) · unit y la integración de lo tocado en verde.

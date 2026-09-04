@@ -29,7 +29,9 @@ import { DELETE } from "./[id]/route";
 
 const DIA = "2027-03-10";
 
-async function sembrarProfesional(opciones: { virtual?: boolean; presencial?: boolean } = {}) {
+async function sembrarProfesional(
+    opciones: { virtual?: boolean; presencial?: boolean; venceEn?: Date } = {},
+) {
     const pais = await prisma.pais.upsert({
         where: { codigo: "CO" },
         update: {},
@@ -56,6 +58,21 @@ async function sembrarProfesional(opciones: { virtual?: boolean; presencial?: bo
             atiendeVirtual: opciones.virtual ?? true,
             atiendePresencial: opciones.presencial ?? false,
             estado: "ACTIVO",
+        },
+    });
+    // SPEC-449: un ACTIVO real SIEMPRE tiene una verificación APROBADA vigente
+    // (la Ley 2375/2024 obliga a revalidar cada 4 meses y `decidir` es lo único
+    // que pone ACTIVO). El fixture creaba un estado que en producción no existe.
+    const revisor = await crearUsuario("ADMIN", `verif.${Date.now()}.${Math.random()}@ejemplo.local`);
+    await prisma.verificacionProfesional.create({
+        data: {
+            perfilProfesionalId: perfil.id,
+            revisadoPorId: revisor.id,
+            revisadoEn: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            checklist: {},
+            resultado: "APROBADO",
+            autorizacionArchivoId: "archivo-de-prueba",
+            venceEn: opciones.venceEn ?? new Date("2027-06-01T00:00:00.000Z"),
         },
     });
     return { usuario, perfil };
@@ -169,6 +186,41 @@ describe("POST /api/profesional/franjas · SPEC-447 (I-311)", () => {
 
         expect(res.status).toBe(400);
         expect(await prisma.franjaDisponible.count({ where: { profesionalId: perfil.id } })).toBe(0);
+    });
+
+    it("SPEC-449 · una franja que cae DESPUÉS del vencimiento se rechaza", async () => {
+        // Verificación que vence el 01-03-2027; la franja del fixture es del 10-03.
+        const { perfil } = await sembrarProfesional({ venceEn: new Date("2027-03-01T00:00:00.000Z") });
+
+        const res = await POST(req(cuerpo("10:00")));
+
+        expect(
+            res.status,
+            "La Ley 2375/2024 mide la obligación en el momento de la ATENCIÓN: agendar " +
+                "para después del vencimiento es agendar para cuando los antecedentes no valen.",
+        ).toBe(400);
+        expect(await prisma.franjaDisponible.count({ where: { profesionalId: perfil.id } })).toBe(0);
+    });
+
+    it("CONTRAPRUEBA · la misma franja ANTES del vencimiento sí se publica", async () => {
+        const { perfil } = await sembrarProfesional({ venceEn: new Date("2027-03-11T00:00:00.000Z") });
+
+        const res = await POST(req(cuerpo("10:00")));
+
+        expect(res.status).toBe(200);
+        expect(await prisma.franjaDisponible.count({ where: { profesionalId: perfil.id } })).toBe(1);
+    });
+
+    it("sin ninguna verificación aprobada no se puede publicar disponibilidad", async () => {
+        const { perfil } = await sembrarProfesional();
+        await prisma.verificacionProfesional.deleteMany({ where: { perfilProfesionalId: perfil.id } });
+
+        const res = await POST(req(cuerpo("10:00")));
+
+        expect(
+            res.status,
+            "Sin vigencia no hay tope posible: publicar sería abrir agenda sin límite.",
+        ).toBe(400);
     });
 
     it("sin sesión de PROFESIONAL no se publica nada", async () => {
