@@ -117,6 +117,25 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     // Deuda: construir la página de perfil del padre.
 ];
 
+/**
+ * SPEC-424 (I-299) · Lista de navegación del profesional.
+ *
+ * Antes de este SPEC el rol PROFESIONAL heredaba `PADRE_NAV_ITEMS` porque
+ * `esEmpleado` en `NavHeader` no lo cubría — Jelkin veía "Mi panel", "Círculo
+ * de Confianza" y "Mis reportes" que son del padre. La pantalla de reportes
+ * fallaba con «No pudimos cargar tus reportes» porque `/api/reportes/*`
+ * responde vacío para un usuario sin reportes propios.
+ *
+ * SPEC-425 (Dev 02 · panel L5) trajo `/dashboard/profesional`: entra como
+ * primer ítem del menú. Verificación y Mi ficha se quedan como accesos
+ * directos hasta que el panel absorba esas dos superficies.
+ */
+export const PROFESIONAL_NAV_ITEMS: PadreNavItem[] = [
+    { href: "/dashboard/profesional", label: "Panel" },
+    { href: "/perfil-profesional/verificacion", label: "Verificación" },
+    { href: "/perfil-profesional/completar", label: "Mi ficha" },
+];
+
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */
 export const IA_TABS: Array<{ key: string; label: string; modulo: string | null }> = [
     { key: "documentacion", label: "Documentación", modulo: null },

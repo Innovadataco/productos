@@ -37,10 +37,9 @@ export function homeParaRol(rol: string | undefined): string {
         // trabajo — es el único módulo que tiene.
         case "VERIFICADOR":
             return "/dashboard/admin/verificacion";
-        // SPEC-425 (A-75 · L5): el profesional aterriza en SU panel. SPEC-424 lo
-        // había apuntado a `/perfil-profesional/verificacion` —lo único que
-        // existía— para cerrar el rebote al área del padre sin esperar este
-        // lote; ahora que el panel existe, la línea se mueve a su casa.
+        // SPEC-425 (A-75 · L5) — cerrado por #330: el profesional aterriza
+        // en SU panel. SPEC-424 lo había apuntado a `/perfil-profesional/
+        // verificacion` —lo único que existía— hasta que este lote llegase.
         case "PROFESIONAL":
             return "/dashboard/profesional";
         case "PARENT":

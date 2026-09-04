@@ -41,7 +41,7 @@ export async function generarRolesCapacidades(): Promise<string> {
         "activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.",
         "Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.",
         "",
-        `Inventario: ${ROLES_BARRIDO.length} roles (5 autenticados + anónimo) × ${asercion.rutasEvaluadas} rutas`,
+        `Inventario: ${ROLES_BARRIDO.length} roles (${ROLES_BARRIDO.length - 1} autenticados + anónimo) × ${asercion.rutasEvaluadas} rutas`,
         `(árbol \`src/app/**\` ∪ rutas declaradas en \`proxy.ts\`) = ${asercion.filas.length} combinaciones.`,
         "",
         `Estado de la aserción A al generar: **${asercion.desalineos.length === 0 ? "VERDE (puerta ≡ predicado)" : `ROJO (${asercion.desalineos.length} desalineos)`}**.`,
