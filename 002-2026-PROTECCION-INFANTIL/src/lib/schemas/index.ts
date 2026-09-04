@@ -41,6 +41,8 @@ export const operadorIdParamsSchema = z.object({
 export const padreIdParamsSchema = z.object({
     id: cuidIdSchema,
 });
+// SPEC-435: schemas del panel de VERIFICADOR viven en `./verificador.ts` para
+// no engrosar este archivo — este comentario deja el rastro en el índice.
 
 // Admin padres — ventana de servicio (spec 119). Campo ausente = conservar el valor
 // actual; null = limpiar (sin vigencia definida = acceso); string ISO = fijar.

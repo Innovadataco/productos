@@ -83,6 +83,11 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // Verificador, una persona, un trabajo — dos módulos duplicaban la
     // superficie de falla en BD viva (lección I-278).
     { clave: "admin_verificacion_profesionales", nombre: "Verificación de profesionales", categoria: "admin", esCritico: true, orden: 130 },
+    // SPEC-435 (Jelkin vivo 04-09): el admin crea/desactiva/reactiva cuentas
+    // de VERIFICADOR igual que a operadores. El VERIFICADOR es un puesto de
+    // trabajo aparte con cuenta propia (Jelkin: «un perfil como lo es
+    // operadores, con su user y pass y módulos»). Default: SOLO ADMIN.
+    { clave: "verificadores_admin", nombre: "Gestión de verificadores", categoria: "admin", esCritico: true, orden: 131 },
     // SPEC-421 (A-75): el admin crea/desactiva/reactiva cuentas de profesionales
     // igual que a los operadores — SIN modelo de asignación (a un psicólogo lo
     // elige el padre, no el sistema). Perfil, tarifa y documentos los sigue

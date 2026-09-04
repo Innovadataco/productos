@@ -7,6 +7,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { rolesConocidos, obtenerRolesProtegidos } from "@/lib/permisos-modulos";
 import { PermisoModuloRepository } from "@/lib/dal/repositories/permiso-modulo";
+import { CLAVES_POR_ROL } from "../../../../../prisma/seed-modulos-grants";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,6 +18,23 @@ function getClientInfo(request: Request) {
         userAgent: request.headers.get("user-agent") || "unknown",
     };
 }
+
+/**
+ * SPEC-435 (Jelkin vivo 04-09) · Roles con lista de módulos CERRADA por fuente.
+ * La refutación adversarial cazó que el PATCH sin whitelist permitía al ADMIN
+ * contaminar VERIFICADOR con módulos ajenos (`operadores`, `padres`, …) desde
+ * la UI `PermisosRolPanel`, aunque `CLAVES_POR_ROL.VERIFICADOR = [...un módulo]`.
+ * El candado `verificador-modulos.candado.test.ts` protegía la fuente pero era
+ * cosmético en runtime.
+ *
+ * Estos roles son «un rol, una persona, un trabajo» (lección I-278 / I-299):
+ *   · VERIFICADOR — SOLO `admin_verificacion_profesionales`.
+ *   · COMITE_CONVIVENCIA — SOLO su bandeja de casos.
+ * El PATCH rechaza cualquier cambio (activar OTRO módulo o desactivar el único)
+ * para uno de estos roles; el fix quirúrgico se hace por PR de arquitectura, no
+ * por click de admin.
+ */
+const ROLES_CERRADOS: readonly string[] = ["VERIFICADOR", "COMITE_CONVIVENCIA"];
 
 const patchSchema = z.object({
     cambios: z
@@ -114,6 +132,31 @@ export async function PATCH(request: Request) {
         const modulos = await repo.listarModulosPorIds(moduloIds);
         if (modulos.length !== moduloIds.length) {
             throw new AppError("Uno o más módulos no existen", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+
+        // SPEC-435 · anti-crecimiento para roles cerrados (VERIFICADOR, COMITE_CONVIVENCIA):
+        // «no hereda módulos de admin». Bloqueamos cualquier cambio a un rol cerrado —
+        // ni activar módulo fuera de la lista, ni tocar el que sí tiene. El fix legítimo
+        // pasa por PR de arquitectura editando `CLAVES_POR_ROL` (fuente única).
+        const clavePorModuloId = new Map(modulos.map((m) => [m.id, m.clave]));
+        const violacionesCerradas: string[] = [];
+        for (const cambio of cambios) {
+            if (!ROLES_CERRADOS.includes(cambio.rol)) continue;
+            const permitidas = CLAVES_POR_ROL[cambio.rol] ?? [];
+            const clave = clavePorModuloId.get(cambio.moduloId) ?? "?";
+            const enLista = permitidas.includes(clave);
+            if (cambio.activo && !enLista) {
+                violacionesCerradas.push(`${cambio.rol}: no puede activar "${clave}" (fuera de la lista cerrada)`);
+            } else if (!cambio.activo && enLista) {
+                violacionesCerradas.push(`${cambio.rol}: no puede desactivar "${clave}" (dejaría al rol sin acceso a su único módulo)`);
+            }
+        }
+        if (violacionesCerradas.length > 0) {
+            throw new AppError(
+                `Roles cerrados por diseño (SPEC-435): ${violacionesCerradas.join("; ")}. Editá CLAVES_POR_ROL en un PR y volvé a intentar.`,
+                ERROR_CODES.CONFLICT,
+                409
+            );
         }
 
         // Anti-lockout: simular el estado final y exigir que cada módulo crítico
