@@ -12,6 +12,13 @@
  *    registra y completa su ficha por la pantalla. Si algo no se puede hacer
  *    por la interfaz, eso ES el hallazgo.»
  *
+ * ESTADO DE LOS ARREGLOS (aviso CEO 04-09 17:0x):
+ *   · SPEC-442 y SPEC-434 desplegadas a producción — el spec ahora afirma
+ *     el comportamiento BUENO: (B) el alta por admin trae cursos, (C) la
+ *     ficha rechaza texto humano con 4xx y guarda con cuid válido. Antes de
+ *     esas dos specs, los dos tests entraban con `test.fail`.
+ *   · SPEC-447 (I-311) sigue pendiente — (D) sigue con `test.fail`.
+ *
  * QUÉ CUBRE (los 4 tests corren contra los ENDPOINTS que las pantallas
  * disparan; el spec no siembra Usuario/Colegio directo por Prisma, pasa por
  * el flujo real):
@@ -231,20 +238,15 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
         }
     });
 
-    test("(B) Colegio dado de alta por el panel del admin queda SIN cursos — I-307", async () => {
-        // TEST.FAIL a propósito citando SPEC-442 / I-307.
+    test("(B) Colegio dado de alta por el panel del admin trae SUS grados — cierre de I-307 (SPEC-442)", async () => {
+        // SPEC-442 desplegado 04-09 16:29 (aviso CEO 17:0x). Antes: el alta
+        // por panel dejaba el colegio con 0 cursos y el rector quedaba
+        // TRABADO en el Paso 4 del camino (I-307, Jelkin 04-09 ~16:0x con
+        // rector 'gilberto', colegio 'sagrado corazon'). Ahora el POST
+        // siembra los cursos por defecto igual que el registro público.
         //
-        // Aviso del CEO 04-09 13:10: «alta por panel de administración deja el
-        // colegio SIN cursos. Es candado, no rodeo.» Cazado por Jelkin el
-        // 04-09 ~16:0x con el rector 'gilberto', colegio 'sagrado corazon' —
-        // el rector queda TRABADO en el Paso 4 del camino: la pantalla
-        // promete 11 grados y su colegio tiene cero.
-        //
-        // Cuando SPEC-442 despliegue, `POST /api/admin/colegios` sembrará los
-        // 11 cursos por defecto (mismo comportamiento que el registro
-        // público). El `test.fail` se convierte en "unexpected pass" y hay
-        // que quitarlo como parte de esa spec.
-        test.fail(true, "SPEC-442 (Dev 01) sembrará cursos por defecto al alta por admin — I-307. Este candado se quita en esa spec.");
+        // El test afirma el comportamiento bueno: el alta por admin deja
+        // al colegio LISTO para que el rector entre y no se trabe.
 
         await asegurarAdmin();
         const request = await ctx();
@@ -266,34 +268,29 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const colegio = await prisma.colegio.findFirst({ where: { nit: NIT_PANEL }, select: { id: true } });
             expect(colegio, "el colegio dado de alta por admin debe existir").not.toBeNull();
 
-            // El candado: SPEC-442 debe sembrar cursos por defecto igual que el registro público.
+            // SPEC-442 desplegado: el alta por admin siembra los cursos por
+            // defecto (mismo comportamiento que el registro público SPEC-344).
+            // El rector ya no queda trabado en el Paso 4.
             const cursos = await prisma.curso.count({ where: { colegioId: colegio!.id } });
             expect(
                 cursos,
-                "I-307: alta por admin deja el colegio con 0 cursos y trabajaría al rector en el Paso 4 del camino. SPEC-442 lo arregla.",
+                "SPEC-442 (cierre I-307): el alta por admin debe sembrar los cursos por defecto",
             ).toBeGreaterThan(0);
         } finally {
             await request.dispose();
         }
     });
 
-    test("(C) Psicólogo se registra y su ficha se cae en `ciudadId` humano — I-302", async () => {
-        // TEST.FAIL a propósito citando SPEC-434 / I-302.
-        //
-        // Aviso del CEO 04-09 13:10 (raíz Jelkin 04-09 ~13:4x): la pantalla
-        // `/perfil-profesional/completar` pide el «identificador interno de
-        // la ciudad» y cualquier valor humano revienta con 500. SPEC-434
-        // arregla la validación previa (autocomplete de ciudad → cuid) y el
-        // manejo del error al backend.
+    test("(C) Psicólogo se registra y su ficha rechaza `ciudadId` humano LIMPIO + acepta cuid — cierre de I-302 (SPEC-434)", async () => {
+        // SPEC-434 desplegado (aviso CEO 17:0x, junto con SPEC-442). Antes:
+        // la pantalla `/perfil-profesional/completar` pedía el identificador
+        // interno y cualquier valor humano reventaba con 500 (I-302, Jelkin
+        // 04-09 ~13:4x). Ahora la validación es limpia — texto humano
+        // devuelve 4xx (no 5xx), y con cuid válido el PUT guarda.
         //
         // Este test camina el registro completo por la interfaz (solicitar →
-        // completar → login → PUT perfil) y afirma que enviar `ciudadId:
-        // "Bogotá"` NO devuelve 2xx: mientras I-302 esté vivo, la respuesta
-        // es 500 (Prisma revienta al connect) o 400 (schema Zod si validara).
-        // Cuando SPEC-434 despliegue, o el schema rechaza limpio o el
-        // frontend nunca envía texto — el `test.fail` se convierte en
-        // "unexpected pass".
-        test.fail(true, "SPEC-434 (Dev 01) fija la validación de ciudad en la ficha del profesional — I-302. Se quita cuando esa spec despliegue.");
+        // completar → login → PUT perfil) y afirma AMBAS mitades: rechazo
+        // limpio con texto humano y guardado con cuid válido.
 
         const request = await ctx();
         try {
@@ -334,8 +331,8 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
                 },
             });
             expect(
-                putConTextoHumano.status() >= 200 && putConTextoHumano.status() < 300,
-                `I-302: enviar 'Bogotá' como ciudadId debe rechazar limpio (400) o al menos NO devolver 2xx. Hoy responde 500 sin manejo. status=${putConTextoHumano.status()} body=${(await putConTextoHumano.text().catch(() => "")).slice(0,200)}`,
+                putConTextoHumano.status() >= 400 && putConTextoHumano.status() < 500,
+                `SPEC-434 (cierre I-302): 'Bogotá' como ciudadId debe rechazar LIMPIO 4xx, no 5xx. status=${putConTextoHumano.status()} body=${(await putConTextoHumano.text().catch(() => "")).slice(0,200)}`,
             ).toBe(true);
 
             // Segunda mitad del candado: con el cuid correcto, el PUT SÍ pasa.
