@@ -48,7 +48,13 @@ function horaBogota(fecha: Date): number {
     ) % 24;
 }
 
-function franjaBogota(fecha: Date): string {
+/**
+ * Exportada desde SPEC-431 (I-247 b) para poder CONTRASTARLA: el armador del
+ * payload al modelo tenía su propia copia y calculaba sobre UTC. Dos funciones
+ * que responden lo mismo tienen que responder igual, y eso hay que poder
+ * probarlo. Función pura, sin estado.
+ */
+export function franjaBogota(fecha: Date): string {
     const h = horaBogota(fecha);
     if (h < 6) return "0-6";
     if (h < 12) return "6-12";
