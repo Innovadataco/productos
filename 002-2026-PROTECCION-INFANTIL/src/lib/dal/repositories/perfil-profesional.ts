@@ -144,6 +144,25 @@ export class PerfilProfesionalRepository {
         return this.db.perfilProfesional.findUnique({ where: { id } });
     }
 
+    /**
+     * SPEC-449 (I-313) · el `venceEn` vigente del profesional, o `null` si no
+     * tiene ninguna verificación APROBADA.
+     *
+     * Lo usa el tope de horizonte al publicar una franja: la Ley 2375/2024 mide
+     * la obligación en el momento de la ATENCIÓN, así que una franja que termina
+     * después de esta fecha sería una cita agendada para cuando los antecedentes
+     * ya no valen. Mismo criterio que `ultimaAprobacion` de `vigencia.ts`,
+     * resuelto en la base para no traerse el historial entero.
+     */
+    async venceEnVigente(perfilProfesionalId: string): Promise<Date | null> {
+        const ultima = await this.db.verificacionProfesional.findFirst({
+            where: { perfilProfesionalId, resultado: "APROBADO" },
+            orderBy: { venceEn: "desc" },
+            select: { venceEn: true },
+        });
+        return ultima?.venceEn ?? null;
+    }
+
     findPorUsuarioId(usuarioId: string): Promise<PerfilProfesional | null> {
         return this.db.perfilProfesional.findUnique({ where: { usuarioId } });
     }

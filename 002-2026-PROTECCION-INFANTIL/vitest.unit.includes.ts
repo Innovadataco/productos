@@ -371,6 +371,12 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-425 (A-75 · L5): el panel del profesional no pinta botones sin motor,
     // el marcador respeta el brief §3 y el porcentaje sale de un solo lugar.
     "src/lib/profesional/panel/panel.candado.test.ts",
+    // SPEC-447 (I-311): la hora de Bogotá en un solo lugar — el camino inverso
+    // (hora de pared → instante guardado) que necesita el calendario.
+    "src/lib/fechas/formato-bogota.test.ts",
+    // SPEC-447 (I-311): la API de franjas estuvo sin pantalla desde SPEC-395.
+    // Este candado falla si vuelve a quedarse sin consumidor en la interfaz.
+    "src/lib/profesional/calendario.candado.test.ts",
     // SPEC-403 (I-288): la comisión es parámetro, no constante — y el seed no
     // le pisa al admin el valor que ajustó.
     "src/lib/profesional/cita/comision.test.ts",

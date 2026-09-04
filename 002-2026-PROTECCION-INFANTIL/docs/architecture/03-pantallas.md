@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-142 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+143 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -146,6 +146,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/padre/suscripcion` | PARENT, PROFESIONAL | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/perfil/notificaciones` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, COMITE_CONVIVENCIA, PARENT, PROFESIONAL | ANONIMO (redirigir→/login) |
 | `/dashboard/profesional` | PARENT, PROFESIONAL | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
+| `/dashboard/profesional/calendario` | PARENT, PROFESIONAL | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/docs` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, PROFESIONAL, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/docs/operar` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, PROFESIONAL, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/docs/tecnico` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, PROFESIONAL, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |

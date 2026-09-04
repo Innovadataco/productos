@@ -1,4 +1,4 @@
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 /**
  * SPEC-200 — Helpers de formateo de fecha/hora fijos en America/Bogota.
@@ -61,4 +61,37 @@ export function diaCalendarioBogota(fecha: Date | string | number = new Date()):
     const iso = formatInTimeZone(toDate(fecha), TIMEZONE_BOGOTA, "yyyy-MM-dd");
     const [y, m, d] = iso.split("-").map(Number);
     return new Date(Date.UTC(y!, m! - 1, d!));
+}
+
+/**
+ * SPEC-447 (I-311): el camino INVERSO — de la hora de pared que escribe una
+ * persona en Bogotá al instante UTC que se guarda.
+ *
+ * Vive acá, con el resto de la zona horaria, y no en la pantalla: la lección de
+ * I-247 es que un offset copiado a mano se desincroniza en silencio. Usa
+ * `fromZonedTime` en vez de restar cinco horas a mano — si algún día Colombia
+ * cambiara de offset, la biblioteca lo sabe y una constante nuestra no.
+ *
+ * @param dia  "YYYY-MM-DD" tal cual lo escribe un `<input type="date">`.
+ * @param hora "HH:mm" tal cual lo escribe un `<input type="time">`.
+ * @throws si el texto no tiene la forma esperada — un instante mal formado que
+ *         se guarda callado es peor que un error.
+ */
+export function instanteDesdeHoraBogota(dia: string, hora: string): Date {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) {
+        throw new Error(`Día inválido: "${dia}" (se esperaba YYYY-MM-DD)`);
+    }
+    if (!/^\d{2}:\d{2}$/.test(hora)) {
+        throw new Error(`Hora inválida: "${hora}" (se esperaba HH:mm)`);
+    }
+    const instante = fromZonedTime(`${dia}T${hora}:00`, TIMEZONE_BOGOTA);
+    if (Number.isNaN(instante.getTime())) {
+        throw new Error(`Fecha y hora inválidas: "${dia} ${hora}"`);
+    }
+    return instante;
+}
+
+/** El mismo instante, sumándole minutos. Para derivar el fin desde la duración del perfil. */
+export function sumarMinutos(instante: Date, minutos: number): Date {
+    return new Date(instante.getTime() + minutos * 60 * 1000);
 }
