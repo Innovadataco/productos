@@ -104,6 +104,54 @@ describe("SPEC-449 · el reloj tiene quien lo llame", () => {
     });
 });
 
+/**
+ * SPEC-449 · `VENCIDO` tiene salida **también en la pantalla**.
+ *
+ * Este bloque nace de un hallazgo del CEO auditando el PR: el service aceptaba
+ * `VENCIDO` y **la bandera que decide si la pantalla muestra el botón seguía
+ * exigiendo `BORRADOR`**. La API habría aceptado el reenvío y el profesional
+ * vencido **nunca habría visto el botón** — el mismo defecto que la spec cierra,
+ * un piso más arriba.
+ *
+ * Y deja una lección sobre el candado anterior: mutar **solo el service** lo
+ * dejaba verde con este bug puesto. Eso es un candado de palabras. La condición
+ * ahora sale de **una sola constante** que comparten vista y service, así que no
+ * pueden volver a divergir — y esto se afirma sobre la vista, no sobre el texto.
+ */
+describe("SPEC-449 · el vencido VE el botón de reenviar, no solo lo acepta la API", () => {
+    const fuente = leerCodigo("src/lib/profesionales/verificador/vista-profesional.ts");
+
+    it("`puedeReenviar` NO decide con un literal propio: usa la constante compartida", () => {
+        expect(
+            /puedeReenviar\s*=\s*\n?\s*\(?ORIGENES_QUE_PUEDEN_REENVIAR/.test(fuente),
+            "Si la vista vuelve a evaluar el estado por su cuenta, vuelve a poder " +
+                "divergir del service — que es exactamente cómo nació este bug.",
+        ).toBe(true);
+        expect(
+            /puedeReenviar\s*=\s*perfil\.estado === "BORRADOR"/.test(fuente),
+            "La condición duplicada con solo BORRADOR es el bug: no puede volver.",
+        ).toBe(false);
+    });
+
+    it("la constante incluye VENCIDO y excluye RECHAZADO y SUSPENDIDO", () => {
+        const decl = /ORIGENES_QUE_PUEDEN_REENVIAR\s*=\s*\[([^\]]*)\]/.exec(fuente);
+        expect(decl, "no se encontró la constante").not.toBeNull();
+        const lista = decl![1]!;
+        expect(lista).toContain('"BORRADOR"');
+        expect(lista, "un plazo cumplido no puede dejar a nadie fuera para siempre").toContain('"VENCIDO"');
+        expect(lista, "RECHAZADO es una decisión humana de IDC, no un plazo").not.toContain('"RECHAZADO"');
+        expect(lista).not.toContain('"SUSPENDIDO"');
+    });
+
+    it("y el service usa la MISMA constante, no su propia copia", () => {
+        const usos = fuente.match(/ORIGENES_QUE_PUEDEN_REENVIAR/g) ?? [];
+        expect(
+            usos.length,
+            "Se espera la declaración + el uso de la vista + el del service.",
+        ).toBeGreaterThanOrEqual(3);
+    });
+});
+
 describe("SPEC-449 · la hora de la corrida no rompe el worker", () => {
     it("una hora válida se convierte en cron", () => {
         expect(horaCorridaACronVerificacion("02:00")).toBe("0 2 * * *");

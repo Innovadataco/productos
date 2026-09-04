@@ -10,40 +10,44 @@ const HACE_49H = new Date("2026-09-08T11:00:00Z");
 const HACE_47H = new Date("2026-09-08T13:00:00Z");
 
 describe("debeExponerContacto · candado del contacto profesional", () => {
+    // SPEC-449: el estado del PERFIL pasó a ser REQUERIDO. Los casos de abajo
+    // eran los de un profesional vigente, así que ahora lo dicen: "ACTIVO".
+    // No es un ajuste cosmético — hacerlo obligatorio es lo que impide que el
+    // próximo llamador se olvide y vuelva a exponer el teléfono de un vencido.
     it("SIN_CONFIRMAR → false (el padre aún no pagó)", () => {
-        expect(debeExponerContacto({ estado: "SIN_CONFIRMAR", pagoAprobadoEn: null }, AHORA)).toBe(false);
+        expect(debeExponerContacto({ estado: "SIN_CONFIRMAR", pagoAprobadoEn: null }, AHORA, "ACTIVO")).toBe(false);
     });
 
     it("PAGADA_PENDIENTE → false (el reloj arrancó pero el profesional aún no confirma)", () => {
-        expect(debeExponerContacto({ estado: "PAGADA_PENDIENTE", pagoAprobadoEn: AHORA }, AHORA)).toBe(false);
+        expect(debeExponerContacto({ estado: "PAGADA_PENDIENTE", pagoAprobadoEn: AHORA }, AHORA, "ACTIVO")).toBe(false);
     });
 
     it("CONFIRMADA → true (la cita arrancó su vida, el padre coordina)", () => {
-        expect(debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA)).toBe(true);
+        expect(debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, "ACTIVO")).toBe(true);
     });
 
     it("VENCIDA_SIN_RESPUESTA con menos de 48h desde el pago → false", () => {
         expect(
-            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: HACE_47H }, AHORA)
+            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: HACE_47H }, AHORA, "ACTIVO")
         ).toBe(false);
     });
 
     it("VENCIDA_SIN_RESPUESTA con >=48h desde el pago → true (excepción del brief §3)", () => {
         expect(
-            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: HACE_49H }, AHORA)
+            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: HACE_49H }, AHORA, "ACTIVO")
         ).toBe(true);
     });
 
     it("VENCIDA_SIN_RESPUESTA sin pagoAprobadoEn (venció el pago) → false", () => {
         expect(
-            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: null }, AHORA)
+            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: null }, AHORA, "ACTIVO")
         ).toBe(false);
     });
 
     it("REEMBOLSADA / CUMPLIDA / etc. → false por default", () => {
         for (const estado of ["REEMBOLSADA", "CUMPLIDA", "NO_ASISTIO_PADRE", "REPROGRAMADA"] as const) {
             expect(
-                debeExponerContacto({ estado, pagoAprobadoEn: AHORA }, AHORA),
+                debeExponerContacto({ estado, pagoAprobadoEn: AHORA }, AHORA, "ACTIVO"),
                 `estado ${estado} debería NO exponer contacto`
             ).toBe(false);
         }
@@ -106,5 +110,49 @@ describe("toCitaParaPadre · el contacto viaja SÓLO en la excepción", () => {
         );
         expect(dto.contactoProfesional).toBeDefined();
         expect(dto.contactoProfesional?.email).toBe("pro@test.local");
+    });
+
+    /**
+     * SPEC-449 (I-313) · el perfil VENCIDO manda sobre cualquier excepción.
+     *
+     * PI no puede seguir sirviendo el teléfono de alguien de quien **ya escribió
+     * en su propia auditoría** que la verificación venció. Esa contradicción
+     * —saberlo y seguir entregándolo— es lo que no se defiende ante un tercero.
+     */
+    it("SPEC-449 · perfil VENCIDO → false AUNQUE la cita esté CONFIRMADA", () => {
+        expect(
+            debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, "VENCIDO"),
+        ).toBe(false);
+    });
+
+    it("SPEC-449 · perfil VENCIDO → false aunque se cumpla la excepción de las 48h", () => {
+        expect(
+            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: HACE_49H }, AHORA, "VENCIDO"),
+        ).toBe(false);
+    });
+
+    it("CONTRAPRUEBA · con el perfil ACTIVO las dos excepciones siguen abriendo el contacto", () => {
+        expect(debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, "ACTIVO")).toBe(true);
+        expect(
+            debeExponerContacto({ estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: HACE_49H }, AHORA, "ACTIVO"),
+        ).toBe(true);
+    });
+
+    /**
+     * HUECO CONOCIDO, documentado en vez de tapado.
+     *
+     * SPEC-449 cierra el contacto para `VENCIDO`, que es lo aprobado. Un perfil
+     * `SUSPENDIDO` —decisión humana de IDC, más grave que un plazo cumplido—
+     * **hoy SIGUE exponiendo el contacto** si la cita está confirmada.
+     *
+     * Este test afirma la conducta REAL, no la deseable, y deja el hueco
+     * nombrado: escribí primero el assert contrario y descubrí que estaba
+     * afirmando algo que no había implementado. Ensanchar reserva legal por mi
+     * cuenta no corresponde — queda reportado al CEO para que lo decida.
+     */
+    it("HUECO · SUSPENDIDO todavía expone contacto (conducta real, reportada al CEO)", () => {
+        expect(
+            debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, "SUSPENDIDO"),
+        ).toBe(true);
     });
 });

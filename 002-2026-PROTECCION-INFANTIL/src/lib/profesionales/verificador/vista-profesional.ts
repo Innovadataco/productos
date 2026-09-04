@@ -27,6 +27,16 @@ export interface VistaProfesionalVerificacion {
  * Devuelve el estado del perfil y, si la última verificación quedó devuelta,
  * la lista de observaciones (nombre visible del ítem + texto). Nada más.
  */
+/**
+ * SPEC-449 · los estados desde los que un profesional puede volver a pedir
+ * verificación. **Fuente única de la vista y del service**: si se duplica, un
+ * lado acepta y el otro no muestra el botón.
+ *
+ * `RECHAZADO` y `SUSPENDIDO` no están a propósito: son decisiones humanas de
+ * IDC, no un plazo que se cumplió.
+ */
+const ORIGENES_QUE_PUEDEN_REENVIAR = ["BORRADOR", "VENCIDO"] as const;
+
 export async function verificacionParaProfesional(usuarioId: string): Promise<VistaProfesionalVerificacion> {
     const perfil = await new VerificadorRepository().findPorUsuarioId(usuarioId);
     if (!perfil) {
@@ -47,9 +57,16 @@ export async function verificacionParaProfesional(usuarioId: string): Promise<Vi
             }
         }
     }
-    // Puede reenviar si su perfil está en BORRADOR (típico tras rechazo) y la
-    // autorización sigue cargada — el service verifica igual antes de mover.
-    const puedeReenviar = perfil.estado === "BORRADOR" && Boolean(perfil.autorizacionArchivoId);
+    // SPEC-449: la bandera que decide si la PANTALLA muestra el botón usa la
+    // MISMA lista de orígenes que el service (`ORIGENES_QUE_PUEDEN_REENVIAR`).
+    // Estaban separadas: el service aceptaba `VENCIDO` y esta bandera no, así
+    // que la API habría aceptado el reenvío y **el profesional vencido nunca
+    // habría visto el botón** — el mismo defecto que la spec cierra, un piso
+    // más arriba. Compartir la constante es lo que impide que vuelvan a
+    // divergir; duplicar la condición es cómo nació el bug.
+    const puedeReenviar =
+        (ORIGENES_QUE_PUEDEN_REENVIAR as readonly string[]).includes(perfil.estado) &&
+        Boolean(perfil.autorizacionArchivoId);
     return {
         estadoPerfil: perfil.estado,
         puedeReenviar,
@@ -76,8 +93,6 @@ export async function verificacionParaProfesional(usuarioId: string): Promise<Vi
  * `RECHAZADO` y `SUSPENDIDO` **siguen sin poder**: son decisiones humanas de
  * IDC, no un plazo que se cumplió. El candado lo afirma en las dos direcciones.
  */
-const ORIGENES_QUE_PUEDEN_REENVIAR = ["BORRADOR", "VENCIDO"] as const;
-
 export async function reenviarParaVerificacion(usuarioId: string): Promise<void> {
     const repo = new VerificadorRepository();
     const perfil = await repo.findPorUsuarioId(usuarioId);

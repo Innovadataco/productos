@@ -34,13 +34,17 @@ const HORAS_48_EN_MS = 48 * 60 * 60 * 1000;
  */
 export function debeExponerContacto(
     solicitud: Pick<SolicitudCita, "estado" | "pagoAprobadoEn">,
-    now: Date = new Date(),
+    now: Date,
     /**
-     * SPEC-449 · estado del PERFIL del profesional. Opcional para no romper a
-     * los llamadores que no lo tienen a mano; cuando llega y es `VENCIDO`, el
-     * contacto se cierra aunque la cita esté confirmada.
+     * SPEC-449 · estado del PERFIL del profesional. **REQUERIDO a propósito.**
+     *
+     * Nació opcional «para no romper llamadores». Eso es exactamente el punto
+     * blando: hoy hay un solo llamador y lo pasa, pero **el próximo que se
+     * olvide vuelve a exponer el teléfono de un profesional vencido, y ningún
+     * test lo vería**. Esto es reserva legal (H-2 · Ley 2375/2024), así que el
+     * compilador tiene que exigirlo — no la memoria de quien escriba el código.
      */
-    estadoPerfil?: PerfilProfesional["estado"] | null
+    estadoPerfil: PerfilProfesional["estado"] | null
 ): boolean {
     // SPEC-449 (I-313): PI no puede seguir sirviendo el teléfono de alguien de
     // quien YA ESCRIBIÓ EN SU PROPIA AUDITORÍA que la verificación venció. Esa
