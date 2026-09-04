@@ -383,4 +383,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // confundían "no hay nada" con "no pude mirar".
     "src/lib/errores-no-mudos.test.ts",
     "src/components/modules/NotificacionesInbox.test.tsx",
+    // SPEC-427 (I-301): un barredor sin quien lo llame es código muerto. Los dos
+    // de SPEC-395 vivieron así hasta hoy — probados, mergeados y sin correr.
+    "src/lib/profesional/cita/worker.candado.test.ts",
+    // SPEC-427 · los dos códigos del cierre: vigencia, un solo uso, tope de
+    // intentos y la traza que ven los tres.
+    "src/lib/profesional/cita/codigos.test.ts",
 ];

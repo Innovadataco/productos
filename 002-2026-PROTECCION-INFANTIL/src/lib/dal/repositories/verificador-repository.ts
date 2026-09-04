@@ -35,6 +35,10 @@ const INCLUDE_FICHA = {
 const INCLUDE_INCIDENTES = {
     profesional: { include: { usuario: { select: { email: true, nombre: true } } } },
     padreUsuario: { select: { email: true, nombre: true } },
+    // SPEC-427: la fecha de la CITA sale de la franja. Antes la fila mostraba
+    // `creadoEn` bajo el rótulo "Cita del …", que es cuándo se pidió la cita,
+    // no cuándo era.
+    franja: { select: { inicio: true } },
 } as const;
 
 export class VerificadorRepository {
@@ -104,10 +108,19 @@ export class VerificadorRepository {
         });
     }
 
-    /** Cola 2 — citas en SIN_CONFIRMAR con las dos puntas (padre + profesional). */
+    /**
+     * Cola 2 — citas que se AUTOCERRARON sin que nadie digitara el código.
+     *
+     * SPEC-427 (I-300): el filtro es `autocerradaEn`, no el estado. Antes era
+     * `where: { estado: "SIN_CONFIRMAR" }` a secas, y ese estado carga dos
+     * intenciones: también es el INICIAL de una solicitud recién creada que
+     * nadie pagó (`cita.service.ts` la crea así cuando no hay pago aprobado).
+     * O sea que la bandeja del Verificador mostraba como incidente cada
+     * solicitud impaga. La marca dedicada las separa.
+     */
     listarIncidentesSinConfirmar() {
         return this.db.solicitudCita.findMany({
-            where: { estado: "SIN_CONFIRMAR" },
+            where: { estado: "SIN_CONFIRMAR", autocerradaEn: { not: null } },
             orderBy: { actualizadoEn: "desc" },
             include: INCLUDE_INCIDENTES,
         });

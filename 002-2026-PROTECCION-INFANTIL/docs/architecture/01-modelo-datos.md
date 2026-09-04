@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **110** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **111** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -505,7 +505,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (62)
+### Otros (sin regla de dominio) (63)
 
 #### `AclaracionExpediente`
 
@@ -647,6 +647,21 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | expiraEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
+
+#### `CodigoCita`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| solicitudId | String | — |
+| tipo | TipoCodigoCita | — |
+| codigoHash | String | — |
+| expiraEn | DateTime | — |
+| intentosFallidos | Int | — |
+| usadoEn | DateTime | opcional |
+| notificacionId | String | opcional |
+| creadoEn | DateTime | — |
+| solicitud | SolicitudCita | relación (FK) |
 
 #### `CodigoReferidoUso`
 
@@ -1478,6 +1493,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | estado | EstadoSolicitudCita | — |
 | venceEn | DateTime | — |
 | pagoAprobadoEn | DateTime | opcional |
+| autocerradaEn | DateTime | opcional |
 | expedienteCompartidoId | String | opcional |
 | solicitudPreviaId | String | opcional |
 | pagoHeredadoDeId | String | opcional |
@@ -1496,6 +1512,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | pagoHeredadoDe | SolicitudCita | opcional, relación |
 | pagosQueHereda | SolicitudCita | lista, relación |
 | encuesta | EncuestaPrimeraCita | opcional, relación |
+| codigos | CodigoCita | lista, relación |
 
 #### `Suscripcion`
 
@@ -2269,6 +2286,7 @@ erDiagram
     SeguimientoCaso ||--o{ InformeCaso : "caso"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
+    SolicitudCita ||--o{ CodigoCita : "solicitud"
     SolicitudCita ||--o{ EncuestaPrimeraCita : "solicitud"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"
     Suscripcion ||--o{ CodigoReferidoUso : "referida"

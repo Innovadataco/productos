@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 533 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3731 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 537 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3759 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -356,6 +356,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
 | `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/codigo` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
@@ -395,6 +396,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -894,6 +898,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
 | `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/codigo` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
@@ -933,6 +938,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -1432,6 +1440,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
 | `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/codigo` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
@@ -1471,6 +1480,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -1970,6 +1982,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/circulo-confianza/semaforo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | HTTP 403 | no permite | sí |
 | `/api/padre/citas` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas/[id]/codigo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/citas/[id]/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/padre/citas/[id]/reprogramar` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia` | api | HTTP 403 | no permite | sí |
@@ -2009,6 +2022,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/cerrar` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/no-asistio` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/panel` | api | HTTP 403 | no permite | sí |
@@ -2508,6 +2524,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/circulo-confianza/semaforo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | HTTP 403 | no permite | sí |
 | `/api/padre/citas` | api | HTTP 403 | no permite | sí |
+| `/api/padre/citas/[id]/codigo` | api | HTTP 403 | no permite | sí |
 | `/api/padre/citas/[id]/reasignar` | api | HTTP 403 | no permite | sí |
 | `/api/padre/citas/[id]/reprogramar` | api | HTTP 403 | no permite | sí |
 | `/api/padre/contacto-emergencia` | api | HTTP 403 | no permite | sí |
@@ -2547,6 +2564,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/cerrar` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/no-asistio` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/panel` | api | HTTP 403 | no permite | sí |
@@ -3046,6 +3066,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/circulo-confianza/semaforo` | api | permitir | permite | sí |
 | `/api/padre/circulo-confianza/timeline` | api | permitir | permite | sí |
 | `/api/padre/citas` | api | permitir | permite | sí |
+| `/api/padre/citas/[id]/codigo` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reasignar` | api | permitir | permite | sí |
 | `/api/padre/citas/[id]/reprogramar` | api | permitir | permite | sí |
 | `/api/padre/contacto-emergencia` | api | permitir | permite | sí |
@@ -3085,6 +3106,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -3584,6 +3608,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/padre/circulo-confianza/semaforo` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/circulo-confianza/timeline` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/citas` | api | HTTP 401 | permite | **NO** |
+| `/api/padre/citas/[id]/codigo` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/citas/[id]/reasignar` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/citas/[id]/reprogramar` | api | HTTP 401 | permite | **NO** |
 | `/api/padre/contacto-emergencia` | api | HTTP 401 | permite | **NO** |
@@ -3623,6 +3648,9 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/citas/[id]/cerrar` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/citas/[id]/expediente` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/citas/[id]/no-asistio` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/franjas` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/franjas/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/panel` | api | HTTP 401 | permite | **NO** |
@@ -4092,6 +4120,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/padre/circulo-confianza/semaforo` | HTTP 401 | permite |
 | `/api/padre/circulo-confianza/timeline` | HTTP 401 | permite |
 | `/api/padre/citas` | HTTP 401 | permite |
+| `/api/padre/citas/[id]/codigo` | HTTP 401 | permite |
 | `/api/padre/citas/[id]/reasignar` | HTTP 401 | permite |
 | `/api/padre/citas/[id]/reprogramar` | HTTP 401 | permite |
 | `/api/padre/contacto-emergencia` | HTTP 401 | permite |
@@ -4129,6 +4158,9 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/pagos/suscripcion/estado` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/validar-bono` | HTTP 401 | permite |
 | `/api/profesional/autorizacion` | HTTP 401 | permite |
+| `/api/profesional/citas/[id]/cerrar` | HTTP 401 | permite |
+| `/api/profesional/citas/[id]/expediente` | HTTP 401 | permite |
+| `/api/profesional/citas/[id]/no-asistio` | HTTP 401 | permite |
 | `/api/profesional/franjas` | HTTP 401 | permite |
 | `/api/profesional/franjas/[id]` | HTTP 401 | permite |
 | `/api/profesional/panel` | HTTP 401 | permite |

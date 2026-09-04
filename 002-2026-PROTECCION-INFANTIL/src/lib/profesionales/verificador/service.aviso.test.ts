@@ -104,11 +104,15 @@ describe("SPEC-418 · el motor sabe programar dentro de una transacción", () =>
 describe("SPEC-418 · el seed faltante se descubre AL DESPLEGAR, no al hacer clic", () => {
     const guardian = leerCodigo("scripts/verify-reglas-notificacion.ts");
 
-    it("el guardián declara los dos eventos de esta spec como BLOQUEANTES", () => {
+    it("el guardián declara como BLOQUEANTES los avisos sin los cuales el flujo se detiene", () => {
         expect(guardian).toContain("profesional.verificacion.aprobada");
         expect(guardian).toContain("profesional.verificacion.devuelta");
+        // SPEC-427 sumó dos: sin el código, NINGUNA cita puede cerrarse; y sin
+        // el aviso de autocierre el padre no se entera de que su cita murió.
+        expect(guardian).toContain("cita.codigo.recordatorio");
+        expect(guardian).toContain("cita.autocerrada.padre");
         const bloqueantes = guardian.match(/bloquea: true/g) ?? [];
-        expect(bloqueantes).toHaveLength(2);
+        expect(bloqueantes, "4 bloqueantes: 2 del Verificador + 2 del cierre de la cita").toHaveLength(4);
     });
 
     it("declara TODOS los callsites que fallan en cerrado, aunque solo dos bloqueen", () => {
@@ -122,13 +126,18 @@ describe("SPEC-418 · el seed faltante se descubre AL DESPLEGAR, no al hacer cli
         ]) {
             expect(guardian, `falta declarar ${evento}`).toContain(evento);
         }
+        // SPEC-427 agrega los tres del cierre de la cita: el recordatorio con el
+        // código, el aviso de autocierre y el de inasistencia.
+        for (const evento of ["cita.codigo.recordatorio", "cita.autocerrada.padre", "cita.no_asistio.padre"]) {
+            expect(guardian, `falta declarar ${evento}`).toContain(evento);
+        }
         // Cuentas: 15 callsites con `programadas === 0`. Uno
         // (`analisis/acciones/handlers/enviar-notificacion.ts`) dispara un evento
         // DINÁMICO y no se puede declarar. Quedan 14 callsites estáticos, pero el
         // del Verificador emite DOS eventos según el resultado (aprobada /
-        // devuelta) — por eso la lista tiene 15 eventos, no 14.
+        // devuelta) — por eso la lista tenía 15 eventos, no 14. SPEC-427 suma 3.
         const total = (guardian.match(/evento: "/g) ?? []).length;
-        expect(total, "15 eventos: 13 de otros callsites + los 2 del Verificador").toBe(15);
+        expect(total, "18 eventos: los 15 de antes + los 3 del cierre de la cita").toBe(18);
     });
 
     it("solo un bloqueante ausente frena el despliegue; los avisos no", () => {

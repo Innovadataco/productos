@@ -1841,6 +1841,93 @@ async function seedVerificacionProfesional() {
     console.log("[SEED] Catálogo Motor Notif de la verificación profesional listo (SPEC-418)");
 }
 
+// ── SPEC-427 (A-75 · L6 · brief §9 momento 6) · los dos códigos del cierre ───
+// Obligatorias: sin el recordatorio el padre no tiene el código y la cita NO
+// puede cerrarse — no es una cortesía, es el mecanismo. Y el aviso de autocierre
+// es la única forma que tiene el padre de enterarse de que su cita murió sin
+// confirmar. Una preferencia no puede dejar a nadie sin ellas.
+async function seedCodigosCita() {
+    const eventos = [
+        {
+            evento: "cita.codigo.recordatorio",
+            asunto: "Tu código para la cita de hoy",
+            cuerpoMarkdown:
+                "Hola {{nombrePadre}},\n\n" +
+                "Tu cita con {{nombreProfesional}} es {{horaCita}}.\n\n" +
+                "**Tu código es {{codigo}}.** Dáselo al profesional durante la sesión: con eso queda " +
+                "constancia de que la cita ocurrió.\n\n" +
+                "**Vence en {{minutosVigencia}} minutos.** Si se te pasa, pedí otro desde tu cuenta las " +
+                "veces que haga falta.\n\n" +
+                "— Protección Infantil",
+            propiedades: {
+                nombrePadre: { type: "string" },
+                nombreProfesional: { type: "string" },
+                horaCita: { type: "string" },
+                codigo: { type: "string" },
+                minutosVigencia: { type: "number" },
+            },
+        },
+        {
+            evento: "cita.no_asistio.padre",
+            asunto: "Tu cita quedó registrada como no asistida",
+            cuerpoMarkdown:
+                "Hola {{nombrePadre}},\n\n" +
+                "{{nombreProfesional}} registró que la cita de {{horaCita}} no se dio porque la familia " +
+                "no se presentó.\n\n" +
+                "Si no fue así, contanoslo al responder la encuesta de la cita: revisamos los dos lados " +
+                "antes de dar nada por cerrado.\n\n" +
+                "Tenés **una reprogramación sin costo** con el mismo profesional.\n\n" +
+                "— Protección Infantil",
+            propiedades: {
+                nombrePadre: { type: "string" },
+                nombreProfesional: { type: "string" },
+                horaCita: { type: "string" },
+            },
+        },
+        {
+            evento: "cita.autocerrada.padre",
+            asunto: "Tu cita quedó sin confirmar",
+            cuerpoMarkdown:
+                "Hola {{nombrePadre}},\n\n" +
+                "Pasaron {{dias}} días desde tu cita con {{nombreProfesional}} ({{horaCita}}) y nadie " +
+                "digitó el código, así que quedó **sin confirmar**.\n\n" +
+                "Ya lo estamos revisando: no tenés que hacer nada. Te escribimos si necesitamos algo tuyo.\n\n" +
+                "— Protección Infantil",
+            propiedades: {
+                nombrePadre: { type: "string" },
+                nombreProfesional: { type: "string" },
+                horaCita: { type: "string" },
+                dias: { type: "number" },
+            },
+        },
+    ] as const;
+
+    for (const e of eventos) {
+        const plantillaClave = `${e.evento}.email`;
+        const datos = {
+            canal: "EMAIL" as const,
+            asunto: e.asunto,
+            cuerpoMarkdown: e.cuerpoMarkdown,
+            variablesSchema: { type: "object", properties: e.propiedades },
+            activa: true,
+        };
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: plantillaClave },
+            update: datos,
+            create: { clave: plantillaClave, ...datos },
+        });
+        await upsertNotificacionRegla({
+            evento: e.evento,
+            rol: "PARENT",
+            canal: "EMAIL",
+            plantillaClave,
+            obligatoria: true,
+            activa: true,
+        });
+    }
+    console.log("[SEED] Catálogo Motor Notif de los códigos de la cita listo (SPEC-427)");
+}
+
 // ── SPEC-403 (I-288 · brief A-75 §4) · la comisión de la red es PARÁMETRO ────
 // Vivía como `const PORCENTAJE_SERVICIO_DEFAULT = 15` dentro de
 // `api/padre/citas/route.ts`. El número correcto es 10 y lo cambia Jelkin sin
@@ -4068,6 +4155,7 @@ async function main() {
     await seedEmergenciaExpediente();
     await seedVerificacionProfesional();
     await seedComisionRed();
+    await seedCodigosCita();
 
     // ── SPEC-226: parámetros del ejecutor + eventos Motor Notif de acciones ──
     await seedEjecucionAcciones();

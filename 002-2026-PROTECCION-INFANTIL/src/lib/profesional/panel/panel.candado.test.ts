@@ -30,53 +30,89 @@ const leerCodigo = (r: string) =>
 const PANEL = "src/components/modules/profesional/PanelProfesional.tsx";
 const ACCIONES = "src/components/modules/profesional/SolicitudAcciones.tsx";
 const SERVICIO = "src/lib/profesional/panel/panel.service.ts";
+const CERRAR = "src/components/modules/profesional/CerrarConCodigo.tsx";
 
 describe("SPEC-425 · el panel no promete lo que no puede hacer", () => {
-    it("solo se pintan los DOS botones que tienen motor", () => {
+    it("solo se pintan los botones que tienen motor", () => {
         const acciones = leerCodigo(ACCIONES);
         // La URL se arma con plantilla: `.../solicitudes/${id}/${accion}`, y la
         // acción sale del tipo — por eso se afirma el tipo y el endpoint base.
         expect(acciones).toContain('"confirmar" | "rechazar"');
         expect(acciones).toContain("/api/profesional/solicitudes/");
-        const botones = (leerCodigo(PANEL) + acciones).match(/<button/g) ?? [];
-        expect(botones, "dos botones: Confirmar y No puedo").toHaveLength(2);
+        // SPEC-427 sumó el TERCER botón con motor: cerrar la cita con el código
+        // (`cerrarConCodigoDeCita`). Sigue siendo uno por acción implementada.
+        expect(leerCodigo(CERRAR)).toContain("/api/profesional/citas/");
+        const botones = (leerCodigo(PANEL) + acciones + leerCodigo(CERRAR)).match(/<button/g) ?? [];
+        expect(botones, "Confirmar, No puedo, Cerrar cita y No se presentó").toHaveLength(4);
     });
 
-    it("no aparece ninguno de los tres controles sin motor", () => {
-        const todo = leerCodigo(PANEL) + leerCodigo(ACCIONES);
-        for (const muerto of ["Proponer otro horario", "cerrar y cobrar", "No se presentó"]) {
+    it("no aparece ninguno de los controles que siguen sin motor", () => {
+        const todo = leerCodigo(PANEL) + leerCodigo(ACCIONES) + leerCodigo(CERRAR);
+        // «cerrar y cobrar» sigue muerto aunque SPEC-427 implementó el cierre:
+        // el COBRO es de L7. Cerrar sí; cobrar todavía no. «No se presentó» dejó
+        // esta lista el 03-09: ya tiene motor (`marcarNoAsistioElPadre`).
+        for (const muerto of ["Proponer otro horario", "cerrar y cobrar"]) {
             expect(todo, `"${muerto}" no tiene implementación: no puede ser un control`).not.toContain(muerto);
         }
     });
 
-    it("en su lugar dice qué falta, y no con un control apagado", () => {
-        const panel = leer(PANEL);
-        expect(panel).toContain("todavía no está disponible");
-        // Un `disabled` fijo sería un botón apagado prometiendo algo. El único
-        // `disabled` legítimo es el de los dos botones vivos mientras trabajan.
+    it("sigue diciendo qué falta, y no con un control apagado", () => {
+        // Lo que falta cambió: el cierre ya está, el GIRO de la plata no (L7).
+        // La pantalla lo dice en palabras en vez de insinuarlo con un botón gris.
+        expect(leer(PANEL)).toContain("todavía no está disponible");
+        // Un `disabled` fijo sería un botón apagado prometiendo algo. Los
+        // `disabled` legítimos son los de los botones vivos mientras trabajan.
         expect(leerCodigo(PANEL)).not.toContain("disabled");
     });
 
-    it("los estados de cierre siguen sin tener quien los escriba (base de la decisión)", () => {
-        // Si un día alguien implementa el cierre, este test cae y obliga a
-        // volver acá a pintar los botones. Es la contraparte del candado.
-        const src = path.join(RAIZ, "src");
-        const hallazgos: string[] = [];
+    /** Los .ts/.tsx de producción bajo src/, sin tests. */
+    function fuentesDeProduccion(): string[] {
+        const salida: string[] = [];
         const recorrer = (dir: string) => {
             for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
                 const r = path.join(dir, e.name);
                 if (e.isDirectory()) recorrer(r);
-                else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) {
-                    const t = fs.readFileSync(r, "utf-8");
-                    if (/estado:\s*"(CUMPLIDA|NO_ASISTIO_PADRE)"/.test(t)) hallazgos.push(r);
-                }
+                else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) salida.push(r);
             }
         };
-        recorrer(src);
-        expect(
-            hallazgos,
-            "alguien implementó el cierre: volvé a PanelProfesional y pintá los botones",
-        ).toEqual([]);
+        recorrer(path.join(RAIZ, "src"));
+        return salida;
+    }
+
+    it("SPEC-427 · `CUMPLIDA` se escribe en UN solo lugar, y es el del cierre", () => {
+        // Este test decía «nadie escribe CUMPLIDA» y cayó el día que SPEC-427
+        // implementó el cierre — que era exactamente para lo que estaba puesto.
+        // Ahora custodia lo siguiente: que haya UNA sola puerta. Dos lugares
+        // escribiendo el mismo estado terminan discrepando.
+        const escritores = fuentesDeProduccion().filter((r) =>
+            /estado:\s*"CUMPLIDA"/.test(fs.readFileSync(r, "utf-8")),
+        );
+        expect(escritores.map((r) => path.relative(RAIZ, r))).toEqual([
+            "src/lib/dal/repositories/solicitud-cita.ts",
+        ]);
+    });
+
+    it("SPEC-427 · `NO_ASISTIO_PADRE` también tiene UN solo escritor", () => {
+        // Los dos estados de cierre viven en el mismo lugar. Que un segundo
+        // archivo empiece a escribir cualquiera de los dos es el principio de
+        // que digan cosas distintas según por dónde entre la petición.
+        const escritores = fuentesDeProduccion().filter((r) =>
+            /estado:\s*"NO_ASISTIO_PADRE"/.test(fs.readFileSync(r, "utf-8")),
+        );
+        expect(escritores.map((r) => path.relative(RAIZ, r))).toEqual([
+            "src/lib/dal/repositories/solicitud-cita.ts",
+        ]);
+    });
+
+    it("CONTRAPRUEBA · los dos estados de cierre se buscan de verdad en el árbol", () => {
+        // Un candado que no encuentra nada porque el patrón está mal siempre
+        // pasa. Este comprueba que el patrón SÍ encuentra al escritor legítimo.
+        const repo = fs.readFileSync(
+            path.join(RAIZ, "src/lib/dal/repositories/solicitud-cita.ts"),
+            "utf-8",
+        );
+        expect(/estado:\s*"CUMPLIDA"/.test(repo)).toBe(true);
+        expect(/estado:\s*"NO_ASISTIO_PADRE"/.test(repo)).toBe(true);
     });
 });
 

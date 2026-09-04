@@ -25,6 +25,7 @@ import type {
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { programar, despacharEnvios } from "@/lib/notificaciones";
+import { trazaDeCodigos, TRAZA_VACIA, type TrazaCodigos } from "@/lib/profesional/cita/codigos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { calcularVenceEn } from "@/lib/profesionales/vigencia";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
@@ -354,12 +355,12 @@ export interface FilaIncidente {
     montoTotal: number;
     estadoDesde: string; // ISO
     /**
-     * SPEC-408 §9 · momento 6 · "traza de códigos a la vista": el modelo de
-     * los dos códigos (cita/expediente) todavía no existe (spec futuro).
-     * Este campo queda cableado para que el candado de Calidad lo vea; hoy
-     * viene como null y la UI pinta "pendiente de instrumentación".
+     * SPEC-427 · la traza que pide el brief §9 momento 6, ya instrumentada:
+     * cuántas veces se pidió cada código, cuándo salió cada envío (leído del
+     * motor, no copiado) y si el profesional lo digitó. SPEC-408 dejó este
+     * campo en `null` a la espera de esta spec.
      */
-    trazaCodigos: null;
+    trazaCodigos: TrazaCodigos;
 }
 
 /**
@@ -369,13 +370,15 @@ export interface FilaIncidente {
  */
 export async function listarIncidentesCitas(): Promise<FilaIncidente[]> {
     const solicitudes = await new VerificadorRepository().listarIncidentesSinConfirmar();
+    // Una consulta para todas las trazas, no una por fila.
+    const trazas = await trazaDeCodigos(solicitudes.map((s) => s.id));
     return solicitudes.map((s) => ({
         solicitudId: s.id,
         padre: { email: s.padreUsuario.email, nombre: s.padreUsuario.nombre },
         profesional: { email: s.profesional.usuario.email, nombreVisible: s.profesional.nombreVisible },
-        fechaCita: s.creadoEn.toISOString(),
+        fechaCita: s.franja.inicio.toISOString(),
         montoTotal: s.montoTotal,
         estadoDesde: s.actualizadoEn.toISOString(),
-        trazaCodigos: null,
+        trazaCodigos: trazas.get(s.id) ?? TRAZA_VACIA,
     }));
 }

@@ -1,0 +1,207 @@
+/**
+ * SPEC-427 (A-75 · L6 · brief §9 momento 6) — los dos códigos del cierre.
+ *
+ * El brief los describe como «el corazón del cierre»: dos códigos distintos,
+ * únicos, de un solo uso, con vigencia de 30 minutos. El padre se los entrega
+ * al profesional **de viva voz, en la sesión**; el profesional los digita.
+ *
+ *  · **Código de cita** → certifica que la sesión OCURRIÓ. Al digitarlo la cita
+ *    queda `CUMPLIDA`. Le llega al padre 10 minutos antes de la hora agendada,
+ *    en el recordatorio, diciendo en el mismo mensaje que vence en 30 minutos.
+ *  · **Código de expediente** → autoriza a ABRIR el expediente. Solo existe si
+ *    el padre eligió compartirlo.
+ *
+ * Por qué así, con las palabras del brief: «la autorización deja de ser una
+ * casilla marcada días antes y pasa a ser un acto del padre, en el momento, con
+ * constancia. Si se arrepiente, no entrega el código y no hay nada que revocar.»
+ *
+ * ## Lo que NO se inventa acá
+ * El mecanismo es el mismo del código de verificación del registro
+ * (`dal/services/autenticacion.ts:252-295`), que ya está probado: bcrypt,
+ * vencimiento, tope de intentos fallidos, y un límite de reemisiones por
+ * ventana. Se reusa el criterio, no se copia el código.
+ */
+import { randomInt } from "node:crypto";
+import bcrypt from "bcryptjs";
+import type { Prisma, TipoCodigoCita } from "@prisma/client";
+import { CodigoCitaRepository } from "@/lib/dal/repositories/codigo-cita";
+import { NotificacionRepository } from "@/lib/dal/repositories/notificacion";
+
+/** Vigencia dictada por el brief §9 momento 6. */
+export const VIGENCIA_CODIGO_MS = 30 * 60 * 1000;
+/** El recordatorio con el código sale 10 minutos antes de la hora agendada. */
+export const ANTICIPACION_RECORDATORIO_MS = 10 * 60 * 1000;
+/** Mismo tope que el código de verificación del registro. */
+export const MAX_INTENTOS_CODIGO = 5;
+/**
+ * Tope de reemisiones por ventana. El brief dice «las veces que haga falta», y
+ * eso se respeta: el tope no es un castigo al padre, es el freno a que un
+ * tercero use la pantalla de «pedir otro» como máquina de mandar correos.
+ * Generoso a propósito.
+ */
+export const MAX_REEMISIONES = 10;
+export const VENTANA_REEMISIONES_MS = 60 * 60 * 1000;
+
+/** 6 dígitos, CSPRNG. Se dicta en voz alta: más largo no se recuerda. */
+export function generarCodigo(): string {
+    return randomInt(100000, 1000000).toString();
+}
+
+export type MotivoRechazo =
+    | "sin_codigo"
+    | "expirado"
+    | "max_intentos"
+    | "incorrecto"
+    | "ya_usado";
+
+export type ResultadoCodigo =
+    | { ok: true; codigoId: string }
+    | { ok: false; motivo: MotivoRechazo };
+
+export interface CodigoEmitido {
+    /** El código EN CLARO. Solo viaja al correo del padre; nunca se persiste así. */
+    codigo: string;
+    codigoId: string;
+    expiraEn: Date;
+}
+
+export interface EmitirCodigoInput {
+    solicitudId: string;
+    tipo: TipoCodigoCita;
+    /**
+     * Cuándo empieza a valer. Para el código de cita es la hora agendada menos
+     * 10 minutos (la fila se crea al confirmar, días antes: el correo se
+     * programa con `enviarEn` y el motor lo suelta a esa hora).
+     */
+    vigenteDesde: Date;
+    tx?: Prisma.TransactionClient | undefined;
+}
+
+/**
+ * Emite un código y devuelve el claro para que el llamador lo mande.
+ *
+ * Emitir NO borra los anteriores: la traza es el conjunto de filas y el brief la
+ * exige completa («cuántas veces se pidió cada código»). Lo que invalida al
+ * viejo es dejar de ser el último sin usar — ver `findVigente`.
+ */
+export async function emitirCodigo(input: EmitirCodigoInput): Promise<CodigoEmitido> {
+    const codigo = generarCodigo();
+    const fila = await new CodigoCitaRepository(input.tx).crear({
+        solicitudId: input.solicitudId,
+        tipo: input.tipo,
+        codigoHash: await bcrypt.hash(codigo, 12),
+        expiraEn: new Date(input.vigenteDesde.getTime() + VIGENCIA_CODIGO_MS),
+    });
+    return { codigo, codigoId: fila.id, expiraEn: fila.expiraEn };
+}
+
+/** ¿Puede el padre pedir otro, o alguien está usando el botón de máquina? */
+export async function puedeReemitir(
+    solicitudId: string,
+    tipo: TipoCodigoCita,
+    ahora: Date
+): Promise<boolean> {
+    const emitidos = await new CodigoCitaRepository().contarEmitidosDesde(
+        solicitudId,
+        tipo,
+        new Date(ahora.getTime() - VENTANA_REEMISIONES_MS)
+    );
+    return emitidos < MAX_REEMISIONES;
+}
+
+/**
+ * Valida el código que digitó el profesional y lo consume.
+ *
+ * El orden importa y es el del registro: primero vencimiento, después tope de
+ * intentos, después la comparación. Un código vencido no gasta intentos —el
+ * padre pide otro y sigue— y un código con los intentos agotados no vuelve a
+ * compararse aunque acierten.
+ *
+ * El consumo va con `updateMany ... WHERE usadoEn IS NULL`: si dos peticiones
+ * llegan juntas, **solo una gana**. Un código de un solo uso no puede cerrar dos
+ * veces la misma cita.
+ */
+export async function verificarYUsar(
+    solicitudId: string,
+    tipo: TipoCodigoCita,
+    codigo: string,
+    ahora: Date
+): Promise<ResultadoCodigo> {
+    const repo = new CodigoCitaRepository();
+    const fila = await repo.findVigente(solicitudId, tipo);
+    if (!fila) return { ok: false, motivo: "sin_codigo" };
+    if (ahora > fila.expiraEn) return { ok: false, motivo: "expirado" };
+    if (fila.intentosFallidos >= MAX_INTENTOS_CODIGO) return { ok: false, motivo: "max_intentos" };
+
+    if (!(await bcrypt.compare(codigo, fila.codigoHash))) {
+        await repo.incrementarIntentos(fila.id);
+        return { ok: false, motivo: "incorrecto" };
+    }
+    if (!(await repo.marcarUsadoSiLibre(fila.id, ahora))) {
+        return { ok: false, motivo: "ya_usado" };
+    }
+    return { ok: true, codigoId: fila.id };
+}
+
+/** Una emisión, como la ven los tres: administrador, padre y profesional. */
+export interface EmisionEnTraza {
+    tipo: TipoCodigoCita;
+    pedidoEn: string;
+    expiraEn: string;
+    /** Cuándo lo digitó el profesional. `null` = no lo digitó. */
+    usadoEn: string | null;
+    intentosFallidos: number;
+    /** Estado real del envío, leído del motor. `null` = todavía no se programó. */
+    envio: { estado: string; enviarEn: string | null; sentAt: string | null } | null;
+}
+
+export interface TrazaCodigos {
+    cita: EmisionEnTraza[];
+    expediente: EmisionEnTraza[];
+}
+
+export const TRAZA_VACIA: TrazaCodigos = { cita: [], expediente: [] };
+
+/**
+ * La traza de una o varias solicitudes, en UNA consulta por tabla.
+ *
+ * El brief la quiere visible para los tres —administrador, padre y profesional—
+ * con tres datos: cuántas veces se pidió cada código, la fecha y hora de cada
+ * envío, y si el profesional lo digitó o no. Los dos primeros salen de las filas
+ * de `CodigoCita`; el estado del envío se LEE del motor en vez de copiarse,
+ * porque un `enviadoEn` propio mentiría el día que el correo falle (I-295).
+ */
+export async function trazaDeCodigos(
+    solicitudIds: string[]
+): Promise<Map<string, TrazaCodigos>> {
+    const filas = await new CodigoCitaRepository().listarPorSolicitudes(solicitudIds);
+    const notifIds = filas.map((f) => f.notificacionId).filter((x): x is string => x !== null);
+    const envios = await new NotificacionRepository().listarEstadosPorIds(notifIds);
+    const porId = new Map(envios.map((e) => [e.id, e]));
+
+    const salida = new Map<string, TrazaCodigos>();
+    for (const id of solicitudIds) salida.set(id, { cita: [], expediente: [] });
+
+    for (const f of filas) {
+        const traza = salida.get(f.solicitudId);
+        if (!traza) continue;
+        const envio = f.notificacionId ? porId.get(f.notificacionId) : undefined;
+        const emision: EmisionEnTraza = {
+            tipo: f.tipo,
+            pedidoEn: f.creadoEn.toISOString(),
+            expiraEn: f.expiraEn.toISOString(),
+            usadoEn: f.usadoEn ? f.usadoEn.toISOString() : null,
+            intentosFallidos: f.intentosFallidos,
+            envio: envio
+                ? {
+                    estado: envio.estado,
+                    enviarEn: envio.enviarEn ? envio.enviarEn.toISOString() : null,
+                    sentAt: envio.sentAt ? envio.sentAt.toISOString() : null,
+                }
+                : null,
+        };
+        if (f.tipo === "CITA") traza.cita.push(emision);
+        else traza.expediente.push(emision);
+    }
+    return salida;
+}
