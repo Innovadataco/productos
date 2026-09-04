@@ -61,6 +61,18 @@ Orden del CEO, textual: *«el candado tiene que **demostrar** que dos ramas que 
 
 ---
 
+## La trampa que apareció al rebasar esta misma spec
+
+Vale escribirla porque **es el defecto de esta spec escondido dentro de su propio arreglo**, y va a volver.
+
+Al rebasar esta rama sobre un `main` que ya se había movido, el único conflicto fue `specs/README.md`. La resolución que veníamos usando todo el día —y que esta spec recomienda— es **«no lo toques a mano: regenerá»**. Acá esa receta **estaba mal**.
+
+Este commit **quita** el bloque de contadores del README. El `main` de enfrente todavía lo tiene. Regenerar a secas sobre la versión de `main` produce un archivo **sin conflicto, que pasa el `--check` y que trae los contadores de vuelta**: el arreglo se deshace solo, en silencio, en el mismo rebase que lo transporta.
+
+**La regla que queda:** «regenerá en vez de resolver a mano» vale cuando el conflicto es **solo por filas agregadas**. Cuando el commit que estás rebasando **quita o mueve** algo del archivo generado, regenerar reconstruye el estado viejo. Ahí hay que partir de **tu** versión (`git checkout --theirs` durante un rebase — invertido respecto de un merge) y regenerar encima, y después **verificar explícitamente que lo que se quitó siga quitado**.
+
+Es la misma familia de todo lo que cazó esta spec: un cambio que **no choca** y por eso nadie mira, y que deja el archivo callado y equivocado.
+
 ## Lo que NO cubre, dicho en voz alta
 
 **Los artefactos de arquitectura son la misma clase y quedan fuera.** `docs/architecture/02-roles-capacidades.md` y `03-pantallas.md` se regeneran enteros y una ruta nueva les agrega una fila: **SPEC-447 y SPEC-437 los tocan las dos**, así que el próximo choque ya está en camino. No se incluyeron porque `arch:check` (a) los compara **byte a byte**, y tolerar el orden ahí es una decisión sobre una verificación que no es de esta spec. **Reportado al CEO con la evidencia.**
