@@ -5,7 +5,7 @@
 
 **Impacto en arquitectura:** ninguna migración. Un `ParametroSistema` nuevo (`comision.porcentaje`) y dos consumidores que lo leen. Cambia una conducta: **crear una solicitud de cita falla si el parámetro no está**, en vez de cobrar un número quemado.
 
-> **Apilada sobre [#330](https://github.com/Innovadataco/productos/pull/330) (SPEC-425)**, que es donde nació `lib/profesional/cita/comision.ts`. Sin esa base, este PR tendría que crear el módulo y volver a tocar `api/padre/citas` — conflicto garantizado. Se mergea después de #330.
+> **Se construyó sobre SPEC-425** ([#330](https://github.com/Innovadataco/productos/pull/330), ya en `main` como `7f9856e1`), que es donde nació `lib/profesional/cita/comision.ts`. Este PR sale rebasado contra `main` y trae **solo** el cambio de 403.
 
 ---
 

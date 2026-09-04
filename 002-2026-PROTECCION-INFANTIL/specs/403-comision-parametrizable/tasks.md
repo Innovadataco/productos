@@ -11,5 +11,5 @@
 
 ## Anotado
 
-- **Apilada sobre #330 (SPEC-425)**: ahí nació `comision.ts`. Se mergea después.
+- **Construida sobre SPEC-425** (#330, ya en `main`): ahí nació `comision.ts`. El PR sale rebasado contra `main`.
 - **Cambio de precio al desplegar**: en producción el parámetro no existe; el seed lo crea en 10 y el padre pasa de pagar 15 % a 10 %. Las solicitudes ya creadas conservan el suyo.
