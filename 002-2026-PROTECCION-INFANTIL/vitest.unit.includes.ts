@@ -389,4 +389,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-427 · los dos códigos del cierre: vigencia, un solo uso, tope de
     // intentos y la traza que ven los tres.
     "src/lib/profesional/cita/codigos.test.ts",
+    // SPEC-427b · H-2 (lectura auditada) y el acceso solo por código.
+    "src/lib/profesional/cita/expediente.candado.test.ts",
 ];

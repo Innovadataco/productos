@@ -96,19 +96,48 @@ export async function hechosDelExpediente(expedienteId: string, usuarioId: strin
  * en vivo desde la cadena propia + los ajenos blindados + el cruce con hijos.
  * (Movida al DAL desde la ruta — Q-3: prisma no sale del DAL.)
  */
+type ResultadoLectura = {
+    lectura: LecturaCapa1;
+    hijoCruzado: { nombre: string; anioNacimiento: number | null; sexo: string | null } | null;
+};
+
+/**
+ * SPEC-427b · la lectura del expediente por su id, calculada sobre su DUEÑO,
+ * sin exigir que el que la pide sea el padre. La autorización la resuelve el
+ * llamador (p. ej. el profesional que digitó el código); acá solo se calcula.
+ * Mantiene a Prisma dentro del DAL (Q-3): el servicio del profesional no lo toca.
+ */
+export async function lecturaDelExpedientePorId(
+    expedienteId: string
+): Promise<ResultadoLectura | null> {
+    const expediente = await prisma.expediente.findUnique({
+        where: { id: expedienteId },
+        select: { id: true, identificadorReportado: true, padreUsuarioId: true },
+    });
+    if (!expediente) return null;
+    return calcularLectura(expediente.identificadorReportado, expediente.padreUsuarioId);
+}
+
 export async function lecturaDelExpediente(
     expedienteId: string,
     usuarioId: string
-): Promise<{ lectura: LecturaCapa1; hijoCruzado: { nombre: string; anioNacimiento: number | null; sexo: string | null } | null } | null> {
+): Promise<ResultadoLectura | null> {
     const expediente = await prisma.expediente.findFirst({
         where: { id: expedienteId, padreUsuarioId: usuarioId },
         select: { id: true, identificadorReportado: true },
     });
     if (!expediente) return null;
+    return calcularLectura(expediente.identificadorReportado, usuarioId);
+}
 
+/** El cálculo puro de la capa 1 dado el identificador y su padre dueño. */
+async function calcularLectura(
+    identificadorReportado: string,
+    usuarioId: string
+): Promise<ResultadoLectura> {
     const [propios, ajenos, hijoCruzado] = await Promise.all([
         prisma.reporte.findMany({
-            where: { usuarioId, eliminado: false, identificador: expediente.identificadorReportado },
+            where: { usuarioId, eliminado: false, identificador: identificadorReportado },
             select: {
                 fechaIncidente: true,
                 ciudad: true,
@@ -120,7 +149,7 @@ export async function lecturaDelExpediente(
         }),
         prisma.reporte.findMany({
             where: whereReporteAprobado({
-                identificador: expediente.identificadorReportado,
+                identificador: identificadorReportado,
                 NOT: { usuarioId },
             }),
             select: {
@@ -137,7 +166,7 @@ export async function lecturaDelExpediente(
             where: {
                 usuarioId,
                 estado: "activo",
-                identificadores: { some: { valor: expediente.identificadorReportado, activo: true } },
+                identificadores: { some: { valor: identificadorReportado, activo: true } },
             },
             select: { nombre: true, anioNacimiento: true, sexo: true },
         }),

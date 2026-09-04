@@ -277,6 +277,29 @@ export class SolicitudCitaRepository {
         });
     }
 
+    /**
+     * SPEC-427b · citas confirmadas que arrancan dentro de la ventana, con
+     * expediente compartido, y sin código de EXPEDIENTE emitido todavía. Es el
+     * gemelo de `listarConfirmadasPorArrancar` pero para el segundo código: solo
+     * existe si el padre eligió compartir su expediente.
+     */
+    listarConfirmadasConExpedientePorArrancar(desde: Date, hasta: Date) {
+        return this.db.solicitudCita.findMany({
+            where: {
+                estado: "CONFIRMADA",
+                expedienteCompartidoId: { not: null },
+                franja: { inicio: { gte: desde, lte: hasta } },
+                codigos: { none: { tipo: "EXPEDIENTE" } },
+            },
+            include: {
+                franja: { select: { inicio: true, fin: true } },
+                padreUsuario: { select: { id: true, email: true, nombre: true } },
+                profesional: { select: { id: true, nombreVisible: true } },
+            },
+            orderBy: { creadoEn: "asc" },
+        });
+    }
+
     /** SPEC-427 · una solicitud con lo que hace falta para emitir y avisar. */
     findParaCodigo(id: string) {
         return this.db.solicitudCita.findUnique({
