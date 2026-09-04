@@ -71,6 +71,33 @@ export class SolicitudCitaRepository {
         });
     }
 
+    /**
+     * SPEC-425 (L5): el marcador del panel se cuenta EN LA BASE, no sobre
+     * `listarPorProfesional` — ese método tiene `take: 100` y a partir de la
+     * solicitud 101 el contador empezaría a mentir sin avisar. Un número que
+     * se ve bien y no lo está es peor que no mostrarlo.
+     */
+    contarPorProfesional(profesionalId: string, estados?: EstadoSolicitudCita[]): Promise<number> {
+        return this.db.solicitudCita.count({
+            where: { profesionalId, ...(estados ? { estado: { in: estados } } : {}) },
+        });
+    }
+
+    /**
+     * Familias DISTINTAS que el profesional atendió. Una familia que pidió tres
+     * citas es una familia, no tres — el marcador cuenta personas, no filas.
+     */
+    async contarFamiliasAtendidas(
+        profesionalId: string,
+        estados: EstadoSolicitudCita[],
+    ): Promise<number> {
+        const filas = await this.db.solicitudCita.groupBy({
+            by: ["padreUsuarioId"],
+            where: { profesionalId, estado: { in: estados } },
+        });
+        return filas.length;
+    }
+
     listarPendientesAprobacionPago() {
         return this.db.solicitudCita.findMany({
             where: { estado: "SIN_CONFIRMAR", pagoAprobadoEn: null },

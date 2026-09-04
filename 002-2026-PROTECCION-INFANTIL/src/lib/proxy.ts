@@ -205,6 +205,11 @@ function homeForRole(rol: string) {
     // SPEC-317 (002-PI-217): cambiado de "/dashboard" a "/dashboard/padre" (zona canónica).
     // esDestinoPermitidoPorRol para PARENT permite todo salvo admin — no hay riesgo de rebote.
     if (rol === "PARENT") return "/dashboard/padre";
+    // SPEC-425 (A-75 · L5): sin este caso el profesional caía al default
+    // "/dashboard/admin", que `esDestinoPermitidoPorRol` le niega — el mismo
+    // doble rebote que documenta SPEC-127 para el padre. El gemelo cliente es
+    // `homeParaRol`; los DOS mapas se tocan juntos, como pide la cabecera.
+    if (rol === "PROFESIONAL") return "/dashboard/profesional";
     return "/dashboard/admin";
 }
 

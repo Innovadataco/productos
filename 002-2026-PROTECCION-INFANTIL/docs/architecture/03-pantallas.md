@@ -4,7 +4,7 @@
 
 # 03 · Pantallas por rol y transiciones
 
-140 páginas (`page.tsx`) clasificadas por quién las alcanza según la
+141 páginas (`page.tsx`) clasificadas por quién las alcanza según la
 puerta real (`proxy()` ejecutado con la sesión canónica; segmentos `[x]` evaluados
 con un valor muestra fijo — al proxy solo le importa el prefijo).
 
@@ -16,6 +16,7 @@ con un valor muestra fijo — al proxy solo le importa el prefijo).
 | COMITE_CONVIVENCIA | `/dashboard/colegio/comite` |
 | COMITE_VALIDACION | `/dashboard/admin/comite` |
 | PARENT | `/dashboard/padre` |
+| PROFESIONAL | `/dashboard/profesional` |
 | SCHOOL_ADMIN | `/dashboard/colegio` |
 | VERIFICADOR | `/dashboard/admin/verificacion` |
 
@@ -143,6 +144,7 @@ Sin sesión, toda ruta protegida redirige a `/login` (página) o 401 (API).
 | `/dashboard/padre/reportar` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/padre/suscripcion` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/dashboard/perfil/notificaciones` | ADMIN, OPERADOR, COMITE_VALIDACION, SCHOOL_ADMIN, COMITE_CONVIVENCIA, PARENT | ANONIMO (redirigir→/login) |
+| `/dashboard/profesional` | PARENT | ADMIN (redirigir→/dashboard/admin)<br>OPERADOR (redirigir→/dashboard/admin)<br>COMITE_VALIDACION (redirigir→/dashboard/admin/comite)<br>SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite)<br>ANONIMO (redirigir→/login) |
 | `/docs` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/docs/operar` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
 | `/docs/tecnico` | ADMIN, OPERADOR, COMITE_VALIDACION, PARENT, ANONIMO | SCHOOL_ADMIN (redirigir→/dashboard/colegio)<br>COMITE_CONVIVENCIA (redirigir→/dashboard/colegio/comite) |
@@ -175,6 +177,7 @@ flowchart LR
     bloqueado_COMITE_CONVIVENCIA[ruta no permitida] -->|COMITE_CONVIVENCIA| COMITE_CONVIVENCIA([/dashboard/colegio/comite])
     bloqueado_COMITE_VALIDACION[ruta no permitida] -->|COMITE_VALIDACION| COMITE_VALIDACION([/dashboard/admin/comite])
     bloqueado_PARENT[ruta no permitida] -->|PARENT| PARENT([/dashboard/padre])
+    bloqueado_PROFESIONAL[ruta no permitida] -->|PROFESIONAL| PROFESIONAL([/dashboard/profesional])
     bloqueado_SCHOOL_ADMIN[ruta no permitida] -->|SCHOOL_ADMIN| SCHOOL_ADMIN([/dashboard/colegio])
     bloqueado_VERIFICADOR[ruta no permitida] -->|VERIFICADOR| VERIFICADOR([/dashboard/admin/verificacion])
 ```

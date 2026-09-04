@@ -10,10 +10,12 @@ import { verifyAuth } from "@/lib/auth";
 import { errorToResponse } from "@/lib/api-handler";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
+// SPEC-425: el porcentaje vive en un solo lugar — el panel del profesional
+// muestra este mismo número y no puede divergir del que se cobra.
+import { PORCENTAJE_SERVICIO_DEFAULT } from "@/lib/profesional/cita/comision";
 import { crearSolicitudCita } from "@/lib/profesional/cita/cita.service";
 
 /** Porcentaje de comisión del sistema (aviso CEO: parametrizable después). */
-const PORCENTAJE_SERVICIO_DEFAULT = 15;
 
 const crearSchema = z.object({
     profesionalId: z.string().uuid(),
