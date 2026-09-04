@@ -34,8 +34,12 @@ export interface PerfilProfesionalPublicoDto {
 /** Campos que ve el propio profesional al leer SU perfil (incluye el estado
  *  para saber si ya está EN_REVISION, y una bandera «autorización subida»
  *  pero NUNCA la ruta cifrada ni la fecha exacta — L2 y él bastan con
- *  saber que ya la subió). */
-export interface PerfilProfesionalPropioDto extends PerfilProfesionalPublicoDto {
+ *  saber que ya la subió).
+ *  SPEC-434 (I-302): agregamos `paisId` a la ciudad — la pantalla de completar
+ *  necesita el país para armar el `CiudadSearchSelect` al recargar. Es vista
+ *  propia, no rompe la reserva del directorio público. */
+export interface PerfilProfesionalPropioDto extends Omit<PerfilProfesionalPublicoDto, "ciudad"> {
+    ciudad: { id: string; nombre: string; paisId: string };
     autorizacionSubida: boolean;
 }
 
@@ -50,7 +54,7 @@ export const CAMPOS_INTERNOS_PROFESIONAL = [
     "autorizacionSubidaEn",
 ] as const;
 
-type PerfilConCiudad = PerfilProfesional & { ciudad: Pick<Ciudad, "id" | "nombre"> };
+type PerfilConCiudad = PerfilProfesional & { ciudad: Pick<Ciudad, "id" | "nombre" | "paisId"> };
 
 function base(perfil: PerfilConCiudad): PerfilProfesionalPublicoDto {
     return {
@@ -78,6 +82,8 @@ export function toPerfilProfesionalPublico(perfil: PerfilConCiudad): PerfilProfe
 export function toPerfilProfesionalPropio(perfil: PerfilConCiudad): PerfilProfesionalPropioDto {
     return {
         ...base(perfil),
+        ciudad: { id: perfil.ciudad.id, nombre: perfil.ciudad.nombre, paisId: perfil.ciudad.paisId },
+        // SPEC-436 renombró `autorizacionArchivoUrl` a `autorizacionArchivoId`.
         autorizacionSubida: perfil.autorizacionArchivoId !== null,
     };
 }

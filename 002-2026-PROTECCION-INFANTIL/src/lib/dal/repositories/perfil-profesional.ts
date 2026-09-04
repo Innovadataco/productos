@@ -29,9 +29,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
-/** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional. */
-const INCLUDE_CIUDAD = { ciudad: { select: { id: true, nombre: true } } } as const;
-export type PerfilConCiudad = PerfilProfesional & { ciudad: { id: string; nombre: string } };
+/** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
+ *  SPEC-434 (I-302): agregamos `paisId` — la pantalla de completar necesita
+ *  seleccionar el país para armar el `<CiudadSearchSelect>` en la recarga.
+ *  Sigue siendo vista PROPIA; H-2 (Ley 2375/2024) no aplica sobre `paisId`. */
+const INCLUDE_CIUDAD = { ciudad: { select: { id: true, nombre: true, paisId: true } } } as const;
+export type PerfilConCiudad = PerfilProfesional & { ciudad: { id: string; nombre: string; paisId: string } };
 
 /**
  * L3 (SPEC-392) · H-2 · protección de tipo, no convención.
