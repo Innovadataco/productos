@@ -135,10 +135,29 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
  * primer ítem del menú. Verificación y Mi ficha se quedan como accesos
  * directos hasta que el panel absorba esas dos superficies.
  */
-export const PROFESIONAL_NAV_ITEMS: PadreNavItem[] = [
-    { href: "/dashboard/profesional", label: "Panel" },
-    { href: "/perfil-profesional/verificacion", label: "Verificación" },
-    { href: "/perfil-profesional/completar", label: "Mi ficha" },
+/**
+ * SPEC-437 (A-75) · el menú del profesional, con su módulo por ítem.
+ *
+ * Antes de esta spec era un `PadreNavItem[]` **sin un solo consumidor**:
+ * `NavHeader` tenía los dos enlaces quemados aparte y ni siquiera coincidían
+ * con esta lista (acá había un «Panel» que el encabezado nunca pintó). Ahora es
+ * la fuente ÚNICA de la barra lateral y del desplegable, para que los dos
+ * menús no puedan volver a divergir.
+ *
+ * Cada ítem cuelga de un módulo concedible, igual que los del operador: se
+ * conceden y revocan desde el panel de permisos (`CATALOGO_MODULOS`).
+ *
+ * **Candado del radicado (I-299): acá NO se lista una pantalla que no exista.**
+ * «Calendario» (`/dashboard/profesional/calendario`) entra cuando SPEC-447 la
+ * construya; su módulo ya está sembrado, que es otra cosa. Un ítem que lleva a
+ * una pantalla muerta es la promesa rota que I-299 vino a cerrar.
+ */
+export const PROFESIONAL_NAV_ITEMS: NavItem[] = [
+    { href: "/dashboard/profesional", label: "Inicio", modulo: "profesional_inicio" },
+    { href: "/dashboard/profesional/citaciones", label: "Citaciones", modulo: "profesional_citaciones" },
+    { href: "/dashboard/profesional/casos", label: "Casos", modulo: "profesional_casos" },
+    { href: "/perfil-profesional/completar", label: "Mi ficha", modulo: "profesional_ficha" },
+    { href: "/perfil-profesional/verificacion", label: "Verificación", modulo: "profesional_verificacion" },
 ];
 
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */

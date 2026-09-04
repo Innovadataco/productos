@@ -98,4 +98,20 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // Default: SOLO rol ADMIN (por `ADMIN: modulosSeed.map(...)` en seed-modulos-grants.ts).
     // NUNCA otorgar a OPERADOR/COMITE/SCHOOL_ADMIN sin auditoría explícita de CEO.
     { clave: "sistema_admin", nombre: "Administración del sistema (servicios docker)", categoria: "admin", esCritico: true, orden: 200 },
+    // ── SPEC-437 (A-75) · los módulos del PROFESIONAL ──────────────────────
+    // Orden de Jelkin: «debe aparecer sus módulos, debemos utilizar la misma
+    // lógica de operador». Cada ítem de su menú cuelga de un módulo concedible
+    // —se conceden y revocan desde el panel de permisos, no quemados en
+    // código—, igual que los del operador.
+    //
+    // `profesional_calendario` se siembra acá aunque su PANTALLA llegue con
+    // SPEC-447: el módulo es el permiso, y el menú solo pinta lo que existe.
+    // Tener el permiso sin pantalla no pinta nada; tener la pantalla sin
+    // permiso tampoco. Los dos hacen falta.
+    { clave: "profesional_inicio", nombre: "Inicio del profesional", categoria: "profesional", orden: 500 },
+    { clave: "profesional_citaciones", nombre: "Citaciones", categoria: "profesional", orden: 510 },
+    { clave: "profesional_casos", nombre: "Casos", categoria: "profesional", orden: 520 },
+    { clave: "profesional_calendario", nombre: "Calendario", categoria: "profesional", orden: 530 },
+    { clave: "profesional_ficha", nombre: "Mi ficha", categoria: "profesional", orden: 540 },
+    { clave: "profesional_verificacion", nombre: "Verificación", categoria: "profesional", orden: 550 },
 ];

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS } from "./nav-items";
+import { ADMIN_NAV_ITEMS, COLEGIO_NAV_ITEMS, COMITE_COLEGIO_NAV_ITEMS, COMITE_NAV_TABS, IA_TABS, PROFESIONAL_NAV_ITEMS } from "./nav-items";
 import type { NavItem } from "./nav-items";
 import { CATALOGO_MODULOS } from "./permisos-catalogo";
 
@@ -57,6 +57,13 @@ const SIN_PANTALLA_PROPIA = new Set([
     // servicios docker) es un módulo de acción endpoint-only; no tiene ítem de
     // menú lateral propio en este SPEC — el tablero de servicios lo agrega D-83.
     "sistema_admin",
+    // SPEC-437 (A-75): el módulo del calendario del profesional se siembra ya
+    // —el permiso se puede conceder— pero su PANTALLA la construye SPEC-447.
+    // El menú no pinta un ítem hacia una pantalla que no existe: es el candado
+    // I-299 y manda sobre la lista de seis del radicado. En cuanto 447 esté en
+    // main, «Calendario» entra a PROFESIONAL_NAV_ITEMS y esta línea SE BORRA
+    // — el test de abajo la exige y se pone rojo si sobra.
+    "profesional_calendario",
 ]);
 
 // SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;
@@ -68,7 +75,10 @@ function aplanar(items: NavItem[]): NavItem[] {
 // SPEC-285 (002-PI-185, I-135): PADRE_NAV_ITEMS ya no lleva `modulo` (el área padre
 // no usa permisos granulares por módulo; el proxy controla por rol). Por eso queda
 // fuera de la verificación menú↔catálogo — se cubre por proxy.test.ts.
-const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS]);
+// SPEC-437 (A-75): el menú del profesional entra a esta verificación. Antes no
+// estaba porque `PROFESIONAL_NAV_ITEMS` no tenía módulos —ni consumidores—; hoy
+// cuelga de módulos concedibles como el del operador y se audita igual.
+const TODOS_LOS_ITEMS = aplanar([...ADMIN_NAV_ITEMS, ...COLEGIO_NAV_ITEMS, ...COMITE_COLEGIO_NAV_ITEMS, ...COMITE_NAV_TABS, ...PROFESIONAL_NAV_ITEMS]);
 
 describe("estructura menú ↔ catálogo", () => {
     it("todo ítem de menú referencia un módulo existente en el catálogo", () => {

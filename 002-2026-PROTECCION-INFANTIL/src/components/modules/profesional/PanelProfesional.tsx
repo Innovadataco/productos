@@ -14,6 +14,12 @@ import { SolicitudAcciones } from "./SolicitudAcciones";
  * va una línea que dice qué falta, no un control apagado — un botón
  * deshabilitado sigue prometiendo algo.
  */
+/**
+ * SPEC-437 (A-75): los bloques se EXPORTAN porque «Citaciones» y «Casos»
+ * son ahora pantallas propias del menú y muestran exactamente esto mismo.
+ * Reusar el bloque —no copiarlo— es lo que impide que el Inicio y la
+ * pantalla dedicada digan cosas distintas del mismo dato.
+ */
 export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
     const pendientes = data.solicitudes.length;
 
@@ -98,7 +104,7 @@ function Avatar({ nombre }: { nombre: string }) {
     );
 }
 
-function Solicitudes({ data }: { data: PanelProfesionalDto }) {
+export function Solicitudes({ data }: { data: PanelProfesionalDto }) {
     const n = data.solicitudes.length;
     return (
         <Bloque titulo="Solicitudes de primera cita" cuenta={n > 0 ? `${n} sin responder` : undefined}>
@@ -140,7 +146,7 @@ function Solicitudes({ data }: { data: PanelProfesionalDto }) {
     );
 }
 
-function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
+export function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
     const n = data.casosPorCerrar.length;
     return (
         <Bloque titulo="Casos por cerrar" cuenta={n > 0 ? `${n} pendiente${n === 1 ? "" : "s"}` : undefined}>
@@ -174,7 +180,7 @@ function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
     );
 }
 
-function CitasConfirmadas({ data }: { data: PanelProfesionalDto }) {
+export function CitasConfirmadas({ data }: { data: PanelProfesionalDto }) {
     const n = data.citasConfirmadas.length;
     return (
         <Bloque titulo="Citas confirmadas" cuenta={n > 0 ? `${n} por delante` : undefined} calma>
@@ -214,7 +220,7 @@ function pesos(valor: number): string {
     }).format(valor);
 }
 
-function PorCobrar({ data }: { data: PanelProfesionalDto }) {
+export function PorCobrar({ data }: { data: PanelProfesionalDto }) {
     const { montoRetenido, citasEsperandoCierre, desglose } = data.porCobrar;
     return (
         <Bloque titulo="Por cobrar">
