@@ -390,15 +390,17 @@ export function NavHeader() {
                                 {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
                                     <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Gestión de casos</MobileLink>
                                 )}
-                                {/* SPEC-424 (I-299): items del profesional. */}
+                                {/* SPEC-437 (A-75): el menú móvil sale de la MISMA lista que el
+                                    desplegable y la barra lateral. Tenerlo quemado acá era el
+                                    defecto de verdad: el botón «Dashboard» del encabezado es
+                                    `hidden sm:inline-flex`, así que en teléfono un profesional
+                                    veía solo Verificación y Mi ficha y NO tenía por dónde volver
+                                    a su panel. Tres renderizadores, una sola fuente. */}
                                 {user.rol === "PROFESIONAL" && (
                                     <>
-                                        {esEnlaceNavegable("/perfil-profesional/verificacion") && (
-                                            <MobileLink href="/perfil-profesional/verificacion" onClick={() => setMobileOpen(false)}>Verificación</MobileLink>
-                                        )}
-                                        {esEnlaceNavegable("/perfil-profesional/completar") && (
-                                            <MobileLink href="/perfil-profesional/completar" onClick={() => setMobileOpen(false)}>Mi ficha</MobileLink>
-                                        )}
+                                        {PROFESIONAL_NAV_ITEMS.filter((item) => esEnlaceNavegable(item.href)).map((item) => (
+                                            <MobileLink key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>{item.label}</MobileLink>
+                                        ))}
                                     </>
                                 )}
                                 <button

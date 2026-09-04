@@ -4973,5 +4973,3 @@ href nuevo sin guarda declarada hace fallar la aserción B ruidosamente).
 | `/dashboard/padre/circulo-confianza` | PARENT |
 | `/login` | ANONIMO |
 | `/mis-reportes` | PARENT |
-| `/perfil-profesional/completar` | PROFESIONAL |
-| `/perfil-profesional/verificacion` | PROFESIONAL |

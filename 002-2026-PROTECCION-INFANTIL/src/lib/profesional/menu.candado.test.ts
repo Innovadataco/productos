@@ -118,17 +118,47 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
         ).toBe(true);
     });
 
-    it("`NavHeader` ya no lleva los enlaces del profesional quemados aparte", () => {
+    /**
+     * Este candado nació con el assert MÁS ANGOSTO QUE SU PROPIO NOMBRE: decía
+     * «NavHeader ya no lleva los enlaces quemados» pero solo miraba
+     * `NavDropdownLink`. `NavHeader.tsx` tiene DOS menús —el desplegable de
+     * escritorio y el móvil (`MobileLink`, `sm:hidden`, 200 líneas más abajo)—
+     * y el móvil seguía quemado. Pasaba en verde con el defecto vivo: en
+     * teléfono el profesional no tenía por dónde volver a su panel, porque el
+     * botón «Dashboard» es `hidden sm:inline-flex`.
+     *
+     * Ahora el barrido es por ARCHIVO, no por componente: cualquier destino del
+     * profesional quemado en cualquiera de los dos menús lo mata. Si mañana
+     * aparece un tercer renderizador, también.
+     */
+    it("`NavHeader` no lleva NINGÚN destino del profesional quemado, en ninguno de sus menús", () => {
         const header = leerCodigo("src/components/modules/NavHeader.tsx");
         expect(
             /PROFESIONAL_NAV_ITEMS/.test(header),
-            "El desplegable tenía dos enlaces quemados que ni coincidían con la " +
-                "constante — dos menús del mismo actor pudiendo decir cosas distintas.",
+            "Los menús del profesional salen de la constante, no de enlaces sueltos.",
         ).toBe(true);
+
+        // Los dos renderizadores tienen que consumir la constante. Que uno la
+        // use y el otro no es exactamente la divergencia que la spec cierra.
+        for (const componente of ["NavDropdownLink", "MobileLink"]) {
+            const usaLaConstante = new RegExp(
+                `PROFESIONAL_NAV_ITEMS[\\s\\S]{0,400}?<${componente}\\b`,
+            ).test(header);
+            expect(
+                usaLaConstante,
+                `<${componente}> no pinta PROFESIONAL_NAV_ITEMS: ese menú puede decir algo distinto del otro.`,
+            ).toBe(true);
+        }
+
+        // Y ningún href del profesional escrito a mano, sea cual sea el
+        // componente que lo pinte.
+        const quemados = header
+            .split("\n")
+            .filter((l) => /href="\/(perfil-profesional|dashboard\/profesional)\//.test(l));
         expect(
-            /NavDropdownLink href="\/perfil-profesional\//.test(header),
-            "Un href del profesional quemado en el header vuelve a abrir la divergencia.",
-        ).toBe(false);
+            quemados,
+            `Destinos del profesional quemados en NavHeader (deben salir de PROFESIONAL_NAV_ITEMS):\n${quemados.join("\n")}`,
+        ).toEqual([]);
     });
 
     it("el área del profesional tiene layout con barra lateral, y también su ficha", () => {
