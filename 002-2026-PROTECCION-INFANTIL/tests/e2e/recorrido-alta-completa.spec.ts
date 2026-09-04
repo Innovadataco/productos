@@ -370,8 +370,10 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
         // profesional aprobado nunca puede publicar disponibilidad desde su
         // panel.
         //
-        // Cuando SPEC-447 despliegue, existirá `/perfil-profesional/franjas`
-        // (o su equivalente en el panel del profesional), un GET responderá
+        // Cuando SPEC-447 despliegue, existirá `/dashboard/profesional/calendario`
+        // (contrato fijado por el CEO 04-09 14:22: es área de TRABAJO del
+        // profesional, no configuración de su ficha; `/perfil-profesional/*`
+        // queda reservado a completar y verificar el perfil). Un GET responderá
         // 200 con el formulario, y publicar por esa pantalla creará al menos
         // una `FranjaDisponible`. Hoy el endpoint `POST /api/profesional/franjas`
         // existe (verificado en `src/app/api/profesional/franjas/route.ts`),
@@ -380,7 +382,7 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
         // Este candado NO ejercita el endpoint — cae en el punto donde el
         // recorrido REAL muere: no hay pantalla. Cuando SPEC-447 la traiga,
         // el `test.fail` se convierte en "unexpected pass" y se parte en dos:
-        // (D1) `GET /perfil-profesional/franjas` → 200; (D2) submit crea una
+        // (D1) `GET /dashboard/profesional/calendario` → 200; (D2) submit crea una
         // franja y aparece en `GET /api/profesional/franjas`.
         test.fail(true, "SPEC-447 (Dev X) trae la pantalla de franjas del profesional — I-311. Se quita cuando esa spec despliegue.");
 
@@ -388,10 +390,10 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
         try {
             // Sin sesión: la ruta puede redirigir al login (307) o dar 404 si
             // no existe. La afirmación es que exista — hoy responde 404.
-            const pantalla = await request.get("/perfil-profesional/franjas", { maxRedirects: 0 });
+            const pantalla = await request.get("/dashboard/profesional/calendario", { maxRedirects: 0 });
             expect(
                 pantalla.status() === 200 || (pantalla.status() >= 300 && pantalla.status() < 400),
-                `I-311: /perfil-profesional/franjas debe existir (200 o 3xx al login), no 404. status=${pantalla.status()}`,
+                `I-311: /dashboard/profesional/calendario debe existir (200 o 3xx al login), no 404. status=${pantalla.status()}`,
             ).toBe(true);
         } finally {
             await request.dispose();
