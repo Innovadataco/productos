@@ -89,4 +89,10 @@ Mismo mensaje, mismo límite. Y otra vez **no se borró nada**: la transacción 
 ## Lo que NO se tocó
 
 - **El marcado retroactivo.** Ya iba por lotes desde SPEC-412 (`marcar()` en tandas de 1.000) y por eso las 37.176 marcas se escribieron sin problema. El estado actual es **«marcado, sin borrar»**, que es exactamente donde hay que estar.
-- **`scripts/demo/borrar-demo.ts`** (el borrador v1, por prefijo) tiene la misma clase de riesgo en su `alertaIds`. Está fuera del alcance de esta spec y en vías de retiro; queda anotado por si se corre antes de jubilarlo.
+- **`scripts/demo/borrar-demo.ts`** (el borrador v1, por prefijo) tiene la misma clase de riesgo en su `alertaIds`.
+
+### Deuda anotada, con visto bueno del CEO (03-09 19:25)
+
+**`borrar-demo.ts` y los `borrar-demo-vN.ts` se jubilan.** El borrador por marcador (`borrar-demo-marcado.ts`) los reemplaza a todos: uno solo para toda la siembra, en vez de un borrador por generación que hay que recordar correr en orden.
+
+**No se hace ahora, a propósito**: la resiembra está esperando y no se mezcla limpieza con una operación en producción. Queda para mañana. Hasta entonces, el riesgo vivo es que alguien corra un `borrar-demo-vN` con más de 32.767 ids y reviente igual — ruidoso y sin borrar nada, como pasó hoy, pero reviente.
