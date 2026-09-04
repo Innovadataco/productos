@@ -384,6 +384,10 @@ enum AccionAudit {
   CITA_PROFESIONAL_CUMPLIDA
   CITA_PROFESIONAL_AUTOCERRADA
   CITA_PROFESIONAL_NO_ASISTIO_PADRE
+  // SPEC-427b · el código de expediente. DIGITADO = el profesional lo tecleó;
+  // ABIERTO = cada lectura del expediente (auditoría H-2, una por acceso).
+  CITA_PROFESIONAL_CODIGO_DIGITADO
+  CITA_PROFESIONAL_EXPEDIENTE_ABIERTO
 }
 
 enum TipoPeriodoServicio {

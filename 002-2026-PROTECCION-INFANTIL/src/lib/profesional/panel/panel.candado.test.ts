@@ -31,6 +31,7 @@ const PANEL = "src/components/modules/profesional/PanelProfesional.tsx";
 const ACCIONES = "src/components/modules/profesional/SolicitudAcciones.tsx";
 const SERVICIO = "src/lib/profesional/panel/panel.service.ts";
 const CERRAR = "src/components/modules/profesional/CerrarConCodigo.tsx";
+const ABRIR = "src/components/modules/profesional/AbrirExpediente.tsx";
 
 describe("SPEC-425 · el panel no promete lo que no puede hacer", () => {
     it("solo se pintan los botones que tienen motor", () => {
@@ -39,15 +40,17 @@ describe("SPEC-425 · el panel no promete lo que no puede hacer", () => {
         // acción sale del tipo — por eso se afirma el tipo y el endpoint base.
         expect(acciones).toContain('"confirmar" | "rechazar"');
         expect(acciones).toContain("/api/profesional/solicitudes/");
-        // SPEC-427 sumó el TERCER botón con motor: cerrar la cita con el código
-        // (`cerrarConCodigoDeCita`). Sigue siendo uno por acción implementada.
+        // SPEC-427 sumó el cierre; SPEC-427b, abrir el expediente con su código.
+        // Cada botón nuevo apunta a un endpoint real.
         expect(leerCodigo(CERRAR)).toContain("/api/profesional/citas/");
-        const botones = (leerCodigo(PANEL) + acciones + leerCodigo(CERRAR)).match(/<button/g) ?? [];
-        expect(botones, "Confirmar, No puedo, Cerrar cita y No se presentó").toHaveLength(4);
+        expect(leerCodigo(ABRIR)).toContain("/api/profesional/citas/");
+        const botones = (leerCodigo(PANEL) + acciones + leerCodigo(CERRAR) + leerCodigo(ABRIR)).match(/<button/g) ?? [];
+        // Confirmar, No puedo, Cerrar cita, No se presentó, Abrir expediente.
+        expect(botones, "cinco botones, todos con motor").toHaveLength(5);
     });
 
     it("no aparece ninguno de los controles que siguen sin motor", () => {
-        const todo = leerCodigo(PANEL) + leerCodigo(ACCIONES) + leerCodigo(CERRAR);
+        const todo = leerCodigo(PANEL) + leerCodigo(ACCIONES) + leerCodigo(CERRAR) + leerCodigo(ABRIR);
         // «cerrar y cobrar» sigue muerto aunque SPEC-427 implementó el cierre:
         // el COBRO es de L7. Cerrar sí; cobrar todavía no. «No se presentó» dejó
         // esta lista el 03-09: ya tiene motor (`marcarNoAsistioElPadre`).
@@ -132,10 +135,18 @@ describe("SPEC-425 · el marcador respeta el brief §3", () => {
         expect(servicio).not.toMatch(/familiasAtendidas: new Set\(/);
     });
 
-    it("los expedientes compartidos se listan, no se abren (brief §9)", () => {
+    it("SPEC-427b · el expediente se abre SOLO con el código, nunca por un enlace", () => {
+        // SPEC-425 los dejaba listados sin abrir. 427b los abre —pero solo con
+        // el código que dicta el padre—. Lo que NO puede haber es un `href` que
+        // lleve al expediente saltándose el código: el acceso pasa por el POST
+        // que consume el código, no por un link.
         const panel = leerCodigo(PANEL);
         expect(panel).not.toMatch(/href=.*expediente/i);
-        expect(leer(PANEL)).toContain("se abre con el código que la familia te entrega");
+        // El componente que abre existe y entra por el endpoint, no por navegación.
+        expect(panel).toContain("AbrirExpediente");
+        const abrir = leerCodigo(ABRIR);
+        expect(abrir).toContain("/api/profesional/citas/");
+        expect(abrir).not.toMatch(/href=.*expediente/i);
     });
 });
 

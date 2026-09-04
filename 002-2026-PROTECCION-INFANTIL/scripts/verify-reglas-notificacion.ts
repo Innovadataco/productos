@@ -87,6 +87,12 @@ export const REGLAS_REQUERIDAS: ReglaRequerida[] = [
         bloquea: false,
     },
     {
+        evento: "cita.codigo_expediente.recordatorio",
+        sostiene: "llevarle al padre el segundo código, el que abre el expediente en solo lectura (SPEC-427b)",
+        callsite: "src/lib/profesional/cita/expediente.service.ts",
+        bloquea: false,
+    },
+    {
         evento: "cita.autocerrada.padre",
         sostiene: "avisarle al padre que su cita murió sin confirmar — es su única señal de que algo salió mal (SPEC-427)",
         callsite: "src/lib/profesional/cita/cierre.service.ts",

@@ -13,10 +13,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **347** |
+| **Total de specs** | **348** |
 | 🔵 PLANEADO | 59 |
 | 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 162 |
+| 🟢 IMPLEMENTADO | 163 |
 | 🧪 PENDIENTE DE PRUEBA | 0 |
 | ✅ FINALIZADO | 38 |
 | 📁 CERRADA | 63 |
@@ -376,6 +376,7 @@
 | [422](422-registro-profesional-publico/spec.md) | SPEC-422 · «Soy profesional» era un enlace muerto — cierra I-297 | 🟢 IMPLEMENTADO |
 | [425](425-panel-profesional/spec.md) | SPEC-425 · El panel del profesional (A-75 · lote L5) | 🟢 IMPLEMENTADO |
 | [427](427-codigos-y-cierre-de-la-cita/spec.md) | SPEC-427 · Los dos códigos y el cierre de la cita — A-75 · L6 | 🟢 IMPLEMENTADO |
+| [427](427b-codigo-expediente/spec.md) | SPEC-427b · El código de expediente, de punta a punta — A-75 · L6 | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 
 ## Incidencias de calidad de datos

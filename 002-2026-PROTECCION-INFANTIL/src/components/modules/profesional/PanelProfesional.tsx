@@ -4,6 +4,7 @@ import { fechaCorta, fechaHora } from "@/lib/format/fecha";
 import type { PanelProfesionalDto } from "@/lib/profesional/panel/panel.service";
 import { SolicitudAcciones } from "./SolicitudAcciones";
 import { CerrarConCodigo } from "./CerrarConCodigo";
+import { AbrirExpediente } from "./AbrirExpediente";
 
 /** Días del autocierre (brief §3). Lo dice el servidor; acá solo se muestra. */
 const DIAS_AUTOCIERRE_UI = 5;
@@ -325,19 +326,14 @@ function ExpedientesCompartidos({ data }: { data: PanelProfesionalDto }) {
             ) : (
                 <ul className="space-y-2">
                     {data.expedientesCompartidos.map((e) => (
-                        <li key={e.solicitudId} className="rounded-xl bg-cielo/8 p-3">
-                            <p className="text-sm font-medium text-body">{e.padreNombre}</p>
-                            <p className="text-xs text-muted">
-                                Solo lectura · el padre puede cerrarlo cuando quiera
-                            </p>
-                        </li>
+                        <AbrirExpediente key={e.solicitudId} solicitudId={e.solicitudId} padreNombre={e.padreNombre} />
                     ))}
                 </ul>
             )}
-            {/* Brief §9: se listan, no se abren sin el código que da el padre. */}
+            {/* Brief §9 momento 6: se abren con el código que la familia entrega. */}
             <p className="mt-3 text-xs text-subtle">
-                El expediente se abre con el código que la familia te entrega en la sesión. Desde acá
-                solo ves quién te lo compartió.
+                Cada expediente se abre con el código que la familia te dicta en la sesión, en solo
+                lectura. Sin ese código, solo ves quién te lo compartió.
             </p>
         </Bloque>
     );
