@@ -58,7 +58,7 @@ const CAMPOS_PROHIBIDOS = [
     // los tocara).
     "resultado",
     "checklist",
-    "autorizacionArchivoUrl",
+    "autorizacionArchivoId",
     "notaInterna",
     "avisoVencimientoEnviadoEn",
 ] as const;

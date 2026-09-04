@@ -4,7 +4,7 @@
  * CANDADO LEGAL (Ley 1918/2018 · 2375/2024 · brief §5): el profesional ve
  * SOLO la observación escrita del ítem que quedó `NO_CUMPLE`. Nunca ve
  * `resultado`, `checklist` como estructura completa, `revisadoPor`, `notaInterna`
- * ni `autorizacionArchivoUrl`. Esa es la evaluación de IDC sobre él, no un
+ * ni `autorizacionArchivoId`. Esa es la evaluación de IDC sobre él, no un
  * dato suyo. Calidad tiene un candado que caza fugas de estos campos.
  */
 import type { EstadoPerfilProfesional } from "@prisma/client";
@@ -49,7 +49,7 @@ export async function verificacionParaProfesional(usuarioId: string): Promise<Vi
     }
     // Puede reenviar si su perfil está en BORRADOR (típico tras rechazo) y la
     // autorización sigue cargada — el service verifica igual antes de mover.
-    const puedeReenviar = perfil.estado === "BORRADOR" && Boolean(perfil.autorizacionArchivoUrl);
+    const puedeReenviar = perfil.estado === "BORRADOR" && Boolean(perfil.autorizacionArchivoId);
     return {
         estadoPerfil: perfil.estado,
         puedeReenviar,
@@ -73,7 +73,7 @@ export async function reenviarParaVerificacion(usuarioId: string): Promise<void>
             409,
         );
     }
-    if (!perfil.autorizacionArchivoUrl) {
+    if (!perfil.autorizacionArchivoId) {
         throw new AppError(
             "Falta subir la autorización firmada antes de reenviar",
             ERROR_CODES.VALIDATION_ERROR,

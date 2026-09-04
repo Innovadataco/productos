@@ -48,7 +48,7 @@ describe("calcularVenceEn — Ley 2375/2024 (SPEC-389)", () => {
 
 // ── Reserva legal del resultado (Ley 1918/2018 · art. 10) ────────────────
 describe("sellos — reserva legal (SPEC-389)", () => {
-    const claveReservadaJamas = ["resultado", "checklist", "autorizacionArchivoUrl", "notaInterna"];
+    const claveReservadaJamas = ["resultado", "checklist", "autorizacionArchivoId", "notaInterna"];
     const perfilActivo = { estado: "ACTIVO" as const };
 
     function verifAprobada(diasVigencia = 60): VerificacionResumenInput {

@@ -28,7 +28,7 @@ type Prohibido =
     | "datosFacturacion"
     | "resultado"
     | "checklist"
-    | "autorizacionArchivoUrl"
+    | "autorizacionArchivoId"
     | "notaInterna"
     | "avisoVencimientoEnviadoEn";
 

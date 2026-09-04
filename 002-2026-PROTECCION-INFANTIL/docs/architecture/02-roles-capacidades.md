@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 8 roles (7 autenticados + anónimo) × 538 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4304 combinaciones.
+Inventario: 8 roles (7 autenticados + anónimo) × 541 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4328 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -218,6 +218,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | permitir | permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -398,6 +399,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/documentos` | api | permitir | permite | sí |
+| `/api/profesional/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -761,6 +764,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | permitir | permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -941,6 +945,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/documentos` | api | permitir | permite | sí |
+| `/api/profesional/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -1304,6 +1310,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | permitir | permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | permitir | permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -1484,6 +1491,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/documentos` | api | permitir | permite | sí |
+| `/api/profesional/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -1847,6 +1856,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/alertas` | api | HTTP 403 | no permite | sí |
 | `/api/alertas/[id]` | api | HTTP 403 | no permite | sí |
@@ -2027,6 +2037,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/documentos` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/panel` | api | HTTP 403 | no permite | sí |
@@ -2390,6 +2402,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/alertas` | api | HTTP 403 | no permite | sí |
 | `/api/alertas/[id]` | api | HTTP 403 | no permite | sí |
@@ -2570,6 +2583,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | HTTP 403 | no permite | sí |
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/documentos` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/panel` | api | HTTP 403 | no permite | sí |
@@ -2933,6 +2948,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -3113,6 +3129,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/documentos` | api | permitir | permite | sí |
+| `/api/profesional/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -3476,6 +3494,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 403 | no permite | sí |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 403 | no permite | sí |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 403 | no permite | sí |
 | `/api/alertas` | api | permitir | permite | sí |
 | `/api/alertas/[id]` | api | permitir | permite | sí |
@@ -3656,6 +3675,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
+| `/api/profesional/documentos` | api | permitir | permite | sí |
+| `/api/profesional/documentos/[clave]` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
 | `/api/profesional/panel` | api | permitir | permite | sí |
@@ -4019,6 +4040,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/admin/verificacion-profesionales` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | api | HTTP 401 | permite | **NO** |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | api | HTTP 401 | permite | **NO** |
 | `/api/admin/verificacion-profesionales/incidentes` | api | HTTP 401 | permite | **NO** |
 | `/api/alertas` | api | HTTP 401 | permite | **NO** |
 | `/api/alertas/[id]` | api | HTTP 401 | permite | **NO** |
@@ -4199,6 +4221,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/paises` | api | permitir | permite | sí |
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/documentos` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/documentos/[clave]` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/franjas` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/franjas/[id]` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/panel` | api | HTTP 401 | permite | **NO** |
@@ -4562,6 +4586,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/admin/verificacion-profesionales` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/[id]` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | HTTP 401 | permite |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | HTTP 401 | permite |
 | `/api/admin/verificacion-profesionales/incidentes` | HTTP 401 | permite |
 | `/api/alertas` | HTTP 401 | permite |
 | `/api/alertas/[id]` | HTTP 401 | permite |
@@ -4710,6 +4735,8 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/pagos/suscripcion/estado` | HTTP 401 | permite |
 | `/api/pagos/suscripcion/validar-bono` | HTTP 401 | permite |
 | `/api/profesional/autorizacion` | HTTP 401 | permite |
+| `/api/profesional/documentos` | HTTP 401 | permite |
+| `/api/profesional/documentos/[clave]` | HTTP 401 | permite |
 | `/api/profesional/franjas` | HTTP 401 | permite |
 | `/api/profesional/franjas/[id]` | HTTP 401 | permite |
 | `/api/profesional/panel` | HTTP 401 | permite |

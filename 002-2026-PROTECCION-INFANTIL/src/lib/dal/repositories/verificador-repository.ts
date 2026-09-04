@@ -5,7 +5,7 @@
  *
  * Encapsula exactamente lo que el Verificador y el Profesional necesitan leer
  * y escribir sobre `PerfilProfesional` + `VerificacionProfesional`. Los
- * candados legales (H-2: `resultado`/`checklist`/`notaInterna`/`autorizacionArchivoUrl`
+ * candados legales (H-2: `resultado`/`checklist`/`notaInterna`/`autorizacionArchivoId`
  * nunca al padre) viven en los mapeos del service, no acá — este repo devuelve
  * el shape crudo con los includes necesarios.
  */
@@ -83,7 +83,7 @@ export class VerificadorRepository {
             revisadoEn: Date;
             checklist: Prisma.InputJsonValue;
             resultado: ResultadoVerificacion;
-            autorizacionArchivoUrl: string;
+            autorizacionArchivoId: string;
             venceEn: Date;
             notaInterna: string;
         },
@@ -97,7 +97,7 @@ export class VerificadorRepository {
                 revisadoEn: params.revisadoEn,
                 checklist: params.checklist,
                 resultado: params.resultado,
-                autorizacionArchivoUrl: params.autorizacionArchivoUrl,
+                autorizacionArchivoId: params.autorizacionArchivoId,
                 venceEn: params.venceEn,
                 notaInterna: params.notaInterna,
             },

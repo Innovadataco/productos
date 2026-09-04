@@ -4,7 +4,7 @@
  * Cubre desde solicitar el enlace hasta transicionar el perfil a EN_REVISION
  * cuando queda completo + con autorización subida. El candado de reserva se
  * afirma golpeando la API real: numeroTarjetaProfesional, datosFacturacion,
- * autorizacionArchivoUrl y autorizacionSubidaEn NUNCA salen en la respuesta.
+ * autorizacionArchivoId y autorizacionSubidaEn NUNCA salen en la respuesta.
  */
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 import { tmpdir } from "node:os";
@@ -246,7 +246,7 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
 
         // En BD sí quedan los internos, y con fecha (para probar «previa» en L2).
         const enBd = await prisma.perfilProfesional.findFirstOrThrow({});
-        expect(enBd.autorizacionArchivoUrl).toMatch(/^[0-9a-f-]{32,}$/);
+        expect(enBd.autorizacionArchivoId).toMatch(/^[0-9a-f-]{32,}$/);
         expect(enBd.autorizacionSubidaEn).toBeInstanceOf(Date);
     });
 
@@ -267,7 +267,7 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
         );
         expect(res.status).toBe(400);
         const enBd = await prisma.perfilProfesional.findUniqueOrThrow({ where: { usuarioId: user.id } });
-        expect(enBd.autorizacionArchivoUrl).toBeNull();
+        expect(enBd.autorizacionArchivoId).toBeNull();
         expect(enBd.estado).toBe("BORRADOR");
     });
 

@@ -3400,7 +3400,7 @@ model InformeCaso {
 //  · `venceEn` de la verificación = `revisadoEn + 4 meses` (Ley 2375/2024 —
 //    no es anual; L2 hará el recordatorio con 30 días de anticipación).
 //  · Solicitudes: `venceEn` = creado + 48 h (§3 «devuelve todo al padre»).
-//  · Autorización: `autorizacionArchivoUrl` guarda la ruta en un storage
+//  · Autorización: `autorizacionArchivoId` guarda el ID OPACO del archivo en un storage
 //    PROTEGIDO (no `escudo-storage`, que es público). El servicio de storage
 //    lo implementa L1b siguiendo el patrón de informes/apelaciones.
 
@@ -3473,7 +3473,7 @@ model PerfilProfesional {
   // se compara con `VerificacionProfesional.revisadoEn` para demostrar que
   // la autorización fue PREVIA a la consulta de antecedentes — sin fecha
   // no se puede probar. Ambos INTERNOS: nunca por API pública.
-  autorizacionArchivoUrl   String?
+  autorizacionArchivoId    String?
   autorizacionSubidaEn     DateTime?                @db.Timestamptz(6)
   creadoEn                 DateTime                 @default(now()) @db.Timestamptz(6)
   actualizadoEn            DateTime                 @updatedAt @db.Timestamptz(6)
@@ -3483,11 +3483,42 @@ model PerfilProfesional {
   verificaciones VerificacionProfesional[]
   franjas        FranjaDisponible[]
   solicitudes    SolicitudCita[]
+  documentos     DocumentoProfesional[]
 
   // L3 filtra el directorio abierto por estado ACTIVO + ciudad; el índice
   // compuesto sirve al listado. La búsqueda por especialidad no lo necesita
   // (usa `has` sobre el array).
   @@index([estado, ciudadId])
+}
+
+// SPEC-436 (I-304) · los documentos que el profesional carga para que el
+// Verificador pueda decidir con criterio (brief A-75 §5-bis).
+//
+// `requisitoClave` NO es un enum: es la clave del requisito tal como vive en el
+// parámetro `verificacion.requisitos`. Si mañana Jelkin agrega un quinto
+// requisito, esta tabla lo acepta sin migración — que es exactamente lo que el
+// parámetro vino a permitir.
+//
+// El archivo NO se guarda acá: se cifra en el storage protegido y de él solo
+// queda el `archivoId` opaco (mismo tratamiento que la autorización firmada).
+// `sha256` es del texto EN CLARO, para verificar integridad sin descifrar todo.
+model DocumentoProfesional {
+  id                  String   @id @default(cuid())
+  perfilProfesionalId String
+  requisitoClave      String
+  archivoId           String
+  // pdf | png | jpg — informativo para la pantalla. El `Content-Type` con el
+  // que se sirve se deduce del contenido descifrado, no de esta columna: un
+  // dato guardado puede mentir, el número mágico del archivo no.
+  extension           String
+  sha256              String
+  subidoEn            DateTime @default(now()) @db.Timestamptz(6)
+
+  perfil PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id], onDelete: Cascade)
+
+  // Uno por requisito: reemplazar es actualizar la fila, no acumular basura.
+  @@unique([perfilProfesionalId, requisitoClave])
+  @@index([perfilProfesionalId])
 }
 
 // N por profesional — el HISTORIAL importa: si venció y hay una nueva
@@ -3503,7 +3534,7 @@ model VerificacionProfesional {
   // Ruta a la autorización firmada por el profesional (Ley 2375/2024 exige
   // documento archivado). Storage PROTEGIDO — se sirve tras auth + módulo de
   // admin, nunca por URL adivinable. El servicio de storage lo trae L1b.
-  autorizacionArchivoUrl String
+  autorizacionArchivoId  String
   venceEn                DateTime               @db.Timestamptz(6)
   creadoEn               DateTime               @default(now()) @db.Timestamptz(6)
 
