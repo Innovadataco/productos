@@ -1,9 +1,22 @@
+/**
+ * SPEC-423 · POST /api/admin/padres/[id]/reenviar-email
+ *
+ * Segunda acción del par (con `restablecer-password`): regenera la contraseña
+ * temporal Y encola el envío por correo. **Ambas cosas ocurren**; el sistema
+ * NO afirma que el correo llegó — solo que se encoló. La credencial siempre
+ * viaja en la respuesta como respaldo (I-298 · CEO 22:0x).
+ *
+ * Diseño (CEO 22:1x, patrón colegios): dos acciones separadas, cada una
+ * explícita. El admin decide el canal — el sistema no adivina.
+ */
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
+import { enviarEmailCredencialesPadre } from "@/lib/email";
 import { withValidation } from "@/lib/validation";
 import { padreIdParamsSchema } from "@/lib/schemas";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
@@ -16,21 +29,6 @@ function getClientInfo(request: Request) {
     };
 }
 
-/**
- * POST /api/admin/padres/[id]/restablecer-password (spec 117 · SPEC-423 · I-298)
- *
- * SPEC-423: dos acciones separadas, no una que adivina. Este endpoint SOLO
- * regenera + devuelve la contraseña temporal en pantalla. **No consulta el
- * correo, no depende de él.** El admin decide después si quiere reenviar el
- * correo (endpoint hermano `reenviar-email`) o entregarla en persona.
- *
- * Por qué se rompió el enfoque anterior (SPEC-117/I-37):
- * `enviarEmailCredencialesPadre` PROGRAMA en el motor de notificaciones
- * (SPEC-201/296). "Encolar" siempre funciona → `emailEnviado` era siempre true
- * → la credencial nunca se revelaba, incluso cuando el envío real fallaba en
- * el worker (I-298: proveedor caído por cuota). La credencial de respaldo
- * solo se activaba cuando el correo andaba, que es cuando no hace falta.
- */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const admin = await verifyAuth("ADMIN");
@@ -43,7 +41,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
         const { id } = withValidation.params(padreIdParamsSchema)(await params);
-        // E-8: la lectura/escritura vive en el repo; la ruta no toca prisma.
         const padre = await new UsuarioRepository().findPadreById(id);
         if (!padre) {
             return NextResponse.json(
@@ -52,11 +49,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        // La contraseña temporal solo se devuelve en esta respuesta (una sola vez):
-        // nunca se persiste en claro ni se registra en logs/auditoría.
+        // Regenerar temporal (el sistema no puede leer la anterior — solo hash).
         const password = randomBytes(6).toString("hex");
         const passwordHash = await hashPassword(password);
-
         await new UsuarioRepository().actualizar(id, { passwordHash, debeCambiarPassword: true });
 
         const { ipAddress, userAgent } = getClientInfo(request);
@@ -65,19 +60,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             tipoRecurso: "Usuario",
             recursoId: id,
             usuarioId: admin.id,
-            valorAnterior: JSON.stringify({ debeCambiarPassword: padre.debeCambiarPassword }),
-            valorNuevo: JSON.stringify({ debeCambiarPassword: true }),
+            valorNuevo: JSON.stringify({ debeCambiarPassword: true, motivo: "SPEC-423 reenviar-email padres" }),
             ipAddress,
             userAgent,
         });
 
+        // Encolamos el envío. Encolar SIEMPRE funciona con el motor de notif
+        // (SPEC-201/296): no confundir con "correo entregado". Nunca afirmamos
+        // que el correo llegó — la credencial de respaldo viaja siempre para
+        // que el admin pueda decidir.
+        let encolado = false;
+        try {
+            await enviarEmailCredencialesPadre(padre.email, password);
+            encolado = true;
+        } catch (err) {
+            logger.error("[PADRES] Error encolando credenciales del padre", err);
+        }
+
         return NextResponse.json({
             padre: { ...padre, debeCambiarPassword: true },
-            // SPEC-423 · la temporal SIEMPRE viaja en la respuesta. Se muestra
-            // una sola vez y no se persiste en claro. El envío por correo se
-            // hace desde el endpoint hermano `reenviar-email`.
+            // SPEC-423 · la temporal SIEMPRE se muestra. La entrega efectiva
+            // del correo es asíncrona; el sistema no la conoce.
             passwordTemporal: password,
-            mensaje: "Contraseña temporal generada. Se muestra abajo una sola vez — cópiela y compártala como prefiera. Para reenviarla por correo, use la acción «Reenviar por correo».",
+            encolado,
+            mensaje: encolado
+                ? "Contraseña temporal regenerada. Envío por correo encolado — puede no llegar (proveedor asíncrono). La temporal está abajo por si necesita compartirla a mano (se muestra una sola vez)."
+                : "Contraseña temporal regenerada. No se pudo encolar el envío por correo. Copie la temporal y compártala manualmente (se muestra una sola vez).",
         });
     } catch (error) {
         if (error instanceof AppError) {

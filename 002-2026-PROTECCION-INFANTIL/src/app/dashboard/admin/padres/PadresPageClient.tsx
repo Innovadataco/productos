@@ -140,6 +140,32 @@ export default function PadresPageClient() {
         }
     }
 
+    // SPEC-423 · segunda acción del par (encolar envío por correo). La
+    // credencial temporal SIEMPRE llega en la respuesta como respaldo.
+    async function reenviarPorCorreo(padre: Padre) {
+        setMessage(null);
+        setPasswordTemporal(null);
+        setAccionEnCurso(padre.id);
+        try {
+            const res = await fetch(`/api/admin/padres/${padre.id}/reenviar-email`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setPasswordTemporal(data.passwordTemporal || null);
+                setMessage({ type: "success", text: data.mensaje || `Envío encolado para ${padre.email}` });
+                await cargar(page, qActiva);
+            } else {
+                setMessage({ type: "error", text: data?.error?.message || "Error reenviando el correo" });
+            }
+        } catch {
+            setMessage({ type: "error", text: "Error de red reenviando el correo" });
+        } finally {
+            setAccionEnCurso(null);
+        }
+    }
+
     async function alternarEstado(padre: Padre) {
         setMessage(null);
         setPasswordTemporal(null);
@@ -347,6 +373,15 @@ export default function PadresPageClient() {
                                                         onClick={() => restablecerPassword(padre)}
                                                     >
                                                             Restablecer contraseña
+                                                    </Button>
+                                                    {/* SPEC-423 · segunda acción explícita del par. */}
+                                                    <Button
+                                                        variant="outline"
+                                                        className="px-3 py-1.5 text-xs"
+                                                        disabled={accionEnCurso === padre.id}
+                                                        onClick={() => reenviarPorCorreo(padre)}
+                                                    >
+                                                            Reenviar por correo
                                                     </Button>
                                                     <Button
                                                         variant={padre.estado === "activo" ? "danger" : "secondary"}

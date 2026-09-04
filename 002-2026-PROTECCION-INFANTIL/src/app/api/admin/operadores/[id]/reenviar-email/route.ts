@@ -59,11 +59,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 estado: operador.estado,
                 debeCambiarPassword: true,
             },
-            passwordTemporal: emailEnviado ? undefined : password,
-            emailEnviado,
+            // SPEC-423 (I-298): la temporal SIEMPRE viaja en la respuesta —
+            // `emailEnviado` mide encolado en el motor de notif (SPEC-296),
+            // no entrega real, así que no puede decidir si mostrar la clave.
+            passwordTemporal: password,
+            encolado: emailEnviado,
             mensaje: emailEnviado
-                ? `Email de bienvenida reenviado al ${esComite ? "comité de validación" : "operador"}.`
-                : "No se pudo reenviar el email. Copie la contraseña temporal mostrada arriba.",
+                ? `Contraseña temporal regenerada. Envío por correo al ${esComite ? "comité de validación" : "operador"} encolado — puede no llegar (proveedor asíncrono). La temporal está abajo (se muestra una sola vez).`
+                : "Contraseña temporal regenerada. No se pudo encolar el envío por correo. Copie la temporal y compártala manualmente (se muestra una sola vez).",
         });
     } catch (error) {
         if (error instanceof AppError) {

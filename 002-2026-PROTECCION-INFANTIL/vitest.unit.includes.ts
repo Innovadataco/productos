@@ -12,6 +12,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/middleware.test.ts",
     // SPEC-416 (I-118): fuente única de "titular del dato" y "con camino guiado".
     "src/lib/routing/roles-titulares.test.ts",
+    // SPEC-423 (I-298): la credencial de respaldo se muestra SIEMPRE en admin.
+    "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
     // SPEC-331 (002-PI-231): vigencia cookie sesion_estado derivada por rol (SCHOOL_ADMIN/COMITE_CONVIVENCIA → colegio, PARENT → suscripción, internos → ACTIVA).
     "src/lib/routing/sesion-estado-emitter.test.ts",
     // 002-PI-232 (A-65 · I-225): borrado FK-safe de Expediente/EventoExpediente en scripts de limpieza.

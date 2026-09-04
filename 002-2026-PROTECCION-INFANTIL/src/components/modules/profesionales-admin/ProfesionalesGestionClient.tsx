@@ -199,6 +199,13 @@ function TabCuentas() {
                                 >
                                     {processing[p.id] === "reset" ? "Restableciendo…" : "Restablecer contraseña"}
                                 </BotonAccion>
+                                {/* SPEC-423 · segunda acción explícita — el admin decide el canal. */}
+                                <BotonAccion
+                                    disabled={!!processing[p.id]}
+                                    onClick={() => void accion(p.id, "reenviar", "POST", `/api/admin/profesionales/${p.id}/reenviar-email`)}
+                                >
+                                    {processing[p.id] === "reenviar" ? "Reenviando…" : "Reenviar por correo"}
+                                </BotonAccion>
                                 {p.estado === "activo" ? (
                                     <BotonAccion
                                         variante="ambar"

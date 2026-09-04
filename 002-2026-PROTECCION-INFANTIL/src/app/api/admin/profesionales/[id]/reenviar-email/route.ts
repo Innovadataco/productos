@@ -1,16 +1,12 @@
 /**
- * SPEC-421 + SPEC-423 (I-298) · POST /api/admin/profesionales/[id]/restablecer-password
+ * SPEC-423 · POST /api/admin/profesionales/[id]/reenviar-email
  *
- * Dos acciones separadas, no una que adivina. Este endpoint SOLO regenera y
- * devuelve la contraseña temporal en pantalla. **No consulta el correo, no
- * depende de él.** Para reenviar por correo hay endpoint hermano.
- *
- * Contexto histórico: SPEC-421 heredó de padres el patrón
- * `passwordTemporal: emailEnviado ? undefined : password` — se rompió con el
- * motor de notif async: encolar siempre funciona → la credencial nunca se
- * revelaba. Ver spec de SPEC-423.
+ * Segunda acción del par (con `restablecer-password`): regenera + encola envío
+ * del correo de bienvenida al profesional. La temporal SIEMPRE viaja en la
+ * respuesta como respaldo — el sistema no sabe si el correo llegó.
  */
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { hashPassword, verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -19,6 +15,7 @@ import { errorToResponse } from "@/lib/api-handler";
 import { logAudit } from "@/lib/audit";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { ProfesionalesAdminService } from "@/lib/dal/services/profesionales-admin";
+import { enviarBienvenidaProfesional } from "@/lib/email";
 import { randomBytes } from "crypto";
 
 function getClientInfo(request: Request) {
@@ -55,21 +52,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             tipoRecurso: "Usuario:PROFESIONAL",
             recursoId: id,
             usuarioId: admin.id,
-            valorAnterior: JSON.stringify({ debeCambiarPassword: profesional.debeCambiarPassword }),
-            valorNuevo: JSON.stringify({ debeCambiarPassword: true }),
+            valorNuevo: JSON.stringify({ debeCambiarPassword: true, motivo: "SPEC-423 reenviar-email profesionales" }),
             ipAddress,
             userAgent,
         });
 
+        let encolado = false;
+        try {
+            await enviarBienvenidaProfesional(profesional.email);
+            encolado = true;
+        } catch (err) {
+            logger.error("[PROFESIONALES] Error encolando bienvenida al profesional", err);
+        }
+
         return NextResponse.json({
             profesional: { ...profesional, debeCambiarPassword: true },
-            // SPEC-423 · la temporal SIEMPRE viaja en la respuesta. Se muestra
-            // una sola vez y no se persiste en claro. El envío por correo se
-            // hace desde el endpoint hermano `reenviar-email`.
             passwordTemporal: password,
-            mensaje: "Contraseña temporal generada. Se muestra abajo una sola vez — cópiela y compártala como prefiera. Para reenviarla por correo, use la acción «Reenviar por correo».",
+            encolado,
+            mensaje: encolado
+                ? "Contraseña temporal regenerada. Envío por correo encolado — puede no llegar (proveedor asíncrono). La temporal está abajo por si necesita compartirla a mano (se muestra una sola vez)."
+                : "Contraseña temporal regenerada. No se pudo encolar el envío por correo. Copie la temporal y compártala manualmente (se muestra una sola vez).",
         });
     } catch (error) {
-        return errorToResponse(error, "[ADMIN/PROFESIONALES/RESTABLECER]");
+        return errorToResponse(error, "[ADMIN/PROFESIONALES/REENVIAR]");
     }
 }
