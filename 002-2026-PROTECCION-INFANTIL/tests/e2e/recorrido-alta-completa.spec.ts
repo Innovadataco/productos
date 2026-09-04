@@ -268,14 +268,18 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const colegio = await prisma.colegio.findFirst({ where: { nit: NIT_PANEL }, select: { id: true } });
             expect(colegio, "el colegio dado de alta por admin debe existir").not.toBeNull();
 
-            // SPEC-442 desplegado: el alta por admin siembra los cursos por
-            // defecto (mismo comportamiento que el registro público SPEC-344).
-            // El rector ya no queda trabado en el Paso 4.
+            // SPEC-442 desplegado: el alta por admin siembra los 11 grados
+            // por defecto (mismo comportamiento que el registro público
+            // SPEC-344). El rector ya no queda trabado en el Paso 4.
+            //
+            // Assert exacto (aviso CEO 17:05): `count > 0` era débil — un
+            // colegio con 1 curso lo cumpliría. Lo que 442 promete son los
+            // ONCE grados, y ese es el candado.
             const cursos = await prisma.curso.count({ where: { colegioId: colegio!.id } });
             expect(
                 cursos,
-                "SPEC-442 (cierre I-307): el alta por admin debe sembrar los cursos por defecto",
-            ).toBeGreaterThan(0);
+                "SPEC-442 (cierre I-307): el alta por admin debe sembrar los 11 grados por defecto",
+            ).toBe(11);
         } finally {
             await request.dispose();
         }
