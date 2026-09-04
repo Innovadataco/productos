@@ -10,6 +10,7 @@
  * la urgencia le desborda antes de reservar, tiene la salida a la mano.
  */
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
+import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
 import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
 
 const CURRENCY_COP = new Intl.NumberFormat("es-CO", {
@@ -29,10 +30,20 @@ export function ProfesionalPerfil({
     p,
     presentacionDelPadre,
     urgencia,
+    // SPEC-428: se paga el PRECIO ESTÁNDAR (§4). La tarifa del profesional
+    // aplica desde la 2ª cita en adelante; ambas se muestran al padre.
+    precioEstandarPrimeraCitaCOP,
+    expedienteIdSugerido,
+    // SPEC-428 (M7): si viene, el panel de reserva usa el flujo de reasignación
+    // (POST /citas/[id]/reasignar) — hereda el pago, no cobra de nuevo.
+    heredarDeSolicitudId,
 }: {
     p: PerfilPublicoDTO;
     presentacionDelPadre?: string | undefined;
     urgencia?: "ESTA_SEMANA" | "SIN_APURO" | undefined;
+    precioEstandarPrimeraCitaCOP: number;
+    expedienteIdSugerido?: string | undefined;
+    heredarDeSolicitudId?: string | undefined;
 }) {
     return (
         <div className="mx-auto max-w-3xl p-4 space-y-6">
@@ -55,19 +66,23 @@ export function ProfesionalPerfil({
                 </div>
             </div>
 
-            {/* TARIFA por delante */}
+            {/* TARIFA por delante — SPEC-428: la 1ª cita es el precio ESTÁNDAR
+                del admin; la tarifa del profesional aplica desde la 2ª cita. */}
             <div className="glass rounded-2xl p-5 bg-cielo/10 dark:bg-cielo/10">
                 <p className="text-xs uppercase tracking-wide text-cielo dark:text-cielo">
-                    Costo de la consulta
+                    Costo de la primera cita
                 </p>
                 <p className="mt-1 text-3xl font-bold text-cielo dark:text-cielo">
-                    {CURRENCY_COP.format(p.tarifaConsultaCOP)}
+                    {CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
                 </p>
                 <p className="mt-1 text-sm text-muted">
                     Sesión de {p.duracionMinutos} minutos{p.emiteFactura ? " · emite factura" : ""}.
                 </p>
+                <p className="mt-2 text-xs text-muted">
+                    De la 2ª cita en adelante: <span className="font-medium">{CURRENCY_COP.format(p.tarifaConsultaCOP)}</span> (tarifa del profesional).
+                </p>
                 <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-ambar dark:text-ambar">
-                    ✨ Nuevo en la red
+                    Nuevo en la red
                 </p>
             </div>
 
@@ -103,39 +118,18 @@ export function ProfesionalPerfil({
                 </div>
             </section>
 
-            {/* Reserva de cita — DESACTIVADA en L3 */}
-            <section aria-labelledby="reservar" className="glass rounded-2xl p-5">
-                <h2 id="reservar" className="text-sm font-semibold text-body">Solicitar cita</h2>
-                <p className="mt-1 text-xs text-muted">
-                    La reserva de cita se habilita en el próximo paso del módulo
-                    (Lote 4). Los datos que anotaste antes se conservan para
-                    cuando esté disponible.
-                </p>
-                {(presentacionDelPadre || urgencia) && (
-                    <div className="mt-3 rounded-xl bg-cielo/10 dark:bg-cielo/10 p-3 text-xs">
-                        {urgencia && (
-                            <p>
-                                <span className="font-medium">Tu urgencia:</span>{" "}
-                                {urgencia === "ESTA_SEMANA" ? "Esta semana" : "Sin apuro"}
-                            </p>
-                        )}
-                        {presentacionDelPadre && (
-                            <p className="mt-1">
-                                <span className="font-medium">Tu presentación:</span>{" "}
-                                <span className="text-muted">{presentacionDelPadre.slice(0, 200)}{presentacionDelPadre.length > 200 ? "…" : ""}</span>
-                            </p>
-                        )}
-                    </div>
-                )}
-                <button
-                    type="button"
-                    disabled
-                    className="mt-3 w-full rounded-xl bg-cielo/40 px-4 py-3 text-sm font-semibold text-white cursor-not-allowed"
-                    aria-disabled="true"
-                >
-                    Solicitar cita (próximamente)
-                </button>
-            </section>
+            {/* SPEC-428 (L4): reserva viva — franjas, presentación, urgencia,
+                pago y decisión de compartir expediente en un solo panel. */}
+            <SolicitarCitaPanel
+                profesionalId={p.id}
+                tarifaProfesionalCOP={p.tarifaConsultaCOP}
+                precioEstandarPrimeraCitaCOP={precioEstandarPrimeraCitaCOP}
+                duracionMinutos={p.duracionMinutos}
+                {...(presentacionDelPadre !== undefined ? { presentacionInicial: presentacionDelPadre } : {})}
+                {...(urgencia !== undefined ? { urgenciaInicial: urgencia } : {})}
+                {...(expedienteIdSugerido !== undefined ? { expedienteIdSugerido } : {})}
+                {...(heredarDeSolicitudId !== undefined ? { heredarDeSolicitudId } : {})}
+            />
 
             <CanalesOficiales />
         </div>

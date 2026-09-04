@@ -40,6 +40,14 @@ export interface CrearCitaInput {
     plazoPagoHoras?: number;
     pagoHeredadoDeId?: string | null;
     solicitudPreviaId?: string | null;
+    /**
+     * SPEC-428 (A-75 §9 M4 §4): la primera cita se paga al PRECIO ESTÁNDAR
+     * definido por el admin, no a la tarifa del profesional (que aplica a
+     * partir de la 2ª cita). Cuando `montoConsultaOverride` viene definido,
+     * el service usa este valor en vez de `pro.tarifaConsultaCOP`. La ruta
+     * `/api/padre/citas` inyecta el precio estándar leído del parámetro.
+     */
+    montoConsultaOverride?: number;
 }
 
 export async function crearSolicitudCita(input: CrearCitaInput) {
@@ -88,7 +96,12 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
         // aprobación manual del admin).
         pagoAprobadoEn = new Date();
     } else {
-        montoConsulta = pro.tarifaConsultaCOP;
+        // SPEC-428 §4: la 1ª cita usa el precio ESTÁNDAR (parametrizado por el
+        // admin) que la ruta inyecta como override. La tarifa del profesional
+        // aplica desde la 2ª cita en adelante y se muestra al padre como
+        // informativa en el perfil. Si el caller no envía override (compatibilidad
+        // hacia atrás para tests/callers viejos), cae a la tarifa del profesional.
+        montoConsulta = input.montoConsultaOverride ?? pro.tarifaConsultaCOP;
         porcentajeServicio = input.porcentajeServicio;
         montoServicio = Math.round((montoConsulta * porcentajeServicio) / 100);
         montoTotal = montoConsulta + montoServicio;

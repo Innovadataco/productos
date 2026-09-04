@@ -184,6 +184,36 @@ export function ExpedienteVivo({
                 </p>
             </header>
 
+            {/* SPEC-428 (A-75 · brief §9 M4): «la puerta al profesional nace del
+                expediente, no de un menú suelto». Dos salidas al alcance del padre:
+                el canal oficial de la línea, y recibir apoyo (arma el flujo con la
+                presentación + urgencia y propaga el expediente). */}
+            <section className="glass rounded-2xl p-4 sm:p-5" aria-labelledby="cta-apoyo">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 id="cta-apoyo" className="titular-seccion">¿Necesitás actuar sobre lo que ves?</h2>
+                        <p className="cuerpo text-subtle mt-1">
+                            Llamá a la línea oficial o recibí apoyo de un psicólogo de la red.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <a
+                            href="tel:141"
+                            className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-white transition hover:bg-cielo/90"
+                        >
+                            <span className="font-mono text-xs">141</span>
+                            Llamar a la línea
+                        </a>
+                        <a
+                            href={`/dashboard/padre/profesionales?expedienteId=${encodeURIComponent(expedienteId)}`}
+                            className="inline-flex items-center gap-2 rounded-full bg-pino px-4 py-2 text-sm font-semibold text-white transition hover:bg-pino/90"
+                        >
+                            Recibir apoyo
+                        </a>
+                    </div>
+                </div>
+            </section>
+
             {/* ── El mapa con la historia ── */}
             <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
                 <div className="flex flex-wrap items-center justify-between gap-2">

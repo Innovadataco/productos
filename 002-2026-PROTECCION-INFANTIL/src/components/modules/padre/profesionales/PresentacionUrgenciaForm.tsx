@@ -19,7 +19,21 @@ const PRESENTACION_MAX = 500;
 
 type Urgencia = "ESTA_SEMANA" | "SIN_APURO";
 
-export function PresentacionUrgenciaForm({ hrefDirectorio }: { hrefDirectorio: string }) {
+export function PresentacionUrgenciaForm({
+    hrefDirectorio,
+    // SPEC-428 (M4): si el padre entró desde su expediente, propagamos el
+    // `expedienteId` hasta el perfil del profesional para poder ofrecer
+    // «compartir mi expediente» al momento del pago.
+    expedienteIdInicial,
+    // SPEC-428 (M7): si viene con `heredarDe`, esta franja del flujo es la
+    // reasignación de una cita vencida — el pago se hereda al hacer POST
+    // a `/citas/[id]/reasignar` en el último paso.
+    heredarDeInicial,
+}: {
+    hrefDirectorio: string;
+    expedienteIdInicial?: string;
+    heredarDeInicial?: string;
+}) {
     const router = useRouter();
     const [presentacion, setPresentacion] = useState("");
     const [urgencia, setUrgencia] = useState<Urgencia>("SIN_APURO");
@@ -31,6 +45,8 @@ export function PresentacionUrgenciaForm({ hrefDirectorio }: { hrefDirectorio: s
         e.preventDefault();
         if (!listo) return;
         const q = new URLSearchParams({ u: urgencia, pres: presentacion.trim() });
+        if (expedienteIdInicial) q.set("expedienteId", expedienteIdInicial);
+        if (heredarDeInicial) q.set("heredarDe", heredarDeInicial);
         router.push(`${hrefDirectorio}?${q.toString()}`);
     }
 

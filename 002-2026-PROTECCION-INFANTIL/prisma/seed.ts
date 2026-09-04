@@ -4078,13 +4078,39 @@ async function main() {
     // ── SPEC-408 (A-75 · brief §9): lista parametrizable de requisitos del Verificador ──
     await seedRequisitosVerificacion();
 
+    // ── SPEC-428 (A-75 · brief §9 M4 §4): precio estándar de la primera cita
+    //    del padre con un profesional. Parametrizable — Jelkin lo ajusta desde
+    //    el ConfigPanel; la tarifa del profesional aplica desde la 2ª cita en
+    //    adelante (informativa acá, informativa allá).
+    await seedParametrosPrimeraCita();
+
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
     await prisma.$disconnect();
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion, seedParametrosPrimeraCita };
+
+// ── SPEC-428 (A-75 · brief §9 M4 §4): precio estándar de la primera cita ──
+// Orden permanente de Jelkin (§4): nada quemado. Se siembra idempotente
+// (`update: {}`) — el admin ajusta desde el ConfigPanel sin despliegue.
+async function seedParametrosPrimeraCita() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "profesional.cita.precio_estandar_primera_cita_cop" },
+        update: {},
+        create: {
+            clave: "profesional.cita.precio_estandar_primera_cita_cop",
+            valor: "50000",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "Precio ESTÁNDAR de la primera cita del padre con un profesional, en pesos colombianos (COP). La tarifa que declara el profesional (`PerfilProfesional.tarifaConsultaCOP`) aplica desde la 2ª cita en adelante y se muestra al padre como informativa. Jelkin lo ajusta acá; SPEC-428.",
+        },
+    });
+    console.log("[SEED] parámetro profesional.cita.precio_estandar_primera_cita_cop listo");
+}
 
 // ── SPEC-408 (A-75 · brief §9): la lista de 4 requisitos que el Verificador chequea ──
 // Orden permanente de Jelkin: NO quemar en código. Se siembra idempotente
