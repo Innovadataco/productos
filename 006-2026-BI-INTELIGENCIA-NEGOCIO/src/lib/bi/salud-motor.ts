@@ -147,10 +147,10 @@ export async function getMotor(): Promise<MotorData> {
                           AND "creadoEn" >= now() - interval '7 days'
                           AND "latenciaMs" IS NOT NULL)::float AS latencia_clasif_ms,
                       (SELECT count(*) FROM "Reporte"
-                        WHERE lower("estado") IN ('pendiente','procesando')
+                        WHERE lower("estado"::text) IN ('pendiente','procesando')
                           AND "eliminado" = false)::int AS en_cola,
                       (SELECT count(*) FROM "Reporte"
-                        WHERE lower("estado") = 'procesando'
+                        WHERE lower("estado"::text) = 'procesando'
                           AND "eliminado" = false
                           AND "actualizadoEn" < now() - interval '10 minutes')::int AS atascados,
                       (SELECT count(*) FROM "ReintentoReporte"
@@ -221,7 +221,7 @@ export async function getMotor(): Promise<MotorData> {
                 prisma.$queryRaw<FilaErrorW[]>`
                     SELECT "servicio", count(*)::int AS errores
                     FROM "worker_logs"
-                    WHERE lower("nivel") = 'error'
+                    WHERE lower("nivel"::text) = 'error'
                       AND "creadoEn" >= now() - interval '24 hours'
                     GROUP BY "servicio"
                     ORDER BY errores DESC, "servicio"`,

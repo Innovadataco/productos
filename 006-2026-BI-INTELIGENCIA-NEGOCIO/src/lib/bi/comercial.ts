@@ -184,24 +184,24 @@ export async function getComercial(): Promise<ComercialData> {
                        WHERE s."fechaPagoReal" >= date_trunc('year', now()))::float
                         AS recaudo_anio,
                       (SELECT count(*) FROM "Suscripcion"
-                        WHERE lower("estado") = 'activa')::int AS activas,
+                        WHERE lower("estado"::text) = 'activa')::int AS activas,
                       (SELECT count(*) FROM "Suscripcion"
-                        WHERE lower("estado") = 'en_gracia')::int AS en_gracia,
+                        WHERE lower("estado"::text) = 'en_gracia')::int AS en_gracia,
                       (SELECT count(*) FROM "Suscripcion"
-                        WHERE lower("estado") = 'suspendida')::int AS suspendidas,
+                        WHERE lower("estado"::text) = 'suspendida')::int AS suspendidas,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE "esFreemium" = true
-                          AND lower("estado") IN ('activa','en_gracia'))::int AS freemium_activos,
+                          AND lower("estado"::text) IN ('activa','en_gracia'))::int AS freemium_activos,
                       (SELECT count(*) FROM "Suscripcion"
-                        WHERE lower("origen") = 'freemium_auto'
+                        WHERE lower("origen"::text) = 'freemium_auto'
                           AND "esFreemium" = false
-                          AND lower("estado") IN ('activa','en_gracia'))::int
+                          AND lower("estado"::text) IN ('activa','en_gracia'))::int
                         AS freemium_convertidas,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE "esFreemium" = false
-                          AND lower("estado") IN ('activa','en_gracia'))::int AS pagantes,
+                          AND lower("estado"::text) IN ('activa','en_gracia'))::int AS pagantes,
                       (SELECT count(*) FROM "Pago"
-                        WHERE lower("estado") = 'pendiente_autorizacion')::int AS pagos_pendientes`,
+                        WHERE lower("estado"::text) = 'pendiente_autorizacion')::int AS pagos_pendientes`,
             ),
             intentar(
                 "embudo",
@@ -209,7 +209,7 @@ export async function getComercial(): Promise<ComercialData> {
                     SELECT
                       (SELECT count(*) FROM "Colegio")::int AS registrados,
                       (SELECT count(*) FROM "OnboardingColegio"
-                        WHERE lower("estado") = 'completado')::int AS onboarding_completado,
+                        WHERE lower("estado"::text) = 'completado')::int AS onboarding_completado,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE "esFreemium" = true)::int AS freemium,
                       (SELECT count(*) FROM "Suscripcion"
@@ -238,12 +238,12 @@ export async function getComercial(): Promise<ComercialData> {
             intentar(
                 "recaudo-por-metodo",
                 prisma.$queryRaw<FilaMetodo[]>`
-                    SELECT COALESCE(NULLIF("metodoPagoManual", ''), 'Sin método') AS metodo,
+                    SELECT COALESCE(NULLIF("metodoPagoManual"::text, ''), 'Sin método') AS metodo,
                            sum("montoRealPagado")::float AS total,
                            count(*)::int AS cantidad
                     FROM "Suscripcion"
                     WHERE "montoRealPagado" IS NOT NULL AND "montoRealPagado" > 0
-                    GROUP BY COALESCE(NULLIF("metodoPagoManual", ''), 'Sin método')
+                    GROUP BY COALESCE(NULLIF("metodoPagoManual"::text, ''), 'Sin método')
                     ORDER BY total DESC`,
             ),
             intentar(
@@ -253,13 +253,13 @@ export async function getComercial(): Promise<ComercialData> {
                            p."nombre" AS plan,
                            s."estado",
                            to_char(s."fechaFin", 'DD/MM/YYYY') AS vence_en,
-                           (lower(s."estado") = 'en_gracia') AS en_gracia
+                           (lower(s."estado"::text) = 'en_gracia') AS en_gracia
                     FROM "Suscripcion" s
                     LEFT JOIN "Colegio" c ON c."id" = s."colegioId"
                     LEFT JOIN "Plan" p ON p."id" = s."planActualId"
                     WHERE s."fechaFin" >= now()
                       AND s."fechaFin" <  now() + interval '7 days'
-                      AND lower(s."estado") IN ('activa','en_gracia')
+                      AND lower(s."estado"::text) IN ('activa','en_gracia')
                     ORDER BY s."fechaFin" ASC
                     LIMIT 10`,
             ),
@@ -288,15 +288,15 @@ export async function getComercial(): Promise<ComercialData> {
                     SELECT
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE "fechaFin" >= now() AND "fechaFin" < now() + interval '7 days'
-                          AND lower("estado") IN ('activa','en_gracia'))::int AS esta_semana,
+                          AND lower("estado"::text) IN ('activa','en_gracia'))::int AS esta_semana,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE "fechaFin" >= now() + interval '7 days'
                           AND "fechaFin" < now() + interval '15 days'
-                          AND lower("estado") IN ('activa','en_gracia'))::int AS en15d,
+                          AND lower("estado"::text) IN ('activa','en_gracia'))::int AS en15d,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE "fechaFin" >= now() + interval '15 days'
                           AND "fechaFin" < now() + interval '30 days'
-                          AND lower("estado") IN ('activa','en_gracia'))::int AS en30d,
+                          AND lower("estado"::text) IN ('activa','en_gracia'))::int AS en30d,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE "esFreemium" = true
                           AND "freemiumFechaFin" >= now()
