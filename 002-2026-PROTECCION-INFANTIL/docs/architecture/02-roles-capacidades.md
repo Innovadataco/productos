@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 536 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3752 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 537 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3759 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -397,6 +397,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
@@ -938,6 +939,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
@@ -1479,6 +1481,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
@@ -2020,6 +2023,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/citas/[id]/cerrar` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/citas/[id]/no-asistio` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
@@ -2561,6 +2565,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/plataformas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/citas/[id]/cerrar` | api | HTTP 403 | no permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/citas/[id]/no-asistio` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas` | api | HTTP 403 | no permite | sí |
 | `/api/profesional/franjas/[id]` | api | HTTP 403 | no permite | sí |
@@ -3102,6 +3107,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/cerrar` | api | permitir | permite | sí |
+| `/api/profesional/citas/[id]/expediente` | api | permitir | permite | sí |
 | `/api/profesional/citas/[id]/no-asistio` | api | permitir | permite | sí |
 | `/api/profesional/franjas` | api | permitir | permite | sí |
 | `/api/profesional/franjas/[id]` | api | permitir | permite | sí |
@@ -3643,6 +3649,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/plataformas` | api | permitir | permite | sí |
 | `/api/profesional/autorizacion` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/citas/[id]/cerrar` | api | HTTP 401 | permite | **NO** |
+| `/api/profesional/citas/[id]/expediente` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/citas/[id]/no-asistio` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/franjas` | api | HTTP 401 | permite | **NO** |
 | `/api/profesional/franjas/[id]` | api | HTTP 401 | permite | **NO** |
@@ -4152,6 +4159,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/pagos/suscripcion/validar-bono` | HTTP 401 | permite |
 | `/api/profesional/autorizacion` | HTTP 401 | permite |
 | `/api/profesional/citas/[id]/cerrar` | HTTP 401 | permite |
+| `/api/profesional/citas/[id]/expediente` | HTTP 401 | permite |
 | `/api/profesional/citas/[id]/no-asistio` | HTTP 401 | permite |
 | `/api/profesional/franjas` | HTTP 401 | permite |
 | `/api/profesional/franjas/[id]` | HTTP 401 | permite |

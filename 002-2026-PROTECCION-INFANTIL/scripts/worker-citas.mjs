@@ -27,6 +27,7 @@ import {
     barrerRecordatoriosDeCita,
     barrerAutocierre,
 } from "../src/lib/profesional/cita/cierre.service.ts";
+import { barrerRecordatoriosDeExpediente } from "../src/lib/profesional/cita/expediente.service.ts";
 import { boss, ensureStarted, ensureQueue } from "../src/lib/queue.ts";
 import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
 import pg from "pg";
@@ -142,6 +143,7 @@ async function start() {
     await boss.work(COLA_MINUTO, async () =>
         correrBarredores(COLA_MINUTO, [
             ["recordatorios", () => barrerRecordatoriosDeCita()],
+            ["recordatoriosExpediente", () => barrerRecordatoriosDeExpediente()],
             ["aviso48h", () => barrerAvisoVencimiento48h()],
             ["plazoPagoPadre", () => barrerPlazoPagoDelPadre()],
         ])

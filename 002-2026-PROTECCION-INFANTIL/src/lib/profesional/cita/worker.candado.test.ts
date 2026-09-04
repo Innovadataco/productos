@@ -71,7 +71,7 @@ function tieneLlamador(nombre: string, codigo: string): boolean {
 describe("SPEC-427 · ningún barredor de la cita queda sin quien lo llame", () => {
     const workers = codigoDeLosWorkers();
 
-    it("los cuatro barredores existen y están declarados donde se espera", () => {
+    it("los barredores existen y están declarados donde se espera", () => {
         const todos = modulosConBarredores().flatMap(barredoresDe);
         expect(todos).toEqual(
             expect.arrayContaining([
@@ -79,9 +79,11 @@ describe("SPEC-427 · ningún barredor de la cita queda sin quien lo llame", () 
                 "barrerPlazoPagoDelPadre",
                 "barrerRecordatoriosDeCita",
                 "barrerAutocierre",
+                // SPEC-427b · el quinto: el recordatorio del código de expediente.
+                "barrerRecordatoriosDeExpediente",
             ])
         );
-        expect(todos.length).toBeGreaterThanOrEqual(4);
+        expect(todos.length).toBeGreaterThanOrEqual(5);
     });
 
     it("CADA barredor exportado tiene un llamador en algún scripts/worker-*.mjs", () => {
@@ -116,13 +118,14 @@ describe("SPEC-427 · ningún barredor de la cita queda sin quien lo llame", () 
         expect((w.match(/boss\.work\(/g) ?? []).length).toBe(2);
     });
 
-    it("el worker de citas llama a los CUATRO barredores, no solo los importa", () => {
+    it("el worker de citas llama a TODOS los barredores, no solo los importa", () => {
         const w = leer("scripts/worker-citas.mjs");
         for (const n of [
             "barrerAvisoVencimiento48h",
             "barrerPlazoPagoDelPadre",
             "barrerRecordatoriosDeCita",
             "barrerAutocierre",
+            "barrerRecordatoriosDeExpediente",
         ]) {
             expect(new RegExp(`\\b${n}\\(\\)`).test(w), `${n} importado pero no llamado`).toBe(true);
         }

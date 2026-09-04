@@ -1884,6 +1884,26 @@ async function seedCodigosCita() {
             },
         },
         {
+            evento: "cita.codigo_expediente.recordatorio",
+            asunto: "Tu código para compartir el expediente",
+            cuerpoMarkdown:
+                "Hola {{nombrePadre}},\n\n" +
+                "Elegiste compartir tu expediente con {{nombreProfesional}} para la cita de {{horaCita}}.\n\n" +
+                "**Tu código de expediente es {{codigo}}.** Dáselo al profesional en la sesión, aparte del " +
+                "código de la cita: con él puede LEER tu expediente, solo durante la sesión y solo si vos " +
+                "se lo entregás.\n\n" +
+                "**Vence en {{minutosVigencia}} minutos.** Si no querés compartirlo, no entregues el código y " +
+                "no pasa nada.\n\n" +
+                "— Protección Infantil",
+            propiedades: {
+                nombrePadre: { type: "string" },
+                nombreProfesional: { type: "string" },
+                horaCita: { type: "string" },
+                codigo: { type: "string" },
+                minutosVigencia: { type: "number" },
+            },
+        },
+        {
             evento: "cita.autocerrada.padre",
             asunto: "Tu cita quedó sin confirmar",
             cuerpoMarkdown:
