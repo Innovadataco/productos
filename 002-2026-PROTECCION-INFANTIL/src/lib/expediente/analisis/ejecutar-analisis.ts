@@ -116,6 +116,7 @@ async function ejecutarJobPadre(expedienteId: string, hashCadena: string, alcanc
                                 pais: true,
                                 edadVictima: true,
                                 fechaIncidente: true,
+                                horaAproximada: true,
                                 plataforma: { select: { clave: true } },
                                 clasificacion: { select: { categoria: true } },
                             },
@@ -139,6 +140,9 @@ async function ejecutarJobPadre(expedienteId: string, hashCadena: string, alcanc
         //    que la fuente autoritativa sea Reporte.
         const hechos: HechoPadre[] = expediente.eventos.map((e) => ({
             fecha: e.reporte?.fechaIncidente ?? e.fechaEvento,
+            // SPEC-438: si el hecho no viene de un Reporte, la fecha es la del
+            // evento y NO se puede afirmar que sea una hora precisa.
+            horaAproximada: e.reporte?.horaAproximada ?? true,
             ciudad: e.reporte?.ciudad ?? null,
             pais: e.reporte?.pais ?? null,
             plataforma: e.plataforma ?? e.reporte?.plataforma?.clave ?? null,

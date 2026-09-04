@@ -22,12 +22,25 @@
  */
 import { desdePartesHoraLocal, partesHoraLocal, type Meridiano } from "@/lib/format/fecha";
 
+import { useEffect, useState } from "react";
+import {
+    FRANJAS,
+    ETIQUETA_FRANJA,
+    esFranja,
+    instanteDeFranja,
+} from "@/lib/reportes/franja-aproximada";
+
 type Props = {
     /** "YYYY-MM-DDTHH:mm" en hora local. */
     value: string;
     /** Tope en hora LOCAL, "YYYY-MM-DDTHH:mm" (el ahora). */
     max: string;
-    onChange: (valor: string) => void;
+    /**
+     * SPEC-438 (I-305): `aproximada` viaja EN LA MISMA emisión que el valor.
+     * Con dos callbacks separados, el segundo llegaba con el `fechaIncidente`
+     * viejo del closure y pisaba la fecha recién elegida.
+     */
+    onChange: (valor: string, aproximada?: boolean) => void;
     error?: string | undefined;
 };
 
@@ -40,7 +53,22 @@ function a24(hora12: number, meridiano: Meridiano): number {
 }
 
 export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
-    const { fecha, hora12, meridiano } = partesHoraLocal(value);
+    const { fecha: fechaDelValor, hora12, meridiano } = partesHoraLocal(value);
+
+    /**
+     * SPEC-438 · el día se recuerda aunque todavía no haya hora.
+     *
+     * El control derivaba TODO de `value`, y `value` solo existe con día Y hora:
+     * elegir un día sin hora emitía "" y el día se borraba de la pantalla. Para
+     * la franja aproximada —que existe precisamente para quien NO tiene hora—
+     * eso la volvía inalcanzable: nunca se habilitaba.
+     */
+    const [diaElegido, setDiaElegido] = useState(fechaDelValor);
+    // Si el valor trae día (o lo limpian desde afuera), manda el valor.
+    useEffect(() => {
+        if (fechaDelValor !== "") setDiaElegido(fechaDelValor);
+    }, [fechaDelValor]);
+    const fecha = fechaDelValor !== "" ? fechaDelValor : diaElegido;
     const maxFecha = max.slice(0, 10);
     const maxHora24 = Number.parseInt(max.slice(11, 13), 10);
 
@@ -62,6 +90,7 @@ export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
 
     function cambiarFecha(nuevaFecha: string) {
         const recortada = nuevaFecha > maxFecha ? maxFecha : nuevaFecha;
+        setDiaElegido(recortada);
         // Si al cambiar de día la hora elegida queda en el futuro, se baja al tope.
         const limite = recortada === maxFecha && !Number.isNaN(maxHora24) ? maxHora24 : 23;
         if (hora12 !== null && a24(hora12, meridiano) > limite) {
@@ -114,7 +143,41 @@ export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
                     </option>
                 </select>
             </div>
-            <p className="text-sm text-muted">No necesitas el minuto exacto: basta el día y la hora aproximada.</p>
+            {/* SPEC-438 (I-305): la salida para quien NO recuerda la hora. Antes,
+                dejar la hora vacía hacía que el sistema guardara el instante del
+                envío como hora del hecho: un dato falso. Ahora se elige la franja
+                y queda MARCADA como aproximada. */}
+            <div className="flex flex-wrap items-center gap-2">
+                <label htmlFor="franja-aproximada" className="text-sm text-muted">
+                    ¿No recordás la hora?
+                </label>
+                <select
+                    id="franja-aproximada"
+                    aria-label="Franja aproximada del incidente"
+                    value=""
+                    disabled={fecha === ""}
+                    onChange={(e) => {
+                        const v = e.target.value;
+                        if (!esFranja(v) || fecha === "") return;
+                        const instante = instanteDeFranja(fecha, v);
+                        // Se emite en el mismo formato local que el control: el
+                        // contrato del wizard no cambia.
+                        const local = new Date(instante.getTime() - instante.getTimezoneOffset() * 60_000);
+                        onChange(local.toISOString().slice(0, 16), true);
+                    }}
+                    className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                >
+                    <option value="">Elegí una franja</option>
+                    {FRANJAS.map((f) => (
+                        <option key={f} value={f}>
+                            {ETIQUETA_FRANJA[f]}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <p className="text-sm text-muted">
+                Si elegís una franja, queda registrada como hora aproximada — no inventamos una hora exacta.
+            </p>
             {error && (
                 <p role="alert" className="text-sm text-ambar">
                     {error}

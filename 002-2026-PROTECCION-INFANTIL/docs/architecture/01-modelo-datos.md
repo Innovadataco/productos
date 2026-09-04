@@ -1791,6 +1791,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | texto | String | — |
 | textoOriginal | String | opcional |
 | fechaIncidente | DateTime | — |
+| horaAproximada | Boolean | — |
 | ciudad | String | — |
 | pais | String | — |
 | paisId | String | opcional |

@@ -1871,6 +1871,18 @@ model Reporte {
   texto                      String             @db.Text
   textoOriginal              String?            @db.Text
   fechaIncidente             DateTime
+  // SPEC-438 (I-305) · ¿la hora es EXACTA o la estimó el reportante?
+  //
+  // Hasta esta spec, si el formulario se enviaba sin hora, el cliente mandaba
+  // `new Date()`: el instante del envío quedaba guardado como la hora del hecho.
+  // No es un dato faltante, es un dato FALSO — indistinguible de uno verdadero,
+  // alimentando la franja horaria que se le entrega al modelo, el patrón
+  // nocturno y un informe con valor probatorio.
+  //
+  // Ahora la hora es obligatoria, y quien no la recuerda elige una FRANJA. Esa
+  // elección queda marcada acá para que el análisis pueda distinguir una hora
+  // precisa de una estimada, en vez de tratarlas igual.
+  horaAproximada             Boolean  @default(false)
   ciudad                     String
   pais                       String
   paisId                     String?

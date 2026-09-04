@@ -113,6 +113,15 @@ describe("ReporteWizard", () => {
         const area = screen.getByPlaceholderText(/Describe la conducta observada/i);
         const botonSiguiente = () => screen.getByRole("button", { name: /Siguiente/i });
 
+        // SPEC-438 (I-305): desde esta spec la fecha del hecho es OBLIGATORIA
+        // para avanzar. Este test mide el largo del texto, así que se le da una
+        // fecha válida para que siga probando LO SUYO y no choque con la guardia
+        // nueva. (Que sin fecha no se avanza tiene su propio candado.)
+        fireEvent.change(screen.getByLabelText(/Día del incidente/i), {
+            target: { value: "2026-07-10" },
+        });
+        fireEvent.change(screen.getByLabelText(/^Hora del incidente$/i), { target: { value: "10" } });
+
         // N-1 = 29 caracteres → avance bloqueado
         fireEvent.change(area, { target: { value: "a".repeat(29) } });
         await waitFor(() => expect(botonSiguiente()).toHaveProperty("disabled", true));

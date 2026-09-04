@@ -16,6 +16,13 @@ import type { AlcanceAnalisis, CategoriaConducta } from "@prisma/client";
 
 export interface HechoPadre {
     fecha: Date;
+    /**
+     * SPEC-438 (I-305) · `true` cuando el reportante NO recordaba la hora y
+     * eligió una franja. El modelo tiene que poder distinguir una hora precisa
+     * de una estimada: hasta hoy, una hora inventada por el sistema entraba al
+     * análisis con el mismo peso que una que alguien recordaba de verdad.
+     */
+    horaAproximada: boolean;
     ciudad: string | null;
     pais: string | null;
     plataforma: string | null;

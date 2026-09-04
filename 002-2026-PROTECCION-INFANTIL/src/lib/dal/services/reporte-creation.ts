@@ -27,6 +27,8 @@ export interface CrearReporteInput {
     plataformaClave: string;
     texto: string;
     fechaIncidente: string;
+    /** SPEC-438: la hora la estimó el reportante (eligió franja). */
+    horaAproximada?: boolean | undefined;
     ciudad: string;
     pais: string;
     paisId?: string | undefined;
@@ -139,6 +141,7 @@ export class ReporteCreationService {
             texto: cifrarTextoReporte(input.texto),
             textoOriginal: textoOriginalCifrado,
             fechaIncidente: new Date(input.fechaIncidente),
+            horaAproximada: input.horaAproximada ?? false,
             ciudad: input.ciudad,
             pais: input.pais,
             paisId: input.ciudadId === "otra" ? null : input.paisId || null,

@@ -19,10 +19,19 @@ export const crearReporteSchema = z.object({
     // La longitud mínima efectiva se valida en la route desde ParametroSistema
     // (reportes.spam.min_text_length, spec 092-US5); aquí solo se exige no vacío.
     texto: z.string().min(1).max(5000),
+    // SPEC-438 (I-305): obligatoria y nunca rellenada por el sistema. El
+    // cliente ya no manda `new Date()` cuando el campo está vacío: si no hay
+    // dato, no se envía y el reporte no sale.
     fechaIncidente: z.string().datetime().refine(
         (val) => new Date(val) <= new Date(),
         { message: "La fecha del incidente no puede ser futura" }
     ),
+    /**
+     * SPEC-438: `true` cuando el reportante eligió una FRANJA (madrugada,
+     * mañana, tarde, noche) en vez de recordar la hora exacta. El análisis
+     * necesita poder distinguir una hora precisa de una estimada.
+     */
+    horaAproximada: z.boolean().optional(),
     ciudad: z.string().min(1).max(100),
     pais: z.string().min(1).max(100),
     paisId: z.string().optional(),

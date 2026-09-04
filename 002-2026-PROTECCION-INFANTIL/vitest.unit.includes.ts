@@ -404,4 +404,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // `POST /api/padre/citas` en 400 permanente. Candado de caso + de clase.
     "src/app/api/padre/citas/identificadores-cuid.test.ts",
     "src/lib/schemas/identificadores.candado.test.ts",
+    // SPEC-438 (I-305): el sistema no puede volver a inventar la hora del hecho.
+    "src/lib/reportes/fecha-hecho.candado.test.ts",
+    "src/lib/reportes/franja-aproximada.test.ts",
 ];
