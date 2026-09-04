@@ -67,7 +67,12 @@ Cerrar el hilo humano del padre: del expediente vivo al primer contacto con un p
 - `arch:check`: **VERDE** en los 7 gates.
 - `tokens:check`: piso 1079 intacto.
 - `npm run lint`: 0 errors (73 warnings preexistentes).
-- Tests unitarios / e2e del nuevo panel + endpoint: fuera de este PR (queda como TAREA de seguimiento en `tasks.md`). El motor de citas ya tiene tests de integración (SPEC-395).
+- **Pruebas (13 casos, veredicto CEO 23:1x)**:
+  - `precio-primera-cita.test.ts` (4): entero cuando sembrado; EXPLOTA sin parámetro; EXPLOTA con valor inválido (0/negativo/no numérico/vacío); redondeo de decimal positivo.
+  - `cita.service.test.ts` (4): override cobra precio ESTÁNDAR; sin override cae a tarifa; reasignación HEREDA montos + `pagoHeredadoDeId` + arranca `pagoAprobadoEn`; rechaza reasignar al MISMO profesional (400).
+  - `api/padre/citas/[id]/route.test.ts` (3): sin sesión → 401; otro padre → 404; el padre dueño → 200 y DTO CitaParaPadre con `contactoProfesional === undefined` (candado H-2).
+  - `api/publico/profesionales/precio-primera-cita/route.test.ts` (2): sin sesión → 200 con el número; sin parámetro → 500 con AppError.
+- **Endpoint público en el barrido arch:check**: `GUARDIAS_ACCESO.publicas` (`src/lib/routing/guardias.ts:54`) incluye `"/api/publico"` — matcheaRuta por segmento cubre `/api/publico/profesionales/precio-primera-cita`. La regeneración de `02-roles-capacidades.md` marca la fila ANONIMO → **permitir** (misma familia que I-289/I-297).
 
 ## Impacto en arquitectura:
 

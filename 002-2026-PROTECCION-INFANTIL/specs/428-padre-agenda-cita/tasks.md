@@ -16,10 +16,16 @@
 - [x] `npm run lint` 0 errors.
 - [x] spec / plan / tasks.
 
+## Tests de este PR (post veredicto CEO 23:1x — «sin pruebas no hay merge»)
+
+- [x] `precio-primera-cita.test.ts`: helper devuelve entero, EXPLOTA sin parámetro, EXPLOTA con valor inválido (0/negativo/no numérico/vacío), redondea decimal positivo.
+- [x] `cita.service.test.ts`: (b) `crearSolicitudCita` con override cobra precio ESTÁNDAR (no la tarifa) · sin override cae a tarifa; (c) `reasignarPorPadre` hereda montos + `pagoHeredadoDeId` + arranca `pagoAprobadoEn` · rechaza reasignar al MISMO profesional.
+- [x] `api/padre/citas/[id]/route.test.ts`: (a) sin sesión → 401; otro padre → 404; el padre dueño → 200 con DTO CitaParaPadre y `contactoProfesional === undefined` (candado H-2).
+- [x] `api/publico/profesionales/precio-primera-cita/route.test.ts`: (e) sin sesión → 200; sin parámetro → 500 con AppError.
+
 ## Seguimiento (fuera de este PR)
 
 - [ ] Tests unitarios `SolicitarCitaPanel` — happy path + rama reasignación.
-- [ ] Test integración GET `/api/padre/citas/[id]` — PARENT ve la suya, 404 en otra.
 - [ ] Test unitario del hook `useCountdown` (borde de vencido).
 - [ ] E2E Playwright de los momentos 1 → 7 con seed determinístico.
-- [ ] Endpoint público `precio-primera-cita` en la landing (si aparece la necesidad).
+- [ ] Consumir el endpoint público `precio-primera-cita` en la landing (si aparece la necesidad).
