@@ -14,6 +14,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "../../../middleware";
 import { firmarSesionEstado, NOMBRE_COOKIE } from "@/lib/routing/vigencia-cookie";
+import { matcheaRuta } from "@/lib/routing/guardias";
 import { SignJWT } from "jose";
 
 const JWT_SECRET_TEST =
@@ -190,6 +191,46 @@ describe("SPEC-287 · loop de vigencia (I-141) NO se reproduce", () => {
         // El middleware NO corta con CONSENTIMIENTO_REQUERIDO para este rol.
         expect(res.status).not.toBe(403);
         expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+
+    // ── SPEC-422 (I-297) · LAS TRES PUERTAS DE REGISTRO ─────────────────────
+    //
+    // Tercera aparición de la misma clase en un día: I-289 (webhook fuera de la
+    // allowlist), I-290 (ítem de menú que rebotaba) y esta. `/registro-profesional`
+    // no estaba en `GUARDIAS_ACCESO.publicas` y el middleware la cortaba con
+    // 307 → /login: la tarjeta «Soy profesional» era un enlace muerto y nadie
+    // podía inscribirse como psicólogo.
+    //
+    // Ojo con la trampa que lo causó: `matcheaRuta` es prefijo POR SEGMENTO, así
+    // que "/registro" NO cubre "/registro-colegio" ni "/registro-profesional".
+    // Cada puerta necesita su propia entrada. El test de abajo lo demuestra.
+    const PUERTAS_DE_REGISTRO = ["/registro", "/registro-colegio", "/registro-profesional"] as const;
+
+    for (const puerta of PUERTAS_DE_REGISTRO) {
+        it(`(j-422) ${puerta} sin sesión → NO rebota al login`, async () => {
+            const req = new NextRequest(`http://localhost:5005${puerta}`);
+            const res = await middleware(req);
+            expect(res.status, `${puerta} es una puerta de registro: no puede exigir sesión`).not.toBe(307);
+            expect(res.headers.get("x-middleware-next"), `${puerta} debe llegar a su página`).toBe("1");
+        });
+
+        it(`(j-422-token) ${puerta}/crear-clave/<token> sin sesión → NO rebota al login`, async () => {
+            // El correo manda a esta URL. Si rebota, el enlace del correo es
+            // tan muerto como la tarjeta.
+            const req = new NextRequest(`http://localhost:5005${puerta}/crear-clave/tok-de-prueba`);
+            const res = await middleware(req);
+            expect(res.status, `el enlace del correo de ${puerta} no puede exigir sesión`).not.toBe(307);
+            expect(res.headers.get("x-middleware-next")).toBe("1");
+        });
+    }
+
+    it("(j-422-prefijo) `/registro` NO cubre a las otras dos — la trampa que causó I-297", async () => {
+        // Contraprueba de la causa: si alguien borra las entradas propias
+        // pensando que `/registro` las cubre, esto lo desmiente.
+        expect(matcheaRuta("/registro-profesional", "/registro")).toBe(false);
+        expect(matcheaRuta("/registro-colegio", "/registro")).toBe(false);
+        // Y lo que sí cubre cada una: su propio subárbol.
+        expect(matcheaRuta("/registro-profesional/crear-clave/abc", "/registro-profesional")).toBe(true);
     });
 
     it("(h) anónimo en /dashboard/padre → redirect a /login", async () => {
