@@ -1,7 +1,7 @@
 /**
  * SPEC-408 · Candado H-2 (Ley 1918/2018 · 2375/2024 · brief §5):
  * la vista del profesional NO expone `resultado`, `checklist` estructurado,
- * `notaInterna`, `autorizacionArchivoUrl` ni `revisadoPor`. Solo la observación
+ * `notaInterna`, `autorizacionArchivoId` ni `revisadoPor`. Solo la observación
  * escrita, por ítem, cuando el último resultado fue RECHAZADO.
  *
  * Este candado corre en unit (jsdom), con jsonify puro sobre el shape de
@@ -15,7 +15,7 @@ const RESERVADOS_LEGALES = [
     "resultado",
     "checklist",
     "notaInterna",
-    "autorizacionArchivoUrl",
+    "autorizacionArchivoId",
     "revisadoPor",
     "revisadoPorId",
 ] as const;

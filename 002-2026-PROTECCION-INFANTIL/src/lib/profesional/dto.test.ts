@@ -1,7 +1,7 @@
 /**
  * SPEC-391 · candado de reserva: internos NO salen por el DTO público.
  * Ley 2375/2024 y aviso CEO 08:40: numeroTarjetaProfesional, datosFacturacion,
- * autorizacionArchivoUrl y autorizacionSubidaEn son reservados. Este test
+ * autorizacionArchivoId y autorizacionSubidaEn son reservados. Este test
  * rompe si alguien los cuela en el DTO — que es el único camino de salida
  * hacia el directorio abierto.
  */
@@ -31,7 +31,7 @@ const PERFIL_COMPLETO = {
     estado: "ACTIVO",
     numeroTarjetaProfesional: "TP-123",
     datosFacturacion: { nit: "900000001" },
-    autorizacionArchivoUrl: "uuid-secreto",
+    autorizacionArchivoId: "uuid-secreto",
     autorizacionSubidaEn: new Date("2026-09-03T10:00:00Z"),
     creadoEn: new Date(),
     actualizadoEn: new Date(),
@@ -39,7 +39,7 @@ const PERFIL_COMPLETO = {
 } as const;
 
 describe("toPerfilProfesionalPublico · candado de reserva", () => {
-    it("NUNCA incluye numeroTarjetaProfesional, datosFacturacion, autorizacionArchivoUrl ni autorizacionSubidaEn", () => {
+    it("NUNCA incluye numeroTarjetaProfesional, datosFacturacion, autorizacionArchivoId ni autorizacionSubidaEn", () => {
         const publico = toPerfilProfesionalPublico(PERFIL_COMPLETO as never);
         for (const clave of CAMPOS_INTERNOS_PROFESIONAL) {
             expect(publico as unknown as Record<string, unknown>, `campo interno "${clave}" se coló al DTO público`).not.toHaveProperty(clave);
@@ -80,7 +80,7 @@ describe("toPerfilProfesionalPropio", () => {
     });
 
     it("con autorización sin subir, `autorizacionSubida` es false", () => {
-        const propio = toPerfilProfesionalPropio({ ...PERFIL_COMPLETO, autorizacionArchivoUrl: null } as never);
+        const propio = toPerfilProfesionalPropio({ ...PERFIL_COMPLETO, autorizacionArchivoId: null } as never);
         expect(propio.autorizacionSubida).toBe(false);
     });
 });
@@ -91,7 +91,7 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
     });
 
     it("sin autorización → false (aunque el resto esté lleno)", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, autorizacionArchivoUrl: null } as never)).toBe(false);
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, autorizacionArchivoId: null } as never)).toBe(false);
     });
 
     it("sin ninguna modalidad marcada → false", () => {

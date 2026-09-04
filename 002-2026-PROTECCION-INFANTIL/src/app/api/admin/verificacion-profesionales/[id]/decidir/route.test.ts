@@ -89,10 +89,25 @@ async function sembrarPerfilEnRevision() {
             tarifaConsultaCOP: 100000,
             duracionMinutos: 45,
             estado: "EN_REVISION",
-            autorizacionArchivoUrl: "/archivos/autorizacion-prueba.pdf",
+            autorizacionArchivoId: "/archivos/autorizacion-prueba.pdf",
             autorizacionSubidaEn: new Date(),
         },
     });
+    // SPEC-436 (I-304): desde esta spec NO se puede marcar CUMPLE un requisito
+    // sin documento cargado. Estos tests son de SPEC-418 (que el aviso quede
+    // encolado), así que se les carga el documento de cada requisito para que
+    // sigan probando LO SUYO en vez de chocar con la guardia nueva.
+    for (const r of REQUISITOS) {
+        await prisma.documentoProfesional.create({
+            data: {
+                perfilProfesionalId: perfil.id,
+                requisitoClave: r.clave,
+                archivoId: `archivo-${r.clave}`,
+                extension: "pdf",
+                sha256: "sha-de-prueba",
+            },
+        });
+    }
     return { perfil, profesional };
 }
 

@@ -17,7 +17,7 @@
  * · Validación por MAGIA DE BYTES (no por extensión). Aceptados: PDF, PNG, JPG
  *   — el CEO 03-09 04:32 pidió los tres porque la gente le toma foto al documento
  *   con el teléfono, no lo escanea.
- * · Lo que se persiste en `PerfilProfesional.autorizacionArchivoUrl` es esta
+ * · Lo que se persiste en `PerfilProfesional.autorizacionArchivoId` es esta
  *   ruta local del archivo cifrado, NUNCA una URL pública.
  */
 import { randomUUID } from "node:crypto";

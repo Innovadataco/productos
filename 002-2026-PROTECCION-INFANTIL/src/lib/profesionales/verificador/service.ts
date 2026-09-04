@@ -29,6 +29,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { calcularVenceEn } from "@/lib/profesionales/vigencia";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
 import { leerRequisitosVerificacion, type ItemChecklist, type RequisitoVerificacion } from "./requisitos";
+import { DocumentoProfesionalRepository } from "@/lib/dal/repositories/documento-profesional";
+import { estadoDeDocumentos, type EstadoDocumento } from "@/lib/profesional/documentos.service";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Schemas de entrada (validación en el borde)
@@ -103,8 +105,13 @@ export interface FichaVerificacion {
         atiendeVirtual: boolean;
         atiendePresencial: boolean;
     };
-    autorizacionArchivoUrl: string | null;
+    autorizacionArchivoId: string | null;
     requisitos: RequisitoVerificacion[];
+    /**
+     * SPEC-436: qué documento tiene cargado cada requisito. `cargado: false` es
+     * lo que la ficha pinta como «sin documento» — y lo que impide el CUMPLE.
+     */
+    documentos: EstadoDocumento[];
     /** Checklist actual (si hay verificación previa) o vacío. */
     checklist: Record<string, ItemChecklist>;
     historial: Array<{
@@ -144,8 +151,9 @@ export async function abrirFicha(solicitudId: string): Promise<FichaVerificacion
             atiendeVirtual: perfil.atiendeVirtual,
             atiendePresencial: perfil.atiendePresencial,
         },
-        autorizacionArchivoUrl: perfil.autorizacionArchivoUrl,
+        autorizacionArchivoId: perfil.autorizacionArchivoId,
         requisitos,
+        documentos: await estadoDeDocumentos(perfil.id),
         checklist:
             ultimaChecklist ??
             Object.fromEntries(requisitos.map((r) => [r.clave, { estado: "PENDIENTE" as const, observacion: "" }])),
@@ -199,7 +207,7 @@ export async function decidir(
             409,
         );
     }
-    if (!perfil.autorizacionArchivoUrl) {
+    if (!perfil.autorizacionArchivoId) {
         throw new AppError(
             "El profesional aún no subió la autorización firmada — no se puede decidir sin ella.",
             ERROR_CODES.VALIDATION_ERROR,
@@ -222,6 +230,27 @@ export async function decidir(
             ERROR_CODES.VALIDATION_ERROR,
             400,
         );
+    }
+
+    // SPEC-436 (I-304) · no se puede marcar CUMPLE un requisito del que NADIE
+    // cargó documento: hasta hoy se podía aprobar sin haber visto nada. La
+    // guardia vive acá, en el servidor, y no solo en la pantalla — una guardia
+    // que solo deshabilita un botón se saltea con una petición directa.
+    const cumple = requisitos.filter((r) => entrada.checklist[r.clave].estado === "CUMPLE");
+    if (cumple.length > 0) {
+        const cargados = new Set(
+            (await new DocumentoProfesionalRepository().listarPorPerfil(perfil.id)).map(
+                (d) => d.requisitoClave,
+            ),
+        );
+        const sinDocumento = cumple.filter((r) => !cargados.has(r.clave));
+        if (sinDocumento.length > 0) {
+            throw new AppError(
+                `No se puede marcar CUMPLE sin el documento cargado. Falta: ${sinDocumento.map((r) => r.nombre).join(", ")}`,
+                ERROR_CODES.VALIDATION_ERROR,
+                400,
+            );
+        }
     }
 
     const noCumple = requisitos.filter((r) => entrada.checklist[r.clave].estado === "NO_CUMPLE");
@@ -271,7 +300,7 @@ export async function decidir(
             revisadoEn,
             checklist: entrada.checklist as unknown as Prisma.InputJsonValue,
             resultado,
-            autorizacionArchivoUrl: perfil.autorizacionArchivoUrl!,
+            autorizacionArchivoId: perfil.autorizacionArchivoId!,
             venceEn,
             notaInterna,
         });

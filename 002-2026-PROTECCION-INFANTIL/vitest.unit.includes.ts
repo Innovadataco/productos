@@ -385,4 +385,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // confundían "no hay nada" con "no pude mirar".
     "src/lib/errores-no-mudos.test.ts",
     "src/components/modules/NotificacionesInbox.test.tsx",
+    // SPEC-436 (I-303): la función que descifra el documento no puede volver a
+    // quedar sin llamador, y el enlace no puede volver a ser el id crudo.
+    "src/lib/profesional/documentos.candado.test.ts",
 ];

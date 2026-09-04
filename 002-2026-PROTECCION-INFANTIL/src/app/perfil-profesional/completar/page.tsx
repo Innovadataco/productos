@@ -17,6 +17,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
+import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
 
 type Perfil = {
     id: string;
@@ -278,6 +279,19 @@ export default function CompletarPerfilProfesionalPage() {
                     <Button onClick={subirAutorizacion} isLoading={subiendo} disabled={!archivo} variant="secondary">
                         {perfil?.autorizacionSubida ? "Reemplazar autorización" : "Subir autorización"}
                     </Button>
+                </div>
+
+                {/* SPEC-436 (I-304): los requisitos que el Verificador va a revisar.
+                    La lista sale del parámetro, no de una constante. */}
+                <div className="mt-8 border-t border-tinta/10 pt-6">
+                    <h2 className="text-lg font-semibold text-body">Documentos para tu verificación</h2>
+                    <p className="mt-1 text-sm text-muted">
+                        Estos son los documentos que revisa Innovadataco antes de activarte. Se guardan
+                        cifrados, igual que la autorización, y solo los abre quien revisa tu solicitud.
+                    </p>
+                    <div className="mt-4">
+                        <DocumentosRequisitos />
+                    </div>
                 </div>
             </GlassCard>
         </main>

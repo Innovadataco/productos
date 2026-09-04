@@ -30,8 +30,17 @@ interface Ficha {
         atiendeVirtual: boolean;
         atiendePresencial: boolean;
     };
-    autorizacionArchivoUrl: string | null;
+    autorizacionArchivoId: string | null;
     requisitos: Requisito[];
+    /** SPEC-436: qué documento cargó el profesional para cada requisito. */
+    documentos: Array<{
+        clave: string;
+        nombre: string;
+        descripcion: string;
+        cargado: boolean;
+        extension: string | null;
+        subidoEn: string | null;
+    }>;
     checklist: Record<string, { estado: EstadoItem; observacion: string }>;
     historial: Array<{
         id: string;
@@ -83,6 +92,10 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
     const noCumple = useMemo(
         () => ficha.requisitos.filter((r) => checklist[r.clave]?.estado === "NO_CUMPLE"),
         [ficha.requisitos, checklist],
+    );
+    const docsPorClave = useMemo(
+        () => Object.fromEntries(ficha.documentos.map((d) => [d.clave, d])),
+        [ficha.documentos],
     );
     const todosDecididos = ficha.requisitos.every((r) => checklist[r.clave]?.estado !== "PENDIENTE");
     const observacionesCompletas = noCumple.every((r) => checklist[r.clave].observacion.trim().length > 0);
@@ -158,10 +171,13 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                     <span className="ml-auto font-mono text-xs text-subtle">{ficha.profesional.email}</span>
                 </div>
                 <p className="cuerpo mt-4 text-body">{ficha.profesional.presentacion}</p>
-                {ficha.autorizacionArchivoUrl && (
+                {ficha.autorizacionArchivoId && (
                     <a
                         className="mt-4 inline-flex items-center gap-2 rounded-full bg-tinta/5 px-4 py-2 text-sm font-medium text-body hover:bg-tinta/10 transition"
-                        href={ficha.autorizacionArchivoUrl}
+                        /* SPEC-436 (I-303): antes iba el id crudo del archivo, que el
+                           navegador resolvía relativo a la página y daba 404. Ahora
+                           apunta al endpoint que descifra, audita y sirve. */
+                        href={`/api/admin/verificacion-profesionales/${ficha.solicitudId}/documentos/autorizacion`}
                         target="_blank"
                         rel="noopener noreferrer"
                     >
@@ -193,12 +209,30 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                     <div className="flex-1">
                                         <p className="font-semibold text-body">{r.nombre}</p>
                                         {r.descripcion && <p className="cuerpo text-subtle mt-1">{r.descripcion}</p>}
+                                        {/* SPEC-436: el documento, junto a su requisito. Sin él
+                                            no se puede marcar CUMPLE — y se dice, no se insinúa. */}
+                                        {docsPorClave[r.clave]?.cargado ? (
+                                            <a
+                                                className="mt-2 inline-flex items-center gap-2 rounded-full bg-cielo/10 px-3 py-1.5 text-xs font-medium text-body transition hover:bg-cielo/20"
+                                                href={`/api/admin/verificacion-profesionales/${ficha.solicitudId}/documentos/${r.clave}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                <IconDownload />
+                                                Ver documento
+                                            </a>
+                                        ) : (
+                                            <p className="mt-2 text-xs text-ambar">
+                                                Sin documento — no se puede marcar «cumple».
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="flex gap-2" role="radiogroup" aria-label={`Estado de ${r.nombre}`}>
                                         <button
                                             type="button"
                                             role="radio"
                                             aria-checked={item.estado === "CUMPLE"}
+                                            disabled={!docsPorClave[r.clave]?.cargado}
                                             onClick={() => setEstado(r.clave, "CUMPLE")}
                                             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
                                                 item.estado === "CUMPLE"

@@ -7,7 +7,7 @@
  * por magia de bytes — no por extensión), tope 5 MB.
  *
  * Guarda el archivo cifrado (AES-256-GCM) en el storage protegido y persiste
- * en el perfil `autorizacionArchivoUrl` (uuid opaco) + `autorizacionSubidaEn`
+ * en el perfil `autorizacionArchivoId` (uuid opaco) + `autorizacionSubidaEn`
  * (fecha, para demostrar que la autorización fue PREVIA a cada verificación
  * — el brief §5 + veredicto CEO 08:40).
  *
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         const guardado = await guardarAutorizacion(buffer, validacion.extension);
 
         const actualizado = await repo.actualizarParcial(perfil.id, {
-            autorizacionArchivoUrl: guardado.archivoId,
+            autorizacionArchivoId: guardado.archivoId,
             autorizacionSubidaEn: new Date(),
         });
 

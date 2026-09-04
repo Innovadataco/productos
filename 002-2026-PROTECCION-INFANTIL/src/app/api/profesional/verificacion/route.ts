@@ -4,7 +4,7 @@
  *
  * Payload de retorno: `{ estadoPerfil, puedeReenviar, observaciones[] }`.
  * NO expone `resultado`, `checklist` estructurado, `revisadoPor`, `notaInterna`
- * ni `autorizacionArchivoUrl`. Ver `vista-profesional.ts` para el candado.
+ * ni `autorizacionArchivoId`. Ver `vista-profesional.ts` para el candado.
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";

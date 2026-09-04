@@ -3,7 +3,7 @@
  *
  * La regla de reserva (Ley 2375/2024 + brief §2 + veredicto CEO 08:40):
  *   NUNCA salen por API pública `numeroTarjetaProfesional`, `datosFacturacion`,
- *   `autorizacionArchivoUrl` ni `autorizacionSubidaEn`. Los datos personales
+ *   `autorizacionArchivoId` ni `autorizacionSubidaEn`. Los datos personales
  *   heredados de `Usuario` (`fechaNacimiento`, `documentoTipo`,
  *   `documentoNumero`) TAMPOCO — se reusan del modelo pero no se serializan.
  *
@@ -46,7 +46,7 @@ export interface PerfilProfesionalPropioDto extends PerfilProfesionalPublicoDto 
 export const CAMPOS_INTERNOS_PROFESIONAL = [
     "numeroTarjetaProfesional",
     "datosFacturacion",
-    "autorizacionArchivoUrl",
+    "autorizacionArchivoId",
     "autorizacionSubidaEn",
 ] as const;
 
@@ -78,7 +78,7 @@ export function toPerfilProfesionalPublico(perfil: PerfilConCiudad): PerfilProfe
 export function toPerfilProfesionalPropio(perfil: PerfilConCiudad): PerfilProfesionalPropioDto {
     return {
         ...base(perfil),
-        autorizacionSubida: perfil.autorizacionArchivoUrl !== null,
+        autorizacionSubida: perfil.autorizacionArchivoId !== null,
     };
 }
 
@@ -96,6 +96,6 @@ export function perfilCompletoParaRevision(perfil: PerfilProfesional): boolean {
         perfil.presentacion.trim().length > 0 &&
         perfil.tarifaConsultaCOP > 0 &&
         perfil.duracionMinutos > 0 &&
-        perfil.autorizacionArchivoUrl !== null
+        perfil.autorizacionArchivoId !== null
     );
 }

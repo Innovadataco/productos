@@ -136,6 +136,11 @@ export class PerfilProfesionalRepository {
         }) as Promise<PerfilConCiudad | null>;
     }
 
+    /** SPEC-436: el perfil por su propio id (para servir sus documentos). */
+    findPorId(id: string): Promise<PerfilProfesional | null> {
+        return this.db.perfilProfesional.findUnique({ where: { id } });
+    }
+
     findPorUsuarioId(usuarioId: string): Promise<PerfilProfesional | null> {
         return this.db.perfilProfesional.findUnique({ where: { usuarioId } });
     }

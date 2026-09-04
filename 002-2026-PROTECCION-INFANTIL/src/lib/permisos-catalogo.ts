@@ -75,7 +75,7 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // SPEC-389 (Red de Profesionales · L2 · brief A-75): cola donde IDC verifica al
     // psicólogo y le da/niega el sello (Ley 1918/2018 + 2375/2024). El resultado de
     // antecedentes es información RESERVADA por ley — este módulo controla quién puede
-    // abrir la ficha y ver `checklist`/`autorizacionArchivoUrl`. Separación de poderes
+    // abrir la ficha y ver `checklist`/`autorizacionArchivoId`. Separación de poderes
     // (criterio I-274): quien verifica NO es quien publica el perfil.
     // Default: SOLO rol ADMIN (mismo criterio que `sistema_admin`, `comite_guias_accion`).
     // SPEC-408 (A-75 · brief §9): un SOLO módulo cubre ambas colas del

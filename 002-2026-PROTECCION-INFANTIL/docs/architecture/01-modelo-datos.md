@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **110** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **111** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -505,7 +505,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (62)
+### Otros (sin regla de dominio) (63)
 
 #### `AclaracionExpediente`
 
@@ -723,6 +723,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | enlacePanel | String | — |
 | estado | String | — |
 | destinatario | Usuario | relación (FK) |
+
+#### `DocumentoProfesional`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| perfilProfesionalId | String | — |
+| requisitoClave | String | — |
+| archivoId | String | — |
+| extension | String | — |
+| sha256 | String | — |
+| subidoEn | DateTime | — |
+| perfil | PerfilProfesional | relación (FK) |
 
 #### `EjecucionAccion`
 
@@ -1284,7 +1297,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | estado | EstadoPerfilProfesional | — |
 | numeroTarjetaProfesional | String | opcional |
 | datosFacturacion | Json | opcional |
-| autorizacionArchivoUrl | String | opcional |
+| autorizacionArchivoId | String | opcional |
 | autorizacionSubidaEn | DateTime | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
@@ -1293,6 +1306,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | verificaciones | VerificacionProfesional | lista, relación |
 | franjas | FranjaDisponible | lista, relación |
 | solicitudes | SolicitudCita | lista, relación |
+| documentos | DocumentoProfesional | lista, relación |
 
 #### `PreferenciaAlertaColegio`
 
@@ -1592,7 +1606,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | revisadoEn | DateTime | — |
 | checklist | Json | — |
 | resultado | ResultadoVerificacion | — |
-| autorizacionArchivoUrl | String | — |
+| autorizacionArchivoId | String | — |
 | venceEn | DateTime | — |
 | creadoEn | DateTime | — |
 | avisoVencimientoEnviadoEn | DateTime | opcional |
@@ -2234,6 +2248,7 @@ erDiagram
     Pais ||--o{ Reporte : "paisRel (opcional)"
     ParametroSistema ||--o{ AuditLog : "parametro (opcional)"
     PatronInstitucional ||--o{ AlertaColegio : "patronInstitucional (opcional)"
+    PerfilProfesional ||--o{ DocumentoProfesional : "perfil"
     PerfilProfesional ||--o{ FranjaDisponible : "profesional"
     PerfilProfesional ||--o{ SolicitudCita : "profesional"
     PerfilProfesional ||--o{ VerificacionProfesional : "perfilProfesional"
