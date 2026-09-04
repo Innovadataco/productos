@@ -32,6 +32,7 @@ import {
     NOMBRE_COOKIE as NOMBRE_COOKIE_SESION,
     leerSesionEstado,
 } from "@/lib/routing/vigencia-cookie";
+import { esTitularDelDato, tieneCaminoGuiado } from "@/lib/routing/roles-titulares";
 import { destinoDePaso, destinoParaRol } from "@/lib/camino/pasos";
 import { GUARDIAS_ACCESO as G } from "@/lib/routing/guardias";
 
@@ -190,8 +191,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
             : null;
 
     if (estado) {
-        // Paso 4: consentimiento.
-        if (estado.requiereConsentimiento && !esExentaConsentimiento(pathname)) {
+        // Paso 4: consentimiento. SPEC-416 (I-118 · orden CEO 03-09-2026):
+        // el guard se le pide SOLO a titulares del dato — fuente única de
+        // la regla legal en `roles-titulares.ts` (motivo probatorio explicado
+        // ahí). Cualquier rol nuevo declara su condición ahí y este bloque
+        // se entera sin cambios.
+        if (esTitularDelDato(sesion.rol) && estado.requiereConsentimiento && !esExentaConsentimiento(pathname)) {
             // SPEC-329 (002-PI-229): las /api/** gateadas responden JSON 403 (no 302 HTML),
             // igual que el Paso 2 con su 401 — un fetch NO puede seguir un redirect y
             // confundir el bloqueo con éxito. Las pantallas (no-api) siguen redirigiendo.
@@ -218,9 +223,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         // Padre (PARENT) y rector (SCHOOL_ADMIN) comparten la misma cadena. El
         // destino se despacha por rol vía `destinoParaRol`. Otros roles nunca
         // llevan `pasoCamino` en la cookie (emisor lo garantiza), así que no
-        // llegan a esta rama.
+        // llegan a esta rama. NO reusar `esTitularDelDato`: son criterios
+        // distintos que HOY coinciden en los mismos roles — pueden divergir
+        // cuando aparezca un titular sin onboarding guiado (o al revés).
+        // Fuente única en `roles-titulares.ts` (dos constantes distintas).
         if (
-            (sesion.rol === "PARENT" || sesion.rol === "SCHOOL_ADMIN") &&
+            tieneCaminoGuiado(sesion.rol) &&
             estado.pasoCamino &&
             !esExentaCamino(pathname, sesion.rol)
         ) {
@@ -284,7 +292,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     // middleware retorna antes de llegar a este punto cuando la pide.
     if (
         !estado &&
-        (sesion.rol === "PARENT" || sesion.rol === "SCHOOL_ADMIN") &&
+        tieneCaminoGuiado(sesion.rol) &&
         !esExentaCamino(pathname, sesion.rol) &&
         !pathname.startsWith("/api/")
     ) {

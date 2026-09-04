@@ -1,6 +1,7 @@
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { requiereConsentimientoActual } from "@/lib/consentimiento/guard";
+import { esTitularDelDato } from "@/lib/routing/roles-titulares";
 import { resolverEstadoVigencia } from "@/lib/pagos/vigencia-middleware";
 import type { EstadoVigenciaEfectivo } from "@/lib/pagos/vigencia-middleware";
 import { firmarSesionEstado } from "@/lib/routing/vigencia-cookie";
@@ -22,7 +23,7 @@ import type { PasoPendienteColegio } from "@/lib/camino/pasos-colegio";
  */
 export async function buildSesionEstadoValue(userId: string): Promise<string> {
     const repo = new UsuarioRepository();
-    const [suscripcion, requiereConsentimiento, flag, usuarioVigencia] = await Promise.all([
+    const [suscripcion, requiereConsentimientoRaw, flag, usuarioVigencia] = await Promise.all([
         new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(userId),
         requiereConsentimientoActual(userId),
         repo.findDebeCambiarPassword(userId),
@@ -30,6 +31,12 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
     ]);
 
     const rol = usuarioVigencia?.rol;
+    // SPEC-416 (I-118 · orden CEO 03-09-2026): el consentimiento se le pide
+    // SOLO a titulares del dato — fuente única en `roles-titulares.ts`, motivo
+    // probatorio explicado ahí. Defensa en profundidad: ni siquiera embebemos
+    // la marca en la cookie para no titulares, así si mañana alguien olvida el
+    // filtro del middleware, el flag ni siquiera está.
+    const requiereConsentimiento = esTitularDelDato(rol) ? requiereConsentimientoRaw : false;
     let vigencia: EstadoVigenciaEfectivo;
 
     if (rol === "SCHOOL_ADMIN" || rol === "COMITE_CONVIVENCIA") {

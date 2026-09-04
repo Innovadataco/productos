@@ -8,11 +8,11 @@
  * contratado ensucia `audit_consentimientos`, que es prueba LEGAL de que
  * un titular consintió.
  *
- * Este spec mergea ANTES que SPEC-416 (Dev 01), como funcionó con I-290/405
- * y con SPEC-408/410. Todos los tests entran con `test.fail` citando
- * SPEC-416 — cuando Dev 01 despliegue el guard filtrado por rol, Playwright
- * reporta "unexpected pass" y él quita los `test.fail` como parte de esa
- * spec.
+ * SPEC-416 (Dev 01) desplegó el guard filtrado por rol; los `test.fail`
+ * fueron retirados como parte de esa spec. Los 8 tests corren ahora
+ * afirmando el comportamiento correcto — si el bug reincide, truenan
+ * de verdad, y en particular el bloque (B) protege que nadie afloje
+ * el guard de los titulares por accidente.
  *
  * EL CANDADO VA EN LAS DOS DIRECCIONES — y la segunda importa más:
  *
@@ -139,7 +139,6 @@ test.describe.serial("Consentimiento por rol (SPEC-417 candado de I-118)", () =>
     // ── (A) los 6 NO TITULARES deben pasar sin consentimiento ──
     for (const rol of ROLES_NO_TITULARES) {
         test(`(A) ${rol} NO debe recibir CONSENTIMIENTO_REQUERIDO`, async ({ request }) => {
-            test.fail(true, "SPEC-416 (Dev 01) filtra el guard de consentimiento por rol; hoy I-118 vive y `${rol}` es rebotado.");
             const cookies = await loginCookie(request, rol);
             const r = await sondaGuard(request, cookies);
             expect(
@@ -152,7 +151,6 @@ test.describe.serial("Consentimiento por rol (SPEC-417 candado de I-118)", () =>
     // ── (B) los 2 TITULARES DEBEN seguir bloqueados sin consentimiento ──
     for (const rol of ROLES_TITULARES) {
         test(`(B) ${rol} SIGUE bloqueado con CONSENTIMIENTO_REQUERIDO`, async ({ request }) => {
-            test.fail(true, "SPEC-416 (Dev 01) preserva el guard para titulares; el candado se quita cuando esa spec despliega.");
             const cookies = await loginCookie(request, rol);
             const r = await sondaGuard(request, cookies);
             // Doble candado: status 403 Y code exacto — un 403 por permiso

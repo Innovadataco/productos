@@ -162,6 +162,41 @@ describe("buildSesionEstadoValue — derivación de vigencia por rol (SPEC-331)"
         });
     });
 
+    // SPEC-416 (I-118): defensa en profundidad — el flag `requiereConsentimiento`
+    // de la cookie solo puede ser `true` para titulares (PARENT / SCHOOL_ADMIN).
+    // Cualquier otro rol lo recibe forzado a `false` aunque el helper diga que sí.
+    describe("SPEC-416 · requiereConsentimiento solo para titulares", () => {
+        beforeEach(() => {
+            // El helper devuelve true por defecto en estas pruebas — el emitter
+            // debe filtrar por rol antes de embeberlo en la cookie.
+            mocks.requiereConsentimiento.mockResolvedValue(true);
+        });
+
+        it("PARENT con requiereConsentimiento=true → true en cookie (siguen siendo titulares)", async () => {
+            setup({ rol: "PARENT", suscripcionEstado: "ACTIVA" });
+            mocks.requiereConsentimiento.mockResolvedValue(true);
+            const payload = JSON.parse(await buildSesionEstadoValue("uid-p"));
+            expect(payload.requiereConsentimiento).toBe(true);
+        });
+
+        it("SCHOOL_ADMIN con requiereConsentimiento=true → true en cookie", async () => {
+            setup({ rol: "SCHOOL_ADMIN", vigente: true });
+            mocks.requiereConsentimiento.mockResolvedValue(true);
+            const payload = JSON.parse(await buildSesionEstadoValue("uid-s"));
+            expect(payload.requiereConsentimiento).toBe(true);
+        });
+
+        it.each(["ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA", "VERIFICADOR", "PROFESIONAL"])(
+            "%s con requiereConsentimiento=true → forzado a false (no titular del dato)",
+            async (rol) => {
+                setup({ rol });
+                mocks.requiereConsentimiento.mockResolvedValue(true);
+                const payload = JSON.parse(await buildSesionEstadoValue("uid-x"));
+                expect(payload.requiereConsentimiento).toBe(false);
+            }
+        );
+    });
+
     // ── SPEC-339 · pasoCamino en la cookie ──────────────────────────────────
     describe("SPEC-339 · pasoCamino", () => {
         it("PARENT: el paso pendiente derivado viaja en la cookie", async () => {
