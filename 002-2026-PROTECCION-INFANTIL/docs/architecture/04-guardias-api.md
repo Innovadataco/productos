@@ -21,9 +21,9 @@ Candado 22 v5: enumeración completa, no muestreo.
 
 ## Resumen
 
-- Total de rutas `/api/**`: **385**
-- Recomendación **bloquear** en fail-closed: **325**
-- Recomendación **exenta** en fail-closed (por catálogo): **48**
+- Total de rutas `/api/**`: **390**
+- Recomendación **bloquear** en fail-closed: **329**
+- Recomendación **exenta** en fail-closed (por catálogo): **49**
 - Recomendación **exenta selectiva por guardián** (pagos/suscripción): **12** — exentas de vigencia y camino; bloqueadas por consentimiento y cambio-de-clave.
 
 ## Guardianes que aplican HOY (con cookie `sesion_estado`)
@@ -220,6 +220,7 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/admin/verificacion-profesionales` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/admin/verificacion-profesionales/[id]` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/admin/verificacion-profesionales/incidentes` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/alertas` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/alertas/[id]` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
@@ -358,6 +359,7 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/padre/circulo-confianza/semaforo` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/padre/circulo-confianza/timeline` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/padre/citas` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
+| `/api/padre/citas/[id]` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/padre/citas/[id]/reasignar` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/padre/citas/[id]/reprogramar` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/padre/contacto-emergencia` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
@@ -396,6 +398,8 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/paises` | P | — | — | — | — | — | — |
 | `/api/plataformas` | P | — | — | — | — | — | — |
 | `/api/profesional/autorizacion` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
+| `/api/profesional/documentos` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
+| `/api/profesional/documentos/[clave]` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/profesional/franjas` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/profesional/franjas/[id]` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/profesional/panel` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
@@ -407,6 +411,7 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/profesional/verificacion/reenviar` | R | SÍ | SÍ | SÍ | SÍ | SÍ | SÍ |
 | `/api/publico/guia-accion/categoria/[cat]` | P | — | — | — | — | — | — |
 | `/api/publico/profesionales/[id]/franjas` | P | — | — | — | — | — | — |
+| `/api/publico/profesionales/precio-primera-cita` | P | — | — | — | — | — | — |
 | `/api/publico/verificar-pdf/[hash]` | P | — | — | — | — | — | — |
 | `/api/reportes` | P | — | — | — | — | — | — |
 | `/api/reportes/[id]/evento` | P | — | — | — | — | — | — |
@@ -616,6 +621,7 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/admin/verificacion-profesionales` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/admin/verificacion-profesionales/[id]` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/admin/verificacion-profesionales/[id]/decidir` | PASA | **bloquear** | cae en el catálogo genérico |
+| `/api/admin/verificacion-profesionales/[id]/documentos/[clave]` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/admin/verificacion-profesionales/incidentes` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/alertas` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/alertas/[id]` | PASA | **bloquear** | cae en el catálogo genérico |
@@ -754,6 +760,7 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/padre/circulo-confianza/semaforo` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/padre/circulo-confianza/timeline` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/padre/citas` | PASA | **bloquear** | cae en el catálogo genérico |
+| `/api/padre/citas/[id]` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/padre/citas/[id]/reasignar` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/padre/citas/[id]/reprogramar` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/padre/contacto-emergencia` | PASA | **bloquear** | cae en el catálogo genérico |
@@ -792,6 +799,8 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/paises` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/plataformas` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/profesional/autorizacion` | PASA | **bloquear** | cae en el catálogo genérico |
+| `/api/profesional/documentos` | PASA | **bloquear** | cae en el catálogo genérico |
+| `/api/profesional/documentos/[clave]` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/profesional/franjas` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/profesional/franjas/[id]` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/profesional/panel` | PASA | **bloquear** | cae en el catálogo genérico |
@@ -803,6 +812,7 @@ Camino y vigencia se ramifican por rol: se listan las dos ramas relevantes (PARE
 | `/api/profesional/verificacion/reenviar` | PASA | **bloquear** | cae en el catálogo genérico |
 | `/api/publico/guia-accion/categoria/[cat]` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/publico/profesionales/[id]/franjas` | PASA | **exenta** | pública por diseño (sin JWT) |
+| `/api/publico/profesionales/precio-primera-cita` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/publico/verificar-pdf/[hash]` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/reportes` | PASA | **exenta** | pública por diseño (sin JWT) |
 | `/api/reportes/[id]/evento` | PASA | **exenta** | pública por diseño (sin JWT) |

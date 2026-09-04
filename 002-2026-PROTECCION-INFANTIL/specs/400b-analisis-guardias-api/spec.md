@@ -15,7 +15,7 @@ Jelkin decidió que la corrección se hace con **análisis previo, no como hotfi
 
 Sigue el patrón de la línea base de arquitectura (`scripts/arch/generar-*.ts`): registrado en `scripts/arch/artefactos.ts` como fila `04-guardias-api.md`. `npm run arch:check` verifica el drift automáticamente sin step nuevo en `verificaciones`.
 
-**Enumeración**: recorre `src/app/api/**/route.ts(x)` con `inventarioRutasApp()` (helper de SPEC-126) — 385 rutas. Candado 22 v5 cumplido: enumeración completa, no muestreo.
+**Enumeración**: recorre `src/app/api/**/route.ts(x)` con `inventarioRutasApp()` (helper de SPEC-126) — 390 rutas. Candado 22 v5 cumplido: enumeración completa, no muestreo.
 
 **Evaluación por ruta** (usando los helpers reales de `src/lib/routing/guardias.ts`, sin duplicar lógica):
 
@@ -34,7 +34,7 @@ Sigue el patrón de la línea base de arquitectura (`scripts/arch/generar-*.ts`)
   - **Exentas de CAMINO** — el paso `plan` cuelga del camino guiado, verificado positivamente en `src/lib/camino/pasos.ts:22` (`PASOS_CAMINO = ["permiso","datos","hijos","plan"]` para PARENT) y `pasos-colegio.ts:20` (`PASOS_COLEGIO = ["rector","plan",...]` para SCHOOL_ADMIN). Si el camino bloquea las rutas de pago, el propio camino no se puede terminar.
   - **SIGUEN bloqueadas por CONSENTIMIENTO** — quien no aceptó el tratamiento de datos no debe transar.
   - **SIGUEN bloqueadas por CAMBIO-DE-CLAVE** — cuenta con clave forzada es señal de compromiso; ahí menos que nunca se mueve plata.
-- `bloquear` (325): el resto — default de "cualquier /api/ regular".
+- `bloquear` (329): el resto — default de "cualquier /api/ regular".
 
 ### 2) `docs/architecture/04-guardias-api.md` (nuevo, generado)
 
@@ -42,8 +42,8 @@ Cinco secciones:
 
 1. **Fenómeno medido** — descripción textual de I-236/I-239 con el punto exacto de `middleware.ts` donde ocurre.
 2. **Resumen** — totales por veredicto.
-3. **Guardianes que aplican HOY (con cookie)** — tabla de 385 filas × 7 columnas (ruta + tipo + 5 guardianes) con `SÍ`/`no`/`—`.
-4. **Recomendación fail-closed por ruta** — tabla de 385 filas con `bloquear`/`exenta`/`decidir` + motivo humano por fila.
+3. **Guardianes que aplican HOY (con cookie)** — tabla de 390 filas × 7 columnas (ruta + tipo + 5 guardianes) con `SÍ`/`no`/`—`.
+4. **Recomendación fail-closed por ruta** — tabla de 390 filas con `bloquear`/`exenta`/`decidir` + motivo humano por fila.
 5. **Exentas selectivas** — las 12 rutas de pagos/suscripción con `exenta de X, Y ; bloquea por Z, W` (decisión CEO 04-09 02:12 escrita textualmente + verificación positiva del paso `plan` del camino guiado).
 6. **Matriz de pruebas de cookie-ausente por guardián × rol** — 24 filas (4 guardianes × 6-8 roles) con "hoy responde 200 (fail-open)" vs "con fail-closed debería responder `403 { code: … }`". Los tests que faltan se implementan en el PR de **SPEC-400c** (implementación), no acá.
 
@@ -58,7 +58,7 @@ Cinco secciones:
 ## Candados
 
 - **SPEC-400b es análisis, no fix**: cero cambios en `middleware.ts`, `proxy.ts`, `guardias.ts`, `roles-titulares.ts`, `middleware-api-guardias.test.ts` o cualquier código de producción.
-- **Enumeración completa (candado 22 v5)**: los 385 archivos `route.ts` de `src/app/api/**` se listan y evalúan, uno por uno.
+- **Enumeración completa (candado 22 v5)**: los 390 archivos `route.ts` de `src/app/api/**` se listan y evalúan, uno por uno.
 - **Sin duplicar lógica**: el generador IMPORTA los helpers reales de `guardias.ts`. Si mañana `esExentaVigencia` cambia, el generador ve el cambio y el drift lo delata en `arch:check`.
 - **Determinístico**: mismo commit → mismo output byte-a-byte. `encabezadoGenerado()` no incluye timestamp por diseño.
 - **Sin decidir por Jelkin**: las 12 rutas `decidir` se listan con las dos opciones. El generador NO elige.
@@ -70,7 +70,7 @@ Un script nuevo bajo `scripts/arch/`, un artefacto autogenerado en `docs/archite
 
 ## Cómo se probó
 
-- Ejecutado local: `npx tsx scripts/arch/generar-guardias-api.ts` → 385 rutas listadas, resumen `325 bloquear · 48 exenta · 12 exenta selectiva`. Las 12 selectivas son todas de `/api/pagos/**` y `/api/(padre|colegio)/suscripcion*` — coincide con la anticipación del CEO. La verificación positiva del camino guiado (paso `plan` en `pasos.ts:22` y `pasos-colegio.ts:20`) confirma que exentar `camino` no rompe otro invariante.
+- Ejecutado local: `npx tsx scripts/arch/generar-guardias-api.ts` → 390 rutas listadas, resumen `329 bloquear · 49 exenta · 12 exenta selectiva`. Las 12 selectivas son todas de `/api/pagos/**` y `/api/(padre|colegio)/suscripcion*` — coincide con la anticipación del CEO. La verificación positiva del camino guiado (paso `plan` en `pasos.ts:22` y `pasos-colegio.ts:20`) confirma que exentar `camino` no rompe otro invariante.
 - `npm run arch:check` verde tras regenerar el índice (`00-INDICE.md`). Cazará cualquier drift futuro.
 
 ## DoD
