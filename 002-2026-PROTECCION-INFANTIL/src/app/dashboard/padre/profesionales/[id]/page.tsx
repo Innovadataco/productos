@@ -25,6 +25,16 @@ export default async function PadreProfesionalPerfilPage({
     const { id } = await params;
     const { expedienteId, heredarDe } = await searchParams;
 
+    // SPEC-441 · «volver al directorio» conserva el contexto — pero SOLO con IDs
+    // opacos. SPEC-440 (I-306) sacó `u`/`pres` de la URL porque filtran PII de
+    // menores; la urgencia y la presentación las restaura el directorio desde su
+    // `sessionStorage`, no desde la barra de direcciones. Meterlas acá reabriría
+    // esa fuga (y, tras 440, `u`/`pres` ya no existen en `searchParams`).
+    const paramsVolver = new URLSearchParams();
+    if (expedienteId) paramsVolver.set("expedienteId", expedienteId);
+    if (heredarDe) paramsVolver.set("heredarDe", heredarDe);
+    const hrefVolverQuery = paramsVolver.toString() ? `?${paramsVolver.toString()}` : "";
+
     const [perfil, precioEstandarPrimeraCitaCOP] = await Promise.all([
         new PerfilProfesionalRepository().obtenerPublicoPorId(id),
         leerPrecioEstandarPrimeraCita(),
@@ -37,6 +47,10 @@ export default async function PadreProfesionalPerfilPage({
             precioEstandarPrimeraCitaCOP={precioEstandarPrimeraCitaCOP}
             expedienteIdSugerido={expedienteId}
             heredarDeSolicitudId={heredarDe}
+            /* SPEC-441: la vuelta al directorio conserva el contexto — expediente
+               y reasignación por la URL (IDs opacos); urgencia y presentación las
+               restaura el directorio de su sessionStorage (SPEC-440, sin PII). */
+            hrefVolver={`/dashboard/padre/profesionales/directorio${hrefVolverQuery}`}
         />
     );
 }
