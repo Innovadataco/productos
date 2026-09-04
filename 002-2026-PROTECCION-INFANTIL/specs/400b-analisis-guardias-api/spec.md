@@ -29,9 +29,11 @@ Sigue el patrón de la línea base de arquitectura (`scripts/arch/generar-*.ts`)
 **Fail-closed propuesto** por ruta:
 
 - `exenta` (48): pública, ruta de sesión, `/api/auth/**`, `/api/sesion/al-dia`, `/api/vigencia/refresh`, `/api/health`, `/api/monitor/notif`, `/api/webhooks/**`, `/api/publico/**`, catálogos (`/api/plataformas`, `/paises`, `/departamentos`, `/ciudades`, `/config/parametros/publicos`), `/api/consulta`, `/api/reportes`, `/api/estadisticas-publicas`, `/api/docs`, `/api/me`, `/api/consentimiento`.
-- `decidir` (12): pagos y suscripción. Dos opciones legítimas — SPEC-400b implementación decide con Jelkin/CEO:
-  - `(a)` tratar como cualquier `/api/` y exigir vigencia.
-  - `(b)` exenta explícita porque **pagar SIN vigencia es cómo se sale de la vencida**.
+- `exenta selectiva` (12): pagos y suscripción — **decisión CEO 04-09 02:12**. La exención es **por guardián, no en bloque**:
+  - **Exentas de VIGENCIA** — pagar es la única salida del estado vencido; exigir vigencia para renovar encierra al usuario fuera de su cuenta sin camino de vuelta (abrazo mortal, no decisión de gusto).
+  - **Exentas de CAMINO** — el paso `plan` cuelga del camino guiado, verificado positivamente en `src/lib/camino/pasos.ts:22` (`PASOS_CAMINO = ["permiso","datos","hijos","plan"]` para PARENT) y `pasos-colegio.ts:20` (`PASOS_COLEGIO = ["rector","plan",...]` para SCHOOL_ADMIN). Si el camino bloquea las rutas de pago, el propio camino no se puede terminar.
+  - **SIGUEN bloqueadas por CONSENTIMIENTO** — quien no aceptó el tratamiento de datos no debe transar.
+  - **SIGUEN bloqueadas por CAMBIO-DE-CLAVE** — cuenta con clave forzada es señal de compromiso; ahí menos que nunca se mueve plata.
 - `bloquear` (325): el resto — default de "cualquier /api/ regular".
 
 ### 2) `docs/architecture/04-guardias-api.md` (nuevo, generado)
@@ -42,8 +44,8 @@ Cinco secciones:
 2. **Resumen** — totales por veredicto.
 3. **Guardianes que aplican HOY (con cookie)** — tabla de 385 filas × 7 columnas (ruta + tipo + 5 guardianes) con `SÍ`/`no`/`—`.
 4. **Recomendación fail-closed por ruta** — tabla de 385 filas con `bloquear`/`exenta`/`decidir` + motivo humano por fila.
-5. **Decisiones abiertas** — solo las 12 `decidir` con las dos opciones.
-6. **Matriz de pruebas de cookie-ausente por guardián × rol** — 24 filas (4 guardianes × 6-8 roles) con "hoy responde 200 (fail-open)" vs "con fail-closed debería responder `403 { code: … }`". Los tests que faltan se implementan en el PR de SPEC-400b, no acá.
+5. **Exentas selectivas** — las 12 rutas de pagos/suscripción con `exenta de X, Y ; bloquea por Z, W` (decisión CEO 04-09 02:12 escrita textualmente + verificación positiva del paso `plan` del camino guiado).
+6. **Matriz de pruebas de cookie-ausente por guardián × rol** — 24 filas (4 guardianes × 6-8 roles) con "hoy responde 200 (fail-open)" vs "con fail-closed debería responder `403 { code: … }`". Los tests que faltan se implementan en el PR de **SPEC-400c** (implementación), no acá.
 
 ### 3) `scripts/arch/artefactos.ts` — registro de la nueva fila
 
@@ -68,7 +70,7 @@ Un script nuevo bajo `scripts/arch/`, un artefacto autogenerado en `docs/archite
 
 ## Cómo se probó
 
-- Ejecutado local: `npx tsx scripts/arch/generar-guardias-api.ts` → 385 rutas listadas, resumen `325 bloquear · 48 exenta · 12 decidir`. Las 12 `decidir` son todas de `/api/pagos/` y `/api/(padre|colegio)/suscripcion` — coincide con la anticipación del CEO.
+- Ejecutado local: `npx tsx scripts/arch/generar-guardias-api.ts` → 385 rutas listadas, resumen `325 bloquear · 48 exenta · 12 exenta selectiva`. Las 12 selectivas son todas de `/api/pagos/**` y `/api/(padre|colegio)/suscripcion*` — coincide con la anticipación del CEO. La verificación positiva del camino guiado (paso `plan` en `pasos.ts:22` y `pasos-colegio.ts:20`) confirma que exentar `camino` no rompe otro invariante.
 - `npm run arch:check` verde tras regenerar el índice (`00-INDICE.md`). Cazará cualquier drift futuro.
 
 ## DoD
@@ -81,9 +83,12 @@ Un script nuevo bajo `scripts/arch/`, un artefacto autogenerado en `docs/archite
 - [ ] `specs-discipline` + generador de README de SPEC-413 se cumplen (fila 400b sale sola).
 - [ ] CI del PR verde.
 
-## Siguiente paso (SPEC-400b implementación — PR aparte)
+## Siguiente paso (SPEC-400c implementación — PR aparte)
 
-- Decidir con Jelkin/CEO las 12 rutas `decidir`.
-- Escribir el fail-closed en `middleware.ts` (bloque nuevo cuando `!estado` para `/api/**` regulares, con excepciones desde el catálogo del análisis).
-- Añadir los 24 tests de la matriz de cookie-ausente en `middleware-api-guardias.test.ts`.
-- Documentar la migración en un plan aparte (rollout gradual con `feature-flag`).
+Con la decisión CEO 02:12 aplicada aquí, la implementación se radica como **PI · SPEC-400c** con estas piezas ya cerradas:
+
+- **Fail-closed general**: cuando `!estado`, bloquear `/api/**` regulares con `401`/`403` (con `code` como los guardianes actuales de SPEC-329).
+- **Exenta selectiva de pagos/suscripción**: aplicar los guardianes de consentimiento y cambio-de-clave incluso sin cookie (bloqueando), y SALTAR los de vigencia y camino. Requiere una consulta rápida de Node al detectar `!estado` (los flags de consentimiento y cambio-de-clave se pueden derivar del JWT si están firmados en él; si no, re-sellar la cookie primero via `/api/sesion/al-dia`).
+- **Los 24 tests de la matriz**: cookie-ausente por guardián × rol, con el nuevo cierre.
+- **Rollout gradual con feature-flag**: para poder revertir sin re-deploy si algo se rompe. Detalle en el plan de SPEC-400c.
+- **No arranco hasta el OK del CEO** — primero este inventario entra a main.
