@@ -212,7 +212,7 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
                     </p>
 
                     {error && (
-                        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+                        <p role="alert" className="text-sm text-rubi">
                             {error}
                         </p>
                     )}
@@ -240,7 +240,7 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
                                     {delDia.map((f) => (
                                         <li
                                             key={f.id}
-                                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/60 px-3 py-2 dark:bg-slate-900/40"
+                                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-tinta/5 px-3 py-2"
                                         >
                                             <div className="text-sm">
                                                 <p className="font-medium text-body">
