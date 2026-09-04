@@ -46,6 +46,9 @@ export function hrefsLogoPorRol(rol: RolBarrido): string[] {
     // SPEC-168: el comité de convivencia no navega a áreas públicas con sesión activa.
     if (rol === "COMITE_CONVIVENCIA") return ["/dashboard/colegio/comite/casos"];
     if (rol === "SCHOOL_ADMIN") return ["/", "/dashboard/colegio"];
+    // SPEC-426 · I-312: el PROFESIONAL tiene su propia área y el proxy no lo
+    // deja pasar por `/dashboard`. El logo de NavHeader.tsx va directo a su panel.
+    if (rol === "PROFESIONAL") return ["/", "/dashboard/profesional"];
     return ["/", "/dashboard"];
 }
 

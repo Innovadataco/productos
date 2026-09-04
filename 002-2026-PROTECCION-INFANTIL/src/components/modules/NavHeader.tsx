@@ -29,6 +29,10 @@ export function destinoLogo(user: { rol: string } | null, pathname: string | nul
     // se reservó como aterrizaje que respeta marcadores viejos y no como destino click.
     if (user.rol === "ADMIN" || user.rol === "OPERADOR") return "/dashboard/admin/bandeja";
     if (user.rol === "COMITE_VALIDACION") return "/dashboard/admin/comite";
+    // SPEC-426 · I-312: el PROFESIONAL tiene su propia área y el proxy no lo
+    // deja pasar por `/dashboard`. Antes el logo lo mandaba al redirect —
+    // arch:check aserción B lo cazó como href muerto. Va directo a su panel.
+    if (user.rol === "PROFESIONAL") return "/dashboard/profesional";
     return "/dashboard";
 }
 
