@@ -43,6 +43,17 @@ export const ARTEFACTOS: ArtefactoLineaBase[] = [
         generador: "scripts/arch/generar-pantallas.ts",
     },
     {
+        archivo: "04-guardias-api.md",
+        titulo: "Guardianes de /api/** (fase de análisis · SPEC-400b · I-236 · I-239)",
+        fuentes: [
+            "src/app/api/**",
+            "src/lib/routing/guardias.ts",
+            "src/lib/routing/roles-titulares.ts",
+            "middleware.ts",
+        ],
+        generador: "scripts/arch/generar-guardias-api.ts",
+    },
+    {
         archivo: "06-stack.md",
         titulo: "Stack, contenedores y puertos",
         fuentes: ["package.json", "Dockerfile", "docker-compose.prod.yml", "docker-compose.yml"],
