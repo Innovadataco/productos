@@ -17,7 +17,7 @@ import { crearSolicitudCita, reasignarPorPadre } from "./cita.service";
 async function seedProfesional(tarifaCOP = 120_000) {
     const { ciudad } = await crearPaisCiudad();
     const usuario = await crearUsuario("PROFESIONAL");
-    return prisma.perfilProfesional.create({
+    const perfil = await prisma.perfilProfesional.create({
         data: {
             usuarioId: usuario.id,
             nombreVisible: "Prof. Uno",
@@ -33,6 +33,25 @@ async function seedProfesional(tarifaCOP = 120_000) {
             estado: "ACTIVO",
         },
     });
+    // SPEC-449: un perfil ACTIVO **sin** verificación aprobada vigente no existe
+    // en producción — el estado lo escribe la aprobación, y `venceEn` es lo que
+    // la Ley 2375/2024 obliga a revalidar. Este fixture lo sembraba así y pasaba
+    // solo porque la consulta vieja no miraba la vigencia; `obtenerPublicoPorId`
+    // ahora sí. Se endurece el fixture, NO se afloja el guard: aflojarlo dejaría
+    // agendando a un profesional con los antecedentes caducados.
+    const revisor = await crearUsuario("ADMIN");
+    await prisma.verificacionProfesional.create({
+        data: {
+            perfilProfesionalId: perfil.id,
+            revisadoPorId: revisor.id,
+            revisadoEn: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            checklist: {},
+            resultado: "APROBADO",
+            autorizacionArchivoId: "archivo-de-prueba",
+            venceEn: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        },
+    });
+    return perfil;
 }
 
 async function seedFranja(profesionalId: string, offsetDias = 3) {
