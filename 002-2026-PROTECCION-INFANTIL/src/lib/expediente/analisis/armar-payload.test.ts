@@ -22,6 +22,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         {
             // 2026-08-01 22:30 Bogotá
             fecha: new Date("2026-08-02T03:30:00Z"),
+            horaAproximada: false,
             ciudad: "Riohacha",
             pais: "CO",
             plataforma: "whatsapp",
@@ -31,6 +32,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         {
             // 2026-08-15 21:15 Bogotá
             fecha: new Date("2026-08-16T02:15:00Z"),
+            horaAproximada: false,
             ciudad: "Riohacha",
             pais: "CO",
             plataforma: "whatsapp",
@@ -40,6 +42,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         {
             // 2026-08-20 09:00 Bogotá
             fecha: new Date("2026-08-20T14:00:00Z"),
+            horaAproximada: false,
             ciudad: "Valledupar",
             pais: "CO",
             plataforma: "instagram",
@@ -55,6 +58,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
             hechos: [
                 {
                     fecha,
+                    horaAproximada: false,
                     ciudad: "Riohacha",
                     pais: "CO",
                     plataforma: "whatsapp",

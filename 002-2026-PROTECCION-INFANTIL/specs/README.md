@@ -16,7 +16,6 @@
 > ```
 > npx tsx scripts/specs/generar-readme.ts --resumen
 > ```
-
 ## Backlog activo (no cerradas)
 
 <!-- SPEC-413:BEGIN tabla -->
@@ -378,6 +377,7 @@
 | [434](434-ficha-profesional-usable/spec.md) | SPEC-434 · La ficha del profesional, usable de verdad — cierra I-302 | 🟢 IMPLEMENTADO |
 | [432](432b-artefactos-arquitectura-sin-conflicto/spec.md) | SPEC-432b · Los artefactos de arquitectura dejan de ser terreno de conflicto | 🟢 IMPLEMENTADO |
 | [436](436-documentos-del-profesional/spec.md) | SPEC-436 · Los documentos del profesional: se cargan, se guardan y SE PUEDEN LEER | 🟢 IMPLEMENTADO |
+| [438](438-fecha-hora-obligatorias/spec.md) | SPEC-438 · La fecha y la hora del hecho son obligatorias, y el sistema nunca las inventa | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
 | [444](444-identificadores-cuid/spec.md) | SPEC-444 · Los identificadores del padre se validaban como uuid — cierra I-310 | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->

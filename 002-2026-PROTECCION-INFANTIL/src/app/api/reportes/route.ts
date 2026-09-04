@@ -50,7 +50,7 @@ export async function POST(request: Request) {
             );
         }
 
-        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima, reportePrevioId } = parsed.data;
+        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, horaAproximada, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima, reportePrevioId } = parsed.data;
 
         // Spec 092-US5: la longitud mínima es un parámetro (ADR_004), no un literal.
         const paramMinTexto = await getParametroSistema("reportes.spam.min_text_length");
@@ -158,6 +158,7 @@ export async function POST(request: Request) {
                 plataformaClave,
                 texto,
                 fechaIncidente,
+                horaAproximada,
                 ciudad,
                 pais,
                 paisId,

@@ -577,4 +577,34 @@ describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
         const res = await POST(req);
         expect(res.status).toBe(201);
     });
+
+    it("SPEC-438 (I-305): SIN fecha del hecho el servidor rechaza — no rellena", async () => {
+        // El defecto: el cliente mandaba `new Date()` cuando el campo venía
+        // vacío y el instante del ENVÍO quedaba como hora del HECHO. El
+        // servidor tiene que rechazar la ausencia, no aceptar un relleno.
+        const { fechaIncidente: _sinFecha, ...sinLaFecha } = reporteValido;
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", sinLaFecha);
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.campo, "el cliente puede resaltar el campo exacto").toBe("fechaIncidente");
+    });
+
+    it("SPEC-438: una hora ESTIMADA queda marcada como aproximada en la base", async () => {
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            horaAproximada: true,
+        });
+        expect((await POST(req)).status).toBe(201);
+        const r = await prisma.reporte.findFirst({ orderBy: { creadoEn: "desc" } });
+        expect(r?.horaAproximada, "sin la marca, una hora estimada se lee como precisa").toBe(true);
+    });
+
+    it("SPEC-438: una hora EXACTA no queda marcada como aproximada", async () => {
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido);
+        expect((await POST(req)).status).toBe(201);
+        const r = await prisma.reporte.findFirst({ orderBy: { creadoEn: "desc" } });
+        expect(r?.horaAproximada).toBe(false);
+    });
+
 });

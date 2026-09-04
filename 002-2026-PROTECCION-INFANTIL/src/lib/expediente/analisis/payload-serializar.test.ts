@@ -15,6 +15,7 @@ describe("SPEC-349 · payload serializado para el modelo (audit 615 chars)", () 
         // y sí diga "9 p. m." — franja nocturna Bogota, sin fingir el minuto exacto.
         const hecho: HechoPadre = {
             fecha: new Date("2026-08-31T02:15:00.000Z"),
+            horaAproximada: false,
             ciudad: "Bogotá",
             pais: "CO",
             plataforma: "roblox",
@@ -37,6 +38,7 @@ describe("SPEC-349 · payload serializado para el modelo (audit 615 chars)", () 
     it("preserva plataforma y categoría cuando vienen (fix nº2)", () => {
         const hecho: HechoPadre = {
             fecha: new Date("2026-08-30T14:00:00.000Z"),
+            horaAproximada: false,
             ciudad: "Cali",
             pais: "CO",
             plataforma: "roblox",
@@ -53,6 +55,7 @@ describe("SPEC-349 · payload serializado para el modelo (audit 615 chars)", () 
     it("no rompe cuando plataforma o categoría son null (histórico legítimo)", () => {
         const hecho: HechoPadre = {
             fecha: new Date("2026-08-30T14:00:00.000Z"),
+            horaAproximada: false,
             ciudad: "Cali",
             pais: "CO",
             plataforma: null,

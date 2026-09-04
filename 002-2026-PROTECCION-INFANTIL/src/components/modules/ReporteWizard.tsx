@@ -19,6 +19,8 @@ type WizardData = {
     paisId: string;
     ciudadId: string;
     fechaIncidente: string;
+    /** SPEC-438: la hora la estimó el reportante (eligió franja). */
+    horaAproximada: boolean;
     edadVictima: string;
     texto: string;
     esAnonimo: boolean;
@@ -66,6 +68,7 @@ export function ReporteWizard({
             paisId: "",
             ciudadId: "",
             fechaIncidente: "",
+            horaAproximada: false,
             edadVictima: "",
             texto: "",
             // SPEC-295: en modo autenticado el default es NO anónimo — el padre
@@ -143,9 +146,15 @@ export function ReporteWizard({
                     plataforma: data.plataforma,
                     otraPlataforma: data.otraPlataforma,
                     texto: data.texto,
-                    fechaIncidente: data.fechaIncidente
-                        ? new Date(data.fechaIncidente).toISOString()
-                        : new Date().toISOString(),
+                    // SPEC-438 (I-305): acá estaba el defecto. Si el campo venía
+                    // vacío se mandaba `new Date()`, y el instante del ENVÍO
+                    // quedaba guardado como la hora del HECHO. No es un dato
+                    // faltante: es un dato falso, indistinguible de uno
+                    // verdadero, que alimentaba la franja horaria del modelo y
+                    // un informe con valor probatorio. Ahora la fecha es
+                    // obligatoria y el sistema no rellena nada.
+                    fechaIncidente: new Date(data.fechaIncidente).toISOString(),
+                    horaAproximada: data.horaAproximada,
                     ciudad: data.ciudad,
                     pais: data.pais,
                     paisId: data.paisId || null,
@@ -284,6 +293,7 @@ export function ReporteWizard({
                     ciudad={data.ciudad}
                     pais={data.pais}
                     fechaIncidente={data.fechaIncidente}
+                    horaAproximada={data.horaAproximada}
                     paisId={data.paisId}
                     ciudadId={data.ciudadId}
                     edadVictima={data.edadVictima}
@@ -316,6 +326,10 @@ export function ReporteWizard({
                                 (!data.paisId ||
                                     !data.ciudadId ||
                                     (data.ciudadId === "otra" && !data.ciudad) ||
+                                    // SPEC-438 (I-305): la fecha y hora del hecho son
+                                    // OBLIGATORIAS. Sin esto se podía avanzar sin ellas
+                                    // y el sistema guardaba la hora del envío.
+                                    !data.fechaIncidente ||
                                     data.texto.length < minTexto))
                         }
                     >

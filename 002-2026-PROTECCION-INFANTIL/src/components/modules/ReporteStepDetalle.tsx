@@ -14,6 +14,7 @@ export function ReporteStepDetalle({
     ciudad,
     pais,
     fechaIncidente,
+    horaAproximada,
     paisId,
     ciudadId,
     edadVictima,
@@ -23,6 +24,8 @@ export function ReporteStepDetalle({
     ciudad: string;
     pais: string;
     fechaIncidente: string;
+    /** SPEC-438: la hora la estimó el reportante (eligió franja). */
+    horaAproximada: boolean;
     paisId: string;
     ciudadId: string;
     edadVictima: string;
@@ -31,6 +34,7 @@ export function ReporteStepDetalle({
         ciudad: string;
         pais: string;
         fechaIncidente: string;
+        horaAproximada: boolean;
         paisId: string;
         ciudadId: string;
         edadVictima: string;
@@ -73,6 +77,7 @@ export function ReporteStepDetalle({
             fechaIncidente,
             edadVictima,
             texto,
+            horaAproximada,
         });
         setOtraCiudad("");
     };
@@ -87,7 +92,7 @@ export function ReporteStepDetalle({
 
     const handleCiudadSelect = (opcion: CiudadOpcion | null) => {
         if (!opcion) {
-            onChange({ ciudadId: "", ciudad: "", pais, paisId, fechaIncidente, edadVictima, texto });
+            onChange({ ciudadId: "", ciudad: "", pais, paisId, fechaIncidente, horaAproximada, edadVictima, texto });
             return;
         }
         if (opcion.id === "otra") {
@@ -99,6 +104,7 @@ export function ReporteStepDetalle({
                 fechaIncidente,
                 edadVictima,
                 texto,
+                horaAproximada,
             });
         } else {
             onChange({
@@ -109,6 +115,7 @@ export function ReporteStepDetalle({
                 fechaIncidente,
                 edadVictima,
                 texto,
+                horaAproximada,
             });
             setOtraCiudad("");
         }
@@ -126,6 +133,7 @@ export function ReporteStepDetalle({
                 fechaIncidente,
                 edadVictima,
                 texto,
+                horaAproximada,
             });
         }
     };
@@ -172,8 +180,19 @@ export function ReporteStepDetalle({
                 <FechaHoraIncidente
                     value={fechaIncidente}
                     max={hoy}
-                    onChange={(elegido) =>
-                        onChange({ ciudad, pais, fechaIncidente: elegido, paisId, ciudadId, edadVictima, texto })
+                    onChange={(elegido, aproximada) =>
+                        // Una sola emisión: la fecha y su marca viajan juntas.
+                        // Elegir hora EXACTA (sin marca) apaga la aproximación.
+                        onChange({
+                            ciudad,
+                            pais,
+                            fechaIncidente: elegido,
+                            horaAproximada: aproximada === true,
+                            paisId,
+                            ciudadId,
+                            edadVictima,
+                            texto,
+                        })
                     }
                     error={fechaIncidente > hoy ? "El hecho no puede ser a futuro; ajustamos la hora al momento actual." : undefined}
                 />
@@ -189,7 +208,7 @@ export function ReporteStepDetalle({
                     ]}
                     value={edadVictima}
                     onChange={(e) =>
-                        onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto })
+                        onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto , horaAproximada })
                     }
                 />
             </div>
@@ -211,7 +230,7 @@ export function ReporteStepDetalle({
                     className="w-full rounded-xl px-4 py-3 text-sm text-body placeholder-subtle outline-none transition min-h-[160px] resize-y glass-input ring-accent-input"
                     placeholder="Describe la conducta observada con el mayor detalle posible..."
                     value={texto}
-                    onChange={(e) => onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima, texto: e.target.value })}
+                    onChange={(e) => onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima, texto: e.target.value , horaAproximada })}
                     maxLength={max}
                 />
                 <div className="mt-1.5 flex justify-between text-xs">
