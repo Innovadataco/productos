@@ -133,13 +133,20 @@ jobs:
     needs: [should-skip]
     if: needs.should-skip.outputs.skip != 'true'
     # SPEC-375 · SPEC-407: TOPE DURO por shard.
-    # Cada intento individual usa `timeout 28m` en el shell (ver step "Correr
+    # Cada intento individual usa `timeout 45m` en el shell (ver step "Correr
     # shard"). El tope del job acomoda hasta DOS intentos secuenciales
-    # (28m + 28m + overhead ≈ 60m); SPEC-407 caso B mostró runners GHA que
-    # ejecutan ~3× más lento parejo y no terminan en 35m. La exigencia por
-    # INTENTO baja a 28m (más estricta que los 35m originales); el reintento
-    # se dispara SÓLO por timeout de shell (exit 124), no por test fallido.
-    timeout-minutes: 60
+    # (45m + 45m + overhead ≈ 100m).
+    #
+    # HISTORIAL de calibración (importa porque el número anterior lo puse mal):
+    # - 28m/intento (03-09 17:3x): fijado mirando la corrida sana MÁS RÁPIDA
+    #   observada, no la distribución real. Cortó corridas legítimas de 32m
+    #   que existían antes del tope. Dev 02 midió shard 3 en 6 corridas:
+    #   17·32·59·18·18·58 — rango normal 17-33m. 28 parte esa distribución
+    #   por la mitad. Un tope se fija con la DISTRIBUCIÓN, no con el promedio.
+    # - 45m/intento (esta versión): 33m es el máximo sano observado; 45 da
+    #   margen real y sigue cortando las anomalías tipo B (~55-60m). Cuando
+    #   la mediana del shard más lento suba, se revisa este tope.
+    timeout-minutes: 100
     # Mega-lote 002-PI: shard 4 vías (~28min → ~7min por shard). Cada shard corre en
     # su propio runner con su propio Postgres: no hay BD compartida entre shards.
     # Los umbrales de cobertura se evalúan en el job agregador (test-integration-coverage).
@@ -200,7 +207,7 @@ jobs:
       # Si el JSON existe → se pasan los archivos como positional args (sin --shard).
       # Si NO existe → fallback a --shard=N/4 original (el script sale sin imprimir).
       - name: Correr shard ${{ matrix.shard }}/4 (SPEC-281 reparto por peso o fallback)
-        # SPEC-407 caso B (runner GHA lento): wrapper con `timeout 28m` + reintento
+        # SPEC-407 caso B (runner GHA lento): wrapper con `timeout 45m` + reintento
         # SÓLO por timeout de shell (exit 124). Un test rojo (exit ≠ 124) NO reintenta
         # nunca. El reintento se ve en el resumen del run (::warning + GITHUB_STEP_SUMMARY)
         # y queda contable para futuras auditorías. Candados aprobados por CEO 17:3x.
@@ -211,10 +218,10 @@ jobs:
             ARCHIVOS="$(node scripts/ci/reparto-shards.mjs --shard=${{ matrix.shard }}/4 --durations test-durations.json)"
             if [ -n "$ARCHIVOS" ]; then
               echo "[ci] reparto por peso activo (SPEC-281): $(echo $ARCHIVOS | wc -w) archivos"
-              timeout 28m node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json $ARCHIVOS
+              timeout 45m node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json $ARCHIVOS
             else
               echo "[ci] fallback a --shard=${{ matrix.shard }}/4 (SPEC-281 no aplicó)"
-              timeout 28m node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --shard=${{ matrix.shard }}/4 --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json
+              timeout 45m node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --shard=${{ matrix.shard }}/4 --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json
             fi
           }
 
@@ -225,7 +232,7 @@ jobs:
           # otro exit code (0 = pass, 1 = test rojo, cualquier otro) reintenta.
           # Reintentar un fallo de test real sería lo peor que se podría construir.
           if [ "$EXIT" -eq 124 ]; then
-            echo "::warning title=SPEC-407 · shard ${{ matrix.shard }} reintento por timeout::Runner GHA lento (caso B). Primer intento tomó >28 min; reintentando UNA vez."
+            echo "::warning title=SPEC-407 · shard ${{ matrix.shard }} reintento por timeout::Runner GHA lento (caso B). Primer intento tomó >45 min; reintentando UNA vez."
             echo "- **SPEC-407 caso B**: shard ${{ matrix.shard }} reintentado (primer intento exit 124 = timeout). Runner lento, no test rojo." >> "$GITHUB_STEP_SUMMARY"
             run_vitest
             EXIT=$?
