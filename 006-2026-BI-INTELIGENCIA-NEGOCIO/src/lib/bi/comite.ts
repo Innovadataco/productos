@@ -137,7 +137,7 @@ export async function getComite(): Promise<ComiteData> {
                     SELECT
                       (SELECT count(*) FROM "Reporte" WHERE "eliminado" = false)::int AS reportes,
                       (SELECT count(DISTINCT "reporteId") FROM "TransicionReporte"
-                        WHERE lower("estadoNuevo") = 'revision_manual')::int AS revision_manual,
+                        WHERE lower("estadoNuevo"::text) = 'revision_manual')::int AS revision_manual,
                       (SELECT count(*) FROM "SolicitudComite")::int AS escalados,
                       (SELECT count(*) FROM "SolicitudComite"
                         WHERE "resueltoEn" IS NOT NULL)::int AS resueltos`,

@@ -49,7 +49,7 @@
 --   `eventos_match`. Queda VETADA como tabla completa (guard §4).
 --
 -- REGLA DE GOBIERNO (AGENTS.md §7): agregar una tabla nueva a la publicación
---   exige pedirla por nombre y autorización de Jelkin. Las 44 tablas de abajo
+--   exige pedirla por nombre y autorización de Jelkin. Las 45 tablas de abajo
 --   son la lista canónica autorizada (23 originales D-20 del 005 + 17 nuevas
 --   autorizadas para BI v2 el 2026-09-01 − 3 legacy vacías retiradas el mismo
 --   día: Subscription, BillingCycle, AlertaSuscripcion + 7 autorizadas el
@@ -92,7 +92,7 @@ DECLARE
   pub_tabla       text;
   n_filas         bigint;
 
-  -- ── LISTA CANÓNICA (44 tablas) ─────────────────────────────────────────
+  -- ── LISTA CANÓNICA (45 tablas) ─────────────────────────────────────────
   -- Cada fila: {tabla, columnas} · columnas = NULL → completa; si no, CSV
   -- exacto de columnas publicadas (orden libre; el script compara ordenado).
   canon text[][] := ARRAY[
@@ -200,7 +200,14 @@ DECLARE
     ARRAY['worker_logs', 'id,servicio,nivel,mensaje,creadoEn'],
     -- IncidenteInfra: apertura/resolución de incidentes de infraestructura.
     -- VETADAS: detalle (texto libre) y ultimoEmailEn (operativo interno).
-    ARRAY['IncidenteInfra', 'id,senal,estado,inicio,fin,creadoEn,actualizadoEn']
+    ARRAY['IncidenteInfra', 'id,senal,estado,inicio,fin,creadoEn,actualizadoEn'],
+    -- ── 1 nueva autorizada (resiembra SPEC-412 · 2026-09-03 · CEO) ──────────
+    -- demo_marcado: marcador de lo sembrado vs real — ES EL criterio para
+    -- separar demo de real desde BI (el nombre/prefijo es la trampa del
+    -- poblador viejo). Publicada a mano por el CEO de PI el 2026-09-03 con
+    -- columna completa (metadata solo trae corrida/script/notas — sin PII,
+    -- verificado en prod). El suscriptor ya la sincroniza (30.250 filas).
+    ARRAY['demo_marcado', NULL]
   ];
 
   -- ── TABLAS PROHIBIDAS (Ley 1581 · jamás en la publicación) ─────────────
@@ -212,7 +219,7 @@ DECLARE
     'contactos_emergencia', 'EventoExpediente', 'NotaSeguimiento',
     'AclaracionExpediente', 'aclaracion_expediente', 'InformeConsolidado',
     'informes_consolidados', 'Apelacion', 'AnalisisExpediente', 'InformePadre',
-    'TokenRegistro', 'notificaciones', 'RateLimit', 'demo_marcado',
+    'TokenRegistro', 'notificaciones', 'RateLimit',
     'simulacion_runs', 'simulacion_reportes',
     'simulacion_abuso_runs', 'sesiones_log', 'audit_consentimientos',
     -- PK = nick en claro del reportado: impublicable sin PII (ver cabecera).
