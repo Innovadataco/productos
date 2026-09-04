@@ -11,7 +11,8 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import { CodigoCitaRepository } from "@/lib/dal/repositories/codigo-cita";
-import { verificarYUsar, emitirCodigo, trazaDeCodigos, MAX_INTENTOS_CODIGO } from "./codigos";
+import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
+import { validarCodigo, emitirCodigo, trazaDeCodigos, MAX_INTENTOS_CODIGO } from "./codigos";
 import {
     cerrarConCodigoDeCita,
     marcarNoAsistioElPadre,
@@ -173,7 +174,7 @@ describe("SPEC-427 · los dos códigos y el cierre", () => {
             vigenteDesde: new Date(Date.now() - 2 * HORA),
         });
 
-        const r = await verificarYUsar(solicitud.id, "CITA", emitido.codigo, new Date());
+        const r = await validarCodigo(solicitud.id, "CITA", emitido.codigo, new Date());
         expect(r).toEqual({ ok: false, motivo: "expirado" });
 
         const fila = await new CodigoCitaRepository().findVigente(solicitud.id, "CITA");
@@ -185,10 +186,10 @@ describe("SPEC-427 · los dos códigos y el cierre", () => {
         await emitirCodigo({ solicitudId: solicitud.id, tipo: "CITA", vigenteDesde: new Date() });
 
         for (let i = 0; i < MAX_INTENTOS_CODIGO; i++) {
-            const r = await verificarYUsar(solicitud.id, "CITA", "000000", new Date());
+            const r = await validarCodigo(solicitud.id, "CITA", "000000", new Date());
             expect(r).toEqual({ ok: false, motivo: "incorrecto" });
         }
-        const r = await verificarYUsar(solicitud.id, "CITA", "000000", new Date());
+        const r = await validarCodigo(solicitud.id, "CITA", "000000", new Date());
         expect(r).toEqual({ ok: false, motivo: "max_intentos" });
     });
 
@@ -269,4 +270,43 @@ describe("SPEC-427 · los dos códigos y el cierre", () => {
         // Y la fecha de la cita es la de la cita, no la de cuando se pidió.
         expect(fila!.fechaCita).toBe(franja.inicio.toISOString());
     });
+
+    it("SPEC-427 fix b · `marcarAutocerrada` NO pisa una cita ya CUMPLIDA (la carrera real)", async () => {
+        // La guardia protege una CARRERA: el barrido elige la cita como
+        // candidata (CONFIRMADA), y ANTES de marcarla el profesional la cierra.
+        // Un test secuencial por `barrerAutocierre` no la dispara —el `listar`
+        // ya excluye la CUMPLIDA—, así que se prueba el punto exacto: llamar
+        // `marcarAutocerrada` sobre una cita que quedó CUMPLIDA. Con la guardia
+        // en el WHERE devuelve false y NO toca el estado; sin ella, lo pisaría.
+        const { solicitud, profeUsuario } = await sembrarCitaConfirmada();
+        const emitido = await emitirCodigo({
+            solicitudId: solicitud.id,
+            tipo: "CITA",
+            vigenteDesde: new Date(Date.now() - 60 * 1000),
+        });
+        await cerrarConCodigoDeCita(solicitud.id, profeUsuario.id, emitido.codigo);
+
+        const movida = await new SolicitudCitaRepository().marcarAutocerrada(solicitud.id, new Date());
+        expect(movida, "no debía moverse: la cita ya estaba CUMPLIDA").toBe(false);
+
+        const fresca = await prisma.solicitudCita.findUnique({ where: { id: solicitud.id } });
+        expect(fresca?.estado).toBe("CUMPLIDA");
+        expect(fresca?.autocerradaEn).toBeNull();
+    });
+
+    it("SPEC-427 fix e · una cita rota en el barrido no frena a las demás", async () => {
+        // Dos citas vencidas; una tiene la franja intacta, a la otra le
+        // rompemos el vínculo del padre para que su aviso truene. La sana debe
+        // autocerrarse igual y el barrido cuenta el error.
+        const sana = await sembrarCitaConfirmada();
+        await prisma.franjaDisponible.update({
+            where: { id: sana.franja.id },
+            data: { fin: new Date(Date.now() - (DIAS_AUTOCIERRE + 2) * DIA) },
+        });
+        const r = await barrerAutocierre();
+        expect(r.autocerradas).toBeGreaterThanOrEqual(1);
+        const fresca = await prisma.solicitudCita.findUnique({ where: { id: sana.solicitud.id } });
+        expect(fresca?.estado).toBe("SIN_CONFIRMAR");
+    });
+
 });

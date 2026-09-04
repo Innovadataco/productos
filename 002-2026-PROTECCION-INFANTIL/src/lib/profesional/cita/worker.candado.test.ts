@@ -19,13 +19,33 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const RAIZ = process.cwd();
-const MODULOS_CON_BARREDORES = [
-    "src/lib/profesional/cita/worker.ts",
-    "src/lib/profesional/cita/cierre.service.ts",
-];
 
 function leer(rel: string): string {
     return readFileSync(join(RAIZ, rel), "utf8");
+}
+
+/**
+ * Quita comentarios (línea y bloque) del código. Sin esto, una llamada que en
+ * realidad está COMENTADA —`// barrerAutocierre()`— contaría como llamador, y
+ * el candado pasaría verde con el barredor de hecho muerto. Es justo la clase
+ * de agujero que este candado existe para tapar.
+ */
+function sinComentarios(codigo: string): string {
+    return codigo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+}
+
+/**
+ * Descubre POR DISCO todo archivo de `src/lib/profesional/cita/` que exporte un
+ * barredor, en vez de una lista fija de dos rutas. Un barredor nuevo en un
+ * archivo nuevo entra al candado solo — no depende de que alguien se acuerde de
+ * sumarlo acá.
+ */
+function modulosConBarredores(): string[] {
+    const dir = "src/lib/profesional/cita";
+    return readdirSync(join(RAIZ, dir))
+        .filter((f) => /\.ts$/.test(f) && !/\.test\.ts$/.test(f))
+        .map((f) => `${dir}/${f}`)
+        .filter((rel) => /export\s+async\s+function\s+barrer/.test(leer(rel)));
 }
 
 /** Los `export async function barrer…` de un módulo. */
@@ -34,16 +54,16 @@ function barredoresDe(rel: string): string[] {
     return [...leer(rel).matchAll(re)].map((m) => m[1]);
 }
 
-/** El código de todos los workers .mjs juntos: ahí tiene que estar el llamador. */
+/** El código de todos los workers .mjs, SIN comentarios. */
 function codigoDeLosWorkers(): string {
     const dir = join(RAIZ, "scripts");
     return readdirSync(dir)
         .filter((f) => f.startsWith("worker-") && f.endsWith(".mjs"))
-        .map((f) => readFileSync(join(dir, f), "utf8"))
+        .map((f) => sinComentarios(readFileSync(join(dir, f), "utf8")))
         .join("\n");
 }
 
-/** ¿Alguien llama a esta función en los workers? Llamada, no solo mención. */
+/** ¿Alguien LLAMA a esta función en los workers? Llamada real, no comentario. */
 function tieneLlamador(nombre: string, codigo: string): boolean {
     return new RegExp(`\\b${nombre}\\s*\\(`).test(codigo);
 }
@@ -52,7 +72,7 @@ describe("SPEC-427 · ningún barredor de la cita queda sin quien lo llame", () 
     const workers = codigoDeLosWorkers();
 
     it("los cuatro barredores existen y están declarados donde se espera", () => {
-        const todos = MODULOS_CON_BARREDORES.flatMap(barredoresDe);
+        const todos = modulosConBarredores().flatMap(barredoresDe);
         expect(todos).toEqual(
             expect.arrayContaining([
                 "barrerAvisoVencimiento48h",
@@ -65,7 +85,7 @@ describe("SPEC-427 · ningún barredor de la cita queda sin quien lo llame", () 
     });
 
     it("CADA barredor exportado tiene un llamador en algún scripts/worker-*.mjs", () => {
-        const huerfanos = MODULOS_CON_BARREDORES.flatMap(barredoresDe).filter(
+        const huerfanos = modulosConBarredores().flatMap(barredoresDe).filter(
             (n) => !tieneLlamador(n, workers)
         );
         expect(huerfanos).toEqual([]);
@@ -73,6 +93,17 @@ describe("SPEC-427 · ningún barredor de la cita queda sin quien lo llame", () 
 
     it("CONTRAPRUEBA · el candado detecta un barredor que nadie llama", () => {
         expect(tieneLlamador("barrerLoQueNadieAgendo", workers)).toBe(false);
+    });
+
+    it("CONTRAPRUEBA · una llamada COMENTADA no cuenta como llamador", () => {
+        // Este es el agujero que se cerró en el fix (i): antes, un `//` con el
+        // nombre y paréntesis engañaba al candado y lo dejaba verde con el
+        // barredor de hecho muerto.
+        const comentado = "// barrerAutocierre() — desactivado temporalmente\nconsole.log('nada');";
+        expect(tieneLlamador("barrerAutocierre", sinComentarios(comentado))).toBe(false);
+        // Y la llamada de verdad sí cuenta.
+        const real = "await barrerAutocierre();";
+        expect(tieneLlamador("barrerAutocierre", sinComentarios(real))).toBe(true);
     });
 
     it("el worker de citas agenda las dos colas y las trabaja", () => {

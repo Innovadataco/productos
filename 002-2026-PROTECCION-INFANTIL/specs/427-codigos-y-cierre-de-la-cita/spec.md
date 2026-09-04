@@ -94,3 +94,38 @@ Es degradación silenciosa de manual: funcionaba lo suficiente para no avisar. E
 - **Las encuestas.** Son de **SPEC-429**, en paralelo. El punto de unión es `al-cumplir.ts`: una función vacía que 429 llena y que 427 llama en los dos cierres.
 - **El aviso al administrador por correo.** El brief dice «se le avisa al padre y al administrador». Al padre, por correo. Al administrador, **por la cola 2**, que es su canal real y queda hasta que alguien la resuelva. Un correo más a una casilla compartida no es un aviso: es ruido.
 - **El autocierre de la cita virtual con las dos entradas registradas** (brief §3). PI no hospeda la cita, así que no hay entradas que registrar.
+
+---
+
+## Revisión adversarial (CEO · 7 lentes) — arreglos antes del merge
+
+El primer intento fue **rechazado**: falló su CI y la revisión adversarial encontró problemas reales. Se corrigieron ocho, cada uno con la prueba que reproduce la falla (candado 24 v2), y se partió una funcionalidad a otra spec.
+
+| # | Qué estaba mal | Cómo quedó | Prueba |
+|---|---|---|---|
+| **B1** | `worker-citas.mjs` agendaba y trabajaba las colas **sin `createQueue`** → pg-boss ^12 lanza «Queue not found» y `pi-citas` entra en bucle de reinicio (I-301 otra vez, puesto por nosotros). | `ensureQueue(queue.ts:52)` para las dos colas antes de `schedule/work`. | El candado del worker exige que agende **y** trabaje; el arranque real crea las colas. |
+| **a** | `cerrarConCodigoDeCita` consumía el código y escribía `CUMPLIDA` en **dos statements sueltos**: si el 2.º fallaba, código quemado y cita sin cerrar. | Los dos writes en un **`withUnitOfWork`**: o pasan los dos o ninguno. | Candado estático: los dos `marcar*` viven dentro del mismo `withUnitOfWork`, con contraprueba de la forma vieja. |
+| **b** | `marcarAutocerrada` escribía **sin guardia de estado** → podía pisar una `CUMPLIDA`/`NO_ASISTIO` recién escrita en la carrera. | Guardia en el WHERE (`estado: "CONFIRMADA", autocerradaEn: null`); devuelve si movió. | Integración: llamar `marcarAutocerrada` sobre una cita ya `CUMPLIDA` → `false`, estado intacto. **Probado muriendo.** |
+| **c** | Autocierre e inasistencia movían el estado **antes** del aviso, suelto: si el aviso fallaba, el padre nunca se enteraba y nadie reintentaba (I-294/295). | Estado + aviso en la **misma transacción** (SPEC-418); `programadas === 0` → `logger.error`, no silencio. | Integración del autocierre y la inasistencia; el aviso se despacha tras el commit. |
+| **e** | Los barridos no tenían `try/catch` por cita: **una rota frenaba a las demás**. | `try/catch` por cita, con cuenta de errores; el barrido sigue. | Integración: una cita sana se autocierra aunque otra falle. |
+| **g** | Textos que prometían la **encuesta de 429** (no construida) y una **reprogramación sin costo** no cableada. | Correo de inasistencia y panel reescritos: «lo revisamos», sin prometer lo que no existe. | — |
+| **h** | `pi-citas` no estaba en la whitelist de `docker-adapter.ts` → el admin no podía reiniciarlo. | Agregado (11 contenedores); test de combinaciones a 33. | `docker-adapter.test.ts`. |
+| **i** | El candado «todo `barrer*` tiene llamador» aceptaba una **mención en comentario** y miraba solo dos archivos fijos. | Descubre los módulos **por disco** y cuenta la llamada **sin comentarios**. | Contraprueba: una llamada comentada NO cuenta. |
+
+### Lo que salió de 427
+
+**El código de EXPEDIENTE completo → SPEC-427b.** Estaba a medias (se validaba y auditaba, pero **nadie lo emitía y no abría nada**): media funcionalidad no entra a medias. Con él se mudan a la migración de 427b dos valores de `AccionAudit` para que 427 no lleve un enum sin emisor (I-277): `CITA_PROFESIONAL_EXPEDIENTE_ABIERTO` y `CITA_PROFESIONAL_CODIGO_DIGITADO`.
+
+### Contrato cross-producto para Kimi (BI · bloqueante que NO despliega hasta confirmar)
+
+**`AuditLog` está en la publicación `bi_replica`.** Esta migración agrega **5 valores** a `AccionAudit` y se escriben en `AuditLog`; si el enum del suscriptor de BI no los tiene, su replicación se atasca al primer row. **No se despliega 427 hasta que BI prepare su lado.** Los 5 valores:
+
+```
+CITA_PROFESIONAL_CODIGO_EMITIDO
+CITA_PROFESIONAL_CODIGO_FALLIDO
+CITA_PROFESIONAL_CUMPLIDA
+CITA_PROFESIONAL_AUTOCERRADA
+CITA_PROFESIONAL_NO_ASISTIO_PADRE
+```
+
+(Los otros dos —`EXPEDIENTE_ABIERTO`, `CODIGO_DIGITADO`— llegan con 427b; Kimi los recibe en ese lote.)

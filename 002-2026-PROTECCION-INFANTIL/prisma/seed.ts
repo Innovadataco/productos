@@ -1874,9 +1874,8 @@ async function seedCodigosCita() {
                 "Hola {{nombrePadre}},\n\n" +
                 "{{nombreProfesional}} registró que la cita de {{horaCita}} no se dio porque la familia " +
                 "no se presentó.\n\n" +
-                "Si no fue así, contanoslo al responder la encuesta de la cita: revisamos los dos lados " +
-                "antes de dar nada por cerrado.\n\n" +
-                "Tenés **una reprogramación sin costo** con el mismo profesional.\n\n" +
+                "Si no fue así, escribinos a soporte y lo revisamos: no damos nada por cerrado con la " +
+                "palabra de un solo lado.\n\n" +
                 "— Protección Infantil",
             propiedades: {
                 nombrePadre: { type: "string" },

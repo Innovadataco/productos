@@ -27,7 +27,7 @@ import {
     barrerRecordatoriosDeCita,
     barrerAutocierre,
 } from "../src/lib/profesional/cita/cierre.service.ts";
-import { boss, ensureStarted } from "../src/lib/queue.ts";
+import { boss, ensureStarted, ensureQueue } from "../src/lib/queue.ts";
 import { iniciarTickVida } from "../src/lib/monitoreo/tick-vida.ts";
 import pg from "pg";
 
@@ -127,6 +127,13 @@ async function correrBarredores(nombre, barredores) {
 async function start() {
     await acquireAdvisoryLock();
     await ensureStarted();
+
+    // pg-boss ^12 exige la cola CREADA antes de agendar o trabajar: sin esto el
+    // worker lanza "Queue ... not found" y `pi-citas` entra en bucle de
+    // reinicio — con el monitor viéndolo verde. Es I-301 otra vez, y esta vez lo
+    // habríamos puesto nosotros. `ensureQueue` es idempotente (queue.ts:52).
+    await ensureQueue(COLA_MINUTO);
+    await ensureQueue(COLA_DIARIO);
 
     await boss.schedule(COLA_MINUTO, CRON_CADA_5_MIN, {}, { tz: "America/Bogota" });
     await boss.schedule(COLA_DIARIO, CRON_DIARIO, {}, { tz: "America/Bogota" });

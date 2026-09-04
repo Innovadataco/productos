@@ -77,7 +77,7 @@ export function CerrarConCodigo({ solicitudId }: { solicitudId: string }) {
         return (
             <p className="anim-entrada mt-3 text-xs text-body">
                 Quedó registrado que la familia no se presentó. Le avisamos al padre; si él lo ve distinto,
-                lo dirá en su encuesta y lo revisamos.
+                lo revisamos antes de dar nada por cerrado.
             </p>
         );
     }

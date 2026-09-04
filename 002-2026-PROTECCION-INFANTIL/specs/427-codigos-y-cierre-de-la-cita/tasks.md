@@ -18,3 +18,16 @@
 - La **plata** (liberar, girar, devolver) es de L7.
 - Las **encuestas** y el cruce son de SPEC-429 (Dev 01, en paralelo).
 - El aviso al administrador es la **cola 2**, no un correo más.
+
+## Revisión adversarial (segunda vuelta)
+
+- [x] R1 B1 · `ensureQueue` en `worker-citas.mjs` antes de `schedule/work`.
+- [x] R2 (a) · cerrar = consumir + `CUMPLIDA` en una transacción; candado estático con contraprueba.
+- [x] R3 (b) · `marcarAutocerrada` con guardia de estado; probado muriendo.
+- [x] R4 (c) · autocierre e inasistencia atómicos (estado + aviso en la tx); `programadas===0` → `logger.error`.
+- [x] R5 (e) · `try/catch` por cita en los barridos.
+- [x] R6 (g) · textos sin la encuesta de 429 ni la reprogramación no cableada.
+- [x] R7 (h) · `pi-citas` en la whitelist de `docker-adapter.ts`.
+- [x] R8 (i) · candado del worker: descubre por disco, ignora comentarios; contraprueba.
+- [x] R9 · código de EXPEDIENTE → SPEC-427b; `EXPEDIENTE_ABIERTO` y `CODIGO_DIGITADO` se mudan a su migración (I-277).
+- [x] R10 · los 5 valores de enum de 427 documentados para Kimi (BI · `bi_replica`).

@@ -88,8 +88,8 @@ describe("SPEC-427 · el código nunca queda escrito en claro", () => {
 
     it("no se audita el valor del código, ni cuando falla", () => {
         const cierre = leerCodigo(CIERRE);
-        // Se auditan el motivo y el id de la fila; el valor no aparece.
-        expect(cierre).toContain("motivo: r.motivo");
+        // Se audita el MOTIVO del rechazo (de la variable que sea), nunca el valor.
+        expect(cierre).toMatch(/metadatos:\s*\{\s*tipo:\s*"CITA",\s*motivo:\s*\w+\.motivo\s*\}/);
         expect(cierre).not.toMatch(/metadatos:\s*\{[^}]*\bcodigo\b\s*[,}]/);
         expect(cierre).not.toMatch(/valorNuevo:.*\bcodigo\b/);
     });
@@ -136,12 +136,18 @@ describe("SPEC-427 · un solo uso, de verdad", () => {
 describe("SPEC-427 · el código y su aviso nacen juntos", () => {
     it("la emisión falla en cerrado si no hay regla activa (I-295)", () => {
         const cierre = leerCodigo(CIERRE);
-        expect(cierre).toContain("withUnitOfWork");
-        expect(cierre).toContain("aviso.programadas === 0");
+        // Se acota a la función que emite el recordatorio: el archivo tiene
+        // VARIAS transacciones ahora (cierre, inasistencia, autocierre), así
+        // que un índice global apuntaría a la primera que aparezca.
+        const i = cierre.indexOf("async function emitirYProgramarRecordatorio");
+        const j = cierre.indexOf("\nasync function ", i + 1);
+        const cuerpo = cierre.slice(i, j === -1 ? undefined : j);
+        expect(cuerpo).toContain("withUnitOfWork");
+        expect(cuerpo).toContain("aviso.programadas === 0");
         // Dentro de la transacción: si el aviso no se encola, el código no queda.
-        const iTx = cierre.indexOf("withUnitOfWork");
-        const iEmite = cierre.indexOf("await emitirCodigo(");
-        const iChequeo = cierre.indexOf("aviso.programadas === 0");
+        const iTx = cuerpo.indexOf("withUnitOfWork");
+        const iEmite = cuerpo.indexOf("await emitirCodigo(");
+        const iChequeo = cuerpo.indexOf("aviso.programadas === 0");
         expect(iTx).toBeLessThan(iEmite);
         expect(iEmite).toBeLessThan(iChequeo);
     });
@@ -151,5 +157,44 @@ describe("SPEC-427 · el código y su aviso nacen juntos", () => {
         // Sin este `none`, cada corrida emitiría un código nuevo y el padre
         // recibiría un correo cada 5 minutos.
         expect(repo).toMatch(/codigos:\s*\{\s*none:\s*\{\s*tipo:\s*"CITA"\s*\}\s*\}/);
+    });
+});
+
+describe("SPEC-427 fix a · consumir el código y CUMPLIDA, en una sola transacción", () => {
+    /**
+     * El bug original: se consumía el código y se escribía CUMPLIDA en dos
+     * statements sueltos; si el segundo fallaba, el código quedaba quemado y la
+     * cita sin cerrar, sin forma de reintentar. Un test de conducta no lo
+     * reproduce fácil —el precheck de estado tapa la carrera—, así que se
+     * custodia la ESTRUCTURA: los dos writes tienen que vivir dentro del mismo
+     * `withUnitOfWork`.
+     */
+    const cierre = leerCodigo(CIERRE);
+
+    /** El cuerpo de la función de cierre, desde su nombre hasta el próximo `\nexport`. */
+    function cuerpoDeCerrar(src: string): string {
+        const i = src.indexOf("export async function cerrarConCodigoDeCita");
+        const j = src.indexOf("\nexport ", i + 1);
+        return src.slice(i, j === -1 ? undefined : j);
+    }
+
+    /** ¿El consumo y el CUMPLIDA están dentro de un `withUnitOfWork`? */
+    function ambosEnLaMismaTx(cuerpo: string): boolean {
+        const tx = /withUnitOfWork\(async \(tx\) => \{([\s\S]*?)\n    \}\);/.exec(cuerpo);
+        if (!tx) return false;
+        const dentro = tx[1];
+        return dentro.includes("marcarUsadoSiLibre") && dentro.includes("marcarCumplidaSiConfirmada");
+    }
+
+    it("los dos writes viven en el mismo withUnitOfWork", () => {
+        expect(ambosEnLaMismaTx(cuerpoDeCerrar(cierre))).toBe(true);
+    });
+
+    it("CONTRAPRUEBA · la forma vieja (dos statements sueltos) se detecta como el bug", () => {
+        const viejo = `export async function cerrarConCodigoDeCita() {
+            const consumido = await repo.marcarUsadoSiLibre(id, ahora);
+            const cerrada = await repo.marcarCumplidaSiConfirmada(id);
+        }`;
+        expect(ambosEnLaMismaTx(cuerpoDeCerrar(viejo))).toBe(false);
     });
 });

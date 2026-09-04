@@ -242,11 +242,18 @@ export class SolicitudCitaRepository {
      * pasó y nadie la cerró» de «recién creada y nadie pagó», que comparten
      * `SIN_CONFIRMAR`. La cola 2 del Verificador filtra por esta columna.
      */
-    marcarAutocerrada(id: string, autocerradaEn: Date) {
-        return this.db.solicitudCita.update({
-            where: { id },
+    /**
+     * SPEC-427 (fix b) · guardia de estado en el WHERE. Entre que el barrido
+     * elige las candidatas y las marca, el profesional puede haber cerrado una:
+     * sin este `estado: "CONFIRMADA"`, el autocierre PISARÍA una CUMPLIDA o una
+     * NO_ASISTIO recién escritas. Devuelve si de verdad la movió.
+     */
+    async marcarAutocerrada(id: string, autocerradaEn: Date): Promise<boolean> {
+        const r = await this.db.solicitudCita.updateMany({
+            where: { id, estado: "CONFIRMADA", autocerradaEn: null },
             data: { estado: "SIN_CONFIRMAR", autocerradaEn },
         });
+        return r.count === 1;
     }
 
     /**
