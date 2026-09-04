@@ -1,30 +1,37 @@
 "use client";
 
 /**
- * SPEC-391 (A-75 · L1b) — el profesional recién creado completa su perfil.
+ * SPEC-391 (A-75 · L1b) · SPEC-434 (I-302 · Jelkin vivo 04-09) — el profesional
+ * completa su ficha.
  *
- * Estado inicial: `BORRADOR`. Cuando el profesional guarda con todo lleno Y
- * sube la autorización firmada, el backend transiciona a `EN_REVISION` — de
- * ahí lo toma L2 (IDC). Mientras esté en `BORRADOR`, nada aparece en la cola
- * de admin y nada aparece en el directorio del padre.
+ * Cambios de SPEC-434:
+ *  · País + ciudad con `<Select>` y `CiudadSearchSelect` (mismo componente
+ *    que ya usa el reporte y el perfil del padre). El texto libre «ID de tu
+ *    ciudad» era un cuid oculto — nadie podía usarlo.
+ *  · Voz neutra Colombia (sin voseo) — alinea con módulo de colegio (I-250).
+ *  · «Emito factura» fuera de la pantalla (el dato queda en el modelo).
+ *  · Años de experiencia como selector 1..50 (antes texto libre).
+ *  · Al pasar a `EN_REVISION`, modal con el mensaje humano (no «EN_REVISION»
+ *    a la vista del usuario, jamás — ni siquiera como fallback).
  *
- * La subida de la autorización es un `multipart/form-data` propio: PDF, PNG o
- * JPG (foto del documento con el teléfono), tope 5 MB, validación por magia
- * de bytes. El servidor devuelve error legible si el formato no es aceptado.
+ * Estado inicial: `BORRADOR`. Cuando la ficha queda completa Y hay autorización,
+ * el backend transiciona a `EN_REVISION` — de ahí lo toma L2 (IDC).
  */
 import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
 import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
+import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 
 type Perfil = {
     id: string;
     nombreVisible: string;
     tituloProfesional: string;
     especialidades: string[];
-    ciudad: { id: string; nombre: string };
+    ciudad: { id: string; nombre: string; paisId: string };
     atiendeVirtual: boolean;
     atiendePresencial: boolean;
     aniosExperiencia: number;
@@ -36,20 +43,33 @@ type Perfil = {
     autorizacionSubida: boolean;
 };
 
+type PaisOption = { id: string; nombre: string };
+
+const ANIOS_EXPERIENCIA_OPCIONES = (() => {
+    const opts: Array<{ value: string; label: string }> = [
+        { value: "", label: "Elija los años" },
+    ];
+    for (let i = 1; i <= 50; i++) {
+        opts.push({ value: String(i), label: i === 1 ? "1 año" : `${i} años`});
+    }
+    return opts;
+})();
+
 export default function CompletarPerfilProfesionalPage() {
     const [perfil, setPerfil] = useState<Perfil | null>(null);
     const [cargando, setCargando] = useState(true);
+    const [paises, setPaises] = useState<PaisOption[]>([]);
     const [nombreVisible, setNombreVisible] = useState("");
     const [tituloProfesional, setTituloProfesional] = useState("");
     const [especialidadesTexto, setEspecialidadesTexto] = useState("");
-    const [ciudadId, setCiudadId] = useState("");
+    const [paisId, setPaisId] = useState("");
+    const [ciudad, setCiudad] = useState<CiudadOpcion | null>(null);
     const [atiendeVirtual, setAtiendeVirtual] = useState(false);
     const [atiendePresencial, setAtiendePresencial] = useState(false);
-    const [aniosExperiencia, setAniosExperiencia] = useState<number>(0);
+    const [aniosExperiencia, setAniosExperiencia] = useState<string>("");
     const [presentacion, setPresentacion] = useState("");
     const [tarifaConsultaCOP, setTarifaConsultaCOP] = useState<number>(0);
     const [duracionMinutos, setDuracionMinutos] = useState<number>(45);
-    const [emiteFactura, setEmiteFactura] = useState(false);
     const [numeroTarjetaProfesional, setNumeroTarjeta] = useState("");
     const [archivo, setArchivo] = useState<File | null>(null);
     const [guardando, setGuardando] = useState(false);
@@ -57,27 +77,43 @@ export default function CompletarPerfilProfesionalPage() {
     const [errorPerfil, setErrorPerfil] = useState("");
     const [errorArchivo, setErrorArchivo] = useState("");
     const [ok, setOk] = useState("");
+    // SPEC-434 punto 5: modal al pasar a EN_REVISION. Se abre una sola vez
+    // por transición y NUNCA muestra el nombre técnico del estado.
+    const [modalRevision, setModalRevision] = useState(false);
 
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch("/api/profesional/perfil", { credentials: "include" });
-                if (res.ok) {
-                    const json = await res.json();
+                const [perfilRes, paisRes] = await Promise.all([
+                    fetch("/api/profesional/perfil", { credentials: "include" }),
+                    fetch("/api/paises", { credentials: "include" }),
+                ]);
+                const paisJson = await paisRes.json().catch(() => ({}));
+                setPaises((paisJson.paises ?? []) as PaisOption[]);
+                if (perfilRes.ok) {
+                    const json = await perfilRes.json();
                     if (json.perfil) {
                         const p: Perfil = json.perfil;
                         setPerfil(p);
                         setNombreVisible(p.nombreVisible);
                         setTituloProfesional(p.tituloProfesional);
                         setEspecialidadesTexto(p.especialidades.join(", "));
-                        setCiudadId(p.ciudad.id);
+                        if (p.ciudad?.id && p.ciudad.paisId) {
+                            setPaisId(p.ciudad.paisId);
+                            setCiudad({
+                                id: p.ciudad.id,
+                                nombre: p.ciudad.nombre,
+                                paisId: p.ciudad.paisId,
+                                departamentoId: null,
+                                departamento: null,
+                            });
+                        }
                         setAtiendeVirtual(p.atiendeVirtual);
                         setAtiendePresencial(p.atiendePresencial);
-                        setAniosExperiencia(p.aniosExperiencia);
+                        setAniosExperiencia(p.aniosExperiencia > 0 ? String(p.aniosExperiencia) : "");
                         setPresentacion(p.presentacion);
                         setTarifaConsultaCOP(p.tarifaConsultaCOP);
                         setDuracionMinutos(p.duracionMinutos);
-                        setEmiteFactura(p.emiteFactura);
                     }
                 }
             } finally {
@@ -90,6 +126,15 @@ export default function CompletarPerfilProfesionalPage() {
         e.preventDefault();
         setErrorPerfil("");
         setOk("");
+        if (!ciudad?.id) {
+            setErrorPerfil("Seleccione su ciudad usando el buscador.");
+            return;
+        }
+        const anios = Number(aniosExperiencia);
+        if (!Number.isInteger(anios) || anios < 1 || anios > 50) {
+            setErrorPerfil("Seleccione sus años de experiencia (entre 1 y 50).");
+            return;
+        }
         setGuardando(true);
         try {
             const especialidades = especialidadesTexto
@@ -104,24 +149,29 @@ export default function CompletarPerfilProfesionalPage() {
                     nombreVisible,
                     tituloProfesional,
                     especialidades,
-                    ciudadId,
+                    ciudadId: ciudad.id,
                     atiendeVirtual,
                     atiendePresencial,
-                    aniosExperiencia,
+                    aniosExperiencia: anios,
                     presentacion,
                     tarifaConsultaCOP,
                     duracionMinutos,
-                    emiteFactura,
                     numeroTarjetaProfesional: numeroTarjetaProfesional || null,
                 }),
             });
             const json = await res.json().catch(() => ({}));
             if (!res.ok) {
-                setErrorPerfil(json?.error?.message ?? "No pudimos guardar el perfil.");
+                setErrorPerfil(json?.error?.message ?? "No fue posible guardar la ficha.");
                 return;
             }
-            setPerfil(json.perfil as Perfil);
-            setOk("Guardado.");
+            const nuevo = json.perfil as Perfil;
+            const antes = perfil?.estado ?? "BORRADOR";
+            setPerfil(nuevo);
+            if (antes !== "EN_REVISION" && nuevo.estado === "EN_REVISION") {
+                setModalRevision(true);
+            } else {
+                setOk("Cambios guardados.");
+            }
         } finally {
             setGuardando(false);
         }
@@ -141,11 +191,17 @@ export default function CompletarPerfilProfesionalPage() {
             });
             const json = await res.json().catch(() => ({}));
             if (!res.ok) {
-                setErrorArchivo(json?.error?.message ?? "No pudimos subir la autorización.");
+                setErrorArchivo(json?.error?.message ?? "No fue posible subir la autorización.");
                 return;
             }
-            setPerfil(json.perfil as Perfil);
-            setOk("Autorización recibida.");
+            const nuevo = json.perfil as Perfil;
+            const antes = perfil?.estado ?? "BORRADOR";
+            setPerfil(nuevo);
+            if (antes !== "EN_REVISION" && nuevo.estado === "EN_REVISION") {
+                setModalRevision(true);
+            } else {
+                setOk("Autorización recibida.");
+            }
         } finally {
             setSubiendo(false);
         }
@@ -159,19 +215,22 @@ export default function CompletarPerfilProfesionalPage() {
         );
     }
 
+    // SPEC-434 punto 2: voz neutra Colombia — sin voseo.
+    // SPEC-434 punto 5: en pantalla NUNCA aparece «EN_REVISION». Si el perfil
+    // ya está en ese estado (usuario recarga después de entregar), se pinta
+    // un mensaje humano.
+    const yaEnRevision = perfil?.estado === "EN_REVISION";
+
     return (
         <main className="mx-auto max-w-3xl px-4 py-8">
-            <h1 className="font-serif text-3xl text-body">Completá tu perfil</h1>
+            <h1 className="font-serif text-3xl text-body">Complete su perfil</h1>
             <p className="mt-2 text-sm text-muted">
-                Cuando termines el perfil y subas tu autorización firmada, tu ficha entra a la revisión de
-                Innovadataco. Mientras tanto queda como borrador y nadie la ve.
+                Cuando termine la ficha y suba su autorización firmada, el equipo de
+                Innovadataco la revisa. Mientras tanto queda como borrador y nadie la ve.
             </p>
-            {perfil && (
-                <p className="mt-3 text-sm">
-                    Estado: <strong className="text-body">{perfil.estado}</strong>
-                    {perfil.estado === "EN_REVISION" && (
-                        <span className="text-accent"> · te avisamos cuando IDC responda.</span>
-                    )}
+            {yaEnRevision && (
+                <p className="mt-3 rounded-lg bg-accent/10 px-3 py-2 text-sm text-body">
+                    Su ficha está en revisión. Le enviaremos un correo cuando pueda continuar.
                 </p>
             )}
 
@@ -183,14 +242,34 @@ export default function CompletarPerfilProfesionalPage() {
 
             <GlassCard className="mt-6">
                 <form onSubmit={guardar} className="space-y-4">
-                    <Input label="Cómo querés que te vean" value={nombreVisible} onChange={(e) => setNombreVisible(e.target.value)} />
+                    <Input label="Cómo desea que lo vean" value={nombreVisible} onChange={(e) => setNombreVisible(e.target.value)} />
                     <Input label="Título profesional" value={tituloProfesional} onChange={(e) => setTituloProfesional(e.target.value)} />
                     <Input
                         label="Especialidades (separadas por coma)"
                         value={especialidadesTexto}
                         onChange={(e) => setEspecialidadesTexto(e.target.value)}
                     />
-                    <Input label="ID de tu ciudad" value={ciudadId} onChange={(e) => setCiudadId(e.target.value)} />
+
+                    {/* SPEC-434 punto 1 · país + ciudad como en el reporte. */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Select
+                            label="País"
+                            value={paisId}
+                            onChange={(e) => {
+                                setPaisId(e.target.value);
+                                setCiudad(null);
+                            }}
+                            options={[{ value: "", label: "Elija país" }, ...paises.map((p) => ({ value: p.id, label: p.nombre }))]}
+                        />
+                        <CiudadSearchSelect
+                            paisId={paisId}
+                            value={ciudad}
+                            onSelect={setCiudad}
+                            disabled={!paisId}
+                            permitirOtra={false}
+                        />
+                    </div>
+
                     <div className="flex flex-wrap gap-4 text-sm">
                         <label className="flex items-center gap-2">
                             <input type="checkbox" checked={atiendeVirtual} onChange={(e) => setAtiendeVirtual(e.target.checked)} />
@@ -200,18 +279,14 @@ export default function CompletarPerfilProfesionalPage() {
                             <input type="checkbox" checked={atiendePresencial} onChange={(e) => setAtiendePresencial(e.target.checked)} />
                             Atiendo presencial
                         </label>
-                        <label className="flex items-center gap-2">
-                            <input type="checkbox" checked={emiteFactura} onChange={(e) => setEmiteFactura(e.target.checked)} />
-                            Emito factura
-                        </label>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <Input
+                        {/* SPEC-434 punto 4 · años como selector 1..50. */}
+                        <Select
                             label="Años de experiencia"
-                            type="number"
-                            min={0}
                             value={aniosExperiencia}
-                            onChange={(e) => setAniosExperiencia(Number(e.target.value))}
+                            onChange={(e) => setAniosExperiencia(e.target.value)}
+                            options={ANIOS_EXPERIENCIA_OPCIONES}
                         />
                         <Input
                             label="Tarifa por consulta (COP)"
@@ -236,7 +311,7 @@ export default function CompletarPerfilProfesionalPage() {
                             onChange={(e) => setPresentacion(e.target.value)}
                             className="mt-1 w-full min-h-32 rounded-lg border border-tinta/15 bg-transparent px-3 py-2 text-sm"
                             maxLength={1500}
-                            placeholder="Contá quién sos y con quién trabajás mejor, en pocas líneas."
+                            placeholder="Escriba quién es y con quién trabaja mejor, en pocas líneas."
                         />
                     </label>
                     <Input
@@ -258,8 +333,9 @@ export default function CompletarPerfilProfesionalPage() {
             <GlassCard className="mt-6">
                 <h2 className="text-lg font-semibold text-body">Autorización firmada</h2>
                 <p className="mt-1 text-sm text-muted">
-                    Subí el documento firmado que autoriza la consulta de antecedentes. Aceptamos PDF, PNG y JPG,
-                    hasta 5 MB. La ley exige que quede archivada — la guardamos cifrada y solo Innovadataco la lee.
+                    Suba el documento firmado que autoriza la consulta de antecedentes.
+                    Aceptamos PDF, PNG y JPG, hasta 5 MB. La ley exige que quede archivada —
+                    la guardamos cifrada y solo Innovadataco la lee.
                 </p>
                 <div className="mt-4 space-y-3">
                     <input
@@ -269,7 +345,7 @@ export default function CompletarPerfilProfesionalPage() {
                         className="text-sm"
                     />
                     {perfil?.autorizacionSubida && (
-                        <p className="text-sm text-accent">Ya subiste una autorización.</p>
+                        <p className="text-sm text-accent">Ya subió una autorización.</p>
                     )}
                     {errorArchivo && (
                         <Alerta tono="advertencia" className="text-center">
@@ -294,6 +370,31 @@ export default function CompletarPerfilProfesionalPage() {
                     </div>
                 </div>
             </GlassCard>
+
+            {modalRevision && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="revision-titulo"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/60 p-4"
+                >
+                    <div className="w-full max-w-md rounded-2xl bg-page p-6 shadow-xl">
+                        <h2 id="revision-titulo" className="font-serif text-xl text-body">
+                            Su ficha quedó entregada
+                        </h2>
+                        <p className="mt-3 text-sm text-body">
+                            El equipo de Innovadataco va a revisar su caso. Cuando termine, le llegará
+                            un correo con el resultado y los pasos a seguir.
+                        </p>
+                        <p className="mt-2 text-sm text-muted">
+                            Mientras tanto, esta pantalla queda a su disposición para editar la ficha.
+                        </p>
+                        <div className="mt-5 flex justify-end">
+                            <Button onClick={() => setModalRevision(false)}>Entendido</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

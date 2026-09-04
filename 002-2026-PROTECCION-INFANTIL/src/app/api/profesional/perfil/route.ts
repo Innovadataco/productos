@@ -15,6 +15,7 @@ import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
+import { CiudadRepository } from "@/lib/dal/repositories/ciudad";
 import {
     perfilProfesionalUpdateSchema,
     type PerfilProfesionalUpdateInput,
@@ -95,6 +96,20 @@ export async function PUT(request: Request) {
                 { error: { message: parsed.error.issues[0]?.message ?? "Datos inválidos", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
+        }
+
+        // SPEC-434 (I-302 · Jelkin vivo 04-09): antes un `ciudadId` inválido
+        // caía como 500 (Prisma «no Ciudad record found»). Un dato malo del
+        // usuario tiene que ser 400 con mensaje entendible, nunca 500. El
+        // selector nuevo baja la probabilidad, pero el candado vive acá.
+        if (parsed.data.ciudadId !== undefined && parsed.data.ciudadId !== "") {
+            const ciudad = await new CiudadRepository().findById(parsed.data.ciudadId);
+            if (!ciudad) {
+                return NextResponse.json(
+                    { error: { message: "La ciudad seleccionada no existe. Usá el buscador para elegirla.", code: ERROR_CODES.VALIDATION_ERROR } },
+                    { status: 400 }
+                );
+            }
         }
 
         const repo = new PerfilProfesionalRepository();
