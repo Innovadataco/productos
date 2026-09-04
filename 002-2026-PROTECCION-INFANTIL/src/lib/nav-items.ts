@@ -25,6 +25,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
     { href: "/dashboard/admin/usuarios", label: "Usuarios", modulo: "usuarios_admin" },
     { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
+    // SPEC-421 (A-75): gestión de cuentas de profesionales (mismo perfil que
+    // padres: externo, no interno). Sin crear (padre y psicólogo se registran
+    // solos) — el admin restablece contraseña y reenvía enlace de registro.
+    { href: "/dashboard/admin/profesionales/gestion", label: "Profesionales", modulo: "profesionales_admin" },
     // SPEC-212 (002-PI-112): panel administrativo de pagos (color ámbar en AdminNav).
     { href: "/dashboard/admin/pagos", label: "Pagos", modulo: "pagos_admin" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },

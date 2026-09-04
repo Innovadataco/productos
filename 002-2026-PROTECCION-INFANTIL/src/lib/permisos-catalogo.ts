@@ -83,6 +83,12 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // Verificador, una persona, un trabajo — dos módulos duplicaban la
     // superficie de falla en BD viva (lección I-278).
     { clave: "admin_verificacion_profesionales", nombre: "Verificación de profesionales", categoria: "admin", esCritico: true, orden: 130 },
+    // SPEC-421 (A-75): el admin crea/desactiva/reactiva cuentas de profesionales
+    // igual que a los operadores — SIN modelo de asignación (a un psicólogo lo
+    // elige el padre, no el sistema). Perfil, tarifa y documentos los sigue
+    // cargando el propio profesional (SPEC-391 · veredicto Jelkin 20:3x).
+    // Default: SOLO ADMIN por el `modulosSeed.map(...)` del seed.
+    { clave: "profesionales_admin", nombre: "Gestión de profesionales", categoria: "admin", esCritico: true, orden: 132 },
     // SPEC-291 (002-PI-191): acciones admin sobre servicios docker (start/stop/restart).
     // Default: SOLO rol ADMIN (por `ADMIN: modulosSeed.map(...)` en seed-modulos-grants.ts).
     // NUNCA otorgar a OPERADOR/COMITE/SCHOOL_ADMIN sin auditoría explícita de CEO.

@@ -43,6 +43,20 @@ export class TokenRegistroRepository {
     }
 
     /**
+     * SPEC-421 · solicitudes de registro pendientes de un rol específico.
+     * Devuelve email/creadoEn/expiraEn/rol — NUNCA el `tokenHash` ni el token
+     * en claro (ese solo existe en el enlace del correo).
+     */
+    findPendientesPorRol(rol: string, take = 100) {
+        return this.db.tokenRegistro.findMany({
+            where: { rol: rol as never, usado: false, expiraEn: { gt: new Date() } },
+            orderBy: { creadoEn: "desc" },
+            take,
+            select: { id: true, email: true, creadoEn: true, expiraEn: true, rol: true },
+        });
+    }
+
+    /**
      * El último token de un email, usado o no — para distinguir "ya lo usaste"
      * y "se venció" de "nunca existió" y responder con calma, no con un genérico.
      */
