@@ -388,4 +388,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-436 (I-303): la función que descifra el documento no puede volver a
     // quedar sin llamador, y el enlace no puede volver a ser el id crudo.
     "src/lib/profesional/documentos.candado.test.ts",
+    // SPEC-444 (I-310): los ids de PI son cuid. Validarlos con uuid() dejaba
+    // `POST /api/padre/citas` en 400 permanente. Candado de caso + de clase.
+    "src/app/api/padre/citas/identificadores-cuid.test.ts",
+    "src/lib/schemas/identificadores.candado.test.ts",
 ];

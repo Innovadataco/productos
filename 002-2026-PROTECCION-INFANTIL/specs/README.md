@@ -13,10 +13,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **352** |
+| **Total de specs** | **353** |
 | 🔵 PLANEADO | 59 |
 | 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 167 |
+| 🟢 IMPLEMENTADO | 168 |
 | 🧪 PENDIENTE DE PRUEBA | 0 |
 | ✅ FINALIZADO | 38 |
 | 📁 CERRADA | 63 |
@@ -381,6 +381,7 @@
 | [431](431-franja-nocturna-payload/spec.md) | SPEC-431 · La franja horaria le mentía al modelo — cierra I-247 b | 🟢 IMPLEMENTADO |
 | [436](436-documentos-del-profesional/spec.md) | SPEC-436 · Los documentos del profesional: se cargan, se guardan y SE PUEDEN LEER | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
+| [444](444-identificadores-cuid/spec.md) | SPEC-444 · Los identificadores del padre se validaban como uuid — cierra I-310 | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 
 ## Incidencias de calidad de datos

@@ -7,13 +7,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { errorToResponse } from "@/lib/api-handler";
+import { cuidIdSchema } from "@/lib/schemas/base";
 import { reasignarPorPadre } from "@/lib/profesional/cita/cita.service";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 
+// SPEC-444 (I-310): los ids de PerfilProfesional y FranjaDisponible son cuid().
 const bodySchema = z.object({
-    nuevoProfesionalId: z.string().uuid(),
-    nuevaFranjaId: z.string().uuid(),
+    nuevoProfesionalId: cuidIdSchema,
+    nuevaFranjaId: cuidIdSchema,
 });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
