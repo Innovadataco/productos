@@ -380,10 +380,8 @@ enum AccionAudit {
   // que el brief exige vive en `CodigoCita`; estas acciones son el rastro de
   // QUIÉN hizo qué, que es lo que `CodigoCita` no puede contar por sí solo.
   CITA_PROFESIONAL_CODIGO_EMITIDO
-  CITA_PROFESIONAL_CODIGO_DIGITADO
   CITA_PROFESIONAL_CODIGO_FALLIDO
   CITA_PROFESIONAL_CUMPLIDA
-  CITA_PROFESIONAL_EXPEDIENTE_ABIERTO
   CITA_PROFESIONAL_AUTOCERRADA
   CITA_PROFESIONAL_NO_ASISTIO_PADRE
 }

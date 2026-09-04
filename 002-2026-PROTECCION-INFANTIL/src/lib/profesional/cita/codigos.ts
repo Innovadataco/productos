@@ -110,18 +110,24 @@ export async function puedeReemitir(
 }
 
 /**
- * Valida el código que digitó el profesional y lo consume.
+ * Valida el código que digitó el profesional, **sin consumirlo**.
  *
  * El orden importa y es el del registro: primero vencimiento, después tope de
  * intentos, después la comparación. Un código vencido no gasta intentos —el
  * padre pide otro y sigue— y un código con los intentos agotados no vuelve a
  * compararse aunque acierten.
  *
- * El consumo va con `updateMany ... WHERE usadoEn IS NULL`: si dos peticiones
- * llegan juntas, **solo una gana**. Un código de un solo uso no puede cerrar dos
- * veces la misma cita.
+ * SPEC-427 (fix a) · validar y CONSUMIR se separaron a propósito. El consumo
+ * (`marcarUsadoSiLibre`) y el cambio de estado de la cita tienen que ocurrir en
+ * una MISMA transacción: si se consumía acá y el `CUMPLIDA` fallaba después, el
+ * código quedaba quemado y la cita sin cerrar. Por eso esto solo dice «este
+ * código sirve, es la fila N»; el llamador consume dentro de su transacción.
+ *
+ * El incremento por código errado SÍ va acá y fuera de toda transacción del
+ * cierre: contar un intento fallido no debe deshacerse si el cierre aborta, o
+ * la fuerza bruta dejaría de contarse.
  */
-export async function verificarYUsar(
+export async function validarCodigo(
     solicitudId: string,
     tipo: TipoCodigoCita,
     codigo: string,
@@ -136,9 +142,6 @@ export async function verificarYUsar(
     if (!(await bcrypt.compare(codigo, fila.codigoHash))) {
         await repo.incrementarIntentos(fila.id);
         return { ok: false, motivo: "incorrecto" };
-    }
-    if (!(await repo.marcarUsadoSiLibre(fila.id, ahora))) {
-        return { ok: false, motivo: "ya_usado" };
     }
     return { ok: true, codigoId: fila.id };
 }

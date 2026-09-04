@@ -2,8 +2,11 @@
  * SPEC-427 (A-75 · L6 · brief §9 momentos 6) · el cierre de la cita.
  *
  * Acá vive todo lo que pasa DESPUÉS de que la cita quedó confirmada: el envío
- * del código al padre, el momento en que el profesional lo digita, la apertura
- * del expediente, y el autocierre a los 5 días cuando nadie cerró nada.
+ * del código al padre, el momento en que el profesional lo digita para cerrar,
+ * y el autocierre a los 5 días cuando nadie cerró nada.
+ *
+ * El código de EXPEDIENTE (la otra mitad del momento 6 del brief) sale a
+ * SPEC-427b: media funcionalidad no entra a medias.
  *
  * Separado de `cita.service.ts` a propósito: ese módulo es el ciclo de la
  * RESERVA (crear, pagar, confirmar, reprogramar) y ya carga con eso.
@@ -19,7 +22,7 @@ import { CodigoCitaRepository } from "@/lib/dal/repositories/codigo-cita";
 import { programar, despacharEnvios } from "@/lib/notificaciones/motor";
 import {
     emitirCodigo,
-    verificarYUsar,
+    validarCodigo,
     puedeReemitir,
     ANTICIPACION_RECORDATORIO_MS,
     VIGENCIA_CODIGO_MS,
@@ -81,8 +84,8 @@ export async function cerrarConCodigoDeCita(
         );
     }
 
-    const r = await verificarYUsar(solicitudId, "CITA", codigo, ahora);
-    if (!r.ok) {
+    const v = await validarCodigo(solicitudId, "CITA", codigo, ahora);
+    if (!v.ok) {
         await logAudit({
             accion: "CITA_PROFESIONAL_CODIGO_FALLIDO",
             tipoRecurso: "SolicitudCita",
@@ -90,23 +93,33 @@ export async function cerrarConCodigoDeCita(
             usuarioId: profesionalUsuarioId,
             // El código NO se audita, ni acertado ni fallido: el motivo alcanza
             // para investigar y el valor es un secreto de un solo uso.
-            metadatos: { tipo: "CITA", motivo: r.motivo },
+            metadatos: { tipo: "CITA", motivo: v.motivo },
             ipAddress: "profesional",
             userAgent: "cita/cerrar",
         });
-        throw rechazo(r.motivo);
+        throw rechazo(v.motivo);
     }
 
-    const cerrada = await new SolicitudCitaRepository().marcarCumplidaSiConfirmada(solicitudId);
-    if (!cerrada) {
-        throw new AppError("La cita cambió de estado mientras se cerraba.", ERROR_CODES.CONFLICT, 409);
-    }
+    // SPEC-427 (fix a) · consumir el código y escribir CUMPLIDA en la MISMA
+    // transacción. Antes eran dos statements sueltos: si el segundo fallaba, el
+    // código quedaba quemado y la cita sin cerrar — el padre no tenía cómo
+    // reintentar. Ahora, o pasan los dos o no pasa ninguno.
+    const cerrada = await withUnitOfWork(async (tx) => {
+        const consumido = await new CodigoCitaRepository(tx).marcarUsadoSiLibre(v.codigoId, ahora);
+        if (!consumido) throw rechazo("ya_usado");
+        const fila = await new SolicitudCitaRepository(tx).marcarCumplidaSiConfirmada(solicitudId);
+        if (!fila) {
+            throw new AppError("La cita cambió de estado mientras se cerraba.", ERROR_CODES.CONFLICT, 409);
+        }
+        return fila;
+    });
+
     await logAudit({
         accion: "CITA_PROFESIONAL_CUMPLIDA",
         tipoRecurso: "SolicitudCita",
         recursoId: solicitudId,
         usuarioId: profesionalUsuarioId,
-        metadatos: { codigoId: r.codigoId },
+        metadatos: { codigoId: v.codigoId },
         ipAddress: "profesional",
         userAgent: "cita/cerrar",
     });
@@ -155,11 +168,54 @@ export async function marcarNoAsistioElPadre(
         );
     }
 
-    const repo = new SolicitudCitaRepository();
-    const marcada = await repo.marcarNoAsistioPadreSiConfirmada(solicitudId);
-    if (!marcada) {
-        throw new AppError("La cita cambió de estado mientras se marcaba.", ERROR_CODES.CONFLICT, 409);
-    }
+    // SPEC-427 (fix c) · el cambio de estado y el aviso al padre, en la MISMA
+    // transacción. Es una declaración sobre el padre hecha por otro: si el
+    // estado se moviera y el aviso se perdiera, el padre nunca se enteraría y
+    // nadie reintentaría (I-294/295). Encolado dentro de la tx (SPEC-418): si
+    // la tx aborta, no queda un aviso de algo que no pasó.
+    const completa = await new SolicitudCitaRepository().findParaCodigo(solicitudId);
+    const { marcada, envios } = await withUnitOfWork(async (tx) => {
+        const fila = await new SolicitudCitaRepository(tx).marcarNoAsistioPadreSiConfirmada(solicitudId);
+        if (!fila) {
+            throw new AppError("La cita cambió de estado mientras se marcaba.", ERROR_CODES.CONFLICT, 409);
+        }
+        let envios: Awaited<ReturnType<typeof programar>>["envios"] = [];
+        if (completa) {
+            const aviso = await programar(
+                {
+                    evento: EVENTO_NO_ASISTIO,
+                    sujetoTipo: "SolicitudCita",
+                    sujetoId: solicitudId,
+                    destinatarios: [
+                        {
+                            usuarioId: completa.padreUsuario.id,
+                            email: completa.padreUsuario.email,
+                            rol: "PARENT",
+                            variables: {
+                                nombrePadre: completa.padreUsuario.nombre ?? "",
+                                nombreProfesional: completa.profesional.nombreVisible,
+                                horaCita: horaLegible(completa.franja.inicio),
+                            },
+                        },
+                    ],
+                },
+                { tx }
+            );
+            // Falta la regla activa: no se frena el cierre (no es bloqueante),
+            // pero NO se traga en silencio — I-294/295.
+            if (aviso.programadas === 0) {
+                logger.error("[SPEC-427] Inasistencia marcada sin aviso al padre: falta la regla activa", {
+                    solicitudId,
+                });
+            }
+            envios = aviso.envios ?? [];
+        }
+        return { marcada: fila, envios };
+    });
+
+    // Ya committeado: se despierta al worker. Si esto falla no se pierde nada —
+    // la fila quedó ENCOLADA en la transacción y el polling la recoge.
+    await despacharEnvios(envios ?? []);
 
     await logAudit({
         accion: "CITA_PROFESIONAL_NO_ASISTIO_PADRE",
@@ -169,31 +225,6 @@ export async function marcarNoAsistioElPadre(
         ipAddress: "profesional",
         userAgent: "cita/no-asistio",
     });
-
-    // El padre se entera por correo, no por descubrirlo en la pantalla. Es una
-    // declaración sobre él hecha por otro: enterarse tarde es lo que convierte
-    // un malentendido en un reclamo.
-    const completa = await repo.findParaCodigo(solicitudId);
-    if (completa) {
-        const aviso = await programar({
-            evento: EVENTO_NO_ASISTIO,
-            sujetoTipo: "SolicitudCita",
-            sujetoId: solicitudId,
-            destinatarios: [
-                {
-                    usuarioId: completa.padreUsuario.id,
-                    email: completa.padreUsuario.email,
-                    rol: "PARENT",
-                    variables: {
-                        nombrePadre: completa.padreUsuario.nombre ?? "",
-                        nombreProfesional: completa.profesional.nombreVisible,
-                        horaCita: horaLegible(completa.franja.inicio),
-                    },
-                },
-            ],
-        });
-        await despacharEnvios(aviso.envios ?? []);
-    }
 
     // El cruce de SPEC-429 también arranca acá: la cita terminó, aunque haya
     // terminado mal, y las dos encuestas se activan igual.
@@ -207,63 +238,6 @@ export async function marcarNoAsistioElPadre(
     }
 
     return { estado: marcada.estado };
-}
-
-/**
- * El profesional digita el código de expediente → puede abrirlo.
- *
- * El permiso queda en la fila usada del código: hay acceso si existe un código
- * de EXPEDIENTE usado para esa solicitud. No se agrega una segunda verdad —
- * un booleano en la solicitud podría contradecir la traza que el brief exige.
- */
-export async function abrirExpedienteConCodigo(
-    solicitudId: string,
-    profesionalUsuarioId: string,
-    codigo: string,
-    ahora = new Date()
-) {
-    const solicitud = await exigirDuenoDeLaCita(solicitudId, profesionalUsuarioId);
-    if (!solicitud.expedienteCompartidoId) {
-        throw new AppError(
-            "El padre no compartió el expediente para esta cita.",
-            ERROR_CODES.CONFLICT,
-            409
-        );
-    }
-
-    const r = await verificarYUsar(solicitudId, "EXPEDIENTE", codigo, ahora);
-    if (!r.ok) {
-        await logAudit({
-            accion: "CITA_PROFESIONAL_CODIGO_FALLIDO",
-            tipoRecurso: "SolicitudCita",
-            recursoId: solicitudId,
-            usuarioId: profesionalUsuarioId,
-            metadatos: { tipo: "EXPEDIENTE", motivo: r.motivo },
-            ipAddress: "profesional",
-            userAgent: "cita/abrir-expediente",
-        });
-        throw rechazo(r.motivo);
-    }
-
-    await logAudit({
-        accion: "CITA_PROFESIONAL_EXPEDIENTE_ABIERTO",
-        tipoRecurso: "Expediente",
-        recursoId: solicitud.expedienteCompartidoId,
-        usuarioId: profesionalUsuarioId,
-        metadatos: { solicitudId, codigoId: r.codigoId },
-        ipAddress: "profesional",
-        userAgent: "cita/abrir-expediente",
-    });
-    return { expedienteId: solicitud.expedienteCompartidoId };
-}
-
-/**
- * ¿Este profesional puede leer el expediente de esta cita?
- * Sí solo si digitó el código: el acto del padre es lo que abre la puerta.
- */
-export async function tieneAccesoAlExpediente(solicitudId: string): Promise<boolean> {
-    const codigos = await new CodigoCitaRepository().listarPorSolicitud(solicitudId);
-    return codigos.some((c) => c.tipo === "EXPEDIENTE" && c.usadoEn !== null);
 }
 
 /** Formato humano de la hora de la cita, para el correo. */
@@ -376,20 +350,32 @@ export async function barrerRecordatoriosDeCita(ahora = new Date()) {
     const citas = await new SolicitudCitaRepository().listarConfirmadasPorArrancar(desde, hasta);
 
     let emitidos = 0;
+    let errores = 0;
     for (const c of citas) {
-        const { aviso } = await emitirYProgramarRecordatorio(
-            {
+        // SPEC-427 (fix e) · una cita rota no puede frenar a las demás. Se
+        // registra y se sigue; el barrido termina con la cuenta de cuántas
+        // fallaron para que un problema sistemático se vea.
+        try {
+            const { aviso } = await emitirYProgramarRecordatorio(
+                {
+                    solicitudId: c.id,
+                    padre: c.padreUsuario,
+                    profesionalNombre: c.profesional.nombreVisible,
+                    inicio: c.franja.inicio,
+                },
+                ahora
+            );
+            emitidos += 1;
+            await despacharEnvios(aviso.envios ?? []);
+        } catch (e) {
+            errores += 1;
+            logger.error("[SPEC-427] No se pudo emitir el código de una cita", {
                 solicitudId: c.id,
-                padre: c.padreUsuario,
-                profesionalNombre: c.profesional.nombreVisible,
-                inicio: c.franja.inicio,
-            },
-            ahora
-        );
-        emitidos += 1;
-        await despacharEnvios(aviso.envios ?? []);
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
     }
-    return { emitidos };
+    return { emitidos, errores };
 }
 
 /**
@@ -458,45 +444,72 @@ export async function barrerAutocierre(ahora = new Date()) {
     const vencidas = await repo.listarConfirmadasVencidasParaAutocierre(limite);
 
     let autocerradas = 0;
+    let errores = 0;
     for (const c of vencidas) {
-        await repo.marcarAutocerrada(c.id, ahora);
-        autocerradas += 1;
+        // SPEC-427 (fix e) · una cita rota no frena el barrido.
+        try {
+            // SPEC-427 (fix b, c) · el cambio de estado y el aviso, atómicos.
+            // La guardia de estado vive en el WHERE de `marcarAutocerrada`: si
+            // el profesional cerró la cita entre el `listar` y esto, NO se pisa
+            // su CUMPLIDA/NO_ASISTIO — `movida` sale false y no se avisa nada.
+            const { movida, envios } = await withUnitOfWork(async (tx) => {
+                const movida = await new SolicitudCitaRepository(tx).marcarAutocerrada(c.id, ahora);
+                if (!movida) return { movida: false, envios: [] as Awaited<ReturnType<typeof programar>>["envios"] };
 
-        await logAudit({
-            accion: "CITA_PROFESIONAL_AUTOCERRADA",
-            tipoRecurso: "SolicitudCita",
-            recursoId: c.id,
-            metadatos: {
-                diasSinCerrar: DIAS_AUTOCIERRE,
-                profesionalId: c.profesional.id,
-                finDeLaCita: c.franja.fin.toISOString(),
-            },
-            ipAddress: "worker",
-            userAgent: "cita/autocierre",
-        });
-
-        // Al padre por correo; al administrador por la cola 2 del Verificador,
-        // que es su canal real y queda hasta que alguien la resuelva. Un correo
-        // más a una casilla compartida no es un aviso: es ruido que se pierde.
-        const aviso = await programar({
-            evento: EVENTO_AUTOCERRADA,
-            sujetoTipo: "SolicitudCita",
-            sujetoId: c.id,
-            destinatarios: [
-                {
-                    usuarioId: c.padreUsuario.id,
-                    email: c.padreUsuario.email,
-                    rol: "PARENT",
-                    variables: {
-                        nombrePadre: c.padreUsuario.nombre ?? "",
-                        nombreProfesional: c.profesional.nombreVisible,
-                        horaCita: horaLegible(c.franja.inicio),
-                        dias: DIAS_AUTOCIERRE,
+                const aviso = await programar(
+                    {
+                        evento: EVENTO_AUTOCERRADA,
+                        sujetoTipo: "SolicitudCita",
+                        sujetoId: c.id,
+                        destinatarios: [
+                            {
+                                usuarioId: c.padreUsuario.id,
+                                email: c.padreUsuario.email,
+                                rol: "PARENT",
+                                variables: {
+                                    nombrePadre: c.padreUsuario.nombre ?? "",
+                                    nombreProfesional: c.profesional.nombreVisible,
+                                    horaCita: horaLegible(c.franja.inicio),
+                                    dias: DIAS_AUTOCIERRE,
+                                },
+                            },
+                        ],
                     },
+                    { tx }
+                );
+                if (aviso.programadas === 0) {
+                    logger.error("[SPEC-427] Cita autocerrada sin aviso al padre: falta la regla activa", {
+                        solicitudId: c.id,
+                    });
+                }
+                return { movida: true, envios: aviso.envios ?? [] };
+            });
+
+            if (!movida) continue; // la cerró alguien antes; no es un error
+
+            autocerradas += 1;
+            await logAudit({
+                accion: "CITA_PROFESIONAL_AUTOCERRADA",
+                tipoRecurso: "SolicitudCita",
+                recursoId: c.id,
+                metadatos: {
+                    diasSinCerrar: DIAS_AUTOCIERRE,
+                    profesionalId: c.profesional.id,
+                    finDeLaCita: c.franja.fin.toISOString(),
                 },
-            ],
-        });
-        await despacharEnvios(aviso.envios ?? []);
+                ipAddress: "worker",
+                userAgent: "cita/autocierre",
+            });
+            // Al padre por correo; al administrador por la cola 2 del Verificador,
+            // que es su canal real y queda hasta que alguien la resuelva.
+            await despacharEnvios(envios ?? []);
+        } catch (e) {
+            errores += 1;
+            logger.error("[SPEC-427] No se pudo autocerrar una cita", {
+                solicitudId: c.id,
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
     }
-    return { autocerradas };
+    return { autocerradas, errores };
 }
