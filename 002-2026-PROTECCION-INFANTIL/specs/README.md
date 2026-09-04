@@ -16,6 +16,20 @@
 > ```
 > npx tsx scripts/specs/generar-readme.ts --resumen
 > ```
+<!-- SPEC-413:BEGIN resumen -->
+<!-- Generado por `npx tsx scripts/specs/generar-readme.ts`. NO editar a mano. -->
+
+| Métrica | Valor |
+|---------|-------|
+| **Total de specs** | **355** |
+| 🔵 PLANEADO | 59 |
+| 🟡 DESARROLLO | 25 |
+| 🟢 IMPLEMENTADO | 170 |
+| 🧪 PENDIENTE DE PRUEBA | 0 |
+| ✅ FINALIZADO | 38 |
+| 📁 CERRADA | 63 |
+<!-- SPEC-413:END resumen -->
+
 ## Backlog activo (no cerradas)
 
 <!-- SPEC-413:BEGIN tabla -->
@@ -376,6 +390,7 @@
 | [432](432-generados-sin-conflicto/spec.md) | SPEC-432 · Los archivos generados dejan de ser terreno de conflicto | 🟢 IMPLEMENTADO |
 | [434](434-ficha-profesional-usable/spec.md) | SPEC-434 · La ficha del profesional, usable de verdad — cierra I-302 | 🟢 IMPLEMENTADO |
 | [432](432b-artefactos-arquitectura-sin-conflicto/spec.md) | SPEC-432b · Los artefactos de arquitectura dejan de ser terreno de conflicto | 🟢 IMPLEMENTADO |
+| [435](435-cuentas-verificador/spec.md) | SPEC-435 · Cuentas de VERIFICADOR — el admin las crea con user y pass | 🟢 IMPLEMENTADO |
 | [436](436-documentos-del-profesional/spec.md) | SPEC-436 · Los documentos del profesional: se cargan, se guardan y SE PUEDEN LEER | 🟢 IMPLEMENTADO |
 | [438](438-fecha-hora-obligatorias/spec.md) | SPEC-438 · La fecha y la hora del hecho son obligatorias, y el sistema nunca las inventa | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |

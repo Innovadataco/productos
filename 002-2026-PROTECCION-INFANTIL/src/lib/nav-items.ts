@@ -23,6 +23,9 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/estadisticas", label: "Dashboard", modulo: "estadisticas" },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", modulo: "centro_control_ia" },
     { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
+    // SPEC-435 (Jelkin vivo 04-09): cuentas VERIFICADOR con su user y pass —
+    // molde exacto del operador, sin colegio ni vigencia.
+    { href: "/dashboard/admin/verificadores", label: "Verificadores", modulo: "verificadores_admin" },
     { href: "/dashboard/admin/usuarios", label: "Usuarios", modulo: "usuarios_admin" },
     { href: "/dashboard/admin/padres", label: "Padres", modulo: "padres" },
     // SPEC-421 (A-75): gestión de cuentas de profesionales (mismo perfil que

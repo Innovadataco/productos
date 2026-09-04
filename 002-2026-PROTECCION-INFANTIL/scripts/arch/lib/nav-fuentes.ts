@@ -197,24 +197,28 @@ function subnavsFijos(): NavArray[] {
 export const NOTA_IA_TABS = `IA_TABS (${IA_TABS.length} tabs por key, sin href) no entra en la aserción B: no es un enlace.`;
 
 /**
- * Grants de módulos por defecto (`clavesPorRol` de `prisma/seed-modulos-grants.ts`, activo: true).
+ * Grants de módulos por defecto (`CLAVES_POR_ROL` de `prisma/seed-modulos-grants.ts`, activo: true).
+ * SPEC-435: la constante se exportó y el nombre pasó de `clavesPorRol` (local
+ * a la función) a `CLAVES_POR_ROL` (top-level, importable por candados).
  * Roles sin entrada (PARENT) = sin módulos. Si el bloque cambia de forma, falla ruidoso.
  */
 export function grantsSeedPorRol(): Record<string, string[]> {
     const texto = fs.readFileSync(RUTA_SEED, "utf-8");
-    const bloque = texto.match(/clavesPorRol[^=]*=\s*\{([\s\S]*?)\};/);
+    const bloque =
+        texto.match(/CLAVES_POR_ROL[^=]*=\s*\{([\s\S]*?)\};/) ??
+        texto.match(/clavesPorRol[^=]*=\s*\{([\s\S]*?)\};/);
     if (!bloque) {
-        throw new Error("[Arch:B] no se encontró `clavesPorRol` en prisma/seed.ts (fuente única de grants por defecto, 002-PI-048).");
+        throw new Error("[Arch:B] no se encontró `CLAVES_POR_ROL` en prisma/seed-modulos-grants.ts (fuente única de grants por defecto, 002-PI-048).");
     }
     const grants: Record<string, string[]> = {};
-    for (const m of bloque[1].matchAll(/(\w+):\s*(?:modulosSeed\.map|(\[[^\]]*\]))/g)) {
+    for (const m of bloque[1].matchAll(/(\w+):\s*(?:CATALOGO_MODULOS\.map|modulosSeed\.map|(\[[^\]]*\]))/g)) {
         grants[m[1]] =
             m[2] === undefined
                 ? CATALOGO_MODULOS.map((x) => x.clave).sort()
                 : [...m[2].matchAll(/"([^"]+)"/g)].map((x) => x[1]).sort();
     }
     if (Object.keys(grants).length === 0) {
-        throw new Error("[Arch:B] `clavesPorRol` de prisma/seed.ts no se pudo interpretar (0 roles).");
+        throw new Error("[Arch:B] `CLAVES_POR_ROL` de prisma/seed-modulos-grants.ts no se pudo interpretar (0 roles).");
     }
     return grants;
 }

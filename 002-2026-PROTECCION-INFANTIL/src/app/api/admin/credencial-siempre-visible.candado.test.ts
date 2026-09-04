@@ -67,9 +67,10 @@ describe("SPEC-423 · credencial siempre visible en endpoints admin «SIEMPRE mu
     });
 
     it("cubre los endpoints «SIEMPRE muestra» conocidos (contraprueba)", () => {
-        // Piso: hoy hay 5 (padres/prof restablecer-password, colegios/prof
-        // regenerar-password, solicitudes/reenviar). Si desaparece uno, avisa.
-        expect(alcanzados.length).toBeGreaterThanOrEqual(5);
+        // Piso: hoy hay 6 (padres/prof/verificadores restablecer-password,
+        // colegios/prof regenerar-password, solicitudes/reenviar). Si
+        // desaparece uno, avisa. SPEC-435 sumó verificadores.
+        expect(alcanzados.length).toBeGreaterThanOrEqual(6);
     });
 
     it("ningún endpoint «SIEMPRE muestra» condiciona la credencial a `undefined` según un flag de correo", () => {

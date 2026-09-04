@@ -55,10 +55,16 @@ const SEED_MODULOS_PATH = path.join(process.cwd(), "prisma", "seed-modulos-grant
 
 function bloqueClavesPorRol(): string {
     const src = fs.readFileSync(SEED_MODULOS_PATH, "utf-8");
-    const inicio = src.indexOf("const clavesPorRol");
+    // SPEC-435: la constante local `clavesPorRol` pasó a `export const CLAVES_POR_ROL`
+    // (top-level, importable por candados). Reconocemos ambos nombres.
+    const inicio = (() => {
+        const nuevo = src.indexOf("export const CLAVES_POR_ROL");
+        if (nuevo !== -1) return nuevo;
+        return src.indexOf("const clavesPorRol");
+    })();
     const fin = src.indexOf("};", inicio);
     if (inicio === -1 || fin === -1) {
-        throw new Error("No se encontró clavesPorRol en prisma/seed-modulos-grants.ts (cambió la estructura; revisar este test)");
+        throw new Error("No se encontró CLAVES_POR_ROL en prisma/seed-modulos-grants.ts (cambió la estructura; revisar este test)");
     }
     return src.slice(inicio, fin);
 }
@@ -76,7 +82,9 @@ describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", (
     });
 
     it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {
-        expect(bloqueClavesPorRol()).toMatch(/ADMIN:\s*modulosSeed\.map/);
+        // SPEC-435: la fuente pasó a llamar `CATALOGO_MODULOS.map` (constante importada
+        // al top-level) en vez de la variable local `modulosSeed`. Ambos nombres valen.
+        expect(bloqueClavesPorRol()).toMatch(/ADMIN:\s*(?:modulosSeed|CATALOGO_MODULOS)\.map/);
     });
     // SPEC-381 (I-274): quien modera NO aprueba sus propias guías. `comite_guias_accion`
     // es exclusivo del rol COMITE_VALIDACION; sacar al ADMIN de esa clave evita el
@@ -84,7 +92,8 @@ describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", (
     it("ADMIN NO recibe `comite_guias_accion` (separación de poderes SPEC-381 · I-274)", () => {
         const bloque = bloqueClavesPorRol();
         // Con el filter, la línea del ADMIN nombra explícitamente la exclusión.
-        expect(bloque).toMatch(/ADMIN:\s*modulosSeed\.map\(\(m\) => m\.clave\)\.filter\(\(c\) => c !== "comite_guias_accion"\)/);
+        // SPEC-435: acepta también `CATALOGO_MODULOS.map` (nueva forma tras el refactor).
+        expect(bloque).toMatch(/ADMIN:\s*(?:modulosSeed|CATALOGO_MODULOS)\.map\(\(m\) => m\.clave\)\.filter\(\(c\) => c !== "comite_guias_accion"\)/);
     });
 
 });

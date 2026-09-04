@@ -2,7 +2,7 @@
  * SPEC-053 (data-model §1.4): repositorio de Usuario.
  * Acepta un cliente transaccional opcional (D2).
  */
-import type { Prisma } from "@prisma/client";
+import type { Prisma, RolUsuario } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
@@ -319,6 +319,25 @@ export class UsuarioRepository {
         return this.db.usuario.findFirst({
             where: { id, rol: "PROFESIONAL" },
             select: { id: true, email: true, nombre: true, estado: true, debeCambiarPassword: true, creadoEn: true, ultimaSesion: true },
+        });
+    }
+
+    /**
+     * SPEC-435 · listado admin de cuentas por rol simple (sin colegio ni vigencia).
+     * Uso: panel del admin sobre VERIFICADOR — un solo trabajo, un solo rol.
+     */
+    listarPorRol(rol: RolUsuario) {
+        return this.db.usuario.findMany({
+            where: { rol },
+            orderBy: { creadoEn: "desc" },
+            select: {
+                id: true,
+                email: true,
+                nombre: true,
+                estado: true,
+                creadoEn: true,
+                ultimaSesion: true,
+            },
         });
     }
 
