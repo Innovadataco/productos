@@ -196,12 +196,42 @@ export class PerfilProfesionalRepository {
     // ─────────────────────────────────────────────────────────────────────
 
     /**
+     * SPEC-449 (I-313) · la SEGUNDA defensa de la vigencia, y la que no depende
+     * de que el reloj haya corrido.
+     *
+     * La Ley 2375/2024 obliga a revalidar antecedentes cada 4 meses. El worker
+     * de SPEC-449 marca `VENCIDO`, pero corre una vez al día: entre que los
+     * antecedentes caducan y que el reloj pasa hay una ventana en la que el
+     * perfil sigue `ACTIVO`. Este filtro cierra esa ventana **en la consulta**,
+     * y por eso las dos defensas suman en vez de sustituirse.
+     *
+     * La condición es la misma que `puedeAparecerEnDirectorio` (`vigencia.ts:127`)
+     * expresada en SQL: existe una verificación **APROBADA** cuyo `venceEn`
+     * todavía no pasó. El esquema ya trae `@@index([venceEn])` puesto para esto.
+     *
+     * **Deliberadamente conservador:** un perfil SIN ninguna verificación
+     * aprobada tampoco aparece. Es la lectura correcta de la ley — no se muestra
+     * a quien nunca se verificó— y coincide con `puedeAparecerEnDirectorio`.
+     */
+    private static vigenciaVigente(ahora: Date): Prisma.PerfilProfesionalWhereInput {
+        return {
+            verificaciones: {
+                some: { resultado: "APROBADO", venceEn: { gt: ahora } },
+            },
+        };
+    }
+
+    /**
      * Lista PÚBLICA (para el directorio del padre). Solo `estado = ACTIVO`.
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
      * (candado H-4 · «da turno a todos» sin marear al padre al filtrar).
      */
-    async listarActivos(filtros: FiltrosDirectorio): Promise<PerfilPublicoDTO[]> {
-        const where: Prisma.PerfilProfesionalWhereInput = { estado: "ACTIVO" };
+    async listarActivos(filtros: FiltrosDirectorio, ahora: Date = new Date()): Promise<PerfilPublicoDTO[]> {
+        const where: Prisma.PerfilProfesionalWhereInput = {
+            estado: "ACTIVO",
+            // SPEC-449: estado ∧ vigencia. Ver `vigenciaVigente`.
+            ...PerfilProfesionalRepository.vigenciaVigente(ahora),
+        };
         if (filtros.ciudadId) where.ciudadId = filtros.ciudadId;
         if (filtros.especialidad) where.especialidades = { has: filtros.especialidad };
         if (filtros.modalidad === "virtual") where.atiendeVirtual = true;
@@ -218,9 +248,13 @@ export class PerfilProfesionalRepository {
      * detalle no destapa campos internos. El contacto se entrega en L4, al
      * confirmar la cita, no acá.
      */
-    async obtenerPublicoPorId(id: string): Promise<PerfilPublicoDTO | null> {
+    async obtenerPublicoPorId(id: string, ahora: Date = new Date()): Promise<PerfilPublicoDTO | null> {
         const row = await this.db.perfilProfesional.findFirst({
-            where: { id, estado: "ACTIVO" },
+            // SPEC-449: mismo par estado ∧ vigencia que la lista. Este método
+            // tiene TRES consumidores, y uno es `cita.service.ts`, que lo usa
+            // para validar al profesional al crear la cita: filtrar acá bloquea
+            // de paso las citas nuevas contra un profesional vencido.
+            where: { id, estado: "ACTIVO", ...PerfilProfesionalRepository.vigenciaVigente(ahora) },
             select: SELECT_TARJETA_PUBLICA,
         });
         return row ? toPublicoDTO(row) : null;

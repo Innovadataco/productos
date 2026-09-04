@@ -34,8 +34,19 @@ const HORAS_48_EN_MS = 48 * 60 * 60 * 1000;
  */
 export function debeExponerContacto(
     solicitud: Pick<SolicitudCita, "estado" | "pagoAprobadoEn">,
-    now: Date = new Date()
+    now: Date = new Date(),
+    /**
+     * SPEC-449 · estado del PERFIL del profesional. Opcional para no romper a
+     * los llamadores que no lo tienen a mano; cuando llega y es `VENCIDO`, el
+     * contacto se cierra aunque la cita esté confirmada.
+     */
+    estadoPerfil?: PerfilProfesional["estado"] | null
 ): boolean {
+    // SPEC-449 (I-313): PI no puede seguir sirviendo el teléfono de alguien de
+    // quien YA ESCRIBIÓ EN SU PROPIA AUDITORÍA que la verificación venció. Esa
+    // contradicción —saberlo y seguir entregándolo— es lo que no se defiende
+    // ante un tercero. Manda sobre cualquier excepción de abajo.
+    if (estadoPerfil === "VENCIDO") return false;
     if (solicitud.estado === "CONFIRMADA") return true;
     if (solicitud.estado === "VENCIDA_SIN_RESPUESTA") {
         if (!solicitud.pagoAprobadoEn) return false;
@@ -110,7 +121,10 @@ export function toCitaParaPadre(
         solicitudPreviaId: solicitud.solicitudPreviaId,
         pagoHeredadoDeId: solicitud.pagoHeredadoDeId,
     };
-    if (debeExponerContacto(solicitud, now)) {
+    // SPEC-449: el estado del PERFIL entra en la decisión. `solicitud.profesional`
+    // ya es un `PerfilProfesional` completo, así que el dato está a mano y no
+    // hace falta ensanchar ninguna consulta.
+    if (debeExponerContacto(solicitud, now, solicitud.profesional.estado)) {
         base.contactoProfesional = {
             email: solicitud.profesional.usuario.email,
             telefono: solicitud.profesional.usuario.telefono,
