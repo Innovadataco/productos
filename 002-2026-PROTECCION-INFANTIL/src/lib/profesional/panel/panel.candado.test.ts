@@ -155,3 +155,57 @@ describe("SPEC-425 · el profesional aterriza en su panel, en los DOS mapas", ()
         expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/admin")).toBe(false);
     });
 });
+
+/**
+ * SPEC-437 (puntos 3 y 4) · la voz y el largo del panel.
+ *
+ * Jelkin, textual: *«menos prosa, directo al grano, menos texto»*, y la misma
+ * voz neutra que SPEC-434 le puso a la ficha. El panel había quedado afuera de
+ * esa corrección y estaba lleno de voseo: «No tenés», «Vos ponés», «Podés
+ * cambiarla», «cuando confirmes», «sepas cuáles te faltan», «Te avisamos».
+ *
+ * Es un candado de TEXTO a propósito: acá el texto **es** la conducta. Muere
+ * con el defecto puesto — devolvé un «Tenés» al panel y este bloque se cae.
+ */
+describe("SPEC-437 · el panel del profesional habla neutro y corto", () => {
+    // `leerCodigo` saca los comentarios: este archivo NOMBRA el voseo que
+    // persigue, y nombrarlo no puede poner el gate en rojo.
+    const fuente = leerCodigo(PANEL);
+
+    const VOSEO = [
+        /\btenés\b/i,
+        /\bpodés\b/i,
+        /\bponés\b/i,
+        /\bquerés\b/i,
+        /\bvolvé\b/i,
+        /\bmirá\b/i,
+        /\brevisá\b/i,
+        /\bvos\b/i,
+        /\batendiste\b/i,
+        /\bvas a ver\b/i,
+    ];
+
+    it.each(VOSEO.map((r) => [r.source, r] as const))("no aparece %s", (_etiqueta, patron) => {
+        expect(
+            patron.test(fuente),
+            "SPEC-434 fijó español neutro y el panel quedó afuera. Si vuelve el voseo, " +
+                "la voz del producto se parte en dos según la pantalla.",
+        ).toBe(false);
+    });
+
+    it("cada estado vacío se resuelve en una línea corta, sin párrafo explicativo", () => {
+        const vacios = [...fuente.matchAll(/<Vacio>([\s\S]*?)<\/Vacio>/g)].map((m) =>
+            m[1].replace(/\s+/g, " ").trim(),
+        );
+
+        expect(vacios.length, "el panel tiene estados vacíos que revisar").toBeGreaterThanOrEqual(4);
+        for (const texto of vacios) {
+            expect(
+                texto.length,
+                `Estado vacío demasiado largo: «${texto}». Jelkin pidió una línea corta; ` +
+                    "la explicación se elimina, no se muda a un tooltip ni a un pie.",
+            ).toBeLessThanOrEqual(40);
+        }
+    });
+});
+
