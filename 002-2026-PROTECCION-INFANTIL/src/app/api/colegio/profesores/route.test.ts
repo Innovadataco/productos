@@ -228,4 +228,48 @@ describe("/api/colegio/profesores", () => {
         const res = await GET(request("GET", "http://localhost:5005/api/colegio/profesores", undefined, mockToken));
         expect(res.status, "un colegio configurado y vencido sigue cortado").toBe(403);
     });
+
+    // SPEC-442 (I-307 · Jelkin vivo 04-09): antes el schema aceptaba desde
+    // 1900 hasta el año actual (permitía profesor de 5 años y del futuro).
+    // Ahora el rango es 18–80 años; la validación vive en el schema Zod,
+    // no en el `min/max` del <Input> (I-262: la edad calculada en el cliente
+    // se salta con curl o con el DevTools).
+    describe("SPEC-442 · año de nacimiento del profesor con rango real (18–80)", () => {
+        const anioActual = new Date().getFullYear();
+
+        async function altaConAnio(anio: number, numeroDocumento: string) {
+            await setupSchoolAdmin();
+            const body = {
+                nombre: "María",
+                apellidos: "López",
+                tipoDocumento: "CC",
+                numeroDocumento,
+                anioNacimiento: anio,
+                sexo: "F",
+                email: `prof-${numeroDocumento}@colegio.edu.co`,
+                telefono: "+573001112233",
+            };
+            return POST(request("POST", "http://localhost:5005/api/colegio/profesores", body, mockToken));
+        }
+
+        it("rechaza el año actual + 1 (futuro) — 400", async () => {
+            const res = await altaConAnio(anioActual + 1, "AGE-FUT");
+            expect(res.status).toBe(400);
+        });
+
+        it("rechaza el año equivalente a 17 años — 400", async () => {
+            const res = await altaConAnio(anioActual - 17, "AGE-17");
+            expect(res.status).toBe(400);
+        });
+
+        it("acepta el año equivalente a 18 años — 201", async () => {
+            const res = await altaConAnio(anioActual - 18, "AGE-18");
+            expect(res.status).toBe(201);
+        });
+
+        it("acepta el año equivalente a 80 años — 201", async () => {
+            const res = await altaConAnio(anioActual - 80, "AGE-80");
+            expect(res.status).toBe(201);
+        });
+    });
 });

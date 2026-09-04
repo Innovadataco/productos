@@ -26,22 +26,53 @@
 
 - **`src/app/camino/colegio/profesores/page.tsx`**: reemplazado el `<Link href="/dashboard/colegio/profesores?crear=1">` con **formulario individual in-place** — 8 campos (nombre, apellidos, tipoDoc, número, año, sexo, email, teléfono). POST `/api/colegio/profesores` + recarga. El wizard Excel ya vivía dentro del paso. Botón «Atrás» al paso plan.
 
-### Punto 3 · Año de nacimiento con rango real
+### Punto 3 · Año de nacimiento con rango real (el candado vive en el servidor)
 
-- **UI form individual** (`ProfesoresPageClient.tsx:449`): `<Input type="number" min={añoActual-80} max={añoActual-18} step={1}>` + validación en submit (`RANGO_ANIO_NACIMIENTO`).
-- **UI form del paso** (`camino/colegio/profesores/page.tsx`): mismo rango, misma validación.
+I-262 ya nos había enseñado que la edad calculada en el cliente se salta con curl o DevTools. Acá el `min/max` del `<Input>` es UX (feedback inmediato); el candado real vive en Zod, y el test lo empuja con los 4 casos del radicado.
+
 - **Backend / Zod** (`src/lib/schemas/identidad.ts`): `.gte(año-80).lte(año-18)` con mensajes explícitos. Antes: `.gte(1900).lte(año actual)` — permitía profesor de 5 años.
 - **Carga por Excel** (`src/lib/colegio/carga-profesores/validator.ts:86`): mismo rango, mismo mensaje.
+- **UI form individual** (`ProfesoresPageClient.tsx:449`): `<Input type="number" min={añoActual-80} max={añoActual-18}>` + validación en submit (`RANGO_ANIO_NACIMIENTO`) — UX/first-line.
+- **UI form del paso** (`camino/colegio/profesores/page.tsx`): mismo rango y validación.
+- **Test integración** `src/app/api/colegio/profesores/route.test.ts` (POST):
+  - año actual + 1 → 400.
+  - año actual − 17 → 400.
+  - año actual − 18 → 201.
+  - año actual − 80 → 201.
 
-### Punto 4 · Paso «plan» — ancho y footer duplicado
+### Punto 4 · Paso «plan» — ancho y footer duplicado (impacto del layout compartido)
 
-- **Footer duplicado**: los dos layouts anidados (`camino/layout.tsx` + `camino/colegio/layout.tsx`) pintaban CADA UNO el par «Salir y seguir después · Este no es mi correo». En el flujo colegio, el layout padre se reduce a `<>{children}</>` (el hijo pinta todo el chrome).
-- **Ancho**: el layout colegio limita a `max-w-md` (mobile-first del brief). SÓLO el paso plan pasa a `max-w-4xl` porque `PlanesSelector` renderea una grilla; el resto de pasos sigue en móvil.
+**Rutas bajo `/camino/**` y qué layout heredan** (verificado con `ls` sobre el árbol):
+
+| Ruta | `camino/layout.tsx` | `camino/colegio/layout.tsx` |
+|---|---|---|
+| `/camino/datos` | sí | — |
+| `/camino/hijos` | sí | — |
+| `/camino/plan` | sí | — |
+| `/camino/listo` | sí | — |
+| `/camino/colegio/rector` | sí (colapsa) | sí |
+| `/camino/colegio/plan` | sí (colapsa) | sí |
+| `/camino/colegio/profesores` | sí (colapsa) | sí |
+| `/camino/colegio/cursos` | sí (colapsa) | sí |
+| `/camino/colegio/estudiantes` | sí (colapsa) | sí |
+| `/camino/colegio/listo` | sí (colapsa) | sí |
+
+- **Footer duplicado**: en las 6 rutas del colegio, los dos layouts pintaban CADA UNO el par «Salir · Este no es mi correo». Cuando el pathname empieza con `/camino/colegio`, el padre se reduce a `<>{children}</>` y el hijo es la fuente única del chrome. **Las 4 rutas del padre (datos, hijos, plan, listo del PADRE) NO se afectan** — el `startsWith` no las alcanza, siguen con SU footer y SU salida a `/registro`.
+- **Ancho**: el layout colegio limita a `max-w-md` (mobile-first del brief). SÓLO `/camino/colegio/plan` pasa a `max-w-4xl` porque `PlanesSelector` renderea una grilla; el resto de pasos sigue en móvil. Es cambio de una sola ruta; no toca ancho de las 4 rutas del padre.
 - Botón «Atrás» agregado también en `plan/page.tsx` y `estudiantes/page.tsx` (servidor).
 
-## Candado — comportamiento, no palabras
+## Candado — comportamiento, no palabras (los TRES callers)
 
-**`src/lib/colegio/semilla-colegio.test.ts`** ejercita los DOS callers de producción (admin + registro público) y afirma `curso.count(activo) === 11`. Verificado en la mesa: si borro la línea `await sembrarSemillaColegio(...)` de `admin/colegios/route.ts`, el test `caller 1` se pone rojo. No es grep del nombre — es la conducta lo que muere. El `scripts/smoke-prod-safe.ts` no corre en la suite; su candado es su propio hard-coded «después del `prisma.colegio.create` llamo al helper», visible en el diff del PR.
+**`src/lib/colegio/semilla-colegio.test.ts`** ejercita los tres callers de producción y afirma `curso.count(activo) === 11` para cada uno.
+
+Para no correr el smoke completo contra producción desde CI (RIESGO CEO 04-09 13:31), extraje la creación del colegio del smoke a `crearColegioParaSmoke()` — función exportada, invocable, marcada con prefijo estable `[SMOKE]`. El test ejercita ESA función; el script del CLI queda como cáscara (`if (!process.env.VITEST) main()`).
+
+**Regresión verificada en la mesa (muriendo con el defecto puesto)**:
+- Sacar `await sembrarSemillaColegio(...)` de `admin/colegios/route.ts` → `caller 1` rojo con «Expected 0 to be 11».
+- Sacar `await sembrarSemillaColegio(...)` de `registro-colegio.ts` → `caller 2` rojo.
+- Sacar `await sembrarSemillaColegio(...)` de `smoke-prod-safe.ts::crearColegioParaSmoke` → `caller 3` rojo.
+
+Los tres restauran verde al devolver la llamada.
 
 ## Verificación
 

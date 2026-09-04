@@ -6,12 +6,13 @@
  *
  * Callers ejercitados:
  *   1. `POST /api/admin/colegios` (alta por administración global).
- *   2. `RegistroColegioService.registrarColegio` (registro público del rector).
+ *   2. `RegistroColegioService.registrarPublico` (registro público del rector).
+ *   3. `crearColegioParaSmoke` (extraído de `smoke-prod-safe.ts` para no
+ *      correr el smoke completo contra producción desde CI · CEO 04-09 13:31).
  *
- * `scripts/smoke-prod-safe.ts` corre contra producción (no en la suite de
- * tests). Su candado es el test estático en `smoke-prod-safe.siembra.test.ts`
- * — verifica que la línea de siembra vive en el archivo justo después del
- * `prisma.colegio.create`.
+ * Los tres tests SIEMPRE afirman `curso.count(activo) === 11`. Sacar la
+ * llamada al helper de cualquier caller pone al test respectivo en rojo —
+ * es candado por conducta, no vigila el nombre de la función.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
@@ -25,6 +26,7 @@ import {
 } from "@/lib/reporte-test-utils";
 import { POST as AdminColegiosPOST } from "@/app/api/admin/colegios/route";
 import { RegistroColegioService } from "@/lib/dal/services/registro-colegio";
+import { crearColegioParaSmoke, PREFIJO_NOMBRE_SMOKE } from "../../../scripts/smoke-prod-safe";
 
 declare global {
     var __testToken: string | undefined;
@@ -114,6 +116,34 @@ describe("SPEC-442 · candado por conducta: todo camino de alta siembra cursos",
         const cursos = await contarCursosActivos(colegio.id);
         // El helper SIEMPRE deja 11 grados. Sacar `sembrarSemillaColegio` de
         // `registro-colegio.ts` deja el conteo en 0 → este test rojo.
+        expect(cursos).toBe(11);
+    });
+
+    it("caller 3 · crearColegioParaSmoke deja los 11 grados activos (bug I-307 originario del smoke)", async () => {
+        const { pais, ciudad } = await crearPaisCiudad();
+        const ts = Date.now();
+        const inicio = new Date();
+        const fin = new Date();
+        fin.setFullYear(fin.getFullYear() + 1);
+        const tenant = await prisma.tenant.create({
+            data: { nombre: `smoke-test-${ts}`, estado: "activo" },
+        });
+
+        const colegio = await crearColegioParaSmoke({
+            cliente: prisma,
+            ts,
+            paisId: pais.id,
+            ciudadId: ciudad.id,
+            tenantId: tenant.id,
+            inicioServicio: inicio,
+            finServicio: fin,
+        });
+
+        // Marcador estable — un huérfano del smoke se identifica por acá.
+        expect(colegio.nombre.startsWith(PREFIJO_NOMBRE_SMOKE)).toBe(true);
+        const cursos = await contarCursosActivos(colegio.id);
+        // El helper SIEMPRE deja 11 grados. Sacar `sembrarSemillaColegio` de
+        // `crearColegioParaSmoke` deja el conteo en 0 → este test rojo.
         expect(cursos).toBe(11);
     });
 });
