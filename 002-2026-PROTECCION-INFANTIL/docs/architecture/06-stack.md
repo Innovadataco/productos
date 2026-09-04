@@ -83,6 +83,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `ratchets:no-unref-timer` | `tsx scripts/lint/no-unref-timer-nuevo.ts` |
 | `ratchets:no-usd-vistas` | `tsx scripts/lint/no-usd-en-vistas-suscripcion.ts` |
 | `ratchets:no-x-invoke-path` | `tsx scripts/lint/no-x-invoke-path.ts` |
+| `reglas:check` | `tsx scripts/verify-reglas-notificacion.ts` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |
 | `test:coverage` | `npm run test:unit && npm run test:integration` |

@@ -1,7 +1,7 @@
 /**
  * SPEC-201 (BRIEF §7): API pública estricta del motor de notificaciones.
  */
-export { programar, cancelar, estado, recalcular } from "./motor";
+export { programar, despacharEnvios, cancelar, estado, recalcular } from "./motor";
 export type {
     ProgramarInput,
     ProgramarResult,
@@ -9,6 +9,8 @@ export type {
     CancelarResult,
     RecalcularInput,
     RecalcularResult,
+    ProgramarOpciones,
+    EnvioPendiente,
 } from "./motor";
 export { parseOffset, aplicarOffset, TIMEZONE_MOTOR } from "./offset";
 export type { OffsetParseado, UnidadOffset } from "./offset";

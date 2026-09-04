@@ -24,7 +24,7 @@ import type {
 } from "@prisma/client";
 import { z } from "zod";
 import { logAudit } from "@/lib/audit";
-import { enviarEmailNotificacion } from "@/lib/notificaciones/enviar-email";
+import { programar, despacharEnvios } from "@/lib/notificaciones";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { calcularVenceEn } from "@/lib/profesionales/vigencia";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
@@ -253,7 +253,17 @@ export async function decidir(
             ? "Verificación aprobada."
             : `Devuelto con ${noCumple.length} ítem(s) por corregir: ${noCumple.map((r) => r.nombre).join(", ")}`;
 
-    const { perfil: perfilActualizado, verificacion } = await repo.transaccion(async (tx) => {
+    // SPEC-418 (I-295): el aviso se ENCOLA DENTRO de la transacción, junto con
+    // la decisión que lo origina. Antes se enviaba después, directo por Resend y
+    // con el error tragado: con el proveedor caído el profesional nunca se
+    // enteraba de que le devolvieron y no quedaba rastro. Como de este aviso
+    // depende que el ciclo siga, sin él el profesional espera para siempre.
+    const observaciones = noCumple.map((r) => ({
+        requisito: r.nombre,
+        observacion: entrada.checklist[r.clave].observacion.trim(),
+    }));
+
+    const { perfil: perfilActualizado, verificacion, envios } = await repo.transaccion(async (tx) => {
         const repoTx = new VerificadorRepository(tx);
         const verificacion = await repoTx.crearVerificacion({
             perfilProfesionalId: perfil.id,
@@ -266,7 +276,47 @@ export async function decidir(
             notaInterna,
         });
         const perfilActualizado = await repoTx.cambiarEstadoPerfil(perfil.id, nuevoEstadoPerfil);
-        return { perfil: perfilActualizado, verificacion };
+
+        const aviso = await programar(
+            {
+                evento:
+                    resultado === "APROBADO"
+                        ? "profesional.verificacion.aprobada"
+                        : "profesional.verificacion.devuelta",
+                sujetoTipo: "PerfilProfesional",
+                sujetoId: perfil.id,
+                destinatarios: [
+                    {
+                        usuarioId: perfil.usuarioId,
+                        email: perfil.usuario.email,
+                        rol: "PROFESIONAL",
+                        variables: {
+                            nombreProfesional: perfil.nombreVisible,
+                            detalleObservaciones: observaciones
+                                .map((o, i) => `${i + 1}. ${o.requisito}: ${o.observacion}`)
+                                .join("\n"),
+                        },
+                    },
+                ],
+            },
+            { tx },
+        );
+
+        // Falla en CERRADO: si no hay regla activa no habría a quién avisar, y
+        // committear la decisión dejaría al profesional esperando sin saberlo —
+        // que es exactamente I-295. Mejor que la decisión no pase y se vea el
+        // error, a que pase y desaparezca el aviso. Las reglas se siembran en
+        // `prisma/seed.ts` (`seedVerificacionProfesional`) y son `obligatoria`,
+        // así que una preferencia del profesional no puede dejarlo en cero.
+        if (aviso.programadas === 0) {
+            throw new AppError(
+                "No se pudo encolar el aviso al profesional: falta la regla activa del motor de notificaciones. La decisión no se guardó.",
+                ERROR_CODES.INTERNAL_ERROR,
+                500,
+            );
+        }
+
+        return { perfil: perfilActualizado, verificacion, envios: aviso.envios ?? [] };
     });
 
     // Audit + email fuera de la transacción — un problema del proveedor no
@@ -284,67 +334,12 @@ export async function decidir(
         metadatos: { resultado, itemsNoCumple: noCumple.map((r) => r.clave) },
     });
 
-    try {
-        await enviarEmailProfesional({
-            emailProfesional: perfil.usuario.email,
-            nombreProfesional: perfil.nombreVisible,
-            resultado,
-            observaciones: noCumple.map((r) => ({
-                requisito: r.nombre,
-                observacion: entrada.checklist[r.clave].observacion.trim(),
-            })),
-        });
-    } catch (err) {
-        // No propagar — el envío es best-effort y ya se auditó la decisión.
-        // El worker de notificaciones tiene su propio reintento; el motor de
-        // email no es de misión crítica para cerrar la decisión.
-        console.error("[SPEC-408] envío de email al profesional falló:", err);
-    }
+    // Ya committeado: se le avisa al worker para que salga ahora en vez de
+    // esperar al próximo poll. Si esto falla no se pierde nada — la fila está
+    // ENCOLADA en la base y el polling de respaldo la recoge.
+    await despacharEnvios(envios);
 
     return { resultado, perfil: perfilActualizado, verificacion };
-}
-
-async function enviarEmailProfesional(params: {
-    emailProfesional: string;
-    nombreProfesional: string;
-    resultado: ResultadoVerificacion;
-    observaciones: Array<{ requisito: string; observacion: string }>;
-}): Promise<void> {
-    if (params.resultado === "APROBADO") {
-        await enviarEmailNotificacion(
-            params.emailProfesional,
-            "Tu perfil profesional fue aprobado",
-            [
-                `Hola ${params.nombreProfesional},`,
-                "",
-                "Verificamos tus documentos y tu perfil quedó activo. Ya podés cargar tu carta de",
-                "presentación, tu disponibilidad y aparecer en el directorio de familias.",
-                "",
-                "Ingresá a la plataforma para continuar.",
-                "",
-                "— Protección Infantil",
-            ].join("\n"),
-        );
-        return;
-    }
-    const detalle = params.observaciones
-        .map((o, i) => `${i + 1}. ${o.requisito}: ${o.observacion}`)
-        .join("\n");
-    await enviarEmailNotificacion(
-        params.emailProfesional,
-        "Necesitamos que corrijas algunos documentos",
-        [
-            `Hola ${params.nombreProfesional},`,
-            "",
-            "Revisamos tu solicitud y hay ítems por corregir antes de aprobar tu perfil:",
-            "",
-            detalle,
-            "",
-            "Ingresá, ajustá lo indicado y reenviá — el ciclo se repite hasta aprobar.",
-            "",
-            "— Protección Infantil",
-        ].join("\n"),
-    );
 }
 
 // ────────────────────────────────────────────────────────────────────────────

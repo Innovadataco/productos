@@ -1744,6 +1744,73 @@ async function seedEmergenciaExpediente() {
     console.log("[SEED] Catálogo Motor Notif expediente.emergencia.activada listo (SPEC-239)");
 }
 
+// ── SPEC-418 (I-295): catálogo del Motor de Notificaciones para la decisión del
+// Verificador sobre un perfil profesional. Aditivo e idempotente (patrón I-100).
+//
+// Por qué existe: la devolución al profesional se enviaba con `enviarEmailNotificacion`
+// —envío DIRECTO por Resend, fuera de transacción y con el error tragado—. Con el
+// proveedor caído, el profesional nunca se enteraba y no quedaba rastro: el ciclo de
+// admisión se detenía en silencio. Ahora pasa por el motor como todo lo demás.
+//
+// Las dos reglas son `obligatoria: true` a propósito: no son marketing, son el paso
+// que hace avanzar (o reanudar) el ciclo. Nadie puede quedarse sin ellas por una
+// preferencia — y además el service falla en cerrado si no encuentra regla activa,
+// así que una regla desactivada bloquearía la decisión en vez de perderla en silencio.
+async function seedVerificacionProfesional() {
+    const eventos = [
+        {
+            evento: "profesional.verificacion.aprobada",
+            asunto: "Tu perfil profesional fue aprobado",
+            cuerpoMarkdown:
+                "Hola {{nombreProfesional}},\n\n" +
+                "Verificamos tus documentos y tu perfil quedó activo. Ya podés cargar tu carta de " +
+                "presentación, tu disponibilidad y aparecer en el directorio de familias.\n\n" +
+                "Ingresá a la plataforma para continuar.\n\n" +
+                "— Protección Infantil",
+            propiedades: { nombreProfesional: { type: "string" } },
+        },
+        {
+            evento: "profesional.verificacion.devuelta",
+            asunto: "Necesitamos que corrijas algunos documentos",
+            cuerpoMarkdown:
+                "Hola {{nombreProfesional}},\n\n" +
+                "Revisamos tu solicitud y hay ítems por corregir antes de aprobar tu perfil:\n\n" +
+                "{{detalleObservaciones}}\n\n" +
+                "Ingresá, ajustá lo indicado y reenviá — el ciclo se repite hasta aprobar.\n\n" +
+                "— Protección Infantil",
+            propiedades: {
+                nombreProfesional: { type: "string" },
+                detalleObservaciones: { type: "string" },
+            },
+        },
+    ] as const;
+
+    for (const e of eventos) {
+        const plantillaClave = `${e.evento}.email`;
+        const datos = {
+            canal: "EMAIL" as const,
+            asunto: e.asunto,
+            cuerpoMarkdown: e.cuerpoMarkdown,
+            variablesSchema: { type: "object", properties: e.propiedades },
+            activa: true,
+        };
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: plantillaClave },
+            update: datos,
+            create: { clave: plantillaClave, ...datos },
+        });
+        await upsertNotificacionRegla({
+            evento: e.evento,
+            rol: "PROFESIONAL",
+            canal: "EMAIL",
+            plantillaClave,
+            obligatoria: true,
+            activa: true,
+        });
+    }
+    console.log("[SEED] Catálogo Motor Notif de la verificación profesional listo (SPEC-418)");
+}
+
 // ── SPEC-226 (002-PI-mega-cola): parámetros del ejecutor de acciones automáticas
 // (rate-limit por regla, scope `analisis_accion`) + catálogo Motor Notif de los
 // eventos `analisis.alerta.admin` y `analisis.operador.asignacion` (FR-014).
@@ -3942,6 +4009,7 @@ async function main() {
 
     // ── SPEC-239: catálogo Motor Notif de expediente.emergencia.activada ──
     await seedEmergenciaExpediente();
+    await seedVerificacionProfesional();
 
     // ── SPEC-226: parámetros del ejecutor + eventos Motor Notif de acciones ──
     await seedEjecucionAcciones();
