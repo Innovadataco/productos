@@ -25,6 +25,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/reparto-shards.test.mjs",
     // SPEC-381 (I-269): cada ruta de inicio-admin.ts DEBE tener page.tsx.
     "src/lib/dal/services/inicio-admin.ratchet.test.ts",
+    // SPEC-414 (I-294): el marcador se consulta por su nombre físico
+    // (`demo_marcado`) y una señal que truena se VE en vez de desaparecer.
+    "src/lib/dal/services/inicio-admin.marcado.test.ts",
     // SPEC-398 (I-286): candado del jurado del pipeline real — sin override,
     // el motor recibe {} (jurado completo). Con override, {modeloClasificacion:X}.
     "src/lib/dal/services/reporte-processing/pipeline-jurado.test.ts",
