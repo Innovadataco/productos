@@ -376,6 +376,12 @@ enum AccionAudit {
   CITA_PROFESIONAL_VENCIDA_PROFESIONAL
   CITA_PROFESIONAL_ALARMA_TASA_VENCIMIENTOS
   CITA_PROFESIONAL_SUSPENDIDO_POR_VENCIMIENTOS
+  // SPEC-429 (§9-bis): registrada por `cruzarEncuestasSiCompletas` cuando las
+  // respuestas r1/r2 del padre y del profesional se contradicen tras cerrar
+  // la 2ª encuesta.
+  ENCUESTA_CITA_CONTRADICCION
+  // SPEC-429: cada vez que un lado responde su encuesta. `recursoId` = solicitud.
+  ENCUESTA_CITA_RESPONDIDA
 }
 
 enum TipoPeriodoServicio {
@@ -615,6 +621,13 @@ model Usuario {
   tokenInvitacion             String?          @unique
   tokenInvitacionExpiraEn     DateTime?        @db.Timestamptz(6)
   debeCambiarPassword         Boolean          @default(false)
+  // SPEC-429 (A-75 · brief §9-bis · orden CEO 23:5x) — guardia nueva: quien
+  // tiene una cita CUMPLIDA sin responder su encuesta queda bloqueado en
+  // `/encuesta`, salvo el par «cambiar contraseña» y la sesión. `alCumplirCita`
+  // (SPEC-427 · contrato con Dev 02) lo pone en true al escribir CUMPLIDA para
+  // padre y profesional; el POST `/api/encuesta` lo baja cuando ya no queda
+  // ninguna pendiente. Estilo `debeCambiarPassword`.
+  encuestaPendiente           Boolean          @default(false)
   intentosFallidos            Int              @default(0)
   bloqueadoHasta              DateTime?
   ultimaSesion                DateTime?
@@ -3590,7 +3603,13 @@ model SolicitudCita {
   reprogramaciones     SolicitudCita[]        @relation("SolicitudReprogramada")
   pagoHeredadoDe       SolicitudCita?         @relation("PagoHeredado", fields: [pagoHeredadoDeId], references: [id])
   pagosQueHereda       SolicitudCita[]        @relation("PagoHeredado")
-  encuesta             EncuestaPrimeraCita?
+  // SPEC-429 (A-75 · brief §9-bis) · dos encuestas por solicitud tras
+  // `CUMPLIDA`, una por lado. Antes vivía como `EncuestaPrimeraCita` (huérfana,
+  // 0 filas, 0 llamadores); el brief v2.2 §7 la manda a rehacer sin estrellas
+  // ni texto libre. `alCumplirCita` (contrato con SPEC-427) marca a los dos
+  // usuarios como `encuestaPendiente = true`.
+  encuestas            EncuestaCita[]
+  incidentesEncuesta   IncidenteContradiccionEncuesta[]
 
   // L4/L5: bandeja del profesional (sus solicitudes por estado) y del padre.
   @@index([profesionalId, estado, creadoEn(sort: Desc)])
@@ -3599,15 +3618,49 @@ model SolicitudCita {
   @@index([estado, venceEn])
 }
 
-model EncuestaPrimeraCita {
-  id           String   @id @default(cuid())
-  solicitudId  String   @unique
-  seDioLaCita  Boolean
-  // 1..5 — se valida en la capa de aplicación (Zod), Postgres no restringe.
-  puntaje      Int
-  volveria     Boolean
-  comentario   String?  @db.Text
-  respondidaEn DateTime @db.Timestamptz(6)
+// SPEC-429 (A-75 · brief §9-bis) · Encuesta post-cita del padre O del
+// profesional. Cinco preguntas de opción por lado (sin estrellas ni texto
+// libre). Se guardan como strings enum para poder ampliar sin migración.
+// El cruce automático de `r1` y `r2` genera `IncidenteContradiccionEncuesta`.
+model EncuestaCita {
+  id           String              @id @default(cuid())
+  solicitudId  String
+  origen       OrigenEncuestaCita
+  r1           String
+  r2           String
+  r3           String
+  r4           String
+  r5           String
+  respondidaEn DateTime            @default(now()) @db.Timestamptz(6)
 
-  solicitud SolicitudCita @relation(fields: [solicitudId], references: [id])
+  solicitud    SolicitudCita       @relation(fields: [solicitudId], references: [id])
+
+  // Una encuesta por (solicitud, origen). Segunda respuesta al mismo lado
+  // dispara conflicto de unique — el service lo trata como 409.
+  @@unique([solicitudId, origen])
+  @@index([origen, respondidaEn])
+}
+
+enum OrigenEncuestaCita {
+  PADRE
+  PROFESIONAL
+}
+
+// SPEC-429 (A-75 · brief §9-bis) · Contradicción detectada al cruzar las
+// respuestas 1 (¿se dio la cita?) y 2 (¿a tiempo?) de los dos lados.
+// Fila abierta al cerrar la 2ª encuesta; el Verificador la resuelve.
+model IncidenteContradiccionEncuesta {
+  id               String    @id @default(cuid())
+  solicitudId      String
+  pregunta         String    // "P1" | "P2"
+  padreValor       String
+  profesionalValor String
+  detectadoEn      DateTime  @default(now()) @db.Timestamptz(6)
+  resueltoEn       DateTime? @db.Timestamptz(6)
+  resueltoPor      String?
+
+  solicitud        SolicitudCita @relation(fields: [solicitudId], references: [id])
+
+  @@unique([solicitudId, pregunta])
+  @@index([resueltoEn, detectadoEn])
 }

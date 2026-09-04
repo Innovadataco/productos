@@ -16,8 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 7 roles (5 autenticados + anónimo) × 533 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3731 combinaciones.
+Inventario: 7 roles (5 autenticados + anónimo) × 535 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 3745 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -342,6 +342,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
+| `/api/encuesta` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -541,6 +542,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
+| `/encuesta` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -880,6 +882,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
+| `/api/encuesta` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -1079,6 +1082,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
+| `/encuesta` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -1418,6 +1422,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
+| `/api/encuesta` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -1617,6 +1622,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
+| `/encuesta` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/admin/comite | no permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -1956,6 +1962,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | HTTP 403 | no permite | sí |
 | `/api/docs/indice` | api | HTTP 403 | no permite | sí |
+| `/api/encuesta` | api | HTTP 403 | no permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | HTTP 403 | no permite | sí |
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
@@ -2155,6 +2162,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/docs` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio | no permite | sí |
+| `/encuesta` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/login` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/colegio | no permite | sí |
 | `/offline` | página | redirigir→/dashboard/colegio | no permite | sí |
@@ -2494,6 +2502,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta/evento` | api | HTTP 403 | no permite | sí |
 | `/api/departamentos` | api | HTTP 403 | no permite | sí |
 | `/api/docs/indice` | api | HTTP 403 | no permite | sí |
+| `/api/encuesta` | api | HTTP 403 | no permite | sí |
 | `/api/estadisticas-publicas` | api | HTTP 403 | no permite | sí |
 | `/api/health` | api | HTTP 403 | no permite | sí |
 | `/api/health/worker` | api | HTTP 403 | no permite | sí |
@@ -2693,6 +2702,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/docs` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
+| `/encuesta` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/login` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/mis-reportes` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
 | `/offline` | página | redirigir→/dashboard/colegio/comite | no permite | sí |
@@ -3032,6 +3042,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
+| `/api/encuesta` | api | permitir | permite | sí |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -3231,6 +3242,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
+| `/encuesta` | página | permitir | permite | sí |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | permitir | permite | sí |
 | `/offline` | página | permitir | permite | sí |
@@ -3570,6 +3582,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/api/consulta/evento` | api | permitir | permite | sí |
 | `/api/departamentos` | api | permitir | permite | sí |
 | `/api/docs/indice` | api | permitir | permite | sí |
+| `/api/encuesta` | api | HTTP 401 | permite | **NO** |
 | `/api/estadisticas-publicas` | api | permitir | permite | sí |
 | `/api/health` | api | permitir | permite | sí |
 | `/api/health/worker` | api | permitir | permite | sí |
@@ -3769,6 +3782,7 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
+| `/encuesta` | página | redirigir→/login | permite | **NO** |
 | `/login` | página | permitir | permite | sí |
 | `/mis-reportes` | página | redirigir→/login | permite | **NO** |
 | `/offline` | página | permitir | permite | sí |
@@ -4082,6 +4096,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/api/config/parametros/[clave]/revelar` | HTTP 401 | permite |
 | `/api/config/parametros/todos` | HTTP 401 | permite |
 | `/api/consentimiento/aceptar` | HTTP 401 | permite |
+| `/api/encuesta` | HTTP 401 | permite |
 | `/api/interno/expediente/[id]/transicionar` | HTTP 401 | permite |
 | `/api/me` | HTTP 401 | permite |
 | `/api/me/colegio` | HTTP 401 | permite |
@@ -4200,6 +4215,7 @@ menú (condición ZEUS 1: el rojo es SOLO desalineo real con sesión canónica).
 | `/dashboard/perfil` | redirigir→/login | permite |
 | `/dashboard/perfil/notificaciones` | redirigir→/login | permite |
 | `/dashboard/profesional` | redirigir→/login | permite |
+| `/encuesta` | redirigir→/login | permite |
 | `/mis-reportes` | redirigir→/login | permite |
 | `/perfil-profesional/completar` | redirigir→/login | permite |
 | `/perfil-profesional/verificacion` | redirigir→/login | permite |

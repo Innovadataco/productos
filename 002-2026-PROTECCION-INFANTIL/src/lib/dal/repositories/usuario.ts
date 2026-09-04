@@ -347,6 +347,18 @@ export class UsuarioRepository {
         });
     }
 
+    /**
+     * SPEC-429: flag de encuesta pendiente (guardia estilo `debeCambiarPassword`).
+     * Se sube desde `alCumplirCita` (SPEC-427 → 429) y se baja desde
+     * `registrarRespuestaEncuesta` cuando al usuario no le quedan pendientes.
+     */
+    findEncuestaPendiente(id: string) {
+        return this.db.usuario.findUnique({
+            where: { id },
+            select: { encuestaPendiente: true },
+        });
+    }
+
     /** E-8: sesión del panel colegio (layout colegio: rol/estado/colegio/flag password). */
     findSesionColegio(id: string) {
         return this.db.usuario.findUnique({

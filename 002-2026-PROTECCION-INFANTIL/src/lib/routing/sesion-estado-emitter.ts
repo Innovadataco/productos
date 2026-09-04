@@ -23,11 +23,14 @@ import type { PasoPendienteColegio } from "@/lib/camino/pasos-colegio";
  */
 export async function buildSesionEstadoValue(userId: string): Promise<string> {
     const repo = new UsuarioRepository();
-    const [suscripcion, requiereConsentimientoRaw, flag, usuarioVigencia] = await Promise.all([
+    const [suscripcion, requiereConsentimientoRaw, flag, usuarioVigencia, encuestaFlag] = await Promise.all([
         new PagosRepository().obtenerSuscripcionActivaPorUsuarioId(userId),
         requiereConsentimientoActual(userId),
         repo.findDebeCambiarPassword(userId),
         repo.findVigenciaCliente(userId),
+        // SPEC-429: guardia estilo `debeCambiarPassword` — leemos el flag y lo
+        // embebemos en la cookie firmada; el middleware redirige a `/encuesta`.
+        repo.findEncuestaPendiente(userId),
     ]);
 
     const rol = usuarioVigencia?.rol;
@@ -49,6 +52,7 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
     }
 
     const debeCambiarPassword = Boolean(flag?.debeCambiarPassword);
+    const encuestaPendiente = Boolean(encuestaFlag?.encuestaPendiente);
 
     // SPEC-339 (A-67) + SPEC-344 (A-69 · C1): el camino guiado del padre y del
     // colegio comparten la MISMA cookie firmada, discriminando por rol. El paso
@@ -62,7 +66,7 @@ export async function buildSesionEstadoValue(userId: string): Promise<string> {
                 : null;
 
     return firmarSesionEstado(
-        { vigencia, requiereConsentimiento, debeCambiarPassword, pasoCamino },
+        { vigencia, requiereConsentimiento, debeCambiarPassword, encuestaPendiente, pasoCamino },
         requireEnv("JWT_SECRET", 32),
     );
 }

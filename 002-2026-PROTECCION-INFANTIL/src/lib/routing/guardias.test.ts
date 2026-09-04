@@ -13,6 +13,7 @@ import {
     esRutaSesion,
     esExentaConsentimiento,
     esExentaCambiarPassword,
+    esExentaEncuesta,
     esExentaCamino,
     esExentaVigencia,
     destinoVigencia,
@@ -26,6 +27,11 @@ describe("GUARDIAS_ACCESO — invariante destino ∈ exentas", () => {
 
     it("cambiarPassword.destino aparece en cambiarPassword.exentas", () => {
         expect(GUARDIAS_ACCESO.cambiarPassword.exentas).toContain(GUARDIAS_ACCESO.cambiarPassword.destino);
+    });
+
+    // SPEC-429: guardia nueva (encuesta post-cita).
+    it("encuesta.destino aparece en encuesta.exentas", () => {
+        expect(GUARDIAS_ACCESO.encuesta.exentas).toContain(GUARDIAS_ACCESO.encuesta.destino);
     });
 
     it("por cada rol de vigencia, destino aparece en exentas", () => {
@@ -252,5 +258,33 @@ describe("SPEC-422 (I-297) · las puertas de registro son públicas", () => {
         // Sin esto, un `esRutaPublica` que devolviera siempre true dejaría el
         // test en verde para siempre.
         expect(esRutaPublica("/registro-inventado")).toBe(false);
+    });
+});
+
+// SPEC-429 (A-75 · brief §9-bis · orden CEO 23:5x): la guardia nueva de
+// encuesta post-cita — quien tiene una cita CUMPLIDA sin responder queda
+// encerrado en /encuesta salvo el par «cambiar contraseña» + logout + /api/me.
+describe("SPEC-429 · esExentaEncuesta", () => {
+    it("permite la propia pantalla y su API (candado del muro)", () => {
+        expect(esExentaEncuesta("/encuesta")).toBe(true);
+        expect(esExentaEncuesta("/api/encuesta")).toBe(true);
+    });
+
+    it("permite el par cambio-de-password (que manda sobre encuesta)", () => {
+        expect(esExentaEncuesta("/cambiar-password")).toBe(true);
+        expect(esExentaEncuesta("/api/auth/cambiar-password")).toBe(true);
+    });
+
+    it("permite salir (logout) y leer la sesión (I-25)", () => {
+        expect(esExentaEncuesta("/api/auth/logout")).toBe(true);
+        expect(esExentaEncuesta("/api/me")).toBe(true);
+    });
+
+    it("NO permite el resto — es la esencia del bloqueo", () => {
+        expect(esExentaEncuesta("/dashboard/padre")).toBe(false);
+        expect(esExentaEncuesta("/dashboard/profesional")).toBe(false);
+        expect(esExentaEncuesta("/api/padre/citas")).toBe(false);
+        expect(esExentaEncuesta("/api/profesional/panel")).toBe(false);
+        expect(esExentaEncuesta("/")).toBe(false);
     });
 });
