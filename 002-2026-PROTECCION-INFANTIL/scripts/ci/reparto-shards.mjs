@@ -174,7 +174,7 @@ function main() {
     if (provisionales.length > 0) {
         console.error(
             `[reparto-shards] ::warning:: ${provisionales.length} archivo(s) con MENOS de ${MUESTRAS_PARA_CONFIAR} ` +
-            `corridas medidas: su peso todavía es provisional.`
+            "corridas medidas: su peso todavía es provisional."
         );
     }
 
