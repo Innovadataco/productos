@@ -17,34 +17,33 @@ El radicado 439 mandaba reconstruir dos cosas que **ya funcionaban**. El CEO lo 
 
 ---
 
-## El defecto real: no faltaba código, sobraba código muerto
+## El defecto real: faltaba una tercera población
 
-**`notificarCambioCirculoSiCorresponde` no tenía un solo llamador.** Construida en SPEC-135 (E-2), enriquecida en SPEC-308 (A-50) —contacto, identificador, plataforma, categoría, total de reportes, link al expediente—, con interruptor, enfriamiento y tests. Su propia spec afirma *«el punto de disparo es este flujo, ya invocado cuando un reporte pasa a estado visible»*. **Nunca lo estuvo.**
-
-Verificado: el barrel la reexporta, cinco archivos importan el barrel y **ninguno importa ese símbolo**; fuera de `src/` tampoco. Solo la llamaban sus propios tests — que es exactamente por qué nadie lo notó: **probaban que funciona sin probar que se usa.**
-
-Es el **segundo caso en dos días**. I-303 (`leerAutorizacion`, SPEC-436) fue idéntico.
-
----
-
-## Y son tres poblaciones, no una
-
-| Quién | Cómo llega al identificador | Estado antes |
+| Quién | Cómo llega al identificador | Estado |
 |---|---|---|
 | **Suscriptor** | Se suscribió explícitamente | ✅ `enviarAlertasSuscriptores` |
-| **Vigilante** | Lo tiene en su círculo de confianza | ⚠️ construido y **sin cablear** |
-| **Reportante** | **Lo reportó** | ❌ nadie le avisaba |
+| **Vigilante** | Lo tiene en su círculo de confianza | ✅ `notificarCambioCirculoSiCorresponde`, llamada desde `scripts/worker-reportes.mjs:226` |
+| **Reportante** | **Lo reportó** | ❌ **nadie le avisaba** |
 
-Reportar **no** agrega el identificador al círculo (`reporte-creation.ts:47`), así que la tercera población no la cubría ninguna de las otras dos. Era la promesa central del producto —*más gente reportando la misma cuenta = señal más fuerte*— y al padre no le llegaba nada.
+Reportar **no** agrega el identificador al círculo (`reporte-creation.ts:47`), así que la tercera población no la cubría ninguna de las otras dos. Era la promesa central del producto —*más gente reportando la misma cuenta = señal más fuerte*— y al padre que ya había reportado no le llegaba nada.
 
----
+### Corrección de método, escrita a propósito
+
+Este Dev reportó que el aviso del círculo estaba **«sin cablear», con cero llamadores. Era falso.** El CEO lo verificó en `origin/main` y en el contenedor: `scripts/worker-reportes.mjs:25` lo importa del barrel y `:226` lo llama; el worker corre en producción.
+
+**El error fue de método, no de lectura.** El barrido afirmaba cubrir «fuera de `src/` tampoco» y no lo cubría: el `grep` terminaba en un `head` que se llenó con nueve líneas de `specs/*.md` antes de llegar a `scripts/`. La conclusión afirmó más terreno del que el comando recorrió.
+
+**Consecuencia si se hubiera actuado:** el cableado «arreglador» llegó a escribirse y habría producido un aviso **duplicado** al padre, no uno nuevo. Se revirtió: `finalizacion.ts` queda **byte a byte igual a `main`**.
+
+De ahí que el primer candado vigile **el llamador que ya existe**, en el worker. Lo que se dio por muerto por error es justamente lo que hay que blindar: un barrido con ese criterio lo habría marcado como borrable.
+
+> **Anotado, no arreglado (orden del CEO).** Esa llamada es *fire-and-forget* con `.catch()`: si falla, el error muere en un log y nadie se entera. Es degradación silenciosa, distinta de la ausencia de cableado, y no es de esta spec.
 
 ## Lo construido
 
-1. **El cable que faltaba.** `notificarCambioCirculoSiCorresponde(reporteId)` se llama desde `finalizacion.ts`, en el bloque `CLASIFICADO || CORREGIDO` — el punto exacto que su propia spec nombraba.
-2. **`corroboracion-padre.ts`** — el aviso al padre que ya había reportado. Se dispara desde `detectarYRegistrarMatch`, **después** de `eventos.crear`: esa creación es única por `reporteNuevoId` (FR-004), así que un reintento no puede avisar dos veces. **No necesita enfriamiento propio**; el opt-out lo da el motor con `NotificacionPreferencia`, sin columna nueva.
-3. **Plantilla y regla sembradas** (`reporte.corroborado_por_otro`), idempotentes: el admin edita el texto y apaga la regla sin desplegar.
-4. **`esAnonimo` en la superficie de seguimiento.** `otrosReportesDe` (SPEC-324) devolvía 4 campos; `cadenas-padre` ya daba los 6. Quedaban inconsistentes: ahora las dos muestran el **tipo** de autor.
+1. **`corroboracion-padre.ts`** — el aviso al padre que ya había reportado. Se dispara desde `detectarYRegistrarMatch`, **después** de `eventos.crear`: esa creación es única por `reporteNuevoId` (FR-004), así que un reintento no puede avisar dos veces. **No necesita enfriamiento propio**; el opt-out lo da el motor con `NotificacionPreferencia`, sin columna nueva.
+2. **Plantilla y regla sembradas** (`reporte.corroborado_por_otro`), idempotentes: el admin edita el texto y apaga la regla sin desplegar.
+3. **`esAnonimo` en la superficie de seguimiento.** `otrosReportesDe` (SPEC-324) devolvía 4 campos; `cadenas-padre` ya daba los 6. Quedaban inconsistentes: ahora las dos muestran el **tipo** de autor.
 
 **Reserva (A-60 · criterio 5).** El correo lleva plataforma, ciudad, conducta y conteo. Nunca el texto ni la identidad. `usuarioId` **no se selecciona** en la consulta de otros reportes: lo que no se carga no se puede filtrar mal después.
 
@@ -54,11 +53,11 @@ Reportar **no** agrega el identificador al círculo (`reporte-creation.ts:47`), 
 
 | Mutación | Rojos |
 |---|---|
-| Borrar los dos cables + `esAnonimo` del select | **4** — los tres de cableado + el de reserva |
+| Borrar la llamada del worker, la del match y `esAnonimo` del select | **4** — los tres de cableado + el de reserva |
 | Que el aviso se mande a sí mismo / meta un id en las variables | **2** — los de conducta |
 | Quitar `DUPLICADO` de las exclusiones de señal + la herencia de SPEC-366 | **2** — los que protegen lo preexistente |
 
-Los candados de cableado miran **quién llama**, no si la función existe: es la lección del defecto que cierra esta spec. Y hay tres candados nuevos sobre lo que SPEC-366/324/139 ya habían construido y **nadie protegía** — el radicado 439 es la prueba de que lo no protegido no solo se rompe: se olvida.
+Los candados de cableado miran **quién llama**, no si la función existe — y cuentan llamadores en `scripts/**` además de `src/`, la lección que dejó el falso positivo de arriba. Y hay tres candados nuevos sobre lo que SPEC-366/324/139 ya habían construido y **nadie protegía** — el radicado 439 es la prueba de que lo no protegido no solo se rompe: se olvida.
 
 `tsc` limpio · lint 0 errores · unit **283/283 (2376)** · integración de lo tocado verde.
 

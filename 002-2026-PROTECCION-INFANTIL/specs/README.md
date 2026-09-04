@@ -16,20 +16,6 @@
 > ```
 > npx tsx scripts/specs/generar-readme.ts --resumen
 > ```
-<!-- SPEC-413:BEGIN resumen -->
-<!-- Generado por `npx tsx scripts/specs/generar-readme.ts`. NO editar a mano. -->
-
-| Métrica | Valor |
-|---------|-------|
-| **Total de specs** | **353** |
-| 🔵 PLANEADO | 59 |
-| 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 168 |
-| 🧪 PENDIENTE DE PRUEBA | 0 |
-| ✅ FINALIZADO | 38 |
-| 📁 CERRADA | 63 |
-<!-- SPEC-413:END resumen -->
-
 ## Backlog activo (no cerradas)
 
 <!-- SPEC-413:BEGIN tabla -->

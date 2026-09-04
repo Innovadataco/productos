@@ -1,16 +1,23 @@
 /**
  * SPEC-439 · candados del aviso al padre.
  *
- * El defecto que cierra esta spec **no fue código faltante: fue código muerto**.
- * `notificarCambioCirculoSiCorresponde` se construyó en SPEC-135 (E-2), se
- * enriqueció en SPEC-308 (A-50), tiene sus tests… y **nunca tuvo un llamador**.
- * Su propia spec afirma «el punto de disparo es este flujo, ya invocado cuando
- * un reporte pasa a estado visible» — no lo estaba. Es el segundo caso en dos
- * días: I-303 (`leerAutorizacion`) fue idéntico.
+ * Lo que de verdad faltaba es **una tercera población**: quien REPORTÓ el
+ * identificador. El suscriptor ya recibía aviso (`enviarAlertasSuscriptores`) y
+ * quien lo vigila en su círculo también (`notificarCambioCirculoSiCorresponde`,
+ * llamada desde `scripts/worker-reportes.mjs:226`). Reportar **no** agrega el
+ * identificador al círculo (`reporte-creation.ts:47`), así que al reportante no
+ * le llegaba nada — y ese es el corazón de la promesa del producto.
  *
- * Por qué los tests de entonces no lo cazaron: **llamaban la función directo**.
- * Probaban que funciona sin probar que se usa. Los candados de acá miran el
- * CABLEADO, no la existencia.
+ * **Corrección de método, escrita a propósito.** Este Dev reportó que el aviso
+ * del círculo estaba «sin cablear». Era FALSO: su llamador vive en un `.mjs`
+ * fuera de `src/`, y el barrido que afirmaba cubrir «fuera de src también» se
+ * truncó en un `head`. Si se hubiera actuado sobre esa conclusión, el resultado
+ * habría sido un aviso DUPLICADO, no uno arreglado. De ahí que el primer
+ * candado de acá vigile **el llamador que ya existe** en el worker: lo que se
+ * dio por muerto por error es justamente lo que hay que blindar.
+ *
+ * Los candados miran el CABLEADO, no la existencia — y cuentan llamadores en
+ * `scripts/**` además de `src/`.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "node:fs";
@@ -29,13 +36,15 @@ function leerCodigo(rel: string): string {
 }
 
 describe("SPEC-439 · candado de cableado: los avisos tienen un llamador REAL", () => {
-    it("el aviso al círculo se dispara desde el flujo que lo vuelve visible", () => {
-        const finalizacion = leerCodigo("src/lib/dal/services/reporte-processing/finalizacion.ts");
+    it("el aviso al círculo lo sigue disparando el worker de reportes", () => {
+        const worker = leerCodigo("scripts/worker-reportes.mjs");
 
         expect(
-            /notificarCambioCirculoSiCorresponde\s*\(\s*reporteId\s*\)/.test(finalizacion),
-            "SPEC-135/308 construyó el aviso al círculo y nadie lo llamaba. Si esta " +
-                "línea desaparece de `finalizacion.ts`, el padre deja de enterarse otra vez.",
+            /notificarCambioCirculoSiCorresponde\s*\(\s*reporteId\s*\)/.test(worker),
+            "El aviso del círculo (SPEC-135 · E-2, enriquecido por SPEC-308) se llama " +
+                "desde `scripts/worker-reportes.mjs`. Ese llamador vive FUERA de `src/`, " +
+                "que es justo por qué un barrido descuidado lo dio por muerto. Si la " +
+                "línea desaparece, el padre que vigila deja de enterarse y nada avisa.",
         ).toBe(true);
     });
 
