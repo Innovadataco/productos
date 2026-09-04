@@ -139,20 +139,37 @@ describe("toCitaParaPadre · el contacto viaja SÓLO en la excepción", () => {
     });
 
     /**
-     * HUECO CONOCIDO, documentado en vez de tapado.
+     * SPEC-449 · I-315 — el candado en los TRES estados que importan.
      *
-     * SPEC-449 cierra el contacto para `VENCIDO`, que es lo aprobado. Un perfil
-     * `SUSPENDIDO` —decisión humana de IDC, más grave que un plazo cumplido—
-     * **hoy SIGUE exponiendo el contacto** si la cita está confirmada.
-     *
-     * Este test afirma la conducta REAL, no la deseable, y deja el hueco
-     * nombrado: escribí primero el assert contrario y descubrí que estaba
-     * afirmando algo que no había implementado. Ensanchar reserva legal por mi
-     * cuenta no corresponde — queda reportado al CEO para que lo decida.
+     * Nació como un hueco: escribí el assert de `SUSPENDIDO` y descubrí que
+     * estaba afirmando algo que no había implementado. Se reportó la conducta
+     * REAL en vez de dejar el test verde afirmando lo deseable, y el CEO
+     * aprobó cerrarlo: la suspensión es una decisión HUMANA de IDC sobre esa
+     * persona, así que seguir sirviendo su teléfono contradice esa decisión
+     * con más gravedad que el vencimiento.
      */
-    it("HUECO · SUSPENDIDO todavía expone contacto (conducta real, reportada al CEO)", () => {
+    it("I-315 · SUSPENDIDO tampoco expone contacto — es una decisión humana de IDC", () => {
         expect(
             debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, "SUSPENDIDO"),
+        ).toBe(false);
+    });
+
+    it.each([
+        ["ACTIVO", true],
+        ["VENCIDO", false],
+        ["SUSPENDIDO", false],
+    ] as const)("los tres estados que importan · %s → %s", (estadoPerfil, esperado) => {
+        expect(
+            debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, estadoPerfil),
+        ).toBe(esperado);
+    });
+
+    it("un estado de TRÁNSITO no se cierra por accidente: la lista es explícita", () => {
+        // `EN_REVISION` no está en la lista a propósito — cerrarlo sería otra
+        // decisión, que nadie tomó. Si alguien cambia el guard por un
+        // `!== "ACTIVO"`, este test lo caza.
+        expect(
+            debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, "EN_REVISION"),
         ).toBe(true);
     });
 });

@@ -46,11 +46,21 @@ export function debeExponerContacto(
      */
     estadoPerfil: PerfilProfesional["estado"] | null
 ): boolean {
-    // SPEC-449 (I-313): PI no puede seguir sirviendo el teléfono de alguien de
-    // quien YA ESCRIBIÓ EN SU PROPIA AUDITORÍA que la verificación venció. Esa
-    // contradicción —saberlo y seguir entregándolo— es lo que no se defiende
-    // ante un tercero. Manda sobre cualquier excepción de abajo.
-    if (estadoPerfil === "VENCIDO") return false;
+    // SPEC-449 (I-313 · I-315): PI no puede seguir sirviendo el teléfono de
+    // alguien de quien **ya decidió** que no debe estar atendiendo. Manda sobre
+    // cualquier excepción de abajo, incluida la cita confirmada.
+    //
+    //  · `VENCIDO` — se le cumplió el plazo de la Ley 2375/2024 y quedó escrito
+    //    en la auditoría. Seguir entregando su contacto es contradecir lo que
+    //    el propio sistema registró que sabía.
+    //  · `SUSPENDIDO` — **más grave todavía**: es una decisión HUMANA de IDC
+    //    sobre esa persona. Si PI sigue dándole su teléfono a una familia,
+    //    contradice su propia decisión (I-315).
+    //
+    // La lista es explícita a propósito: un `!== "ACTIVO"` cerraría también
+    // estados de tránsito como `EN_REVISION`, y eso es otra decisión que nadie
+    // tomó.
+    if (estadoPerfil === "VENCIDO" || estadoPerfil === "SUSPENDIDO") return false;
     if (solicitud.estado === "CONFIRMADA") return true;
     if (solicitud.estado === "VENCIDA_SIN_RESPUESTA") {
         if (!solicitud.pagoAprobadoEn) return false;
