@@ -41,9 +41,16 @@ export default function CaminoColegioLayout({ children }: { children: React.Reac
         router.push(destino);
     };
 
+    // SPEC-442 (I-307 · Jelkin vivo 04-09): el paso «plan» renderea la grilla
+    // de planes de `PlanesSelector` (max-w-6xl adentro) — con `max-w-md` de
+    // este layout, los planes quedan apilados y forzaban a bajar. Le damos
+    // ancho medio (max-w-4xl) solo a ese paso; el resto sigue mobile-first.
+    const esPasoPlan = pathname === "/camino/colegio/plan";
+    const anchoMain = esPasoPlan ? "max-w-4xl" : "max-w-md";
+
     return (
         <div className="theme-colegio min-h-screen bg-page">
-            <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 py-6">
+            <div className={`mx-auto flex min-h-screen w-full ${anchoMain} flex-col px-4 py-6`}>
                 {definicion && (
                     <header className="mb-6">
                         <p className="text-sm font-medium text-muted">

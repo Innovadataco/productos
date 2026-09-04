@@ -82,6 +82,16 @@ export default async function PasoEstudiantesColegio() {
                     Agregue su primer estudiante para terminar.
                 </p>
             )}
+
+            {/* SPEC-442 (I-307 · Jelkin vivo 04-09): «siempre hay salida» —
+                botón atrás en todos los pasos. `Link` funciona bajo server
+                component; no necesita client boundary. */}
+            <Link
+                href="/camino/colegio/cursos"
+                className="block w-full rounded-md border border-tinta/20 px-3 py-2 text-center text-sm font-medium text-muted hover:border-pino hover:text-pino"
+            >
+                Atrás
+            </Link>
         </div>
     );
 }

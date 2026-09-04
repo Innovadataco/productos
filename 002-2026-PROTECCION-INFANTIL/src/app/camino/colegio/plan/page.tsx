@@ -135,6 +135,16 @@ export default async function CaminoColegioPlanPage() {
                 tasaIva={tasaIva}
                 aplicaIva={aplicaIva}
             />
+
+            {/* SPEC-442 (I-307 · Jelkin vivo 04-09): «siempre hay salida». */}
+            <div className="mt-6 flex justify-center">
+                <a
+                    href="/camino/colegio/rector"
+                    className="rounded-xl border border-tinta/20 px-4 py-2 text-sm font-medium text-muted hover:border-pino hover:text-pino"
+                >
+                    Atrás
+                </a>
+            </div>
         </div>
     );
 }

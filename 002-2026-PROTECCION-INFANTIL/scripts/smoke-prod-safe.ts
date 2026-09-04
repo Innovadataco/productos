@@ -47,6 +47,12 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import type { RolUsuario } from "@prisma/client";
+// SPEC-442 (I-307): TODO camino que crea `Colegio` en prod pasa por el helper.
+// El smoke crea colegios efímeros y los borra al final, pero si el proceso se
+// interrumpe entre create y delete, quedaba huérfano y SIN cursos — mismo bug
+// que dejó a «sagrado corazon» trabado en el paso 4. Ahora nunca queda huérfano
+// sin semilla.
+import { sembrarSemillaColegio } from "@/lib/colegio/semilla-colegio";
 
 const DOMINIO_SMOKE = "@test.invalid";
 const PREFIJO_SMOKE = "smoke-";
@@ -227,6 +233,10 @@ async function crearCuentasEfimeras(): Promise<CuentasEfimeras> {
             tenantId: tenant.id,
         },
     });
+    // SPEC-442: semilla obligatoria (materias + cursos + onboarding). Sin
+    // esto, un smoke interrumpido deja un colegio huérfano SIN cursos en
+    // producción — mismo bug I-307.
+    await sembrarSemillaColegio(colegio.id, prisma);
 
     const usuarios = new Map<RolUsuario, { id: string; email: string }>();
     for (const plan of PLAN_ROLES) {
@@ -275,7 +285,15 @@ async function borrarCuentasEfimeras(c: CuentasEfimeras): Promise<void> {
     await prisma.rateLimit.deleteMany({ where: { identifier: { in: usuarioIds } } });
     await prisma.perfilOperador.deleteMany({ where: { usuarioId: { in: usuarioIds } } });
     await prisma.usuario.deleteMany({ where: { id: { in: usuarioIds } } });
-    if (c.colegioId) await prisma.colegio.deleteMany({ where: { id: c.colegioId } });
+    // SPEC-442: `sembrarSemillaColegio` deja cursos + materias + onboarding
+    // — hay que borrarlos antes del `Colegio` para no violar FKs.
+    if (c.colegioId) {
+        await prisma.cursoMateria.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.curso.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.materia.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.onboardingColegio.deleteMany({ where: { colegioId: c.colegioId } });
+        await prisma.colegio.deleteMany({ where: { id: c.colegioId } });
+    }
     if (c.tenantId) await prisma.tenant.deleteMany({ where: { id: c.tenantId } });
     if (c.ciudadIdCreada) await prisma.ciudad.deleteMany({ where: { id: c.ciudadIdCreada } });
     if (c.paisIdCreado) await prisma.pais.deleteMany({ where: { id: c.paisIdCreado } });

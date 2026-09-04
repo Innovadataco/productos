@@ -13,10 +13,10 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de specs** | **351** |
+| **Total de specs** | **352** |
 | 🔵 PLANEADO | 59 |
 | 🟡 DESARROLLO | 25 |
-| 🟢 IMPLEMENTADO | 166 |
+| 🟢 IMPLEMENTADO | 167 |
 | 🧪 PENDIENTE DE PRUEBA | 0 |
 | ✅ FINALIZADO | 38 |
 | 📁 CERRADA | 63 |
@@ -380,6 +380,7 @@
 | [428](428-padre-agenda-cita/spec.md) | SPEC-428 · El padre agenda una cita con un profesional — brief A-75 v2.1 §9 | 🟢 IMPLEMENTADO |
 | [431](431-franja-nocturna-payload/spec.md) | SPEC-431 · La franja horaria le mentía al modelo — cierra I-247 b | 🟢 IMPLEMENTADO |
 | [436](436-documentos-del-profesional/spec.md) | SPEC-436 · Los documentos del profesional: se cargan, se guardan y SE PUEDEN LEER | 🟢 IMPLEMENTADO |
+| [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 
 ## Incidencias de calidad de datos

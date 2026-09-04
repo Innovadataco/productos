@@ -2,13 +2,13 @@
 
 /**
  * SPEC-344 (A-69 · C1) — Paso 4 · Cursos y materias.
+ * SPEC-442 (I-307 · Jelkin vivo 04-09 16:0x): la pantalla NO promete lo que no
+ * verificó — cuenta los cursos del fetch y adapta título + copia. Si llegan 0,
+ * ofrece «Crear un curso» in-place (no expulsa) y siempre hay botón «Atrás».
  *
- * Los 11 grados vienen sembrados desde `crearColegioMinimo` (D-5). El rector
- * puede quitar los que no aplican (inactivarlos, nada-se-borra); puede
- * continuar cuando hay ≥ 1 curso activo — los 11 sembrados cumplen esta
- * condición desde el arranque. La asignación materia↔profesor con candado
- * D3 (`FR-030`) vive en la ficha detallada del curso y en el endpoint
- * `POST /api/colegio/cursos/[id]/materias`; es opcional en el camino.
+ * Antes: h1 fijo «Sus cursos ya están listos» y párrafo hardcodeado «Le dejamos
+ * los 11 grados» aunque `cursos.length === 0`. El rector del colegio «sagrado
+ * corazon» quedó trabado sin salida.
  *
  * Voz: usted formal Colombia.
  */
@@ -33,6 +33,8 @@ export default function PasoCursosColegio() {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [cambiando, setCambiando] = useState<string | null>(null);
+    const [creando, setCreando] = useState(false);
+    const [nuevoNombre, setNuevoNombre] = useState("");
 
     const cargar = async () => {
         setCargando(true);
@@ -88,19 +90,63 @@ export default function PasoCursosColegio() {
         }
     };
 
+    /**
+     * SPEC-442: «siempre hay salida». Si el paso llegó con 0 cursos (por
+     * historia del colegio o porque un camino de alta se salteó la siembra),
+     * el rector crea uno acá mismo y continúa. NO se muda al panel.
+     */
+    const crearCurso = async () => {
+        const nombre = nuevoNombre.trim();
+        if (!nombre) return;
+        setCreando(true);
+        setError(null);
+        try {
+            const res = await fetch("/api/colegio/cursos", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    nombre,
+                    anioLectivo: String(new Date().getFullYear()),
+                }),
+            });
+            if (!res.ok) {
+                const json = await res.json().catch(() => null);
+                throw new Error(json?.error?.message || "No pudimos crear el curso.");
+            }
+            setNuevoNombre("");
+            await cargar();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error creando curso.");
+        } finally {
+            setCreando(false);
+        }
+    };
+
     const cursosActivos = cursos.filter((c) => c.estado === "activo");
     const listo = cursosActivos.length > 0;
 
     const continuar = () => router.push("/camino/colegio/estudiantes");
+    const atras = () => router.push("/camino/colegio/profesores");
+
+    // SPEC-442: título y copia dependen del conteo REAL, no de una promesa fija.
+    const conteoActivos = cursosActivos.length;
+    const tituloDinamico =
+        cargando
+            ? "Cargando sus cursos…"
+            : conteoActivos === 0
+                ? "No hay cursos configurados. Cree uno para continuar."
+                : `Tiene ${conteoActivos} curso${conteoActivos === 1 ? "" : "s"} activo${conteoActivos === 1 ? "" : "s"}. Ajuste sin digitar nada.`;
+    const copiaDinamica =
+        conteoActivos === 0
+            ? "Este paso exige al menos un curso. Puede crear uno acá mismo o volver al paso anterior."
+            : "Para dividir un curso en A/B o asignar materias con profesor, entre a la ficha del curso.";
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="font-serif text-2xl text-body">Sus cursos ya están listos. Quite los que no tenga.</h1>
-                <p className="mt-2 text-sm text-muted">
-                    Le dejamos los 11 grados del año lectivo vigente. Ajuste sin digitar nada. Para dividir un
-                    curso en A/B o asignar materias con profesor, entre a la ficha del curso.
-                </p>
+                <h1 className="font-serif text-2xl text-body">{tituloDinamico}</h1>
+                <p className="mt-2 text-sm text-muted">{copiaDinamica}</p>
             </div>
 
             <GlassCard>
@@ -151,14 +197,49 @@ export default function PasoCursosColegio() {
                 )}
             </GlassCard>
 
+            {/* SPEC-442: crear un curso in-place — «siempre hay salida». */}
+            <GlassCard>
+                <h2 className="text-sm font-semibold text-body">Crear un curso</h2>
+                <p className="mt-1 text-xs text-muted">
+                    Ejemplo: «Grado 6º» o «Transición A». Puede quitarlo después si no aplica.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input
+                        type="text"
+                        value={nuevoNombre}
+                        onChange={(e) => setNuevoNombre(e.target.value)}
+                        placeholder="Nombre del curso"
+                        className="flex-1 rounded-xl border border-tinta/10 bg-white px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-pino dark:bg-tinta/5"
+                        maxLength={80}
+                    />
+                    <Button
+                        onClick={crearCurso}
+                        isLoading={creando}
+                        disabled={!nuevoNombre.trim() || creando}
+                    >
+                        Crear
+                    </Button>
+                </div>
+            </GlassCard>
+
             {error && <Alerta tono="advertencia">{error}</Alerta>}
 
             <p className="text-sm text-muted">
                 {cursosActivos.length} curso{cursosActivos.length === 1 ? "" : "s"} activo{cursosActivos.length === 1 ? "" : "s"}
             </p>
-            <Button onClick={continuar} disabled={!listo} className="w-full">
-                Continuar
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row-reverse">
+                <Button onClick={continuar} disabled={!listo} className="w-full sm:flex-1">
+                    Continuar
+                </Button>
+                {/* SPEC-442: botón «Atrás» — nunca queda encerrado en el paso. */}
+                <button
+                    type="button"
+                    onClick={atras}
+                    className="w-full rounded-xl border border-tinta/20 px-4 py-2 text-sm font-medium text-muted hover:border-pino hover:text-pino sm:w-auto"
+                >
+                    Atrás
+                </button>
+            </div>
         </div>
     );
 }
