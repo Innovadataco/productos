@@ -138,6 +138,23 @@ function main() {
             : mediana,
     }));
 
+    // SPEC-407 (CEO 22:2x): candado de cobertura. Si el archivo de pesos
+    // cubre menos del 80% de los tests, el reparto trabaja "casi a ciegas"
+    // (mediana bruta para el resto → LPT amontona los pesados donde caiga).
+    // Es exactamente el estado en el que empezamos el 03-09-2026: 8 pesos
+    // reales sobre ~478 archivos, reparto malo pero sin queja alguna. Este
+    // warning cierra el ciclo: si dentro de tres meses el archivo se queda
+    // viejo, se sabe apenas corre el shard.
+    const conDatoReal = archivos.filter((a) => typeof durMap[a] === "number" && durMap[a] > 0).length;
+    const cobertura = archivos.length > 0 ? conDatoReal / archivos.length : 0;
+    const UMBRAL_COBERTURA = 0.80;
+    if (cobertura < UMBRAL_COBERTURA) {
+        const pct = (cobertura * 100).toFixed(1);
+        console.error(`[reparto-shards] ⚠️  test-durations.json cubre ${conDatoReal}/${archivos.length} archivos (${pct}%) — bajo el umbral ${(UMBRAL_COBERTURA * 100).toFixed(0)}%. LPT usa mediana para el resto y amontona pesados. Regenerar con scripts/ci/actualizar-duraciones.mjs sobre una corrida verde.`);
+        // GHA actions marcan el warning como anotación oficial del step:
+        console.error(`::warning title=SPEC-407 cobertura de pesos::test-durations.json cubre solo ${pct}% de los tests (${conDatoReal}/${archivos.length}); regenerar con actualizar-duraciones.mjs`);
+    }
+
     const shards = repartirEnShards(archivosConDuracion, total);
 
     // Candado SC-005 (no perder archivos): la suma de longitudes debe ser exacta.
