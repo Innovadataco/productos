@@ -6,11 +6,13 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol } from "@/lib/operadores/permisos";
 import { EstadisticasService } from "@/lib/dal/services/estadisticas";
+import { cuidIdSchema } from "@/lib/schemas/base";
 
 const querySchema = z.object({
     fechaDesde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     fechaHasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    operadorId: z.string().uuid().optional(),
+    // SPEC-444 (I-310): Usuario.id es cuid(); uuid() nunca dejaba filtrar por operador.
+    operadorId: cuidIdSchema.optional(),
     estado: z.enum(["REVISION_MANUAL", "CLASIFICADO", "CORREGIDO", "REPORTE_FALSO"]).optional(),
     categoria: z.string().optional(),
     busqueda: z.string().optional(),

@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { errorToResponse } from "@/lib/api-handler";
+import { cuidIdSchema } from "@/lib/schemas/base";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
 // SPEC-403 (I-288): el porcentaje es PARÁMETRO, no constante. El admin lo
@@ -16,13 +17,15 @@ import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
 import { crearSolicitudCita } from "@/lib/profesional/cita/cita.service";
 import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
 
+// SPEC-444 (I-310): todos los modelos de PI generan ids con @default(cuid()).
+// Validar con uuid() rechazaba el id real y dejaba la ruta en 400 permanente.
 const crearSchema = z.object({
-    profesionalId: z.string().uuid(),
-    franjaId: z.string().uuid(),
+    profesionalId: cuidIdSchema,
+    franjaId: cuidIdSchema,
     presentacion: z.string().trim().min(20).max(2000),
     urgencia: z.enum(["ESTA_SEMANA", "SIN_APURO"]),
-    expedienteCompartidoId: z.string().uuid().optional(),
-    pagoHeredadoDeId: z.string().uuid().optional(),
+    expedienteCompartidoId: cuidIdSchema.optional(),
+    pagoHeredadoDeId: cuidIdSchema.optional(),
 });
 
 export async function GET() {

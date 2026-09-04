@@ -6,11 +6,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { errorToResponse } from "@/lib/api-handler";
+import { cuidIdSchema } from "@/lib/schemas/base";
 import { reprogramarPorPadre } from "@/lib/profesional/cita/cita.service";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 
-const bodySchema = z.object({ nuevaFranjaId: z.string().uuid() });
+// SPEC-444 (I-310): el id de FranjaDisponible es cuid(), no uuid.
+const bodySchema = z.object({ nuevaFranjaId: cuidIdSchema });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
