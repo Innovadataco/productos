@@ -21,7 +21,8 @@ export default async function ProfesionalLayout({ children }: { children: React.
     const permitidos = await modulosPermitidosParaRol(rol);
 
     return (
-        <div className="flex min-h-screen">
+        // SPEC-460: el profesional comparte el acento cielo del padre (theme-profesional).
+        <div className="theme-profesional flex min-h-screen">
             <AdminNav rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
             <main className="flex-1 overflow-auto">{children}</main>
         </div>

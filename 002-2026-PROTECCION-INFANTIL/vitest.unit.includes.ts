@@ -165,6 +165,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-454 (OLA 1 rediseño): candado de conducta del Button — la re-piel
     // (tokens + firma) no puede romper onClick/disabled/a11y/API de 5 variantes.
     "src/components/ui/Button.test.tsx",
+    // SPEC-460: el acento por territorio — --accent por tema + familia Tailwind
+    // + los 4 layouts aplican su tema.
+    "src/app/dashboard/accent-por-rol.candado.test.ts",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",

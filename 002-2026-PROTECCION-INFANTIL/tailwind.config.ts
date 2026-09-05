@@ -42,15 +42,20 @@ const config: Config = {
                     800: "rgb(var(--cielo-700-rgb) / <alpha-value>)",
                     900: "rgb(var(--cielo-700-rgb) / <alpha-value>)",
                 },
+                /* SPEC-460: la familia `accent` sigue al territorio vía --accent-rgb
+                   (declarado por tema en globals.css). Antes fija a pino; ahora el
+                   layout de cada rol la pinta (ámbar-ink IDC · pino colegio · cielo
+                   padre/profesional). Las pantallas sin tema caen al default pino
+                   (:root), sin cambio visual. */
                 accent: {
-                    50: "rgb(var(--pino-rgb) / 0.06)",
-                    100: "rgb(var(--pino-100-rgb) / <alpha-value>)",
-                    200: "rgb(var(--pino-rgb) / 0.25)",
-                    300: "rgb(var(--pino-rgb) / 0.45)",
-                    400: "rgb(var(--pino-rgb) / 0.7)",
-                    500: "rgb(var(--pino-rgb) / <alpha-value>)",
-                    600: "rgb(var(--pino-600-rgb) / <alpha-value>)",
-                    700: "rgb(var(--pino-700-rgb) / <alpha-value>)",
+                    50: "rgb(var(--accent-rgb) / 0.06)",
+                    100: "rgb(var(--accent-rgb) / 0.14)",
+                    200: "rgb(var(--accent-rgb) / 0.25)",
+                    300: "rgb(var(--accent-rgb) / 0.45)",
+                    400: "rgb(var(--accent-rgb) / 0.7)",
+                    500: "rgb(var(--accent-rgb) / <alpha-value>)",
+                    600: "rgb(var(--accent-rgb) / <alpha-value>)",
+                    700: "rgb(var(--accent-rgb) / <alpha-value>)",
                 },
             },
             /* §4.5 Una sola curva en todo el producto */
