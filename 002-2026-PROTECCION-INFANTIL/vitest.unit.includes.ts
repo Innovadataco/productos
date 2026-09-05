@@ -462,4 +462,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/ui/modal-firma.candado.test.ts",
     "src/lib/rediseno/admin-sin-rojo-crudo.candado.test.ts",
     "src/lib/rediseno/emergencia-rubi.candado.test.ts",
+    // SPEC-478 (fallo Diseño): el subtítulo del nav de colegio en text-muted por AA (fuente, sin BD).
+    "src/lib/rediseno/nav-colegio-subtitulo-muted.candado.test.ts",
 ];

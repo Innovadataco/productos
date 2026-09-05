@@ -30,7 +30,7 @@ export function ColegioSideNav({ rol, modulosPermitidos }: { rol: string; modulo
         <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-pino/20 bg-pino/5 backdrop-blur-xl sm:flex">
             <div className="border-b border-pino/20 p-6">
                 <h1 className="text-lg font-bold text-body">Mi colegio</h1>
-                <p className="mt-1 text-xs text-subtle">Panel institucional</p>
+                <p className="mt-1 text-xs text-muted">Panel institucional</p>
             </div>
             <ul className="flex-1 space-y-1 p-3">
                 {items.map((item) => {

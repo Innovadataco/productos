@@ -409,6 +409,7 @@
 | [474](474-modal-firma/spec.md) | SPEC-474 · OLA 5: cablear la firma en Modal | 🟢 IMPLEMENTADO |
 | [475](475-emergencia-rubi/spec.md) | SPEC-475 · El botón de emergencia: disparador fantasma, confirmar sólido — cierra I-320 (parte 1) | 🟢 IMPLEMENTADO |
 | [476](476-lote-muebles-ola1/spec.md) | SPEC-476 · Lote consolidado de la OLA 1 del rediseño — 12 muebles en un merge | 🟢 IMPLEMENTADO |
+| [478](478-nav-colegio-subtitulo-muted/spec.md) | SPEC-478 · Subtítulo del nav de colegio a text-muted (contraste AA) — fallo de forma de Diseño | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
