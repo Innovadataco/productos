@@ -43,7 +43,11 @@ import * as path from "node:path";
 // salen (marca cielo/pino + rubi). Re-medido sobre el main que YA tiene SPEC-455
 // (1065): los ~27 crudos del hero salen → 1038. Es el ratchet sobre main fresco,
 // no el 1052 que midió la rama antes de rebasar sobre 455.
-const PISO = 1038;
+// 2026-09-04 SPEC-458: `Alerta.tsx` migra sus 16 crudos (error/exito/advertencia/
+// info × bg+text × claro+dark) a tokens por función (rubi/pino/ambar/cielo con
+// `.text-estado-*`). Medición sobre origin/main fresco (1038): salen los 16 →
+// 1022. Ratchet baja con el arreglo.
+const PISO = 1022;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
