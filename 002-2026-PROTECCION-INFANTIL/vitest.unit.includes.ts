@@ -462,4 +462,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/ui/modal-firma.candado.test.ts",
     "src/lib/rediseno/admin-sin-rojo-crudo.candado.test.ts",
     "src/lib/rediseno/emergencia-rubi.candado.test.ts",
+    // SPEC-477 (Diseño): los canales oficiales en neutro uniforme, sin color por canal (fuente, sin BD).
+    "src/lib/rediseno/canales-oficiales-neutro.candado.test.ts",
 ];
