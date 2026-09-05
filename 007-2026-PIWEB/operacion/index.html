@@ -103,6 +103,8 @@ body {
            background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 8px 11px; }
 .leyenda b { color: var(--ink); font-weight: 600; margin-right: 4px; }
 .leyenda .ly { white-space: normal; }
+.leyenda .nota { flex-basis: 100%; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line-2);
+                 color: var(--faint); font-size: 10.5px; line-height: 1.45; white-space: normal; }
 
 /* Paneles */
 .panel { background: var(--surface); border: 1px solid var(--line);
@@ -216,6 +218,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     <div class="ly"><b>Probado</b> <span class="emo">&#9989;</span> en vivo &middot; <span class="emo">&#128994;</span> verde en CI &middot; <span class="emo">&#9203;</span> pendiente &middot; <span class="emo">&#128683;</span> bloqueado &middot; <span class="g no">&#10007;</span> no</div>
     <div class="ly"><b>Desplegado</b> <span class="g ok">&#10003;</span> s&iacute; &middot; <span class="dash">&mdash;</span> no &middot; <span class="faint">&middot;</span> n/a</div>
     <div class="ly"><b>Probado por Jelkin</b> <span class="g ok">&#10003;</span> aceptada &middot; <span class="g bad">&#10007;</span> rechazada &middot; <span class="g w">&middot;</span> pendiente</div>
+    <div class="nota"><span class="emo">&#9989;</span> en vivo = verificado en producci&oacute;n, la mayor&iacute;a ANTES del redise&ntilde;o actual; el interior con sesi&oacute;n a&uacute;n no re-verificado sobre la versi&oacute;n desplegada.</div>
   </div>
 
   <!-- Checklist por rol (9 secciones) -->
