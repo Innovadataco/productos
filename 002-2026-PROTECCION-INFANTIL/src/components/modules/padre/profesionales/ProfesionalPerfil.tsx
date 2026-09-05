@@ -9,6 +9,7 @@
  * Los canales oficiales van AL FINAL — el padre ya se presentó y filtró; si
  * la urgencia le desborda antes de reservar, tiene la salida a la mano.
  */
+import Link from "next/link";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
 import type { PerfilPublicoDTO } from "@/lib/dal/repositories/perfil-profesional";
@@ -35,16 +36,32 @@ export function ProfesionalPerfil({
     // SPEC-428 (M7): si viene, el panel de reserva usa el flujo de reasignación
     // (POST /citas/[id]/reasignar) — hereda el pago, no cobra de nuevo.
     heredarDeSolicitudId,
+    hrefVolver,
 }: {
     p: PerfilPublicoDTO;
     precioEstandarPrimeraCitaCOP: number;
     expedienteIdSugerido?: string | undefined;
     heredarDeSolicitudId?: string | undefined;
+    /**
+     * SPEC-441 · a dónde vuelve el padre. Se entraba a una ficha y **no había
+     * salida hacia el directorio**: para seguir comparando había que usar el
+     * botón del navegador o empezar de nuevo. Es lo único del radicado original
+     * que sobrevivió intacto a la refutación.
+     */
+    hrefVolver?: string | undefined;
 }) {
     // SPEC-440 (I-306): la presentación y urgencia las lee `SolicitarCitaPanel`
     // del `sessionStorage` — no vienen por props ni por URL.
     return (
         <div className="mx-auto max-w-3xl p-4 space-y-6">
+            {hrefVolver && (
+                <Link
+                    href={hrefVolver}
+                    className="ring-accent inline-flex items-center gap-1 rounded-lg text-sm text-muted hover:text-body motion-safe:transition-colors"
+                >
+                    <span aria-hidden="true">←</span> Ver otros profesionales
+                </Link>
+            )}
             {/* Cabecera */}
             <div className="flex items-start gap-4">
                 {p.fotoUrl ? (

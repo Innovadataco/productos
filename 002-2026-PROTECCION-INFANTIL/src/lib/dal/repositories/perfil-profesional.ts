@@ -63,7 +63,13 @@ export interface PerfilPublicoDTO {
     tarifaConsultaCOP: number;
     duracionMinutos: number;
     emiteFactura: boolean;
-    ciudad: { id: string; nombre: string };
+    /**
+     * SPEC-441: la ubicación DEL PROFESIONAL, con país. Antes el DTO solo
+     * llevaba `{id, nombre}`, así que la tarjeta imprimía una ciudad suelta
+     * —«Bogotá»— sin decir de qué país ni de quién era. `pais` puede venir
+     * `null` si la ciudad no lo tiene cargado: la pantalla NO inventa uno.
+     */
+    ciudad: { id: string; nombre: string; pais: string | null };
 }
 
 const SELECT_TARJETA_PUBLICA = {
@@ -80,7 +86,8 @@ const SELECT_TARJETA_PUBLICA = {
     tarifaConsultaCOP: true,
     duracionMinutos: true,
     emiteFactura: true,
-    ciudad: { select: { id: true, nombre: true } },
+    // SPEC-441: el país viaja para poder decir «ciudad, país» y no una ciudad suelta.
+    ciudad: { select: { id: true, nombre: true, pais: { select: { nombre: true } } } },
 } satisfies Prisma.PerfilProfesionalSelect;
 
 /**
@@ -106,7 +113,13 @@ function toPublicoDTO(row: Prisma.PerfilProfesionalGetPayload<{ select: typeof S
         tarifaConsultaCOP: row.tarifaConsultaCOP,
         duracionMinutos: row.duracionMinutos,
         emiteFactura: row.emiteFactura,
-        ciudad: row.ciudad ?? { id: row.ciudadId, nombre: "" },
+        // SPEC-441: el fallback conserva la forma pero NO inventa datos —
+        // nombre vacío y país null. La pantalla decide qué hacer con eso; antes
+        // el guard era `p.ciudad &&`, que con este objeto siempre es cierto y
+        // pintaba un pin con el nombre en blanco.
+        ciudad: row.ciudad
+            ? { id: row.ciudad.id, nombre: row.ciudad.nombre, pais: row.ciudad.pais?.nombre ?? null }
+            : { id: row.ciudadId, nombre: "", pais: null },
     };
 }
 

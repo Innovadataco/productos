@@ -41,6 +41,7 @@ function obtenerSeedSesion(): string {
 
 export function DirectorioProfesionales({
     hrefPerfil,
+    precioPrimeraCitaCOP,
     // SPEC-428: si el padre entró desde su expediente, se pasa por acá al
     // perfil para ofrecer «compartir expediente» al pagar (§9 M4).
     expedienteIdInicial,
@@ -50,6 +51,9 @@ export function DirectorioProfesionales({
 }: {
     /** Prefijo del enlace al perfil individual, sin id. */
     hrefPerfil: string;
+    /** SPEC-441: el precio que se COBRA por la primera cita, leído en el
+     *  servidor del mismo parámetro que usa la ficha. */
+    precioPrimeraCitaCOP: number;
     expedienteIdInicial?: string | undefined;
     heredarDeInicial?: string | undefined;
 }) {
@@ -176,7 +180,13 @@ export function DirectorioProfesionales({
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {items.map((p) => (
-                        <ProfesionalTarjeta key={p.id} p={p} hrefBase={hrefPerfil} queryString={queryPerfil} />
+                        <ProfesionalTarjeta
+                            key={p.id}
+                            p={p}
+                            hrefBase={hrefPerfil}
+                            queryString={queryPerfil}
+                            precioPrimeraCitaCOP={precioPrimeraCitaCOP}
+                        />
                     ))}
                 </div>
             )}
