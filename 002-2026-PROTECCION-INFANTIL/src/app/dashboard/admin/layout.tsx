@@ -19,7 +19,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const permitidos = await modulosPermitidosParaRol(rol);
 
     return (
-        <div className="flex min-h-screen">
+        // SPEC-460: el acento del territorio IDC es ámbar-ink (theme-admin).
+        <div className="theme-admin flex min-h-screen">
             <AdminNav rol={rol as AdminRol} modulosPermitidos={[...permitidos]} />
             <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
                 {children}

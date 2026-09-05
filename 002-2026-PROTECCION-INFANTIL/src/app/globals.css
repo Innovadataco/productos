@@ -42,6 +42,14 @@
         --pino-600-rgb: 11 110 90; /* = pino (ya es oscuro en claro) */
         --pino-700-rgb: 8 74 60; /* #084a3c */
 
+        /* SPEC-460 · El acento por territorio. `--accent-rgb` es el triplet que
+           cambia por tema (.theme-*); alimenta la familia Tailwind `accent`
+           (con alpha) Y el color `--accent` que lee el Button del Sistema de
+           Diseño (SPEC-454). Default = pino (colegio + pantallas sin tema:
+           login, portada — el mismo pino fijo de antes, sin cambio visual). */
+        --accent-rgb: var(--pino-rgb);
+        --accent: rgb(var(--accent-rgb));
+
         /* Luz ambiental (bg-page / LuzAmbiental): alphas del campo de luz */
         --luz-a: 0.12;
         --luz-b: 0.1;
@@ -361,6 +369,10 @@
    Tema institucional para colegios (SCHOOL_ADMIN) — capa de compatibilidad
    re-mapeada a tokens (pino ya ES el verde institucional: alias semántico).
    ========================================================================== */
+/* SPEC-460: el acento del territorio (colegio = pino). Alimenta el Button del
+   Sistema de Diseño (--accent) y la familia Tailwind `accent` (--accent-rgb). */
+.theme-colegio { --accent-rgb: var(--pino-rgb); }
+
 .theme-colegio .text-accent,
 .theme-colegio.text-accent {
     color: rgb(var(--pino-rgb));
@@ -409,6 +421,9 @@
    Tema padre (PARENT) — capa de compatibilidad re-mapeada a tokens cielo.
    SPEC-231 (002-PI-131): área del padre usa la familia cielo como acento.
    ========================================================================== */
+/* SPEC-460: el acento del territorio (padre = cielo). */
+.theme-padre { --accent-rgb: var(--cielo-rgb); }
+
 .theme-padre .text-accent,
 .theme-padre.text-accent {
     color: rgb(var(--cielo-rgb));
@@ -446,6 +461,108 @@
 
 .theme-padre .bg-page,
 .theme-padre.bg-page {
+    background:
+        radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgb(var(--cielo-rgb) / var(--luz-c)) 0%, transparent 50%),
+        rgb(var(--papel-rgb));
+}
+
+/* ==========================================================================
+   SPEC-460 · Tema IDC / admin (ADMIN, OPERADOR, COMITE_VALIDACION, VERIFICADOR)
+   — el backoffice. Acento ámbar-ink (Sistema §3.2: firma ámbar; §3.1: el ámbar
+   crudo no cumple contraste como texto, se usa ámbar-ink #8a5c06, 5.11:1).
+   ========================================================================== */
+.theme-admin { --accent-rgb: var(--ambar-ink-rgb); }
+
+.theme-admin .text-accent,
+.theme-admin.text-accent {
+    color: rgb(var(--ambar-ink-rgb));
+}
+
+.theme-admin .text-gradient,
+.theme-admin.text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(to right, rgb(var(--ambar-ink-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-admin .accent-gradient,
+.theme-admin.accent-gradient {
+    background-image: linear-gradient(to right, rgb(var(--ambar-ink-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-admin .ring-accent,
+.theme-admin.ring-accent {
+    outline: none;
+}
+
+.theme-admin .ring-accent:focus-visible,
+.theme-admin.ring-accent:focus-visible {
+    outline: 2px solid rgb(var(--ambar-ink-rgb));
+    outline-offset: 2px;
+}
+
+.theme-admin .ring-accent-input:focus,
+.theme-admin.ring-accent-input:focus {
+    border-color: rgb(var(--ambar-ink-rgb));
+    box-shadow: 0 0 0 2px rgb(var(--ambar-ink-rgb) / 0.5);
+}
+
+.theme-admin .bg-page,
+.theme-admin.bg-page {
+    background:
+        radial-gradient(1200px 800px at 10% -10%, rgb(var(--ambar-rgb) / var(--luz-a)) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgb(var(--ambar-rgb) / var(--luz-c)) 0%, transparent 50%),
+        rgb(var(--papel-rgb));
+}
+
+/* ==========================================================================
+   SPEC-460 · Tema profesional (PROFESIONAL) — la puerta lateral del padre.
+   Comparte el acento cielo del padre (Sistema §3.2: «cielo con firma de forma»);
+   se diferencia por forma, no por color.
+   ========================================================================== */
+.theme-profesional { --accent-rgb: var(--cielo-rgb); }
+
+.theme-profesional .text-accent,
+.theme-profesional.text-accent {
+    color: rgb(var(--cielo-rgb));
+}
+
+.theme-profesional .text-gradient,
+.theme-profesional.text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-profesional .accent-gradient,
+.theme-profesional.accent-gradient {
+    background-image: linear-gradient(to right, rgb(var(--cielo-rgb)), rgb(var(--pino-rgb)));
+}
+
+.theme-profesional .ring-accent,
+.theme-profesional.ring-accent {
+    outline: none;
+}
+
+.theme-profesional .ring-accent:focus-visible,
+.theme-profesional.ring-accent:focus-visible {
+    outline: 2px solid rgb(var(--cielo-rgb));
+    outline-offset: 2px;
+}
+
+.theme-profesional .ring-accent-input:focus,
+.theme-profesional.ring-accent-input:focus {
+    border-color: rgb(var(--cielo-rgb));
+    box-shadow: 0 0 0 2px rgb(var(--cielo-rgb) / 0.5);
+}
+
+.theme-profesional .bg-page,
+.theme-profesional.bg-page {
     background:
         radial-gradient(1200px 800px at 10% -10%, rgb(var(--cielo-rgb) / var(--luz-a)) 0%, transparent 50%),
         radial-gradient(1000px 700px at 90% 10%, rgb(var(--pino-rgb) / var(--luz-b)) 0%, transparent 45%),
