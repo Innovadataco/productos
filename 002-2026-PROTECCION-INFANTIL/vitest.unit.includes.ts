@@ -468,4 +468,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/rediseno/canales-oficiales-neutro.candado.test.ts",
     // SPEC-479 (fallo Diseño): PadreSideNav en cielo, 0 sky, activo cielo / inactivo neutro (fuente, sin BD).
     "src/lib/rediseno/padre-sidenav-cielo.candado.test.ts",
+    // SPEC-481 (bug prod): profesional sin PerfilProfesional → redirect a completar, no 500 (mockea auth/service/redirect, sin BD).
+    "src/app/dashboard/profesional/profesional-sin-perfil.candado.test.tsx",
 ];

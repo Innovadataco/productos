@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { verifyAuth } from "@/lib/auth";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { panelDelProfesional } from "@/lib/profesional/panel/panel.service";
 import { PanelProfesional } from "@/components/modules/profesional/PanelProfesional";
 
@@ -23,7 +25,21 @@ export const metadata: Metadata = {
 
 export default async function ProfesionalInicioPage() {
     const usuario = await verifyAuth("PROFESIONAL");
-    const data = await panelDelProfesional(usuario.id);
+
+    let data: Awaited<ReturnType<typeof panelDelProfesional>>;
+    try {
+        data = await panelDelProfesional(usuario.id);
+    } catch (error) {
+        // SPEC-481: un profesional registrado que todavía no completó su
+        // `PerfilProfesional` hacía que `panelDelProfesional` lanzara NOT_FOUND →
+        // 500 en este Server Component, que es SU propia home (vía `homeParaRol`).
+        // En vez de romper, lo mandamos al onboarding a completar el perfil. El
+        // contrato del service no se toca (otros caminos siguen viendo el NOT_FOUND).
+        if (error instanceof AppError && error.code === ERROR_CODES.NOT_FOUND) {
+            redirect("/perfil-profesional/completar");
+        }
+        throw error;
+    }
 
     return (
         <main className="min-h-screen bg-page py-4">
