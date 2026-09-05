@@ -394,6 +394,7 @@
 | [456](456-portada/spec.md) | SPEC-456 · «Cara» del rediseño: la portada (la puerta de entrada) | 🟢 IMPLEMENTADO |
 | [463](463-colegio-voz-usted/spec.md) | SPEC-463 · La voz del colegio a «usted» (D-107 de Jelkin) | 🟢 IMPLEMENTADO |
 | [466](466-tokens-ratchet-inteligente/spec.md) | SPEC-466 · El piso de `tokens:check` deja de serializar los merges | 🟢 IMPLEMENTADO |
+| [474](474-modal-firma/spec.md) | SPEC-474 · OLA 5: cablear la firma en Modal | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
