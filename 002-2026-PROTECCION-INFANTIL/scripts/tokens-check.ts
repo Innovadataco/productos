@@ -38,7 +38,12 @@ import * as path from "node:path";
 // paleta a tokens (pino/cielo/ambar + color-mix; nunca rojo) y sus textos SVG a
 // fill-current + text-muted/body. Salen 14 clases crudas (slate/sky/cyan) de las
 // dos gráficas compartidas. Medición sobre origin/main fresco: 1065 (122 archivos).
-const PISO = 1065;
+// 2026-09-04 SPEC-456: la portada (hero) migra su piel a tokens — el gradiente
+// `from-sky-500 to-cyan-600` + todos los sky/cyan del hero y el rojo del error
+// salen (marca cielo/pino + rubi). Re-medido sobre el main que YA tiene SPEC-455
+// (1065): los ~27 crudos del hero salen → 1038. Es el ratchet sobre main fresco,
+// no el 1052 que midió la rama antes de rebasar sobre 455.
+const PISO = 1038;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
