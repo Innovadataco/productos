@@ -396,6 +396,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-420: el borrado va por lotes — PostgreSQL admite 32.767 parámetros
     // por sentencia y producción tenía 37.176 marcas.
     "scripts/demo/lotes.test.ts",
+    // SPEC-499: el profesional demo aparece/es reservable (ACTIVO + verificación
+    // vigente) y es purgable (orden FK-seguro en ORDEN_BORRADO).
+    "scripts/demo-prod/profesional-demo.candado.test.ts",
     // SPEC-378: Inicio del administrador (server component + tarjetas ámbar).
     "src/app/dashboard/admin/inicio/page.test.tsx",
     // SPEC-379: membrete institucional compartido + candado UI materia-profesor.
