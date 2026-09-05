@@ -34,9 +34,10 @@
 El barrido `--tension` ya existía en el script; faltaba quién lo corriera. Se agregó el workflow **`.github/workflows/tokens-tension.yml`**:
 
 - **Disparo MANUAL** (`workflow_dispatch`) — el CEO lo corre al cerrar cada ola del rediseño. El `schedule` (cron nocturno) queda comentado, listo para activar cuando el ritmo de olas baje.
-- Corre sobre `main` fresco (`checkout ref: main`), ejecuta `npx tsx scripts/tokens-check.ts --tension`, y **si el piso bajó abre un PR** (`peter-evans/create-pull-request`, rama `bot/tokens-tension`) — **nunca commitea directo a main**.
-- Antes de abrir el PR, re-verifica `npm run tokens:check` verde. Si el piso ya estaba en el mínimo, no abre nada (idempotente).
-- Permisos mínimos: `contents: write` + `pull-requests: write`.
+- Corre sobre `main` fresco (`checkout ref: main`), ejecuta `npx tsx scripts/tokens-check.ts --tension`, y **si el piso bajó abre un PR con `gh` nativo** (GITHUB_TOKEN, sin action de terceros) — **nunca commitea directo a main**.
+- La rama del bot es **`work/pi-SPEC-466-tension`** (no `bot/…`): matchea el patrón de `verificar-base-pr.yml` (`^work/pi-SPEC-[0-9]+-`) para que su PR pase el check requerido `verificar_base` del ruleset «Gate CI - main». Un `bot/…` nacería bloqueado (SPEC-466, cazado por CEO en review de #391). El force-push reusa la rama en cada corrida; se borra al mergear.
+- Antes de abrir el PR, re-verifica `npm run tokens:check` verde. Si el piso ya estaba en el mínimo, no abre nada (idempotente). Si el PR ya está abierto, el force-push lo actualiza (no recrea).
+- Permisos mínimos: `contents: write` + `pull-requests: write`. Se usa `gh` (preinstalado en el runner) en vez de un action de terceros — consistente con el resto de workflows del repo (solo oficiales).
 
 ## Referencias
 

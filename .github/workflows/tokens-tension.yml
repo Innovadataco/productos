@@ -64,21 +64,31 @@ jobs:
         if: steps.diff.outputs.cambio == 'si'
         run: npm run tokens:check
 
-      # Abre un PR con el piso nuevo — nunca commitea directo a main.
+      # Abre (o actualiza) un PR con el piso nuevo — nunca commitea directo a main.
+      # Con `gh` nativo (GITHUB_TOKEN) — sin action de terceros. La rama del bot
+      # matchea `verificar-base-pr.yml` (^work/pi-SPEC-[0-9]+-...) para que su PR
+      # pase el check requerido `verificar_base` del ruleset «Gate CI - main».
+      # SPEC-466: `bot/…` NO tiene exención en ese patrón → su PR nacería
+      # bloqueado; por eso la rama es `work/pi-SPEC-466-tension`.
       - name: Abrir PR con el piso apretado
         if: steps.diff.outputs.cambio == 'si'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: bot/tokens-tension
-          base: main
-          commit-message: "chore(tokens): apretar el piso de tokens:check al mínimo real (SPEC-466 --tension)"
-          title: "chore(tokens): apretar el piso al mínimo real (barrido --tension)"
-          body: |
-            Barrido de tensión de `tokens:check` (SPEC-466). El conteo real de color
-            crudo bajó por debajo del PISO vigente; este PR aprieta la constante al
-            mínimo medido sobre `main` fresco.
-
-            - Generado por el workflow `tokens-tension` (disparo manual).
-            - El guard es `<=`: los PR que bajan crudos no tocan el PISO; este barrido lo aprieta.
-            - Verificado: `npm run tokens:check` verde tras apretar.
-          labels: tokens, chore
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          RAMA="work/pi-SPEC-466-tension"
+          git config user.email "bot-tokens@innovadataco.local"
+          git config user.name "bot-tokens-tension"
+          git checkout -B "$RAMA"
+          git add 002-2026-PROTECCION-INFANTIL/scripts/tokens-check.ts
+          git commit -m "chore(tokens): apretar el piso de tokens:check al mínimo real (SPEC-466 --tension)"
+          git push --force origin "$RAMA"
+          # Si ya hay un PR abierto para esta rama, el force-push lo actualiza solo.
+          if [ -z "$(gh pr list --head "$RAMA" --state open --json number --jq '.[].number')" ]; then
+            gh pr create --base main --head "$RAMA" \
+              --title "chore(tokens): apretar el piso al mínimo real (barrido --tension)" \
+              --body "Barrido de tensión de \`tokens:check\` (SPEC-466). El conteo real de color crudo bajó por debajo del PISO vigente; este PR aprieta la constante al mínimo medido sobre \`main\` fresco. Guard \`<=\`: los PR que bajan crudos no tocan el PISO; este barrido lo aprieta. Verificado: \`npm run tokens:check\` verde tras apretar."
+          else
+            echo "PR de tensión ya abierto para $RAMA; el force-push lo actualizó."
+          fi
