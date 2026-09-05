@@ -175,9 +175,9 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
 
     return (
         <div className="space-y-6">
-            <GlassCard className="border-l-4 border-l-sky-500 p-4">
+            <GlassCard className="border-l-4 border-l-cielo p-4">
                 <p className="text-sm font-medium text-body">
-                    Motor activo: <span className="text-sky-600 dark:text-cyan-400">RÚBRICA</span>
+                    Motor activo: <span className="text-cielo">RÚBRICA</span>
                 </p>
                 <p className="text-xs text-muted">
                     El sandbox ejecuta el mismo motor multi-modelo que producción.
@@ -196,13 +196,13 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
                         placeholder="Escriba aquí el texto a analizar..."
                         rows={6}
                         maxLength={4000}
-                        className="w-full resize-y rounded-xl border border-slate-200 bg-white/80 p-3 text-sm text-body placeholder:text-subtle focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-900/80 dark:focus:border-cyan-500 dark:focus:ring-sky-900"
+                        className="w-full resize-y rounded-xl border border-tinta/10 bg-papel/80 p-3 text-sm text-body placeholder:text-subtle focus:border-cielo focus:outline-none focus:ring-2 focus:ring-cielo/20"
                     />
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                         <button
                             type="button"
                             onClick={() => setTexto(EXAMPLE_TEXT)}
-                            className="text-xs text-sky-600 hover:underline dark:text-cyan-400"
+                            className="text-xs text-cielo hover:underline"
                         >
                             Cargar ejemplo
                         </button>
@@ -216,7 +216,7 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
                         <button
                             type="button"
                             onClick={resetToBase}
-                            className="text-xs text-sky-600 hover:underline dark:text-cyan-400"
+                            className="text-xs text-cielo hover:underline"
                         >
                             Restaurar configuración actual
                         </button>
@@ -261,8 +261,8 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
             </div>
 
             {error && (
-                <GlassCard className="border-l-4 border-l-red-500 p-4">
-                    <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                <GlassCard className="border-l-4 border-l-rubi p-4">
+                    <p className="text-sm text-estado-rubi">{error}</p>
                 </GlassCard>
             )}
 

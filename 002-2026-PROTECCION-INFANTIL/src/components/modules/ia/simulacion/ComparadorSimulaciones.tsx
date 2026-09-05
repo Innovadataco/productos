@@ -65,7 +65,7 @@ export function ComparadorSimulaciones({ runs, onBack, onRepeat }: ComparadorSim
                 <p className="text-sm text-muted mb-3">Seleccione 2 a 5 simulaciones completadas.</p>
                 <div className="space-y-2">
                     {runs.map((run) => (
-                        <label key={run.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700 cursor-pointer">
+                        <label key={run.id} className="flex items-center gap-3 rounded-lg border border-tinta/10 p-3 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={selected.includes(run.id)}
@@ -83,7 +83,7 @@ export function ComparadorSimulaciones({ runs, onBack, onRepeat }: ComparadorSim
                         Comparar
                     </Button>
                 </div>
-                {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {error && <p className="mt-3 text-sm text-estado-rubi">{error}</p>}
             </GlassCard>
 
             {result && (
@@ -91,7 +91,7 @@ export function ComparadorSimulaciones({ runs, onBack, onRepeat }: ComparadorSim
                     <h4 className="font-semibold text-body mb-3">Resumen</h4>
                     <table className="min-w-full text-sm">
                         <thead>
-                            <tr className="border-b border-slate-200 dark:border-slate-700">
+                            <tr className="border-b border-tinta/10">
                                 <th className="py-2 text-left text-muted">Métrica</th>
                                 {result.runs.map((r) => (
                                     <th key={r.id} className="py-2 px-3 text-left text-body">
@@ -111,7 +111,7 @@ export function ComparadorSimulaciones({ runs, onBack, onRepeat }: ComparadorSim
                                 { label: "Latencia p50 (ms)", key: "latenciaP50Ms" as const },
                                 { label: "Latencia p95 (ms)", key: "latenciaP95Ms" as const },
                             ].map((row) => (
-                                <tr key={row.key} className="border-b border-slate-100 dark:border-slate-800">
+                                <tr key={row.key} className="border-b border-tinta/10">
                                     <td className="py-2 text-muted">{row.label}</td>
                                     {result.runs.map((r) => (
                                         <td key={r.id} className="py-2 px-3 font-medium text-body">
@@ -124,14 +124,14 @@ export function ComparadorSimulaciones({ runs, onBack, onRepeat }: ComparadorSim
                     </table>
 
                     {result.advertencia && (
-                        <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">{result.advertencia}</p>
+                        <p className="mt-3 text-xs text-estado-ambar">{result.advertencia}</p>
                     )}
 
                     <h4 className="font-semibold text-body mb-3 mt-6">Comparación por índice</h4>
                     <div className="max-h-96 overflow-auto">
                         <table className="min-w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700">
+                                <tr className="border-b border-tinta/10">
                                     <th className="py-2 px-2 text-left text-muted">#</th>
                                     <th className="py-2 px-2 text-left text-muted">Esperada</th>
                                     {result.runs.map((r) => (
@@ -146,7 +146,7 @@ export function ComparadorSimulaciones({ runs, onBack, onRepeat }: ComparadorSim
                                     const resultados = fila.resultados;
                                     const esperada = resultados[0]?.categoriaEsperada ?? "N/A";
                                     return (
-                                        <tr key={fila.indice} className="border-b border-slate-100 dark:border-slate-800">
+                                        <tr key={fila.indice} className="border-b border-tinta/10">
                                             <td className="py-2 px-2 text-body">{fila.indice}</td>
                                             <td className="py-2 px-2">
                                                 <Badge variant="neutral">{esperada}</Badge>

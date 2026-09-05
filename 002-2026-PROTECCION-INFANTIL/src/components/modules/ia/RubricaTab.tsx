@@ -147,8 +147,8 @@ export function RubricaTab({ rol }: RubricaTabProps) {
     return (
         <div className="space-y-6">
             {message && (
-                <GlassCard className={`border-l-4 p-4 ${message.type === "success" ? "border-l-green-500" : "border-l-red-500"}`}>
-                    <p className={message.type === "success" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                <GlassCard className={`border-l-4 p-4 ${message.type === "success" ? "border-l-pino" : "border-l-rubi"}`}>
+                    <p className={message.type === "success" ? "text-estado-pino" : "text-estado-rubi"}>
                         {message.text}
                     </p>
                 </GlassCard>
@@ -201,7 +201,7 @@ export function RubricaTab({ rol }: RubricaTabProps) {
                                             )
                                         }
                                         aria-label={`Texto de la pregunta ${i + 1}`}
-                                        className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-body placeholder:text-subtle focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-900/80 dark:focus:border-cyan-500 dark:focus:ring-sky-900"
+                                        className="w-full rounded-xl border border-tinta/10 bg-papel/80 px-3 py-2 text-sm text-body placeholder:text-subtle focus:border-cielo focus:outline-none focus:ring-2 focus:ring-cielo/20"
                                     />
                                 </div>
                             ))}
