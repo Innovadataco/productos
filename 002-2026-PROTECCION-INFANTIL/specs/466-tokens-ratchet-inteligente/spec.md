@@ -29,6 +29,17 @@
 - No se afloja la meta (cerca de 0): el piso sigue bajando, solo que sin serializar.
 - El guard sigue fallando si el conteo sube.
 
+## Follow-up de infra · el job de tensión (2026-09-05)
+
+El barrido `--tension` ya existía en el script; faltaba quién lo corriera. Se agregó el workflow **`.github/workflows/tokens-tension.yml`**:
+
+- **Disparo MANUAL** (`workflow_dispatch`) — el CEO lo corre al cerrar cada ola del rediseño. El `schedule` (cron nocturno) queda comentado, listo para activar cuando el ritmo de olas baje.
+- Corre sobre `main` fresco (`checkout ref: main`), ejecuta `npx tsx scripts/tokens-check.ts --tension`, y **si el piso bajó abre un PR con `gh` nativo** (GITHUB_TOKEN, sin action de terceros) — **nunca commitea directo a main**.
+- La rama del bot es **`work/pi-SPEC-466-tension`** (no `bot/…`): matchea el patrón de `verificar-base-pr.yml` (`^work/pi-SPEC-[0-9]+-`) para que su PR pase el check requerido `verificar_base` del ruleset «Gate CI - main». Un `bot/…` nacería bloqueado (SPEC-466, cazado por CEO en review de #391). El force-push reusa la rama en cada corrida; se borra al mergear.
+- Antes de abrir el PR, re-verifica `npm run tokens:check` verde. Si el piso ya estaba en el mínimo, no abre nada (idempotente). Si el PR ya está abierto, el force-push lo actualiza (no recrea).
+- Permisos mínimos: `contents: write` + `pull-requests: write`. Se usa `gh` (preinstalado en el runner) en vez de un action de terceros — consistente con el resto de workflows del repo (solo oficiales).
+- **Anti-recursión de GitHub (cazado por CEO en review de #391)**: un push/PR originado con `GITHUB_TOKEN` **no dispara** otros workflows. El PR del bot nace sin correr `verificar_base`/`pi-gate`/`bi-gate` → esos required checks quedan «pendientes» → el ruleset «Gate CI - main» lo bloquea. No es un problema de la rama sino de quién origina el evento. **Remedio** (job de baja frecuencia, sin PAT ni secreto): el operador empuja un **commit vacío como usuario real** a la rama del bot — eso origina `pull_request synchronize` con actor real y dispara los checks: `git switch work/pi-SPEC-466-tension && git commit --allow-empty -m "ci: disparar checks" && git push`. El body del PR que abre el bot incluye esa instrucción. (Alternativa de automación total: PAT fino como secreto que agrega Jelkin — descartada por no valer el mantenimiento en un job manual de baja frecuencia.)
+
 ## Referencias
 
 - **SPEC-432** (los generados dejan de ser terreno de conflicto) — mismo patrón de candado de merge real, aquí sobre un número.

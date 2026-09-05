@@ -7,5 +7,5 @@
 - [x] Preflight: tsc + tokens:check + arch:check + generar-readme --check + suite unit.
 
 ## Pendiente
-- [ ] Commit + push + PR + reportar al CEO.
-- [ ] (Infra) job periódico que corra `--tension` sobre main fresco.
+- [x] Commit + push + PR + reportar al CEO. (#382, mergeado)
+- [x] (Infra) job que corra `--tension` sobre main fresco — `.github/workflows/tokens-tension.yml`, disparo manual, abre PR con el piso apretado. NO activado en schedule (lo dispara el CEO al cerrar la ola).
