@@ -142,7 +142,7 @@ export function CiudadSearchSelect({
                     id={`${id}-lista`}
                     role="listbox"
                     aria-label="Resultados de ciudades"
-                    className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                    className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-tinta/10 bg-papel shadow-lg"
                 >
                     {fallo ? (
                         <p className="px-4 py-3 text-sm text-muted">
@@ -159,7 +159,7 @@ export function CiudadSearchSelect({
                                 type="button"
                                 role="option"
                                 aria-selected={value?.id === c.id}
-                                className="block w-full px-4 py-2.5 text-left text-sm text-body hover:bg-slate-100 dark:hover:bg-slate-800"
+                                className="block w-full px-4 py-2.5 text-left text-sm text-body hover:bg-tinta/5"
                                 onClick={() => elegir(c)}
                             >
                                 <span className="font-medium">{c.nombre}</span>
@@ -172,13 +172,13 @@ export function CiudadSearchSelect({
                             type="button"
                             role="option"
                             aria-selected={value?.id === "otra"}
-                            className="block w-full border-t border-slate-200 px-4 py-2.5 text-left text-sm font-medium text-accent hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                            className="block w-full border-t border-tinta/10 px-4 py-2.5 text-left text-sm font-medium text-accent hover:bg-tinta/5"
                             onClick={() => elegir({ id: "otra", nombre: "", paisId, departamentoId: null, departamento: null })}
                         >
                             Otra ciudad o municipio
                         </button>
                     )}
-                    <p className="border-t border-slate-100 px-4 py-1.5 text-[10px] text-subtle dark:border-slate-800">
+                    <p className="border-t border-tinta/10 px-4 py-1.5 text-[10px] text-subtle">
                         Datos geográficos: GeoNames (CC-BY 4.0)
                     </p>
                 </div>

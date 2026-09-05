@@ -1,5 +1,10 @@
 "use client";
 
+// SPEC-495 · data-viz: los colores de este componente (línea de la serie, área,
+// puntos, etiquetas de eje) CODIFICAN el valor de la serie — NO se tokenizan a
+// ciegas. La escala la define Diseño (regla de oro color-que-codifica-valor);
+// hasta entonces quedan crudos a propósito. Excluido de los candados de barrido.
+
 export function Sparkline({
     data,
     ariaLabel = "Gráfico de tendencia",

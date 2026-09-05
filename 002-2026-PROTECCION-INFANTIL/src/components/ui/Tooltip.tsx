@@ -34,7 +34,7 @@ export function Tooltip({ content, children, position = "bottom" }: TooltipProps
                 <span
                     id={tooltipId}
                     role="tooltip"
-                    className={`absolute z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-xs font-medium text-white shadow-lg dark:bg-slate-100 dark:text-slate-900 ${positionClasses[position]}`}
+                    className={`absolute z-50 whitespace-nowrap rounded-lg bg-tinta px-2 py-1 text-xs font-medium text-papel shadow-lg ${positionClasses[position]}`}
                 >
                     {content}
                 </span>
