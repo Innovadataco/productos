@@ -92,12 +92,24 @@ describe("SPEC-437 · misma mecánica que el operador: módulo por ítem", () =>
         ].sort());
     });
 
-    it("el rol PROFESIONAL los tiene concedidos en el seed", () => {
+    it("el grant de PROFESIONAL es EXACTAMENTE el de su menú — ni de más ni de menos", () => {
+        // Antes este candado exigía conceder los SEIS módulos del catálogo. Eso
+        // forzaba conceder `profesional_calendario`, cuya pantalla (SPEC-447) y
+        // cuyo ítem de menú (T013) todavía no estaban — un permiso a una
+        // superficie sin camino. El grant se ata al NAV, no al catálogo:
+        //  · un módulo de más → acceso a algo que el menú no ofrece;
+        //  · uno de menos    → un ítem que el nav pinta y el permiso filtra (menú roto).
         const seed = fs.readFileSync(path.join(RAIZ, "prisma/seed-modulos-grants.ts"), "utf-8");
-        const bloque = seed.slice(seed.indexOf("PROFESIONAL: ["), seed.indexOf("]", seed.indexOf("PROFESIONAL: [")));
-        for (const m of CATALOGO_MODULOS.filter((x) => x.categoria === "profesional")) {
-            expect(bloque.includes(`"${m.clave}"`), `${m.clave} no se le concede a PROFESIONAL`).toBe(true);
-        }
+        const inicio = seed.indexOf("PROFESIONAL: [");
+        const bloque = seed.slice(inicio, seed.indexOf("]", inicio));
+        const concedidos = [...bloque.matchAll(/"(profesional_[a-z]+)"/g)].map((m) => m[1]).sort();
+        const delNav = [...new Set(PROFESIONAL_NAV_ITEMS.map((i) => i.modulo))].sort();
+        expect(concedidos).toEqual(delNav);
+        // Explícito para que el rojo lo nombre: calendario se siembra en el
+        // catálogo (concedible) pero NO se concede hasta que su ítem exista.
+        expect(concedidos).not.toContain("profesional_calendario");
+        // Y el módulo SÍ vive en el catálogo — la exclusión es del grant, no del catálogo.
+        expect(CATALOGO_MODULOS.some((m) => m.clave === "profesional_calendario")).toBe(true);
     });
 });
 

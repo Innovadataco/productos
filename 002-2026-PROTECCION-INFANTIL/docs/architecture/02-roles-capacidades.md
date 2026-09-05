@@ -16,10 +16,8 @@ La matriz de abajo ejecuta el código real: `proxy()` con la sesión canónica (
 activo, `debeCambiarPassword=false`, vigencia vigente; solo varía el rol) y el predicado.
 Alineación D5: permitir ≡ `true`; 401/403/redirect ≡ `false`.
 
-Inventario: 8 roles (7 autenticados + anónimo) × 549 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4392 combinaciones.
-Inventario: 8 roles (7 autenticados + anónimo) × 543 rutas
-(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4344 combinaciones.
+Inventario: 8 roles (7 autenticados + anónimo) × 551 rutas
+(árbol `src/app/**` ∪ rutas declaradas en `proxy.ts`) = 4408 combinaciones.
 
 Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 
@@ -3335,9 +3333,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | redirigir→/dashboard/padre | no permite | sí |
 | `/dashboard/profesional/calendario` | página | redirigir→/dashboard/padre | no permite | sí |
-| `/dashboard/profesional` | página | permitir | permite | sí |
-| `/dashboard/profesional/casos` | página | permitir | permite | sí |
-| `/dashboard/profesional/citaciones` | página | permitir | permite | sí |
+| `/dashboard/profesional/casos` | página | redirigir→/dashboard/padre | no permite | sí |
+| `/dashboard/profesional/citaciones` | página | redirigir→/dashboard/padre | no permite | sí |
 | `/docs` | página | permitir | permite | sí |
 | `/docs/operar` | página | permitir | permite | sí |
 | `/docs/tecnico` | página | permitir | permite | sí |
@@ -3892,6 +3889,8 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/dashboard/perfil/notificaciones` | página | permitir | permite | sí |
 | `/dashboard/profesional` | página | permitir | permite | sí |
 | `/dashboard/profesional/calendario` | página | permitir | permite | sí |
+| `/dashboard/profesional/casos` | página | permitir | permite | sí |
+| `/dashboard/profesional/citaciones` | página | permitir | permite | sí |
 | `/docs` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/docs/operar` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/docs/tecnico` | página | redirigir→/dashboard/profesional | no permite | sí |
@@ -3899,14 +3898,6 @@ Estado de la aserción A al generar: **VERDE (puerta ≡ predicado)**.
 | `/mis-reportes` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/offline` | página | redirigir→/dashboard/profesional | no permite | sí |
 | `/perfil-profesional` | página | permitir | permite | sí |
-| `/dashboard/profesional/casos` | página | permitir | permite | sí |
-| `/dashboard/profesional/citaciones` | página | permitir | permite | sí |
-| `/docs` | página | permitir | permite | sí |
-| `/docs/operar` | página | permitir | permite | sí |
-| `/docs/tecnico` | página | permitir | permite | sí |
-| `/login` | página | permitir | permite | sí |
-| `/mis-reportes` | página | permitir | permite | sí |
-| `/offline` | página | permitir | permite | sí |
 | `/perfil-profesional/completar` | página | permitir | permite | sí |
 | `/perfil-profesional/verificacion` | página | permitir | permite | sí |
 | `/privacidad` | página | redirigir→/dashboard/profesional | no permite | sí |
