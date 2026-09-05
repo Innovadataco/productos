@@ -15,6 +15,9 @@ describe("GET /api/config/parametros/todos", () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
 
+        // SPEC-443: el arnés siembra `seguridad.permisos_roles_protegidos`; limpiamos para
+        // controlar el conteo exacto del escenario (3 params).
+        await prisma.parametroSistema.deleteMany();
         // Sembrar 3 parámetros en distintas categorías para validar orden y ausencia de paginación.
         await prisma.parametroSistema.createMany({
             data: [

@@ -95,8 +95,12 @@ describe("/api/admin/permisos-modulos", () => {
     it("anti-lockout con 2 roles protegidos: permite si al menos uno conserva acceso", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
-        await prisma.parametroSistema.create({
-            data: {
+        // SPEC-443: el arnés (sembrarPermisosDeProduccion) ya siembra este param con
+        // ["ADMIN"]; el escenario lo lleva a ["ADMIN","SCHOOL_ADMIN"] con upsert.
+        await prisma.parametroSistema.upsert({
+            where: { clave: "seguridad.permisos_roles_protegidos" },
+            update: { valor: JSON.stringify(["ADMIN", "SCHOOL_ADMIN"]) },
+            create: {
                 clave: "seguridad.permisos_roles_protegidos",
                 valor: JSON.stringify(["ADMIN", "SCHOOL_ADMIN"]),
                 tipo: "STRING_ARRAY",
@@ -123,15 +127,9 @@ describe("/api/admin/permisos-modulos", () => {
     it("PATCH · 409 si intenta activar un módulo prohibido a un rol cerrado (VERIFICADOR)", async () => {
         const admin = await crearUsuario("ADMIN");
         vi.spyOn(auth, "verifyAuth").mockResolvedValue(admin);
-        // `resetDatabase` ya siembra el catálogo completo con `otorgarTodosLosPermisos`,
-        // así que reutilizamos la fila (no la recreamos).
+        // SPEC-443: en el mapa real VERIFICADOR NO tiene "operadores" (sin fila) —
+        // ese es el estado de partida real; el guard debe rechazar activarlo.
         const operadores = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "operadores" } });
-        // Baseline: tras el reset el ADMIN otorgó todo a todos. Empezamos limpiando
-        // el permiso de VERIFICADOR sobre "operadores" para probar el guard puro.
-        await prisma.permisoModulo.update({
-            where: { rol_moduloId: { rol: "VERIFICADOR", moduloId: operadores.id } },
-            data: { activo: false },
-        });
 
         const res = await PATCH(patchReq([{ rol: "VERIFICADOR", moduloId: operadores.id, activo: true }]));
         expect(res.status).toBe(409);
@@ -142,8 +140,8 @@ describe("/api/admin/permisos-modulos", () => {
         const fila = await prisma.permisoModulo.findUnique({
             where: { rol_moduloId: { rol: "VERIFICADOR", moduloId: operadores.id } },
         });
-        // El guard rechazó ANTES del upsert: el permiso quedó apagado.
-        expect(fila?.activo).toBe(false);
+        // El guard rechazó ANTES del upsert: VERIFICADOR sigue sin acceso activo (fila ausente).
+        expect(fila?.activo ?? false).toBe(false);
     });
 
     it("PATCH · 409 si intenta desactivar el único módulo permitido de un rol cerrado", async () => {

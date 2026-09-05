@@ -68,7 +68,9 @@ describe("PATCH /api/admin/ia/rubrica/config", () => {
         const sinCambios = await PATCH(crearRequestAutenticado("PATCH", URL, {}));
         expect(sinCambios.status).toBe(400);
 
-        expect(await prisma.parametroSistema.count()).toBe(0);
+        // SPEC-443: el arnés siembra `seguridad.permisos_roles_protegidos`; acá contamos
+        // solo params de rúbrica para afirmar que un 400 no escribió ninguno.
+        expect(await prisma.parametroSistema.count({ where: { clave: { startsWith: "ia.rubrica" } } })).toBe(0);
     });
 
     it("403 cuando el rol no tiene el módulo ia_rubrica", async () => {

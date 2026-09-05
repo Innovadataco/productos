@@ -385,6 +385,7 @@
 | [440](440-area-del-padre/spec.md) | SPEC-440 · Correcciones del área del padre — punto 1 primero (I-306) + puntos 2/4/5 (ola 2) | 🟢 IMPLEMENTADO |
 | [441](441-directorio-profesional/spec.md) | SPEC-441 · La tarjeta del profesional presenta a la persona, y el precio deja de estar mal | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
+| [443](443-arnes-permisos-reales/spec.md) | SPEC-443 · El arnés de pruebas deja de repartir permisos que producción no da — cierra I-309 | 🟢 IMPLEMENTADO |
 | [444](444-identificadores-cuid/spec.md) | SPEC-444 · Los identificadores del padre se validaban como uuid — cierra I-310 | 🟢 IMPLEMENTADO |
 | [447](447-calendario-del-profesional/spec.md) | SPEC-447 · El profesional publica su disponibilidad — cierra I-311 | 🟢 IMPLEMENTADO |
 | [449](449-vencimiento-verificacion/spec.md) | SPEC-449 · La verificación vencida saca al profesional del directorio — cierra I-313 | 🟢 IMPLEMENTADO |

@@ -11,7 +11,7 @@ import { PermisoModuloRepository } from "./permiso-modulo";
 describe("PermisoModuloRepository", () => {
     beforeEach(async () => {
         // resetDatabase ya siembra los módulos y otorga permisos a todos los roles
-        // (llamar otorgarTodosLosPermisos de nuevo duplicaría las claves).
+        // (llamar sembrarPermisosDeProduccion de nuevo duplicaría las claves).
         await resetDatabase();
     });
 
@@ -33,23 +33,27 @@ describe("PermisoModuloRepository", () => {
 
     it("snapshotDe y aplicarCambios: crea y actualiza el permiso en una transacción", async () => {
         const admin = await crearUsuario("ADMIN", "admin-permisos@test.local");
-        const modulo = await prisma.moduloPermisible.findFirst();
+        // SPEC-443: se usa un grant REAL del mapa de prod (OPERADOR tiene
+        // `bandeja_reportes`), NO se fabrica un permiso que el mapa niega.
+        const modulo = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave: "bandeja_reportes" } });
         const repo = new PermisoModuloRepository();
 
-        const antes = await repo.snapshotDe([{ rol: "PARENT", moduloId: modulo!.id, activo: false }]);
-        expect(antes[0].activo, "estado inicial activo (otorgado a todos)").toBe(true);
+        const antes = await repo.snapshotDe([{ rol: "OPERADOR", moduloId: modulo.id, activo: false }]);
+        expect(antes[0].activo, "estado inicial real: OPERADOR tiene bandeja_reportes").toBe(true);
 
-        await repo.aplicarCambios([{ rol: "PARENT", moduloId: modulo!.id, activo: false }], admin.id);
+        await repo.aplicarCambios([{ rol: "OPERADOR", moduloId: modulo.id, activo: false }], admin.id);
         const actualizado = await prisma.permisoModulo.findUnique({
-            where: { rol_moduloId: { rol: "PARENT", moduloId: modulo!.id } },
+            where: { rol_moduloId: { rol: "OPERADOR", moduloId: modulo.id } },
         });
         expect(actualizado?.activo, "el cambio quedó aplicado").toBe(false);
         expect(actualizado?.actualizadoPorId).toBe(admin.id);
 
-        // Y crea la fila si no existe (upsert de un rol nuevo)
-        await repo.aplicarCambios([{ rol: "OPERADOR", moduloId: modulo!.id, activo: true }], admin.id);
+        // CREA la fila si no existe: `aplicarCambios` ES la operación de gestión de
+        // grants (la admin concede un módulo a un rol). Probar que crea la fila NO es
+        // fabricar acceso — es la conducta del repo bajo prueba.
+        await repo.aplicarCambios([{ rol: "VERIFICADOR", moduloId: modulo.id, activo: true }], admin.id);
         const creado = await prisma.permisoModulo.findUnique({
-            where: { rol_moduloId: { rol: "OPERADOR", moduloId: modulo!.id } },
+            where: { rol_moduloId: { rol: "VERIFICADOR", moduloId: modulo.id } },
         });
         expect(creado?.activo).toBe(true);
     });

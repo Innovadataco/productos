@@ -114,7 +114,7 @@ describe("POST /api/admin/reportes/[id]/denuncia-formal (SPEC-140, F2)", () => {
 
     it("403 para rol PARENT sin el módulo (en los defaults reales PARENT nunca lo tiene)", async () => {
         const padre = await crearUsuario("PARENT");
-        await revocarModulo("PARENT", "denuncia_formal");
+        // SPEC-443: en el mapa real PARENT nunca tuvo denuncia_formal (sin fila) → 403 directo.
         const reporte = await crearReporteClasificado();
         activeToken = await crearTokenUsuario(padre.id, "PARENT");
         const res = await postDenuncia(reporte.id, { canalDestino: "Línea 141 ICBF" });

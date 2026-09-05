@@ -28,7 +28,7 @@ describe("resetDatabase (SPEC-282)", () => {
     });
 
     it("con lista explícita → vacía SOLO esas tablas (ModuloPermisible no tiene FK a Usuario)", async () => {
-        // Siembra Usuario. ModuloPermisible ya fue sembrado por otorgarTodosLosPermisos()
+        // Siembra Usuario. ModuloPermisible ya fue sembrado por sembrarPermisosDeProduccion()
         // en el beforeEach y no tiene FK a Usuario → CASCADE de Usuario no la afecta.
         await prisma.usuario.create({
             data: {
@@ -72,7 +72,7 @@ describe("resetDatabase (SPEC-282)", () => {
 
         // Usuario sigue (no se truncó).
         expect(await prisma.usuario.count()).toBe(1);
-        // Permisos reconstruidos por otorgarTodosLosPermisos().
+        // Permisos reconstruidos por sembrarPermisosDeProduccion().
         expect(await prisma.permisoModulo.count()).toBeGreaterThan(0);
     });
 });
