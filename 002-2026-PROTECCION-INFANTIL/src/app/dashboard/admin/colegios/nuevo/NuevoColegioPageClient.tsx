@@ -89,7 +89,7 @@ export default function NuevoColegioPageClient() {
             </div>
 
             {error && (
-                <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+                <div className="rounded-xl bg-rubi/10 p-4 text-sm text-rubi">
                     {error.text}
                 </div>
             )}

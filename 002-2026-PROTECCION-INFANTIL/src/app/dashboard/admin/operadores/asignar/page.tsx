@@ -210,14 +210,14 @@ export default function AdminOperadoresAsignarPage() {
                                             <td className="py-3 text-right">
                                                 <div className="flex items-center justify-end gap-3">
                                                     <span className="text-xs text-muted">{Math.round(uso * 100)}%</span>
-                                                    <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                                                    <div className="h-2 w-24 overflow-hidden rounded-full bg-tinta/10">
                                                         <div
                                                             className={`h-full rounded-full ${
                                                                 uso >= 1
-                                                                    ? "bg-red-500"
+                                                                    ? "bg-rubi"
                                                                     : uso >= 0.7
-                                                                        ? "bg-amber-500"
-                                                                        : "bg-emerald-500"
+                                                                        ? "bg-ambar"
+                                                                        : "bg-pino"
                                                             }`}
                                                             style={{ width: `${Math.min(100, uso * 100)}%` }}
                                                         />
