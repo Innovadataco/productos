@@ -26,7 +26,9 @@
  *   pasados ~4 meses), así que la mutación directa por Prisma es la ÚNICA
  *   forma de reproducir el escenario sin esperar cuatro meses en CI.
  *
- * CANDADO. Todos los tests con `test.fail` citando SPEC-449 — el patrón de
+ * ESTADO. SPEC-449 (#358) YA está en main y desplegada — el directorio
+ * `/api/padre/profesionales` ya filtra `estado = ACTIVO`. Los tests afirman
+ * el comportamiento bueno (aviso CEO 23:2x). El patrón original era
  * «candado antes del fix» que la memoria «calidad-candado-antes-del-fix»
  * fija: la spec de Calidad mergea antes que la implementación de Dev; cuando
  * SPEC-449 despliegue y el recorrido real quede bendecido en producción
@@ -318,10 +320,6 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
         // pruebe como un solo recorrido. Si el prevuelo se saliera de la
         // marca, un fallo del setup (perfil que nunca aparece) enmascararía
         // el bug real (el listado no filtra VENCIDO).
-        test.fail(
-            true,
-            "SPEC-449 (Dev X) saca del directorio los perfiles VENCIDO y refuerza H-2. Este candado se quita cuando esa spec despliegue.",
-        );
 
         const request = await ctx();
         try {
@@ -345,10 +343,6 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
     });
 
     test("(A) tras pasar a VENCIDO, el perfil DESAPARECE del listado del padre", async () => {
-        test.fail(
-            true,
-            "SPEC-449 (Dev X) saca del directorio los perfiles VENCIDO y refuerza H-2. Este candado se quita cuando esa spec despliegue.",
-        );
 
         // EXCEPCIÓN documentada: no existe endpoint público para forzar el
         // vencimiento manual (el flujo real es que `venceEn` en
@@ -381,10 +375,6 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
     });
 
     test("(B) la ficha individual de un VENCIDO responde 404 (o al menos no expone contacto H-2)", async () => {
-        test.fail(
-            true,
-            "SPEC-449 (Dev X) saca del directorio los perfiles VENCIDO y refuerza H-2. Este candado se quita cuando esa spec despliegue.",
-        );
 
         // El estado ya está mutado a VENCIDO por el candado (A) (describe.serial).
         // La forma óptima es 404: el perfil VENCIDO no existe públicamente.
