@@ -8,8 +8,10 @@ services:
     volumes:
       - ./index.html:/usr/share/nginx/html/index.html:ro
       - ./assets:/usr/share/nginx/html/assets:ro
-      # SPEC-497 · Tablero de Operación (ruta /operacion/).
-      # La PÁGINA viene del repo; los DATOS viven FUERA de git y los mantiene el CEO
-      # por SSH sin redesplegar (la vista los re-lee sola cada 60 s).
-      - ./operacion:/usr/share/nginx/html/operacion:ro
+      # SPEC-497 · Tablero de Operación.
+      # ⚠️ Montaje ARCHIVO POR ARCHIVO a propósito, no el directorio.
+      # Montar `./operacion` como directorio :ro IMPIDE crear dentro el mountpoint
+      # del JSON y el contenedor NO ARRANCA (probado en vivo el 05-09: dejó piweb
+      # en 502). El JSON vive fuera de git y lo mantiene el CEO por SSH.
+      - ./operacion/index.html:/usr/share/nginx/html/operacion/index.html:ro
       - /opt/proteccion-infantil/piweb/operacion.json:/usr/share/nginx/html/operacion/operacion.json:ro
