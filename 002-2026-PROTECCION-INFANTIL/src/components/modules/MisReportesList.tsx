@@ -110,7 +110,7 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-body truncate">{r.identificador}</h3>
                             {r.esAnonimo && (
-                                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-muted">
+                                <span className="rounded-full bg-tinta/5 px-2 py-0.5 text-xs text-muted">
                                     Anónimo
                                 </span>
                             )}
@@ -158,7 +158,7 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
 
                     {expandidoId === r.id && (
                         <div
-                            className="w-full border-t border-slate-200 dark:border-slate-700 pt-3"
+                            className="w-full border-t border-tinta/10 pt-3"
                             data-testid={`consulta-inline-${r.id}`}
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -196,6 +196,6 @@ function estadoBadgeClass(badge: BadgeVisual): string {
             return base + "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300";
         case "muted":
         default:
-            return base + "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+            return base + "bg-tinta/5 text-muted";
     }
 }
