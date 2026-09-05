@@ -27,8 +27,8 @@ export function ColegioSideNav({ rol, modulosPermitidos }: { rol: string; modulo
         pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false));
 
     return (
-        <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-emerald-200/40 bg-emerald-50/50 backdrop-blur-xl sm:flex dark:border-emerald-900/30 dark:bg-emerald-950/20">
-            <div className="border-b border-emerald-200/40 p-6 dark:border-emerald-900/30">
+        <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-pino/20 bg-pino/5 backdrop-blur-xl sm:flex">
+            <div className="border-b border-pino/20 p-6">
                 <h1 className="text-lg font-bold text-body">Mi colegio</h1>
                 <p className="mt-1 text-xs text-subtle">Panel institucional</p>
             </div>
@@ -48,8 +48,8 @@ export function ColegioSideNav({ rol, modulosPermitidos }: { rol: string; modulo
                                 href={item.href}
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                                     active
-                                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/25"
-                                        : "text-emerald-900/70 hover:bg-emerald-100 hover:text-emerald-900 dark:text-emerald-200/70 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-100"
+                                        ? "bg-pino text-white shadow-lg shadow-pino/25"
+                                        : "text-muted hover:bg-pino/10 hover:text-pino"
                                 }`}
                                 aria-current={active ? "page" : undefined}
                             >
@@ -87,7 +87,7 @@ function GrupoExpandible({
         <li>
             <button
                 type="button"
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-emerald-900/70 transition hover:bg-emerald-100 hover:text-emerald-900 dark:text-emerald-200/70 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-100"
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted transition hover:bg-pino/10 hover:text-pino"
                 aria-expanded={abierto}
                 aria-controls={idLista}
                 onClick={() => setToggleUsuario(!abierto)}
@@ -107,8 +107,8 @@ function GrupoExpandible({
                                     href={hijo.href}
                                     className={`flex items-center gap-3 rounded-xl py-2.5 pl-11 pr-4 text-sm font-semibold transition ${
                                         active
-                                            ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/25"
-                                            : "text-emerald-900/70 hover:bg-emerald-100 hover:text-emerald-900 dark:text-emerald-200/70 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-100"
+                                            ? "bg-pino text-white shadow-lg shadow-pino/25"
+                                            : "text-muted hover:bg-pino/10 hover:text-pino"
                                     }`}
                                     aria-current={active ? "page" : undefined}
                                 >

@@ -396,6 +396,7 @@
 | [458](458-alerta-sistema-diseno/spec.md) | SPEC-458 · OLA 1 — la Alerta al Sistema de Diseño | 🟢 IMPLEMENTADO |
 | [460](460-accent-por-rol/spec.md) | SPEC-460 · El acento por territorio — `--accent` por rol | 🟢 IMPLEMENTADO |
 | [461](461-cargando-sistema-diseno/spec.md) | SPEC-461 · OLA 1: el estado «Cargando» al Sistema de Diseño (el mueble de más alcance) | 🟢 IMPLEMENTADO |
+| [462](462-colegio-color-firma/spec.md) | SPEC-462 · Lote 2 — Colegio: color y firma | 🟢 IMPLEMENTADO |
 | [463](463-colegio-voz-usted/spec.md) | SPEC-463 · La voz del colegio a «usted» (D-107 de Jelkin) | 🟢 IMPLEMENTADO |
 | [464](464-admin-rojos-densidad/spec.md) | SPEC-464 · Lote 3 · Admin: rojos a rubí + densidad | 🟢 IMPLEMENTADO |
 | [466](466-tokens-ratchet-inteligente/spec.md) | SPEC-466 · El piso de `tokens:check` deja de serializar los merges | 🟢 IMPLEMENTADO |
