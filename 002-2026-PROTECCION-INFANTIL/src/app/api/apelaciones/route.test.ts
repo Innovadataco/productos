@@ -82,7 +82,7 @@ describe("POST /api/apelaciones", () => {
     });
 
     afterAll(async () => {
-        rmSync(storageDir, { recursive: true, force: true });
+        rmSync(storageDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         await prisma.$disconnect();
     });
 

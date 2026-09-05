@@ -68,7 +68,7 @@ function enRama(base: string, rama: string, cambios: () => void) {
 describe("SPEC-466 · el piso ya no serializa (merge real, estilo 432)", () => {
     let repo: string | null = null;
     afterEach(() => {
-        if (repo) fs.rmSync(repo, { recursive: true, force: true });
+        if (repo) fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         repo = null;
     });
 
@@ -111,7 +111,7 @@ describe("SPEC-466 · el piso ya no serializa (merge real, estilo 432)", () => {
 describe("SPEC-466 · el guard real (conducta)", () => {
     const TMP_DIR = path.join(RAIZ, "src", "__spec466_tmp__");
     afterEach(() => {
-        fs.rmSync(TMP_DIR, { recursive: true, force: true });
+        fs.rmSync(TMP_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     });
 
     function correrGuard(): { code: number; salida: string } {
