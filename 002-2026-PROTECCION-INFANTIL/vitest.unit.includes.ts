@@ -441,6 +441,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-432: prueba con DOS RAMAS DE VERDAD que los generados dejaron de
     // ser terreno de conflicto, con contraprueba sin .gitattributes.
     "scripts/specs/merge-sin-conflicto.candado.test.ts",
+    // SPEC-487 (D-109): los PR no tocan los generados (invariante de
+    // representabilidad); el barrido post-merge los regenera. Merge real + repr.
+    "scripts/specs/generados-post-merge.candado.test.ts",
     // SPEC-432b: lo mismo para los artefactos de arquitectura, con la matriz
     // que demuestra que aflojar el orden no aflojó el contenido.
     "scripts/arch/artefactos-sin-conflicto.candado.test.ts",

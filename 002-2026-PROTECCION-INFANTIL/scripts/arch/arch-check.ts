@@ -25,7 +25,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ARTEFACTOS } from "./artefactos";
-import { diferenciasTolerandoOrden } from "./lib/comparar-tolerando-orden";
 import { ejecutarAsercionA } from "./asercion-puerta-predicado";
 import { ejecutarAsercionB } from "./asercion-menu-no-miente";
 import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
@@ -51,7 +50,26 @@ async function verificarDrift(): Promise<string[]> {
     const fallos: string[] = [];
     for (const artefacto of ARTEFACTOS) {
         const generar = await cargarGenerador(artefacto.generador);
-        const regenerado = await generar();
+        let regenerado: string;
+        try {
+            regenerado = await generar();
+        } catch (e) {
+            fallos.push(`${artefacto.archivo}: el generador no corre sobre la fuente (${(e as Error).message})`);
+            continue;
+        }
+
+        // SPEC-487 (D-109): los artefactos de tabla append-por-spec/ruta
+        // (`toleraOrdenDeFilas`: 02-roles, 03-pantallas) ya NO se comparan con lo
+        // commiteado —el PR no los toca; el barrido post-merge los regenera—.
+        // Basta con que el generador corra limpio: REPRESENTABILIDAD. Con esto
+        // dos PR que agregan rutas/roles no chocan en el generado (kill de la
+        // clase union server-side). El contenido lo siguen vigilando las
+        // aserciones B/B-bis (menú honesto) y rutas-app.test; el orden/unicidad
+        // de las filas, el `--check` del barrido sobre main.
+        if (artefacto.toleraOrdenDeFilas) continue;
+
+        // Los byte-exactos (00-INDICE, 01-modelo-datos, 06-stack) NO son
+        // append-por-spec → siguen comparándose byte a byte contra lo commiteado.
         const destino = path.join(RUTA_DOCS_ARCH, artefacto.archivo);
         const commiteado = fs.existsSync(destino) ? fs.readFileSync(destino, "utf-8") : null;
         if (commiteado === null) {
@@ -59,17 +77,6 @@ async function verificarDrift(): Promise<string[]> {
             continue;
         }
         if (commiteado === regenerado) continue;
-
-        // SPEC-432b: en los artefactos de tabla se tolera el ORDEN de las filas
-        // —`merge=union` no lo garantiza— y NUNCA el contenido. En los demás la
-        // comparación sigue siendo byte a byte.
-        if (artefacto.toleraOrdenDeFilas) {
-            const diferencias = diferenciasTolerandoOrden(commiteado, regenerado);
-            if (diferencias.length === 0) continue;
-            for (const d of diferencias) fallos.push(`${artefacto.archivo}: ${d}`);
-            fallos.push(`${artefacto.archivo} → regenerar con \`npx tsx ${artefacto.generador}\` y commitear`);
-            continue;
-        }
         fallos.push(
             `${artefacto.archivo} difiere de la regeneración (drift: regenerar con \`npx tsx ${artefacto.generador}\` y commitear)`
         );
@@ -92,7 +99,7 @@ async function main() {
     console.log("[Arch:check] (a) Drift de artefactos…");
     const drift = await verificarDrift();
     if (drift.length === 0) {
-        console.log(`[Arch:check] (a) VERDE: los ${ARTEFACTOS.length} artefactos regenerados son idénticos a lo commiteado.`);
+        console.log("[Arch:check] (a) VERDE: byte-exactos idénticos a lo commiteado; tablas append-por-spec representables (SPEC-487: el barrido post-merge las regenera).");
     } else {
         rojo = true;
         console.error(`[Arch:check] (a) ROJO: ${drift.length} artefactos con drift:`);
