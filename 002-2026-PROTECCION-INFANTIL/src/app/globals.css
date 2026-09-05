@@ -478,3 +478,114 @@
     .pi-scan { opacity: 0.55; transform: none; }
     .pi-nd { opacity: 0.75; }
 }
+
+/* ── Button · Sistema de Diseño v1.3 (SPEC-454 · OLA 1 del rediseño) ─────────
+   Tres jerarquías del §7.1, mapeadas a las 5 variantes de la API (que no
+   cambia): primary→Primario, secondary/outline→Fantasma, ghost→Sutil,
+   danger→Fantasma-rubí. Radio 16px (Diseño 04-09; el «12px» de §7.1 era error).
+   Alto mínimo 48px. El acento se LEE de --accent con fallback pino — SPEC-460
+   lo declarará por rol en los layouts; hasta entonces todos salen en pino.
+   La FIRMA (gradiente + grano + órbita) vive SOLO en el Primario (Diseño). §5:
+   prefers-reduced-motion y hover:none apagan la órbita y el desplazamiento. */
+:root {
+    --pi-btn-grano: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* Acento por defecto (fallback). SPEC-460 lo sobrescribe por rol en el layout. */
+    --pi-accent: var(--accent, rgb(var(--pino-rgb)));
+}
+
+.btn-ds {
+    min-height: 48px;
+    border-radius: 16px;
+    transition: transform 0.28s var(--curva), box-shadow 0.28s var(--curva), filter 0.24s var(--curva), background-color 0.2s var(--curva);
+    position: relative;
+    isolation: isolate;
+}
+
+/* Primario — el único sólido, y el único con firma. */
+.btn-ds--primary {
+    background: linear-gradient(135deg, var(--pi-accent), color-mix(in srgb, var(--pi-accent) 72%, rgb(var(--cielo-rgb))));
+    color: rgb(var(--papel-rgb));
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--pi-accent) 30%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.22);
+    overflow: hidden;
+}
+/* Grano sobre el acento. */
+.btn-ds--primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--pi-btn-grano);
+    background-size: 140px 140px;
+    mix-blend-mode: overlay;
+    opacity: 0.25;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 0;
+}
+/* Órbita: un punto que recorre el perímetro. Firma del producto. */
+.btn-ds--primary::before {
+    content: "";
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgb(var(--papel-rgb));
+    box-shadow: 0 0 14px rgb(var(--papel-rgb) / 0.9), 0 0 6px rgb(var(--papel-rgb));
+    top: -3.5px;
+    left: 20px;
+    z-index: 2;
+    animation: pi-btn-orbita 4.5s var(--curva) infinite;
+}
+.btn-ds--primary > * { position: relative; z-index: 1; }
+.btn-ds--primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px color-mix(in srgb, var(--pi-accent) 42%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.28); }
+
+@keyframes pi-btn-orbita {
+    0%   { left: 20px; top: -3.5px; }
+    25%  { left: calc(100% - 27px); top: -3.5px; }
+    50%  { left: calc(100% - 27px); top: calc(100% - 3.5px); }
+    75%  { left: 20px; top: calc(100% - 3.5px); }
+    100% { left: 20px; top: -3.5px; }
+}
+
+/* Fantasma — transparente + borde del acento. secondary y outline. */
+.btn-ds--fantasma {
+    background: transparent;
+    color: var(--pi-accent);
+    border: 1.5px solid var(--pi-accent);
+}
+.btn-ds--fantasma:hover { background: color-mix(in srgb, var(--pi-accent) 12%, transparent); }
+
+/* Fantasma-rubí — danger. El sólido rubí queda reservado al «confirmar» del modal. */
+.btn-ds--fantasma-rubi {
+    background: transparent;
+    color: rgb(var(--rubi-ink-rgb));
+    border: 1.5px solid rgb(var(--rubi-rgb));
+}
+.btn-ds--fantasma-rubi:hover { background: rgb(var(--rubi-rgb) / 0.1); }
+
+/* Sutil — velo. ghost. */
+.btn-ds--sutil {
+    background: rgb(var(--tinta-rgb) / 0.05);
+    color: rgb(var(--tinta-rgb));
+}
+.btn-ds--sutil:hover { background: rgb(var(--tinta-rgb) / 0.09); }
+
+.btn-ds:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: none;
+    transform: none;
+    box-shadow: none;
+}
+/* En disabled la firma se calla. */
+.btn-ds--primary:disabled::before { animation: none; }
+
+/* §5: sin puntero o con movimiento reducido, la firma y el desplazamiento se apagan. */
+@media (prefers-reduced-motion: reduce) {
+    .btn-ds { transition: none; }
+    .btn-ds--primary::before { animation: none; }
+    .btn-ds--primary:hover { transform: none; }
+}
+@media (hover: none) {
+    .btn-ds--primary::before { animation: none; }
+    .btn-ds--primary:hover { transform: none; }
+}

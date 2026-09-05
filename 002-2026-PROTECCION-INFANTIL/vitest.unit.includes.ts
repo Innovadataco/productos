@@ -157,6 +157,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/providers/SessionPingProvider.test.tsx",
     "src/components/ui/Accordion.test.tsx",
     "src/components/ui/Alerta.test.tsx",
+    // SPEC-454 (OLA 1 rediseño): candado de conducta del Button — la re-piel
+    // (tokens + firma) no puede romper onClick/disabled/a11y/API de 5 variantes.
+    "src/components/ui/Button.test.tsx",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",
