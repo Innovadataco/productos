@@ -2,8 +2,10 @@
 /* eslint-disable max-lines */
 /**
  * Seed demo de PRODUCCIÓN — volumen completo para SPEC-160 (002-PI-059).
+ * SPEC-499: agrega un PROFESIONAL verificado + franjas (para caminar el ciclo
+ * de cita) y el modo `--min` (VOLUMEN MÍNIMO · 1 colegio) para poblar rápido.
  * Uso:
- *   DEMO_PASSWORD=DemoSeguro2026! node --env-file=.env --import tsx scripts/demo-prod/sembrar-demo.ts [--force]
+ *   DEMO_PASSWORD=DemoSeguro2026! node --env-file=.env --import tsx scripts/demo-prod/sembrar-demo.ts [--force] [--min]
  */
 import { spawnSync } from "node:child_process";
 import { prisma } from "./lib/prisma";
@@ -11,7 +13,8 @@ import { marcarDemo } from "./lib/marcar";
 import { auditarDemo } from "./lib/auditar";
 import { hashDemoPassword, getDemoPassword } from "./lib/password";
 import { hashIdentificacion } from "@/lib/hash-identificacion";
-import { CORRIDA, NUM_COLEGIOS, CURSOS_POR_COLEGIO, ESTUDIANTES_POR_CURSO, NUM_OPERADORES, NUM_PADRES, PADRES_CON_CIRCULO, NUM_REPORTES, FRACCION_ANONIMOS } from "./lib/config";
+import { CORRIDA, VOLUMEN_COMPLETO, VOLUMEN_MINIMO, FRACCION_ANONIMOS } from "./lib/config";
+import { ESTADO_PERFIL_DEMO, REVISADO_HACE_DIAS, NUM_FRANJAS_DEMO, verificacionDemo } from "./lib/profesional-demo";
 import {
     nombreColegio,
     nombrePersona,
@@ -35,6 +38,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const FORCE = process.argv.includes("--force");
+const MIN = process.argv.includes("--min");
 
 interface ColegioCreado {
     id: string;
@@ -65,6 +69,9 @@ interface Resumen {
     padres: number;
     contactosConfianza: number;
     identificadoresContacto: number;
+    profesionales: number;
+    franjas: number;
+    verificaciones: number;
     reportes: number;
     reportesAnonimos: number;
     reportesAutenticados: number;
@@ -113,11 +120,129 @@ async function cargarBase() {
     return { admin, pais, ciudad, departamento, plataforma };
 }
 
+/**
+ * SPEC-499 · siembra dos profesionales demo:
+ *  1. CON perfil `ACTIVO` + verificación `APROBADO` vigente (regla SPEC-449) +
+ *     franjas libres futuras → aparece en el directorio y es reservable.
+ *  2. SIN perfil → para caminar SPEC-481 («entrar sin perfil completa el
+ *     onboarding, no 500»). Es solo un `Usuario` PROFESIONAL sin
+ *     `PerfilProfesional`; su conducta ya la bloquea el candado
+ *     `profesional-sin-perfil.candado.test.tsx`.
+ * Ambos marcados en `demo_marcado` (purgables vía `lib/orden-borrado`).
+ */
+async function sembrarProfesionalDemo(
+    adminId: string,
+    ciudadId: string,
+    passwordHash: string,
+): Promise<{ emailConPerfil: string; emailSinPerfil: string; profesionales: number; verificaciones: number; franjas: number }> {
+    const email = emailUsuarioDemo("PROFESIONAL", 1);
+    const { nombre, apellidos } = nombrePersona(96001);
+    const usuario = await prisma.usuario.create({
+        data: {
+            email,
+            nombre: `${nombre} ${apellidos}`,
+            passwordHash,
+            rol: "PROFESIONAL",
+            estado: "activo",
+            debeCambiarPassword: false,
+        },
+    });
+    await marcarDemo("Usuario", usuario.id, { corrida: CORRIDA, script: "sembrar-demo", notas: "PROFESIONAL" });
+
+    const revisadoEn = new Date(Date.now() - REVISADO_HACE_DIAS * 24 * 60 * 60 * 1000);
+    // SPEC-391: la autorización firmada es PREVIA a la revisión de antecedentes.
+    const autorizacionSubidaEn = new Date(revisadoEn.getTime() - 24 * 60 * 60 * 1000);
+    const duracionMinutos = 50;
+    const perfil = await prisma.perfilProfesional.create({
+        data: {
+            usuarioId: usuario.id,
+            nombreVisible: `Dra. ${nombre} ${apellidos}`,
+            tituloProfesional: "Psicóloga clínica",
+            especialidades: ["Ansiedad infantil", "Acoso escolar"],
+            ciudadId,
+            atiendeVirtual: true,
+            atiendePresencial: true,
+            aniosExperiencia: 8,
+            presentacion:
+                "Perfil DEMO para caminar el ciclo de primera cita. Acompaño a niñas, niños y adolescentes en situaciones de acoso y ansiedad, con enfoque en protección.",
+            tarifaConsultaCOP: 120000,
+            duracionMinutos,
+            emiteFactura: true,
+            estado: ESTADO_PERFIL_DEMO,
+            autorizacionArchivoId: "demo-autorizacion-profesional-01",
+            autorizacionSubidaEn,
+        },
+    });
+    await marcarDemo("PerfilProfesional", perfil.id, { corrida: CORRIDA, script: "sembrar-demo" });
+
+    const verif = verificacionDemo(revisadoEn);
+    const verificacion = await prisma.verificacionProfesional.create({
+        data: {
+            perfilProfesionalId: perfil.id,
+            revisadoPorId: adminId,
+            revisadoEn: verif.revisadoEn,
+            checklist: { antecedentes: true, tarjetaProfesional: true, autorizacionFirmada: true },
+            resultado: verif.resultado,
+            autorizacionArchivoId: "demo-autorizacion-profesional-01",
+            venceEn: verif.venceEn,
+        },
+    });
+    await marcarDemo("VerificacionProfesional", verificacion.id, { corrida: CORRIDA, script: "sembrar-demo" });
+
+    // Franjas libres futuras (una por día, alternando modalidad). `tomada=false`.
+    let franjas = 0;
+    for (let f = 0; f < NUM_FRANJAS_DEMO; f++) {
+        const inicio = new Date();
+        inicio.setDate(inicio.getDate() + f + 1);
+        inicio.setHours(9 + (f % 6), 0, 0, 0);
+        const fin = new Date(inicio.getTime() + duracionMinutos * 60 * 1000);
+        const franja = await prisma.franjaDisponible.create({
+            data: {
+                profesionalId: perfil.id,
+                inicio,
+                fin,
+                modalidad: f % 2 === 0 ? "VIRTUAL" : "PRESENCIAL",
+                tomada: false,
+            },
+        });
+        await marcarDemo("FranjaDisponible", franja.id, { corrida: CORRIDA, script: "sembrar-demo" });
+        franjas++;
+    }
+
+    // Profesional 2: SIN perfil (SPEC-481). Solo el usuario; al entrar a su
+    // home debe ir a completar el perfil, no romper en 500.
+    const emailSinPerfil = emailUsuarioDemo("PROFESIONAL", 2);
+    const { nombre: nomSinPerfil, apellidos: apeSinPerfil } = nombrePersona(96002);
+    const usuarioSinPerfil = await prisma.usuario.create({
+        data: {
+            email: emailSinPerfil,
+            nombre: `${nomSinPerfil} ${apeSinPerfil}`,
+            passwordHash,
+            rol: "PROFESIONAL",
+            estado: "activo",
+            debeCambiarPassword: false,
+        },
+    });
+    await marcarDemo("Usuario", usuarioSinPerfil.id, {
+        corrida: CORRIDA,
+        script: "sembrar-demo",
+        notas: "PROFESIONAL sin perfil (SPEC-481)",
+    });
+
+    return { emailConPerfil: email, emailSinPerfil, profesionales: 2, verificaciones: 1, franjas };
+}
+
 async function main() {
     await verificarIdempotencia();
     const { admin, pais, ciudad, departamento, plataforma } = await cargarBase();
     const passwordHash = await hashDemoPassword();
     const password = getDemoPassword();
+
+    // SPEC-499: el flag `--min` reduce el volumen a 1 colegio. Se destructura
+    // con los mismos nombres para no tocar los bucles de abajo.
+    const { NUM_COLEGIOS, CURSOS_POR_COLEGIO, ESTUDIANTES_POR_CURSO, NUM_OPERADORES, NUM_PADRES, PADRES_CON_CIRCULO, NUM_REPORTES } =
+        MIN ? VOLUMEN_MINIMO : VOLUMEN_COMPLETO;
+    console.log(`[sembrar-demo] Volumen: ${MIN ? "MÍNIMO (--min · 1 colegio)" : "COMPLETO"}`);
 
     const resumen: Resumen = {
         colegios: [],
@@ -132,6 +257,9 @@ async function main() {
         padres: 0,
         contactosConfianza: 0,
         identificadoresContacto: 0,
+        profesionales: 0,
+        franjas: 0,
+        verificaciones: 0,
         reportes: 0,
         reportesAnonimos: 0,
         reportesAutenticados: 0,
@@ -449,6 +577,20 @@ async function main() {
     }
 
     // ------------------------------------------------------------------
+    // Fase 5-bis (SPEC-499): PROFESIONAL verificado + franjas publicadas.
+    // Sin esto el ciclo de primera cita no se puede caminar (hoy 0 citas):
+    // el directorio del padre exige perfil ACTIVO Y verificación APROBADA
+    // vigente (SPEC-449); la reserva exige una franja libre futura.
+    // ------------------------------------------------------------------
+    console.log("[sembrar-demo] Fase 5-bis: creando PROFESIONAL verificado + franjas...");
+    const prof = await sembrarProfesionalDemo(admin.id, ciudad.id, passwordHash);
+    const profEmail = prof.emailConPerfil;
+    const profSinPerfilEmail = prof.emailSinPerfil;
+    resumen.profesionales += prof.profesionales;
+    resumen.verificaciones += prof.verificaciones;
+    resumen.franjas += prof.franjas;
+
+    // ------------------------------------------------------------------
     // Fase 6: reportes
     // ------------------------------------------------------------------
     console.log("[sembrar-demo] Fase 6: generando reportes demo...");
@@ -562,6 +704,8 @@ async function main() {
                 password,
             })),
             { email: comiteEmail, rol: "COMITE_VALIDACION" as const, password },
+            { email: profEmail, rol: "PROFESIONAL" as const, password },
+            { email: profSinPerfilEmail, rol: "PROFESIONAL" as const, password },
             ...padres.map((p) => ({ email: p.email, rol: "PARENT" as const, password })),
         ],
         colegios: resumen.colegios.map((c) => ({ nombre: c.nombre, adminEmail: c.adminEmail })),
@@ -581,6 +725,7 @@ async function main() {
     console.log(`  Padres:             ${resumen.padres}`);
     console.log(`  Contactos confianza:${resumen.contactosConfianza}`);
     console.log(`  Ident. contacto:    ${resumen.identificadoresContacto}`);
+    console.log(`  Profesionales:      ${resumen.profesionales} (1 con perfil + 1 sin perfil · verificaciones ${resumen.verificaciones}, franjas ${resumen.franjas})`);
     console.log(`  Reportes:           ${resumen.reportes} (anónimos ${resumen.reportesAnonimos}, autenticados ${resumen.reportesAutenticados})`);
     console.log(`    Históricos:       ${resumen.reportesHistoricos}`);
     console.log(`    Frescos (motor):  ${resumen.reportesFrescos}`);
