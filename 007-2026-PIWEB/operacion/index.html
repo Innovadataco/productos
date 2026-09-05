@@ -240,7 +240,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
   <section id="pantallas-wrap" hidden>
     <div class="seccion-titulo">
       <h2>Pantallas vs Dise&ntilde;o</h2>
-      <span class="sub"><span class="g ok">&#10003;</span> cumple &middot; <span class="g bad">&#10007;</span> no cumple &middot; <span class="emo">&#9203;</span> pendiente &nbsp;&middot;&nbsp; Jelkin <span class="g ok">&#10003;</span> aceptada / <span class="g w">&middot;</span> pendiente</span>
+      <span class="sub"><span class="g ok">&#10003;</span> cumple &middot; <span class="g mid">&#9680;</span> criterio &middot; <span class="g bad">&#10007;</span> no cumple &middot; <span class="emo">&#9203;</span> pendiente &nbsp;&middot;&nbsp; Jelkin <span class="g ok">&#10003;</span> aceptada / <span class="g w">&middot;</span> pendiente</span>
     </div>
     <div class="roles" id="pantallas"></div>
   </section>
@@ -324,6 +324,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
   }
   function celdaCumple(v) {
     if (v === "cumple")    return '<span class="g ok"  title="Cumple el diseño">&#10003;</span>';        // ✓
+    if (v === "criterio")  return '<span class="g mid" title="Objetivo cumple; criterio fino por revisar en fresco">&#9680;</span>'; // ◐
     if (v === "no-cumple") return '<span class="g bad" title="No cumple el diseño">&#10007;</span>';     // ✗
     if (v === "pendiente") return '<span class="emo" title="Pendiente de revisión de diseño">&#9203;</span>'; // ⏳
     return '<span class="dash">&mdash;</span>';
