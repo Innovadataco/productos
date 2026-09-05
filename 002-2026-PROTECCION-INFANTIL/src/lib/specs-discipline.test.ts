@@ -153,9 +153,17 @@ describe("disciplina Spec-Kit (spec 087)", () => {
         expect(inexistentes, inexistentes.join("; ")).toEqual([]);
     });
 
-    it("el índice specs/README.md cubre todas las carpetas reales", () => {
-        const readme = fs.readFileSync(path.join(SPECS_DIR, "README.md"), "utf-8");
-        const faltantes = carpetas.filter((c) => !readme.includes(`(${c}/spec.md)`));
-        expect(faltantes, faltantes.join("; ")).toEqual([]);
+    // SPEC-487 (D-109): el índice specs/README.md ya NO se compara con las carpetas
+    // en el PR —eso obligaba a cada PR a editar el índice (clase de conflicto union)—;
+    // lo regenera el barrido post-merge. Acá se vigila la REPRESENTABILIDAD de la
+    // fuente: ninguna carpeta de spec a medio crear (sin spec.md). Que el índice
+    // committeado esté al día lo garantiza el barrido, no el PR.
+    it("ninguna carpeta specs/NNN queda a medio crear (sin spec.md) — representabilidad (SPEC-487)", () => {
+        const sinSpec = fs
+            .readdirSync(SPECS_DIR, { withFileTypes: true })
+            .filter((e) => e.isDirectory())
+            .map((e) => e.name)
+            .filter((c) => !fs.existsSync(path.join(SPECS_DIR, c, "spec.md")));
+        expect(sinSpec, sinSpec.join("; ")).toEqual([]);
     });
 });

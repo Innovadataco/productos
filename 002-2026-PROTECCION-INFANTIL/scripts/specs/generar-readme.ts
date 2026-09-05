@@ -287,6 +287,38 @@ export function verificarReadme(): string[] {
     return problemas;
 }
 
+/**
+ * SPEC-487 (D-109) · verificación de REPRESENTABILIDAD para el PR.
+ *
+ * El PR ya NO toca specs/README.md (lo regenera el barrido post-merge). Acá no
+ * se compara committed==regen —eso obligaba a cada PR a editar el índice y era
+ * la fuente del CONFLICTING en cadena (union no lo resuelve server-side)—. Se
+ * verifica que la FUENTE sea representable:
+ *  - toda carpeta specs/NNN-* tiene spec.md (no hay spec a medio crear);
+ *  - el generador corre limpio (cada spec produce su fila sin romper).
+ * El índice committeado lo pone al día el barrido, no el PR.
+ */
+export function verificarRepresentable(dirSpecs: string = DIR_SPECS): string[] {
+    const problemas: string[] = [];
+    for (const carpeta of readdirSync(dirSpecs)) {
+        const ruta = resolve(dirSpecs, carpeta);
+        if (!statSync(ruta).isDirectory()) continue;
+        if (!existsSync(resolve(ruta, "spec.md"))) {
+            problemas.push(`specs/${carpeta}/ no tiene spec.md (carpeta de spec a medio crear).`);
+        }
+    }
+    // El generador corre sobre la fuente real (solo en el modo por defecto): si
+    // algún spec.md rompe el parseo, la fuente no es representable.
+    if (dirSpecs === DIR_SPECS) {
+        try {
+            generarReadme();
+        } catch (e) {
+            problemas.push(`el generador del índice no corre sobre la fuente: ${(e as Error).message}`);
+        }
+    }
+    return problemas;
+}
+
 function main(): void {
     const argv = process.argv.slice(2);
 
@@ -295,6 +327,20 @@ function main(): void {
     if (argv.includes("--resumen")) {
         const specs = ordenar(listarCarpetasSpec().map(cargarSpec));
         console.log(renderResumen(specs).split("\n").filter((l) => !l.startsWith("<!--")).join("\n").trim());
+        return;
+    }
+
+    // SPEC-487 (D-109): el check del PR es de REPRESENTABILIDAD (la fuente produce
+    // el índice sin romper), NO committed==regen. El PR no toca el índice; el
+    // barrido post-merge lo regenera. Este es el modo que corre el gate de CI.
+    if (argv.includes("--check-representable")) {
+        const problemas = verificarRepresentable();
+        if (problemas.length > 0) {
+            console.error("[SPEC-487] La fuente de specs no es representable en el índice:");
+            for (const p of problemas) console.error(`  - ${p}`);
+            process.exit(1);
+        }
+        console.log("[SPEC-487] Fuente de specs representable (el índice lo regenera el barrido post-merge).");
         return;
     }
 

@@ -1,0 +1,103 @@
+# SPEC-487 (D-109) · Barrido post-merge de los generados append-por-spec.
+#
+# Los 3 generados a los que CADA spec/ruta le agrega una fila —specs/README.md,
+# docs/architecture/02-roles-capacidades.md, 03-pantallas.md— dejaron de tocarse
+# en los PR (el gate del PR verifica REPRESENTABILIDAD, no committed==regen). Eso
+# saca esos archivos de la cadena de conflictos: `merge=union` bajaba el dolor del
+# rebase local pero GitHub NO lo aplica server-side → cada PR que los editaba
+# quedaba CONFLICTING contra el siguiente (medido en toda la Ola 2).
+#
+# Este job los mantiene al día: corre sobre `main` fresco tras cada merge, los
+# regenera, y si driftearon PUSHEA una rama y el OPERADOR abre el PR (flujo B,
+# D-110, ya validado en vivo en #406 — nada de `gh pr create`). Es idempotente y
+# AUTO-TERMINANTE: cuando el PR del barrido mergea, regen==committed → sin drift →
+# no abre otro. Nunca commitea directo a main.
+#
+# Ventana de lag aceptable: entre un merge y el merge del PR del barrido, el índice
+# committeado trasciende la fuente por unas filas; como el gate del PR ya no exige
+# igualdad, nadie se pone rojo y la FUENTE siempre es correcta (el índice es
+# documentación, consistencia eventual).
+name: generados-post-merge-002-proteccion-infantil
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "002-2026-PROTECCION-INFANTIL/specs/**"
+      - "002-2026-PROTECCION-INFANTIL/src/**"
+      - "002-2026-PROTECCION-INFANTIL/prisma/schema.prisma"
+      - "002-2026-PROTECCION-INFANTIL/scripts/arch/**"
+      - "002-2026-PROTECCION-INFANTIL/docs/architecture/**"
+  workflow_dispatch:
+
+# Cada corrida reconcilia el estado COMPLETO de main; una corrida vieja es
+# descartable → cancel-in-progress:true (a diferencia del --tension, que no
+# cancela porque reescribe un número monotónico).
+concurrency:
+  group: generados-post-merge-002
+  cancel-in-progress: true
+
+jobs:
+  barrido:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # pushea la rama del bot (el operador abre el PR — flujo B)
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main # siempre sobre main fresco
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+
+      # Regenera los 3 generados append-por-spec desde la fuente de main.
+      # (Los byte-exactos 00/01/06 los mantiene al día el PR vía arch:check, no acá.)
+      - name: Regenerar índice + tablas de arquitectura
+        run: |
+          npx tsx scripts/specs/generar-readme.ts
+          npx tsx scripts/arch/generar-roles-capacidades.ts
+          npx tsx scripts/arch/generar-pantallas.ts
+
+      - name: ¿Hubo drift?
+        id: diff
+        run: |
+          ARCHIVOS="specs/README.md docs/architecture/02-roles-capacidades.md docs/architecture/03-pantallas.md"
+          if git diff --quiet -- $ARCHIVOS; then
+            echo "cambio=no" >> "$GITHUB_OUTPUT"
+            echo "Los generados ya reflejan main (idempotente). Nada que abrir."
+          else
+            echo "cambio=si" >> "$GITHUB_OUTPUT"
+            git diff --stat -- $ARCHIVOS
+          fi
+
+      # Tras regenerar, arch:check sigue verde (byte-exactos + aserciones).
+      - name: Verificar arch:check tras regenerar
+        if: steps.diff.outputs.cambio == 'si'
+        run: npm run arch:check
+
+      # El bot SOLO pushea la rama — NO abre el PR (flujo B, D-110, validado en #406).
+      # El OPERADOR abre el PR como usuario real: (a) esquiva el permiso de create de
+      # Actions (OFF por seguridad) y (b) dispara los required checks (actor real).
+      # El commit vacío anti-recursión NO hace falta. La rama matchea
+      # `verificar-base-pr.yml` (^work/pi-SPEC-[0-9]+-).
+      - name: Pushear la rama y avisar al operador
+        if: steps.diff.outputs.cambio == 'si'
+        working-directory: .
+        run: |
+          set -euo pipefail
+          RAMA="work/pi-SPEC-487-generados"
+          git config user.email "bot-generados@innovadataco.local"
+          git config user.name "bot-generados-post-merge"
+          git checkout -B "$RAMA"
+          git add 002-2026-PROTECCION-INFANTIL/specs/README.md \
+                  002-2026-PROTECCION-INFANTIL/docs/architecture/02-roles-capacidades.md \
+                  002-2026-PROTECCION-INFANTIL/docs/architecture/03-pantallas.md
+          git commit -m "chore(generados): regenerar índice + tablas de arquitectura post-merge (SPEC-487)"
+          git push --force origin "$RAMA"
+          echo "::notice title=Barrido de generados (SPEC-487)::Los generados driftearon; la rama $RAMA quedó pusheada. El operador la abre como PR (flujo B): por la UI https://github.com/Innovadataco/productos/pull/new/$RAMA, o con gh: gh pr create --base main --head $RAMA --title 'chore(generados): regenerar índice + tablas de arquitectura (barrido post-merge SPEC-487)' --body 'Barrido post-merge de los generados append-por-spec (SPEC-487). Regenerados sobre main fresco; arch:check verde.'"

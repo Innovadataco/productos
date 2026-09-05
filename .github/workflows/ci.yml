@@ -103,7 +103,11 @@ jobs:
       # difiere, el mensaje indica el comando exacto para arreglarlo. Corta el
       # ciclo de "conflictos de rebase" que hacía de specs/README.md el archivo
       # que más chocaba en el repo (03-09-2026: #324, #327/#329, #308).
-      - run: npx tsx scripts/specs/generar-readme.ts --check
+      # SPEC-487 (D-109): el PR verifica REPRESENTABILIDAD (la fuente produce el
+      # índice sin romper), NO committed==regen. El PR no toca specs/README.md; el
+      # barrido post-merge (generados-post-merge.yml) lo regenera. Esto saca el
+      # índice de la cadena de conflictos union.
+      - run: npx tsx scripts/specs/generar-readme.ts --check-representable
 
   test-unit:
     runs-on: ubuntu-latest
