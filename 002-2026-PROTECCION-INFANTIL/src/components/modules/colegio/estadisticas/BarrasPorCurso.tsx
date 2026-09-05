@@ -30,7 +30,7 @@ export function BarrasPorCurso({ cursos, className = "" }: BarrasPorCursoProps) 
 
             {cursos.length === 0 ? (
                 <p className="cuerpo mt-4 text-muted">
-                    Ningún curso con reportes en los últimos 30 días — tus cursos están en calma.
+                    Ningún curso con reportes en los últimos 30 días — sus cursos están en calma.
                 </p>
             ) : (
                 <ol className="mt-4 space-y-1">

@@ -3,7 +3,7 @@ import Link from "next/link";
 /**
  * SPEC-143 (US4, FR-009) — Empty state del colegio sin cursos (mockup §5.2 del
  * brief): hero (escudo + sparkles, SVG custom — uno de los 3 momentos hero
- * permitidos por §4.4), celebración "Tu colegio está listo para empezar", CTA
+ * permitidos por §4.4), celebración "Su colegio está listo para empezar", CTA
  * gigante "Crear primer curso" y la vía alternativa "¿Ya tienes tu lista en
  * Excel?". La interfaz nunca muestra vacío: muestra el primer paso.
  */
@@ -53,10 +53,10 @@ export function EmptyStateColegio({ colegioNombre, className = "" }: EmptyStateC
                 </div>
 
                 <h1 className="titular-h1 anim-entrada mt-6 text-body" style={{ "--anim-retardo": "70ms" } as React.CSSProperties}>
-                    Tu colegio está listo para empezar
+                    Su colegio está listo para empezar
                 </h1>
                 <p className="cuerpo anim-entrada mt-3 text-muted" style={{ "--anim-retardo": "140ms" } as React.CSSProperties}>
-                    Comencemos creando tu primer curso.
+                    Comencemos creando su primer curso.
                 </p>
 
                 <Link
@@ -68,7 +68,7 @@ export function EmptyStateColegio({ colegioNombre, className = "" }: EmptyStateC
                 </Link>
 
                 <p className="anim-entrada mt-8 text-sm text-muted" style={{ "--anim-retardo": "280ms" } as React.CSSProperties}>
-                    ¿Ya tienes tu lista en Excel?
+                    ¿Ya tiene su lista en Excel?
                 </p>
                 <Link
                     href="/dashboard/colegio/cursos/unificado?modo=excel"

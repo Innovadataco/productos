@@ -53,7 +53,7 @@ export function SeccionIdentificadores({ estudiantes, onChange }: SeccionIdentif
     return (
         <div className="space-y-5">
             <p className="text-sm text-muted">
-                Redes, gamer tags, teléfonos o emails con los que tus estudiantes aparecen en línea. Es opcional.
+                Redes, gamer tags, teléfonos o emails con los que sus estudiantes aparecen en línea. Es opcional.
             </p>
             {conNombre.map((estudiante, indice) => (
                 <div key={estudiante.key} className="glass-input space-y-3 rounded-2xl p-4" aria-label={`Identificadores de ${estudiante.nombre} ${estudiante.apellidos}`}>

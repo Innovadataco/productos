@@ -13,7 +13,7 @@ import type { PlanSelectorDTO } from "@/lib/pagos/planes-selector.types";
 
 export const metadata: Metadata = {
     title: "Suscripción",
-    description: "Gestiona la suscripción institucional de Protección Infantil.",
+    description: "Gestione la suscripción institucional de Protección Infantil.",
 };
 
 interface PageProps {

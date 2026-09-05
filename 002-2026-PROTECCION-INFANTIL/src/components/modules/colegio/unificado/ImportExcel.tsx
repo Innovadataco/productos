@@ -53,7 +53,7 @@ export function ImportExcel({ onAceptar }: ImportExcelProps) {
                     data && typeof data === "object" && "error" in data
                         ? (data as { error?: { message?: string } }).error?.message
                         : undefined;
-                setError(mensaje ?? "No pudimos leer el archivo. Revisa que sea la plantilla y vuelve a intentar.");
+                setError(mensaje ?? "No pudimos leer el archivo. Revise que sea la plantilla y vuelva a intentar.");
                 return;
             }
             setResultado(data as ResultadoDryRun);
@@ -112,7 +112,7 @@ export function ImportExcel({ onAceptar }: ImportExcelProps) {
             <div
                 role="button"
                 tabIndex={0}
-                aria-label="Arrastra tu Excel o haz click aquí"
+                aria-label="Arrastre su Excel o haga clic aquí"
                 onClick={() => inputRef.current?.click()}
                 onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -137,7 +137,7 @@ export function ImportExcel({ onAceptar }: ImportExcelProps) {
             >
                 <span aria-hidden="true" className="text-2xl">📤</span>
                 <span className="text-sm font-semibold text-body">
-                    {cargando ? "Revisando tu lista…" : "Arrastra tu Excel o haz click aquí"}
+                    {cargando ? "Revisando su lista…" : "Arrastre su Excel o haga clic aquí"}
                 </span>
                 <span className="text-xs text-subtle">CSV o XLSX, hasta 500 filas</span>
             </div>

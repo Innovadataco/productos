@@ -51,7 +51,7 @@ export default async function ColegioLayout({ children }: { children: React.Reac
                     {debeMostrarBanner(estadoVigencia) && (
                         <div className="px-4 pt-4 sm:px-6">
                             <Alerta tono="advertencia">
-                                Tu plan vence pronto. Renueva para no perder el acceso.
+                                Su plan vence pronto. Renueve para no perder el acceso.
                             </Alerta>
                         </div>
                     )}

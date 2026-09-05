@@ -38,7 +38,7 @@ describe("ImportExcel", () => {
 
     it("renderiza el dropzone y el enlace de plantilla", () => {
         render(<ImportExcel onAceptar={() => undefined} />);
-        expect(screen.getByText("Arrastra tu Excel o haz click aquí")).toBeTruthy();
+        expect(screen.getByText("Arrastre su Excel o haga clic aquí")).toBeTruthy();
         const plantilla = screen.getByRole("link", { name: "Descargar plantilla Excel" });
         expect(plantilla.getAttribute("href")).toBe("/api/colegio/cursos/unificado/plantilla");
     });
@@ -71,7 +71,7 @@ describe("ImportExcel", () => {
         await subirArchivo(container);
 
         fireEvent.click(screen.getByRole("button", { name: "Corregir en Excel y reintentar" }));
-        expect(screen.getByText("Arrastra tu Excel o haz click aquí")).toBeTruthy();
+        expect(screen.getByText("Arrastre su Excel o haga clic aquí")).toBeTruthy();
         expect(onAceptar).not.toHaveBeenCalled();
     });
 

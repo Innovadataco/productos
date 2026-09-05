@@ -1,6 +1,6 @@
 /**
  * SPEC-143 (T005) — HeroEstado: declaración + luz ambiental + punto con pulso por
- * estado. CONDICIÓN DE COPY (ZEUS): el ámbar dice explícitamente "ya lo atendiste".
+ * estado. CONDICIÓN DE COPY (ZEUS): el ámbar dice explícitamente "ya lo atendió".
  */
 import React from "react";
 import { describe, it, expect } from "vitest";
@@ -22,14 +22,14 @@ describe("HeroEstado", () => {
     it("ámbar: el copy DICE que ya está atendido (nunca trabajo pendiente)", () => {
         render(<HeroEstado estado="ambar" />);
         const titular = screen.getByRole("heading", { level: 1 }).textContent ?? "";
-        expect(titular).toContain("ya lo atendiste");
-        expect(screen.getByText(/no tienes nada pendiente/i)).toBeTruthy();
+        expect(titular).toContain("ya lo atendió");
+        expect(screen.getByText(/no tiene nada pendiente/i)).toBeTruthy();
         expect(screen.queryByRole("link")).toBeNull();
     });
 
     it("rubí: palabra de urgencia y CTA a los avisos", () => {
         const { container } = render(<HeroEstado estado="rubi" />);
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("necesita que actúes hoy");
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("necesita que actúe hoy");
         const cta = screen.getByRole("link", { name: /Ver avisos nuevos/ });
         expect(cta.getAttribute("href")).toBe("/dashboard/colegio/alertas");
         expect(container.querySelector('[data-punto-estado="rubi"]')).toBeTruthy();

@@ -30,7 +30,7 @@ export function EscalarAlertaModal({ isOpen, alertaId, onClose, onEscalada }: Es
         if (!alertaId) return;
         const limpio = motivo.trim();
         if (limpio.length === 0) {
-            setError("Escribe el motivo del escalamiento");
+            setError("Escriba el motivo del escalamiento");
             return;
         }
         if (limpio.length > 2000) {
@@ -51,7 +51,7 @@ export function EscalarAlertaModal({ isOpen, alertaId, onClose, onEscalada }: Es
                 if (res.status === 409) {
                     setError(data?.error?.message || "Esta alerta ya fue escalada al comité");
                 } else if (res.status === 400) {
-                    setError(data?.error?.message || "Revisa el motivo: no cumple los requisitos");
+                    setError(data?.error?.message || "Revise el motivo: no cumple los requisitos");
                 } else {
                     setError(data?.error?.message || "No pudimos escalar la alerta");
                 }

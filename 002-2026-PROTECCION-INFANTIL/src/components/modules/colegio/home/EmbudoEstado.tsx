@@ -33,7 +33,7 @@ export function EmbudoEstado({ embudo, className = "" }: EmbudoEstadoProps) {
             aria-label="Embudo de estado de los reportes"
             className={`glass rounded-[var(--radio-card)] p-6 sm:p-8 ${className}`}
         >
-            <h2 className="titular-seccion text-body">El embudo de tus reportes</h2>
+            <h2 className="titular-seccion text-body">El embudo de sus reportes</h2>
 
             <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
                 <CifraEmbudo etiqueta="Recibidos" valor={recibidos} />

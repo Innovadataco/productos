@@ -391,6 +391,7 @@
 | [450](450-shards-y-margen-de-ci/spec.md) | SPEC-450 · El margen de CI contra el techo de 45 minutos — cierra I-282 | 🟢 IMPLEMENTADO |
 | [455](455-dashboard-publico-sin-rojo/spec.md) | SPEC-455 · «Cara» del rediseño: el dashboard público sin alarma | 🟢 IMPLEMENTADO |
 | [456](456-portada/spec.md) | SPEC-456 · «Cara» del rediseño: la portada (la puerta de entrada) | 🟢 IMPLEMENTADO |
+| [463](463-colegio-voz-usted/spec.md) | SPEC-463 · La voz del colegio a «usted» (D-107 de Jelkin) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

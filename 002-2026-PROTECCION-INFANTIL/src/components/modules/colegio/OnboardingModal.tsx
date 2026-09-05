@@ -91,14 +91,14 @@ export function OnboardingModal({ forceOpen = false, onOmitido }: OnboardingModa
             onClose={() => {
                 if (!forceOpen) setOpen(false);
             }}
-            title="Activa tu protección"
+            title="Active su protección"
             size="lg"
             showCloseButton={!forceOpen}
         >
             <div className="space-y-5">
                 <p className="text-sm text-muted">
                     Completa estos pasos para que el sistema pueda generar alertas cuando detecte un riesgo asociado a
-                    tu comunidad educativa.
+                    su comunidad educativa.
                 </p>
 
                 <ol className="space-y-3">

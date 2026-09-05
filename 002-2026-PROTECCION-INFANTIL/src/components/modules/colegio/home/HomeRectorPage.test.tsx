@@ -68,7 +68,7 @@ describe("HomeRectorPage", () => {
 
     it("estado rubí (≥1 nueva): declaración de urgencia con CTA", () => {
         render(<HomeRectorPage nombreUsuario="X" datos={fixture({ semaforo: { alertasNuevas: 2, alertas72h: 2 } })} />);
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("necesita que actúes hoy");
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("necesita que actúe hoy");
         const ctas = screen.getAllByRole("link", { name: /Ver avisos nuevos/ });
         expect(ctas.length).toBeGreaterThanOrEqual(1);
         for (const cta of ctas) expect(cta.getAttribute("href")).toBe("/dashboard/colegio/alertas");
@@ -76,7 +76,7 @@ describe("HomeRectorPage", () => {
 
     it("estado ámbar (72 h sin nuevas): el copy dice que ya está atendido", () => {
         render(<HomeRectorPage nombreUsuario="X" datos={fixture({ semaforo: { alertasNuevas: 0, alertas72h: 1 } })} />);
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("ya lo atendiste");
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("ya lo atendió");
     });
 
     it("I-29 y terminología §3: cero scores, cero jerga, cero palabras prohibidas", () => {

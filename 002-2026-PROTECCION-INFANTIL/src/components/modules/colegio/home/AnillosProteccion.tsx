@@ -35,7 +35,7 @@ export function AnillosProteccion({
             <PanelVidrio className={`flex h-full flex-col items-center justify-center p-6 text-center sm:p-8 ${className}`}>
                 <h2 className="titular-seccion text-body">Anillos de protección</h2>
                 <p className="cuerpo mt-3 text-muted">
-                    Aún no hay estudiantes para dibujar. Cuando crees tu primer curso, estos anillos
+                    Aún no hay estudiantes para dibujar. Cuando cree su primer curso, estos anillos
                     mostrarán a cuántos puedes ver y a cuántos puedes llamar.
                 </p>
                 <Link
