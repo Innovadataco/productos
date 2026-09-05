@@ -306,7 +306,7 @@ export default function ColegiosPageClient() {
             </div>
 
             {passwordInfo && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                <div className="rounded-xl border border-ambar/30 bg-ambar/10 p-4 text-sm text-estado-ambar">
                     <p className="font-semibold">Contraseña temporal de {passwordInfo.email} ({passwordInfo.colegioNombre})</p>
                     <p className="mt-1 opacity-80">Muéstrela una vez; no se volverá a mostrar.</p>
                     <div className="mt-3 flex items-center gap-3">

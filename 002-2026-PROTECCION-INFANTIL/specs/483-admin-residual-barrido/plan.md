@@ -9,7 +9,8 @@ Barrido mecánico de color crudo (Ola A) sobre `src/app/dashboard/admin/**`. Sin
    - `slate/gray` → borde `border-tinta/10`, velo `bg-tinta/5`, superficie `bg-papel/*`, divide `divide-tinta/10`, texto por jerarquía (`text-body/muted/subtle`). Pares light/dark → un token theme-aware (drop `dark:`).
    - `sky/cyan` → `cielo` (`text-cielo`, `bg-cielo/10`, `border-cielo`).
    - `emerald` → `pino` (`text-pino`, `bg-pino/10`).
-3. **Excluir `amber`** (Ola B) y `tokens-check.ts`/PISO.
+   - `amber` (ampliación mecánica): caja/trazo/fondo → `ambar` (con alpha); texto → `text-estado-ambar` (`--ambar-ink-rgb`, AA); `<Alerta advertencia>` sin override crudo.
+3. **Excluir `pdf-informe-mensual.tsx`** (colegio, Diseño aparte) y `tokens-check.ts`/PISO.
 4. **Candado** de conducta que muere por mutación (0 crudo mecánico en admin).
 5. **Preflight** completo (tsc, eslint, tokens:check, arch:check, generar-readme --check, unit) antes del push.
 

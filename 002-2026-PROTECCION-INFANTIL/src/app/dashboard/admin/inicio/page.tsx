@@ -155,7 +155,7 @@ function TarjetaSenal({ senal }: { senal: SenalAlarma }) {
     // Regla dura de Jelkin: NUNCA rojo. Ámbar para todas — la prioridad se
     // separa por sección arriba, no por color de tarjeta.
     return (
-        <GlassCard className="border-l-4 border-amber-500 p-4">
+        <GlassCard className="border-l-4 border-l-ambar p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <p className="text-sm text-body">{senal.texto}</p>
                 <Link

@@ -128,8 +128,9 @@ describe("/dashboard/admin/inicio · SPEC-378", () => {
         expect(resolverLinks[0].getAttribute("href")).toBe("/dashboard/admin/notificaciones/salud");
         expect(resolverLinks[1].getAttribute("href")).toBe("/dashboard/admin/operadores/asignar");
 
-        // El acento es ÁMBAR — al menos un elemento con `border-amber-`.
-        const conAmbar = container.querySelectorAll("[class*='amber-']");
+        // El acento es ÁMBAR — al menos un elemento con el token `ambar`
+        // (SPEC-483 migró el crudo `amber-*` al token: `border-l-ambar`).
+        const conAmbar = container.querySelectorAll("[class*='ambar']");
         expect(conAmbar.length, "las tarjetas deben usar ámbar como acento").toBeGreaterThan(0);
 
         // Y cero rojo en toda la pantalla.

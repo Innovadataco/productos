@@ -138,7 +138,7 @@ export default function DatasetEntrenamientoPageClient() {
                 </div>
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Pendientes de anonimizar</p>
-                    <p className="mt-1 text-2xl font-bold text-amber-600">{Math.max(0, total - anonimizados)}</p>
+                    <p className="mt-1 text-2xl font-bold text-estado-ambar">{Math.max(0, total - anonimizados)}</p>
                 </div>
             </div>
 
@@ -196,7 +196,7 @@ export default function DatasetEntrenamientoPageClient() {
                                                     Anonimizado
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-ambar/10 px-2.5 py-0.5 text-xs font-medium text-estado-ambar">
                                                 <ExclamationIcon className="h-3.5 w-3.5" />
                                                     Sin anonimizar
                                             </span>

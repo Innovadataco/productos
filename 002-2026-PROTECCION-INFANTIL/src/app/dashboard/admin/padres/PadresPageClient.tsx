@@ -249,7 +249,7 @@ export default function PadresPageClient() {
             )}
 
             {passwordTemporal && (
-                <Alerta tono="advertencia" role="status" className="border border-amber-200 p-4 dark:border-amber-800">
+                <Alerta tono="advertencia" role="status">
                     <p className="font-semibold">Contraseña temporal (muéstrela una vez)</p>
                     <div className="mt-2 flex items-center gap-2">
                         <code className="rounded-lg bg-papel/60 px-3 py-1.5 font-mono text-base">{passwordTemporal}</code>

@@ -137,7 +137,7 @@ export default function AdminOperadoresAsignarPage() {
                     </p>
                 )}
                 {reconciliacionError && (
-                    <p className="text-sm text-amber-700 dark:text-amber-400" role="alert">
+                    <p className="text-sm text-estado-ambar" role="alert">
                         {reconciliacionError}
                     </p>
                 )}
