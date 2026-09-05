@@ -56,6 +56,15 @@ body {
 .wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 32px;
         display: flex; flex-direction: column; gap: 13px; }
 
+/* Pestañas Operación / Modelo */
+.tabs { display: flex; gap: 4px; }
+.tabs a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none;
+          padding: 6px 12px; border: 1px solid var(--line); border-bottom: none;
+          border-radius: 6px 6px 0 0; background: var(--head); }
+.tabs a:hover { color: var(--ink); }
+.tabs a.active { color: var(--ink); background: var(--surface); border-color: var(--line);
+                 box-shadow: 0 2px 0 0 var(--surface); }
+
 /* Barra */
 .bar { display: flex; align-items: center; justify-content: space-between;
        gap: 10px 20px; flex-wrap: wrap; padding-bottom: 9px; border-bottom: 2px solid var(--line); }
@@ -198,6 +207,11 @@ footer code { font-family: "IBM Plex Mono", monospace; }
 </head>
 <body>
 <div class="wrap">
+
+  <nav class="tabs">
+    <a href="../operacion/" class="active" aria-current="page">Operaci&oacute;n</a>
+    <a href="../modelo/">Modelo de datos</a>
+  </nav>
 
   <div class="bar">
     <h1>Operación · Protección Infantil</h1>

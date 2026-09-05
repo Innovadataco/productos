@@ -15,3 +15,7 @@ services:
       # en 502). El JSON vive fuera de git y lo mantiene el CEO por SSH.
       - ./operacion/index.html:/usr/share/nginx/html/operacion/index.html:ro
       - /opt/proteccion-infantil/piweb/operacion.json:/usr/share/nginx/html/operacion/operacion.json:ro
+      # SPEC-503 · pestaña «Modelo de datos» (estática). Archivo por archivo, igual que operacion.
+      # ⚠️ Mount NUEVO: NO basta `docker restart piweb`; requiere `docker compose up -d`
+      # para que nginx tome el bind del archivo nuevo.
+      - ./modelo/index.html:/usr/share/nginx/html/modelo/index.html:ro
