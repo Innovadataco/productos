@@ -121,16 +121,20 @@ async function cargarBase() {
 }
 
 /**
- * SPEC-499 · siembra UN profesional demo que SÍ aparece en el directorio del
- * padre y es reservable: perfil `ACTIVO` + verificación `APROBADO` vigente
- * (la regla de SPEC-449) + franjas libres futuras. Todo marcado en
- * `demo_marcado` para que la purga lo levante (ver `lib/orden-borrado`).
+ * SPEC-499 · siembra dos profesionales demo:
+ *  1. CON perfil `ACTIVO` + verificación `APROBADO` vigente (regla SPEC-449) +
+ *     franjas libres futuras → aparece en el directorio y es reservable.
+ *  2. SIN perfil → para caminar SPEC-481 («entrar sin perfil completa el
+ *     onboarding, no 500»). Es solo un `Usuario` PROFESIONAL sin
+ *     `PerfilProfesional`; su conducta ya la bloquea el candado
+ *     `profesional-sin-perfil.candado.test.tsx`.
+ * Ambos marcados en `demo_marcado` (purgables vía `lib/orden-borrado`).
  */
 async function sembrarProfesionalDemo(
     adminId: string,
     ciudadId: string,
     passwordHash: string,
-): Promise<{ email: string; profesionales: number; verificaciones: number; franjas: number }> {
+): Promise<{ emailConPerfil: string; emailSinPerfil: string; profesionales: number; verificaciones: number; franjas: number }> {
     const email = emailUsuarioDemo("PROFESIONAL", 1);
     const { nombre, apellidos } = nombrePersona(96001);
     const usuario = await prisma.usuario.create({
@@ -205,7 +209,27 @@ async function sembrarProfesionalDemo(
         franjas++;
     }
 
-    return { email, profesionales: 1, verificaciones: 1, franjas };
+    // Profesional 2: SIN perfil (SPEC-481). Solo el usuario; al entrar a su
+    // home debe ir a completar el perfil, no romper en 500.
+    const emailSinPerfil = emailUsuarioDemo("PROFESIONAL", 2);
+    const { nombre: nomSinPerfil, apellidos: apeSinPerfil } = nombrePersona(96002);
+    const usuarioSinPerfil = await prisma.usuario.create({
+        data: {
+            email: emailSinPerfil,
+            nombre: `${nomSinPerfil} ${apeSinPerfil}`,
+            passwordHash,
+            rol: "PROFESIONAL",
+            estado: "activo",
+            debeCambiarPassword: false,
+        },
+    });
+    await marcarDemo("Usuario", usuarioSinPerfil.id, {
+        corrida: CORRIDA,
+        script: "sembrar-demo",
+        notas: "PROFESIONAL sin perfil (SPEC-481)",
+    });
+
+    return { emailConPerfil: email, emailSinPerfil, profesionales: 2, verificaciones: 1, franjas };
 }
 
 async function main() {
@@ -560,7 +584,8 @@ async function main() {
     // ------------------------------------------------------------------
     console.log("[sembrar-demo] Fase 5-bis: creando PROFESIONAL verificado + franjas...");
     const prof = await sembrarProfesionalDemo(admin.id, ciudad.id, passwordHash);
-    const profEmail = prof.email;
+    const profEmail = prof.emailConPerfil;
+    const profSinPerfilEmail = prof.emailSinPerfil;
     resumen.profesionales += prof.profesionales;
     resumen.verificaciones += prof.verificaciones;
     resumen.franjas += prof.franjas;
@@ -680,6 +705,7 @@ async function main() {
             })),
             { email: comiteEmail, rol: "COMITE_VALIDACION" as const, password },
             { email: profEmail, rol: "PROFESIONAL" as const, password },
+            { email: profSinPerfilEmail, rol: "PROFESIONAL" as const, password },
             ...padres.map((p) => ({ email: p.email, rol: "PARENT" as const, password })),
         ],
         colegios: resumen.colegios.map((c) => ({ nombre: c.nombre, adminEmail: c.adminEmail })),
@@ -699,7 +725,7 @@ async function main() {
     console.log(`  Padres:             ${resumen.padres}`);
     console.log(`  Contactos confianza:${resumen.contactosConfianza}`);
     console.log(`  Ident. contacto:    ${resumen.identificadoresContacto}`);
-    console.log(`  Profesionales:      ${resumen.profesionales} (verificaciones ${resumen.verificaciones}, franjas ${resumen.franjas})`);
+    console.log(`  Profesionales:      ${resumen.profesionales} (1 con perfil + 1 sin perfil · verificaciones ${resumen.verificaciones}, franjas ${resumen.franjas})`);
     console.log(`  Reportes:           ${resumen.reportes} (anónimos ${resumen.reportesAnonimos}, autenticados ${resumen.reportesAutenticados})`);
     console.log(`    Históricos:       ${resumen.reportesHistoricos}`);
     console.log(`    Frescos (motor):  ${resumen.reportesFrescos}`);
