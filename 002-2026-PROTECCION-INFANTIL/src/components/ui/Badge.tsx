@@ -6,13 +6,21 @@ interface BadgeProps {
     className?: string;
 }
 
+// SPEC-457 · Badge al Sistema de Diseño (catálogo §2). Pastilla de estado por
+// FUNCIÓN semántica, en tokens: nunca color crudo, nunca rojo decorativo.
+//   success → pino (ok/verificado) · warning → ambar (atención)
+//   danger  → rubi (criticidad REAL) · neutral → neutro (tinta velada)
+//   default/info → cielo (informativo/marca)
+// Los tokens voltean solos en modo oscuro (variables CSS), así que no hace falta
+// la variante `dark:`. La conducta no cambia: cada variante muestra el MISMO
+// estado que antes, y el estado se lee por texto (children) además del color.
 const variantClasses: Record<BadgeVariant, string> = {
-    default: "bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300",
-    success: "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300",
-    warning: "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300",
-    danger: "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300",
-    info: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300",
-    neutral: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    default: "bg-cielo/10 text-cielo",
+    success: "bg-pino/10 text-pino",
+    warning: "bg-ambar/10 text-ambar",
+    danger: "bg-rubi/10 text-rubi",
+    info: "bg-cielo/10 text-cielo",
+    neutral: "bg-tinta/10 text-muted",
 };
 
 export function Badge({ children, variant = "default", className = "" }: BadgeProps) {

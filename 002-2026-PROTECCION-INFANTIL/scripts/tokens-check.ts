@@ -43,7 +43,12 @@ import * as path from "node:path";
 // salen (marca cielo/pino + rubi). Re-medido sobre el main que YA tiene SPEC-455
 // (1065): los ~27 crudos del hero salen → 1038. Es el ratchet sobre main fresco,
 // no el 1052 que midió la rama antes de rebasar sobre 455.
-const PISO = 1038;
+// 2026-09-04 SPEC-457: el mueble `Badge.tsx` migra sus 6 variantes a tokens
+// semánticos (pino=ok · ambar=atención · rubi=criticidad · cielo=info · neutro),
+// sin `dark:` (los tokens voltean solos). Salen los 24 crudos del Badge —la peor
+// deuda de color del producto (24 usos × 79 pantallas). Medición sobre origin/main
+// fresco (con 455+456): 1014 (120 archivos).
+const PISO = 1014;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
