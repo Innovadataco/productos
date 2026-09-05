@@ -47,7 +47,11 @@ import * as path from "node:path";
 // Sistema de Diseño — las 17 clases crudas (sky/cyan/emerald/red/slate del
 // `Button.tsx`) salen; la piel vive en globals.css por token (.css no cuenta en
 // este ratchet). Medición sobre origin/main fresco (1038): 1038 − 17 = 1021.
-const PISO = 1021;
+// 2026-09-05 SPEC-469: el mueble `Tabla.tsx` (51 pantallas) migra sus 6 crudos
+// (head bg/borde + divide del body, todos `slate`) a token `tinta` velado — sin
+// líneas verticales ni zebra, separación por espacio/tono. Medición sobre
+// origin/main fresco (con Button, 1021): 1015 (119 archivos).
+const PISO = 1015;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;

@@ -60,7 +60,7 @@ describe("Tabla", () => {
             </>
         );
         const theads = container.querySelectorAll("thead");
-        expect(theads[0].className).toContain("bg-slate-100/70");
+        expect(theads[0].className).toContain("bg-tinta/5");
         expect(theads[1].className).toContain("border-b");
     });
 
@@ -74,6 +74,6 @@ describe("Tabla", () => {
                 </TablaBody>
             </Tabla>
         );
-        expect(container.querySelector("tbody")?.className).toContain("divide-y divide-slate-100");
+        expect(container.querySelector("tbody")?.className).toContain("divide-y divide-tinta/10");
     });
 });
