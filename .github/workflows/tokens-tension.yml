@@ -5,7 +5,8 @@
 # mínimo real— la hace ESTE job, no los PR. Corre sobre `main` fresco:
 #   npx tsx scripts/tokens-check.ts --tension
 # que reescribe `const PISO = N` si el conteo real bajó (nunca sube; idempotente).
-# Si cambió algo, abre un PR con el piso apretado (nunca commitea directo a main).
+# Si cambió algo, pushea la rama con el piso apretado y el operador abre el PR
+# como usuario real (flujo B, SPEC-466); nunca commitea directo a main.
 #
 # Disparo MANUAL por ahora (workflow_dispatch): el CEO lo corre a mano al cerrar
 # cada ola del rediseño. El `schedule` queda comentado, listo para activar cuando
@@ -27,8 +28,7 @@ jobs:
   tension:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # commitea la rama del PR
-      pull-requests: write # abre el PR con el piso apretado
+      contents: write # pushea la rama del bot (el operador abre el PR — flujo B)
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -64,31 +64,30 @@ jobs:
         if: steps.diff.outputs.cambio == 'si'
         run: npm run tokens:check
 
-      # Abre (o actualiza) un PR con el piso nuevo — nunca commitea directo a main.
-      # Con `gh` nativo (GITHUB_TOKEN) — sin action de terceros. La rama del bot
-      # matchea `verificar-base-pr.yml` (^work/pi-SPEC-[0-9]+-...) para que su PR
-      # pase el check requerido `verificar_base` del ruleset «Gate CI - main».
-      # SPEC-466: `bot/…` NO tiene exención en ese patrón → su PR nacería
-      # bloqueado; por eso la rama es `work/pi-SPEC-466-tension`.
+      # El bot SOLO pushea la rama con el piso apretado — NO abre el PR.
+      # Nunca commitea directo a main. La rama `work/pi-SPEC-466-tension` matchea
+      # `verificar-base-pr.yml` (^work/pi-SPEC-[0-9]+-...) para que el PR pase el
+      # check requerido `verificar_base` del ruleset «Gate CI - main». El
+      # force-push reusa la rama en cada corrida; se borra al mergear.
       #
-      # ⚠️ ANTI-RECURSIÓN (trampa de GitHub): un push/PR originado con
-      # `GITHUB_TOKEN` NO dispara otros workflows. El PR del bot nace SIN correr
-      # `verificar_base` / `pi-gate` / `bi-gate` → esos checks requeridos quedan
-      # «pendientes» para siempre → el ruleset «Gate CI - main» lo bloquea igual.
-      # Cambiar la rama no lo arregla; el problema es quién origina el evento.
-      # Remedio (job de baja frecuencia, sin PAT ni secreto): el operador empuja
-      # UN commit vacío a la rama del bot COMO USUARIO REAL, lo que origina el
-      # evento `pull_request synchronize` con actor real y dispara los checks:
-      #     git fetch origin work/pi-SPEC-466-tension
-      #     git switch work/pi-SPEC-466-tension
-      #     git commit --allow-empty -m "ci: disparar checks"
-      #     git push
-      # Con eso corren los required checks → el PR queda mergeable.
-      - name: Abrir PR con el piso apretado
+      # ⚠️ Por qué el OPERADOR (usuario real) abre el PR, no el bot — DOS candados
+      # de GitHub DISTINTOS, ambos cazados corriendo el job de verdad (D-110):
+      #  1. PERMISO DE CREAR PR: con «Allow GitHub Actions to create and approve
+      #     pull requests» en OFF (buen default de seguridad; decisión CEO = flujo
+      #     (B), SPEC-466), un `gh pr create` desde el workflow falla con
+      #     «GitHub Actions is not permitted to create or approve pull requests».
+      #     El toggle NO se abre por un job manual de baja frecuencia.
+      #  2. ANTI-RECURSIÓN DE CHECKS: un push/PR originado con `GITHUB_TOKEN` NO
+      #     dispara otros workflows → los required checks quedarían «pendientes».
+      #
+      # REMEDIO ÚNICO que resuelve LOS DOS a la vez: el operador abre el PR como
+      # usuario real. Eso (a) esquiva el permiso de create —lo abre una persona,
+      # no Actions— y (b) origina `pull_request opened` con actor real → los
+      # required checks corren solos. El commit vacío YA NO hace falta (era el
+      # remedio viejo, que solo atacaba el candado 2 y no el 1).
+      - name: Pushear la rama y avisar al operador
         if: steps.diff.outputs.cambio == 'si'
         working-directory: .
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           RAMA="work/pi-SPEC-466-tension"
@@ -98,13 +97,4 @@ jobs:
           git add 002-2026-PROTECCION-INFANTIL/scripts/tokens-check.ts
           git commit -m "chore(tokens): apretar el piso de tokens:check al mínimo real (SPEC-466 --tension)"
           git push --force origin "$RAMA"
-          # Si ya hay un PR abierto para esta rama, el force-push lo actualiza solo.
-          if [ -z "$(gh pr list --head "$RAMA" --state open --json number --jq '.[].number')" ]; then
-            gh pr create --base main --head "$RAMA" \
-              --title "chore(tokens): apretar el piso al mínimo real (barrido --tension)" \
-              --body "Barrido de tensión de \`tokens:check\` (SPEC-466). El conteo real de color crudo bajó por debajo del PISO vigente; este PR aprieta la constante al mínimo medido sobre \`main\` fresco. Guard \`<=\`: los PR que bajan crudos no tocan el PISO; este barrido lo aprieta. Verificado: \`npm run tokens:check\` verde tras apretar.
-
-          **Para mergear:** este PR lo abrió el \`GITHUB_TOKEN\`, así que los checks requeridos NO se dispararon (anti-recursión de GitHub) y aparecen pendientes. Empujá un commit vacío como usuario real para dispararlos: \`git switch work/pi-SPEC-466-tension && git commit --allow-empty -m 'ci: disparar checks' && git push\`."
-          else
-            echo "PR de tensión ya abierto para $RAMA; el force-push lo actualizó."
-          fi
+          echo "::notice title=Barrido --tension (SPEC-466)::El piso bajó y la rama $RAMA quedó pusheada. El operador la abre como PR (flujo B): por la UI https://github.com/Innovadataco/productos/pull/new/$RAMA, o con gh: gh pr create --base main --head $RAMA --title 'chore(tokens): apretar el piso al mínimo real (barrido --tension)' --body 'Barrido de tensión de tokens:check (SPEC-466). Piso apretado al mínimo real sobre main fresco; guard <= verde tras apretar.'"
