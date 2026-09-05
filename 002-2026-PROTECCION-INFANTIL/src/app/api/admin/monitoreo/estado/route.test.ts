@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
+import { SENALES_MONITOREO } from "@/lib/monitoreo/probes";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -39,32 +40,20 @@ describe("GET /api/admin/monitoreo/estado (SPEC-171)", () => {
         expect(res.status).toBe(403);
     });
 
-    it("devuelve las 15 señales en verde (tailscale no-aplica sin URL) y metadatos del tablero", async () => {
+    it("devuelve TODAS las señales declaradas en verde (tailscale no-aplica sin URL)", async () => {
         await autenticarAdmin();
 
         const res = await GET(new Request(URL));
         expect(res.status).toBe(200);
         const body = await res.json();
 
-        // SPEC-291 (002-PI-191): 7 heredadas + 7 nuevas por tick-vida (workers propios).
-        // SPEC-302 (002-PI-208): + notif_pendientes_vencidas (métrica R-022 §1.3 punto a).
-        expect(Object.keys(body.senales).sort()).toEqual([
-            "analisis_reglas",
-            "analisis_score",
-            "anomalias",
-            "app",
-            "bd",
-            "expediente_motor",
-            "indices",
-            "notif_pendientes_vencidas",
-            "notificaciones",
-            "ollama_ping",
-            "ollama_smoke",
-            "senal_comunitaria",
-            "tailscale",
-            "vigencia",
-            "worker",
-        ]);
+        // SPEC-449: se afirma contra `SENALES_MONITOREO` DERIVADO, no contra una
+        // lista literal. La literal se desincronizaba cada vez que un worker
+        // nuevo sumaba su señal —pasó con SPEC-427 y volvió a pasar acá—, y el
+        // rojo salía en el shard 3 de CI a los 21 minutos en vez de en local.
+        // Derivarlo conserva lo que este test debe vigilar (que el tablero
+        // devuelva TODAS las señales) sin romperse porque se agregó una bien.
+        expect(Object.keys(body.senales).sort()).toEqual([...SENALES_MONITOREO].sort());
         expect(body.senales.app).toEqual({ estado: "verde", ultimoProbeEn: null, detalle: null });
         expect(body.senales.ollama_ping.estado).toBe("verde");
         expect(body.senales.tailscale.estado).toBe("no-aplica");

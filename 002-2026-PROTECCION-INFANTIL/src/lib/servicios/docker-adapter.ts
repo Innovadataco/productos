@@ -29,6 +29,7 @@ export const CONTENEDORES_PERMITIDOS = [
     "pi-senal-comunitaria",
     "pi-analisis-score",
     "pi-vigencia",
+    "pi-verificacion-vencimiento",
     "pi-analisis-reglas",
     "pi-expediente-motor",
     "pi-anomalias",

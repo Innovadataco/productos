@@ -113,6 +113,7 @@ Comando por defecto: `["node", "server.js"]`.
 | app | build local (Dockerfile) | `pi-app-dev` | 5005:3000 |
 | db | `pgvector/pgvector:pg16` | — | 5433:5432 |
 | pi-sesiones | build local (Dockerfile) | `pi-sesiones-dev` | — |
+| pi-verificacion-vencimiento | build local (Dockerfile) | `pi-verificacion-vencimiento-dev` | — |
 | pi-vigencia | build local (Dockerfile) | `pi-vigencia-dev` | — |
 
 ### Producción (`docker-compose.prod.yml`)
@@ -130,6 +131,7 @@ Comando por defecto: `["node", "server.js"]`.
 | pi-notificaciones | `pi-app:${PI_APP_TAG:-latest}` | `pi-notificaciones` | — |
 | pi-senal-comunitaria | `pi-app:${PI_APP_TAG:-latest}` | `pi-senal-comunitaria` | — |
 | pi-sesiones | `pi-app:${PI_APP_TAG:-latest}` | `pi-sesiones` | — |
+| pi-verificacion-vencimiento | `pi-app:${PI_APP_TAG:-latest}` | `pi-verificacion-vencimiento` | — |
 | pi-vigencia | `pi-app:${PI_APP_TAG:-latest}` | `pi-vigencia` | — |
 | simulador-abuso | `pi-app:${PI_APP_TAG:-latest}` | `pi-simulador-abuso` | — |
 | worker | `pi-app:${PI_APP_TAG:-latest}` | `pi-worker` | — |

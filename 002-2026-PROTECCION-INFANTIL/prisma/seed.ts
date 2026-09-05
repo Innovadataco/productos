@@ -4088,6 +4088,10 @@ async function main() {
     //    Plantilla y regla sembradas (no quemadas): el admin edita el texto y
     //    puede apagar la regla desde el panel, sin desplegar.
     await seedCorroboracionPadre();
+    // ── SPEC-449 (I-313): el reloj de la verificación del profesional ──────
+    //    Hora de corrida parametrizable + aviso «te vence pronto», los dos
+    //    sembrados: el admin ajusta la hora y edita el texto sin desplegar.
+    await seedVencimientoVerificacion();
 
     // Cerramos el cliente interno para no dejar conexiones/locks colgando entre
     // llamadas en tests (evita deadlocks con TRUNCATE de resetDatabase).
@@ -4095,7 +4099,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion, seedParametrosPrimeraCita, seedCorroboracionPadre };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion, seedParametrosPrimeraCita, seedCorroboracionPadre, seedVencimientoVerificacion };
 
 // ── SPEC-428 (A-75 · brief §9 M4 §4): precio estándar de la primera cita ──
 // Orden permanente de Jelkin (§4): nada quemado. Se siembra idempotente
@@ -4495,4 +4499,69 @@ async function seedCorroboracionPadre() {
     });
 
     console.log("[SEED] SPEC-439 plantilla+regla reporte.corroborado_por_otro listas");
+}
+
+// ── SPEC-449 (I-313): reloj de vencimiento de la verificación ──────────────
+// La Ley 2375/2024 obliga a revalidar antecedentes cada 4 meses. El aviso sale
+// ANTES de que venza (30 días), no el día después — que es cuando ya perdió al
+// profesional del directorio. Texto y hora sembrados: se editan sin desplegar.
+async function seedVencimientoVerificacion() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "profesional.verificacion.hora_corrida" },
+        update: {},
+        create: {
+            clave: "profesional.verificacion.hora_corrida",
+            valor: "02:00",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion:
+                "Hora (HH:MM, Bogotá) de la corrida diaria que marca VENCIDA la verificación del profesional y avisa los vencimientos próximos. Un valor inválido cae al default 02:00 sin romper el worker. SPEC-449.",
+        },
+    });
+
+    const clave = "profesional_verificacion_por_vencer";
+    const asunto = "Tu verificación vence pronto";
+    const cuerpoMarkdown = [
+        "Hola,",
+        "",
+        "Tu verificación como profesional de la red vence el **{{venceEn}}**.",
+        "",
+        "La ley exige revalidar los antecedentes cada cuatro meses. Si vence, tu perfil",
+        "deja de aparecer en el directorio y las familias no podrán agendar contigo.",
+        "",
+        "Puedes volver a enviar tus documentos desde tu ficha, en cualquier momento.",
+    ].join("\n");
+
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave },
+        update: {
+            canal: "EMAIL",
+            asunto,
+            cuerpoMarkdown,
+            variablesSchema: { type: "object", properties: { venceEn: { type: "string" } } },
+            activa: true,
+        },
+        create: {
+            clave,
+            canal: "EMAIL",
+            asunto,
+            cuerpoMarkdown,
+            variablesSchema: { type: "object", properties: { venceEn: { type: "string" } } },
+            activa: true,
+        },
+    });
+
+    await upsertNotificacionRegla({
+        evento: "profesional.verificacion.por_vencer",
+        rol: "PROFESIONAL",
+        canal: "EMAIL",
+        plantillaClave: clave,
+        // Obligatoria: no es marketing. Sin este aviso el profesional se entera
+        // de que venció cuando ya salió del directorio.
+        obligatoria: true,
+    });
+
+    console.log("[SEED] SPEC-449 hora de corrida + aviso de vencimiento listos");
 }

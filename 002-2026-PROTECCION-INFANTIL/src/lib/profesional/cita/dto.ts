@@ -34,8 +34,33 @@ const HORAS_48_EN_MS = 48 * 60 * 60 * 1000;
  */
 export function debeExponerContacto(
     solicitud: Pick<SolicitudCita, "estado" | "pagoAprobadoEn">,
-    now: Date = new Date()
+    now: Date,
+    /**
+     * SPEC-449 · estado del PERFIL del profesional. **REQUERIDO a propósito.**
+     *
+     * Nació opcional «para no romper llamadores». Eso es exactamente el punto
+     * blando: hoy hay un solo llamador y lo pasa, pero **el próximo que se
+     * olvide vuelve a exponer el teléfono de un profesional vencido, y ningún
+     * test lo vería**. Esto es reserva legal (H-2 · Ley 2375/2024), así que el
+     * compilador tiene que exigirlo — no la memoria de quien escriba el código.
+     */
+    estadoPerfil: PerfilProfesional["estado"] | null
 ): boolean {
+    // SPEC-449 (I-313 · I-315): PI no puede seguir sirviendo el teléfono de
+    // alguien de quien **ya decidió** que no debe estar atendiendo. Manda sobre
+    // cualquier excepción de abajo, incluida la cita confirmada.
+    //
+    //  · `VENCIDO` — se le cumplió el plazo de la Ley 2375/2024 y quedó escrito
+    //    en la auditoría. Seguir entregando su contacto es contradecir lo que
+    //    el propio sistema registró que sabía.
+    //  · `SUSPENDIDO` — **más grave todavía**: es una decisión HUMANA de IDC
+    //    sobre esa persona. Si PI sigue dándole su teléfono a una familia,
+    //    contradice su propia decisión (I-315).
+    //
+    // La lista es explícita a propósito: un `!== "ACTIVO"` cerraría también
+    // estados de tránsito como `EN_REVISION`, y eso es otra decisión que nadie
+    // tomó.
+    if (estadoPerfil === "VENCIDO" || estadoPerfil === "SUSPENDIDO") return false;
     if (solicitud.estado === "CONFIRMADA") return true;
     if (solicitud.estado === "VENCIDA_SIN_RESPUESTA") {
         if (!solicitud.pagoAprobadoEn) return false;
@@ -110,7 +135,10 @@ export function toCitaParaPadre(
         solicitudPreviaId: solicitud.solicitudPreviaId,
         pagoHeredadoDeId: solicitud.pagoHeredadoDeId,
     };
-    if (debeExponerContacto(solicitud, now)) {
+    // SPEC-449: el estado del PERFIL entra en la decisión. `solicitud.profesional`
+    // ya es un `PerfilProfesional` completo, así que el dato está a mano y no
+    // hace falta ensanchar ninguna consulta.
+    if (debeExponerContacto(solicitud, now, solicitud.profesional.estado)) {
         base.contactoProfesional = {
             email: solicitud.profesional.usuario.email,
             telefono: solicitud.profesional.usuario.telefono,

@@ -74,7 +74,10 @@ function afirmarPayloadSinContactoNiInternos(payload: unknown, ctx: string) {
     }
 }
 
-async function crearProfesionalActivo(ciudadId: string, extra?: { especialidades?: string[] }) {
+async function crearProfesionalActivo(
+    ciudadId: string,
+    extra?: { especialidades?: string[]; venceEn?: Date },
+) {
     const usuario = await crearUsuario("PARENT"); // rol PARENT sirve — el candado del schema no restringe rol; L1b lo cambia a PROFESIONAL. Lo que importa es el Usuario base con los centinelas.
     // Machaco el Usuario base con centinelas para que el barrido detecte fugas
     // desde CUALQUIER join hacia `Usuario`. Sufijo único por id para no chocar
@@ -90,7 +93,14 @@ async function crearProfesionalActivo(ciudadId: string, extra?: { especialidades
             nombre: CENTINELAS.nombreUsuario,
         },
     });
-    return prisma.perfilProfesional.create({
+    // SPEC-449 (I-313): un profesional ACTIVO de verdad SIEMPRE tiene una
+    // verificación APROBADA vigente — la Ley 2375/2024 obliga a revalidar cada
+    // 4 meses y `decidir` es lo único que pone ACTIVO. El fixture creaba
+    // perfiles ACTIVO sin ninguna verificación, un estado que en producción no
+    // existe; ahora la crea. **Esto NO afloja el candado H-2 de este archivo:**
+    // los centinelas en los campos internos siguen exactamente donde estaban y
+    // el barrido que los busca no se tocó.
+    const perfil = await prisma.perfilProfesional.create({
         data: {
             usuarioId: usuario.id,
             nombreVisible: `Dra. Pública ${usuario.id.slice(0, 5)}`,
@@ -111,6 +121,28 @@ async function crearProfesionalActivo(ciudadId: string, extra?: { especialidades
                 razonSocial: CENTINELAS.datosFacturacionRazonSocial,
                 nit: CENTINELAS.datosFacturacionNit,
             },
+        },
+    });
+    await crearVerificacionAprobada(perfil.id, extra?.venceEn);
+    return perfil;
+}
+
+/**
+ * SPEC-449: la verificación APROBADA que sostiene a un perfil ACTIVO.
+ * `venceEn` por defecto en el futuro; pasándole una fecha pasada se simula el
+ * profesional cuyos antecedentes caducaron.
+ */
+async function crearVerificacionAprobada(perfilProfesionalId: string, venceEn?: Date) {
+    const revisor = await crearUsuario("ADMIN");
+    return prisma.verificacionProfesional.create({
+        data: {
+            perfilProfesionalId,
+            revisadoPorId: revisor.id,
+            revisadoEn: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            checklist: {},
+            resultado: "APROBADO",
+            autorizacionArchivoId: "archivo-de-prueba",
+            venceEn: venceEn ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         },
     });
 }
@@ -290,5 +322,67 @@ describe("SPEC-392 · GET /api/padre/profesionales/[id] · candado H-2", () => {
             params: Promise.resolve({ id: perfil.id }),
         });
         expect(res.status).toBe(404);
+    });
+});
+
+/**
+ * SPEC-449 (I-313) · la vigencia manda, no solo el estado.
+ *
+ * La Ley 2375/2024 obliga a revalidar antecedentes cada 4 meses. Antes de esta
+ * spec, `listarActivos` filtraba **solo** `estado: "ACTIVO"`: un profesional
+ * cuya verificación caducó seguía en el directorio **para siempre**, porque
+ * además nada en el árbol escribía nunca `VENCIDO`.
+ *
+ * Estos candados son de CONDUCTA: consultan el endpoint real y afirman quién
+ * sale y quién no. **Reproducción negativa:** devolvé el `where` a solo
+ * `estado: "ACTIVO"` en `perfil-profesional.ts` y el primero se pone rojo.
+ */
+describe("SPEC-449 · un profesional con antecedentes caducados NO aparece", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        const padre = await crearUsuario("PARENT");
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+    });
+
+    it("con la verificación VENCIDA desaparece de la lista, aunque el perfil siga ACTIVO", async () => {
+        const { ciudad } = await crearPaisCiudad();
+        await crearProfesionalActivo(ciudad.id, { venceEn: new Date(Date.now() - 24 * 60 * 60 * 1000) });
+
+        const res = await GET_LISTA(await requestLista("?seed=abcdefgh1234"));
+        const body = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(
+            body.items,
+            "El perfil sigue ACTIVO porque el reloj todavía no corrió — y aun así no " +
+                "puede aparecer: es la segunda defensa que SPEC-449 agrega en la consulta.",
+        ).toHaveLength(0);
+    });
+
+    it("CONTRAPRUEBA · el mismo perfil con la verificación vigente SÍ aparece", async () => {
+        const { ciudad } = await crearPaisCiudad();
+        await crearProfesionalActivo(ciudad.id);
+
+        const res = await GET_LISTA(await requestLista("?seed=abcdefgh1234"));
+        const body = await res.json();
+
+        expect(body.items).toHaveLength(1);
+    });
+
+    it("y su ficha individual responde 404, no una página con sus datos", async () => {
+        const { ciudad } = await crearPaisCiudad();
+        const perfil = await crearProfesionalActivo(ciudad.id, {
+            venceEn: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        });
+
+        const res = await GET_DETALLE(
+            new Request(`http://localhost:5005/api/padre/profesionales/${perfil.id}`),
+            { params: Promise.resolve({ id: perfil.id }) },
+        );
+
+        expect(
+            res.status,
+            "Sacarlo de la lista y dejar su ficha abierta por URL directa sería media defensa.",
+        ).toBe(404);
     });
 });
