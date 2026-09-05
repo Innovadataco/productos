@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -248,10 +249,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                     )}
 
                     {loading ? (
-                        <div className="flex items-center gap-3 py-8 text-muted">
-                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-pino" />
-                            Cargando...
-                        </div>
+                        <SkeletonLista />
                     ) : error ? (
                         <ErrorState title="No pudimos cargar el alumno" description={error} onRetry={() => estudianteId && cargar(estudianteId)} />
                     ) : estudiante ? (

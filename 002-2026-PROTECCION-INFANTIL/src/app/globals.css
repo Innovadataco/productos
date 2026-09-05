@@ -70,10 +70,17 @@
 
         /* §4.5 Movimiento — una sola curva en todo el producto */
         --curva: cubic-bezier(0.16, 1, 0.3, 1);
+
+        /* SPEC-494 · relleno del mueble Skeleton (§4.8): ~6% tinta, se ve sin gritar. */
+        --skeleton: rgb(var(--tinta-rgb) / 0.06);
     }
 
     .dark {
         color-scheme: dark;
+
+        /* SPEC-494 · en oscuro el fantasma sube a ~8% (tinta voltea a claro, así
+           el fantasma se ve sobre el fondo oscuro; papel/8 sería casi invisible). */
+        --skeleton: rgb(var(--tinta-rgb) / 0.08);
 
         --pino-rgb: 79 224 184; /* #4fe0b8 */
         --cielo-rgb: 111 182 245; /* #6fb6f5 */
@@ -342,6 +349,29 @@
     *::after {
         animation: none !important;
         transition: none !important;
+    }
+}
+
+/* SPEC-494 · mueble Skeleton (§4.8): fantasma de carga que preserva el layout,
+   NUNCA un spinner. Relleno por token --skeleton; shimmer suave izq→der (jamás
+   girar). El bloque reduced-motion de arriba apaga el ::after → queda el fantasma
+   estático visible, sin movimiento. */
+.skeleton {
+    background-color: var(--skeleton);
+    position: relative;
+    overflow: hidden;
+}
+.skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(var(--tinta-rgb) / 0.05), transparent);
+    animation: skeleton-shimmer 1.4s var(--curva) infinite;
+}
+@keyframes skeleton-shimmer {
+    100% {
+        transform: translateX(100%);
     }
 }
 

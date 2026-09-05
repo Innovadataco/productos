@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -366,10 +367,7 @@ export default function ColegiosPageClient() {
                         Listado
                     </h2>
                     {loading ? (
-                        <div className="flex items-center gap-3 py-8 text-muted">
-                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
-                            Cargando colegios...
-                        </div>
+                        <SkeletonLista />
                     ) : error ? (
                         <ErrorState title="No pudimos cargar los colegios" description={error} onRetry={cargar} />
                     ) : colegios.length === 0 ? (
