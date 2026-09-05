@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Operación · Protección Infantil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Tokens del artefacto aprobado — herramienta operativa, aislada del sistema de marketing de piweb */
+:root {
+  --ground:  #F3F5F8;
+  --surface: #FFFFFF;
+  --head:    #F7F9FB;
+  --zebra:   #FCFDFE;
+  --line:    #DCE2E9;
+  --line-2:  #EEF1F4;
+  --ink:     #0E141C;
+  --muted:   #5B6875;
+  --faint:   #8E99A5;
+  --accent:  #2563A8;
+  --libre:      #17754A;  --libre-bg:   #E1F1E8;
+  --proceso:    #A96D02;  --proceso-bg: #FBF0D9;
+  --ocupado:    #BC3626;  --ocupado-bg: #FAE5E2;
+  --off:        #8E99A5;  --off-bg:     #EDF0F3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:  #0A1017;  --surface: #131B25;  --head:    #0F1721;  --zebra:   #111924;
+    --line:    #24303F;  --line-2:  #1A2330;
+    --ink:     #EAEFF5;  --muted:   #8B98A7;  --faint:   #64717F;  --accent:  #5B9BD8;
+    --libre:      #4FB07C;  --libre-bg:   #102D1F;
+    --proceso:    #DCA43B;  --proceso-bg: #31250C;
+    --ocupado:    #E0685A;  --ocupado-bg: #381A16;
+    --off:        #64717F;  --off-bg:     #1A222E;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:  #0A1017;  --surface: #131B25;  --head:    #0F1721;  --zebra:   #111924;
+  --line:    #24303F;  --line-2:  #1A2330;
+  --ink:     #EAEFF5;  --muted:   #8B98A7;  --faint:   #64717F;  --accent:  #5B9BD8;
+  --libre:      #4FB07C;  --libre-bg:   #102D1F;
+  --proceso:    #DCA43B;  --proceso-bg: #31250C;
+  --ocupado:    #E0685A;  --ocupado-bg: #381A16;
+  --off:        #64717F;  --off-bg:     #1A222E;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px; line-height: 1.4; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 32px;
+        display: flex; flex-direction: column; gap: 13px; }
+
+/* Barra */
+.bar { display: flex; align-items: center; justify-content: space-between;
+       gap: 10px 20px; flex-wrap: wrap; padding-bottom: 9px; border-bottom: 2px solid var(--line); }
+.bar h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.bar .info { font-family: "IBM Plex Mono", monospace; font-size: 11.5px;
+             color: var(--muted); font-variant-numeric: tabular-nums;
+             display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.bar .info b { color: var(--ink); font-weight: 600; }
+.bar .info .dash { color: var(--faint); }
+.bar .recargar { font: inherit; font-family: "IBM Plex Sans", sans-serif; font-size: 11.5px;
+                 background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+                 border-radius: 4px; padding: 4px 9px; cursor: pointer; transition: background .12s; }
+.bar .recargar:hover { background: var(--head); color: var(--ink); }
+.bar .recargar:active { transform: translateY(1px); }
+
+/* Equipos */
+.crew { display: flex; flex-wrap: wrap; gap: 6px; }
+.grp { display: flex; align-items: center; gap: 5px; background: var(--surface);
+       border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px 5px 10px; flex-wrap: wrap; }
+.grp > .gl { font-size: 9.5px; font-weight: 700; letter-spacing: .1em;
+             text-transform: uppercase; color: var(--faint);
+             padding-right: 6px; border-right: 1px solid var(--line-2);
+             margin-right: 2px; white-space: nowrap; }
+.who { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+       padding: 2px 7px 2px 5px; border-radius: 3px; white-space: nowrap; }
+.who i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.who.libre     { background: var(--libre-bg); }
+.who.libre i   { background: var(--libre); }
+.who.proceso   { background: var(--proceso-bg); }
+.who.proceso i { background: var(--proceso); }
+.who.ocupado   { background: var(--ocupado-bg); }
+.who.ocupado i { background: var(--ocupado); }
+.who.off       { background: var(--off-bg); }
+.who.off i     { background: var(--off); }
+.who b { font-weight: 600; }
+.who span { color: var(--muted); font-size: 11.5px; }
+.crew-empty { color: var(--muted); font-size: 12px; padding: 6px 10px; background: var(--surface);
+              border: 1px dashed var(--line); border-radius: 5px; }
+
+.key { display: flex; gap: 13px; flex-wrap: wrap; font-size: 11px; color: var(--faint); }
+.key i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+/* Paneles */
+.panel { background: var(--surface); border: 1px solid var(--line);
+         border-radius: 5px; overflow: hidden; }
+.ph { display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; padding: 7px 11px; background: var(--head); border-bottom: 1px solid var(--line); }
+.ph h2 { margin: 0; font-size: 10px; font-weight: 700;
+         letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.ph .meta { font-family: "IBM Plex Mono", monospace; font-size: 11px;
+            color: var(--faint); font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; font-size: 9.5px; font-weight: 600;
+     letter-spacing: .07em; text-transform: uppercase; color: var(--faint);
+     padding: 6px 8px; border-bottom: 1px solid var(--line);
+     white-space: nowrap; background: var(--surface); }
+th.c { text-align: center; }
+td { padding: 5px 8px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+td.c { text-align: center; }
+tbody tr:nth-child(even) { background: var(--zebra); }
+tr:last-child td { border-bottom: none; }
+td.nm { font-weight: 500; white-space: normal; min-width: 186px; }
+
+.id { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600;
+      color: var(--accent); font-variant-numeric: tabular-nums; }
+.d { font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
+     font-variant-numeric: tabular-nums; color: var(--muted); }
+.d.est { color: var(--proceso); }
+.ref { font-family: "IBM Plex Mono", monospace; font-size: 11px;
+       color: var(--muted); font-variant-numeric: tabular-nums; }
+.dash { color: var(--faint); }
+
+.b { display: inline-block; min-width: 15px; font-weight: 700; font-size: 13px; line-height: 1; }
+.b.y { color: var(--libre); }
+.b.n { color: var(--faint); font-weight: 400; }
+.b.w { color: var(--proceso); }
+
+.tag { display: inline-block; padding: 1px 6px; border-radius: 3px;
+       font-size: 10.5px; font-weight: 600; }
+.tag.ok  { background: var(--libre-bg);   color: var(--libre); }
+.tag.mid { background: var(--proceso-bg); color: var(--proceso); }
+.tag.bad { background: var(--ocupado-bg); color: var(--ocupado); }
+
+.need { color: var(--proceso); font-weight: 600; white-space: normal; min-width: 210px; }
+.need.hard { color: var(--ocupado); }
+
+.prog { display: inline-flex; align-items: center; gap: 6px; }
+.prog .track { width: 44px; height: 4px; border-radius: 2px;
+               background: var(--line); overflow: hidden; }
+.prog .track i { display: block; height: 100%; background: var(--libre); }
+
+.alert { display: flex; gap: 9px; align-items: center;
+         background: var(--proceso-bg); border-left: 3px solid var(--proceso);
+         border-radius: 4px; padding: 8px 12px; font-size: 12.5px; }
+.alert b { color: var(--proceso); }
+.alert.hard { background: var(--ocupado-bg); border-left-color: var(--ocupado); }
+.alert.hard b { color: var(--ocupado); }
+
+.tabla-vacia { padding: 14px; color: var(--muted); text-align: center; font-size: 12.5px; }
+
+/* Estado de error / carga */
+.aviso { background: var(--surface); border: 1px solid var(--line); border-radius: 5px;
+         padding: 18px 20px; }
+.aviso.err { border-left: 3px solid var(--ocupado); }
+.aviso h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.aviso p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; max-width: 62ch; }
+.aviso pre { margin: 10px 0 0; padding: 8px 10px; background: var(--ground);
+             border: 1px solid var(--line-2); border-radius: 4px; font-family: "IBM Plex Mono", monospace;
+             font-size: 11px; color: var(--faint); overflow-x: auto; white-space: pre-wrap;
+             max-height: 140px; }
+.aviso .last { margin-top: 8px; font-family: "IBM Plex Mono", monospace;
+               font-size: 10.5px; color: var(--faint); }
+
+footer { font-size: 10.5px; color: var(--faint); padding-top: 4px; }
+footer code { font-family: "IBM Plex Mono", monospace; }
+
+@media (max-width: 640px) {
+  .wrap { padding: 12px 10px 28px; }
+  td.nm { min-width: 148px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="bar">
+    <h1>Operación · Protección Infantil</h1>
+    <div class="info">
+      <span>Colombia <b id="now">—</b></span>
+      <span>Actualizado <b id="actualizado">—</b></span>
+      <span>Prod <b id="prod">—</b></span>
+      <button type="button" class="recargar" id="recargar" aria-label="Recargar el tablero ahora">Recargar ahora</button>
+    </div>
+  </div>
+
+  <!-- Equipos -->
+  <div id="equipos"></div>
+
+  <div class="key">
+    <span><i style="background:var(--libre)"></i>Libre</span>
+    <span><i style="background:var(--proceso)"></i>En proceso</span>
+    <span><i style="background:var(--ocupado)"></i>Ocupado o congelado</span>
+    <span><i style="background:var(--off)"></i>Sin sesión</span>
+  </div>
+
+  <!-- Funcionalidades -->
+  <div class="panel">
+    <div class="ph">
+      <h2>Funcionalidades</h2>
+      <span class="meta" id="meta-func">—</span>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="c">#</th>
+            <th>Funcionalidad</th>
+            <th class="c">Brief</th>
+            <th class="c">Instr.</th>
+            <th class="c">Spec</th>
+            <th class="c">Inicio</th>
+            <th class="c">Estimada</th>
+            <th class="c">Fin</th>
+            <th class="c">Despl.</th>
+            <th class="c">Calidad</th>
+            <th class="c">Tu OK</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-func">
+          <tr><td colspan="11" class="tabla-vacia">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="alerta"></div>
+
+  <!-- Recorridos -->
+  <div class="panel">
+    <div class="ph">
+      <h2>Recorridos de calidad</h2>
+      <span class="meta" id="meta-rec">—</span>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="c">#</th>
+            <th>Recorrido</th>
+            <th class="c">Avance</th>
+            <th class="c">Inicio</th>
+            <th class="c">Estimada</th>
+            <th class="c">Fin</th>
+            <th class="c">Resultado</th>
+            <th class="c">Estado</th>
+            <th>¿Te necesita?</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-rec">
+          <tr><td colspan="9" class="tabla-vacia">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="aviso"></div>
+
+  <footer>
+    Producción <code id="prod-footer">—</code> · Fechas en hora de Colombia · Tablero mantenido por el CEO.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ------------------ configuración ------------------
+  var params = new URLSearchParams(location.search);
+  var refreshSeg = parseInt(params.get("refresh"), 10);
+  if (!Number.isFinite(refreshSeg) || refreshSeg < 5) refreshSeg = 60;
+  var REFRESH_MS = refreshSeg * 1000;
+  var URL_JSON = "operacion.json";
+
+  // ------------------ reloj vivo ------------------
+  var $now = document.getElementById("now");
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function tickReloj() {
+    try {
+      var p = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "America/Bogota",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+      }).formatToParts(new Date()).reduce(function (a, x) { a[x.type] = x.value; return a; }, {});
+      $now.textContent = p.day + "-" + p.month + "-" + p.year + " " + p.hour + ":" + p.minute + ":" + p.second;
+    } catch (e) {
+      var d = new Date();
+      $now.textContent = pad(d.getDate()) + "-" + pad(d.getMonth() + 1) + "-" + d.getFullYear() +
+                         " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+    }
+  }
+  tickReloj();
+  setInterval(tickReloj, 1000);
+
+  // ------------------ helpers ------------------
+  function esc(s) {
+    if (s === null || s === undefined) return "";
+    return String(s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function fecha(v) {
+    // v puede ser "DD-MM-AAAA HH:MM", "DD-MM-AAAA", "3 h", "2 días", null.
+    // Devuelve el texto TAL CUAL (nunca rellena con 00:00). null → em-dash.
+    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
+    return '<span class="d">' + esc(v) + "</span>";
+  }
+  function fechaEstimada(v) {
+    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
+    return '<span class="d est">' + esc(v) + "</span>";
+  }
+  function ref(v) {
+    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
+    return '<span class="ref">' + esc(v) + "</span>";
+  }
+  function estadoPersona(e) {
+    return ({ libre: "libre", proceso: "proceso", ocupado: "ocupado", off: "off" })[e] || "off";
+  }
+  function tagCalidad(v) {
+    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
+    var cls = "mid";
+    if (v === "Cumple") cls = "ok";
+    else if (v === "Sin probar" || v === "Bloqueado") cls = "bad";
+    // "Parcial" y "En curso" quedan en mid; cualquier otro también.
+    return '<span class="tag ' + cls + '">' + esc(v) + "</span>";
+  }
+  function marcaTuOk(v) {
+    if (v === "aceptada") return '<b class="b y">✓</b>';
+    if (v === "pendiente") return '<b class="b w">·</b>';
+    return '<span class="dash">—</span>';
+  }
+  function marcaDesplegado(v) {
+    return v === true ? '<b class="b y">✓</b>' : '<b class="b n">—</b>';
+  }
+  function barra(hechos, total) {
+    var h = Math.max(0, Number(hechos) || 0);
+    var t = Math.max(0, Number(total) || 0);
+    if (t === 0) return '<span class="prog"><span class="ref">' + h + "/" + t + "</span></span>";
+    var pct = Math.min(100, Math.round((h / t) * 100));
+    return '<span class="prog"><span class="track"><i style="width:' + pct + '%"></i></span>' +
+           '<span class="ref">' + h + "/" + t + "</span></span>";
+  }
+
+  // ------------------ render ------------------
+  function renderEquipos(equipos) {
+    var $c = document.getElementById("equipos");
+    if (!equipos || !Array.isArray(equipos) || equipos.length === 0 ||
+        equipos.every(function (g) { return !g.personas || g.personas.length === 0; })) {
+      $c.innerHTML =
+        '<div class="crew"><div class="crew-empty">' +
+        '<b style="color:var(--ink);font-weight:600">Equipos</b> · Sin nadie en sesión' +
+        "</div></div>";
+      return;
+    }
+    var html = '<div class="crew">';
+    equipos.forEach(function (g) {
+      html += '<div class="grp"><span class="gl">' + esc(g.grupo || "Equipo") + "</span>";
+      (g.personas || []).forEach(function (p) {
+        var st = estadoPersona(p.estado);
+        html += '<span class="who ' + st + '"><i></i>' +
+                "<b>" + esc(p.nombre || "—") + "</b>" +
+                (p.detalle ? " <span>" + esc(p.detalle) + "</span>" : "") +
+                "</span>";
+      });
+      html += "</div>";
+    });
+    html += "</div>";
+    $c.innerHTML = html;
+  }
+
+  function renderFuncionalidades(fs) {
+    var $tb = document.getElementById("tbody-func");
+    var $meta = document.getElementById("meta-func");
+    if (!fs || !Array.isArray(fs) || fs.length === 0) {
+      $tb.innerHTML = '<tr><td colspan="11" class="tabla-vacia">Sin funcionalidades listadas.</td></tr>';
+      $meta.textContent = "0";
+      return;
+    }
+    var totalDespl = 0, totalCumple = 0, totalOk = 0;
+    var html = "";
+    fs.forEach(function (f) {
+      if (f.desplegado === true) totalDespl++;
+      if (f.calidad === "Cumple") totalCumple++;
+      if (f.tuOk === "aceptada") totalOk++;
+      html +=
+        "<tr>" +
+          '<td class="c id">' + esc(f.id || "—") + "</td>" +
+          '<td class="nm">' + esc(f.nombre || "—") + "</td>" +
+          '<td class="c">' + ref(f.brief) + "</td>" +
+          '<td class="c">' + ref(f.instructivo) + "</td>" +
+          '<td class="c">' + ref(f.spec) + "</td>" +
+          '<td class="c">' + fecha(f.inicio) + "</td>" +
+          '<td class="c">' + fechaEstimada(f.estimada) + "</td>" +
+          '<td class="c">' + fecha(f.fin) + "</td>" +
+          '<td class="c">' + marcaDesplegado(f.desplegado) + "</td>" +
+          '<td class="c">' + tagCalidad(f.calidad) + "</td>" +
+          '<td class="c">' + marcaTuOk(f.tuOk) + "</td>" +
+        "</tr>";
+    });
+    $tb.innerHTML = html;
+    $meta.textContent =
+      fs.length + " · " + totalDespl + " desplegadas · " +
+      totalCumple + " Cumple · " + totalOk + " aceptadas";
+  }
+
+  function renderAlerta(a) {
+    var $c = document.getElementById("alerta");
+    if (!a || !a.texto) { $c.innerHTML = ""; return; }
+    var cls = a.nivel === "hard" ? "alert hard" : "alert";
+    $c.innerHTML = '<div class="' + cls + '"><b>Atención</b><span>' + esc(a.texto) + "</span></div>";
+  }
+
+  function renderRecorridos(rs, meta) {
+    var $tb = document.getElementById("tbody-rec");
+    var $meta = document.getElementById("meta-rec");
+    if (!rs || !Array.isArray(rs) || rs.length === 0) {
+      $tb.innerHTML = '<tr><td colspan="9" class="tabla-vacia">Sin recorridos listados.</td></tr>';
+      $meta.textContent = meta && meta.ultimoInforme ? "Último informe " + esc(meta.ultimoInforme) : "";
+      return;
+    }
+    // Orden: hard con teNecesita · normal con teNecesita · resto. Dentro, orden del array.
+    var conIndice = rs.map(function (r, i) { return { r: r, i: i }; });
+    conIndice.sort(function (a, b) {
+      function prio(x) {
+        if (x.r.teNecesita && x.r.teNecesitaNivel === "hard") return 0;
+        if (x.r.teNecesita) return 1;
+        return 2;
+      }
+      var pa = prio(a), pb = prio(b);
+      if (pa !== pb) return pa - pb;
+      return a.i - b.i;
+    });
+    var html = "";
+    conIndice.forEach(function (o) {
+      var r = o.r;
+      var need;
+      if (r.teNecesita) {
+        var cls = r.teNecesitaNivel === "hard" ? "need hard" : "need";
+        need = '<td class="' + cls + '">' + esc(r.teNecesita) + "</td>";
+      } else {
+        need = '<td class="dash">No</td>';
+      }
+      html +=
+        "<tr>" +
+          '<td class="c id">' + esc(r.id || "—") + "</td>" +
+          '<td class="nm">' + esc(r.nombre || "—") + "</td>" +
+          '<td class="c">' + barra(r.hechos, r.total) + "</td>" +
+          '<td class="c">' + fecha(r.inicio) + "</td>" +
+          '<td class="c">' + fechaEstimada(r.estimada) + "</td>" +
+          '<td class="c">' + fecha(r.fin) + "</td>" +
+          '<td class="c">' + tagCalidad(r.resultado) + "</td>" +
+          '<td class="c d">' + esc(r.estado || "—") + "</td>" +
+          need +
+        "</tr>";
+    });
+    $tb.innerHTML = html;
+    var metaTexto = "";
+    if (meta) {
+      var pedazos = [];
+      if (meta.ultimoInforme) pedazos.push("Último informe " + esc(meta.ultimoInforme));
+      if (meta.resumen) pedazos.push(esc(meta.resumen));
+      metaTexto = pedazos.join(" · ");
+    }
+    $meta.innerHTML = metaTexto;
+  }
+
+  function renderBarra(data) {
+    document.getElementById("actualizado").textContent = data.actualizado || "—";
+    document.getElementById("prod").textContent = data.prod || "—";
+    document.getElementById("prod-footer").textContent = data.prod || "—";
+  }
+
+  function renderTodo(data) {
+    document.getElementById("aviso").innerHTML = "";
+    renderBarra(data);
+    renderEquipos(data.equipos);
+    renderFuncionalidades(data.funcionalidades);
+    renderAlerta(data.alerta);
+    renderRecorridos(data.recorridos, data.metaRecorridos);
+  }
+
+  function renderError(tipo, mensaje, cuerpo, http) {
+    var $a = document.getElementById("aviso");
+    var texto, titulo;
+    if (tipo === "ausente") {
+      titulo = "El tablero no encuentra su archivo de datos";
+      texto = "Este archivo lo mantiene el CEO por SSH sin desplegar. Si esto persiste por más de unos minutos, avisale.";
+    } else if (tipo === "corrupto") {
+      titulo = "El archivo de datos tiene un error de formato";
+      texto = "El JSON no se puede leer. Snippet del error abajo — probablemente una coma de más o una comilla suelta.";
+    } else {
+      titulo = "No se pudo cargar el tablero";
+      texto = "Puede ser un problema de red o del servidor. Reintento automático en " + refreshSeg + " s.";
+    }
+    var extra = "";
+    if (http) extra += "<p class=\"last\" style=\"margin-top:8px\">HTTP " + esc(http) + "</p>";
+    if (mensaje && tipo !== "ausente") extra += "<pre>" + esc(mensaje) + "</pre>";
+    if (cuerpo && tipo === "corrupto") extra += "<pre>" + esc(cuerpo.slice(0, 300)) + "</pre>";
+    extra += '<p class="last">Último intento: ' + esc(reloj()) + "</p>";
+    $a.innerHTML = '<div class="aviso err"><h3>' + titulo + "</h3><p>" + texto + "</p>" + extra + "</div>";
+    // Vaciar los paneles a estado limpio.
+    document.getElementById("actualizado").textContent = "—";
+    document.getElementById("prod").textContent = "—";
+    document.getElementById("prod-footer").textContent = "—";
+    document.getElementById("equipos").innerHTML = "";
+    document.getElementById("tbody-func").innerHTML = '<tr><td colspan="11" class="tabla-vacia">—</td></tr>';
+    document.getElementById("meta-func").textContent = "—";
+    document.getElementById("alerta").innerHTML = "";
+    document.getElementById("tbody-rec").innerHTML = '<tr><td colspan="9" class="tabla-vacia">—</td></tr>';
+    document.getElementById("meta-rec").textContent = "";
+  }
+
+  function reloj() {
+    return $now.textContent;
+  }
+
+  // ------------------ fetch ------------------
+  var cargando = false;
+  async function cargar() {
+    if (cargando) return;
+    cargando = true;
+    try {
+      var url = URL_JSON + "?t=" + Date.now();
+      var res = await fetch(url, { cache: "no-store" });
+      if (res.status === 404) { renderError("ausente", null, null, 404); return; }
+      if (!res.ok) { renderError("red", "HTTP " + res.status + " " + res.statusText, null, res.status); return; }
+      var texto = await res.text();
+      var data;
+      try {
+        data = JSON.parse(texto);
+      } catch (e) {
+        renderError("corrupto", e.message, texto);
+        return;
+      }
+      renderTodo(data);
+    } catch (e) {
+      renderError("red", e.message || String(e), null);
+    } finally {
+      cargando = false;
+    }
+  }
+
+  // Cargar apenas se pinte el DOM, y luego cada REFRESH_MS.
+  cargar();
+  setInterval(cargar, REFRESH_MS);
+
+  // Botón «Recargar ahora».
+  document.getElementById("recargar").addEventListener("click", cargar);
+
+  // Recargar si la pestaña vuelve al foco (mejor UX que esperar el próximo ciclo).
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") cargar();
+  });
+})();
+</script>
+</body>
+</html>

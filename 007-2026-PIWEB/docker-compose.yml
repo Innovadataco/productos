@@ -8,3 +8,8 @@ services:
     volumes:
       - ./index.html:/usr/share/nginx/html/index.html:ro
       - ./assets:/usr/share/nginx/html/assets:ro
+      # SPEC-497 · Tablero de Operación (ruta /operacion/).
+      # La PÁGINA viene del repo; los DATOS viven FUERA de git y los mantiene el CEO
+      # por SSH sin redesplegar (la vista los re-lee sola cada 60 s).
+      - ./operacion:/usr/share/nginx/html/operacion:ro
+      - /opt/proteccion-infantil/piweb/operacion.json:/usr/share/nginx/html/operacion/operacion.json:ro
