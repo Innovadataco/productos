@@ -50,8 +50,8 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
     const titulo = rol === "OPERADOR" ? "Operador" : rol === "PROFESIONAL" ? "Profesional" : "Administración";
 
     return (
-        <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl sm:flex">
-            <div className="border-b border-slate-200 dark:border-slate-800 p-6">
+        <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-tinta/10 bg-papel/70 dark:bg-papel/60 backdrop-blur-xl sm:flex">
+            <div className="border-b border-tinta/10 p-6">
                 <h1 className="text-lg font-bold text-body">{titulo}</h1>
                 <p className="mt-1 text-xs text-subtle">Protección Infantil</p>
             </div>
@@ -73,10 +73,10 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                                     active
                                         ? isPagos
                                             ? "bg-ambar text-white shadow-lg shadow-ambar/25 dark:bg-ambar dark:shadow-ambar/20"
-                                            : "accent-gradient text-white shadow-lg shadow-sky-500/25 dark:shadow-sky-400/20"
+                                            : "accent-gradient text-white shadow-lg shadow-cielo/25 dark:shadow-cielo/20"
                                         : isPagos
                                             ? "text-ambar hover:bg-ambar/10 dark:text-ambar dark:hover:bg-ambar/20 hover:text-ambar"
-                                            : "text-muted hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-body"
+                                            : "text-muted hover:bg-tinta/5 hover:text-body"
                                 }`}
                             >
                                 <link.icon className="h-4 w-4" />
@@ -87,10 +87,10 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                 })}
             </ul>
             {/* I-33 (SPEC-108): acceso a cambio de contraseña desde el panel admin/operador/comité */}
-            <div className="border-t border-slate-200 p-3 dark:border-slate-800">
+            <div className="border-t border-tinta/10 p-3">
                 <Link
                     href="/cambiar-password"
-                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted transition hover:bg-slate-100 hover:text-body dark:hover:bg-slate-800/60"
+                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted transition hover:bg-tinta/5 hover:text-body"
                 >
                     <KeyIcon className="h-4 w-4" />
                     Cambiar contraseña
