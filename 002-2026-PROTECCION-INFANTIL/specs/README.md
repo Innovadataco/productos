@@ -421,6 +421,12 @@
 | [485](485-chrome-nav-footer/spec.md) | SPEC-485 · El chrome compartido (NavHeader + LandingFooter) al Sistema de Diseño | 🟢 IMPLEMENTADO |
 | [486](486-rmsync-maxretries-node24/spec.md) | SPEC-486 · rmSync de cleanup con maxRetries — el runner de CI (Node 24 / git 2.55) tira ENOTEMPTY | 🟢 IMPLEMENTADO |
 | [487](487-generados-post-merge/spec.md) | SPEC-487 · Los generados dejan de tocarse en el PR: barrido post-merge (kill de la clase union) | 🟢 IMPLEMENTADO |
+| [488](488-rol-interno-ambar/spec.md) | SPEC-488 · Identidad de rol interno unificada en ámbar (mata el violet) + toggle | 🟢 IMPLEMENTADO |
+| [489](489-ring-confianza-tokens/spec.md) | SPEC-489 · El medidor de confianza (IaDocsPanel) a tokens (data-viz reservado) | 🟢 IMPLEMENTADO |
+| [490](490-colegio-border-l-emerald/spec.md) | SPEC-490 · Los 2 border-l-emerald del colegio + refuerzo del patrón direccional | 🟢 IMPLEMENTADO |
+| [491](491-publicas-auth-slate/spec.md) | SPEC-491 · Mini-barrido de públicas de auth (recuperar + reportar): slate→neutro | 🟢 IMPLEMENTADO |
+| [492](492-portada-forma-afinado/spec.md) | SPEC-492 · Afinado de forma de la portada (radio, titular fluido, estados de la consulta) | 🟢 IMPLEMENTADO |
+| [493](493-dashboard-profesional-forma/spec.md) | SPEC-493 · Afinado de forma: dashboard-público + profesional (concretos) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
