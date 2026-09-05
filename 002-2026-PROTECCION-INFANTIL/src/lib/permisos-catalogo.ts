@@ -1,6 +1,6 @@
 /**
  * Catálogo inicial de módulos permisibles (spec 019).
- * Única fuente: lo usan el seed y los tests (otorgarTodosLosPermisos).
+ * Única fuente: lo usan el seed y los tests (sembrarPermisosDeProduccion).
  */
 export interface ModuloCatalogo {
     clave: string;

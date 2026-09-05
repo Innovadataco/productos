@@ -1,41 +1,19 @@
 import { prisma } from "./prisma";
 import { CATALOGO_MODULOS } from "./permisos-catalogo";
+import { syncModulosYGrants } from "../../prisma/seed-modulos-grants";
 import { RolUsuario } from "@prisma/client";
 
 /**
- * Tras el reset, otorga a TODOS los roles del enum acceso a todo el catálogo:
- * reproduce el comportamiento implícito que los tests existentes asumen (los
- * guards de módulo son una capa adicional, no un reemplazo). Los tests de
- * permisos crean sus propios módulos/permisos y no se ven afectados.
+ * SPEC-443 (I-309): tras el reset, el arnés siembra EXACTAMENTE el mismo mapa de
+ * permisos que producción — la fuente única `syncModulosYGrants` de
+ * `prisma/seed-modulos-grants.ts` (NO una copia: el mismo módulo importado, para que
+ * no puedan separarse). Antes encendía 43 módulos × 8 roles («otorgar TODOS»), lo que
+ * hacía pasar en verde tests de acceso que en prod daban 403 (I-278) y candados de
+ * bloqueo que nunca morían. Un escenario que necesite un módulo que su rol NO tiene
+ * en prod lo concede explícitamente en el propio test; prohibido volver a encender todo.
  */
-export async function otorgarTodosLosPermisos() {
-    const moduloIds = new Map<string, string>();
-    for (const m of CATALOGO_MODULOS.filter((x) => !x.padre)) {
-        const row = await prisma.moduloPermisible.upsert({
-            where: { clave: m.clave },
-            update: { nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden },
-            create: { clave: m.clave, nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden },
-        });
-        moduloIds.set(m.clave, row.id);
-    }
-    for (const m of CATALOGO_MODULOS.filter((x) => x.padre)) {
-        const padreId = moduloIds.get(m.padre!)!;
-        const row = await prisma.moduloPermisible.upsert({
-            where: { clave: m.clave },
-            update: { nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden, padreId },
-            create: { clave: m.clave, nombre: m.nombre, categoria: m.categoria, esCritico: m.esCritico ?? false, orden: m.orden, padreId },
-        });
-        moduloIds.set(m.clave, row.id);
-    }
-    for (const rol of Object.values(RolUsuario)) {
-        for (const moduloId of moduloIds.values()) {
-            await prisma.permisoModulo.upsert({
-                where: { rol_moduloId: { rol, moduloId } },
-                update: { activo: true },
-                create: { rol, moduloId, activo: true },
-            });
-        }
-    }
+export async function sembrarPermisosDeProduccion(): Promise<void> {
+    await syncModulosYGrants(prisma);
 }
 
 const EXCLUDED_TABLES = new Set([
@@ -93,7 +71,7 @@ async function obtenerTablasDePGTables(): Promise<string[]> {
  * - `resetDatabase([])`: NO trunca nada, pero SÍ ejecuta seed de permisos y
  *   plataformas (mantiene la parte determinista del reset).
  *
- * En los tres casos, ejecuta `otorgarTodosLosPermisos()` + `asegurarPlataformas()`
+ * En los tres casos, ejecuta `sembrarPermisosDeProduccion()` + `asegurarPlataformas()`
  * al final para mantener el mismo contrato de estado inicial.
  */
 /**
@@ -149,7 +127,7 @@ export async function resetDatabase(tablas?: string[]): Promise<void> {
         }
     }
     // tablas === [] → salta el TRUNCATE, cae directo a los seeds.
-    await otorgarTodosLosPermisos();
+    await sembrarPermisosDeProduccion();
     // Algunos tests dan por sentado que ciertos catálogos estáticos existen
     // (ej. plataforma "whatsapp" en asignador.test.ts). Se aseguran aquí para
     // que la suite sea autocontenida aunque la BD de test no haya corrido seed.
