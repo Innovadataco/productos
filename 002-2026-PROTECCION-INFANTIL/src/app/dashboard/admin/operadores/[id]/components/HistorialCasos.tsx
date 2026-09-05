@@ -108,7 +108,7 @@ export function HistorialCasos({
                             </TablaBody>
                         </Tabla>
                         {pagination.totalPages > 1 && (
-                            <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 px-4 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="mt-4 flex flex-col gap-3 border-t border-tinta/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-sm text-subtle">
                                     Página {pagination.page} de {pagination.totalPages} · {pagination.total} casos
                                 </p>

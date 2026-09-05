@@ -122,7 +122,7 @@ export function OperacionTableroClient() {
                             {!monitoreoEnabled && (
                                 <div
                                     role="status"
-                                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+                                    className="rounded-xl border border-ambar/30 bg-ambar/10 p-4 text-sm text-estado-ambar"
                                 >
                                     Monitoreo desactivado: el vigilante está apagado en Configuración. Los semáforos muestran el último estado conocido y el tablero no se actualiza solo.
                                 </div>

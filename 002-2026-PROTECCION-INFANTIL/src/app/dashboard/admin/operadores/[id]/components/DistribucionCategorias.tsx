@@ -33,7 +33,7 @@ export function DistribucionCategorias({ casosPorCategoria }: { casosPorCategori
                                         <span className="text-body">{formatCategoria(c.categoria)}</span>
                                         <span className="text-muted">{c.total}</span>
                                     </div>
-                                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-tinta/10">
                                         <div
                                             className="h-full rounded-full bg-accent"
                                             style={{ width: `${ancho}%` }}
