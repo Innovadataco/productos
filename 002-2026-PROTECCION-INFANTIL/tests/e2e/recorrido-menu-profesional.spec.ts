@@ -1,61 +1,70 @@
 /**
- * SPEC-437 (Calidad · candado) · El menú del profesional solo pinta ítems con
- * pantalla real.
+ * SPEC-437 (Calidad) · Recorrido del menú del profesional — la barra lateral
+ * nueva + el menú móvil.
  *
- * ORIGEN OPERATIVO. Análogo al candado del menú admin (SPEC-405 / I-290). El
- * menú del rol PROFESIONAL vive en `src/lib/nav-items.ts` como
- * `PROFESIONAL_NAV_ITEMS` y lo consume `NavHeader.tsx`. Nada garantiza hoy
- * que cada `href` del menú tenga un `page.tsx` real: un ítem huérfano rinde
- * 404 y el CI no truena — es la clase de bug que este candado nace para
- * cazar antes de que Jelkin lo encuentre en producción.
+ * ORIGEN. Aviso del CEO 04-09 19:4x tras revisión del recorrido anterior:
+ * el spec previo afirmaba los 3 ítems del encabezado (`PROFESIONAL_NAV_ITEMS`)
+ * que ya existían — eso NO cubre lo que SPEC-437 (#359) arregla, que es:
  *
- * QUÉ AFIRMA — el orden lo fijó el CEO por importancia:
+ *   · Una BARRA LATERAL con 6 módulos concedibles:
+ *     Inicio · Citaciones · Casos · Calendario · Mi ficha · Verificación.
+ *   · «Citaciones» y «Casos» como PÁGINAS PROPIAS (no eran ítems antes).
+ *   · El MENÚ MÓVIL — hoy dejaba al psicólogo sin forma de volver al panel.
+ *   · Cero ítems de padre/operador/comité (I-299 reforzada).
  *
- *   (A) Cada href del menú del profesional, pedido con la sesión del propio
- *       profesional, responde 200 (o 3xx a otra ruta de la app — nunca 404).
- *       Un 404 es el bug canónico: el menú promete pantalla que no existe.
+ * Afirmar los 3 ítems viejos era el «candado de palabras»: pasa verde sin
+ * tocar lo que 437 arregla ([[ceo-candado-vigila-conducta-no-palabras]]).
+ * Este spec afirma **la conducta nueva**.
  *
- *   (B) Cada href del menú tiene un `page.tsx` real en `src/app/<href>/page.tsx`
- *       (o en una variante con grupo de rutas Next `(...)`). Este candado
- *       corre en el archivo fuente — es el que dispara aunque el servidor
- *       aún no esté levantado, y protege de renombres accidentales.
+ * TODOS LOS TESTS CON `test.fail`. SPEC-437 (#359) aún no despliega. Cuando
+ * entre, Playwright reporta "unexpected pass" y Dev X quita los candados
+ * como parte de esa spec — no antes, aunque el HTML de hoy ya contenga
+ * alguno de los ítems por casualidad.
  *
- *   (C) [candado futuro] En viewport móvil (375x812) el menú también pinta
- *       los mismos ítems. Este spec opera con `APIRequestContext` sin
- *       navegador para (A)/(B); el candado móvil se deja anotado y se
- *       activa cuando pasemos a `page`/`context.setViewportSize`.
- *
- * TEST.FAIL A PROPÓSITO. Los tres tests van con `test.fail(true, "SPEC-437
- * ...")` — patrón «candado ANTES del fix» (memoria interna). SPEC-437 aún
- * no está en main; cuando Dev X la despliegue, quien la mergee retira los
- * `test.fail` y los candados pasan a exigir el comportamiento correcto.
- *
- * FUENTE ÚNICA. Se importa `PROFESIONAL_NAV_ITEMS` de `src/lib/nav-items.ts`
- * — si Dev agrega/quita/renombra ítems, este spec los ejercita solo. Es el
- * candado a nivel datos que ningún `arch:check` HTTP daría.
- *
- * AISLAMIENTO. Prefijo `e2e-437-<uuid>`, profesional efímero registrado por
- * la pantalla (POST solicitar → fabricar token → POST completar) — nunca
- * mutación de rol real, nunca INSERT directo al `Usuario`/`Consentimiento`.
- * Limpieza FK-safe en `afterAll`.
+ * AISLAMIENTO. Prefijo `e2e-437-<uuid>`, cero mutación de rol real,
+ * limpieza FK-safe en `afterAll`. Aceptación del consentimiento por el
+ * flujo real (`POST /api/consentimiento/aceptar`).
  */
 import { test, expect, request as playwrightRequest, type APIRequestContext } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/lib/auth";
 import type { RolUsuario } from "@prisma/client";
-import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 
 const CORRIDA = `e2e-437-${randomUUID().slice(0, 8)}`;
-const PASSWORD = "Prof437!Secure";
+const PASSWORD = "Menu437!Secure";
 const EMAIL_PROF = `${CORRIDA}-prof@proteccion.local`;
 
-const sembrados = {
-    usuarios: new Set<string>(),
-    tokens: new Set<string>(),
-};
+/**
+ * Los 6 ítems que SPEC-437 (#359) construye en la barra lateral. Las URLs
+ * de referencia son la convención del proyecto (`/dashboard/profesional/*`
+ * para área de trabajo, `/perfil-profesional/*` para configurar la ficha).
+ * Si #359 elige otras URLs, el spec truena con el nombre exacto — que es
+ * lo que uno quiere.
+ */
+const ITEMS_LATERAL = [
+    { label: "Inicio",       href: "/dashboard/profesional" },
+    { label: "Citaciones",   href: "/dashboard/profesional/citaciones" },
+    { label: "Casos",        href: "/dashboard/profesional/casos" },
+    { label: "Calendario",   href: "/dashboard/profesional/calendario" },
+    { label: "Mi ficha",     href: "/perfil-profesional/completar" },
+    { label: "Verificación", href: "/perfil-profesional/verificacion" },
+] as const;
+
+/** Ítems que NUNCA deben aparecer — son de otros roles (I-299 reforzada). */
+const ITEMS_AJENOS = [
+    "Mis reportes",         // padre
+    "Círculo",              // padre
+    "A quién vigilo",       // padre
+    "Suscripción",          // padre
+    "Bandeja de reportes",  // operador
+    "Comité",               // comité de validación
+    "Colegios",             // admin
+    "Padres",               // admin
+] as const;
+
+const sembrados = { usuarios: new Set<string>(), tokens: new Set<string>() };
 
 async function ctx(): Promise<APIRequestContext> {
     return playwrightRequest.newContext();
@@ -71,15 +80,15 @@ async function fabricarEnlace(email: string, rol: RolUsuario): Promise<string> {
     return token;
 }
 
+async function login(request: APIRequestContext, email: string) {
+    const res = await request.post("/api/auth/login", { data: { email, password: PASSWORD } });
+    expect(res.status(), `login ${email}`).toBe(200);
+}
+
 async function aceptarConsentimiento(request: APIRequestContext) {
     await request.post("/api/consentimiento/aceptar", {
         data: { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: false },
     });
-}
-
-async function loginProfesional(request: APIRequestContext) {
-    const res = await request.post("/api/auth/login", { data: { email: EMAIL_PROF, password: PASSWORD } });
-    expect(res.status(), `login ${EMAIL_PROF}`).toBe(200);
 }
 
 async function limpiarSembrados() {
@@ -87,71 +96,50 @@ async function limpiarSembrados() {
         where: { email: EMAIL_PROF },
         select: { id: true },
     });
-    const usuarioIds = usuariosCreados.map((u) => u.id);
-    if (usuarioIds.length > 0) {
-        const perfiles = await prisma.perfilProfesional.findMany({
-            where: { usuarioId: { in: usuarioIds } },
-            select: { id: true },
-        });
-        const perfilIds = perfiles.map((p) => p.id);
-        if (perfilIds.length > 0) {
-            await prisma.documentoProfesional.deleteMany({ where: { perfilProfesionalId: { in: perfilIds } } });
-            await prisma.verificacionProfesional.deleteMany({ where: { perfilProfesionalId: { in: perfilIds } } });
-            await prisma.perfilProfesional.deleteMany({ where: { id: { in: perfilIds } } });
-        }
+    const ids = usuariosCreados.map((u) => u.id);
+    if (ids.length > 0) {
+        await prisma.perfilProfesional.deleteMany({ where: { usuarioId: { in: ids } } });
     }
     if (sembrados.tokens.size > 0) {
         await prisma.tokenRegistro.deleteMany({ where: { id: { in: [...sembrados.tokens] } } });
     }
-    if (usuarioIds.length > 0) {
-        await prisma.auditLog.deleteMany({ where: { usuarioId: { in: usuarioIds } } });
-        await prisma.usuario.deleteMany({ where: { id: { in: usuarioIds } } });
+    if (ids.length > 0) {
+        await prisma.auditLog.deleteMany({ where: { usuarioId: { in: ids } } });
+        await prisma.usuario.deleteMany({ where: { id: { in: ids } } });
     }
     sembrados.usuarios.clear();
     sembrados.tokens.clear();
 }
 
-/**
- * Un href del menú tiene página real si existe `src/app/<href>/page.tsx`
- * en cualquiera de las variantes canónicas que Next reconoce:
- *   - directa: `src/app/dashboard/profesional/page.tsx`
- *   - dentro de un grupo de rutas: `src/app/(algo)/dashboard/profesional/page.tsx`
- * El grupo `(algo)` es un directorio con paréntesis; Next lo salta a efectos
- * de URL. Este candado hace la búsqueda directa primero — que es la variante
- * usada hoy — y deja abierta la puerta de expandir a grupos si el árbol
- * cambia (búsqueda recursiva sería demasiado laxa para un candado).
- */
-function existePaginaReal(href: string): { ok: boolean; camino: string } {
-    const raiz = resolve(process.cwd(), "src", "app");
-    // href empieza con "/"; page.tsx bajo el href tal cual.
-    const caminoDirecto = resolve(raiz, `.${href}`, "page.tsx");
-    if (existsSync(caminoDirecto)) return { ok: true, camino: caminoDirecto };
-    return { ok: false, camino: caminoDirecto };
+/** Extrae el HTML del panel del profesional, con sesión ya iniciada. */
+async function htmlPanel(request: APIRequestContext, userAgent: string): Promise<string> {
+    const res = await request.get("/dashboard/profesional", {
+        headers: { "user-agent": userAgent },
+    });
+    expect(res.status(), `GET /dashboard/profesional con UA=${userAgent}`).toBe(200);
+    return res.text();
 }
 
-test.describe.serial("Menú del profesional — alineado con pantallas reales (SPEC-437)", () => {
+const UA_MOBILE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+const UA_DESKTOP = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
+
+test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437 candado)", () => {
     test.beforeAll(async () => {
+        // Registro por la pantalla (patrón SPEC-448 · fabricarEnlace).
         const request = await ctx();
         try {
-            // El profesional se registra caminando la pantalla real
-            // (POST solicitar → fabricar token del correo → POST completar),
-            // igual patrón que SPEC-448.
             const solicitar = await request.post("/api/auth/registro-profesional/solicitar", {
                 data: { email: EMAIL_PROF },
             });
-            expect(solicitar.status(), "SPEC-391: solicitar profesional responde 202").toBe(202);
+            expect(solicitar.status(), "SPEC-391: solicitar 202").toBe(202);
+            const tokensCreados = await prisma.tokenRegistro.count({ where: { email: EMAIL_PROF } });
+            expect(tokensCreados, "el POST solicitar debe crear al menos un TokenRegistro real").toBeGreaterThanOrEqual(1);
 
             const token = await fabricarEnlace(EMAIL_PROF, "PROFESIONAL" as RolUsuario);
             const completar = await request.post("/api/auth/registro-profesional/completar", {
                 data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
             });
-            expect(completar.status(), `completar profesional body=${await completar.text().catch(() => "")}`).toBe(200);
-
-            const usuario = await prisma.usuario.findUnique({ where: { email: EMAIL_PROF }, select: { id: true } });
-            expect(usuario, "el POST completar debe haber creado el Usuario").not.toBeNull();
-            sembrados.usuarios.add(usuario!.id);
-
-            await loginProfesional(request);
+            expect(completar.status(), `completar body=${await completar.text().catch(() => "")}`).toBe(200);
             await aceptarConsentimiento(request);
         } finally {
             await request.dispose();
@@ -162,89 +150,89 @@ test.describe.serial("Menú del profesional — alineado con pantallas reales (S
         await limpiarSembrados();
     });
 
-    /**
-     * (A) Cada href del menú responde 200 desde el servidor (nunca 404).
-     *
-     * El profesional aterriza en su panel; el resto del menú se ejercita
-     * por HTTP con la sesión del propio profesional. Aceptamos 200 y 3xx
-     * (redirects internos hacia rutas de la app) — el candado dispara si
-     * cae 404 (o >=500). Cada ítem en su propio `test.step` para que la
-     * salida del CI señale cuál falló.
-     */
-    test("(A) cada href del menú profesional responde 200/3xx (nunca 404)", async () => {
-        test.fail(true, "SPEC-437 (Dev X) alinea el menú del profesional con las pantallas reales. Este candado se quita cuando esa spec despliegue.");
+    test("(A) la barra lateral pinta los 6 ítems concedibles del profesional", async () => {
+        test.fail(true, "SPEC-437 (Dev X · #359) construye la barra lateral con 6 módulos. Este candado se quita cuando esa spec despliegue.");
 
         const request = await ctx();
         try {
-            await loginProfesional(request);
-            expect(
-                PROFESIONAL_NAV_ITEMS.length,
-                "PROFESIONAL_NAV_ITEMS no puede estar vacío — hay menú por caminar",
-            ).toBeGreaterThan(0);
-
-            for (const item of PROFESIONAL_NAV_ITEMS) {
-                await test.step(`${item.label} → GET ${item.href}`, async () => {
-                    const res = await request.get(item.href, { maxRedirects: 0 });
-                    const status = res.status();
-                    expect(
-                        status,
-                        `el ítem '${item.label}' (${item.href}) responde ${status} — un menú del profesional NO puede prometer una pantalla que devuelve 404`,
-                    ).not.toBe(404);
-                    expect(
-                        status >= 500,
-                        `el ítem '${item.label}' (${item.href}) responde ${status} — error del servidor cuenta como pantalla rota`,
-                    ).toBe(false);
-                });
+            await login(request, EMAIL_PROF);
+            const html = await htmlPanel(request, UA_DESKTOP);
+            // Cada label del menú debe aparecer en el HTML del panel.
+            for (const item of ITEMS_LATERAL) {
+                expect(
+                    html.includes(item.label),
+                    `barra lateral debe pintar '${item.label}' (href esperado ${item.href}). HTML sin ese label significa que #359 aún no lo cablea.`,
+                ).toBe(true);
+            }
+            // Y ningún href debe apuntar a una pantalla inexistente: cada
+            // href del menú debe tener page.tsx real que responda distinto de 404.
+            for (const item of ITEMS_LATERAL) {
+                const res = await request.get(item.href, { maxRedirects: 0 });
+                expect(
+                    res.status() !== 404,
+                    `href '${item.href}' del ítem '${item.label}' NO puede ser 404 — sería un enlace a pantalla inexistente. status=${res.status()}`,
+                ).toBe(true);
             }
         } finally {
             await request.dispose();
         }
     });
 
-    /**
-     * (B) Cada href del menú tiene `page.tsx` real bajo `src/app/`.
-     *
-     * Este candado corre en la fuente. Es el que caza un rename mal hecho
-     * en Next (por ejemplo, mover la carpeta y olvidar el ítem del menú).
-     */
-    test("(B) cada href del menú tiene page.tsx real en src/app/<href>/page.tsx", async () => {
-        test.fail(true, "SPEC-437 (Dev X) alinea el menú del profesional con las pantallas reales. Este candado se quita cuando esa spec despliegue.");
+    test("(B) el menú móvil da los mismos accesos y permite volver al panel", async () => {
+        test.fail(true, "SPEC-437 (Dev X · #359) trae el menú móvil que hoy dejaba al psicólogo sin retorno al panel.");
 
-        const huerfanos: Array<{ href: string; label: string; camino: string }> = [];
-        for (const item of PROFESIONAL_NAV_ITEMS) {
-            const veredicto = existePaginaReal(item.href);
-            if (!veredicto.ok) {
-                huerfanos.push({ href: item.href, label: item.label, camino: veredicto.camino });
+        const request = await ctx();
+        try {
+            await login(request, EMAIL_PROF);
+            const html = await htmlPanel(request, UA_MOBILE);
+            // El HTML server-side es el mismo bajo desktop y móvil (Next.js);
+            // las diferencias se dan por CSS media queries. El candado es
+            // ESTRUCTURAL: en el HTML aparecen los 6 ítems Y hay marcadores
+            // del componente móvil (típicamente hamburger + drawer + link al
+            // panel para volver).
+            for (const item of ITEMS_LATERAL) {
+                expect(
+                    html.includes(item.label),
+                    `menú móvil debe listar '${item.label}' (mismo que desktop). HTML sin ese label = móvil no lo cablea.`,
+                ).toBe(true);
             }
+            // Marcador del retorno al panel — un link a `/dashboard/profesional`
+            // o un botón con label "Panel" / "Volver al panel" / similar debe
+            // existir en el HTML móvil (hueco que Dev 02 cazó: sin él, el
+            // psicólogo queda encerrado en la subruta).
+            const marcadorRetorno =
+                html.includes("Volver al panel") ||
+                html.includes("Panel") ||
+                /href="\/dashboard\/profesional"[^/]/i.test(html);
+            expect(
+                marcadorRetorno,
+                "menú móvil debe tener un retorno al panel (label 'Panel'/'Volver al panel' o link a /dashboard/profesional). Sin él, el psicólogo queda encerrado.",
+            ).toBe(true);
+        } finally {
+            await request.dispose();
         }
-        expect(
-            huerfanos,
-            `menú del profesional con ítems SIN page.tsx en el árbol de Next: ${JSON.stringify(huerfanos, null, 2)}`,
-        ).toEqual([]);
     });
 
-    /**
-     * (C) [candado futuro] En móvil (375x812) el menú pinta los mismos
-     *     ítems que en escritorio. Este spec opera con `APIRequestContext`
-     *     sin navegador; cuando pasemos a `page`/`context.setViewportSize`
-     *     el candado se activa. Por ahora afirma la mitad estructural: el
-     *     menú del profesional está pensado desde el mismo `PROFESIONAL_NAV_ITEMS`
-     *     (fuente única) y ese arreglo no está vacío.
-     */
-    test("(C) [candado futuro] móvil pinta los mismos ítems — de momento afirma fuente única", async () => {
-        test.fail(true, "SPEC-437 (Dev X) alinea el menú del profesional con las pantallas reales. Este candado se quita cuando esa spec despliegue.");
+    test("(C) el menú NO pinta ningún ítem de padre / operador / comité (I-299)", async () => {
+        test.fail(true, "SPEC-437 (Dev X · #359) refuerza I-299: el profesional NO ve el menú de otros roles.");
 
-        // Hasta que este spec suba a `page` con viewport 375x812 y verifique
-        // el DOM del `NavHeader` en móvil, dejamos afirmado que la fuente es
-        // única. Si Dev abre otra lista de items solo-móvil, este assert
-        // truena y obliga a revisar la duplicación.
-        expect(
-            Array.isArray(PROFESIONAL_NAV_ITEMS),
-            "PROFESIONAL_NAV_ITEMS debe seguir siendo la fuente única del menú del profesional",
-        ).toBe(true);
-        expect(
-            PROFESIONAL_NAV_ITEMS.every((it) => typeof it.href === "string" && it.href.length > 0),
-            "cada ítem del menú del profesional debe declarar un href textual",
-        ).toBe(true);
+        const request = await ctx();
+        try {
+            await login(request, EMAIL_PROF);
+            const htmlDesktop = await htmlPanel(request, UA_DESKTOP);
+            const htmlMobile  = await htmlPanel(request, UA_MOBILE);
+            for (const ajeno of ITEMS_AJENOS) {
+                expect(
+                    htmlDesktop.includes(ajeno),
+                    `desktop: '${ajeno}' NO puede aparecer en el menú del profesional (es de otro rol).`,
+                ).toBe(false);
+                expect(
+                    htmlMobile.includes(ajeno),
+                    `móvil: '${ajeno}' NO puede aparecer en el menú del profesional (es de otro rol).`,
+                ).toBe(false);
+            }
+        } finally {
+            await request.dispose();
+        }
     });
 });
