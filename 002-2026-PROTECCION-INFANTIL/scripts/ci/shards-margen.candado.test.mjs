@@ -56,6 +56,32 @@ describe("SPEC-450 · el margen se agranda sin tocar el techo", () => {
         expect(workflow).toMatch(/--shard=\$\{\{ matrix\.shard \}\}\/6/);
     });
 
+    /**
+     * El rótulo del step decía «shard N/4» mientras el reparto ya era /6: el log
+     * del CI afirmaba algo que el código no hacía, en el archivo de la spec que
+     * vino a cerrar esa clase. Este candado exige que TODO `matrix.shard }}/X`
+     * del workflow —rótulo, reparto y fallback— use el largo real de la matriz,
+     * o lo derive con `strategy.job-total`, que no puede desalinearse nunca.
+     */
+    it("ningún `matrix.shard }}/X` del workflow contradice el largo de la matriz", () => {
+        const m = /shard:\s*\[([^\]]+)\]/.exec(workflow);
+        expect(m, "no encontré la matriz de shards en ci.yml").not.toBe(null);
+        const largo = m[1].split(",").filter((s) => s.trim() !== "").length;
+
+        // El denominador es un número suelto o una expresión `${{ … }}` entera:
+        // capturar con `\S+?` corta dentro de la expresión (el espacio de
+        // `${{ strategy.job-total }}`) y deja `${{`, un falso positivo.
+        const desalineados = [...workflow.matchAll(/matrix\.shard\s*\}\}\/(\$\{\{[^}]*\}\}|\d+)/g)]
+            .map((x) => x[1])
+            .filter((x) => x !== String(largo) && !x.includes("strategy.job-total"));
+
+        expect(
+            desalineados,
+            `La matriz tiene ${largo} shards y estos denominadores dicen otra cosa: ${desalineados.join(", ")}. ` +
+                "Un rótulo o un fallback con el número viejo miente en el log y, en el fallback, parte la cobertura en silencio.",
+        ).toEqual([]);
+    });
+
     it("hay señal a los 30 minutos, y AVISA en vez de cortar", () => {
         expect(workflow).toContain("SPEC-450 · shard");
         expect(workflow).toMatch(/-ge\s+1800/);

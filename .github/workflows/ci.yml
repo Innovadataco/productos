@@ -217,8 +217,12 @@ jobs:
       # los 6 blobs en test-integration-coverage); blob = resultados + cobertura.
       # SPEC-281 (002-PI-180): reparto por peso medido (test-durations.json).
       # Si el JSON existe → se pasan los archivos como positional args (sin --shard).
-      # Si NO existe → fallback a --shard=N/4 original (el script sale sin imprimir).
-      - name: Correr shard ${{ matrix.shard }}/4 (SPEC-281 reparto por peso o fallback)
+      # Si NO existe → fallback a --shard=N/M con M = el largo de la matriz (el
+      # script sale sin imprimir). SPEC-450: el rótulo del step y el fallback
+      # salen del MISMO número que la matriz. Cuando decía «/4» sobre una corrida
+      # de 6, el log del CI afirmaba algo que el código no hacía — la clase que
+      # esta misma spec vino a cerrar, en su propio archivo.
+      - name: Correr shard ${{ matrix.shard }}/${{ strategy.job-total }} (SPEC-281 reparto por peso o fallback)
         # SPEC-407 caso B (runner GHA lento): wrapper con `timeout 45m` + reintento
         # SÓLO por timeout de shell (exit 124). Un test rojo (exit ≠ 124) NO reintenta
         # nunca. El reintento se ve en el resumen del run (::warning + GITHUB_STEP_SUMMARY)
