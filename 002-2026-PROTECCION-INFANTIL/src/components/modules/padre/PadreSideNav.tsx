@@ -17,8 +17,8 @@ export function PadreSideNav() {
         pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false));
 
     return (
-        <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-sky-200/40 bg-sky-50/50 backdrop-blur-xl sm:flex dark:border-sky-900/30 dark:bg-sky-950/20">
-            <div className="border-b border-sky-200/40 p-6 dark:border-sky-900/30">
+        <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-cielo/20 bg-cielo/5 backdrop-blur-xl sm:flex">
+            <div className="border-b border-cielo/20 p-6">
                 <h1 className="text-lg font-bold text-body">Mi protección</h1>
                 <p className="mt-1 text-xs text-subtle">Área del padre</p>
             </div>
@@ -32,8 +32,8 @@ export function PadreSideNav() {
                                 href={item.href}
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                                     active
-                                        ? "bg-sky-600 text-white shadow-lg shadow-sky-500/25"
-                                        : "text-sky-900/70 hover:bg-sky-100 hover:text-sky-900 dark:text-sky-200/70 dark:hover:bg-sky-900/40 dark:hover:text-sky-100"
+                                        ? "bg-cielo text-white shadow-lg shadow-cielo/25"
+                                        : "text-muted hover:bg-cielo/10 hover:text-cielo"
                                 }`}
                                 aria-current={active ? "page" : undefined}
                             >
