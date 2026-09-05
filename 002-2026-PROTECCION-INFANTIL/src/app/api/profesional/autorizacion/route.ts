@@ -15,6 +15,7 @@
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -33,6 +34,9 @@ async function requireProfesional() {
     if (user.rol !== "PROFESIONAL") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
+    // SPEC-496: el rol es la primera puerta; el módulo es la segunda. Revocar
+    // `profesional_ficha` corta el acceso, no solo el ítem del menú.
+    await assertModulo(user, "profesional_ficha");
     return user;
 }
 

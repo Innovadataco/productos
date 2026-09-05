@@ -8,12 +8,14 @@
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { verificacionParaProfesional } from "@/lib/profesionales/verificador/vista-profesional";
 
 export async function GET() {
     try {
         const user = await verifyAuth("PROFESIONAL");
+        await assertModulo(user, "profesional_verificacion");
         const data = await verificacionParaProfesional(user.id);
         return NextResponse.json({ data });
     } catch (error) {

@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
@@ -20,6 +21,7 @@ const crearSchema = z.object({
 export async function GET() {
     try {
         const user = await verifyAuth("PROFESIONAL");
+        await assertModulo(user, "profesional_calendario");
         const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
         if (!perfil) throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);
         const franjas = await new FranjaDisponibleRepository().listarDeProfesional(perfil.id);
@@ -32,6 +34,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth("PROFESIONAL");
+        await assertModulo(user, "profesional_calendario");
         const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
         if (!perfil) throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);
         const body = crearSchema.parse(await request.json());

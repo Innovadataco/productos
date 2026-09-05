@@ -44,6 +44,9 @@ export const CLAVES_POR_ROL: Record<string, string[]> = {
     // SPEC-235 (002-PI-135): el comité de validación aprueba/rechaza guías de acción.
     // SPEC-263 (002-PI-164): expediente_revelar_original otorgado al comité para revisar texto en casos escalados.
     // SPEC-266 (002-PI-169): bandeja_reportes y denuncia_formal eran indebidos (I-128); revocados en BD viva por revocar-grants-pagos-operador.ts.
+    // SPEC-496 (decisión CEO): `comite_auditoria` queda FUERA a propósito — el
+    // comité valida y quien valida no audita su propia validación (separación de
+    // funciones). No es un olvido; ver el comentario junto al tab en nav-items.ts.
     COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_guias_accion", "expediente_revelar_original", "centro_control_ia", "ia_rubrica"],  // SPEC-452 (I-318): lee la rúbrica. Padre centro_control_ia + hijo ia_rubrica (jerarquía AND); abre solo la pestaña Rúbrica del Centro IA. Escritura cerrada por rol ADMIN (D-102).
     // SPEC-263 (002-PI-164): pagos_admin quitado de OPERADOR (la revocación en BD viva requiere scripts/revocar-grants-pagos-operador.ts).
     // expediente_revelar_original añadido para que el operador valide spam o dudas de contexto.

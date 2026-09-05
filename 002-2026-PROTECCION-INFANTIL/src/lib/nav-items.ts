@@ -58,6 +58,12 @@ export const COMITE_NAV_TABS: NavItem[] = [
     { href: "/dashboard/admin/comite/gestion", label: "Gestión", modulo: "comite" },
     // SPEC-235 (002-PI-135): aprobación de guías de acción por el comité.
     { href: "/dashboard/admin/comite/guias-pendientes", label: "Guías", modulo: "comite_guias_accion" },
+    // SPEC-496 (decisión CEO): `comite_auditoria` es solo-ADMIN A PROPÓSITO —
+    // NO es un olvido. Separación de funciones: el comité VALIDA clasificaciones
+    // y quien valida no audita su propia validación (dárselo lo volvería
+    // autocontrol). El tab se filtra para COMITE_VALIDACION (ComiteSubNav, D-41)
+    // y la página degrada a `SinAccesoModulo`. No agregar `comite_auditoria` a
+    // COMITE_VALIDACION en `CLAVES_POR_ROL` creyendo que es un hueco.
     { href: "/dashboard/admin/comite/auditoria", label: "Auditoría", modulo: "comite_auditoria" },
 ];
 

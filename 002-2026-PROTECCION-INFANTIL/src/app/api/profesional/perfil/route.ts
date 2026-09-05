@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
@@ -30,6 +31,10 @@ async function requireProfesional() {
     if (user.rol !== "PROFESIONAL") {
         throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
     }
+    // SPEC-496: el rol es la primera puerta; el módulo es la segunda. Revocar
+    // `profesional_ficha` en el panel de permisos corta el acceso de verdad
+    // (antes solo escondía el ítem del menú — degradación silenciosa).
+    await assertModulo(user, "profesional_ficha");
     return user;
 }
 

@@ -7,12 +7,14 @@
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { panelDelProfesional } from "@/lib/profesional/panel/panel.service";
 
 export async function GET() {
     try {
         const user = await verifyAuth("PROFESIONAL");
+        await assertModulo(user, "profesional_inicio");
         const data = await panelDelProfesional(user.id);
         return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store" } });
     } catch (error) {

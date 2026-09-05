@@ -8,6 +8,7 @@
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -19,6 +20,7 @@ import {
 
 async function perfilDelProfesional() {
     const user = await verifyAuth("PROFESIONAL");
+    await assertModulo(user, "profesional_ficha");
     const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
     if (!perfil) {
         throw new AppError(

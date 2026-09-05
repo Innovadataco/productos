@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { verifyAuth } from "@/lib/auth";
+import { puedeAccederAModulo } from "@/lib/permisos-modulos";
+import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -30,6 +32,10 @@ export const metadata: Metadata = {
 
 export default async function CalendarioProfesionalPage() {
     const usuario = await verifyAuth("PROFESIONAL");
+    // SPEC-496: el módulo manda — revocar `profesional_calendario` corta el acceso.
+    if (!(await puedeAccederAModulo(usuario.rol, "profesional_calendario"))) {
+        return <SinAccesoModulo />;
+    }
     const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(usuario.id);
     if (!perfil) {
         throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);
