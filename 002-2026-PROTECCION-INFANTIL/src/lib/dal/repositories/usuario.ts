@@ -62,6 +62,8 @@ export class UsuarioRepository {
     }
 
     // SPEC-334: perfil del padre (6 campos + nombres de país/ciudad para mostrar).
+    // SPEC-440 P5: suma `presentacionEstandar` y `urgenciaEstandar` — el flujo
+    // de búsqueda de psicólogo los prellena para no volver a pedirlos.
     obtenerPerfilPadre(id: string) {
         return this.db.usuario.findUnique({
             where: { id },
@@ -79,11 +81,15 @@ export class UsuarioRepository {
                 ciudadId: true,
                 paisPerfil: { select: { id: true, nombre: true } },
                 ciudadPerfil: { select: { id: true, nombre: true } },
+                presentacionEstandar: true,
+                urgenciaEstandar: true,
             },
         });
     }
 
     // SPEC-334: actualiza solo los campos del perfil del padre.
+    // SPEC-440 P5: acepta también `presentacionEstandar`/`urgenciaEstandar`
+    // (persistencia del formulario de búsqueda de psicólogo).
     actualizarPerfilPadre(
         id: string,
         data: Pick<
@@ -97,6 +103,8 @@ export class UsuarioRepository {
             | "telefono"
             | "paisId"
             | "ciudadId"
+            | "presentacionEstandar"
+            | "urgenciaEstandar"
         >
     ) {
         return this.db.usuario.update({ where: { id }, data });

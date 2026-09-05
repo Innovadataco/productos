@@ -112,4 +112,44 @@ describe("PATCH /api/padre/perfil (SPEC-339)", { timeout: 30_000 }, () => {
         expect(res.status).toBe(200);
         expect((await prisma.usuario.findUnique({ where: { id: padre.id } }))?.fechaNacimiento).not.toBeNull();
     });
+
+    // SPEC-440 P5 (Jelkin vivo 04-09) · «que no le vuelva a pedir la presentación
+    // en cada ingreso». El endpoint acepta y persiste presentación + urgencia
+    // estándar; el GET los devuelve para prellenar el form del padre en la
+    // próxima visita a /dashboard/padre/profesionales.
+    it("SPEC-440 P5: PATCH persiste presentacionEstandar y urgenciaEstandar", async () => {
+        const padre = await comoPadre();
+        const res = await PATCH(crearRequest({
+            presentacionEstandar: "Buscamos apoyo para un hijo de 12 años.",
+            urgenciaEstandar: "ESTA_SEMANA",
+        }));
+        expect(res.status).toBe(200);
+        const guardado = await prisma.usuario.findUnique({ where: { id: padre.id } });
+        expect(guardado?.presentacionEstandar).toBe("Buscamos apoyo para un hijo de 12 años.");
+        expect(guardado?.urgenciaEstandar).toBe("ESTA_SEMANA");
+    });
+
+    it("SPEC-440 P5: GET devuelve presentacionEstandar y urgenciaEstandar del perfil", async () => {
+        const padre = await comoPadre();
+        await prisma.usuario.update({
+            where: { id: padre.id },
+            data: { presentacionEstandar: "Necesito hablar con alguien pronto.", urgenciaEstandar: "SIN_APURO" },
+        });
+        const res = await GET();
+        const json = await res.json();
+        expect(json.perfil.presentacionEstandar).toBe("Necesito hablar con alguien pronto.");
+        expect(json.perfil.urgenciaEstandar).toBe("SIN_APURO");
+    });
+
+    it("SPEC-440 P5: rechaza urgenciaEstandar fuera del enum", async () => {
+        await comoPadre();
+        const res = await PATCH(crearRequest({ urgenciaEstandar: "URGENTE" }));
+        expect(res.status).toBe(400);
+    });
+
+    it("SPEC-440 P5: rechaza presentacionEstandar de menos de 10 caracteres", async () => {
+        await comoPadre();
+        const res = await PATCH(crearRequest({ presentacionEstandar: "corta" }));
+        expect(res.status).toBe(400);
+    });
 });

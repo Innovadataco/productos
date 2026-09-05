@@ -40,8 +40,6 @@ function obtenerSeedSesion(): string {
 }
 
 export function DirectorioProfesionales({
-    urgenciaInicial,
-    presentacionInicial,
     hrefPerfil,
     // SPEC-428: si el padre entró desde su expediente, se pasa por acá al
     // perfil para ofrecer «compartir expediente» al pagar (§9 M4).
@@ -50,13 +48,13 @@ export function DirectorioProfesionales({
     // hará POST a /citas/[id]/reasignar en vez del alta normal.
     heredarDeInicial,
 }: {
-    urgenciaInicial?: "ESTA_SEMANA" | "SIN_APURO" | undefined;
-    presentacionInicial?: string | undefined;
     /** Prefijo del enlace al perfil individual, sin id. */
     hrefPerfil: string;
     expedienteIdInicial?: string | undefined;
     heredarDeInicial?: string | undefined;
 }) {
+    // SPEC-440 (I-306): presentación/urgencia NO viajan en URL; el perfil
+    // las lee del `sessionStorage` en cliente (helper `borrador-consulta`).
     const [seed, setSeed] = useState<string | null>(null);
     const [facetas, setFacetas] = useState<Facetas | null>(null);
     const [items, setItems] = useState<PerfilPublicoDTO[] | null>(null);
@@ -98,19 +96,16 @@ export function DirectorioProfesionales({
             });
     }, [seed, ciudadId, especialidad, modalidad]);
 
-    // El link al perfil conserva la urgencia y la presentación (llegan en L4).
+    // El link al perfil conserva SOLO los IDs opacos. La urgencia y la
+    // presentación las lee el perfil del `sessionStorage` en cliente
+    // (SPEC-440 · I-306): no volver a poner PII en la URL.
     const queryPerfil = useMemo(() => {
         const q = new URLSearchParams();
-        if (urgenciaInicial) q.set("u", urgenciaInicial);
-        if (presentacionInicial) q.set("pres", presentacionInicial);
-        // SPEC-428: propaga `expedienteId` para que el perfil lo ofrezca al pagar.
         if (expedienteIdInicial) q.set("expedienteId", expedienteIdInicial);
-        // SPEC-428 (M7): propaga `heredarDe` para que el perfil use el flujo
-        // de reasignación (POST /citas/[id]/reasignar) en vez de crear cita.
         if (heredarDeInicial) q.set("heredarDe", heredarDeInicial);
         const qs = q.toString();
         return qs ? `?${qs}` : "";
-    }, [urgenciaInicial, presentacionInicial, expedienteIdInicial, heredarDeInicial]);
+    }, [expedienteIdInicial, heredarDeInicial]);
 
     return (
         <div className="mx-auto max-w-5xl p-4 space-y-5">

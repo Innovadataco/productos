@@ -18,24 +18,23 @@ vi.mock("next/link", () => ({
 }));
 
 describe("PadreSideNav (SPEC-231)", () => {
-    // SPEC-317: "Mi perfil" se retiró de PADRE_NAV_ITEMS porque /dashboard/padre/perfil
-    // no existe todavía — la página de perfil del padre es deuda pendiente. El ítem se
-    // quita del menú lateral para no generar un enlace roto; cuando la página exista,
-    // se reincorpora aquí y en nav-items.ts.
-    it("renderiza los 9 items del menú padre (Mi perfil retirado por SPEC-317; Mis reportes agregado por SPEC-324; Encontrar psicólogo agregado por SPEC-392)", () => {
+    // SPEC-440 P4 (Jelkin vivo 04-09): «el perfil del padre no deja editar sus datos».
+    // La pantalla existe desde SPEC-334; SPEC-317 la había retirado del nav por
+    // hueco temporal — reincorporada acá para que el padre pueda llegar a editarla.
+    it("renderiza los 10 items del menú padre (SPEC-440 P4 reincorpora Mi perfil; Mis reportes y Encontrar psicólogo siguen)", () => {
         mockPathname.value = "/dashboard/padre";
         render(<PadreSideNav />);
 
-        const labels = ["Inicio", "Mis expedientes", "Mis reportes", "Reportar", "Encontrar psicólogo", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones"]; // SPEC-324 + SPEC-325 + SPEC-392
+        const labels = ["Inicio", "Mis expedientes", "Mis reportes", "Reportar", "Encontrar psicólogo", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones", "Mi perfil"];
         for (const label of labels) {
             expect(screen.getByRole("link", { name: label })).toBeDefined();
         }
-        expect(screen.queryByRole("link", { name: "Mi perfil" })).toBeNull();
+        expect(screen.getByRole("link", { name: "Mi perfil" }).getAttribute("href")).toBe("/dashboard/padre/perfil");
         // SPEC-324: "Mis reportes" apunta a la ruta top-level /mis-reportes (fuera del shell).
         expect(screen.getByRole("link", { name: "Mis reportes" }).getAttribute("href")).toBe("/mis-reportes");
         // SPEC-392 (L3): "Encontrar psicólogo" al directorio del padre.
         expect(screen.getByRole("link", { name: "Encontrar psicólogo" }).getAttribute("href")).toBe("/dashboard/padre/profesionales");
-        expect(screen.getAllByRole("link")).toHaveLength(9);
+        expect(screen.getAllByRole("link")).toHaveLength(10);
     });
 
     it("marca Inicio como activo en la raíz", () => {
