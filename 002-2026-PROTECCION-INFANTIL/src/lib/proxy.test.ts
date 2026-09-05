@@ -290,3 +290,205 @@ describe("PUBLIC_ROUTES — SPEC-286 (I-136) quitar /consulta", () => {
         expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
     });
 });
+
+// SPEC-426 (orden CEO 23:0x) · PROFESIONAL en lista blanca del proxy con
+// candado bidireccional. Molde SPEC-319 (COMITE_CONVIVENCIA). Cierra el hueco
+// que el barrido arch:check destapó en el #332 (SPEC-424): sin esta lista,
+// PROFESIONAL podía pegarle a ~290 rutas fuera de su superficie (`/api/padre/**`,
+// `/api/colegio/**`, `/api/config/parametros/**`, `/api/interno/**`,
+// `/api/reportes/procesar`) — cada handler validaba rol pero no la puerta.
+describe("SPEC-426 · PROFESIONAL con lista blanca", () => {
+    describe("predicado esDestinoPermitidoPorRol — lo listado pasa", () => {
+        it("permite su superficie propia (dashboard + APIs + verificación)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/profesional")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/profesional/agenda")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/perfil-profesional/verificacion")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/perfil-profesional/completar")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/panel")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/perfil")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/franjas")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/solicitudes")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/verificacion/reenviar")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/autorizacion")).toBe(true);
+        });
+
+        it("permite sesión + perfil compartidos (I-25, C-9, SPEC-203)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/me")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/cambiar-password")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/auth/cambiar-password")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/auth/logout")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/consentimiento")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/consentimiento")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/perfil")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/notificaciones")).toBe(true);
+        });
+
+        it("permite el árbol público de solo lectura (SPEC-118 · D-37)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard-publico")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/seguimiento")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/consulta")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/estadisticas-publicas")).toBe(true);
+        });
+    });
+
+    describe("predicado esDestinoPermitidoPorRol — todo lo demás cae", () => {
+        it("NO puede entrar al área del padre (candado bidireccional)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/padre")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/padre/circulo-confianza")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/padre/citas")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/padre/perfil")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/padre/hijos")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/mis-reportes")).toBe(false);
+        });
+
+        it("NO puede entrar al módulo colegio (candado bidireccional)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/colegio")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/colegio/cursos")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/colegio/rector")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/colegio/alumnos")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/colegio/comite")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/colegio/comite/casos")).toBe(false);
+        });
+
+        it("NO puede entrar al área interna ni ADMIN-only", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/admin")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/admin/verificacion")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/admin/colegios")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/admin/profesionales")).toBe(false);
+        });
+
+        it("NO puede tocar internos / parámetros / reportes (el hueco ancho de #332)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/interno/expediente/abc/transicionar")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/reportes/procesar")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/config/parametros")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/config/parametros/publicos")).toBe(false);
+        });
+
+        it("NO puede crear reportes desde su cuenta institucional (misma regla que otros roles institucionales)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/reportar")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/reportes")).toBe(false);
+        });
+    });
+
+    describe("proxy en runtime — API cerrada devuelve 403, página cerrada redirige al panel", () => {
+        it("/api/padre/citas → 403 (no redirect)", async () => {
+            const res = await proxy(requestConSesion("/api/padre/citas", await tokenParaRol("PROFESIONAL")));
+            expect(res.status).toBe(403);
+        });
+
+        it("/api/colegio/rector → 403", async () => {
+            const res = await proxy(requestConSesion("/api/colegio/rector", await tokenParaRol("PROFESIONAL")));
+            expect(res.status).toBe(403);
+        });
+
+        it("/api/reportes/procesar → 403 (cierra el hueco de #332)", async () => {
+            const res = await proxy(requestConSesion("/api/reportes/procesar", await tokenParaRol("PROFESIONAL")));
+            expect(res.status).toBe(403);
+        });
+
+        it("/dashboard/padre → redirige al panel del PROFESIONAL", async () => {
+            const res = await proxy(requestConSesion("/dashboard/padre", await tokenParaRol("PROFESIONAL")));
+            expect(res.status).toBe(307);
+            expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard/profesional");
+        });
+
+        it("su panel aterriza sin segundo rebote", async () => {
+            const res = await proxy(requestConSesion("/dashboard/profesional", await tokenParaRol("PROFESIONAL")));
+            expect(res.status).toBe(200);
+        });
+
+        it("su API propia pasa (200), aunque el handler todavía valide rol después", async () => {
+            const res = await proxy(requestConSesion("/api/profesional/panel", await tokenParaRol("PROFESIONAL")));
+            expect(res.status).toBe(200);
+        });
+    });
+
+    describe("otros roles quedan como estaban en las rutas del profesional", () => {
+        it("ADMIN sigue viendo /api/admin/** (no rompimos la lista negra)", () => {
+            expect(esDestinoPermitidoPorRol("ADMIN", "/api/admin/profesionales")).toBe(true);
+        });
+    });
+});
+
+// SPEC-426 · I-312 (Jelkin vivo 04-09) · candado bidireccional del PARENT
+// entrando a áreas de otros roles. Antes cualquier `/dashboard/profesional/**`
+// (link compartido, menú ajeno, redirect viejo) dejaba pasar al padre hasta el
+// layout, que lanzaba `verifyAuth("PROFESIONAL")` con 403 en pantalla — sin
+// vuelta a lo suyo. Lección I-299: cada rol vuelve a su área, nunca a un
+// error. Este bloque prueba ambos lados en predicado y en runtime.
+describe("SPEC-426 · I-312 · PARENT redirect en áreas ajenas (nunca error)", () => {
+    describe("predicado esDestinoPermitidoPorRol", () => {
+        it("PARENT ya NO puede entrar a /dashboard/profesional/** — false explícito", () => {
+            expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/profesional")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/profesional/agenda")).toBe(false);
+        });
+
+        it("PARENT no puede entrar a /api/profesional/**", () => {
+            expect(esDestinoPermitidoPorRol("PARENT", "/api/profesional/panel")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PARENT", "/api/profesional/perfil")).toBe(false);
+        });
+
+        it("PARENT tampoco puede entrar al área colegio o al comité de convivencia", () => {
+            expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/colegio")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PARENT", "/api/colegio/rector")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/colegio/comite")).toBe(false);
+            expect(esDestinoPermitidoPorRol("PARENT", "/api/colegio/comite/casos")).toBe(false);
+        });
+
+        it("PARENT sigue viendo lo suyo (contraprueba de no exceso)", () => {
+            expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PARENT", "/dashboard/padre/expedientes")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PARENT", "/mis-reportes")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PARENT", "/api/padre/perfil")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PARENT", "/reportar")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PARENT", "/api/notificaciones")).toBe(true);
+        });
+
+        it("PROFESIONAL sigue entrando a lo suyo (contraprueba del lado del profesional)", () => {
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/profesional")).toBe(true);
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/panel")).toBe(true);
+        });
+    });
+
+    describe("runtime proxy", () => {
+        it("PARENT en /dashboard/profesional → 307 a /dashboard/padre (no error)", async () => {
+            const res = await proxy(requestConSesion("/dashboard/profesional", await tokenParaRol("PARENT")));
+            expect(res.status).toBe(307);
+            expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard/padre");
+        });
+
+        it("PARENT en /dashboard/profesional/agenda → 307 a /dashboard/padre", async () => {
+            const res = await proxy(requestConSesion("/dashboard/profesional/agenda", await tokenParaRol("PARENT")));
+            expect(res.status).toBe(307);
+            expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard/padre");
+        });
+
+        it("PARENT en /api/profesional/panel → 403 JSON (no HTML de error)", async () => {
+            const res = await proxy(requestConSesion("/api/profesional/panel", await tokenParaRol("PARENT")));
+            expect(res.status).toBe(403);
+            expect(res.headers.get("content-type")).toContain("application/json");
+        });
+
+        it("PARENT en /dashboard/colegio → 307 a /dashboard/padre (mismo criterio, otro rol)", async () => {
+            const res = await proxy(requestConSesion("/dashboard/colegio", await tokenParaRol("PARENT")));
+            expect(res.status).toBe(307);
+            expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard/padre");
+        });
+
+        // Contraprueba dura: si mañana alguien retira el guard nuevo, el padre
+        // vuelve a llegar hasta el layout y este test cae con status 200.
+        it("PARENT en su propia área NO se rebota (contraprueba)", async () => {
+            const res = await proxy(requestConSesion("/dashboard/padre", await tokenParaRol("PARENT")));
+            expect(res.status).toBe(200);
+        });
+
+        // Simetría con SPEC-426 · el candado del PROFESIONAL entrando a lo del
+        // padre sigue vivo (no lo hemos roto por accidente).
+        it("PROFESIONAL en /dashboard/padre → 307 a /dashboard/profesional (contraprueba de simetría)", async () => {
+            const res = await proxy(requestConSesion("/dashboard/padre", await tokenParaRol("PROFESIONAL")));
+            expect(res.status).toBe(307);
+            expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard/profesional");
+        });
+    });
+});

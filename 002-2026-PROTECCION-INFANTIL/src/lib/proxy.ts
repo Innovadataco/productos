@@ -22,6 +22,25 @@ const PAGOS_CLIENTE_ROUTES = ["/api/pagos"];
 // SPEC-168: rutas exclusivas del Comité de Convivencia (rol COMITE_CONVIVENCIA).
 const COMITE_CONVIVENCIA_ROUTES = ["/dashboard/colegio/comite", "/api/colegio/comite"];
 
+// SPEC-426 (A-75 · orden CEO 23:0x) · Rutas exclusivas del PROFESIONAL.
+// Molde SPEC-319 (COMITE_CONVIVENCIA · lista blanca) tras auditar el barrido
+// arch:check regenerado por SPEC-424 (#332): el proxy le permitía a PROFESIONAL
+// ~290 rutas (las mismas que PARENT — 84 de /api/colegio, 30 de /api/padre,
+// /api/config/parametros, /api/interno/expediente/[id]/transicionar y
+// /api/reportes/procesar). Todas cerradas de un tirón por la lista blanca +
+// candado bidireccional del test (lo listado pasa, todo lo demás 403).
+const PROFESIONAL_ROUTES = [
+    // Panel del rol (SPEC-425).
+    "/dashboard/profesional",
+    // Verificación + ficha (SPEC-424).
+    "/perfil-profesional",
+    // Superficie API del rol: /api/profesional/{panel,perfil,autorizacion,
+    // solicitudes,verificacion,franjas}. Cada handler valida rol PROFESIONAL
+    // por separado; esta línea impide que otro rol siquiera llegue al handler
+    // y que el rol PROFESIONAL toque cualquier otro `/api/**`.
+    "/api/profesional",
+];
+
 // SPEC-173 (candado B): la gestión de integrantes del comité es exclusiva del
 // rector (SCHOOL_ADMIN); el rol COMITE_CONVIVENCIA no puede administrarse a sí mismo.
 const COMITE_INTEGRANTES_SOLO_RECTOR = ["/dashboard/colegio/comite/integrantes", "/api/colegio/comite/integrantes"];
@@ -101,6 +120,33 @@ function esRutaPermitidaComiteConvivencia(pathname: string): boolean {
     return SESION_ROUTES.some((route) => matchesRoute(pathname, route));
 }
 
+function isProfesionalRoute(pathname: string): boolean {
+    return PROFESIONAL_ROUTES.some((route) => matchesRoute(pathname, route));
+}
+
+/**
+ * SPEC-426 (A-75 · orden CEO 23:0x) · lista blanca del PROFESIONAL.
+ *
+ * El rol solo puede usar: (i) sus propias rutas (dashboard + `/api/profesional/**`
+ * + `/perfil-profesional/**`), (ii) las rutas de sesión (login, cambio password,
+ * consentimiento, logout, /api/me), (iii) el panel de preferencias/bandeja
+ * compartido (SPEC-203) y (iv) el árbol público de solo lectura que también
+ * ve el rector (SPEC-118 · landing, dashboard público, seguimiento y sus APIs).
+ *
+ * TODO lo demás — /dashboard/padre, /api/padre/**, /api/colegio/**, /api/reportes,
+ * /api/interno/**, /api/config/parametros/**, /api/admin/**, /reportar — cae en
+ * 403 (API) o redirect al panel (páginas). El candado bidireccional del test
+ * `proxy-profesional.test.ts` verifica ambos lados: lo listado pasa, todo lo
+ * demás no.
+ */
+function esRutaPermitidaProfesional(pathname: string): boolean {
+    if (esRutaPerfil(pathname)) return true;
+    if (isProfesionalRoute(pathname)) return true;
+    if (PUBLICAS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
+    if (APIS_LECTURA_SCHOOL_ADMIN.some((route) => matchesRoute(pathname, route))) return true;
+    return SESION_ROUTES.some((route) => matchesRoute(pathname, route));
+}
+
 // Rutas públicas que los roles internos no pueden usar (la cuenta institucional no reporta).
 const REPORTAR_ROUTE = "/reportar";
 
@@ -132,6 +178,9 @@ export function esDestinoPermitidoPorRol(rol: string | null | undefined, pathnam
     if (esRutaPerfil(pathname)) return true;
     if (rol === "SCHOOL_ADMIN") return esRutaPermitidaSchoolAdmin(pathname);
     if (rol === "COMITE_CONVIVENCIA") return esRutaPermitidaComiteConvivencia(pathname);
+    // SPEC-426 (orden CEO 23:0x): PROFESIONAL con lista blanca — cierra el hueco
+    // ancho (~290 rutas) que el barrido arch:check destapó en el #332.
+    if (rol === "PROFESIONAL") return esRutaPermitidaProfesional(pathname);
     if (esRolInterno(rol)) {
         // Mismo orden que proxyCore: admin-only primero, luego el área interna, y solo
         // después usuario-final/reportar. Sin esto, "/dashboard/admin" caía en el
@@ -141,8 +190,16 @@ export function esDestinoPermitidoPorRol(rol: string | null | undefined, pathnam
         if (isUserFinalRoute(pathname) || isReportarRoute(pathname)) return false;
         return true;
     }
-    // PARENT: área de usuario final y rutas públicas; no área interna.
+    // PARENT: área de usuario final y rutas públicas; no área interna ni de otros roles.
+    // SPEC-426 · I-312 (Jelkin vivo 04-09): antes solo bloqueábamos admin — un padre
+    // que aterrizaba en `/dashboard/profesional/**` (compartir link, redirect viejo,
+    // menú ajeno) llegaba al layout, disparaba `verifyAuth("PROFESIONAL")` y recibía
+    // 403 en vez de volver a lo suyo. Lección I-299: cada rol vuelve a su área,
+    // nunca a un error. Se cierran las áreas exclusivas del resto de roles.
     if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin")) return false;
+    if (isProfesionalRoute(pathname)) return false;
+    if (isColegioRoute(pathname)) return false;
+    if (isComiteConvivenciaRoute(pathname)) return false;
     return true;
 }
 
@@ -266,6 +323,40 @@ async function proxyCore(request: NextRequest) {
             return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
         }
         return redirectToHome(request, rol);
+    }
+
+    // SPEC-426 (orden CEO 23:0x): PROFESIONAL con lista blanca — cierra el hueco
+    // ancho (~290 rutas permitidas) que #332 destapó en el barrido arch:check.
+    // Molde SPEC-319 (Comité de Convivencia). Cada handler de /api/profesional/**
+    // ya valida el rol; esta capa además impide que otro rol siquiera llegue al
+    // handler y que el PROFESIONAL toque `/api/padre/**`, `/api/colegio/**`,
+    // `/api/config/parametros/**`, `/api/interno/**`, `/api/reportes/procesar`
+    // o el área interna.
+    if (rol === "PROFESIONAL") {
+        if (esRutaPermitidaProfesional(pathname)) return NextResponse.next();
+        if (pathname.startsWith("/api/")) {
+            return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
+        }
+        return redirectToHome(request, rol);
+    }
+
+    // SPEC-426 · I-312 (Jelkin vivo 04-09): un padre que aterrizaba en
+    // `/dashboard/profesional/**` (link compartido, menú ajeno, redirect viejo)
+    // caía en el layout `verifyAuth("PROFESIONAL")` con 403 en pantalla, en vez
+    // de volver a su área. Lección I-299: cada rol vuelve a su casa, nunca a un
+    // error. Redirigimos al padre a `/dashboard/padre` cuando pisa el área de
+    // otro rol (colegio, comité, profesional). En APIs devolvemos 403 JSON.
+    if (rol === "PARENT") {
+        const enAreaDeOtroRol =
+            isProfesionalRoute(pathname) ||
+            isColegioRoute(pathname) ||
+            isComiteConvivenciaRoute(pathname);
+        if (enAreaDeOtroRol) {
+            if (pathname.startsWith("/api/")) {
+                return NextResponse.json({ error: { message: "Permisos insuficientes" } }, { status: 403 });
+            }
+            return redirectToHome(request, rol);
+        }
     }
 
     // Admin-only routes inside the admin area: must be checked before the generic internal route check.
