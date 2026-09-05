@@ -332,8 +332,8 @@ export default function ColegiosPageClient() {
                 <div
                     className={`rounded-xl p-4 text-sm ${
                         message.type === "error"
-                            ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
+                            ? "bg-rubi/10 text-rubi"
+                            : "bg-pino/10 text-pino"
                     }`}
                 >
                     {message.text}
@@ -521,7 +521,7 @@ function EditRow({
                         />
                         <div>
                             <label className="mb-1.5 block text-sm font-medium text-body">
-                                País <span className="text-red-500">*</span>
+                                País <span className="text-rubi">*</span>
                             </label>
                             <select
                                 required
@@ -543,7 +543,7 @@ function EditRow({
                         </div>
                         <div>
                             <label className="mb-1.5 block text-sm font-medium text-body">
-                                Ciudad <span className="text-red-500">*</span>
+                                Ciudad <span className="text-rubi">*</span>
                             </label>
                             <select
                                 required

@@ -99,7 +99,7 @@ export default function CirculoPadreClient({ padreId }: { padreId: string }) {
                 <Cargando inline texto="Cargando círculo de confianza..." className="py-8" />
             ) : error ? (
                 <GlassCard className="p-6">
-                    <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
+                    <p className="text-sm text-rubi" role="alert">{error}</p>
                 </GlassCard>
             ) : datos && datos.contactos.length === 0 ? (
                 <EmptyState

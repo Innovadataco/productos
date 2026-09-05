@@ -129,7 +129,7 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
 
             {error && (
                 <GlassCard className="p-4">
-                    <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
+                    <p className="text-sm text-rubi" role="alert">{error}</p>
                 </GlassCard>
             )}
 

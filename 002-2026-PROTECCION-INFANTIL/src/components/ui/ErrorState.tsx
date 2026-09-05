@@ -24,7 +24,8 @@ export function ErrorState({
             role="alert"
             aria-live="polite"
         >
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300">
+            {/* SPEC-472 · criticidad real en token `rubi`, nunca rojo crudo. Voltea solo en oscuro. */}
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rubi/10 text-rubi">
                 <svg
                     className="h-6 w-6"
                     fill="none"

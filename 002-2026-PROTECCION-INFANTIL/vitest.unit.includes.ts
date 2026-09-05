@@ -449,4 +449,17 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-439: el aviso al padre. El defecto era código MUERTO (SPEC-135/308
     // construido y sin llamador), así que el candado mira el CABLEADO.
     "src/lib/dal/services/corroboracion-padre.candado.test.ts",
+    // SPEC-476 (OLA 1 · lote de 12 muebles al Sistema de Diseño): candados que
+    // leen fuente, sin BD. (SPEC-458 Alerta se cubre por Alerta.test.tsx en el glob.)
+    "src/components/ui/badge-tokens.candado.test.ts",
+    "src/components/ui/cargando-skeleton.candado.test.ts",
+    "src/components/ui/input-error-token.candado.test.ts",
+    "src/components/ui/tabla-tokens.candado.test.ts",
+    "src/components/ui/select-error-token.candado.test.ts",
+    "src/components/ui/emptystate-tokens.candado.test.ts",
+    "src/components/ui/errorstate-tokens.candado.test.ts",
+    "src/components/ui/glasscard-firma.candado.test.ts",
+    "src/components/ui/modal-firma.candado.test.ts",
+    "src/lib/rediseno/admin-sin-rojo-crudo.candado.test.ts",
+    "src/lib/rediseno/emergencia-rubi.candado.test.ts",
 ];

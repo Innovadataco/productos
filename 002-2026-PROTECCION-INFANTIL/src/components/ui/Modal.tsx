@@ -181,7 +181,7 @@ export function Modal({
                 aria-modal="true"
                 aria-labelledby={title ? "modal-title" : undefined}
                 tabIndex={-1}
-                className={`max-h-[90vh] w-full ${sizeClasses[size]} overflow-y-auto rounded-2xl glass-strong p-6 shadow-xl focus:outline-none`}
+                className={`max-h-[90vh] w-full ${sizeClasses[size]} overflow-y-auto rounded-[var(--radio-hero)] glass-strong p-6 shadow-xl focus:outline-none`}
             >
                 {showCloseButton && (
                     <div className="flex items-center justify-between gap-4">

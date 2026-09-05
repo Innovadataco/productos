@@ -392,9 +392,22 @@
 | [454](454-button-sistema-diseno/spec.md) | SPEC-454 · OLA 1 del rediseño — el Button al Sistema de Diseño | 🟢 IMPLEMENTADO |
 | [455](455-dashboard-publico-sin-rojo/spec.md) | SPEC-455 · «Cara» del rediseño: el dashboard público sin alarma | 🟢 IMPLEMENTADO |
 | [456](456-portada/spec.md) | SPEC-456 · «Cara» del rediseño: la portada (la puerta de entrada) | 🟢 IMPLEMENTADO |
-| [463](463-colegio-voz-usted/spec.md) | SPEC-463 · La voz del colegio a «usted» (D-107 de Jelkin) | 🟢 IMPLEMENTADO |
-| [466](466-tokens-ratchet-inteligente/spec.md) | SPEC-466 · El piso de `tokens:check` deja de serializar los merges | 🟢 IMPLEMENTADO |
+| [457](457-badge-sistema-diseno/spec.md) | SPEC-457 · OLA 1: el Badge al Sistema de Diseño (la peor deuda de color) | 🟢 IMPLEMENTADO |
+| [458](458-alerta-sistema-diseno/spec.md) | SPEC-458 · OLA 1 — la Alerta al Sistema de Diseño | 🟢 IMPLEMENTADO |
 | [460](460-accent-por-rol/spec.md) | SPEC-460 · El acento por territorio — `--accent` por rol | 🟢 IMPLEMENTADO |
+| [461](461-cargando-sistema-diseno/spec.md) | SPEC-461 · OLA 1: el estado «Cargando» al Sistema de Diseño (el mueble de más alcance) | 🟢 IMPLEMENTADO |
+| [463](463-colegio-voz-usted/spec.md) | SPEC-463 · La voz del colegio a «usted» (D-107 de Jelkin) | 🟢 IMPLEMENTADO |
+| [464](464-admin-rojos-densidad/spec.md) | SPEC-464 · Lote 3 · Admin: rojos a rubí + densidad | 🟢 IMPLEMENTADO |
+| [466](466-tokens-ratchet-inteligente/spec.md) | SPEC-466 · El piso de `tokens:check` deja de serializar los merges | 🟢 IMPLEMENTADO |
+| [467](467-input-sistema-diseno/spec.md) | SPEC-467 · OLA 4: el Input al Sistema de Diseño | 🟢 IMPLEMENTADO |
+| [469](469-tabla-sistema-diseno/spec.md) | SPEC-469 · OLA 4: la Tabla al Sistema de Diseño | 🟢 IMPLEMENTADO |
+| [470](470-select-sistema-diseno/spec.md) | SPEC-470 · OLA 4: el Select al Sistema de Diseño | 🟢 IMPLEMENTADO |
+| [471](471-emptystate-sistema-diseno/spec.md) | SPEC-471 · OLA 4: el EmptyState al Sistema de Diseño | 🟢 IMPLEMENTADO |
+| [472](472-errorstate-sistema-diseno/spec.md) | SPEC-472 · OLA 4: el ErrorState al Sistema de Diseño | 🟢 IMPLEMENTADO |
+| [473](473-glasscard-firma/spec.md) | SPEC-473 · OLA 5: cablear la firma en GlassCard | 🟢 IMPLEMENTADO |
+| [474](474-modal-firma/spec.md) | SPEC-474 · OLA 5: cablear la firma en Modal | 🟢 IMPLEMENTADO |
+| [475](475-emergencia-rubi/spec.md) | SPEC-475 · El botón de emergencia: disparador fantasma, confirmar sólido — cierra I-320 (parte 1) | 🟢 IMPLEMENTADO |
+| [476](476-lote-muebles-ola1/spec.md) | SPEC-476 · Lote consolidado de la OLA 1 del rediseño — 12 muebles en un merge | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
