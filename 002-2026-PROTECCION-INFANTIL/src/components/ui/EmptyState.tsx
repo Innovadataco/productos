@@ -22,7 +22,7 @@ export function EmptyState({
             aria-live="polite"
         >
             {icon ?? (
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tinta/5 text-muted">
                     <svg
                         className="h-6 w-6"
                         fill="none"
