@@ -20,8 +20,8 @@ function Stage({
 }) {
     return (
         <div className="relative pl-6">
-            <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-sky-500 ring-4 ring-sky-100 dark:bg-cyan-400 dark:ring-sky-900" />
-            <div className="absolute left-[4px] top-6 h-[calc(100%-16px)] w-0.5 bg-slate-200 dark:bg-slate-700" />
+            <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-cielo ring-4 ring-cielo/20" />
+            <div className="absolute left-[4px] top-6 h-[calc(100%-16px)] w-0.5 bg-tinta/10" />
             <GlassCard className="mb-4 p-4">
                 <div className="mb-2 flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-body">{title}</h4>
@@ -103,7 +103,7 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
             {etapas.anonimizacion && (
                 <Stage title="Anonimización" latency={etapas.anonimizacion.latenciaMs}>
                     <p className="text-xs text-muted">Texto anonimizado:</p>
-                    <p className="max-h-32 overflow-auto rounded bg-slate-50 p-2 text-xs text-body dark:bg-slate-900">
+                    <p className="max-h-32 overflow-auto rounded bg-tinta/5 p-2 text-xs text-body">
                         {etapas.anonimizacion.textoAnonimizado}
                     </p>
                 </Stage>

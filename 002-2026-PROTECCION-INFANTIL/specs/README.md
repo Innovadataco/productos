@@ -415,6 +415,7 @@
 | [481](481-profesional-sin-perfil-redirect/spec.md) | SPEC-481 · Profesional sin perfil: redirect a completar (no 500) — bug en prod | 🟢 IMPLEMENTADO |
 | [482](482-colegio-residual-barrido/spec.md) | SPEC-482 · Barrido residual del colegio al Sistema de Diseño (Lote-2, Olas A+B) | 🟢 IMPLEMENTADO |
 | [483](483-admin-residual-barrido/spec.md) | SPEC-483 · Barrido residual del ADMIN al Sistema de Diseño (mecánico completo) | 🟢 IMPLEMENTADO |
+| [483](483b-ia-monitoreo-residual/spec.md) | SPEC-483b · Barrido residual del panel de IA + monitoreo (fase 2 admin, mecánico) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

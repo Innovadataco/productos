@@ -141,8 +141,8 @@ export function IaModelSelector() {
     return (
         <div className="space-y-6">
             {message && (
-                <GlassCard className={`border-l-4 p-4 ${message.type === "success" ? "border-l-green-500" : "border-l-red-500"}`}>
-                    <p className={message.type === "success" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                <GlassCard className={`border-l-4 p-4 ${message.type === "success" ? "border-l-pino" : "border-l-rubi"}`}>
+                    <p className={message.type === "success" ? "text-estado-pino" : "text-estado-rubi"}>
                         {message.text}
                     </p>
                 </GlassCard>
@@ -171,7 +171,7 @@ export function IaModelSelector() {
                 </div>
 
                 {testResult && (
-                    <div className={`text-sm ${testResult.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                    <div className={`text-sm ${testResult.ok ? "text-estado-pino" : "text-estado-rubi"}`}>
                         {testResult.message}
                     </div>
                 )}
@@ -186,7 +186,7 @@ export function IaModelSelector() {
                 {loadingModels ? (
                     <p className="text-sm text-muted">Cargando modelos...</p>
                 ) : classificationModels.length === 0 ? (
-                    <p className="text-sm text-red-600 dark:text-red-400">
+                    <p className="text-sm text-estado-rubi">
                         No se encontraron modelos de clasificación instalados. Verifique que Ollama esté corriendo y que haya modelos descargados.
                     </p>
                 ) : (

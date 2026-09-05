@@ -77,8 +77,8 @@ function PipelineDiagram() {
                             onClick={() => setSelected(selected === step.id ? null : step.id)}
                             className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
                                 selected === step.id
-                                    ? "border-sky-500 bg-sky-50 text-sky-700 dark:border-cyan-400 dark:bg-sky-950/50 dark:text-cyan-300"
-                                    : "border-slate-200 bg-white/70 text-body hover:border-sky-300 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-slate-500"
+                                    ? "border-cielo bg-cielo/10 text-cielo"
+                                    : "border-tinta/10 bg-papel/70 text-body hover:border-cielo/50"
                             }`}
                         >
                             {idx + 1}. {step.label}
@@ -146,6 +146,9 @@ function ConfidenceGauge({ confianza, umbral }: { confianza: number; umbral: num
     return (
         <GlassCard className="flex flex-col items-center p-6">
             <div className="relative h-40 w-48">
+                {/* data-viz:inicio · medidor de confianza: el color CODIFICA el valor/umbral
+                    (verde≥umbral, ámbar debajo). Lo migra Diseño (SPEC-483b) con su escala
+                    dedicada; NO tokenizar a ciegas (regla de oro: color-que-codifica-valor). */}
                 <svg viewBox="0 0 180 110" className="h-full w-full" aria-hidden="true">
                     <path
                         d="M 20 100 A 70 70 0 0 1 160 100"
@@ -175,6 +178,7 @@ function ConfidenceGauge({ confianza, umbral }: { confianza: number; umbral: num
                         className="text-slate-500"
                     />
                 </svg>
+                {/* data-viz:fin */}
                 <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
                     <span className="text-2xl font-bold text-body">{(confianza * 100).toFixed(0)}%</span>
                     <span className="text-xs text-muted">umbral {umbral}</span>
@@ -201,7 +205,7 @@ function MetricBarsByCategory() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <div className="h-32 animate-pulse rounded-2xl bg-slate-200" />;
+    if (loading) return <div className="h-32 animate-pulse rounded-2xl bg-tinta/10" />;
     if (!data || data.length === 0) {
         return (
             <EmptyState
