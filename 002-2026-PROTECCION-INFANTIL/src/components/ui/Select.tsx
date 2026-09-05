@@ -35,8 +35,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                         <ChevronDownIcon className="h-4 w-4" />
                     </span>
                 </div>
+                {/* SPEC-470 · el error del formulario en token `rubi` (criticidad),
+                    nunca rojo crudo. El token voltea solo en oscuro. */}
                 {error && (
-                    <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{error}</p>
+                    <p className="mt-1.5 text-sm text-rubi">{error}</p>
                 )}
             </div>
         );
