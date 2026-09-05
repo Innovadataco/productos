@@ -2,6 +2,7 @@
  
 
 import { useEffect, useState, useCallback } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -300,9 +301,7 @@ export default function AlertasColegioPageClient() {
                     )}
 
                     {cargando ? (
-                        <div className="flex justify-center py-12">
-                            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-pino border-t-transparent" />
-                        </div>
+                        <SkeletonLista />
                     ) : alertas.length === 0 ? (
                         <EmptyState
                             title="Aún no hay alertas"

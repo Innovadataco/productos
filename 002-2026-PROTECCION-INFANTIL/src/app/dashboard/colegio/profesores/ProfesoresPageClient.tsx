@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import { Alerta } from "@/components/ui/Alerta";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -333,12 +334,7 @@ export default function ProfesoresPageClient() {
                     />
 
                     {loading ? (
-                        <div className="glass rounded-2xl p-8">
-                            <div className="flex items-center gap-3 text-muted">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-accent" />
-                                Cargando profesores...
-                            </div>
-                        </div>
+                        <SkeletonLista />
                     ) : error ? (
                         <ErrorState title="No pudimos cargar los profesores" description={error} onRetry={cargar} />
                     ) : profesores.length === 0 && !filtroTexto.trim() ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -156,10 +157,7 @@ export default function MateriasPageClient() {
 
                     <GlassCard>
                         {loading ? (
-                            <div className="flex items-center gap-3 py-8 text-muted">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-accent" />
-                                Cargando materias...
-                            </div>
+                            <SkeletonLista />
                         ) : error ? (
                             <ErrorState title="No pudimos cargar las materias" description={error} onRetry={cargar} />
                         ) : materias.length === 0 ? (

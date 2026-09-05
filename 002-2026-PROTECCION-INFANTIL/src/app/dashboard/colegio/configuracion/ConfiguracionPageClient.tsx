@@ -1,6 +1,7 @@
 "use client";
 
 import { EscudoColegioUploader } from "@/components/modules/colegio/casos/EscudoColegioUploader";
+import { SkeletonDetalle } from "@/components/ui/skeletons";
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Mail } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
@@ -225,12 +226,7 @@ export default function ConfiguracionPageClient() {
                     <EscudoColegioUploader />
 
                     {loading ? (
-                        <GlassCard>
-                            <div className="flex items-center gap-3 text-muted">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-accent" />
-                                Cargando configuración...
-                            </div>
-                        </GlassCard>
+                        <SkeletonDetalle />
                     ) : errorCarga ? (
                         <ErrorState title="No pudimos cargar la configuración" description={errorCarga} onRetry={() => void cargar()} />
                     ) : prefs ? (

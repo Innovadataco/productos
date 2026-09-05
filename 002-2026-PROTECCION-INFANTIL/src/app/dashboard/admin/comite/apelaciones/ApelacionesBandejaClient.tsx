@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -243,10 +244,7 @@ export function ApelacionesBandejaClient() {
                     />
                 </div>
                 {cargando ? (
-                    <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
-                        Cargando apelaciones...
-                    </div>
+                    <SkeletonLista />
                 ) : items.length === 0 ? (
                     <EmptyState title="No hay apelaciones" description="Cuando un titular radique una apelación, aparecerá aquí." />
                 ) : (
@@ -294,12 +292,7 @@ export function ApelacionesBandejaClient() {
                 )}
             </GlassCard>
 
-            {cargandoDetalle && (
-                <div className="flex items-center gap-3 py-6 text-muted">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
-                    Cargando caso...
-                </div>
-            )}
+            {cargandoDetalle && <SkeletonLista filas={3} />}
 
             {detalle && !cargandoDetalle && (
                 <GlassCard>

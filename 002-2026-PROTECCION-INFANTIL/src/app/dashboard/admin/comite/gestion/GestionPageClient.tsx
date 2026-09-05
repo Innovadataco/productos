@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { SkeletonDetalle, SkeletonLista } from "@/components/ui/skeletons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -390,10 +391,7 @@ export default function GestionPageClient() {
             )}
 
             {loadingCuenta ? (
-                <div className="flex items-center gap-3 py-8 text-muted">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
-                    Cargando cuenta del comité...
-                </div>
+                <SkeletonDetalle />
             ) : !cuenta ? (
                 <GlassCard>
                     <h2 className="text-lg font-semibold text-body">Cuenta de acceso del comité</h2>
@@ -519,10 +517,7 @@ export default function GestionPageClient() {
                                 Listado informativo de las personas que conforman el comité. El ingreso a la plataforma se hace solo con la cuenta de acceso del comité.
                             </p>
                             {loadingIntegrantes ? (
-                                <div className="flex items-center gap-3 py-8 text-muted">
-                                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
-                                    Cargando integrantes...
-                                </div>
+                                <SkeletonLista />
                             ) : integrantes.length === 0 ? (
                                 <EmptyState
                                     title="No hay integrantes registrados"

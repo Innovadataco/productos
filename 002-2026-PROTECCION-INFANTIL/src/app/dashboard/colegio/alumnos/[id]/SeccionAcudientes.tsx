@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -275,10 +276,7 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
             ) : null}
 
             {loading ? (
-                <div className="flex items-center gap-3 py-8 text-muted">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-pino" />
-                    Cargando...
-                </div>
+                <SkeletonLista />
             ) : acudientes.length === 0 ? (
                 <div className="mt-4">
                     <EmptyState

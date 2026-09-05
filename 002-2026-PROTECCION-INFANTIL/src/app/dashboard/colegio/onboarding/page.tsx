@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SkeletonDetalle } from "@/components/ui/skeletons";
 import Link from "next/link";
 import { OnboardingModal } from "@/components/modules/colegio/OnboardingModal";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -47,10 +48,7 @@ export default function OnboardingPage() {
 
     if (cargando) {
         return (
-            <div className="flex items-center justify-center gap-3 p-8 text-muted">
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/15 border-t-pino" />
-                Cargando…
-            </div>
+            <SkeletonDetalle />
         );
     }
 

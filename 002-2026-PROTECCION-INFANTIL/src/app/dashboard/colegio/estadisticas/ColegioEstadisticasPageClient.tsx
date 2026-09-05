@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { SkeletonLista } from "@/components/ui/skeletons";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -235,11 +236,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                         comparativa={estadisticas.comparativa}
                         onCambiarCriterio={cargarComparativa}
                     />
-                    {cargandoComparativa && (
-                        <div className="flex justify-center py-4">
-                            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-pino border-t-transparent" />
-                        </div>
-                    )}
+                    {cargandoComparativa && <SkeletonLista filas={2} />}
 
                     <section aria-labelledby="titulo-mapa-publico" className="space-y-4">
                         <h2 id="titulo-mapa-publico" className="titular-seccion text-body">
