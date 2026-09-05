@@ -16,10 +16,10 @@
  * tocar lo que 437 arregla ([[ceo-candado-vigila-conducta-no-palabras]]).
  * Este spec afirma **la conducta nueva**.
  *
- * TODOS LOS TESTS CON `test.fail`. SPEC-437 (#359) aún no despliega. Cuando
- * entre, Playwright reporta "unexpected pass" y Dev X quita los candados
- * como parte de esa spec — no antes, aunque el HTML de hoy ya contenga
- * alguno de los ítems por casualidad.
+ * SPEC-437 (#359) YA está en main y desplegada — los tests afirman el
+ * comportamiento bueno (aviso CEO tras el merge de #359). El menú viene
+ * de la fuente única `PROFESIONAL_NAV_ITEMS`, así que el candado prueba
+ * lo que Dev realmente cablea, no una lista hardcodeada.
  *
  * AISLAMIENTO. Prefijo `e2e-437-<uuid>`, cero mutación de rol real,
  * limpieza FK-safe en `afterAll`. Aceptación del consentimiento por el
@@ -30,6 +30,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 import type { RolUsuario } from "@prisma/client";
 
 const CORRIDA = `e2e-437-${randomUUID().slice(0, 8)}`;
@@ -37,20 +38,12 @@ const PASSWORD = "Menu437!Secure";
 const EMAIL_PROF = `${CORRIDA}-prof@proteccion.local`;
 
 /**
- * Los 6 ítems que SPEC-437 (#359) construye en la barra lateral. Las URLs
- * de referencia son la convención del proyecto (`/dashboard/profesional/*`
- * para área de trabajo, `/perfil-profesional/*` para configurar la ficha).
- * Si #359 elige otras URLs, el spec truena con el nombre exacto — que es
- * lo que uno quiere.
+ * Los ítems de la barra lateral vienen de la FUENTE ÚNICA
+ * `PROFESIONAL_NAV_ITEMS` (`src/lib/nav-items.ts`), que SPEC-437 (#359)
+ * construyó. Importarla en vez de hardcodear evita que el spec se
+ * desincronice: si Dev agrega/quita un ítem, el candado lo prueba solo.
  */
-const ITEMS_LATERAL = [
-    { label: "Inicio",       href: "/dashboard/profesional" },
-    { label: "Citaciones",   href: "/dashboard/profesional/citaciones" },
-    { label: "Casos",        href: "/dashboard/profesional/casos" },
-    { label: "Calendario",   href: "/dashboard/profesional/calendario" },
-    { label: "Mi ficha",     href: "/perfil-profesional/completar" },
-    { label: "Verificación", href: "/perfil-profesional/verificacion" },
-] as const;
+const ITEMS_LATERAL = PROFESIONAL_NAV_ITEMS;
 
 /** Ítems que NUNCA deben aparecer — son de otros roles (I-299 reforzada). */
 const ITEMS_AJENOS = [
@@ -151,7 +144,6 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
     });
 
     test("(A) la barra lateral pinta los 6 ítems concedibles del profesional", async () => {
-        test.fail(true, "SPEC-437 (Dev X · #359) construye la barra lateral con 6 módulos. Este candado se quita cuando esa spec despliegue.");
 
         const request = await ctx();
         try {
@@ -179,7 +171,6 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
     });
 
     test("(B) el menú móvil da los mismos accesos y permite volver al panel", async () => {
-        test.fail(true, "SPEC-437 (Dev X · #359) trae el menú móvil que hoy dejaba al psicólogo sin retorno al panel.");
 
         const request = await ctx();
         try {
@@ -214,7 +205,6 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
     });
 
     test("(C) el menú NO pinta ningún ítem de padre / operador / comité (I-299)", async () => {
-        test.fail(true, "SPEC-437 (Dev X · #359) refuerza I-299: el profesional NO ve el menú de otros roles.");
 
         const request = await ctx();
         try {
