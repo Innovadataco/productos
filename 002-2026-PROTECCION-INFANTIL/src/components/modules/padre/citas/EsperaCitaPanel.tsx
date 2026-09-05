@@ -31,32 +31,32 @@ const ESTADO_LEGIBLE: Record<CitaParaPadreDto["estado"], { titulo: string; detal
     },
     CUMPLIDA: {
         titulo: "Cita realizada",
-        detalle: "Esta cita ya se realizó. Podés pedir una siguiente desde el directorio.",
+        detalle: "Esta cita ya se realizó. Puedes pedir una siguiente desde el directorio.",
         tono: "gris",
     },
     NO_ASISTIO_PADRE: {
         titulo: "No asistió el padre",
-        detalle: "El profesional marcó que no llegaste. Si fue un error, escribinos a soporte.",
+        detalle: "El profesional marcó que no llegaste. Si fue un error, escríbenos a soporte.",
         tono: "gris",
     },
     NO_ASISTIO_PROFESIONAL: {
         titulo: "El profesional no asistió",
-        detalle: "Podés elegir otro profesional sin volver a pagar (el pago se hereda).",
+        detalle: "Puedes elegir otro profesional sin volver a pagar (el pago se hereda).",
         tono: "rojo",
     },
     VENCIDA_SIN_RESPUESTA: {
         titulo: "No respondió a tiempo",
-        detalle: "Pasaron 48 h sin confirmación. Elegí otro profesional — el pago viaja con la nueva solicitud.",
+        detalle: "Pasaron 48 h sin confirmación. Elige otro profesional — el pago viaja con la nueva solicitud.",
         tono: "rojo",
     },
     REEMBOLSADA: {
         titulo: "Cita reembolsada",
-        detalle: "El pago volvió a tu método. Podés pedir una nueva cita cuando quieras.",
+        detalle: "El pago volvió a tu método. Puedes pedir una nueva cita cuando quieras.",
         tono: "gris",
     },
     SIN_CONFIRMAR: {
         titulo: "Pendiente de pago",
-        detalle: "Todavía no se confirmó el pago. Si es un error, escribinos a soporte.",
+        detalle: "Todavía no se confirmó el pago. Si es un error, escríbenos a soporte.",
         tono: "gris",
     },
     REPROGRAMADA: {
@@ -189,7 +189,7 @@ export function EsperaCitaPanel({ citaInicial }: Props) {
             {puedeElegirOtro && (
                 <section className="rounded-2xl border border-pino/30 bg-pino/5 p-4 sm:p-5">
                     <p className="cuerpo text-body">
-                        El pago se hereda: elegí a otro profesional sin volver a pagar la primera cita.
+                        El pago se hereda: elige a otro profesional sin volver a pagar la primera cita.
                     </p>
                     <Link
                         href={`/dashboard/padre/profesionales?heredarDe=${encodeURIComponent(cita.id)}`}

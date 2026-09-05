@@ -149,7 +149,7 @@ export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
                 y queda MARCADA como aproximada. */}
             <div className="flex flex-wrap items-center gap-2">
                 <label htmlFor="franja-aproximada" className="text-sm text-muted">
-                    ¿No recordás la hora?
+                    ¿No recuerdas la hora?
                 </label>
                 <select
                     id="franja-aproximada"
@@ -167,7 +167,7 @@ export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
                     }}
                     className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
                 >
-                    <option value="">Elegí una franja</option>
+                    <option value="">Elige una franja</option>
                     {FRANJAS.map((f) => (
                         <option key={f} value={f}>
                             {ETIQUETA_FRANJA[f]}
@@ -176,7 +176,7 @@ export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
                 </select>
             </div>
             <p className="text-sm text-muted">
-                Si elegís una franja, queda registrada como hora aproximada — no inventamos una hora exacta.
+                Si eliges una franja, queda registrada como hora aproximada — no inventamos una hora exacta.
             </p>
             {error && (
                 <p role="alert" className="text-sm text-ambar">

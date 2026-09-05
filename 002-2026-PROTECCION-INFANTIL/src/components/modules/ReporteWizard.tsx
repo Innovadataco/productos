@@ -226,7 +226,7 @@ export function ReporteWizard({
                 </p>
                 <p className="mt-2 text-sm text-tinta/80">
                     <span className="font-mono font-bold">{oferta.identificador}</span> ya tiene un reporte tuyo en el sistema.
-                    ¿Querés agregar otro evento al mismo caso?
+                    ¿Quieres agregar otro evento al mismo caso?
                 </p>
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <Button

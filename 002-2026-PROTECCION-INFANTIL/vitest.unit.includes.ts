@@ -16,6 +16,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
     // SPEC-463 (D-107): el colegio habla de usted; el padre conserva «tú».
     "src/app/dashboard/colegio/voz-usted.candado.test.ts",
+    // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del
+    // árbol de render + lexemas exactos. Mixta PreferenciasNotificaciones §D exenta.
+    "src/app/voz-tu-padre-publico.candado.test.ts",
     // SPEC-435 (Jelkin 04-09): la cuenta VERIFICADOR nace con un solo módulo
     // (no hereda operador/comité/padre). Fuente: `prisma/seed-modulos-grants.ts`.
     "src/lib/verificador-modulos.candado.test.ts",
