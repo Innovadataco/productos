@@ -117,29 +117,20 @@ export function NavHeader() {
         user?.rol === "VERIFICADOR" ||
         user?.rol === "PROFESIONAL";
 
-    const headerBorderClass = user?.rol === "ADMIN"
+    // SPEC-488 · identidad de rol interno de IDC en un solo acento (ámbar): el
+    // color NO codifica el rol (§3.1 color=función); se distinguen por NOMBRE +
+    // inicial (badge con `user.rol` + avatar con iniciales). ADMIN/OPERADOR/
+    // COMITE_VALIDACION → ámbar (mata el violet del operador y corrige comité).
+    // PROFESIONAL (externo, no IDC) y el resto caen al default.
+    const esRolInternoIdc = user?.rol === "ADMIN" || user?.rol === "OPERADOR" || user?.rol === "COMITE_VALIDACION";
+
+    const headerBorderClass = esRolInternoIdc
         ? "border-b-ambar/40"
-        : user?.rol === "OPERADOR"
-            ? "border-b-violet-500/40 dark:border-b-violet-400/30"
-            : user?.rol === "COMITE_VALIDACION"
-                ? "border-b-pino/40"
-                : "border-b-white/40 dark:border-b-white/10";
+        : "border-b-white/40 dark:border-b-white/10";
 
-    const avatarClass = user?.rol === "ADMIN"
-        ? "bg-ambar"
-        : user?.rol === "OPERADOR"
-            ? "bg-violet-500"
-            : user?.rol === "COMITE_VALIDACION"
-                ? "bg-pino"
-                : "accent-gradient";
+    const avatarClass = esRolInternoIdc ? "bg-ambar" : "accent-gradient";
 
-    const rolBadgeClass = user?.rol === "ADMIN"
-        ? "bg-ambar/10 text-estado-ambar"
-        : user?.rol === "OPERADOR"
-            ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
-            : user?.rol === "COMITE_VALIDACION"
-                ? "bg-pino/10 text-estado-pino"
-                : "bg-tinta/10 text-muted";
+    const rolBadgeClass = esRolInternoIdc ? "bg-ambar/10 text-estado-ambar" : "bg-tinta/10 text-muted";
 
     const dashboardHref = user?.rol === "SCHOOL_ADMIN"
         ? "/dashboard/colegio"

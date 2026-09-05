@@ -306,7 +306,7 @@ export function MapaUbicaciones({
             const pais = paisesMap.get(norm);
 
             const popupContent = pais
-                ? `<div class="font-sans"><div class="text-sm font-semibold">${nombre}</div><div class="text-xs text-slate-600">${pais.total} reporte(s)</div></div>`
+                ? `<div class="font-sans"><div class="text-sm font-semibold">${nombre}</div><div class="text-xs text-muted">${pais.total} reporte(s)</div></div>`
                 : `<div class="font-sans"><div class="text-sm font-semibold">${nombre}</div></div>`;
             layer.bindPopup(popupContent);
 
@@ -340,13 +340,13 @@ export function MapaUbicaciones({
                         <Marker key={idx} position={[p.lat, p.lng]} icon={cityIcon(p.total, color)}>
                             <Tooltip direction="top" offset={[0, -10]} opacity={1}>
                                 <div className="text-xs font-semibold">{ciudad}</div>
-                                <div className="text-[10px] text-slate-600">{pais}</div>
+                                <div className="text-[10px] text-muted">{pais}</div>
                                 <div className="text-[10px] font-bold">{p.total} reporte(s)</div>
                             </Tooltip>
                             <Popup>
                                 <div className="font-sans">
                                     <div className="text-sm font-semibold">{p.label}</div>
-                                    <div className="text-xs text-slate-600">{p.total} reporte(s)</div>
+                                    <div className="text-xs text-muted">{p.total} reporte(s)</div>
                                 </div>
                             </Popup>
                         </Marker>
@@ -355,7 +355,7 @@ export function MapaUbicaciones({
             </MapContainer>
 
             {paises && paises.length > 0 && (
-                <div className="absolute bottom-3 right-3 z-[1000] rounded-lg border border-slate-200 bg-white/90 p-3 text-xs shadow-md backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
+                <div className="absolute bottom-3 right-3 z-[1000] rounded-lg border border-tinta/10 bg-papel/90 p-3 text-xs shadow-md backdrop-blur">
                     <p className="mb-2 font-semibold text-body">Reportes por país</p>
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
@@ -379,7 +379,7 @@ export function MapaUbicaciones({
             )}
 
             {geoError && (
-                <div className="absolute bottom-3 left-3 z-[1000] rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                <div className="absolute bottom-3 left-3 z-[1000] rounded-lg bg-ambar/10 px-3 py-2 text-xs text-estado-ambar">
                     No se pudieron cargar los contornos geográficos.
                 </div>
             )}

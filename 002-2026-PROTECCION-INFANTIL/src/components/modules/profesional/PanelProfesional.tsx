@@ -194,7 +194,7 @@ export function CitasConfirmadas({ data }: { data: PanelProfesionalDto }) {
                                 <span className="text-sm font-bold leading-none text-body">
                                     {fechaCorta(c.inicio).split(" ")[0]}
                                 </span>
-                                <span className="text-[10px] uppercase text-subtle">
+                                <span className="text-[11px] uppercase text-subtle">
                                     {fechaCorta(c.inicio).split(" ")[1]}
                                 </span>
                             </div>

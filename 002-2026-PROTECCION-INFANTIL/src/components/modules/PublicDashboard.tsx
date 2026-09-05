@@ -59,13 +59,13 @@ export function PublicDashboard({
     if (loading) {
         return (
             <section className="space-y-6" aria-label="Cargando dashboard">
-                <div className="h-8 w-56 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700" />
+                <div className="h-8 w-56 animate-pulse rounded-[var(--radio-card)] bg-tinta/5" />
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-700" />
+                        <div key={i} className="h-28 animate-pulse rounded-2xl bg-tinta/5" />
                     ))}
                 </div>
-                <div className="h-80 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-700" />
+                <div className="h-80 animate-pulse rounded-2xl bg-tinta/5" />
             </section>
         );
     }

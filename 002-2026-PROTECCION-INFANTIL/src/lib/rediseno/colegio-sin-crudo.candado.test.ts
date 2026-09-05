@@ -17,8 +17,10 @@ const RAICES = [
     resolve(__dirname, "..", "..", "components/modules/colegio"),
 ];
 const EXCLUYE = /pdf-informe-mensual|\.test\.tsx?$/;
+// SPEC-490: incluye el infijo direccional opcional (`-l`, `-t`, `-r`, `-b`, `-x`,
+// `-y`) — sin él, `border-l-emerald-500` se colaba (2 crudos que 482 perdió).
 const CRUDO =
-    /\b(?:text|bg|border|ring|from|to|via|divide|fill|stroke|shadow)-(?:emerald|slate|gray|amber)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
+    /\b(?:text|bg|border|ring|from|to|via|divide|fill|stroke|shadow)(?:-[ltrbxy])?-(?:emerald|slate|gray|amber)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
 
 function* recorrer(dir: string): Generator<string> {
     for (const e of readdirSync(dir, { withFileTypes: true })) {

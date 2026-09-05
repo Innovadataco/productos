@@ -35,7 +35,7 @@ export function BarChart({
                             x={leftMargin - 8}
                             y={y + barHeight / 2 + 4}
                             textAnchor="end"
-                            className="fill-current text-muted text-[10px]"
+                            className="fill-current text-muted text-[11px]"
                         >
                             {d.label.length > 18 ? `${d.label.slice(0, 18)}...` : d.label}
                         </text>
@@ -56,7 +56,7 @@ export function BarChart({
                         <text
                             x={leftMargin + barWidth + 6}
                             y={y + barHeight / 2 + 4}
-                            className="fill-current text-body text-[10px] font-medium"
+                            className="fill-current text-body text-[11px] font-medium"
                         >
                             {d.value}
                         </text>
