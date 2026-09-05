@@ -3,7 +3,7 @@
  *
  * CONTRATO CANDADO ANTES DEL FIX (memoria `calidad-candado-antes-del-fix.md`).
  * Encargo del CEO 04-09: cubrir la creación de un VERIFICADOR desde el panel
- * del admin en tres direcciones (A/B/C), con `test.fail` citando SPEC-435 en
+ * del admin en cuatro direcciones (A + credencial-no-por-correo, B, C — aviso CEO 20:0x
  * cada test — el candado se retira cuando SPEC-435 despliegue.
  *
  * QUÉ CUBRE — el orden fija el recorrido de negocio del CEO:
@@ -129,12 +129,19 @@ test.describe.serial("Alta de VERIFICADOR desde el panel del admin (SPEC-435)", 
      *     `pi-restablecer-vs-reenviar-credenciales.md`).
      */
     test("(A) POST /api/admin/verificadores crea la cuenta y devuelve passwordTemporal", async () => {
-        test.fail(true, CANDADO_MSG);
         const request = await ctx();
         try {
             await login(request, EMAIL_ADMIN, PASSWORD);
             await aceptarConsentimiento(request);
             await login(request, EMAIL_ADMIN, PASSWORD);
+
+            // Contrato Jelkin: la credencial viaja en la respuesta, NO por correo.
+            // Contar notificaciones al VERIFICADOR antes/después del POST — debe
+            // seguir en 0. Si suma una fila, el alta está mandando correo con la
+            // temporal (viola el contrato de la casa · pi-restablecer-vs-reenviar).
+            const notifsAntes = await prisma.notificacion.count({
+                where: { destinatarioEmail: EMAIL_VERIF },
+            });
 
             const res = await request.post("/api/admin/verificadores", {
                 data: { email: EMAIL_VERIF, nombre: `Verif E2E ${CORRIDA}` },
@@ -159,6 +166,15 @@ test.describe.serial("Alta de VERIFICADOR desde el panel del admin (SPEC-435)", 
 
             verificadorId = json.verificador!.id!;
             passwordTemporal = json.passwordTemporal!;
+
+            // Post-condición del contrato: NO se envía correo con la temporal.
+            const notifsDespues = await prisma.notificacion.count({
+                where: { destinatarioEmail: EMAIL_VERIF },
+            });
+            expect(
+                notifsDespues,
+                `contrato Jelkin: crear VERIFICADOR NO manda correo con la temporal. notif antes=${notifsAntes} después=${notifsDespues}`,
+            ).toBe(notifsAntes);
         } finally {
             await request.dispose();
         }
@@ -170,7 +186,6 @@ test.describe.serial("Alta de VERIFICADOR desde el panel del admin (SPEC-435)", 
      *     página REAL — no a `SinAccesoModulo`, que también devuelve 200.
      */
     test("(B) el VERIFICADOR entra con la temporal, cambia password y llega a /dashboard/admin/verificacion", async () => {
-        test.fail(true, CANDADO_MSG);
         expect(passwordTemporal, "el test (A) debe haber capturado passwordTemporal").not.toBe("");
         const request = await ctx();
         try {
@@ -212,7 +227,6 @@ test.describe.serial("Alta de VERIFICADOR desde el panel del admin (SPEC-435)", 
      *     `CLAVES_POR_ROL.VERIFICADOR` (`prisma/seed-modulos-grants.ts:58`).
      */
     test("(C) el VERIFICADOR recibe 403 al llamar módulos ajenos (reportes-revision · comite/solicitudes · colegios)", async () => {
-        test.fail(true, CANDADO_MSG);
         expect(passwordNueva, "el test (B) debe haber fijado la nueva password").not.toBe("");
         const request = await ctx();
         try {
