@@ -65,25 +65,55 @@ function* recorrer(directorio: string): Generator<string> {
     }
 }
 
-let total = 0;
-let archivos = 0;
-for (const ruta of recorrer(RAIZ_SRC)) {
-    const contenido = fs.readFileSync(ruta, "utf8");
-    const coincidencias = contenido.match(PATRON);
-    if (coincidencias && coincidencias.length > 0) {
-        total += coincidencias.length;
-        archivos += 1;
+function medir(): { total: number; archivos: number } {
+    let total = 0;
+    let archivos = 0;
+    for (const ruta of recorrer(RAIZ_SRC)) {
+        const contenido = fs.readFileSync(ruta, "utf8");
+        const coincidencias = contenido.match(PATRON);
+        if (coincidencias && coincidencias.length > 0) {
+            total += coincidencias.length;
+            archivos += 1;
+        }
     }
+    return { total, archivos };
+}
+
+const { total, archivos } = medir();
+
+/**
+ * SPEC-466 · Modo tensión. La tensión del ratchet NO la hace cada PR (eso
+ * serializaba los merges: dos muebles que bajaban crudos distintos chocaban en
+ * la línea del PISO). Un barrido periódico —o un PR-bot— corre `--tension`
+ * sobre `origin/main` fresco y reescribe el PISO al mínimo real medido. Baja,
+ * nunca sube. Los PR que migran a tokens NO tocan esta constante: pasan por el
+ * guard `<=` mientras no suban.
+ */
+if (process.argv.includes("--tension")) {
+    if (total < PISO) {
+        const archivoScript = path.resolve(__dirname, "tokens-check.ts");
+        const fuente = fs.readFileSync(archivoScript, "utf8");
+        const reescrito = fuente.replace(/const PISO = \d+;/, `const PISO = ${total};`);
+        fs.writeFileSync(archivoScript, reescrito);
+        console.log(`[Tokens:check] TENSIÓN: piso apretado ${PISO} → ${total} (mínimo real medido).`);
+        process.exit(0);
+    }
+    console.log(`[Tokens:check] TENSIÓN: nada que apretar (conteo ${total} = piso ${PISO}).`);
+    process.exit(0);
 }
 
 console.log(`[Tokens:check] Color crudo en src/** productivo: ${total} ocurrencias en ${archivos} archivos (piso: ${PISO}).`);
 
+// SPEC-466: el guard es `<=` — solo falla si el conteo SUBE del piso. Un PR que
+// BAJA crudos pasa sin tocar la constante PISO (la aprieta el barrido `--tension`,
+// no el PR). Así dos muebles paralelos mergean sin serializar en esta línea.
 if (total > PISO) {
     console.error(
         `[Tokens:check] ROJO: el conteo SUBIÓ del piso (${total} > ${PISO}). ` +
             "En código nuevo el color crudo está prohibido (SPEC-157, FR-007): usa tokens " +
-            "(pino/cielo/ambar/rubi/papel/tinta y la capa semántica). Si migraste pantallas " +
-            "a tokens y el conteo BAJÓ, actualiza la constante PISO con la nueva medición.",
+            "(pino/cielo/ambar/rubi/papel/tinta y la capa semántica). NO subas el PISO para " +
+            "que pase: quita el crudo. Si migraste pantallas y el conteo BAJÓ, NO hace falta " +
+            "tocar el PISO — el barrido `npx tsx scripts/tokens-check.ts --tension` lo aprieta.",
     );
     process.exit(1);
 }
