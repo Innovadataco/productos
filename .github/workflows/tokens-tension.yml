@@ -70,6 +70,20 @@ jobs:
       # pase el check requerido `verificar_base` del ruleset «Gate CI - main».
       # SPEC-466: `bot/…` NO tiene exención en ese patrón → su PR nacería
       # bloqueado; por eso la rama es `work/pi-SPEC-466-tension`.
+      #
+      # ⚠️ ANTI-RECURSIÓN (trampa de GitHub): un push/PR originado con
+      # `GITHUB_TOKEN` NO dispara otros workflows. El PR del bot nace SIN correr
+      # `verificar_base` / `pi-gate` / `bi-gate` → esos checks requeridos quedan
+      # «pendientes» para siempre → el ruleset «Gate CI - main» lo bloquea igual.
+      # Cambiar la rama no lo arregla; el problema es quién origina el evento.
+      # Remedio (job de baja frecuencia, sin PAT ni secreto): el operador empuja
+      # UN commit vacío a la rama del bot COMO USUARIO REAL, lo que origina el
+      # evento `pull_request synchronize` con actor real y dispara los checks:
+      #     git fetch origin work/pi-SPEC-466-tension
+      #     git switch work/pi-SPEC-466-tension
+      #     git commit --allow-empty -m "ci: disparar checks"
+      #     git push
+      # Con eso corren los required checks → el PR queda mergeable.
       - name: Abrir PR con el piso apretado
         if: steps.diff.outputs.cambio == 'si'
         working-directory: .
@@ -88,7 +102,9 @@ jobs:
           if [ -z "$(gh pr list --head "$RAMA" --state open --json number --jq '.[].number')" ]; then
             gh pr create --base main --head "$RAMA" \
               --title "chore(tokens): apretar el piso al mínimo real (barrido --tension)" \
-              --body "Barrido de tensión de \`tokens:check\` (SPEC-466). El conteo real de color crudo bajó por debajo del PISO vigente; este PR aprieta la constante al mínimo medido sobre \`main\` fresco. Guard \`<=\`: los PR que bajan crudos no tocan el PISO; este barrido lo aprieta. Verificado: \`npm run tokens:check\` verde tras apretar."
+              --body "Barrido de tensión de \`tokens:check\` (SPEC-466). El conteo real de color crudo bajó por debajo del PISO vigente; este PR aprieta la constante al mínimo medido sobre \`main\` fresco. Guard \`<=\`: los PR que bajan crudos no tocan el PISO; este barrido lo aprieta. Verificado: \`npm run tokens:check\` verde tras apretar.
+
+          **Para mergear:** este PR lo abrió el \`GITHUB_TOKEN\`, así que los checks requeridos NO se dispararon (anti-recursión de GitHub) y aparecen pendientes. Empujá un commit vacío como usuario real para dispararlos: \`git switch work/pi-SPEC-466-tension && git commit --allow-empty -m 'ci: disparar checks' && git push\`."
           else
             echo "PR de tensión ya abierto para $RAMA; el force-push lo actualizó."
           fi
