@@ -444,6 +444,16 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-487 (D-109): los PR no tocan los generados (invariante de
     // representabilidad); el barrido post-merge los regenera. Merge real + repr.
     "scripts/specs/generados-post-merge.candado.test.ts",
+    // SPEC-488: rol interno de IDC unificado en ámbar (mata el violet).
+    "src/components/modules/rol-interno-ambar.candado.test.ts",
+    // SPEC-489: el ring de confianza a tokens (escala pino/ámbar por umbral, nunca rojo).
+    "src/components/modules/ia/ring-confianza-tokens.candado.test.ts",
+    // SPEC-491: públicas de auth (recuperar + reportar) sin slate crudo.
+    "src/app/recuperar/publicas-auth-sin-crudo.candado.test.ts",
+    // SPEC-492: portada — radio por token, skeleton, titular fluido.
+    "src/components/modules/portada-forma.candado.test.ts",
+    // SPEC-493: dashboard-público + profesional (forma) sin crudo + labels 11px.
+    "src/components/modules/dashboard-profesional-forma.candado.test.ts",
     // SPEC-432b: lo mismo para los artefactos de arquitectura, con la matriz
     // que demuestra que aflojar el orden no aflojó el contenido.
     "scripts/arch/artefactos-sin-conflicto.candado.test.ts",

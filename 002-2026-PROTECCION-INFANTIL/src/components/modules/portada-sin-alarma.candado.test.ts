@@ -54,7 +54,9 @@ describe("SPEC-456 · el hero vive en la marca y habla en «tú»", () => {
 
     it("el titular va en Instrument Serif y la bajada no es jerga institucional", () => {
         const src = hero();
-        expect(/font-serif/.test(src), "El titular del hero debe ir en Instrument Serif (font-serif).").toBe(true);
+        // SPEC-492: el titular pasó a la clase `titular-estado` (clamp §4.1), que
+        // define font-family Instrument Serif por CSS — sigue siendo serif de marca.
+        expect(/font-serif|titular-estado/.test(src), "El titular del hero debe ir en Instrument Serif (font-serif o .titular-estado).").toBe(true);
         for (const jerga of ["identificadores", "conductas de riesgo"]) {
             expect(
                 new RegExp(jerga, "i").test(src),

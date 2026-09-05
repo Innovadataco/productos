@@ -146,16 +146,16 @@ function ConfidenceGauge({ confianza, umbral }: { confianza: number; umbral: num
     return (
         <GlassCard className="flex flex-col items-center p-6">
             <div className="relative h-40 w-48">
-                {/* data-viz:inicio · medidor de confianza: el color CODIFICA el valor/umbral
-                    (verde≥umbral, ámbar debajo). Lo migra Diseño (SPEC-483b) con su escala
-                    dedicada; NO tokenizar a ciegas (regla de oro: color-que-codifica-valor). */}
+                {/* SPEC-489 · medidor de confianza tokenizado según la escala de Diseño (§7.9):
+                    en/sobre umbral → pino, bajo umbral → ámbar, arco neutro (--linea), marcador
+                    tinta-muted. NUNCA rojo. El color sigue codificando el valor, pero por token. */}
                 <svg viewBox="0 0 180 110" className="h-full w-full" aria-hidden="true">
                     <path
                         d="M 20 100 A 70 70 0 0 1 160 100"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={stroke}
-                        className="text-slate-200 dark:text-slate-700"
+                        className="text-tinta/10"
                     />
                     <path
                         d="M 20 100 A 70 70 0 0 1 160 100"
@@ -165,7 +165,7 @@ function ConfidenceGauge({ confianza, umbral }: { confianza: number; umbral: num
                         strokeDasharray={circumference}
                         strokeDashoffset={offset}
                         strokeLinecap="round"
-                        className={confianza >= umbral ? "text-green-500" : "text-amber-500"}
+                        className={confianza >= umbral ? "text-estado-pino" : "text-estado-ambar"}
                     />
                     {/* Marcador del umbral */}
                     <line
@@ -175,10 +175,9 @@ function ConfidenceGauge({ confianza, umbral }: { confianza: number; umbral: num
                         y2={100 - (radius - stroke) * Math.sin(Math.PI * umbral)}
                         stroke="currentColor"
                         strokeWidth="3"
-                        className="text-slate-500"
+                        className="text-muted"
                     />
                 </svg>
-                {/* data-viz:fin */}
                 <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
                     <span className="text-2xl font-bold text-body">{(confianza * 100).toFixed(0)}%</span>
                     <span className="text-xs text-muted">umbral {umbral}</span>

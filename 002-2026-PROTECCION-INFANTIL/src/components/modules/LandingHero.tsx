@@ -105,7 +105,7 @@ export function LandingHero({
     const resultado = data as ResultadoConsulta | null;
 
     return (
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/30 dark:border-white/10 bg-gradient-to-br from-cielo to-pino px-6 py-14 text-white shadow-2xl shadow-tinta/20 sm:py-20">
+        <section className="relative overflow-hidden rounded-[var(--radio-hero)] border border-white/30 dark:border-white/10 bg-gradient-to-br from-cielo to-pino px-6 py-14 text-white shadow-2xl shadow-tinta/20 sm:py-20">
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-pulseSlow" />
                 <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-pino/30 blur-3xl animate-pulseSlow" style={{ animationDelay: "1.5s" }} />
@@ -119,7 +119,7 @@ export function LandingHero({
                 {/* SPEC-456 · voz serif, en «tú», sin jerga (P-2/P-3). El titular va en
                     Instrument Serif como el resto del producto; la bajada le habla a un
                     padre asustado, no a un inversionista. */}
-                <h1 className="font-serif text-4xl font-normal tracking-tight sm:text-5xl lg:text-6xl">
+                <h1 className="titular-estado font-normal">
                     Si algo le pasa a tu hijo en internet, empieza acá
                 </h1>
                 <p className="mx-auto mt-5 max-w-2xl text-base text-white/90 sm:text-lg leading-relaxed">
@@ -189,8 +189,10 @@ export function LandingHero({
                         {(isLoading || error || buscado) && (
                             <div className="mt-5 w-full border-t border-white/20 pt-5">
                                 {isLoading && (
-                                    <div className="flex flex-col items-center py-4">
-                                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                    <div className="flex flex-col items-center py-4" aria-busy="true">
+                                        {/* Skeleton, nunca spinner giratorio (§4.8): en el hero
+                                            (fondo degradado) va una barra liviana con pulso. */}
+                                        <div className="h-4 w-40 animate-pulse rounded-full bg-white/25" />
                                         <p className="mt-2 text-sm text-white/90">Consultando...</p>
                                     </div>
                                 )}

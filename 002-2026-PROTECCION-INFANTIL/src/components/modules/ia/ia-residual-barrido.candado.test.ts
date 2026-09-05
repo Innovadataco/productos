@@ -36,40 +36,27 @@ function* recorrer(dir: string): Generator<string> {
     }
 }
 
+// La forma con guion inicial `-(familia)-N` captura también las variantes
+// direccionales (`border-l-emerald`, `border-b-…`) — no solo `text/bg/border-`.
 const CRUDO = /-(slate|gray|sky|cyan|emerald|red|green|amber)-[0-9]{2,3}(\/[0-9]{1,3})?\b/;
 
-/** Líneas fuera de las regiones marcadas `data-viz:inicio` … `data-viz:fin`. */
-function lineasVigiladas(codigo: string): { n: number; linea: string }[] {
-    const out: { n: number; linea: string }[] = [];
-    let enDataViz = false;
-    codigo.split("\n").forEach((linea, i) => {
-        if (linea.includes("data-viz:inicio")) enDataViz = true;
-        if (!enDataViz) out.push({ n: i + 1, linea });
-        if (linea.includes("data-viz:fin")) enDataViz = false;
-    });
-    return out;
-}
-
 describe("SPEC-483b · barrido residual del panel de IA + monitoreo", () => {
-    it("0 crudo fuera de las regiones data-viz (gauge de confianza exento)", () => {
+    // SPEC-489: el medidor de confianza de IaDocsPanel se tokenizó (ya no es una
+    // región data-viz cruda reservada); por eso el candado escanea TODO ia/**,
+    // sin exención. La escala del ring la vigila su propio candado (SPEC-489).
+    it("ia/** + monitoreo/LogsTab no traen crudo slate/gray/sky/cyan/emerald/red/green/amber", () => {
         const archivos = [...recorrer(DIR_IA), LOGS_TAB];
         const hits: string[] = [];
         for (const archivo of archivos) {
             const codigo = fs.readFileSync(archivo, "utf-8");
-            for (const { n, linea } of lineasVigiladas(codigo)) {
+            for (const [i, linea] of codigo.split("\n").entries()) {
                 const m = linea.match(CRUDO);
                 if (m) {
                     const rel = path.relative(SRC, archivo);
-                    hits.push(`${rel}:${n} → «${m[0]}»: ${linea.trim().slice(0, 90)}`);
+                    hits.push(`${rel}:${i + 1} → «${m[0]}»: ${linea.trim().slice(0, 90)}`);
                 }
             }
         }
-        expect(hits, `crudo reintroducido fuera de data-viz:\n${hits.join("\n")}`).toEqual([]);
-    });
-
-    it("el gauge de confianza de IaDocsPanel sigue marcado como data-viz (no tokenizado a ciegas)", () => {
-        const docs = fs.readFileSync(path.join(DIR_IA, "IaDocsPanel.tsx"), "utf-8");
-        expect(docs, "falta el marcador data-viz:inicio del medidor de confianza").toContain("data-viz:inicio");
-        expect(docs, "falta el marcador data-viz:fin del medidor de confianza").toContain("data-viz:fin");
+        expect(hits, `crudo reintroducido en ia/**:\n${hits.join("\n")}`).toEqual([]);
     });
 });

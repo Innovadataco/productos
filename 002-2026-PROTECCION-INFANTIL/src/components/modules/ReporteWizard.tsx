@@ -201,8 +201,8 @@ export function ReporteWizard({
 
     if (checkingSession) {
         return (
-            <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white/70 p-8 text-center backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/60">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+            <div className="mx-auto max-w-xl rounded-2xl border border-tinta/10 bg-papel/70 p-8 text-center backdrop-blur-xl">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
                 <p className="mt-3 text-sm text-muted">Verificando sesión...</p>
             </div>
         );
@@ -264,14 +264,14 @@ export function ReporteWizard({
                         <div
                             className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${s <= step
                                 ? "bg-primary-600 text-white"
-                                : "bg-slate-200 text-slate-500"
+                                : "bg-tinta/10 text-muted"
                             }`}
                         >
                             {s}
                         </div>
                         {s < 3 && (
                             <div
-                                className={`mx-2 h-1 flex-1 rounded transition ${s < step ? "bg-primary-600" : "bg-slate-200"
+                                className={`mx-2 h-1 flex-1 rounded transition ${s < step ? "bg-primary-600" : "bg-tinta/10"
                                 }`}
                             />
                         )}

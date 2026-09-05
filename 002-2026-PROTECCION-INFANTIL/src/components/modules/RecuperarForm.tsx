@@ -41,10 +41,10 @@ export function RecuperarForm() {
     if (success) {
         return (
             <div className="text-center">
-                <p className="text-sm text-slate-700">
+                <p className="text-sm text-muted">
                     Si el email está registrado, recibirás un enlace para restablecer tu contraseña.
                 </p>
-                <p className="mt-2 text-sm text-slate-500">Revisa tu bandeja de entrada y carpeta de spam.</p>
+                <p className="mt-2 text-sm text-subtle">Revisa tu bandeja de entrada y carpeta de spam.</p>
             </div>
         );
     }

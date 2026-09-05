@@ -32,8 +32,8 @@ export default function RecuperarTokenPage() {
     return (
         <main className="mx-auto max-w-md px-4 py-12">
             <div className="mb-6 text-center">
-                <h1 className="text-2xl font-bold text-slate-900">Restablecer contraseña</h1>
-                <p className="mt-1 text-sm text-slate-600">
+                <h1 className="text-2xl font-bold text-body">Restablecer contraseña</h1>
+                <p className="mt-1 text-sm text-muted">
                     {status === "valid"
                         ? "Ingresa tu nueva contraseña."
                         : status === "invalid"
@@ -47,7 +47,7 @@ export default function RecuperarTokenPage() {
                 {status === "valid" && <RestablecerForm token={token} />}
                 {status === "invalid" && (
                     <div className="space-y-4 text-center">
-                        <p className="text-sm text-slate-700">
+                        <p className="text-sm text-muted">
                             El enlace de recuperación es inválido, ya fue usado o expiró.
                         </p>
                         <Link href="/recuperar">
@@ -59,7 +59,7 @@ export default function RecuperarTokenPage() {
                 )}
             </GlassCard>
 
-            <p className="mt-4 text-center text-sm text-slate-600">
+            <p className="mt-4 text-center text-sm text-muted">
                 <Link href="/login" className="font-medium text-primary-600 hover:underline">
                     Volver a iniciar sesión
                 </Link>

@@ -186,7 +186,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                         {TARJETAS.map((tarjeta) => (
-                            <GlassCard key={tarjeta.key} className="border-l-4 border-l-emerald-500 text-center">
+                            <GlassCard key={tarjeta.key} className="border-l-4 border-l-pino text-center">
                                 <div className="text-2xl">{tarjeta.icon}</div>
                                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">{tarjeta.label}</p>
                                 <p className="mt-1 text-3xl font-bold text-estado-pino">
@@ -202,7 +202,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                         </h2>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             {TARJETAS_TIPO_SUJETO.map((tarjeta) => (
-                                <GlassCard key={tarjeta.key} className="border-l-4 border-l-emerald-500 text-center">
+                                <GlassCard key={tarjeta.key} className="border-l-4 border-l-pino text-center">
                                     <div className="text-2xl">{tarjeta.icon}</div>
                                     <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">{tarjeta.label}</p>
                                     <p className="mt-1 text-3xl font-bold text-estado-pino">
