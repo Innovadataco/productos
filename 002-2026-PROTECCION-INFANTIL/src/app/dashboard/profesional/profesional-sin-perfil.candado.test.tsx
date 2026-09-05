@@ -16,6 +16,12 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const verifyAuthMock = vi.fn();
 const panelMock = vi.fn();
+// SPEC-496: la página del profesional gatea por módulo (`profesional_inicio`)
+// ANTES de la lógica de perfil. Un PROFESIONAL real tiene ese módulo concedido
+// (prisma/seed-modulos-grants.ts → PROFESIONAL). Se mockea a `true` (estado real)
+// para aislar la conducta de SPEC-481; la conducta del gate (revocado → corte)
+// la cubren los candados propios de SPEC-496.
+const puedeAccederAModuloMock = vi.fn();
 const redirectMock = vi.fn((path: string) => {
     // Emula next/navigation.redirect: corta la ejecución lanzando (como en Next).
     throw new Error(`NEXT_REDIRECT:${path}`);
@@ -23,6 +29,9 @@ const redirectMock = vi.fn((path: string) => {
 
 vi.mock("next/navigation", () => ({ redirect: (p: string) => redirectMock(p) }));
 vi.mock("@/lib/auth", () => ({ verifyAuth: (...a: unknown[]) => verifyAuthMock(...a) }));
+vi.mock("@/lib/permisos-modulos", () => ({
+    puedeAccederAModulo: (...a: unknown[]) => puedeAccederAModuloMock(...a),
+}));
 vi.mock("@/lib/profesional/panel/panel.service", () => ({
     panelDelProfesional: (...a: unknown[]) => panelMock(...a),
 }));
@@ -38,6 +47,7 @@ describe("SPEC-481 · profesional sin perfil → completar (no 500)", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         verifyAuthMock.mockResolvedValue({ id: "prof-1", rol: "PROFESIONAL" });
+        puedeAccederAModuloMock.mockResolvedValue(true); // estado real: PROFESIONAL tiene profesional_inicio
         redirectMock.mockImplementation((path: string) => {
             throw new Error(`NEXT_REDIRECT:${path}`);
         });
