@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Modelo de datos · Protección Infantil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Tokens del artefacto aprobado — misma herramienta operativa que el tablero */
+:root {
+  --ground:  #F3F5F8;
+  --surface: #FFFFFF;
+  --head:    #F7F9FB;
+  --zebra:   #FCFDFE;
+  --line:    #DCE2E9;
+  --line-2:  #EEF1F4;
+  --ink:     #0E141C;
+  --muted:   #5B6875;
+  --faint:   #8E99A5;
+  --accent:  #2563A8;
+  --libre:      #17754A;  --libre-bg:   #E1F1E8;
+  --proceso:    #A96D02;  --proceso-bg: #FBF0D9;
+  --ocupado:    #BC3626;  --ocupado-bg: #FAE5E2;
+  --off:        #8E99A5;  --off-bg:     #EDF0F3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:  #0A1017;  --surface: #131B25;  --head:    #0F1721;  --zebra:   #111924;
+    --line:    #24303F;  --line-2:  #1A2330;
+    --ink:     #EAEFF5;  --muted:   #8B98A7;  --faint:   #64717F;  --accent:  #5B9BD8;
+    --libre:      #4FB07C;  --libre-bg:   #102D1F;
+    --proceso:    #DCA43B;  --proceso-bg: #31250C;
+    --ocupado:    #E0685A;  --ocupado-bg: #381A16;
+    --off:        #64717F;  --off-bg:     #1A222E;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:  #0A1017;  --surface: #131B25;  --head:    #0F1721;  --zebra:   #111924;
+  --line:    #24303F;  --line-2:  #1A2330;
+  --ink:     #EAEFF5;  --muted:   #8B98A7;  --faint:   #64717F;  --accent:  #5B9BD8;
+  --libre:      #4FB07C;  --libre-bg:   #102D1F;
+  --proceso:    #DCA43B;  --proceso-bg: #31250C;
+  --ocupado:    #E0685A;  --ocupado-bg: #381A16;
+  --off:        #64717F;  --off-bg:     #1A222E;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px; line-height: 1.4; -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 32px;
+        display: flex; flex-direction: column; gap: 13px; }
+
+/* Pestañas Operación / Modelo */
+.tabs { display: flex; gap: 4px; }
+.tabs a { font-size: 12.5px; font-weight: 600; color: var(--muted); text-decoration: none;
+          padding: 6px 12px; border: 1px solid var(--line); border-bottom: none;
+          border-radius: 6px 6px 0 0; background: var(--head); }
+.tabs a:hover { color: var(--ink); }
+.tabs a.active { color: var(--ink); background: var(--surface); border-color: var(--line);
+                 box-shadow: 0 2px 0 0 var(--surface); }
+
+/* Barra */
+.bar { display: flex; align-items: baseline; justify-content: space-between;
+       gap: 10px 20px; flex-wrap: wrap; padding-bottom: 9px; border-bottom: 2px solid var(--line); }
+.bar h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.bar .info { font-family: "IBM Plex Mono", monospace; font-size: 11.5px;
+             color: var(--muted); font-variant-numeric: tabular-nums;
+             display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; }
+.bar .info b { color: var(--ink); font-weight: 600; }
+
+/* Paneles */
+.panel { background: var(--surface); border: 1px solid var(--line);
+         border-radius: 5px; overflow: hidden; }
+.ph { display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; padding: 7px 11px; background: var(--head); border-bottom: 1px solid var(--line); }
+.ph h2 { margin: 0; font-size: 10px; font-weight: 700;
+         letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.ph .meta { font-family: "IBM Plex Mono", monospace; font-size: 11px;
+            color: var(--faint); font-variant-numeric: tabular-nums; }
+.pbody { padding: 12px; }
+
+/* Diagrama */
+.diagrama-scroll { overflow-x: auto; padding: 8px 4px; text-align: center; }
+.mermaid { display: inline-block; min-width: 0; }
+.mermaid svg { max-width: 100%; height: auto; }
+.diag-fallback { padding: 14px; color: var(--muted); font-size: 12.5px; }
+.diag-fallback pre { margin: 10px 0 0; padding: 10px; background: var(--ground);
+                     border: 1px solid var(--line-2); border-radius: 4px; overflow-x: auto;
+                     font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--faint);
+                     white-space: pre; }
+
+.nota { display: flex; gap: 9px; align-items: flex-start;
+        background: var(--ocupado-bg); border-left: 3px solid var(--ocupado);
+        border-radius: 4px; padding: 9px 12px; font-size: 12.5px; line-height: 1.5; }
+.nota b { color: var(--ocupado); white-space: nowrap; }
+
+/* Dominios */
+.dom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 10px; padding: 12px; }
+.dom { border: 1px solid var(--line); border-radius: 5px; background: var(--surface); overflow: hidden; }
+.dom-h { display: flex; align-items: baseline; gap: 7px; padding: 7px 10px;
+         background: var(--head); border-bottom: 1px solid var(--line-2); }
+.dom-h .ic { font-size: 15px; line-height: 1; }
+.dom-h b { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.dom-h .n { margin-left: auto; font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--faint); }
+.dom-t { display: flex; flex-wrap: wrap; gap: 4px; padding: 9px 10px; }
+.chip { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--muted);
+        background: var(--ground); border: 1px solid var(--line-2); border-radius: 3px; padding: 1px 6px; }
+
+/* Recomendaciones */
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; font-size: 9.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+     color: var(--faint); padding: 6px 9px; border-bottom: 1px solid var(--line); white-space: nowrap;
+     background: var(--surface); }
+td { padding: 7px 9px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+td.c { text-align: center; white-space: nowrap; }
+tbody tr:nth-child(even) { background: var(--zebra); }
+tr:last-child td { border-bottom: none; }
+td.tabla { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--accent); white-space: nowrap; }
+td.que { color: var(--ink); min-width: 320px; }
+.prio { display: inline-block; min-width: 26px; text-align: center; padding: 1px 6px; border-radius: 3px;
+        font-weight: 700; font-size: 10.5px; }
+.prio.p0 { background: var(--ocupado-bg); color: var(--ocupado); }
+.prio.p1 { background: var(--proceso-bg); color: var(--proceso); }
+.prio.p2 { background: var(--off-bg); color: var(--muted); }
+.carril { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); }
+
+.reco-foot { padding: 9px 11px; font-size: 11.5px; color: var(--faint); border-top: 1px solid var(--line-2); }
+
+footer { font-size: 10.5px; color: var(--faint); padding-top: 4px; }
+footer code { font-family: "IBM Plex Mono", monospace; }
+
+@media (max-width: 640px) {
+  .wrap { padding: 12px 10px 28px; }
+  .dom-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="tabs">
+    <a href="../operacion/">Operaci&oacute;n</a>
+    <a href="../modelo/" class="active" aria-current="page">Modelo de datos</a>
+  </nav>
+
+  <div class="bar">
+    <h1>Modelo de datos &middot; Protecci&oacute;n Infantil</h1>
+    <div class="info">
+      <span><b>111</b> tablas</span>
+      <span><b>47</b> tipos</span>
+      <span><b>228</b> relaciones</span>
+      <span>Fuente <b>prisma/schema.prisma</b></span>
+      <span>Prod <b>9fb46126</b></span>
+    </div>
+  </div>
+
+  <!-- Mapa del modelo -->
+  <div class="panel">
+    <div class="ph"><h2>Mapa del modelo &mdash; c&oacute;mo se conecta</h2></div>
+    <div class="diagrama-scroll">
+      <pre class="mermaid" id="diagrama"></pre>
+      <div class="diag-fallback" id="diag-fallback" hidden>
+        El diagrama no se pudo cargar (depende de una librer&iacute;a externa). El detalle del modelo est&aacute; completo en los dominios de abajo.
+      </div>
+    </div>
+  </div>
+
+  <div class="nota">
+    <b>Aviso PII</b>
+    <span>Varias tablas derivadas del texto del reporte se copian a la r&eacute;plica de BI (006) <b>sin filtrar</b> &mdash; riesgo de datos personales (ver recomendaciones P0). El texto del reporte s&iacute; est&aacute; protegido en el origen; las derivadas se escaparon.</span>
+  </div>
+
+  <!-- Dominios -->
+  <div class="panel">
+    <div class="ph"><h2>Dominios</h2><span class="meta">las 111 tablas &middot; 11 dominios</span></div>
+    <div class="dom-grid" id="dominios"></div>
+  </div>
+
+  <!-- Recomendaciones -->
+  <div class="panel">
+    <div class="ph"><h2>Recomendaciones de la auditor&iacute;a (Datos)</h2><span class="meta">priorizadas</span></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th class="c">Prio</th><th>Tabla / patr&oacute;n</th><th>Qu&eacute;</th><th class="c">Carril</th></tr></thead>
+        <tbody id="reco"></tbody>
+      </table>
+    </div>
+    <div class="reco-foot">Todo es <b>an&aacute;lisis</b>; los cambios van por migraci&oacute;n/carril de cada producto, <b>nunca a mano</b>, y hoy el despliegue est&aacute; <b>congelado</b>.</div>
+  </div>
+
+  <footer>
+    Instant&aacute;nea del esquema sobre producci&oacute;n <code>9fb46126</code> &middot; 05-09-2026 &middot; Mantenido por el CEO.
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.3/mermaid.min.js" onerror="window.__mermaidFailed=true"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Dominios (contenido estático del modelo) ----------
+  var DOMINIOS = [
+    { ic: "👤", nombre: "Usuarios y acceso", tablas: ["Usuario","PerfilOperador","IntegranteComite","IdentificadorIntegranteComite","CodigoVerificacion","TokenRecuperacion","TokenRegistro","SesionLog","AuditConsentimiento","ModuloPermisible","PermisoModulo"] },
+    { ic: "🏫", nombre: "Colegios y estudiantes", tablas: ["Tenant","Colegio","OnboardingColegio","Curso","Profesor","Materia","CursoMateria","Estudiante","AcudienteEstudiante","IdentificadorAcudiente","IdentificadorProfesor","EstudianteObservacion","IdentificadorEstudiante","CargaRosterSesion"] },
+    { ic: "🚨", nombre: "Alertas de colegio", tablas: ["AlertaColegio","PatronInstitucional","PreferenciaAlertaColegio","RegistroAvisoColegio","NotificacionInApp"] },
+    { ic: "📣", nombre: "Reportes y matching", tablas: ["Reporte","SolicitudComite","TransicionReporte","ReintentoReporte","PasoProcesamiento","FuenteReporte","IdentificadorReportado","EventoMatch","Plataforma","SeguimientoCaso","NotaSeguimiento"] },
+    { ic: "🧠", nombre: "Análisis / IA", tablas: ["ClasificacionIA","CorreccionAdmin","DatasetEntrenamiento","EmbeddingDataset","EmbeddingReporte","SimulacionRun","SimulacionReporte","SimulacionAbusoRun","ClasificacionRubricaVoto","DerivaMotorSnapshot","RateLimit","BlockList"] },
+    { ic: "📂", nombre: "Expediente y comité", tablas: ["Expediente","EventoExpediente","InformePadre","InformeConsolidado","PatronExpediente","GuiaAccionCategoria","AclaracionExpediente","AnalisisExpediente","InformeCaso","Apelacion","DocumentoApelacion","AccesoDocumentoApelacion","SenalComunitariaCache"] },
+    { ic: "👪", nombre: "Familia / círculo", tablas: ["ContactoConfianza","Hijo","HijoPadre","IdentificadorHijo","IdentificadorHijoDesvinculado","IdentificadorContacto","AlertaSuscripcion","ContactoEmergencia"] },
+    { ic: "🧑‍⚕️", nombre: "Profesional y citas", tablas: ["PerfilProfesional","DocumentoProfesional","VerificacionProfesional","FranjaDisponible","SolicitudCita","EncuestaPrimeraCita"] },
+    { ic: "💳", nombre: "Pagos y suscripción", tablas: ["Plan","Subscription","BillingCycle","Suscripcion","Pago","BonoPromocional","BonoAplicado","CodigoReferidoUso","TasaCambio","ScoreCliente"] },
+    { ic: "🔔", nombre: "Avisos y recomendaciones", tablas: ["Notificacion","NotificacionPlantilla","NotificacionRegla","NotificacionPreferencia","NotificacionContactoBloqueado","DigestSemanal","ReglaRecomendacion","Recomendacion","ReglaRecomendacionHistorial","EjecucionAccion","Anomalia"] },
+    { ic: "⚙️", nombre: "Sistema, geografía y auditoría", tablas: ["ParametroSistema","AuditLog","HealthProbe","IncidenteInfra","WorkerLog","DemoMarcado","TipoDocumento","Pais","Departamento","Ciudad"] }
+  ];
+
+  var RECO = [
+    { prio: "P0", tabla: "Réplica BI · SolicitudComite", que: "Copia el caso del menor (motivo/resolución/análisis) en 637/637 filas, sin filtrar", carril: "006" },
+    { prio: "P0", tabla: "Réplica BI · ClasificacionIA", que: "Copia piiDetectada (fragmentos PII) + rawResponse (texto crudo), campos que la app oculta", carril: "006" },
+    { prio: "P0", tabla: "Réplica BI · EmbeddingReporte", que: "Copia el vector (huella revertible del texto)", carril: "006" },
+    { prio: "P0", tabla: "Réplica BI · sistémico", que: "45 tablas publicadas; veto anti-PII incompleto → lista blanca positiva + completar vetos + limpiar réplica", carril: "006" },
+    { prio: "P1", tabla: "AuditConsentimiento", que: "onDelete: Cascade borra la evidencia legal de consentimiento al borrar el usuario", carril: "002" },
+    { prio: "P1", tabla: "PermisoModulo.rol", que: "Es String libre (no enum) → grants muertos en silencio", carril: "002" },
+    { prio: "P2", tabla: "~20 índices", que: "Redundantes (duplican un @unique) o de baja cardinalidad → costo de escritura", carril: "002" }
+  ];
+
+  var DIAGRAMA_SRC =
+    'flowchart LR\n' +
+    '  U["👤 Usuario / cuentas"]\n' +
+    '  R["📣 Reporte"]\n' +
+    '  IA["🧠 Clasificación IA"]\n' +
+    '  EXP["📂 Expediente / comité"]\n' +
+    '  MATCH["🔗 Identificadores / matching"]\n' +
+    '  FAM["👪 Hijos / círculo"]\n' +
+    '  PAY["💳 Pagos / suscripción"]\n' +
+    '  CITA["📅 Solicitud de cita"]\n' +
+    '  COL["🏫 Colegio"]\n' +
+    '  CUR["📚 Cursos"]\n' +
+    '  EST["🧒 Estudiantes"]\n' +
+    '  CONV["🤝 Comité convivencia"]\n' +
+    '  ALE["🚨 Alertas colegio"]\n' +
+    '  PROF["🧑‍⚕️ Profesional"]\n' +
+    '  VER["✅ Verificación"]\n' +
+    '  FRA["🕒 Franjas"]\n' +
+    '  BI[("📊 Réplica BI (006)")]\n' +
+    '  U --> R\n' +
+    '  U --> FAM\n' +
+    '  U --> PAY\n' +
+    '  U --> CITA\n' +
+    '  R --> IA\n' +
+    '  R --> EXP\n' +
+    '  R --> MATCH\n' +
+    '  COL --> CUR --> EST\n' +
+    '  COL --> CONV\n' +
+    '  COL --> ALE\n' +
+    '  EST -. match .- MATCH\n' +
+    '  ALE --> CONV\n' +
+    '  PROF --> VER\n' +
+    '  PROF --> FRA\n' +
+    '  CITA --> FRA\n' +
+    '  CITA --> PROF\n' +
+    '  R --> BI\n' +
+    '  IA --> BI\n' +
+    '  EXP --> BI';
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // ---------- render estático ----------
+  function renderDominios() {
+    var html = "";
+    DOMINIOS.forEach(function (d) {
+      var chips = d.tablas.map(function (t) { return '<span class="chip">' + esc(t) + "</span>"; }).join("");
+      html +=
+        '<div class="dom">' +
+          '<div class="dom-h"><span class="ic">' + esc(d.ic) + "</span><b>" + esc(d.nombre) + "</b>" +
+            '<span class="n">' + d.tablas.length + "</span></div>" +
+          '<div class="dom-t">' + chips + "</div>" +
+        "</div>";
+    });
+    document.getElementById("dominios").innerHTML = html;
+  }
+
+  function renderReco() {
+    var html = "";
+    RECO.forEach(function (r) {
+      var cls = r.prio === "P0" ? "p0" : (r.prio === "P1" ? "p1" : "p2");
+      html +=
+        "<tr>" +
+          '<td class="c"><span class="prio ' + cls + '">' + esc(r.prio) + "</span></td>" +
+          '<td class="tabla">' + esc(r.tabla) + "</td>" +
+          '<td class="que">' + esc(r.que) + "</td>" +
+          '<td class="c"><span class="carril">' + esc(r.carril) + "</span></td>" +
+        "</tr>";
+    });
+    document.getElementById("reco").innerHTML = html;
+  }
+
+  // ---------- diagrama (mermaid por CDN, con fallback) ----------
+  function esOscuro() {
+    var attr = document.documentElement.getAttribute("data-theme");
+    if (attr === "dark") return true;
+    if (attr === "light") return false;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function mostrarFallback() {
+    document.getElementById("diagrama").hidden = true;
+    var fb = document.getElementById("diag-fallback");
+    fb.hidden = false;
+    fb.innerHTML += '<pre>' + esc(DIAGRAMA_SRC) + "</pre>";
+  }
+  var rendering = false;
+  async function renderDiagrama() {
+    if (rendering) return;
+    if (window.__mermaidFailed || typeof mermaid === "undefined") { mostrarFallback(); return; }
+    rendering = true;
+    var el = document.getElementById("diagrama");
+    try {
+      el.removeAttribute("data-processed");
+      el.textContent = DIAGRAMA_SRC;
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: esOscuro() ? "dark" : "default",
+        securityLevel: "strict",
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis" }
+      });
+      await mermaid.run({ nodes: [el] });
+    } catch (e) {
+      mostrarFallback();
+    } finally {
+      rendering = false;
+    }
+  }
+
+  // ---------- arranque ----------
+  renderDominios();
+  renderReco();
+  renderDiagrama();
+
+  // Re-render del diagrama si cambia el esquema claro/oscuro del sistema.
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var onChange = function () {
+      var el = document.getElementById("diagrama");
+      if (el) { el.hidden = false; el.innerHTML = ""; }
+      var fb = document.getElementById("diag-fallback");
+      if (fb) { fb.hidden = true; }
+      renderDiagrama();
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+})();
+</script>
+</body>
+</html>
