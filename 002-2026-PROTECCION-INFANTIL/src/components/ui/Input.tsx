@@ -25,8 +25,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                     aria-describedby={error ? `${id}-error` : undefined}
                     {...props}
                 />
+                {/* SPEC-467 · el error del formulario en token semántico: `rubi`
+                    (criticidad), nunca rojo crudo. El token voltea solo en oscuro. */}
                 {error && (
-                    <p id={`${id}-error`} className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                    <p id={`${id}-error`} className="mt-1.5 text-sm text-rubi">
                         {error}
                     </p>
                 )}

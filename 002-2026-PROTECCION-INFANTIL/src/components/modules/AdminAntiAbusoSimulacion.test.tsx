@@ -56,7 +56,9 @@ describe("AdminAntiAbusoSimulacion (barra de filtros, SPEC-181)", () => {
         expect(screen.getByLabelText("Plataforma")).toBeTruthy();
         expect(screen.getByLabelText("Ordenar por")).toBeTruthy();
         expect(screen.getByText("Cargando simulación...")).toBeTruthy();
-        expect(document.querySelector(".animate-pulse")).toBeNull();
+        // SPEC-461: el `<Cargando>` estándar es un skeleton que PULSA (antes giraba).
+        // La carga inicial usa el mueble estándar, no un placeholder ad-hoc.
+        expect(document.querySelector(".animate-pulse")).toBeTruthy();
 
         await waitFor(() => {
             expect(screen.queryByText("Cargando simulación...")).toBeNull();

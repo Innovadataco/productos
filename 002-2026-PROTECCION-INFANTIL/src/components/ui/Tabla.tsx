@@ -35,10 +35,13 @@ type TablaHeadProps = {
 };
 
 export function TablaHead({ children, variante = "relleno", className = "" }: TablaHeadProps) {
+    // SPEC-469 · Tabla al Sistema de Diseño (catálogo §2): color por token, sin
+    // líneas verticales ni zebra — separación por espacio/tono (`divide-y` +
+    // wash de tinta), no por rejilla. El token de tinta voltea solo en oscuro.
     const base =
         variante === "relleno"
-            ? "bg-slate-100/70 dark:bg-slate-800/60 text-subtle"
-            : "border-b border-slate-200 dark:border-slate-800";
+            ? "bg-tinta/5 text-subtle"
+            : "border-b border-tinta/10";
     return <thead className={`${base} ${className}`.trim()}>{children}</thead>;
 }
 
@@ -49,7 +52,7 @@ type TablaBodyProps = {
 
 export function TablaBody({ children, className = "" }: TablaBodyProps) {
     return (
-        <tbody className={`divide-y divide-slate-100 dark:divide-slate-800 ${className}`.trim()}>
+        <tbody className={`divide-y divide-tinta/10 ${className}`.trim()}>
             {children}
         </tbody>
     );

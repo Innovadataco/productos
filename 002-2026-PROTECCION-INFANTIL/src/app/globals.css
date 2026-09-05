@@ -275,6 +275,14 @@
         color: rgb(var(--rubi-ink-rgb));
     }
 
+    /* SPEC-458: cielo para texto de estado (info). El token base `cielo`
+       (#5aa2ea) falla AA como texto; se usa la variante oscurecida
+       `--cielo-700-rgb` (#2c5f99 claro / #9cc9f5 dark), misma que el catálogo
+       §4.2 reserva para texto/botón. Completa el set junto a pino/ambar/rubi. */
+    .text-estado-cielo {
+        color: rgb(var(--cielo-700-rgb));
+    }
+
     /* ---------- Movimiento §4.5 — curva única, pulso como ÚNICO bucle ---------- */
 
     /* Entrada escalonada: translateY(16px) + opacidad; retardo por --anim-retardo (60-80ms entre bloques) */

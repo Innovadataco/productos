@@ -23,7 +23,7 @@ export function GlassCard({ children, className = "", onClick, onKeyDown, tabInd
     if (isInteractive) {
         return (
             <div
-                className={`glass rounded-3xl p-6 sm:p-8 ${className}`}
+                className={`glass rounded-[var(--radio-card)] p-6 sm:p-8 ${className}`}
                 onClick={onClick}
                 onKeyDown={handleKeyDown}
                 tabIndex={tabIndex ?? 0}
@@ -36,7 +36,7 @@ export function GlassCard({ children, className = "", onClick, onKeyDown, tabInd
     }
 
     return (
-        <div className={`glass rounded-3xl p-6 sm:p-8 ${className}`} {...props}>
+        <div className={`glass rounded-[var(--radio-card)] p-6 sm:p-8 ${className}`} {...props}>
             {children}
         </div>
     );

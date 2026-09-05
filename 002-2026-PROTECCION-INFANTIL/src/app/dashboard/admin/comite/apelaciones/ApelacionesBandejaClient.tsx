@@ -225,8 +225,8 @@ export function ApelacionesBandejaClient() {
                 <div
                     className={`rounded-xl p-4 text-sm ${
                         mensaje.type === "error"
-                            ? "bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-200"
-                            : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
+                            ? "bg-rubi/10 text-rubi"
+                            : "bg-pino/10 text-pino"
                     }`}
                 >
                     {mensaje.text}

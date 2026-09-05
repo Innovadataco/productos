@@ -66,14 +66,18 @@ export function BotonActivarEmergencia({
                 registrado por el padre.
             </p>
             <div>
-                <button
+                {/* SPEC-475 (I-320) · el DISPARADOR de una acción destructiva es
+                    Fantasma-rubí; el rubí sólido se reserva al «confirmar» del modal,
+                    donde el usuario ya decidió (regla Diseño §7.1). */}
+                <Button
                     type="button"
                     onClick={() => setAbierto(true)}
                     disabled={ejecutando}
-                    className="inline-flex items-center justify-center rounded-xl bg-rubi px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                    variant="danger"
+                    className="text-sm"
                 >
                     Activar emergencia
-                </button>
+                </Button>
             </div>
             {error && (
                 <p role="alert" className="text-sm text-rubi">
@@ -89,9 +93,17 @@ export function BotonActivarEmergencia({
                         por el padre. Úsala solo cuando el caso requiera contacto inmediato con el acudiente.
                     </p>
                     <div className="flex flex-wrap gap-3">
-                        <Button onClick={confirmar} disabled={ejecutando} variant="danger" className="text-sm">
+                        {/* SPEC-475 (I-320) · el CONFIRMAR del modal es el único lugar
+                            con rubí SÓLIDO (reserva de Diseño §7.1): el usuario ya
+                            decidió acá. One-off intencional, no una variante reusable. */}
+                        <button
+                            type="button"
+                            onClick={confirmar}
+                            disabled={ejecutando}
+                            className="inline-flex items-center justify-center rounded-xl bg-rubi px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
                             {ejecutando ? "Activando..." : "Confirmar activación"}
-                        </Button>
+                        </button>
                         <Button
                             onClick={() => setAbierto(false)}
                             disabled={ejecutando}
