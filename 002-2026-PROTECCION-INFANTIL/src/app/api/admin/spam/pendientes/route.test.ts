@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
+import { syncModulosYGrants } from "../../../../../../prisma/seed-modulos-grants";
 import {
     crearUsuario,
     crearTokenUsuario,
@@ -24,6 +25,11 @@ describe("GET /api/admin/spam/pendientes", () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetDatabase();
+        // SPEC-452: partir del mapa REAL de grants (no el arnés permisivo I-309):
+        // el acceso de OPERADOR/COMITE a estos endpoints depende del seed, no del arnés.
+        await prisma.permisoModulo.deleteMany();
+        await syncModulosYGrants(prisma);
+
         await crearParametrosReportes();
         await crearPlataforma();
         await crearPaisCiudad();

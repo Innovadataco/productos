@@ -389,6 +389,7 @@
 | [447](447-calendario-del-profesional/spec.md) | SPEC-447 · El profesional publica su disponibilidad — cierra I-311 | 🟢 IMPLEMENTADO |
 | [449](449-vencimiento-verificacion/spec.md) | SPEC-449 · La verificación vencida saca al profesional del directorio — cierra I-313 | 🟢 IMPLEMENTADO |
 | [450](450-shards-y-margen-de-ci/spec.md) | SPEC-450 · El margen de CI contra el techo de 45 minutos — cierra I-282 | 🟢 IMPLEMENTADO |
+| [452](452-grants-operador-comite/spec.md) | SPEC-452 · Dos módulos que producción niega y el arnés juraba conceder — cierra I-317 e I-318 | 🟢 IMPLEMENTADO |
 | [454](454-button-sistema-diseno/spec.md) | SPEC-454 · OLA 1 del rediseño — el Button al Sistema de Diseño | 🟢 IMPLEMENTADO |
 | [455](455-dashboard-publico-sin-rojo/spec.md) | SPEC-455 · «Cara» del rediseño: el dashboard público sin alarma | 🟢 IMPLEMENTADO |
 | [456](456-portada/spec.md) | SPEC-456 · «Cara» del rediseño: la portada (la puerta de entrada) | 🟢 IMPLEMENTADO |

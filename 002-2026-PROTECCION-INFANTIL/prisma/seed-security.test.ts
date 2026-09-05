@@ -70,7 +70,7 @@ function bloqueClavesPorRol(): string {
 }
 
 describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", () => {
-    it("COMITE_VALIDACION recibe exactamente 4 grants (SPEC-266, I-128)", () => {
+    it("COMITE_VALIDACION recibe exactamente 6 grants (SPEC-452 suma ia_rubrica)", () => {
         const entrada = bloqueClavesPorRol().match(/COMITE_VALIDACION:\s*\[([^\]]*)\]/)?.[1] ?? "";
         const claves = entrada.match(/"[^"]+"/g) ?? [];
         // SPEC-128 (D-43): solo comite_bandeja base.
@@ -78,7 +78,8 @@ describe("grants por defecto del comité — reconciliación D-43 (SPEC-128)", (
         // SPEC-235 (002-PI-135): comite_guias_accion para aprobar/rechazar guías.
         // SPEC-263 (002-PI-164): expediente_revelar_original standalone (sin padre desde SPEC-266).
         // SPEC-266 (002-PI-169): bandeja_reportes y denuncia_formal eran indebidos (I-128) — eliminados.
-        expect(claves).toEqual(['"comite"', '"comite_bandeja"', '"comite_guias_accion"', '"expediente_revelar_original"']);
+        // SPEC-452 (I-318): + centro_control_ia (padre) + ia_rubrica (hijo) para LEER la rúbrica (jerarquía AND); escritura cerrada por rol ADMIN.
+        expect(claves).toEqual(['"comite"', '"comite_bandeja"', '"comite_guias_accion"', '"expediente_revelar_original"', '"centro_control_ia"', '"ia_rubrica"']);
     });
 
     it("ADMIN deriva sus grants del catálogo completo (conserva comite y comite_auditoria)", () => {

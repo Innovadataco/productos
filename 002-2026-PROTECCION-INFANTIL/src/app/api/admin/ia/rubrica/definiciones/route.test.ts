@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
+import { syncModulosYGrants } from "../../../../../../../prisma/seed-modulos-grants";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import { DEFINICIONES_CATEGORIA } from "@/lib/ai/rubrica-semilla";
 import * as auth from "@/lib/auth";
@@ -9,6 +10,11 @@ import * as auth from "@/lib/auth";
 describe("GET /api/admin/ia/rubrica/definiciones (SPEC-248 / 002-PI-151)", () => {
     beforeEach(async () => {
         await resetDatabase();
+        // SPEC-452: partir del mapa REAL de grants (no el arnés permisivo I-309):
+        // el acceso de OPERADOR/COMITE a estos endpoints depende del seed, no del arnés.
+        await prisma.permisoModulo.deleteMany();
+        await syncModulosYGrants(prisma);
+
         vi.restoreAllMocks();
     });
 
