@@ -80,7 +80,7 @@ export interface ErroresWizard {
 export function validarWizard(curso: CursoForm, estudiantes: EstudianteForm[]): ErroresWizard | null {
     const errores: ErroresWizard = { estudiantes: {} };
     if (curso.nombre.trim().length < 2) {
-        errores.curso = "Escribe el nombre del curso";
+        errores.curso = "Escriba el nombre del curso";
     }
     for (const e of estudiantes) {
         if (!e.nombre.trim()) {

@@ -388,7 +388,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                                 maxLength={4000}
                                 value={resolucion}
                                 onChange={(e) => setResolucion(e.target.value)}
-                                placeholder="Escribe la decisión documentada del comité…"
+                                placeholder="Escriba la decisión documentada del comité…"
                                 className="min-h-[120px] w-full rounded-xl glass-input px-4 py-2 text-sm text-body placeholder-subtle ring-accent-input"
                             />
                             {/* SPEC-319 §2.4: quién firma el cierre (integrante activo) */}

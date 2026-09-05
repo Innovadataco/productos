@@ -60,9 +60,9 @@ export default function OnboardingPage() {
             <main className="flex items-center justify-center p-4 sm:p-6 lg:p-8">
                 <GlassCard className="w-full max-w-lg text-center">
                     <div className="text-4xl">🎉</div>
-                    <h1 className="mt-3 text-2xl font-bold text-body">Tu colegio ya está configurado</h1>
+                    <h1 className="mt-3 text-2xl font-bold text-body">Su colegio ya está configurado</h1>
                     <p className="mt-2 text-sm text-muted">
-                        Completaste la configuración inicial. El sistema ya puede generar alertas para tu comunidad
+                        Completó la configuración inicial. El sistema ya puede generar alertas para su comunidad
                         educativa.
                     </p>
                     <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -19,7 +19,7 @@ describe("FranjaVigilancia", () => {
                 deltaSemana={-1}
             />
         );
-        expect(screen.getByText("Última señal sobre tu colegio")).toBeTruthy();
+        expect(screen.getByText("Última señal sobre su colegio")).toBeTruthy();
         expect(screen.getByText("hace 12 minutos")).toBeTruthy();
         expect(screen.getByText("Última revisión del sistema")).toBeTruthy();
         expect(screen.getByText("hace 5 minutos")).toBeTruthy();

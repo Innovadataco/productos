@@ -156,7 +156,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <h2 className="text-lg font-semibold text-body">Informe mensual</h2>
-                                <p className="text-sm text-muted">Descarga el resumen agregado de un mes específico.</p>
+                                <p className="text-sm text-muted">Descargue el resumen agregado de un mes específico.</p>
                             </div>
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                                 <input
@@ -245,7 +245,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                         <h2 id="titulo-mapa-publico" className="titular-seccion text-body">
                             Mapa de reportes a nivel país
                         </h2>
-                        <p className="text-sm text-muted">Contexto nacional, separado de las estadísticas de tu colegio.</p>
+                        <p className="text-sm text-muted">Contexto nacional, separado de las estadísticas de su colegio.</p>
                         <PublicDashboard />
                     </section>
                 </div>

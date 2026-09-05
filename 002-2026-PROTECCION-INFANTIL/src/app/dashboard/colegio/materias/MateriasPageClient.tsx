@@ -137,7 +137,7 @@ export default function MateriasPageClient() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-body">Materias</h1>
-                            <p className="text-sm text-muted">Catálogo de asignaturas de tu colegio.</p>
+                            <p className="text-sm text-muted">Catálogo de asignaturas de su colegio.</p>
                         </div>
                         <Button onClick={() => setCreando(true)}>+ Nueva materia</Button>
                     </div>
@@ -165,7 +165,7 @@ export default function MateriasPageClient() {
                         ) : materias.length === 0 ? (
                             <EmptyState
                                 title="No hay materias registradas"
-                                description="Crea la primera para asignarla a los cursos."
+                                description="Cree la primera para asignarla a los cursos."
                                 action={<Button onClick={() => setCreando(true)}>Crear materia</Button>}
                             />
                         ) : (

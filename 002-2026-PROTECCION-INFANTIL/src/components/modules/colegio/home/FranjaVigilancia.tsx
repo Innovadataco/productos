@@ -3,7 +3,7 @@ import { relativoHumano } from "@/lib/colegio/fechas-humano";
 /**
  * SPEC-143 (US1, FR-008, D3) — Franja de vigilancia: SOLO VERDADES (regla de ZEUS).
  * Los DOS hechos de D3, cada uno con su etiqueta correcta:
- *   (a) "Última señal sobre tu colegio" = max(AlertaColegio.creadoEn) — por colegio,
+ *   (a) "Última señal sobre su colegio" = max(AlertaColegio.creadoEn) — por colegio,
  *       puede no existir nunca → copy honesto "sin señales aún".
  *   (b) "Última revisión del sistema" = heartbeat del worker — global y verdadero.
  * Más los reportes de la semana (métrica D2) con su delta vs la anterior, sin
@@ -32,7 +32,7 @@ export function FranjaVigilancia({ ultimaSenal, latidoSistema, reportesSemana, d
         >
             <dl className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-8">
                 <div>
-                    <dt className="microetiqueta">Última señal sobre tu colegio</dt>
+                    <dt className="microetiqueta">Última señal sobre su colegio</dt>
                     <dd className="mt-0.5 text-sm font-medium text-body">
                         {ultimaSenal ? (
                             <time dateTime={ultimaSenal.toISOString()}>{relativoHumano(ultimaSenal)}</time>

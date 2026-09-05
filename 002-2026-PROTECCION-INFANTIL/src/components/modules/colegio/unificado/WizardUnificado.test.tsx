@@ -69,7 +69,7 @@ describe("WizardUnificado", () => {
         const seccion3 = screen.getByRole("button", { name: /3\. Identificadores digitales/ });
         expect(seccion3.getAttribute("aria-expanded")).toBe("false");
         expect(screen.getByText("opcional")).toBeTruthy();
-        expect(screen.getByText("Arrastra tu Excel o haz click aquí")).toBeTruthy();
+        expect(screen.getByText("Arrastre su Excel o haga clic aquí")).toBeTruthy();
     });
 
     it("fila sin apellidos: la marca con mensaje humano y NO guarda (fetch jamás llamado)", async () => {

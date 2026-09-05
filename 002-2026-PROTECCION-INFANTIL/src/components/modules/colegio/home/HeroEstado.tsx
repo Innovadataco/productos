@@ -21,22 +21,22 @@ interface CopyEstado {
 
 const COPY: Record<EstadoSistema, CopyEstado> = {
     pino: {
-        titular: "Tu colegio está {palabra}",
+        titular: "Su colegio está {palabra}",
         palabra: "tranquilo",
-        detalle: "Sin alertas nuevas sobre tus estudiantes.",
+        detalle: "Sin alertas nuevas sobre sus estudiantes.",
         etiqueta: "Tranquilo",
     },
     ambar: {
-        titular: "Hubo {palabra} y ya lo atendiste",
+        titular: "Hubo {palabra} y ya lo atendió",
         palabra: "algo",
-        detalle: "Las señales recientes ya están atendidas: no tienes nada pendiente.",
+        detalle: "Las señales recientes ya están atendidas: no tiene nada pendiente.",
         etiqueta: "Atendido",
     },
     rubi: {
-        titular: "Tu colegio {palabra}",
-        palabra: "necesita que actúes hoy",
-        detalle: "Tienes alertas nuevas sobre tus estudiantes sin gestionar.",
-        etiqueta: "Actúa hoy",
+        titular: "Su colegio {palabra}",
+        palabra: "necesita que actúe hoy",
+        detalle: "Tiene alertas nuevas sobre sus estudiantes sin gestionar.",
+        etiqueta: "Actúe hoy",
     },
 };
 

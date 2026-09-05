@@ -20,7 +20,7 @@ export function CursosQueMerecenMirada({ cursos, className = "" }: CursosQueMere
 
             {cursos.length === 0 ? (
                 <p className="cuerpo mt-4 text-muted">
-                    Ningún curso con reportes en los últimos 30 días — tus cursos están en calma.
+                    Ningún curso con reportes en los últimos 30 días — sus cursos están en calma.
                 </p>
             ) : (
                 <ol className="mt-4 divide-y divide-tinta/10">

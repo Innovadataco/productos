@@ -72,7 +72,7 @@ export function WizardUnificado({ modoExcelInicial = false }: WizardUnificadoPro
         if (encontrados) {
             setErrores(encontrados);
             setAbiertos((prev) => [...new Set([...prev, "curso", "estudiantes"])]);
-            setToast({ tipo: "error", mensaje: "No pudimos guardar. Revisa los campos marcados y volvemos a intentar." });
+            setToast({ tipo: "error", mensaje: "No pudimos guardar. Revise los campos marcados y volvemos a intentar." });
             return;
         }
         setErrores(null);

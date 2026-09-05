@@ -26,7 +26,7 @@ const ACCIONES = [
         // SPEC-148: pantalla propia de profesores (reemplaza el placeholder a cursos).
         href: "/dashboard/colegio/profesores",
         titulo: "Profesores",
-        detalle: "Agrega y organiza el directorio",
+        detalle: "Agregue y organice el directorio",
         Icono: GraduationCap,
     },
     {

@@ -12,8 +12,8 @@ describe("EmptyStateColegio", () => {
         render(<EmptyStateColegio colegioNombre="Colegio San José" />);
         expect(screen.getByText("Colegio San José")).toBeTruthy();
         expect(screen.getByRole("img", { name: /Escudo de protección/ })).toBeTruthy();
-        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Tu colegio está listo para empezar");
-        expect(screen.getByText(/Comencemos creando tu primer curso/)).toBeTruthy();
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Su colegio está listo para empezar");
+        expect(screen.getByText(/Comencemos creando su primer curso/)).toBeTruthy();
     });
 
     it("CTA gigante al primer curso y vía alternativa de Excel", () => {
@@ -23,6 +23,6 @@ describe("EmptyStateColegio", () => {
         expect(cta.className).toContain("min-h-12");
         const excel = screen.getByRole("link", { name: /Subirla y creamos todo por ti/ });
         expect(excel.getAttribute("href")).toBe("/dashboard/colegio/cursos/unificado?modo=excel");
-        expect(screen.getByText(/¿Ya tienes tu lista en Excel\?/)).toBeTruthy();
+        expect(screen.getByText(/¿Ya tiene su lista en Excel\?/)).toBeTruthy();
     });
 });

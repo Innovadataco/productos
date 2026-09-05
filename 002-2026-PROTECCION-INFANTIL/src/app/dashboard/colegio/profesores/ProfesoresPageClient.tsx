@@ -42,7 +42,7 @@ type Profesor = {
 type TipoDocumento = { clave: string; nombre: string };
 
 const SEXO_OPTIONS = [
-    { value: "", label: "Selecciona…" },
+    { value: "", label: "Seleccione…" },
     { value: "M", label: "Masculino" },
     { value: "F", label: "Femenino" },
     { value: "OTRO", label: "Otro" },
@@ -117,7 +117,7 @@ export default function ProfesoresPageClient() {
 
     const tipoDocumentoOptions = useMemo(
         () => [
-            { value: "", label: "Selecciona…" },
+            { value: "", label: "Seleccione…" },
             ...tiposDocumento.map((t) => ({ value: t.clave, label: t.nombre })),
         ],
         [tiposDocumento]
@@ -186,13 +186,13 @@ export default function ProfesoresPageClient() {
         const email = form.email.trim();
         const telefono = form.telefono.trim();
         if (!form.nombre.trim() || !form.apellidos.trim()) {
-            setFormError("Completa el nombre y los apellidos del profesor");
+            setFormError("Complete el nombre y los apellidos del profesor");
             return;
         }
         // SPEC-320 (§2.2): en el alta la identidad es obligatoria.
         if (esCrear) {
             if (!form.tipoDocumento || !form.numeroDocumento.trim() || !form.anioNacimiento.trim() || !form.sexo || !email || !telefono) {
-                setFormError("Completa la identidad del profesor: tipo y número de documento, año de nacimiento, sexo, email y teléfono");
+                setFormError("Complete la identidad del profesor: tipo y número de documento, año de nacimiento, sexo, email y teléfono");
                 return;
             }
             // SPEC-442 (I-307 · Jelkin vivo 04-09): el input permitía años
@@ -290,7 +290,7 @@ export default function ProfesoresPageClient() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-body">Profesores</h1>
-                            <p className="text-sm text-muted">El directorio de profesores de tu colegio.</p>
+                            <p className="text-sm text-muted">El directorio de profesores de su colegio.</p>
                         </div>
                         <Button className="min-h-12" onClick={abrirCrear}>
                             Agregar profesor

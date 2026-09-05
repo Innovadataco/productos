@@ -283,7 +283,7 @@ export default function SeccionAcudientes({ estudianteId }: SeccionAcudientesPro
                 <div className="mt-4">
                     <EmptyState
                         title="No hay acudientes"
-                        description="Agrega un acudiente para completar el anillo de reacción."
+                        description="Agregue un acudiente para completar el anillo de reacción."
                         action={
                             <Button onClick={abrirNuevoAcudiente} disabled={!puedeAgregarAcudiente}>
                                 Agregar acudiente

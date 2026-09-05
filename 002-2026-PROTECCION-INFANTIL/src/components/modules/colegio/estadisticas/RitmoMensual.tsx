@@ -50,7 +50,7 @@ export function RitmoMensual({ puntos, className = "" }: RitmoMensualProps) {
 
     return (
         <section aria-label="Ritmo mensual de reportes" className={`glass flex h-full flex-col rounded-[var(--radio-card)] p-6 sm:p-8 ${className}`}>
-            <h2 className="titular-seccion text-body">El ritmo de tus reportes</h2>
+            <h2 className="titular-seccion text-body">El ritmo de sus reportes</h2>
 
             <p className="sr-only" role="status">
                 {`Ritmo mensual: ${total} ${total === 1 ? "reporte" : "reportes"} en los últimos 12 meses.`}

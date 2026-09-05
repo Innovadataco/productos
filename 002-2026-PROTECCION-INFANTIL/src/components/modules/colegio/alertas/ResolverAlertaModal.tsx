@@ -30,7 +30,7 @@ export function ResolverAlertaModal({ isOpen, alertaId, onClose, onResuelta }: R
         if (!alertaId) return;
         const limpio = nota.trim();
         if (limpio.length === 0) {
-            setError("Escribe lo que hiciste antes de registrarlo");
+            setError("Escriba lo que hizo antes de registrarlo");
             return;
         }
         if (limpio.length > 1000) {

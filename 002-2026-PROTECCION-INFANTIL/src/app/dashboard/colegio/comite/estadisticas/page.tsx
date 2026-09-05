@@ -50,7 +50,7 @@ export default async function ComiteEstadisticasPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-body">Estadísticas del comité</h1>
                     <p className="mt-2 text-muted">
-                        Agregados de los casos escalados al Comité de Convivencia de tu colegio.
+                        Agregados de los casos escalados al Comité de Convivencia de su colegio.
                     </p>
                 </div>
 

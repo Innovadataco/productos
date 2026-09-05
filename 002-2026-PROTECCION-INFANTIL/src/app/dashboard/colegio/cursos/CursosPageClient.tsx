@@ -127,7 +127,7 @@ export default function CursosPageClient() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-body">Cursos</h1>
-                            <p className="text-sm text-muted">Gestiona los cursos de tu colegio.</p>
+                            <p className="text-sm text-muted">Gestione los cursos de su colegio.</p>
                         </div>
                         <Button onClick={() => router.push("/dashboard/colegio/cursos/unificado")}>
                             Nuevo curso
@@ -170,7 +170,7 @@ export default function CursosPageClient() {
                         ) : cursos.length === 0 ? (
                             <EmptyState
                                 title="No hay cursos registrados"
-                                description="Crea el primer curso para comenzar a gestionar alumnos."
+                                description="Cree el primer curso para comenzar a gestionar alumnos."
                                 action={
                                     <Button onClick={() => router.push("/dashboard/colegio/cursos/unificado")}>
                                         Crear curso

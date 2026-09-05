@@ -134,7 +134,7 @@ export function BuscadorGlobal() {
     const texto = consulta.trim();
     const textoVacio =
         texto.length < MIN_CARACTERES
-            ? "Escribe al menos 2 caracteres para buscar"
+            ? "Escriba al menos 2 caracteres para buscar"
             : `Sin resultados para «${texto}»`;
 
     return (

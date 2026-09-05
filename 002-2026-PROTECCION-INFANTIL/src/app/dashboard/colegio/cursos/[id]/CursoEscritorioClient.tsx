@@ -269,7 +269,7 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
                 {totalEstudiantes === 0 ? (
                     <EmptyState
                         title="Este curso aún no tiene estudiantes"
-                        description="Agrega el primero para empezar a ver su cobertura y a quién llamar."
+                        description="Agregue el primero para empezar a ver su cobertura y a quién llamar."
                         action={
                             <Button className="min-h-12" onClick={() => setAgregando(true)}>
                                 + Agregar estudiante
@@ -356,7 +356,7 @@ export default function CursoEscritorioClient({ datos }: CursoEscritorioClientPr
                         onChange={(e) => setEditForm({ ...editForm, profesorTitularId: e.target.value })}
                     />
                     {cargandoProfesores ? (
-                        <p className="text-xs text-subtle">Cargando profesores de tu colegio…</p>
+                        <p className="text-xs text-subtle">Cargando profesores de su colegio…</p>
                     ) : null}
                     <div className="flex flex-wrap items-center gap-3">
                         <Button onClick={guardarEdicion} isLoading={guardando} className="min-h-12">

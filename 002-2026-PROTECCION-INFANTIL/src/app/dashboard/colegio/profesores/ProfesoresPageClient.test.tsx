@@ -97,7 +97,7 @@ describe("ProfesoresPageClient", () => {
         fireEvent.change(screen.getByLabelText(/Nombre/), { target: { value: "Ana" } });
         fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
-        expect((await screen.findByRole("alert")).textContent).toContain("Completa el nombre y los apellidos del profesor");
+        expect((await screen.findByRole("alert")).textContent).toContain("Complete el nombre y los apellidos del profesor");
         // Solo el GET inicial; nada se guardó.
         expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "POST")).toHaveLength(0);
     });

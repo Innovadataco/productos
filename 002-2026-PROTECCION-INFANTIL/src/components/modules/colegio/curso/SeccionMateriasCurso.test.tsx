@@ -105,6 +105,6 @@ describe("SeccionMateriasCurso — SPEC-379 D3 (candado UI)", () => {
             })
         );
         render(<SeccionMateriasCurso cursoId="c1" onAviso={() => {}} />);
-        await waitFor(() => expect(screen.getByText(/Primero crea un profesor/i)).toBeDefined());
+        await waitFor(() => expect(screen.getByText(/Primero cree un profesor/i)).toBeDefined());
     });
 });

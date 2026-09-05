@@ -105,7 +105,7 @@ export default function ComparativaCursosPage() {
                 <h1 className="text-2xl font-bold text-body">Comparativa entre cursos</h1>
                 <EmptyState
                     title="Sin datos para comparar"
-                    description="No hay cursos activos en el colegio todavía. Crea cursos y vuelve a consultar."
+                    description="No hay cursos activos en el colegio todavía. Cree cursos y vuelva a consultar."
                 />
             </div>
         );

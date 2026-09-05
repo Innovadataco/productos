@@ -132,7 +132,7 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
                     <Select
                         label="Materia"
                         options={[
-                            { value: "", label: materiasDisponibles.length === 0 ? "Sin materias disponibles" : "Selecciona una materia" },
+                            { value: "", label: materiasDisponibles.length === 0 ? "Sin materias disponibles" : "Seleccione una materia" },
                             ...materiasDisponibles.map((m) => ({ value: m.id, label: m.nombre })),
                         ]}
                         value={materiaId}
@@ -153,8 +153,8 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
                                 value: "",
                                 label:
                                     profesores.length === 0
-                                        ? "Primero crea un profesor"
-                                        : "Elige un profesor",
+                                        ? "Primero cree un profesor"
+                                        : "Elija un profesor",
                             },
                             ...profesores.map((p) => ({ value: p.id, label: `${p.nombre} ${p.apellidos}` })),
                         ]}

@@ -9,12 +9,12 @@ export default function ColegioAuditoriaPageClient() {
             <div className="mb-2">
                 <h1 className="text-2xl font-bold text-body">Auditoría del colegio</h1>
                 <p className="text-sm text-muted">
-                    Registro de acciones de tu institución: cursos, alumnos, identificadores, cargas masivas, alertas y reportes.
+                    Registro de acciones de su institución: cursos, alumnos, identificadores, cargas masivas, alertas y reportes.
                 </p>
             </div>
             <AuditLogViewer
                 title="Auditoría del colegio"
-                subtitle="Solo se muestran las acciones registradas para tu colegio."
+                subtitle="Solo se muestran las acciones registradas para su colegio."
                 defaultActions={COLEGIO_AUDIT_ACTIONS}
                 endpoint="/api/colegio/auditoria"
                 legible

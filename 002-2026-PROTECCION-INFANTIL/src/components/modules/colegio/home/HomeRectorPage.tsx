@@ -88,7 +88,7 @@ export function HomeRectorPage({ nombreUsuario, datos, cobertura }: HomeRectorPa
                 </div>
 
                 <section
-                    aria-label="Cifras de tu colegio"
+                    aria-label="Cifras de su colegio"
                     className="anim-entrada grid grid-cols-2 gap-3 lg:grid-cols-5"
                     style={retardo(210)}
                 >

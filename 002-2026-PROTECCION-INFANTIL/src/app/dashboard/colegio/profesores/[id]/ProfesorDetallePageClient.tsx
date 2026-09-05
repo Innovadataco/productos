@@ -231,7 +231,7 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
                                 {identificadores.length === 0 ? (
                                     <EmptyState
                                         title="No hay identificadores"
-                                        description="Agrega un identificador para usar en futuras alertas."
+                                        description="Agregue un identificador para usar en futuras alertas."
                                         action={<Button onClick={abrirNuevo}>Agregar identificador</Button>}
                                     />
                                 ) : (

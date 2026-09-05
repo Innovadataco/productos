@@ -306,7 +306,7 @@ export default function AlertasColegioPageClient() {
                     ) : alertas.length === 0 ? (
                         <EmptyState
                             title="Aún no hay alertas"
-                            description="Aparecerán cuando un identificador que registres para un alumno salga en un reporte. Empieza registrando tus cursos y alumnos."
+                            description="Aparecerán cuando un identificador que registre para un alumno salga en un reporte. Empiece registrando sus cursos y alumnos."
                             icon={<span className="text-2xl">🛡️</span>}
                             action={
                                 <Button onClick={() => router.push("/dashboard/colegio/cursos")}>
