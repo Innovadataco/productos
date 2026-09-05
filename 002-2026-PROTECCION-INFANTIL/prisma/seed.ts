@@ -4499,6 +4499,8 @@ async function seedCorroboracionPadre() {
     });
 
     console.log("[SEED] SPEC-439 plantilla+regla reporte.corroborado_por_otro listas");
+}
+
 // ── SPEC-449 (I-313): reloj de vencimiento de la verificación ──────────────
 // La Ley 2375/2024 obliga a revalidar antecedentes cada 4 meses. El aviso sale
 // ANTES de que venza (30 días), no el día después — que es cuando ya perdió al
