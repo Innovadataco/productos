@@ -416,6 +416,7 @@
 | [482](482-colegio-residual-barrido/spec.md) | SPEC-482 · Barrido residual del colegio al Sistema de Diseño (Lote-2, Olas A+B) | 🟢 IMPLEMENTADO |
 | [483](483-admin-residual-barrido/spec.md) | SPEC-483 · Barrido residual del ADMIN al Sistema de Diseño (mecánico completo) | 🟢 IMPLEMENTADO |
 | [483](483b-ia-monitoreo-residual/spec.md) | SPEC-483b · Barrido residual del panel de IA + monitoreo (fase 2 admin, mecánico) | 🟢 IMPLEMENTADO |
+| [484](484-pdf-informe-hex-marca/spec.md) | SPEC-484 · Los PDFs del colegio al hex de marca (pino, no emerald) | 🟢 IMPLEMENTADO |
 | [485](485-chrome-nav-footer/spec.md) | SPEC-485 · El chrome compartido (NavHeader + LandingFooter) al Sistema de Diseño | 🟢 IMPLEMENTADO |
 | [486](486-rmsync-maxretries-node24/spec.md) | SPEC-486 · rmSync de cleanup con maxRetries — el runner de CI (Node 24 / git 2.55) tira ENOTEMPTY | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->

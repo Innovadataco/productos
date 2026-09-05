@@ -10,10 +10,10 @@ import type {
     Alignment,
 } from "pdfmake/interfaces";
 
-const COLOR_PRIMARIO = "#10b981"; // emerald-500
-const COLOR_TEXTO = "#1f2937"; // gray-800
-const COLOR_MUTED = "#6b7280"; // gray-500
-const COLOR_FONDO = "#f0fdf4"; // emerald-50
+const COLOR_PRIMARIO = "#0b6e5a"; // = valor claro del token pino, mantener en sync
+const COLOR_TEXTO = "#0f1815"; // = valor claro del token tinta, mantener en sync
+const COLOR_MUTED = "#4d5552"; // = valor claro del token tinta-muted, mantener en sync
+const COLOR_FONDO = "#e9f2ee"; // = tinte pino muy claro (valor claro), mantener en sync
 
 interface EstilosPdf extends StyleDictionary {
     titulo: NonNullable<StyleDictionary["titulo"]>;
@@ -214,8 +214,8 @@ function construirTablaPorCurso(cursos: EstadisticasCurso[]): Content {
         layout: {
             hLineWidth: (i: number, node: any) => (i === 0 || i === node.table.body.length ? 1 : 0.5),
             vLineWidth: () => 0.5,
-            hLineColor: () => "#e5e7eb",
-            vLineColor: () => "#e5e7eb",
+            hLineColor: () => "#dfe3e1",
+            vLineColor: () => "#dfe3e1",
             fillColor: (rowIndex: number) =>
                 rowIndex === 0 ? COLOR_PRIMARIO : rowIndex % 2 === 0 ? "#f9fafb" : null,
             paddingLeft: () => 8,
