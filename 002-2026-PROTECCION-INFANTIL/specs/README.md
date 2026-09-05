@@ -417,6 +417,7 @@
 | [483](483-admin-residual-barrido/spec.md) | SPEC-483 · Barrido residual del ADMIN al Sistema de Diseño (mecánico completo) | 🟢 IMPLEMENTADO |
 | [483](483b-ia-monitoreo-residual/spec.md) | SPEC-483b · Barrido residual del panel de IA + monitoreo (fase 2 admin, mecánico) | 🟢 IMPLEMENTADO |
 | [486](486-rmsync-maxretries-node24/spec.md) | SPEC-486 · rmSync de cleanup con maxRetries — el runner de CI (Node 24 / git 2.55) tira ENOTEMPTY | 🟢 IMPLEMENTADO |
+| [485](485-chrome-nav-footer/spec.md) | SPEC-485 · El chrome compartido (NavHeader + LandingFooter) al Sistema de Diseño | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

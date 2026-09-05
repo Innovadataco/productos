@@ -118,28 +118,28 @@ export function NavHeader() {
         user?.rol === "PROFESIONAL";
 
     const headerBorderClass = user?.rol === "ADMIN"
-        ? "border-b-amber-500/40 dark:border-b-amber-400/30"
+        ? "border-b-ambar/40"
         : user?.rol === "OPERADOR"
             ? "border-b-violet-500/40 dark:border-b-violet-400/30"
             : user?.rol === "COMITE_VALIDACION"
-                ? "border-b-emerald-500/40 dark:border-b-emerald-400/30"
+                ? "border-b-pino/40"
                 : "border-b-white/40 dark:border-b-white/10";
 
     const avatarClass = user?.rol === "ADMIN"
-        ? "bg-amber-500"
+        ? "bg-ambar"
         : user?.rol === "OPERADOR"
             ? "bg-violet-500"
             : user?.rol === "COMITE_VALIDACION"
-                ? "bg-emerald-500"
+                ? "bg-pino"
                 : "accent-gradient";
 
     const rolBadgeClass = user?.rol === "ADMIN"
-        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+        ? "bg-ambar/10 text-estado-ambar"
         : user?.rol === "OPERADOR"
             ? "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
             : user?.rol === "COMITE_VALIDACION"
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+                ? "bg-pino/10 text-estado-pino"
+                : "bg-tinta/10 text-muted";
 
     const dashboardHref = user?.rol === "SCHOOL_ADMIN"
         ? "/dashboard/colegio"
@@ -200,19 +200,19 @@ export function NavHeader() {
                     {esEnlaceNavegable(dashboardHref) && (
                         <Link
                             href={dashboardHref}
-                            className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                            className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-tinta/5 transition"
                         >
                             Dashboard
                         </Link>
                     )}
 
                     {isLoading ? (
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-cielo" />
                     ) : user ? (
                         <div className="relative" ref={dropdownRef}>
                             <button
                                 onClick={() => setOpen((v) => !v)}
-                                className="flex min-h-[44px] items-center gap-2 rounded-xl glass-input px-2.5 py-2 text-sm font-medium text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                                className="flex min-h-[44px] items-center gap-2 rounded-xl glass-input px-2.5 py-2 text-sm font-medium text-body hover:bg-tinta/5 transition"
                                 aria-expanded={open}
                                 aria-haspopup="true"
                                 aria-label="Menú de usuario"
@@ -225,8 +225,8 @@ export function NavHeader() {
                             </button>
 
                             {open && (
-                                <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 shadow-2xl">
-                                    <div className="border-b border-slate-100 dark:border-slate-800 px-3 py-2">
+                                <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl bg-papel border border-tinta/10 p-2 shadow-2xl">
+                                    <div className="border-b border-tinta/10 px-3 py-2">
                                         <p className="text-sm font-semibold text-body truncate">{user.nombre || user.email}</p>
                                         <div className="mt-1 flex items-center gap-2">
                                             <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${rolBadgeClass}`}>
@@ -314,7 +314,7 @@ export function NavHeader() {
                                                 )}
                                             </>
                                         )}
-                                        <hr className="my-1 border-slate-100 dark:border-slate-800" />
+                                        <hr className="my-1 border-tinta/10" />
                                         {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible para TODOS los roles */}
                                         {esEnlaceNavegable("/cambiar-password") && (
                                             <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
@@ -327,7 +327,7 @@ export function NavHeader() {
                                                 await logout();
                                                 window.location.href = "/";
                                             }}
-                                            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+                                            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-muted hover:bg-tinta/5 transition"
                                         >
                                             Cerrar sesión
                                         </button>
@@ -339,7 +339,7 @@ export function NavHeader() {
                         esEnlaceNavegable("/login") && (
                             <Link
                                 href="/login"
-                                className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-white/70 dark:hover:bg-slate-800/70 transition"
+                                className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-tinta/5 transition"
                             >
                                 Iniciar sesión
                             </Link>
@@ -359,7 +359,7 @@ export function NavHeader() {
             </div>
 
             {mobileOpen && (
-                <div className="sm:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 shadow-lg">
+                <div className="sm:hidden border-t border-tinta/10 bg-papel px-4 py-3 shadow-lg">
                     <div className="flex flex-col gap-2">
                         {esEnlaceNavegable("/") && <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>}
                         {esEnlaceNavegable("/dashboard-publico") && <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>}
@@ -409,7 +409,7 @@ export function NavHeader() {
                                         await logout();
                                         window.location.href = "/";
                                     }}
-                                    className="text-left text-sm font-medium text-red-600 dark:text-red-400 px-3 py-2"
+                                    className="text-left text-sm font-medium text-muted px-3 py-2"
                                 >
                                     Cerrar sesión
                                 </button>
@@ -437,7 +437,7 @@ function NavDropdownLink({
         <Link
             href={href}
             onClick={onClick}
-            className="block rounded-lg px-3 py-2 text-sm text-body hover:bg-sky-50 dark:hover:bg-sky-950/30 hover:text-accent transition"
+            className="block rounded-lg px-3 py-2 text-sm text-body hover:bg-cielo/10 hover:text-accent transition"
         >
             {children}
         </Link>
@@ -457,7 +457,7 @@ function MobileLink({
         <Link
             href={href}
             onClick={onClick}
-            className="block rounded-lg px-3 py-2 text-sm font-medium text-body hover:bg-slate-100 dark:hover:bg-slate-800/60 transition"
+            className="block rounded-lg px-3 py-2 text-sm font-medium text-body hover:bg-tinta/5 transition"
         >
             {children}
         </Link>

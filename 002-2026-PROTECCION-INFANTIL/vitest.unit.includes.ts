@@ -174,6 +174,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-483b (Lote-2 fase 2): panel de IA + monitoreo sin crudo; el medidor de
     // confianza (data-viz) queda marcado y exento, lo migra Diseño.
     "src/components/modules/ia/ia-residual-barrido.candado.test.ts",
+    // SPEC-485 (Lote-2): el chrome compartido (NavHeader + LandingFooter) sin crudo,
+    // logout neutro (cero rojo). violet OPERADOR queda flagueado (sin token).
+    "src/components/modules/chrome-nav-footer.candado.test.ts",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",
