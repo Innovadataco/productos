@@ -39,8 +39,13 @@ describe("SPEC-488 · rol interno unificado en ámbar (mata el violet)", () => {
 
     it("el badge de rol de NavHeader rinde el NOMBRE del rol (user.rol), no solo el color", () => {
         const nav = fs.readFileSync(path.join(SRC, "components/modules/NavHeader.tsx"), "utf-8");
-        // El badge usa la clase de rol Y muestra el nombre del rol como texto.
-        expect(nav).toMatch(/rolBadgeClass/);
-        expect(nav).toMatch(/\{user\.rol[.\s]/);
+        // Aserción LIGADA (auditoría CEO): el span que lleva `rolBadgeClass` debe
+        // rendir `{user.rol...}` como texto. `/\{user\.rol/` a secas matchea los ~13
+        // condicionales `{user.rol === "…"}` del nav → pasaba con el badge borrado.
+        // Este patrón ata la clase del badge al nombre: borrar el badge lo pone rojo.
+        expect(
+            /rolBadgeClass}`}>\s*\{user\.rol/.test(nav),
+            "el badge (span con rolBadgeClass) debe mostrar {user.rol} como texto — distinción por nombre, no solo color",
+        ).toBe(true);
     });
 });

@@ -14,6 +14,11 @@ import * as path from "node:path";
 const RAIZ = path.resolve(__dirname, "..", "..", "..");
 const DIR_RECUPERAR = __dirname;
 const REPORTAR = path.resolve(__dirname, "..", "reportar", "page.tsx");
+// SPEC-491 (auditoría CEO): la pantalla se ARMA desde components/ — escanear el
+// RENDER (los forms montados), no solo el directorio de la ruta. Sin esto el
+// candado pasaba con el slate vivo en RecuperarForm/RestablecerForm.
+const MODULES = path.resolve(__dirname, "..", "..", "components", "modules");
+const FORMS = [path.join(MODULES, "RecuperarForm.tsx"), path.join(MODULES, "RestablecerForm.tsx")];
 
 function* recorrer(dir: string): Generator<string> {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -27,8 +32,8 @@ function* recorrer(dir: string): Generator<string> {
 const CRUDO = /\b(?:text|bg|border|ring|from|to|via|divide|fill|stroke)(?:-[ltrbxy])?-(?:slate|gray)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/;
 
 describe("SPEC-491 · públicas de auth (recuperar + reportar) sin slate crudo", () => {
-    it("0 crudo slate/gray en recuperar/** y reportar/page.tsx", () => {
-        const archivos = [...recorrer(DIR_RECUPERAR), REPORTAR];
+    it("0 crudo slate/gray en el render de recuperar + reportar (rutas Y forms montados)", () => {
+        const archivos = [...recorrer(DIR_RECUPERAR), REPORTAR, ...FORMS];
         const hits: string[] = [];
         for (const archivo of archivos) {
             for (const [i, linea] of fs.readFileSync(archivo, "utf-8").split("\n").entries()) {

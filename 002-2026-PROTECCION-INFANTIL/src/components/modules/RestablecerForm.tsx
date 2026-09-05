@@ -56,7 +56,7 @@ export function RestablecerForm({ token }: RestablecerFormProps) {
         return (
             <div className="text-center">
                 <p className="text-sm font-medium text-green-700">Contraseña actualizada correctamente.</p>
-                <p className="mt-2 text-sm text-slate-600">Serás redirigido a iniciar sesión...</p>
+                <p className="mt-2 text-sm text-muted">Serás redirigido a iniciar sesión...</p>
             </div>
         );
     }
