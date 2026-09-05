@@ -221,6 +221,7 @@ export class ReporteQueryService {
             pais: r.pais,
             ciudad: r.ciudadRel?.nombre ?? r.ciudad,
             categoriaLabel: r.clasificacion ? formatCategoria(r.clasificacion.categoria) : null,
+            esAnonimo: r.esAnonimo,
         }));
     }
 

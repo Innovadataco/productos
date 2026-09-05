@@ -33,6 +33,10 @@ export class ReporteSeguimientoRepository {
                 ciudad: true,
                 ciudadRel: { select: { nombre: true } },
                 clasificacion: { select: { categoria: true } },
+                // SPEC-439: el TIPO de autor (anónimo vs padre autenticado), nunca su
+                // identidad. `usuarioId` NO se selecciona a propósito: no puede salir
+                // de acá ni por error. `cadenas-padre` ya lo hacía así.
+                esAnonimo: true,
             },
             orderBy: { creadoEn: "desc" },
             take: 50,

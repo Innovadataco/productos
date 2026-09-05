@@ -380,6 +380,7 @@
 | [435](435-cuentas-verificador/spec.md) | SPEC-435 · Cuentas de VERIFICADOR — el admin las crea con user y pass | 🟢 IMPLEMENTADO |
 | [436](436-documentos-del-profesional/spec.md) | SPEC-436 · Los documentos del profesional: se cargan, se guardan y SE PUEDEN LEER | 🟢 IMPLEMENTADO |
 | [438](438-fecha-hora-obligatorias/spec.md) | SPEC-438 · La fecha y la hora del hecho son obligatorias, y el sistema nunca las inventa | 🟢 IMPLEMENTADO |
+| [439](439-corroboracion-y-aviso-al-padre/spec.md) | SPEC-439 · El aviso al padre cuando alguien más reporta lo mismo | 🟢 IMPLEMENTADO |
 | [442](442-camino-colegio/spec.md) | SPEC-442 · El camino del colegio, sin callejones — cierra I-307 | 🟢 IMPLEMENTADO |
 | [444](444-identificadores-cuid/spec.md) | SPEC-444 · Los identificadores del padre se validaban como uuid — cierra I-310 | 🟢 IMPLEMENTADO |
 | [447](447-calendario-del-profesional/spec.md) | SPEC-447 · El profesional publica su disponibilidad — cierra I-311 | 🟢 IMPLEMENTADO |
