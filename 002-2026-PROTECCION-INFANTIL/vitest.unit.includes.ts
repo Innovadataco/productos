@@ -483,4 +483,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/rediseno/colegio-sin-crudo.candado.test.ts",
     // SPEC-486 (infra): todo rmSync(recursive) de cleanup lleva maxRetries (ENOTEMPTY en Node 24/git 2.55 del runner de CI).
     "scripts/specs/rmsync-maxretries.candado.test.ts",
+    // SPEC-484: los PDFs del colegio (informe + estadísticas) en hex de marca (pino), no emerald crudo (fuente, sin BD).
+    "src/lib/rediseno/pdf-colegio-hex-marca.candado.test.ts",
 ];

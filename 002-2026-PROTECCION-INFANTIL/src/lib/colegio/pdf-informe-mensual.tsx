@@ -6,11 +6,11 @@
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 import type { InformeMensualColegio } from "./informe-mensual";
 
-const COLOR_PRIMARIO = "#10b981"; // emerald-500
-const COLOR_TEXTO = "#1f2937"; // gray-800
-const COLOR_MUTED = "#6b7280"; // gray-500
-const COLOR_FONDO = "#f0fdf4"; // emerald-50
-const COLOR_BORDE = "#e5e7eb"; // gray-200
+const COLOR_PRIMARIO = "#0b6e5a"; // = valor claro del token pino, mantener en sync
+const COLOR_TEXTO = "#0f1815"; // = valor claro del token tinta, mantener en sync
+const COLOR_MUTED = "#4d5552"; // = valor claro del token tinta-muted, mantener en sync
+const COLOR_FONDO = "#e9f2ee"; // = tinte pino muy claro (valor claro), mantener en sync
+const COLOR_BORDE = "#dfe3e1"; // = valor claro de la línea neutra (tinta), mantener en sync
 
 const estilos = StyleSheet.create({
     pagina: {
@@ -30,12 +30,12 @@ const estilos = StyleSheet.create({
     membreteNombre: {
         fontSize: 16,
         fontWeight: "bold",
-        color: "#1f2937",
+        color: COLOR_TEXTO,
         marginBottom: 2,
     },
     membreteNit: {
         fontSize: 9,
-        color: "#6b7280",
+        color: COLOR_MUTED,
         marginBottom: 2,
     },
     titulo: {
