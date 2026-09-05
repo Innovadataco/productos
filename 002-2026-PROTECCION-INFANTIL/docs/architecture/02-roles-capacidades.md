@@ -4916,7 +4916,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | analisis_recomendaciones | `/dashboard/admin/analisis/recomendaciones` | ADMIN |
 | anti_abuso | `/dashboard/admin/anti-abuso` | ADMIN |
 | bandeja_reportes | `/dashboard/admin/bandeja` | ADMIN, OPERADOR |
-| centro_control_ia | `/dashboard/admin/ia` | ADMIN |
+| centro_control_ia | `/dashboard/admin/ia` | ADMIN, COMITE_VALIDACION |
 | colegios | `/dashboard/colegio` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |
 | colegios | `/dashboard/colegio/suscripcion` | ADMIN, COMITE_CONVIVENCIA, SCHOOL_ADMIN |
 | colegios_auditoria | `/dashboard/colegio/auditoria` | ADMIN, SCHOOL_ADMIN |
@@ -4941,7 +4941,7 @@ Desde la D-41, el menú pinta un ítem solo si (módulo concedido) ∧ (predicad
 | padres | `/dashboard/admin/padres` | ADMIN |
 | pagos_admin | `/dashboard/admin/pagos` | ADMIN |
 | profesionales_admin | `/dashboard/admin/profesionales/gestion` | ADMIN |
-| revision_spam | `/dashboard/admin/spam` | ADMIN |
+| revision_spam | `/dashboard/admin/spam` | ADMIN, OPERADOR |
 | usuarios_admin | `/dashboard/admin/usuarios` | ADMIN |
 | verificadores_admin | `/dashboard/admin/verificadores` | ADMIN |
 
