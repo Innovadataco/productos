@@ -419,6 +419,7 @@
 | [484](484-pdf-informe-hex-marca/spec.md) | SPEC-484 · Los PDFs del colegio al hex de marca (pino, no emerald) | 🟢 IMPLEMENTADO |
 | [485](485-chrome-nav-footer/spec.md) | SPEC-485 · El chrome compartido (NavHeader + LandingFooter) al Sistema de Diseño | 🟢 IMPLEMENTADO |
 | [486](486-rmsync-maxretries-node24/spec.md) | SPEC-486 · rmSync de cleanup con maxRetries — el runner de CI (Node 24 / git 2.55) tira ENOTEMPTY | 🟢 IMPLEMENTADO |
+| [487](487-generados-post-merge/spec.md) | SPEC-487 · Los generados dejan de tocarse en el PR: barrido post-merge (kill de la clase union) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
