@@ -118,7 +118,7 @@ export function PresentacionUrgenciaForm({
             <header>
                 <h1 className="text-2xl font-serif text-body">Antes de conocer a alguien</h1>
                 <p className="mt-1 text-sm text-muted">
-                    Contanos por qué buscás un psicólogo. El profesional lo verá cuando le solicites cita.
+                    Cuéntanos por qué buscas un psicólogo. El profesional lo verá cuando le solicites cita.
                 </p>
             </header>
 

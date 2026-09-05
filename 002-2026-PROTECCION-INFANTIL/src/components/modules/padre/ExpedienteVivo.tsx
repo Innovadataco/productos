@@ -191,7 +191,7 @@ export function ExpedienteVivo({
             <section className="glass rounded-2xl p-4 sm:p-5" aria-labelledby="cta-apoyo">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h2 id="cta-apoyo" className="titular-seccion">¿Necesitás actuar sobre lo que ves?</h2>
+                        <h2 id="cta-apoyo" className="titular-seccion">¿Necesitas actuar sobre lo que ves?</h2>
                         <p className="cuerpo text-subtle mt-1">
                             Llamá a la línea oficial o recibí apoyo de un psicólogo de la red.
                         </p>
