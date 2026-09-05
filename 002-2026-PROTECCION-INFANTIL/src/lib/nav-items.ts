@@ -156,6 +156,10 @@ export const PROFESIONAL_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/profesional", label: "Inicio", modulo: "profesional_inicio" },
     { href: "/dashboard/profesional/citaciones", label: "Citaciones", modulo: "profesional_citaciones" },
     { href: "/dashboard/profesional/casos", label: "Casos", modulo: "profesional_casos" },
+    // SPEC-437 · T013: «Calendario» entra al menú ahora que SPEC-447 (#353)
+    // construyó y desplegó `/dashboard/profesional/calendario`. Antes su ítem
+    // habría llevado a una pantalla inexistente (candado I-299); hoy existe.
+    { href: "/dashboard/profesional/calendario", label: "Calendario", modulo: "profesional_calendario" },
     { href: "/perfil-profesional/completar", label: "Mi ficha", modulo: "profesional_ficha" },
     { href: "/perfil-profesional/verificacion", label: "Verificación", modulo: "profesional_verificacion" },
 ];

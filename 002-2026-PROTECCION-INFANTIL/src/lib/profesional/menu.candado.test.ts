@@ -93,23 +93,23 @@ describe("SPEC-437 · misma mecánica que el operador: módulo por ítem", () =>
     });
 
     it("el grant de PROFESIONAL es EXACTAMENTE el de su menú — ni de más ni de menos", () => {
-        // Antes este candado exigía conceder los SEIS módulos del catálogo. Eso
-        // forzaba conceder `profesional_calendario`, cuya pantalla (SPEC-447) y
-        // cuyo ítem de menú (T013) todavía no estaban — un permiso a una
-        // superficie sin camino. El grant se ata al NAV, no al catálogo:
-        //  · un módulo de más → acceso a algo que el menú no ofrece;
-        //  · uno de menos    → un ítem que el nav pinta y el permiso filtra (menú roto).
+        // El grant se ata al NAV, no al catálogo. Un módulo de más es acceso a una
+        // superficie que el menú no ofrece; uno de menos es un ítem que el nav
+        // pinta y el permiso filtra (menú roto). Hoy son los SEIS: `profesional_calendario`
+        // entró con T013 porque SPEC-447 desplegó su pantalla — antes se quedaba
+        // afuera justamente porque no existía, y este candado lo habría cazado.
         const seed = fs.readFileSync(path.join(RAIZ, "prisma/seed-modulos-grants.ts"), "utf-8");
         const inicio = seed.indexOf("PROFESIONAL: [");
         const bloque = seed.slice(inicio, seed.indexOf("]", inicio));
         const concedidos = [...bloque.matchAll(/"(profesional_[a-z]+)"/g)].map((m) => m[1]).sort();
         const delNav = [...new Set(PROFESIONAL_NAV_ITEMS.map((i) => i.modulo))].sort();
         expect(concedidos).toEqual(delNav);
-        // Explícito para que el rojo lo nombre: calendario se siembra en el
-        // catálogo (concedible) pero NO se concede hasta que su ítem exista.
-        expect(concedidos).not.toContain("profesional_calendario");
-        // Y el módulo SÍ vive en el catálogo — la exclusión es del grant, no del catálogo.
-        expect(CATALOGO_MODULOS.some((m) => m.clave === "profesional_calendario")).toBe(true);
+        // Cada módulo concedido tiene pantalla real (no se concede lo que no se
+        // puede alcanzar): su href resuelve a un page.tsx en disco.
+        for (const item of PROFESIONAL_NAV_ITEMS) {
+            const ruta = path.join(RAIZ, "src/app", item.href, "page.tsx");
+            expect(fs.existsSync(ruta), `el ítem "${item.label}" (${item.href}) no tiene page.tsx`).toBe(true);
+        }
     });
 });
 

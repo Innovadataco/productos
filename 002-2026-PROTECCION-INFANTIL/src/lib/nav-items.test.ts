@@ -14,7 +14,10 @@ const CLAVES_CATALOGO = new Set(CATALOGO_MODULOS.map((m) => m.clave));
 
 // Módulos sin ítem de menú propio (contenedores, tabs IA, audit_logs) — research.md §3.3
 const SIN_PANTALLA_PROPIA = new Set([
-    "comite",
+    // NOTA (SPEC-437 · T013): `comite` salió de acá — tenía ítem de menú
+    // (`/dashboard/admin/comite/gestion`, ADMIN_NAV_ITEMS) desde spec 086, así que
+    // su justificación «sin pantalla propia» era superflua y nadie lo notaba. Lo
+    // cazó el guard nuevo «SIN_PANTALLA_PROPIA no tiene justificaciones superfluas».
     "ia_playground",
     "ia_rubrica",
     "ia_simulaciones",
@@ -57,13 +60,10 @@ const SIN_PANTALLA_PROPIA = new Set([
     // servicios docker) es un módulo de acción endpoint-only; no tiene ítem de
     // menú lateral propio en este SPEC — el tablero de servicios lo agrega D-83.
     "sistema_admin",
-    // SPEC-437 (A-75): el módulo del calendario del profesional se siembra ya
-    // —el permiso se puede conceder— pero su PANTALLA la construye SPEC-447.
-    // El menú no pinta un ítem hacia una pantalla que no existe: es el candado
-    // I-299 y manda sobre la lista de seis del radicado. En cuanto 447 esté en
-    // main, «Calendario» entra a PROFESIONAL_NAV_ITEMS y esta línea SE BORRA
-    // — el test de abajo la exige y se pone rojo si sobra.
-    "profesional_calendario",
+    // SPEC-437 · T013: `profesional_calendario` YA salió de acá. Su pantalla
+    // (SPEC-447, #353) está en main y su ítem entró a PROFESIONAL_NAV_ITEMS, así
+    // que la justificación «sin pantalla propia» sobra — y el test
+    // «no hay justificación superflua» de abajo la caza si alguien la devuelve.
 ]);
 
 // SPEC-173 (FASE-C): los nodos expandibles (p. ej. "Usuarios") declaran hijos;
@@ -84,6 +84,20 @@ describe("estructura menú ↔ catálogo", () => {
     it("todo ítem de menú referencia un módulo existente en el catálogo", () => {
         for (const item of TODOS_LOS_ITEMS) {
             expect(CLAVES_CATALOGO.has(item.modulo), `ítem "${item.label}" → clave desconocida "${item.modulo}"`).toBe(true);
+        }
+    });
+
+    // SPEC-437 · T013: el guard que el comentario de SIN_PANTALLA_PROPIA prometía
+    // («se pone rojo si sobra») pero que NO existía — el test de abajo usaba un OR,
+    // así que un módulo en el menú Y en la lista pasaba igual. Sin esto, la lista
+    // se pudre en silencio: nadie recuerda sacar la justificación cuando la
+    // pantalla nace. Ahora una entrada que ya tiene ítem de menú, o que ni existe
+    // en el catálogo, es un rojo con nombre.
+    it("SIN_PANTALLA_PROPIA no tiene justificaciones superfluas ni claves muertas", () => {
+        const clavesEnMenu = new Set(TODOS_LOS_ITEMS.map((i) => i.modulo));
+        for (const clave of SIN_PANTALLA_PROPIA) {
+            expect(CLAVES_CATALOGO.has(clave), `"${clave}" justificado como sin pantalla pero no existe en el catálogo`).toBe(true);
+            expect(clavesEnMenu.has(clave), `"${clave}" está en el menú: su justificación "sin pantalla propia" ya sobra, bórrala`).toBe(false);
         }
     });
 
