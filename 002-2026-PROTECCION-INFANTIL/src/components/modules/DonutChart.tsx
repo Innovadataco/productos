@@ -1,6 +1,20 @@
 "use client";
 
-const COLORS = ["#3b6bff", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#64748b"];
+// SPEC-455 · mueble «la gráfica» (catálogo §4). Serie categórica en TOKENS del
+// sistema —`pino`, `cielo`, `ambar` y derivados por `color-mix`— nunca color
+// crudo ni rojo: `rubi` se reserva para criticidad real y nombrada, no para el
+// «cuarto color de la lista». Antes era una lista de hex sueltos que incluía el
+// rojo de alarma en una gráfica que solo informa. Se resuelve por variable CSS
+// para que la gráfica herede el tema (claro/oscuro) sin repetir color crudo.
+const SERIE = [
+    "rgb(var(--pino-rgb))",
+    "rgb(var(--cielo-rgb))",
+    "rgb(var(--ambar-rgb))",
+    "color-mix(in srgb, rgb(var(--pino-rgb)) 55%, rgb(var(--cielo-rgb)))",
+    "color-mix(in srgb, rgb(var(--ambar-rgb)) 60%, rgb(var(--pino-rgb)))",
+    "color-mix(in srgb, rgb(var(--cielo-rgb)) 55%, rgb(var(--ambar-rgb)))",
+    "color-mix(in srgb, rgb(var(--ambar-rgb)) 45%, rgb(var(--cielo-rgb)))",
+];
 
 export function DonutChart({
     data,
@@ -24,7 +38,7 @@ export function DonutChart({
                 aria-label={ariaLabel}
             >
                 <title>{ariaLabel}</title>
-                <circle cx="90" cy="90" r={radius} fill="none" stroke="currentColor" strokeWidth="20" className="text-slate-200 dark:text-slate-700" />
+                <circle cx="90" cy="90" r={radius} fill="none" stroke="currentColor" strokeWidth="20" className="text-tinta/10 dark:text-white/10" />
                 {data.map((d, i) => {
                     const previous = data.slice(0, i).reduce((sum, item) => sum + item.value, 0);
                     const segment = (d.value / total) * circumference;
@@ -37,7 +51,7 @@ export function DonutChart({
                             cy="90"
                             r={radius}
                             fill="none"
-                            stroke={COLORS[i % COLORS.length]}
+                            stroke={SERIE[i % SERIE.length]}
                             strokeWidth="20"
                             strokeDasharray={`${segment} ${circumference - segment}`}
                             strokeDashoffset={offset}
@@ -48,7 +62,7 @@ export function DonutChart({
                         </circle>
                     );
                 })}
-                <text x="90" y="95" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100 text-base font-bold">
+                <text x="90" y="95" textAnchor="middle" className="fill-current text-body text-base font-bold">
                     {total}
                 </text>
             </svg>
@@ -59,10 +73,12 @@ export function DonutChart({
                         <li key={i} className="flex items-center gap-2">
                             <span
                                 className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                                style={{ backgroundColor: SERIE[i % SERIE.length] }}
                             />
-                            <span className="text-slate-700 dark:text-slate-300">
-                                {d.label}: <span className="font-medium">{d.value}</span> ({percentage}%)
+                            {/* Etiqueta en versalita (catálogo §4): la categoría en small-caps,
+                                el número en cifra normal. */}
+                            <span className="text-body">
+                                <span className="[font-variant:small-caps]">{d.label}</span>: <span className="font-medium">{d.value}</span> ({percentage}%)
                             </span>
                         </li>
                     );

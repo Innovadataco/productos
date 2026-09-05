@@ -277,11 +277,18 @@ export function MapaUbicaciones({
 
     const maxTotal = Math.max(1, ...validos.map((p) => p.total));
 
+    // SPEC-455: la paleta manda también sobre los rellenos del choropleth y la
+    // leyenda, no solo sobre los pines. Antes `paisStyle`/mouseout/leyenda usaban
+    // `COLORES` (riesgo, con #ef4444) sin mirar `paleta`, así que el dashboard
+    // público seguía pintando el rojo de alarma aunque se le pasara `paleta="padre"`. `borde`/
+    // `bordeHover` son neutros (grises) y no viven en la paleta padre: se quedan.
+    const pal = paleta === "padre" ? COLORES_PADRE : COLORES;
+
     const paisStyle = useCallback(
         (feature?: GeoJSON.Feature): PathOptions => {
             const nombre = normalizarNombre(String(feature?.properties?.name || ""));
             const pais = paisesMap.get(nombre);
-            const color = pais && maxPais > 0 ? colorPorCantidad(pais.total, maxPais) : COLORES.sinDatos;
+            const color = pais && maxPais > 0 ? colorPorCantidad(pais.total, maxPais, paleta) : pal.sinDatos;
             return {
                 fillColor: color,
                 fillOpacity: 0.55,
@@ -289,7 +296,7 @@ export function MapaUbicaciones({
                 weight: 1,
             };
         },
-        [paisesMap, maxPais]
+        [paisesMap, maxPais, paleta, pal]
     );
 
     const onEachFeature = useCallback(
@@ -307,11 +314,11 @@ export function MapaUbicaciones({
                 layer.setStyle({ fillOpacity: 0.75, color: COLORES.bordeHover, weight: 2 });
             });
             layer.on("mouseout", () => {
-                const color = pais && maxPais > 0 ? colorPorCantidad(pais.total, maxPais) : COLORES.sinDatos;
+                const color = pais && maxPais > 0 ? colorPorCantidad(pais.total, maxPais, paleta) : pal.sinDatos;
                 layer.setStyle({ fillOpacity: 0.55, color: COLORES.borde, weight: 1, fillColor: color });
             });
         },
-        [paisesMap, maxPais]
+        [paisesMap, maxPais, paleta, pal]
     );
 
     return (
@@ -352,19 +359,19 @@ export function MapaUbicaciones({
                     <p className="mb-2 font-semibold text-body">Reportes por país</p>
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: COLORES.alto }} />
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: pal.alto }} />
                             <span className="text-muted">Alto ({maxPais > 0 ? `≥ ${Math.ceil(maxPais * 0.75)}` : "—"})</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: COLORES.medio }} />
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: pal.medio }} />
                             <span className="text-muted">Medio</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: COLORES.bajo }} />
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: pal.bajo }} />
                             <span className="text-muted">Bajo</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: COLORES.sinDatos }} />
+                            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: pal.sinDatos }} />
                             <span className="text-muted">Sin datos</span>
                         </div>
                     </div>

@@ -32,8 +32,8 @@ type StatsData = {
 
 export function PublicDashboard({
     variant = "completo",
-    titulo = "Dashboard público",
-    subtitulo = "Panorama estratégico de reportes en la plataforma. Datos agregados y anonimizados.",
+    titulo = "Lo que estamos viendo entre todos",
+    subtitulo = "Lo que la comunidad ha reportado, sin nombres ni datos de nadie. Para que veas que no estás solo.",
 }: {
     /** SPEC-129 (D-b): "resumen" = KPIs + origen/países para la home del colegio;
      *  "completo" = todo (dashboard público y vista ampliada del colegio). */
@@ -159,6 +159,10 @@ export function PublicDashboard({
                                 center={[4.5, -74]}
                                 zoom={3}
                                 sinUbicacion={sinUbicacion}
+                                /* SPEC-455: el dashboard público es abierto (un padre asustado
+                                   también lo ve). Nunca rojo de alarma — la paleta sin alarma de
+                                   SPEC-370 (ámbar/pino) ya existe; acá se cablea. */
+                                paleta="padre"
                             />
                         )}
                     </ChartCard>

@@ -34,7 +34,11 @@ import * as path from "node:path";
 // 1079 sin que este PR haya sumado nada — mis archivos siguen en 0 raws. Piso
 // vuelve a 1079 para reflejar el suelo real de main. Cuando alguien migre el
 // próximo bloque de sky-*/amber-* a tokens el piso vuelve a bajar.
-const PISO = 1079;
+// 2026-09-04 SPEC-455: el mueble «la gráfica» (DonutChart + BarChart) migra su
+// paleta a tokens (pino/cielo/ambar + color-mix; nunca rojo) y sus textos SVG a
+// fill-current + text-muted/body. Salen 14 clases crudas (slate/sky/cyan) de las
+// dos gráficas compartidas. Medición sobre origin/main fresco: 1065 (122 archivos).
+const PISO = 1065;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
