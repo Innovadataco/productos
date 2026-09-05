@@ -90,7 +90,7 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
     });
 
     afterAll(() => {
-        rmSync(storageDirApelaciones, { recursive: true, force: true });
+        rmSync(storageDirApelaciones, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     });
 
     it("registro público → login real → entra a su home", async () => {

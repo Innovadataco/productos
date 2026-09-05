@@ -109,7 +109,7 @@ describe("SPEC-432 · dos ramas que agregan una spec cada una mergean solas", ()
     });
 
     afterAll(() => {
-        fs.rmSync(sandbox, { recursive: true, force: true });
+        fs.rmSync(sandbox, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     });
 
     it("el merge NO se detiene y no deja marcadores de conflicto", () => {

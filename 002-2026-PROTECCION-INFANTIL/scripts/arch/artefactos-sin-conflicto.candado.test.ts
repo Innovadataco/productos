@@ -226,7 +226,7 @@ describe("SPEC-432b · dos ramas que agregan una ruta cada una mergean solas", (
     });
 
     afterAll(() => {
-        fs.rmSync(sandbox, { recursive: true, force: true });
+        fs.rmSync(sandbox, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     });
 
     it("el merge no se detiene y sobreviven LAS DOS rutas", () => {

@@ -30,7 +30,7 @@ describe("GET /api/admin/comite/apelaciones/[id]/documento", () => {
     });
 
     afterAll(async () => {
-        rmSync(storageDir, { recursive: true, force: true });
+        rmSync(storageDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         await prisma.$disconnect();
     });
 

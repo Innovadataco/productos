@@ -105,7 +105,7 @@ describe("POST /api/pagos/renovacion", () => {
     });
 
     afterAll(() => {
-        rmSync(dirTemporal, { recursive: true, force: true });
+        rmSync(dirTemporal, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         delete process.env.COMPROBANTES_STORAGE_DIR;
     });
 

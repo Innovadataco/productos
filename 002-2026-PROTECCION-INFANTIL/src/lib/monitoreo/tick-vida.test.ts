@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    fs.rmSync(TMP_DIR, { recursive: true, force: true });
+    fs.rmSync(TMP_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     delete process.env.WORKER_RUN_DIR;
 });
 

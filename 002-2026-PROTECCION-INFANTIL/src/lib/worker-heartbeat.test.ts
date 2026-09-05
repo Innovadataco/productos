@@ -29,7 +29,7 @@ afterEach(() => {
     } else {
         process.env.WORKER_RUN_DIR = RUN_DIR_ORIGINAL;
     }
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 describe("leerHeartbeatWorker", () => {

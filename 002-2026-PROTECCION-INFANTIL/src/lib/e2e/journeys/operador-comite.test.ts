@@ -99,7 +99,7 @@ describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 },
     });
 
     afterAll(() => {
-        rmSync(storageDirApelaciones, { recursive: true, force: true });
+        rmSync(storageDirApelaciones, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     });
 
     it("el operador ve su bandeja y confirma un caso (con §9)", async () => {
