@@ -22,6 +22,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-504 (CEO): voz del profesional (usted) sin voseo; borde Unicode. Test de
     // fs puro → lane unit (antes solo lo globaba integración, con tax de BD).
     "src/app/perfil-profesional/completar/voz.candado.test.ts",
+    // SPEC-505 (CEO · Jelkin): el ÁREA del profesional habla usted (sin voseo);
+    // dirs profesional + §B en dirs compartidos. Evita §C (cita.service, FichaVerif).
+    "src/app/registro-profesional/voz-usted-profesional.candado.test.ts",
     // SPEC-435 (Jelkin 04-09): la cuenta VERIFICADOR nace con un solo módulo
     // (no hereda operador/comité/padre). Fuente: `prisma/seed-modulos-grants.ts`.
     "src/lib/verificador-modulos.candado.test.ts",
