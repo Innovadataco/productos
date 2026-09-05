@@ -310,7 +310,7 @@ export default function ColegiosPageClient() {
                     <p className="font-semibold">Contraseña temporal de {passwordInfo.email} ({passwordInfo.colegioNombre})</p>
                     <p className="mt-1 opacity-80">Muéstrela una vez; no se volverá a mostrar.</p>
                     <div className="mt-3 flex items-center gap-3">
-                        <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">
+                        <code className="rounded-lg bg-papel/60 px-3 py-1.5 font-mono text-base">
                             {passwordInfo.password}
                         </code>
                         <Button
@@ -367,7 +367,7 @@ export default function ColegiosPageClient() {
                     </h2>
                     {loading ? (
                         <div className="flex items-center gap-3 py-8 text-muted">
-                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                            <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
                             Cargando colegios...
                         </div>
                     ) : error ? (
@@ -380,7 +380,7 @@ export default function ColegiosPageClient() {
                     ) : (
                         <div className="mt-4 overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="border-b border-slate-200 dark:border-slate-800">
+                                <thead className="border-b border-tinta/10">
                                     <tr className="text-subtle">
                                         <th className="pb-3 font-medium">Nombre</th>
                                         <th className="pb-3 font-medium">Ciudad / País</th>
@@ -390,7 +390,7 @@ export default function ColegiosPageClient() {
                                         <th className="pb-3 font-medium text-right">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                <tbody className="divide-y divide-tinta/10">
                                     {colegios.map((colegio) => (
                                         <Fragment key={colegio.id}>
                                             <tr className="align-top">
@@ -423,7 +423,7 @@ export default function ColegiosPageClient() {
                                                     <div className="flex flex-wrap justify-end gap-2">
                                                         <Link
                                                             href={`/dashboard/admin/colegios/${colegio.id}/estructura`}
-                                                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                            className="rounded-lg border border-tinta/10 px-3 py-1.5 text-xs text-body hover:bg-tinta/5"
                                                         >
                                                             Ver estructura
                                                         </Link>

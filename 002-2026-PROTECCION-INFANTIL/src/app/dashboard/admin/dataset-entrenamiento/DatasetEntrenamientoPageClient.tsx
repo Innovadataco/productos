@@ -134,7 +134,7 @@ export default function DatasetEntrenamientoPageClient() {
                 </div>
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Anonimizados</p>
-                    <p className="mt-1 text-2xl font-bold text-emerald-600">{anonimizados}</p>
+                    <p className="mt-1 text-2xl font-bold text-pino">{anonimizados}</p>
                 </div>
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs font-medium text-subtle uppercase tracking-wide">Pendientes de anonimizar</p>
@@ -174,7 +174,7 @@ export default function DatasetEntrenamientoPageClient() {
                             </tr>
                         ) : (
                             items.map((item) => (
-                                <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                <tr key={item.id} className="hover:bg-tinta/5 transition">
                                     <td className="px-4 py-3 max-w-md">
                                         <p className="truncate text-body" title={item.texto}>
                                             {item.texto}
@@ -191,7 +191,7 @@ export default function DatasetEntrenamientoPageClient() {
                                     <td className="px-4 py-3 text-subtle">{FUENTES[item.fuente] || item.fuente}</td>
                                     <td className="px-4 py-3">
                                         {item.textoAnonimizado ? (
-                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-pino/10 px-2.5 py-0.5 text-xs font-medium text-pino">
                                                 <ShieldCheckIcon className="h-3.5 w-3.5" />
                                                     Anonimizado
                                             </span>
@@ -212,7 +212,7 @@ export default function DatasetEntrenamientoPageClient() {
                 </Tabla>
 
                 {totalPages > 1 && (
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-tinta/10 px-4 py-3">
                         <p className="text-sm text-subtle">
                             Página {page} de {totalPages} · {total} registros
                         </p>

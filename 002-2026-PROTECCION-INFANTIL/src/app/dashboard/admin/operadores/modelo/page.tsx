@@ -121,7 +121,7 @@ export default function AdminOperadoresModeloPage() {
                                                 : null
                                         )
                                     }
-                                    className="w-full rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-sm text-body outline-none focus:border-accent focus:ring-1 focus:ring-accent dark:border-slate-700 dark:bg-slate-900/60"
+                                    className="w-full rounded-lg border border-tinta/10 bg-papel/70 px-3 py-2 text-sm text-body outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                                 >
                                     <option value="ponderado_carga_inversa">
                                         Ponderado por carga inversa (más cupo libre = más probabilidad)
@@ -131,7 +131,7 @@ export default function AdminOperadoresModeloPage() {
                             </div>
                         </div>
 
-                        <div className="rounded-xl bg-slate-50 p-4 text-sm text-muted dark:bg-slate-800/40">
+                        <div className="rounded-xl bg-tinta/5 p-4 text-sm text-muted">
                             <p className="font-medium text-body">Cómo funciona</p>
                             <ul className="mt-2 list-disc space-y-1 pl-5">
                                 <li>La asignación es instantánea cuando un reporte entra a revisión manual.</li>

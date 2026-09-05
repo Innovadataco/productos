@@ -168,6 +168,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-460: el acento por territorio — --accent por tema + familia Tailwind
     // + los 4 layouts aplican su tema.
     "src/app/dashboard/accent-por-rol.candado.test.ts",
+    // SPEC-483 (Lote-2 · Ola A): el admin no vuelve a traer crudo mecánico
+    // slate/gray/sky/cyan/emerald (amber queda para Ola B).
+    "src/app/dashboard/admin/admin-residual-barrido.candado.test.ts",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",

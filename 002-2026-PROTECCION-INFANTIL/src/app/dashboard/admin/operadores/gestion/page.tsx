@@ -245,7 +245,7 @@ export default function AdminOperadoresGestionPage() {
                 <Alerta tono="advertencia" role="status" className="border border-amber-200 p-4 dark:border-amber-800">
                     <p className="font-semibold">Contraseña temporal (muéstrela una vez)</p>
                     <div className="mt-2 flex items-center gap-2">
-                        <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">{passwordTemporal}</code>
+                        <code className="rounded-lg bg-papel/60 px-3 py-1.5 font-mono text-base">{passwordTemporal}</code>
                         <Button
                             type="button"
                             variant="outline"
@@ -303,7 +303,7 @@ export default function AdminOperadoresGestionPage() {
                                     type="checkbox"
                                     checked={form.esRevisorDeApelaciones}
                                     onChange={(e) => setForm((f) => ({ ...f, esRevisorDeApelaciones: e.target.checked }))}
-                                    className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                                    className="h-4 w-4 rounded border-tinta/10 text-accent focus:ring-accent"
                                 />
                             Revisor de apelaciones
                             </label>

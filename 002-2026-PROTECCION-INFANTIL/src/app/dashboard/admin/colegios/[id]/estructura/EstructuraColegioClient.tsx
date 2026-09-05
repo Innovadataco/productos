@@ -162,7 +162,7 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
                             </div>
 
                             {cursoAbierto === curso.id && (
-                                <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+                                <div className="mt-3 border-t border-tinta/10 pt-3">
                                     {loadingEstudiantes ? (
                                         <Cargando inline texto="Cargando alumnos..." className="py-4" />
                                     ) : estudiantes.length === 0 ? (

@@ -371,7 +371,7 @@ export default function GestionPageClient() {
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
                     <p className="font-semibold">Contraseña temporal (muéstrela una vez)</p>
                     <div className="mt-2 flex items-center gap-2">
-                        <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">
+                        <code className="rounded-lg bg-papel/60 px-3 py-1.5 font-mono text-base">
                             {passwordTemporal}
                         </code>
                         <Button
@@ -391,7 +391,7 @@ export default function GestionPageClient() {
 
             {loadingCuenta ? (
                 <div className="flex items-center gap-3 py-8 text-muted">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
                     Cargando cuenta del comité...
                 </div>
             ) : !cuenta ? (
@@ -520,7 +520,7 @@ export default function GestionPageClient() {
                             </p>
                             {loadingIntegrantes ? (
                                 <div className="flex items-center gap-3 py-8 text-muted">
-                                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
                                     Cargando integrantes...
                                 </div>
                             ) : integrantes.length === 0 ? (
@@ -531,7 +531,7 @@ export default function GestionPageClient() {
                             ) : (
                                 <div className="mt-4 overflow-x-auto">
                                     <table className="w-full text-left text-sm">
-                                        <thead className="border-b border-slate-200 dark:border-slate-800">
+                                        <thead className="border-b border-tinta/10">
                                             <tr className="text-subtle">
                                                 <th className="pb-3 font-medium">Nombres</th>
                                                 <th className="pb-3 font-medium">Apellidos</th>
@@ -542,7 +542,7 @@ export default function GestionPageClient() {
                                                 <th className="pb-3 font-medium text-right">Acciones</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        <tbody className="divide-y divide-tinta/10">
                                             {integrantes.map((integrante) => (
                                                 <tr key={integrante.id} className="align-top">
                                                     <td className="py-3 pr-3 text-body">{integrante.nombres}</td>

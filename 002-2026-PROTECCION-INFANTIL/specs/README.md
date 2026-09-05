@@ -413,6 +413,7 @@
 | [478](478-nav-colegio-subtitulo-muted/spec.md) | SPEC-478 · Subtítulo del nav de colegio a text-muted (contraste AA) — fallo de forma de Diseño | 🟢 IMPLEMENTADO |
 | [479](479-padre-sidenav-cielo/spec.md) | SPEC-479 · PadreSideNav al Sistema de Diseño: sky→cielo — gemelo de SPEC-462 | 🟢 IMPLEMENTADO |
 | [481](481-profesional-sin-perfil-redirect/spec.md) | SPEC-481 · Profesional sin perfil: redirect a completar (no 500) — bug en prod | 🟢 IMPLEMENTADO |
+| [483](483-admin-residual-barrido/spec.md) | SPEC-483 · Barrido residual del ADMIN al Sistema de Diseño (Ola A · mecánica) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

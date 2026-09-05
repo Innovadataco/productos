@@ -65,12 +65,12 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                     <h1 className="text-2xl font-bold text-body">Centro de Control IA</h1>
                     <p className="text-sm text-muted">Explorá, probá y ajustá el pipeline de clasificación sin afectar datos reales.</p>
                 </div>
-                <span className="self-start rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800 dark:bg-sky-950/50 dark:text-sky-300">
+                <span className="self-start rounded-full bg-cielo/10 px-3 py-1 text-xs font-medium text-cielo">
                     Solo admins
                 </span>
             </div>
 
-            <div className="border-b border-slate-200 dark:border-slate-700">
+            <div className="border-b border-tinta/10">
                 <nav className="-mb-px flex gap-6" aria-label="Tabs">
                     {tabsVisibles.map((tab) => {
                         const isActive = activeTab === tab.key;
@@ -80,8 +80,8 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
                                 href={`/dashboard/admin/ia?tab=${tab.key}`}
                                 className={`inline-flex items-center border-b-2 px-1 py-3 text-sm font-medium transition ${
                                     isActive
-                                        ? "border-sky-500 text-sky-600 dark:border-cyan-400 dark:text-cyan-400"
-                                        : "border-transparent text-muted hover:border-slate-300 hover:text-body dark:hover:border-slate-600"
+                                        ? "border-cielo text-cielo"
+                                        : "border-transparent text-muted hover:border-tinta/10 hover:text-body"
                                 }`}
                             >
                                 {tab.label}

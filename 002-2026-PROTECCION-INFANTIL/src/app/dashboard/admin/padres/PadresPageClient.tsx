@@ -252,7 +252,7 @@ export default function PadresPageClient() {
                 <Alerta tono="advertencia" role="status" className="border border-amber-200 p-4 dark:border-amber-800">
                     <p className="font-semibold">Contraseña temporal (muéstrela una vez)</p>
                     <div className="mt-2 flex items-center gap-2">
-                        <code className="rounded-lg bg-white/60 px-3 py-1.5 font-mono text-base dark:bg-slate-900/60">{passwordTemporal}</code>
+                        <code className="rounded-lg bg-papel/60 px-3 py-1.5 font-mono text-base">{passwordTemporal}</code>
                         <Button
                             type="button"
                             variant="outline"
@@ -354,7 +354,7 @@ export default function PadresPageClient() {
                                                 <div className="flex flex-wrap justify-end gap-2">
                                                     <Link
                                                         href={`/dashboard/admin/padres/${padre.id}/circulo`}
-                                                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                        className="rounded-lg border border-tinta/10 px-3 py-1.5 text-xs text-body hover:bg-tinta/5"
                                                     >
                                                         Ver círculo
                                                     </Link>

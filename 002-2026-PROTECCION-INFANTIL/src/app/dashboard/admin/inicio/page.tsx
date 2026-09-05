@@ -160,7 +160,7 @@ function TarjetaSenal({ senal }: { senal: SenalAlarma }) {
                 <p className="text-sm text-body">{senal.texto}</p>
                 <Link
                     href={senal.ruta}
-                    className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-medium text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                    className="rounded-lg border border-tinta/10 px-3 py-1 text-xs font-medium text-body hover:bg-tinta/5"
                 >
                     Resolver
                 </Link>

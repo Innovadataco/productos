@@ -244,7 +244,7 @@ export function ApelacionesBandejaClient() {
                 </div>
                 {cargando ? (
                     <div className="flex items-center gap-3 py-8 text-muted">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
                         Cargando apelaciones...
                     </div>
                 ) : items.length === 0 ? (
@@ -252,7 +252,7 @@ export function ApelacionesBandejaClient() {
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="border-b border-slate-200 dark:border-slate-800">
+                            <thead className="border-b border-tinta/10">
                                 <tr className="text-subtle">
                                     <th className="pb-3 font-medium">Número</th>
                                     <th className="pb-3 font-medium">Identificador</th>
@@ -262,7 +262,7 @@ export function ApelacionesBandejaClient() {
                                     <th className="pb-3 font-medium text-right">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            <tbody className="divide-y divide-tinta/10">
                                 {items.map((a) => (
                                     <tr key={a.id} className="align-top">
                                         <td className="py-3 pr-3 font-mono text-body">{a.numero}</td>
@@ -296,7 +296,7 @@ export function ApelacionesBandejaClient() {
 
             {cargandoDetalle && (
                 <div className="flex items-center gap-3 py-6 text-muted">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
                     Cargando caso...
                 </div>
             )}
@@ -327,7 +327,7 @@ export function ApelacionesBandejaClient() {
                         )}
 
                         {detalle.documento && (
-                            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                            <div className="rounded-xl border border-tinta/10 p-3">
                                 <h3 className="text-sm font-semibold text-body">Documento de evidencia</h3>
                                 <p className="mt-1 text-sm text-muted">
                                     {detalle.documento.nombreOriginal} · {formatTamano(detalle.documento.tamanoBytes)}
@@ -359,7 +359,7 @@ export function ApelacionesBandejaClient() {
                         )}
 
                         {(detalle.apelacion.estado === "ACEPTADA" || detalle.apelacion.estado === "RECHAZADA") && (
-                            <div className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900/40">
+                            <div className="rounded-xl bg-tinta/5 p-3 text-sm">
                                 <p className="font-semibold text-body">Decisión: {ESTADO_LABEL[detalle.apelacion.estado]}</p>
                                 {detalle.apelacion.quitoVisibilidad && (
                                     <p className="text-xs text-muted">Se quitó la visibilidad pública del identificador.</p>
@@ -369,7 +369,7 @@ export function ApelacionesBandejaClient() {
                         )}
 
                         {detalle.apelacion.estado === "EN_REVISION" && (
-                            <form onSubmit={resolver} className="space-y-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                            <form onSubmit={resolver} className="space-y-4 rounded-xl border border-tinta/10 p-4">
                                 <h3 className="text-sm font-semibold text-body">Resolver el caso</h3>
                                 <div className="flex gap-4">
                                     <label className="flex items-center gap-2 text-sm text-body">
@@ -383,7 +383,7 @@ export function ApelacionesBandejaClient() {
                                 </div>
 
                                 {decision === "ACEPTADA" && (
-                                    <div className="space-y-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                                    <div className="space-y-3 rounded-xl bg-tinta/5 p-3">
                                         <label className="flex items-center gap-2 text-sm text-body">
                                             <input
                                                 type="checkbox"
@@ -450,7 +450,7 @@ export function ApelacionesBandejaClient() {
                                 </h3>
                                 <div className="mt-2 space-y-2">
                                     {detalle.reportes.map((r) => (
-                                        <div key={r.id} className="rounded-xl border border-slate-100 p-3 text-sm dark:border-slate-800">
+                                        <div key={r.id} className="rounded-xl border border-tinta/10 p-3 text-sm">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <span className="font-medium text-body">{r.categoria || r.estado}</span>
                                                 {r.eliminado && <Badge variant="neutral">Dado de baja</Badge>}

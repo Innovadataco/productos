@@ -224,7 +224,7 @@ export default function AdminOperadoresAsignarPage() {
                                                     </div>
                                                     <Link
                                                         href={`/dashboard/admin/operadores/${op.id}`}
-                                                        className="rounded-lg border border-slate-300 px-3 py-1 text-xs text-body hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                                                        className="rounded-lg border border-tinta/10 px-3 py-1 text-xs text-body hover:bg-tinta/5"
                                                     >
                                                         Ver detalle
                                                     </Link>
