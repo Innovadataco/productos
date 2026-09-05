@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { verifyAuth } from "@/lib/auth";
+import { puedeAccederAModulo } from "@/lib/permisos-modulos";
+import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { panelDelProfesional } from "@/lib/profesional/panel/panel.service";
 import { PanelProfesional } from "@/components/modules/profesional/PanelProfesional";
@@ -25,6 +27,11 @@ export const metadata: Metadata = {
 
 export default async function ProfesionalInicioPage() {
     const usuario = await verifyAuth("PROFESIONAL");
+    // SPEC-496: el módulo es la segunda puerta. Si un admin revocó
+    // `profesional_inicio`, se corta el acceso (no solo se esconde el menú).
+    if (!(await puedeAccederAModulo(usuario.rol, "profesional_inicio"))) {
+        return <SinAccesoModulo />;
+    }
 
     let data: Awaited<ReturnType<typeof panelDelProfesional>>;
     try {

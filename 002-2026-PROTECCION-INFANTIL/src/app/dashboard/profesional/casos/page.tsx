@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { verifyAuth } from "@/lib/auth";
+import { puedeAccederAModulo } from "@/lib/permisos-modulos";
+import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { panelDelProfesional } from "@/lib/profesional/panel/panel.service";
 import { CasosPorCerrar, PorCobrar } from "@/components/modules/profesional/PanelProfesional";
 
@@ -19,6 +21,10 @@ export const metadata: Metadata = {
 
 export default async function CasosPage() {
     const usuario = await verifyAuth("PROFESIONAL");
+    // SPEC-496: el módulo manda — revocar `profesional_casos` corta el acceso.
+    if (!(await puedeAccederAModulo(usuario.rol, "profesional_casos"))) {
+        return <SinAccesoModulo />;
+    }
     const data = await panelDelProfesional(usuario.id);
 
     return (

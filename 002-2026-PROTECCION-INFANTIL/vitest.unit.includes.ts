@@ -498,4 +498,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/specs/rmsync-maxretries.candado.test.ts",
     // SPEC-484: los PDFs del colegio (informe + estadísticas) en hex de marca (pino), no emerald crudo (fuente, sin BD).
     "src/lib/rediseno/pdf-colegio-hex-marca.candado.test.ts",
+    // SPEC-496: ningún módulo concedido a un rol puede quedar «solo-NAV» (exigido
+    // por cero endpoints/páginas). Escanea la fuente; mata la CLASE, no el caso.
+    "src/lib/permisos-modulo-sin-superficie.candado.test.ts",
 ];

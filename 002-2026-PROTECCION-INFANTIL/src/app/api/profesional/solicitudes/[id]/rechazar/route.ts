@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { rechazarPorProfesional } from "@/lib/profesional/cita/cita.service";
 
@@ -14,6 +15,7 @@ const bodySchema = z.object({ motivo: z.string().trim().min(1).max(500).optional
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth("PROFESIONAL");
+        await assertModulo(user, "profesional_citaciones");
         const { id } = await context.params;
         // El body es opcional; si no hay JSON válido, sigue con motivo undefined.
         let motivo: string | undefined;

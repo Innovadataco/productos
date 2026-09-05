@@ -6,6 +6,7 @@
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { assertModulo } from "@/lib/permisos-modulos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { errorToResponse } from "@/lib/api-handler";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
@@ -14,6 +15,7 @@ import { servirDocumento } from "@/lib/profesional/documentos.service";
 export async function GET(_req: Request, ctx: { params: Promise<{ clave: string }> }) {
     try {
         const user = await verifyAuth("PROFESIONAL");
+        await assertModulo(user, "profesional_ficha");
         const { clave } = await ctx.params;
         const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
         if (!perfil) throw new AppError("Perfil profesional no encontrado", ERROR_CODES.NOT_FOUND, 404);

@@ -26,8 +26,10 @@ enum RolUsuario {
   PROFESIONAL
   // SPEC-408 (A-75 · brief §9): rol INTERNO dedicado a admitir profesionales y
   // atender incidentes de citas. Perfil equivalente al Operador — no ve
-  // denuncias ni bandeja ni casos del comité. Sus módulos son
-  // `admin_verificacion_profesionales` y `admin_verificacion_incidentes`.
+  // denuncias ni bandeja ni casos del comité. Su módulo es
+  // `admin_verificacion_profesionales` (ambas colas —admisión e incidentes—
+  // cuelgan de él; SPEC-496 borró la mención al fantasma
+  // `admin_verificacion_incidentes`, que nunca existió en el catálogo).
   VERIFICADOR
 }
 

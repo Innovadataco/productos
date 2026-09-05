@@ -736,3 +736,5 @@
 ## Convención de archivos por spec
 
 Cada spec cerrada debe contener al menos: `spec.md` (alcance), `plan.md` (plan) y `reporte-cierre.md`/`cierre.md` (evidencia de cierre, en la carpeta de la spec o en `docs/cierre-NNN.md`).
+
+- **SPEC-496** · [`496-profesional-modulo-gatea`](496-profesional-modulo-gatea/) — el módulo `profesional_*` GATEA endpoints y páginas (antes solo-NAV: revocarlo escondía el menú pero no cortaba el acceso). Candado de CLASE contra futuros solo-NAV. + módulo fantasma `admin_verificacion_incidentes` borrado + decisión `comite_auditoria` documentada.
