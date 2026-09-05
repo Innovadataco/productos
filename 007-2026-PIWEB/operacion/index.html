@@ -149,6 +149,16 @@ td.act { color: var(--muted); white-space: normal; min-width: 150px; font-size: 
 .g.no  { color: var(--faint); font-weight: 400; }
 .g.bad { color: var(--ocupado); }
 .emo { font-size: 12.5px; line-height: 1; }
+.ruta { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted);
+        white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Título de sección de nivel superior (Pantallas vs Diseño) */
+.seccion-titulo { display: flex; align-items: baseline; justify-content: space-between;
+                  gap: 8px 18px; flex-wrap: wrap; margin-top: 4px; padding-bottom: 5px;
+                  border-bottom: 2px solid var(--line); }
+.seccion-titulo h2 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+.seccion-titulo .sub { font-size: 11px; color: var(--faint); }
+[hidden] { display: none !important; }
 
 .alert { display: flex; gap: 9px; align-items: center;
          background: var(--proceso-bg); border-left: 3px solid var(--proceso);
@@ -226,6 +236,15 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     <div class="panel"><div class="tabla-vacia">Cargando&hellip;</div></div>
   </div>
 
+  <!-- Pantallas vs Diseño (secciones por área) -->
+  <section id="pantallas-wrap" hidden>
+    <div class="seccion-titulo">
+      <h2>Pantallas vs Dise&ntilde;o</h2>
+      <span class="sub"><span class="g ok">&#10003;</span> cumple &middot; <span class="g bad">&#10007;</span> no cumple &middot; <span class="emo">&#9203;</span> pendiente &nbsp;&middot;&nbsp; Jelkin <span class="g ok">&#10003;</span> aceptada / <span class="g w">&middot;</span> pendiente</span>
+    </div>
+    <div class="roles" id="pantallas"></div>
+  </section>
+
   <div id="aviso"></div>
 
   <footer>
@@ -301,6 +320,12 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     if (v === "aceptada")  return '<span class="g ok"  title="Aceptada por Jelkin">&#10003;</span>';   // ✓
     if (v === "rechazada") return '<span class="g bad" title="Rechazada por Jelkin">&#10007;</span>';   // ✗
     if (v === "pendiente") return '<span class="g w"   title="Pendiente de Jelkin">&middot;</span>';    // ·
+    return '<span class="dash">&mdash;</span>';
+  }
+  function celdaCumple(v) {
+    if (v === "cumple")    return '<span class="g ok"  title="Cumple el diseño">&#10003;</span>';        // ✓
+    if (v === "no-cumple") return '<span class="g bad" title="No cumple el diseño">&#10007;</span>';     // ✗
+    if (v === "pendiente") return '<span class="emo" title="Pendiente de revisión de diseño">&#9203;</span>'; // ⏳
     return '<span class="dash">&mdash;</span>';
   }
 
@@ -388,6 +413,53 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     $c.innerHTML = html;
   }
 
+  function renderPantallas(areas) {
+    var wrap = document.getElementById("pantallas-wrap");
+    var $c = document.getElementById("pantallas");
+    if (!areas || !Array.isArray(areas) || areas.length === 0) {
+      wrap.hidden = true; $c.innerHTML = ""; return;
+    }
+    wrap.hidden = false;
+    var html = "";
+    areas.forEach(function (a) {
+      var ps = Array.isArray(a.pantallas) ? a.pantallas : [];
+      var cumpleN = 0, jokN = 0;
+      var filas = "";
+      if (ps.length === 0) {
+        filas = '<tr><td colspan="5" class="tabla-vacia">Sin pantallas listadas.</td></tr>';
+      } else {
+        ps.forEach(function (s) {
+          if (s.cumple === "cumple") cumpleN++;
+          if (s.jelkin === "aceptada") jokN++;
+          filas +=
+            "<tr>" +
+              '<td class="c id">' + esc(s.id || "&mdash;") + "</td>" +
+              '<td class="nm">' + esc(s.pantalla || "&mdash;") + "</td>" +
+              '<td class="ruta">' + (s.ruta ? esc(s.ruta) : '<span class="dash">&mdash;</span>') + "</td>" +
+              '<td class="c">' + celdaCumple(s.cumple) + "</td>" +
+              '<td class="c">' + celdaJelkin(s.jelkin) + "</td>" +
+            "</tr>";
+        });
+      }
+      var meta = ps.length + " &middot; " + cumpleN + " cumplen &middot; " + jokN + " aceptadas";
+      html +=
+        '<div class="panel">' +
+          '<div class="ph rol">' +
+            '<h2><span class="ic">' + esc(a.icono || "&bull;") + "</span>" + esc(a.area || "&mdash;") + "</h2>" +
+            '<span class="meta">' + meta + "</span>" +
+          "</div>" +
+          '<div class="scroll"><table>' +
+            "<thead><tr>" +
+              '<th class="c">#</th><th>Pantalla</th><th>Ruta</th>' +
+              '<th class="c">Cumple dise&ntilde;o</th><th class="c">Jelkin</th>' +
+            "</tr></thead>" +
+            "<tbody>" + filas + "</tbody>" +
+          "</table></div>" +
+        "</div>";
+    });
+    $c.innerHTML = html;
+  }
+
   function renderBarra(data) {
     document.getElementById("actualizado").textContent = data.actualizado || "—";
     document.getElementById("prod").textContent = data.prod || "—";
@@ -400,6 +472,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     renderEquipos(data.equipos);
     renderAlerta(data.alerta);
     renderRoles(data.roles);
+    renderPantallas(data.pantallas);
   }
 
   function renderError(tipo, mensaje, cuerpo, http) {
@@ -428,6 +501,8 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     document.getElementById("equipos").innerHTML = "";
     document.getElementById("alerta").innerHTML = "";
     document.getElementById("roles").innerHTML = '<div class="panel"><div class="tabla-vacia">&mdash;</div></div>';
+    document.getElementById("pantallas-wrap").hidden = true;
+    document.getElementById("pantallas").innerHTML = "";
   }
 
   function reloj() {
