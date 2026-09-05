@@ -43,7 +43,11 @@ import * as path from "node:path";
 // salen (marca cielo/pino + rubi). Re-medido sobre el main que YA tiene SPEC-455
 // (1065): los ~27 crudos del hero salen → 1038. Es el ratchet sobre main fresco,
 // no el 1052 que midió la rama antes de rebasar sobre 455.
-const PISO = 1038;
+// 2026-09-04 SPEC-467: el mueble `Input.tsx` (75 pantallas) — el único crudo era el
+// par del error `text-red-600 dark:text-red-400` → token `rubi`. Salen 2 crudos.
+// Medición sobre origin/main fresco (con 455+456; Badge/Cargando van por sus PRs):
+// 1036 (120 archivos). Cadena del piso: cuando entre otro mueble antes, re-medir.
+const PISO = 1036;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
