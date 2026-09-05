@@ -171,6 +171,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-483 (Lote-2 · Ola A): el admin no vuelve a traer crudo mecánico
     // slate/gray/sky/cyan/emerald (amber queda para Ola B).
     "src/app/dashboard/admin/admin-residual-barrido.candado.test.ts",
+    // SPEC-483b (Lote-2 fase 2): panel de IA + monitoreo sin crudo; el medidor de
+    // confianza (data-viz) queda marcado y exento, lo migra Diseño.
+    "src/components/modules/ia/ia-residual-barrido.candado.test.ts",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",

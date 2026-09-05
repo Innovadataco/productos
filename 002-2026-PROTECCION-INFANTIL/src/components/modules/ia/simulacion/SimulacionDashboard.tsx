@@ -139,22 +139,22 @@ export function SimulacionDashboard({ id, onBack, onRefresh }: SimulacionDashboa
                         </span>
                         <span className="text-muted">Transcurrido: {formatDuration(elapsed)}</span>
                     </div>
-                    <div className="mt-2 h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+                    <div className="mt-2 h-2 w-full rounded-full bg-tinta/10">
                         <div
-                            className="h-2 rounded-full bg-sky-500 transition-all"
+                            className="h-2 rounded-full bg-cielo transition-all"
                             style={{ width: `${run.totalCasos ? (run.progreso / run.totalCasos) * 100 : 0}%` }}
                         />
                     </div>
                     <p className="mt-2 text-xs text-muted">
                         Inicio: {new Date(run.fechaInicio).toLocaleString("es-CO", { timeZone: "America/Bogota" })}
                     </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                    <p className="text-xs text-estado-ambar">
                         Los jobs ya encolados seguirán su curso si cancela.
                     </p>
                 </GlassCard>
             )}
 
-            <div className="border-b border-slate-200 dark:border-slate-700">
+            <div className="border-b border-tinta/10">
                 <nav className="-mb-px flex gap-4" aria-label="Simulación tabs">
                     {[
                         { key: "progreso", label: "Progreso" },
@@ -166,8 +166,8 @@ export function SimulacionDashboard({ id, onBack, onRefresh }: SimulacionDashboa
                             onClick={() => setActiveTab(t.key as typeof activeTab)}
                             className={`inline-flex items-center border-b-2 px-1 py-2 text-sm font-medium transition ${
                                 activeTab === t.key
-                                    ? "border-sky-500 text-sky-600 dark:border-cyan-400 dark:text-cyan-400"
-                                    : "border-transparent text-muted hover:border-slate-300 hover:text-body dark:hover:border-slate-600"
+                                    ? "border-cielo text-cielo"
+                                    : "border-transparent text-muted hover:border-tinta/10 hover:text-body"
                             }`}
                         >
                             {t.label}

@@ -27,7 +27,7 @@ export function TablaResultadosSimulacion({ resultados }: TablaResultadosSimulac
             <GlassCard className="p-5 overflow-auto">
                 <table className="min-w-full text-sm">
                     <thead>
-                        <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <tr className="border-b border-tinta/10">
                             <th className="py-2 px-2 text-left text-muted">#</th>
                             <th className="py-2 px-2 text-left text-muted">Identificador</th>
                             <th className="py-2 px-2 text-left text-muted">Esperada</th>
@@ -41,7 +41,7 @@ export function TablaResultadosSimulacion({ resultados }: TablaResultadosSimulac
                     </thead>
                     <tbody>
                         {resultados.map((r) => (
-                            <tr key={r.indice} className="border-b border-slate-100 dark:border-slate-800">
+                            <tr key={r.indice} className="border-b border-tinta/10">
                                 <td className="py-2 px-2 text-body">{r.indice}</td>
                                 <td className="py-2 px-2 font-mono text-xs text-muted">{r.identificador}</td>
                                 <td className="py-2 px-2">

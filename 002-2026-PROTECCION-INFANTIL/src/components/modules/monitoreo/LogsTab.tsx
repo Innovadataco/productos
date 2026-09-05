@@ -142,7 +142,7 @@ export function LogsTab() {
             ) : (
                 <>
                     <LogsTable items={datos.items} onVerContexto={setContextoSeleccionado} />
-                    <div className="flex flex-col gap-3 border-t border-slate-100 px-2 pt-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 border-t border-tinta/10 px-2 pt-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-subtle">
                             {datos.total > 0
                                 ? `Mostrando ${offset + 1} - ${Math.min(offset + LIMIT, datos.total)} de ${datos.total}`

@@ -33,7 +33,7 @@ export function MetricasSimulacion({ metricas }: MetricasSimulacionProps) {
                     <div className="mt-3 overflow-auto">
                         <table className="min-w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700">
+                                <tr className="border-b border-tinta/10">
                                     <th className="py-2 px-2 text-left text-muted">Categoría</th>
                                     <th className="py-2 px-2 text-left text-muted">Support</th>
                                     <th className="py-2 px-2 text-left text-muted">Precision</th>
@@ -43,7 +43,7 @@ export function MetricasSimulacion({ metricas }: MetricasSimulacionProps) {
                             </thead>
                             <tbody>
                                 {categorias.map(([cat, m]) => (
-                                    <tr key={cat} className="border-b border-slate-100 dark:border-slate-800">
+                                    <tr key={cat} className="border-b border-tinta/10">
                                         <td className="py-2 px-2 font-medium text-body">{cat}</td>
                                         <td className="py-2 px-2 text-muted">{m.support}</td>
                                         <td className="py-2 px-2 text-muted">{formatPct(m.precision)}</td>
@@ -63,7 +63,7 @@ export function MetricasSimulacion({ metricas }: MetricasSimulacionProps) {
                     <div className="mt-3 overflow-auto">
                         <table className="min-w-full text-sm">
                             <thead>
-                                <tr className="border-b border-slate-200 dark:border-slate-700">
+                                <tr className="border-b border-tinta/10">
                                     <th className="py-2 px-2 text-left text-muted">Esperada \ Asignada</th>
                                     <th className="py-2 px-2 text-left text-muted">Categoría</th>
                                     <th className="py-2 px-2 text-left text-muted">Casos</th>
@@ -71,7 +71,7 @@ export function MetricasSimulacion({ metricas }: MetricasSimulacionProps) {
                             </thead>
                             <tbody>
                                 {metricas.matrizConfusion.map((row, i) => (
-                                    <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
+                                    <tr key={i} className="border-b border-tinta/10">
                                         <td className="py-2 px-2 font-medium text-body">{row.esperado}</td>
                                         <td className="py-2 px-2 text-muted">{row.asignado}</td>
                                         <td className="py-2 px-2">
@@ -90,7 +90,7 @@ export function MetricasSimulacion({ metricas }: MetricasSimulacionProps) {
                     <h4 className="font-semibold text-body">Falsos negativos críticos</h4>
                     <div className="mt-3 max-h-96 overflow-auto space-y-3">
                         {metricas.falsosNegativos.slice(0, 20).map((fn) => (
-                            <div key={fn.indice} className="rounded-lg border border-red-200 p-3 dark:border-red-900">
+                            <div key={fn.indice} className="rounded-lg border border-rubi/30 p-3">
                                 <div className="flex gap-2 text-sm">
                                     <span className="text-muted">#{fn.indice}</span>
                                     <Badge variant="danger">Esperado: {fn.esperado}</Badge>

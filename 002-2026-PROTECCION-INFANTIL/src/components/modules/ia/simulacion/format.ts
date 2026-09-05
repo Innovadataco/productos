@@ -15,7 +15,7 @@ export function formatDuration(ms: number) {
 }
 
 export function classForDelta(delta: number) {
-    if (delta > 0.01) return "text-green-600 dark:text-green-400";
-    if (delta < -0.01) return "text-red-600 dark:text-red-400";
-    return "text-slate-500 dark:text-slate-400";
+    if (delta > 0.01) return "text-estado-pino";
+    if (delta < -0.01) return "text-estado-rubi";
+    return "text-muted";
 }

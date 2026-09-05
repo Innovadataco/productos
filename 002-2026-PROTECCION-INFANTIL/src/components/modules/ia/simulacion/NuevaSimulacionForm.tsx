@@ -138,7 +138,7 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
 
             {message && (
                 <div
-                    className={`text-sm ${message.type === "success" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                    className={`text-sm ${message.type === "success" ? "text-estado-pino" : "text-estado-rubi"}`}
                 >
                     {message.text}
                 </div>
@@ -147,7 +147,7 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
             {step === 1 && (
                 <div className="space-y-4">
                     <p className="text-sm text-muted">Paso 1 de 2 — Cargar set de casos</p>
-                    <div className="rounded-lg bg-slate-50 p-3 text-xs text-muted dark:bg-slate-800/50 space-y-1">
+                    <div className="rounded-lg bg-tinta/5 p-3 text-xs text-muted space-y-1">
                         <p className="font-medium">Formato esperado:</p>
                         <p>CSV: texto,plataforma,identificador,fechaIncidente,ciudad,pais,edadVictima,categoriaEsperada</p>
                         <p>JSON: array con esos mismos campos (edadVictima y categoriaEsperada opcionales).</p>
@@ -159,7 +159,7 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
                         onChange={handleFileChange}
                     />
                     {archivo && (
-                        <div className="rounded-lg bg-slate-50 p-3 text-sm text-muted dark:bg-slate-800/50">
+                        <div className="rounded-lg bg-tinta/5 p-3 text-sm text-muted">
                             <p>Formato detectado: {formato.toUpperCase()}</p>
                             <p className="text-xs">Tamaño: {archivo.length} caracteres</p>
                         </div>
@@ -170,11 +170,11 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
                         </Button>
                     </div>
                     {errores.length > 0 && (
-                        <div className="max-h-48 overflow-auto rounded-lg border border-red-200 bg-red-50 p-3 text-sm dark:border-red-900 dark:bg-red-950/20">
-                            <p className="font-medium text-red-700 dark:text-red-300">Errores por línea:</p>
+                        <div className="max-h-48 overflow-auto rounded-lg border border-rubi/30 bg-rubi/10 p-3 text-sm">
+                            <p className="font-medium text-estado-rubi">Errores por línea:</p>
                             <ul className="mt-2 space-y-1">
                                 {errores.slice(0, 20).map((err, i) => (
-                                    <li key={i} className="text-red-600 dark:text-red-400">
+                                    <li key={i} className="text-estado-rubi">
                                         Fila {err.indice}: {err.campo ? `[${err.campo}] ` : ""}
                                         {err.mensaje}
                                     </li>
@@ -188,14 +188,14 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
             {step === 2 && (
                 <div className="space-y-4">
                     <p className="text-sm text-muted">Paso 2 de 2 — Configurar y lanzar</p>
-                    <div className="rounded-lg bg-slate-50 p-3 text-sm text-muted dark:bg-slate-800/50">
+                    <div className="rounded-lg bg-tinta/5 p-3 text-sm text-muted">
                         <p>Casos válidos: {totalCasos}</p>
                     </div>
                     <fieldset>
                         <legend className="block text-sm font-medium text-body mb-1.5">
                             Modelos de clasificación (se ejecutan en secuencia)
                         </legend>
-                        <div className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                        <div className="space-y-2 rounded-lg border border-tinta/10 p-3">
                             {models.map((m) => {
                                 const valor = `${m.name}:${m.tag}`;
                                 return (
@@ -212,7 +212,7 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
                             })}
                         </div>
                     </fieldset>
-                    <div className="rounded-lg bg-slate-50 p-3 text-sm text-muted dark:bg-slate-800/50">
+                    <div className="rounded-lg bg-tinta/5 p-3 text-sm text-muted">
                         Estimación total: ~{estimacionMinutos} minutos con {modelos.length} modelo(s) en secuencia.
                     </div>
                     <div className="flex gap-2">
@@ -228,7 +228,7 @@ export function NuevaSimulacionForm({ onBack, onCreated }: NuevaSimulacionFormPr
 
             {step === 3 && (
                 <div className="space-y-4">
-                    <p className="text-green-600 dark:text-green-400 text-sm">Simulación lanzada. Volviendo al listado...</p>
+                    <p className="text-estado-pino text-sm">Simulación lanzada. Volviendo al listado...</p>
                 </div>
             )}
         </GlassCard>
