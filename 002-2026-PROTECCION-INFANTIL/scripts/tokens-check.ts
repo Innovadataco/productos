@@ -43,7 +43,11 @@ import * as path from "node:path";
 // salen (marca cielo/pino + rubi). Re-medido sobre el main que YA tiene SPEC-455
 // (1065): los ~27 crudos del hero salen → 1038. Es el ratchet sobre main fresco,
 // no el 1052 que midió la rama antes de rebasar sobre 455.
-const PISO = 1038;
+// 2026-09-04 SPEC-461: el mueble `Cargando.tsx` (el de más alcance: 110 pantallas)
+// pasa de spinner con `border-slate-200` a skeleton pulse en token (tinta velada).
+// Salen sus 4 crudos. Medición sobre origin/main fresco (con 455+456, SIN 457, que
+// va por su propio PR): 1034 (120 archivos).
+const PISO = 1034;
 
 const PATRON =
     /\b(?:text|bg|border|ring|from|to|via|divide|outline|placeholder|caret|accent|decoration|stroke|fill|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/g;
