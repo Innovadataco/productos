@@ -17,6 +17,14 @@ import { readFileSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 
+/**
+ * SPEC-450 · cuántas corridas hacen falta para que un peso deje de ser
+ * provisional. Con una sola corrida el número es una foto: el 03-09 se armó el
+ * archivo entero con `corridas: 1` y la deriva no avisó hasta que un shard tocó
+ * el techo de 45 min.
+ */
+const MUESTRAS_PARA_CONFIAR = 3;
+
 function parseArgs(argv) {
     const args = {};
     for (const a of argv) {
@@ -123,19 +131,56 @@ function main() {
         process.exit(0);
     }
 
+    // SPEC-450: el archivo de pesos admite DOS formas por entrada:
+    //   · número suelto           → formato histórico de SPEC-281
+    //   · { ms, muestras }        → formato nuevo, con cuántas corridas lo midieron
+    // Leer las dos evita una migración de golpe y deja convivir lo viejo.
+    const msDe = (v) => {
+        if (typeof v === "number") return v > 0 ? v : null;
+        if (v && typeof v === "object" && typeof v.ms === "number" && v.ms > 0) return v.ms;
+        return null;
+    };
+    const muestrasDe = (v) => (v && typeof v === "object" && typeof v.muestras === "number" ? v.muestras : 1);
+
     // Mediana de las duraciones conocidas para archivos sin dato.
     const duracionesConocidas = Object.values(durMap)
-        .filter((v) => typeof v === "number" && v > 0)
+        .map(msDe)
+        .filter((v) => v !== null)
         .sort((a, b) => a - b);
     const mediana = duracionesConocidas.length > 0
         ? duracionesConocidas[Math.floor(duracionesConocidas.length / 2)]
         : 10000;
 
+    // SPEC-450 · lo que antes entraba CALLADO ahora avisa.
+    //
+    // Un archivo sin medición se reparte con la mediana. Eso está bien como
+    // arranque, pero es mentira para un archivo pesado: el máximo medido son
+    // ~33 s contra una mediana de ~6 s, así que un test nuevo y caro se
+    // subestima 5× y el shard que le toque se pasa de largo. Antes no lo decía
+    // nadie; la deriva solo se veía como «un shard tardó el doble».
+    const sinMedicion = archivos.filter((a) => msDe(durMap[a]) === null);
+    const provisionales = archivos.filter((a) => {
+        const v = durMap[a];
+        return msDe(v) !== null && muestrasDe(v) < MUESTRAS_PARA_CONFIAR;
+    });
+    if (sinMedicion.length > 0) {
+        console.error(
+            `[reparto-shards] ::warning:: ${sinMedicion.length} archivo(s) SIN medición entran con la mediana ` +
+            `(${Math.round(mediana / 1000)}s). Si alguno es pesado, su shard se pasa de largo.`
+        );
+        for (const a of sinMedicion.slice(0, 10)) console.error(`[reparto-shards]   · ${a}`);
+        if (sinMedicion.length > 10) console.error(`[reparto-shards]   · … y ${sinMedicion.length - 10} más`);
+    }
+    if (provisionales.length > 0) {
+        console.error(
+            `[reparto-shards] ::warning:: ${provisionales.length} archivo(s) con MENOS de ${MUESTRAS_PARA_CONFIAR} ` +
+            "corridas medidas: su peso todavía es provisional."
+        );
+    }
+
     const archivosConDuracion = archivos.map((archivo) => ({
         archivo,
-        duracionMs: typeof durMap[archivo] === "number" && durMap[archivo] > 0
-            ? durMap[archivo]
-            : mediana,
+        duracionMs: msDe(durMap[archivo]) ?? mediana,
     }));
 
     // SPEC-407 (CEO 22:2x): candado de cobertura. Si el archivo de pesos

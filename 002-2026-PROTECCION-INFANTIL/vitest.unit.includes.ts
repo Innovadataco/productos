@@ -30,6 +30,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/ci/resumen.test.mjs",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
     "scripts/ci/reparto-shards.test.mjs",
+    // SPEC-450 (I-282): el margen contra el techo de 45 min — 6 shards, aviso
+    // a los 30, y pesos que dicen de cuántas corridas salen.
+    "scripts/ci/shards-margen.candado.test.mjs",
     // SPEC-381 (I-269): cada ruta de inicio-admin.ts DEBE tener page.tsx.
     "src/lib/dal/services/inicio-admin.ratchet.test.ts",
     // SPEC-414 (I-294): el marcador se consulta por su nombre físico

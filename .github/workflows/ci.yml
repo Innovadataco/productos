@@ -159,7 +159,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        # SPEC-450 (I-282): de 4 a 6 shards. La suite pesa ~57 min de test puro;
+        # con 4 daba ~14 min teóricos y corría en 17-19, y el PEOR caso medido
+        # fue 43,3 min — el 96 % del techo de 45. Cruzarlo dispara el reintento
+        # de SPEC-407 y el job termina en 63-90 min, que es lo que se veía como
+        # «colgado». Con 6 quedan ~10 min teóricos y el peor caso proyectado
+        # baja a ~28: margen real contra un runner lento.
+        shard: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         working-directory: 002-2026-PROTECCION-INFANTIL
@@ -208,11 +214,15 @@ jobs:
       - run: npx prisma generate
       # 002-PI-068: tests con base de datos y singleFork (mutex TestMutex).
       # Mega-lote: shard N/4. Umbrales de cobertura en 0 aquí (se evalúan al mergear
-      # los 4 blobs en test-integration-coverage); blob = resultados + cobertura.
+      # los 6 blobs en test-integration-coverage); blob = resultados + cobertura.
       # SPEC-281 (002-PI-180): reparto por peso medido (test-durations.json).
       # Si el JSON existe → se pasan los archivos como positional args (sin --shard).
-      # Si NO existe → fallback a --shard=N/4 original (el script sale sin imprimir).
-      - name: Correr shard ${{ matrix.shard }}/4 (SPEC-281 reparto por peso o fallback)
+      # Si NO existe → fallback a --shard=N/M con M = el largo de la matriz (el
+      # script sale sin imprimir). SPEC-450: el rótulo del step y el fallback
+      # salen del MISMO número que la matriz. Cuando decía «/4» sobre una corrida
+      # de 6, el log del CI afirmaba algo que el código no hacía — la clase que
+      # esta misma spec vino a cerrar, en su propio archivo.
+      - name: Correr shard ${{ matrix.shard }}/${{ strategy.job-total }} (SPEC-281 reparto por peso o fallback)
         # SPEC-407 caso B (runner GHA lento): wrapper con `timeout 45m` + reintento
         # SÓLO por timeout de shell (exit 124). Un test rojo (exit ≠ 124) NO reintenta
         # nunca. El reintento se ve en el resumen del run (::warning + GITHUB_STEP_SUMMARY)
@@ -221,18 +231,28 @@ jobs:
           set +e
           run_vitest() {
             local ARCHIVOS
-            ARCHIVOS="$(node scripts/ci/reparto-shards.mjs --shard=${{ matrix.shard }}/4 --durations test-durations.json)"
+            ARCHIVOS="$(node scripts/ci/reparto-shards.mjs --shard=${{ matrix.shard }}/6 --durations test-durations.json)"
             if [ -n "$ARCHIVOS" ]; then
               echo "[ci] reparto por peso activo (SPEC-281): $(echo $ARCHIVOS | wc -w) archivos"
               timeout 45m node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json $ARCHIVOS
             else
-              echo "[ci] fallback a --shard=${{ matrix.shard }}/4 (SPEC-281 no aplicó)"
-              timeout 45m node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --shard=${{ matrix.shard }}/4 --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json
+              echo "[ci] fallback a --shard=${{ matrix.shard }}/6 (SPEC-281 no aplicó)"
+              timeout 45m node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run --shard=${{ matrix.shard }}/6 --coverage.enabled --coverage.thresholds.lines=0 --coverage.thresholds.statements=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --reporter=default --reporter=blob --outputFile.blob=blobs/shard-${{ matrix.shard }}.json
             fi
           }
 
+          INICIO=$SECONDS
           run_vitest
           EXIT=$?
+          # SPEC-450 (I-282) · SEÑAL TEMPRANA, no corte. El techo sigue siendo
+          # `timeout 45m`: esto solo avisa cuando un shard se acerca, para verlo
+          # ANTES de que lo toque. La deriva del 04-09 pasó de 18 a 43 min sin
+          # que nadie se enterara hasta que un job pareció colgado.
+          DURACION=$(( SECONDS - INICIO ))
+          if [ "$DURACION" -ge 1800 ] && [ "$EXIT" -ne 124 ]; then
+            echo "::warning title=SPEC-450 · shard ${{ matrix.shard }} lento::Tardó $(( DURACION / 60 )) min (umbral de aviso: 30). El techo son 45: si sigue subiendo, el próximo cruza y el job termina en 63-90 min."
+            echo "- **SPEC-450**: shard ${{ matrix.shard }} tardó $(( DURACION / 60 )) min (aviso ≥30, techo 45). Revisar deriva de la suite o refrescar \`test-durations.json\`." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
           # SPEC-407: SOLO reintentar por timeout de shell (exit 124). Ningún
           # otro exit code (0 = pass, 1 = test rojo, cualquier otro) reintenta.
@@ -265,7 +285,7 @@ jobs:
           # No depende de ninguna rama viva — sobrevive al merge del PR SPEC-407.
           VITEST_DEBUG_HANDLES: ${{ (inputs.debug_handles && '1') || vars.SPEC_407_DEBUG_HANDLES || '' }}
       - uses: actions/upload-artifact@v4
-        # Sube el blob incluso si el shard falló: el job agregador mergea los 4 y
+        # Sube el blob incluso si el shard falló: el job agregador mergea los 6 y
         # reporta los tests fallidos con detalle (y el ratchet se evalúa sobre la
         # suite completa cuando todo va verde). Sin esto, un shard rojo dejaba al
         # agregador sin blobs y fallaba por umbrales parciales (ruido).
