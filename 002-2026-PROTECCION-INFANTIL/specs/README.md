@@ -389,6 +389,7 @@
 | [447](447-calendario-del-profesional/spec.md) | SPEC-447 · El profesional publica su disponibilidad — cierra I-311 | 🟢 IMPLEMENTADO |
 | [449](449-vencimiento-verificacion/spec.md) | SPEC-449 · La verificación vencida saca al profesional del directorio — cierra I-313 | 🟢 IMPLEMENTADO |
 | [450](450-shards-y-margen-de-ci/spec.md) | SPEC-450 · El margen de CI contra el techo de 45 minutos — cierra I-282 | 🟢 IMPLEMENTADO |
+| [455](455-dashboard-publico-sin-rojo/spec.md) | SPEC-455 · «Cara» del rediseño: el dashboard público sin alarma | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

@@ -42,7 +42,7 @@ describe("PublicDashboard", () => {
         mockFetch(statsApi);
         render(<PublicDashboard />);
 
-        await waitFor(() => expect(screen.getByText("Dashboard público")).toBeTruthy());
+        await waitFor(() => expect(screen.getByText("Lo que estamos viendo entre todos")).toBeTruthy());
         expect(screen.getByText("Reportes registrados")).toBeTruthy();
         expect(screen.getByText("Identificadores visibles")).toBeTruthy();
         expect(screen.queryByText(/nivel de riesgo/i)).toBeNull();
@@ -55,7 +55,7 @@ describe("PublicDashboard", () => {
         });
         render(<PublicDashboard />);
 
-        await waitFor(() => expect(screen.getByText("Dashboard público")).toBeTruthy());
+        await waitFor(() => expect(screen.getByText("Lo que estamos viendo entre todos")).toBeTruthy());
         expect(screen.getByText("Sin datos geográficos")).toBeTruthy();
     });
 
@@ -70,7 +70,7 @@ describe("PublicDashboard", () => {
         mockFetch({ ...statsApi, sinUbicacion: 3 });
         render(<PublicDashboard />);
 
-        await waitFor(() => expect(screen.getByText("Dashboard público")).toBeTruthy());
+        await waitFor(() => expect(screen.getByText("Lo que estamos viendo entre todos")).toBeTruthy());
         await waitFor(() => expect(mapaProps.ultima?.sinUbicacion).toBe(3));
     });
 });

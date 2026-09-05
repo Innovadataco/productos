@@ -35,10 +35,13 @@ export function BarChart({
                             x={leftMargin - 8}
                             y={y + barHeight / 2 + 4}
                             textAnchor="end"
-                            className="fill-slate-600 dark:fill-slate-300 text-[10px]"
+                            className="fill-current text-muted text-[10px]"
                         >
                             {d.label.length > 18 ? `${d.label.slice(0, 18)}...` : d.label}
                         </text>
+                        {/* SPEC-455 · mueble «la gráfica»: la barra es `cielo` (token), no
+                            `sky/cyan` crudos. El hover baja opacidad en vez de saltar a otra
+                            escala, para no reintroducir color crudo. */}
                         <rect
                             x={leftMargin}
                             y={y}
@@ -46,14 +49,14 @@ export function BarChart({
                             height={barHeight}
                             fill="currentColor"
                             rx={4}
-                            className="text-sky-500 dark:text-cyan-400 transition-all duration-300 hover:text-sky-600 dark:hover:text-cyan-300"
+                            className="text-cielo transition-all duration-300 hover:opacity-80"
                         >
                             <title>{`${d.label}: ${d.value}`}</title>
                         </rect>
                         <text
                             x={leftMargin + barWidth + 6}
                             y={y + barHeight / 2 + 4}
-                            className="fill-slate-700 dark:fill-slate-200 text-[10px] font-medium"
+                            className="fill-current text-body text-[10px] font-medium"
                         >
                             {d.value}
                         </text>
