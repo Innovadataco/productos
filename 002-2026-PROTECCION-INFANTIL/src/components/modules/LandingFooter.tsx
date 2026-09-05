@@ -3,7 +3,7 @@ import { APP_VERSION } from "@/lib/version";
 
 export function LandingFooter() {
     return (
-        <footer className="mt-12 border-t border-slate-200 dark:border-slate-800 py-8">
+        <footer className="mt-12 border-t border-tinta/10 py-8">
             <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                 <p className="text-xs text-subtle">
                     © 2026 Innovadataco. Todos los derechos reservados. · Versión {APP_VERSION}
