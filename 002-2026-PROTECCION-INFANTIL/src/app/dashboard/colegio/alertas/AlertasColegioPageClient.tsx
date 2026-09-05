@@ -294,14 +294,14 @@ export default function AlertasColegioPageClient() {
                     )}
 
                     {error && (
-                        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+                        <div className="rounded-xl bg-rubi/10 p-4 text-sm text-estado-rubi">
                             {error}
                         </div>
                     )}
 
                     {cargando ? (
                         <div className="flex justify-center py-12">
-                            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-pino border-t-transparent" />
                         </div>
                     ) : alertas.length === 0 ? (
                         <EmptyState
@@ -320,7 +320,7 @@ export default function AlertasColegioPageClient() {
                                 <div className="flex items-center gap-3 px-1">
                                     <input
                                         type="checkbox"
-                                        className="h-4 w-4 accent-emerald-600"
+                                        className="h-4 w-4 accent-pino"
                                         checked={seleccionadas.size === alertas.length && alertas.length > 0}
                                         onChange={toggleTodas}
                                         aria-label="Seleccionar todas"
@@ -332,10 +332,10 @@ export default function AlertasColegioPageClient() {
                                         key={alerta.id}
                                         className={`border-l-4 ${
                                             alerta.prioridad === "alta"
-                                                ? "border-l-red-500"
+                                                ? "border-l-ambar"
                                                 : alerta.prioridad === "media"
-                                                    ? "border-l-amber-500"
-                                                    : "border-l-emerald-500"
+                                                    ? "border-l-ambar"
+                                                    : "border-l-pino"
                                         }`}
                                     >
                                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -343,7 +343,7 @@ export default function AlertasColegioPageClient() {
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <input
                                                         type="checkbox"
-                                                        className="h-4 w-4 accent-emerald-600"
+                                                        className="h-4 w-4 accent-pino"
                                                         checked={seleccionadas.has(alerta.id)}
                                                         onChange={() => toggleSeleccion(alerta.id)}
                                                         aria-label={`Seleccionar alerta ${alerta.id}`}
