@@ -132,12 +132,22 @@ describe("SPEC-466 · el guard real (conducta)", () => {
         expect(correrGuard().code).toBe(0);
     });
 
-    it("rojo si un crudo NUEVO sube el conteo (contraprueba de regresión)", () => {
+    it("rojo si el conteo SUPERA el piso (contraprueba de regresión, robusta a holgura)", () => {
         fs.mkdirSync(TMP_DIR, { recursive: true });
-        // Un archivo productivo (no .test) con color crudo → el conteo sube.
-        fs.writeFileSync(path.join(TMP_DIR, "Regresion.tsx"), 'export const X = "text-red-600 bg-slate-900";\n');
+        // SPEC-476: el ratchet BAJA crudos sin apretar el PISO (regla de SPEC-466), así
+        // que en main puede existir holgura (conteo < piso) y un solo crudo nuevo NO
+        // necesariamente cruza el piso. Para probar el contrato REAL del guard
+        // (`total > PISO` ⇒ rojo) medimos el estado y sembramos los crudos que falten
+        // para superar el piso, sea cual sea la holgura. Sigue muriendo si el guard se
+        // rompe: con el conteo por encima del piso, código 0 marca el test en rojo.
+        const base = correrGuard().salida;
+        const conteo = Number(base.match(/(\d+) ocurrencias/)?.[1] ?? "0");
+        const piso = Number(base.match(/piso: (\d+)/)?.[1] ?? "0");
+        const faltan = Math.max(1, piso - conteo + 1);
+        const crudos = Array.from({ length: faltan }, (_, i) => `text-red-${((i % 3) + 1) * 100}`).join(" ");
+        fs.writeFileSync(path.join(TMP_DIR, "Regresion.tsx"), `export const X = "${crudos}";\n`);
         const r = correrGuard();
-        expect(r.code, "un crudo nuevo DEBE poner el guard en rojo").toBe(1);
+        expect(r.code, "superar el piso DEBE poner el guard en rojo").toBe(1);
         expect(r.salida).toMatch(/SUBIÓ/);
     });
 });
