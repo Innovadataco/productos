@@ -29,6 +29,15 @@
 - No se afloja la meta (cerca de 0): el piso sigue bajando, solo que sin serializar.
 - El guard sigue fallando si el conteo sube.
 
+## Follow-up de infra · el job de tensión (2026-09-05)
+
+El barrido `--tension` ya existía en el script; faltaba quién lo corriera. Se agregó el workflow **`.github/workflows/tokens-tension.yml`**:
+
+- **Disparo MANUAL** (`workflow_dispatch`) — el CEO lo corre al cerrar cada ola del rediseño. El `schedule` (cron nocturno) queda comentado, listo para activar cuando el ritmo de olas baje.
+- Corre sobre `main` fresco (`checkout ref: main`), ejecuta `npx tsx scripts/tokens-check.ts --tension`, y **si el piso bajó abre un PR** (`peter-evans/create-pull-request`, rama `bot/tokens-tension`) — **nunca commitea directo a main**.
+- Antes de abrir el PR, re-verifica `npm run tokens:check` verde. Si el piso ya estaba en el mínimo, no abre nada (idempotente).
+- Permisos mínimos: `contents: write` + `pull-requests: write`.
+
 ## Referencias
 
 - **SPEC-432** (los generados dejan de ser terreno de conflicto) — mismo patrón de candado de merge real, aquí sobre un número.
