@@ -19,6 +19,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del
     // árbol de render + lexemas exactos. Mixta PreferenciasNotificaciones §D exenta.
     "src/app/voz-tu-padre-publico.candado.test.ts",
+    // SPEC-504 (CEO): voz del profesional (usted) sin voseo; borde Unicode. Test de
+    // fs puro → lane unit (antes solo lo globaba integración, con tax de BD).
+    "src/app/perfil-profesional/completar/voz.candado.test.ts",
     // SPEC-435 (Jelkin 04-09): la cuenta VERIFICADOR nace con un solo módulo
     // (no hereda operador/comité/padre). Fuente: `prisma/seed-modulos-grants.ts`.
     "src/lib/verificador-modulos.candado.test.ts",

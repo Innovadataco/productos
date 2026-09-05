@@ -25,26 +25,32 @@ function sinComentarios(codigo: string): string {
 }
 
 /**
- * Verbos en voseo — versiones EXACTAS con acento agudo final. Es la marca
- * inequívoca del voseo (sin ambigüedad con conjugaciones neutras). Un
- * patrón como `sub[íi]` daría falso positivo con «subió» (formal, tercera
- * persona) por el borde ASCII de `\b` frente a `ó`.
+ * SPEC-504 (radicado CEO · hallazgo Dev 1, 05-09) · Verbos en voseo, versiones
+ * EXACTAS. El borde de palabra usa **letra Unicode** `(?<![\p{L}])…(?![\p{L}])`
+ * con flag `u`, NO `\b` ASCII.
+ *
+ * Por qué: el `\b` ASCII NO cierra contra **vocal acentuada final** (á/é/í): entre
+ * la vocal acentuada (no-word en ASCII) y el espacio/puntuación siguiente no hay
+ * transición word↔non-word, así que `\belegí\b`, `\bcontá\b`, `\bSubí\b` estaban
+ * **MUERTOS** — nunca disparaban y el candado pasaba CON el defecto puesto (peor
+ * que ninguno). Los presentes `-és/-ás` sobrevivían (cierran en `s`, ASCII), pero
+ * todo imperativo/enclítico acabado en vocal acentuada moría.
+ *
+ * El borde Unicode dispara en «Elegí»/«Contá»/«Subí» y a la vez NO caza por
+ * subcadena («subió», «revisándolo»). Verificado por mutación (voseo → rojo).
  */
-const PATRONES_VOSEO: Array<{ patron: RegExp; ejemplo: string }> = [
-    { patron: /\b[Cc]ompletá\b/, ejemplo: "Completá" },
-    { patron: /\bquerés\b/i, ejemplo: "querés" },
-    { patron: /\btenés\b/i, ejemplo: "tenés" },
-    { patron: /\bpodés\b/i, ejemplo: "podés" },
-    { patron: /\bsabés\b/i, ejemplo: "sabés" },
-    { patron: /\bvivís\b/i, ejemplo: "vivís" },
-    { patron: /\bsos\b/, ejemplo: "sos" },
-    { patron: /\bSubí\b/, ejemplo: "Subí" },
-    { patron: /\bcontá\b/i, ejemplo: "contá" },
-    { patron: /\bdale\b/i, ejemplo: "dale" },
-    { patron: /\bterminés\b/i, ejemplo: "terminés" },
-    { patron: /\bsubás\b/i, ejemplo: "subás" },
-    { patron: /\belegí\b/i, ejemplo: "elegí" },
+const B = "(?<![\\p{L}])";
+const E = "(?![\\p{L}])";
+function vos(lexema: string): RegExp {
+    return new RegExp(B + lexema + E, "iu");
+}
+const LEXEMAS_VOSEO = [
+    "completá", "querés", "tenés", "podés", "sabés", "vivís", "sos",
+    "subí", "contá", "dale", "terminés", "subás", "elegí",
 ];
+const PATRONES_VOSEO: Array<{ patron: RegExp; ejemplo: string }> = LEXEMAS_VOSEO.map(
+    (lexema) => ({ patron: vos(lexema), ejemplo: lexema }),
+);
 
 describe("SPEC-434 · voz Colombia (sin voseo) en /perfil-profesional/completar", () => {
     it("la pantalla existe (contraprueba del scanner)", () => {
