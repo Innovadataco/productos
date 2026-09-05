@@ -72,7 +72,7 @@ export default function OnboardingPage() {
                                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">
                                     {tarjeta.label}
                                 </p>
-                                <p className="mt-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                                <p className="mt-1 text-2xl font-bold text-estado-pino">
                                     {resumen[tarjeta.key]}
                                 </p>
                             </div>

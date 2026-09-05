@@ -164,7 +164,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                                     value={mesInforme}
                                     onChange={(e) => setMesInforme(e.target.value)}
                                     disabled={descargandoInforme}
-                                    className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-body focus:border-emerald-500 focus:outline-none dark:border-emerald-900 dark:bg-emerald-950/30"
+                                    className="rounded-lg border border-pino/30 bg-tinta/5 px-3 py-2 text-sm text-body focus:border-pino focus:outline-none"
                                 />
                                 <Button
                                     onClick={descargarInformeMensual}
@@ -189,7 +189,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                             <GlassCard key={tarjeta.key} className="border-l-4 border-l-emerald-500 text-center">
                                 <div className="text-2xl">{tarjeta.icon}</div>
                                 <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">{tarjeta.label}</p>
-                                <p className="mt-1 text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                                <p className="mt-1 text-3xl font-bold text-estado-pino">
                                     {estadisticas.totales[tarjeta.key]}
                                 </p>
                             </GlassCard>
@@ -205,7 +205,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                                 <GlassCard key={tarjeta.key} className="border-l-4 border-l-emerald-500 text-center">
                                     <div className="text-2xl">{tarjeta.icon}</div>
                                     <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-subtle">{tarjeta.label}</p>
-                                    <p className="mt-1 text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                                    <p className="mt-1 text-3xl font-bold text-estado-pino">
                                         {estadisticas.alertasPorTipoSujeto[tarjeta.key]}
                                     </p>
                                 </GlassCard>
@@ -237,7 +237,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                     />
                     {cargandoComparativa && (
                         <div className="flex justify-center py-4">
-                            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                            <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-pino border-t-transparent" />
                         </div>
                     )}
 

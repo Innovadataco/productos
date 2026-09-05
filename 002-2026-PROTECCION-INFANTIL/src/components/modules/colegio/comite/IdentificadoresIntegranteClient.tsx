@@ -154,7 +154,7 @@ export function IdentificadoresIntegranteClient({ integranteId }: Props) {
                     </p>
                 )}
                 {error && (
-                    <p className="mt-3 text-sm text-amber-700 dark:text-amber-400" role="alert">
+                    <p className="mt-3 text-sm text-estado-ambar" role="alert">
                         {error}
                     </p>
                 )}

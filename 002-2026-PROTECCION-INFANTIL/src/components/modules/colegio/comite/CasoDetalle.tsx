@@ -225,7 +225,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                     Análisis del comité
                 </h2>
                 {analisisEstado?.recomendacionInformeEn && (
-                    <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-50/60 p-3 text-sm text-body dark:bg-amber-950/20">
+                    <div className="mt-3 rounded-xl border border-ambar/40 bg-ambar/10 p-3 text-sm text-body">
                         <p className="font-medium">Recomendación al rector · enviada.</p>
                         <p className="mt-1 text-muted">
                             El comité recomendó al rector emitir el informe del caso el{" "}
@@ -296,7 +296,7 @@ export function CasoDetalle({ solicitudId, puedeResolver }: Props) {
                             </p>
                         )}
                         {analisisError && (
-                            <p className="text-xs text-amber-700 dark:text-amber-400" role="alert">
+                            <p className="text-xs text-estado-ambar" role="alert">
                                 {analisisError}
                             </p>
                         )}

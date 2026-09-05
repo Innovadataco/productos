@@ -198,7 +198,7 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
                                 <th className="pb-3 font-medium text-right">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y divide-tinta/10">
                             {vinculos.map((v) => (
                                 <tr key={v.id} className="align-top">
                                     <td className="py-3 pr-3 font-medium text-body">{v.materia.nombre}</td>
