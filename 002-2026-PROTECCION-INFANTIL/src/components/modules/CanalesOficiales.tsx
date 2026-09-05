@@ -4,21 +4,18 @@ const CANALES = [
         label: "Línea 141",
         sub: "ICBF",
         icon: <span className="font-mono text-sm font-bold">141</span>,
-        tone: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
     },
     {
         href: "https://www.policia.gov.co",
         label: "CAI Virtual",
         sub: "Policía Nacional",
         icon: <PoliceIcon className="h-5 w-5" />,
-        tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
     },
     {
         href: "https://www.teprotejo.gov.co",
         label: "Te Protejo",
         sub: "MinTIC / Fiscalía",
         icon: <ShieldIcon className="h-5 w-5" />,
-        tone: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
     },
 ];
 
@@ -35,14 +32,14 @@ export function CanalesOficiales() {
                         href={c.href}
                         target={c.href.startsWith("http") ? "_blank" : undefined}
                         rel={c.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                        className="group flex items-center gap-3 rounded-xl bg-white/40 dark:bg-slate-900/40 p-3 transition hover:bg-white/70 dark:hover:bg-slate-800/60"
+                        className="group flex items-center gap-3 rounded-[var(--radio-card)] bg-tinta/5 p-3 transition hover:bg-tinta/10"
                     >
-                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${c.tone}`}>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tinta/10 text-muted">
                             {c.icon}
                         </span>
                         <div>
                             <p className="text-sm font-semibold text-body group-hover:text-accent transition">{c.label}</p>
-                            <p className="text-xs text-subtle">{c.sub}</p>
+                            <p className="text-xs text-muted">{c.sub}</p>
                         </div>
                     </a>
                 ))}

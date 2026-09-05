@@ -43,7 +43,7 @@ describe("PadreSideNav (SPEC-231)", () => {
 
         const inicio = screen.getByRole("link", { name: "Inicio" });
         expect(inicio.getAttribute("aria-current")).toBe("page");
-        expect(inicio.className).toContain("bg-sky-600");
+        expect(inicio.className).toContain("bg-cielo");
     });
 
     it("marca Mis expedientes como activo en subruta", () => {
@@ -70,7 +70,7 @@ describe("PadreSideNav (SPEC-231)", () => {
         render(<PadreSideNav />);
 
         const nav = screen.getByRole("navigation");
-        expect(nav.className).toContain("border-sky-200/40");
-        expect(nav.className).toContain("bg-sky-50/50");
+        expect(nav.className).toContain("border-cielo/20");
+        expect(nav.className).toContain("bg-cielo/5");
     });
 });

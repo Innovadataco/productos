@@ -464,4 +464,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/rediseno/emergencia-rubi.candado.test.ts",
     // SPEC-478 (fallo Diseño): el subtítulo del nav de colegio en text-muted por AA (fuente, sin BD).
     "src/lib/rediseno/nav-colegio-subtitulo-muted.candado.test.ts",
+    // SPEC-477 (Diseño): los canales oficiales en neutro uniforme, sin color por canal (fuente, sin BD).
+    "src/lib/rediseno/canales-oficiales-neutro.candado.test.ts",
+    // SPEC-479 (fallo Diseño): PadreSideNav en cielo, 0 sky, activo cielo / inactivo neutro (fuente, sin BD).
+    "src/lib/rediseno/padre-sidenav-cielo.candado.test.ts",
 ];
