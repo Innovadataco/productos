@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
+import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Guardian } from "@/components/ui/Guardian";
@@ -269,21 +270,18 @@ export function NavHeader() {
                                                 Gestión de casos
                                             </NavDropdownLink>
                                         )}
-                                        {/* SPEC-424 (I-299): items del profesional. Hasta SPEC-425
-                                            (Dev 02 · panel L5), la entrada principal es la
-                                            verificación — lo único que hoy tiene su propia pantalla. */}
+                                        {/* SPEC-437 (A-75): el desplegable sale de la MISMA lista que
+                                            la barra lateral (`PROFESIONAL_NAV_ITEMS`). Antes tenía dos
+                                            enlaces quemados acá que ni siquiera coincidían con esa
+                                            constante —que no la usaba nadie—: dos menús del mismo actor
+                                            que podían decir cosas distintas. Ahora no pueden. */}
                                         {user.rol === "PROFESIONAL" && (
                                             <>
-                                                {esEnlaceNavegable("/perfil-profesional/verificacion") && (
-                                                    <NavDropdownLink href="/perfil-profesional/verificacion" onClick={() => setOpen(false)}>
-                                                        Verificación
+                                                {PROFESIONAL_NAV_ITEMS.filter((item) => esEnlaceNavegable(item.href)).map((item) => (
+                                                    <NavDropdownLink key={item.href} href={item.href} onClick={() => setOpen(false)}>
+                                                        {item.label}
                                                     </NavDropdownLink>
-                                                )}
-                                                {esEnlaceNavegable("/perfil-profesional/completar") && (
-                                                    <NavDropdownLink href="/perfil-profesional/completar" onClick={() => setOpen(false)}>
-                                                        Mi ficha
-                                                    </NavDropdownLink>
-                                                )}
+                                                ))}
                                             </>
                                         )}
                                         {!esEmpleado && (
@@ -392,15 +390,17 @@ export function NavHeader() {
                                 {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
                                     <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Gestión de casos</MobileLink>
                                 )}
-                                {/* SPEC-424 (I-299): items del profesional. */}
+                                {/* SPEC-437 (A-75): el menú móvil sale de la MISMA lista que el
+                                    desplegable y la barra lateral. Tenerlo quemado acá era el
+                                    defecto de verdad: el botón «Dashboard» del encabezado es
+                                    `hidden sm:inline-flex`, así que en teléfono un profesional
+                                    veía solo Verificación y Mi ficha y NO tenía por dónde volver
+                                    a su panel. Tres renderizadores, una sola fuente. */}
                                 {user.rol === "PROFESIONAL" && (
                                     <>
-                                        {esEnlaceNavegable("/perfil-profesional/verificacion") && (
-                                            <MobileLink href="/perfil-profesional/verificacion" onClick={() => setMobileOpen(false)}>Verificación</MobileLink>
-                                        )}
-                                        {esEnlaceNavegable("/perfil-profesional/completar") && (
-                                            <MobileLink href="/perfil-profesional/completar" onClick={() => setMobileOpen(false)}>Mi ficha</MobileLink>
-                                        )}
+                                        {PROFESIONAL_NAV_ITEMS.filter((item) => esEnlaceNavegable(item.href)).map((item) => (
+                                            <MobileLink key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>{item.label}</MobileLink>
+                                        ))}
                                     </>
                                 )}
                                 <button

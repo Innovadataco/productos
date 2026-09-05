@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
+import { ADMIN_NAV_ITEMS, PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 
-type RolNav = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "SCHOOL_ADMIN";
+// SPEC-437 (A-75): el PROFESIONAL entra a esta misma barra. Orden de Jelkin:
+// «debemos utilizar la misma lógica de operador» — mismo componente, mismo
+// filtrado por módulo, no un menú paralelo hecho aparte.
+type RolNav = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION" | "SCHOOL_ADMIN" | "PROFESIONAL";
 
 const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element> = {
     "/dashboard/admin": InboxIcon,
@@ -23,6 +26,13 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
     "/dashboard/admin/anti-abuso": ShieldIcon,
     "/dashboard/admin/dataset-entrenamiento": DatabaseIcon,
     "/dashboard/admin/configuracion": CogIcon,
+    // SPEC-437 (A-75): los del profesional.
+    "/dashboard/profesional": InboxIcon,
+    "/dashboard/profesional/citaciones": UsersIcon,
+    "/dashboard/profesional/casos": ScaleIcon,
+    "/dashboard/profesional/calendario": ChartIcon,
+    "/perfil-profesional/completar": UserCircleIcon,
+    "/perfil-profesional/verificacion": ShieldIcon,
 };
 
 export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermitidos: string[] }) {
@@ -30,11 +40,14 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
     const permitidos = new Set(modulosPermitidos);
     // D-41 (SPEC-126): módulo de BD ∧ predicado del proxy — la puerta tiene la
     // última palabra sobre si se pinta (misma regla que NavHeader.tsx).
-    const links = ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo) && esDestinoPermitidoPorRol(rol, l.href)).map((l) => ({
+    const items = rol === "PROFESIONAL" ? PROFESIONAL_NAV_ITEMS : ADMIN_NAV_ITEMS;
+    // D-41 (SPEC-126): módulo de BD ∧ predicado del proxy — la puerta tiene la
+    // última palabra sobre si se pinta.
+    const links = items.filter((l) => permitidos.has(l.modulo) && esDestinoPermitidoPorRol(rol, l.href)).map((l) => ({
         ...l,
         icon: ICONS[l.href] ?? InboxIcon,
     }));
-    const titulo = rol === "OPERADOR" ? "Operador" : "Administración";
+    const titulo = rol === "OPERADOR" ? "Operador" : rol === "PROFESIONAL" ? "Profesional" : "Administración";
 
     return (
         <nav className="hidden w-64 flex-shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl sm:flex">
@@ -48,7 +61,9 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
                     // coincidiría con TODAS las subrutas (doble resaltado, US8).
                     const active =
                         pathname === link.href ||
-                        (link.href !== "/dashboard/admin" && (pathname?.startsWith(link.href + "/") ?? false));
+                        (link.href !== "/dashboard/admin" &&
+                            link.href !== "/dashboard/profesional" &&
+                            (pathname?.startsWith(link.href + "/") ?? false));
                     const isPagos = link.href === "/dashboard/admin/pagos";
                     return (
                         <li key={link.href}>

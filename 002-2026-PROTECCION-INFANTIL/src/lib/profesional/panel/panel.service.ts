@@ -26,6 +26,8 @@ import type { EstadoSolicitudCita } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
+import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
+import { saludoDelPanel } from "./saludo";
 import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
 
 /** Estados que esperan una respuesta del profesional dentro de las 48 h. */
@@ -85,6 +87,13 @@ export interface ExpedienteCompartidoDto {
 
 export interface PanelProfesionalDto {
     nombreVisible: string;
+    /**
+     * SPEC-437 (punto 5): el encabezado ya resuelto («Hola, Beatriz» o «Hola»).
+     * Se calcula acá y no en la pantalla porque `nombreVisible` es un campo
+     * libre que puede traer una presentación entera — el panel llegó a decir
+     * «Hola, ¡Hola!». La pantalla no debe tener que adivinar qué es un nombre.
+     */
+    saludo: string;
     solicitudes: SolicitudPanelDto[];
     casosPorCerrar: CasoPorCerrarDto[];
     citasConfirmadas: CitaAgendaDto[];
@@ -112,6 +121,11 @@ export async function panelDelProfesional(
     ahora: Date = new Date(),
 ): Promise<PanelProfesionalDto> {
     const perfil = await new VerificadorRepository().findPorUsuarioId(usuarioId);
+    // SPEC-437: el saludo usa el nombre de la CUENTA. Por el repositorio (Q-3:
+    // nada de Prisma directo fuera del DAL) y no ensanchando el `include` de
+    // `findPorUsuarioId`, que comparten otros caminos — ensanchar un select
+    // compartido es cómo se terminan filtrando datos que nadie pidió.
+    const cuenta = await new UsuarioRepository().findById(usuarioId);
     if (!perfil) {
         throw new AppError("Perfil profesional no encontrado", ERROR_CODES.NOT_FOUND, 404);
     }
@@ -143,6 +157,7 @@ export async function panelDelProfesional(
 
     return {
         nombreVisible: perfil.nombreVisible,
+        saludo: saludoDelPanel(cuenta?.nombre, perfil.nombreVisible),
         solicitudes: esperandoRespuesta.map((s) => ({
             id: s.id,
             padreNombre: s.padreUsuario.nombre ?? "Una familia",

@@ -14,18 +14,23 @@ import { SolicitudAcciones } from "./SolicitudAcciones";
  * va una línea que dice qué falta, no un control apagado — un botón
  * deshabilitado sigue prometiendo algo.
  */
+/**
+ * SPEC-437 (A-75): los bloques se EXPORTAN porque «Citaciones» y «Casos»
+ * son ahora pantallas propias del menú y muestran exactamente esto mismo.
+ * Reusar el bloque —no copiarlo— es lo que impide que el Inicio y la
+ * pantalla dedicada digan cosas distintas del mismo dato.
+ */
 export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
-    const primerNombre = data.nombreVisible.split(" ")[0] ?? data.nombreVisible;
     const pendientes = data.solicitudes.length;
 
     return (
         <div className="mx-auto max-w-5xl space-y-6 p-6">
             <header>
-                <h1 className="text-2xl font-bold text-body">Hola, {primerNombre}</h1>
+                <h1 className="text-2xl font-bold text-body">{data.saludo}</h1>
                 <p className="text-muted">
                     {pendientes === 0
-                        ? "No tenés solicitudes esperando respuesta."
-                        : `Tenés ${pendientes} solicitud${pendientes === 1 ? "" : "es"} esperando respuesta.`}
+                        ? "Sin solicitudes por responder."
+                        : `${pendientes} solicitud${pendientes === 1 ? "" : "es"} por responder.`}
                 </p>
             </header>
 
@@ -99,12 +104,12 @@ function Avatar({ nombre }: { nombre: string }) {
     );
 }
 
-function Solicitudes({ data }: { data: PanelProfesionalDto }) {
+export function Solicitudes({ data }: { data: PanelProfesionalDto }) {
     const n = data.solicitudes.length;
     return (
         <Bloque titulo="Solicitudes de primera cita" cuenta={n > 0 ? `${n} sin responder` : undefined}>
             {n === 0 ? (
-                <Vacio>Cuando una familia te pida una primera cita, aparece acá.</Vacio>
+                <Vacio>Sin solicitudes.</Vacio>
             ) : (
                 <ul className="space-y-4">
                     {data.solicitudes.map((s) => (
@@ -124,8 +129,8 @@ function Solicitudes({ data }: { data: PanelProfesionalDto }) {
                                 <SolicitudAcciones solicitudId={s.id} />
                                 {s.venceEnRespuesta ? (
                                     <p className="mt-2 text-xs text-ambar">
-                                        Tenés plazo hasta el {fechaHora(s.venceEnRespuesta)}. Después se le
-                                        abre tu contacto directo y se le devuelve la reserva.
+                                        Plazo hasta el {fechaHora(s.venceEnRespuesta)}. Vencido, se abre
+                                        el contacto directo y se devuelve la reserva.
                                     </p>
                                 ) : (
                                     <p className="mt-2 text-xs text-muted">
@@ -141,12 +146,12 @@ function Solicitudes({ data }: { data: PanelProfesionalDto }) {
     );
 }
 
-function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
+export function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
     const n = data.casosPorCerrar.length;
     return (
         <Bloque titulo="Casos por cerrar" cuenta={n > 0 ? `${n} pendiente${n === 1 ? "" : "s"}` : undefined}>
             {n === 0 ? (
-                <Vacio>Las citas que ya pasaron y falta cerrar aparecen acá.</Vacio>
+                <Vacio>Sin casos por cerrar.</Vacio>
             ) : (
                 <ul className="space-y-4">
                     {data.casosPorCerrar.map((c) => (
@@ -158,9 +163,9 @@ function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
                                     Cita del {fechaHora(c.inicio)} · {c.modalidad.toLowerCase()}
                                 </p>
                                 <p className="mt-2 text-xs text-muted">
-                                    Tu pago de{" "}
-                                    <strong className="text-body">{pesos(c.montoRetenido)}</strong> queda
-                                    retenido hasta que la cierres.
+                                    Pago retenido:{" "}
+                                    <strong className="text-body">{pesos(c.montoRetenido)}</strong>. Se libera
+                                    al cerrar la cita.
                                 </p>
                             </div>
                         </li>
@@ -169,19 +174,18 @@ function CasosPorCerrar({ data }: { data: PanelProfesionalDto }) {
             )}
             {/* Honestidad sobre el alcance: el cierre es de L6, no de este lote. */}
             <p className="mt-4 border-t border-tinta/8 pt-3 text-xs text-subtle">
-                Cerrar la cita y liberar el pago todavía no está disponible. Llega con el cierre y la
-                encuesta; hasta entonces esta lista es para que sepas cuáles te faltan.
+                El cierre de la cita todavía no está disponible.
             </p>
         </Bloque>
     );
 }
 
-function CitasConfirmadas({ data }: { data: PanelProfesionalDto }) {
+export function CitasConfirmadas({ data }: { data: PanelProfesionalDto }) {
     const n = data.citasConfirmadas.length;
     return (
         <Bloque titulo="Citas confirmadas" cuenta={n > 0 ? `${n} por delante` : undefined} calma>
             {n === 0 ? (
-                <Vacio>Cuando confirmes una solicitud, la vas a ver en esta agenda.</Vacio>
+                <Vacio>Sin citas confirmadas.</Vacio>
             ) : (
                 <ul className="space-y-3">
                     {data.citasConfirmadas.map((c) => (
@@ -216,7 +220,7 @@ function pesos(valor: number): string {
     }).format(valor);
 }
 
-function PorCobrar({ data }: { data: PanelProfesionalDto }) {
+export function PorCobrar({ data }: { data: PanelProfesionalDto }) {
     const { montoRetenido, citasEsperandoCierre, desglose } = data.porCobrar;
     return (
         <Bloque titulo="Por cobrar">
@@ -238,7 +242,7 @@ function PorCobrar({ data }: { data: PanelProfesionalDto }) {
                 />
             </dl>
             <p className="mt-3 text-xs text-subtle">
-                Vos ponés tu tarifa. Podés cambiarla cuando quieras desde tu perfil.
+                La tarifa se edita en el perfil.
             </p>
         </Bloque>
     );
@@ -263,7 +267,7 @@ function Marcador({ data }: { data: PanelProfesionalDto }) {
                 <Kpi n={sinConfirmar} etiqueta="sin confirmar" apagado />
             </div>
             <p className="mt-4 text-xs text-muted">
-                Solo cuentan las que atendiste. Las <strong>sin confirmar</strong> no suman ni se giran.
+                Solo cuentan las atendidas. Las <strong>sin confirmar</strong> no suman ni se giran.
             </p>
         </Bloque>
     );
@@ -283,7 +287,7 @@ function Verificacion({ data }: { data: PanelProfesionalDto }) {
     return (
         <Bloque titulo="Tu verificación">
             {!v ? (
-                <Vacio>Tu perfil todavía no pasó por verificación.</Vacio>
+                <Vacio>Sin verificación registrada.</Vacio>
             ) : (
                 <>
                     <p className="text-sm font-semibold text-body">
@@ -294,8 +298,8 @@ function Verificacion({ data }: { data: PanelProfesionalDto }) {
                     </p>
                     <p className="mt-3 text-xs text-subtle">
                         {v.alDia
-                            ? "Te avisamos con un mes de anticipación. Si vence, tu perfil deja de mostrarse hasta que se revise de nuevo."
-                            : "Mientras esté vencida tu perfil no se muestra a las familias. Volvé a enviarlo para que lo revisen."}
+                            ? "Aviso un mes antes del vencimiento. Vencida, el perfil deja de mostrarse."
+                            : "Vencida, el perfil no se muestra a las familias. Envíelo de nuevo para revisión."}
                     </p>
                     <Link
                         href="/perfil-profesional/verificacion"
@@ -314,7 +318,7 @@ function ExpedientesCompartidos({ data }: { data: PanelProfesionalDto }) {
     return (
         <Bloque titulo="Expedientes compartidos" cuenta={n > 0 ? `${n} activo${n === 1 ? "" : "s"}` : undefined} calma>
             {n === 0 ? (
-                <Vacio>Cuando una familia te comparta el expediente de su hijo, aparece acá.</Vacio>
+                <Vacio>Sin expedientes compartidos.</Vacio>
             ) : (
                 <ul className="space-y-2">
                     {data.expedientesCompartidos.map((e) => (

@@ -56,6 +56,21 @@ export const CLAVES_POR_ROL: Record<string, string[]> = {
     // admin (ni pagos, ni operadores, ni comité, ni padres). El candado
     // `verificador-modulos.candado.test.ts` protege este contrato.
     VERIFICADOR: ["admin_verificacion_profesionales"],
+    // SPEC-437 (A-75): el profesional trabaja con menú lateral, misma mecánica
+    // que el operador. La lista es EXACTAMENTE los módulos que `PROFESIONAL_NAV_ITEMS`
+    // pinta — ni uno más ni uno menos: un grant sin ítem de menú es acceso a una
+    // superficie sin camino, y uno con ítem pero sin pantalla es la promesa rota
+    // de I-299. `profesional_calendario` entra ahora (T013) porque SPEC-447 (#353)
+    // desplegó su pantalla y su ítem ya está en el nav: cada uno de los 6 tiene
+    // pantalla real, así que least-privilege se cumple igual.
+    PROFESIONAL: [
+        "profesional_inicio",
+        "profesional_citaciones",
+        "profesional_casos",
+        "profesional_calendario",
+        "profesional_ficha",
+        "profesional_verificacion",
+    ],
 };
 
 export async function syncModulosYGrants(prisma: PrismaClient): Promise<ResultadoSyncModulos> {

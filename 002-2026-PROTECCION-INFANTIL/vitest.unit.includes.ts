@@ -395,6 +395,12 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-447 (I-311): la API de franjas estuvo sin pantalla desde SPEC-395.
     // Este candado falla si vuelve a quedarse sin consumidor en la interfaz.
     "src/lib/profesional/calendario.candado.test.ts",
+    // SPEC-437 (punto 5): el panel decía «Hola, ¡Hola!» — el saludo usa el
+    // nombre, no el campo libre de la ficha.
+    "src/lib/profesional/panel/saludo.test.ts",
+    // SPEC-437 (I-299): el menú del profesional no promete pantallas muertas
+    // ni pinta items ajenos, y sale de la misma lista que el desplegable.
+    "src/lib/profesional/menu.candado.test.ts",
     // SPEC-403 (I-288): la comisión es parámetro, no constante — y el seed no
     // le pisa al admin el valor que ajustó.
     "src/lib/profesional/cita/comision.test.ts",
