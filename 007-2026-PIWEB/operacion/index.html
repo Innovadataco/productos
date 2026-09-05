@@ -98,6 +98,12 @@ body {
 .key { display: flex; gap: 13px; flex-wrap: wrap; font-size: 11px; color: var(--faint); }
 .key i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 
+/* Leyenda de símbolos del checklist */
+.leyenda { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 11px; color: var(--muted);
+           background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 8px 11px; }
+.leyenda b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+.leyenda .ly { white-space: normal; }
+
 /* Paneles */
 .panel { background: var(--surface); border: 1px solid var(--line);
          border-radius: 5px; overflow: hidden; }
@@ -107,6 +113,12 @@ body {
          letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .ph .meta { font-family: "IBM Plex Mono", monospace; font-size: 11px;
             color: var(--faint); font-variant-numeric: tabular-nums; }
+/* Encabezado de sección de ROL: nombre legible + ícono */
+.ph.rol { align-items: center; }
+.ph.rol h2 { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--ink);
+             display: inline-flex; align-items: center; gap: 7px; }
+.ph.rol h2 .ic { font-size: 15px; line-height: 1; }
+.roles { display: flex; flex-direction: column; gap: 10px; }
 .scroll { overflow-x: auto; }
 
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -120,34 +132,21 @@ td.c { text-align: center; }
 tbody tr:nth-child(even) { background: var(--zebra); }
 tr:last-child td { border-bottom: none; }
 td.nm { font-weight: 500; white-space: normal; min-width: 186px; }
+td.act { color: var(--muted); white-space: normal; min-width: 150px; font-size: 11.5px; }
 
 .id { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600;
       color: var(--accent); font-variant-numeric: tabular-nums; }
-.d { font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
-     font-variant-numeric: tabular-nums; color: var(--muted); }
-.d.est { color: var(--proceso); }
-.ref { font-family: "IBM Plex Mono", monospace; font-size: 11px;
-       color: var(--muted); font-variant-numeric: tabular-nums; }
 .dash { color: var(--faint); }
+.faint { color: var(--faint); }
 
-.b { display: inline-block; min-width: 15px; font-weight: 700; font-size: 13px; line-height: 1; }
-.b.y { color: var(--libre); }
-.b.n { color: var(--faint); font-weight: 400; }
-.b.w { color: var(--proceso); }
-
-.tag { display: inline-block; padding: 1px 6px; border-radius: 3px;
-       font-size: 10.5px; font-weight: 600; }
-.tag.ok  { background: var(--libre-bg);   color: var(--libre); }
-.tag.mid { background: var(--proceso-bg); color: var(--proceso); }
-.tag.bad { background: var(--ocupado-bg); color: var(--ocupado); }
-
-.need { color: var(--proceso); font-weight: 600; white-space: normal; min-width: 210px; }
-.need.hard { color: var(--ocupado); }
-
-.prog { display: inline-flex; align-items: center; gap: 6px; }
-.prog .track { width: 44px; height: 4px; border-radius: 2px;
-               background: var(--line); overflow: hidden; }
-.prog .track i { display: block; height: 100%; background: var(--libre); }
+/* Glifos de estado de las celdas del checklist */
+.g { display: inline-block; min-width: 15px; font-weight: 700; font-size: 13px; line-height: 1; }
+.g.ok  { color: var(--libre); }
+.g.mid { color: var(--proceso); }
+.g.w   { color: var(--proceso); }
+.g.no  { color: var(--faint); font-weight: 400; }
+.g.bad { color: var(--ocupado); }
+.emo { font-size: 12.5px; line-height: 1; }
 
 .alert { display: flex; gap: 9px; align-items: center;
          background: var(--proceso-bg); border-left: 3px solid var(--proceso);
@@ -177,6 +176,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
 @media (max-width: 640px) {
   .wrap { padding: 12px 10px 28px; }
   td.nm { min-width: 148px; }
+  td.act { min-width: 128px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -207,70 +207,26 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     <span><i style="background:var(--off)"></i>Sin sesión</span>
   </div>
 
-  <!-- Funcionalidades -->
-  <div class="panel">
-    <div class="ph">
-      <h2>Funcionalidades</h2>
-      <span class="meta" id="meta-func">—</span>
-    </div>
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr>
-            <th class="c">#</th>
-            <th>Funcionalidad</th>
-            <th class="c">Brief</th>
-            <th class="c">Instr.</th>
-            <th class="c">Spec</th>
-            <th class="c">Inicio</th>
-            <th class="c">Estimada</th>
-            <th class="c">Fin</th>
-            <th class="c">Despl.</th>
-            <th class="c">Calidad</th>
-            <th class="c">Tu OK</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-func">
-          <tr><td colspan="11" class="tabla-vacia">Cargando…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
+  <!-- Alerta destacada -->
   <div id="alerta"></div>
 
-  <!-- Recorridos -->
-  <div class="panel">
-    <div class="ph">
-      <h2>Recorridos de calidad</h2>
-      <span class="meta" id="meta-rec">—</span>
-    </div>
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr>
-            <th class="c">#</th>
-            <th>Recorrido</th>
-            <th class="c">Avance</th>
-            <th class="c">Inicio</th>
-            <th class="c">Estimada</th>
-            <th class="c">Fin</th>
-            <th class="c">Resultado</th>
-            <th class="c">Estado</th>
-            <th>¿Te necesita?</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-rec">
-          <tr><td colspan="9" class="tabla-vacia">Cargando…</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <!-- Leyenda de símbolos del checklist -->
+  <div class="leyenda">
+    <div class="ly"><b>Desarrollo</b> <span class="g ok">&#10003;</span> hecho &middot; <span class="g mid">&#9680;</span> parcial &middot; <span class="g no">&#10007;</span> no</div>
+    <div class="ly"><b>Probado</b> <span class="emo">&#9989;</span> en vivo &middot; <span class="emo">&#128994;</span> verde en CI &middot; <span class="emo">&#9203;</span> pendiente &middot; <span class="emo">&#128683;</span> bloqueado &middot; <span class="g no">&#10007;</span> no</div>
+    <div class="ly"><b>Desplegado</b> <span class="g ok">&#10003;</span> s&iacute; &middot; <span class="dash">&mdash;</span> no &middot; <span class="faint">&middot;</span> n/a</div>
+    <div class="ly"><b>Probado por Jelkin</b> <span class="g ok">&#10003;</span> aceptada &middot; <span class="g bad">&#10007;</span> rechazada &middot; <span class="g w">&middot;</span> pendiente</div>
+  </div>
+
+  <!-- Checklist por rol (9 secciones) -->
+  <div class="roles" id="roles">
+    <div class="panel"><div class="tabla-vacia">Cargando&hellip;</div></div>
   </div>
 
   <div id="aviso"></div>
 
   <footer>
-    Producción <code id="prod-footer">—</code> · Fechas en hora de Colombia · Tablero mantenido por el CEO.
+    Producci&oacute;n <code id="prod-footer">&mdash;</code> &middot; Fechas en hora de Colombia &middot; Tablero mantenido por el CEO.
   </footer>
 
 </div>
@@ -313,46 +269,36 @@ footer code { font-family: "IBM Plex Mono", monospace; }
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-  function fecha(v) {
-    // v puede ser "DD-MM-AAAA HH:MM", "DD-MM-AAAA", "3 h", "2 días", null.
-    // Devuelve el texto TAL CUAL (nunca rellena con 00:00). null → em-dash.
-    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
-    return '<span class="d">' + esc(v) + "</span>";
-  }
-  function fechaEstimada(v) {
-    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
-    return '<span class="d est">' + esc(v) + "</span>";
-  }
-  function ref(v) {
-    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
-    return '<span class="ref">' + esc(v) + "</span>";
-  }
   function estadoPersona(e) {
     return ({ libre: "libre", proceso: "proceso", ocupado: "ocupado", off: "off" })[e] || "off";
   }
-  function tagCalidad(v) {
-    if (v === null || v === undefined || v === "") return '<span class="dash">—</span>';
-    var cls = "mid";
-    if (v === "Cumple") cls = "ok";
-    else if (v === "Sin probar" || v === "Bloqueado") cls = "bad";
-    // "Parcial" y "En curso" quedan en mid; cualquier otro también.
-    return '<span class="tag ' + cls + '">' + esc(v) + "</span>";
+
+  // Celdas de estado del checklist — símbolos EXACTOS del brief SPEC-498.
+  function celdaDesarrollo(v) {
+    if (v === "si")      return '<span class="g ok"  title="Hecho">&#10003;</span>';       // ✓
+    if (v === "parcial") return '<span class="g mid" title="Parcial">&#9680;</span>';       // ◐
+    if (v === "no")      return '<span class="g no"  title="No iniciada">&#10007;</span>';   // ✗
+    return '<span class="dash">&mdash;</span>';
   }
-  function marcaTuOk(v) {
-    if (v === "aceptada") return '<b class="b y">✓</b>';
-    if (v === "pendiente") return '<b class="b w">·</b>';
-    return '<span class="dash">—</span>';
+  function celdaProbado(v) {
+    if (v === "vivo")      return '<span class="emo" title="Probado en vivo">&#9989;</span>';              // ✅
+    if (v === "ci")        return '<span class="emo" title="Verde en CI (no en vivo)">&#128994;</span>';    // 🟢
+    if (v === "pendiente") return '<span class="emo" title="Pendiente">&#9203;</span>';                     // ⏳
+    if (v === "bloqueado") return '<span class="emo" title="Bloqueado">&#128683;</span>';                   // 🚫
+    if (v === "no")        return '<span class="g no" title="No probado">&#10007;</span>';                  // ✗
+    return '<span class="dash">&mdash;</span>';
   }
-  function marcaDesplegado(v) {
-    return v === true ? '<b class="b y">✓</b>' : '<b class="b n">—</b>';
+  function celdaDesplegado(v) {
+    if (v === "si") return '<span class="g ok"  title="Desplegado">&#10003;</span>';   // ✓
+    if (v === "no") return '<span class="dash" title="No desplegado">&mdash;</span>';   // —
+    if (v === "na") return '<span class="faint" title="No aplica">&middot;</span>';     // ·
+    return '<span class="dash">&mdash;</span>';
   }
-  function barra(hechos, total) {
-    var h = Math.max(0, Number(hechos) || 0);
-    var t = Math.max(0, Number(total) || 0);
-    if (t === 0) return '<span class="prog"><span class="ref">' + h + "/" + t + "</span></span>";
-    var pct = Math.min(100, Math.round((h / t) * 100));
-    return '<span class="prog"><span class="track"><i style="width:' + pct + '%"></i></span>' +
-           '<span class="ref">' + h + "/" + t + "</span></span>";
+  function celdaJelkin(v) {
+    if (v === "aceptada")  return '<span class="g ok"  title="Aceptada por Jelkin">&#10003;</span>';   // ✓
+    if (v === "rechazada") return '<span class="g bad" title="Rechazada por Jelkin">&#10007;</span>';   // ✗
+    if (v === "pendiente") return '<span class="g w"   title="Pendiente de Jelkin">&middot;</span>';    // ·
+    return '<span class="dash">&mdash;</span>';
   }
 
   // ------------------ render ------------------
@@ -362,7 +308,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
         equipos.every(function (g) { return !g.personas || g.personas.length === 0; })) {
       $c.innerHTML =
         '<div class="crew"><div class="crew-empty">' +
-        '<b style="color:var(--ink);font-weight:600">Equipos</b> · Sin nadie en sesión' +
+        '<b style="color:var(--ink);font-weight:600">Equipos</b> &middot; Sin nadie en sesi&oacute;n' +
         "</div></div>";
       return;
     }
@@ -372,7 +318,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
       (g.personas || []).forEach(function (p) {
         var st = estadoPersona(p.estado);
         html += '<span class="who ' + st + '"><i></i>' +
-                "<b>" + esc(p.nombre || "—") + "</b>" +
+                "<b>" + esc(p.nombre || "&mdash;") + "</b>" +
                 (p.detalle ? " <span>" + esc(p.detalle) + "</span>" : "") +
                 "</span>";
       });
@@ -382,100 +328,61 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     $c.innerHTML = html;
   }
 
-  function renderFuncionalidades(fs) {
-    var $tb = document.getElementById("tbody-func");
-    var $meta = document.getElementById("meta-func");
-    if (!fs || !Array.isArray(fs) || fs.length === 0) {
-      $tb.innerHTML = '<tr><td colspan="11" class="tabla-vacia">Sin funcionalidades listadas.</td></tr>';
-      $meta.textContent = "0";
-      return;
-    }
-    var totalDespl = 0, totalCumple = 0, totalOk = 0;
-    var html = "";
-    fs.forEach(function (f) {
-      if (f.desplegado === true) totalDespl++;
-      if (f.calidad === "Cumple") totalCumple++;
-      if (f.tuOk === "aceptada") totalOk++;
-      html +=
-        "<tr>" +
-          '<td class="c id">' + esc(f.id || "—") + "</td>" +
-          '<td class="nm">' + esc(f.nombre || "—") + "</td>" +
-          '<td class="c">' + ref(f.brief) + "</td>" +
-          '<td class="c">' + ref(f.instructivo) + "</td>" +
-          '<td class="c">' + ref(f.spec) + "</td>" +
-          '<td class="c">' + fecha(f.inicio) + "</td>" +
-          '<td class="c">' + fechaEstimada(f.estimada) + "</td>" +
-          '<td class="c">' + fecha(f.fin) + "</td>" +
-          '<td class="c">' + marcaDesplegado(f.desplegado) + "</td>" +
-          '<td class="c">' + tagCalidad(f.calidad) + "</td>" +
-          '<td class="c">' + marcaTuOk(f.tuOk) + "</td>" +
-        "</tr>";
-    });
-    $tb.innerHTML = html;
-    $meta.textContent =
-      fs.length + " · " + totalDespl + " desplegadas · " +
-      totalCumple + " Cumple · " + totalOk + " aceptadas";
-  }
-
   function renderAlerta(a) {
     var $c = document.getElementById("alerta");
     if (!a || !a.texto) { $c.innerHTML = ""; return; }
     var cls = a.nivel === "hard" ? "alert hard" : "alert";
-    $c.innerHTML = '<div class="' + cls + '"><b>Atención</b><span>' + esc(a.texto) + "</span></div>";
+    $c.innerHTML = '<div class="' + cls + '"><b>Atenci&oacute;n</b><span>' + esc(a.texto) + "</span></div>";
   }
 
-  function renderRecorridos(rs, meta) {
-    var $tb = document.getElementById("tbody-rec");
-    var $meta = document.getElementById("meta-rec");
-    if (!rs || !Array.isArray(rs) || rs.length === 0) {
-      $tb.innerHTML = '<tr><td colspan="9" class="tabla-vacia">Sin recorridos listados.</td></tr>';
-      $meta.textContent = meta && meta.ultimoInforme ? "Último informe " + esc(meta.ultimoInforme) : "";
+  function renderRoles(roles) {
+    var $c = document.getElementById("roles");
+    if (!roles || !Array.isArray(roles) || roles.length === 0) {
+      $c.innerHTML = '<div class="panel"><div class="tabla-vacia">Sin funcionalidades listadas.</div></div>';
       return;
     }
-    // Orden: hard con teNecesita · normal con teNecesita · resto. Dentro, orden del array.
-    var conIndice = rs.map(function (r, i) { return { r: r, i: i }; });
-    conIndice.sort(function (a, b) {
-      function prio(x) {
-        if (x.r.teNecesita && x.r.teNecesitaNivel === "hard") return 0;
-        if (x.r.teNecesita) return 1;
-        return 2;
-      }
-      var pa = prio(a), pb = prio(b);
-      if (pa !== pb) return pa - pb;
-      return a.i - b.i;
-    });
     var html = "";
-    conIndice.forEach(function (o) {
-      var r = o.r;
-      var need;
-      if (r.teNecesita) {
-        var cls = r.teNecesitaNivel === "hard" ? "need hard" : "need";
-        need = '<td class="' + cls + '">' + esc(r.teNecesita) + "</td>";
+    roles.forEach(function (rol) {
+      var fs = Array.isArray(rol.funcionalidades) ? rol.funcionalidades : [];
+      var despl = 0, jok = 0, vivo = 0;
+      var filas = "";
+      if (fs.length === 0) {
+        filas = '<tr><td colspan="7" class="tabla-vacia">Sin funcionalidades listadas.</td></tr>';
       } else {
-        need = '<td class="dash">No</td>';
+        fs.forEach(function (f) {
+          if (f.desplegado === "si") despl++;
+          if (f.jelkin === "aceptada") jok++;
+          if (f.probado === "vivo") vivo++;
+          filas +=
+            "<tr>" +
+              '<td class="c id">' + esc(f.id || "&mdash;") + "</td>" +
+              '<td class="nm">' + esc(f.nombre || "&mdash;") + "</td>" +
+              '<td class="act">' + (f.actor ? esc(f.actor) : '<span class="dash">&mdash;</span>') + "</td>" +
+              '<td class="c">' + celdaDesarrollo(f.desarrollo) + "</td>" +
+              '<td class="c">' + celdaProbado(f.probado) + "</td>" +
+              '<td class="c">' + celdaDesplegado(f.desplegado) + "</td>" +
+              '<td class="c">' + celdaJelkin(f.jelkin) + "</td>" +
+            "</tr>";
+        });
       }
+      var meta = fs.length + " &middot; " + despl + " desplegadas &middot; " + vivo + " en vivo &middot; " + jok + " aceptadas";
       html +=
-        "<tr>" +
-          '<td class="c id">' + esc(r.id || "—") + "</td>" +
-          '<td class="nm">' + esc(r.nombre || "—") + "</td>" +
-          '<td class="c">' + barra(r.hechos, r.total) + "</td>" +
-          '<td class="c">' + fecha(r.inicio) + "</td>" +
-          '<td class="c">' + fechaEstimada(r.estimada) + "</td>" +
-          '<td class="c">' + fecha(r.fin) + "</td>" +
-          '<td class="c">' + tagCalidad(r.resultado) + "</td>" +
-          '<td class="c d">' + esc(r.estado || "—") + "</td>" +
-          need +
-        "</tr>";
+        '<div class="panel">' +
+          '<div class="ph rol">' +
+            '<h2><span class="ic">' + esc(rol.icono || "&bull;") + "</span>" + esc(rol.rol || "&mdash;") + "</h2>" +
+            '<span class="meta">' + meta + "</span>" +
+          "</div>" +
+          '<div class="scroll"><table>' +
+            "<thead><tr>" +
+              '<th class="c">#</th><th>Funcionalidad</th><th>Actor</th>' +
+              '<th class="c">Desarrollo</th><th class="c">Probado</th>' +
+              '<th class="c">Desplegado</th><th class="c">Probado por Jelkin</th>' +
+            "</tr></thead>" +
+            "<tbody>" + filas + "</tbody>" +
+          "</table></div>" +
+        "</div>";
     });
-    $tb.innerHTML = html;
-    var metaTexto = "";
-    if (meta) {
-      var pedazos = [];
-      if (meta.ultimoInforme) pedazos.push("Último informe " + esc(meta.ultimoInforme));
-      if (meta.resumen) pedazos.push(esc(meta.resumen));
-      metaTexto = pedazos.join(" · ");
-    }
-    $meta.innerHTML = metaTexto;
+    $c.innerHTML = html;
   }
 
   function renderBarra(data) {
@@ -488,9 +395,8 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     document.getElementById("aviso").innerHTML = "";
     renderBarra(data);
     renderEquipos(data.equipos);
-    renderFuncionalidades(data.funcionalidades);
     renderAlerta(data.alerta);
-    renderRecorridos(data.recorridos, data.metaRecorridos);
+    renderRoles(data.roles);
   }
 
   function renderError(tipo, mensaje, cuerpo, http) {
@@ -512,16 +418,13 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     if (cuerpo && tipo === "corrupto") extra += "<pre>" + esc(cuerpo.slice(0, 300)) + "</pre>";
     extra += '<p class="last">Último intento: ' + esc(reloj()) + "</p>";
     $a.innerHTML = '<div class="aviso err"><h3>' + titulo + "</h3><p>" + texto + "</p>" + extra + "</div>";
-    // Vaciar los paneles a estado limpio.
+    // Vaciar el contenido a estado limpio.
     document.getElementById("actualizado").textContent = "—";
     document.getElementById("prod").textContent = "—";
     document.getElementById("prod-footer").textContent = "—";
     document.getElementById("equipos").innerHTML = "";
-    document.getElementById("tbody-func").innerHTML = '<tr><td colspan="11" class="tabla-vacia">—</td></tr>';
-    document.getElementById("meta-func").textContent = "—";
     document.getElementById("alerta").innerHTML = "";
-    document.getElementById("tbody-rec").innerHTML = '<tr><td colspan="9" class="tabla-vacia">—</td></tr>';
-    document.getElementById("meta-rec").textContent = "";
+    document.getElementById("roles").innerHTML = '<div class="panel"><div class="tabla-vacia">&mdash;</div></div>';
   }
 
   function reloj() {
