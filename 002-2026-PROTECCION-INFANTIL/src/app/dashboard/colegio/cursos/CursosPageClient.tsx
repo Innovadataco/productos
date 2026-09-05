@@ -162,7 +162,7 @@ export default function CursosPageClient() {
                     <GlassCard>
                         {loading ? (
                             <div className="flex items-center gap-3 py-8 text-muted">
-                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                                <span className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/20 border-t-accent" />
                                 Cargando cursos...
                             </div>
                         ) : error ? (
@@ -180,7 +180,7 @@ export default function CursosPageClient() {
                         ) : (
                             <div className="mt-4 overflow-x-auto">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="border-b border-slate-200 dark:border-slate-800">
+                                    <thead className="border-b border-tinta/10">
                                         <tr className="text-subtle">
                                             <th className="pb-3 font-medium">Nombre</th>
                                             <th className="pb-3 font-medium">Grado</th>
@@ -189,7 +189,7 @@ export default function CursosPageClient() {
                                             <th className="pb-3 font-medium text-right">Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <tbody className="divide-y divide-tinta/10">
                                         {cursos.map((curso) => (
                                             <tr key={curso.id} className="align-top">
                                                 <td className="py-3 pr-3 font-medium text-body">

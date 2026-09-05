@@ -56,7 +56,7 @@ export function SeccionComparativa({ comparativa, onCambiarCriterio }: SeccionCo
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
-                            <tr className="border-b border-emerald-100 dark:border-emerald-900/30">
+                            <tr className="border-b border-pino/20">
                                 <th className="py-3 pr-4 font-semibold text-subtle">{criterio === "grado" ? "Grado" : "Año lectivo"}</th>
                                 <th className="py-3 pr-4 text-right font-semibold text-subtle">Cursos</th>
                                 <th className="py-3 pr-4 text-right font-semibold text-subtle">Estudiantes</th>
@@ -67,7 +67,7 @@ export function SeccionComparativa({ comparativa, onCambiarCriterio }: SeccionCo
                         </thead>
                         <tbody>
                             {comparativa.grupos.map((grupo) => (
-                                <tr key={grupo.grupo} className="border-b border-emerald-50 dark:border-emerald-950/20 last:border-b-0">
+                                <tr key={grupo.grupo} className="border-b border-pino/10 last:border-b-0">
                                     <td className="py-3 pr-4 text-body">{grupo.grupo}</td>
                                     <td className="py-3 pr-4 text-right text-body">{grupo.cursos}</td>
                                     <td className="py-3 pr-4 text-right text-body">{grupo.estudiantes}</td>

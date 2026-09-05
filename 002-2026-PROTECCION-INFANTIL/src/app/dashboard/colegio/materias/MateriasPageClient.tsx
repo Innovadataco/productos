@@ -178,7 +178,7 @@ export default function MateriasPageClient() {
                                             <th className="pb-3 font-medium text-right">Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <tbody className="divide-y divide-tinta/10">
                                         {materias.map((materia) => (
                                             <tr key={materia.id} className="align-top">
                                                 <td className="py-3 pr-3 font-medium text-body">{materia.nombre}</td>

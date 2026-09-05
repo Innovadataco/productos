@@ -473,4 +473,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/rediseno/padre-sidenav-cielo.candado.test.ts",
     // SPEC-481 (bug prod): profesional sin PerfilProfesional → redirect a completar, no 500 (mockea auth/service/redirect, sin BD).
     "src/app/dashboard/profesional/profesional-sin-perfil.candado.test.tsx",
+    // SPEC-482 (Lote-2): el territorio colegio sin color crudo — emerald/slate/gray/amber → tokens (excl. pdf-informe-mensual).
+    "src/lib/rediseno/colegio-sin-crudo.candado.test.ts",
 ];

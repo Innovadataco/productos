@@ -17,7 +17,7 @@ export function TablaDesgloseCursos({ cursos }: TablaDesgloseCursosProps) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead>
-                            <tr className="border-b border-emerald-100 dark:border-emerald-900/30">
+                            <tr className="border-b border-pino/20">
                                 <th className="py-3 pr-4 font-semibold text-subtle">Curso</th>
                                 <th className="py-3 pr-4 font-semibold text-subtle">Grado</th>
                                 <th className="py-3 pr-4 text-right font-semibold text-subtle">Estudiantes</th>
@@ -27,7 +27,7 @@ export function TablaDesgloseCursos({ cursos }: TablaDesgloseCursosProps) {
                         </thead>
                         <tbody>
                             {cursos.map((curso) => (
-                                <tr key={curso.cursoId} className="border-b border-emerald-50 dark:border-emerald-950/20 last:border-b-0">
+                                <tr key={curso.cursoId} className="border-b border-pino/10 last:border-b-0">
                                     <td className="py-3 pr-4 text-body">{curso.nombre}</td>
                                     <td className="py-3 pr-4 text-muted">{curso.grado ?? "—"}</td>
                                     <td className="py-3 pr-4 text-right text-body">{curso.alumnos}</td>

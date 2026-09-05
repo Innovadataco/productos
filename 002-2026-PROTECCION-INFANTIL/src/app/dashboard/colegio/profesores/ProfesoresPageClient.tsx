@@ -397,7 +397,7 @@ export default function ProfesoresPageClient() {
                                                 <span className="inline-flex flex-wrap justify-end gap-2">
                                                     <a
                                                         href={`/dashboard/colegio/profesores/${profesor.id}`}
-                                                        className="inline-flex min-h-12 items-center justify-center rounded-xl border bg-white/80 px-3 text-xs font-semibold text-body transition-all duration-200 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800"
+                                                        className="inline-flex min-h-12 items-center justify-center rounded-xl border bg-tinta/5 px-3 text-xs font-semibold text-body transition-all duration-200 hover:bg-tinta/10"
                                                     >
                                                         Ficha
                                                     </a>
