@@ -105,10 +105,10 @@ export function LandingHero({
     const resultado = data as ResultadoConsulta | null;
 
     return (
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/30 dark:border-white/10 bg-gradient-to-br from-sky-500 to-cyan-600 dark:from-sky-600 dark:to-cyan-700 px-6 py-14 text-white shadow-2xl shadow-sky-500/15 dark:shadow-cyan-900/30 sm:py-20">
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/30 dark:border-white/10 bg-gradient-to-br from-cielo to-pino px-6 py-14 text-white shadow-2xl shadow-tinta/20 sm:py-20">
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl animate-pulseSlow" />
-                <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-cyan-300/20 blur-3xl animate-pulseSlow" style={{ animationDelay: "1.5s" }} />
+                <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-pino/30 blur-3xl animate-pulseSlow" style={{ animationDelay: "1.5s" }} />
             </div>
 
             <div className="relative mx-auto max-w-5xl text-center">
@@ -116,40 +116,43 @@ export function LandingHero({
                     <ShieldIcon className="h-8 w-8 text-white" />
                 </div>
 
-                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-                    Protege a quienes más importan
+                {/* SPEC-456 · voz serif, en «tú», sin jerga (P-2/P-3). El titular va en
+                    Instrument Serif como el resto del producto; la bajada le habla a un
+                    padre asustado, no a un inversionista. */}
+                <h1 className="font-serif text-4xl font-normal tracking-tight sm:text-5xl lg:text-6xl">
+                    Si algo le pasa a tu hijo en internet, empieza acá
                 </h1>
-                <p className="mx-auto mt-5 max-w-2xl text-base text-sky-50 sm:text-lg leading-relaxed">
-                    Consulta y reporta identificadores asociados a conductas de riesgo para menores en plataformas digitales.
-                    De forma gratuita, con o sin cuenta.
+                <p className="mx-auto mt-5 max-w-2xl text-base text-white/90 sm:text-lg leading-relaxed">
+                    Cuéntanos qué viste. Nosotros lo revisamos y te ayudamos a entenderlo.
+                    Anónimo o con cuenta — nadie más lo ve hasta que tú decidas.
                 </p>
 
                 <div className="mt-10 grid gap-4 sm:grid-cols-[1fr_1.25fr]">
-                    <div className="flex flex-col items-start rounded-3xl bg-white p-6 text-left shadow-xl shadow-sky-900/10 sm:p-8">
-                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
+                    <div className="flex flex-col items-start rounded-3xl bg-white p-6 text-left shadow-xl shadow-tinta/10 sm:p-8">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cielo/10 text-cielo">
                             <FlagIcon className="h-6 w-6" />
                         </div>
-                        <span className="text-xl font-bold text-sky-700 sm:text-2xl">Crear un reporte</span>
-                        <span className="mt-1 text-sm font-medium text-sky-600/90">Elige cómo deseas reportar</span>
+                        <span className="text-xl font-bold text-body sm:text-2xl">Crear un reporte</span>
+                        <span className="mt-1 text-sm font-medium text-muted">Elige cómo deseas reportar</span>
                         <div className="mt-5 flex w-full flex-col gap-3">
                             <Link
                                 href="/reportar"
-                                className="group inline-flex items-center justify-center gap-2 rounded-2xl accent-gradient px-5 py-3 text-sm font-bold text-white shadow-lg shadow-sky-500/25 transition hover:brightness-110"
+                                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl accent-gradient px-5 py-3 text-sm font-bold text-white shadow-lg shadow-cielo/25 transition hover:brightness-110"
                             >
                                 <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
                                 Reportar anónimo
                             </Link>
                             <Link
                                 href="/login?redirect=/reportar"
-                                className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-3 text-sm font-bold text-sky-700 transition hover:bg-sky-100"
+                                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cielo/30 bg-cielo/5 px-5 py-3 text-sm font-bold text-cielo transition hover:bg-cielo/10"
                             >
                                 <UserIcon className="h-5 w-5" aria-hidden="true" />
                                 Reportar con mi cuenta
                             </Link>
 
                             {/* Spec 091-B: re-consulta del propio reporte, discreta, dentro de la tarjeta */}
-                            <form onSubmit={irASeguimiento} className="mt-4 border-t border-sky-200/60 pt-4">
-                                <label htmlFor="rpt-input" className="text-xs font-medium text-sky-700">
+                            <form onSubmit={irASeguimiento} className="mt-4 border-t border-cielo/20 pt-4">
+                                <label htmlFor="rpt-input" className="text-xs font-medium text-body">
                                     ¿Ya reportaste? Consulta el estado de tu reporte
                                 </label>
                                 <div className="mt-1.5 flex gap-2">
@@ -159,12 +162,12 @@ export function LandingHero({
                                         value={rpt}
                                         onChange={(e) => setRpt(e.target.value)}
                                         placeholder="RPT-XXXXXX"
-                                        className="w-full rounded-xl border border-sky-200 bg-white/80 px-3 py-2 text-sm text-sky-900 placeholder:text-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                        className="min-h-12 w-full rounded-xl border border-cielo/30 bg-white/80 px-3 py-2 text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-cielo"
                                     />
                                     <button
                                         type="submit"
                                         disabled={!rpt.trim()}
-                                        className="rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-700 disabled:opacity-50"
+                                        className="min-h-12 rounded-xl bg-cielo px-4 py-2 text-xs font-bold text-white transition hover:brightness-110 disabled:opacity-50"
                                     >
                                         Ver estado
                                     </button>
@@ -193,7 +196,7 @@ export function LandingHero({
                                 )}
 
                                 {error && (
-                                    <p className="rounded-xl bg-red-500/20 px-4 py-3 text-sm text-white">{error}</p>
+                                    <p className="rounded-xl bg-rubi/30 px-4 py-3 text-sm text-white">{error}</p>
                                 )}
 
                                 {!isLoading && buscado && !error && !resultado?.tieneReportes && (

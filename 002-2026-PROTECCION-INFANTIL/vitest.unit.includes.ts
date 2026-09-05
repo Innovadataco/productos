@@ -65,6 +65,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/ModalConsentimiento.test.tsx",
     // SPEC-455: gráficas en tokens + dashboard público sin rojo de alarma (fuente, sin BD).
     "src/components/modules/graficas-y-mapa-sin-alarma.candado.test.ts",
+    // SPEC-456: portada — canales oficiales arriba + hero en tokens + voz sin jerga (fuente, sin BD).
+    "src/components/modules/portada-sin-alarma.candado.test.ts",
     // SPEC-343 (I-232): candado — los documentos legales servidos no contienen notas internas.
     "src/lib/legal/documentos-servidos.test.ts",
     // SPEC-326 §3.1: vista de notificaciones del padre en frases (sin BD, mock fetch).
