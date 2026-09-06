@@ -69,7 +69,7 @@ describe("HomeRectorPage", () => {
     it("estado PENDIENTE (≥1 nueva, D-120: ámbar): urgencia «actúe hoy» con CTA", () => {
         render(<HomeRectorPage nombreUsuario="X" datos={fixture({ semaforo: { alertasNuevas: 2, alertas72h: 2 } })} />);
         expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("necesita que actúe hoy");
-        const ctas = screen.getAllByRole("link", { name: /Ver avisos nuevos/ });
+        const ctas = screen.getAllByRole("link", { name: /Ver alertas/ });
         expect(ctas.length).toBeGreaterThanOrEqual(1);
         for (const cta of ctas) expect(cta.getAttribute("href")).toBe("/dashboard/colegio/alertas");
     });

@@ -1,6 +1,6 @@
 /**
  * SPEC-158 (T004, US1) — EmbudoEstado: cuatro cifras del embudo sin solapes,
- * "le esperan" (SPEC-551: usted) destacado con enlace a los avisos cuando hay pendientes y
+ * "le esperan" (SPEC-551: usted) destacado con enlace a las alertas cuando hay pendientes y
  * copy positivo cuando no hay nada (la calma también se muestra).
  */
 import React from "react";
@@ -19,9 +19,9 @@ describe("EmbudoEstado", () => {
         expect(seccion.textContent).toContain("5");
     });
 
-    it("con pendientes: destaca rubí y termina en verbo (enlace a los avisos)", () => {
+    it("con pendientes: destaca rubí y termina en verbo (enlace a las alertas)", () => {
         render(<EmbudoEstado embudo={{ recibidos: 5, cerrados: 2, enRevision: 1, teEsperan: 2 }} />);
-        const enlace = screen.getByRole("link", { name: /Ver avisos nuevos/ });
+        const enlace = screen.getByRole("link", { name: /Ver alertas/ });
         expect(enlace.getAttribute("href")).toBe("/dashboard/colegio/alertas");
         expect(enlace.className).toContain("min-h-12"); // tap target ≥ 48px
         expect(document.querySelector('[data-estado-esperan="pendiente"]')).toBeTruthy();
@@ -30,7 +30,7 @@ describe("EmbudoEstado", () => {
     it("sin pendientes: copy positivo y sin enlace de acción", () => {
         render(<EmbudoEstado embudo={{ recibidos: 3, cerrados: 2, enRevision: 1, teEsperan: 0 }} />);
         expect(screen.getByText(/Nada te espera — la vigilancia sigue activa/)).toBeTruthy();
-        expect(screen.queryByRole("link", { name: /Ver avisos nuevos/ })).toBeNull();
+        expect(screen.queryByRole("link", { name: /Ver alertas/ })).toBeNull();
         expect(document.querySelector('[data-estado-esperan="al-dia"]')).toBeTruthy();
     });
 

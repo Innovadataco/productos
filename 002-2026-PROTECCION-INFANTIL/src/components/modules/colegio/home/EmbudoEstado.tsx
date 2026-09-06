@@ -61,7 +61,9 @@ export function EmbudoEstado({ embudo, className = "" }: EmbudoEstadoProps) {
                     href="/dashboard/colegio/alertas"
                     className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
                 >
-                    Ver avisos nuevos →
+                    {/* SPEC-561: «Ver alertas» —nombra la sección (el nav dice «Alertas») y evita
+                        confundir «avisos» con «Notificaciones» (CO-14); un destino, un rótulo. */}
+                    Ver alertas →
                 </Link>
             ) : (
                 <p className="cuerpo mt-5 text-muted">Nada te espera — la vigilancia sigue activa.</p>
