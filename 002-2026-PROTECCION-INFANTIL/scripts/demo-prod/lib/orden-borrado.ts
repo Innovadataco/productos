@@ -13,6 +13,9 @@
 export const ORDEN_BORRADO: string[] = [
     "AuditLog",
     "Reporte",
+    // SPEC-516: el identificador visible de PA-16 se crea sin Reporte propio, así
+    // que ni la fase reporte-derivada ni la fase 4 lo levantan; se borra por marca.
+    "IdentificadorReportado",
     "IdentificadorContacto",
     "ContactoConfianza",
     "AlertaSuscripcion",

@@ -15,6 +15,7 @@ import { hashDemoPassword, getDemoPassword } from "./lib/password";
 import { hashIdentificacion } from "@/lib/hash-identificacion";
 import { CORRIDA, VOLUMEN_COMPLETO, VOLUMEN_MINIMO, FRACCION_ANONIMOS } from "./lib/config";
 import { ESTADO_PERFIL_DEMO, REVISADO_HACE_DIAS, NUM_FRANJAS_DEMO, verificacionDemo } from "./lib/profesional-demo";
+import { sembrarDesbloqueoCalidad } from "./desbloqueo-calidad";
 import {
     nombreColegio,
     nombrePersona,
@@ -687,6 +688,38 @@ async function main() {
     }
 
     // ------------------------------------------------------------------
+    // Fase 6-bis (SPEC-516): siembra de desbloqueo de Calidad (comité de
+    // convivencia + casos, caso escalado + expediente, identificador visible,
+    // reporte clasificado y caso escalable).
+    // ------------------------------------------------------------------
+    const colegioBase = resumen.colegios[0];
+    const padreBase = padres[0];
+    const operadorBase = operadoresIds[0];
+    let desbloqueoEmail: string | null = null;
+    if (colegioBase && padreBase && operadorBase) {
+        console.log("[sembrar-demo] Fase 6-bis (SPEC-516): desbloqueo de Calidad...");
+        const desbloqueo = await sembrarDesbloqueoCalidad({
+            adminId: admin.id,
+            colegioId: colegioBase.id,
+            tenantId: colegioBase.tenantId,
+            padreId: padreBase.id,
+            comiteValidacionId: comite.id,
+            operadorId: operadorBase,
+            plataformaId: plataforma.id,
+            paisId: pais.id,
+            ciudadId: ciudad.id,
+            passwordHash,
+        });
+        desbloqueoEmail = desbloqueo.comiteConvivenciaEmail;
+        console.log(
+            `[sembrar-demo]   · comité convivencia + ${desbloqueo.integrantesConvivencia} integrantes · ` +
+                `${desbloqueo.solicitudesColegio} casos colegio · ${desbloqueo.solicitudesEscaladas} escaladas · ` +
+                `${desbloqueo.expedientes} expediente(+informe+aclaración) · ${desbloqueo.identificadoresVisibles} ident. visible · ` +
+                `${desbloqueo.reportesClasificados} clasificado · ${desbloqueo.casosEscalables} escalable`,
+        );
+    }
+
+    // ------------------------------------------------------------------
     // Fase 7: audit final + credenciales + resumen
     // ------------------------------------------------------------------
     await auditarDemo("EXPERIMENT_COMPLETE", undefined, admin.id, undefined, { corrida: CORRIDA, fase: "fin" });
@@ -704,6 +737,9 @@ async function main() {
                 password,
             })),
             { email: comiteEmail, rol: "COMITE_VALIDACION" as const, password },
+            ...(desbloqueoEmail
+                ? [{ email: desbloqueoEmail, rol: "COMITE_CONVIVENCIA" as const, password }]
+                : []),
             { email: profEmail, rol: "PROFESIONAL" as const, password },
             { email: profSinPerfilEmail, rol: "PROFESIONAL" as const, password },
             ...padres.map((p) => ({ email: p.email, rol: "PARENT" as const, password })),
