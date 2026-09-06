@@ -4,7 +4,14 @@
  * y tab "Clasificación" por query param. Sin BD.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within, configure } from "@testing-library/react";
+
+// SPEC-554: el presupuesto por defecto de 1000 ms de waitFor/findBy se agota bajo
+// CARGA de CI (varios forks + coverage instrumentando), no porque la condición no
+// se cumpla — es determinista: el texto aparece cuando resuelve el fetch mockeado.
+// Subir el presupuesto elimina el falso rojo de reloj de pared SIN aflojar ninguna
+// aserción (seguimos esperando la MISMA condición exacta, solo con más margen).
+configure({ asyncUtilTimeout: 5000 });
 import { OperacionTableroClient } from "@/app/dashboard/admin/estadisticas/operacion/OperacionTableroClient";
 
 const nav = vi.hoisted(() => ({ tab: null as string | null, replace: vi.fn() }));

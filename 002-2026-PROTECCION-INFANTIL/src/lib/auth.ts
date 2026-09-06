@@ -59,10 +59,17 @@ export async function verifyPassword(
 }
 
 export async function createToken(payload: Record<string, unknown>): Promise<string> {
+    // SPEC-554: `iat` y `exp` derivan de UN SOLO instante. Antes `setIssuedAt()` y
+    // `setExpirationTime("Xh")` leían el reloj por separado; si un segundo cruzaba
+    // entre ambas lecturas, `exp - iat` daba `ttl ± 1` (p. ej. 86401 vs 86400) — un
+    // falso rojo del reloj de pared. Con un `iat` fijo el TTL es EXACTO siempre, en
+    // producción y en test, sin depender de congelar el reloj.
+    const ttlSegundos = await obtenerJwtTtlSegundos();
+    const iat = Math.floor(Date.now() / 1000);
     return new SignJWT(payload)
         .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt()
-        .setExpirationTime(`${(await obtenerJwtTtlSegundos()) / 3600}h`)
+        .setIssuedAt(iat)
+        .setExpirationTime(iat + ttlSegundos)
         .sign(getSecret());
 }
 
