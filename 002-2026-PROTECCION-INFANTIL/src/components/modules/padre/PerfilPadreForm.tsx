@@ -6,6 +6,17 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { Cargando } from "@/components/ui/Cargando";
+import { EDAD_MIN_PADRE, EDAD_MAX_PADRE } from "@/lib/padre/fecha-nacimiento-padre";
+
+// SPEC-541: min/max del input de fecha de nacimiento (18–100 años), en UTC para
+// casar con la validación del servidor. El servidor sigue siendo la defensa real;
+// esto solo tapa el caso amable (Calidad · el input no tenía min/max).
+function fechaHaceAnios(anios: number): string {
+    const hoy = new Date();
+    return new Date(Date.UTC(hoy.getUTCFullYear() - anios, hoy.getUTCMonth(), hoy.getUTCDate()))
+        .toISOString()
+        .slice(0, 10);
+}
 
 type PaisOption = { id: string; nombre: string };
 
@@ -160,7 +171,14 @@ export function PerfilPadreForm({
                 />
                 <Input label="Número de documento" value={documentoNumero} onChange={(e) => setDocumentoNumero(e.target.value)} placeholder="Sin puntos ni espacios" />
                 {!esCamino && (
-                    <Input label="Fecha de nacimiento" type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
+                    <Input
+                        label="Fecha de nacimiento"
+                        type="date"
+                        value={fechaNacimiento}
+                        min={fechaHaceAnios(EDAD_MAX_PADRE)}
+                        max={fechaHaceAnios(EDAD_MIN_PADRE)}
+                        onChange={(e) => setFechaNacimiento(e.target.value)}
+                    />
                 )}
                 <Input label="Teléfono" type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. +57 300 123 4567" />
                 <Select
