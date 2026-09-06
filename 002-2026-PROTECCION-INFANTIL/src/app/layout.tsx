@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { PieGlobal } from "@/components/modules/PieGlobal";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
+import { AvisoVersionNueva } from "@/components/modules/version/AvisoVersionNueva";
 
 // SPEC-157 (D1/D3): un solo mecanismo — next/font/local con woff2 vendoreados en
 // public/fonts (latin + latin-ext, SIL OFL). Cero descargas de Google en build/runtime.
@@ -110,6 +111,8 @@ export default function RootLayout({
                             en todas las pantallas, cortas o largas. */}
                         <div className="flex-1">{children}</div>
                         <PieGlobal />
+                        {/* SPEC-548 (I-337): aviso de version nueva, toast discreto que no bloquea. */}
+                        <AvisoVersionNueva />
                     </AuthProvider>
                 </ThemeProvider>
             </body>

@@ -57,6 +57,12 @@ export const GUARDIAS_ACCESO = {
         // alcanzable sin cuenta o el sello no cumple su función.
         "/verificar",
         "/api/health",
+        // SPEC-548 (I-337): sello de versión del build para el motor de detección
+        // de despliegue del cliente. Público a propósito — el toast «hay versión
+        // nueva» vive en el layout raíz (todas las pantallas, con o sin sesión), y
+        // el SHA ya se sirve en el pie global. Sin este exento, el fetch responde
+        // 401 en las páginas públicas y el aviso nunca aparece ahí.
+        "/api/version",
         // SPEC-302 (002-PI-208): señal de monitoreo del motor de notificaciones,
         // mismo trato que /api/health — consumida por curl externo (tabla §6b).
         "/api/monitor/notif",
