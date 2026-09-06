@@ -95,6 +95,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-511 (CEO): resto visual del flujo del reporte — detalle + seguimiento sin
     // color crudo (estado/neutro por token) + wizard con Skeleton, no spinner de página.
     "src/components/modules/flujo-reporte-forma.candado.test.ts",
+    // SPEC-530 (CEO): color crudo interno — Comité + expediente admin, 0 crudo por token.
+    "src/components/modules/crudo-comite-expediente.candado.test.ts",
     // SPEC-343 (I-232): candado — los documentos legales servidos no contienen notas internas.
     "src/lib/legal/documentos-servidos.test.ts",
     // SPEC-326 §3.1: vista de notificaciones del padre en frases (sin BD, mock fetch).
