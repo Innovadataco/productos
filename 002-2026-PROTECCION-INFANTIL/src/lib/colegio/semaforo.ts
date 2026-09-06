@@ -1,22 +1,40 @@
 /**
- * SPEC-143 (D1, aprobada por ZEUS 2026-08-03) — Regla del semáforo de la home del
- * rector, como función pura:
- *   rubí  = ≥1 alerta en estado "nueva" (sin gestionar)
- *   ámbar = 0 nuevas pero ≥1 alerta en las últimas 72 horas
- *   pino  = el resto
- * 72 h (no 7 días): el estado decae solo y no hay fatiga de alarma.
- * CONDICIÓN DE COPY: en ámbar la interfaz dice explícitamente que ya está atendido
- * ("hubo algo y ya lo atendiste") — nunca se lee como trabajo pendiente.
+ * SPEC-143 (D1) → SPEC-560 (D-120, ratificada por el CEO) — Regla del estado de la
+ * home del rector, como función pura.
+ *
+ * D-120 DEROGA la D1 de SPEC-143: el ámbar significa ATENCIÓN / acción pendiente en
+ * todo el producto; lo ya atendido va en pino. El rubí queda SOLO para la alerta
+ * específica de alto riesgo en su tarjeta — nunca en un hero-resumen.
+ *
+ * El estado se nombra por su SEMÁNTICA (PENDIENTE / ATENDIDO / TRANQUILO), no por su
+ * color: así el color deja de ser el contrato y cambiarlo no revive D1. La traducción
+ * a color vive en `colorDeEstadoColegio` (única fuente del color del estado):
+ *   PENDIENTE (alertasNuevas>0)  → ámbar  (hay que actuar)
+ *   ATENDIDO  (alertas72h>0)     → pino   (reciente, ya atendido: al día)
+ *   TRANQUILO (ninguna)          → pino   (sin novedad)
  */
 import type { EstadoSistema } from "@/components/ui/Anillo";
+
+export type EstadoColegio = "PENDIENTE" | "ATENDIDO" | "TRANQUILO";
 
 export interface ConteosSemaforo {
     alertasNuevas: number;
     alertas72h: number;
 }
 
-export function resolverEstado({ alertasNuevas, alertas72h }: ConteosSemaforo): EstadoSistema {
-    if (alertasNuevas > 0) return "rubi";
-    if (alertas72h > 0) return "ambar";
-    return "pino";
+export function resolverEstado({ alertasNuevas, alertas72h }: ConteosSemaforo): EstadoColegio {
+    if (alertasNuevas > 0) return "PENDIENTE";
+    if (alertas72h > 0) return "ATENDIDO";
+    return "TRANQUILO";
+}
+
+/** Único lugar donde el estado del colegio se traduce a color (D-120: nunca rubí). */
+export function colorDeEstadoColegio(estado: EstadoColegio): EstadoSistema {
+    switch (estado) {
+        case "PENDIENTE":
+            return "ambar";
+        case "ATENDIDO":
+        case "TRANQUILO":
+            return "pino";
+    }
 }
