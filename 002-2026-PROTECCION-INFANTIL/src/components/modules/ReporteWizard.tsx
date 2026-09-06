@@ -7,6 +7,7 @@ import { ReporteStepConfirmar } from "./ReporteStepConfirmar";
 import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { ReporteBloqueoRol } from "./ReporteBloqueoRol";
 import { Button } from "@/components/ui/Button";
+import { SkeletonContainer, SkeletonText } from "@/components/ui/Skeleton";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
 import { tomarHandoffReportar, guardarBorradorReporte, leerBorradorReporte, borrarBorradorReporte } from "@/lib/reportar-handoff";
 
@@ -201,10 +202,12 @@ export function ReporteWizard({
 
     if (checkingSession) {
         return (
-            <div className="mx-auto max-w-xl rounded-2xl border border-tinta/10 bg-papel/70 p-8 text-center backdrop-blur-xl">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-tinta/10 border-t-accent" />
-                <p className="mt-3 text-sm text-muted">Verificando sesión...</p>
-            </div>
+            <SkeletonContainer
+                label="Verificando sesión…"
+                className="mx-auto max-w-xl rounded-2xl border border-tinta/10 bg-papel/70 p-8 backdrop-blur-xl"
+            >
+                <SkeletonText lines={4} />
+            </SkeletonContainer>
         );
     }
 

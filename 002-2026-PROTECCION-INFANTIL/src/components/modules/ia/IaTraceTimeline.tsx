@@ -113,7 +113,7 @@ export function IaTraceTimeline({ trace }: IaTraceTimelineProps) {
                 <div className="flex flex-wrap gap-2">
                     {guardas.doxing.esDoxing && <Badge variant="danger">DOXING</Badge>}
                     {guardas.keywords.tieneMatch && <Badge variant="danger">Keywords críticas</Badge>}
-                    {guardas.prioridadAlta && <Badge variant="warning">Prioridad alta</Badge>}
+                    {guardas.prioridadAlta && <Badge variant="danger">Prioridad alta</Badge>}
                     {guardas.rafaga.esRafaga && <Badge variant="danger">Ráfaga</Badge>}
                     {!guardas.doxing.esDoxing && !guardas.keywords.tieneMatch && !guardas.rafaga.esRafaga && (
                         <Badge variant="success">Ninguna guarda activa</Badge>
