@@ -2582,7 +2582,10 @@ model ModuloPermisible {
 
 model PermisoModulo {
   id               String   @id @default(cuid())
-  rol              String
+  // SPEC-509: rol como enum (antes String libre). Un rol mal escrito ya no crea
+  // un grant muerto silencioso: la BD lo rechaza. La tabla NO se publica a BI, así
+  // que el enum no exige coordinar la réplica.
+  rol              RolUsuario
   moduloId         String
   activo           Boolean  @default(false)
   actualizadoPorId String?
@@ -2592,8 +2595,9 @@ model PermisoModulo {
   modulo         ModuloPermisible @relation(fields: [moduloId], references: [id], onDelete: Cascade)
   actualizadoPor Usuario?         @relation(fields: [actualizadoPorId], references: [id])
 
+  // SPEC-509: `@@unique([rol, moduloId])` ya indexa el prefijo `rol`; se retira el
+  // `@@index([rol])` redundante (T-1 de la auditoría del modelo).
   @@unique([rol, moduloId])
-  @@index([rol])
 }
 
 model ClasificacionRubricaVoto {

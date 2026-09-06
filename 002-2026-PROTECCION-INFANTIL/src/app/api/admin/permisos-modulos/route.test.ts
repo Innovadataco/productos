@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { RolUsuario } from "@prisma/client";
 import { GET, PATCH } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -13,7 +14,8 @@ async function crearModulo(clave: string, esCritico = false) {
 }
 
 async function seedPermiso(rol: string, moduloId: string, activo: boolean) {
-    return prisma.permisoModulo.create({ data: { rol, moduloId, activo } });
+    // SPEC-509: `rol` es enum en la columna; el helper acepta string y castea.
+    return prisma.permisoModulo.create({ data: { rol: rol as RolUsuario, moduloId, activo } });
 }
 
 function patchReq(cambios: unknown) {
@@ -73,7 +75,9 @@ describe("/api/admin/permisos-modulos", () => {
         const body = await res.json();
         expect(body.error.message).toContain("ADMN");
 
-        const filas = await prisma.permisoModulo.findMany({ where: { rol: "ADMN" } });
+        // SPEC-509: no se creó fila fantasma para ese módulo (antes se consultaba
+        // `where rol:"ADMN"`, hoy incompilable — el enum lo impide en tipo y en BD).
+        const filas = await prisma.permisoModulo.findMany({ where: { moduloId: modulo.id } });
         expect(filas).toHaveLength(0);
     });
 

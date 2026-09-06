@@ -13,14 +13,18 @@ export async function puedeAccederAModulo(rol: string, clave: string): Promise<b
     const modulo = await prisma.moduloPermisible.findUnique({ where: { clave } });
     if (!modulo) return false;
 
+    // SPEC-509: `rol` llega como string (p. ej. del JWT); la columna es enum
+    // `RolUsuario`. El cast es seguro (el rol se fija en login desde Usuario.rol,
+    // que YA es RolUsuario). En lectura, un rol inexistente no matchea (Set vacío);
+    // la integridad la impone la BD en la ESCRITURA.
     const propio = await prisma.permisoModulo.findUnique({
-        where: { rol_moduloId: { rol, moduloId: modulo.id } },
+        where: { rol_moduloId: { rol: rol as RolUsuario, moduloId: modulo.id } },
     });
     if (propio?.activo !== true) return false;
 
     if (modulo.padreId) {
         const padre = await prisma.permisoModulo.findUnique({
-            where: { rol_moduloId: { rol, moduloId: modulo.padreId } },
+            where: { rol_moduloId: { rol: rol as RolUsuario, moduloId: modulo.padreId } },
         });
         return padre?.activo === true;
     }
@@ -33,7 +37,7 @@ export async function puedeAccederAModulo(rol: string, clave: string): Promise<b
  */
 export async function modulosPermitidosParaRol(rol: string): Promise<Set<string>> {
     const [permisos, modulos] = await Promise.all([
-        prisma.permisoModulo.findMany({ where: { rol }, select: { moduloId: true, activo: true } }),
+        prisma.permisoModulo.findMany({ where: { rol: rol as RolUsuario }, select: { moduloId: true, activo: true } }),
         prisma.moduloPermisible.findMany({ select: { id: true, clave: true, padreId: true } }),
     ]);
     const activoPorModulo = new Map(permisos.map((p) => [p.moduloId, p.activo]));
@@ -81,17 +85,14 @@ export async function assertAnyModulo<T extends { rol: string }>(user: T, claves
 }
 
 /**
- * Roles conocidos: los del enum RolUsuario más cualquier rol que ya tenga filas
- * en PermisoModulo (así se absorben roles futuros sin refactor, pero un typo
- * en un PATCH devuelve error en lugar de crear una fila fantasma).
+ * Roles conocidos = los del enum `RolUsuario`. SPEC-509: antes esta función
+ * también sumaba los rols DISTINTOS presentes en `PermisoModulo` para «absorber
+ * roles futuros sin refactor». Con `PermisoModulo.rol` ya como enum, la BD no
+ * admite ningún valor fuera de `RolUsuario`: la unión con los datos era redundante
+ * (todo rol vive en el enum) y se retira.
  */
 export async function rolesConocidos(): Promise<string[]> {
-    const delEnum = Object.values(RolUsuario) as string[];
-    const enDatos = await prisma.permisoModulo.findMany({
-        select: { rol: true },
-        distinct: ["rol"],
-    });
-    return [...new Set([...delEnum, ...enDatos.map((r) => r.rol)])];
+    return Object.values(RolUsuario) as string[];
 }
 
 export async function obtenerRolesProtegidos(): Promise<string[]> {
