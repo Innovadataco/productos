@@ -360,10 +360,10 @@ export default function CompletarPerfilProfesionalPage() {
                 {/* SPEC-436 (I-304): los requisitos que el Verificador va a revisar.
                     La lista sale del parámetro, no de una constante. */}
                 <div className="mt-8 border-t border-tinta/10 pt-6">
-                    <h2 className="text-lg font-semibold text-body">Documentos para tu verificación</h2>
+                    <h2 className="text-lg font-semibold text-body">Documentos para su verificación</h2>
                     <p className="mt-1 text-sm text-muted">
                         Estos son los documentos que revisa Innovadataco antes de activarte. Se guardan
-                        cifrados, igual que la autorización, y solo los abre quien revisa tu solicitud.
+                        cifrados, igual que la autorización, y solo los abre quien revisa su solicitud.
                     </p>
                     <div className="mt-4">
                         <DocumentosRequisitos />

@@ -48,11 +48,11 @@ export default function CrearClaveProfesionalPage({ params }: { params: Promise<
             }
             if (!res.ok) {
                 const json = await res.json().catch(() => null);
-                throw new Error(json?.error?.message || "No pudimos crear tu cuenta. Intente de nuevo.");
+                throw new Error(json?.error?.message || "No pudimos crear su cuenta. Intente de nuevo.");
             }
             router.push("/perfil-profesional/completar");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "No pudimos crear tu cuenta. Intente de nuevo.");
+            setError(err instanceof Error ? err.message : "No pudimos crear su cuenta. Intente de nuevo.");
         } finally {
             setEnviando(false);
         }
@@ -63,7 +63,7 @@ export default function CrearClaveProfesionalPage({ params }: { params: Promise<
             <div className="w-full max-w-md animate-fadeIn">
                 <div className="mb-6 text-center">
                     <h1 className="font-serif text-3xl text-body">Elija su contraseña</h1>
-                    <p className="mt-2 text-sm text-muted">Con esto queda lista tu cuenta y armás tu perfil.</p>
+                    <p className="mt-2 text-sm text-muted">Con esto queda lista su cuenta y arma su perfil.</p>
                 </div>
 
                 <GlassCard>
@@ -80,7 +80,7 @@ export default function CrearClaveProfesionalPage({ params }: { params: Promise<
                             <p className="text-sm text-muted">
                                 ¿Ya tiene cuenta?{" "}
                                 <Link href="/login" className="font-medium text-accent hover:underline">
-                                    Iniciá sesión
+                                    Inicie sesión
                                 </Link>
                             </p>
                         </div>

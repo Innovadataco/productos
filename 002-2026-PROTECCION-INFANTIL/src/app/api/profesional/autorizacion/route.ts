@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         const perfil = await repo.findPorUsuarioId(user.id);
         if (!perfil) {
             return NextResponse.json(
-                { error: { message: "Completa tu perfil antes de subir la autorización.", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: "Complete su perfil antes de subir la autorización.", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }

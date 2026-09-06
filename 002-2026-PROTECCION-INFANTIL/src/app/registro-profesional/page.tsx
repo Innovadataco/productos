@@ -79,7 +79,7 @@ export default function RegistroProfesionalPage() {
                                 Sumate a la Red de Profesionales.
                             </h1>
                             <p className="mt-2 text-sm text-muted">
-                                Dejanos tu correo y te enviamos un enlace para crear tu cuenta.
+                                Déjenos su correo y le enviamos un enlace para crear su cuenta.
                                 Después completa su perfil y sube su autorización.
                             </p>
                         </div>
@@ -87,7 +87,7 @@ export default function RegistroProfesionalPage() {
                         <GlassCard>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <Input
-                                    label="Tu correo"
+                                    label="Su correo"
                                     type="email"
                                     placeholder="tucorreo@ejemplo.com"
                                     autoComplete="email"
@@ -108,17 +108,17 @@ export default function RegistroProfesionalPage() {
                         <p className="mt-4 text-center text-sm text-muted">
                             ¿Ya tiene cuenta?{" "}
                             <Link href="/login" className="font-medium text-accent hover:underline">
-                                Iniciá sesión
+                                Inicie sesión
                             </Link>
                         </p>
                     </>
                 ) : (
                     <>
                         <div className="mb-6 text-center">
-                            <h1 className="font-serif text-3xl text-body">Te escribimos</h1>
+                            <h1 className="font-serif text-3xl text-body">Le escribimos</h1>
                             <p className="mt-2 text-sm text-muted">
                                 Enviamos un enlace a <strong className="text-body">{email}</strong>.
-                                Abrilo y creá tu contraseña.
+                                Ábralo y cree su contraseña.
                             </p>
                         </div>
 
@@ -130,7 +130,7 @@ export default function RegistroProfesionalPage() {
                                 </p>
                                 {reenviado && (
                                     <Alerta tono="exito" className="text-center">
-                                        Listo, te lo enviamos de nuevo.
+                                        Listo, se lo enviamos de nuevo.
                                     </Alerta>
                                 )}
                                 {error && (
