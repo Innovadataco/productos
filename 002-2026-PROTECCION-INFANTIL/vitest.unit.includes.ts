@@ -549,4 +549,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-496: ningún módulo concedido a un rol puede quedar «solo-NAV» (exigido
     // por cero endpoints/páginas). Escanea la fuente; mata la CLASE, no el caso.
     "src/lib/permisos-modulo-sin-superficie.candado.test.ts",
+    // SPEC-535 (PA-24 Mis reportes + PA-08 detalle): badges de estado del padre sin color crudo (arbol de render, no directorio).
+    "src/components/modules/crudo-padre-reportes.candado.test.ts",
 ];
