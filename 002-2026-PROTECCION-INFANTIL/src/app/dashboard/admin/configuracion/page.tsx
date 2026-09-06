@@ -10,7 +10,7 @@ export default async function AdminConfiguracionPage() {
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-body">Configuración del sistema</h1>
                 <p className="text-sm text-muted">
-                    Editá los parámetros que controlan el scoring, visibilidad pública, alertas y límites. Los cambios se aplican de inmediato.
+                    Edite los parámetros que controlan el scoring, visibilidad pública, alertas y límites. Los cambios se aplican de inmediato.
                 </p>
             </div>
             <ConfiguracionTabs />

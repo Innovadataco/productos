@@ -236,7 +236,7 @@ export function IaDocsPanel() {
             <section className="space-y-3">
                 <h2 className="text-lg font-semibold text-body">Flujo del pipeline</h2>
                 <p className="text-sm text-muted">
-                    Hacé clic en cada etapa para ver qué hace. El pipeline completo se ejecuta en el playground sin guardar nada.
+                    Haga clic en cada etapa para ver qué hace. El pipeline completo se ejecuta en el playground sin guardar nada.
                 </p>
                 <PipelineDiagram />
             </section>

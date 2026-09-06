@@ -18,7 +18,7 @@ export default async function IncidentesPage() {
                 <p className="microetiqueta">Red de Apoyo · cola 2</p>
                 <h1 className="titular-h1 mt-1">Incidentes de citas</h1>
                 <p className="cuerpo text-subtle mt-2">
-                    Citas que quedaron <em className="palabra-estado">sin confirmar</em>. Revisá la traza de códigos
+                    Citas que quedaron <em className="palabra-estado">sin confirmar</em>. Revise la traza de códigos
                     y decidí caso por caso — reembolsar, reagendar o marcar cerrada.
                 </p>
                 <div className="mt-4">

@@ -11,7 +11,7 @@ export default async function AdminConfiguracionGuiasAccionPage() {
             <div>
                 <h1 className="text-2xl font-bold text-body">Guías de acción</h1>
                 <p className="text-sm text-muted">
-                    Editá, enviá al comité y previsualizá las guías de acción que los usuarios verán según la categoría del reporte.
+                    Edite, envíe al comité y previsualice las guías de acción que los usuarios verán según la categoría del reporte.
                 </p>
             </div>
             <GuiasAccionAdminClient />

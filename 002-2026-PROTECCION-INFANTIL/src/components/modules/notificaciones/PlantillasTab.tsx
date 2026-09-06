@@ -150,7 +150,7 @@ export function PlantillasTab() {
             <GlassCard>
                 <div className="mb-4">
                     <h2 className="text-lg font-semibold text-body">Plantillas del motor</h2>
-                    <p className="text-sm text-muted">Editá el asunto, cuerpo Markdown y variables de cada plantilla.</p>
+                    <p className="text-sm text-muted">Edite el asunto, cuerpo Markdown y variables de cada plantilla.</p>
                 </div>
                 {mensaje && <Alerta tono="exito" className="mb-4">{mensaje}</Alerta>}
                 {error && !editando && <Alerta tono="error" className="mb-4">{error}</Alerta>}

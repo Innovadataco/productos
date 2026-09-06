@@ -153,7 +153,7 @@ export async function PATCH(request: Request) {
         }
         if (violacionesCerradas.length > 0) {
             throw new AppError(
-                `Roles cerrados por diseño (SPEC-435): ${violacionesCerradas.join("; ")}. Editá CLAVES_POR_ROL en un PR y volvé a intentar.`,
+                `Roles cerrados por diseño (SPEC-435): ${violacionesCerradas.join("; ")}. Edite CLAVES_POR_ROL en un PR y vuelva a intentar.`,
                 ERROR_CODES.CONFLICT,
                 409
             );
