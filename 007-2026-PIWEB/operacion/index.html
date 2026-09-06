@@ -114,6 +114,24 @@ body {
 .leyenda .ly { white-space: normal; }
 .leyenda .nota { flex-basis: 100%; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line-2);
                  color: var(--faint); font-size: 10.5px; line-height: 1.45; white-space: normal; }
+.leyenda .ly .m { color: var(--faint); }
+
+/* Cabecera de progreso — resumen por columna (contado en vivo del JSON) */
+.resumen { display: flex; flex-wrap: wrap; gap: 8px; }
+.resumen .col { flex: 1 1 150px; min-width: 138px; background: var(--surface);
+                border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; }
+.resumen .col h3 { margin: 0 0 3px; font-size: 9.5px; font-weight: 700; letter-spacing: .09em;
+                   text-transform: uppercase; color: var(--faint); }
+.resumen .col .big { font-size: 15px; font-weight: 700; color: var(--ink);
+                     font-variant-numeric: tabular-nums; line-height: 1.1; }
+.resumen .col .big small { font-size: 10.5px; font-weight: 500; color: var(--faint); }
+.resumen .col .brk { font-size: 10.5px; margin-top: 2px; line-height: 1.55; }
+.resumen .seg { white-space: nowrap; margin-right: 7px; }
+.resumen .seg b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.resumen .seg.ok    { color: var(--libre); }
+.resumen .seg.mid   { color: var(--proceso); }
+.resumen .seg.bad   { color: var(--ocupado); }
+.resumen .seg.faint { color: var(--faint); }
 
 /* Paneles */
 .panel { background: var(--surface); border: 1px solid var(--line);
@@ -236,15 +254,18 @@ footer code { font-family: "IBM Plex Mono", monospace; }
   <!-- Alerta destacada -->
   <div id="alerta"></div>
 
-  <!-- Leyenda de símbolos del checklist -->
+  <!-- Cabecera de progreso: resumen por columna (contado en vivo del JSON) -->
+  <div class="resumen" id="resumen"></div>
+
+  <!-- Leyenda en lenguaje claro: qué significa cada estado -->
   <div class="leyenda">
-    <div class="ly"><b>Desarrollo</b> <span class="g ok">&#10003;</span> hecho &middot; <span class="g mid">&#9680;</span> parcial &middot; <span class="g no">&#10007;</span> no</div>
-    <div class="ly"><b>Datos</b> <span class="g ok">&#10003;</span> ok &middot; <span class="g bad">&#10007;</span> no &middot; <span class="emo">&#9203;</span> pendiente</div>
-    <div class="ly"><b>Dise&ntilde;o</b> <span class="g ok">&#10003;</span> ok &middot; <span class="g bad">&#10007;</span> no &middot; <span class="emo">&#9203;</span> pendiente</div>
-    <div class="ly"><b>Calidad</b> <span class="emo">&#9989;</span> en vivo &middot; <span class="emo">&#128994;</span> verde en CI &middot; <span class="emo">&#9203;</span> pendiente &middot; <span class="emo">&#128683;</span> bloqueado &middot; <span class="g no">&#10007;</span> no</div>
-    <div class="ly"><b>Desplegado</b> <span class="g ok">&#10003;</span> s&iacute; &middot; <span class="dash">&mdash;</span> no &middot; <span class="faint">&middot;</span> n/a</div>
-    <div class="ly"><b>Jelkin</b> <span class="g ok">&#10003;</span> aceptada &middot; <span class="g bad">&#10007;</span> rechazada &middot; <span class="g w">&middot;</span> pendiente</div>
-    <div class="nota"><span class="emo">&#9989;</span> en vivo = verificado en producci&oacute;n, la mayor&iacute;a ANTES del redise&ntilde;o actual; el interior con sesi&oacute;n a&uacute;n no re-verificado sobre la versi&oacute;n desplegada.</div>
+    <div class="ly"><b>Desarrollo</b> <span class="m">&iquest;est&aacute; construido?</span> &nbsp; <span class="g ok">&#10003;</span> hecho &middot; <span class="g mid">&#9680;</span> a medias &middot; <span class="g no">&#10007;</span> sin empezar</div>
+    <div class="ly"><b>Datos</b> <span class="m">privacidad y datos sensibles</span> &nbsp; <span class="g ok">&#10003;</span> ok = en orden &middot; <span class="emo">&#9888;&#65039;</span> riesgo = funciona pero toca datos sensibles &middot; <span class="g bad">&#10007;</span> no-ok = problema por corregir</div>
+    <div class="ly"><b>Dise&ntilde;o</b> <span class="m">visto visual</span> &nbsp; <span class="g ok">&#10003;</span> cumple = aprobado a la vista &middot; <span class="g mid">&#9680;</span> criterio = sin defecto, falta el visto fino &middot; <span class="g bad">&#10007;</span> no-cumple = no pas&oacute;</div>
+    <div class="ly"><b>Calidad</b> <span class="m">&iquest;est&aacute; probado?</span> &nbsp; <span class="emo">&#9989;</span> en vivo = probado en producci&oacute;n &middot; <span class="emo">&#128994;</span> CI = probado por m&aacute;quina, falta en vivo &middot; <span class="emo">&#9203;</span> pendiente &middot; <span class="emo">&#128683;</span> bloqueado &middot; <span class="g no">&#10007;</span> no</div>
+    <div class="ly"><b>Desplegado</b> <span class="m">&iquest;est&aacute; publicado?</span> &nbsp; <span class="g ok">&#10003;</span> s&iacute; &middot; <span class="dash">&mdash;</span> no &middot; <span class="faint">&middot;</span> n/a</div>
+    <div class="ly"><b>Jelkin</b> <span class="m">tu visto bueno</span> &nbsp; <span class="g ok">&#10003;</span> aceptada &middot; <span class="g bad">&#10007;</span> rechazada &middot; <span class="g w">&middot;</span> pendiente = falta tu revisi&oacute;n</div>
+    <div class="nota"><span class="emo">&#9989;</span> &laquo;en vivo&raquo; = verificado en producci&oacute;n, la mayor&iacute;a ANTES del redise&ntilde;o actual; el interior con sesi&oacute;n a&uacute;n no re-verificado sobre la versi&oacute;n desplegada.</div>
   </div>
 
   <!-- Checklist por rol (9 secciones) -->
@@ -345,12 +366,12 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     if (v === "pendiente") return '<span class="emo" title="Pendiente de revisión de diseño">&#9203;</span>'; // ⏳
     return '<span class="dash">&mdash;</span>';
   }
-  // Datos y Diseño (checklist por rol): mismo mapa · ok→✓ · no→✗ · pendiente→⏳
-  function celdaOkNoPend(v, etiqueta) {
-    var t = etiqueta ? etiqueta + " " : "";
-    if (v === "ok")        return '<span class="g ok"  title="' + t + 'OK">&#10003;</span>';        // ✓
-    if (v === "no")        return '<span class="g bad" title="' + t + 'no">&#10007;</span>';        // ✗
-    if (v === "pendiente") return '<span class="emo" title="' + t + 'pendiente">&#9203;</span>';    // ⏳
+  // Datos (checklist por rol): ok→✓ · riesgo→⚠️ · no-ok→✗ · pendiente→⏳
+  function celdaDatos(v) {
+    if (v === "ok")        return '<span class="g ok"  title="Datos en orden">&#10003;</span>';                                    // ✓
+    if (v === "riesgo")    return '<span class="emo" title="Funciona, pero toca datos sensibles (revisar)">&#9888;&#65039;</span>'; // ⚠️
+    if (v === "no-ok")     return '<span class="g bad" title="Problema de datos por corregir">&#10007;</span>';                    // ✗
+    if (v === "pendiente") return '<span class="emo" title="Pendiente de revisión de datos">&#9203;</span>';                      // ⏳
     return '<span class="dash">&mdash;</span>';
   }
 
@@ -412,8 +433,8 @@ footer code { font-family: "IBM Plex Mono", monospace; }
               '<td class="nm">' + esc(f.nombre || "&mdash;") + "</td>" +
               '<td class="act">' + (f.actor ? esc(f.actor) : '<span class="dash">&mdash;</span>') + "</td>" +
               '<td class="c">' + celdaDesarrollo(f.desarrollo) + "</td>" +
-              '<td class="c">' + celdaOkNoPend(f.datos, "Datos") + "</td>" +
-              '<td class="c">' + celdaOkNoPend(f.diseno, "Diseño") + "</td>" +
+              '<td class="c">' + celdaDatos(f.datos) + "</td>" +
+              '<td class="c">' + celdaCumple(f.diseno) + "</td>" +
               '<td class="c">' + celdaProbado(f.probado) + "</td>" +
               '<td class="c">' + celdaDesplegado(f.desplegado) + "</td>" +
               '<td class="c">' + celdaJelkin(f.jelkin) + "</td>" +
@@ -487,6 +508,40 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     $c.innerHTML = html;
   }
 
+  // Cabecera de progreso: cuenta en vivo cada estado por columna, desde el JSON.
+  function renderResumen(roles) {
+    var $c = document.getElementById("resumen");
+    var fs = [];
+    (Array.isArray(roles) ? roles : []).forEach(function (r) {
+      if (Array.isArray(r.funcionalidades)) fs = fs.concat(r.funcionalidades);
+    });
+    var total = fs.length;
+    if (total === 0) { $c.innerHTML = ""; return; }
+    function cuenta(campo) {
+      var c = {};
+      fs.forEach(function (f) { var v = f[campo]; c[v] = (c[v] || 0) + 1; });
+      return c;
+    }
+    var dev = cuenta("desarrollo"), dat = cuenta("datos"), dis = cuenta("diseno"),
+        cal = cuenta("probado"), dep = cuenta("desplegado"), jel = cuenta("jelkin");
+    function seg(cls, n, etq) { return n ? '<span class="seg ' + cls + '"><b>' + n + "</b> " + etq + "</span>" : ""; }
+    function card(titulo, big, brk) {
+      return '<div class="col"><h3>' + titulo + "</h3>" +
+             (big ? '<div class="big">' + big + "</div>" : "") +
+             (brk ? '<div class="brk">' + brk + "</div>" : "") + "</div>";
+    }
+    var html = "";
+    html += card("Desarrollo", (dev.si || 0) + "<small>/" + total + "</small>",
+      "hechas" + (dev.parcial ? " &middot; " + dev.parcial + " a medias" : "") + (dev.no ? " &middot; " + dev.no + " sin empezar" : ""));
+    html += card("Datos", "", seg("ok", dat.ok, "ok") + seg("mid", dat.riesgo, "riesgo") + seg("bad", dat["no-ok"], "no-ok") + seg("faint", dat.pendiente, "pend"));
+    html += card("Dise&ntilde;o", "", seg("ok", dis.cumple, "cumple") + seg("mid", dis.criterio, "criterio") + seg("bad", dis["no-cumple"], "no-cumple") + seg("faint", dis.pendiente, "pend"));
+    html += card("Calidad", "", seg("ok", cal.vivo, "en vivo") + seg("mid", cal.ci, "CI") + seg("faint", cal.pendiente, "pend") + seg("bad", cal.bloqueado, "bloq") + seg("bad", cal.no, "no"));
+    html += card("Desplegado", (dep.si || 0) + "<small>/" + total + "</small>",
+      "publicadas" + (dep.no ? " &middot; " + dep.no + " no" : ""));
+    html += card("Jelkin", "", seg("ok", jel.aceptada, "aceptadas") + seg("bad", jel.rechazada, "rechazadas") + seg("faint", jel.pendiente, "pend"));
+    $c.innerHTML = html;
+  }
+
   function renderBarra(data) {
     document.getElementById("actualizado").textContent = data.actualizado || "—";
     document.getElementById("prod").textContent = data.prod || "—";
@@ -498,6 +553,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     renderBarra(data);
     renderEquipos(data.equipos);
     renderAlerta(data.alerta);
+    renderResumen(data.roles);
     renderRoles(data.roles);
     renderPantallas(data.pantallas);
   }
@@ -527,6 +583,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     document.getElementById("prod-footer").textContent = "—";
     document.getElementById("equipos").innerHTML = "";
     document.getElementById("alerta").innerHTML = "";
+    document.getElementById("resumen").innerHTML = "";
     document.getElementById("roles").innerHTML = '<div class="panel"><div class="tabla-vacia">&mdash;</div></div>';
     document.getElementById("pantallas-wrap").hidden = true;
     document.getElementById("pantallas").innerHTML = "";
