@@ -233,7 +233,7 @@ export default function AlertasColegioPageClient() {
                         <div>
                             <h1 className="text-2xl font-bold text-body">Alertas</h1>
                             <p className="text-sm text-muted">
-                                Avisos que llegan cuando un identificador que registraste para un alumno,
+                                Avisos que llegan cuando un identificador que registraste para un estudiante,
                                 profesor o acudiente aparece en un reporte de la comunidad. Ordenadas por
                                 prioridad, novedad y tiempo restante de respuesta.
                             </p>
@@ -305,11 +305,11 @@ export default function AlertasColegioPageClient() {
                     ) : alertas.length === 0 ? (
                         <EmptyState
                             title="Aún no hay alertas"
-                            description="Aparecerán cuando un identificador que registre para un alumno salga en un reporte. Empiece registrando sus cursos y alumnos."
+                            description="Aparecerán cuando un identificador que registre para un estudiante salga en un reporte. Empiece registrando sus cursos y estudiantes."
                             icon={<span className="text-2xl">🛡️</span>}
                             action={
                                 <Button onClick={() => router.push("/dashboard/colegio/cursos")}>
-                                    Ir a Alumnos
+                                    Ir a Estudiantes
                                 </Button>
                             }
                         />
