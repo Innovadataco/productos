@@ -48,11 +48,11 @@ export default function CrearClaveProfesionalPage({ params }: { params: Promise<
             }
             if (!res.ok) {
                 const json = await res.json().catch(() => null);
-                throw new Error(json?.error?.message || "No pudimos crear tu cuenta. Intentá de nuevo.");
+                throw new Error(json?.error?.message || "No pudimos crear tu cuenta. Intente de nuevo.");
             }
             router.push("/perfil-profesional/completar");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "No pudimos crear tu cuenta. Intentá de nuevo.");
+            setError(err instanceof Error ? err.message : "No pudimos crear tu cuenta. Intente de nuevo.");
         } finally {
             setEnviando(false);
         }
@@ -62,7 +62,7 @@ export default function CrearClaveProfesionalPage({ params }: { params: Promise<
         <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-12">
             <div className="w-full max-w-md animate-fadeIn">
                 <div className="mb-6 text-center">
-                    <h1 className="font-serif text-3xl text-body">Elegí tu contraseña</h1>
+                    <h1 className="font-serif text-3xl text-body">Elija su contraseña</h1>
                     <p className="mt-2 text-sm text-muted">Con esto queda lista tu cuenta y armás tu perfil.</p>
                 </div>
 
@@ -78,7 +78,7 @@ export default function CrearClaveProfesionalPage({ params }: { params: Promise<
                                 </Button>
                             </Link>
                             <p className="text-sm text-muted">
-                                ¿Ya tenés cuenta?{" "}
+                                ¿Ya tiene cuenta?{" "}
                                 <Link href="/login" className="font-medium text-accent hover:underline">
                                     Iniciá sesión
                                 </Link>

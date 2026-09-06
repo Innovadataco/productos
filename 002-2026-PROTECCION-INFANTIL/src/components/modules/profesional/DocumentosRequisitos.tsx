@@ -80,7 +80,7 @@ export function DocumentosRequisitos() {
             setDocs(json.data);
         } catch (e) {
             console.error("[DocumentosRequisitos]", e);
-            setError("No pudimos comunicarnos con el servidor. Revisá tu conexión e intentá de nuevo.");
+            setError("No pudimos comunicarnos con el servidor. Revise su conexión e intente de nuevo.");
         } finally {
             setSubiendo(null);
         }

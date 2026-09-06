@@ -70,7 +70,7 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
             {vista.estadoPerfil === "ACTIVO" && (
                 <div className="glass rounded-2xl p-6">
                     <p className="cuerpo text-body">
-                        Tu perfil quedó activo. Ahora podés cargar tu carta de presentación, tu disponibilidad y
+                        Su perfil quedó activo. Ahora puede cargar su carta de presentación, su disponibilidad y
                         aparecer en el directorio de familias.
                     </p>
                 </div>
@@ -97,7 +97,7 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
             {vista.puedeReenviar && (
                 <div className="glass rounded-2xl p-6">
                     <p className="cuerpo text-body">
-                        Cuando termines de corregir, reenviá tu perfil para que lo revisemos otra vez.
+                        Cuando termine de corregir, reenvíe su perfil para que lo revisemos otra vez.
                     </p>
                     <button
                         type="button"

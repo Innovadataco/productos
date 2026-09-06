@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         const archivo = form?.get("archivo");
         if (typeof requisito !== "string" || requisito.length === 0) {
             return NextResponse.json(
-                { error: { message: "Indicá a qué requisito corresponde (campo `requisito`).", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: "Indique a qué requisito corresponde (campo `requisito`).", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
             typeof (archivo as { arrayBuffer?: unknown }).arrayBuffer === "function";
         if (!esArchivo) {
             return NextResponse.json(
-                { error: { message: "Adjuntá el archivo (campo `archivo`).", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: "Adjunte el archivo (campo `archivo`).", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
