@@ -63,7 +63,7 @@ export default async function CentroControlIAPage({ searchParams }: PageProps) {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-body">Centro de Control IA</h1>
-                    <p className="text-sm text-muted">Explorá, probá y ajustá el pipeline de clasificación sin afectar datos reales.</p>
+                    <p className="text-sm text-muted">Explore, pruebe y ajuste el pipeline de clasificación sin afectar datos reales.</p>
                 </div>
                 <span className="self-start rounded-full bg-cielo/10 px-3 py-1 text-xs font-medium text-cielo">
                     Solo admins

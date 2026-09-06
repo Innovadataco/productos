@@ -89,7 +89,7 @@ export function ParametrosNotificacionesTab() {
             <GlassCard>
                 <div className="mb-4">
                     <h2 className="text-lg font-semibold text-body">Parámetros del motor</h2>
-                    <p className="text-sm text-muted">Ajustá los valores de configuración del motor de notificaciones.</p>
+                    <p className="text-sm text-muted">Ajuste los valores de configuración del motor de notificaciones.</p>
                 </div>
                 {mensaje && <Alerta tono="exito" className="mb-4">{mensaje}</Alerta>}
                 {error && <Alerta tono="error" className="mb-4">{error}</Alerta>}

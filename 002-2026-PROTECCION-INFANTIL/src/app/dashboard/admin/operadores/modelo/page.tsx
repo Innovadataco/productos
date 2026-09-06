@@ -78,7 +78,7 @@ export default function AdminOperadoresModeloPage() {
             <div className="mb-2">
                 <h1 className="text-2xl font-bold text-body">Modelo de asignación</h1>
                 <p className="text-sm text-muted">
-                    Configurá cómo se reparten los casos entre operadores y el cupo default.
+                    Configure cómo se reparten los casos entre operadores y el cupo default.
                 </p>
             </div>
 
