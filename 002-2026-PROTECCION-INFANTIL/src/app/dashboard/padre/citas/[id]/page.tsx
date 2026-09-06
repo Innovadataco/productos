@@ -22,8 +22,8 @@ export default async function CitaPadreDetallePage({
     const user = await verifyAuth("PARENT");
     const cita = await new SolicitudCitaRepository().findParaPadre(id, user.id);
     if (!cita) {
-        // No revela si existe o no — enruta a la lista del padre.
-        redirect("/dashboard/padre");
+        // No revela si existe o no — enruta a la lista de citas (SPEC-545 la creó).
+        redirect("/dashboard/padre/citas");
     }
     return <EsperaCitaPanel citaInicial={toCitaParaPadre(cita)} />;
 }

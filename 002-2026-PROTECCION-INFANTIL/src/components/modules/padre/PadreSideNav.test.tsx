@@ -21,11 +21,11 @@ describe("PadreSideNav (SPEC-231)", () => {
     // SPEC-440 P4 (Jelkin vivo 04-09): «el perfil del padre no deja editar sus datos».
     // La pantalla existe desde SPEC-334; SPEC-317 la había retirado del nav por
     // hueco temporal — reincorporada acá para que el padre pueda llegar a editarla.
-    it("renderiza los 10 items del menú padre (SPEC-440 P4 reincorpora Mi perfil; Mis reportes y Encontrar psicólogo siguen)", () => {
+    it("renderiza los 11 items del menú padre (SPEC-545 agrega «Mis citas» tras «Encontrar psicólogo»; SPEC-440 P4 Mi perfil)", () => {
         mockPathname.value = "/dashboard/padre";
         render(<PadreSideNav />);
 
-        const labels = ["Inicio", "Mis expedientes", "Mis reportes", "Reportar", "Encontrar psicólogo", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones", "Mi perfil"];
+        const labels = ["Inicio", "Mis expedientes", "Mis reportes", "Reportar", "Encontrar psicólogo", "Mis citas", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones", "Mi perfil"];
         for (const label of labels) {
             expect(screen.getByRole("link", { name: label })).toBeDefined();
         }
@@ -34,7 +34,11 @@ describe("PadreSideNav (SPEC-231)", () => {
         expect(screen.getByRole("link", { name: "Mis reportes" }).getAttribute("href")).toBe("/mis-reportes");
         // SPEC-392 (L3): "Encontrar psicólogo" al directorio del padre.
         expect(screen.getByRole("link", { name: "Encontrar psicólogo" }).getAttribute("href")).toBe("/dashboard/padre/profesionales");
-        expect(screen.getAllByRole("link")).toHaveLength(10);
+        // SPEC-545: «Mis citas» va inmediatamente tras «Encontrar psicólogo».
+        expect(screen.getByRole("link", { name: "Mis citas" }).getAttribute("href")).toBe("/dashboard/padre/citas");
+        const rotulos = screen.getAllByRole("link").map((a) => a.textContent);
+        expect(rotulos.indexOf("Mis citas")).toBe(rotulos.indexOf("Encontrar psicólogo") + 1);
+        expect(screen.getAllByRole("link")).toHaveLength(11);
     });
 
     it("marca Inicio como activo en la raíz", () => {

@@ -117,6 +117,9 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     // arriba de "Suscripción" porque es el frente nuevo y el que arma la red;
     // exento del guardián de vigencia (padre sin suscripción también lo ve).
     { href: "/dashboard/padre/profesionales", label: "Encontrar psicólogo" },
+    // SPEC-545: el listado de citas del padre. Va tras «Encontrar psicólogo» (buscar
+    // es la entrada; las citas, el seguimiento) y antes de «Suscripción».
+    { href: "/dashboard/padre/citas", label: "Mis citas" },
     { href: "/dashboard/padre/suscripcion", label: "Suscripción" },
     { href: "/dashboard/padre/hijos", label: "A quién protejo" }, // SPEC-325
     { href: "/dashboard/padre/circulo-confianza", label: "A quién vigilo" }, // SPEC-325 (antes "Círculo confianza")
