@@ -12,6 +12,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/guardias.test.ts",
     "src/lib/routing/vigencia-cookie.test.ts",
     "src/lib/routing/middleware.test.ts",
+    // SPEC-572 (I-236): interceptor cliente que refresca sesion_estado ante el 403 del cerrojo.
+    "src/lib/http/sesion-refresh-interceptor.test.ts",
+    // SPEC-572 (I-236): cerrojo fail-closed — sin cookie sesion_estado, los 3 muros + /api/** cierran.
+    "src/lib/routing/middleware-fail-closed.candado.test.ts",
     // SPEC-416 (I-118): fuente única de "titular del dato" y "con camino guiado".
     "src/lib/routing/roles-titulares.test.ts",
     // SPEC-423 (I-298): la credencial de respaldo se muestra SIEMPRE en admin.

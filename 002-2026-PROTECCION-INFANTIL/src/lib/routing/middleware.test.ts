@@ -448,22 +448,29 @@ describe("SPEC-339 · guardián del camino", () => {
         expect(url.searchParams.get("destino")).toBe("/dashboard/padre");
     });
 
-    it("padre SIN cookie en ruta exenta (p.ej. /mis-reportes) → next(), sin rebote", async () => {
+    // SPEC-572 (I-236): /mis-reportes está exento del CAMINO y de VIGENCIA (regla dura de Jelkin:
+    // reportar no se bloquea por cobro), pero NO de consentimiento ni cambio-de-password — igual que
+    // con cookie. Así que SIN cookie también rebota a re-derivar (antes fallaba abierto).
+    it("padre SIN cookie en /mis-reportes → rebote (fail-closed: sujeta a consent/password)", async () => {
         const token = await jwtParaRol("PARENT");
         const req = new NextRequest("http://localhost:5005/mis-reportes", {
             headers: { cookie: `token=${token}` },
         });
         const res = await middleware(req);
-        expect(res.headers.get("x-middleware-next")).toBe("1");
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/api/sesion/al-dia");
     });
 
-    it("los demás roles SIN cookie siguen fallando abierto, como siempre", async () => {
+    // SPEC-572 (I-236): antes «los demás roles SIN cookie fallaban abierto». Ya no — el muro de
+    // cambio-de-password aplica a TODO rol, así que ADMIN sin cookie también rebota a re-derivar.
+    it("otros roles (ADMIN) SIN cookie → rebote, ya NO fallan abierto (SPEC-572)", async () => {
         const token = await jwtParaRol("ADMIN");
         const req = new NextRequest("http://localhost:5005/dashboard", {
             headers: { cookie: `token=${token}` },
         });
         const res = await middleware(req);
-        expect(res.headers.get("x-middleware-next")).toBe("1");
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/api/sesion/al-dia");
     });
 });
 

@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { PieGlobal } from "@/components/modules/PieGlobal";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
+import { SesionRefreshInterceptor } from "@/components/modules/SesionRefreshInterceptor";
 import { AvisoVersionNueva } from "@/components/modules/version/AvisoVersionNueva";
 
 // SPEC-157 (D1/D3): un solo mecanismo — next/font/local con woff2 vendoreados en
@@ -106,6 +107,9 @@ export default function RootLayout({
                 <ThemeProvider>
                     <AuthProvider>
                         <ServiceWorkerRegister />
+                        {/* SPEC-572 (I-236): refresco silencioso de sesion_estado — captura el 403
+                            SESION_ESTADO_REQUERIDO del cerrojo fail-closed, re-sella y reintenta. */}
+                        <SesionRefreshInterceptor />
                         <NavHeader />
                         {/* SPEC-362 (G21): el contenido empuja y el pie queda abajo
                             en todas las pantallas, cortas o largas. */}

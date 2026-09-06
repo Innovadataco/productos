@@ -281,25 +281,40 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         }
     }
 
-    // SPEC-339 (A-67) — LA GRIETA DE LA FALLA-ABIERTA.
+    // SPEC-572 (I-236) — FALLA-CERRADA del estado de sesión (cierra la grieta de I-236).
     //
-    // Cuando la cookie de estado no se puede leer (venció a los 5 min, o es de
-    // antes de este despliegue), el bloque de arriba entero se salta y el
-    // middleware DEJA PASAR. Para vigencia esa ventana se tolera a propósito
-    // (no colgar la BD desde Edge). Para el camino NO: el brief §6 exige que el
-    // padre no pueda saltarse un paso "ni escribiendo la URL a mano", y con
-    // falla-abierta bastaba con esperar cinco minutos.
+    // El JWT es válido (Paso 2), pero la cookie firmada `sesion_estado` está AUSENTE o EXPIRÓ:
+    // no sabemos consentimiento/cambio-de-password/camino/vigencia. La condición que encendía los
+    // tres muros era la PRESENCIA de una cookie que el CLIENTE controla — borrarla (o dejarla
+    // vencer) los apagaba, indefinidamente, con la sesión igual de autenticada por su JWT.
+    // SPEC-339 solo había cerrado el CAMINO (y solo en páginas); consentimiento, cambio de
+    // password, vigencia y TODO /api/** seguían fallando ABIERTO.
     //
-    // Solución sin tocar la BD desde Edge: un rebote ÚNICO a una ruta de sesión
-    // (Node) que re-sella la cookie y devuelve al padre a su destino o a su paso.
-    // No puede ciclar: `/api/sesion/al-dia` es ruta de sesión, así que el
-    // middleware retorna antes de llegar a este punto cuando la pide.
-    if (
-        !estado &&
-        tieneCaminoGuiado(sesion.rol) &&
-        !esExentaCamino(pathname, sesion.rol) &&
-        !pathname.startsWith("/api/")
-    ) {
+    // Regla dura (CEO): ausente/expirado = DESCONOCIDO, y desconocido CIERRA, no abre.
+    //
+    // No se puede derivar de la BD desde Edge. Cierre (SPEC-339 generalizada a todos los muros):
+    // un rebote ÚNICO a `/api/sesion/al-dia` (Node) que re-deriva el estado real, re-sella la
+    // cookie y devuelve al destino. NO cicla: es ruta de sesión (Paso 3 retorna antes de acá).
+    // El cierre es INCONDICIONAL: llegado este punto ya pasamos Paso 1/2/3, y toda ruta que llega
+    // acá está sujeta al menos al muro de cambio-de-password (sus exentas son rutas de sesión que
+    // ya retornaron). Con estado presente, los muros de arriba deciden; sin estado, se re-deriva.
+    if (!estado) {
+        if (pathname.startsWith("/api/")) {
+            // SPEC-329: JSON 403, nunca 302 — un fetch no sigue redirects y confundiría el bloqueo
+            // con éxito. Código PROPIO para que el interceptor de sesión (SPEC-400) lo distinga de
+            // un 403 de muro real (esos NO se reintentan) y dispare el refresh (`/api/vigencia/refresh`)
+            // + retry. Un adversario que borra la cookie y pega directo a la API recibe 403, no pasa.
+            return NextResponse.json(
+                {
+                    error: {
+                        message: "Tu sesión necesita revalidarse. Reintenta.",
+                        code: "SESION_ESTADO_REQUERIDO",
+                        redirectTo: G.caminoRebote,
+                    },
+                },
+                { status: 403 },
+            );
+        }
         const alDia = new URL(G.caminoRebote, request.url);
         alDia.searchParams.set("destino", pathname);
         return aplicarCspSiCorresponde(request, NextResponse.redirect(alDia));
