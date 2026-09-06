@@ -121,8 +121,8 @@ function formatearConfianza(confianza: number): string {
 function Stage({ titulo, children }: { titulo: string; children: React.ReactNode }) {
     return (
         <div className="relative pl-6">
-            <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-sky-500 ring-4 ring-sky-100 dark:bg-cyan-400 dark:ring-sky-900" />
-            <div className="absolute left-[4px] top-6 h-[calc(100%-16px)] w-0.5 bg-slate-200 dark:bg-slate-700" />
+            <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-cielo ring-4 ring-cielo/20" />
+            <div className="absolute left-[4px] top-6 h-[calc(100%-16px)] w-0.5 bg-tinta/20" />
             <GlassCard className="mb-4 p-4">
                 <h4 className="mb-2 text-sm font-semibold text-body">{titulo}</h4>
                 <div className="space-y-2 text-sm text-body">{children}</div>
@@ -194,7 +194,7 @@ return (
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-tinta/10">
                         {Object.entries(clasificacion.matriz).map(([categoria, fila]) => (
                             <tr key={categoria}>
                                 <td className="px-2 py-1 text-body">{categoria}</td>
@@ -225,7 +225,7 @@ return (
                         {detalle.preguntas.map((pregunta, indice) => (
                             <li
                                 key={`${detalle.categoria}-${indice}`}
-                                className="rounded-lg bg-slate-50 p-2 text-xs dark:bg-slate-900"
+                                className="rounded-lg bg-tinta/5 p-2 text-xs"
                             >
                                 <div className="flex flex-wrap items-center gap-2">
                                     <Badge variant={pregunta.tipo === "decisiva" ? "danger" : "neutral"}>
@@ -349,7 +349,7 @@ function SeccionDenunciaFormal({ reporteId, canales }: { reporteId: string; cana
                             id="canal-denuncia"
                             value={canal}
                             onChange={(e) => setCanal(e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-body dark:border-slate-700 dark:bg-slate-900"
+                            className="w-full rounded-lg border border-tinta/20 bg-papel px-3 py-2 text-sm text-body"
                         >
                             <option value="">Selecciona un canal...</option>
                             {canales.map((c) => (
@@ -359,7 +359,7 @@ function SeccionDenunciaFormal({ reporteId, canales }: { reporteId: string; cana
                             ))}
                         </select>
                         {canales.length === 0 && (
-                            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                            <p className="mt-1 text-xs text-estado-ambar">
                                 No hay canales oficiales configurados. Un administrador debe revisar el parámetro de canales.
                             </p>
                         )}
@@ -383,7 +383,7 @@ function SeccionDenunciaFormal({ reporteId, canales }: { reporteId: string; cana
                 </div>
             )}
             {errorDenuncia && (
-                <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
+                <p className="mt-2 text-xs text-estado-rubi" role="alert">
                     {errorDenuncia}
                 </p>
             )}
@@ -446,7 +446,7 @@ export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExped
                 <Cargando tamano="sm" texto="Cargando expediente..." className="py-10" />
             ) : error ? (
                 <div className="py-6 text-center">
-                    <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
+                    <p className="text-sm text-estado-rubi" role="alert">{error}</p>
                 </div>
             ) : expediente ? (
                 <div className="space-y-4">
@@ -475,13 +475,13 @@ export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExped
                             </div>
                         </div>
                         {expediente.revelado && (
-                            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                            <p className="mt-2 text-xs text-estado-ambar">
                                 Versión original revelada. Esta revelación queda registrada en el registro de auditoría.
                             </p>
                         )}
                     </GlassCard>
 
-                    <div className="flex gap-2 border-b border-slate-200 pb-2 dark:border-slate-700">
+                    <div className="flex gap-2 border-b border-tinta/20 pb-2">
                         <Button
                             onClick={() => setPestaña("pipeline")}
                             variant={pestaña === "pipeline" ? "primary" : "outline"}
