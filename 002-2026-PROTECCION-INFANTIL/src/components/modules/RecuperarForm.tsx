@@ -59,7 +59,7 @@ export function RecuperarForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-estado-rubi">{error}</p>}
             <Button type="submit" isLoading={isLoading} className="w-full">
                 Enviar enlace de recuperación
             </Button>

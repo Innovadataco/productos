@@ -23,7 +23,7 @@ export function ReporteStepDescripcion({ value, onChange }: { value: string; onC
                     maxLength={max}
                 />
                 <div className="mt-1.5 flex justify-between text-xs">
-                    <span className={isValid ? "text-subtle" : "text-red-600 dark:text-red-400"}>
+                    <span className={isValid ? "text-subtle" : "text-estado-rubi"}>
                         {chars < min
                             ? `Mínimo ${min} caracteres (${chars}/${min})`
                             : chars > max
@@ -32,7 +32,7 @@ export function ReporteStepDescripcion({ value, onChange }: { value: string; onC
                     </span>
                 </div>
             </div>
-            <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300">
+            <div className="rounded-xl bg-ambar/10 p-3 text-xs text-estado-ambar">
                 Este reporte es solo de texto. No incluyas fotos, videos ni archivos adjuntos.
             </div>
         </div>

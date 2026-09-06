@@ -55,7 +55,7 @@ export function RestablecerForm({ token }: RestablecerFormProps) {
     if (success) {
         return (
             <div className="text-center">
-                <p className="text-sm font-medium text-green-700">Contraseña actualizada correctamente.</p>
+                <p className="text-sm font-medium text-estado-pino">Contraseña actualizada correctamente.</p>
                 <p className="mt-2 text-sm text-muted">Serás redirigido a iniciar sesión...</p>
             </div>
         );
@@ -77,7 +77,7 @@ export function RestablecerForm({ token }: RestablecerFormProps) {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-estado-rubi">{error}</p>}
             <Button type="submit" isLoading={isLoading} className="w-full">
                 Restablecer contraseña
             </Button>

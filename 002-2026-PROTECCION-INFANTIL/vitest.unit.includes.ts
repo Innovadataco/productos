@@ -25,6 +25,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-505 (CEO · Jelkin): el ÁREA del profesional habla usted (sin voseo);
     // dirs profesional + §B en dirs compartidos. Evita §C (cita.service, FichaVerif).
     "src/app/registro-profesional/voz-usted-profesional.candado.test.ts",
+    // SPEC-507 (CEO): CLASE — ningún form público con color crudo de estado; la
+    // validación/avisos van por token (text-estado-*, bg-ambar/10). Deriva por glob.
+    "src/components/modules/forms-publicos-sin-color-crudo-estado.candado.test.ts",
     // SPEC-435 (Jelkin 04-09): la cuenta VERIFICADOR nace con un solo módulo
     // (no hereda operador/comité/padre). Fuente: `prisma/seed-modulos-grants.ts`.
     "src/lib/verificador-modulos.candado.test.ts",
