@@ -123,7 +123,7 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                         )}
                         {r.clasificacion && (
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                <span className="rounded-full bg-sky-50 dark:bg-sky-950/40 px-2 py-0.5 text-[10px] font-medium text-accent">
+                                <span className="rounded-full bg-cielo/10 px-2 py-0.5 text-[10px] font-medium text-estado-cielo">
                                     {r.clasificacion.categoriaGrupo}
                                 </span>
                             </div>
@@ -191,9 +191,9 @@ function estadoBadgeClass(badge: BadgeVisual): string {
     const base = "rounded-full px-3 py-1 text-xs font-medium ";
     switch (badge) {
         case "warning":
-            return base + "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
+            return base + "bg-ambar/10 text-estado-ambar";
         case "success":
-            return base + "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300";
+            return base + "bg-pino/10 text-estado-pino";
         case "muted":
         default:
             return base + "bg-tinta/5 text-muted";
