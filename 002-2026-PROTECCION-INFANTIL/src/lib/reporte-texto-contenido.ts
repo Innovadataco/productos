@@ -73,3 +73,41 @@ export async function descifrarCampo(
     const cifrado = campo === "texto" ? contenido.textoCifrado : contenido.textoOriginalCifrado;
     return descifrarConLlave(cifrado, dek, aadDe(contenidoId, campo));
 }
+
+/**
+ * Campo re-sellable POST-alta: SOLO el texto de TRABAJO. `textoOriginal` NO entra acá — es
+ * evidencia legal inmutable (se fija en el alta y después solo se PURGA con `purgadoEn` +
+ * `origenEvidencia`, jamás se sobreescribe). Cerrado en el TIPO a propósito (CEO 06-09): que
+ * la anonimización no pueda pisar el original con una línea. Ampliar este union es una
+ * decisión de política, no un ajuste de firma.
+ */
+export type CampoResellable = "texto";
+
+/**
+ * ÚNICA vía de cambio del texto de TRABAJO post-alta (anonimización, corrección, reactivación):
+ * desenvuelve la DEK EXISTENTE (por su `kekVersion` — no se rota la DEK), re-cifra el nuevo
+ * plano con la MISMA DEK y el AAD por fila+campo, y actualiza SOLO `textoCifrado`.
+ *
+ * NUNCA toca `textoOriginalCifrado`: el original es inmutable. La DEK no sale de este módulo —
+ * el llamador pasa texto plano, jamás llaves. El AAD no cambia (`contenidoId|texto`), así que
+ * el resellado no invalida nada de lo ya cifrado.
+ */
+export async function resellarCampo(
+    tx: Prisma.TransactionClient,
+    contenidoId: string,
+    campo: CampoResellable,
+    nuevoPlano: string
+): Promise<void> {
+    // Cinturón además del tipo cerrado: si alguien fuerza el campo por JS (cast a any), muere
+    // acá antes de tocar la fila. El original NO se resella; se purga por otra vía.
+    if (campo !== "texto") {
+        throw new Error(
+            `[reporte-texto-contenido] resellarCampo: "${String(campo)}" no es re-sellable — el original es evidencia inmutable (solo se purga).`
+        );
+    }
+    const llave = await tx.llaveReporte.findUniqueOrThrow({ where: { contenidoId } });
+    const kek = llavePorVersion(llave.kekVersion);
+    const dek = Buffer.from(descifrarConLlave(llave.dekCifrada, kek, aadEnvoltura(contenidoId)), "base64");
+    const textoCifrado = cifrarConLlave(nuevoPlano, dek, aadDe(contenidoId, "texto"));
+    await tx.contenidoReporte.update({ where: { id: contenidoId }, data: { textoCifrado } });
+}

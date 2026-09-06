@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { sellarTextoNuevo, descifrarCampo } from "@/lib/reporte-texto-contenido";
+import { sellarTextoNuevo, descifrarCampo, resellarCampo } from "@/lib/reporte-texto-contenido";
 
 const KEK = randomBytes(32).toString("base64");
 
@@ -44,5 +44,37 @@ describe("S-D · DEK por denuncia (cifrar/descifrar + cripto-shred)", () => {
         const relato = "relato único del reportante";
         const { contenidoId } = await sellarTextoNuevo(prisma, { texto: relato });
         expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).toBe(relato);
+    });
+
+    it("resellarCampo reescribe el texto de TRABAJO y deja el ORIGINAL intacto (evidencia inmutable)", async () => {
+        const original = "relato original crudo del reportante";
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: original, origenEvidencia: "ORIGINAL" });
+
+        await resellarCampo(prisma, contenidoId, "texto", "relato ANONIMIZADO (puntitos negros)");
+
+        expect(await descifrarCampo(prisma, contenidoId, "texto")).toBe("relato ANONIMIZADO (puntitos negros)");
+        // El original NO se movió: sigue siendo la evidencia legal del alta.
+        expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).toBe(original);
+    });
+
+    it("resellarCampo NO rota la DEK: mismo llavero, mismo kekVersion tras el resellado", async () => {
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: "v1" });
+        const antes = await prisma.llaveReporte.findUniqueOrThrow({ where: { contenidoId } });
+        await resellarCampo(prisma, contenidoId, "texto", "v2");
+        const despues = await prisma.llaveReporte.findUniqueOrThrow({ where: { contenidoId } });
+        expect(despues.dekCifrada).toBe(antes.dekCifrada);
+        expect(despues.kekVersion).toBe(antes.kekVersion);
+    });
+
+    it("CANDADO: resellar el ORIGINAL está PROHIBIDO — forzar el campo por JS LANZA y no toca la evidencia", async () => {
+        const original = "evidencia que nadie puede pisar";
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: original });
+        // El tipo `CampoResellable` ya lo impide en compilación; esto cubre el bypass por JS.
+        await expect(
+            // @ts-expect-error — "textoOriginal" NO es un CampoResellable (cerrado a propósito).
+            resellarCampo(prisma, contenidoId, "textoOriginal", "intento de borrar la evidencia")
+        ).rejects.toThrow(/no es re-sellable|inmutable/i);
+        // La evidencia sigue intacta.
+        expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).toBe(original);
     });
 });
