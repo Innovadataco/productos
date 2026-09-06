@@ -32,7 +32,8 @@ BI v2 tiene **UN solo Postgres propio** (contenedor `bi-db`, imagen
 | `06-bi-db-recorte-pii.sql` | **bi-db** (suscriptor) | Defensa en profundidad PII |
 | `07-bi-db-limpieza-legacy.sql` | **bi-db** (suscriptor) | Tras retirar legacy del canon (02) |
 | `08-bi-db-reconciliar-drift.sql` | **bi-db** (suscriptor) | Fix idempotente de drift enum/columnas |
-| `09-bi-db-limpieza-contenido.sql` | **bi-db** (suscriptor) | Tras la whitelist 2026-09-05 (02) — saca de bi-db lo ya replicado |
+| `09a-bi-db-pre-corte.sql` | **bi-db** (suscriptor) | **FASE 1** del corte 2026-09-05 — ANTES de tocar PI (DROP NOT NULL × 4) |
+| `09b-bi-db-limpieza-contenido.sql` | **bi-db** (suscriptor) | **FASE 3** del corte 2026-09-05 — tras 02 + REFRESH, saca de bi-db lo ya replicado |
 
 ## Estado heredado del 005 (Fase A · 2026-08-28 · verificado con CEO)
 
@@ -233,6 +234,42 @@ docker compose -f docker-compose.bi.yml run --rm bi-next \
 
 ---
 
+## 🔒 SECUENCIA DEL CORTE DE COLUMNAS (whitelist 2026-09-05 · orden validado por el CEO de PI)
+
+El script 02 corta columnas NOT NULL sin default (`SolicitudComite.motivo`,
+`clasificacion_rubrica_votos.preguntasJson`, `worker_logs.mensaje`,
+`IncidenteInfra.senal`). Si el corte en PI ocurre primero, el apply worker
+reintenta la misma transacción en bucle, la réplica se detiene y el WAL se
+acumula en el **master de producción de PI** (minutos, no días). La inversión
+simple (DROP COLUMN primero en bi-db) revienta por el otro lado ("missing
+replicated column"). Orden obligatorio, reproducido en pg16 desechable:
+
+```text
+FASE 1 · bi-db:  psql -f 09a-bi-db-pre-corte.sql   (DROP NOT NULL × 4,
+                  conservando la columna · incluye su SELECT de verificación:
+                  deben salir 4 filas con is_nullable = YES)
+FASE 2 · pi-db:  1. ALTER PUBLICATION bi_replica DROP TABLE public."EmbeddingReporte";
+                  2. psql -f 02-pi-db-publicacion.sql   (lo corre el CEO de PI)
+FASE 3 · bi-db:  3. ALTER SUBSCRIPTION bi006_replica_sub REFRESH PUBLICATION;
+                  4. psql -f 09b-bi-db-limpieza-contenido.sql
+                  (recién aquí DROP COLUMN + TRUNCATE EmbeddingReporte)
+```
+
+Notas operativas:
+- El script 02 lleva `\set ON_ERROR_STOP on` como PRIMERA LÍNEA (sin depender
+  del `-v` del comando). Estrenar cualquier cambio de DDL del 02 en un pg16
+  desechable (`pg_dump --schema-only` del master → contenedor `postgres:16` →
+  correr el 02 → salida limpia) antes de producción.
+- `ALTER PUBLICATION` toma ShareUpdateExclusiveLock: no bloquea la app de PI,
+  pero no solaparlo con VACUUM/ANALYZE/CREATE INDEX ni migraciones de PI.
+- `IncidenteInfra.senal` se corta porque en patrones coordinados es
+  `patron_coordinado:sha256(texto del reporte)` SIN salt (huella revertible,
+  Ley 1581). `HealthProbe.senal` SE CONSERVA: vocabulario fijo del monitor
+  (app/worker/bd/ollama_ping/ollama_smoke/tailscale), sin hash ni texto.
+
+---
+
+
 ## ⚠️ REGLA DEL SLOT (4e) · leer antes de apagar o retirar la réplica
 
 **Apagar bi-db un rato NO pasa nada.** PI acumula los cambios (WAL retenido por
@@ -284,7 +321,21 @@ Desde la reescritura del script 02 (2026-09-01 · SPEC-006), la publicación
 las columnas vetadas ni siquiera salen de pi-db por el slot (defensa en
 profundidad sobre el REVOKE del script 01).
 
-### Lista canónica de tablas (40)
+### Lista canónica de tablas
+
+> **Fuente de verdad: el array `canon` del script 02.** La lista de abajo
+> corresponde a la reescritura 2026-09-01; el **2026-09-05** el canon pasó a
+> **44 tablas con columnas EXPLÍCITAS (deny-by-default total)**, cortando
+> además contenido narrativo y PII destilado ya publicados:
+> `SolicitudComite.motivo/resolucion/analisis`, `ClasificacionIA.rawResponse/
+> piiDetectada` (se conserva `contienePii`), `Reporte.keywordsDetectadas`,
+> `CorreccionAdmin.motivo`, `TransicionReporte.motivo/metadatos`,
+> `AuditLog.metadatos`, `worker_logs.mensaje/contextoJson`,
+> `clasificacion_rubrica_votos.preguntasJson`, `demo_marcado.metadata`,
+> `HealthProbe.detalle`, `IncidenteInfra.detalle/senal/ultimoEmailEn`,
+> `pasos_procesamiento.detalle`, `ReintentoReporte.error` y
+> `EmbeddingReporte` entera (shell vacío + índice HNSW se conservan en bi-db).
+> Ver `canon` y `columnas_vetadas` en `02-pi-db-publicacion.sql`.
 
 **15 con column list anti-PII** (solo se publican las columnas listadas):
 

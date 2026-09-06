@@ -1,4 +1,5 @@
--- 09-bi-db-limpieza-contenido.sql · Limpieza del SUSCRIPTOR tras la whitelist
+\set ON_ERROR_STOP on
+-- 09b-bi-db-limpieza-contenido.sql · FASE 3 · Limpieza del SUSCRIPTOR
 -- Producto 006 · BI v2 · 2026-09-05
 --
 -- Contexto: la publicación bi_replica pasó de lista negra a LISTA BLANCA
@@ -7,14 +8,18 @@
 -- este script. Es la otra mitad del corte: la lista blanca controla qué
 -- entra; esto saca lo que ya había entrado.
 --
--- ORDEN OBLIGATORIO (después de que el CEO corrió el DROP manual de
--- EmbeddingReporte + el script 02 en el master de PI):
---   1. CEO de PI: ALTER PUBLICATION bi_replica DROP TABLE public."EmbeddingReporte";
---      (paso deliberado: la tabla tiene datos y el guard B1 del script 02
---      aborta para que un humano decida — este script asume que ya se hizo)
---   2. CEO de PI: psql -f 02-pi-db-publicacion.sql  (reconcilia las 44 listas)
---   3. BI:        ALTER SUBSCRIPTION bi006_replica_sub REFRESH PUBLICATION;
---   4. BI:        psql -f 09-bi-db-limpieza-contenido.sql   ← ESTE ARCHIVO
+-- ORDEN OBLIGATORIO — este archivo es la FASE 3 y corre ÚLTIMO:
+--   FASE 1 · bi-db:  09a-bi-db-pre-corte.sql (DROP NOT NULL × 4 — ANTES de
+--                    tocar PI; sin esto el apply worker entra en bucle y el
+--                    WAL se acumula en el master de producción)
+--   FASE 2 · pi-db:  1. CEO: ALTER PUBLICATION bi_replica DROP TABLE public."EmbeddingReporte";
+--                       (paso deliberado: la tabla tiene datos y el guard B1
+--                       del script 02 aborta para que un humano decida)
+--                    2. CEO: psql -f 02-pi-db-publicacion.sql (reconcilia las 44 listas)
+--   FASE 3 · bi-db:  3. ALTER SUBSCRIPTION bi006_replica_sub REFRESH PUBLICATION;
+--                    4. psql -f 09b-bi-db-limpieza-contenido.sql   ← ESTE ARCHIVO
+--   El DROP COLUMN va DESPUÉS del REFRESH: antes de él, el apply worker
+--   exige las columnas ("missing replicated column") y reintenta en bucle.
 --
 -- Idempotente: todo IF EXISTS / TRUNCATE re-corrible.
 
@@ -32,6 +37,12 @@ ALTER TABLE "AuditLog"             DROP COLUMN IF EXISTS metadatos;
 ALTER TABLE "worker_logs"          DROP COLUMN IF EXISTS mensaje;
 ALTER TABLE "clasificacion_rubrica_votos" DROP COLUMN IF EXISTS "preguntasJson";
 ALTER TABLE "demo_marcado"         DROP COLUMN IF EXISTS metadata;
+-- IncidenteInfra.senal: en patrones coordinados era patron_coordinado:
+-- sha256(texto del reporte) SIN salt — huella revertible (Ley 1581), misma
+-- razón que EmbeddingReporte.vector. HealthProbe.senal NO se toca: es
+-- vocabulario fijo del monitor (app/worker/bd/ollama_ping/ollama_smoke/
+-- tailscale), distinta columna de otra tabla.
+ALTER TABLE "IncidenteInfra"       DROP COLUMN IF EXISTS senal;
 
 -- ── 2. PerfilOperador: columnas bootstrap huérfanas (jamás viajaron por la
 --       réplica — verificadas en 0 excepto creadoEn con 10 filas de un
@@ -60,6 +71,14 @@ UPDATE "bi_catalogo_columna" SET "excluida" = true
    'motivo','resolucion','analisis','rawResponse','piiDetectada',
    'keywordsDetectadas','metadatos','mensaje','preguntasJson','metadata','vector'
  );
+-- IncidenteInfra.senal se excluye SOLO en su tabla: 'senal' también existe en
+-- HealthProbe (vocabulario fijo del monitor) y esa SE CONSERVA — el filtro es
+-- por tablaId, no por nombre de columna.
+UPDATE "bi_catalogo_columna" cc SET "excluida" = true
+  FROM "bi_catalogo_tabla" ct
+ WHERE cc."tablaId" = ct.id
+   AND ct."nombreFuente" = 'IncidenteInfra'
+   AND cc."nombreFuente" = 'senal';
 -- Y la tabla entera que sale de circulación:
 UPDATE "bi_catalogo_tabla" SET "activo" = false
  WHERE "nombreFuente" = 'EmbeddingReporte';
@@ -75,7 +94,11 @@ SELECT 'contenido residual' AS chequeo, count(*) AS debe_ser_0
    ('Reporte','keywordsDetectadas'), ('AuditLog','metadatos'),
    ('worker_logs','mensaje'), ('clasificacion_rubrica_votos','preguntasJson'),
    ('demo_marcado','metadata'), ('PerfilOperador','notasInternas'),
-   ('PerfilOperador','creadoPorId')
+   ('PerfilOperador','creadoPorId'), ('IncidenteInfra','senal')
  );
 SELECT 'vectores residual' AS chequeo, count(*) AS debe_ser_0
   FROM "EmbeddingReporte";
+-- Guarda cruzada: la columna homónima del monitor NO se tocó.
+SELECT 'HealthProbe.senal conservada' AS chequeo, count(*) AS debe_ser_1
+  FROM information_schema.columns
+ WHERE table_name = 'HealthProbe' AND column_name = 'senal';

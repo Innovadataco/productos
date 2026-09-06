@@ -1,3 +1,4 @@
+\set ON_ERROR_STOP on
 -- ==========================================================================
 -- 02-pi-db-publicacion.sql · Producto 006 · BI v2
 -- Publicación lógica `bi_replica` en el Postgres de PI (pg_logical).
@@ -32,6 +33,19 @@
 --   (como aquí). Nota operativa: si la suscripción del 006 ya existiera al
 --   correr esto, aplicar después `ALTER SUBSCRIPTION bi006_replica_sub
 --   REFRESH PUBLICATION` en bi-db para propagar el cambio de columnas.
+--
+-- ORDEN SEGURO (acordado con PI 2026-09-05 · verificado en pg16 desechable):
+--   NO correr este script primero. Cuando una columna cortada es NOT NULL sin
+--   default del lado del suscriptor, el apply worker reintenta en bucle y el
+--   WAL se acumula en el MASTER de PI. Secuencia obligatoria:
+--     FASE 1 · bi-db:  09a-bi-db-pre-corte.sql (DROP NOT NULL de las 4
+--                      columnas NOT NULL cortadas, conservando la columna).
+--     FASE 2 · pi-db:  Paso 1 (CEO: DROP TABLE EmbeddingReporte de la
+--                      publicación) + ESTE SCRIPT.
+--     FASE 3 · bi-db:  ALTER SUBSCRIPTION ... REFRESH PUBLICATION y recién
+--                      después 09b-bi-db-limpieza-contenido.sql (DROP COLUMN +
+--                      TRUNCATE EmbeddingReporte + catálogo excluida=true).
+--   Secuencia detallada en INSTRUCTIVO-REPLICA-006.md.
 --
 -- GUARDS (fallan EN VOZ ALTA con RAISE EXCEPTION y ON_ERROR_STOP=1):
 --     · B2: una tabla canónica no existe en el master → aborta antes de tocar
@@ -129,7 +143,14 @@ DECLARE
     ARRAY['IdentificadorHijo', 'id,hijoId,tipo,plataformaId,activo,creadoEn,actualizadoEn'],
     ARRAY['IdentificadorProfesor', 'id,profesorId,colegioId,tipo,plataformaId,estado,createdAt,updatedAt'],
     ARRAY['IdentificadorReportado', 'id,plataformaId,totalReportes,reportesAutenticados,reportesAnonimos,esVisiblePublicamente,ultimoReporteEn,creadoEn,actualizadoEn,nivelRiesgo,score,scoreAnonimo,scoreAutenticado,scoreAjustado,ocultoPorComiteEn,reportesAprobados,autenticadosAprobados'],
-    ARRAY['IncidenteInfra', 'id,senal,estado,inicio,fin,creadoEn,actualizadoEn'],
+    --   ↑ senal CORTADA (whitelist 2026-09-05): en patrones coordinados es
+    --     patron_coordinado:sha256(texto del reporte) SIN salt — la misma
+    --     huella revertible por la que salió EmbeddingReporte. La tabla queda
+    --     (id,estado,inicio,fin,creadoEn,actualizadoEn) — el semáforo de
+    --     incidentes sigue midiendo duración/estado. HealthProbe.senal se
+    --     CONSERVA: vocabulario fijo del monitor (app/worker/bd/ollama_ping/
+    --     ollama_smoke/tailscale), sin hash ni texto.
+    ARRAY['IncidenteInfra', 'id,estado,inicio,fin,creadoEn,actualizadoEn'],
     ARRAY['OnboardingColegio', 'id,colegioId,estado,pasoActual,completadoEn,creadoEn,actualizadoEn'],
     ARRAY['Pago', 'id,suscripcionId,duracionCubierta,montoBaseUSD,descuentoAplicadoUSD,montoNetoUSD,tasaCambioAplicada,montoLocalPagado,monedaLocal,metodoDeclarado,fechaReporte,fechaAutorizacion,estado,createdAt,updatedAt,montoReembolsoUSD'],
     ARRAY['Pais', 'id,codigo,nombre,esActivo,creadoEn'],
@@ -159,8 +180,8 @@ DECLARE
     ARRAY['pasos_procesamiento', 'id,reporteId,etapa,veredicto,latenciaMs,creadoEn'],
     ARRAY['patrones_institucionales', 'id,colegioId,periodo,grado,conducta,plataformaId,conteo,creadoEn,actualizadoEn'],
     ARRAY['score_clientes', 'id,suscripcionId,periodo,componenteReportes,componenteCasos,componenteAlertas,componenteSesiones,pesoReportes,pesoCasos,pesoAlertas,pesoSesiones,scoreTotal,percentilEnCohorte,calculadoEn'],
-    ARRAY['worker_logs', 'id,servicio,nivel,creadoEn'],
     --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): mensaje
+    ARRAY['worker_logs', 'id,servicio,nivel,creadoEn']
   ];
 
   -- ── TABLAS PROHIBIDAS (Ley 1581 · jamás en la publicación) ─────────────
@@ -230,6 +251,7 @@ DECLARE
     ARRAY['HealthProbe', 'detalle'],
     ARRAY['worker_logs', 'contextoJson'],
     ARRAY['IncidenteInfra', 'detalle'], ARRAY['IncidenteInfra', 'ultimoEmailEn'],
+    ARRAY['IncidenteInfra', 'senal'],
     ARRAY['senal_comunitaria_cache', 'identificadorReportado'],
     -- WHITELIST 2026-09-05 (minimización Ley 1581): contenido narrativo, PII
     -- destilado, JSON libre y vectores. Redundante con la lista blanca del
