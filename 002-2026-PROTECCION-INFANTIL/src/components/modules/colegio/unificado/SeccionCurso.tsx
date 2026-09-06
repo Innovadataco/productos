@@ -77,7 +77,7 @@ export function SeccionCurso({
                             options={[
                                 {
                                     value: "",
-                                    label: cargando ? "Cargando profesores…" : profesores.length === 0 ? "Aún no tienes profesores" : "Sin profesor titular",
+                                    label: cargando ? "Cargando profesores…" : profesores.length === 0 ? "Aún no tiene profesores" : "Sin profesor titular",
                                 },
                                 ...profesores.map((p) => ({ value: p.id, label: `${p.nombre} ${p.apellidos}` })),
                             ]}

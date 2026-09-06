@@ -185,7 +185,7 @@ export default function SeccionMateriasCurso({ cursoId, onAviso }: SeccionMateri
                 <div className="mt-6">
                     <EmptyState
                         title="Este curso aún no tiene materias"
-                        description="Asigna la primera desde el selector de arriba."
+                        description="Asigne la primera desde el selector de arriba."
                     />
                 </div>
             ) : (

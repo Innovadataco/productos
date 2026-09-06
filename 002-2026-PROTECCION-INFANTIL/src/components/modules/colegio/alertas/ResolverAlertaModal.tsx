@@ -80,12 +80,12 @@ export function ResolverAlertaModal({ isOpen, alertaId, onClose, onResuelta }: R
         <Modal isOpen={isOpen} onClose={cerrar} title="Resolver aquí">
             <div className="space-y-4">
                 <p className="text-sm text-muted">
-                    Resuelve el caso en el colegio, sin comité. Cuenta qué hiciste: la nota queda
+                    Resuelva el caso en el colegio, sin comité. Cuente qué hizo: la nota queda
                     en la bitácora del caso y la alerta pasa a Gestionada.
                 </p>
                 <div>
                     <label htmlFor="nota-resolucion" className="mb-1 block text-sm font-medium text-body">
-                        Qué hiciste con este caso
+                        Qué hizo con este caso
                     </label>
                     <textarea
                         id="nota-resolucion"

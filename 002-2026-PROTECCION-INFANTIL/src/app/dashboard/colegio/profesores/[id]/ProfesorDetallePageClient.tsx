@@ -87,7 +87,7 @@ export default function ProfesorDetallePageClient({ params }: { params: Promise<
             if (resProfesor.ok && dataProfesor.profesor) {
                 setProfesor(dataProfesor.profesor);
             } else if (resProfesor.status === 404 || resProfesor.status === 403) {
-                setError(dataProfesor?.error?.message || "No tienes acceso a este profesor");
+                setError(dataProfesor?.error?.message || "No tiene acceso a este profesor");
                 setLoading(false);
                 return;
             }

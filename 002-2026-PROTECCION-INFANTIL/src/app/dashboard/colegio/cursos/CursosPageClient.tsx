@@ -168,7 +168,7 @@ export default function CursosPageClient() {
                         ) : cursos.length === 0 ? (
                             <EmptyState
                                 title="No hay cursos registrados"
-                                description="Cree el primer curso para comenzar a gestionar alumnos."
+                                description="Cree el primer curso para comenzar a gestionar estudiantes."
                                 action={
                                     <Button onClick={() => router.push("/dashboard/colegio/cursos/unificado")}>
                                         Crear curso
