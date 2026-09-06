@@ -25,11 +25,11 @@
  * en un archivo del árbol pone el candado en rojo. Un candado que pasa con el
  * defecto es peor que ninguno.
  *
- * EXCLUSIÓN declarada (no silenciosa): `PreferenciasNotificaciones.tsx` es una
- * pantalla MIXTA (Sección D del barrido de Diseño) que ven padre + profesional +
- * admin; su voz (tú/usted) está PENDIENTE de decisión de Jelkin. Conserva su
- * voseo («querés») a propósito hasta esa decisión — está fuera del radicado
- * SPEC-501. Cuando se decida, se quita de la exclusión y se corrige.
+ * RESUELTO (SPEC-506 · decisión de Jelkin, §D del barrido de Diseño):
+ * `PreferenciasNotificaciones.tsx` es MIXTA (la ven padre + profesional + admin).
+ * La voz del CUERPO ahora va por AUDIENCIA (§1.9): padre = «tú» (sin voseo) ·
+ * colegio/profesional/admin = «usted». Se quitó su voseo («querés»→«quieres») y
+ * su exclusión: el archivo entra al barrido de voseo como cualquier otro.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -70,9 +70,8 @@ const RAICES = [
     ...paginas(path.join(APP, "dashboard", "padre")),
 ];
 
-// data-viz (color = valor, lo define Diseño), tests, y la MIXTA pendiente (§D).
+// data-viz (color = valor, lo define Diseño) y tests.
 const EXCLUYE = /Sparkline\.tsx$|\.test\.tsx?$/;
-const PENDIENTE_VOZ_MIXTA = /PreferenciasNotificaciones\.tsx$/; // §D · decisión de Jelkin
 
 function resolver(spec: string, desde: string): string | null {
     let base: string;
@@ -153,9 +152,7 @@ const NODOS_CLAVE = [
 ];
 
 describe("SPEC-501 · padre + público hablan de «tú» (sin voseo)", () => {
-    const arbol = [...arbolDeRender(RAICES)].filter(
-        (a) => !EXCLUYE.test(a) && !PENDIENTE_VOZ_MIXTA.test(a),
-    );
+    const arbol = [...arbolDeRender(RAICES)].filter((a) => !EXCLUYE.test(a));
 
     it("las raíces se resolvieron (portada + reportar + recuperar + seguimiento + padre)", () => {
         const raicesVivas = RAICES.filter((r) => fs.existsSync(r));

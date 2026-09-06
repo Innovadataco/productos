@@ -88,6 +88,54 @@ describe("PreferenciasNotificaciones · vista del padre (SPEC-326 §3.1)", () =>
             expect(screen.getByText(/Suscriptores › Reporte_publicado/)).toBeDefined()
         );
         // No muestra el encabezado de frases del padre.
-        expect(screen.queryByText("¿Qué querés que te avisemos?")).toBeNull();
+        expect(screen.queryByText("¿Qué quieres que te avisemos?")).toBeNull();
+    });
+});
+
+// SPEC-506 · CANDADO: la voz del CUERPO va por AUDIENCIA (§1.9), como el título
+// por rol (TEMA_POR_ROL). Padre = «tú» (sin voseo) · colegio/profesional/admin/
+// interno = «usted». Antes el cuerpo estaba fijo en «tú» y el componente estaba
+// EXIMIDO del candado de voz (PENDIENTE_VOZ_MIXTA). Vigila CONDUCTA: inspecciona
+// el texto REALMENTE renderizado por rol. Muere con el defecto — volver a «querés»
+// (voseo) o poner «tu rol»/«tus preferencias» a un rol usted vuelve rojo.
+function mockPreferenciasError() {
+    vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({ ok: false, json: async () => ({}) }) as Response)
+    );
+}
+
+describe("PreferenciasNotificaciones · voz del cuerpo por audiencia (SPEC-506)", () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it("padre: el cuerpo tutea SIN voseo («quieres», nunca «querés»)", async () => {
+        mockPreferencias(GRUPOS_PADRE);
+        const { container } = render(<PreferenciasNotificaciones rol="PARENT" correo="juan@correo.com" />);
+        await waitFor(() => expect(screen.getByText("¿Qué quieres que te avisemos?")).toBeDefined());
+        expect(container.textContent).not.toMatch(/querés/i);
+    });
+
+    it("rol usted (colegio) sin config: el cuerpo trata de «usted» («su rol», no «tu rol»)", async () => {
+        mockPreferencias([]);
+        const { container } = render(<PreferenciasNotificaciones rol="SCHOOL_ADMIN" correo="rector@colegio.edu" />);
+        await waitFor(() =>
+            expect(screen.getByText("No hay notificaciones configurables para su rol.")).toBeDefined()
+        );
+        expect(container.textContent).not.toMatch(/para tu rol/i);
+    });
+
+    it("el error de carga adapta la voz: padre «tus», usted «sus»", async () => {
+        mockPreferenciasError();
+        const { unmount } = render(<PreferenciasNotificaciones rol="PARENT" correo="p@correo.com" />);
+        await waitFor(() => expect(screen.getByText("No pudimos cargar tus preferencias")).toBeDefined());
+        expect(screen.queryByText("No pudimos cargar sus preferencias")).toBeNull();
+        unmount();
+
+        mockPreferenciasError();
+        render(<PreferenciasNotificaciones rol="SCHOOL_ADMIN" correo="r@colegio.edu" />);
+        await waitFor(() => expect(screen.getByText("No pudimos cargar sus preferencias")).toBeDefined());
+        expect(screen.queryByText("No pudimos cargar tus preferencias")).toBeNull();
     });
 });
