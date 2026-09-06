@@ -41,10 +41,11 @@ const COPY: Record<EstadoColegio, CopyEstado> = {
     },
 };
 
+// SPEC-566 (D-120): sin rubí — el hero ya no puede llegar a ese estado
+// (colorDeEstadoColegio devuelve solo pino|ambar). Era código muerto.
 const PUNTO_ESTADO = {
     pino: "bg-pino",
     ambar: "bg-ambar",
-    rubi: "bg-rubi",
 } as const;
 
 interface HeroEstadoProps {

@@ -3,11 +3,12 @@ import type { EmbudoTablero } from "@/lib/dal/repositories/colegio-resumen";
 
 /**
  * SPEC-158 (T004, US1, FR-003) — El embudo: qué me espera a mí.
- * Cuatro cifras grandes (recibidos / cerrados / en revisión / te esperan a ti),
+ * Cuatro cifras grandes (recibidos / cerrados / en revisión / le esperan),
  * cada reporte contado UNA vez en el bucket de su estado más pendiente (sin
- * solapes, garantizado por `embudoPorReporte`). "Te esperan a ti" es el verbo del
- * tablero: si es > 0 se destaca con el estado rubí del sistema y enlaza a los
- * avisos del colegio; si es 0, copy positivo — la calma también se muestra (§4.0.1).
+ * solapes, garantizado por `embudoPorReporte`). «Le esperan» es el verbo del
+ * tablero: si es > 0 se destaca en ámbar (SPEC-551: atención, no rubí) y enlaza
+ * a «Ver alertas» (SPEC-561); si es 0, copy positivo — la calma también se
+ * muestra (§4.0.1).
  */
 
 interface EmbudoEstadoProps {
