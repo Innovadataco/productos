@@ -115,13 +115,13 @@ describe("MisHijos", () => {
         fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "1030512345" } });
 
         // 1º con plataforma → se acumula en la lista
-        fireEvent.change(screen.getByLabelText("Identificador"), { target: { value: "anaroblox" } });
+        fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "anaroblox" } });
         fireEvent.change(screen.getByLabelText("Plataforma"), { target: { value: "p1" } });
         fireEvent.click(screen.getByRole("button", { name: "Agregar otro" }));
         await waitFor(() => expect(screen.getByTestId("identificadores-nuevos")).toBeDefined());
 
         // 2º sin plataforma, escrito pero NO "agregado": debe entrar igual.
-        fireEvent.change(screen.getByLabelText("Identificador"), { target: { value: "+573001112233" } });
+        fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "+573001112233" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
 
         await waitFor(() => {
