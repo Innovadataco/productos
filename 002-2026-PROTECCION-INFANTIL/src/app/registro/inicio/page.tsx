@@ -67,7 +67,7 @@ export default function RegistroInicioPage() {
                         </div>
                         <h2 className="font-serif text-2xl font-normal text-body">Colegio</h2>
                         <p className="mt-2 font-sans text-sm text-muted">
-                            Gestiona la protección de tus estudiantes, activa alertas y coordina con las familias.
+                            Gestione la protección de sus estudiantes, active alertas y coordine con las familias.
                         </p>
                         <Link
                             href="/registro-colegio"
@@ -101,7 +101,7 @@ export default function RegistroInicioPage() {
                         </div>
                         <h2 className="font-serif text-2xl font-normal text-body">Soy profesional</h2>
                         <p className="mt-2 font-sans text-sm text-muted" style={{ borderRadius: "12px" }}>
-                            Psicólogos y acompañantes verificados. Recibí solicitudes de padres que buscan
+                            Psicólogos y acompañantes verificados. Reciba solicitudes de padres que buscan
                             ayuda tras un reporte.
                         </p>
                         <Link
