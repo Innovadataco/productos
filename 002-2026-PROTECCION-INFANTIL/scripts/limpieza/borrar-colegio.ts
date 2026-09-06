@@ -26,7 +26,7 @@
  */
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
-import { parseArgs, requerirMotivo, registrarAuditoria, log } from "./_common";
+import { parseArgs, requerirMotivo, registrarAuditoria, log, bloquearSiHayConsentimiento } from "./_common";
 import { borrarReporte } from "./borrar-reporte";
 
 export interface ResultadoBorrarColegio {
@@ -218,6 +218,9 @@ export async function borrarColegio(
             }
         }
 
+        // SPEC-508: no destruir evidencia de consentimiento por el cascade. Si el
+        // admin o el comité tuvieran constancias, se NIEGA (rollback de la tx).
+        await bloquearSiHayConsentimiento(tx, usuariosColegio, `colegio ${colegioId}`);
         if (colegio.admin) await tx.usuario.delete({ where: { id: colegio.admin.id } });
         if (colegio.comiteConvivencia) await tx.usuario.delete({ where: { id: colegio.comiteConvivencia.id } });
 

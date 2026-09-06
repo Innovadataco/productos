@@ -13,7 +13,7 @@
  */
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
-import { parseArgs, requerirMotivo, registrarAuditoria, log, PRESERVADOS } from "./_common";
+import { parseArgs, requerirMotivo, registrarAuditoria, log, PRESERVADOS, bloquearSiHayConsentimiento, contarConsentimientos } from "./_common";
 import { borrarReporte } from "./borrar-reporte";
 
 export interface ResultadoBorrarPadre {
@@ -27,6 +27,7 @@ export interface ResultadoBorrarPadre {
         tokensRecuperacion: number;
         suscripciones: number;
         expedientes: number;
+        consentimientos: number;
         usuario: number;
     };
     dryRun: boolean;
@@ -71,6 +72,8 @@ export async function borrarPadre(
         tokensRecuperacion: await client.tokenRecuperacion.count({ where: { usuarioId: usuario.id } }),
         suscripciones: await client.suscripcion.count({ where: { usuarioId: usuario.id } }),
         expedientes: expedienteIds.length,
+        // SPEC-508: constancias de consentimiento que el cascade destruiría (evidencia legal).
+        consentimientos: await contarConsentimientos(client, [usuario.id]),
         usuario: 1,
     };
 
@@ -82,9 +85,15 @@ export async function borrarPadre(
         log("borrar-padre", `  · TokenRecuperacion: ${conteoDetalle.tokensRecuperacion}`);
         log("borrar-padre", `  · Suscripcion: ${conteoDetalle.suscripciones}`);
         log("borrar-padre", `  · Expediente (+ AclaracionExpediente, InformeConsolidado, PatronExpediente, EventoExpediente): ${conteoDetalle.expedientes}`);
+        log("borrar-padre", `  · AuditConsentimiento (EVIDENCIA LEGAL — el borrado se NIEGA si > 0, SPEC-508): ${conteoDetalle.consentimientos}`);
         log("borrar-padre", "  · Usuario: 1");
         return { usuarioId: usuario.id, email, filasBorradas: 0, detalle: conteoDetalle, dryRun: true };
     }
+
+    // SPEC-508 · para el sangrado del P1-A: no destruir la evidencia de
+    // consentimiento por el cascade. Si el padre tiene constancias, se NIEGA
+    // antes de borrar nada (ni reportes, ni la transacción del usuario).
+    await bloquearSiHayConsentimiento(client, [usuario.id], `padre ${email}`);
 
     // Los reportes se borran uno a uno (fuera de la transacción del usuario
     // para reutilizar el orden FK-safe validado). Cada uno ya es transaccional.
@@ -122,6 +131,7 @@ export async function borrarPadre(
             tokensRecuperacion: tr.count,
             suscripciones: su.count,
             expedientes: expedienteIds.length,
+            consentimientos: 0, // SPEC-508: garantizado 0 acá (el guard ya se negó si había).
             usuario: u ? 1 : 0,
         };
         const total = Object.values(detalle).reduce((a, b) => a + b, 0);

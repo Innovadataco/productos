@@ -24,6 +24,7 @@ interface FakeModels {
     informeConsolidado: { deleteMany: AnyFn };
     patronExpediente: { deleteMany: AnyFn };
     usuario: { findUnique: AnyFn; delete: AnyFn };
+    auditConsentimiento: { count: AnyFn }; // SPEC-508
     contactoConfianza: { count: AnyFn; deleteMany: AnyFn };
     codigoVerificacion: { count: AnyFn; deleteMany: AnyFn };
     tokenRecuperacion: { count: AnyFn; deleteMany: AnyFn };
@@ -82,6 +83,7 @@ function makeFakeClient(): { client: PrismaClient; tx: FakeModels } {
         informeConsolidado: makeModel(),
         patronExpediente: makeModel(),
         usuario: makeModel(),
+        auditConsentimiento: makeModel(), // SPEC-508 · count → 0 por defecto
         contactoConfianza: makeModel(),
         codigoVerificacion: makeModel(),
         tokenRecuperacion: makeModel(),
@@ -257,6 +259,27 @@ describe("borrarPadre — A-65 · borrado de Expediente antes del Usuario", () =
         expect(tx.aclaracionExpediente.deleteMany).not.toHaveBeenCalled();
         // Usuario sí se borra
         expect(tx.usuario.delete).toHaveBeenCalled();
+    });
+
+    // ── SPEC-508 · candado: no destruir la evidencia legal de consentimiento ──
+    // Muere por mutación: si se quita `bloquearSiHayConsentimiento` de borrar-padre,
+    // el usuario se borra igual (cascade arrasa AuditConsentimiento) y este test cae.
+    it("SPEC-508 confirm: se NIEGA a borrar si el padre tiene consentimiento (no borra nada)", async () => {
+        tx.auditConsentimiento.count.mockResolvedValue(2);
+        const { borrarPadre } = await import("./borrar-padre");
+        await expect(borrarPadre("padre@test.com", "baja", { confirm: true, client })).rejects.toThrow(
+            /BLOQUEADO/,
+        );
+        expect(tx.usuario.delete).not.toHaveBeenCalled();
+        expect(tx.expediente.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("SPEC-508 dry-run: reporta el conteo de consentimientos que se perderían", async () => {
+        tx.auditConsentimiento.count.mockResolvedValue(3);
+        const { borrarPadre } = await import("./borrar-padre");
+        const resultado = await borrarPadre("padre@test.com", "baja", { confirm: false, client });
+        expect(resultado.detalle.consentimientos).toBe(3);
+        expect(tx.usuario.delete).not.toHaveBeenCalled();
     });
 });
 

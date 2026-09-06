@@ -57,6 +57,41 @@ export async function registrarAuditoria(
     });
 }
 
+/**
+ * SPEC-508 · para el sangrado del P1-A de la auditoría del modelo. Borrar un
+ * `Usuario` con filas en `AuditConsentimiento` dispara el `onDelete: Cascade` y
+ * destruye la evidencia legal del consentimiento (Ley 1581) SIN dejar rastro —
+ * ni siquiera aparece en el dry-run. Hasta la migración P1-A (que cambia el FK a
+ * `Restrict` y archiva en una `ConstanciaConsentimiento` inmutable), NINGÚN
+ * camino de borrado puede tocar un usuario con consentimiento: se NIEGA en voz alta.
+ *
+ * No se «archiva» en `AuditLog.metadatos`: esa columna se replica a `bi_replica`
+ * y meter ahí el `documentoHash` abriría una fuga de PII (otro hallazgo de la
+ * misma auditoría). Por eso el stop-gap es negarse, no copiar.
+ */
+export async function contarConsentimientos(
+    client: Pick<PrismaClient, "auditConsentimiento">,
+    usuarioIds: string[],
+): Promise<number> {
+    if (usuarioIds.length === 0) return 0;
+    return client.auditConsentimiento.count({ where: { usuarioId: { in: usuarioIds } } });
+}
+
+export async function bloquearSiHayConsentimiento(
+    client: Pick<PrismaClient, "auditConsentimiento">,
+    usuarioIds: string[],
+    contexto: string,
+): Promise<void> {
+    const n = await contarConsentimientos(client, usuarioIds);
+    if (n > 0) {
+        throw new Error(
+            `[limpieza] BORRADO BLOQUEADO (${contexto}): ${n} constancia(s) de AuditConsentimiento se ` +
+                "destruirían por el cascade (evidencia legal, Ley 1581). Hasta la migración P1-A " +
+                "(ConstanciaConsentimiento inmutable) este borrado se NIEGA. Preservá la evidencia antes.",
+        );
+    }
+}
+
 export const PRESERVADOS = {
     usuarios: ["soporte@innovadataco.com"],
     // Reportes que NO borra reset-piloto (D-001 §5, evidencia viva I-105/I-100/I-113/I-114/I-121).
