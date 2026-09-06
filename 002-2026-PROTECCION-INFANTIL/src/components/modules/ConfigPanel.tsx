@@ -253,7 +253,7 @@ export default function ConfigPanel() {
             )}
 
             {pendingConfig && (
-                <Alerta tono="info" role="status" className="border border-sky-200 p-4 dark:border-sky-800">
+                <Alerta tono="info" role="status" className="border border-cielo/30 p-4">
                     <div className="flex items-center justify-between">
                         <p>Configuración precargada desde un experimento. Revisa los valores y guarda para activarla.</p>
                         <Button variant="ghost" className="text-xs" onClick={dismissPendingConfig}>

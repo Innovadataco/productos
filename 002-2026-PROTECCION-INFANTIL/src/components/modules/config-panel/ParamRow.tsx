@@ -55,8 +55,8 @@ export function ParamRow({ param, value, revealed, message, saving, onChange, on
                 <div
                     className={`mt-2 rounded-lg px-3 py-1.5 text-xs ${
                         message.type === "error"
-                            ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300"
-                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300"
+                            ? "bg-rubi/10 text-estado-rubi"
+                            : "bg-pino/10 text-estado-pino"
                     }`}
                 >
                     {message.text}
