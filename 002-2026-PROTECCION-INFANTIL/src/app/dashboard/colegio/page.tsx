@@ -20,9 +20,12 @@ import { calcularCobertura } from "@/lib/colegio/cobertura";
  * plataforma): la decisión C2/C3 de SPEC-129 queda SUPERADA (documentado en el
  * cierre de SPEC-143). ConsultaPublica/PublicDashboard siguen en la landing `/`.
  *
- * La auth (rol, vigencia, cambio de contraseña) la hace el `layout.tsx`: aquí solo
- * se lee la identidad de sesión para el saludo y el `colegioId`. TODOS los datos
- * propios salen de UNA llamada a `ColegioResumenRepository.homeRector(colegioId)`.
+ * La vigencia y el cambio de contraseña los hace el `middleware.ts`/`layout.tsx`;
+ * la vigencia y el consentimiento, el middleware. La AUTORIZACIÓN de esta página
+ * la hace ELLA MISMA (SPEC-571): `verifyToken` + `findSesionColegio` — sin
+ * `colegioId` de sesión, redirige a /login; el layout NO guarda por rol. Aquí se
+ * lee la identidad para el saludo y el `colegioId`. TODOS los datos propios salen
+ * de UNA llamada a `ColegioResumenRepository.homeRector(colegioId)`.
  */
 export default async function ColegioDashboardPage() {
     const cookieStore = await cookies();
