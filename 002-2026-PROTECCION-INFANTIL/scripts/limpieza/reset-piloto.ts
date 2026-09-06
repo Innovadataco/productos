@@ -90,12 +90,57 @@ async function resetSoloSembrado(motivo: string, backupSize: number): Promise<vo
     log("reset-piloto", `REALIZADO --solo-sembrado backup=${backupSize}B filas=${total} marcas=${res.marcadasLimpiadas}`);
 }
 
+/**
+ * Reportes que borra el reset. Normal: solo huérfanos (tenant/usuario null) y SIN los de
+ * `PRESERVADOS.reportesExcluidos`. `--purga-total` (ventana S-D, D-113): TODOS — los 3 de
+ * «evidencia viva» ya son dato de prueba (D-113, 05-09) y la migración S-D exige la tabla vacía.
+ */
+export async function seleccionarReportesABorrar(
+    purgaTotal: boolean
+): Promise<{ id: string; numeroSeguimiento: string | null }[]> {
+    if (purgaTotal) {
+        return prisma.reporte.findMany({ select: { id: true, numeroSeguimiento: true } });
+    }
+    return prisma.reporte.findMany({
+        where: {
+            tenantId: null,
+            usuarioId: null,
+            numeroSeguimiento: { notIn: [...PRESERVADOS.reportesExcluidos] },
+        },
+        select: { id: true, numeroSeguimiento: true },
+    });
+}
+
+/**
+ * Garantía de `--purga-total`: la migración S-D exige estas cuatro tablas VACÍAS (agrega
+ * `contenidoId` NOT NULL). Si algo quedó (un reporte de soporte@ no contemplado, o un contenido
+ * sin barrer), ABORTA ruidoso ANTES de la ventana en vez de dejar texto cifrado de denuncias vivo.
+ */
+export async function afirmarPurgaTotalCompleta(): Promise<void> {
+    const [reportes, eventos, contenidos, llaves] = await Promise.all([
+        prisma.reporte.count(),
+        prisma.eventoExpediente.count(),
+        prisma.contenidoReporte.count(),
+        prisma.llaveReporte.count(),
+    ]);
+    if (reportes || eventos || contenidos || llaves) {
+        throw new Error(
+            `[reset-piloto] --purga-total NO dejó las tablas en 0: Reporte=${reportes} ` +
+                `EventoExpediente=${eventos} ContenidoReporte=${contenidos} LlaveReporte=${llaves}. ` +
+                "La migración S-D las exige vacías; revisá qué quedó antes de la ventana.",
+        );
+    }
+}
+
 async function main(): Promise<void> {
-    const args = parseArgs(process.argv);
+    const args = parseArgs(process.argv, ["motivo", "backup", "confirm", "solo-sembrado", "purga-total"]);
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
     const backup = typeof args.backup === "string" ? args.backup : "";
     if (!backup) throw new Error("[reset-piloto] Falta --backup=<ruta.sql>");
     if (args.confirm !== true) throw new Error("[reset-piloto] Falta --confirm");
+    // D-113 / ventana S-D: --purga-total IGNORA los reportes «preservados» (ya son dato de
+    // prueba) y garantiza las tablas cifradas en 0. soporte@ (login) y el seed NO se tocan.
+    const purgaTotal = args["purga-total"] === true;
 
     const backupSize = ejecutarBackup(backup);
 
@@ -146,16 +191,9 @@ async function main(): Promise<void> {
         await borrarPadre(p.email, motivo, { confirm: true, client: prisma });
     }
 
-    const reportesHuerfanos = await prisma.reporte.findMany({
-        where: {
-            tenantId: null,
-            usuarioId: null,
-            numeroSeguimiento: { notIn: [...PRESERVADOS.reportesExcluidos] },
-        },
-        select: { id: true, numeroSeguimiento: true },
-    });
-    log("reset-piloto", `Reportes huérfanos a borrar: ${reportesHuerfanos.length}`);
-    for (const r of reportesHuerfanos) {
+    const reportesABorrar = await seleccionarReportesABorrar(purgaTotal);
+    log("reset-piloto", `Reportes a borrar (${purgaTotal ? "purga-total" : "normal"}): ${reportesABorrar.length}`);
+    for (const r of reportesABorrar) {
         await borrarReporte(r.id, motivo, { confirm: true, client: prisma });
     }
 
@@ -170,9 +208,9 @@ async function main(): Promise<void> {
     // de arriba). Esto es el CINTURÓN: elimina cualquier contenido —y su DEK por Cascade en
     // LlaveReporte— que haya quedado SIN dueño vivo (un camino no cubierto, o un TRUNCATE futuro
     // que saltee los triggers row-level). NO toca el contenido de los reportes PRESERVADOS
-    // (evidencia D-001 §5): esos conservan su dueño, así que no son huérfanos. Sin esto, un
-    // «borramos todo» podría dejar el texto cifrado de denuncias vivo en la base — justo lo que
-    // se supone que se destruye. El candado reset-piloto-cripto-shred afirma 0 huérfanos.
+    // con dueño VIVO (en el reset normal, los preservados; en --purga-total no queda ninguno,
+    // D-113): esos no son huérfanos. Sin esto, un «borramos todo» podría dejar el texto cifrado
+    // de denuncias vivo en la base — justo lo que se supone que se destruye.
     const contenidoHuerfano = await prisma.$executeRawUnsafe(`
         DELETE FROM "ContenidoReporte" c
          WHERE NOT EXISTS (SELECT 1 FROM "Reporte" r          WHERE r."contenidoId" = c.id)
@@ -180,11 +218,16 @@ async function main(): Promise<void> {
     `);
     log("reset-piloto", `Contenido cifrado huérfano barrido: ${contenidoHuerfano} filas (LlaveReporte cae por Cascade).`);
 
+    if (purgaTotal) {
+        await afirmarPurgaTotalCompleta();
+        log("reset-piloto", "--purga-total verificado: Reporte/EventoExpediente/ContenidoReporte/LlaveReporte en 0.");
+    }
+
     const resumen: ResumenReset = {
         backupSize,
         colegios: colegios.map((c) => c.id),
         padres: padres.map((p) => p.email),
-        reportesHuerfanos: reportesHuerfanos.map((r) => r.numeroSeguimiento ?? r.id),
+        reportesHuerfanos: reportesABorrar.map((r) => r.numeroSeguimiento ?? r.id),
         simulaciones: simulaciones.map((s) => s.id),
     };
     const totalIds =

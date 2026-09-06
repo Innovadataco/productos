@@ -24,9 +24,10 @@ const SWEEP = `
 `;
 
 async function crearReporteVivo(identificador: string) {
-    const plataforma = await prisma.plataforma.create({
-        data: { clave: `plat-${identificador}`, nombre: `Plataforma ${identificador}` },
-    });
+    // Plataforma es tabla de SEED (no se trunca en resetDatabase, está en PRESERVADOS.tablas):
+    // reusamos una ya sembrada por asegurarPlataformas en vez de crear una con clave fija (que
+    // choca al re-correr). El aislamiento lo da que Reporte/Contenido SÍ se truncan por test.
+    const plataforma = await prisma.plataforma.findFirstOrThrow();
     return prisma.$transaction((tx) =>
         crearReporteConTexto(tx, {
             texto: "relato de un caso vivo",

@@ -12,13 +12,33 @@ export interface ArgsBase {
     motivo: string;
 }
 
-export function parseArgs(argv: string[]): Record<string, string | boolean> {
+/**
+ * Parsea `--k=v` y `--k` (booleano). ABORTA (throw) ante CUALQUIER flag no reconocido — antes
+ * de tocar nada. Un script DESTRUCTIVO que traga en silencio una bandera que no entiende es una
+ * trampa: `reset-piloto --purga-total` con el flag ignorado correría el reset NORMAL y creeríamos
+ * la base vacía con datos adentro (CEO 06-09). Por eso `flagsPermitidos` es OBLIGATORIO: ningún
+ * script de limpieza puede volver al modo que ignora en silencio.
+ */
+export function parseArgs(argv: string[], flagsPermitidos: readonly string[]): Record<string, string | boolean> {
+    const permitidos = new Set(flagsPermitidos);
     const args: Record<string, string | boolean> = {};
+    const desconocidos: string[] = [];
     for (const raw of argv.slice(2)) {
         if (!raw.startsWith("--")) continue;
         const [k, v] = raw.slice(2).split("=");
         if (!k) continue;
+        if (!permitidos.has(k)) {
+            desconocidos.push(k);
+            continue;
+        }
         args[k] = v === undefined ? true : v;
+    }
+    if (desconocidos.length > 0) {
+        throw new Error(
+            `[limpieza] Flag(s) no reconocido(s): ${desconocidos.map((d) => `--${d}`).join(", ")}. ` +
+                `Permitidos: ${[...permitidos].map((p) => `--${p}`).join(", ")}. ` +
+                "ABORTA sin borrar nada — un flag ignorado en un script destructivo es una trampa.",
+        );
     }
     return args;
 }
