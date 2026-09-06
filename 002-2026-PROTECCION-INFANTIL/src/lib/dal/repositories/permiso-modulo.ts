@@ -2,7 +2,7 @@
  * E-8 (002-PI-056): repositorio de ModuloPermisible + PermisoModulo (matriz de
  * permisos por rol). Dominio global (sin tenant). Acepta tx opcional (D2).
  */
-import type { Prisma } from "@prisma/client";
+import type { Prisma, RolUsuario } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withUnitOfWork, type DbClient } from "../unit-of-work";
 
@@ -49,15 +49,16 @@ export class PermisoModuloRepository {
 
     /** Permisos de los roles protegidos sobre módulos críticos (estado actual). */
     listarPermisosPorRolesYModulos(roles: string[], moduloIds: string[]) {
+        // SPEC-509: la columna es enum; los roles llegan como string (params/JWT).
         return this.db.permisoModulo.findMany({
-            where: { rol: { in: roles }, moduloId: { in: moduloIds } },
+            where: { rol: { in: roles as RolUsuario[] }, moduloId: { in: moduloIds } },
         });
     }
 
     /** Snapshot previo de los permisos que cambian (auditoría). */
     snapshotDe(cambios: CambioPermisoModulo[]) {
         return this.db.permisoModulo.findMany({
-            where: { OR: cambios.map((c) => ({ rol: c.rol, moduloId: c.moduloId })) },
+            where: { OR: cambios.map((c) => ({ rol: c.rol as RolUsuario, moduloId: c.moduloId })) },
             select: { rol: true, moduloId: true, activo: true },
         });
     }
@@ -69,9 +70,9 @@ export class PermisoModuloRepository {
             for (const c of cambios) {
                 resultados.push(
                     await tx.permisoModulo.upsert({
-                        where: { rol_moduloId: { rol: c.rol, moduloId: c.moduloId } },
+                        where: { rol_moduloId: { rol: c.rol as RolUsuario, moduloId: c.moduloId } },
                         update: { activo: c.activo, actualizadoPorId },
-                        create: { rol: c.rol, moduloId: c.moduloId, activo: c.activo, actualizadoPorId },
+                        create: { rol: c.rol as RolUsuario, moduloId: c.moduloId, activo: c.activo, actualizadoPorId },
                     })
                 );
             }

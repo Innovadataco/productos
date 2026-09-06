@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import type { RolUsuario } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { CATALOGO_MODULOS } from "./permisos-catalogo";
@@ -13,9 +14,9 @@ async function crearModulo(clave: string, padreId?: string) {
 
 async function setPermiso(rol: string, moduloId: string, activo: boolean) {
     return prisma.permisoModulo.upsert({
-        where: { rol_moduloId: { rol, moduloId } },
+        where: { rol_moduloId: { rol: rol as RolUsuario, moduloId } },
         update: { activo },
-        create: { rol, moduloId, activo },
+        create: { rol: rol as RolUsuario, moduloId, activo },
     });
 }
 
@@ -67,13 +68,18 @@ describe("permisos-modulos", () => {
         expect(await puedeAccederAModulo("ADMIN", "no_existe")).toBe(false);
     });
 
-    it("absorbe un rol nuevo con solo insertar filas (sin enum ni refactor)", async () => {
+    it("SPEC-509 (D-116): un rol fuera del enum NO entra por texto libre — la BD lo rechaza", async () => {
         const modulo = await crearModulo("m3");
-        await setPermiso("FISCALIA", modulo.id, true);
-        expect(await puedeAccederAModulo("FISCALIA", "m3")).toBe(true);
+        // Contrato NUEVO: SPEC-509 DEROGA «absorbe un rol nuevo insertando filas». Un rol
+        // inventado como 'FISCALIA' ya no puede colarse por texto libre a la tabla que decide
+        // permisos; un rol nuevo exige código (enum + guardas + nav), no una fila suelta.
+        // Candado de conducta: con `PermisoModulo.rol` String este insert entraría y el test
+        // se pondría ROJO; con el enum RolUsuario, es rechazado.
+        await expect(setPermiso("FISCALIA", modulo.id, true)).rejects.toThrow();
+        // `rolesConocidos()` es exactamente el enum: incluye ADMIN, nunca un rol inventado.
         const roles = await rolesConocidos();
-        expect(roles).toContain("FISCALIA");
         expect(roles).toContain("ADMIN");
+        expect(roles).not.toContain("FISCALIA");
     });
 
     // Spec 096 + SPEC-266 (002-PI-169): expediente_revelar_original es módulo

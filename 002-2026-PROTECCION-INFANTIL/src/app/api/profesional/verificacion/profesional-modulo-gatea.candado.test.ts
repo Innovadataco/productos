@@ -17,6 +17,7 @@
  * ejecute de verdad.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { RolUsuario } from "@prisma/client";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -64,7 +65,7 @@ async function sembrarProfesionalConPerfil() {
 async function revocarModulo(rol: string, clave: string) {
     const modulo = await prisma.moduloPermisible.findUniqueOrThrow({ where: { clave } });
     await prisma.permisoModulo.update({
-        where: { rol_moduloId: { rol, moduloId: modulo.id } },
+        where: { rol_moduloId: { rol: rol as RolUsuario, moduloId: modulo.id } },
         data: { activo: false },
     });
 }

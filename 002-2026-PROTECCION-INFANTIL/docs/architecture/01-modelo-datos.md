@@ -1650,7 +1650,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | Campo | Tipo | Atributos |
 | --- | --- | --- |
 | id | String | id |
-| rol | String | — |
+| rol | RolUsuario | — |
 | moduloId | String | — |
 | activo | Boolean | — |
 | actualizadoPorId | String | opcional |

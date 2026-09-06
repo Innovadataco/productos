@@ -4,6 +4,7 @@
  * ADITIVO e idempotente: crea módulos y grants faltantes, NUNCA revoca ni borra.
  */
 import { PrismaClient, TipoParametro, CategoriaParametro } from "@prisma/client";
+import type { RolUsuario } from "@prisma/client";
 import { CATALOGO_MODULOS } from "../src/lib/permisos-catalogo";
 
 export interface ResultadoSyncModulos {
@@ -107,7 +108,7 @@ export async function syncModulosYGrants(prisma: PrismaClient): Promise<Resultad
 
     // Backfill: reproduce el acceso implícito actual por rol (denegar por defecto al resto).
     let permisosCreados = 0;
-    for (const [rol, claves] of Object.entries(CLAVES_POR_ROL)) {
+    for (const [rol, claves] of Object.entries(CLAVES_POR_ROL) as [RolUsuario, string[]][]) {
         for (const clave of claves) {
             const moduloId = moduloIds.get(clave)!;
             const existente = await prisma.permisoModulo.findUnique({
