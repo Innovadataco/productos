@@ -95,14 +95,14 @@ describe("C12 · SPEC-519 · el comité abre su caso, y el árbol de módulos lo
         expect(res.status).toBe(200);
     });
 
-    it("B · el comité NO abre un caso AJENO → 403 «No tienes permiso para ver este caso»", async () => {
+    it("B · el comité NO abre un caso AJENO → 403 «No tiene permiso para ver este caso»", async () => {
         const comite = await comiteConToken();
         const otro = await crearUsuario("COMITE_VALIDACION");
         const id = await crearReporteDeComite(otro.id, "ajeno");
         const res = await GET(req(), params(id));
         expect(res.status).toBe(403);
         const body = (await res.json()) as { error?: { message?: string } };
-        expect(body.error?.message).toBe("No tienes permiso para ver este caso");
+        expect(body.error?.message).toBe("No tiene permiso para ver este caso");
     });
 
     it("D · hijo `comite_bandeja` apagado con padre `comite` activo → 403 (candado I-278)", async () => {

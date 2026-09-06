@@ -242,7 +242,7 @@ export default function ColegiosPageClient() {
 
     async function guardarEdicion(id: string) {
         if (!editForm.nombre || !editForm.paisId || !editForm.ciudadId || !editForm.representanteLegalNombre) {
-            setMessage({ type: "error", text: "Completa los campos requeridos" });
+            setMessage({ type: "error", text: "Complete los campos requeridos" });
             return;
         }
         if (editForm.inicioServicio && editForm.finServicio && editForm.finServicio <= editForm.inicioServicio) {
@@ -373,7 +373,7 @@ export default function ColegiosPageClient() {
                     ) : colegios.length === 0 ? (
                         <EmptyState
                             title="No hay colegios registrados"
-                            description="Crea el primer colegio para comenzar a gestionar instituciones."
+                            description="Cree el primer colegio para comenzar a gestionar instituciones."
                         />
                     ) : (
                         <div className="mt-4 overflow-x-auto">

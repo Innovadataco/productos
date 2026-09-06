@@ -60,7 +60,7 @@ function validar(
     const errores: string[] = [];
 
     if (!hasta) {
-        errores.push("Selecciona una fecha límite.");
+        errores.push("Seleccione una fecha límite.");
     } else {
         const fecha = new Date(`${hasta}:00`);
         if (Number.isNaN(fecha.getTime())) {
@@ -71,7 +71,7 @@ function validar(
     }
 
     if (nivel && !servicio) {
-        errores.push("Si seleccionas un nivel, debes seleccionar un servicio.");
+        errores.push("Si selecciona un nivel, debe seleccionar un servicio.");
     }
 
     if (requiereMotivo) {
@@ -180,7 +180,7 @@ export function MantenimientoLogsPanel() {
     const confirmarPurga = async () => {
         const hastaIso = localDateTimeToIso(hasta);
         if (!hastaIso) {
-            setErrores(["Selecciona una fecha límite válida."]);
+            setErrores(["Seleccione una fecha límite válida."]);
             setModalAbierto(false);
             return;
         }

@@ -26,6 +26,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/voseo-clase.candado.test.ts",
     // SPEC-528: color de «dar de baja» por reversibilidad (rubí solo irreversible).
     "src/components/modules/baja-color-criticidad.candado.test.ts",
+    // SPEC-529: tuteo interno (admin/comité validación/verificador) → usted, por clase.
+    "src/components/modules/tuteo-interno.candado.test.ts",
     // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del
     // árbol de render + lexemas exactos. Mixta PreferenciasNotificaciones §D exenta.
     "src/app/voz-tu-padre-publico.candado.test.ts",
