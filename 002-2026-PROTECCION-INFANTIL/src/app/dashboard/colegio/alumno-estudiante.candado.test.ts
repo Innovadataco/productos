@@ -14,10 +14,9 @@
  * Verificado por MUTACIÓN: reponer un «alumno» de texto (p.ej. «Ir a Alumnos»)
  * en una pantalla del colegio pone el candado en rojo con archivo:línea.
  *
- * EXCEPCIÓN declarada (no silenciosa): `ColegioAuditoriaPageClient` conserva
- * «cursos, alumnos, identificadores…» — es una pantalla que Diseño NO marcó en
- * la auditoría. Reportado al CEO como residual; si Diseño extiende el mapa, se
- * quita esta excepción y se corrige (mismo trato que las 3 de «la cuenta»).
+ * SIN excepciones: Diseño extendió el mapa y aprobó las 2 residuales que Dev 2
+ * cazó (ColegioAuditoria «cursos, estudiantes…» y Alertas «registró para un
+ * estudiante»); el candado ya cubre TODO el árbol del colegio.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -28,10 +27,6 @@ const DIRS_COLEGIO = [
     path.join(SRC, "app/dashboard/colegio"),
     path.join(SRC, "components/modules/colegio"),
 ];
-
-// Residual declarado (Diseño no lo marcó): ColegioAuditoria. Se salta por su
-// contenido exacto; si se corrige, la excepción deja de aplicar sola.
-const RESIDUAL_DECLARADO = "cursos, alumnos, identificadores";
 
 function sinComentarios(codigo: string): string {
     return codigo
@@ -59,7 +54,6 @@ describe("SPEC-522 · el colegio dice «estudiante» (sin «alumno» en texto vi
             for (const archivo of recorrer(dir)) {
                 const codigo = sinComentarios(fs.readFileSync(archivo, "utf-8"));
                 for (const [i, linea] of codigo.split("\n").entries()) {
-                    if (linea.includes(RESIDUAL_DECLARADO)) continue; // excepción declarada
                     const m = linea.match(VETADA);
                     if (m) {
                         const rel = path.relative(SRC, archivo);

@@ -233,7 +233,7 @@ export default function AlertasColegioPageClient() {
                         <div>
                             <h1 className="text-2xl font-bold text-body">Alertas</h1>
                             <p className="text-sm text-muted">
-                                Avisos que llegan cuando un identificador que registraste para un estudiante,
+                                Avisos que llegan cuando un identificador que registró para un estudiante,
                                 profesor o acudiente aparece en un reporte de la comunidad. Ordenadas por
                                 prioridad, novedad y tiempo restante de respuesta.
                             </p>
