@@ -7,6 +7,7 @@ import { PieGlobal } from "@/components/modules/PieGlobal";
 import { NavHeader } from "@/components/modules/NavHeader";
 import { ServiceWorkerRegister } from "@/components/modules/ServiceWorkerRegister";
 import { SesionRefreshInterceptor } from "@/components/modules/SesionRefreshInterceptor";
+import { LimpiarMarcaRebote } from "@/components/modules/LimpiarMarcaRebote";
 import { AvisoVersionNueva } from "@/components/modules/version/AvisoVersionNueva";
 
 // SPEC-157 (D1/D3): un solo mecanismo — next/font/local con woff2 vendoreados en
@@ -110,6 +111,9 @@ export default function RootLayout({
                         {/* SPEC-572 (I-236): refresco silencioso de sesion_estado — captura el 403
                             SESION_ESTADO_REQUERIDO del cerrojo fail-closed, re-sella y reintenta. */}
                         <SesionRefreshInterceptor />
+                        {/* SPEC-572 (loop-cap · residual de Datos): saca `?_rv=1` de la barra tras
+                            una carga sana, para que un favorito/compartido no dispare el logout luego. */}
+                        <LimpiarMarcaRebote />
                         <NavHeader />
                         {/* SPEC-362 (G21): el contenido empuja y el pie queda abajo
                             en todas las pantallas, cortas o largas. */}
