@@ -125,7 +125,7 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         expect(cal).toContain("Primero indique en su ficha si atiende virtual o presencial.");
         expect(cal).toContain("Revise su conexión.");
         expect(cal).toContain("según su ficha.");
-        expect(cal).toContain("puede agendar con usted.");
+        expect(cal).toContain("puede agendar una cita.");
         expect(calPage).toContain("Publique y retire las franjas en las que atiende.");
         expect(verif).toContain("Verificación de su perfil");
         expect(verif).toContain("Ya estamos revisando sus documentos. Le avisamos por correo");

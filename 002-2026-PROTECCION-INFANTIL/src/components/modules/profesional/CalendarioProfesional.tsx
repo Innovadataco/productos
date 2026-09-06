@@ -227,7 +227,7 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
                 <h2 className="mb-3 text-sm font-semibold text-body">Sus franjas</h2>
                 {franjas.length === 0 ? (
                     <p className="text-sm text-muted">
-                        Sin franjas publicadas, ninguna familia puede agendar con usted.
+                        Sin franjas publicadas, ninguna familia puede agendar una cita.
                     </p>
                 ) : (
                     <div className="space-y-5">
