@@ -5,7 +5,7 @@ import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 export const metadata: Metadata = {
     title: "Reportar",
     description:
-        "Reporta de forma anónima o autenticada identificadores asociados a conductas de riesgo para menores en plataformas digitales.",
+        "Reporta de forma anónima o autenticada cuentas asociadas a conductas de riesgo para menores en plataformas digitales.",
     alternates: {
         canonical: "/reportar",
     },
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
         url: "/reportar",
         title: "Reportar — Protección Infantil",
         description:
-            "Reporta identificadores asociados a conductas de riesgo para menores en plataformas digitales.",
+            "Reporta cuentas asociadas a conductas de riesgo para menores en plataformas digitales.",
     },
 };
 

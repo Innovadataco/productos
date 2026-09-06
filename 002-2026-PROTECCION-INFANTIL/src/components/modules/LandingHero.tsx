@@ -181,7 +181,7 @@ export function LandingHero({
                             <SearchIcon className="h-6 w-6" aria-hidden="true" />
                         </div>
                         <span className="text-xl font-bold text-white sm:text-2xl">Consultar</span>
-                        <span className="mt-1 text-sm font-medium text-white/90">Busca un número, nick o usuario</span>
+                        <span className="mt-1 text-sm font-medium text-white/90">Busca una cuenta</span>
                         <div className="mt-5 w-full">
                             <ConsultaForm onSearch={onSearch} compact />
                         </div>
@@ -204,7 +204,7 @@ export function LandingHero({
                                 {!isLoading && buscado && !error && !resultado?.tieneReportes && (
                                     <div className="space-y-4">
                                         <p className="text-sm text-white/90">
-                                            {resultado?.mensaje || "Sin reportes registrados para este identificador."}
+                                            {resultado?.mensaje || "Sin reportes registrados para esta cuenta."}
                                         </p>
                                         {resultado?.bloqueVacia && (
                                             <ConsultaVaciaBloque bloque={resultado.bloqueVacia} identificador={resultado.identificador} />

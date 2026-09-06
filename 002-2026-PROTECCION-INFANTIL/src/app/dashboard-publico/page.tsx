@@ -4,7 +4,7 @@ import { PublicDashboard } from "@/components/modules/PublicDashboard";
 export const metadata: Metadata = {
     title: "Dashboard público",
     description:
-        "Estadísticas agregadas sobre identificadores reportados visibles públicamente: total de reportes y distribución por plataforma, país y categoría.",
+        "Estadísticas agregadas sobre cuentas reportadas visibles públicamente: total de reportes y distribución por plataforma, país y categoría.",
     alternates: {
         canonical: "/dashboard-publico",
     },
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
         url: "/dashboard-publico",
         title: "Dashboard público — Protección Infantil",
         description:
-            "Estadísticas agregadas sobre identificadores reportados visibles públicamente.",
+            "Estadísticas agregadas sobre cuentas reportadas visibles públicamente.",
     },
 };
 

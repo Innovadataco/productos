@@ -61,7 +61,7 @@ describe("ReporteWizard", () => {
         await waitFor(() => {
             expect(document.body.textContent).not.toContain("Las cuentas internas no pueden crear reportes");
         });
-        expect(document.body.textContent).toContain("¿Qué identificador está asociado a la situación?");
+        expect(document.body.textContent).toContain("¿Qué cuenta está asociada a la situación?");
     });
 
     it("no muestra bloqueo cuando no hay sesión (anónimo puro)", async () => {
@@ -71,7 +71,7 @@ describe("ReporteWizard", () => {
         await waitFor(() => {
             expect(document.body.textContent).not.toContain("Las cuentas internas no pueden crear reportes");
         });
-        expect(document.body.textContent).toContain("¿Qué identificador está asociado a la situación?");
+        expect(document.body.textContent).toContain("¿Qué cuenta está asociada a la situación?");
     });
 
     // Test de EFECTO (I-14): el botón "Siguiente" del paso 2 obedece el parámetro
@@ -98,7 +98,7 @@ describe("ReporteWizard", () => {
         render(<ReporteWizard />);
 
         // Paso 1: identificador + plataforma
-        fireEvent.change(await screen.findByLabelText(/Número, nick o usuario/i), { target: { value: "+573001234567" } });
+        fireEvent.change(await screen.findByLabelText(/La cuenta/i), { target: { value: "+573001234567" } });
         await screen.findByRole("option", { name: "WhatsApp" });
         fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
         fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
@@ -193,7 +193,7 @@ describe("ReporteWizard", () => {
     // ─────────────────────────────────────────────────────────────────────
     describe("identificador prellenado por el handoff", () => {
         const campoIdentificador = () =>
-            screen.getByLabelText(/Número, nick o usuario/i) as HTMLInputElement;
+            screen.getByLabelText(/La cuenta/i) as HTMLInputElement;
 
         afterEach(() => {
             sessionStorage.clear();

@@ -46,8 +46,8 @@ export function IdentificadorBusquedaClient({ identificador, expedientes }: Iden
                     value={valor}
                     onChange={(e) => setValor(e.target.value)}
                     maxLength={MAX_IDENTIFICADOR_LENGTH}
-                    placeholder="Buscar por identificador (número, nick o perfil)"
-                    aria-label="Buscar por identificador"
+                    placeholder="Buscar por cuenta (número, usuario o perfil)"
+                    aria-label="Buscar por cuenta"
                     className="w-full flex-1 rounded-xl border border-cielo/30 bg-white/70 px-4 py-2.5 text-sm text-body placeholder:text-muted focus:border-primary-500 focus:outline-none"
                 />
                 <button
@@ -60,7 +60,7 @@ export function IdentificadorBusquedaClient({ identificador, expedientes }: Iden
 
             {expedientes.length === 0 ? (
                 <div className="glass rounded-2xl p-8 text-center">
-                    <p className="text-body font-semibold">No tienes expedientes sobre este identificador</p>
+                    <p className="text-body font-semibold">No tienes expedientes sobre esta cuenta</p>
                     <p className="mt-2 text-sm text-muted">
                         Si quieres reportar una nueva situación relacionada, puedes hacerlo desde el flujo de reporte.
                     </p>

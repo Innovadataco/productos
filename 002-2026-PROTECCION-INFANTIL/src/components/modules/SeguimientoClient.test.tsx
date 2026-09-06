@@ -75,7 +75,7 @@ describe("SeguimientoClient", () => {
             expect(body).toContain("Solicitud de material");
             expect(body).toContain("Contacto insistente");
             // spec 089-US6: sin score ni etiqueta de riesgo; señal descriptiva de actividad
-            expect(body).toContain("Actividad del identificador");
+            expect(body).toContain("Actividad de la cuenta");
             expect(body).toContain("Actividad alta de reportes");
             expect(body).not.toContain("Riesgo ALTO");
             expect(body).not.toContain("Nivel de riesgo del identificador");
@@ -209,7 +209,7 @@ describe("SeguimientoClient", () => {
             });
 
             const body = document.body.textContent || "";
-            expect(body).toContain("Otros reportes de este identificador");
+            expect(body).toContain("Otros reportes de esta cuenta");
             expect(body).toContain("Medellín, Colombia");
             expect(body).toContain("Solicitud de encuentro");
             // Hora de Colombia (UTC-5): 15:30 UTC → 10:30 a. m.
@@ -219,13 +219,13 @@ describe("SeguimientoClient", () => {
         it("no dibuja el bloque cuando el backend manda null (visitante anónimo)", async () => {
             await consultar({ ...baseData, otrosReportes: null });
 
-            expect(document.body.textContent).not.toContain("Otros reportes de este identificador");
+            expect(document.body.textContent).not.toContain("Otros reportes de esta cuenta");
         });
 
         it("no dibuja el bloque cuando la lista viene vacía", async () => {
             await consultar({ ...baseData, otrosReportes: [] });
 
-            expect(document.body.textContent).not.toContain("Otros reportes de este identificador");
+            expect(document.body.textContent).not.toContain("Otros reportes de esta cuenta");
         });
 
         // SPEC-340 (A-68 §2.5): el CTA de SPEC-324 se retiró — el camino correcto

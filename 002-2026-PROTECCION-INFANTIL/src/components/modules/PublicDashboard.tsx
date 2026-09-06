@@ -113,7 +113,7 @@ export function PublicDashboard({
             {/* KPIs */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <TarjetaMetrica label="Reportes registrados" value={totales.reportes} />
-                <TarjetaMetrica label="Identificadores visibles" value={totales.identificadoresUnicos} />
+                <TarjetaMetrica label="Cuentas visibles" value={totales.identificadoresUnicos} />
                 <TarjetaMetrica
                     label="Reportes autenticados"
                     value={Math.round((totales.reportesAutenticados / totalOrigen) * 100)}
