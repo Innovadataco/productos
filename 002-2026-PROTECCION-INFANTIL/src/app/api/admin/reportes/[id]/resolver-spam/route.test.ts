@@ -105,6 +105,9 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
         const operador = await crearUsuario("OPERADOR", "op@test.com");
         const reporte = await setupReporteSpam(operador.id);
         mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
+        // S-C: capturar el texto de TRABAJO ANTES del POST — la confirmación de spam da de baja el
+        // reporte y purga el trabajo al marcador; el dataset guarda el texto real (pre-purga).
+        const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
 
         const req = crearRequestResolver(reporte.id, { decision: "es_spam", motivo: "Contenido promocional" }, mockToken);
         const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
@@ -118,7 +121,6 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
         expect(actualizado?.eliminado).toBe(true);
         expect(actualizado?.motivoBaja).toBe("RETIRO_LIMPIEZA");
 
-        const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
         const dataset = await prisma.datasetEntrenamiento.findFirst({
             where: { texto: textoReporte, clasificacionCorrecta: "SPAM" },
         });
