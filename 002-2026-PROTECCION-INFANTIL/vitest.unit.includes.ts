@@ -337,7 +337,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/simulacion/parser.test.ts",
     "src/lib/simulacion/progreso.test.ts",
     "src/lib/specs-discipline.test.ts",
-    "src/lib/texto-reporte-cifrado.test.ts",
     "src/lib/texto-reporte-frontera.test.ts",
     "src/lib/url-privacy.test.ts",
     "src/lib/validation.test.ts",

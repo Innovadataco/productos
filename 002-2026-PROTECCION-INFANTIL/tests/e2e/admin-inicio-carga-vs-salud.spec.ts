@@ -35,6 +35,7 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { RolUsuario } from "@prisma/client";
 
 const ADMIN_EMAIL = "e2e-i271-admin@proteccion.local";
@@ -108,7 +109,7 @@ function conteoDelTexto(texto: string | undefined): number {
 }
 
 async function sembrarSolicitudComitePendienteVieja(esDemo: boolean, sufijo: string, plataformaId: string) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `${CORRIDA}-id-${sufijo}`,
             plataformaId,
@@ -139,7 +140,7 @@ async function sembrarSolicitudComitePendienteVieja(esDemo: boolean, sufijo: str
 }
 
 async function sembrarReporteHuerfanoViejo(esDemo: boolean, sufijo: string, plataformaId: string) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `${CORRIDA}-idH-${sufijo}`,
             plataformaId,

@@ -3,6 +3,7 @@
  * de confianza. Frontera DAL (Q-3).
  */
 import { prisma } from "@/lib/prisma";
+import { descifrarCampos } from "@/lib/reporte-texto-contenido";
 import { whereReportesCirculo } from "@/lib/dal/services/circulo-confianza/estado";
 import type { DatosReporte } from "@/lib/dal/services/circulo-confianza/tipos";
 
@@ -77,7 +78,7 @@ export class TimelineCirculoRepository {
         desde: Date
     ): Promise<EventoExpedienteTimeline[]> {
         if (identificadores.length === 0) return [];
-        return prisma.eventoExpediente.findMany({
+        const eventos = await prisma.eventoExpediente.findMany({
             where: {
                 expediente: {
                     padreUsuarioId: usuarioId,
@@ -89,12 +90,27 @@ export class TimelineCirculoRepository {
                 id: true,
                 expedienteId: true,
                 fechaEvento: true,
-                texto: true,
+                contenidoId: true,
                 categoriaDetectada: true,
                 ordenSecuencial: true,
             },
             orderBy: { fechaEvento: "desc" },
         });
+        // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte. Se descifra el
+        // lote (2 queries, fail-loud) y se proyecta al campo `texto` del contrato del timeline.
+        const textos = await descifrarCampos(
+            prisma,
+            eventos.map((e) => e.contenidoId),
+            "texto"
+        );
+        return eventos.map((e) => ({
+            id: e.id,
+            expedienteId: e.expedienteId,
+            fechaEvento: e.fechaEvento,
+            texto: textos.get(e.contenidoId)!,
+            categoriaDetectada: e.categoriaDetectada,
+            ordenSecuencial: e.ordenSecuencial,
+        }));
     }
 
     async buscarExpedientesPorIdentificadores(

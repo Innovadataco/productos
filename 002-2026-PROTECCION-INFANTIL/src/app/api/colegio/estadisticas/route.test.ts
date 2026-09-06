@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { GET as getEstadisticas } from "./route";
 import { GET as getPdf } from "./pdf/route";
 import { prisma } from "@/lib/prisma";
@@ -277,7 +278,8 @@ describe("/api/colegio/estadisticas", () => {
             const json = await res.json();
             const respuesta = JSON.stringify(json);
 
-            expect(respuesta).not.toContain(reporte.texto);
+            const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
+            expect(respuesta).not.toContain(textoReporte);
             expect(respuesta).not.toContain(alumno.nombre);
             expect(respuesta).not.toContain("+57300PII");
             expect(respuesta).not.toContain(reporte.id);

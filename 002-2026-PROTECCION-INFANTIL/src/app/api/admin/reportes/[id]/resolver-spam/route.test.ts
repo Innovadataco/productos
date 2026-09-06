@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -117,8 +118,9 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
         expect(actualizado?.eliminado).toBe(true);
         expect(actualizado?.motivoBaja).toBe("RETIRO_LIMPIEZA");
 
+        const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
         const dataset = await prisma.datasetEntrenamiento.findFirst({
-            where: { texto: reporte.texto, clasificacionCorrecta: "SPAM" },
+            where: { texto: textoReporte, clasificacionCorrecta: "SPAM" },
         });
         expect(dataset).not.toBeNull();
         expect(dataset?.fuente).toBe("spam_revisado");

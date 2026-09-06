@@ -5,8 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
-import { decryptParameter } from "@/lib/param-encryption";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 
 const mockClasificar = vi.fn();
 const mockPii = vi.fn();
@@ -233,11 +232,14 @@ describe("POST /api/reportes/procesar", () => {
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("CLASIFICADO");
-        expect(actualizado?.textoOriginal).toMatch(/^enc:/);
-        expect(decryptParameter(actualizado!.textoOriginal!)).toBe("Mi hija María del colegio San José recibió mensajes.");
-        // SPEC-130 (BL-4): el texto anonimizado también queda cifrado en reposo.
-        expect(actualizado?.texto).toMatch(/^enc:/);
-        expect(descifrarTextoReporte(actualizado!.texto)).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
+        // S-C (D-116/D-117): la anonimización re-sella SOLO el texto de TRABAJO; el original
+        // (evidencia) queda intacto. Ambos descifran por el camino central (contenidoId no cambia).
+        expect(await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal")).toBe(
+            "Mi hija María del colegio San José recibió mensajes."
+        );
+        expect(await descifrarCampo(prisma, reporte.contenidoId, "texto")).toBe(
+            "Mi hija [NOMBRE] del [COLEGIO] recibió mensajes."
+        );
     });
 
     it("no muta estado en errores transitorios de anonimización (reintentable)", async () => {

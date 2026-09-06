@@ -1,12 +1,11 @@
 import { sendReporte } from "@/lib/queue";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
-import { encryptParameter } from "@/lib/param-encryption";
 import { logger } from "@/lib/logger";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import { SimulacionRunRepository } from "@/lib/dal/repositories/simulacion-run";
 import { SimulacionReporteRepository } from "@/lib/dal/repositories/simulacion-reporte";
 import { PlataformaRepository } from "@/lib/dal/repositories/plataforma";
-import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import type { CasoSimulacion } from "@/lib/schemas/simulacion";
 
 const BATCH_SIZE = 5;
@@ -38,25 +37,27 @@ export async function crearReporteSimulacion(
 
     const identificador = generarIdentificadorSimulacion(shortRunId(runId), indice);
     const numeroSeguimiento = generarNumeroSeguimiento();
-    const textoOriginalCifrado = encryptParameter(caso.texto);
 
     const result = await withUnitOfWork(async (tx) => {
-        const reporte = await new ReporteRepository(tx).crear({
-            identificador,
-            plataformaId: plataforma.id,
+        // S-C (D-116/D-117): alta por el ÚNICO factory de texto cifrado. El original se sella solo
+        // (default = texto en `sellarTextoNuevo`), idéntico a la simulación previa (original == caso).
+        const reporte = await crearReporteConTexto(tx, {
             texto: caso.texto,
-            textoOriginal: textoOriginalCifrado,
-            fechaIncidente: new Date(caso.fechaIncidente),
-            ciudad: caso.ciudad,
-            pais: caso.pais,
-            esAnonimo: true,
-            // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
-            ...(caso.edadVictima !== undefined ? { edadVictima: caso.edadVictima } : {}),
-            usuarioId: null,
-            numeroSeguimiento,
-            estado: "PENDIENTE",
-            prioridadAlta: false,
-            keywordsDetectadas: [],
+            reporte: {
+                identificador,
+                plataformaId: plataforma.id,
+                fechaIncidente: new Date(caso.fechaIncidente),
+                ciudad: caso.ciudad,
+                pais: caso.pais,
+                esAnonimo: true,
+                // undefined explícito ≡ omitir en Prisma (exactOptionalPropertyTypes)
+                ...(caso.edadVictima !== undefined ? { edadVictima: caso.edadVictima } : {}),
+                usuarioId: null,
+                numeroSeguimiento,
+                estado: "PENDIENTE",
+                prioridadAlta: false,
+                keywordsDetectadas: [],
+            },
         });
 
         // @ts-expect-error SPEC-136 (O-2): executor.test.ts afirma las claves

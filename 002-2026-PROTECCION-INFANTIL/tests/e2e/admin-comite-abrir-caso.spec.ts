@@ -32,6 +32,7 @@ import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { RolUsuario } from "@prisma/client";
 
 const CORRIDA = `e2e-c12-${randomUUID().slice(0, 8)}`;
@@ -112,7 +113,7 @@ async function obtenerPlataformaId(): Promise<string> {
 }
 
 async function crearReporteConComite(comiteId: string, sufijo: string, plataformaId: string): Promise<string> {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `${CORRIDA}-id-${sufijo}`,
             plataformaId,

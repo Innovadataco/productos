@@ -5,6 +5,7 @@
  *   node --env-file=.env --import tsx scripts/verificar-demo.ts [--verbose]
  */
 import { PrismaClient } from "@prisma/client";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 
 const prisma = new PrismaClient();
 const VERBOSE = process.argv.includes("--verbose");
@@ -32,7 +33,7 @@ async function main() {
             id: true,
             numeroSeguimiento: true,
             identificador: true,
-            texto: VERBOSE,
+            contenidoId: true,
             ciudad: true,
             pais: true,
             creadoEn: true,
@@ -46,9 +47,11 @@ async function main() {
         console.log(`ID:              ${procesando.id}`);
         console.log(`Seguimiento:     ${procesando.numeroSeguimiento}`);
         if (VERBOSE) {
+            // S-C (D-116/D-117): el relato vive cifrado en ContenidoReporte; se descifra por el camino central.
+            const textoProc = await descifrarCampo(prisma, procesando.contenidoId, "texto");
             console.log(`Identificador:   ${procesando.identificador}`);
             console.log(`Ubicacion:       ${procesando.ciudad}, ${procesando.pais}`);
-            console.log(`Texto:           ${procesando.texto?.slice(0, 100)}...`);
+            console.log(`Texto:           ${textoProc.slice(0, 100)}...`);
         }
         console.log(`Actualizado hace: ${minutos} minutos`);
     }

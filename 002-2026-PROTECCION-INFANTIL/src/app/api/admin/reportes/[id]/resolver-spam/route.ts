@@ -7,8 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
-import { prisma } from "@/lib/prisma";
-import { descifrarCampo } from "@/lib/reporte-texto-contenido";
+import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { esAdminRol, esOperadorRol } from "@/lib/operadores/permisos";
 import { generarEmbedding } from "@/lib/ai/embedder";
@@ -95,7 +94,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 { status: 404 }
             );
         }
-        const texto = await descifrarCampo(prisma, reporteRow.contenidoId, "texto");
+        const texto = await descifrarCampoReporte(reporteRow.contenidoId, "texto");
         const reporte = { ...reporteRow, texto };
 
         const estadoValido =

@@ -38,6 +38,7 @@ import { test, expect } from "@playwright/test";
 import { randomBytes, randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import {
     avisarPadresQueReportaron,
     EVENTO_CORROBORACION,
@@ -84,7 +85,7 @@ async function asegurarPadre(email: string, nombre: string): Promise<string> {
  */
 async function sembrarReporte(plataformaId: string, autorId: string | null): Promise<string> {
     const id = cuidHex();
-    await prisma.reporte.create({
+    await crearReporteFixture(prisma, {
         data: {
             id,
             identificador: `${CORRIDA}-id-x`,

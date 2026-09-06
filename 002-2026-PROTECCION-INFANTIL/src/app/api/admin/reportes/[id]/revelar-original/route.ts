@@ -5,8 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
-import { prisma } from "@/lib/prisma";
-import { descifrarCampo } from "@/lib/reporte-texto-contenido";
+import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
 function getClientInfo(request: Request) {
@@ -53,7 +52,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // S-C: el textoOriginal (evidencia inmutable) vive cifrado en ContenidoReporte; se
         // descifra por su contenidoId. Fail-loud: si la DEK murió (cripto-shred) LANZA — no
         // muestra vacío ni el sobre crudo.
-        const textoOriginal = await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal");
+        const textoOriginal = await descifrarCampoReporte(reporte.contenidoId, "textoOriginal");
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({

@@ -11,6 +11,7 @@
 import { EstadoExpediente } from "@prisma/client";
 import type { AccionAudit, Expediente, Prisma, ScoreGravedad } from "@prisma/client";
 import { prisma } from "../prisma.ts";
+import { descifrarCampos, resellarCampo } from "@/lib/reporte-texto-contenido";
 import { logAudit } from "@/lib/audit";
 import type { DbClient } from "../unit-of-work";
 import { withUnitOfWork } from "../unit-of-work";
@@ -160,19 +161,37 @@ export class ExpedienteMotorRepository {
         textoRetenido: string
     ): Promise<{ eventos: number; informes: number }> {
         const [eventosActualizados, informesActualizados] = await withUnitOfWork(async (tx) => {
-            return Promise.all([
-                tx.eventoExpediente.updateMany({
-                    where: { expedienteId, texto: { not: textoRetenido } },
-                    data: { texto: textoRetenido },
-                }),
-                tx.informeConsolidado.updateMany({
-                    where: {
-                        expedienteId,
-                        OR: [{ resumenTextoGenerado: { not: textoRetenido } }, { pdfUrl: { not: textoRetenido } }],
-                    },
-                    data: { resumenTextoGenerado: textoRetenido, pdfUrl: textoRetenido },
-                }),
-            ]);
+            // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte (texto de
+            // TRABAJO). La purga re-sella ese texto al marcador con la MISMA DEK, saltando los ya
+            // purgados (idempotencia: con IV aleatorio no se compara ciphertext sino el plano).
+            //
+            // ⚠️ GAP DE POLÍTICA (reportado a CEO — pendiente `purgarOriginal`): esto NO alcanza el
+            // `textoOriginalCifrado` del evento. Como los eventos no se anonimizan, ese original
+            // DUPLICA el relato sensible y sobrevive a la retención (el motor no borra filas: US3.2,
+            // la DEK no se quema). Cerrar la fuga exige una primitiva de purga del original en
+            // reporte-texto-contenido (fuera del alcance de S-C). Mientras no exista, la purga de
+            // retención de eventos es incompleta respecto del modelo de columna única anterior.
+            const eventos = await tx.eventoExpediente.findMany({
+                where: { expedienteId },
+                select: { contenidoId: true },
+            });
+            const contenidoIds = eventos.map((e) => e.contenidoId);
+            const textos = await descifrarCampos(tx, contenidoIds, "texto");
+            let eventosCount = 0;
+            for (const id of contenidoIds) {
+                if (textos.get(id) !== textoRetenido) {
+                    await resellarCampo(tx, id, "texto", textoRetenido);
+                    eventosCount++;
+                }
+            }
+            const informes = await tx.informeConsolidado.updateMany({
+                where: {
+                    expedienteId,
+                    OR: [{ resumenTextoGenerado: { not: textoRetenido } }, { pdfUrl: { not: textoRetenido } }],
+                },
+                data: { resumenTextoGenerado: textoRetenido, pdfUrl: textoRetenido },
+            });
+            return [{ count: eventosCount }, informes] as const;
         });
         return { eventos: eventosActualizados.count, informes: informesActualizados.count };
     }

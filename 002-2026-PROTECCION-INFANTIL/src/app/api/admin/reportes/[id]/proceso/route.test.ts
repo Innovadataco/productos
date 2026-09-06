@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -159,10 +160,10 @@ describe("GET /api/admin/reportes/[id]/proceso", () => {
         const admin = await crearUsuario("ADMIN");
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
         const reporte = await crearReporteConEventos(admin.id);
-        await prisma.reporte.update({
-            where: { id: reporte.id },
-            data: { textoOriginal: "texto original sensible" },
-        });
+        // S-C (D-116/D-117): original y trabajo viven cifrados en ContenidoReporte (write-once el
+        // original). El endpoint de proceso NO debe filtrar ninguno de los dos relatos.
+        const original = await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal");
+        const trabajo = await descifrarCampo(prisma, reporte.contenidoId, "texto");
 
         const req = crearRequestAutenticado(
             "GET",
@@ -172,7 +173,7 @@ describe("GET /api/admin/reportes/[id]/proceso", () => {
         );
         const res = await GET(req, { params: Promise.resolve({ id: reporte.id }) });
         const text = await res.text();
-        expect(text).not.toContain("texto original sensible");
-        expect(text).not.toContain(reporte.texto);
+        expect(text).not.toContain(original);
+        expect(text).not.toContain(trabajo);
     });
 });

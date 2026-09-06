@@ -9,12 +9,12 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo, MARCADOR_TEXTO_PURGADO } from "@/lib/reporte-texto-contenido";
 import "../mock-headers";
 import { jar, limpiarJar } from "../mock-headers";
 import { prisma } from "@/lib/prisma";
 import { sembrarBase, datosCiclo, sembrarBancoCiclo } from "../seed-ciclo";
 import { entrarComo, verificarHashBcrypt, verificarAuditLog, salirYExigirSesionMuerta, HOME_POR_ROL } from "../helpers";
-import { MARCADOR_TEXTO_PURGADO } from "@/lib/texto-reporte-cifrado";
 
 const CICLO = Number(process.env.E2E_CICLO ?? "1");
 
@@ -234,7 +234,8 @@ describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const bdSpam = (await prisma.reporte.findUnique({ where: { id: casoSpam.id } }))!;
         expect(bdSpam.eliminado, "§9: el spam queda dado de baja").toBe(true);
         expect(bdSpam.motivoBaja, "§9: motivo de limpieza").toBe("RETIRO_LIMPIEZA");
-        expect(bdSpam.texto, "§9: el texto se purga al marcador no-identificable (D4)").toBe(MARCADOR_TEXTO_PURGADO);
+        const textoPurgado = await descifrarCampo(prisma, bdSpam.contenidoId, "texto");
+        expect(textoPurgado, "§9: el texto se purga al marcador no-identificable (D4)").toBe(MARCADOR_TEXTO_PURGADO);
         const datasetSpam = await prisma.datasetEntrenamiento.findFirst({
             where: { clasificacionCorrecta: "SPAM", fuente: "spam_revisado" },
         });

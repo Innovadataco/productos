@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -166,10 +167,9 @@ describe("GET /api/admin/reportes/[id]/transiciones", () => {
         const admin = await crearUsuario("ADMIN");
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
         const reporte = await crearReporteConTransiciones(admin.id);
-        await prisma.reporte.update({
-            where: { id: reporte.id },
-            data: { textoOriginal: "texto original sensible" },
-        });
+        // S-C (D-116/D-117): el original (evidencia) vive cifrado en ContenidoReporte y se fija al alta
+        // (write-once, no se reescribe). El endpoint de transiciones NO debe filtrar ese relato.
+        const original = await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal");
 
         const req = crearRequestAutenticado(
             "GET",
@@ -179,7 +179,7 @@ describe("GET /api/admin/reportes/[id]/transiciones", () => {
         );
         const res = await GET(req, { params: Promise.resolve({ id: reporte.id }) });
         const text = await res.text();
-        expect(text).not.toContain("texto original sensible");
+        expect(text).not.toContain(original);
     });
 });
 

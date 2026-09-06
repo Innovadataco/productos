@@ -160,7 +160,6 @@ async function insertarReportes(reportes: DemoReporte[]) {
                 numeroSeguimiento,
                 estado: "PENDIENTE",
             },
-            select: { id: true },
         });
         creados.push({ id: creado.id, categoriaEsperada: r.categoriaEsperada });
     }

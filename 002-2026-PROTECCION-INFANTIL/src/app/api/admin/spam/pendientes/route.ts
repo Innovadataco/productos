@@ -5,8 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { spamPendientesQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permisos";
-import { prisma } from "@/lib/prisma";
-import { descifrarCampos } from "@/lib/reporte-texto-contenido";
+import { descifrarCamposReporte } from "@/lib/dal/services/descifrar-contenido";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { getParametroSistema } from "@/lib/parametros";
@@ -94,7 +93,7 @@ export async function GET(req: Request) {
         })();
 
         // S-C: descifrado en LOTE (2 queries) del texto de cada reporte de la bandeja.
-        const textos = await descifrarCampos(prisma, reportes.map((r) => r.contenidoId), "texto");
+        const textos = await descifrarCamposReporte(reportes.map((r) => r.contenidoId), "texto");
         return NextResponse.json({
             reportes: reportes.map((r) => {
                 const texto = textos.get(r.contenidoId)!;

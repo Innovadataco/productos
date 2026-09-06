@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -10,7 +9,7 @@ import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
-import { descifrarCampo } from "@/lib/reporte-texto-contenido";
+import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
@@ -104,7 +103,7 @@ export async function POST(request: Request) {
             );
         }
         // SPEC-130 (BL-4): el texto va cifrado en reposo; el plano solo en memoria (O-3).
-        const texto = await descifrarCampo(prisma, reporteRow.contenidoId, "texto");
+        const texto = await descifrarCampoReporte(reporteRow.contenidoId, "texto");
         const reporte = { ...reporteRow, texto };
 
         if (!puedeGestionarReporte(user, reporte)) {
@@ -214,11 +213,16 @@ export async function POST(request: Request) {
         // Preparar texto seguro para el dataset de entrenamiento.
         // Si el reporte ya fue anonimizado previamente, su campo `texto` es seguro.
         // Si no, y la clasificación indica PII, forzamos anonimización antes de guardar.
+        // S-C (D-116/D-117): el original (evidencia) SIEMPRE está sellado desde el alta, así que
+        // «ya anonimizado» ya NO se infiere de textoOriginal!=null — se infiere de que el texto de
+        // TRABAJO divergió del original. La lectura del original es fail-loud (fuera del try de IA).
+        const textoOriginalPlano = await descifrarCampoReporte(reporteRow.contenidoId, "textoOriginal");
+        const yaAnonimizado = reporte.texto !== textoOriginalPlano;
         let textoDataset = reporte.texto;
         let datasetAnonimizado = false;
         let requiereBackfill = false;
         try {
-            if (reporte.textoOriginal !== null) {
+            if (yaAnonimizado) {
                 // El texto ya fue anonimizado en el flujo de procesamiento.
                 textoDataset = reporte.texto;
                 datasetAnonimizado = true;
