@@ -152,3 +152,59 @@ export async function resellarCampo(
     const textoCifrado = cifrarConLlave(nuevoPlano, dek, aadDe(contenidoId, "texto"));
     await tx.contenidoReporte.update({ where: { id: contenidoId }, data: { textoCifrado } });
 }
+
+/**
+ * Marcador no-identificable de la política D4 (texto de TRABAJO purgado). Se muestra tal cual en
+ * las vistas. Mismo valor que el layer legado (`texto-reporte-cifrado.ts`) para consistencia de UI.
+ */
+export const MARCADOR_TEXTO_PURGADO = "[contenido purgado]";
+
+/**
+ * ¿El texto de TRABAJO está purgado (baja D4)? El estado vive en el ESQUEMA (`purgadoEn`), no se
+ * infiere comparando el ciphertext — con IV aleatorio la igualdad de marcador nunca vuelve a dar
+ * true. Mapea el viejo `reporte.texto === MARCADOR_TEXTO_PURGADO` (reporte-lifecycle.ts:229).
+ */
+export async function estaPurgado(tx: Prisma.TransactionClient, contenidoId: string): Promise<boolean> {
+    const c = await tx.contenidoReporte.findUniqueOrThrow({
+        where: { id: contenidoId },
+        select: { purgadoEn: true },
+    });
+    return c.purgadoEn !== null;
+}
+
+/**
+ * Purga D4 del texto de TRABAJO (baja): sobreescribe `textoCifrado` con el MARCADOR (cifrado con la
+ * MISMA DEK) y marca `purgadoEn`. Que el marcador quede CIFRADO en el campo —no solo la bandera— es
+ * defensa en profundidad: cualquier lector (descifrarCampo/descifrarCampos) obtiene «[contenido
+ * purgado]» sin poder filtrar el texto purgado, aunque olvide chequear `purgadoEn`. NO toca
+ * `textoOriginalCifrado` (la evidencia; restaurable con restaurarTextoTrabajo). Mapea el viejo
+ * `reporte.texto = MARCADOR_TEXTO_PURGADO` (reporte-lifecycle.ts:113).
+ */
+export async function purgarTextoTrabajo(tx: Prisma.TransactionClient, contenidoId: string): Promise<void> {
+    const llave = await tx.llaveReporte.findUniqueOrThrow({ where: { contenidoId } });
+    const kek = llavePorVersion(llave.kekVersion);
+    const dek = Buffer.from(descifrarConLlave(llave.dekCifrada, kek, aadEnvoltura(contenidoId)), "base64");
+    const textoCifrado = cifrarConLlave(MARCADOR_TEXTO_PURGADO, dek, aadDe(contenidoId, "texto"));
+    await tx.contenidoReporte.update({
+        where: { id: contenidoId },
+        data: { textoCifrado, purgadoEn: new Date() },
+    });
+}
+
+/**
+ * Reactivar (des-purga): restaura el texto de TRABAJO desde la evidencia original SOLO si estaba
+ * purgado (igual que el condicional viejo reporte-lifecycle.ts:228-231) y limpia `purgadoEn`. La
+ * DEK nunca se tocó (solo cambió el contenido de `textoCifrado`) y el original está intacto, así
+ * que el re-sellado con la misma DEK siempre funciona. NUNCA toca `textoOriginalCifrado`.
+ */
+export async function restaurarTextoTrabajo(tx: Prisma.TransactionClient, contenidoId: string): Promise<void> {
+    const { purgadoEn } = await tx.contenidoReporte.findUniqueOrThrow({
+        where: { id: contenidoId },
+        select: { purgadoEn: true },
+    });
+    if (purgadoEn !== null) {
+        const original = await descifrarCampo(tx, contenidoId, "textoOriginal");
+        await resellarCampo(tx, contenidoId, "texto", original);
+    }
+    await tx.contenidoReporte.update({ where: { id: contenidoId }, data: { purgadoEn: null } });
+}

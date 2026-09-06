@@ -9,7 +9,16 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { sellarTextoNuevo, descifrarCampo, descifrarCampos, resellarCampo } from "@/lib/reporte-texto-contenido";
+import {
+    sellarTextoNuevo,
+    descifrarCampo,
+    descifrarCampos,
+    resellarCampo,
+    estaPurgado,
+    purgarTextoTrabajo,
+    restaurarTextoTrabajo,
+    MARCADOR_TEXTO_PURGADO,
+} from "@/lib/reporte-texto-contenido";
 
 const KEK = randomBytes(32).toString("base64");
 
@@ -98,5 +107,35 @@ describe("S-D · DEK por denuncia (cifrar/descifrar + cripto-shred)", () => {
         const { contenidoId } = await sellarTextoNuevo(prisma, { texto: "se quema" });
         await prisma.llaveReporte.delete({ where: { contenidoId } });
         await expect(descifrarCampos(prisma, [contenidoId], "texto")).rejects.toThrow(/falta (contenido|llave)|corrupción/i);
+    });
+
+    it("purgarTextoTrabajo (baja D4): trabajo → marcador CIFRADO, original intacto, estaPurgado=true", async () => {
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: "relato de trabajo", textoOriginal: "evidencia original" });
+        expect(await estaPurgado(prisma, contenidoId)).toBe(false);
+
+        await purgarTextoTrabajo(prisma, contenidoId);
+
+        expect(await estaPurgado(prisma, contenidoId)).toBe(true);
+        // Cualquier lector (incl. batch) obtiene el marcador, no el texto purgado.
+        expect(await descifrarCampo(prisma, contenidoId, "texto")).toBe(MARCADOR_TEXTO_PURGADO);
+        expect((await descifrarCampos(prisma, [contenidoId], "texto")).get(contenidoId)).toBe(MARCADOR_TEXTO_PURGADO);
+        // La evidencia original NO se tocó.
+        expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).toBe("evidencia original");
+    });
+
+    it("restaurarTextoTrabajo (reactivar): restaura el trabajo desde el original y limpia purgadoEn", async () => {
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: "trabajo", textoOriginal: "evidencia original" });
+        await purgarTextoTrabajo(prisma, contenidoId);
+        await restaurarTextoTrabajo(prisma, contenidoId);
+
+        expect(await estaPurgado(prisma, contenidoId)).toBe(false);
+        expect(await descifrarCampo(prisma, contenidoId, "texto")).toBe("evidencia original");
+    });
+
+    it("restaurarTextoTrabajo SIN purga previa NO pisa el trabajo con el original (condicional, lifecycle:228)", async () => {
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: "trabajo anonimizado", textoOriginal: "original crudo" });
+        await restaurarTextoTrabajo(prisma, contenidoId); // no estaba purgado
+        expect(await descifrarCampo(prisma, contenidoId, "texto")).toBe("trabajo anonimizado");
+        expect(await estaPurgado(prisma, contenidoId)).toBe(false);
     });
 });
