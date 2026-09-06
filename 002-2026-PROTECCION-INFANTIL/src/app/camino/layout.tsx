@@ -35,6 +35,14 @@ export default function CaminoLayout({ children }: { children: React.ReactNode }
     const paso = pasoActual(pathname);
     const definicion = paso ? DEFINICION_PASOS[paso] : null;
 
+    // SPEC-556 (I-338): «Atrás» en los pasos 2, 3 y 4 — el padre debe poder volver
+    // a corregir un dato del paso anterior. El destino es el paso ANTERIOR del
+    // camino; el dato ya cargado se conserva porque cada pantalla recarga lo que se
+    // guardó al avanzar (no se borra nada: Atrás solo NAVEGA). El paso 1 no tiene
+    // anterior, así que no lleva botón.
+    const idxPaso = paso ? PASOS_CAMINO.indexOf(paso) : -1;
+    const destinoAnterior = idxPaso > 0 ? DEFINICION_PASOS[PASOS_CAMINO[idxPaso - 1]!].destino : null;
+
     // SPEC-442 (I-307 · Jelkin vivo 04-09): el flujo del colegio tiene su
     // propio layout anidado con header + footer. Si este layout padre pinta
     // TAMBIÉN el header y el footer, el rector ve el par «Salir · Este no es
@@ -58,6 +66,15 @@ export default function CaminoLayout({ children }: { children: React.ReactNode }
             <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 py-6">
                 {definicion && (
                     <header className="mb-6">
+                        {destinoAnterior && (
+                            <button
+                                type="button"
+                                onClick={() => router.push(destinoAnterior)}
+                                className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-muted underline-offset-2 transition hover:text-body hover:underline"
+                            >
+                                <span aria-hidden="true">←</span> Atrás
+                            </button>
+                        )}
                         <p className="text-sm font-medium text-muted">
                             Paso {definicion.numero} de {TOTAL_PASOS} · {definicion.titulo}
                         </p>
