@@ -68,7 +68,7 @@ export function VerificacionForm({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
-            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            {error && <p className="text-sm text-estado-rubi">{error}</p>}
             <Button type="submit" isLoading={isLoading} className="w-full">
                 Crear cuenta
             </Button>
