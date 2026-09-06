@@ -96,14 +96,14 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
         evento.preventDefault();
         setError(null);
         if (modalidades.length === 0) {
-            setError("Primero indica en tu ficha si atiendes virtual o presencial.");
+            setError("Primero indique en su ficha si atiende virtual o presencial.");
             return;
         }
         let inicio: Date;
         try {
             inicio = instanteDesdeHoraBogota(dia, hora);
         } catch {
-            setError("Revisa la fecha y la hora.");
+            setError("Revise la fecha y la hora.");
             return;
         }
         const fin = sumarMinutos(inicio, duracionMinutos);
@@ -128,7 +128,7 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
             setHora("");
             empezarTransicion(() => router.refresh());
         } catch {
-            setError("No se pudo publicar la franja. Revisa tu conexión.");
+            setError("No se pudo publicar la franja. Revise su conexión.");
         } finally {
             setEnviando(false);
         }
@@ -145,7 +145,7 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
             }
             empezarTransicion(() => router.refresh());
         } catch {
-            setError("No se pudo retirar la franja. Revisa tu conexión.");
+            setError("No se pudo retirar la franja. Revise su conexión.");
         }
     }
 
@@ -155,7 +155,7 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
         <div className="mx-auto max-w-3xl space-y-6 p-6">
             <header>
                 <h1 className="text-2xl font-bold text-body">Calendario</h1>
-                <p className="text-muted">Publica las franjas en las que puedes atender.</p>
+                <p className="text-muted">Publique las franjas en las que puede atender.</p>
             </header>
 
             <GlassCard className="p-5">
@@ -207,8 +207,8 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
 
                     <p className="text-xs text-muted">
                         {finPrevisto
-                            ? `Termina a las ${finPrevisto} · ${duracionMinutos} minutos, según tu ficha.`
-                            : `Cada franja dura ${duracionMinutos} minutos, según tu ficha.`}
+                            ? `Termina a las ${finPrevisto} · ${duracionMinutos} minutos, según su ficha.`
+                            : `Cada franja dura ${duracionMinutos} minutos, según su ficha.`}
                     </p>
 
                     {error && (
@@ -224,10 +224,10 @@ export function CalendarioProfesional({ duracionMinutos, atiendeVirtual, atiende
             </GlassCard>
 
             <GlassCard className="p-5">
-                <h2 className="mb-3 text-sm font-semibold text-body">Tus franjas</h2>
+                <h2 className="mb-3 text-sm font-semibold text-body">Sus franjas</h2>
                 {franjas.length === 0 ? (
                     <p className="text-sm text-muted">
-                        Sin franjas publicadas, ninguna familia puede agendar contigo.
+                        Sin franjas publicadas, ninguna familia puede agendar con usted.
                     </p>
                 ) : (
                     <div className="space-y-5">

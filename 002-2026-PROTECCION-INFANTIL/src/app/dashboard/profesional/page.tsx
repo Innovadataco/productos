@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Inicio",
-    description: "Tus solicitudes de primera cita, tu agenda y tu verificación.",
+    description: "Sus solicitudes de primera cita, su agenda y su verificación.",
 };
 
 export default async function ProfesionalInicioPage() {
