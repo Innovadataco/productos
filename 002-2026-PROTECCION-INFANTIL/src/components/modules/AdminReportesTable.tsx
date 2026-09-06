@@ -356,12 +356,12 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap gap-1">
                                             {r.prioridadAlta && (
-                                                <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                <span className="rounded-full bg-rubi/10 px-2 py-0.5 text-xs font-medium text-estado-rubi">
                                                         Prioridad
                                                 </span>
                                             )}
                                             {r.esRafaga && (
-                                                <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                                <span className="rounded-full bg-rubi/10 px-2 py-0.5 text-xs font-medium text-estado-rubi">
                                                         Ráfaga
                                                 </span>
                                             )}
