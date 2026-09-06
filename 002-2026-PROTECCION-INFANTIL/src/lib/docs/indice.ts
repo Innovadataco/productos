@@ -24,6 +24,8 @@ export interface TemaDocs {
 
 export const INDICE_DOCS: TemaDocs[] = [
     // ── Capa 1 — Qué y por qué (público general, aliados, prensa) ────────────
+    //    Solo `que-y-por-que` y `marco-legal` son capa 1: hablan de lo que el público YA ve.
+    //    `funcionalidades` (abajo, mismo bloque) subió a capa 3 por SPEC-567 (ver su comentario).
     {
         slug: "que-y-por-que",
         titulo: "Qué es y por qué existe",
@@ -50,20 +52,31 @@ export const INDICE_DOCS: TemaDocs[] = [
         titulo: "Catálogo de funcionalidades",
         descripcion:
             "Qué hace cada funcionalidad de la plataforma: reportar, consulta pública, clasificación IA, visibilidad, apelaciones y panel de administración.",
-        capa: 1,
+        // SPEC-567 (endurecimiento, I-351): el índice maestro de specs y el reporte global de
+        // implementación son SUPERFICIE DE RECONOCIMIENTO (le dicen a cualquiera qué existe y cómo
+        // se llama). Ahora que estos .md SÍ viajan en la imagen, no pueden quedar en capa 1 (pública,
+        // sin login) → capa 3 {ADMIN, SCHOOL_ADMIN}. specs/003 y specs/006 siguen públicos: hablan
+        // de lo que el público ya ve.
+        capa: 3,
         documentos: [
             { ruta: "specs/README.md", titulo: "Índice maestro de especificaciones" },
             { ruta: "IMPLEMENTATION-REPORT.md", titulo: "Reporte global de implementación" },
         ],
     },
 
-    // ── Capa 2 — Cómo funciona (usuarios autenticados) ───────────────────────
+    // ── (SPEC-567) Estos dos temas ERAN capa 2; se endurecieron a capa 3 (evasión/reconocimiento
+    //    + operación de admin). Quedan aquí por orden de lectura, pero la `capa` de cada tema manda
+    //    el acceso. La capa 2 (autenticado, sin rol) quedó sin temas tras el endurecimiento. ──────
     {
         slug: "flujo-reporte",
         titulo: "Flujo de un reporte de punta a punta",
         descripcion:
             "Del formulario a la cola, el pipeline de IA (embedding, deduplicación, clasificación, guardas), la revisión humana y la visibilidad pública.",
-        capa: 2,
+        // SPEC-567 (endurecimiento, I-351): capa 2→3. specs/010 (clasificador) y specs/015 (anti-abuso)
+        // son el MANUAL DE EVASIÓN del actor que el anti-abuso vigila; AGENTS.md (arquitectura runtime)
+        // es reconocimiento de la misma clase. Un PARENT o un PROFESIONAL sin verificar (token antes de
+        // activarse) llegaban a capa 2 → ya no.
+        capa: 3,
         documentos: [
             { ruta: "AGENTS.md", titulo: "Arquitectura runtime y flujo de un reporte (resumen)" },
             { ruta: "specs/010-rediseño-clasificador-ia/spec.md", titulo: "Clasificador IA (SPEC-010)" },
@@ -75,7 +88,12 @@ export const INDICE_DOCS: TemaDocs[] = [
         titulo: "Módulos del panel de administración",
         descripcion:
             "Cómo operar cada módulo del panel: configuración del sistema, centro de control IA, anti-abuso, estadísticas y círculo de confianza.",
-        capa: 2,
+        // SPEC-567 (endurecimiento, I-351): capa 2→3. parametros-sistema.md expone los UMBRALES EXACTOS
+        // (visibility.report_threshold, duplicate.similarity_threshold, scoring, rate-limits, bloqueo de
+        // cuenta) + rutas de API de admin; specs/011 es el centro de control IA. Es la operación del
+        // panel de ADMIN — no capa 2. (specs/016 comparte el tema de módulos de admin; se restringe con
+        // él. Si Diseño lo quiere legible por el padre, va a un tema capa-2 aparte.)
+        capa: 3,
         documentos: [
             { ruta: "docs/configuracion/parametros-sistema.md", titulo: "Referencia de parámetros del sistema" },
             { ruta: "specs/011-centro-control-ia/spec.md", titulo: "Centro de Control IA (SPEC-011)" },

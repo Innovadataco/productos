@@ -67,16 +67,47 @@ function estaEmbarcada(ruta: string, roots: Set<string>): boolean {
     return false;
 }
 
-/** ¿`.dockerignore` excluye este root del contexto de build? (patrones simples: nombre exacto, `*.md`, `!neg`). */
-function excluidoPorDockerignore(root: string): boolean {
+const GLOB = /[*?[\]]/;
+
+/**
+ * ¿`.dockerignore` NO garantiza que este root entre al contexto de build? true si lo EXCLUYE, o si
+ * aparece un patrón cuya FORMA el parser no reconoce y que PODRÍA afectar al root.
+ *
+ * SPEC-567 (endurecimiento, refutador de Datos — mismo invariante que SPEC-572): un patrón desconocido
+ * DESCONOCIDO CIERRA, no abre. Antes se asumía benigno todo lo que no fuera nombre-exacto/`*.md`/`!neg`,
+ * así que un `docs/**` o un `**` futuro habría sacado los docs de la imagen sin que este guard lo viera.
+ *
+ * Formas reconocidas: literal exacto (sin glob), `*.md`, `!negación`. Un glob se DESCARTA solo si su
+ * prefijo literal es un path claramente ajeno al root (p.ej. `.env.*` o `scripts/simulacion/*` no tocan
+ * `docs`/`specs`/*.md de raíz); cualquier glob que empiece con `**`, sin prefijo, o cuyo prefijo pueda
+ * tocar el root, CIERRA.
+ */
+function noSeGarantizaInclusion(root: string): boolean {
     const lineas = DOCKERIGNORE.split("\n")
         .map((l) => l.trim())
         .filter((l) => l && !l.startsWith("#"));
     const esMd = root.endsWith(".md");
     let excluido = false;
     for (const l of lineas) {
-        if (l === root || (esMd && l === "*.md")) excluido = true;
-        else if (l === "!" + root) excluido = false;
+        if (l.startsWith("!")) {
+            if (l.slice(1) === root) excluido = false; // re-inclusión explícita de este root
+            continue;
+        }
+        if (!GLOB.test(l)) {
+            // Literal exacto: excluye si matchea el root o es su ancestro; si no, es ajeno → irrelevante.
+            if (l === root || root.startsWith(l + "/")) excluido = true;
+            continue;
+        }
+        if (l === "*.md") {
+            if (esMd) excluido = true; // `*.md` matchea solo .md de raíz (no cruza "/")
+            continue;
+        }
+        // Glob no trivial: ¿su prefijo literal PODRÍA tocar este root? Si es global (`**`), sin prefijo,
+        // o el prefijo se solapa con el root → no podemos PROBAR que el doc viaja → CERRAR (fail-closed).
+        const prefijoLiteral = l.split(GLOB)[0];
+        const podriaTocar =
+            l.startsWith("**") || prefijoLiteral === "" || root.startsWith(prefijoLiteral) || l.startsWith(root);
+        if (podriaTocar) excluido = true;
     }
     return excluido;
 }
@@ -91,12 +122,13 @@ describe("SPEC-567 · ratchet docs-en-imagen (I-351)", () => {
         ).toEqual([]);
     });
 
-    it(".dockerignore no excluye los roots de los docs (si no, la COPY del runner rompe el build)", () => {
+    it(".dockerignore GARANTIZA que los roots de los docs entran al contexto (patrón desconocido = fail-closed)", () => {
         const roots = [...new Set(RUTAS_ALLOWLIST.map((r) => r.split("/")[0]))];
-        const excluidos = roots.filter(excluidoPorDockerignore);
+        const enRiesgo = roots.filter(noSeGarantizaInclusion);
         expect(
-            excluidos,
-            `Roots que .dockerignore saca del contexto (rompen la COPY --from=builder): ${excluidos.join("; ")}`
+            enRiesgo,
+            "Roots sin inclusión garantizada — .dockerignore los excluye, o trae un patrón que el guard " +
+                `no reconoce y podría afectarlos (extendé el parser o simplificá el patrón): ${enRiesgo.join("; ")}`
         ).toEqual([]);
     });
 });
