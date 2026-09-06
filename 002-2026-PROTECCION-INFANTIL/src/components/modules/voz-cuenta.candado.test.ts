@@ -9,12 +9,10 @@
  * renderizada. Muere con el defecto: revertir cualquiera de las 29 cadenas
  * reintroduce la frase vetada (rojo) y borrarla quita la nueva (rojo).
  *
- * NO cubre los 3 residuales que el mapa dejó FUERA a propósito (decisión de
- * alcance de Diseño), para no volverse rojo por algo que el mapa no ordenó:
- *   - app/dashboard/padre/identificador/[nick]/page.tsx  → description del error.
- *   - components/modules/padre/MisHijos.tsx              → intro «uno de sus…».
- *   - components/modules/PublicDashboard.tsx             → «Identificadores visibles».
- * (Reportados al CEO para que Diseño extienda el mapa si corresponde.)
+ * Diseño extendió el mapa a 32 cadenas (aceptó como huecos suyos los 3 residuales
+ * que Dev 2 cazó): PublicDashboard:116 «Cuentas visibles», [nick]:39 description
+ * «La cuenta no puede estar vacía…» y MisHijos:299 intro «una de sus cuentas…».
+ * Este candado los cubre.
  *
  * NO toca el VALOR interpolado `{x.identificador}` ni la UI interna: eso vive en
  * otras rutas y conserva «identificador».
@@ -45,6 +43,11 @@ const BARRIDO: Barrido[] = [
         archivo: "app/dashboard-publico/page.tsx",
         presentes: ["cuentas reportadas visibles públicamente"],
         ausentes: ["identificadores reportados visibles públicamente"],
+    },
+    {
+        archivo: "components/modules/PublicDashboard.tsx",
+        presentes: ['label="Cuentas visibles"'],
+        ausentes: ['label="Identificadores visibles"'],
     },
     {
         archivo: "components/modules/LandingHero.tsx",
@@ -97,8 +100,8 @@ const BARRIDO: Barrido[] = [
     // ── PADRE LOGUEADO ───────────────────────────────────────────────────────
     {
         archivo: "app/dashboard/padre/identificador/[nick]/page.tsx",
-        presentes: ['title="Cuenta inválida"', "sobre esta cuenta."],
-        ausentes: ['title="Identificador inválido"', "sobre este identificador."],
+        presentes: ['title="Cuenta inválida"', "sobre esta cuenta.", "La cuenta no puede estar vacía"],
+        ausentes: ['title="Identificador inválido"', "sobre este identificador.", "El identificador no puede estar vacío"],
     },
     {
         archivo: "components/modules/padre/IdentificadorBusquedaClient.tsx",
@@ -118,6 +121,8 @@ const BARRIDO: Barrido[] = [
             'label="Cuenta"',
             'title="La cuenta es del niño',
             'label="Agregar cuenta"',
+            "una de sus",
+            "cuentas (su Roblox, un teléfono, un correo)",
         ],
         ausentes: [
             '"No se pudo cambiar el identificador"',
@@ -126,6 +131,7 @@ const BARRIDO: Barrido[] = [
             'label="Identificador"',
             'title="El identificador es del niño',
             'label="Agregar identificador"',
+            "identificadores (su Roblox, un teléfono, un correo)",
         ],
     },
 ];

@@ -36,7 +36,7 @@ export default async function PadreIdentificadorPage({ params }: { params: Promi
             <div className="p-6">
                 <ErrorState
                     title="Cuenta inválida"
-                    description={`El identificador no puede estar vacío ni superar ${MAX_IDENTIFICADOR_LENGTH} caracteres. Ajusta la búsqueda e intenta de nuevo.`}
+                    description={`La cuenta no puede estar vacía ni superar ${MAX_IDENTIFICADOR_LENGTH} caracteres. Ajusta la búsqueda e intenta de nuevo.`}
                 />
             </div>
         );

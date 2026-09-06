@@ -296,8 +296,8 @@ export function MisHijos({
                     )}
                 </div>
                 <p className="text-sm text-muted">
-                    Registra a tus hijos y a los familiares cercanos. Si alguien reporta uno de sus
-                    identificadores (su Roblox, un teléfono, un correo), te avisamos.
+                    Registra a tus hijos y a los familiares cercanos. Si alguien reporta una de sus
+                    cuentas (su Roblox, un teléfono, un correo), te avisamos.
                 </p>
                 {maximoActivos !== undefined && activos >= maximoActivos && (
                     <p className="mt-2 rounded-xl border border-ambar/40 bg-ambar/10 px-3 py-2 text-sm text-ambar" role="status">
