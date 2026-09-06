@@ -39,7 +39,7 @@ export default function TablasMotor({ data }: { data: MotorData }) {
                         <table className="w-full border-collapse text-sm">
                             <thead>
                                 <tr>
-                                    {["Señal", "Estado", "Inicio", "Duración"].map((h) => (
+                                    {["Estado", "Inicio", "Duración"].map((h) => (
                                         <th key={h} className={TH}>{h}</th>
                                     ))}
                                 </tr>
@@ -48,10 +48,7 @@ export default function TablasMotor({ data }: { data: MotorData }) {
                                 {data.incidentes.map((inc) => {
                                     const abierto = inc.estado.toLowerCase() === "abierto";
                                     return (
-                                        <tr key={`${inc.senal}-${inc.inicio}`} className="group">
-                                            <td className={`${TD} font-semibold group-hover:bg-[rgb(var(--tinta-rgb)/0.04)]`}>
-                                                {inc.senal}
-                                            </td>
+                                        <tr key={`${inc.inicio}-${inc.estado}`} className="group">
                                             <td className={`${TD} group-hover:bg-[rgb(var(--tinta-rgb)/0.04)]`}>
                                                 <span className={abierto ? "font-semibold text-estado-rubi" : ""}>
                                                     {bonito(inc.estado)}

@@ -42,9 +42,10 @@ export interface MotorData {
         metodo: string | null;
         haceMin: number;
     }[];
-    /** Incidentes recientes (abiertos primero), máx 8 */
+    /** Incidentes recientes (abiertos primero), máx 8. Sin `senal`: en
+     * patrones coordinados era sha256 del texto del reporte (Ley 1581) y la
+     * whitelist 2026-09-05 la cortó de la réplica (02). */
     incidentes: {
-        senal: string;
         estado: string;
         inicio: string;
         duracionMin: number | null;
@@ -87,7 +88,6 @@ interface FilaSenal {
     hace_min: number;
 }
 interface FilaIncidente {
-    senal: string;
     estado: string;
     inicio: string;
     duracion_min: number | null;
@@ -207,7 +207,7 @@ export async function getMotor(): Promise<MotorData> {
             intentar(
                 "incidentes",
                 prisma.$queryRaw<FilaIncidente[]>`
-                    SELECT "senal", "estado",
+                    SELECT "estado",
                            to_char("inicio", 'DD/MM/YYYY HH24:MI') AS inicio,
                            CASE WHEN "fin" IS NULL THEN NULL
                                 ELSE round(EXTRACT(EPOCH FROM ("fin" - "inicio")) / 60)::int
@@ -266,7 +266,6 @@ export async function getMotor(): Promise<MotorData> {
             haceMin: f.hace_min,
         })),
         incidentes: filasIncidentes.map((f) => ({
-            senal: f.senal,
             estado: f.estado,
             inicio: f.inicio,
             duracionMin: f.duracion_min,
