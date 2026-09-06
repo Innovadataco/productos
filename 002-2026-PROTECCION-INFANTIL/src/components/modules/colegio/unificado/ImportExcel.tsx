@@ -161,7 +161,7 @@ export function ImportExcel({ onAceptar }: ImportExcelProps) {
             ) : null}
 
             <div className="text-center">
-                <p className="text-sm text-muted">📥 ¿No tienes plantilla?</p>
+                <p className="text-sm text-muted">📥 ¿No tiene plantilla?</p>
                 <a
                     href="/api/colegio/cursos/unificado/plantilla"
                     download

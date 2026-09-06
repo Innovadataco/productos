@@ -64,7 +64,7 @@ export function BitacoraCaso({ alertaId, notas }: BitacoraCasoProps) {
         >
             <h2 className="titular-seccion text-body">Bitácora — registrar lo actuado</h2>
             <p className="cuerpo mt-1 text-muted">
-                Anota lo que hiciste con fecha y hora. Las notas no se pueden editar ni borrar: quedan como
+                Anote lo que hizo con fecha y hora. Las notas no se pueden editar ni borrar: quedan como
                 respaldo del colegio.
             </p>
 

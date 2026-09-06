@@ -37,8 +37,8 @@ function useTipoDocumentoOpciones() {
     return useMemo(() => {
         // SPEC-320 (§2.2-bis): el documento del alumno es obligatorio; el placeholder ya
         // no ofrece "Sin documento".
-        if (!tipos) return [{ value: "", label: "Selecciona tipo… *" }, ...DOCUMENTO_TIPO_OPCIONES.filter((o) => o.value !== "")];
-        return [{ value: "", label: "Selecciona tipo… *" }, ...tipos.map((t) => ({ value: t.clave, label: t.nombre }))];
+        if (!tipos) return [{ value: "", label: "Seleccione tipo… *" }, ...DOCUMENTO_TIPO_OPCIONES.filter((o) => o.value !== "")];
+        return [{ value: "", label: "Seleccione tipo… *" }, ...tipos.map((t) => ({ value: t.clave, label: t.nombre }))];
     }, [tipos]);
 }
 import type { FilaListaValidada } from "@/lib/colegio/unificado/validar-lista";
@@ -211,7 +211,7 @@ export function TablaEstudiantes({ estudiantes, onChange, errores, modo, onModoC
                     </Button>
 
                     <p className="text-sm text-muted">
-                        ℹ Solo nombre y apellidos son obligatorios. El resto lo puedes completar después.
+                        ℹ Solo nombre y apellidos son obligatorios. El resto lo puede completar después.
                     </p>
                 </>
             )}
