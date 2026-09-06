@@ -29,13 +29,13 @@ describe("EmbudoEstado", () => {
 
     it("sin pendientes: copy positivo y sin enlace de acción", () => {
         render(<EmbudoEstado embudo={{ recibidos: 3, cerrados: 2, enRevision: 1, teEsperan: 0 }} />);
-        expect(screen.getByText(/Nada te espera — la vigilancia sigue activa/)).toBeTruthy();
+        expect(screen.getByText(/Nada le espera — la vigilancia sigue activa/)).toBeTruthy();
         expect(screen.queryByRole("link", { name: /Ver alertas/ })).toBeNull();
         expect(document.querySelector('[data-estado-esperan="al-dia"]')).toBeTruthy();
     });
 
     it("todo en cero: ceros honestos con copy positivo, nunca pantalla rota", () => {
         render(<EmbudoEstado embudo={{ recibidos: 0, cerrados: 0, enRevision: 0, teEsperan: 0 }} />);
-        expect(screen.getByText(/Nada te espera/)).toBeTruthy();
+        expect(screen.getByText(/Nada le espera/)).toBeTruthy();
     });
 });
