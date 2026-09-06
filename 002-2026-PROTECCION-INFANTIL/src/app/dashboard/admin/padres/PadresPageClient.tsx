@@ -384,7 +384,9 @@ export default function PadresPageClient() {
                                                             Reenviar por correo
                                                     </Button>
                                                     <Button
-                                                        variant={padre.estado === "activo" ? "danger" : "secondary"}
+                                                        // SPEC-569 (SPEC-528): «Desactivar» es REVERSIBLE (togglea a «Reactivar»)
+                                                        // → neutro. El rubí (danger) queda solo para lo IRREVERSIBLE.
+                                                        variant="secondary"
                                                         className="px-3 py-1.5 text-xs"
                                                         disabled={accionEnCurso === padre.id}
                                                         onClick={() => alternarEstado(padre)}
