@@ -53,9 +53,14 @@ const NOMBRE_COOKIE_SESION_HOST = "__Host-token";
 // Utilidades
 // ────────────────────────────────────────────────────────────────────────────
 
+// SPEC-572 (nit de Datos): UN solo piso para el largo de JWT_SECRET. Antes getSecret() exigía ≥32
+// y la lectura de estado de sesión usaba ≥16 — dos umbrales para el mismo secreto se desincronizan
+// solos. Alineados acá (32 = el mismo piso que `requireEnv("JWT_SECRET", 32)` en al-dia).
+const LARGO_MINIMO_JWT_SECRET = 32;
+
 function getSecret(): Uint8Array {
     const secret = process.env.JWT_SECRET;
-    if (!secret || secret.length < 32) {
+    if (!secret || secret.length < LARGO_MINIMO_JWT_SECRET) {
         // Fail-open sería peor que fail-closed: dejamos que el request cargue,
         // pero el layout de destino no encontrará usuario y se comportará como
         // sin sesión. Es coherente con lo que hoy hace verifyToken() → null.
@@ -186,14 +191,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         return aplicarCspSiCorresponde(request, NextResponse.next());
     }
 
-    // Paso 4/5/6: leer estado firmado de la cookie. Si no está o expiró, el
-    // middleware permite el paso — el layout/página vería un estado stale por
-    // <5 min pero NO se cuelga la BD desde Edge. El refresh asincrónico se
-    // dispara por el propio cliente al montar (vía POST /api/vigencia/refresh),
-    // o desde las Server Actions que cambian estado.
+    // Paso 4/5/6: leer el estado firmado de la cookie. Si NO está, expiró, o la FIRMA no valida,
+    // `leerSesionEstado` devuelve null y el cierre fail-closed de más abajo (SPEC-572) rebota a
+    // re-derivar (página) o responde 403 (/api/**) — no se puede consultar la BD desde Edge; el
+    // re-sello lo hace `/api/sesion/al-dia` (Node). Umbral del secreto alineado con getSecret().
     const secret = process.env.JWT_SECRET ?? "";
     const estado =
-        secret.length >= 16
+        secret.length >= LARGO_MINIMO_JWT_SECRET
             ? await leerSesionEstado(request.cookies.get(NOMBRE_COOKIE_SESION)?.value, secret)
             : null;
 

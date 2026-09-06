@@ -97,6 +97,35 @@ describe("sesion-refresh-interceptor", () => {
         expect(fetchOriginal).toHaveBeenCalledTimes(3);
     });
 
+    it("CANDADO (loop-free): 403 de estado PERSISTENTE → exactamente 1 refresh + 1 retry → el 403 propaga", async () => {
+        // SPEC-572 (revisión CEO) · el otro camino del bucle: NO el ping-pong de página (`_rv`), sino
+        // el reintento de fetch. Su carácter loop-free es sutil y frágil: depende de reintentar con
+        // `original` (fetch SIN parchar) y NO con `g.fetch`. Si un refactor reintentara con el parchado,
+        // el 403 del reintento se re-interceptaría → refresh + retry infinitos, y hoy nada lo vigila.
+        //
+        // Mock PERSISTENTE (no `...Once`): la ruta gateada SIEMPRE da 403 y el refresh SIEMPRE ok. En el
+        // código correcto: 1 refresh + exactamente 2 toques a la gateada (intento + reintento) y el 403
+        // propaga. En un refactor con bucle: la gateada se tocaría muchas más veces → el candado muere.
+        let gated = 0;
+        let refresh = 0;
+        fetchOriginal.mockImplementation((url: string) => {
+            if (url === "/api/vigencia/refresh") {
+                refresh++;
+                return Promise.resolve(respuesta(RESP_OK));
+            }
+            gated++;
+            // Tope de seguridad: si un refactor introduce bucle, no colgamos la suite — tras unos
+            // pocos toques devolvemos OK y la aserción `gated === 2` lo delata con un número mayor.
+            if (gated > 5) return Promise.resolve(respuesta(RESP_OK));
+            return Promise.resolve(respuesta(RESP_ESTADO_REQUERIDO));
+        });
+        installSesionRefreshInterceptor(target);
+        const res = await target.fetch("/api/padre/home");
+        expect(res.status, "el 403 de estado persistente propaga, no se enmascara ni cicla").toBe(403);
+        expect(refresh, "exactamente UN refresh").toBe(1);
+        expect(gated, "exactamente 1 intento + 1 reintento (con `original`, no `g.fetch`): sin bucle").toBe(2);
+    });
+
     it("nunca dispara refresh cuando la llamada ES a /api/vigencia/refresh", async () => {
         fetchOriginal.mockResolvedValueOnce(respuesta(RESP_ESTADO_REQUERIDO));
         installSesionRefreshInterceptor(target);

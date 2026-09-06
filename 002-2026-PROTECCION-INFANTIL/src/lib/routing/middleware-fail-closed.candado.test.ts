@@ -52,6 +52,17 @@ async function reqReboteFallido(pathname: string, rol: string): Promise<NextRequ
     return new NextRequest(url, { headers: { cookie: `token=${token}` } });
 }
 
+/**
+ * JWT válido y la cookie `sesion_estado` PRESENTE pero con firma inválida (basura). Es el
+ * adversario que FORJA la cookie en vez de borrarla: `leerSesionEstado` (HMAC) devuelve null.
+ */
+async function reqCookieForjada(pathname: string, rol: string): Promise<NextRequest> {
+    const token = await jwt(rol);
+    return new NextRequest(`http://localhost:5005${pathname}`, {
+        headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=forjada.sin-firma-valida.basura` },
+    });
+}
+
 describe("SPEC-572 · fail-closed sin cookie sesion_estado (I-236)", () => {
     it("(muro 1 · consentimiento) titular PARENT en ruta gateada SIN cookie → NO pasa (rebote a re-derivar)", async () => {
         const res = await middleware(await reqSinEstado("/dashboard/padre", "PARENT"));
@@ -113,6 +124,23 @@ describe("SPEC-572 · loop-cap: con el re-sello roto, no hay bucle", () => {
         expect(loc.searchParams.get("mensaje"), "aterriza en algo que le habla").toBe("sesion");
         // La sesión se cierra: sin cookie fresca, seguir gobernado rebotaría de nuevo.
         expect(res.headers.get("set-cookie") ?? "", "cierra la sesión colgada").toContain("sesion_estado=;");
+    });
+
+    it("cookie PRESENTE con firma inválida (adversario que FORJA) → página rebota a al-dia, igual que ausente", async () => {
+        // Datos verificó que `leerSesionEstado` cierra ante firma inválida/payload manipulado/secreto
+        // distinto/iat futuro/TTL vencido — pero eso vive en otro test. Este candado fija el invariante
+        // en el BORDE: hoy compone por la misma rama `!estado`; un refactor que lea la cookie SIN pasar
+        // por `leerSesionEstado` rompería la composición y nadie se enteraría. Con firma forjada, cierra.
+        const res = await middleware(await reqCookieForjada("/dashboard/padre", "PARENT"));
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/api/sesion/al-dia");
+    });
+
+    it("cookie PRESENTE con firma inválida en /api/** → 403 SESION_ESTADO_REQUERIDO, nunca 302", async () => {
+        const res = await middleware(await reqCookieForjada("/api/padre/hijos", "PARENT"));
+        expect(res.status, "forjar la cookie no debe abrir la API: 403, no 3xx").toBe(403);
+        const body = (await res.json()) as { error?: { code?: string } };
+        expect(body?.error?.code).toBe("SESION_ESTADO_REQUERIDO");
     });
 
     it("con `_rv=1` PERO cookie válida presente (re-sello SÍ pegó) → pasa normal, la marca es inerte", async () => {
