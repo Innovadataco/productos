@@ -16,7 +16,7 @@ function inputBase(secciones: PdfInformeCasoInput["secciones"]): PdfInformeCasoI
         tipoSujeto: "ESTUDIANTE",
         curso: "9°-A",
         secciones,
-        hechos: [{ fecha: new Date(), ciudad: "Bogotá", pais: "CO", plataforma: "roblox", categoria: "CIBERACOSO" }],
+        hechos: [{ fecha: new Date("2026-08-20T14:30:00-05:00"), ciudad: "Bogotá", pais: "CO", plataforma: "roblox", categoria: "CIBERACOSO" }],
         notas: [],
         analisisComite: null,
         firmadoPorNombre: "Rectora Prueba",
