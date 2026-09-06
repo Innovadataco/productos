@@ -66,7 +66,7 @@ describe("HomeRectorPage", () => {
         expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("tranquilo");
     });
 
-    it("estado rubí (≥1 nueva): declaración de urgencia con CTA", () => {
+    it("estado PENDIENTE (≥1 nueva, D-120: ámbar): urgencia «actúe hoy» con CTA", () => {
         render(<HomeRectorPage nombreUsuario="X" datos={fixture({ semaforo: { alertasNuevas: 2, alertas72h: 2 } })} />);
         expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("necesita que actúe hoy");
         const ctas = screen.getAllByRole("link", { name: /Ver avisos nuevos/ });
@@ -74,7 +74,7 @@ describe("HomeRectorPage", () => {
         for (const cta of ctas) expect(cta.getAttribute("href")).toBe("/dashboard/colegio/alertas");
     });
 
-    it("estado ámbar (72 h sin nuevas): el copy dice que ya está atendido", () => {
+    it("estado ATENDIDO (72 h sin nuevas, D-120: pino): el copy dice que ya está atendido", () => {
         render(<HomeRectorPage nombreUsuario="X" datos={fixture({ semaforo: { alertasNuevas: 0, alertas72h: 1 } })} />);
         expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("ya lo atendió");
     });
