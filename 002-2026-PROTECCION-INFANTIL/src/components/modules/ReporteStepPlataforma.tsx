@@ -55,9 +55,9 @@ export function ReporteStepPlataforma({
 
     return (
         <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-tinta">¿Qué identificador está asociado a la situación?</h2>
+            <h2 className="text-lg font-semibold text-tinta">¿Qué cuenta está asociada a la situación?</h2>
             <Input
-                label="Número, nick o usuario"
+                label="La cuenta (número o usuario)"
                 placeholder="Ej: +573001234567"
                 value={identificador}
                 onChange={(e) => onChange({ identificador: e.target.value, plataforma, otraPlataforma })}

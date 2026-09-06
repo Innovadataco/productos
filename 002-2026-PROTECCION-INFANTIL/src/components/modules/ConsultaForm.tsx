@@ -17,7 +17,7 @@ export function ConsultaForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!identificador.trim()) {
-            setError("Ingresa el número, nick o usuario que quieres consultar.");
+            setError("Ingresa la cuenta que quieres consultar.");
             return;
         }
         setError("");
@@ -28,7 +28,7 @@ export function ConsultaForm({
         <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-start">
             <div className="flex-1">
                 <Input
-                    label={compact ? undefined : "Número, nick o usuario"}
+                    label={compact ? undefined : "La cuenta (número o usuario)"}
                     placeholder="Ej: +573001234567"
                     value={identificador}
                     onChange={(e) => setIdentificador(e.target.value)}

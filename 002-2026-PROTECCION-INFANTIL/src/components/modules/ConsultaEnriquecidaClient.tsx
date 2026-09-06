@@ -78,7 +78,7 @@ export function ConsultaEnriquecidaClient() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!identificador.trim() || identificador.length < 3) {
-            setError("Ingresa un identificador válido (mínimo 3 caracteres).");
+            setError("Ingresa una cuenta válida (mínimo 3 caracteres).");
             return;
         }
         setLoading(true);
@@ -93,7 +93,7 @@ export function ConsultaEnriquecidaClient() {
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) {
-                setError(json?.error?.message || "Error consultando el identificador.");
+                setError(json?.error?.message || "Error consultando la cuenta.");
                 return;
             }
             setData(json);
@@ -123,7 +123,7 @@ export function ConsultaEnriquecidaClient() {
             <form onSubmit={handleSubmit}>
                 <div className="glass rounded-2xl p-4 sm:p-5">
                     <Input
-                        label="Número, nick o usuario"
+                        label="La cuenta (número o usuario)"
                         placeholder="Ej: 3002222222 o @usuario"
                         value={identificador}
                         onChange={(e) => setIdentificador(e.target.value)}
@@ -145,7 +145,7 @@ export function ConsultaEnriquecidaClient() {
             {data && !data.tieneReportes && (
                 <div className="space-y-4">
                     <div className="rounded-xl glass p-6 text-center">
-                        <p className="text-body">{data.mensaje || "Sin reportes registrados para este identificador."}</p>
+                        <p className="text-body">{data.mensaje || "Sin reportes registrados para esta cuenta."}</p>
                     </div>
                     {data.bloqueVacia && <ConsultaVaciaBloque bloque={data.bloqueVacia} identificador={data.identificador} />}
                 </div>

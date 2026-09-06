@@ -32,7 +32,7 @@ describe("IdentificadorBusquedaClient (SPEC-233)", () => {
     it("muestra estado vacío con CTA a reportar cuando no hay expedientes", () => {
         render(<IdentificadorBusquedaClient identificador="@sin_expedientes" expedientes={[]} />);
 
-        expect(screen.getByText("No tienes expedientes sobre este identificador")).toBeDefined();
+        expect(screen.getByText("No tienes expedientes sobre esta cuenta")).toBeDefined();
         const cta = screen.getByRole("link", { name: /Reportar una situación/i });
         expect(cta.getAttribute("href")).toBe("/dashboard/padre/reportar");
     });
@@ -60,7 +60,7 @@ describe("IdentificadorBusquedaClient (SPEC-233)", () => {
     it("navega a la misma ruta con el identificador codificado al buscar", () => {
         render(<IdentificadorBusquedaClient identificador="@nick_ejemplo" expedientes={[]} />);
 
-        const input = screen.getByLabelText("Buscar por identificador");
+        const input = screen.getByLabelText("Buscar por cuenta");
         fireEvent.change(input, { target: { value: "@nick con espacios/#" } });
         fireEvent.submit(input.closest("form") as HTMLFormElement);
 
@@ -72,7 +72,7 @@ describe("IdentificadorBusquedaClient (SPEC-233)", () => {
     it("no navega cuando la búsqueda está vacía", () => {
         render(<IdentificadorBusquedaClient identificador="@nick_ejemplo" expedientes={[]} />);
 
-        const input = screen.getByLabelText("Buscar por identificador");
+        const input = screen.getByLabelText("Buscar por cuenta");
         fireEvent.change(input, { target: { value: "   " } });
         fireEvent.submit(input.closest("form") as HTMLFormElement);
 

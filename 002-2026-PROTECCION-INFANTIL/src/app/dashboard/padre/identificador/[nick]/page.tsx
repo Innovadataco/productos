@@ -35,8 +35,8 @@ export default async function PadreIdentificadorPage({ params }: { params: Promi
         return (
             <div className="p-6">
                 <ErrorState
-                    title="Identificador inválido"
-                    description={`El identificador no puede estar vacío ni superar ${MAX_IDENTIFICADOR_LENGTH} caracteres. Ajusta la búsqueda e intenta de nuevo.`}
+                    title="Cuenta inválida"
+                    description={`La cuenta no puede estar vacía ni superar ${MAX_IDENTIFICADOR_LENGTH} caracteres. Ajusta la búsqueda e intenta de nuevo.`}
                 />
             </div>
         );
@@ -54,8 +54,8 @@ export default async function PadreIdentificadorPage({ params }: { params: Promi
                 <h1 className="text-2xl font-bold text-body">Expedientes sobre {identificador}</h1>
                 <p className="mt-1 text-sm text-muted">
                     {resultado.pagination.total === 1
-                        ? "1 expediente registrado por ti sobre este identificador."
-                        : `${resultado.pagination.total} expedientes registrados por ti sobre este identificador.`}
+                        ? "1 expediente registrado por ti sobre esta cuenta."
+                        : `${resultado.pagination.total} expedientes registrados por ti sobre esta cuenta.`}
                 </p>
             </div>
             <IdentificadorBusquedaClient identificador={identificador} expedientes={resultado.items} />

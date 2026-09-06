@@ -239,7 +239,7 @@ export function SeguimientoClient() {
 
                     {data.ranking && (
                         <div className={infoBox}>
-                            <h3 className="mb-2 text-sm font-semibold text-body">Actividad del identificador</h3>
+                            <h3 className="mb-2 text-sm font-semibold text-body">Actividad de la cuenta</h3>
                             <Badge variant="info">
                                 Actividad {data.actividad === "alta" ? "alta" : "baja"} de reportes
                             </Badge>
@@ -255,9 +255,9 @@ export function SeguimientoClient() {
                         ni autor, y esta lista no puede inventarlos. */}
                     {data.otrosReportes && data.otrosReportes.length > 0 && (
                         <div className={infoBox}>
-                            <h3 className="text-sm font-semibold text-body">Otros reportes de este identificador</h3>
+                            <h3 className="text-sm font-semibold text-body">Otros reportes de esta cuenta</h3>
                             <p className="mt-1 text-xs text-subtle">
-                                Otras personas reportaron el mismo identificador. Se muestra cuándo y dónde
+                                Otras personas reportaron la misma cuenta. Se muestra cuándo y dónde
                                 ocurrió y qué conducta identificó el sistema; nunca el texto ni quién reportó.
                             </p>
                             <ul className="mt-3 space-y-2">

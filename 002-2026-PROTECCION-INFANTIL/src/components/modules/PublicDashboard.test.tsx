@@ -44,7 +44,7 @@ describe("PublicDashboard", () => {
 
         await waitFor(() => expect(screen.getByText("Lo que estamos viendo entre todos")).toBeTruthy());
         expect(screen.getByText("Reportes registrados")).toBeTruthy();
-        expect(screen.getByText("Identificadores visibles")).toBeTruthy();
+        expect(screen.getByText("Cuentas visibles")).toBeTruthy();
         expect(screen.queryByText(/nivel de riesgo/i)).toBeNull();
         expect(screen.queryByText(/score/i)).toBeNull();
     });
