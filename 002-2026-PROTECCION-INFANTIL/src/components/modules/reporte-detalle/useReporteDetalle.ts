@@ -199,7 +199,7 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         // La nota es obligatoria (el endpoint exige ≥10 como registro auditable de la decisión
         // humana). Validamos acá también para dar el error inmediato, sin ir al servidor.
         if (notaClasificacion.trim().length < 10) {
-            setError("La nota debe explicar el criterio (mínimo 10 caracteres).");
+            setError("Escriba el motivo (mínimo 10 caracteres) para clasificar.");
             return;
         }
         // Complemento de Corregir/Confirmar, NO un tercer camino que compita: esta vía existe SOLO

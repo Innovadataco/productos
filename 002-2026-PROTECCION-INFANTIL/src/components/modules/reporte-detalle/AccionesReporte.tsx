@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import type { DetalleReporte, UseReporteDetalleResult } from "./types";
 import { CATEGORIAS } from "./types";
 import { capacidadesAccionesReporte } from "./capacidades-reporte";
+import { AsignarClasificacionCard } from "./AsignarClasificacionCard";
 
 interface AccionesReporteProps {
     reporte: DetalleReporte;
@@ -14,6 +15,11 @@ interface AccionesReporteProps {
     setCategoriaCorreccion: (v: string) => void;
     motivoCorreccion: string;
     setMotivoCorreccion: (v: string) => void;
+    categoriaClasificacion: string;
+    setCategoriaClasificacion: (v: string) => void;
+    notaClasificacion: string;
+    setNotaClasificacion: (v: string) => void;
+    handleClasificar: () => Promise<void>;
     actionLoading: boolean;
     confirmando: boolean;
     mostrarBaja: boolean;
@@ -51,6 +57,11 @@ export function AccionesReporte({
     setCategoriaCorreccion,
     motivoCorreccion,
     setMotivoCorreccion,
+    categoriaClasificacion,
+    setCategoriaClasificacion,
+    notaClasificacion,
+    setNotaClasificacion,
+    handleClasificar,
     actionLoading,
     confirmando,
     mostrarBaja,
@@ -79,15 +90,33 @@ export function AccionesReporte({
     handleEscalar,
 }: AccionesReporteProps) {
     // SPEC-574 (I-354): las capacidades salen de una fuente pura (capacidades-reporte.ts) — conducta
-    // testeable sin depender de la forma. `puedeClasificar` (nuevo) aparece SOLO en REVISION_MANUAL sin
-    // clasificación y desaparece en cuanto hay una (donde el endpoint respondería 409). Se destructura
-    // acá cuando llegue la forma de Diseño (dónde va el control, copy, rótulo de nota, orden de foco);
-    // por ahora el candado lo afirma sobre el helper. Ver SPEC-562 para el orden de foco del render.
-    const { puedeAnonimizar, puedeCorregir, puedeConfirmar, puedeBaja, puedeReactivar } =
+    // testeable sin depender de la forma. `puedeClasificar` ocupa el slot del par ausente: aparece SOLO
+    // en REVISION_MANUAL sin clasificación y desaparece en cuanto hay una (donde el endpoint respondería
+    // 409). El slot principal muestra SIEMPRE uno de {Corregir+Confirmar} o {Asignar}, nunca los tres.
+    const { puedeAnonimizar, puedeClasificar, puedeCorregir, puedeConfirmar, puedeBaja, puedeReactivar } =
         capacidadesAccionesReporte(reporte);
 
     return (
         <div className="space-y-4">
+            {/* SPEC-574 (I-354): «Asignar clasificación» ocupa el slot del par ausente (no un botón
+                al lado). Solo aparece sin clasificación (REVISION_MANUAL, no eliminado); ahí Corregir/
+                Confirmar están apagados, así que nunca coexisten. Card NEUTRA (no ámbar: el estado
+                «sin determinación» ya va ámbar en el bloque de Clasificación IA de arriba, SPEC-558).
+                Seguridad (Diseño): clasificar recalcula el score y PUEDE volver público el reporte —
+                por eso el botón NO lleva autoFocus y arranca DESHABILITADO hasta categoría + nota ≥10:
+                la nota obligatoria es el candado anti-reflejo (un Enter reflejo no dispara). Sin modal:
+                el doble gate ya son dos actos deliberados. Foco dentro de la card: select → nota → botón. */}
+            {puedeClasificar && (
+                <AsignarClasificacionCard
+                    categoria={categoriaClasificacion}
+                    setCategoria={setCategoriaClasificacion}
+                    nota={notaClasificacion}
+                    setNota={setNotaClasificacion}
+                    onAsignar={handleClasificar}
+                    loading={actionLoading}
+                />
+            )}
+
             {/* SPEC-562 (I-345): «Corregir» va ANTES que «Confirmar» — en el DOM Y en
                 pantalla (el foco no se divorcia de lo que ve el ojo). Así el PRIMER
                 control tabable del contenido es el <select> de corregir —benigno:

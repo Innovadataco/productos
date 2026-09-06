@@ -29,6 +29,11 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
         setCategoriaCorreccion,
         motivoCorreccion,
         setMotivoCorreccion,
+        categoriaClasificacion,
+        setCategoriaClasificacion,
+        notaClasificacion,
+        setNotaClasificacion,
+        handleClasificar,
         actionLoading,
         confirmando,
         mostrarBaja,
@@ -124,6 +129,11 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
                 setCategoriaCorreccion={setCategoriaCorreccion}
                 motivoCorreccion={motivoCorreccion}
                 setMotivoCorreccion={setMotivoCorreccion}
+                categoriaClasificacion={categoriaClasificacion}
+                setCategoriaClasificacion={setCategoriaClasificacion}
+                notaClasificacion={notaClasificacion}
+                setNotaClasificacion={setNotaClasificacion}
+                handleClasificar={handleClasificar}
                 actionLoading={actionLoading}
                 confirmando={confirmando}
                 mostrarBaja={mostrarBaja}
