@@ -38,7 +38,7 @@ export async function GET(request: Request) {
                 filas: [],
                 sinBaseline: true,
                 mensaje:
-                    "Todavía no hay medición de deriva: el job corre los lunes 07:00 (America/Bogota) o puedes recalcular ahora.",
+                    "Todavía no hay medición de deriva: el job corre los lunes 07:00 (America/Bogota) o puede recalcular ahora.",
             });
         }
 

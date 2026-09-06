@@ -51,7 +51,7 @@ export function SimulacionTab() {
                     ) : runs.length === 0 ? (
                         <EmptyState
                             title="Aún no hay simulaciones"
-                            description="Crea una simulación para comparar modelos de clasificación bajo carga."
+                            description="Cree una simulación para comparar modelos de clasificación bajo carga."
                         />
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2">

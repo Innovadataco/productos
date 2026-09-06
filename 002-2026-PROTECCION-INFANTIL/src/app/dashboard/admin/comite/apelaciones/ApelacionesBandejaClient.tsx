@@ -182,7 +182,7 @@ export function ApelacionesBandejaClient() {
             return;
         }
         if (decision === "ACEPTADA" && !quitarVisibilidad && reportesABajar.size === 0) {
-            setMensaje({ type: "error", text: "Al aceptar debes quitar la visibilidad y/o dar de baja reportes." });
+            setMensaje({ type: "error", text: "Al aceptar debe quitar la visibilidad y/o dar de baja reportes." });
             return;
         }
         setEnviando(true);

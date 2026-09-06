@@ -332,7 +332,7 @@ export default function AdminOperadoresGestionPage() {
                     ) : operadores.length === 0 ? (
                         <EmptyState
                             title="No hay operadores registrados"
-                            description="Crea el primer operador para que pueda atender la cola de revisión manual."
+                            description="Cree el primer operador para que pueda atender la cola de revisión manual."
                         />
                     ) : (
                         <div className="mt-4">
