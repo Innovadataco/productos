@@ -8,6 +8,7 @@ import { useReporteDetalle } from "./reporte-detalle/useReporteDetalle";
 import { ReporteDetalleInfo } from "./reporte-detalle/ReporteDetalleInfo";
 import { TextoOriginalPanel } from "./reporte-detalle/TextoOriginalPanel";
 import { AccionesReporte } from "./reporte-detalle/AccionesReporte";
+import { AvisoDeshacerConfirmacion } from "./reporte-detalle/AvisoDeshacerConfirmacion";
 
 interface AdminReporteDetalleProps {
     reporteId: string;
@@ -53,6 +54,9 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
         setMotivoEscalar,
         handleAnonimizar,
         handleConfirmar,
+        deshacer,
+        handleDeshacerConfirmar,
+        descartarDeshacer,
         handleCorregir,
         handleBaja,
         handleReactivar,
@@ -147,6 +151,16 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
                 handleValidarAnonimizacion={handleValidarAnonimizacion}
                 handleEscalar={handleEscalar}
             />
+
+            {/* SPEC-557: toast de deshacer tras confirmar (8 s, no tapa el expediente). */}
+            {deshacer && (
+                <AvisoDeshacerConfirmacion
+                    categoria={deshacer.categoria}
+                    nivelRiesgo={deshacer.nivelRiesgo}
+                    onDeshacer={handleDeshacerConfirmar}
+                    onExpirar={descartarDeshacer}
+                />
+            )}
         </div>
     );
 }

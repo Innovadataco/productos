@@ -13,6 +13,8 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
     const [actionLoading, setActionLoading] = useState(false);
     const [success, setSuccess] = useState("");
     const [confirmando, setConfirmando] = useState(false);
+    // SPEC-557: tras confirmar aparece un toast con [Deshacer] (8 s, lado cliente).
+    const [deshacer, setDeshacer] = useState<{ categoria: string; nivelRiesgo: string } | null>(null);
     const [mostrarBaja, setMostrarBaja] = useState(false);
     const [motivoBaja, setMotivoBaja] = useState("");
     const [notaBaja, setNotaBaja] = useState("");
@@ -33,6 +35,7 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         setLoading(true);
         setError("");
         setSuccess("");
+        setDeshacer(null);
         setCategoriaCorreccion("");
         setMotivoCorreccion("");
         setTextoOriginalRevelado(null);
@@ -112,7 +115,9 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
                 setError(json.error?.message || "Error al confirmar");
                 return;
             }
-            setSuccess("Clasificación confirmada correctamente.");
+            // SPEC-557: la confirmación se ejecutó; el toast anclado abajo avisa qué se
+            // hizo y ofrece [Deshacer] durante 8 s. El toast ES el feedback (sin banner).
+            setDeshacer({ categoria: json.categoria, nivelRiesgo: json.nivelRiesgo });
             onRefresh();
             await reloadReporte();
         } catch {
@@ -121,6 +126,28 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
             setConfirmando(false);
         }
     };
+
+    const handleDeshacerConfirmar = async () => {
+        setError("");
+        try {
+            const res = await fetch(`/api/admin/reportes-revision/${reporteId}/deshacer-confirmacion`, {
+                method: "POST",
+                credentials: "include",
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setError(json.error?.message || "No se pudo deshacer la confirmación");
+                return;
+            }
+            setDeshacer(null);
+            onRefresh();
+            await reloadReporte();
+        } catch {
+            setError("No se pudo deshacer la confirmación");
+        }
+    };
+
+    const descartarDeshacer = () => setDeshacer(null);
 
     const handleCorregir = async () => {
         if (!categoriaCorreccion) {
@@ -346,6 +373,9 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         setMotivoEscalar,
         handleAnonimizar,
         handleConfirmar,
+        deshacer,
+        handleDeshacerConfirmar,
+        descartarDeshacer,
         handleCorregir,
         handleBaja,
         handleReactivar,
