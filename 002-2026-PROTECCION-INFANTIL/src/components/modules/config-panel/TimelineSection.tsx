@@ -22,8 +22,8 @@ export function TimelineSection({ timeline }: TimelineSectionProps) {
                             </p>
                             {Boolean(log.valorAnterior) && Boolean(log.valorNuevo) && (
                                 <div className="mt-2 grid gap-1 text-xs">
-                                    <p className="text-estado-rubi">- {String(log.valorAnterior).slice(0, 200)}</p>
-                                    <p className="text-estado-pino">+ {String(log.valorNuevo).slice(0, 200)}</p>
+                                    <p className="text-body">- {String(log.valorAnterior).slice(0, 200)}</p>
+                                    <p className="text-body">+ {String(log.valorNuevo).slice(0, 200)}</p>
                                 </div>
                             )}
                         </div>
