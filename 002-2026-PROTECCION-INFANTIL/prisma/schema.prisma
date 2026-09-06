@@ -2230,6 +2230,11 @@ model ContactoConfianza {
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
+  // SPEC-544 (I-332): el cooldown de la alerta por EMAIL se mide POR CONTACTO
+  // vigilado, no por usuario (antes `Usuario.ultimaNotificacionCirculoEn`, que
+  // silenciaba al 2.º y 3.º contacto del mismo padre). El canal IN_APP NO usa
+  // cooldown: en la app el aviso se ve siempre.
+  ultimaNotificacionEmailEn DateTime?
 
   usuario         Usuario                 @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   identificadores IdentificadorContacto[]

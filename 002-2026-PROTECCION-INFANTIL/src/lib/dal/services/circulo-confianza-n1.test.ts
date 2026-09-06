@@ -236,9 +236,10 @@ describe("SPEC-135 · notificarCambioCirculoSiCorresponde sin N+1 (FR-004)", () 
             .map((c) => c[0].destinatario.email)
             .sort();
         expect(destinos).toEqual([usuario1.email, usuario2.email].sort());
+        // SPEC-544: el timestamp de cooldown ahora vive en el CONTACTO (por EMAIL), no en el usuario.
         for (const u of [usuario1, usuario2]) {
-            const actualizado = await prisma.usuario.findUnique({ where: { id: u.id }, select: { ultimaNotificacionCirculoEn: true } });
-            expect(actualizado?.ultimaNotificacionCirculoEn).not.toBeNull();
+            const contacto = await prisma.contactoConfianza.findFirst({ where: { usuarioId: u.id }, select: { ultimaNotificacionEmailEn: true } });
+            expect(contacto?.ultimaNotificacionEmailEn).not.toBeNull();
         }
     });
 });

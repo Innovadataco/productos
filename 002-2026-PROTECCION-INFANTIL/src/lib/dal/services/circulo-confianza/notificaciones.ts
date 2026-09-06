@@ -7,7 +7,7 @@
 import { prisma } from "@/lib/prisma";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
-import type { EstadoReporte } from "@prisma/client";
+import type { EstadoReporte, CanalNotificacion } from "@prisma/client";
 import { logger } from "@/lib/logger";
 import { ESTADOS_VISIBLES } from "./tipos";
 
@@ -106,7 +106,6 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                         id: true,
                         email: true,
                         notificacionesCirculo: true,
-                        ultimaNotificacionCirculoEn: true,
                     },
                 },
                 identificadores: {
@@ -121,19 +120,13 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             return;
         }
 
-        // SPEC-308: una alerta enriquecida por contacto impactado. El cooldown se
-        // evalúa por usuario (ultimaNotificacionCirculoEn), no por contacto.
+        // SPEC-544 (I-332): una alerta enriquecida por contacto impactado. El opt-out
+        // del usuario (notificacionesCirculo) sigue mandando. El COOLDOWN ya NO se
+        // evalúa acá: pasó a ser POR CONTACTO y solo para el canal EMAIL (IN_APP no
+        // tiene cooldown). Se decide contacto por contacto en el envío, más abajo.
         const contactosANotificar = contactos.filter((contacto) => {
-            const usuario = contacto.usuario;
-            if (!usuario.notificacionesCirculo) {
-                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuario.id} desactivó notificaciones`);
-                return false;
-            }
-            if (
-                usuario.ultimaNotificacionCirculoEn &&
-                ahora.getTime() - usuario.ultimaNotificacionCirculoEn.getTime() < cooldownMs
-            ) {
-                logger.info(`[CIRCULO] Notificación omitida: usuario ${usuario.id} en cooldown`);
+            if (!contacto.usuario.notificacionesCirculo) {
+                logger.info(`[CIRCULO] Notificación omitida: usuario ${contacto.usuario.id} desactivó notificaciones`);
                 return false;
             }
             return true;
@@ -179,8 +172,6 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             }
         }
 
-        const usuariosActualizados = new Set<string>();
-
         for (const contacto of contactosANotificar) {
             const usuario = contacto.usuario;
             const identificadorContacto = contacto.identificadores.find((i) => i.valor === reporte.identificador);
@@ -189,7 +180,18 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                 : plataformaReporte;
             const expedienteId = expedientePorUsuario.get(usuario.id) ?? null;
 
-            logger.info(`[CIRCULO] Enviando alerta enriquecida a ${usuario.email} (${reporte.identificador})`);
+            // SPEC-544: IN_APP siempre; EMAIL solo si ESTE contacto está fuera de la
+            // ventana de cooldown (su propia marca, no la del usuario). Así un padre
+            // con varios contactos recibe una alerta por cada contacto atacado, y en
+            // la app SIEMPRE ve el aviso aunque el correo esté en cooldown.
+            const emailPermitido =
+                !contacto.ultimaNotificacionEmailEn ||
+                ahora.getTime() - contacto.ultimaNotificacionEmailEn.getTime() >= cooldownMs;
+            const canales: CanalNotificacion[] = emailPermitido ? ["IN_APP", "EMAIL"] : ["IN_APP"];
+
+            logger.info(
+                `[CIRCULO] Enviando alerta a ${usuario.email} (${reporte.identificador}) canales=${canales.join("+")}`
+            );
             await enviarAlertaCirculoConfianzaEnriquecida({
                 destinatario: { usuarioId: usuario.id, email: usuario.email },
                 reporteId: reporte.id,
@@ -199,14 +201,15 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                 categoria: categoria ?? "",
                 totalReportes,
                 expedienteId,
+                canales,
             });
 
-            if (!usuariosActualizados.has(usuario.id)) {
-                await prisma.usuario.update({
-                    where: { id: usuario.id },
-                    data: { ultimaNotificacionCirculoEn: ahora },
+            // La marca de cooldown es del CONTACTO y solo la mueve el EMAIL.
+            if (emailPermitido) {
+                await prisma.contactoConfianza.update({
+                    where: { id: contacto.id },
+                    data: { ultimaNotificacionEmailEn: ahora },
                 });
-                usuariosActualizados.add(usuario.id);
             }
         }
     } catch (error) {

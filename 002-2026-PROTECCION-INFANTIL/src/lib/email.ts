@@ -19,6 +19,7 @@ import { getParametroSistema } from "./parametros.ts";
 import { programar } from "./notificaciones/motor.ts";
 import { renderizarEmailReporteCirculo } from "./notificaciones/plantillas/reporte-circulo.ts";
 import type { FilaDeriva } from "./motor/deriva.ts";
+import type { CanalNotificacion } from "@prisma/client";
 
 async function getAdminEmails(): Promise<string[]> {
     const admins = await prisma.usuario.findMany({
@@ -254,6 +255,9 @@ export async function enviarAlertaCirculoConfianzaEnriquecida(payload: {
     categoria: string;
     totalReportes: number;
     expedienteId?: string | null;
+    // SPEC-544 (I-332): canales a disparar. IN_APP siempre; EMAIL solo fuera del
+    // cooldown por contacto. Si se omite, disparan todos los canales con regla.
+    canales?: CanalNotificacion[];
 }): Promise<void> {
     if (!(await alertasHabilitadas("circulo.notificaciones.enabled"))) return;
 
@@ -279,6 +283,7 @@ export async function enviarAlertaCirculoConfianzaEnriquecida(payload: {
         evento: "padre.circulo_confianza.reporte_enriquecido",
         sujetoTipo: "Reporte",
         sujetoId: payload.reporteId,
+        ...(payload.canales ? { canales: payload.canales } : {}),
         destinatarios: [
             {
                 ...payload.destinatario,

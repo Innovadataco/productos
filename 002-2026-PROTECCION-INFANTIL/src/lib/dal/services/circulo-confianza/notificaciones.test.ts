@@ -147,20 +147,24 @@ describe("notificarCambioCirculoSiCorresponde (SPEC-308)", () => {
         expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
     });
 
-    it("respeta cooldown y no re-notifica", async () => {
+    it("SPEC-544: en cooldown suprime el EMAIL pero manda el IN_APP (en la app se ve siempre)", async () => {
         const usuario = await crearUsuario("PARENT");
-        await prisma.usuario.update({
-            where: { id: usuario.id },
-            data: { ultimaNotificacionCirculoEn: new Date(Date.now() - 1000) },
-        });
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         await agregarContacto(usuario.id, {
             identificadores: [{ valor: "+57300COOL2", plataformaId: plataforma!.id }],
+        });
+        // El contacto ya recibió correo hace un instante → dentro de la ventana.
+        await prisma.contactoConfianza.updateMany({
+            where: { usuarioId: usuario.id },
+            data: { ultimaNotificacionEmailEn: new Date(Date.now() - 1000) },
         });
         const reporte = await crearReporte("+57300COOL2", plataforma!.id, "CLASIFICADO", "OFRECIMIENTO_REGALOS");
 
         await notificarCambioCirculoSiCorresponde(reporte.id);
 
-        expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
+        // El aviso SÍ sale (IN_APP no tiene cooldown), pero sin el canal EMAIL.
+        expect(enviarAlertaCirculoConfianzaEnriquecida).toHaveBeenCalledOnce();
+        const args = vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mock.calls[0][0];
+        expect(args.canales).toEqual(["IN_APP"]);
     });
 });

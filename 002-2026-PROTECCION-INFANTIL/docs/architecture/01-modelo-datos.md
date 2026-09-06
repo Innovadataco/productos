@@ -125,6 +125,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | activo | Boolean | — |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
+| ultimaNotificacionEmailEn | DateTime | opcional |
 | usuario | Usuario | relación (FK) |
 | identificadores | IdentificadorContacto | lista, relación |
 
