@@ -14,6 +14,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { NextRequest } from "next/server";
 import { middleware } from "../../../middleware";
 import { SignJWT } from "jose";
+import { firmarSesionEstado, NOMBRE_COOKIE } from "@/lib/routing/vigencia-cookie";
 
 const JWT_SECRET_TEST =
     process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 32
@@ -37,6 +38,18 @@ async function reqSinEstado(pathname: string, rol: string): Promise<NextRequest>
     return new NextRequest(`http://localhost:5005${pathname}`, {
         headers: { cookie: `token=${token}` },
     });
+}
+
+/**
+ * Igual que `reqSinEstado`, pero la URL trae `?_rv=1`: es el estado en que vuelve el
+ * navegador tras un rebote a `/api/sesion/al-dia` cuyo re-sello NO pegó (cookie rechazada,
+ * reloj adelantado, secure sobre http). JWT válido, cookie de estado AÚN ausente, marca puesta.
+ */
+async function reqReboteFallido(pathname: string, rol: string): Promise<NextRequest> {
+    const token = await jwt(rol);
+    const url = new URL(`http://localhost:5005${pathname}`);
+    url.searchParams.set("_rv", "1");
+    return new NextRequest(url, { headers: { cookie: `token=${token}` } });
 }
 
 describe("SPEC-572 · fail-closed sin cookie sesion_estado (I-236)", () => {
@@ -68,5 +81,54 @@ describe("SPEC-572 · fail-closed sin cookie sesion_estado (I-236)", () => {
         expect(res.status, "un fetch no sigue redirects: debe ser 403, no 3xx").toBe(403);
         const body = (await res.json()) as { error?: { code?: string } };
         expect(body?.error?.code).toBe("SESION_ESTADO_REQUERIDO");
+    });
+});
+
+/**
+ * SPEC-572 (loop-cap, revisión CEO) · CANDADO DE CONDUCTA — "con el re-sello roto, no hay bucle".
+ *
+ * El rebote fail-closed re-sella y devuelve al destino con `?_rv=1`. Si la cookie NO pega en el
+ * cliente, el destino vuelve al middleware SIN estado y CON la marca. El endpoint no ve ese fallo
+ * (cree que re-selló bien); la marca es la única señal que sobrevive. Sin tope, cada vuelta manda
+ * a `/api/sesion/al-dia` otra vez → 307 infinito que deja al usuario fuera.
+ *
+ * Ancla: MISMA ruta gateada, un rebote (sin marca) vs. un rebote fallido (con marca). El primero
+ * va a `al-dia` (el fail-closed original sigue vivo); el segundo corta a `/login`, terminal.
+ * Mutación (verificada aparte): si se quita el chequeo de `marcaRebote`, el segundo caso vuelve a
+ * `al-dia` — el bucle — y este candado muere.
+ */
+describe("SPEC-572 · loop-cap: con el re-sello roto, no hay bucle", () => {
+    it("primer rebote (sin marca) todavía va a /api/sesion/al-dia — el fail-closed no se rompió", async () => {
+        const res = await middleware(await reqSinEstado("/dashboard/padre", "PARENT"));
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/api/sesion/al-dia");
+    });
+
+    it("rebote fallido (con `_rv=1`) y cookie AÚN ausente → corta a /login, NO rebota otra vez", async () => {
+        const res = await middleware(await reqReboteFallido("/dashboard/padre", "PARENT"));
+        expect(res.status).toBe(307);
+        const loc = new URL(res.headers.get("location") ?? "");
+        expect(loc.pathname, "NO puede volver a rebotar a al-dia: sería el bucle").not.toBe("/api/sesion/al-dia");
+        expect(loc.pathname).toBe("/login");
+        expect(loc.searchParams.get("mensaje"), "aterriza en algo que le habla").toBe("sesion");
+        // La sesión se cierra: sin cookie fresca, seguir gobernado rebotaría de nuevo.
+        expect(res.headers.get("set-cookie") ?? "", "cierra la sesión colgada").toContain("sesion_estado=;");
+    });
+
+    it("con `_rv=1` PERO cookie válida presente (re-sello SÍ pegó) → pasa normal, la marca es inerte", async () => {
+        // Regresión: cuando el re-sello sí prendió, el destino trae `_rv=1` como residuo. NO debe
+        // cortar nada: `estado` presente → los muros de arriba deciden y la sesión sana pasa. Si el
+        // loop-cap disparara con la cookie presente, rompería toda navegación tras un rebote exitoso.
+        const token = await jwt("PARENT");
+        const estado = await firmarSesionEstado(
+            { vigencia: "ACTIVA", requiereConsentimiento: false, debeCambiarPassword: false, pasoCamino: null },
+            JWT_SECRET_TEST,
+        );
+        const url = new URL("http://localhost:5005/dashboard/padre");
+        url.searchParams.set("_rv", "1");
+        const res = await middleware(
+            new NextRequest(url, { headers: { cookie: `token=${token}; ${NOMBRE_COOKIE}=${estado}` } }),
+        );
+        expect(res.headers.get("x-middleware-next"), "sesión sana con la marca residual DEBE pasar").toBe("1");
     });
 });

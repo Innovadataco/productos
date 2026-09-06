@@ -81,8 +81,11 @@ function redirect(request: NextRequest, destino: string): NextResponse {
     return NextResponse.redirect(new URL(destino, request.url));
 }
 
-function redirectAtLogin(request: NextRequest): NextResponse {
-    const res = redirect(request, "/login");
+function redirectAtLogin(request: NextRequest, mensaje?: string): NextResponse {
+    // `mensaje` (opcional) pinta el aviso en /login — p.ej. "sesion" cuando el
+    // loop-cap (SPEC-572) corta un rebote perpetuo: el usuario aterriza en algo
+    // que le habla, no en un callejón silencioso.
+    const res = redirect(request, mensaje ? `/login?mensaje=${encodeURIComponent(mensaje)}` : "/login");
     // SPEC-342 (BUG4): sin Path=/ estos delete no borran cookies fijadas con
     // path "/" — la sesión "cerrada" seguía viva.
     res.cookies.delete({ name: NOMBRE_COOKIE_SESION_LEGACY, path: "/" });
@@ -315,6 +318,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 { status: 403 },
             );
         }
+        // SPEC-572 (I-236 · loop-cap, revisión CEO): si YA rebotamos una vez —el destino
+        // trae `marcaRebote`— y la cookie SIGUE ausente, el re-sello de `al-dia` no pegó en
+        // el cliente (cookie rechazada, reloj adelantado, `secure` sobre http). El endpoint
+        // no ve ese fallo (cree que re-selló); solo esta marca sobrevive el viaje. Otro
+        // rebote sería un bucle infinito de 307 que deja al usuario fuera. Cortamos a /login
+        // (ruta pública, terminal, cierra la sesión) con un mensaje — algo que le habla.
+        if (request.nextUrl.searchParams.get(G.marcaRebote) === "1") {
+            return aplicarCspSiCorresponde(request, redirectAtLogin(request, "sesion"));
+        }
+
         const alDia = new URL(G.caminoRebote, request.url);
         alDia.searchParams.set("destino", pathname);
         return aplicarCspSiCorresponde(request, NextResponse.redirect(alDia));

@@ -27,6 +27,7 @@ import { NOMBRE_COOKIE, TTL_SEG, leerSesionEstado } from "@/lib/routing/vigencia
 import { destinoParaRol } from "@/lib/camino/pasos";
 import { requireEnv } from "@/lib/env";
 import { baseUrlPublica } from "@/lib/routing/base-url-publica";
+import { GUARDIAS_ACCESO } from "@/lib/routing/guardias";
 
 // SPEC-397 (I-237 · seguridad · open redirect vivo en prod): defensa por CLASE,
 // no por lista de cadenas. Historia:
@@ -89,6 +90,15 @@ export async function GET(request: Request) {
         // pueden resolver directamente contra la base.
         const destinoPaso = destinoParaRol(usuario.rol, estado.pasoCamino);
         const haciaDonde = destinoPaso ? new URL(destinoPaso, base) : destino;
+
+        // SPEC-572 (I-236 · loop-cap): marcamos el destino con `marcaRebote` — "ya
+        // rebotaste una vez y re-sellé". Si la cookie que fijamos abajo NO pega en el
+        // cliente (rechazada, reloj adelantado, secure sobre http), el destino vuelve al
+        // middleware SIN estado pero CON la marca, y ese la usa para cortar el bucle
+        // (aterriza en /login) en vez de rebotar de nuevo acá. Se fija sobre el URL ya
+        // resuelto (SPEC-397): `searchParams` solo toca la query, nunca el pathname, así
+        // que la defensa anti-open-redirect de `destinoSeguro` queda intacta.
+        haciaDonde.searchParams.set(GUARDIAS_ACCESO.marcaRebote, "1");
 
         // SPEC-342 (candado 22v3): JAMÁS request.url como base de un redirect en
         // Docker — sale 0.0.0.0 y el navegador muere. Base pública de 3 niveles.

@@ -60,6 +60,35 @@ describe("GET /api/sesion/al-dia (SPEC-339)", () => {
         expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/camino/hijos");
     });
 
+    // SPEC-572 (I-236 · loop-cap) — la otra mitad del tope: el destino re-sellado DEBE llevar la
+    // marca `_rv=1`. Es la única señal que sobrevive el viaje de ida y vuelta; sin ella el
+    // middleware no puede distinguir "primer intento" de "ya reboté y no pegó", y el tope sería
+    // código muerto. Se pone tanto al destino pedido como al paso del camino.
+    it("el destino re-sellado lleva la marca de rebote `_rv=1` (habilita el loop-cap del middleware)", async () => {
+        mocks.buildSesionEstadoValue.mockResolvedValue(await cookieFirmada(null));
+        const res = await GET(req("/dashboard/padre/expedientes"));
+        expect(new URL(res.headers.get("location") ?? "").searchParams.get("_rv")).toBe("1");
+    });
+
+    it("también marca el paso del camino, no solo el destino pedido", async () => {
+        mocks.buildSesionEstadoValue.mockResolvedValue(await cookieFirmada("hijos"));
+        const res = await GET(req("/dashboard/padre/expedientes"));
+        const loc = new URL(res.headers.get("location") ?? "");
+        expect(loc.pathname).toBe("/camino/hijos");
+        expect(loc.searchParams.get("_rv")).toBe("1");
+    });
+
+    // El camino INFELIZ (a /login) NO lleva la marca: es terminal, no un destino gobernado que
+    // pudiera rebotar. Marcarlo sería ruido; su ausencia confirma que la marca vive solo en el
+    // camino feliz (el que sí puede reencontrarse con el middleware).
+    it("el camino infeliz (/login) NO lleva la marca `_rv`", async () => {
+        mocks.buildSesionEstadoValue.mockRejectedValue(new Error("base caída"));
+        const res = await GET(req("/dashboard/padre"));
+        const loc = new URL(res.headers.get("location") ?? "");
+        expect(loc.pathname).toBe("/login");
+        expect(loc.searchParams.get("_rv")).toBeNull();
+    });
+
     it("un rol que no es padre → siempre al destino (el camino no lo toca)", async () => {
         mocks.verifyAuth.mockResolvedValue({ id: "a1", rol: "ADMIN" });
         // Cookie envenenada con un paso: el rol manda, no la cookie.
