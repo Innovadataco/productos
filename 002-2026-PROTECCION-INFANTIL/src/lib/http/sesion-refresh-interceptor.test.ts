@@ -126,6 +126,27 @@ describe("sesion-refresh-interceptor", () => {
         expect(gated, "exactamente 1 intento + 1 reintento (con `original`, no `g.fetch`): sin bucle").toBe(2);
     });
 
+    // SPEC-572 (revisión CEO · hallazgo de Calidad «no ejercitado») — el interceptor ENMASCARA el
+    // 403 de estado tras re-sellar (el llamador recibe 200). Eso es correcto SOLO mientras la
+    // distinción por `code` funcione: si se reintentara cualquier 403, un muro REAL (consentimiento,
+    // cambio de password, vigencia) se reintentaría y se enmascararía como 200 → el usuario pasaría
+    // un bloqueo legítimo en silencio (I-236 reabierto por la puerta de al lado, y NADIE lo vería
+    // porque el 200 es normal). Este candado fija: muro real NO se reintenta y PROPAGA su 403.
+    for (const code of ["CONSENTIMIENTO_REQUERIDO", "CAMBIO_PASSWORD_REQUERIDO", "VIGENCIA_REQUERIDA"]) {
+        it(`CANDADO (muro real): 403 «${code}» NO se reintenta y PROPAGA al llamador (no se enmascara como 200)`, async () => {
+            // Las dos respuestas OK extra solo se consumen si un refactor reintentara: entonces el
+            // refresh daría 200 y el retry enmascararía el muro como 200 — y la aserción lo delata.
+            fetchOriginal
+                .mockResolvedValueOnce(respuesta({ status: 403, ok: false, body: { error: { code, message: "muro" } } }))
+                .mockResolvedValueOnce(respuesta(RESP_OK))
+                .mockResolvedValueOnce(respuesta(RESP_OK));
+            installSesionRefreshInterceptor(target);
+            const res = await target.fetch("/api/padre/home");
+            expect(res.status, `el muro «${code}» PROPAGA su 403, no se enmascara como 200`).toBe(403);
+            expect(fetchOriginal, `el muro «${code}» NO dispara refresh ni retry`).toHaveBeenCalledTimes(1);
+        });
+    }
+
     it("nunca dispara refresh cuando la llamada ES a /api/vigencia/refresh", async () => {
         fetchOriginal.mockResolvedValueOnce(respuesta(RESP_ESTADO_REQUERIDO));
         installSesionRefreshInterceptor(target);
