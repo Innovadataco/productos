@@ -8,11 +8,12 @@
  * a TODOS los roles: reproduce una BD "vieja" donde el comité tiene los grants muertos.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import type { RolUsuario } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { revocarGrantsComiteMuertos } from "./revocar-grants-comite-muertos";
 
-const ROL_COMITE = "COMITE_VALIDACION";
+const ROL_COMITE: RolUsuario = "COMITE_VALIDACION";
 const MODULOS_MUERTOS = ["comite", "comite_auditoria"];
 
 const filtroMuertosComite = {
