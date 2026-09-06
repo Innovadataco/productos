@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **111** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **113** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -505,7 +505,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (63)
+### Otros (sin regla de dominio) (65)
 
 #### `AclaracionExpediente`
 
@@ -684,6 +684,21 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | updatedAt | DateTime | — |
 | padre | Usuario | relación (FK) |
 
+#### `ContenidoReporte`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| textoCifrado | String | — |
+| textoOriginalCifrado | String | — |
+| origenEvidencia | OrigenEvidencia | — |
+| purgadoEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| actualizadoEn | DateTime | — |
+| reporte | Reporte | opcional, relación |
+| evento | EventoExpediente | opcional, relación |
+| llave | LlaveReporte | opcional, relación |
+
 #### `DemoMarcado`
 
 | Campo | Tipo | Atributos |
@@ -780,7 +795,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ordenSecuencial | Int | — |
 | reporteId | String | opcional |
 | fechaEvento | DateTime | — |
-| texto | String | — |
+| contenidoId | String | único |
 | categoriaDetectada | String | opcional |
 | confianzaClasificacion | Float | opcional |
 | plataforma | String | opcional |
@@ -788,6 +803,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | createdAt | DateTime | — |
 | expediente | Expediente | relación (FK) |
 | reporte | Reporte | opcional, relación (FK) |
+| contenido | ContenidoReporte | relación (FK) |
 
 #### `EventoMatch`
 
@@ -1076,6 +1092,13 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | generadoPorId | String | — |
 | expediente | Expediente | relación (FK) |
 | generadoPor | Usuario | relación |
+
+#### `LlaveReporte`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| contenidoId | String | único |
 
 #### `Materia`
 
@@ -1788,8 +1811,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | id | String | id |
 | identificador | String | — |
 | plataformaId | String | — |
-| texto | String | — |
-| textoOriginal | String | opcional |
 | fechaIncidente | DateTime | — |
 | horaAproximada | Boolean | — |
 | ciudad | String | — |
@@ -1821,6 +1842,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | anonimizacionValidadaEn | DateTime | opcional |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
+| contenidoId | String | único |
 | plataforma | Plataforma | relación (FK) |
 | usuario | Usuario | opcional, relación (FK) |
 | eliminadoPor | Usuario | opcional, relación (FK) |
@@ -1845,6 +1867,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reportePrincipalId | String | opcional |
 | reportePrincipal | Reporte | opcional, relación |
 | eventosDeCadena | Reporte | lista, relación |
+| contenido | ContenidoReporte | relación (FK) |
 
 #### `SolicitudComite`
 
@@ -2212,6 +2235,8 @@ erDiagram
     Colegio ||--o{ Suscripcion : "colegio (opcional)"
     Colegio ||--o{ Usuario : "colegio (opcional)"
     ContactoConfianza ||--o{ IdentificadorContacto : "contacto"
+    ContenidoReporte ||--o{ EventoExpediente : "contenido"
+    ContenidoReporte ||--o{ Reporte : "contenido"
     CorreccionAdmin ||--o{ DatasetEntrenamiento : "correccion (opcional)"
     Curso ||--o{ CursoMateria : "curso"
     Curso ||--o{ Estudiante : "curso"

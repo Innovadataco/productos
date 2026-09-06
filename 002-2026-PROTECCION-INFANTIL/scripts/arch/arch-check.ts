@@ -30,6 +30,7 @@ import { ejecutarAsercionB } from "./asercion-menu-no-miente";
 import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
 import { buscarInfractores } from "./no-prisma-mocks";
 import { buscarInfractores as buscarAliasWorker } from "./no-worker-alias";
+import { buscarInfractores as buscarReporteCreate } from "./no-reporte-create-directo";
 import { RUTA_DOCS_ARCH, RUTA_EXCEPCIONES, RUTA_SCHEMA } from "./lib/paths";
 import { modelosHuerfanos, parsearSchemaPrisma } from "./lib/schema-prisma";
 
@@ -172,6 +173,16 @@ async function main() {
         rojo = true;
         console.error(`[Arch:check] (f) ROJO: ${aliasWorker.length} alias @/lib/ en la cadena de worker fuera de la allowlist:`);
         for (const f of aliasWorker) console.error(`  - ${f.archivo} · ${f.import}`);
+    }
+
+    console.log("[Arch:check] (g) reporte.create directo SOLO en el factory crearReporteConTexto (S-D · D-116)…");
+    const reporteCreate = buscarReporteCreate();
+    if (reporteCreate.length === 0) {
+        console.log("[Arch:check] (g) VERDE: cero reporte.create directo fuera del factory.");
+    } else {
+        rojo = true;
+        console.error(`[Arch:check] (g) ROJO: ${reporteCreate.length} usos de reporte.create fuera del factory (migrá a crearReporteConTexto):`);
+        for (const f of reporteCreate) console.error(`  - ${f.archivo}:${f.linea} ${f.texto}`);
     }
 
     if (rojo) {

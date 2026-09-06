@@ -1879,8 +1879,6 @@ model Reporte {
   id                         String             @id @default(cuid())
   identificador              String
   plataformaId               String
-  texto                      String             @db.Text
-  textoOriginal              String?            @db.Text
   fechaIncidente             DateTime
   // SPEC-438 (I-305) · ¿la hora es EXACTA o la estimó el reportante?
   //
@@ -1926,6 +1924,11 @@ model Reporte {
   anonimizacionValidadaEn    DateTime?
   creadoEn                   DateTime           @default(now())
   actualizadoEn              DateTime           @updatedAt
+  // S-D (v4.1): el texto de la denuncia vive CIFRADO en `ContenidoReporte` (1:1). NOT NULL
+  // cierra la Trampa A (`reporte.contenido` no-opcional; nunca un reporte sin texto en
+  // silencio). Gratis sobre tabla vacía tras el borrón; el alta inserta el contenido ANTES
+  // del reporte (misma tx). NO se mergea hasta la ventana.
+  contenidoId                String             @unique
 
   plataforma               Plataforma          @relation(fields: [plataformaId], references: [id])
   usuario                  Usuario?            @relation(fields: [usuarioId], references: [id])
@@ -1958,6 +1961,10 @@ model Reporte {
   reportePrincipalId       String?
   reportePrincipal         Reporte?            @relation("CadenaReportes", fields: [reportePrincipalId], references: [id], onDelete: SetNull)
   eventosDeCadena          Reporte[]           @relation("CadenaReportes")
+  // S-D (v4.1): 1:1 con el contenido cifrado, NO-opcional (Trampa A cerrada). `Restrict`: no
+  // se borra un contenido mientras un reporte lo referencia; el trigger lo borra DESPUÉS de
+  // que el reporte se fue (ver la migración).
+  contenido                ContenidoReporte    @relation(fields: [contenidoId], references: [id], onDelete: Restrict)
 
   @@index([reportePrincipalId])
   @@index([identificador, plataformaId])
@@ -1972,6 +1979,51 @@ model Reporte {
   @@index([operadorId])
   @@index([comiteId])
   @@index([anonimizacionValidadaPorId])
+}
+
+// S-D · origen de la evidencia legal. Sin `AUSENTE_PRE_SPEC110`: con el borrón no quedan
+// históricos NULL. No se fabrica evidencia.
+enum OrigenEvidencia {
+  ORIGINAL
+  PURGADA
+}
+
+// S-D · el relato de la denuncia CIFRADO con la DEK POR DENUNCIA (AES-256-GCM). 1:1 con su
+// dueño (un Reporte O un EventoExpediente); la FK vive en el dueño (`contenidoId` NOT NULL),
+// lo que cierra la Trampa A. NUNCA se publica a bi_replica (tablas_prohibidas + REVOKE).
+model ContenidoReporte {
+  id                   String          @id @default(cuid())
+  // Ciphertext del relato del denunciante (cifrado con la DEK por fila). NUNCA texto plano.
+  textoCifrado         String          @db.Text
+  // Evidencia legal: el texto ORIGINAL previo a anonimización, cifrado. NOT NULL.
+  textoOriginalCifrado String          @db.Text
+  origenEvidencia      OrigenEvidencia
+  // Estado purgado (política D4) MODELADO en el esquema, no como cadena en el contenido:
+  // con IV aleatorio la igualdad de marcador nunca vuelve a dar true.
+  purgadoEn            DateTime?       @db.Timestamptz(6)
+  creadoEn             DateTime        @default(now()) @db.Timestamptz(6)
+  actualizadoEn        DateTime        @updatedAt @db.Timestamptz(6)
+
+  // 1:1 con su dueño (un reporte O un evento) y con su llavero (la DEK envuelta).
+  // La versión de la KEK NO vive acá: vive en `LlaveReporte.kekVersion` (v4.1 §1.3).
+  reporte Reporte?
+  evento  EventoExpediente?
+  llave   LlaveReporte?
+}
+
+/// S-D (v4.1 §1.2) · Llavero: la DEK (llave POR DENUNCIA) envuelta por la KEK. SIN nombres ni
+/// PII — quien llegue acá se lleva llaves envueltas e inservibles, nunca identidades. Borrar
+/// el contenido quema la DEK (`onDelete: Cascade`) → cripto-shred de ese caso.
+model LlaveReporte {
+  id          String   @id @default(cuid())
+  contenidoId String   @unique
+  // DEK de 32 bytes envuelta por la KEK activa (sobre {iv,tag,ct}); inservible sin la KEK.
+  dekCifrada  String   @db.Text
+  // Versión de la KEK que envolvió la DEK. Rotar la KEK = re-envolver, sin re-cifrar texto.
+  kekVersion  Int
+  creadoEn    DateTime @default(now()) @db.Timestamptz(6)
+
+  contenido ContenidoReporte @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
 }
 
 model SolicitudComite {
@@ -2768,7 +2820,10 @@ model EventoExpediente {
   ordenSecuencial        Int
   reporteId              String?
   fechaEvento            DateTime @db.Timestamptz(6)
-  texto                  String   @db.Text
+  // S-D (v4.1 · D-117): el relato del evento vive cifrado en `ContenidoReporte` (1:1 propio;
+  // el evento NUNCA comparte fila con su reporte). El viejo `EventoExpediente.texto` se DROPea
+  // en esta migración. NOT NULL @unique: gratis sobre tabla vacía tras el borrón.
+  contenidoId            String   @unique
   categoriaDetectada     String?
   confianzaClasificacion Float?
   plataforma             String?
@@ -2777,6 +2832,7 @@ model EventoExpediente {
 
   expediente Expediente @relation(fields: [expedienteId], references: [id])
   reporte    Reporte?   @relation(fields: [reporteId], references: [id])
+  contenido  ContenidoReporte @relation(fields: [contenidoId], references: [id], onDelete: Restrict)
 
   @@unique([expedienteId, ordenSecuencial])
   // SPEC-323: un reporte entra UNA sola vez al expediente. Postgres admite varios
