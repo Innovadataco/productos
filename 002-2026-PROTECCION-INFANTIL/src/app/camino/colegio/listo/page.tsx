@@ -9,6 +9,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { verifyAuth } from "@/lib/auth";
+import { homeParaRol } from "@/lib/auth/home-para-rol";
 import { derivarPasoPendienteColegio } from "@/lib/dal/services/camino/estado-colegio";
 import { destinoDePasoColegio } from "@/lib/camino/pasos-colegio";
 
@@ -17,7 +18,8 @@ export const dynamic = "force-dynamic";
 
 export default async function CaminoColegioListoPage() {
     const usuario = await verifyAuth();
-    if (usuario.rol !== "SCHOOL_ADMIN") redirect("/dashboard");
+    // SPEC-564: cada rol vuelve a SU área, no al panel del reportero (que le daría 403).
+    if (usuario.rol !== "SCHOOL_ADMIN") redirect(homeParaRol(usuario.rol));
     const paso = await derivarPasoPendienteColegio(usuario.id);
     if (paso) redirect(destinoDePasoColegio(paso));
 
