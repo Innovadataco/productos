@@ -6,6 +6,8 @@
 export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/seed-security.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
+    // CEO 06-09: parseArgs de scripts/demo ABORTA ante flag desconocido (no traga banderas en un script destructivo).
+    "scripts/demo/parseargs-estricto.candado.test.ts",
     // SPEC-287 (002-PI-187): fuente única de guardias + cookie firmada de vigencia + 4 ratchets estáticos.
     "src/lib/routing/guardias.test.ts",
     "src/lib/routing/vigencia-cookie.test.ts",
