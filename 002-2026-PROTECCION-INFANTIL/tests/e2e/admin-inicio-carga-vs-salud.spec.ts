@@ -207,13 +207,18 @@ test.describe.serial("Inicio admin · partición CARGA vs SALUD (I-271)", () => 
         await limpiarSembrados();
     });
 
-    // SPEC-393 · I-271 todavía viva en `948c798b` (fuente: `senalComiteVencido`
-    // en `inicio-admin.ts:171-183` cuenta `SolicitudComite.PENDIENTE` sin JOIN
-    // con DemoMarcado). `test.fail` documenta el defecto y "se da vuelta sola"
-    // cuando llegue el arreglo: pasar entonces se reporta como "unexpected
-    // pass" — señal explícita de que el candado ya lo cubre el código.
+    // I-271 / SPEC-393 · RESUELTO (SPEC-414). `senalComiteVencido` hace el LEFT JOIN
+    // con `demo_marcado` y devuelve `reales`; el corte CARGA/SALUD excluye lo sembrado.
+    // Verificado en prod (05-09): por defecto `alertas: []` con `sembrados.total: 5077`
+    // (comite_vencido 254 + revision_manual 237, todo demo); con `?prueba=1` disparan.
+    // SPEC-515 retira el `test.fail` (era el unexpected-pass anunciado). OJO — HONESTIDAD:
+    // este spec vive en `tests/e2e/**`, que NO corre en CI (ci.yml no tiene job de
+    // playwright/test:e2e). Es un RECORRIDO MANUAL contra prod, no un candado de CI. El
+    // candado que protege la conducta EN CI es el test de integración
+    // `src/app/api/admin/inicio/senales/route.test.ts` (caso d: las colas descuentan
+    // `demo_marcado`; `?prueba=1` lo devuelve). Quitar el `test.fail` hace que este
+    // recorrido manual sea una aserción real (no un fallo permanente) al correrlo.
     test("CARGA sobre demo puro NO sube comite_vencido ni reportes_huerfanos", async ({ page }) => {
-        test.fail(true, "I-271 · SPEC-393: pendiente de arreglo — la señal cuenta demo hoy");
         await loginAdmin(page);
         const antes = await getSenales(page);
         const conteoAntes = {
