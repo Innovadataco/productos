@@ -1,3 +1,5 @@
+import { CATEGORIAS_LABELS } from "@/lib/labels";
+
 export type DetalleReporte = {
     id: string;
     identificador: string;
@@ -42,24 +44,16 @@ export type DetalleReporte = {
     }[];
 };
 
-export const CATEGORIAS = [
-    { value: "CONTACTO_INSISTENTE", label: "Contacto insistente" },
-    { value: "SOLICITUD_MATERIAL", label: "Solicitud de material" },
-    { value: "OFRECIMIENTO_REGALOS", label: "Ofrecimiento de regalos" },
-    { value: "SUPLANTACION_IDENTIDAD", label: "Suplantación de identidad" },
-    { value: "SOLICITUD_ENCUENTRO", label: "Solicitud de encuentro" },
-    { value: "COMPARTIMIENTO_SEXUAL", label: "Compartimiento sexual" },
-    { value: "EXTORSION", label: "Extorsión" },
-    { value: "CONTENIDO_GENERADO_IA", label: "Contenido generado por IA" },
-    { value: "DIFUSION_NO_CONSENTIDA", label: "Difusión no consentida" },
-    { value: "DOXING", label: "Doxing" },
-    { value: "SPAM", label: "Spam" },
-    { value: "OTRO", label: "Otro" },
-];
+// SPEC-574 (I-357) · el desplegable DERIVA del mapa canónico `CATEGORIAS_LABELS` — UNA sola fuente.
+// Antes era una lista paralela hardcodeada que se desincronizó del mapa (le faltaban las 3 de la Ley
+// 2564; al mapa le faltaba SPAM): cada lista incompleta de forma distinta. Derivando, un rótulo nuevo
+// aparece solo en el desplegable y no hay nada que se pueda desincronizar. El endpoint ya deriva del
+// enum; ahora la UI deriva del mapa, y el candado ata el mapa al enum.
+export const CATEGORIAS: { value: string; label: string }[] = Object.entries(CATEGORIAS_LABELS).map(
+    ([value, label]) => ({ value, label }),
+);
 
-export function formatCategoria(categoria: string) {
-    return CATEGORIAS.find((c) => c.value === categoria)?.label || categoria;
-}
+export { formatCategoria } from "@/lib/labels";
 
 export function formatEstado(estado: string) {
     return estado.replace(/_/g, " ");
