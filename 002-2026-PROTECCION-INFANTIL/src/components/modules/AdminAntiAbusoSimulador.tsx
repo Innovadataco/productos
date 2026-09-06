@@ -312,7 +312,7 @@ export function AdminAntiAbusoSimulador() {
                         onClick={() => setSubTab(t.id as "nueva" | "historial")}
                         className={`px-4 py-2 text-sm font-semibold transition ${
                             subTab === t.id
-                                ? "border-b-2 border-sky-600 text-sky-700"
+                                ? "border-b-2 border-cielo text-estado-cielo"
                                 : "text-muted hover:text-body"
                         }`}
                     >
@@ -403,10 +403,10 @@ export function AdminAntiAbusoSimulador() {
                         </div>
 
                         {escenario !== "personalizado" && sugerencia && (
-                            <div className="mt-4 rounded-xl bg-sky-50/60 p-3 text-sm text-sky-900 dark:bg-sky-950/30 dark:text-sky-100">
+                            <div className="mt-4 rounded-xl bg-cielo/10 p-3 text-sm text-estado-cielo">
                                 <p className="font-medium">Sugerencia del sistema</p>
                                 <p className="mt-1">{sugerencia.descripcion}</p>
-                                <p className="mt-1 text-xs text-sky-800 dark:text-sky-200">
+                                <p className="mt-1 text-xs text-estado-cielo">
                                     El sistema propuso esta configuración. Puedes cambiar cualquier campo o dejarlo así.
                                 </p>
                                 <Button

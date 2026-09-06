@@ -285,7 +285,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                         <input
                             id="incluirEliminados"
                             type="checkbox"
-                            className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                            className="h-4 w-4 rounded border-tinta/30 text-accent focus:ring-accent"
                             checked={incluirEliminados}
                             onChange={(e) => setIncluirEliminados(e.target.checked)}
                         />
@@ -338,16 +338,16 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                             </tr>
                         ) : (
                             reportes.map((r) => (
-                                <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                <tr key={r.id} className="hover:bg-tinta/5 transition">
                                     <td className="px-4 py-3 font-mono text-xs text-body">{r.numeroSeguimiento}</td>
                                     <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap gap-1">
-                                            <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-body">
+                                            <span className="rounded-full bg-tinta/10 px-2.5 py-0.5 text-xs font-medium text-body">
                                                 {formatEstado(r.estado)}
                                             </span>
                                             {r.eliminado && (
-                                                <span className="rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
+                                                <span className="rounded-full bg-rubi/10 px-2 py-0.5 text-xs font-medium text-estado-rubi">
                                                         Eliminado
                                                 </span>
                                             )}
@@ -408,7 +408,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                 </Tabla>
 
                 {pagination.totalPages > 1 && (
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-tinta/10 px-4 py-3">
                         <p className="text-sm text-subtle">
                             Página {pagination.page} de {pagination.totalPages} · {pagination.total} reportes
                         </p>
