@@ -61,7 +61,7 @@ const ESTADO_LEGIBLE: Record<CitaParaPadreDto["estado"], { titulo: string; detal
     },
     REPROGRAMADA: {
         titulo: "Reprogramada",
-        detalle: "Esta solicitud fue reprogramada. Buscá abajo el enlace a la nueva cita.",
+        detalle: "Esta solicitud fue reprogramada. Busca abajo el enlace a la nueva cita.",
         tono: "gris",
     },
 };
@@ -148,8 +148,8 @@ export function EsperaCitaPanel({ citaInicial }: Props) {
                 )}
                 {countdown?.vencido && (
                     <p className="cuerpo mt-3">
-                        <strong>Se cumplieron las 48 h.</strong> Refrescá la página o esperá al próximo tick del sistema
-                        para que quede como vencida y podás elegir otro profesional.
+                        <strong>Se cumplieron las 48 h.</strong> Refresca la página o espera al próximo tick del sistema
+                        para que quede como vencida y puedas elegir otro profesional.
                     </p>
                 )}
                 {refrescando && <p className="etiqueta mt-2 text-subtle">Actualizando…</p>}

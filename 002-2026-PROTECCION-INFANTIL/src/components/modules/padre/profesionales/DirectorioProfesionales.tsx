@@ -175,7 +175,7 @@ export function DirectorioProfesionales({
                 <p className="text-sm text-muted">Cargando…</p>
             ) : items.length === 0 && !error ? (
                 <p className="text-sm text-muted">
-                    Ningún profesional coincide con los filtros. Probá cambiar la ciudad o la modalidad.
+                    Ningún profesional coincide con los filtros. Prueba cambiar la ciudad o la modalidad.
                 </p>
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -133,7 +133,7 @@ export function ReglasTab() {
                 <div className="mb-4">
                     <h2 className="text-lg font-semibold text-body">Reglas de disparo</h2>
                     <p className="text-sm text-muted">
-                        Configurá offset, canal, plantilla y obligatoriedad de cada regla. Cambiar el offset de una regla activa recalcula las programaciones futuras.
+                        Configure offset, canal, plantilla y obligatoriedad de cada regla. Cambiar el offset de una regla activa recalcula las programaciones futuras.
                     </p>
                 </div>
                 {mensaje && <Alerta tono="exito" className="mb-4">{mensaje}</Alerta>}
