@@ -85,7 +85,7 @@ function badgeVariant(badge: SeguimientoData["badge"]): BadgeVariant {
 }
 
 
-const infoBox = "rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 p-4";
+const infoBox = "rounded-xl border border-tinta/10 bg-tinta/5 p-4";
 
 // Severidad fija por conducta (spec 089-US4): permite ordenar por gravedad sin backend.
 const SEVERIDAD_CONDUCTA: Record<string, number> = {
@@ -264,7 +264,7 @@ export function SeguimientoClient() {
                                 {data.otrosReportes.map((r) => (
                                     <li
                                         key={r.id}
-                                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/60 px-3 py-2 dark:bg-slate-900/40"
+                                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-tinta/5 px-3 py-2"
                                     >
                                         <div className="text-xs">
                                             <p className="font-medium text-body">{fechaHoraColombia(r.creadoEn)}</p>
@@ -280,7 +280,7 @@ export function SeguimientoClient() {
                         </div>
                     )}
 
-                    <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                    <div className="space-y-3 border-t border-tinta/10 pt-4">
                         {/* SPEC-340 (A-68 §2.5): el CTA "Reportar de nuevo a este
                             identificador" de SPEC-324 se retiró — superado: el camino
                             correcto es "Agregar otro evento" DESDE el reporte, en Mis

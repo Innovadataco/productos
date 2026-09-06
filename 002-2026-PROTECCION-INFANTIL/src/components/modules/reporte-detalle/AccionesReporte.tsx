@@ -87,7 +87,7 @@ export function AccionesReporte({
     return (
         <div className="space-y-4">
             {puedeConfirmar && (
-                <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4">
+                <div className="rounded-lg border border-pino/20 bg-pino/5 p-4">
                     <h3 className="mb-2 font-medium text-body">Confirmar clasificación</h3>
                     <p className="mb-3 text-sm text-subtle">
                         La categoría sugerida por la IA es correcta. Esto registra una confirmación para las métricas de precisión.
@@ -99,7 +99,7 @@ export function AccionesReporte({
             )}
 
             {puedeCorregir && (
-                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                <div className="rounded-lg border border-tinta/10 p-4">
                     <h3 className="mb-2 font-medium text-body">Corregir clasificación</h3>
                     <select
                         data-testid="select-correccion-categoria"
@@ -126,7 +126,7 @@ export function AccionesReporte({
             )}
 
             {puedeAnonimizar && (
-                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                <div className="rounded-lg border border-tinta/10 p-4">
                     <h3 className="mb-2 font-medium text-body">Validar anonimización</h3>
                     <p className="mb-2 text-sm text-subtle">
                         Revisa el texto anonimizado. Si aún contiene datos personales, recházalo y deja una observación.
@@ -150,7 +150,7 @@ export function AccionesReporte({
             )}
 
             {puedeAnonimizar && (
-                <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                <div className="rounded-lg border border-tinta/10 p-4">
                     <h3 className="mb-2 font-medium text-body">Anonimizar reporte</h3>
                     <textarea
                         className="mb-1 w-full rounded-lg glass-input ring-accent-input p-2 text-body"
@@ -168,7 +168,7 @@ export function AccionesReporte({
             )}
 
             {puedeEscalarProp && (
-                <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4">
+                <div className="rounded-lg border border-ambar/20 bg-ambar/10 p-4">
                     {!mostrarEscalar ? (
                         <>
                             <h3 className="mb-2 font-medium text-body">Escalar a comité</h3>
@@ -206,7 +206,7 @@ export function AccionesReporte({
             )}
 
             {puedeBaja && (
-                <div className="rounded-lg border border-red-200 dark:border-red-800 p-4">
+                <div className="rounded-lg border border-rubi/20 p-4">
                     {!mostrarBaja ? (
                         <>
                             <h3 className="mb-2 font-medium text-body">Dar de baja el reporte</h3>
@@ -254,7 +254,7 @@ export function AccionesReporte({
             )}
 
             {puedeReactivar && (
-                <div className="rounded-lg border border-green-200 dark:border-green-800 p-4">
+                <div className="rounded-lg border border-pino/20 p-4">
                     {!mostrarReactivar ? (
                         <>
                             <h3 className="mb-2 font-medium text-body">Reactivar reporte</h3>
