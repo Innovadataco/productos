@@ -10,6 +10,7 @@
  * se mueve), la próxima vez que vence sí se avisa de nuevo.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma } from "@/lib/reporte-test-utils";
@@ -23,7 +24,7 @@ vi.mock("@/lib/email", () => ({
 async function crearReporteSpamVencido(overrides: { creadoEn?: Date } = {}) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     const hace3dias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300SPAM${Math.floor(Math.random() * 1000000)}`,
             plataformaId: plataforma!.id,

@@ -6,6 +6,7 @@
  * - PENDIENTE reciente (< 1 min): saltado por la ventana de gracia.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
@@ -14,7 +15,7 @@ import type { EstadoReporte } from "@prisma/client";
 
 async function sembrarReporte(estado: EstadoReporte, creadoEn: Date, tag: string) {
     const plataforma = (await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } }))!;
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300REC${tag}`,
             plataformaId: plataforma.id,

@@ -5,6 +5,7 @@
  * (I-28/I-29: sin valor del identificador, texto del reporte ni scores).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { PATCH as PATCH_ESTADO } from "./estado/route";
 import { POST as POST_NOTA } from "./notas/route";
@@ -41,7 +42,7 @@ async function setupSchoolAdmin() {
 }
 
 async function crearReporte(identificador: string, plataformaId: string, estado: EstadoReporte) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,

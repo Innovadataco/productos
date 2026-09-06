@@ -6,6 +6,7 @@
  * destino bloqueado ni la página actual (SPEC-118/D-37). Cierra en BD (§9).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import "../mock-headers";
 import { jar, limpiarJar } from "../mock-headers";
 import { prisma } from "@/lib/prisma";
@@ -24,7 +25,7 @@ describe(`SPEC-114 · cola 041 (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const datos = datosCiclo(CICLO);
         const sesion = await entrarComo("PARENT", `e2e-c${CICLO}-c41-padre@test.local`, "ClaveE2E-2026");
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: datos.identificadorComun,
                 plataformaId: plataforma!.id,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -42,7 +43,7 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
 
     async function setupReporteSpam(operadorId?: string) {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300SPAMRES",
                 plataformaId: plataforma!.id,
@@ -161,7 +162,7 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
     it("rechaza si el reporte no está en revisión de spam", async () => {
         const admin = await crearUsuario("ADMIN");
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300NORMAL",
                 plataformaId: plataforma!.id,

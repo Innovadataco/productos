@@ -8,6 +8,7 @@
  * (solicitar → validar → restablecer → login con la nueva). Todo cierra en BD (§9).
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -285,7 +286,7 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const motivo = "Soy el titular de esta línea y los reportes registrados no corresponden.";
 
         // N-3 (002-PI-056): apelar exige reportes asociados al identificador — se siembra uno.
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: datos.identificadorComun,
                 plataformaId: plataforma.id,

@@ -5,7 +5,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { spamPendientesQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permisos";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { prisma } from "@/lib/prisma";
+import { descifrarCampos } from "@/lib/reporte-texto-contenido";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { getParametroSistema } from "@/lib/parametros";
@@ -92,22 +93,25 @@ export async function GET(req: Request) {
             }
         })();
 
+        // S-C: descifrado en LOTE (2 queries) del texto de cada reporte de la bandeja.
+        const textos = await descifrarCampos(prisma, reportes.map((r) => r.contenidoId), "texto");
         return NextResponse.json({
             reportes: reportes.map((r) => {
+                const texto = textos.get(r.contenidoId)!;
                 const secundarias = (r.clasificacion?.categoriasSecundarias as { categoria: string; score: number }[] | null) ?? null;
                 const { motivo, confianzaSpam } = derivarMotivoIngreso({
                     categoria: r.clasificacion?.categoria ?? null,
                     confianza: r.clasificacion?.confianza ?? null,
                     categoriasSecundarias: secundarias,
-                    texto: r.texto,
+                    // S-C: el motivo se deriva sobre el PLANO (antes miraba el ciphertext).
+                    texto,
                     umbralSpam,
                     umbralDominancia,
                     dominiosAcortadores,
                 });
                 return {
                     ...r,
-                    // SPEC-130 (BL-4, O-2): texto descifrado solo en este camino autorizado.
-                    texto: descifrarTextoReporte(r.texto),
+                    texto,
                     motivoIngreso: motivo,
                     confianzaSpam,
                     asignadoA: r.operador ?? null,

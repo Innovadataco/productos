@@ -2,6 +2,7 @@
  * SPEC-230 (002-PI-130): tests del ExpedienteRepository.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { EstadoExpediente } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -181,7 +182,7 @@ describe("ExpedienteRepository", () => {
         const repo = new ExpedienteRepository();
         const padre = await crearPadre();
         const expediente = await crearExpediente(repo, padre.id);
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: expediente.identificadorReportado,
                 plataformaId: await idDePlataforma("whatsapp"),

@@ -6,6 +6,7 @@
  * apaga al hijo.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { notificarHijosSiCorresponde } from "./notificaciones";
@@ -32,7 +33,7 @@ async function crearParams() {
 
 async function crearReporte(identificador: string, estado: EstadoReporte = "CLASIFICADO") {
     const plataforma = await prisma.plataforma.findFirst();
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: normalizarIdentificador(identificador),
             plataformaId: plataforma!.id,

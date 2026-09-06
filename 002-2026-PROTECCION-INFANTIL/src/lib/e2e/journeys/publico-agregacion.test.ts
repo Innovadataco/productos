@@ -6,6 +6,7 @@
  * no expone score ni nivel de riesgo en ningún nivel (D-10/§1.3/§1.5).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import "../mock-headers";
 import { limpiarJar } from "../mock-headers";
 import { prisma } from "@/lib/prisma";
@@ -111,7 +112,7 @@ describe(`SPEC-114 · público y agregación (ciclo ${CICLO})`, { timeout: 30_00
 
         // Agregar un SPAM y un OTRO al mismo identificador común
         for (const categoria of ["SPAM", "OTRO"] as const) {
-            const r = await prisma.reporte.create({
+            const r = await crearReporteFixture(prisma, {
                 data: {
                     identificador: datos.identificadorComun,
                     plataformaId: plataforma!.id,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET, POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -22,7 +23,7 @@ async function crearReporteVisible(
     const ciudad = await prisma.ciudad.findUnique({
         where: { nombre_paisId: { nombre: "Bogotá", paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             // SPEC-377 (I-267): la creación real de un Reporte normaliza el
             // identificador (`src/lib/dal/services/reporte-creation.ts`).
@@ -61,7 +62,7 @@ async function crearReporteEnRevision(identificador: string, plataformaId: strin
     const ciudad = await prisma.ciudad.findUnique({
         where: { nombre_paisId: { nombre: "Bogotá", paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
     });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: normalizarIdentificador(identificador),
             plataformaId,

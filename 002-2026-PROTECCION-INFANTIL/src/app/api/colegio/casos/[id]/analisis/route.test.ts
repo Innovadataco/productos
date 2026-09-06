@@ -5,6 +5,7 @@
  * idempotencia, cooldown, ya-al-día, caso cerrado no gasta modelo.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET, POST } from "./route";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -51,7 +52,7 @@ async function seedCasoConReporte() {
         plataformaId: plataforma.id,
     });
 
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificador.valor,
             plataformaId: plataforma.id,

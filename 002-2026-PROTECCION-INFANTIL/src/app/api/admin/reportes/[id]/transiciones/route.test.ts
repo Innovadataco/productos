@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -17,7 +18,7 @@ vi.mock("next/headers", () => ({
 async function crearReporteConTransiciones(operadorId: string) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     const usuario = await crearUsuario("PARENT");
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: "+57300TRANS01",
             plataformaId: plataforma!.id,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { reconciliarHuerfanos } from "./reconciliacion-huerfanos";
 import { resetDatabase } from "@/lib/test-utils";
@@ -43,7 +44,7 @@ async function crearOperador(
 async function crearReporteRevisionManual(identificador = "3000999999") {
     const plataforma = await prisma.plataforma.findFirst({ where: { clave: "whatsapp" } });
     if (!plataforma) throw new Error("Plataforma whatsapp no encontrada");
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma.id,

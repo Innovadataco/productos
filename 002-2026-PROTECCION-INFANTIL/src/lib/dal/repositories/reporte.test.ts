@@ -3,6 +3,7 @@
  * mismos select/orden/paginación que tenían las rutas migradas.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +20,7 @@ async function crearReporteDePrueba(
     const plataforma = await crearPlataforma();
     const usuario = await crearUsuario("PARENT");
     correlativo += 1;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${TAG}${correlativo}`,
             plataformaId: plataforma.id,

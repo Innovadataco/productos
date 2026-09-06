@@ -5,6 +5,7 @@
  * (Plan.precio, Suscripcion.codigoReferidoPropio, comprobante de Pago, etc.).
  */
 import type { DuracionPlan, EstadoPago, EstadoSuscripcion } from "@prisma/client";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 // Test-only (la importan únicamente los *.test.ts del detector): los tests
 // siembran la BD directamente por diseño (patrón de src/lib/reporte-test-utils.ts,
 // que usa import relativo; la frontera Q-3 restringe el alias `@/lib/prisma`).
@@ -98,7 +99,7 @@ export async function crearReporteMinimo(
     tenantId: string,
     overrides: { ciudadId?: string; paisId?: string } = {}
 ) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: unico("+57300"),
             plataformaId,

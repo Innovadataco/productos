@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { registrarTransicion } from "./reporte-transiciones";
 import { resetDatabase } from "./test-utils";
@@ -7,7 +8,7 @@ import { crearPlataforma, crearPaisCiudad, crearUsuario } from "./reporte-test-u
 async function crearReporteDePrueba(estado: "PENDIENTE" | "PROCESANDO" | "REVISION_MANUAL" = "PENDIENTE") {
     const plataforma = await crearPlataforma();
     const usuario = await crearUsuario("PARENT");
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+57300TEST000",
             plataformaId: plataforma.id,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -26,7 +27,7 @@ async function crearReporteParaUsuario(usuarioId: string, eliminado = false, dia
     const plataforma = await crearPlataforma();
     const creadoEn = new Date();
     creadoEn.setDate(creadoEn.getDate() - diasAtras);
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${Math.floor(Math.random() * 1e7)}`,
             plataformaId: plataforma.id,
@@ -113,11 +114,11 @@ describe("GET /api/admin/usuarios", () => {
         const operador = await crearUsuario("OPERADOR", "op@test.com");
         await prisma.perfilOperador.create({ data: { usuarioId: operador.id, creadoPorId: admin.id, cupoMaximo: 5 } });
         const plataforma = await crearPlataforma();
-        await prisma.reporte.createMany({
-            data: [
-                { identificador: "a", plataformaId: plataforma.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true },
-                { identificador: "b", plataformaId: plataforma.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true, operadorId: operador.id },
-            ],
+        await crearReporteFixture(prisma, {
+            data: { identificador: "a", plataformaId: plataforma.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true },
+        });
+        await crearReporteFixture(prisma, {
+            data: { identificador: "b", plataformaId: plataforma.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true, operadorId: operador.id },
         });
 
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");

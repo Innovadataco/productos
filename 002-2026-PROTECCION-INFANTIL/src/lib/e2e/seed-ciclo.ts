@@ -3,6 +3,7 @@
  * y cantidades varían con el número de ciclo). Determinista = suite estable entre corridas.
  */
 import { prisma } from "@/lib/prisma";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearTiposDocumento } from "@/lib/reporte-test-utils";
 import { crearParametrosExpediente } from "@/lib/reporte-test-utils";
@@ -55,7 +56,7 @@ export async function sembrarBancoCiclo(datos: BancoCiclo, plataformaClave = "wh
     if (!plataforma) throw new Error(`Plataforma ${plataformaClave} no sembrada`);
 
     const crear = async (identificador: string, categoria: CategoriaConducta, anonimo: boolean, texto: string) => {
-        const r = await prisma.reporte.create({
+        const r = await crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId: plataforma.id,

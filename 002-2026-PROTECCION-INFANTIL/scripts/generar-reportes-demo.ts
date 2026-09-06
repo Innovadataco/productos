@@ -5,6 +5,7 @@
  *   node --env-file=.env --import tsx scripts/generar-reportes-demo.ts --count 100 --delay 800 --procesar
  */
 import { PrismaClient, type Plataforma, type Pais, type Ciudad, type Usuario } from "@prisma/client";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 
 const prisma = new PrismaClient();
 
@@ -143,7 +144,7 @@ async function insertarReportes(reportes: DemoReporte[]) {
     const creados: { id: string; categoriaEsperada: Categoria }[] = [];
     for (const r of reportes) {
         const numeroSeguimiento = `RPT-DEMO-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-        const creado = await prisma.reporte.create({
+        const creado = await crearReporteFixture(prisma, {
             data: {
                 identificador: r.identificador,
                 plataformaId: r.plataformaId,

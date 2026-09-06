@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
@@ -14,7 +15,7 @@ describe("reporte-reintentos", () => {
         await crearPaisCiudad();
 
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300REINT",
                 plataformaId: plataforma!.id,

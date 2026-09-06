@@ -7,6 +7,7 @@
  *   · la audit deja rastro sin PII del texto.
  */
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET, PUT } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -34,7 +35,7 @@ async function seedCasoConComite() {
         },
     });
     const plataforma = await crearPlataforma("whatsapp", "WhatsApp", "mensajeria");
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${Date.now()}${Math.floor(Math.random() * 1000)}`,
             plataformaId: plataforma.id,

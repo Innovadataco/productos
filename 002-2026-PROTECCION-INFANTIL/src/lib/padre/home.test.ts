@@ -2,6 +2,7 @@
  * SPEC-309 (A-50): tests de integración del orquestador del home del padre.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { CategoriaConducta } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -27,7 +28,7 @@ async function crearReporteVisible(
     categoria: CategoriaConducta
 ) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma!.id,

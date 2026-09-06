@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -29,7 +30,7 @@ async function crearReporteAsignado(
     estado: "REVISION_MANUAL" | "CORREGIDO" = "REVISION_MANUAL",
     categoria: CategoriaConducta = "CONTACTO_INSISTENTE"
 ) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${Math.floor(Math.random() * 1000000)}`,
             plataformaId,

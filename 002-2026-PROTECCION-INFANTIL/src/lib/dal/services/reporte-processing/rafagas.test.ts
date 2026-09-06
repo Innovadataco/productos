@@ -7,6 +7,7 @@
  * nick + orígenes distintos = corroboración legítima, NO ráfaga.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma } from "@/lib/reporte-test-utils";
@@ -17,7 +18,7 @@ let secuencia = 0;
 
 async function crearReporte(identificador: string, origen: string | null, creadoEn?: Date) {
     secuencia += 1;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,

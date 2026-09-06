@@ -3,6 +3,7 @@
  * escrituras, filtro tipado de estado y conteos de estadísticas por colegio.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -25,7 +26,7 @@ async function sembrarAlerta(colegioId: string, plataformaId: string, tag: strin
     const identificador = await prisma.identificadorEstudiante.create({
         data: { estudianteId: alumno.id, colegioId, tipo: "telefono", valor: `+57300${tag.replace(/\D/g, "").padEnd(7, "0")}`, plataformaId, etiquetaRelacion: "ESTUDIANTE" },
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificador.valor,
             plataformaId,
@@ -152,7 +153,7 @@ describe("AlertaColegioRepository", () => {
             valor: "+57300ACU",
             plataformaId: plataforma.id,
         });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300BASE",
                 plataformaId: plataforma.id,
@@ -234,7 +235,7 @@ describe("AlertaColegioRepository", () => {
 
         // Contrafixture 1: DOS alertas del MISMO estudiante no cruzan (mismo alumnoId).
         const tres = await sembrarAlerta(a.id, plataforma.id, "C3");
-        const reporteExtra = await prisma.reporte.create({
+        const reporteExtra = await crearReporteFixture(prisma, {
             data: {
                 identificador: tres.identificador.valor,
                 plataformaId: plataforma.id,

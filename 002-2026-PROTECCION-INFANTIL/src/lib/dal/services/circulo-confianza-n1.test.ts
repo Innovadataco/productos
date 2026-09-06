@@ -11,6 +11,7 @@
  * El contador se reinicia tras la siembra: solo cuentan las queries del SUT.
  */
 import { describe, it, expect, beforeEach, vi, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { unmockPrisma } from "@/lib/test-mocks/unmock-prisma";
 
 const conteo = vi.hoisted(() => ({
@@ -65,7 +66,7 @@ function reiniciarConteo() {
 }
 
 async function crearReporte(identificador: string, plataformaId: string, estado: EstadoReporte, categoria?: CategoriaConducta) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             // SPEC-325: prod normaliza el identificador al crear el reporte; el
             // helper lo replica para cruzar con el contacto (también normalizado).

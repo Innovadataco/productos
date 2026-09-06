@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -9,7 +10,7 @@ import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
@@ -103,7 +104,8 @@ export async function POST(request: Request) {
             );
         }
         // SPEC-130 (BL-4): el texto va cifrado en reposo; el plano solo en memoria (O-3).
-        const reporte = { ...reporteRow, texto: descifrarTextoReporte(reporteRow.texto) };
+        const texto = await descifrarCampo(prisma, reporteRow.contenidoId, "texto");
+        const reporte = { ...reporteRow, texto };
 
         if (!puedeGestionarReporte(user, reporte)) {
             return NextResponse.json(

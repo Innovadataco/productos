@@ -6,6 +6,7 @@
  * jamás está en el payload del listado.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 
 let mockToken: string | undefined;
 let mockSello: string | undefined;
@@ -39,7 +40,7 @@ async function crearPadreConReporte() {
         data: { passwordHash: await hashPassword(PASSWORD) },
     });
     const plataforma = await prisma.plataforma.findFirstOrThrow();
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: "300stepup",
             plataformaId: plataforma.id,

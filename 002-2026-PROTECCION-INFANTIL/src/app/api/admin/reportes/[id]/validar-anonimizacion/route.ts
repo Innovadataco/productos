@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -10,7 +11,7 @@ import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { esAdminRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
@@ -146,7 +147,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 });
             });
 
-            await regenerarEmbedding(reporteId, descifrarTextoReporte(reporte.texto));
+            await regenerarEmbedding(reporteId, await descifrarCampo(prisma, reporte.contenidoId, "texto"));
             await actualizarVisibilidadPublica(reporte.identificador, reporte.plataformaId);
 
             return NextResponse.json({

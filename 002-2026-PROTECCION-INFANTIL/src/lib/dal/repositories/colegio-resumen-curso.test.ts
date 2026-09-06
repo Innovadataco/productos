@@ -9,6 +9,7 @@
  * - Curso sin estudiantes: ceros sin NaN.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearColegioConAdmin, crearCurso, crearPlataforma, crearProfesor } from "@/lib/reporte-test-utils";
@@ -22,7 +23,7 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 let contador = 0;
 
 async function sembrarReporte(plataformaId: string, tag: string, opts: { eliminado?: boolean } = {}) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57312${String(contador).padStart(7, "0")}`,
             plataformaId,

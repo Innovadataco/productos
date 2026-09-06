@@ -8,6 +8,7 @@
  * correcciones RAG (categoría corregida alimenta el dataset). Todo cierra en BD (§9).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import "../mock-headers";
 import { jar, limpiarJar } from "../mock-headers";
 import { prisma } from "@/lib/prisma";
@@ -162,7 +163,7 @@ describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
 
         // Siembra directa (sin Ollama): el clasificador ya marcó POSIBLE_SPAM
         const sembrarCasoSpam = async (tag: string) => {
-            const reporte = await prisma.reporte.create({
+            const reporte = await crearReporteFixture(prisma, {
                 data: {
                     identificador: datos.identificadorPocos,
                     plataformaId: plataforma.id,
@@ -250,7 +251,7 @@ describe(`SPEC-114 · admin (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
 
         // Siembra directa: reporte CLASIFICADO por la IA, con original preservado
         // (textoOriginal no nulo → el handler no invoca al anonimizador/Ollama)
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: datos.identificadorComun,
                 plataformaId: plataforma.id,

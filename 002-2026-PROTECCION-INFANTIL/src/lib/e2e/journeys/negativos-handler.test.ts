@@ -8,6 +8,7 @@
  * radicación O-1 y se reporta con evidencia.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import "../mock-headers";
 import { jar, limpiarJar } from "../mock-headers";
 import { prisma } from "@/lib/prisma";
@@ -217,7 +218,7 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
         const plataforma = (await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } }))!;
 
         // Caso de revisión asignado a op1 (estado del motor sembrado, sin Ollama)
-        const caso = await prisma.reporte.create({
+        const caso = await crearReporteFixture(prisma, {
             data: {
                 identificador: datos.identificadorComun,
                 plataformaId: plataforma.id,
@@ -351,7 +352,7 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
                 etiquetaRelacion: "ESTUDIANTE",
             },
         });
-        const reporteB = await prisma.reporte.create({
+        const reporteB = await crearReporteFixture(prisma, {
             data: {
                 identificador: identificadorB.valor,
                 plataformaId: plataforma.id,

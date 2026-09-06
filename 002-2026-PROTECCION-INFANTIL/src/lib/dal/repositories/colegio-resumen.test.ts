@@ -9,6 +9,7 @@
  * - UNA llamada: cada método de repo hijo se invoca una vez por carga.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearColegioConAdmin, crearCurso, crearPlataforma, crearProfesor } from "@/lib/reporte-test-utils";
@@ -21,7 +22,7 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 let contador = 0;
 
 async function sembrarReporte(plataformaId: string, tag: string) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57310${String(contador).padStart(7, "0")}`,
             plataformaId,

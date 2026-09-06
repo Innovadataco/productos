@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearParametrosExpediente } from "@/lib/reporte-test-utils";
@@ -7,7 +8,7 @@ import { encryptParameter } from "@/lib/param-encryption";
 
 async function crearReporteBase() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+57300TEST000",
             plataformaId: plataforma!.id,

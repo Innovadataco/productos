@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -35,7 +36,7 @@ async function revocarModulo(rol: RolUsuario, clave: string) {
 async function crearReporteConOriginalCifrado() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     const textoOriginal = "Mi hija María estudia en el colegio San José y su teléfono es 3001234567.";
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+57300TEST000",
             plataformaId: plataforma!.id,
@@ -123,7 +124,7 @@ describe("POST /api/admin/reportes/[id]/revelar-original", () => {
     it("devuelve 404 si el reporte no tiene texto original", async () => {
         const admin = await crearUsuario("ADMIN");
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300TEST000",
                 plataformaId: plataforma!.id,

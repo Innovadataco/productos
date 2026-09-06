@@ -8,6 +8,7 @@
  * apelaciones del comité (bandeja → tomar → resolver ACEPTADA con ocultamiento).
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -47,7 +48,7 @@ async function crearUsuarioInterno(adminToken: string, email: string, nombre: st
 async function crearCasoRevision(operadorId: string, tag: string) {
     const datos = datosCiclo(CICLO);
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: datos.identificadorComun,
             plataformaId: plataforma!.id,
@@ -210,7 +211,7 @@ describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 },
         // con el original cifrado y la copia de trabajo anonimizada por la IA.
         const sembrarCasoAnonimizacion = async (tag: string, operadorId: string | null) => {
             const original = `${datos.textoBase} (caso ${tag}, con nombre propio: María Pérez)`;
-            const reporte = await prisma.reporte.create({
+            const reporte = await crearReporteFixture(prisma, {
                 data: {
                     identificador: datos.identificadorPocos,
                     plataformaId: plataforma.id,
