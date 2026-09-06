@@ -122,10 +122,10 @@ export function ComiteSolicitudDetalle({
 
     return (
         <Modal isOpen onClose={onClose} title={`Solicitud ${solicitud.numero}`}>
-            {error && <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-red-700 dark:text-red-300">{error}</div>}
-            {success && <div className="mb-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3 text-emerald-700 dark:text-emerald-300">{success}</div>}
+            {error && <div className="mb-4 rounded-lg bg-rubi/10 p-3 text-estado-rubi">{error}</div>}
+            {success && <div className="mb-4 rounded-lg bg-pino/10 p-3 text-estado-pino">{success}</div>}
 
-            <div className="mb-4 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+            <div className="mb-4 rounded-lg border border-tinta/10 p-4">
                 <p><span className="text-subtle">Estado:</span> {solicitud.estado}</p>
                 <p><span className="text-subtle">Motivo del escalamiento:</span></p>
                 <p className="whitespace-pre-wrap">{solicitud.motivo}</p>
@@ -169,7 +169,7 @@ export function ComiteSolicitudDetalle({
                     </div>
 
                     {reporte.clasificacion && (
-                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                        <div className="rounded-lg border border-tinta/10 p-4">
                             <h3 className="mb-2 font-medium text-body">Clasificación IA</h3>
                             <p><span className="text-subtle">Categoría:</span> {formatCategoria(reporte.clasificacion.categoria)}</p>
                             <p><span className="text-subtle">Confianza:</span> {(reporte.clasificacion.confianza * 100).toFixed(1)}%</p>
@@ -183,11 +183,11 @@ export function ComiteSolicitudDetalle({
                     </div>
 
                     {readOnly ? (
-                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                        <div className="rounded-lg border border-tinta/10 p-4">
                             <p className="text-muted">Este caso está en modo solo lectura.</p>
                         </div>
                     ) : (
-                        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                        <div className="rounded-lg border border-tinta/10 p-4">
                             <h3 className="mb-2 font-medium text-body">Resolver caso</h3>
                             <label className="mb-1 block text-sm text-subtle" htmlFor="categoria-resolver">Categoría final</label>
                             <select

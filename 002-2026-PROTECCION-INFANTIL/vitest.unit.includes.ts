@@ -538,5 +538,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/rediseno/pdf-colegio-hex-marca.candado.test.ts",
     // SPEC-496: ningún módulo concedido a un rol puede quedar «solo-NAV» (exigido
     // por cero endpoints/páginas). Escanea la fuente; mata la CLASE, no el caso.
+    // SPEC-534 (AD-16 config + CV-02 comite): pantallas de configuracion y de solicitudes de comite sin color crudo (arbol de render, no directorio).
+    "src/components/modules/crudo-config-comite.candado.test.ts",
     "src/lib/permisos-modulo-sin-superficie.candado.test.ts",
 ];
