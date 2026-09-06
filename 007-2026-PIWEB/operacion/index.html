@@ -239,9 +239,11 @@ footer code { font-family: "IBM Plex Mono", monospace; }
   <!-- Leyenda de símbolos del checklist -->
   <div class="leyenda">
     <div class="ly"><b>Desarrollo</b> <span class="g ok">&#10003;</span> hecho &middot; <span class="g mid">&#9680;</span> parcial &middot; <span class="g no">&#10007;</span> no</div>
-    <div class="ly"><b>Probado</b> <span class="emo">&#9989;</span> en vivo &middot; <span class="emo">&#128994;</span> verde en CI &middot; <span class="emo">&#9203;</span> pendiente &middot; <span class="emo">&#128683;</span> bloqueado &middot; <span class="g no">&#10007;</span> no</div>
+    <div class="ly"><b>Datos</b> <span class="g ok">&#10003;</span> ok &middot; <span class="g bad">&#10007;</span> no &middot; <span class="emo">&#9203;</span> pendiente</div>
+    <div class="ly"><b>Dise&ntilde;o</b> <span class="g ok">&#10003;</span> ok &middot; <span class="g bad">&#10007;</span> no &middot; <span class="emo">&#9203;</span> pendiente</div>
+    <div class="ly"><b>Calidad</b> <span class="emo">&#9989;</span> en vivo &middot; <span class="emo">&#128994;</span> verde en CI &middot; <span class="emo">&#9203;</span> pendiente &middot; <span class="emo">&#128683;</span> bloqueado &middot; <span class="g no">&#10007;</span> no</div>
     <div class="ly"><b>Desplegado</b> <span class="g ok">&#10003;</span> s&iacute; &middot; <span class="dash">&mdash;</span> no &middot; <span class="faint">&middot;</span> n/a</div>
-    <div class="ly"><b>Probado por Jelkin</b> <span class="g ok">&#10003;</span> aceptada &middot; <span class="g bad">&#10007;</span> rechazada &middot; <span class="g w">&middot;</span> pendiente</div>
+    <div class="ly"><b>Jelkin</b> <span class="g ok">&#10003;</span> aceptada &middot; <span class="g bad">&#10007;</span> rechazada &middot; <span class="g w">&middot;</span> pendiente</div>
     <div class="nota"><span class="emo">&#9989;</span> en vivo = verificado en producci&oacute;n, la mayor&iacute;a ANTES del redise&ntilde;o actual; el interior con sesi&oacute;n a&uacute;n no re-verificado sobre la versi&oacute;n desplegada.</div>
   </div>
 
@@ -343,6 +345,14 @@ footer code { font-family: "IBM Plex Mono", monospace; }
     if (v === "pendiente") return '<span class="emo" title="Pendiente de revisión de diseño">&#9203;</span>'; // ⏳
     return '<span class="dash">&mdash;</span>';
   }
+  // Datos y Diseño (checklist por rol): mismo mapa · ok→✓ · no→✗ · pendiente→⏳
+  function celdaOkNoPend(v, etiqueta) {
+    var t = etiqueta ? etiqueta + " " : "";
+    if (v === "ok")        return '<span class="g ok"  title="' + t + 'OK">&#10003;</span>';        // ✓
+    if (v === "no")        return '<span class="g bad" title="' + t + 'no">&#10007;</span>';        // ✗
+    if (v === "pendiente") return '<span class="emo" title="' + t + 'pendiente">&#9203;</span>';    // ⏳
+    return '<span class="dash">&mdash;</span>';
+  }
 
   // ------------------ render ------------------
   function renderEquipos(equipos) {
@@ -390,7 +400,7 @@ footer code { font-family: "IBM Plex Mono", monospace; }
       var despl = 0, jok = 0, vivo = 0;
       var filas = "";
       if (fs.length === 0) {
-        filas = '<tr><td colspan="7" class="tabla-vacia">Sin funcionalidades listadas.</td></tr>';
+        filas = '<tr><td colspan="9" class="tabla-vacia">Sin funcionalidades listadas.</td></tr>';
       } else {
         fs.forEach(function (f) {
           if (f.desplegado === "si") despl++;
@@ -402,6 +412,8 @@ footer code { font-family: "IBM Plex Mono", monospace; }
               '<td class="nm">' + esc(f.nombre || "&mdash;") + "</td>" +
               '<td class="act">' + (f.actor ? esc(f.actor) : '<span class="dash">&mdash;</span>') + "</td>" +
               '<td class="c">' + celdaDesarrollo(f.desarrollo) + "</td>" +
+              '<td class="c">' + celdaOkNoPend(f.datos, "Datos") + "</td>" +
+              '<td class="c">' + celdaOkNoPend(f.diseno, "Diseño") + "</td>" +
               '<td class="c">' + celdaProbado(f.probado) + "</td>" +
               '<td class="c">' + celdaDesplegado(f.desplegado) + "</td>" +
               '<td class="c">' + celdaJelkin(f.jelkin) + "</td>" +
@@ -418,8 +430,8 @@ footer code { font-family: "IBM Plex Mono", monospace; }
           '<div class="scroll"><table>' +
             "<thead><tr>" +
               '<th class="c">#</th><th>Funcionalidad</th><th>Actor</th>' +
-              '<th class="c">Desarrollo</th><th class="c">Probado</th>' +
-              '<th class="c">Desplegado</th><th class="c">Probado por Jelkin</th>' +
+              '<th class="c">Desarrollo</th><th class="c">Datos</th><th class="c">Dise&ntilde;o</th>' +
+              '<th class="c">Calidad</th><th class="c">Desplegado</th><th class="c">Jelkin</th>' +
             "</tr></thead>" +
             "<tbody>" + filas + "</tbody>" +
           "</table></div>" +
