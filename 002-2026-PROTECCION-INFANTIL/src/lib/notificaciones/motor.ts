@@ -52,6 +52,11 @@ export interface ProgramarInput {
     }>;
     enviarEn?: Date | undefined;
     metadatos?: Record<string, unknown> | undefined;
+    // SPEC-544 (I-332): restringe el fan-out a estos canales (subconjunto de las
+    // reglas activas del evento). Sin él, se disparan todos los canales con regla
+    // (conducta histórica). Sirve para separar el cooldown por canal: p. ej. IN_APP
+    // siempre y EMAIL solo fuera de la ventana.
+    canales?: CanalNotificacion[] | undefined;
 }
 
 export interface ProgramarResult {
@@ -185,7 +190,11 @@ export async function programar(
 ): Promise<ProgramarResult> {
     const tx = opciones.tx;
     const repos = reposDe(tx);
-    const reglas = await repos.repoRegla.findByEventoActivo(input.evento);
+    const reglasActivas = await repos.repoRegla.findByEventoActivo(input.evento);
+    // SPEC-544: si el caller acota `canales`, solo esas reglas disparan.
+    const reglas = input.canales
+        ? reglasActivas.filter((r) => input.canales!.includes(r.canal))
+        : reglasActivas;
     if (reglas.length === 0) {
         logMotor("info", `[MotorNotificaciones] Sin reglas activas para evento=${input.evento}`);
         return { programadas: 0, canceladasPorReemplazo: 0, envios: [] };

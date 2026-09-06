@@ -394,28 +394,32 @@ describe("circulo-confianza", () => {
             expect(args.categoria).toBe("SOLICITUD_MATERIAL");
             expect(args.totalReportes).toBe(1);
 
-            const actualizado = await prisma.usuario.findUnique({
-                where: { id: usuario.id },
-                select: { ultimaNotificacionCirculoEn: true },
+            // SPEC-544: la marca de cooldown es del CONTACTO (por EMAIL), no del usuario.
+            const contactoActualizado = await prisma.contactoConfianza.findFirst({
+                where: { usuarioId: usuario.id },
+                select: { ultimaNotificacionEmailEn: true },
             });
-            expect(actualizado?.ultimaNotificacionCirculoEn).not.toBeNull();
+            expect(contactoActualizado?.ultimaNotificacionEmailEn).not.toBeNull();
         });
 
-        it("respeta el cooldown y no re-notifica dentro de la ventana", async () => {
+        it("SPEC-544: en cooldown suprime el EMAIL pero mantiene el IN_APP", async () => {
             const usuario = await crearUsuario("PARENT");
-            await prisma.usuario.update({
-                where: { id: usuario.id },
-                data: { ultimaNotificacionCirculoEn: new Date(Date.now() - 1000) },
-            });
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
             await agregarContacto(usuario.id, {
                 identificadores: [{ valor: "+57300COOL", plataformaId: plataforma!.id }],
+            });
+            // El contacto ya fue notificado por correo hace un instante → en cooldown.
+            await prisma.contactoConfianza.updateMany({
+                where: { usuarioId: usuario.id },
+                data: { ultimaNotificacionEmailEn: new Date(Date.now() - 1000) },
             });
             const reporte = await crearReporte("+57300COOL", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
 
             await notificarCambioCirculoSiCorresponde(reporte.id);
 
-            expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
+            // El aviso sale igual (IN_APP no tiene cooldown), pero sin el canal EMAIL.
+            expect(enviarAlertaCirculoConfianzaEnriquecida).toHaveBeenCalledOnce();
+            expect(vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mock.calls[0][0].canales).toEqual(["IN_APP"]);
         });
 
         it("respeta la preferencia del usuario desactivada", async () => {
