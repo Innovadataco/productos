@@ -3798,6 +3798,11 @@ async function main() {
         { clave: "minecraft", nombre: "Minecraft", categoria: "juego" },
         { clave: "telegram", nombre: "Telegram", categoria: "mensajeria" },
         { clave: "snapchat", nombre: "Snapchat", categoria: "red_social" },
+        // SPEC-555 (Jelkin): el número telefónico como plataforma de contacto. Categoría
+        // `mensajeria` para que el desplegable agrupado (listarActivasConCategoria) lo muestre
+        // junto a WhatsApp/Telegram/Discord —así lo lee el padre—; BI lo distingue por
+        // `clave: "telefono"`, que también está publicada a bi_replica.
+        { clave: "telefono", nombre: "Número telefónico", categoria: "mensajeria" },
         { clave: "otro", nombre: "Otra plataforma", categoria: "otro" },
     ];
 
