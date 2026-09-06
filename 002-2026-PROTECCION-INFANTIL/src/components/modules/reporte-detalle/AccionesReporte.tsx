@@ -86,18 +86,14 @@ export function AccionesReporte({
 
     return (
         <div className="space-y-4">
-            {puedeConfirmar && (
-                <div className="rounded-lg border border-pino/20 bg-pino/5 p-4">
-                    <h3 className="mb-2 font-medium text-body">Confirmar clasificación</h3>
-                    <p className="mb-3 text-sm text-subtle">
-                        La categoría sugerida por la IA es correcta. Esto registra una confirmación para las métricas de precisión.
-                    </p>
-                    <Button onClick={handleConfirmar} disabled={confirmando} variant="secondary">
-                        {confirmando ? "Guardando..." : "Confirmar clasificación"}
-                    </Button>
-                </div>
-            )}
-
+            {/* SPEC-562 (I-345): «Corregir» va ANTES que «Confirmar» — en el DOM Y en
+                pantalla (el foco no se divorcia de lo que ve el ojo). Así el PRIMER
+                control tabable del contenido es el <select> de corregir —benigno:
+                recibir foco no dispara nada—, y «Confirmar» (que puede volver público
+                el reporte de un menor) queda segundo, como acto deliberado, en vez de
+                estar a un Tab + Enter de abrir el modal. Confirmar conserva su
+                jerarquía de primario; el énfasis no depende del orden. No hay doble
+                confirmación: el deshacer de 8 s (SPEC-557) es la red. */}
             {puedeCorregir && (
                 <div className="rounded-lg border border-tinta/10 p-4">
                     <h3 className="mb-2 font-medium text-body">Corregir clasificación</h3>
@@ -121,6 +117,18 @@ export function AccionesReporte({
                     />
                     <Button onClick={handleCorregir} disabled={actionLoading}>
                         {actionLoading ? "Guardando..." : "Corregir clasificación"}
+                    </Button>
+                </div>
+            )}
+
+            {puedeConfirmar && (
+                <div className="rounded-lg border border-pino/20 bg-pino/5 p-4">
+                    <h3 className="mb-2 font-medium text-body">Confirmar clasificación</h3>
+                    <p className="mb-3 text-sm text-subtle">
+                        La categoría sugerida por la IA es correcta. Esto registra una confirmación para las métricas de precisión.
+                    </p>
+                    <Button onClick={handleConfirmar} disabled={confirmando} variant="secondary">
+                        {confirmando ? "Guardando..." : "Confirmar clasificación"}
                     </Button>
                 </div>
             )}
