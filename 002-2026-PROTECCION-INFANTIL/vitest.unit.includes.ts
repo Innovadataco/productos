@@ -557,4 +557,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/crudo-padre-reportes.candado.test.ts",
     // SPEC-541: la fecha de nacimiento del padre es 18-100 anios y no futura.
     "src/lib/padre/fecha-nacimiento-padre.candado.test.ts",
+    // SPEC-541 (cliente): el input de fecha de nacimiento del perfil acota 18-100.
+    "src/components/modules/padre/PerfilPadreForm.test.tsx",
 ];
