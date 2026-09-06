@@ -91,6 +91,35 @@ CREATE TRIGGER "evento_borra_contenido"
     AFTER DELETE ON "EventoExpediente"
     FOR EACH ROW EXECUTE FUNCTION "tg_borra_contenido_huerfano"();
 
+-- XOR de dueño (CEO 06-09 · RISK 2): un ContenidoReporte pertenece a EXACTAMENTE un dueño. El
+-- `@unique` de cada FK ya impide DOS del MISMO tipo; esto cierra el cruce que Prisma no expresa
+-- (un Reporte Y un EventoExpediente compartiendo la misma fila cifrada), que rompería D-117 y
+-- haría que borrar un caso dejara vivo el texto de otro. Guarda en el MOTOR, no en call-sites.
+-- (El caso «cero dueños» lo previene el factory —contenido+dueño en la misma tx— y lo barre la
+--  purga de huérfanos; ver reset-piloto y el candado.)
+CREATE OR REPLACE FUNCTION "tg_contenido_un_solo_dueno"() RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_TABLE_NAME = 'Reporte' THEN
+        IF EXISTS (SELECT 1 FROM "EventoExpediente" e WHERE e."contenidoId" = NEW."contenidoId") THEN
+            RAISE EXCEPTION 'XOR de dueño: ContenidoReporte % ya pertenece a un EventoExpediente; un Reporte no puede compartirlo.', NEW."contenidoId";
+        END IF;
+    ELSE
+        IF EXISTS (SELECT 1 FROM "Reporte" r WHERE r."contenidoId" = NEW."contenidoId") THEN
+            RAISE EXCEPTION 'XOR de dueño: ContenidoReporte % ya pertenece a un Reporte; un EventoExpediente no puede compartirlo.', NEW."contenidoId";
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "reporte_un_solo_dueno"
+    BEFORE INSERT OR UPDATE OF "contenidoId" ON "Reporte"
+    FOR EACH ROW EXECUTE FUNCTION "tg_contenido_un_solo_dueno"();
+
+CREATE TRIGGER "evento_un_solo_dueno"
+    BEFORE INSERT OR UPDATE OF "contenidoId" ON "EventoExpediente"
+    FOR EACH ROW EXECUTE FUNCTION "tg_contenido_un_solo_dueno"();
+
 -- Higiene BI (revisión #19): el rol de réplica NO lee la evidencia. Condicional: en el DB de CI
 -- el rol `bi_replica` puede no existir (lo crea el 006), y un REVOKE a un rol inexistente aborta
 -- la migración. NO cierra el hueco de pg_basebackup con atributo REPLICATION — eso es custodia

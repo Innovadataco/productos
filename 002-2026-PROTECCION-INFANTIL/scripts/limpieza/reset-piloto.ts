@@ -165,6 +165,21 @@ async function main(): Promise<void> {
         await borrarSimulacion(s.id, motivo, { confirm: true, client: prisma });
     }
 
+    // S-D (CEO 06-09 · RISK 1) · barrido de contenido cifrado HUÉRFANO. Los triggers ya queman
+    // el ContenidoReporte cuando su Reporte/Evento se borra fila-a-fila (así borran los helpers
+    // de arriba). Esto es el CINTURÓN: elimina cualquier contenido —y su DEK por Cascade en
+    // LlaveReporte— que haya quedado SIN dueño vivo (un camino no cubierto, o un TRUNCATE futuro
+    // que saltee los triggers row-level). NO toca el contenido de los reportes PRESERVADOS
+    // (evidencia D-001 §5): esos conservan su dueño, así que no son huérfanos. Sin esto, un
+    // «borramos todo» podría dejar el texto cifrado de denuncias vivo en la base — justo lo que
+    // se supone que se destruye. El candado reset-piloto-cripto-shred afirma 0 huérfanos.
+    const contenidoHuerfano = await prisma.$executeRawUnsafe(`
+        DELETE FROM "ContenidoReporte" c
+         WHERE NOT EXISTS (SELECT 1 FROM "Reporte" r          WHERE r."contenidoId" = c.id)
+           AND NOT EXISTS (SELECT 1 FROM "EventoExpediente" e WHERE e."contenidoId" = c.id)
+    `);
+    log("reset-piloto", `Contenido cifrado huérfano barrido: ${contenidoHuerfano} filas (LlaveReporte cae por Cascade).`);
+
     const resumen: ResumenReset = {
         backupSize,
         colegios: colegios.map((c) => c.id),
