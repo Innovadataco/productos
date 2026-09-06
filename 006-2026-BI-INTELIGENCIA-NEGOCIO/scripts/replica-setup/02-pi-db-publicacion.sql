@@ -49,7 +49,7 @@
 --   `eventos_match`. Queda VETADA como tabla completa (guard §4).
 --
 -- REGLA DE GOBIERNO (AGENTS.md §7): agregar una tabla nueva a la publicación
---   exige pedirla por nombre y autorización de Jelkin. Las 45 tablas de abajo
+--   exige pedirla por nombre y autorización de Jelkin. Las 44 tablas de abajo
 --   son la lista canónica autorizada (23 originales D-20 del 005 + 17 nuevas
 --   autorizadas para BI v2 el 2026-09-01 − 3 legacy vacías retiradas el mismo
 --   día: Subscription, BillingCycle, AlertaSuscripcion + 7 autorizadas el
@@ -92,122 +92,75 @@ DECLARE
   pub_tabla       text;
   n_filas         bigint;
 
-  -- ── LISTA CANÓNICA (45 tablas) ─────────────────────────────────────────
-  -- Cada fila: {tabla, columnas} · columnas = NULL → completa; si no, CSV
-  -- exacto de columnas publicadas (orden libre; el script compara ordenado).
+  -- ── LISTA CANÓNICA (44 tablas · LISTA BLANCA deny-by-default) ──────────
+  -- 2026-09-05: TODA tabla publica columnas EXPLÍCITAS. Si PI agrega una
+  -- columna nueva, NO viaja hasta que el canon la nombre. Cortadas por
+  -- minimización (Ley 1581): contenido narrativo, JSON libre, vectores y
+  -- PII destilado — ver notas por tabla y columnas_vetadas abajo.
+  -- Cada fila: {tabla, CSV exacto de columnas publicadas} (orden libre; el
+  -- script compara ordenado). NULL ya no se usa: deny-by-default total.
   canon text[][] := ARRAY[
-    -- ── 23 originales (D-20 del 005) · 5 con recorte anti-PII ────────────
-    -- Reporte: sin texto/textoOriginal (evidencia cifrada), sin identificador
-    -- (nick del reportado = PII del presunto; la reincidencia agrega vía
-    -- IdentificadorReportado), sin usuarioId/comiteId/eliminadoPorId/
-    -- anonimizacionValidadaPorId (personas), sin processingError/notaBaja
-    -- (texto libre). operadorId SÍ se publica (cuid interno del operario,
-    -- mismo tratamiento que Suscripcion.usuarioId): autorizado por Jelkin el
-    -- 2026-09-02 para la capacidad operativa (PR 006#295). ciudad/pais/
-    -- otraPlataforma SÍ se publican: son texto geográfico de respaldo (ciudad,
-    -- no persona) y la MV mv_fact_reporte_diario depende de ellas.
-    -- Nota schema: Reporte usa `actualizadoEn` (no updatedAt) y NO tiene
-    -- departamentoId ni colegioId.
-    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,paisId,ciudadId,ciudad,pais,otraPlataforma,estado,esAnonimo,edadVictima,origenRol,operadorId,reporteOrigenId,numeroSeguimiento,tenantId,prioridadAlta,keywordsDetectadas,esRafaga,fuenteConfianza,eliminado,motivoBaja,eliminadoEn,anonimizacionValidadaEn,creadoEn,actualizadoEn'],
-    ARRAY['ClasificacionIA', NULL],
-    ARRAY['clasificacion_rubrica_votos', NULL],  -- @@map · nombre real en BD
-    ARRAY['CorreccionAdmin', NULL],
-    ARRAY['EmbeddingReporte', NULL],
-    ARRAY['TransicionReporte', NULL],
-    ARRAY['SolicitudComite', NULL],
-    -- FuenteReporte: VIVA (antifraude de PI: ipHash/fingerprintHash/pesos).
-    -- Se creyó legacy vacía; el guard 3b la salvó el 2026-09-01 con 19 filas
-    -- reales — permanece en el canon (completa, como desde el 005).
-    ARRAY['FuenteReporte', NULL],
-    ARRAY['Plan', NULL],
-    ARRAY['Tenant', NULL],
-    -- Colegio: sin representanteLegalNombre/Identificacion/Email/Telefono
-    -- (PII del representante legal).
-    ARRAY['Colegio', 'id,nombre,nit,paisId,departamentoId,ciudadId,direccion,inicioServicio,finServicio,tipoPeriodo,estado,tenantId,creadoEn,actualizadoEn'],
-    ARRAY['Curso', NULL],
-    -- Alumno (@@map de Estudiante): NUNCA nombre/apellidos/documentoTipo/
-    -- documentoNumero — PII de menor.
+    ARRAY['AcudienteEstudiante', 'id,estudianteId,orden,relacion,createdAt,updatedAt,estado'],
+    ARRAY['AlertaColegio', 'id,colegioId,reporteId,identificadorAlumnoId,estado,creadoEn,actualizadoEn,patronInstitucionalId,identificadorProfesorId,identificadorAcudienteId,tipoSujeto,prioridad,vencimientoSla,asignadoAId,identificadorIntegranteComiteId'],
     ARRAY['Alumno', 'id,cursoId,colegioId,estado,createdAt,updatedAt'],
-    -- IdentificadorAlumno (@@map de IdentificadorEstudiante): NUNCA valor.
-    ARRAY['IdentificadorAlumno', 'id,alumnoId,colegioId,tipo,plataformaId,etiquetaRelacion,estado,createdAt,updatedAt'],
-    ARRAY['AlertaColegio', NULL],
-    ARRAY['Plataforma', NULL],
-    ARRAY['Pais', NULL],
-    ARRAY['Departamento', NULL],
-    ARRAY['Ciudad', NULL],
-    -- AuditLog: sin ipAddress/userAgent (trazabilidad personal) ni
-    -- valorAnterior/valorNuevo (pueden arrastrar valores PII).
-    ARRAY['AuditLog', 'id,accion,tipoRecurso,recursoId,usuarioId,parametroId,colegioId,metadatos,creadoEn'],
-    -- ── 17 nuevas autorizadas (BI v2 · 2026-09-01) ───────────────────────
-    -- Profesor: NUNCA nombre/apellidos/tipoDocumento/numeroDocumento/email/
-    -- telefono — PII de un adulto del colegio.
-    ARRAY['Profesor', 'id,colegioId,anioNacimiento,sexo,estado,createdAt,updatedAt'],
-    -- AcudienteEstudiante: NUNCA nombre/telefono/email (PII de tercero).
-    ARRAY['AcudienteEstudiante', 'id,estudianteId,orden,relacion,estado,createdAt,updatedAt'],
-    -- IdentificadorAcudiente: NUNCA valor. FK real = acudienteId.
+    ARRAY['AuditLog', 'id,accion,tipoRecurso,recursoId,usuarioId,parametroId,creadoEn,colegioId'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): metadatos
+    ARRAY['Ciudad', 'id,nombre,paisId,esActivo,creadoEn,lat,lng,departamentoId,geonameId,nombreNormalizado,poblacion'],
+    ARRAY['ClasificacionIA', 'id,reporteId,categoria,confianza,contienePii,modeloUsado,latenciaMs,promptTokens,responseTokens,creadoEn,categoriasSecundarias,modeloCascada,posibleAgresorPar,usoCascada,votos,overrideModeloUsado'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): piiDetectada, rawResponse
+    ARRAY['Colegio', 'id,nombre,paisId,departamentoId,ciudadId,direccion,inicioServicio,finServicio,tipoPeriodo,estado,tenantId,creadoEn,actualizadoEn,nit'],
+    ARRAY['ContactoConfianza', 'id,usuarioId,activo,creadoEn,actualizadoEn,parentesco'],
+    ARRAY['CorreccionAdmin', 'id,clasificacionId,categoriaOriginal,categoriaCorregida,adminId,creadoEn,confirmada'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): motivo
+    ARRAY['Curso', 'id,colegioId,nombre,grado,anioLectivo,estado,createdAt,updatedAt,profesorTitularId'],
+    ARRAY['Departamento', 'id,codigo,nombre,paisId,esActivo,creadoEn,actualizadoEn'],
+    ARRAY['DerivaMotorSnapshot', 'id,semanaInicio,categoria,total,correcciones,tasaCorreccion,accuracyBanco,brechaPp,alertada,creadoEn'],
+    -- EmbeddingReporte: FUERA DEL CANON (whitelist 2026-09-05) — su `vector` es huella
+    --   revertible del texto del reporte (PII destilado, Ley 1581) y BI jamás la
+    --   lee. Se conserva en el suscriptor como shell vacío + índice HNSW
+    --   (índice crítico del guardián scripts/verify-hnsw-indexes.ts).
+    ARRAY['FuenteReporte', 'id,reporteId,ipHash,fingerprintHash,cuentaDiasAntiguedad,reportesPrevios,reportesConfirmados,reportesDescartados,pesoAplicado,creadoEn'],
+    ARRAY['HealthProbe', 'id,senal,ok,latenciaMs,creadoEn,metodo'],
+    ARRAY['Hijo', 'id,anioNacimiento,sexo,creadoEn,actualizadoEn,estado'],
+    ARRAY['HijoPadre', 'id,hijoId,usuarioId,creadoEn'],
     ARRAY['IdentificadorAcudiente', 'id,acudienteId,colegioId,tipo,plataformaId,estado,createdAt,updatedAt'],
-    -- IdentificadorProfesor: NUNCA valor.
-    ARRAY['IdentificadorProfesor', 'id,profesorId,colegioId,tipo,plataformaId,estado,createdAt,updatedAt'],
-    -- Hijo (SPEC-325): NUNCA nombre/apellidos/documentoTipo/documentoNumero.
-    ARRAY['Hijo', 'id,anioNacimiento,sexo,estado,creadoEn,actualizadoEn'],
-    -- HijoPadre: completa (puente id,hijoId,usuarioId,creadoEn; usuarioId es
-    -- cuid interno que no resuelve fuera — Usuario jamás se publica).
-    ARRAY['HijoPadre', NULL],
-    -- IdentificadorHijo: NUNCA valor.
-    ARRAY['IdentificadorHijo', 'id,hijoId,tipo,plataformaId,activo,creadoEn,actualizadoEn'],
-    -- ContactoConfianza: NUNCA nombre/etiqueta/nota (texto libre del padre).
-    ARRAY['ContactoConfianza', 'id,usuarioId,parentesco,activo,creadoEn,actualizadoEn'],
-    -- IdentificadorContacto: NUNCA valor. FK real = contactoId.
+    ARRAY['IdentificadorAlumno', 'id,alumnoId,tipo,plataformaId,etiquetaRelacion,estado,createdAt,updatedAt,colegioId'],
     ARRAY['IdentificadorContacto', 'id,contactoId,tipo,plataformaId,activo,creadoEn,actualizadoEn'],
-    -- IdentificadorReportado: agregado público COMPLETO excepto
-    -- `identificador` (nick en claro = PII del presunto reportado).
-    ARRAY['IdentificadorReportado', 'id,plataformaId,totalReportes,reportesAutenticados,reportesAnonimos,reportesAprobados,autenticadosAprobados,esVisiblePublicamente,ocultoPorComiteEn,score,scoreAnonimo,scoreAutenticado,scoreAjustado,nivelRiesgo,ultimoReporteEn,creadoEn,actualizadoEn'],
-    -- Suscripcion: sin contratoPDFUrl (documento firmado con datos del
-    -- titular), sin codigoReferidoPropio/Usado (código único que identifica
-    -- al titular persona), sin motivoCancelacion/referenciaPagoManual (texto
-    -- libre). usuarioId/autorizadoPorAdminId son cuids internos.
-    ARRAY['Suscripcion', 'id,tipoTitular,colegioId,usuarioId,estado,planActualId,fechaInicio,fechaFin,fechaCorteProgramado,esFreemium,freemiumFechaFin,monedaLocal,paisCliente,suspendidaEn,canceladaEn,canceladaPorUsuario,createdAt,updatedAt,origen,autorizadoPorAdminId,autorizadoEn,metodoPagoManual,montoRealPagado,fechaPagoReal'],
-    -- PerfilOperador: autorizada por Jelkin el 2026-09-02 (capacidad operativa,
-    -- semáforo de cupos — PR 006#295). Publicada a mano ese día con esta
-    -- column list; se incorpora al canon para que el reconciliador 3b no la
-    -- trate como drift. VETADAS: notas (texto libre) y creadoPor (persona).
-    ARRAY['PerfilOperador', 'id,usuarioId,cupoMaximo,esComite,esRevisorDeApelaciones,actualizadoEn'],
-    ARRAY['patrones_institucionales', NULL],     -- @@map de PatronInstitucional
-    ARRAY['eventos_match', NULL],                -- @@map de EventoMatch (solo metadatos agregados)
-    ARRAY['score_clientes', NULL],               -- @@map de ScoreCliente
-    ARRAY['DerivaMotorSnapshot', NULL],
-    ARRAY['OnboardingColegio', NULL],
-    ARRAY['TipoDocumento', NULL],
-    -- ── 6 nuevas autorizadas (Lotes A·B·C · 2026-09-03 · orden CEO) ────────
-    -- Pago (SPEC-210+): recaudo real declarado/autorizado. VETADAS en origen:
-    -- comprobante* (URL/mime/hash del comprobante del cliente), motivoRechazo/
-    -- motivoReembolso/referenciaReembolso/notasCliente (texto libre),
-    -- autorizadoPorAdminId/codigoReferidoUsado (identifican personas; los
-    -- referidos además siguen en desarrollo en PI — fuera de alcance).
-    ARRAY['Pago', 'id,suscripcionId,duracionCubierta,montoBaseUSD,descuentoAplicadoUSD,montoNetoUSD,tasaCambioAplicada,montoLocalPagado,monedaLocal,metodoDeclarado,fechaReporte,fechaAutorizacion,estado,montoReembolsoUSD,createdAt,updatedAt'],
-    -- pasos_procesamiento (@@map de PasoProcesamiento): telemetría del
-    -- pipeline (etapa, veredicto, latencia). VETADA: detalle (Json que puede
-    -- arrastrar fragmentos del texto del reporte).
-    ARRAY['pasos_procesamiento', 'id,reporteId,etapa,veredicto,latenciaMs,creadoEn'],
-    -- ReintentoReporte: VETADA: error (texto de la excepción, puede arrastrar
-    -- contexto sensible).
-    ARRAY['ReintentoReporte', 'id,reporteId,intento,exitoso,creadoEn'],
-    -- HealthProbe: señales de salud de app/worker/bd/ollama/tailscale.
-    -- VETADA: detalle (texto libre del monitor).
-    ARRAY['HealthProbe', 'id,senal,ok,latenciaMs,metodo,creadoEn'],
-    -- worker_logs (@@map de WorkerLog): SPEC-193 garantiza que no guarda PII
-    -- ni texto de reportes. VETADO: contextoJson (Json libre — minimización).
-    ARRAY['worker_logs', 'id,servicio,nivel,mensaje,creadoEn'],
-    -- IncidenteInfra: apertura/resolución de incidentes de infraestructura.
-    -- VETADAS: detalle (texto libre) y ultimoEmailEn (operativo interno).
+    ARRAY['IdentificadorHijo', 'id,hijoId,tipo,plataformaId,activo,creadoEn,actualizadoEn'],
+    ARRAY['IdentificadorProfesor', 'id,profesorId,colegioId,tipo,plataformaId,estado,createdAt,updatedAt'],
+    ARRAY['IdentificadorReportado', 'id,plataformaId,totalReportes,reportesAutenticados,reportesAnonimos,esVisiblePublicamente,ultimoReporteEn,creadoEn,actualizadoEn,nivelRiesgo,score,scoreAnonimo,scoreAutenticado,scoreAjustado,ocultoPorComiteEn,reportesAprobados,autenticadosAprobados'],
     ARRAY['IncidenteInfra', 'id,senal,estado,inicio,fin,creadoEn,actualizadoEn'],
-    -- ── 1 nueva autorizada (resiembra SPEC-412 · 2026-09-03 · CEO) ──────────
-    -- demo_marcado: marcador de lo sembrado vs real — ES EL criterio para
-    -- separar demo de real desde BI (el nombre/prefijo es la trampa del
-    -- poblador viejo). Publicada a mano por el CEO de PI el 2026-09-03 con
-    -- columna completa (metadata solo trae corrida/script/notas — sin PII,
-    -- verificado en prod). El suscriptor ya la sincroniza (30.250 filas).
-    ARRAY['demo_marcado', NULL]
+    ARRAY['OnboardingColegio', 'id,colegioId,estado,pasoActual,completadoEn,creadoEn,actualizadoEn'],
+    ARRAY['Pago', 'id,suscripcionId,duracionCubierta,montoBaseUSD,descuentoAplicadoUSD,montoNetoUSD,tasaCambioAplicada,montoLocalPagado,monedaLocal,metodoDeclarado,fechaReporte,fechaAutorizacion,estado,createdAt,updatedAt,montoReembolsoUSD'],
+    ARRAY['Pais', 'id,codigo,nombre,esActivo,creadoEn'],
+    ARRAY['PerfilOperador', 'id,usuarioId,cupoMaximo,esComite,esRevisorDeApelaciones,actualizadoEn'],
+    --   ↑ columna publicada real (autorizada 2026-09-02). NOTAS: bi-db tenía
+    --     columnas bootstrap huérfanas (notasInternas/creadoPorId/creadoEn/
+    --     ultimoEmailNotificacionEn) que NUNCA viajaron por la réplica — se
+    --     dropean del suscriptor en 09-bi-db-limpieza-contenido.sql.
+    ARRAY['Plan', 'id,nombre,descripcion,precio,creadoEn,tipoTitular,duracion,anio,precioBaseUSD,descuentoAnualPct,activo,creadoPorAdminId,createdAt,updatedAt,precioBaseCOP,esFreemium,usosMaximosPorCliente'],
+    ARRAY['Plataforma', 'id,clave,nombre,categoria,esActiva,creadoEn'],
+    ARRAY['Profesor', 'id,colegioId,estado,createdAt,updatedAt,anioNacimiento,sexo'],
+    ARRAY['ReintentoReporte', 'id,reporteId,intento,exitoso,creadoEn'],
+    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,ciudad,pais,estado,esAnonimo,reporteOrigenId,numeroSeguimiento,tenantId,creadoEn,actualizadoEn,paisId,ciudadId,otraPlataforma,edadVictima,prioridadAlta,esRafaga,eliminado,eliminadoEn,motivoBaja,fuenteConfianza,anonimizacionValidadaEn,origenRol,reportePrincipalId,operadorId'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): keywordsDetectadas
+    ARRAY['SolicitudComite', 'id,reporteId,numero,estado,comiteId,operadorId,creadoEn,resueltoEn,alertaColegioId,colegioId,creadoPorId,integranteFirmanteId,analisisActualizadoEn,analisisPorId,recomendacionInformeEn,recomendacionPorId'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): analisis, motivo, resolucion
+    ARRAY['Suscripcion', 'id,tipoTitular,colegioId,usuarioId,estado,planActualId,fechaInicio,fechaFin,fechaCorteProgramado,esFreemium,freemiumFechaFin,monedaLocal,paisCliente,suspendidaEn,canceladaEn,canceladaPorUsuario,createdAt,updatedAt,origen,autorizadoPorAdminId,autorizadoEn,metodoPagoManual,montoRealPagado,fechaPagoReal'],
+    ARRAY['Tenant', 'id,nombre,estado,creadoEn'],
+    ARRAY['TipoDocumento', 'id,clave,nombre,categoria,esActiva,creadoEn'],
+    ARRAY['TransicionReporte', 'id,reporteId,estadoAnterior,estadoNuevo,responsableTipo,responsableId,creadoEn'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): metadatos, motivo
+    ARRAY['clasificacion_rubrica_votos', 'id,clasificacionIAId,modelo,categoria,cumple,creadoEn'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): preguntasJson
+    ARRAY['demo_marcado', 'id,entidad,entidadId,creadoEn'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): metadata
+    ARRAY['eventos_match', 'id,identificadorId,reporteNuevoId,conteoAcumulado,ciudades,conductasCoincidentes,interCiudad,creadoEn'],
+    ARRAY['pasos_procesamiento', 'id,reporteId,etapa,veredicto,latenciaMs,creadoEn'],
+    ARRAY['patrones_institucionales', 'id,colegioId,periodo,grado,conducta,plataformaId,conteo,creadoEn,actualizadoEn'],
+    ARRAY['score_clientes', 'id,suscripcionId,periodo,componenteReportes,componenteCasos,componenteAlertas,componenteSesiones,pesoReportes,pesoCasos,pesoAlertas,pesoSesiones,scoreTotal,percentilEnCohorte,calculadoEn'],
+    ARRAY['worker_logs', 'id,servicio,nivel,creadoEn'],
+    --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): mensaje
   ];
 
   -- ── TABLAS PROHIBIDAS (Ley 1581 · jamás en la publicación) ─────────────
@@ -277,7 +230,27 @@ DECLARE
     ARRAY['HealthProbe', 'detalle'],
     ARRAY['worker_logs', 'contextoJson'],
     ARRAY['IncidenteInfra', 'detalle'], ARRAY['IncidenteInfra', 'ultimoEmailEn'],
-    ARRAY['senal_comunitaria_cache', 'identificadorReportado']
+    ARRAY['senal_comunitaria_cache', 'identificadorReportado'],
+    -- WHITELIST 2026-09-05 (minimización Ley 1581): contenido narrativo, PII
+    -- destilado, JSON libre y vectores. Redundante con la lista blanca del
+    -- canon (una columna vetada no puede estar publicada) — se conserva como
+    -- tripwire contra re-ADD manuales.
+    ARRAY['SolicitudComite', 'motivo'], ARRAY['SolicitudComite', 'resolucion'],
+    ARRAY['SolicitudComite', 'analisis'],
+    ARRAY['ClasificacionIA', 'rawResponse'], ARRAY['ClasificacionIA', 'piiDetectada'],
+    ARRAY['CorreccionAdmin', 'motivo'],
+    ARRAY['TransicionReporte', 'motivo'], ARRAY['TransicionReporte', 'metadatos'],
+    ARRAY['Reporte', 'keywordsDetectadas'],
+    ARRAY['AuditLog', 'metadatos'],
+    ARRAY['worker_logs', 'mensaje'],
+    ARRAY['clasificacion_rubrica_votos', 'preguntasJson'],
+    ARRAY['demo_marcado', 'metadata'],
+    ARRAY['EmbeddingReporte', 'vector'],
+    -- PerfilOperador: columna canónica publicada (2026-09-02). Las columnas
+    -- bootstrap del suscriptor (notasInternas/creadoPorId/creadoEn/
+    -- ultimoEmailNotificacionEn) nunca viajaron por la réplica — se dropean
+    -- en 09-bi-db-limpieza-contenido.sql.
+    ARRAY['PerfilOperador', 'notasInternas'], ARRAY['PerfilOperador', 'creadoPorId']
   ];
 
   tabla_pii  text;
