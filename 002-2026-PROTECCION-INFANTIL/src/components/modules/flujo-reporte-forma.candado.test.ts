@@ -88,4 +88,22 @@ describe("SPEC-511 · resto visual del flujo del reporte", () => {
             "no debe quedar spinner de PÁGINA (animate-spin) en el wizard — es skeleton",
         ).toBe(false);
     });
+
+    it("D · la señal `prioridadAlta` nunca se pinta warning/ámbar — rubi/danger en TODA pantalla (Diseño)", () => {
+        // prioridadAlta = cortar:true (ráfaga/doxing) = criticidad real. La misma
+        // señal en dos colores miente con el color; Diseño la fija en rubi/danger.
+        const MODULES = path.join(SRC, "components", "modules");
+        const hits: string[] = [];
+        for (const archivo of recorrer(MODULES)) {
+            for (const [i, linea] of fs.readFileSync(archivo, "utf-8").split("\n").entries()) {
+                if (/prioridadAlta/.test(linea) && /variant="warning"|text-estado-ambar|bg-ambar|amber/.test(linea)) {
+                    hits.push(`${path.relative(SRC, archivo)}:${i + 1}: ${linea.trim().slice(0, 90)}`);
+                }
+            }
+        }
+        expect(
+            hits,
+            ["SPEC-511 — prioridadAlta pintada warning/ámbar (debe ser rubi/danger):", ...hits].join("\n"),
+        ).toEqual([]);
+    });
 });
