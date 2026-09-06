@@ -23,6 +23,46 @@ import * as path from "node:path";
 
 const SRC = path.resolve(__dirname, "..", ".."); // .../src
 
+// SPEC-539: el candado escanea el ÁRBOL DE RENDER de cada superficie (el archivo +
+// sus imports de primer partido bajo src/), no una ruta a mano. Así la copia se
+// encuentra aunque un componente se parta en dos (p. ej. HijoCard extraído de
+// MisHijos) — misma lección que SPEC-491. Antes leía un solo archivo y veía un
+// hueco falso cuando el texto se mudaba a un hijo montado.
+function resolverImport(spec: string, desdeDir: string): string | null {
+    let base: string;
+    if (spec.startsWith("@/")) base = path.join(SRC, spec.slice(2));
+    else if (spec.startsWith(".")) base = path.resolve(desdeDir, spec);
+    else return null; // paquete externo
+    for (const c of [base + ".tsx", base + ".ts", path.join(base, "index.tsx"), path.join(base, "index.ts")]) {
+        if (fs.existsSync(c) && fs.statSync(c).isFile()) return c;
+    }
+    return null;
+}
+
+/** Texto del archivo + su árbol de render (imports de primer partido bajo src/). */
+function textoRenderizado(archivoRel: string): string {
+    const raiz = path.join(SRC, archivoRel);
+    if (!fs.existsSync(raiz)) throw new Error(`voz-cuenta: no existe ${archivoRel}`);
+    const boundary = SRC + path.sep;
+    const vistos = new Set<string>();
+    const cola = [raiz];
+    const RE = /from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']\s*\)|(?:^|\n)\s*import\s+["']([^"']+)["']/g;
+    while (cola.length) {
+        const f = cola.shift() as string;
+        if (vistos.has(f)) continue;
+        vistos.add(f);
+        const src = fs.readFileSync(f, "utf-8");
+        let m: RegExpExecArray | null;
+        while ((m = RE.exec(src)) !== null) {
+            const spec = m[1] || m[2] || m[3];
+            if (!spec) continue;
+            const r = resolverImport(spec, path.dirname(f));
+            if (r && r.startsWith(boundary) && !vistos.has(r)) cola.push(r);
+        }
+    }
+    return [...vistos].map((f) => fs.readFileSync(f, "utf-8")).join("\n");
+}
+
 type Barrido = { archivo: string; presentes: string[]; ausentes: string[] };
 
 // Cada fila = una superficie del mapa. `presentes` ancla la copia nueva (no se
@@ -139,8 +179,8 @@ const BARRIDO: Barrido[] = [
 describe("SPEC-512 · voz «la cuenta» en la cara del padre + pública", () => {
     for (const { archivo, presentes, ausentes } of BARRIDO) {
         it(`${archivo}: copia nueva presente, palabra vetada ausente`, () => {
-            const ruta = path.join(SRC, archivo);
-            const codigo = fs.readFileSync(ruta, "utf-8");
+            // Escanea el ÁRBOL DE RENDER (archivo + imports), no solo el archivo.
+            const codigo = textoRenderizado(archivo);
             for (const frase of presentes) {
                 expect(codigo.includes(frase), `falta la copia nueva: «${frase}»`).toBe(true);
             }

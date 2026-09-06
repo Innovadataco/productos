@@ -26,6 +26,7 @@ import { PanelAgregar, type DatoNuevo } from "./PanelAgregar";
 import { QueRecibes } from "./QueRecibes";
 import { TarjetaPersona } from "./TarjetaPersona";
 import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import {
     nombreVisible,
@@ -37,7 +38,12 @@ import {
     type Plataforma,
 } from "./tipos";
 
-type Panel = { tipo: "cerrado" } | { tipo: "persona" } | { tipo: "dato"; contacto: Contacto };
+type Panel =
+    | { tipo: "cerrado" }
+    | { tipo: "persona" }
+    | { tipo: "dato"; contacto: Contacto }
+    // SPEC-539: editar los datos de una persona vigilada (nombre / parentesco).
+    | { tipo: "editar"; contacto: Contacto };
 
 export function CirculoConfianzaClient() {
     const [contactos, setContactos] = useState<Contacto[]>([]);
@@ -49,6 +55,8 @@ export function CirculoConfianzaClient() {
     const [errorPanel, setErrorPanel] = useState("");
     const [guardando, setGuardando] = useState(false);
     const [panel, setPanel] = useState<Panel>({ tipo: "cerrado" });
+    // SPEC-539: formulario de edición de nombre/parentesco de un contacto.
+    const [edicion, setEdicion] = useState({ nombre: "", parentesco: "" });
     const [detalle, setDetalle] = useState<DetalleContacto | null>(null);
     // SPEC-540: la confirmación de «Quitar» es un modal del estándar, no window.confirm.
     const [confirmarQuitar, setConfirmarQuitar] = useState<Contacto | null>(null);
@@ -185,8 +193,42 @@ export function CirculoConfianzaClient() {
         await patchContacto(detalle.id, { identificadores: lista }, "No pudimos cambiar ese dato");
     }
 
+    // SPEC-539: abrir el formulario de edición pre-cargado con lo que ya hay.
+    function abrirEditar(contacto: Contacto) {
+        setErrorPanel("");
+        setDetalle(null);
+        setEdicion({ nombre: contacto.nombre ?? contacto.etiqueta ?? "", parentesco: contacto.parentesco ?? "" });
+        setPanel({ tipo: "editar", contacto });
+    }
+
+    // SPEC-539: guardar el cambio de nombre/parentesco contra el PATCH que ya existe.
+    async function guardarEdicion(e: React.FormEvent) {
+        e.preventDefault();
+        if (panel.tipo !== "editar") return;
+        const id = panel.contacto.id;
+        setGuardando(true);
+        setErrorPanel("");
+        try {
+            const res = await fetch(`/api/circulo-confianza/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre: edicion.nombre.trim(), parentesco: edicion.parentesco.trim() || null }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data?.error?.message || "No pudimos guardar los cambios");
+            }
+            setPanel({ tipo: "cerrado" });
+            await cargar();
+        } catch (err) {
+            setErrorPanel(err instanceof Error ? err.message : "No pudimos guardar los cambios");
+        } finally {
+            setGuardando(false);
+        }
+    }
+
+    // SPEC-540: «Quitar» confirma en un modal del estándar (no window.confirm).
     function quitarPersona(contacto: Contacto) {
-        // SPEC-540: abre el modal de confirmación (antes era window.confirm).
         setConfirmarQuitar(contacto);
     }
 
@@ -263,7 +305,7 @@ export function CirculoConfianzaClient() {
                 <EstadoVacio onAgregar={abrirAgregar} />
             ) : (
                 <>
-                    {panel.tipo !== "cerrado" && (
+                    {(panel.tipo === "persona" || panel.tipo === "dato") && (
                         <div className="mt-6">
                             <PanelAgregar
                                 modo={panel.tipo === "persona" ? "persona" : "dato"}
@@ -276,6 +318,23 @@ export function CirculoConfianzaClient() {
                                 onGuardarDato={agregarDato}
                             />
                         </div>
+                    )}
+
+                    {panel.tipo === "editar" && (
+                        <form onSubmit={guardarEdicion} className="glass mt-6 space-y-3 rounded-2xl p-5" data-testid="editar-contacto">
+                            <h3 className="text-base font-semibold text-body">Editar a {edicion.nombre || "esta persona"}</h3>
+                            {errorPanel && <p className="text-sm text-estado-rubi" role="alert">{errorPanel}</p>}
+                            <Input label="Nombre" value={edicion.nombre} onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })} />
+                            <Input label="Qué es de tus hijos" value={edicion.parentesco} onChange={(e) => setEdicion({ ...edicion, parentesco: e.target.value })} />
+                            <div className="flex justify-end gap-2">
+                                <Button type="button" variant="outline" onClick={() => setPanel({ tipo: "cerrado" })} disabled={guardando}>
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" isLoading={guardando} disabled={guardando}>
+                                    Guardar cambios
+                                </Button>
+                            </div>
+                        </form>
                     )}
 
                     {detalle && (
@@ -361,6 +420,7 @@ export function CirculoConfianzaClient() {
                                                     "No pudimos cambiar el estado"
                                                 )
                                             }
+                                            onEditar={abrirEditar}
                                             onQuitar={quitarPersona}
                                         />
                                     ))}

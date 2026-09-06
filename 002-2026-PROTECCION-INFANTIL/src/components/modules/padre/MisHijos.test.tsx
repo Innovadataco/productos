@@ -14,7 +14,7 @@
  * ataría los tests al orden interno de esos dos fetch.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MisHijos } from "./MisHijos";
 
 const fetchMock = vi.fn();
@@ -79,6 +79,26 @@ describe("MisHijos", () => {
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
         expect(screen.getByText("Juan Pérez")).toBeDefined();
         expect(screen.getByText(/robloxjuan/)).toBeDefined();
+    });
+
+    it("SPEC-539 · «Editar» abre el formulario pre-cargado y guarda por PATCH /api/padre/hijos/[id] (sin tocar el estado)", async () => {
+        mockRutas([hijoBase()]);
+        render(<MisHijos />);
+        await screen.findByText("Juan Pérez");
+
+        fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+        const form = await screen.findByTestId("editar-hijo-h1");
+        // Pre-cargado con lo que ya hay; cambiamos el nombre.
+        fireEvent.change(within(form).getByDisplayValue("Juan"), { target: { value: "Juancho" } });
+        fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+
+        await waitFor(() => {
+            const patch = llamada("PATCH", "/api/padre/hijos/h1");
+            expect(patch).toBeTruthy();
+            const body = JSON.parse((patch![1] as RequestInit).body as string) as Record<string, unknown>;
+            expect(body.nombre).toBe("Juancho");
+            expect(body.estado).toBeUndefined(); // la edición de datos NO cambia el estado
+        });
     });
 
     it("registrar hace POST y recarga", async () => {
