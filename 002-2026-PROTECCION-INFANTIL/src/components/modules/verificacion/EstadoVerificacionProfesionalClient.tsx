@@ -52,16 +52,16 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
     return (
         <div className="mx-auto max-w-3xl space-y-6 anim-entrada">
             <header>
-                <p className="microetiqueta">Verificación de tu perfil</p>
+                <p className="microetiqueta">Verificación de su perfil</p>
                 <h1 className="titular-h1 mt-1">
-                    Tu perfil está <span className={`palabra-estado ${et.tono}`}>{et.label}</span>
+                    Su perfil está <span className={`palabra-estado ${et.tono}`}>{et.label}</span>
                 </h1>
             </header>
 
             {vista.estadoPerfil === "EN_REVISION" && (
                 <div className="glass rounded-2xl p-6">
                     <p className="cuerpo text-body">
-                        Ya estamos revisando tus documentos. Te avisamos por correo apenas haya novedad — no hace
+                        Ya estamos revisando sus documentos. Le avisamos por correo apenas haya novedad — no hace
                         falta que hagas nada.
                     </p>
                 </div>
