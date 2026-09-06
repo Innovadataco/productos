@@ -408,6 +408,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-499: el profesional demo aparece/es reservable (ACTIVO + verificación
     // vigente) y es purgable (orden FK-seguro en ORDEN_BORRADO).
     "scripts/demo-prod/profesional-demo.candado.test.ts",
+    // SPEC-516: la siembra de desbloqueo de Calidad es purgable (IdentificadorReportado
+    // en ORDEN_BORRADO + cadena de expediente en purgar-demo).
+    "scripts/demo-prod/desbloqueo-purgable.candado.test.ts",
     // SPEC-378: Inicio del administrador (server component + tarjetas ámbar).
     "src/app/dashboard/admin/inicio/page.test.tsx",
     // SPEC-379: membrete institucional compartido + candado UI materia-profesor.

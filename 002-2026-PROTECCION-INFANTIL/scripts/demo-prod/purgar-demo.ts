@@ -51,6 +51,8 @@ async function main() {
     const reporteIds = await entidadDemoIds("Reporte");
     const estudianteIds = await entidadDemoIds("Estudiante");
     const colegioIds = await entidadDemoIds("Colegio");
+    // SPEC-516: expedientes demo (padre-derivados; su cadena no la cubre el reporte).
+    const expedienteIds = await entidadDemoIds("Expediente");
 
     console.log(
         `[purgar-demo] Reportes demo: ${reporteIds.length}, Estudiantes demo: ${estudianteIds.length}, Colegios demo: ${colegioIds.length}`,
@@ -148,6 +150,30 @@ async function main() {
             where: { colegioId: { in: colegioIds } },
         });
         console.log(`[purgar-demo] Borradas ${preferenciasDel.count} PreferenciaAlertaColegio`);
+    }
+
+    // ------------------------------------------------------------------
+    // Fase 2-bis (SPEC-516): cadena de expediente (padre-derivada). Debe ir
+    // ANTES de borrar el Usuario padre: `Expediente.padreUsuarioId` es NOT NULL.
+    // Orden FK-safe: AclaracionExpediente → InformeConsolidado → PatronExpediente
+    // → EventoExpediente → Expediente.
+    // ------------------------------------------------------------------
+    if (expedienteIds.length > 0) {
+        const aclDel = await prisma.aclaracionExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+        console.log(`[purgar-demo] Borradas ${aclDel.count} AclaracionExpediente`);
+        const infDel = await prisma.informeConsolidado.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+        console.log(`[purgar-demo] Borrados ${infDel.count} InformeConsolidado`);
+        const patDel = await prisma.patronExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+        console.log(`[purgar-demo] Borrados ${patDel.count} PatronExpediente`);
+        const evDel = await prisma.eventoExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
+        console.log(`[purgar-demo] Borrados ${evDel.count} EventoExpediente`);
+        // Self-relación: nullear antes de borrar para no chocar el FK.
+        await prisma.expediente.updateMany({
+            where: { id: { in: expedienteIds } },
+            data: { expedienteRelacionadoAnteriorId: null },
+        });
+        const expDel = await prisma.expediente.deleteMany({ where: { id: { in: expedienteIds } } });
+        console.log(`[purgar-demo] Borrados ${expDel.count} Expediente`);
     }
 
     // ------------------------------------------------------------------
