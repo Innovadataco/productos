@@ -277,28 +277,42 @@ export async function actualizarContacto(
 export async function eliminarContacto(id: string, usuarioId: string, request?: Request) {
     const contacto = await prisma.contactoConfianza.findFirst({
         where: { id, usuarioId },
-        select: { id: true, activo: true },
+        select: {
+            id: true,
+            nombre: true,
+            etiqueta: true,
+            parentesco: true,
+            identificadores: { select: { valor: true, tipo: true, plataformaId: true } },
+        },
     });
     if (!contacto) {
         throw new Error("Contacto no encontrado");
     }
 
     return prisma.$transaction(async (tx) => {
-        await tx.contactoConfianza.update({ where: { id }, data: { activo: false } });
-        await tx.identificadorContacto.updateMany({
-            where: { contactoId: id },
-            data: { activo: false },
-        });
+        // SPEC-540 (D-118): el borrado es REAL, así que la auditoría preserva el hecho
+        // —quién (usuarioId), cuándo (creadoEn de la fila), qué contacto y qué
+        // identificadores— en `valorAnterior`, aunque la fila del contacto desaparezca.
         await logAudit({
             accion: "CIRCULO_CONTACT_DISABLE",
             tipoRecurso: "ContactoConfianza",
             recursoId: id,
             usuarioId,
+            valorAnterior: JSON.stringify({
+                nombre: contacto.nombre ?? contacto.etiqueta ?? null,
+                parentesco: contacto.parentesco ?? null,
+                identificadores: contacto.identificadores,
+            }),
             valorNuevo: JSON.stringify({ eliminado: true }),
             ipAddress: request?.headers.get("x-forwarded-for") || request?.headers.get("x-real-ip") || "unknown",
             userAgent: request?.headers.get("user-agent") || "unknown",
             tx,
         });
+        // SPEC-540: «Quitar» REMUEVE de verdad. Antes hacía soft-delete (activo=false),
+        // indistinguible de «Pausar»: la persona reaparecía «En pausa» con «Reanudar», y
+        // volver a pulsar «Quitar» no cambiaba nada. Ahora se borra el contacto; sus
+        // identificadores caen por cascade (IdentificadorContacto onDelete: Cascade).
+        await tx.contactoConfianza.delete({ where: { id } });
         return { ok: true };
     });
 }

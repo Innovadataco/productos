@@ -1,6 +1,8 @@
 /**
- * SPEC-325 (002-PI-225): "A quién vigilo" — nombre/parentesco propios, baja
- * lógica (DELETE), y unicidad por-padre con warn+override.
+ * SPEC-325 (002-PI-225): "A quién vigilo" — nombre/parentesco propios y unicidad
+ * por-padre con warn+override.
+ * SPEC-540 (D-118): «Quitar» BORRA de verdad (hard-delete), distinto de «Pausar»
+ * (activo=false, recuperable). Antes ambos eran baja lógica y se confundían.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
@@ -34,19 +36,50 @@ describe("contactos vigilo (SPEC-325)", () => {
         expect(c.identificadores[0].valor).toBe("tiojuan1");
     });
 
-    it("eliminar contacto = baja lógica (activo=false), no hard-delete", async () => {
+    // SPEC-540 (D-118) · CANDADO de conducta: «Quitar» y «Pausar» son EXCLUYENTES.
+    // Quitar borra de verdad (la fila y sus identificadores por cascade); Pausar deja
+    // activo=false, recuperable. Antes ambos hacían activo=false y por eso «Quitar»
+    // dejaba a la persona ahí con «Reanudar». Muere si Quitar vuelve a soft-delete.
+    it("SPEC-540: «Quitar» BORRA el contacto y sus identificadores (hard-delete)", async () => {
         const padre = await crearUsuario("PARENT");
         const c = await agregarContacto(padre.id, {
             nombre: "Vecino",
             identificadores: [{ valor: "vecino_x" }],
         });
         await eliminarContacto(c.id, padre.id);
+        // Desaparece de los dos lados: la fila ya no existe.
+        expect(await prisma.contactoConfianza.findUnique({ where: { id: c.id } })).toBeNull();
+        // Y sus identificadores caen por cascade (no quedan huérfanos).
+        expect(await prisma.identificadorContacto.count({ where: { contactoId: c.id } })).toBe(0);
+    });
+
+    it("SPEC-540: «Pausar» (activo=false) NO borra — queda recuperable, distinto de Quitar", async () => {
+        const padre = await crearUsuario("PARENT");
+        const c = await agregarContacto(padre.id, {
+            nombre: "Tía",
+            identificadores: [{ valor: "tia_y" }],
+        });
+        await actualizarContacto(c.id, padre.id, { activo: false });
         const row = await prisma.contactoConfianza.findUnique({ where: { id: c.id } });
         expect(row).not.toBeNull(); // sigue existiendo
-        expect(row?.activo).toBe(false);
-        // sus identificadores también quedan inactivos
-        const idents = await prisma.identificadorContacto.findMany({ where: { contactoId: c.id } });
-        expect(idents.every((i) => !i.activo)).toBe(true);
+        expect(row?.activo).toBe(false); // pausado, recuperable con Reanudar
+    });
+
+    it("SPEC-540: la auditoría del borrado preserva el contacto y sus identificadores", async () => {
+        const padre = await crearUsuario("PARENT");
+        const c = await agregarContacto(padre.id, {
+            nombre: "Vecino Auditado",
+            identificadores: [{ valor: "vecino_aud" }],
+        });
+        await eliminarContacto(c.id, padre.id);
+        const audit = await prisma.auditLog.findFirst({
+            where: { tipoRecurso: "ContactoConfianza", recursoId: c.id, usuarioId: padre.id },
+            orderBy: { creadoEn: "desc" },
+        });
+        expect(audit).not.toBeNull(); // quién + cuándo (creadoEn) + qué contacto
+        const anterior = JSON.parse(audit?.valorAnterior ?? "{}");
+        expect(anterior.nombre).toBe("Vecino Auditado");
+        expect(anterior.identificadores?.some((i: { valor: string }) => i.valor === "vecino_aud")).toBe(true);
     });
 
     it("no deja eliminar un contacto ajeno", async () => {

@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { CirculoConfianzaClient } from "./CirculoConfianzaClient";
 
 vi.mock("next/link", () => ({
@@ -158,6 +158,28 @@ describe("Tu círculo de confianza · A-73 (SPEC-367)", () => {
 
         await waitFor(() => {
             expect(screen.queryByRole("button", { name: "Ver de qué se trata" })).toBeNull();
+        });
+    });
+
+    it("SPEC-540 · «Quitar» abre un MODAL del estándar (no window.confirm), nombra a la persona y avisa permanente; confirmar ejecuta el borrado", async () => {
+        const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+        const fetchMock = mockearFetch([MARTA]);
+        render(<CirculoConfianzaClient />);
+        await screen.findByText("Marta Gómez");
+
+        // Antes de abrir, solo el botón de la tarjeta.
+        fireEvent.click(screen.getByRole("button", { name: "Quitar" }));
+
+        // Es un modal (está en el DOM con role=dialog), NO window.confirm.
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog.textContent).toContain("Marta Gómez"); // nombra a la persona
+        expect(dialog.textContent).toMatch(/no se puede deshacer/i); // avisa que es permanente
+        expect(confirmSpy).not.toHaveBeenCalled();
+
+        // La confirmación ACTÚA: dispara el DELETE del contacto.
+        fireEvent.click(within(dialog).getByRole("button", { name: "Quitar" }));
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledWith("/api/circulo-confianza/c1", { method: "DELETE" });
         });
     });
 });
