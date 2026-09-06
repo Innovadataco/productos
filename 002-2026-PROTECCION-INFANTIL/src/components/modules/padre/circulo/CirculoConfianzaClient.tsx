@@ -25,6 +25,8 @@ import { IlustracionCirculo } from "./IlustracionCirculo";
 import { PanelAgregar, type DatoNuevo } from "./PanelAgregar";
 import { QueRecibes } from "./QueRecibes";
 import { TarjetaPersona } from "./TarjetaPersona";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import {
     nombreVisible,
     tonoDeContacto,
@@ -48,6 +50,8 @@ export function CirculoConfianzaClient() {
     const [guardando, setGuardando] = useState(false);
     const [panel, setPanel] = useState<Panel>({ tipo: "cerrado" });
     const [detalle, setDetalle] = useState<DetalleContacto | null>(null);
+    // SPEC-540: la confirmación de «Quitar» es un modal del estándar, no window.confirm.
+    const [confirmarQuitar, setConfirmarQuitar] = useState<Contacto | null>(null);
 
     const cargar = useCallback(async () => {
         try {
@@ -181,15 +185,21 @@ export function CirculoConfianzaClient() {
         await patchContacto(detalle.id, { identificadores: lista }, "No pudimos cambiar ese dato");
     }
 
-    async function quitarPersona(contacto: Contacto) {
-        const nombre = nombreVisible(contacto);
-        if (!window.confirm(`¿Quitar a ${nombre} de tu círculo? Dejaremos de vigilarla.`)) return;
+    function quitarPersona(contacto: Contacto) {
+        // SPEC-540: abre el modal de confirmación (antes era window.confirm).
+        setConfirmarQuitar(contacto);
+    }
+
+    async function ejecutarQuitar() {
+        const contacto = confirmarQuitar;
+        if (!contacto) return;
         setGuardando(true);
         setError("");
         try {
             const res = await fetch(`/api/circulo-confianza/${contacto.id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("No pudimos quitar a esta persona");
             if (detalle?.id === contacto.id) setDetalle(null);
+            setConfirmarQuitar(null);
             await cargar();
         } catch (e) {
             setError(e instanceof Error ? e.message : "No pudimos quitar a esta persona");
@@ -408,6 +418,26 @@ export function CirculoConfianzaClient() {
                     Ir a &ldquo;A quién protejo&rdquo;
                 </Link>
             </div>
+
+            <Modal
+                isOpen={confirmarQuitar !== null}
+                onClose={() => setConfirmarQuitar(null)}
+                title="Quitar del círculo"
+            >
+                <p className="text-sm text-body">
+                    {confirmarQuitar
+                        ? `¿Quitar a ${nombreVisible(confirmarQuitar)} de tu círculo? Dejaremos de vigilarla y se borrarán sus datos guardados. Esto no se puede deshacer.`
+                        : ""}
+                </p>
+                <div className="mt-5 flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setConfirmarQuitar(null)} disabled={guardando}>
+                        Cancelar
+                    </Button>
+                    <Button onClick={ejecutarQuitar} isLoading={guardando} disabled={guardando}>
+                        Quitar
+                    </Button>
+                </div>
+            </Modal>
         </div>
     );
 }
