@@ -38,7 +38,7 @@ export function ConfigSection({
                 <div>
                     <h2 className="text-lg font-semibold text-body">{section.label}</h2>
                     <p className="text-sm text-muted">{section.description}</p>
-                    {hasUnsaved && <p className="mt-1 text-xs text-amber-600 dark:text-amber-300">Cambios sin guardar</p>}
+                    {hasUnsaved && <p className="mt-1 text-xs text-estado-ambar">Cambios sin guardar</p>}
                 </div>
                 <Button
                     onClick={() => onSaveSection(section.key)}
@@ -53,15 +53,15 @@ export function ConfigSection({
                 <div
                     className={`mb-4 rounded-lg px-4 py-2 text-sm ${
                         message.type === "error"
-                            ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200"
-                            : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200"
+                            ? "bg-rubi/10 text-estado-rubi"
+                            : "bg-pino/10 text-estado-pino"
                     }`}
                 >
                     {message.text}
                 </div>
             )}
 
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-tinta/10">
                 {items
                     .filter((p) => p.clave !== "ui.grupos_categoria")
                     .map((p) => (

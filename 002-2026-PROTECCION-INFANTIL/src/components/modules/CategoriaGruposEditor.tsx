@@ -192,7 +192,7 @@ export function CategoriaGruposEditor() {
                 <div>
                     <h3 className="text-sm font-semibold text-body">Grupos de categoría</h3>
                     {dirty ? (
-                        <p className="text-xs text-amber-600 dark:text-amber-300">Tienes cambios sin guardar</p>
+                        <p className="text-xs text-estado-ambar">Tienes cambios sin guardar</p>
                     ) : (
                         <p className="text-xs text-muted">Los cambios están guardados.</p>
                     )}
@@ -206,7 +206,7 @@ export function CategoriaGruposEditor() {
                 {grupos.map((grupo) => (
                     <div
                         key={grupo.clave}
-                        className="rounded-2xl border border-slate-200 bg-white/50 p-4 dark:border-slate-800 dark:bg-slate-900/50"
+                        className="rounded-2xl border border-tinta/10 bg-tinta/5 p-4"
                     >
                         <div className="mb-3 flex items-start justify-between gap-2">
                             <Input
@@ -218,7 +218,7 @@ export function CategoriaGruposEditor() {
                             <button
                                 type="button"
                                 onClick={() => eliminarGrupo(grupo.clave)}
-                                className="mt-6 text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+                                className="mt-6 text-xs text-rubi hover:text-rubi/80"
                                 title="Eliminar grupo"
                             >
                                 Eliminar
@@ -234,14 +234,14 @@ export function CategoriaGruposEditor() {
                                     {grupo.categorias.map((cat) => (
                                         <span
                                             key={cat}
-                                            className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-[10px] font-medium text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
+                                            className="inline-flex items-center gap-1 rounded-full bg-cielo/10 px-2 py-1 text-[10px] font-medium text-cielo"
                                         >
                                             {CATEGORIA_LABELS[cat] || cat}
                                             <Tooltip content={`Quitar ${CATEGORIA_LABELS[cat] || cat}`}>
                                                 <button
                                                     type="button"
                                                     onClick={() => quitarCategoria(grupo.clave, cat)}
-                                                    className="ml-1 leading-none hover:text-red-600"
+                                                    className="ml-1 leading-none hover:text-rubi"
                                                     aria-label={`Quitar ${CATEGORIA_LABELS[cat] || cat}`}
                                                 >
                                                     ×
@@ -272,14 +272,14 @@ export function CategoriaGruposEditor() {
             </div>
 
             {disponibles.length > 0 && (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+                <div className="rounded-2xl border border-ambar/30 bg-ambar/10 p-4">
                     <div className="flex items-start gap-2">
-                        <span className="text-amber-600 dark:text-amber-300" aria-hidden="true">⚠</span>
+                        <span className="text-estado-ambar" aria-hidden="true">⚠</span>
                         <div>
-                            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                            <p className="text-xs font-semibold text-estado-ambar">
                                 Categorías sin agrupar
                             </p>
-                            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300/90">
+                            <p className="mt-1 text-xs text-estado-ambar">
                                 Estas categorías se ocultan en las vistas de usuario hasta que se asignen a un grupo.
                             </p>
                         </div>
@@ -288,7 +288,7 @@ export function CategoriaGruposEditor() {
                         {disponibles.map((cat) => (
                             <span
                                 key={cat}
-                                className="rounded-full bg-white/60 px-2 py-1 text-[10px] text-amber-900 dark:bg-slate-900/40 dark:text-amber-100"
+                                className="rounded-full bg-papel px-2 py-1 text-[10px] text-estado-ambar"
                             >
                                 {CATEGORIA_LABELS[cat] || cat}
                             </span>

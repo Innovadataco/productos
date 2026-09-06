@@ -12,7 +12,7 @@ export function TimelineSection({ timeline }: TimelineSectionProps) {
             ) : (
                 <div className="mt-4 space-y-3 max-h-96 overflow-auto">
                     {timeline.map((log: Record<string, unknown>) => (
-                        <div key={String(log.id)} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+                        <div key={String(log.id)} className="rounded-lg border border-tinta/10 p-3 text-sm">
                             <div className="flex items-center justify-between">
                                 <span className="font-medium text-body">{String(log.accion)}</span>
                                 <span className="text-xs text-muted">{new Date(String(log.creadoEn)).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</span>
@@ -22,8 +22,8 @@ export function TimelineSection({ timeline }: TimelineSectionProps) {
                             </p>
                             {Boolean(log.valorAnterior) && Boolean(log.valorNuevo) && (
                                 <div className="mt-2 grid gap-1 text-xs">
-                                    <p className="text-red-700 dark:text-red-300">- {String(log.valorAnterior).slice(0, 200)}</p>
-                                    <p className="text-green-700 dark:text-green-300">+ {String(log.valorNuevo).slice(0, 200)}</p>
+                                    <p className="text-body">- {String(log.valorAnterior).slice(0, 200)}</p>
+                                    <p className="text-body">+ {String(log.valorNuevo).slice(0, 200)}</p>
                                 </div>
                             )}
                         </div>
