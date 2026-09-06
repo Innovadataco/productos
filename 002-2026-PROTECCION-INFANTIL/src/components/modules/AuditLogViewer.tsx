@@ -15,8 +15,10 @@ export function AuditLogViewer({
     legible = false,
 }: {
     defaultActions?: AccionAudit[] | undefined;
-    title: string;
-    subtitle: string;
+    // SPEC-569: opcionales — la página dueña puede rendir su propio <h1> y NO pasar title/subtitle
+    // para no duplicar el encabezado (el viewer solo pinta header si recibe title).
+    title?: string | undefined;
+    subtitle?: string | undefined;
     endpoint?: string | undefined;
     /** SPEC-129 (C6): frases naturales y detalle sin JSON crudo (rector no técnico). */
     legible?: boolean | undefined;
@@ -96,10 +98,12 @@ export function AuditLogViewer({
 
     return (
         <div className="mx-auto max-w-7xl space-y-6">
-            <div className="mb-2">
-                <h1 className="text-2xl font-bold text-body">{title}</h1>
-                <p className="text-sm text-muted">{subtitle}</p>
-            </div>
+            {title && (
+                <div className="mb-2">
+                    <h1 className="text-2xl font-bold text-body">{title}</h1>
+                    {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
+                </div>
+            )}
 
             <GlassCard>
                 <h2 className="text-lg font-semibold text-body">Filtros</h2>
