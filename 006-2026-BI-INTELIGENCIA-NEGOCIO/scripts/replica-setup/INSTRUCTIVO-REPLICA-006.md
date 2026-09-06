@@ -31,6 +31,8 @@ BI v2 tiene **UN solo Postgres propio** (contenedor `bi-db`, imagen
 | `05-mv-fact.sql` | **bi-db** (suscriptor) | Tras la sincronización inicial |
 | `06-bi-db-recorte-pii.sql` | **bi-db** (suscriptor) | Defensa en profundidad PII |
 | `07-bi-db-limpieza-legacy.sql` | **bi-db** (suscriptor) | Tras retirar legacy del canon (02) |
+| `08-bi-db-reconciliar-drift.sql` | **bi-db** (suscriptor) | Fix idempotente de drift enum/columnas |
+| `09-bi-db-limpieza-contenido.sql` | **bi-db** (suscriptor) | Tras la whitelist 2026-09-05 (02) — saca de bi-db lo ya replicado |
 
 ## Estado heredado del 005 (Fase A · 2026-08-28 · verificado con CEO)
 
