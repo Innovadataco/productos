@@ -83,3 +83,69 @@ describe("SPEC-463 · el colegio habla de usted (sin tuteo)", () => {
         expect(tuteoDelPadre).toBeGreaterThan(0);
     });
 });
+
+// SPEC-523 · CANDADO DE CLASE: el colegio + comité de convivencia hablan de
+// «usted» — no basta con los pronombres (SPEC-463), el tuteo se cuela por las
+// FORMAS VERBALES («tienes», «puedes», «hiciste»). Se cazan las inequívocas
+// (presentes -as/-es de 2ª persona y pretéritos -aste/-iste) con borde de letra
+// UNICODE (el `\b` ASCII muere en vocal acentuada). Los imperativos ambiguos con
+// 3ª persona (Selecciona/Asigna/Anota) NO se barren a ciegas (el mapa los difiere
+// al pase visual); las 2 líneas puramente imperativas que SÍ tocó SPEC-523 se
+// candan por ancla positiva.
+//
+// Verificado por MUTACIÓN: reponer «tienes/puedes/hiciste» en una pantalla del
+// colegio → rojo con archivo:línea; revertir «Seleccione tipo»/«Asigne» → cae el ancla.
+const B_U = "(?<![\\p{L}])";
+const E_U = "(?![\\p{L}])";
+// Formas de tuteo INEQUÍVOCAS (2ª persona), no colisionan con 3ª persona.
+const LEXEMAS_TUTEO_VERBAL = [
+    // presentes -as/-es
+    "tienes", "puedes", "quieres", "debes", "necesitas", "sabes", "prefieres",
+    "eliges", "escribes", "guardas", "agregas", "editas", "creas", "completas",
+    "vives", "sientes", "seleccionas", "asignas", "resuelves", "anotas",
+    // pretéritos -aste/-iste
+    "hiciste", "registraste", "anotaste", "resolviste", "asignaste", "seleccionaste",
+    "completaste", "creaste", "enviaste", "agregaste", "editaste", "guardaste",
+    "tuviste", "pudiste",
+];
+const PATRONES_TUTEO = LEXEMAS_TUTEO_VERBAL.map((l) => new RegExp(B_U + l + E_U, "iu"));
+
+describe("SPEC-523 · el colegio + comité hablan de «usted» (sin tuteo verbal)", () => {
+    it("ninguna forma verbal de tuteo aparece en el árbol del colegio", () => {
+        const hits: string[] = [];
+        for (const dir of DIRS_COLEGIO) {
+            for (const archivo of recorrer(dir)) {
+                const codigo = sinComentarios(fs.readFileSync(archivo, "utf-8"));
+                for (const [i, linea] of codigo.split("\n").entries()) {
+                    for (const patron of PATRONES_TUTEO) {
+                        const m = linea.match(patron);
+                        if (m) hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${m[0]}»: ${linea.trim().slice(0, 90)}`);
+                    }
+                }
+            }
+        }
+        expect(
+            hits,
+            [
+                "SPEC-523 — tuteo verbal en una pantalla del colegio/comité:",
+                ...hits,
+                "",
+                "El colegio y el comité hablan de USTED. Pase el verbo a usted",
+                "(tienes→tiene, puedes→puede, hiciste→hizo, Anota→Anote).",
+            ].join("\n"),
+        ).toEqual([]);
+    });
+
+    it("contraprueba: los imperativos ambiguos que tocó SPEC-523 quedaron en «usted»", () => {
+        const tabla = fs.readFileSync(
+            path.join(SRC, "components/modules/colegio/unificado/TablaEstudiantes.tsx"),
+            "utf-8",
+        );
+        expect(tabla.includes("Seleccione tipo")).toBe(true);
+        const materias = fs.readFileSync(
+            path.join(SRC, "components/modules/colegio/curso/SeccionMateriasCurso.tsx"),
+            "utf-8",
+        );
+        expect(materias.includes("Asigne la primera")).toBe(true);
+    });
+});

@@ -55,7 +55,7 @@ type EstadoObservacion = { activa: ObservacionVista | null; historial: Observaci
 type Mensaje = { type: "success" | "error"; text: string } | null;
 
 const etiquetaOptions = [
-    { value: "ESTUDIANTE", label: "Alumno" },
+    { value: "ESTUDIANTE", label: "Estudiante" },
     { value: "MADRE", label: "Madre" },
     { value: "PADRE", label: "Padre" },
     { value: "PRIMO", label: "Primo" },
@@ -111,7 +111,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                     setCurso(dataCurso.curso);
                 }
             } else if (resEstudiante.status === 404 || resEstudiante.status === 403) {
-                setError(dataEstudiante?.error?.message || "No tienes acceso a este alumno");
+                setError(dataEstudiante?.error?.message || "No tiene acceso a este estudiante");
                 setLoading(false);
                 return;
             }
@@ -124,7 +124,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                 setObservacion(dataObservacion.observacion);
             }
         } catch {
-            setError("Error de red cargando el alumno");
+            setError("Error de red cargando el estudiante");
         } finally {
             setLoading(false);
         }
@@ -183,7 +183,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                     type: "success",
                     text: activa
                         ? "Observación especial retirada"
-                        : "Alumno marcado en observación especial: te avisaremos al primer reporte",
+                        : "Estudiante marcado en observación especial: le avisaremos al primer reporte",
                 });
                 if (estudianteId) await cargar(estudianteId);
             } else {
@@ -230,7 +230,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                             >
                                 ← Volver al curso
                             </Button>
-                            <h1 className="text-2xl font-bold text-body">{estudiante?.nombre || "Alumno"}</h1>
+                            <h1 className="text-2xl font-bold text-body">{estudiante?.nombre || "Estudiante"}</h1>
                             {curso && <p className="text-sm text-muted">{curso.nombre}</p>}
                         </div>
                         <Button onClick={() => setModalOpen(true)}>Nuevo identificador</Button>
@@ -251,7 +251,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                     {loading ? (
                         <SkeletonLista />
                     ) : error ? (
-                        <ErrorState title="No pudimos cargar el alumno" description={error} onRetry={() => estudianteId && cargar(estudianteId)} />
+                        <ErrorState title="No pudimos cargar el estudiante" description={error} onRetry={() => estudianteId && cargar(estudianteId)} />
                     ) : estudiante ? (
                         <div className="space-y-6">
                             {/* SPEC-150 (US3): observación especial — estado (desde
@@ -262,7 +262,7 @@ export default function AlumnoDetallePageClient({ params }: { params: Promise<{ 
                                     <div>
                                         <h2 className="text-lg font-semibold text-body">Observación especial</h2>
                                         <p className="mt-1 text-sm text-muted">
-                                            Los alumnos en observación especial generan aviso al primer reporte.
+                                            Los estudiantes en observación especial generan aviso al primer reporte.
                                         </p>
                                     </div>
                                     <button

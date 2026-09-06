@@ -18,6 +18,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/dashboard/colegio/voz-usted.candado.test.ts",
     // SPEC-514: candado de clase — el área interna (admin/operador/comité/verificador) sin voseo.
     "src/app/dashboard/admin/voz-usted-interno.candado.test.ts",
+    // SPEC-522: candado de clase — el colegio dice «estudiante», no «alumno» (texto visible).
+    "src/app/dashboard/colegio/alumno-estudiante.candado.test.ts",
     // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del
     // árbol de render + lexemas exactos. Mixta PreferenciasNotificaciones §D exenta.
     "src/app/voz-tu-padre-publico.candado.test.ts",
