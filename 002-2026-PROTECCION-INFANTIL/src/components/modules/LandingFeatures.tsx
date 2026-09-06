@@ -11,7 +11,7 @@ const FEATURES = [
     },
     {
         title: "Consulta pública",
-        description: "Verifica si un número, nick o usuario fue reportado antes de interactuar.",
+        description: "Verifica si una cuenta fue reportada antes de interactuar.",
         icon: SearchIcon,
     },
     {

@@ -207,7 +207,7 @@ describe("MisHijos", () => {
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
         await waitFor(() => expect(screen.getAllByRole("option", { name: "Roblox" }).length).toBeGreaterThan(0));
 
-        fireEvent.change(screen.getByLabelText("Agregar identificador"), { target: { value: "juan@correo.com" } });
+        fireEvent.change(screen.getByLabelText("Agregar cuenta"), { target: { value: "juan@correo.com" } });
         fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
 
         await waitFor(() => {

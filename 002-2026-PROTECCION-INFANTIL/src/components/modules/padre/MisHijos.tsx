@@ -254,7 +254,7 @@ export function MisHijos({
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ activo }),
                 }),
-            "No se pudo cambiar el identificador"
+            "No se pudo cambiar la cuenta"
         );
 
     // Solo saca el identificador de la vista de ESTE padre.
@@ -276,7 +276,7 @@ export function MisHijos({
                         ...(plataformaId ? { plataformaId } : {}),
                     }),
                 }),
-            "No se pudo agregar el identificador"
+            "No se pudo agregar la cuenta"
         );
 
     return (
@@ -327,7 +327,7 @@ export function MisHijos({
                     </div>
 
                     <div className="rounded-xl border border-cielo/40 p-3 dark:border-cielo/30">
-                        <p className="text-sm font-medium text-body">Sus identificadores</p>
+                        <p className="text-sm font-medium text-body">Sus cuentas</p>
                         <p className="mb-2 text-xs text-muted">
                             Agrega todos los que conozcas: su usuario de Roblox, su teléfono, su correo.
                             Puedes sumar más después.
@@ -356,7 +356,7 @@ export function MisHijos({
                         )}
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
                             <Input
-                                label="Identificador"
+                                label="Cuenta"
                                 placeholder="su Roblox, teléfono, correo…"
                                 value={borrador.valor}
                                 onChange={(e) => setBorrador({ ...borrador, valor: e.target.value })}
@@ -473,7 +473,7 @@ function HijoCard({
                             <button
                                 type="button"
                                 aria-label={`${i.activo ? "Inactivar" : "Activar"} ${i.valor} para todos`}
-                                title="El identificador es del niño: el cambio también aplica al otro padre"
+                                title="La cuenta es del niño: el cambio también aplica al otro padre"
                                 className="text-xs text-muted underline hover:text-body"
                                 onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
                             >
@@ -496,7 +496,7 @@ function HijoCard({
 
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
                 <Input
-                    label="Agregar identificador"
+                    label="Agregar cuenta"
                     placeholder="su Roblox, teléfono, correo…"
                     value={nuevo.valor}
                     onChange={(e) => setNuevo({ ...nuevo, valor: e.target.value })}

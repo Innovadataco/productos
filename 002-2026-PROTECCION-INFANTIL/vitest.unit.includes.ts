@@ -97,6 +97,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",
     "src/components/modules/AdminNav.test.tsx",
+    // SPEC-512: candado de voz «la cuenta» (identificador/nick → cuenta en padre+público).
+    "src/components/modules/voz-cuenta.candado.test.ts",
     "src/components/modules/AdminAntiAbusoSimulador.test.tsx",
     "src/components/modules/AdminAntiAbusoSimulacion.test.tsx",
     "src/components/modules/AdminReporteDetalle.test.tsx",

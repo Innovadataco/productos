@@ -6,7 +6,7 @@ export const metadata: Metadata = {
         absolute: "Protección Infantil — Reportes Comunitarios",
     },
     description:
-        "Consulta identificadores de riesgo y reporta conductas sospechosas para proteger a menores en plataformas digitales.",
+        "Consulta cuentas de riesgo y reporta conductas sospechosas para proteger a menores en plataformas digitales.",
     alternates: {
         canonical: "/",
     },
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
         url: "/",
         title: "Protección Infantil — Reportes Comunitarios",
         description:
-            "Consulta identificadores de riesgo y reporta conductas sospechosas para proteger a menores en plataformas digitales.",
+            "Consulta cuentas de riesgo y reporta conductas sospechosas para proteger a menores en plataformas digitales.",
     },
 };
 
