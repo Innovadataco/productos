@@ -10,9 +10,9 @@
  *
  * Integración (jsdom) por el glob src/**: no toca vitest.unit.includes.ts.
  *
- * NOTA: el hero (HeroEstado «necesita que actúe hoy») NO se incluye: remapearlo a
- * ámbar choca con la D1 de SPEC-143 (ámbar = «ya atendido, nada pendiente»). Ese
- * conflicto lo arbitra el CEO/Diseño; este candado cubre lo no-ambiguo.
+ * NOTA: el hero (HeroEstado) tiene su propio candado desde SPEC-560/D-120
+ * (`lib/colegio/semaforo.test.ts` + `HeroEstado.test.tsx`): allí PENDIENTE=ámbar,
+ * ATENDIDO/TRANQUILO=pino, nunca rubí. Este candado cubre embudo/cobertura/KPI.
  */
 import React from "react";
 import * as fs from "node:fs";

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
-import { resolverEstado } from "@/lib/colegio/semaforo";
+import { resolverEstado, colorDeEstadoColegio } from "@/lib/colegio/semaforo";
 import { fechaLargaES } from "@/lib/colegio/fechas-humano";
 import type { HomeRector } from "@/lib/dal/repositories/colegio-resumen";
 import { HeroEstado } from "./HeroEstado";
@@ -119,7 +119,7 @@ export function HomeRectorPage({ nombreUsuario, datos, cobertura }: HomeRectorPa
                             estudiantes={kpis.estudiantes}
                             sinRedes={datos.cobertura.sinRedes}
                             sinContacto={datos.cobertura.sinContacto}
-                            estado={estado}
+                            estado={colorDeEstadoColegio(estado)}
                         />
                     )}
                     <TendenciaReportes
