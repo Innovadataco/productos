@@ -11,7 +11,6 @@ import {
     crearPlataforma,
     crearPaisCiudad,
 } from "@/lib/reporte-test-utils";
-import { encryptParameter } from "@/lib/param-encryption";
 import type { RolUsuario } from "@prisma/client";
 
 let activeToken: string | null = null;
@@ -41,7 +40,8 @@ async function crearReporteConOriginalCifrado() {
             identificador: "+57300TEST000",
             plataformaId: plataforma!.id,
             texto: "Texto anonimizado de prueba para el reporte de validación.",
-            textoOriginal: encryptParameter(textoOriginal),
+            // S-C: el original va EN PLANO al fixture; el factory lo cifra con la DEK por denuncia.
+            textoOriginal,
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
             ciudad: "Bogotá",
             pais: "Colombia",
@@ -121,31 +121,20 @@ describe("POST /api/admin/reportes/[id]/revelar-original", () => {
         expect(body.textoOriginal).toContain("María");
     });
 
-    it("devuelve 404 si el reporte no tiene texto original", async () => {
+    it("devuelve 404 si el reporte no existe", async () => {
+        // S-C (D-116/D-117): TODO reporte tiene su original sellado al alta (write-once), así que ya
+        // no existe «reporte sin texto original». El único 404 del endpoint es reporte inexistente.
         const admin = await crearUsuario("ADMIN");
-        const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await crearReporteFixture(prisma, {
-            data: {
-                identificador: "+57300TEST000",
-                plataformaId: plataforma!.id,
-                texto: "Texto sin original.",
-                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
-                ciudad: "Bogotá",
-                pais: "Colombia",
-                esAnonimo: false,
-                estado: "PENDIENTE",
-                numeroSeguimiento: `RPT-${Date.now()}`,
-            },
-        });
+        const idInexistente = "cm00000000000000000000000";
         activeToken = await crearTokenUsuario(admin.id, "ADMIN");
 
         const req = crearRequestAutenticado(
             "POST",
-            `http://localhost:5005/api/admin/reportes/${reporte.id}/revelar-original`,
+            `http://localhost:5005/api/admin/reportes/${idInexistente}/revelar-original`,
             {},
             activeToken
         );
-        const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
+        const res = await POST(req, { params: Promise.resolve({ id: idInexistente }) });
         expect(res.status).toBe(404);
     });
 });
