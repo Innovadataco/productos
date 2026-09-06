@@ -35,6 +35,8 @@ type Props = {
     value: string;
     /** Tope en hora LOCAL, "YYYY-MM-DDTHH:mm" (el ahora). */
     max: string;
+    /** SPEC-563: piso en hora LOCAL, "YYYY-MM-DDTHH:mm" (hace 2 años) — comodidad; la barrera es el servidor. */
+    min?: string;
     /**
      * SPEC-438 (I-305): `aproximada` viaja EN LA MISMA emisión que el valor.
      * Con dos callbacks separados, el segundo llegaba con el `fechaIncidente`
@@ -52,7 +54,7 @@ function a24(hora12: number, meridiano: Meridiano): number {
     return meridiano === "pm" ? base + 12 : base;
 }
 
-export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
+export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) {
     const { fecha: fechaDelValor, hora12, meridiano } = partesHoraLocal(value);
 
     /**
@@ -70,6 +72,7 @@ export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
     }, [fechaDelValor]);
     const fecha = fechaDelValor !== "" ? fechaDelValor : diaElegido;
     const maxFecha = max.slice(0, 10);
+    const minFecha = min ? min.slice(0, 10) : undefined;
     const maxHora24 = Number.parseInt(max.slice(11, 13), 10);
 
     // Solo el día de HOY tiene horas futuras que bloquear; los días anteriores
@@ -115,6 +118,7 @@ export function FechaHoraIncidente({ value, max, onChange, error }: Props) {
                     aria-label="Día del incidente"
                     value={fecha}
                     max={maxFecha}
+                    min={minFecha}
                     onChange={(e) => cambiarFecha(e.target.value)}
                     className="h-12 min-w-0 flex-1 basis-40 rounded-xl border border-tinta/15 bg-papel px-3 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
                 />

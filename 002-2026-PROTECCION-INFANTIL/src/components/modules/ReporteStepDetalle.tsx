@@ -56,6 +56,15 @@ export function ReporteStepDetalle({
         const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60_000);
         return local.toISOString().slice(0, 16);
     })();
+    // SPEC-563 (Jelkin): piso de 2 años atrás, en la MISMA zona local que el input.
+    // Es comodidad del navegador; la barrera de verdad la aplica el servidor
+    // (fechaIncidenteSchema). Mismo cálculo local que `hoy`.
+    const hace2Anios = (() => {
+        const ahora = new Date();
+        ahora.setFullYear(ahora.getFullYear() - 2);
+        const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60_000);
+        return local.toISOString().slice(0, 16);
+    })();
 
     useEffect(() => {
         fetch("/api/paises", { credentials: "include" })
@@ -180,6 +189,7 @@ export function ReporteStepDetalle({
                 <FechaHoraIncidente
                     value={fechaIncidente}
                     max={hoy}
+                    min={hace2Anios}
                     onChange={(elegido, aproximada) =>
                         // Una sola emisión: la fecha y su marca viajan juntas.
                         // Elegir hora EXACTA (sin marca) apaga la aproximación.
