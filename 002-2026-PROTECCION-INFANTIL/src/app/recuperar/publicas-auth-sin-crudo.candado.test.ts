@@ -11,8 +11,8 @@
  * Por eso este candado hace **BFS transitivo** desde las páginas Y los layouts,
  * siguiendo los imports `@/…`/relativos que resuelven a archivos de render bajo
  * `src/` (components/app), con set de visitados. Escanea todo lo alcanzable.
- * Excluye data-viz (Sparkline) y tests. Muere por mutación en cualquier nodo del
- * render, incluido el chrome del layout.
+ * Excluye solo tests (Sparkline ya está tokenizada por SPEC-537). Muere por mutación en
+ * cualquier nodo del render, incluido el chrome del layout.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -30,8 +30,9 @@ const RAICES = [
     path.join(APP, "reportar", "layout.tsx"),
 ];
 
-// data-viz (color = valor): fuera del barrido, lo define Diseño.
-const EXCLUYE = /Sparkline\.tsx$|\.test\.tsx?$/;
+// SPEC-537: Sparkline ya NO se exceptúa — Diseño cerró su escala y quedó tokenizada
+// (serie→cielo, ejes→tinta, halo→papel), con su propio candado de mapeo. Solo tests fuera.
+const EXCLUYE = /\.test\.tsx?$/;
 
 function resolver(spec: string, desde: string): string | null {
     let base: string;
