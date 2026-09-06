@@ -136,7 +136,7 @@ export class ComiteApelacionesService {
                 pais: r.pais,
                 // SPEC-130 (BL-4, O-2): el texto sale descifrado solo por este camino
                 // autorizado del comité; purgado → marcador tal cual.
-                texto: descifrarTextoReporte(r.texto),
+                texto: descifrarTextoReporte(r.texto, { reporteId: r.id }),
                 categoria: r.clasificacion?.categoria ?? null,
                 confianza: r.clasificacion?.confianza ?? null,
             })),

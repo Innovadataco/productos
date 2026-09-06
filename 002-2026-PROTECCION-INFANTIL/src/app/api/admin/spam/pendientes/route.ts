@@ -95,19 +95,23 @@ export async function GET(req: Request) {
         return NextResponse.json({
             reportes: reportes.map((r) => {
                 const secundarias = (r.clasificacion?.categoriasSecundarias as { categoria: string; score: number }[] | null) ?? null;
+                // SPEC-130 (BL-4, O-2): texto descifrado solo en este camino autorizado.
+                // SPEC-520: se descifra UNA vez y alimenta TANTO el motivo COMO la vista.
+                // Antes `derivarMotivoIngreso` recibía `r.texto` CIFRADO y el motivo se
+                // calculaba sobre el ciphertext desde que existe el cifrado (BL-4).
+                const texto = descifrarTextoReporte(r.texto, { reporteId: r.id });
                 const { motivo, confianzaSpam } = derivarMotivoIngreso({
                     categoria: r.clasificacion?.categoria ?? null,
                     confianza: r.clasificacion?.confianza ?? null,
                     categoriasSecundarias: secundarias,
-                    texto: r.texto,
+                    texto,
                     umbralSpam,
                     umbralDominancia,
                     dominiosAcortadores,
                 });
                 return {
                     ...r,
-                    // SPEC-130 (BL-4, O-2): texto descifrado solo en este camino autorizado.
-                    texto: descifrarTextoReporte(r.texto),
+                    texto,
                     motivoIngreso: motivo,
                     confianzaSpam,
                     asignadoA: r.operador ?? null,
