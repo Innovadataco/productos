@@ -585,7 +585,7 @@ async function ejecutar(motivo: string, confirm: boolean, semilla: number): Prom
 }
 
 async function main(): Promise<void> {
-    const args = parseArgs(process.argv);
+    const args = parseArgs(process.argv, ["motivo", "confirm", "semilla"]);
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
     const semilla = typeof args.semilla === "string" ? Number(args.semilla) : 412;
     if (!Number.isFinite(semilla)) throw new Error("[poblar-v5] --semilla debe ser un número");

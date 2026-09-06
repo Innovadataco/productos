@@ -97,13 +97,33 @@ export interface ArgsDemo {
     semilla: number;
 }
 
-export function parseArgs(argv: string[]): Record<string, string | boolean> {
+/**
+ * Parsea `--k=v` y `--k` (booleano). ABORTA (throw) ante CUALQUIER flag no reconocido, antes de
+ * tocar nada. Los scripts de demo POBLAN y BORRAN datos: uno que traga en silencio una bandera
+ * que no entiende es una trampa —`--purga-tota` correría igual el modo por defecto y creerías
+ * que hizo lo que pediste— (mismo criterio que scripts/limpieza, CEO 06-09). Por eso
+ * `flagsPermitidos` es OBLIGATORIO: ningún script puede volver al modo que ignora en silencio.
+ */
+export function parseArgs(argv: string[], flagsPermitidos: readonly string[]): Record<string, string | boolean> {
+    const permitidos = new Set(flagsPermitidos);
     const args: Record<string, string | boolean> = {};
+    const desconocidos: string[] = [];
     for (const raw of argv.slice(2)) {
         if (!raw.startsWith("--")) continue;
         const [k, v] = raw.slice(2).split("=");
         if (!k) continue;
+        if (!permitidos.has(k)) {
+            desconocidos.push(k);
+            continue;
+        }
         args[k] = v === undefined ? true : v;
+    }
+    if (desconocidos.length > 0) {
+        throw new Error(
+            `[demo] Flag(s) no reconocido(s): ${desconocidos.map((d) => `--${d}`).join(", ")}. ` +
+                `Permitidos: ${[...permitidos].map((p) => `--${p}`).join(", ")}. ` +
+                "ABORTA sin tocar datos — un flag ignorado en un script destructivo es una trampa.",
+        );
     }
     return args;
 }

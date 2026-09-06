@@ -177,7 +177,7 @@ async function ejecutar(motivo: string, confirm: boolean) {
 }
 
 async function main() {
-    const args = parseArgs(process.argv);
+    const args = parseArgs(process.argv, ["motivo", "confirm"]);
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
     const confirm = args.confirm === true;
     await ejecutar(motivo, confirm);
