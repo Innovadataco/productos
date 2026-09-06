@@ -11,7 +11,7 @@ const mockParametroFindUnique = vi.hoisted(() => vi.fn());
 const mockPlataformaFindUnique = vi.hoisted(() => vi.fn());
 const mockSendReporte = vi.hoisted(() => vi.fn());
 const mockGenerarNumeroSeguimiento = vi.hoisted(() => vi.fn());
-const mockEncryptParameter = vi.hoisted(() => vi.fn());
+const mockCrearReporteConTexto = vi.hoisted(() => vi.fn());
 const mockLoggerInfo = vi.hoisted(() => vi.fn());
 const mockLoggerError = vi.hoisted(() => vi.fn());
 
@@ -55,8 +55,10 @@ vi.mock("@/lib/reporte-utils", () => ({
     generarNumeroSeguimiento: () => mockGenerarNumeroSeguimiento(),
 }));
 
-vi.mock("@/lib/param-encryption", () => ({
-    encryptParameter: (val: string) => mockEncryptParameter(val),
+// S-C (D-116/D-117): el executor crea por el factory de texto cifrado, no por reporte.create directo.
+// Se mockea el factory (unit lane, sin BD ni cripto real) y se afirma qué le pasa el executor.
+vi.mock("@/lib/dal/services/crear-reporte-con-texto", () => ({
+    crearReporteConTexto: (...args: unknown[]) => mockCrearReporteConTexto(...args),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -85,9 +87,9 @@ describe("executor.ts", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockGenerarNumeroSeguimiento.mockReturnValue("RPT-TEST01");
-        mockEncryptParameter.mockImplementation((val: string) => `enc:${val}`);
         mockSendReporte.mockResolvedValue(undefined);
         mockPlataformaFindUnique.mockResolvedValue({ id: "plataforma-1" });
+        mockCrearReporteConTexto.mockResolvedValue({ id: "reporte-1", numeroSeguimiento: "RPT-TEST01", estado: "PENDIENTE" });
         mockReporteCreate.mockResolvedValue({ id: "reporte-1" });
         mockSimulacionReporteCreate.mockResolvedValue({ id: "sim-rep-1" });
         mockSimulacionReporteFindMany.mockResolvedValue([]);
@@ -101,9 +103,11 @@ describe("executor.ts", () => {
 
             await crearReporteSimulacion("run-1", 1, casoCompleto, "ornith:9b");
 
-            expect(mockReporteCreate).toHaveBeenCalledWith(
+            expect(mockCrearReporteConTexto).toHaveBeenCalledWith(
+                expect.anything(),
                 expect.objectContaining({
-                    data: expect.objectContaining({
+                    texto: casoCompleto.texto,
+                    reporte: expect.objectContaining({
                         fechaIncidente: new Date("2026-01-15T10:00:00Z"),
                         ciudad: "Bogotá",
                         pais: "Colombia",
@@ -119,10 +123,10 @@ describe("executor.ts", () => {
 
             await crearReporteSimulacion("run-1", 1, casoCompleto, "ornith:9b");
 
-            const data = mockReporteCreate.mock.calls[0][0].data;
-            expect(data.ciudad).not.toBe("Simulación");
-            expect(data.pais).not.toBe("Simulación");
-            expect(data.fechaIncidente).toEqual(new Date("2026-01-15T10:00:00Z"));
+            const reporte = mockCrearReporteConTexto.mock.calls[0][1].reporte;
+            expect(reporte.ciudad).not.toBe("Simulación");
+            expect(reporte.pais).not.toBe("Simulación");
+            expect(reporte.fechaIncidente).toEqual(new Date("2026-01-15T10:00:00Z"));
         });
 
         it("guarda categoriaEsperada solo en SimulacionReporte", async () => {
@@ -130,7 +134,7 @@ describe("executor.ts", () => {
 
             await crearReporteSimulacion("run-1", 1, casoCompleto, "ornith:9b");
 
-            const reporteData = mockReporteCreate.mock.calls[0][0].data;
+            const reporteData = mockCrearReporteConTexto.mock.calls[0][1].reporte;
             expect(reporteData.categoriaEsperada).toBeUndefined();
             expect(mockSimulacionReporteCreate).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -155,8 +159,8 @@ describe("executor.ts", () => {
 
             await crearReporteSimulacion("run-1", 1, casoMinimo, "ornith:9b");
 
-            const data = mockReporteCreate.mock.calls[0][0].data;
-            expect(data.edadVictima).toBeUndefined();
+            const reporte = mockCrearReporteConTexto.mock.calls[0][1].reporte;
+            expect(reporte.edadVictima).toBeUndefined();
             expect(mockSimulacionReporteCreate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     data: expect.objectContaining({
@@ -181,7 +185,7 @@ describe("executor.ts", () => {
 
             await runSimulacionBatchCreator("run-1", "ornith:9b");
 
-            expect(mockReporteCreate).toHaveBeenCalledTimes(2);
+            expect(mockCrearReporteConTexto).toHaveBeenCalledTimes(2);
             expect(mockSendReporte).toHaveBeenCalledTimes(2);
             // I-06: NO se marca COMPLETADA al encolar; queda EN_PROGRESO
             const updatesConEstado = mockSimulacionRunUpdate.mock.calls
@@ -238,7 +242,7 @@ describe("executor.ts", () => {
 
             await runSimulacionBatchCreator("run-1", "ornith:9b");
 
-            expect(mockReporteCreate).toHaveBeenCalledTimes(1);
+            expect(mockCrearReporteConTexto).toHaveBeenCalledTimes(1);
             expect(mockSendReporte).toHaveBeenCalledTimes(1);
         });
 
@@ -258,7 +262,7 @@ describe("executor.ts", () => {
 
             await runSimulacionBatchCreator("run-1", "ornith:9b");
 
-            expect(mockReporteCreate).toHaveBeenCalledTimes(1);
+            expect(mockCrearReporteConTexto).toHaveBeenCalledTimes(1);
             const updatesConEstado = mockSimulacionRunUpdate.mock.calls
                 .map((c) => c[0]?.data?.estado)
                 .filter(Boolean);
@@ -286,7 +290,7 @@ describe("executor.ts", () => {
 
             await runSimulacionBatchCreator("run-1", "ornith:9b");
 
-            expect(mockReporteCreate).not.toHaveBeenCalled();
+            expect(mockCrearReporteConTexto).not.toHaveBeenCalled();
             expect(mockSimulacionRunUpdate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     data: expect.objectContaining({
@@ -306,7 +310,7 @@ describe("executor.ts", () => {
 
             await runSimulacionBatchCreator("run-1", "ornith:9b");
 
-            expect(mockReporteCreate).not.toHaveBeenCalled();
+            expect(mockCrearReporteConTexto).not.toHaveBeenCalled();
             expect(mockSimulacionRunUpdate).not.toHaveBeenCalled();
         });
 
