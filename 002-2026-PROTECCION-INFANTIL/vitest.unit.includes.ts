@@ -23,6 +23,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del
     // árbol de render + lexemas exactos. Mixta PreferenciasNotificaciones §D exenta.
     "src/app/voz-tu-padre-publico.candado.test.ts",
+    // SPEC-525: /registro/inicio — tarjetas de rol en «usted», puerta pública en «tú».
+    "src/app/registro/inicio/voz-tarjetas.candado.test.ts",
     // SPEC-504 (CEO): voz del profesional (usted) sin voseo; borde Unicode. Test de
     // fs puro → lane unit (antes solo lo globaba integración, con tax de BD).
     "src/app/perfil-profesional/completar/voz.candado.test.ts",
