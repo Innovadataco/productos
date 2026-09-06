@@ -24,11 +24,12 @@ type Props = {
     onVerDetalle: (contacto: Contacto) => void;
     onAgregarDato: (contacto: Contacto) => void;
     onPausar: (contacto: Contacto) => void;
+    onEditar: (contacto: Contacto) => void;
     onQuitar: (contacto: Contacto) => void;
     ocupado?: boolean;
 };
 
-export function TarjetaPersona({ contacto, onVerDetalle, onAgregarDato, onPausar, onQuitar, ocupado }: Props) {
+export function TarjetaPersona({ contacto, onVerDetalle, onAgregarDato, onPausar, onEditar, onQuitar, ocupado }: Props) {
     const tono = tonoDeContacto(contacto);
     const nombre = nombreVisible(contacto);
     const enAtencion = tono === "ambar";
@@ -116,6 +117,14 @@ export function TarjetaPersona({ contacto, onVerDetalle, onAgregarDato, onPausar
                     className="inline-flex h-9 items-center rounded-xl px-3 text-sm font-semibold text-pino transition hover:bg-pino/10 disabled:opacity-50"
                 >
                     + Otro dato
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onEditar(contacto)}
+                    disabled={ocupado}
+                    className="inline-flex h-9 items-center rounded-xl px-3 text-sm font-semibold text-body transition hover:bg-tinta/5 disabled:opacity-50"
+                >
+                    Editar
                 </button>
                 <span className="ml-auto flex items-center gap-1">
                     <button

@@ -182,4 +182,25 @@ describe("Tu círculo de confianza · A-73 (SPEC-367)", () => {
             expect(fetchMock).toHaveBeenCalledWith("/api/circulo-confianza/c1", { method: "DELETE" });
         });
     });
+
+    it("SPEC-539 · «Editar» abre un formulario pre-cargado que guarda nombre/parentesco por PATCH", async () => {
+        const fetchMock = mockearFetch([MARTA]);
+        render(<CirculoConfianzaClient />);
+        await screen.findByText("Marta Gómez");
+
+        fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+
+        // Formulario pre-cargado con lo que ya hay.
+        const form = await screen.findByTestId("editar-contacto");
+        const nombre = within(form).getByDisplayValue("Marta Gómez");
+        fireEvent.change(nombre, { target: { value: "Marta Gómez Actualizada" } });
+        fireEvent.click(within(form).getByRole("button", { name: "Guardar cambios" }));
+
+        await waitFor(() => {
+            const calls = fetchMock.mock.calls as unknown as Array<[string, { method?: string; body?: string } | undefined]>;
+            const patch = calls.find((c) => c[0] === "/api/circulo-confianza/c1" && c[1]?.method === "PATCH");
+            expect(patch).toBeTruthy();
+            expect(JSON.parse(patch![1]!.body ?? "{}").nombre).toBe("Marta Gómez Actualizada");
+        });
+    });
 });

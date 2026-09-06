@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Loader2, Mail, Bell, Lock } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -202,9 +201,17 @@ export function PreferenciasNotificaciones({ rol, correo }: Props = {}) {
                             Te escribimos a <span className="font-semibold">{correo ?? "tu correo"}</span>
                         </p>
                     </div>
-                    <Link href="/dashboard/padre/perfil" className="text-sm font-semibold text-cielo-600 hover:underline">
-                        Cambiar
-                    </Link>
+                    {/* SPEC-539: la puerta a «Mi perfil» no cambia el correo (ese form no
+                        tiene campo de correo). Hasta que entre SPEC-547 (cambio con
+                        verificación del buzón), se muestra honesto y deshabilitado, no un
+                        enlace que no lleva a nada. Se revierte cuando 547 habilite el flujo. */}
+                    <span
+                        className="cursor-not-allowed text-sm font-semibold text-muted"
+                        aria-disabled="true"
+                        title="El cambio de correo estará disponible pronto, con verificación del nuevo buzón."
+                    >
+                        Cambiar (pronto)
+                    </span>
                 </section>
 
                 {/* Toggles reales */}

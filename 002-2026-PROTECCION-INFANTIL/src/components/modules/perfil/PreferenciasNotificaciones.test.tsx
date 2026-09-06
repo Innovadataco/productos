@@ -51,7 +51,9 @@ describe("PreferenciasNotificaciones · vista del padre (SPEC-326 §3.1)", () =>
 
         // Encabezado con el correo.
         await waitFor(() => expect(screen.getByText("juan@correo.com")).toBeDefined());
-        expect(screen.getByText("Cambiar")).toBeDefined();
+        // SPEC-539: el cambio de correo queda honesto/deshabilitado hasta SPEC-547 (no un enlace muerto).
+        expect(screen.getByText("Cambiar (pronto)")).toBeDefined();
+        expect(screen.queryByRole("link", { name: /Cambiar/ })).toBeNull();
 
         // Los 2 toggles reales, en frases.
         expect(screen.getByText("Cuando alguien reporte a una persona de mi círculo")).toBeDefined();
