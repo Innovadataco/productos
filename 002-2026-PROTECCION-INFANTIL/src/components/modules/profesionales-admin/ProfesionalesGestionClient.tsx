@@ -47,7 +47,7 @@ export function ProfesionalesGestionClient() {
                 <h1 className="titular-h1 mt-1">Gestión de profesionales</h1>
                 <p className="cuerpo text-subtle mt-2">
                     El profesional se registra <em className="palabra-estado">él mismo</em>. Desde acá
-                    lo destrabás cuando el correo falla — restablecer contraseña o reenviar el enlace
+                    lo destraba cuando el correo falla — restablecer contraseña o reenviar el enlace
                     con la URL en pantalla para copiar a mano.
                 </p>
                 <div className="mt-4 flex gap-2">

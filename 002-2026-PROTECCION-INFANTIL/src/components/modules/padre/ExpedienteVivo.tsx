@@ -193,7 +193,7 @@ export function ExpedienteVivo({
                     <div>
                         <h2 id="cta-apoyo" className="titular-seccion">¿Necesitas actuar sobre lo que ves?</h2>
                         <p className="cuerpo text-subtle mt-1">
-                            Llamá a la línea oficial o recibí apoyo de un psicólogo de la red.
+                            Llama a la línea oficial o recibe apoyo de un psicólogo de la red.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
