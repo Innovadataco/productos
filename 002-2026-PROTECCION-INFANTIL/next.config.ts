@@ -68,10 +68,14 @@ const nextConfig: NextConfig = {
                 headers: headersSeguridad,
             },
             {
-                // E-6 P4c: el CSP estático NO aplica a /dashboard/** — esa área lo
-                // sirve el middleware (middleware.ts en la raíz, SPEC-287) con nonce por
-                // request (prod). Si ambos emitieran el mismo header habría duplicado.
-                source: "/((?!dashboard).*)",
+                // E-6 P4c: el CSP estático NO aplica al área privada `/dashboard/**` — esa
+                // área la sirve el middleware (middleware.ts en la raíz, SPEC-287) con nonce
+                // por request (prod). Si ambos emitieran el mismo header habría duplicado.
+                // SPEC-531: excluir por SEGMENTO (`dashboard` seguido de `/` o fin), no por
+                // prefijo. El `(?!dashboard)` anterior también excluía la PÚBLICA
+                // `/dashboard-publico`, dejándola sin CSP estática y a merced del nonce del
+                // middleware (que su HTML prerenderizado no lleva) → scripts bloqueados.
+                source: "/((?!dashboard(?:/|$)).*)",
                 headers: [
                     {
                         key: "Content-Security-Policy",

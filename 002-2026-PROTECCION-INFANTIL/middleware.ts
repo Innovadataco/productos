@@ -132,7 +132,11 @@ function buildCsp(nonce: string, esProduccion: boolean): string {
  */
 function aplicarCspSiCorresponde(request: NextRequest, response: NextResponse): NextResponse {
     const { pathname } = request.nextUrl;
-    if (!pathname.startsWith("/dashboard")) return response;
+    // SPEC-531: comparación por SEGMENTO, no por prefijo. `startsWith("/dashboard")`
+    // barría la pública PRERENDERIZADA `/dashboard-publico` al CSP con nonce del área
+    // privada; como su HTML se hornea sin nonce, con `strict-dynamic` el navegador
+    // bloqueaba TODOS sus scripts. El endurecimiento es SOLO del área privada `/dashboard/**`.
+    if (pathname !== "/dashboard" && !pathname.startsWith("/dashboard/")) return response;
 
     const nonce = generarNonce();
     const csp = buildCsp(nonce, process.env.NODE_ENV === "production");
