@@ -73,6 +73,15 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json /app/tsconfig.json /app/next.config.ts ./
 
+# SPEC-567 (I-351): los documentos servidos (índice de /docs/* y confianza del rector) se leen en
+# runtime contra process.cwd()=/app (src/lib/docs/documentos.ts y colegio/confianza-documentos.ts).
+# Sin estas COPY el runner no los tenía → `fs.readFile` lanzaba y TODA ruta de doc daba 404.
+# Es markdown: el peso en la imagen es ruido. El ratchet indice.dockerfile.ratchet.test.ts exige
+# que cada ruta de los dos allowlists quede embarcada acá (muere si alguien la agrega sin COPY).
+COPY --from=builder /app/docs ./docs
+COPY --from=builder /app/specs ./specs
+COPY --from=builder /app/README.md /app/AGENTS.md /app/IMPLEMENTATION-REPORT.md ./
+
 # Directorio compartido app↔worker para el heartbeat del healthcheck (spec 097)
 RUN mkdir -p /app/run && chown nextjs:nodejs /app/run
 
