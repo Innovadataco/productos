@@ -13,6 +13,17 @@ export const reactivarReporteSchema = z.object({
 });
 export type ReactivarReporteInput = z.infer<typeof reactivarReporteSchema>;
 
+// SPEC-513 (PA-21): la cota de FUTURO de la fecha del hecho vive en UN solo
+// lugar. Cualquier endpoint que reciba `fechaIncidente` reusa ESTO — no copia la
+// línea: un `z.string().refine(Date.parse)` suelto en el evento derivó y aceptaba
+// fecha futura. El cliente manda ISO completo (`new Date(valorLocal).toISOString()`),
+// por eso `.datetime()` estricto lo acepta.
+export const fechaIncidenteSchema = z.string().datetime().refine(
+    (val) => new Date(val) <= new Date(),
+    { message: "La fecha del incidente no puede ser futura" },
+);
+export type FechaIncidenteInput = z.infer<typeof fechaIncidenteSchema>;
+
 export const crearReporteSchema = z.object({
     identificador: z.string().min(3).max(100),
     plataforma: z.string().min(1),
@@ -22,10 +33,7 @@ export const crearReporteSchema = z.object({
     // SPEC-438 (I-305): obligatoria y nunca rellenada por el sistema. El
     // cliente ya no manda `new Date()` cuando el campo está vacío: si no hay
     // dato, no se envía y el reporte no sale.
-    fechaIncidente: z.string().datetime().refine(
-        (val) => new Date(val) <= new Date(),
-        { message: "La fecha del incidente no puede ser futura" }
-    ),
+    fechaIncidente: fechaIncidenteSchema,
     /**
      * SPEC-438: `true` cuando el reportante eligió una FRANJA (madrugada,
      * mañana, tarde, noche) en vez de recordar la hora exacta. El análisis

@@ -1,5 +1,6 @@
 /**
- * CANDADO ANTES DEL FIX — POST /api/reportes/[id]/evento acepta fecha FUTURA.
+ * CANDADO (no-regresión) — POST /api/reportes/[id]/evento rechaza fecha FUTURA.
+ * SPEC-513 (PA-21) cerró el hueco; este spec quedó como la no-regresión viva.
  *
  * Contexto (leído en fuente, main, 2026-09-05):
  *  - SPEC-438 endureció el POST PRINCIPAL `/api/reportes`: su `crearReporteSchema`
@@ -19,12 +20,11 @@
  * CANDADO (conducta, muere con el defecto):
  *  - Afirma la conducta BUENA: un evento con fecha futura DEBE rechazarse (400
  *    VALIDATION_ERROR), igual que el POST principal.
- *  - HOY el endpoint responde 201 → el `expect(400)` falla → `test.fail(true)`
- *    mantiene el test VERDE mientras el defecto vive (el bug queda probado en CI).
- *  - Cuando el fix del lote del padre agregue la cota de futuro a ESE bodySchema,
- *    el 400 llega, el cuerpo pasa y Playwright marca el `test.fail` como FALLO:
- *    esa es la señal para RETIRAR este `test.fail` (verde con el defecto puesto,
- *    rojo en cuanto se arregla).
+ *  - SPEC-513 (PA-21) arregló el hueco: el bodySchema del evento ahora reusa el
+ *    validador CANÓNICO `fechaIncidenteSchema` (lib/validators). Se RETIRÓ el
+ *    `test.fail(true)`: este spec es ya la no-regresión viva (rojo si el guard se
+ *    cae). El candado de clase `fecha-incidente-schema-unico` impide además que
+ *    otra ruta vuelva a declarar su propio schema sobre `fechaIncidente`.
  *
  * Siembra por `@/lib/prisma` (BD de CI/dev, NO producción) — calca el arnés del
  * spec hermano `mis-reportes-expediente.spec.ts` (SPEC-340).
@@ -103,14 +103,9 @@ async function reportar(page: Page, identificador: string): Promise<string> {
 }
 
 test.describe("Candado · POST /api/reportes/[id]/evento no acepta fecha futura", () => {
-    test("(candado antes del fix) un evento con fechaIncidente FUTURA se rechaza 400 VALIDATION_ERROR", async ({ page }) => {
-        test.fail(
-            true,
-            "El bodySchema de /api/reportes/[id]/evento (route.ts:26-28) NO cota el futuro; hoy persiste 201. " +
-                "El fix del lote del padre debe rechazar la fecha futura como el POST principal (SPEC-438). " +
-                "Cuando el 400 llegue, este test pasa y Playwright marca el test.fail como fallo: RETIRAR entonces.",
-        );
-
+    test("un evento con fechaIncidente FUTURA se rechaza 400 VALIDATION_ERROR", async ({ page }) => {
+        // SPEC-513 (PA-21): el bodySchema del evento ya reusa `fechaIncidenteSchema`
+        // (cota de futuro). Se RETIRÓ el `test.fail`: esto es la no-regresión viva.
         const email = emailUnico();
         await crearPadreCompleto(email);
         await login(page, email);

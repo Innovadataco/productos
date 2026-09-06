@@ -19,13 +19,13 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
 import { sendReporte } from "@/lib/queue";
+import { fechaIncidenteSchema } from "@/lib/validators";
 
 const bodySchema = z.object({
     texto: z.string().trim().min(10, "Cuéntanos qué pasó").max(2000),
-    // Fecha Y hora del hecho (brief §2.2) — ISO local o completo.
-    fechaIncidente: z
-        .string()
-        .refine((v) => !Number.isNaN(Date.parse(v)), { message: "Fecha y hora inválidas" }),
+    // SPEC-513 (PA-21): la fecha del hecho reusa la regla CANÓNICA (incluye la
+    // cota de futuro). Antes tenía un `Date.parse` propio que aceptaba futuro.
+    fechaIncidente: fechaIncidenteSchema,
 });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

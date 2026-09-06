@@ -75,11 +75,17 @@ describe("SPEC-438 · sin fecha y hora no se puede enviar", () => {
 
     it("el esquema del servidor la exige (no es opcional ni tiene default)", () => {
         const v = sinComentarios(leer("src/lib/validators.ts"));
+        // SPEC-513 (PA-21): la cota de futuro se extrajo a `fechaIncidenteSchema`
+        // (validador ÚNICO que reusan crear y evento). Sigue siendo datetime estricto.
+        const iDef = v.indexOf("export const fechaIncidenteSchema");
+        expect(iDef, "debe existir el validador compartido").toBeGreaterThan(-1);
+        expect(v.slice(iDef, iDef + 200)).toContain("z.string().datetime()");
+        // crearReporteSchema la REUSA y NO la hace opcional (sin hora no hay reporte).
         const i = v.indexOf("fechaIncidente:");
-        const trozo = v.slice(i, i + 200);
-        expect(trozo).toContain("z.string().datetime()");
+        const trozo = v.slice(i, i + 120);
+        expect(trozo).toContain("fechaIncidenteSchema");
         expect(trozo, "si fuera opcional, el servidor aceptaría un reporte sin hora").not.toMatch(
-            /fechaIncidente:\s*z\.string\(\)\.datetime\(\)[^,]*\.optional\(\)/,
+            /fechaIncidente:\s*fechaIncidenteSchema\s*\.optional\(\)/,
         );
     });
 });
