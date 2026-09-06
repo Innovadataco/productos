@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Calendario",
-    description: "Publica y retira las franjas en las que atiendes.",
+    description: "Publique y retire las franjas en las que atiende.",
 };
 
 export default async function CalendarioProfesionalPage() {

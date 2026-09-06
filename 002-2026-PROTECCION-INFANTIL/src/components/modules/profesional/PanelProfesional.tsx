@@ -123,7 +123,7 @@ export function Solicitudes({ data }: { data: PanelProfesionalDto }) {
                                 </p>
                                 {s.compartioExpediente && (
                                     <p className="mt-1 text-xs text-cielo">
-                                        Te compartió el expediente de su hijo
+                                        Le compartió el expediente de su hijo
                                     </p>
                                 )}
                                 <SolicitudAcciones solicitudId={s.id} />
@@ -234,7 +234,7 @@ export function PorCobrar({ data }: { data: PanelProfesionalDto }) {
                 Una cita sin cerrar no entra en el giro.
             </p>
             <dl className="mt-4 space-y-1.5 border-t border-tinta/8 pt-3 text-xs">
-                <Fila termino="Tu tarifa por consulta" valor={pesos(desglose.tarifaProfesional)} fuerte />
+                <Fila termino="Su tarifa por consulta" valor={pesos(desglose.tarifaProfesional)} fuerte />
                 <Fila termino="El padre paga" valor={pesos(desglose.pagaElPadre)} />
                 <Fila
                     termino={`Servicio de la red (${desglose.porcentajeServicio}%)`}
@@ -260,7 +260,7 @@ function Fila({ termino, valor, fuerte }: { termino: string; valor: string; fuer
 function Marcador({ data }: { data: PanelProfesionalDto }) {
     const { familiasAtendidas, solicitudesRecibidas, sinConfirmar } = data.marcador;
     return (
-        <Bloque titulo="Tu año en la red">
+        <Bloque titulo="Su año en la red">
             <div className="grid grid-cols-3 gap-2 text-center">
                 <Kpi n={familiasAtendidas} etiqueta="familias atendidas" />
                 <Kpi n={solicitudesRecibidas} etiqueta="solicitudes recibidas" />
@@ -285,7 +285,7 @@ function Kpi({ n, etiqueta, apagado }: { n: number; etiqueta: string; apagado?: 
 function Verificacion({ data }: { data: PanelProfesionalDto }) {
     const v = data.verificacion;
     return (
-        <Bloque titulo="Tu verificación">
+        <Bloque titulo="Su verificación">
             {!v ? (
                 <Vacio>Sin verificación registrada.</Vacio>
             ) : (
@@ -333,8 +333,8 @@ function ExpedientesCompartidos({ data }: { data: PanelProfesionalDto }) {
             )}
             {/* Brief §9: se listan, no se abren sin el código que da el padre. */}
             <p className="mt-3 text-xs text-subtle">
-                El expediente se abre con el código que la familia te entrega en la sesión. Desde acá
-                solo ves quién te lo compartió.
+                El expediente se abre con el código que la familia le entrega en la sesión. Desde aquí
+                solo ve quién se lo compartió.
             </p>
         </Bloque>
     );

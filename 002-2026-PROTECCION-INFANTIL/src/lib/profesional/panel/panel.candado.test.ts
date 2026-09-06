@@ -98,8 +98,13 @@ describe("SPEC-425 · el marcador respeta el brief §3", () => {
 
     it("los expedientes compartidos se listan, no se abren (brief §9)", () => {
         const panel = leerCodigo(PANEL);
+        // CONDUCTA (lo que 425 protege): el expediente NO se abre desde el panel —
+        // no hay enlace para abrirlo— sino con un código que la familia entrega en
+        // sesión. El ancla positiva es el CONCEPTO invariante «se abre con el código»,
+        // no la oración entera: así un ajuste de voz de Diseño (te→le, ves→ve) no
+        // rompe el candado sin que cambie la conducta (lección SPEC-512/550).
         expect(panel).not.toMatch(/href=.*expediente/i);
-        expect(leer(PANEL)).toContain("se abre con el código que la familia te entrega");
+        expect(leer(PANEL)).toContain("se abre con el código");
     });
 });
 
