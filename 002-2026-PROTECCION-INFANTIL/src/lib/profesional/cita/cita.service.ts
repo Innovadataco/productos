@@ -289,7 +289,7 @@ export async function reasignarPorPadre(input: ReasignarInput) {
         );
     }
     if (input.nuevoProfesionalId === original.profesionalId) {
-        throw new AppError("Elegí OTRO profesional para reasignar", ERROR_CODES.VALIDATION_ERROR, 400);
+        throw new AppError("Elija OTRO profesional para reasignar", ERROR_CODES.VALIDATION_ERROR, 400);
     }
     // Traslado de reserva: fila nueva con nuevo profesional y hereda el pago
     // (no vuelve a cobrar). La original queda como estaba (NO_ASISTIO_PROFESIONAL

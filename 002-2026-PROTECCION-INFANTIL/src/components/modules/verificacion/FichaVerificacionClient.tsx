@@ -193,7 +193,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                     Verificación por ítem
                 </h2>
                 <p className="cuerpo text-subtle mt-1">
-                    Marcá cada requisito. Si algo <em className="palabra-estado">no cumple</em>, escribí qué corregir —
+                    Marque cada requisito. Si algo <em className="palabra-estado">no cumple</em>, escriba qué corregir —
                     el profesional lo recibe tal cual.
                 </p>
                 <ul className="mt-4 space-y-3">
@@ -320,7 +320,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                             ? `${noCumple.length} ítem(s) por corregir — al enviar, el profesional recibe las observaciones por correo.`
                             : todosDecididos
                                 ? "Faltan observaciones en algún ítem NO CUMPLE."
-                                : "Marcá cada requisito antes de decidir."}
+                                : "Marque cada requisito antes de decidir."}
                 </p>
                 <button
                     type="button"

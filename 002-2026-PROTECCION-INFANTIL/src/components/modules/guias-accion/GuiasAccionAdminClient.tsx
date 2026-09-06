@@ -67,7 +67,7 @@ export default function GuiasAccionAdminClient() {
                     categoria,
                     tituloEmocional: "Nueva guía de acción",
                     categoriaBadgeTexto: categoria,
-                    pasosJson: [{ orden: 1, tipo: "TRANQUILIDAD", titulo: "Primer paso", descripcion: "Editá este paso" }],
+                    pasosJson: [{ orden: 1, tipo: "TRANQUILIDAD", titulo: "Primer paso", descripcion: "Edite este paso" }],
                     botonesAccionJson: [{ tipo: "url", texto: "Ejemplo", valor: "https://teprotejo.org", estilo: "secundario" }],
                 }),
             });
@@ -272,7 +272,7 @@ export default function GuiasAccionAdminClient() {
 
             {tab === "cielo" && (
                 <div className="rounded-lg border border-tinta/10 bg-tinta/5 p-6 text-sm text-muted">
-                    Seleccioná &quot;Preview&quot; en una guía del listado para ver cómo se verá públicamente.
+                    Seleccione &quot;Preview&quot; en una guía del listado para ver cómo se verá públicamente.
                 </div>
             )}
 
