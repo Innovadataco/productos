@@ -203,7 +203,7 @@ async function ejecutar(motivo: string, confirm: boolean, semilla: number) {
 }
 
 async function main() {
-    const args = parseArgs(process.argv);
+    const args = parseArgs(process.argv, ["motivo", "confirm", "semilla"]);
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
     const confirm = args.confirm === true;
     const semilla = typeof args.semilla === "string" ? Number.parseInt(args.semilla, 10) : 20260902;
