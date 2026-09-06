@@ -571,4 +571,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/PerfilPadreForm.test.tsx",
     // SPEC-536 (bandeja admin + permisos AD-06 + simulador anti-abuso AD-14): color crudo por arbol de render (frontera Dev1 #458 = Historial).
     "src/components/modules/crudo-admin-reportes-permisos-simulador.candado.test.ts",
+    // SPEC-574 (I-354): clasificar es el complemento de corregir/confirmar (conducta pura); y el
+    // catálogo de categorías de la UI no se desincroniza del enum CategoriaConducta.
+    "src/components/modules/reporte-detalle/capacidades-reporte.candado.test.ts",
+    "src/components/modules/reporte-detalle/catalogo-categorias.candado.test.ts",
 ];

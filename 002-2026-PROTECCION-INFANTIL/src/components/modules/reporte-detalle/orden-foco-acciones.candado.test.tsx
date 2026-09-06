@@ -41,13 +41,15 @@ function reporteRevision(): DetalleReporte {
 const noop = () => {};
 const asyncNoop = async () => {};
 
-function props() {
+function props(over: Partial<React.ComponentProps<typeof AccionesReporte>> = {}) {
     return {
         reporte: reporteRevision(),
         puedeEscalarProp: false,
         textoAnonimizado: "", setTextoAnonimizado: noop,
         categoriaCorreccion: "", setCategoriaCorreccion: noop,
         motivoCorreccion: "", setMotivoCorreccion: noop,
+        categoriaClasificacion: "", setCategoriaClasificacion: noop,
+        notaClasificacion: "", setNotaClasificacion: noop, handleClasificar: asyncNoop,
         actionLoading: false, confirmando: false,
         mostrarBaja: false, setMostrarBaja: noop, motivoBaja: "", setMotivoBaja: noop,
         notaBaja: "", setNotaBaja: noop,
@@ -57,7 +59,13 @@ function props() {
         handleAnonimizar: asyncNoop, handleConfirmar: asyncNoop, handleCorregir: asyncNoop,
         handleBaja: asyncNoop, handleReactivar: asyncNoop, handleValidarAnonimizacion: asyncNoop,
         handleEscalar: asyncNoop,
+        ...over,
     };
+}
+
+/** Reporte en REVISION_MANUAL SIN clasificación → puedeClasificar (el slot muestra «Asignar»). */
+function reporteSinClasificacion(): DetalleReporte {
+    return { ...reporteRevision(), clasificacion: null };
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), select:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -78,5 +86,52 @@ describe("SPEC-562 · orden de foco: Confirmar no es el primer tabable", () => {
         const select = container.querySelector('[data-testid="select-correccion-categoria"]');
         const confirmar = screen.getByRole("button", { name: "Confirmar clasificación" });
         expect(focusables.indexOf(select as Element)).toBeLessThan(focusables.indexOf(confirmar));
+    });
+});
+
+/**
+ * SPEC-574 (I-354) · «Asignar clasificación» ocupa el slot del par ausente y su nota obligatoria es
+ * el candado anti-reflejo. Clasificar recalcula el score y PUEDE volver público el reporte de un
+ * menor, así que aplica el mismo cuidado que Confirmar — pero por una vía más fuerte que el orden-DOM:
+ * el botón arranca DESHABILITADO (no hay categoría ni nota), y un botón deshabilitado no es tabable ni
+ * lo dispara un Enter reflejo.
+ */
+describe("SPEC-574 · «Asignar clasificación»: slot único y gate anti-reflejo", () => {
+    it("sin clasificación aparece «Asignar» y NO Corregir/Confirmar (los tres NUNCA coexisten)", () => {
+        render(<AccionesReporte {...props({ reporte: reporteSinClasificacion() })} />);
+        expect(screen.getByRole("button", { name: "Asignar clasificación" })).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Corregir clasificación" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "Confirmar clasificación" })).toBeNull();
+    });
+
+    it("con clasificación NO aparece «Asignar» (el slot lo ocupan Corregir/Confirmar)", () => {
+        render(<AccionesReporte {...props({ reporte: reporteRevision() })} />);
+        expect(screen.queryByRole("button", { name: "Asignar clasificación" })).toBeNull();
+    });
+
+    it("el botón «Asignar» arranca DESHABILITADO (sin categoría ni nota) → un Enter reflejo no dispara", () => {
+        const { container } = render(<AccionesReporte {...props({ reporte: reporteSinClasificacion() })} />);
+        const boton = screen.getByRole("button", { name: "Asignar clasificación" }) as HTMLButtonElement;
+        expect(boton.disabled, "sin categoría+nota el botón NO puede dispararse").toBe(true);
+        // Deshabilitado ⇒ fuera de los tabables: el primer tabable es el <select> de categoría (benigno).
+        const focusables = [...container.querySelectorAll(FOCUSABLE)];
+        const select = container.querySelector('[data-testid="select-clasificar-categoria"]');
+        expect(select, "el select de categoría debe existir").toBeTruthy();
+        expect(focusables[0]).toBe(select);
+        expect(focusables).not.toContain(boton);
+    });
+
+    it("con categoría Y nota ≥10 el botón se habilita (el gate se abre con dos actos deliberados)", () => {
+        render(
+            <AccionesReporte
+                {...props({
+                    reporte: reporteSinClasificacion(),
+                    categoriaClasificacion: "OFRECIMIENTO_REGALOS",
+                    notaClasificacion: "Encaja en ofrecimiento de regalos por el patrón del mensaje.",
+                })}
+            />,
+        );
+        const boton = screen.getByRole("button", { name: "Asignar clasificación" }) as HTMLButtonElement;
+        expect(boton.disabled).toBe(false);
     });
 });
