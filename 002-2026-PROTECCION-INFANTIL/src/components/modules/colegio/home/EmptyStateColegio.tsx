@@ -75,7 +75,7 @@ export function EmptyStateColegio({ colegioNombre, className = "" }: EmptyStateC
                     className="anim-entrada mt-2 inline-flex min-h-12 items-center rounded-xl px-4 py-2 text-sm font-semibold text-accent transition hover:underline"
                     style={{ "--anim-retardo": "280ms" } as React.CSSProperties}
                 >
-                    Subirla y creamos todo por ti →
+                    Subirla y creamos todo por usted →
                 </Link>
             </div>
         </main>

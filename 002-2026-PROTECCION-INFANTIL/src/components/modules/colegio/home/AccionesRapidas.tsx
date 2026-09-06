@@ -19,7 +19,7 @@ const ACCIONES = [
     {
         href: "/dashboard/colegio/cursos/unificado?modo=excel",
         titulo: "Subir lista en Excel",
-        detalle: "Creamos los cursos por ti",
+        detalle: "Creamos los cursos por usted",
         Icono: Upload,
     },
     {
@@ -32,7 +32,7 @@ const ACCIONES = [
     {
         href: "/dashboard/colegio/cursos",
         titulo: "Ver estudiantes",
-        detalle: "Entra a cada curso",
+        detalle: "Entre a cada curso",
         Icono: Users,
     },
 ] as const;
