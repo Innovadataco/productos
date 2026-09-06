@@ -10,6 +10,10 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
     const [textoAnonimizado, setTextoAnonimizado] = useState("");
     const [categoriaCorreccion, setCategoriaCorreccion] = useState("");
     const [motivoCorreccion, setMotivoCorreccion] = useState("");
+    // SPEC-574 (I-354): clasificación MANUAL — el reporte cayó a REVISION_MANUAL antes de que el
+    // motor lo clasificara, así que no hay ClasificacionIA que corregir/confirmar. El operador la CREA.
+    const [categoriaClasificacion, setCategoriaClasificacion] = useState("");
+    const [notaClasificacion, setNotaClasificacion] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
     const [success, setSuccess] = useState("");
     const [confirmando, setConfirmando] = useState(false);
@@ -187,6 +191,53 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         }
     };
 
+    const handleClasificar = async () => {
+        if (!categoriaClasificacion) {
+            setError("Selecciona una categoría para clasificar.");
+            return;
+        }
+        // La nota es obligatoria (el endpoint exige ≥10 como registro auditable de la decisión
+        // humana). Validamos acá también para dar el error inmediato, sin ir al servidor.
+        if (notaClasificacion.trim().length < 10) {
+            setError("La nota debe explicar el criterio (mínimo 10 caracteres).");
+            return;
+        }
+        // Complemento de Corregir/Confirmar, NO un tercer camino que compita: esta vía existe SOLO
+        // cuando no hay clasificación. Si ya la hay, el endpoint responde 409 y remite a corrección;
+        // acá lo respetamos (surface del mensaje), no lo esquivamos.
+        if (reporte?.clasificacion) {
+            setError("Este reporte ya tiene clasificación; usa la corrección de categoría.");
+            return;
+        }
+        setActionLoading(true);
+        setError("");
+        setSuccess("");
+        try {
+            const res = await fetch(`/api/admin/reportes-revision/${reporteId}/clasificar`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ categoria: categoriaClasificacion, nota: notaClasificacion }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                // Incluye el 409 «ya tiene clasificación»: mostramos el mensaje del servidor tal cual,
+                // que remite a la vía de corrección. No lo enmascaramos ni reintentamos por otro camino.
+                setError(json.error?.message || "Error al clasificar");
+                return;
+            }
+            setSuccess("Reporte clasificado correctamente.");
+            setCategoriaClasificacion("");
+            setNotaClasificacion("");
+            onRefresh();
+            await reloadReporte();
+        } catch {
+            setError("Error al clasificar");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleBaja = async () => {
         if (!motivoBaja) {
             setError("Seleccione un motivo de baja.");
@@ -348,6 +399,10 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         setCategoriaCorreccion,
         motivoCorreccion,
         setMotivoCorreccion,
+        categoriaClasificacion,
+        setCategoriaClasificacion,
+        notaClasificacion,
+        setNotaClasificacion,
         actionLoading,
         confirmando,
         mostrarBaja,
@@ -377,6 +432,7 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         handleDeshacerConfirmar,
         descartarDeshacer,
         handleCorregir,
+        handleClasificar,
         handleBaja,
         handleReactivar,
         handleRevelarOriginal,

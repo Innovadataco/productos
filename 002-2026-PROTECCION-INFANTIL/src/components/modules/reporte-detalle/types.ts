@@ -76,6 +76,10 @@ export interface UseReporteDetalleResult {
     setCategoriaCorreccion: (v: string) => void;
     motivoCorreccion: string;
     setMotivoCorreccion: (v: string) => void;
+    categoriaClasificacion: string;
+    setCategoriaClasificacion: (v: string) => void;
+    notaClasificacion: string;
+    setNotaClasificacion: (v: string) => void;
     actionLoading: boolean;
     confirmando: boolean;
     mostrarBaja: boolean;
@@ -105,6 +109,7 @@ export interface UseReporteDetalleResult {
     handleDeshacerConfirmar: () => Promise<void>;
     descartarDeshacer: () => void;
     handleCorregir: () => Promise<void>;
+    handleClasificar: () => Promise<void>;
     handleBaja: () => Promise<void>;
     handleReactivar: () => Promise<void>;
     handleRevelarOriginal: () => Promise<void>;

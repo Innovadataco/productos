@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/Button";
 import type { DetalleReporte, UseReporteDetalleResult } from "./types";
 import { CATEGORIAS } from "./types";
+import { capacidadesAccionesReporte } from "./capacidades-reporte";
 
 interface AccionesReporteProps {
     reporte: DetalleReporte;
@@ -77,12 +78,13 @@ export function AccionesReporte({
     handleValidarAnonimizacion,
     handleEscalar,
 }: AccionesReporteProps) {
-    const estaEliminado = reporte.eliminado;
-    const puedeAnonimizar = !estaEliminado && reporte.estado === "REQUIERE_ANONIMIZACION";
-    const puedeCorregir = !estaEliminado && !!reporte.clasificacion && reporte.estado !== "CORREGIDO" && !reporte.clasificacion?.correccion;
-    const puedeConfirmar = !estaEliminado && reporte.estado === "REVISION_MANUAL" && !!reporte.clasificacion && !reporte.clasificacion?.correccion;
-    const puedeBaja = !estaEliminado;
-    const puedeReactivar = estaEliminado;
+    // SPEC-574 (I-354): las capacidades salen de una fuente pura (capacidades-reporte.ts) — conducta
+    // testeable sin depender de la forma. `puedeClasificar` (nuevo) aparece SOLO en REVISION_MANUAL sin
+    // clasificación y desaparece en cuanto hay una (donde el endpoint respondería 409). Se destructura
+    // acá cuando llegue la forma de Diseño (dónde va el control, copy, rótulo de nota, orden de foco);
+    // por ahora el candado lo afirma sobre el helper. Ver SPEC-562 para el orden de foco del render.
+    const { puedeAnonimizar, puedeCorregir, puedeConfirmar, puedeBaja, puedeReactivar } =
+        capacidadesAccionesReporte(reporte);
 
     return (
         <div className="space-y-4">
