@@ -44,7 +44,11 @@ const config = [
             "**/*.test.*",
             "src/app/dashboard/admin/colegios/ColegiosPageClient.tsx",
             "src/app/dashboard/admin/comite/gestion/GestionPageClient.tsx",
-            "src/app/dashboard/admin/operadores/gestion/page.tsx",
+            // SPEC-571: el ofensor heredado `operadores/gestion/page.tsx` se dividió
+            // (guardia de rol) en wrapper de servidor + este client; el contenido
+            // grande —el mismo— vive ahora acá. No es deuda nueva: es el mismo archivo
+            // renombrado por el split; el registro no crece.
+            "src/app/dashboard/admin/operadores/gestion/GestionClient.tsx",
             "src/app/dashboard/circulo-confianza/page.tsx",
             "src/components/modules/ia/IaModelSelector.tsx",
             // SPEC-245 (002-PI-148): ofensor heredado >500 líneas; el ratchet solo se encoge,
