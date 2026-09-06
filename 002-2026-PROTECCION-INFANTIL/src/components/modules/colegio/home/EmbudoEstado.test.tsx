@@ -1,6 +1,6 @@
 /**
  * SPEC-158 (T004, US1) — EmbudoEstado: cuatro cifras del embudo sin solapes,
- * "te esperan a ti" destacado con enlace a los avisos cuando hay pendientes y
+ * "le esperan" (SPEC-551: usted) destacado con enlace a los avisos cuando hay pendientes y
  * copy positivo cuando no hay nada (la calma también se muestra).
  */
 import React from "react";
@@ -15,7 +15,7 @@ describe("EmbudoEstado", () => {
         expect(seccion.textContent).toContain("Recibidos");
         expect(seccion.textContent).toContain("Cerrados");
         expect(seccion.textContent).toContain("En revisión");
-        expect(seccion.textContent).toContain("Te esperan a ti");
+        expect(seccion.textContent).toContain("Le esperan"); // SPEC-551: rector = usted
         expect(seccion.textContent).toContain("5");
     });
 

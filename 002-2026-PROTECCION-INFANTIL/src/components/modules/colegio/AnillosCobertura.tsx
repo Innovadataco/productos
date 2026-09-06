@@ -41,11 +41,12 @@ const COLORES_FONDO = {
     rubi: "text-rubi",
 };
 
-function colorPorPorcentaje(porcentaje: number, total: number): "pino" | "ambar" | "rubi" {
-    if (total === 0) return "rubi";
+export function colorPorPorcentaje(porcentaje: number, total: number): "pino" | "ambar" {
+    // SPEC-551: un gauge de cobertura NUNCA va en rojo (§7.9). Cobertura baja =
+    // «falta registrar» = atención (ámbar), no criticidad. total 0 = aún nada = ámbar.
+    if (total === 0) return "ambar";
     if (porcentaje >= 1) return "pino";
-    if (porcentaje >= 0.5) return "ambar";
-    return "rubi";
+    return "ambar";
 }
 
 function AnilloSujeto({ titulo, subtitulo, porcentaje, total, ctaHref, ctaTexto, color }: AnilloSujetoProps) {
