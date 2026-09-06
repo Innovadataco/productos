@@ -11,10 +11,11 @@
  * NO es lista de archivos a mano: sigue el ÁRBOL DE RENDER de cada pantalla desde su
  * raíz por imports de primer partido bajo components/modules (lección SPEC-491).
  *
- * FRONTERA de propiedad: `AdminAntiAbusoSimuladorHistorial` está en el árbol del
- * simulador pero es cancha de Dev 1 (#458, gráficas/tabla de anti-abuso); SPEC-536
- * NO lo toca. Se excluye de la aserción de cero-crudo, y se verifica que SIGUE en el
- * árbol (la frontera es real, no letra muerta). El resto del árbol sí se vigila.
+ * SPEC-542: la frontera con Dev 1 se RETIRA. Cuando 536 pasó, `AdminAntiAbusoSimulador
+ * Historial` era cancha de Dev 1 (#458/SPEC-537, dataviz) y se excluía del cero-crudo.
+ * Ya mergeado #458 y tokenizado el residual que dejó (row-hover slate→tinta, link
+ * sky→accent), el árbol se vigila COMPLETO — sin exención. El Historial pasa a `TOCADOS`
+ * (el anti-falso-verde exige que el árbol lo alcance y esté tokenizado).
  *
  * Muere con el defecto: reintroducir un crudo en cualquier archivo vigilado
  * → rojo con archivo:línea.
@@ -69,19 +70,18 @@ const ROOTS = [
     path.join(MODULES, "PermisosRolPanel.tsx"),
     path.join(MODULES, "AdminAntiAbusoSimulador.tsx"),
 ];
-// Cancha de Dev 1 (#458): excluida de cero-crudo, pero DEBE seguir en el árbol.
-const FRONTERA_DEV1 = [path.join(MODULES, "AdminAntiAbusoSimuladorHistorial.tsx")];
+// SPEC-542: sin frontera — se vigila el árbol COMPLETO (Historial incluido).
+const TREE = arbolDeRender(ROOTS);
 
-const RAW_TREE = arbolDeRender(ROOTS);
-const TREE = RAW_TREE.filter((f) => !FRONTERA_DEV1.includes(f));
-
-// Archivos que SPEC-536 tocó (incluye el residual +1 AdminReporteDetalle, borde de
-// Alerta error que el mapa no contó); el árbol DEBE alcanzarlos (anti-falso-verde).
+// Archivos que el barrido tocó; el árbol DEBE alcanzarlos (anti-falso-verde).
+// +AdminReporteDetalle: residual de 536 (borde de Alerta error que el mapa no contó).
+// +AdminAntiAbusoSimuladorHistorial: SPEC-542 retiró su frontera y tokenizó su residual.
 const TOCADOS = [
     "AdminReportesTable.tsx",
     "PermisosRolPanel.tsx",
     "AdminAntiAbusoSimulador.tsx",
     "AdminReporteDetalle.tsx",
+    "AdminAntiAbusoSimuladorHistorial.tsx",
 ].map((r) => path.join(MODULES, r));
 
 describe("SPEC-536 · la regex CRUDO caza el defecto y respeta los tokens", () => {
@@ -99,14 +99,9 @@ describe("SPEC-536 · la regex CRUDO caza el defecto y respeta los tokens", () =
     });
 });
 
-describe("SPEC-536 · anti-falso-verde: árbol construido, frontera real, tocados alcanzados", () => {
+describe("SPEC-536/542 · anti-falso-verde: árbol construido, tocados alcanzados", () => {
     it("descubrió el árbol, no un conjunto vacío", () => {
         expect(TREE.length).toBeGreaterThanOrEqual(TOCADOS.length);
-    });
-    it("la frontera Dev1 sigue montada en el árbol (exclusión viva, no letra muerta)", () => {
-        for (const f of FRONTERA_DEV1) {
-            expect(RAW_TREE.includes(f), `${path.relative(SRC, f)} ya no está en el árbol; quitá la frontera`).toBe(true);
-        }
     });
     it.each(TOCADOS.map((f) => [path.relative(SRC, f), f] as const))(
         "alcanza y tokenizó %s",
@@ -119,7 +114,7 @@ describe("SPEC-536 · anti-falso-verde: árbol construido, frontera real, tocado
     );
 });
 
-describe("SPEC-536 · cero color crudo en el árbol de render (menos la frontera Dev1)", () => {
+describe("SPEC-536/542 · cero color crudo en el árbol de render (completo, sin frontera)", () => {
     it("ningún archivo vigilado contiene color crudo de Tailwind", () => {
         const hits: string[] = [];
         for (const f of TREE) {
