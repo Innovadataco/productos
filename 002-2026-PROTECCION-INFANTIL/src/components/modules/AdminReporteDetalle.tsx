@@ -94,7 +94,7 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
             {success && <Alerta tono="exito" role="status" className="mb-4">{success}</Alerta>}
 
             {estaEliminado && (
-                <Alerta tono="error" className="mb-4 border border-red-200 p-4 dark:border-red-800">
+                <Alerta tono="error" className="mb-4 border border-rubi/30 p-4">
                     <h3 className="mb-1 font-medium">Reporte dado de baja</h3>
                     <p><span className="text-subtle">Motivo:</span> {reporte.motivoBaja || "No especificado"}</p>
                     {reporte.notaBaja && <p><span className="text-subtle">Nota:</span> {reporte.notaBaja}</p>}

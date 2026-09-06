@@ -132,7 +132,7 @@ export function PermisosRolPanel() {
     }
 
     if (loading) return <p className="text-sm text-muted">Cargando permisos...</p>;
-    if (!data) return <p className="text-sm text-red-600 dark:text-red-400">No se pudo cargar la matriz de permisos.</p>;
+    if (!data) return <p className="text-sm text-estado-rubi">No se pudo cargar la matriz de permisos.</p>;
 
     return (
         <GlassCard className="p-6 space-y-5">
@@ -151,7 +151,7 @@ export function PermisosRolPanel() {
                 options={data.roles.map((r) => ({ value: r, label: r }))}
             />
 
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-tinta/10">
                 {data.modulos.map((modulo) => (
                     <div key={modulo.id} className="py-2">
                         {renderModulo(modulo, false)}
@@ -161,7 +161,7 @@ export function PermisosRolPanel() {
             </div>
 
             {message && (
-                <p className={`text-sm ${message.type === "success" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                <p className={`text-sm ${message.type === "success" ? "text-estado-pino" : "text-estado-rubi"}`}>
                     {message.text}
                 </p>
             )}
