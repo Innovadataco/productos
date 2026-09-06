@@ -42,17 +42,17 @@ export function EmbudoEstado({ embudo, className = "" }: EmbudoEstadoProps) {
                 <div
                     data-estado-esperan={hayPendientes ? "pendiente" : "al-dia"}
                     className={`rounded-2xl px-4 py-3 ${
-                        hayPendientes ? "bg-rubi/10 ring-1 ring-rubi/40" : "bg-pino/10 ring-1 ring-pino/30"
+                        hayPendientes ? "bg-ambar/10 ring-1 ring-ambar/40" : "bg-pino/10 ring-1 ring-pino/30"
                     }`}
                 >
                     <p
                         className={`cifra text-4xl font-semibold sm:text-5xl ${
-                            hayPendientes ? "text-estado-rubi" : "text-body"
+                            hayPendientes ? "text-estado-ambar" : "text-body"
                         }`}
                     >
                         {teEsperan}
                     </p>
-                    <p className="microetiqueta mt-2">Te esperan a ti</p>
+                    <p className="microetiqueta mt-2">Le esperan</p>
                 </div>
             </div>
 
