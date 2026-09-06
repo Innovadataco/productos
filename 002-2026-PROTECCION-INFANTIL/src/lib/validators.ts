@@ -18,10 +18,23 @@ export type ReactivarReporteInput = z.infer<typeof reactivarReporteSchema>;
 // línea: un `z.string().refine(Date.parse)` suelto en el evento derivó y aceptaba
 // fecha futura. El cliente manda ISO completo (`new Date(valorLocal).toISOString()`),
 // por eso `.datetime()` estricto lo acepta.
-export const fechaIncidenteSchema = z.string().datetime().refine(
-    (val) => new Date(val) <= new Date(),
-    { message: "La fecha del incidente no puede ser futura" },
-);
+export const fechaIncidenteSchema = z.string().datetime()
+    .refine(
+        (val) => new Date(val) <= new Date(),
+        { message: "La fecha del incidente no puede ser futura" },
+    )
+    // SPEC-563 (Jelkin): la BARRERA vive en el servidor. Un incidente de más de 2
+    // años atrás no es reportable; el mínimo es exactamente 2 años atrás (ese día
+    // justo es válido, un día más viejo se rechaza). El `min` del input es solo
+    // comodidad. Se calcula por pedido con `new Date()` para que la ventana corra.
+    .refine(
+        (val) => {
+            const minimo = new Date();
+            minimo.setFullYear(minimo.getFullYear() - 2);
+            return new Date(val) >= minimo;
+        },
+        { message: "La fecha del incidente no puede ser de más de 2 años atrás" },
+    );
 export type FechaIncidenteInput = z.infer<typeof fechaIncidenteSchema>;
 
 export const crearReporteSchema = z.object({
