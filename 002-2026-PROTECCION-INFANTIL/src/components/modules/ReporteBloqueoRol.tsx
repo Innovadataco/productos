@@ -35,14 +35,14 @@ export function ReporteBloqueoRol({ onLogoutAndRetry, returnTo }: ReporteBloqueo
 
     return (
         <div
-            className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 dark:border-amber-800/60 dark:bg-amber-950/20"
+            className="mx-auto max-w-xl rounded-2xl border border-ambar/20 bg-ambar/10 p-8"
             role="alert"
             data-testid="reporte-bloqueo-rol"
         >
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+            <h2 className="text-lg font-semibold text-estado-ambar">
                 Las cuentas internas no pueden crear reportes
             </h2>
-            <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+            <p className="mt-2 text-sm text-estado-ambar">
                 Los usuarios internos (colegio · admin · comités) no pueden reportar desde su cuenta institucional. Puedes hacerlo de forma anónima o crear una cuenta de padre.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">

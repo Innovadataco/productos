@@ -41,7 +41,7 @@ export function ConfirmacionReporte({ numeroSeguimiento }: { numeroSeguimiento: 
                     </Button>
                 </div>
 
-                <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 text-left">
+                <div className="rounded-xl bg-ambar/10 p-3 text-xs text-estado-ambar text-left">
                     <strong>Guarda este número.</strong> Es la única forma de consultar el estado de tu reporte.
                 </div>
 

@@ -49,7 +49,7 @@ export function LoginForm({ onLogin }: { onLogin: (email: string, password: stri
                     </Link>
                 </div>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-estado-rubi">{error}</p>}
             <Button type="submit" isLoading={isLoading} className="w-full">
                 Iniciar sesión
             </Button>
