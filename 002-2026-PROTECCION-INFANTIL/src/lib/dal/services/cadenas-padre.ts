@@ -12,9 +12,9 @@
 import { prisma } from "../../prisma";
 import { formatCategoria } from "../../labels";
 import { formatPlataforma } from "../../plataforma";
-import { whereReporteAprobado, whereReporteVigente } from "../../reportes-acceso";
+import { whereReporteVigente, ESTADOS_APROBADOS, CATEGORIAS_NO_APROBADAS } from "../../reportes-acceso";
 import { getParametroSistemaValor } from "../../parametros";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, EstadoReporte } from "@prisma/client";
 
 export interface EventoCadenaDto {
     id: string;
@@ -178,12 +178,23 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
         // encabezado por su primer miembro — «se muestra lo que queda».
         const cabeza = grupo.find((r) => r.id === principalId) ?? grupo[0];
 
+        // SPEC-543 (I-330) · «otros reportes» del mismo identificador incluye los
+        // ANÓNIMOS y los DUPLICADOS. Un DUPLICADO es justamente la señal de que otra
+        // persona reportó al mismo depredador: NO puede ocultarse (antes se usaba
+        // whereReporteAprobado, que solo deja CLASIFICADO/CORREGIDO y borraba de la
+        // vista al anónimo duplicado). Se excluye solo SPAM/OTRO (ruido), nunca por
+        // ser anónimo ni por estar marcado DUPLICADO. El select de abajo sigue
+        // blindado: ciudad · país · fecha/hora · clasificación, jamás el texto.
         const otros = await prisma.reporte.findMany({
-            where: whereReporteAprobado({
-                identificador: cabeza.identificador,
-                plataformaId: cabeza.plataformaId,
-                id: { notIn: grupo.map((g) => g.id) },
-            }),
+            where: {
+                ...whereReporteVigente({
+                    identificador: cabeza.identificador,
+                    plataformaId: cabeza.plataformaId,
+                    id: { notIn: grupo.map((g) => g.id) },
+                }),
+                estado: { in: [...ESTADOS_APROBADOS, "DUPLICADO"] as EstadoReporte[] },
+                clasificacion: { isNot: { categoria: { in: [...CATEGORIAS_NO_APROBADAS] } } },
+            },
             select: {
                 id: true,
                 creadoEn: true,
