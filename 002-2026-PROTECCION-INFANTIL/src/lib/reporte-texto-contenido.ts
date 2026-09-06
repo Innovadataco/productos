@@ -75,6 +75,47 @@ export async function descifrarCampo(
 }
 
 /**
+ * Versión BATCH de `descifrarCampo` para lectores de LISTA (bandejas de spam/apelaciones/eventos):
+ * descifra el MISMO `campo` de muchos contenidos con SOLO 2 queries (un findMany de contenidos +
+ * uno de llaves) en vez de 2N. Desenvuelve la DEK de cada fila con su propio `kekVersion` en
+ * memoria. Fail-loud igual que el singular: si un `contenidoId` pedido no tiene contenido o llave
+ * LANZA — un reporte vivo siempre tiene su contenido por la FK `Restrict`, así que faltar = corrupción,
+ * no un caso borrado (ese ya no está en la lista). Devuelve `Map<contenidoId, textoDescifrado>`.
+ */
+export async function descifrarCampos(
+    tx: Prisma.TransactionClient,
+    contenidoIds: string[],
+    campo: CampoContenido
+): Promise<Map<string, string>> {
+    const ids = [...new Set(contenidoIds)];
+    const resultado = new Map<string, string>();
+    if (ids.length === 0) return resultado; // sin ids no se toca la BD
+
+    const [contenidos, llaves] = await Promise.all([
+        tx.contenidoReporte.findMany({ where: { id: { in: ids } } }),
+        tx.llaveReporte.findMany({ where: { contenidoId: { in: ids } } }),
+    ]);
+    const contenidoPorId = new Map(contenidos.map((c) => [c.id, c]));
+    const llavePorContenido = new Map(llaves.map((l) => [l.contenidoId, l]));
+
+    for (const id of ids) {
+        const contenido = contenidoPorId.get(id);
+        const llave = llavePorContenido.get(id);
+        if (!contenido || !llave) {
+            throw new Error(
+                `[reporte-texto-contenido] descifrarCampos: falta ${!contenido ? "contenido" : "llave"} para ${id}. ` +
+                    "Un reporte vivo siempre tiene su contenido (FK Restrict); esto es corrupción, no un caso borrado."
+            );
+        }
+        const kek = llavePorVersion(llave.kekVersion);
+        const dek = Buffer.from(descifrarConLlave(llave.dekCifrada, kek, aadEnvoltura(id)), "base64");
+        const cifrado = campo === "texto" ? contenido.textoCifrado : contenido.textoOriginalCifrado;
+        resultado.set(id, descifrarConLlave(cifrado, dek, aadDe(id, campo)));
+    }
+    return resultado;
+}
+
+/**
  * Campo re-sellable POST-alta: SOLO el texto de TRABAJO. `textoOriginal` NO entra acá — es
  * evidencia legal inmutable (se fija en el alta y después solo se PURGA con `purgadoEn` +
  * `origenEvidencia`, jamás se sobreescribe). Cerrado en el TIPO a propósito (CEO 06-09): que

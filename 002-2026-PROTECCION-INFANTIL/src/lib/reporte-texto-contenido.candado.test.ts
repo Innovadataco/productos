@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { sellarTextoNuevo, descifrarCampo, resellarCampo } from "@/lib/reporte-texto-contenido";
+import { sellarTextoNuevo, descifrarCampo, descifrarCampos, resellarCampo } from "@/lib/reporte-texto-contenido";
 
 const KEK = randomBytes(32).toString("base64");
 
@@ -76,5 +76,27 @@ describe("S-D · DEK por denuncia (cifrar/descifrar + cripto-shred)", () => {
         ).rejects.toThrow(/no es re-sellable|inmutable/i);
         // La evidencia sigue intacta.
         expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).toBe(original);
+    });
+
+    it("descifrarCampos (batch): descifra el mismo campo de N contenidos en un Map correcto", async () => {
+        const a = await sellarTextoNuevo(prisma, { texto: "relato A" });
+        const b = await sellarTextoNuevo(prisma, { texto: "relato B" });
+        const c = await sellarTextoNuevo(prisma, { texto: "relato C" });
+
+        const mapa = await descifrarCampos(prisma, [a.contenidoId, b.contenidoId, c.contenidoId], "texto");
+        expect(mapa.size).toBe(3);
+        expect(mapa.get(a.contenidoId)).toBe("relato A");
+        expect(mapa.get(b.contenidoId)).toBe("relato B");
+        expect(mapa.get(c.contenidoId)).toBe("relato C");
+    });
+
+    it("descifrarCampos con lista vacía devuelve Map vacío (no toca la BD)", async () => {
+        expect((await descifrarCampos(prisma, [], "texto")).size).toBe(0);
+    });
+
+    it("descifrarCampos es fail-loud: un contenidoId sin llave (cripto-shred/corrupción) LANZA", async () => {
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: "se quema" });
+        await prisma.llaveReporte.delete({ where: { contenidoId } });
+        await expect(descifrarCampos(prisma, [contenidoId], "texto")).rejects.toThrow(/falta (contenido|llave)|corrupción/i);
     });
 });
