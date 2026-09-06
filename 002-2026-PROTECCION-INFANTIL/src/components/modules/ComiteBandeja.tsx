@@ -62,13 +62,13 @@ function estadoBadge(estado: Solicitud["estado"]) {
     const base = "rounded-full px-2.5 py-0.5 text-xs font-medium";
     switch (estado) {
         case "PENDIENTE":
-            return `${base} bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300`;
+            return `${base} bg-ambar/10 text-ambar`;
         case "ASIGNADA":
-            return `${base} bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300`;
+            return `${base} bg-cielo/10 text-cielo`;
         case "RESUELTA":
-            return `${base} bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300`;
+            return `${base} bg-pino/10 text-pino`;
         default:
-            return `${base} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300`;
+            return `${base} bg-tinta/10 text-muted`;
     }
 }
 
@@ -280,7 +280,7 @@ export function ComiteBandeja() {
             <div className="glass rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-100/70 dark:bg-slate-800/60 text-subtle">
+                        <thead className="bg-tinta/5 text-subtle">
                             <tr>
                                 <th className="px-4 py-3 font-medium">Tipo</th>
                                 <th className="px-4 py-3 font-medium">Número</th>
@@ -291,11 +291,11 @@ export function ComiteBandeja() {
                                 <th className="px-4 py-3 font-medium">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y divide-tinta/10">
                             {loading ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-8 text-center text-subtle">
-                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-accent" />
+                                        <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-tinta/20 border-t-accent" />
                                         <p className="mt-2 text-xs">Cargando...</p>
                                     </td>
                                 </tr>
@@ -328,7 +328,7 @@ export function ComiteBandeja() {
                 </div>
 
                 {pagination.totalPages > 1 && (
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-tinta/10 px-4 py-3">
                         <p className="text-sm text-subtle">
                             Página {pagination.page} de {pagination.totalPages} · {pagination.total} solicitudes
                         </p>
@@ -368,7 +368,7 @@ function FilaRevision({
     onVer: (s: Solicitud) => void;
 }) {
     return (
-        <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+        <tr className="hover:bg-tinta/5 transition">
             <td className="px-4 py-3">
                 <TipoBadge tipo="REVISION_REPORTE" />
             </td>
@@ -378,7 +378,7 @@ function FilaRevision({
                     <span className={estadoBadge(s.estado)}>{s.estado}</span>
                     {s.matchInterCiudad && (
                         <span
-                            className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                            className="rounded-full bg-rubi/10 px-2.5 py-0.5 text-xs font-medium text-rubi"
                             title="El identificador tiene reportes de fuentes independientes desde 2 o más ciudades"
                         >
                             Reincidencia inter-ciudad
@@ -416,7 +416,7 @@ function FilaRevision({
 // SPEC-237 (FR-001/T016): la fila de consolidación linkea a la vista de detalle.
 function FilaConsolidacion({ item }: { item: ItemConsolidacion }) {
     return (
-        <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+        <tr className="hover:bg-tinta/5 transition">
             <td className="px-4 py-3">
                 <TipoBadge tipo="CONSOLIDACION_EXPEDIENTE" />
             </td>
