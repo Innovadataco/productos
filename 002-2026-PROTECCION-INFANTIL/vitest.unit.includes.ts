@@ -553,4 +553,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/permisos-modulo-sin-superficie.candado.test.ts",
     // SPEC-535 (PA-24 Mis reportes + PA-08 detalle): badges de estado del padre sin color crudo (arbol de render, no directorio).
     "src/components/modules/crudo-padre-reportes.candado.test.ts",
+    // SPEC-541: la fecha de nacimiento del padre es 18-100 anios y no futura.
+    "src/lib/padre/fecha-nacimiento-padre.candado.test.ts",
 ];
