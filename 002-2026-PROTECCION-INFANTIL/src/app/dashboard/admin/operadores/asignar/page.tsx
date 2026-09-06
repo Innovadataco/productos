@@ -79,7 +79,7 @@ export default function AdminOperadoresAsignarPage() {
             }
             const r = json as ResumenReconciliacion;
             if (r.deshabilitado) {
-                setReconciliacionMsg("La reconciliación está deshabilitada por parámetro. Revisá operadores.reconciliacion_enabled.");
+                setReconciliacionMsg("La reconciliación está deshabilitada por parámetro. Revise operadores.reconciliacion_enabled.");
             } else {
                 setReconciliacionMsg(`Encontrados: ${r.encontrados} · Asignados: ${r.asignados} · Fallidos: ${r.fallidos}`);
             }

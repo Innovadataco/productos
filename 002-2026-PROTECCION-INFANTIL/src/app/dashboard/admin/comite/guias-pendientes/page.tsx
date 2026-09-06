@@ -21,7 +21,7 @@ export default async function AdminComiteGuiasPendientesPage() {
         <div className="mx-auto max-w-6xl space-y-6">
             <div>
                 <h1 className="text-2xl font-bold text-body">Guías de acción pendientes</h1>
-                <p className="text-sm text-muted">Revisá, aprobá o rechazá las guías enviadas por el administrador.</p>
+                <p className="text-sm text-muted">Revise, apruebe o rechace las guías enviadas por el administrador.</p>
             </div>
             <GuiasPendientesClient />
         </div>
