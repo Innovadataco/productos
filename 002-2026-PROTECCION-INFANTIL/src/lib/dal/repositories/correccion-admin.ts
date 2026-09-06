@@ -30,4 +30,14 @@ export class CorreccionAdminRepository {
     crear(data: Prisma.CorreccionAdminUncheckedCreateInput) {
         return this.db.correccionAdmin.create({ data });
     }
+
+    /**
+     * SPEC-557: borra la fila de confirmación/corrección de una clasificación.
+     * Al deshacer una CONFIRMACIÓN se elimina esta fila para LIBERAR el slot
+     * `@unique(clasificacionId)` — así el deshacer NO gasta la «única corrección»:
+     * corregir vuelve a estar disponible como red tardía.
+     */
+    eliminarPorClasificacionId(clasificacionId: string) {
+        return this.db.correccionAdmin.delete({ where: { clasificacionId } });
+    }
 }

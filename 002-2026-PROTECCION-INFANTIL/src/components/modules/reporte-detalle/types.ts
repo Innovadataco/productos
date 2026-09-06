@@ -101,6 +101,9 @@ export interface UseReporteDetalleResult {
     setMotivoEscalar: (v: string) => void;
     handleAnonimizar: () => Promise<void>;
     handleConfirmar: () => Promise<void>;
+    deshacer: { categoria: string; nivelRiesgo: string } | null;
+    handleDeshacerConfirmar: () => Promise<void>;
+    descartarDeshacer: () => void;
     handleCorregir: () => Promise<void>;
     handleBaja: () => Promise<void>;
     handleReactivar: () => Promise<void>;
