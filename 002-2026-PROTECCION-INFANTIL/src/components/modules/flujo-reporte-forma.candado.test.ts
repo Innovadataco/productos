@@ -89,21 +89,42 @@ describe("SPEC-511 · resto visual del flujo del reporte", () => {
         ).toBe(false);
     });
 
-    it("D · la señal `prioridadAlta` nunca se pinta warning/ámbar — rubi/danger en TODA pantalla (Diseño)", () => {
-        // prioridadAlta = cortar:true (ráfaga/doxing) = criticidad real. La misma
-        // señal en dos colores miente con el color; Diseño la fija en rubi/danger.
-        const MODULES = path.join(SRC, "components", "modules");
-        const hits: string[] = [];
-        for (const archivo of recorrer(MODULES)) {
-            for (const [i, linea] of fs.readFileSync(archivo, "utf-8").split("\n").entries()) {
-                if (/prioridadAlta/.test(linea) && /variant="warning"|text-estado-ambar|bg-ambar|amber/.test(linea)) {
-                    hits.push(`${path.relative(SRC, archivo)}:${i + 1}: ${linea.trim().slice(0, 90)}`);
+    it("D · las señales de criticidad (prioridadAlta / esRafaga) nunca se pintan warning/ámbar — rubi/danger (Diseño)", () => {
+        // prioridadAlta y esRafaga salen de la MISMA guarda (cortar:true, ráfaga/
+        // doxing) = criticidad real; se distinguen por TEXTO, no por color. Diseño
+        // las fija en rubi/danger en TODA pantalla — la misma señal en dos colores
+        // miente con el color.
+        // Alcance = las DOS pantallas del detalle del reporte que Diseño ruló
+        // (ReporteDetalleInfo + IaTraceTimeline). `AdminReportesTable` pinta la
+        // misma señal en color CRUDO (ráfaga ámbar): es una tabla sin tokenizar,
+        // barrido aparte — escalado al CEO, no se toca piecemeal acá.
+        const DIRS = [
+            path.join(SRC, "components", "modules", "reporte-detalle"),
+            path.join(SRC, "components", "modules", "ia"),
+        ];
+        const SENAL = /prioridadAlta|esRafaga|Prioridad alta|Ráfaga/;
+        const AMBAR = /variant="warning"|text-estado-ambar|bg-ambar|amber-/;
+        const archivos = DIRS.flatMap((d) => [...recorrer(d)]);
+        // Anti-falso-verde: el scan resolvió de verdad las dos pantallas.
+        expect(archivos.some((a) => a.endsWith("ReporteDetalleInfo.tsx")), "no se resolvió ReporteDetalleInfo").toBe(true);
+        expect(archivos.some((a) => a.endsWith("IaTraceTimeline.tsx")), "no se resolvió IaTraceTimeline").toBe(true);
+        const hits = new Set<string>();
+        for (const archivo of archivos) {
+            const lineas = fs.readFileSync(archivo, "utf-8").split("\n");
+            lineas.forEach((linea, i) => {
+                if (!SENAL.test(linea)) return;
+                // Ventana ±2: la señal (booleano/label) y su color pueden estar en
+                // líneas distintas (span multilínea), no solo inline como en <Badge>.
+                for (let j = Math.max(0, i - 2); j <= Math.min(lineas.length - 1, i + 2); j++) {
+                    if (AMBAR.test(lineas[j])) {
+                        hits.add(`${path.relative(SRC, archivo)}:${j + 1} (señal en :${i + 1}): ${lineas[j].trim().slice(0, 80)}`);
+                    }
                 }
-            }
+            });
         }
         expect(
-            hits,
-            ["SPEC-511 — prioridadAlta pintada warning/ámbar (debe ser rubi/danger):", ...hits].join("\n"),
+            [...hits],
+            ["SPEC-511 — criticidad (prioridadAlta/esRafaga) pintada warning/ámbar (debe ser rubi/danger):", ...hits].join("\n"),
         ).toEqual([]);
     });
 });

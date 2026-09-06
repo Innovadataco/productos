@@ -86,7 +86,7 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                             </span>
                         )}
                         {reporte.esRafaga && (
-                            <span className="rounded-full bg-ambar/10 px-2 py-0.5 text-xs font-medium text-estado-ambar">
+                            <span className="rounded-full bg-rubi/10 px-2 py-0.5 text-xs font-medium text-estado-rubi">
                                 Ráfaga
                             </span>
                         )}
