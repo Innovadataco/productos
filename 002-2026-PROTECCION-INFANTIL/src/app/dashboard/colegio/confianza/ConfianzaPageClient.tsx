@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
 import { Markdown } from "@/lib/docs/markdown";
+import { quitarTituloH1 } from "@/lib/docs/quitar-titulo-h1";
 
 interface Documento {
     clave: string;
@@ -19,6 +20,7 @@ interface Documento {
 interface EventoAuditoria {
     id: string;
     accion: string;
+    accionLabel: string;
     tipoRecurso: string;
     fecha: string;
     resumen: string | null;
@@ -154,8 +156,14 @@ export default function ConfianzaPageClient() {
                     <ErrorState title="No pudimos cargar el documento" description={errorDoc} />
                 ) : markdown ? (
                     <GlassCard className="p-6">
+                        {/* SPEC-576 (I-359): un solo título en el panel. La pantalla ya pinta `titulo`
+                            acá; se quita el `# Título` propio del markdown para no duplicarlo (el H1 de
+                            página «Confianza institucional» es aparte). Y el cuerpo largo va en una
+                            medida de lectura (~70ch) — a todo el ancho las líneas son ilegibles. */}
                         <h2 className="mb-4 text-xl font-bold text-body">{titulo}</h2>
-                        <Markdown source={markdown} />
+                        <div className="max-w-[70ch]">
+                            <Markdown source={quitarTituloH1(markdown)} />
+                        </div>
                     </GlassCard>
                 ) : null}
             </section>
@@ -199,7 +207,7 @@ export default function ConfianzaPageClient() {
                             {eventos.map((evento) => (
                                 <tr key={evento.id}>
                                     <td className="px-4 py-3 text-sm">{new Date(evento.fecha).toLocaleString("es-CO", { timeZone: "America/Bogota" })}</td>
-                                    <td className="px-4 py-3 text-sm">{evento.accion}</td>
+                                    <td className="px-4 py-3 text-sm">{evento.accionLabel}</td>
                                     <td className="px-4 py-3 text-sm">{evento.tipoRecurso}</td>
                                     <td className="px-4 py-3 text-sm">{evento.resumen ?? "—"}</td>
                                 </tr>
