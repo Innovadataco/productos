@@ -99,8 +99,15 @@ export function MisHijos({
             .catch(() => setPlataformas([]));
     }, []);
 
+    // SPEC-555 (I-337): «Sin plataforma» confundía al padre —parecía una opción
+    // afirmativa de «esto no está en ninguna plataforma»— cuando lo que faltaba
+    // era el «Número telefónico» (ahora sembrado por Datos, entra por el catálogo
+    // de abajo). La primera entrada pasa a ser un prompt neutro. Se CONSERVA su
+    // value "" a propósito: es la red de resiliencia del comentario de arriba
+    // (registrar el identificador «suelto», plataformaId null, si el catálogo
+    // /api/plataformas no carga) y el estado inicial del select.
     const opcionesPlataforma = [
-        { value: "", label: "Sin plataforma" },
+        { value: "", label: "Elige una plataforma" },
         ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
     ];
 
