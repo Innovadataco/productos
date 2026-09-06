@@ -27,6 +27,16 @@ export interface CapacidadesAcciones {
     puedeReactivar: boolean;
 }
 
+/**
+ * SPEC-574 · el gate anti-reflejo de «Asignar clasificación»: el botón está listo SOLO con categoría
+ * elegida Y nota con ≥10 caracteres (trim). Diseño lo fijó como el candado anti-reflejo — con el botón
+ * deshabilitado, un Enter reflejo no dispara una acción que puede volver PÚBLICO el reporte de un menor
+ * (más fuerte que el orden-DOM de SPEC-562). Pura para poder afirmarla sin render.
+ */
+export function asignacionListaParaEnviar(categoria: string, nota: string): boolean {
+    return categoria.trim().length > 0 && nota.trim().length >= 10;
+}
+
 export function capacidadesAccionesReporte(reporte: ReporteParaCapacidades): CapacidadesAcciones {
     const estaEliminado = reporte.eliminado;
     const tieneClasificacion = !!reporte.clasificacion;

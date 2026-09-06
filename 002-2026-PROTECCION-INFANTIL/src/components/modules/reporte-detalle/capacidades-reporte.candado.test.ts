@@ -11,7 +11,11 @@
  * quitar el `REVISION_MANUAL` → el caso de otro estado muere.
  */
 import { describe, it, expect } from "vitest";
-import { capacidadesAccionesReporte, type ReporteParaCapacidades } from "./capacidades-reporte";
+import {
+    capacidadesAccionesReporte,
+    asignacionListaParaEnviar,
+    type ReporteParaCapacidades,
+} from "./capacidades-reporte";
 
 function reporte(over: Partial<ReporteParaCapacidades>): ReporteParaCapacidades {
     return { eliminado: false, estado: "REVISION_MANUAL", clasificacion: null, ...over };
@@ -44,5 +48,37 @@ describe("SPEC-574 · capacidades de acción del operador", () => {
         expect(c.puedeClasificar).toBe(false);
         expect(c.puedeCorregir).toBe(false);
         expect(c.puedeConfirmar).toBe(false);
+    });
+
+    it("los TRES nunca coexisten: clasificar excluye a corregir/confirmar en cualquier estado", () => {
+        // Diseño: el slot principal muestra SIEMPRE uno de {Corregir+Confirmar} o {Asignar}, nunca los
+        // tres. Se cumple para toda combinación relevante de estado × (con/sin) clasificación.
+        const escenarios: ReporteParaCapacidades[] = [
+            { eliminado: false, estado: "REVISION_MANUAL", clasificacion: null },
+            { eliminado: false, estado: "REVISION_MANUAL", clasificacion: { correccion: null } },
+            { eliminado: false, estado: "CLASIFICADO", clasificacion: { correccion: null } },
+            { eliminado: false, estado: "CORREGIDO", clasificacion: { correccion: { x: 1 } } },
+            { eliminado: true, estado: "REVISION_MANUAL", clasificacion: null },
+        ];
+        for (const r of escenarios) {
+            const c = capacidadesAccionesReporte(r);
+            expect(
+                c.puedeClasificar && (c.puedeCorregir || c.puedeConfirmar),
+                `clasificar y corregir/confirmar no pueden estar activos a la vez: ${JSON.stringify(r)}`,
+            ).toBe(false);
+        }
+    });
+});
+
+describe("SPEC-574 · gate anti-reflejo de «Asignar» (asignacionListaParaEnviar)", () => {
+    it("sin categoría → NO listo (el botón queda deshabilitado, un Enter no dispara)", () => {
+        expect(asignacionListaParaEnviar("", "una nota suficientemente larga")).toBe(false);
+    });
+    it("nota con < 10 caracteres (tras trim) → NO listo", () => {
+        expect(asignacionListaParaEnviar("OTRO", "corta")).toBe(false);
+        expect(asignacionListaParaEnviar("OTRO", "         ")).toBe(false); // solo espacios
+    });
+    it("categoría Y nota ≥10 → listo (el gate se abre con dos actos deliberados)", () => {
+        expect(asignacionListaParaEnviar("OTRO", "motivo con más de diez caracteres")).toBe(true);
     });
 });
