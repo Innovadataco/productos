@@ -89,42 +89,55 @@ describe("SPEC-511 · resto visual del flujo del reporte", () => {
         ).toBe(false);
     });
 
-    it("D · las señales de criticidad (prioridadAlta / esRafaga) nunca se pintan warning/ámbar — rubi/danger (Diseño)", () => {
+    it("D · las señales de criticidad (prioridadAlta / esRafaga) SOLO usan el token de criticidad (rubi/danger), en las TRES pantallas — Diseño", () => {
         // prioridadAlta y esRafaga salen de la MISMA guarda (cortar:true, ráfaga/
         // doxing) = criticidad real; se distinguen por TEXTO, no por color. Diseño
         // las fija en rubi/danger en TODA pantalla — la misma señal en dos colores
-        // miente con el color.
-        // Alcance = las DOS pantallas del detalle del reporte que Diseño ruló
-        // (ReporteDetalleInfo + IaTraceTimeline). `AdminReportesTable` pinta la
-        // misma señal en color CRUDO (ráfaga ámbar): es una tabla sin tokenizar,
-        // barrido aparte — escalado al CEO, no se toca piecemeal acá.
+        // miente con el color. Cubre las TRES pantallas que la renderizan:
+        // ReporteDetalleInfo, IaTraceTimeline y AdminReportesTable (SPEC-518: el 3.º
+        // se coló mientras el alcance era de 2). El candado falla si la señal se pinta
+        // con CUALQUIER cosa que no sea el token de criticidad, INCLUIDO color crudo.
         const DIRS = [
             path.join(SRC, "components", "modules", "reporte-detalle"),
             path.join(SRC, "components", "modules", "ia"),
         ];
-        const SENAL = /prioridadAlta|esRafaga|Prioridad alta|Ráfaga/;
-        const AMBAR = /variant="warning"|text-estado-ambar|bg-ambar|amber-/;
-        const archivos = DIRS.flatMap((d) => [...recorrer(d)]);
-        // Anti-falso-verde: el scan resolvió de verdad las dos pantallas.
-        expect(archivos.some((a) => a.endsWith("ReporteDetalleInfo.tsx")), "no se resolvió ReporteDetalleInfo").toBe(true);
-        expect(archivos.some((a) => a.endsWith("IaTraceTimeline.tsx")), "no se resolvió IaTraceTimeline").toBe(true);
+        const FILES = [path.join(SRC, "components", "modules", "AdminReportesTable.tsx")];
+        // Cualquier color/variant que NO sea el token de criticidad (rubi/danger):
+        // crudo Tailwind (incluido red/amber — debe ser TOKEN), token de estado no-rubi
+        // (ambar/pino/cielo), o Badge variant no-danger. `bg-rubi/…`, `text-estado-rubi`
+        // y `variant="danger"` NO matchean → son lo esperado.
+        const NO_CRITICIDAD = /\b(?:text|bg|border|ring|from|to|via|divide|fill|stroke)(?:-[ltrbxy])?-(?:red|amber|green|emerald|yellow|rose|orange|lime|teal|blue|sky|indigo|violet|slate|gray|zinc|neutral|stone)-[0-9]{2,3}|text-estado-(?:ambar|pino|cielo)\b|\bbg-(?:ambar|pino|cielo)\//;
+        const conVariant = /variant="(?:warning|success|info)"/;
+        const archivos = [...DIRS.flatMap((d) => [...recorrer(d)]), ...FILES.filter((f) => fs.existsSync(f))];
+        // Anti-falso-verde: el scan resolvió de verdad las TRES pantallas.
+        for (const clave of ["ReporteDetalleInfo.tsx", "IaTraceTimeline.tsx", "AdminReportesTable.tsx"]) {
+            expect(archivos.some((a) => a.endsWith(clave)), `no se resolvió ${clave}`).toBe(true);
+        }
         const hits = new Set<string>();
         for (const archivo of archivos) {
             const lineas = fs.readFileSync(archivo, "utf-8").split("\n");
             lineas.forEach((linea, i) => {
-                if (!SENAL.test(linea)) return;
-                // Ventana ±2: la señal (booleano/label) y su color pueden estar en
-                // líneas distintas (span multilínea), no solo inline como en <Badge>.
-                for (let j = Math.max(0, i - 2); j <= Math.min(lineas.length - 1, i + 2); j++) {
-                    if (AMBAR.test(lineas[j])) {
-                        hits.add(`${path.relative(SRC, archivo)}:${j + 1} (señal en :${i + 1}): ${lineas[j].trim().slice(0, 80)}`);
+                // Render POSITIVO de la señal como badge (`X.prioridadAlta &&` /
+                // `X.esRafaga &&`); NO la negación `!…esRafaga` («ninguna guarda activa»,
+                // otro badge) ni el type-def (`esRafaga: boolean`, sin `&&`).
+                if (!/\b(?:prioridadAlta|esRafaga)\s*&&/.test(linea) || linea.includes("!")) return;
+                // El color va en la MISMA línea (inline <Badge>) o en la SIGUIENTE (span).
+                for (let j = i; j <= Math.min(lineas.length - 1, i + 1); j++) {
+                    if (NO_CRITICIDAD.test(lineas[j]) || conVariant.test(lineas[j])) {
+                        hits.add(`${path.relative(SRC, archivo)}:${j + 1} (render de la señal en :${i + 1}): ${lineas[j].trim().slice(0, 80)}`);
                     }
                 }
             });
         }
         expect(
             [...hits],
-            ["SPEC-511 — criticidad (prioridadAlta/esRafaga) pintada warning/ámbar (debe ser rubi/danger):", ...hits].join("\n"),
+            [
+                "SPEC-518 — criticidad (prioridadAlta/esRafaga) pintada con algo que NO es el token de criticidad:",
+                ...hits,
+                "",
+                "Ambas señales van SIEMPRE en rubi/danger (bg-rubi/10 + text-estado-rubi, o",
+                "<Badge variant=\"danger\">). Se distinguen por TEXTO, no por color.",
+            ].join("\n"),
         ).toEqual([]);
     });
 });
