@@ -181,7 +181,7 @@ export function VerificadoresGestionClient() {
                                 </BotonAccion>
                                 {v.estado === "activo" ? (
                                     <BotonAccion
-                                        variante="ambar"
+                                        variante="neutral"
                                         disabled={!!processing[v.id]}
                                         onClick={() => void accion(v.id, "baja", "PATCH", `/api/admin/verificadores/${v.id}/estado`, { estado: "inactivo" })}
                                     >
@@ -189,7 +189,7 @@ export function VerificadoresGestionClient() {
                                     </BotonAccion>
                                 ) : (
                                     <BotonAccion
-                                        variante="pino"
+                                        variante="neutral"
                                         disabled={!!processing[v.id]}
                                         onClick={() => void accion(v.id, "reactivar", "PATCH", `/api/admin/verificadores/${v.id}/estado`, { estado: "activo" })}
                                     >

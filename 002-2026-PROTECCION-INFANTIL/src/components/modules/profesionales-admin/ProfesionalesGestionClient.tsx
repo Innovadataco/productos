@@ -208,7 +208,7 @@ function TabCuentas() {
                                 </BotonAccion>
                                 {p.estado === "activo" ? (
                                     <BotonAccion
-                                        variante="ambar"
+                                        variante="neutral"
                                         disabled={!!processing[p.id]}
                                         onClick={() => void accion(p.id, "baja", "DELETE", `/api/admin/profesionales/${p.id}`)}
                                     >
@@ -216,7 +216,7 @@ function TabCuentas() {
                                     </BotonAccion>
                                 ) : (
                                     <BotonAccion
-                                        variante="pino"
+                                        variante="neutral"
                                         disabled={!!processing[p.id]}
                                         onClick={() => void accion(p.id, "reactivar", "POST", `/api/admin/profesionales/${p.id}/reactivar`)}
                                     >
