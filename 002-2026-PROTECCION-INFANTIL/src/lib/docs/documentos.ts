@@ -6,6 +6,7 @@
  */
 import fs from "node:fs/promises";
 import path from "node:path";
+import { logger } from "@/lib/logger";
 import { buscarDocumentoPermitido } from "./indice";
 
 export interface DocumentoLeido {
@@ -27,8 +28,17 @@ export async function leerDocumento(ruta: string): Promise<DocumentoLeido | null
     let markdown: string;
     try {
         markdown = await fs.readFile(absoluta, "utf-8");
-    } catch {
-        return null;
+    } catch (err) {
+        // SPEC-567 (I-351): la ruta ESTÁ en el allowlist pero el archivo no está en el runtime.
+        // Eso NO es «no encontrado» (404, que es clave desconocida) — es una imagen mal armada:
+        // el doc no se embarcó en la etapa runner del Dockerfile (o quedó dockerignored). Fail-loud
+        // con log de servidor y throw → 500, para que un hueco de despliegue sea RUIDOSO, no silencioso.
+        logger.error(
+            `[docs] Documento del allowlist ausente en runtime: ${ruta} (${absoluta}). ` +
+                "¿Falta la COPY en el Dockerfile runner o está dockerignored?",
+            err
+        );
+        throw new Error(`Documento del allowlist no disponible en runtime: ${ruta}`);
     }
 
     return {

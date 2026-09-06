@@ -18,12 +18,24 @@ export interface TemaDocs {
     slug: string;
     titulo: string;
     descripcion: string;
+    /**
+     * SPEC-567 (I-351) — la capa es atributo del TEMA, no del documento. Reclasificar un solo
+     * documento arrastra a sus compañeros de tema, y puede VACIAR un nivel entero sin que nadie
+     * lo note: mover `specs/016` (círculo de confianza) a capa 3 junto a `parametros-sistema.md`
+     * dejó la capa 2 SIN temas → un padre autenticado veía exactamente lo mismo que un anónimo
+     * (lo cazó `app/api/docs/indice/route.test.ts`: «PARENT autenticado: capas 1 y 2»).
+     * Antes de mover el último documento de una capa, preguntá qué queda de esa categoría; si un
+     * documento no comparte destino con su tema, va en un tema propio (así vive `specs/016` en
+     * capa 2, separado de `panel-admin`).
+     */
     capa: CapaDocs;
     documentos: DocumentoDocs[];
 }
 
 export const INDICE_DOCS: TemaDocs[] = [
     // ── Capa 1 — Qué y por qué (público general, aliados, prensa) ────────────
+    //    Solo `que-y-por-que` y `marco-legal` son capa 1: hablan de lo que el público YA ve.
+    //    `funcionalidades` (abajo, mismo bloque) subió a capa 3 por SPEC-567 (ver su comentario).
     {
         slug: "que-y-por-que",
         titulo: "Qué es y por qué existe",
@@ -50,20 +62,32 @@ export const INDICE_DOCS: TemaDocs[] = [
         titulo: "Catálogo de funcionalidades",
         descripcion:
             "Qué hace cada funcionalidad de la plataforma: reportar, consulta pública, clasificación IA, visibilidad, apelaciones y panel de administración.",
-        capa: 1,
+        // SPEC-567 (endurecimiento, I-351): el índice maestro de specs y el reporte global de
+        // implementación son SUPERFICIE DE RECONOCIMIENTO (le dicen a cualquiera qué existe y cómo
+        // se llama). Ahora que estos .md SÍ viajan en la imagen, no pueden quedar en capa 1 (pública,
+        // sin login) → capa 3 {ADMIN, SCHOOL_ADMIN}. specs/003 y specs/006 siguen públicos: hablan
+        // de lo que el público ya ve.
+        capa: 3,
         documentos: [
             { ruta: "specs/README.md", titulo: "Índice maestro de especificaciones" },
             { ruta: "IMPLEMENTATION-REPORT.md", titulo: "Reporte global de implementación" },
         ],
     },
 
-    // ── Capa 2 — Cómo funciona (usuarios autenticados) ───────────────────────
+    // ── (SPEC-567) `flujo-reporte` y `panel-admin` ERAN capa 2; se endurecieron a capa 3 (evasión/
+    //    reconocimiento + «cómo detectamos»). Quedan aquí por orden de lectura, pero la `capa` de cada
+    //    tema manda el acceso. La capa 2 (autenticado, sin rol) la sostiene `circulo-confianza`, justo
+    //    debajo de `panel-admin` — NO quedó vacía (si lo hiciera, el padre vería lo mismo que un anónimo).
     {
         slug: "flujo-reporte",
         titulo: "Flujo de un reporte de punta a punta",
         descripcion:
             "Del formulario a la cola, el pipeline de IA (embedding, deduplicación, clasificación, guardas), la revisión humana y la visibilidad pública.",
-        capa: 2,
+        // SPEC-567 (endurecimiento, I-351): capa 2→3. specs/010 (clasificador) y specs/015 (anti-abuso)
+        // son el MANUAL DE EVASIÓN del actor que el anti-abuso vigila; AGENTS.md (arquitectura runtime)
+        // es reconocimiento de la misma clase. Un PARENT o un PROFESIONAL sin verificar (token antes de
+        // activarse) llegaban a capa 2 → ya no.
+        capa: 3,
         documentos: [
             { ruta: "AGENTS.md", titulo: "Arquitectura runtime y flujo de un reporte (resumen)" },
             { ruta: "specs/010-rediseño-clasificador-ia/spec.md", titulo: "Clasificador IA (SPEC-010)" },
@@ -74,11 +98,34 @@ export const INDICE_DOCS: TemaDocs[] = [
         slug: "panel-admin",
         titulo: "Módulos del panel de administración",
         descripcion:
-            "Cómo operar cada módulo del panel: configuración del sistema, centro de control IA, anti-abuso, estadísticas y círculo de confianza.",
-        capa: 2,
+            "Cómo operar cada módulo del panel: configuración del sistema, centro de control IA, anti-abuso y estadísticas.",
+        // SPEC-567 (endurecimiento, I-351): capa 2→3. parametros-sistema.md expone los UMBRALES EXACTOS
+        // (visibility.report_threshold, duplicate.similarity_threshold, scoring, rate-limits, bloqueo de
+        // cuenta) + rutas de API de admin; specs/011 es el centro de control IA. Es «CÓMO DETECTAMOS» —
+        // no capa 2. specs/016 (círculo de confianza) NO está acá: describe una función que el propio
+        // padre opera (no detección) → vive en su tema de capa 2, más abajo (ver `circulo-confianza`).
+        capa: 3,
         documentos: [
             { ruta: "docs/configuracion/parametros-sistema.md", titulo: "Referencia de parámetros del sistema" },
             { ruta: "specs/011-centro-control-ia/spec.md", titulo: "Centro de Control IA (SPEC-011)" },
+        ],
+    },
+
+    // ── Capa 2 — Autenticado (padre, profesional): funciones que el propio usuario OPERA ─────────
+    //    Criterio (CEO): capa 3 = «cómo detectamos» (umbrales, scoring, clasificador, anti-abuso);
+    //    capa 2 = una función que el propio usuario opera. Este tema SOSTIENE la capa 2: sin él,
+    //    quedaría vacía y un padre autenticado vería lo mismo que un anónimo (route.test.ts).
+    {
+        slug: "circulo-confianza",
+        titulo: "Círculo de confianza",
+        descripcion:
+            "Cómo funciona el círculo de confianza del padre: a quién se le comparte y cómo se agrega o se quita un contacto. No cambia QUÉ se ve (no agrega reglas de visibilidad); remite a la lógica de consulta.",
+        // SPEC-567 (endurecimiento, I-351): specs/016 se QUEDA en capa 2. Su spec dice explícitamente
+        // que no agrega reglas de visibilidad nuevas y remite a `/api/consulta` — describe una función
+        // que el padre opera, no CÓMO detectamos. Un padre que entiende su propio círculo es legítimo;
+        // un profesional sin verificar que conoce `report_threshold` no (eso es capa 3, arriba).
+        capa: 2,
+        documentos: [
             { ruta: "specs/016-circulo-confianza/spec.md", titulo: "Círculo de Confianza (SPEC-016)" },
         ],
     },

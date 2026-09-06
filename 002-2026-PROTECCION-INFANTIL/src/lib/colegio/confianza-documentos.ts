@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { logger } from "@/lib/logger";
 
 export interface DocumentoConfianza {
     clave: string;
@@ -40,8 +41,16 @@ export async function leerDocumentoConfianza(clave: string): Promise<DocumentoLe
     let markdown: string;
     try {
         markdown = await fs.readFile(absoluta, "utf-8");
-    } catch {
-        return null;
+    } catch (err) {
+        // SPEC-567 (I-351): clave del allowlist con archivo ausente en runtime = imagen mal armada
+        // (el doc no se embarcó en la etapa runner del Dockerfile), NO «no encontrado». Fail-loud:
+        // log + throw → 500, para que el hueco de despliegue sea RUIDOSO.
+        logger.error(
+            `[confianza] Documento del allowlist ausente en runtime: ${documento.ruta} (${absoluta}). ` +
+                "¿Falta la COPY en el Dockerfile runner o está dockerignored?",
+            err
+        );
+        throw new Error(`Documento de confianza no disponible en runtime: ${documento.clave}`);
     }
 
     return {
