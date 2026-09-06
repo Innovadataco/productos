@@ -17,6 +17,7 @@ import {
     estaPurgado,
     purgarTextoTrabajo,
     restaurarTextoTrabajo,
+    purgarOriginal,
     MARCADOR_TEXTO_PURGADO,
 } from "@/lib/reporte-texto-contenido";
 
@@ -137,5 +138,36 @@ describe("S-D · DEK por denuncia (cifrar/descifrar + cripto-shred)", () => {
         await restaurarTextoTrabajo(prisma, contenidoId); // no estaba purgado
         expect(await descifrarCampo(prisma, contenidoId, "texto")).toBe("trabajo anonimizado");
         expect(await estaPurgado(prisma, contenidoId)).toBe(false);
+    });
+
+    it("CANDADO retención (evento): tras purgar trabajo+original, NI el trabajo NI el original quedan legibles", async () => {
+        // Un evento no se anonimiza: el original DUPLICA el relato sensible. La purga de retención
+        // (FR-016 · purgarCamposSensibles) debe destruir AMBOS o el relato sobrevive (regresión).
+        const sensible = "relato sensible del menor que la retención debe DESTRUIR";
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: sensible, textoOriginal: sensible, origenEvidencia: "ORIGINAL" });
+
+        await purgarTextoTrabajo(prisma, contenidoId); // texto de trabajo → marcador
+        await purgarOriginal(prisma, contenidoId);      // ORIGINAL → destruido (marcador)
+
+        // Dirección 1: el texto de trabajo no revela el relato.
+        expect(await descifrarCampo(prisma, contenidoId, "texto")).toBe(MARCADOR_TEXTO_PURGADO);
+        // Dirección 2: el ORIGINAL tampoco — no sobrevive a la retención.
+        expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).toBe(MARCADOR_TEXTO_PURGADO);
+
+        const fila = await prisma.contenidoReporte.findUniqueOrThrow({ where: { id: contenidoId } });
+        expect(fila.origenEvidencia).toBe("PURGADA");
+        // Ni el ciphertext crudo conserva el relato sensible en ningún campo.
+        expect(fila.textoCifrado).not.toContain("sensible");
+        expect(fila.textoOriginalCifrado).not.toContain("sensible");
+    });
+
+    it("CANDADO write-once: purgarOriginal SOLO destruye (marcador), nunca reescribe la evidencia con contenido real", async () => {
+        // El original es write-once: la firma de purgarOriginal no acepta texto, así que
+        // estructuralmente no puede plantar contenido; solo el MARCADOR. resellarCampo tampoco lo
+        // toca (tipo cerrado a "texto"). Verificamos que lo único que puede quedar es el marcador.
+        const { contenidoId } = await sellarTextoNuevo(prisma, { texto: "t", textoOriginal: "evidencia real original" });
+        await purgarOriginal(prisma, contenidoId);
+        expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).toBe(MARCADOR_TEXTO_PURGADO);
+        expect(await descifrarCampo(prisma, contenidoId, "textoOriginal")).not.toBe("evidencia real original");
     });
 });

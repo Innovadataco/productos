@@ -208,3 +208,26 @@ export async function restaurarTextoTrabajo(tx: Prisma.TransactionClient, conten
     }
     await tx.contenidoReporte.update({ where: { id: contenidoId }, data: { purgadoEn: null } });
 }
+
+/**
+ * Purga de RETENCIÓN del ORIGINAL (evidencia): DESTRUYE `textoOriginalCifrado` sobreescribiéndolo
+ * con el MARCADOR (cifrado, misma DEK) y marca `origenEvidencia = PURGADA` + `purgadoEn`.
+ *
+ * Es la ÚNICA vía que toca el original, y SOLO para destruirlo: NO acepta contenido, así que
+ * estructuralmente NO puede reescribir la evidencia con texto real (el original es write-once —
+ * anonimizar jamás lo toca, ver `resellarCampo`; purgar por retención lo DESTRUYE, no lo reescribe).
+ *
+ * Los eventos NO se anonimizan, así que sin esto su relato sensible sobrevive a la retención (el
+ * motor no borra filas) — una regresión sobre la promesa central de que el texto se puede destruir.
+ * Combinada con `purgarTextoTrabajo`, la purga de retención deja el caso ILEGIBLE en AMBOS campos.
+ */
+export async function purgarOriginal(tx: Prisma.TransactionClient, contenidoId: string): Promise<void> {
+    const llave = await tx.llaveReporte.findUniqueOrThrow({ where: { contenidoId } });
+    const kek = llavePorVersion(llave.kekVersion);
+    const dek = Buffer.from(descifrarConLlave(llave.dekCifrada, kek, aadEnvoltura(contenidoId)), "base64");
+    const textoOriginalCifrado = cifrarConLlave(MARCADOR_TEXTO_PURGADO, dek, aadDe(contenidoId, "textoOriginal"));
+    await tx.contenidoReporte.update({
+        where: { id: contenidoId },
+        data: { textoOriginalCifrado, origenEvidencia: OrigenEvidencia.PURGADA, purgadoEn: new Date() },
+    });
+}
