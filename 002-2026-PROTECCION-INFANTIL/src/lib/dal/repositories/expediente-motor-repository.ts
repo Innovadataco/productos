@@ -11,7 +11,7 @@
 import { EstadoExpediente } from "@prisma/client";
 import type { AccionAudit, Expediente, Prisma, ScoreGravedad } from "@prisma/client";
 import { prisma } from "../prisma.ts";
-import { descifrarCampos, resellarCampo } from "@/lib/reporte-texto-contenido";
+import { descifrarCampos, purgarOriginal, resellarCampo } from "@/lib/reporte-texto-contenido";
 import { logAudit } from "@/lib/audit";
 import type { DbClient } from "../unit-of-work";
 import { withUnitOfWork } from "../unit-of-work";
@@ -161,16 +161,13 @@ export class ExpedienteMotorRepository {
         textoRetenido: string
     ): Promise<{ eventos: number; informes: number }> {
         const [eventosActualizados, informesActualizados] = await withUnitOfWork(async (tx) => {
-            // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte (texto de
-            // TRABAJO). La purga re-sella ese texto al marcador con la MISMA DEK, saltando los ya
-            // purgados (idempotencia: con IV aleatorio no se compara ciphertext sino el plano).
-            //
-            // ⚠️ GAP DE POLÍTICA (reportado a CEO — pendiente `purgarOriginal`): esto NO alcanza el
-            // `textoOriginalCifrado` del evento. Como los eventos no se anonimizan, ese original
-            // DUPLICA el relato sensible y sobrevive a la retención (el motor no borra filas: US3.2,
-            // la DEK no se quema). Cerrar la fuga exige una primitiva de purga del original en
-            // reporte-texto-contenido (fuera del alcance de S-C). Mientras no exista, la purga de
-            // retención de eventos es incompleta respecto del modelo de columna única anterior.
+            // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte (texto de TRABAJO
+            // + textoOriginal). La retención destruye AMBOS con la MISMA DEK: el trabajo se re-sella al
+            // marcador `[retenido]` y el original se PURGA (marcador de purga + origenEvidencia=PURGADA).
+            // Los eventos no se anonimizan, así que sin purgar el original su relato sensible sobreviviría
+            // a la retención (regresión sobre la promesa central de que el texto se puede destruir).
+            // Idempotente: con el trabajo ya en `[retenido]` (proxy de «ya retención-purgado», ambos van
+            // juntos en esta misma tx atómica) el evento no se recuenta ni se re-purga.
             const eventos = await tx.eventoExpediente.findMany({
                 where: { expedienteId },
                 select: { contenidoId: true },
@@ -181,6 +178,7 @@ export class ExpedienteMotorRepository {
             for (const id of contenidoIds) {
                 if (textos.get(id) !== textoRetenido) {
                     await resellarCampo(tx, id, "texto", textoRetenido);
+                    await purgarOriginal(tx, id);
                     eventosCount++;
                 }
             }
