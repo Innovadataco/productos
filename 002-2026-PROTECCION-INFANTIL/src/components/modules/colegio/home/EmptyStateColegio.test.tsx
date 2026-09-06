@@ -21,7 +21,7 @@ describe("EmptyStateColegio", () => {
         const cta = screen.getByRole("link", { name: /Crear primer curso/ });
         expect(cta.getAttribute("href")).toBe("/dashboard/colegio/cursos/unificado");
         expect(cta.className).toContain("min-h-12");
-        const excel = screen.getByRole("link", { name: /Subirla y creamos todo por ti/ });
+        const excel = screen.getByRole("link", { name: /Subirla y creamos todo por usted/ });
         expect(excel.getAttribute("href")).toBe("/dashboard/colegio/cursos/unificado?modo=excel");
         expect(screen.getByText(/¿Ya tiene su lista en Excel\?/)).toBeTruthy();
     });

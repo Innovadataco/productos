@@ -67,7 +67,7 @@ export function EmbudoEstado({ embudo, className = "" }: EmbudoEstadoProps) {
                     Ver alertas →
                 </Link>
             ) : (
-                <p className="cuerpo mt-5 text-muted">Nada te espera — la vigilancia sigue activa.</p>
+                <p className="cuerpo mt-5 text-muted">Nada le espera — la vigilancia sigue activa.</p>
             )}
         </section>
     );
