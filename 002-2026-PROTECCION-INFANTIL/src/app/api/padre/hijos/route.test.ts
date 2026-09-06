@@ -212,6 +212,33 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         const enBd = await prisma.hijo.findUnique({ where: { id: json.hijoId } });
         expect(enBd?.anioNacimiento).toBe(dentro);
     });
+
+    // SPEC-565 (I-348 · CEO): con el selector de edad 5-17 en el alta Y en la
+    // edicion, la UI ya NO puede emitir un anio fuera de rango; este test del
+    // servidor pasa a ser la UNICA red que atrapa un error de BORDE. Por eso los
+    // CUATRO bordes EXACTOS: mantienen vivos los dos operandos del validador
+    // (anio < anioMin  y  anio > anioMax) y fijan el borde donde lo declaramos.
+    // Un `>` por `>=`, o EDAD_MENOR_MIN/MAX corrido en uno, pone alguno en rojo
+    // — un valor lejano (Y-30) no distingue eso.
+    it.each([
+        { edad: 5, espera: "pasa" }, // minimo justo -> 201
+        { edad: 4, espera: "rechaza" }, // un anio mas joven -> 400
+        { edad: 17, espera: "pasa" }, // maximo justo -> 201
+        { edad: 18, espera: "rechaza" }, // un anio mas viejo -> 400
+    ])("SPEC-565: POST borde edad $edad -> $espera", async ({ edad, espera }) => {
+        const anioActual = new Date().getFullYear();
+        const doc = menor(edad).documentoNumero;
+        const res = await POST(reqCrear({ ...menor(edad), anioNacimiento: anioActual - edad }));
+        if (espera === "pasa") {
+            expect(res.status, `edad ${edad} debe pasar`).toBe(201);
+            const { hijoId } = await res.json();
+            expect((await prisma.hijo.findUnique({ where: { id: hijoId } }))?.anioNacimiento).toBe(anioActual - edad);
+        } else {
+            expect(res.status, `edad ${edad} debe rechazarse`).toBe(400);
+            expect((await res.json()).error.message).toContain("entre 5 y 17");
+            expect(await prisma.hijo.findFirst({ where: { documentoNumero: doc } })).toBeNull();
+        }
+    });
 });
 
 describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }, () => {
@@ -308,6 +335,31 @@ describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }
         expect(json.error.message).toContain("entre 5 y 17");
         const despues = await prisma.hijo.findUnique({ where: { id: hijoId } });
         expect(despues?.anioNacimiento).toBe(antes?.anioNacimiento);
+    });
+
+    // SPEC-565 (I-348 · CEO): los cuatro bordes EXACTOS tambien por PATCH — el
+    // caso viejo (Y-30) dejaba sin ejercitar el lado joven del validador y no
+    // distingue `>` de `>=`. Aqui cada operando y cada borde quedan vivos.
+    it.each([
+        { edad: 5, espera: "pasa" },
+        { edad: 4, espera: "rechaza" },
+        { edad: 17, espera: "pasa" },
+        { edad: 18, espera: "rechaza" },
+    ])("SPEC-565: PATCH borde edad $edad -> $espera", async ({ edad, espera }) => {
+        const hijoId = await crearMenor();
+        const anioActual = new Date().getFullYear();
+        const antes = await prisma.hijo.findUnique({ where: { id: hijoId } });
+        const [req, ctx] = reqPatch(hijoId, { anioNacimiento: anioActual - edad });
+        const res = await PATCH(req, ctx);
+        const despues = await prisma.hijo.findUnique({ where: { id: hijoId } });
+        if (espera === "pasa") {
+            expect(res.status, `edad ${edad} debe pasar`).toBe(200);
+            expect(despues?.anioNacimiento).toBe(anioActual - edad);
+        } else {
+            expect(res.status, `edad ${edad} debe rechazarse`).toBe(400);
+            expect((await res.json()).error.message).toContain("entre 5 y 17");
+            expect(despues?.anioNacimiento).toBe(antes?.anioNacimiento);
+        }
     });
 
     // ── SPEC-363 · BUG1: el cupo NO es burlable al reactivar ─────────────────

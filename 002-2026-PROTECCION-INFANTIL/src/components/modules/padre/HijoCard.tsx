@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { BitacoraMenor } from "./BitacoraMenor";
+import { edadesMenor, anioDesdeEdad } from "@/lib/padre/documento-menor";
 
 export const DOCUMENTO_TIPOS = [
     { value: "RC", label: "Registro civil" },
@@ -157,7 +158,19 @@ export function HijoCard({
                         <Input label="Apellidos" value={edicion.apellidos} onChange={(e) => setEdicion({ ...edicion, apellidos: e.target.value })} />
                         <Select label="Tipo de documento" options={DOCUMENTO_TIPOS} value={edicion.documentoTipo} onChange={(e) => setEdicion({ ...edicion, documentoTipo: e.target.value })} />
                         <Input label="Número de documento" value={edicion.documentoNumero} onChange={(e) => setEdicion({ ...edicion, documentoNumero: e.target.value })} />
-                        <Input label="Año de nacimiento" type="number" value={edicion.anioNacimiento} onChange={(e) => setEdicion({ ...edicion, anioNacimiento: e.target.value })} />
+                        {/* SPEC-565 (I-348): edad por SELECTOR (5-17), como en el alta — F8 de
+                            SPEC-361: teclear el año a mano llevaba a valores absurdos. El value
+                            es el AÑO derivado de la edad, así que siempre cae en el rango que el
+                            servidor exige; el guardado no cambia. */}
+                        <Select
+                            label="Edad"
+                            options={[
+                                { value: "", label: "Sin especificar" },
+                                ...edadesMenor().map((edad) => ({ value: String(anioDesdeEdad(edad)), label: `${edad} años` })),
+                            ]}
+                            value={edicion.anioNacimiento}
+                            onChange={(e) => setEdicion({ ...edicion, anioNacimiento: e.target.value })}
+                        />
                         <Select label="Sexo" options={SEXOS} value={edicion.sexo} onChange={(e) => setEdicion({ ...edicion, sexo: e.target.value })} />
                     </div>
                     <div className="flex justify-end gap-2">
