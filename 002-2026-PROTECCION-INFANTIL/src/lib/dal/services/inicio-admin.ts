@@ -161,7 +161,7 @@ function conteoDesde(fila: { total: bigint; reales: bigint } | undefined): Conte
 
 /** Cuál de los dos números manda, según esté puesto el interruptor. */
 function segunInterruptor(c: ConteoCarga, incluirSembrados: boolean): number {
-    return incluirSembrados ? c.total : c.reales;
+    return c.total; // MUTACIÓN SPEC-515 · NO MERGEAR · cuenta demo a propósito para probar el candado
 }
 
 /** Una señal de CARGA: la alarma (si hay) y cuánto de prueba se descontó. */
