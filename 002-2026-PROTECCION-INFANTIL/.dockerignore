@@ -6,8 +6,9 @@ node_modules
 .env.*
 !.env.example
 !.env.production.example
-specs
-docs
+# SPEC-567 (I-351): `specs/` y `docs/` DEBEN entrar al contexto de build — el índice de
+# documentación (src/lib/docs/indice.ts) y los documentos de confianza los sirven en runtime.
+# Excluirlos aquí dejaba al builder sin ellos, así que ninguna COPY del runner podía embarcarlos.
 design
 design-system
 tests
@@ -15,6 +16,9 @@ scripts/simulacion/*
 !scripts/simulacion/simulacion-200-antes-curaduria.json
 *.md
 !README.md
+# SPEC-567 (I-351): estos dos .md de raíz están en el allowlist de docs → deben viajar.
+!AGENTS.md
+!IMPLEMENTATION-REPORT.md
 .DS_Store
 .venv-presidio
 prisma/dev.db

@@ -305,6 +305,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/credenciales-literal.test.ts",
     "src/lib/design-tokens.test.ts",
     "src/lib/docs/indice.test.ts",
+    "src/lib/docs/indice.dockerfile.ratchet.test.ts",
+    "src/lib/docs/documentos-ausente.test.ts",
     "src/lib/errors.test.ts",
     "src/lib/expediente/analisis-interno.test.ts",
     "src/lib/expediente/expediente-forense.test.ts",
