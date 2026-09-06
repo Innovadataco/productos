@@ -21,6 +21,9 @@ const SRC = path.resolve(__dirname, "..", ".."); // .../src
 const GESTION = [
     "components/modules/profesionales-admin/ProfesionalesGestionClient.tsx",
     "components/modules/verificadores-admin/VerificadoresGestionClient.tsx",
+    // SPEC-569: cerrar el hueco — el toggle de padres (Desactivar↔Reactivar) es reversible y
+    // se coló en rubí porque este candado no escaneaba su archivo. Ahora sí.
+    "app/dashboard/admin/padres/PadresPageClient.tsx",
 ];
 const REPORTE = "components/modules/reporte-detalle/AccionesReporte.tsx";
 
@@ -62,14 +65,15 @@ function leer(rel: string): Boton[] {
 }
 
 describe("SPEC-528 · color de «dar de baja» por reversibilidad", () => {
-    it("gestión (profesionales/verificadores): baja y reactivar reversibles NO son sólidas", () => {
+    it("gestión (profesionales/verificadores/padres): baja/desactivar y reactivar reversibles NO son sólidas", () => {
         const malos: string[] = [];
         for (const rel of GESTION) {
             for (const b of leer(rel)) {
-                const esBaja = b.inner.includes("Dar de baja");
+                // SPEC-569: «Desactivar» es sinónimo reversible de «Dar de baja» (togglea a «Reactivar»).
+                const esBaja = b.inner.includes("Dar de baja") || b.inner.includes("Desactivar");
                 const esReactivar = b.inner.includes("Reactivar");
                 if ((esBaja || esReactivar) && SOLIDO.includes(b.variant)) {
-                    malos.push(`${rel} → «${esBaja ? "Dar de baja" : "Reactivar"}» en variante sólida «${b.variant}»`);
+                    malos.push(`${rel} → «${esBaja ? "Dar de baja/Desactivar" : "Reactivar"}» en variante sólida «${b.variant}»`);
                 }
             }
         }

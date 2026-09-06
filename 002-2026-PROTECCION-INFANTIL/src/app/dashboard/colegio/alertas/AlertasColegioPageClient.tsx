@@ -359,7 +359,10 @@ export default function AlertasColegioPageClient() {
                                                         {PRIORIDAD_LABELS[alerta.prioridad] || alerta.prioridad}
                                                     </Badge>
                                                     {estaVencida(alerta.vencimientoSla) && (
-                                                        <Badge variant="danger">SLA vencido</Badge>
+                                                        // SPEC-569 (D-120): un SLA vencido es URGENCIA operativa (vamos tarde),
+                                                        // no criticidad REAL del hecho → ámbar (warning), no rubí (danger).
+                                                        // La prioridad ALTA sí usa rubí acá (PRIORIDAD_VARIANTS), y es correcto.
+                                                        <Badge variant="warning">SLA vencido</Badge>
                                                     )}
                                                 </div>
 

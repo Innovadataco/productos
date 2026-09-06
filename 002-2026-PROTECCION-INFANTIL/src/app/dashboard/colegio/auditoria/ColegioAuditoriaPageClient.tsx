@@ -12,9 +12,9 @@ export default function ColegioAuditoriaPageClient() {
                     Registro de acciones de su institución: cursos, estudiantes, identificadores, cargas masivas, alertas y reportes.
                 </p>
             </div>
+            {/* SPEC-569: el encabezado local de arriba es el ÚNICO — no se pasa title/subtitle al
+                viewer, que si los recibe pinta su propio título y duplica «Auditoría del colegio». */}
             <AuditLogViewer
-                title="Auditoría del colegio"
-                subtitle="Solo se muestran las acciones registradas para su colegio."
                 defaultActions={COLEGIO_AUDIT_ACTIONS}
                 endpoint="/api/colegio/auditoria"
                 legible
