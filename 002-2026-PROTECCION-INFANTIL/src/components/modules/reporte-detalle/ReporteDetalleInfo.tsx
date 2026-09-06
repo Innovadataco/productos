@@ -53,8 +53,27 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
             {reporte.clasificacion && (
                 <div className="rounded-lg border border-tinta/10 p-4">
                     <h3 className="mb-2 font-medium text-body">Clasificación IA</h3>
-                    <p><span className="text-subtle">Categoría:</span> {formatCategoria(reporte.clasificacion.categoria)}</p>
-                    <p><span className="text-subtle">Confianza:</span> {(reporte.clasificacion.confianza * 100).toFixed(1)}%</p>
+                    {/* SPEC-558 (I-345): a confianza 0, «Otro» NO es una clasificación
+                        sino la AUSENCIA de una — el jurado no llegó a acuerdo y el caso
+                        va a revisión manual. Pintar «Categoría: Otro · Confianza: 0.0%»
+                        como dos líneas iguales hace que el operador cansado lo lea como
+                        categoría real. La DIFERENCIA DE TRATAMIENTO es el arreglo: un
+                        estado destacado en ámbar (atención, nunca rubí), no una palabra
+                        más en el mismo párrafo. Con confianza > 0 el bloque no cambia. */}
+                    {reporte.clasificacion.confianza === 0 ? (
+                        <div className="rounded-lg bg-ambar/10 p-3">
+                            <p className="font-serif italic text-lg text-estado-ambar">Sin determinación</p>
+                            <p className="mt-1 text-sm text-estado-ambar">
+                                El jurado no llegó a una categoría · va a <span className="font-semibold">revisión manual</span>
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <p><span className="text-subtle">Categoría:</span> {formatCategoria(reporte.clasificacion.categoria)}</p>
+                            <p><span className="text-subtle">Confianza:</span> {(reporte.clasificacion.confianza * 100).toFixed(1)}%</p>
+                        </>
+                    )}
+                    {/* Los tres modelos y su detalle quedan DEBAJO, subordinados. */}
                     <p><span className="text-subtle">Modelo:</span> {reporte.clasificacion.modeloUsado}</p>
                     {reporte.clasificacion.posibleAgresorPar && (
                         <p className="text-estado-cielo">Posible agresor par / adolescente</p>
