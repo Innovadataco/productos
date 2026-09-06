@@ -241,7 +241,7 @@ export function AccionesReporte({
                                 {notaBaja.length} / 2000 caracteres
                             </p>
                             <div className="flex gap-2">
-                                <Button onClick={handleBaja} disabled={actionLoading}>
+                                <Button onClick={handleBaja} disabled={actionLoading} variant="danger">
                                     {actionLoading ? "Procesando..." : "Confirmar baja"}
                                 </Button>
                                 <Button onClick={() => { setMostrarBaja(false); setMotivoBaja(""); setNotaBaja(""); }} variant="secondary" disabled={actionLoading}>
