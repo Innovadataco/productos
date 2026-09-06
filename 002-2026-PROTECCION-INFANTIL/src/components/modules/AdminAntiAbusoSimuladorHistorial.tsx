@@ -160,14 +160,14 @@ export function AdminAntiAbusoSimuladorHistorial({ onVerDetalle }: HistorialProp
                     </TablaHead>
                     <TablaBody>
                         {runs.map((r) => (
-                            <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                            <tr key={r.id} className="hover:bg-tinta/5 transition">
                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-2">
                                         <code className="font-mono text-xs">{r.id.slice(0, 8)}</code>
                                         <button
                                             type="button"
                                             onClick={() => void copiarId(r.id)}
-                                            className="text-xs text-sky-600 hover:underline"
+                                            className="text-xs text-accent hover:underline"
                                             aria-label={`Copiar ID ${r.id.slice(0, 8)}`}
                                         >
                                             {copiadoId === r.id ? "Copiado" : "Copiar"}
