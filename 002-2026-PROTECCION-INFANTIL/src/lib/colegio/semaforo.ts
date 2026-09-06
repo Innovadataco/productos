@@ -29,7 +29,9 @@ export function resolverEstado({ alertasNuevas, alertas72h }: ConteosSemaforo): 
 }
 
 /** Único lugar donde el estado del colegio se traduce a color (D-120: nunca rubí). */
-export function colorDeEstadoColegio(estado: EstadoColegio): EstadoSistema {
+// SPEC-566 (D-120): el estado del colegio NUNCA se pinta en rubí; el tipo lo dice
+// (Extract sobre EstadoSistema) para que el hero pueda borrar la rama muerta de rubí.
+export function colorDeEstadoColegio(estado: EstadoColegio): Extract<EstadoSistema, "pino" | "ambar"> {
     switch (estado) {
         case "PENDIENTE":
             return "ambar";
