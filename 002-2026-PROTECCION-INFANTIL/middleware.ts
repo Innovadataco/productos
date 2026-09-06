@@ -53,9 +53,14 @@ const NOMBRE_COOKIE_SESION_HOST = "__Host-token";
 // Utilidades
 // ────────────────────────────────────────────────────────────────────────────
 
+// SPEC-572 (nit de Datos): UN solo piso para el largo de JWT_SECRET. Antes getSecret() exigía ≥32
+// y la lectura de estado de sesión usaba ≥16 — dos umbrales para el mismo secreto se desincronizan
+// solos. Alineados acá (32 = el mismo piso que `requireEnv("JWT_SECRET", 32)` en al-dia).
+const LARGO_MINIMO_JWT_SECRET = 32;
+
 function getSecret(): Uint8Array {
     const secret = process.env.JWT_SECRET;
-    if (!secret || secret.length < 32) {
+    if (!secret || secret.length < LARGO_MINIMO_JWT_SECRET) {
         // Fail-open sería peor que fail-closed: dejamos que el request cargue,
         // pero el layout de destino no encontrará usuario y se comportará como
         // sin sesión. Es coherente con lo que hoy hace verifyToken() → null.
@@ -81,8 +86,11 @@ function redirect(request: NextRequest, destino: string): NextResponse {
     return NextResponse.redirect(new URL(destino, request.url));
 }
 
-function redirectAtLogin(request: NextRequest): NextResponse {
-    const res = redirect(request, "/login");
+function redirectAtLogin(request: NextRequest, mensaje?: string): NextResponse {
+    // `mensaje` (opcional) pinta el aviso en /login — p.ej. "sesion" cuando el
+    // loop-cap (SPEC-572) corta un rebote perpetuo: el usuario aterriza en algo
+    // que le habla, no en un callejón silencioso.
+    const res = redirect(request, mensaje ? `/login?mensaje=${encodeURIComponent(mensaje)}` : "/login");
     // SPEC-342 (BUG4): sin Path=/ estos delete no borran cookies fijadas con
     // path "/" — la sesión "cerrada" seguía viva.
     res.cookies.delete({ name: NOMBRE_COOKIE_SESION_LEGACY, path: "/" });
@@ -183,14 +191,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         return aplicarCspSiCorresponde(request, NextResponse.next());
     }
 
-    // Paso 4/5/6: leer estado firmado de la cookie. Si no está o expiró, el
-    // middleware permite el paso — el layout/página vería un estado stale por
-    // <5 min pero NO se cuelga la BD desde Edge. El refresh asincrónico se
-    // dispara por el propio cliente al montar (vía POST /api/vigencia/refresh),
-    // o desde las Server Actions que cambian estado.
+    // Paso 4/5/6: leer el estado firmado de la cookie. Si NO está, expiró, o la FIRMA no valida,
+    // `leerSesionEstado` devuelve null y el cierre fail-closed de más abajo (SPEC-572) rebota a
+    // re-derivar (página) o responde 403 (/api/**) — no se puede consultar la BD desde Edge; el
+    // re-sello lo hace `/api/sesion/al-dia` (Node). Umbral del secreto alineado con getSecret().
     const secret = process.env.JWT_SECRET ?? "";
     const estado =
-        secret.length >= 16
+        secret.length >= LARGO_MINIMO_JWT_SECRET
             ? await leerSesionEstado(request.cookies.get(NOMBRE_COOKIE_SESION)?.value, secret)
             : null;
 
@@ -315,6 +322,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
                 { status: 403 },
             );
         }
+        // SPEC-572 (I-236 · loop-cap, revisión CEO): si YA rebotamos una vez —el destino
+        // trae `marcaRebote`— y la cookie SIGUE ausente, el re-sello de `al-dia` no pegó en
+        // el cliente (cookie rechazada, reloj adelantado, `secure` sobre http). El endpoint
+        // no ve ese fallo (cree que re-selló); solo esta marca sobrevive el viaje. Otro
+        // rebote sería un bucle infinito de 307 que deja al usuario fuera. Cortamos a /login
+        // (ruta pública, terminal, cierra la sesión) con un mensaje — algo que le habla.
+        if (request.nextUrl.searchParams.get(G.marcaRebote) === "1") {
+            return aplicarCspSiCorresponde(request, redirectAtLogin(request, "sesion"));
+        }
+
         const alDia = new URL(G.caminoRebote, request.url);
         alDia.searchParams.set("destino", pathname);
         return aplicarCspSiCorresponde(request, NextResponse.redirect(alDia));

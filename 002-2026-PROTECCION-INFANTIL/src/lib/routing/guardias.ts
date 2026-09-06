@@ -142,6 +142,20 @@ export const GUARDIAS_ACCESO = {
      */
     caminoRebote: "/api/sesion/al-dia",
 
+    /**
+     * SPEC-572 (I-236 · loop-cap, revisión CEO) — marca de "ya reboté una vez".
+     *
+     * El rebote fail-closed manda a `caminoRebote`, que re-sella la cookie y
+     * devuelve al destino CON este parámetro. Si la respuesta vuelve al
+     * middleware SIN estado y CON esta marca, el re-sello no pegó en el cliente
+     * (cookie rechazada, reloj adelantado, `secure` sobre http): un segundo
+     * rebote sería un bucle infinito de 307. La marca lo corta: se aterriza en
+     * `/login` (ruta pública, terminal) en vez de rebotar de nuevo. El endpoint
+     * no puede ver este fallo —cree que re-selló bien—; solo el navegador lo ve,
+     * y esta marca es la única señal que sobrevive el viaje de ida y vuelta.
+     */
+    marcaRebote: "_rv",
+
     camino: {
         // No hay un destino fijo: depende del paso pendiente (ver `pasos.ts` para
         // el padre y `pasos-colegio.ts` para el colegio). El guardián calcula el
