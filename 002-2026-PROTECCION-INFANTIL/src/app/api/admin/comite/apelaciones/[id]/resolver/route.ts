@@ -77,7 +77,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         if (decision === "ACEPTADA" && !quitarVisibilidad && reportesABajar.length === 0) {
             return NextResponse.json(
-                { error: { message: "Al aceptar debes quitar la visibilidad y/o dar de baja reportes", code: ERROR_CODES.VALIDATION_ERROR } },
+                { error: { message: "Al aceptar debe quitar la visibilidad y/o dar de baja reportes", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }
