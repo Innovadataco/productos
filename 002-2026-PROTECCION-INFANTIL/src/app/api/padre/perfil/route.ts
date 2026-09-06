@@ -7,6 +7,7 @@ import { errorToResponse } from "@/lib/api-handler";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { DOCUMENTO_TIPOS_PADRE } from "@/lib/validators";
+import { validarFechaNacimientoPadre } from "@/lib/padre/fecha-nacimiento-padre";
 
 // SPEC-334: teléfono con validación mínima (7-20 dígitos, permite + espacios guiones).
 const telefonoRegex = /^[+\d][\d\s-]{6,19}$/;
@@ -22,9 +23,15 @@ const perfilSchema = z.object({
     // SPEC-339 (D-2): fechaNacimiento deja de pedirse en el camino. Se ACEPTA
     // aún (la pantalla de perfil fuera del camino puede seguir mandándola y el
     // campo vive en la BD); simplemente ya no es parte del Paso 2.
+    // SPEC-541 (P2): además del formato, la edad debe ser de 18 a 100 años y la
+    // fecha no puede ser futura (antes aceptaba 1900 y fechas futuras).
     fechaNacimiento: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida")
+        .superRefine((v, ctx) => {
+            const err = validarFechaNacimientoPadre(v);
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err });
+        })
         .optional()
         .nullable(),
     telefono: z
