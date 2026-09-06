@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
 import { TarjetaMetrica } from "@/components/ui/TarjetaMetrica";
 import { useFetchJson } from "@/components/ui/use-fetch-json";
+import { precisionColorClass } from "./escala-salud-motor";
 
  type StatsData = {
     totales: {
@@ -188,12 +189,6 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
             {children}
         </article>
     );
-}
-
-function precisionColorClass(value: number): string {
-    if (value < 0.7) return "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300";
-    if (value < 0.9) return "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300";
-    return "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300";
 }
 
 function PrecisionTable({

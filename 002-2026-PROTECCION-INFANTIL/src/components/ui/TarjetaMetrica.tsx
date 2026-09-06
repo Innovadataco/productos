@@ -13,16 +13,19 @@ type TarjetaMetricaProps = {
     value: string | number;
     suffix?: string | undefined;
     sub?: string | undefined;
-    /** "up" = rojo (sube riesgo), "down" = verde (baja riesgo). */
+    /** SPEC-537: "up" = ámbar (sube riesgo), "down" = pino (baja riesgo). Nunca rubí. */
     tone?: "up" | "down" | undefined;
     disposicion?: "centrada" | "panel" | undefined;
     mono?: boolean | undefined;
     className?: string | undefined;
 };
 
-function toneClass(tone?: "up" | "down"): string {
-    if (tone === "up") return "text-red-700 dark:text-red-400";
-    if (tone === "down") return "text-green-700 dark:text-green-400";
+// SPEC-537 (data-viz por DIRECCIÓN): sube-riesgo → ámbar, baja-riesgo → pino. NUNCA rubí:
+// una flecha de tendencia no es una alarma (el rubí se reserva a criticidad real). Exportada
+// como fuente única del mapeo dirección→token para el candado.
+export function toneClass(tone?: "up" | "down"): string {
+    if (tone === "up") return "text-estado-ambar";
+    if (tone === "down") return "text-estado-pino";
     return "text-body";
 }
 

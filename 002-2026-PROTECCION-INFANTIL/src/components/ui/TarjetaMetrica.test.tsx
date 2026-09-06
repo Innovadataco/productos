@@ -19,11 +19,12 @@ describe("TarjetaMetrica", () => {
         expect(article?.className).not.toContain("text-center");
     });
 
-    it("aplica tone up (rojo) y down (verde) al valor", () => {
+    it("SPEC-537 · tone up (ámbar, sube riesgo) y down (pino, baja riesgo) al valor — nunca rubí", () => {
         const { rerender } = render(<TarjetaMetrica label="Subidas" value={3} tone="up" />);
-        expect(screen.getByText("3").className).toContain("text-red-700");
+        expect(screen.getByText("3").className).toContain("text-estado-ambar");
+        expect(screen.getByText("3").className).not.toContain("rubi");
         rerender(<TarjetaMetrica label="Bajadas" value={2} tone="down" />);
-        expect(screen.getByText("2").className).toContain("text-green-700");
+        expect(screen.getByText("2").className).toContain("text-estado-pino");
     });
 
     it("renderiza suffix y sub cuando se proporcionan", () => {
