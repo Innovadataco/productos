@@ -24,7 +24,7 @@ async function perfilDelProfesional() {
     const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
     if (!perfil) {
         throw new AppError(
-            "Completa tu perfil antes de cargar documentos.",
+            "Complete su perfil antes de cargar documentos.",
             ERROR_CODES.VALIDATION_ERROR,
             400
         );
