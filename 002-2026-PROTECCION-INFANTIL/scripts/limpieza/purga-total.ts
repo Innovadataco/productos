@@ -41,13 +41,16 @@ export const ENTIDADES_BORRADO_PURGA_TOTAL: readonly string[] = [
     "SimulacionReporte",
     "ClasificacionRubricaVoto",
     "EmbeddingReporte",
-    "AlertaColegio",
-    "Reporte",
-    // Fase 3 — expedientes y casos
+    // Grupo casos de seguimiento ANTES que la alerta: FK RESTRICT
+    // SeguimientoCaso→AlertaColegio e InformeCaso/NotaSeguimiento→SeguimientoCaso
+    // (detectado en ensayo real contra clon, 2026-09-07).
     "InformeCaso",
     "NotaSeguimiento",
-    "AnalisisExpediente",
     "SeguimientoCaso",
+    "AlertaColegio",
+    "Reporte",
+    // Fase 3 — expedientes
+    "AnalisisExpediente",
     "AclaracionExpediente",
     "InformePadre",
     "InformeConsolidado",
