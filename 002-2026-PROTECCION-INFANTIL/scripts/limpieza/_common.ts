@@ -5,7 +5,7 @@
  */
 import type { PrismaClient, Prisma } from "@prisma/client";
 
-export type TipoPurga = "colegio" | "padre" | "reporte" | "simulacion" | "reset_piloto";
+export type TipoPurga = "colegio" | "padre" | "reporte" | "simulacion" | "reset_piloto" | "purga_total";
 
 export interface ArgsBase {
     confirm: boolean;
@@ -92,29 +92,82 @@ export async function bloquearSiHayConsentimiento(
     }
 }
 
-export const PRESERVADOS = {
+/**
+ * SPEC-578 (D-113, 2026-09-07) — regla única de la purga:
+ *   PRESERVAR = configuración/seed del producto · BORRAR = dato de prueba.
+ * La lista anterior «evidencia viva» (RPT-1RR278/RPT-2JFULR/RPT-FA1C23, D-001 §5)
+ * queda ANULADA: D-113 ordena borrar también esos 3 reportes. Ver
+ * scripts/limpieza/CLASIFICACION-PURGA.md (contrato completo, 111 modelos).
+ */
+export const PRESERVA_SIEMPRE = {
+    /** Buzones que NUNCA se borran. */
     usuarios: ["soporte@innovadataco.com"],
-    // Reportes que NO borra reset-piloto (D-001 §5, evidencia viva I-105/I-100/I-113/I-114/I-121).
-    reportesExcluidos: ["RPT-1RR278", "RPT-2JFULR", "RPT-FA1C23"],
-    // Tablas que NUNCA se tocan (seed permanente).
-    tablas: [
+    /**
+     * Modelos que NUNCA se borran (config/seed). La purga total compara sus
+     * conteos antes/después y TIRA DEL PROCESO si alguno se movió.
+     * FuenteReporte se RECLASIFICÓ como dato (por-reporte) y salió de la lista.
+     */
+    modelos: [
         "ParametroSistema",
         "Plan",
-        "notificacion_reglas",
-        "notificacion_plantillas",
+        "NotificacionPlantilla",
+        "NotificacionRegla",
         "Pais",
         "Departamento",
         "Ciudad",
         "Plataforma",
+        "TipoDocumento",
         "ModuloPermisible",
+        "PermisoModulo",
         "GuiaAccionCategoria",
-        "reglas_recomendacion",
-        "FuenteReporte",
+        "ReglaRecomendacion",
         "DatasetEntrenamiento",
         "EmbeddingDataset",
         "AuditLog",
     ],
 } as const;
+
+/**
+ * Compatibilidad con importadores históricos. DEPRECATED: usar PRESERVA_SIEMPRE.
+ * `reportesExcluidos` queda vacío por D-113 (los 3 reportes evidencia se borran).
+ */
+export const PRESERVADOS = {
+    usuarios: PRESERVA_SIEMPRE.usuarios,
+    reportesExcluidos: [] as string[],
+    tablas: [...PRESERVA_SIEMPRE.modelos],
+} as const;
+
+/**
+ * SPEC-578 — validación pura de los flags de reset-piloto (testeable sin BD).
+ * Reglas: --confirm obligatorio en todos los modos; --backup y
+ * --backup-ya-tomado son mutuamente excluyentes y uno de los dos es obligatorio.
+ */
+export interface FlagsResetPiloto {
+    backup: string;
+    backupYaTomado: string | null;
+    purgaTotal: boolean;
+    soloSembrado: boolean;
+}
+
+export function validarFlagsResetPiloto(args: Record<string, string | boolean>): FlagsResetPiloto {
+    if (args.confirm !== true) {
+        throw new Error("[reset-piloto] Falta --confirm (obligatorio en todos los modos)");
+    }
+    const backup = typeof args.backup === "string" ? args.backup : "";
+    const backupYaTomado = typeof args["backup-ya-tomado"] === "string" ? args["backup-ya-tomado"] : "";
+    if (backup && backupYaTomado) {
+        throw new Error("[reset-piloto] --backup y --backup-ya-tomado son mutuamente excluyentes");
+    }
+    if (!backup && !backupYaTomado) {
+        throw new Error("[reset-piloto] Falta --backup=<ruta.sql> o --backup-ya-tomado=<ruta.sql>");
+    }
+    return {
+        backup,
+        backupYaTomado: backupYaTomado || null,
+        purgaTotal: args["purga-total"] === true,
+        soloSembrado: args["solo-sembrado"] === true,
+    };
+}
 
 export function log(prefix: string, msg: string): void {
     console.log(`[limpieza/${prefix}] ${msg}`);

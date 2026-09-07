@@ -13,7 +13,7 @@
  */
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
-import { parseArgs, requerirMotivo, registrarAuditoria, log, PRESERVADOS, bloquearSiHayConsentimiento, contarConsentimientos } from "./_common";
+import { parseArgs, requerirMotivo, registrarAuditoria, log, PRESERVA_SIEMPRE, bloquearSiHayConsentimiento, contarConsentimientos } from "./_common";
 import { borrarReporte } from "./borrar-reporte";
 
 export interface ResultadoBorrarPadre {
@@ -40,7 +40,7 @@ export async function borrarPadre(
 ): Promise<ResultadoBorrarPadre> {
     const client = opts.client ?? prisma;
 
-    if (PRESERVADOS.usuarios.includes(email as (typeof PRESERVADOS.usuarios)[number])) {
+    if (PRESERVA_SIEMPRE.usuarios.includes(email as (typeof PRESERVA_SIEMPRE.usuarios)[number])) {
         throw new Error(`[borrar-padre] Usuario preservado: ${email}`);
     }
 
