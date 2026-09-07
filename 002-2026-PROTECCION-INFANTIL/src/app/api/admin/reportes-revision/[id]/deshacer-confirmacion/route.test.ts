@@ -12,6 +12,7 @@ import {
     crearPaisCiudad,
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import type { CategoriaConducta } from "@prisma/client";
 
 /**
@@ -46,20 +47,23 @@ describe("POST /api/admin/reportes-revision/[id]/deshacer-confirmacion", () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const usuario = await crearUsuario("PARENT");
         const identificador = "+57300DESHACER";
-        const reporte = await prisma.reporte.create({
-            data: {
-                identificador,
-                plataformaId: plataforma!.id,
-                usuarioId: usuario.id,
+        // S-C (D-116/D-117): el alta pasa por el factory (texto sellado en ContenidoReporte).
+        const reporte = await prisma.$transaction((tx) =>
+            crearReporteConTexto(tx, {
                 texto: "Mensaje ofreciendo regalos a cambio de fotos.",
-                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
-                ciudad: "Bogotá",
-                pais: "Colombia",
-                esAnonimo: false,
-                numeroSeguimiento: "RPT-DESH001",
-                estado: (over.estado ?? "CLASIFICADO") as never,
-            },
-        });
+                reporte: {
+                    identificador,
+                    plataformaId: plataforma!.id,
+                    usuarioId: usuario.id,
+                    fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                    ciudad: "Bogotá",
+                    pais: "Colombia",
+                    esAnonimo: false,
+                    numeroSeguimiento: "RPT-DESH001",
+                    estado: (over.estado ?? "CLASIFICADO") as never,
+                },
+            })
+        );
         const clasificacion = await prisma.clasificacionIA.create({
             data: {
                 reporteId: reporte.id,

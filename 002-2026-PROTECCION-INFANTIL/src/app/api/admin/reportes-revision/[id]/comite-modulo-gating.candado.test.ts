@@ -27,6 +27,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
 import { syncModulosYGrants } from "../../../../../../prisma/seed-modulos-grants";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 
 let mockToken: string | undefined;
 vi.mock("next/headers", () => ({
@@ -46,20 +47,24 @@ async function plataformaId(): Promise<string> {
 }
 
 async function crearReporteDeComite(comiteId: string, sufijo: string): Promise<string> {
-    const r = await prisma.reporte.create({
-        data: {
-            identificador: `c12-${sufijo}`,
-            plataformaId: await plataformaId(),
+    // S-C (D-116/D-117): el alta pasa por el factory (texto sellado en ContenidoReporte).
+    const pid = await plataformaId();
+    const r = await prisma.$transaction((tx) =>
+        crearReporteConTexto(tx, {
             texto: `c12 ${sufijo}: reporte del candado de gating`,
-            fechaIncidente: new Date("2026-07-10T10:00:00Z"),
-            ciudad: "Bogotá",
-            pais: "Colombia",
-            esAnonimo: true,
-            numeroSeguimiento: `RPT-C12-${sufijo}-${randomUUID().slice(0, 6).toUpperCase()}`,
-            estado: "REVISION_MANUAL",
-            comiteId,
-        },
-    });
+            reporte: {
+                identificador: `c12-${sufijo}`,
+                plataformaId: pid,
+                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                esAnonimo: true,
+                numeroSeguimiento: `RPT-C12-${sufijo}-${randomUUID().slice(0, 6).toUpperCase()}`,
+                estado: "REVISION_MANUAL",
+                comiteId,
+            },
+        })
+    );
     return r.id;
 }
 

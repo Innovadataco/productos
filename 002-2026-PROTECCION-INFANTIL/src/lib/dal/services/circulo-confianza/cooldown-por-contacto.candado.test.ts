@@ -20,6 +20,7 @@ import { agregarContacto } from "./index";
 import { enviarAlertaCirculoConfianzaEnriquecida } from "@/lib/email";
 import { crearUsuario, crearPlataforma, crearPaisCiudad, crearParametrosReportes } from "@/lib/reporte-test-utils";
 import { normalizarIdentificador } from "@/lib/dal/identificadores/normalizar";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 vi.mock("@/lib/email", () => ({
@@ -41,20 +42,23 @@ async function crearCirculoParams() {
 async function crearReporte(identificador: string, plataformaId: string, estado: EstadoReporte, categoria: CategoriaConducta) {
     const pais = await prisma.pais.findUnique({ where: { codigo: "CO" } });
     const ciudad = await prisma.ciudad.findUnique({ where: { nombre_paisId: { nombre: "Bogotá", paisId: pais!.id } } });
-    const reporte = await prisma.reporte.create({
-        data: {
-            identificador: normalizarIdentificador(identificador),
-            plataformaId,
+    // S-C (D-116/D-117): el alta pasa por el factory (texto sellado en ContenidoReporte).
+    const reporte = await prisma.$transaction((tx) =>
+        crearReporteConTexto(tx, {
             texto: "Texto de prueba",
-            fechaIncidente: new Date("2026-07-10T10:00:00Z"),
-            ciudad: "Bogotá",
-            pais: "Colombia",
-            paisId: ciudad?.paisId ?? null,
-            ciudadId: ciudad?.id ?? null,
-            esAnonimo: false,
-            estado,
-        },
-    });
+            reporte: {
+                identificador: normalizarIdentificador(identificador),
+                plataformaId,
+                fechaIncidente: new Date("2026-07-10T10:00:00Z"),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                paisId: ciudad?.paisId ?? null,
+                ciudadId: ciudad?.id ?? null,
+                esAnonimo: false,
+                estado,
+            },
+        })
+    );
     await prisma.clasificacionIA.create({
         data: { reporteId: reporte.id, categoria, confianza: 0.8, contienePii: false, piiDetectada: [], modeloUsado: "ornith:9b", latenciaMs: 1000 },
     });
