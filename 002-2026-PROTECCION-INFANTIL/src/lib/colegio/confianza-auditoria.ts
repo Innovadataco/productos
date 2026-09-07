@@ -1,8 +1,11 @@
 import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
+import { resumenAuditoriaColegio, accionLabelColegio } from "@/lib/colegio/confianza-auditoria-resumen";
 
 export interface EventoAuditoriaColegio {
     id: string;
     accion: string;
+    /** Etiqueta humana de la acción (SPEC-576): «Integrante de comité agregado», no el enum crudo. */
+    accionLabel: string;
     tipoRecurso: string;
     recursoId: string | null;
     usuarioId: string | null;
@@ -57,11 +60,15 @@ export async function listarAuditoriaColegio(
         items: filas.map((f) => ({
             id: f.id,
             accion: f.accion,
+            accionLabel: accionLabelColegio(f.accion),
             tipoRecurso: f.tipoRecurso,
             recursoId: f.recursoId,
             usuarioId: f.usuarioId,
             fecha: f.creadoEn.toISOString(),
-            resumen: f.valorNuevo ? truncarResumen(f.valorNuevo) : null,
+            // SPEC-576 (I-358): frase DECLARADA en español o null (→ «—» en la UI). NUNCA el payload:
+            // el origen manda frase-o-null, no JSON — la diferencia entre tapar el síntoma (formatear
+            // el JSON) y cerrar el canal (una lista declarada por acción).
+            resumen: resumenAuditoriaColegio(f.accion, f.valorNuevo),
         })),
         pagination: {
             page: pageEfectiva,
@@ -70,9 +77,4 @@ export async function listarAuditoriaColegio(
             totalPages,
         },
     };
-}
-
-function truncarResumen(valor: string): string {
-    if (valor.length <= 200) return valor;
-    return `${valor.slice(0, 200)}…`;
 }
