@@ -7,7 +7,7 @@ import { fraseAccionLegible, detalleLegible } from "./legible";
 describe("fraseAccionLegible (SPEC-129 C6)", () => {
     it("traduce las acciones del colegio a lenguaje natural", () => {
         expect(fraseAccionLegible("COLEGIO_CURSO_CREADO")).toBe("Se creó un curso");
-        expect(fraseAccionLegible("COLEGIO_CARGA_MASIVA")).toBe("Carga masiva de alumnos");
+        expect(fraseAccionLegible("COLEGIO_CARGA_MASIVA")).toBe("Carga masiva de estudiantes");
         expect(fraseAccionLegible("COLEGIO_ESTADISTICAS_PDF_DESCARGADO")).toBe("Se descargó el informe PDF");
     });
 

@@ -28,6 +28,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/dashboard/admin/voz-usted-interno.candado.test.ts",
     // SPEC-522: candado de clase — el colegio dice «estudiante», no «alumno» (texto visible).
     "src/app/dashboard/colegio/alumno-estudiante.candado.test.ts",
+    // SPEC-577: extensión de SPEC-522 — el área admin también dice «estudiante».
+    "src/app/dashboard/admin/alumno-estudiante.candado.test.ts",
     // SPEC-569 (G2): badge «SLA vencido» en ámbar (no rubí) + auditoría con UN solo encabezado.
     "src/app/dashboard/colegio/spec-569-forma.candado.test.ts",
     // SPEC-533 (I-329): el SW se registra y no cachea rutas privadas (modo offline).

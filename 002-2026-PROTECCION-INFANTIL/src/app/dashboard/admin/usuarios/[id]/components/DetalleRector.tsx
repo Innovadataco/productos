@@ -47,7 +47,7 @@ export function DetalleRector({ detalle }: DetalleRectorProps) {
                             <p className="mt-1 text-xl font-bold text-body">{colegio.nombre}</p>
                         </GlassCard>
                         <GlassCard className="p-5">
-                            <p className="text-xs text-muted">Alumnos</p>
+                            <p className="text-xs text-muted">Estudiantes</p>
                             <p className="mt-1 text-2xl font-bold text-body">{colegio.alumnos}</p>
                         </GlassCard>
                         <GlassCard className="p-5">

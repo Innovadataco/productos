@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Cargando } from "@/components/ui/Cargando";
 
 /**
- * SPEC-141 (N-1, FR-005): estructura del colegio (cursos → alumnos con
+ * SPEC-141 (N-1, FR-005): estructura del colegio (cursos → estudiantes con
  * identificadores) en SOLO LECTURA (soporte). Sin controles de edición; las
  * mutaciones siguen siendo exclusivas del SCHOOL_ADMIN.
  */
@@ -85,13 +85,13 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
                 const json = await res.json().catch(() => ({}));
                 if (!res.ok) {
                     throw new Error(
-                        typeof json?.error?.message === "string" ? json.error.message : "No se pudieron cargar los alumnos"
+                        typeof json?.error?.message === "string" ? json.error.message : "No se pudieron cargar los estudiantes"
                     );
                 }
                 setEstudiantes(json.items ?? []);
                 setPaginacion(json.pagination ?? { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 });
             } catch (e) {
-                setError(e instanceof Error ? e.message : "No se pudieron cargar los alumnos");
+                setError(e instanceof Error ? e.message : "No se pudieron cargar los estudiantes");
             } finally {
                 setLoadingEstudiantes(false);
             }
@@ -115,7 +115,7 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
                 <div>
                     <h1 className="text-2xl font-bold text-body">Estructura del colegio</h1>
                     <p className="text-sm text-muted">
-                        Vista de soporte: cursos y alumnos con sus identificadores, tal como los cargó el colegio.
+                        Vista de soporte: cursos y estudiantes con sus identificadores, tal como los cargó el colegio.
                     </p>
                 </div>
                 <Badge variant="warning">Solo lectura</Badge>
@@ -150,37 +150,37 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
                                     {curso.grado && <Badge variant="neutral">Grado {curso.grado}</Badge>}
                                     {curso.anioLectivo && <Badge variant="neutral">Año {curso.anioLectivo}</Badge>}
                                     {curso.estado !== "activo" && <Badge variant="neutral">Inactivo</Badge>}
-                                    <span className="text-xs text-muted">{curso.alumnos} alumnos</span>
+                                    <span className="text-xs text-muted">{curso.alumnos} estudiantes</span>
                                 </div>
                                 <Button
                                     variant="outline"
                                     className="px-3 py-1.5 text-xs"
                                     onClick={() => alternarCurso(curso.id)}
                                 >
-                                    {cursoAbierto === curso.id ? "Ocultar alumnos" : "Ver alumnos"}
+                                    {cursoAbierto === curso.id ? "Ocultar estudiantes" : "Ver estudiantes"}
                                 </Button>
                             </div>
 
                             {cursoAbierto === curso.id && (
                                 <div className="mt-3 border-t border-tinta/10 pt-3">
                                     {loadingEstudiantes ? (
-                                        <Cargando inline texto="Cargando alumnos..." className="py-4" />
+                                        <Cargando inline texto="Cargando estudiantes..." className="py-4" />
                                     ) : estudiantes.length === 0 ? (
-                                        <p className="text-sm text-muted">El curso no tiene alumnos registrados.</p>
+                                        <p className="text-sm text-muted">El curso no tiene estudiantes registrados.</p>
                                     ) : (
                                         <>
                                             <ul className="space-y-2">
-                                                {estudiantes.map((alumno) => (
-                                                    <li key={alumno.id} className="text-sm text-body">
+                                                {estudiantes.map((estudiante) => (
+                                                    <li key={estudiante.id} className="text-sm text-body">
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <span>{alumno.nombre}</span>
-                                                            {alumno.estado !== "activo" && (
+                                                            <span>{estudiante.nombre}</span>
+                                                            {estudiante.estado !== "activo" && (
                                                                 <Badge variant="neutral">Inactivo</Badge>
                                                             )}
                                                         </div>
-                                                        {alumno.identificadores.length > 0 && (
+                                                        {estudiante.identificadores.length > 0 && (
                                                             <ul className="ml-4 mt-1 space-y-1">
-                                                                {alumno.identificadores.map((i) => (
+                                                                {estudiante.identificadores.map((i) => (
                                                                     <li key={i.id} className="flex flex-wrap items-center gap-2">
                                                                         <span className="font-mono text-xs">{i.valor}</span>
                                                                         <span className="text-xs text-muted">
@@ -198,7 +198,7 @@ export default function EstructuraColegioClient({ colegioId }: { colegioId: stri
                                             <div className="mt-3 flex items-center justify-between text-xs text-muted">
                                                 <span>
                                                     Página {paginacion.page} de {Math.max(paginacion.totalPages, 1)} ·{" "}
-                                                    {paginacion.total} alumnos
+                                                    {paginacion.total} estudiantes
                                                 </span>
                                                 <div className="flex gap-2">
                                                     <Button
