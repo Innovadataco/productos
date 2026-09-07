@@ -24,6 +24,8 @@ export const SECTIONS: { key: string; label: string; description: string; prefix
     // SPEC-290 (002-PI-190): cierre por inactividad y cadencia del worker de sesiones (pi-sesiones).
     { key: "sesiones", label: "Sesiones", description: "Cierre por inactividad, cadencia del worker, ping del cliente y retención de logs.", prefixes: ["sesion."] },
     { key: "analytics", label: "Analítica › Colegios", description: "Umbrales de hallazgos automáticos del panel de colegios.", prefixes: ["analytics.colegios."] },
+    // SPEC-580 (002-PI): países visibles en el formulario de reporte público.
+    { key: "geo", label: "Geografía", description: "Catálogo geográfico visible en formularios públicos.", prefixes: ["geo."] },
     { key: "system", label: "Sistema", description: "Parámetros generales de la aplicación.", prefixes: ["system."] },
     { key: "other", label: "Otros", description: "Parámetros adicionales no agrupados.", prefixes: [] },
 ];
