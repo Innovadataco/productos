@@ -70,13 +70,18 @@ const RENDERERS: Record<string, (p: Payload) => string | null> = {
         if (!tipoEvento) return null;
         return `Se envió un aviso: ${TIPO_EVENTO_HUMANO[tipoEvento] ?? tipoEvento}.`;
     },
-    USER_CREATE: () => "Se creó un usuario de demostración.",
+    USER_CREATE: (p) =>
+        p.demo === true
+            ? "Se creó un usuario de demostración."
+            : "Se creó un usuario.",
 };
 
 /**
  * Etiqueta humana de la columna «Acción». Los 3 primeros son de Diseño (§ del doc de 576); los 4
- * restantes los propuso Dev siguiendo el patrón participio (pendiente confirmación de Diseño). Cae al
- * enum crudo si la acción no tiene rótulo — mejor eso que romper, y el candado exige rótulo a las 7.
+ * restantes los propuso Dev siguiendo el patrón participio y los confirmó Diseño, con UNA corrección:
+ * USER_CREATE es genérico (también se emite al crear un verificador real) — el detalle «de demostración»
+ * es del payload (demo:true) y vive en el Resumen, no en el rótulo. Cae al enum crudo si la acción no
+ * tiene rótulo — mejor eso que romper, y el candado exige rótulo a las 7.
  */
 const ACCION_LABEL: Record<string, string> = {
     COLEGIO_COMITE_INTEGRANTE_CREADO: "Integrante de comité agregado",
@@ -85,7 +90,7 @@ const ACCION_LABEL: Record<string, string> = {
     COLEGIO_ESTADISTICAS_PDF_DESCARGADO: "PDF de estadísticas descargado",
     COLEGIO_ALERTA_CREADA: "Alerta creada",
     COLEGIO_AVISO_ENVIADO: "Aviso enviado",
-    USER_CREATE: "Usuario de demostración creado",
+    USER_CREATE: "Usuario creado",
 };
 
 /** Acciones con renderer declarado (para el candado: todas deben tener también rótulo). */

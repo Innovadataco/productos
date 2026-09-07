@@ -58,13 +58,16 @@ describe("SPEC-576 · resumen declarado, nunca el payload (I-358)", () => {
         expect(r).not.toContain("ent_X");
     });
 
-    it("estadísticas y USER_CREATE → frase fija, sin filtrar ningún campo del payload", () => {
+    it("estadísticas → frase fija; USER_CREATE genérico, el detalle demo sale del payload", () => {
         expect(
             resumenAuditoriaColegio("COLEGIO_ESTADISTICAS_PDF_DESCARGADO", JSON.stringify({ colegioId: "col_X", timestamp: "t" })),
         ).toBe("Se descargó el PDF de estadísticas.");
-        const user = resumenAuditoriaColegio("USER_CREATE", JSON.stringify({ email: "demo@x.co" }));
-        expect(user).toBe("Se creó un usuario de demostración.");
-        expect(user).not.toContain("demo@x.co");
+        const verificador = resumenAuditoriaColegio("USER_CREATE", JSON.stringify({ email: "verif@x.co" }));
+        expect(verificador).toBe("Se creó un usuario.");
+        expect(verificador).not.toContain("verif@x.co");
+        expect(resumenAuditoriaColegio("USER_CREATE", JSON.stringify({ demo: true }))).toBe(
+            "Se creó un usuario de demostración.",
+        );
     });
 
     it("ACCIÓN NO MAPEADA → null (→ «—»), NUNCA el payload — aunque traiga algo sensible", () => {
