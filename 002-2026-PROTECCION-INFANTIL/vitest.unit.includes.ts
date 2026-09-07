@@ -338,6 +338,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-302 (002-PI-208): logger estructurado del motor — todo mockeado, sin BD.
     "src/lib/notificaciones/motor-logger.test.ts",
     "src/lib/param-encryption.test.ts",
+    // S-C/SPEC-581: primitivas cripto puras de la KEK del texto de reportes (sin BD).
+    "src/lib/reporte-texto-llaves.test.ts",
     "src/lib/pagos/api-helpers.test.ts",
     "src/lib/pagos/bono-aplicacion.service.test.ts",
     "src/lib/pagos/pagos-calculos.service.test.ts",
