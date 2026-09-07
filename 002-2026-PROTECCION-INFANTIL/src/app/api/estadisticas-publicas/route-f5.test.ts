@@ -3,6 +3,7 @@
  * CONTEO agregado de identificadores con match, nunca el detalle (§1.3).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -19,7 +20,7 @@ async function crearEvento(identificadorValor: string, plataformaId: string, agr
                 update: {},
                 create: { identificador: identificadorValor, plataformaId, totalReportes: 2, reportesAprobados: 2 },
             });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificadorValor,
             plataformaId,

@@ -4,6 +4,7 @@
  * y conservador sin huella), SC-003 (idempotencia), puerta D-08 e interCiudad.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
@@ -23,7 +24,7 @@ async function crearReporteAprobado(opciones: {
     eliminado?: boolean;
 }) {
     correlativo += 1;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: opciones.identificador,
             plataformaId: opciones.plataformaId,

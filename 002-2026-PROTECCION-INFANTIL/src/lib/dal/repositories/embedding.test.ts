@@ -3,6 +3,7 @@
  * actualiza vector y modelo si existe (regeneración tras anonimizar/validar).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import { prisma } from "@/lib/prisma";
@@ -13,7 +14,7 @@ const TAG = Math.random().toString(36).slice(2, 8);
 async function crearReporteDePrueba(sufijo = "") {
     const plataforma = await crearPlataforma();
     const usuario = await crearUsuario("PARENT");
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${TAG}`,
             plataformaId: plataforma.id,
@@ -105,7 +106,7 @@ describe("EmbeddingRepository (E-8 LOTE 4: búsquedas pgvector del motor)", () =
     it("buscarReporteSimilarPorEmbedding y buscarSimilitudMaximaPorEmbedding: mismo identificador+plataforma", async () => {
         const repo = new EmbeddingRepository();
         const origen = await crearReporteDePrueba();
-        const gemelo = await prisma.reporte.create({
+        const gemelo = await crearReporteFixture(prisma, {
             data: {
                 identificador: `+57300${TAG}`,
                 plataformaId: origen.plataformaId,

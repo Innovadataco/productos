@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -38,7 +39,7 @@ describe("GET /api/admin/spam/pendientes", () => {
 
     async function setupReporteSpam(asignadoA?: string) {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300SPAMPEND",
                 plataformaId: plataforma!.id,
@@ -80,7 +81,7 @@ describe("GET /api/admin/spam/pendientes", () => {
         prioridadAlta?: boolean;
     }) {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId: plataforma!.id,

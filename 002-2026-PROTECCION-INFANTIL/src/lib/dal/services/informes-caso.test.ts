@@ -3,6 +3,7 @@
  * DE VERDAD y el correlativo no pierde carreras.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -20,7 +21,7 @@ async function crearCaso() {
     const curso = await crearCurso(colegio.id);
     const estudiante = await crearEstudiante(curso.id, colegio.id);
     const identificador = await crearIdentificadorEstudiante(estudiante.id, { plataformaId: plataforma.id });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificador.valor,
             plataformaId: plataforma.id,

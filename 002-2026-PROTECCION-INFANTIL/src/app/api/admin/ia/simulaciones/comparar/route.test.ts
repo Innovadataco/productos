@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -23,10 +24,10 @@ describe("POST /api/admin/ia/simulaciones/comparar", () => {
             data: { modelo: "qwen:7b", totalCasos: 1, estado: "COMPLETADA", creadoPorId: admin.id },
         });
 
-        const r1 = await prisma.reporte.create({
+        const r1 = await crearReporteFixture(prisma, {
             data: { identificador: "SIM-1-001", plataformaId: plataforma.id, texto: "texto", textoOriginal: "texto", fechaIncidente: new Date(), ciudad: "x", pais: "x", esAnonimo: true, estado: "CLASIFICADO" },
         });
-        const r2 = await prisma.reporte.create({
+        const r2 = await crearReporteFixture(prisma, {
             data: { identificador: "SIM-2-001", plataformaId: plataforma.id, texto: "texto", textoOriginal: "texto", fechaIncidente: new Date(), ciudad: "x", pais: "x", esAnonimo: true, estado: "CLASIFICADO" },
         });
 

@@ -27,6 +27,7 @@
  * tras directriz explícita del CEO (spec §Candados).
  */
 import { randomBytes } from "node:crypto";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword } from "../src/lib/auth";
@@ -237,7 +238,7 @@ async function sembrarColegioE2E(
         select: { id: true },
     });
     if (!reporteExistente) {
-        const reporte = await tx.reporte.create({
+        const reporte = await crearReporteFixture(tx, {
             data: {
                 identificador: identificadorReporte,
                 plataformaId,

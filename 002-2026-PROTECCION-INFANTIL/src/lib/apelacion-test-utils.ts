@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { guardarDocumentoCifrado, sha256Hex } from "./apelacion-storage";
 import { calcularPlazoRespuesta } from "./apelaciones";
 import type { EstadoApelacion } from "@prisma/client";
@@ -59,7 +60,7 @@ export async function crearReporteParaIdentificador(opts: {
     plataformaId: string;
     estado?: "PENDIENTE" | "CLASIFICADO" | "REVISION_MANUAL";
 }) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: opts.identificador,
             plataformaId: opts.plataformaId,

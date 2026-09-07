@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import type { CategoriaConducta, EstadoReporte } from "@prisma/client";
 
 const ADMIN_EMAIL = "admin@proteccion.local";
@@ -39,7 +41,7 @@ async function crearReporteAdmin(estado: EstadoReporte, categoria: CategoriaCond
     const identificador = opciones.identificador || `+57300ADMIN${crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
     const numeroSeguimiento = `RPT-ADM-${crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 8)}`;
 
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma.id,
@@ -143,7 +145,8 @@ test.describe("Panel de administración", () => {
         const fila = page.locator("tr", { hasText: reporte.numeroSeguimiento! });
         await fila.getByRole("button", { name: "Ver detalle" }).click();
 
-        await page.locator("textarea").filter({ hasText: reporte.texto }).fill(
+        const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
+        await page.locator("textarea").filter({ hasText: textoReporte }).fill(
             "Texto anonimizado de prueba con suficientes caracteres para superar el mínimo."
         );
         await page.getByRole("button", { name: "Confirmar anonimización" }).click();

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -10,7 +11,6 @@ import {
     crearPaisCiudad,
     crearParametrosExpediente,
 } from "@/lib/reporte-test-utils";
-import { encryptParameter } from "@/lib/param-encryption";
 import type { RolUsuario } from "@prisma/client";
 
 let activeToken: string | null = null;
@@ -40,12 +40,13 @@ async function revocarModulo(rol: RolUsuario, clave: string) {
 
 async function crearReporteCompleto() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+57300TEST000",
             plataformaId: plataforma!.id,
             texto: "Texto anonimizado de prueba del expediente.",
-            textoOriginal: encryptParameter("Texto original con datos sensibles de prueba."),
+            // S-C: el original va EN PLANO al fixture; el factory lo cifra con la DEK.
+            textoOriginal: "Texto original con datos sensibles de prueba.",
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
             ciudad: "Bogotá",
             pais: "Colombia",

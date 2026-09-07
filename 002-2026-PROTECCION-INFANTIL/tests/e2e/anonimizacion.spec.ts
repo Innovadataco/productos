@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { encryptParameter } from "@/lib/param-encryption";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 
 const PII_NOMBRE = "Juan Pérez E2E";
 const PII_TELEFONO = "+573001234567";
@@ -28,12 +29,14 @@ async function seedReporteAnonimizado(identificador: string) {
 
     const numeroSeguimiento = `RPT-${crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 6)}`;
 
-    const reporte = await prisma.reporte.create({
+    // S-C (D-116/D-117): alta por el helper único de tests. `texto` = trabajo (anonimizado),
+    // `textoOriginal` = crudo EN PLANO (el factory lo cifra con la DEK; ya no se pre-cifra acá).
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma.id,
             texto: TEXTO_ANONIMIZADO,
-            textoOriginal: encryptParameter(TEXTO_CRUDO),
+            textoOriginal: TEXTO_CRUDO,
             fechaIncidente: new Date("2026-07-10T10:00:00Z"),
             ciudad: "Bogotá",
             pais: "Colombia",
@@ -133,10 +136,16 @@ test.describe("Anonimización de PII", () => {
     });
 
     test("los logs de error no exponen PII cruda del reporte", async () => {
-        const reporte = await seedReporteAnonimizado(`+57300LOG${Date.now()}`);
-        expect(reporte.reporte.texto).not.toContain(PII_NOMBRE);
-        expect(reporte.reporte.texto).not.toContain(PII_TELEFONO);
-        expect(reporte.reporte.texto).toBe(TEXTO_ANONIMIZADO);
-        expect(reporte.reporte.textoOriginal).toMatch(/^enc:/);
+        const { reporte } = await seedReporteAnonimizado(`+57300LOG${Date.now()}`);
+        // S-C: el texto de TRABAJO (anonimizado) sale por el camino central de descifrado.
+        const textoTrabajo = await descifrarCampo(prisma, reporte.contenidoId, "texto");
+        expect(textoTrabajo).not.toContain(PII_NOMBRE);
+        expect(textoTrabajo).not.toContain(PII_TELEFONO);
+        expect(textoTrabajo).toBe(TEXTO_ANONIMIZADO);
+        // El original (evidencia) queda CIFRADO en reposo (ciphertext ≠ plano) y descifra al crudo.
+        const contenido = await prisma.contenidoReporte.findUniqueOrThrow({ where: { id: reporte.contenidoId } });
+        expect(contenido.textoOriginalCifrado).not.toBe(TEXTO_CRUDO);
+        expect(contenido.textoOriginalCifrado).not.toContain(PII_NOMBRE);
+        expect(await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal")).toBe(TEXTO_CRUDO);
     });
 });

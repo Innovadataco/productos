@@ -8,9 +8,8 @@
  */
 import type { EstadoReporte, Prisma } from "@prisma/client";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
-import { encryptParameter } from "@/lib/param-encryption";
-import { cifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
-import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import { ReporteRepository } from "../repositories/reporte";
 import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
 import { PlataformaRepository } from "../repositories/plataforma";
@@ -67,8 +66,11 @@ export class ReporteCreationService {
     private readonly reportes: ReporteRepository;
     private readonly identificadores: IdentificadorReportadoRepository;
     private readonly plataformas: PlataformaRepository;
+    // S-C: el factory de texto cifrado necesita el TransactionClient directo (no un repo).
+    private readonly tx: Prisma.TransactionClient | undefined;
 
     constructor(tx?: Prisma.TransactionClient) {
+        this.tx = tx;
         this.reportes = new ReporteRepository(tx);
         this.identificadores = new IdentificadorReportadoRepository(tx);
         this.plataformas = new PlataformaRepository(tx);
@@ -122,40 +124,32 @@ export class ReporteCreationService {
             return { ok: false, tipo: "error_numero" };
         }
 
-        // El texto original se cifra inmediatamente; la copia anonimizada la genera
-        // el worker de procesamiento asíncrono.
-        let textoOriginalCifrado: string;
-        try {
-            textoOriginalCifrado = encryptParameter(input.texto);
-        } catch (err) {
-            logger.error("[REPORTES] Error cifrando texto original:", err);
-            return { ok: false, tipo: "error_cifrado" };
-        }
-
-        const reporte = await this.reportes.crear({
-            identificador,
-            plataformaId: input.plataformaId,
-            // SPEC-130 (BL-4): el texto de trabajo también va cifrado en reposo
-            // (el pipeline lo descifra por la capa de datos; la evidencia íntegra
-            // sigue en textoOriginal, cifrada igual desde SPEC-110).
-            texto: cifrarTextoReporte(input.texto),
-            textoOriginal: textoOriginalCifrado,
-            fechaIncidente: new Date(input.fechaIncidente),
-            horaAproximada: input.horaAproximada ?? false,
-            ciudad: input.ciudad,
-            pais: input.pais,
-            paisId: input.ciudadId === "otra" ? null : input.paisId || null,
-            ciudadId: input.ciudadId === "otra" ? null : input.ciudadId || null,
-            otraPlataforma: input.plataformaClave === "otro" ? input.otraPlataforma || null : null,
-            edadVictima: input.edadVictima ?? null,
-            esAnonimo: input.esAnonimo,
-            usuarioId,
-            origenRol: input.origenRol ?? null,
-            numeroSeguimiento,
-            tenantId: input.tenantId,
-            estado: input.estadoInicial,
-            prioridadAlta: input.prioridadAlta,
-            keywordsDetectadas: input.keywordsDetectadas,
+        // S-C (D-116/D-117): el relato ya NO vive en Reporte.texto/textoOriginal — el factory
+        // sella el texto cifrado (ContenidoReporte + LlaveReporte, DEK por denuncia) y crea el
+        // Reporte con contenidoId, TODO en la misma transacción. Un fallo de cifrado LANZA y el
+        // tx hace rollback; NO se atrapa acá (atraparlo dentro del tx comitearía contenido a medias).
+        const reporte = await crearReporteConTexto(this.tx ?? prisma, {
+            texto: input.texto,
+            reporte: {
+                identificador,
+                plataformaId: input.plataformaId,
+                fechaIncidente: new Date(input.fechaIncidente),
+                horaAproximada: input.horaAproximada ?? false,
+                ciudad: input.ciudad,
+                pais: input.pais,
+                paisId: input.ciudadId === "otra" ? null : input.paisId || null,
+                ciudadId: input.ciudadId === "otra" ? null : input.ciudadId || null,
+                otraPlataforma: input.plataformaClave === "otro" ? input.otraPlataforma || null : null,
+                edadVictima: input.edadVictima ?? null,
+                esAnonimo: input.esAnonimo,
+                usuarioId,
+                origenRol: input.origenRol ?? null,
+                numeroSeguimiento,
+                tenantId: input.tenantId,
+                estado: input.estadoInicial,
+                prioridadAlta: input.prioridadAlta,
+                keywordsDetectadas: input.keywordsDetectadas,
+            },
         });
 
         // Agregación del identificador (SPEC-110: un reporte nuevo levanta el

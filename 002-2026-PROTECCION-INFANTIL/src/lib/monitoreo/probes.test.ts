@@ -5,6 +5,7 @@
  * `probeWorker` un WORKER_RUN_DIR temporal (vi.resetModules + import dinámico).
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -74,7 +75,7 @@ async function sembrarOverrideModelo(valor: string | null) {
 
 async function crearReporteClasificado(id: string) {
     const plataforma = await crearPlataforma("test-plat-" + id, "Test");
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             id,
             identificador: "+57300000000" + id.slice(-2),

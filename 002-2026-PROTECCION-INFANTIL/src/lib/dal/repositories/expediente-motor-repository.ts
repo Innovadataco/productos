@@ -11,6 +11,7 @@
 import { EstadoExpediente } from "@prisma/client";
 import type { AccionAudit, Expediente, Prisma, ScoreGravedad } from "@prisma/client";
 import { prisma } from "../prisma.ts";
+import { descifrarCampos, purgarOriginal, resellarCampo } from "@/lib/reporte-texto-contenido";
 import { logAudit } from "@/lib/audit";
 import type { DbClient } from "../unit-of-work";
 import { withUnitOfWork } from "../unit-of-work";
@@ -160,19 +161,35 @@ export class ExpedienteMotorRepository {
         textoRetenido: string
     ): Promise<{ eventos: number; informes: number }> {
         const [eventosActualizados, informesActualizados] = await withUnitOfWork(async (tx) => {
-            return Promise.all([
-                tx.eventoExpediente.updateMany({
-                    where: { expedienteId, texto: { not: textoRetenido } },
-                    data: { texto: textoRetenido },
-                }),
-                tx.informeConsolidado.updateMany({
-                    where: {
-                        expedienteId,
-                        OR: [{ resumenTextoGenerado: { not: textoRetenido } }, { pdfUrl: { not: textoRetenido } }],
-                    },
-                    data: { resumenTextoGenerado: textoRetenido, pdfUrl: textoRetenido },
-                }),
-            ]);
+            // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte (texto de TRABAJO
+            // + textoOriginal). La retención destruye AMBOS con la MISMA DEK: el trabajo se re-sella al
+            // marcador `[retenido]` y el original se PURGA (marcador de purga + origenEvidencia=PURGADA).
+            // Los eventos no se anonimizan, así que sin purgar el original su relato sensible sobreviviría
+            // a la retención (regresión sobre la promesa central de que el texto se puede destruir).
+            // Idempotente: con el trabajo ya en `[retenido]` (proxy de «ya retención-purgado», ambos van
+            // juntos en esta misma tx atómica) el evento no se recuenta ni se re-purga.
+            const eventos = await tx.eventoExpediente.findMany({
+                where: { expedienteId },
+                select: { contenidoId: true },
+            });
+            const contenidoIds = eventos.map((e) => e.contenidoId);
+            const textos = await descifrarCampos(tx, contenidoIds, "texto");
+            let eventosCount = 0;
+            for (const id of contenidoIds) {
+                if (textos.get(id) !== textoRetenido) {
+                    await resellarCampo(tx, id, "texto", textoRetenido);
+                    await purgarOriginal(tx, id);
+                    eventosCount++;
+                }
+            }
+            const informes = await tx.informeConsolidado.updateMany({
+                where: {
+                    expedienteId,
+                    OR: [{ resumenTextoGenerado: { not: textoRetenido } }, { pdfUrl: { not: textoRetenido } }],
+                },
+                data: { resumenTextoGenerado: textoRetenido, pdfUrl: textoRetenido },
+            });
+            return [{ count: eventosCount }, informes] as const;
         });
         return { eventos: eventosActualizados.count, informes: informesActualizados.count };
     }

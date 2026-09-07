@@ -8,6 +8,7 @@
  * - A/B tenant: B nunca ve actividad de A en ningún bloque.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -26,7 +27,7 @@ let contador = 0;
 
 async function sembrarReporte(plataformaId: string, tag: string) {
     contador += 1;
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57314${String(contador).padStart(7, "0")}`,
             plataformaId,

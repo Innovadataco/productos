@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 
 async function seedConsultaData(identificador: string) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
@@ -28,7 +29,7 @@ async function seedConsultaData(identificador: string) {
 
     for (let i = 0; i < 3; i++) {
         const numeroSeguimiento = `RPT-${crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 6)}`;
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 ...base,
                 numeroSeguimiento,

@@ -17,8 +17,7 @@ import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { requireEnv } from "@/lib/env";
 import { getParametroSistemaValor } from "@/lib/parametros";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
-import { textoCifradoDeReportePropio } from "@/lib/dal/services/expediente-vivo";
+import { textoDeReportePropio } from "@/lib/dal/services/expediente-vivo";
 import { leerSelloStepUp, NOMBRE_COOKIE_STEPUP } from "@/lib/routing/stepup-sello";
 
 const HOST_COOKIE = "__Host-token";
@@ -60,16 +59,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         }
 
         // El reporte PROPIO (PII: dueño único). El texto ajeno no existe acá.
-        // La consulta vive en el DAL (Q-3); acá solo la autoridad y el descifrado.
-        const textoCifrado = await textoCifradoDeReportePropio(usuario.id, id);
-        if (textoCifrado === null) {
+        // La consulta + descifrado viven en el DAL (Q-3 · S-C); acá solo la autoridad (step-up).
+        const texto = await textoDeReportePropio(usuario.id, id);
+        if (texto === null) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
 
-        return NextResponse.json({ texto: descifrarTextoReporte(textoCifrado) });
+        return NextResponse.json({ texto });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

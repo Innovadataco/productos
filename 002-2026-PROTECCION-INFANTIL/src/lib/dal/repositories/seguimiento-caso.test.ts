@@ -5,6 +5,7 @@
  * El detalle de la alerta NUNCA incluye el valor del identificador (I-28).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -28,7 +29,7 @@ async function fixtureAlerta(identificadorValor: string) {
         plataformaId: plataforma!.id,
         etiquetaRelacion: "ESTUDIANTE",
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificadorValor,
             plataformaId: plataforma!.id,

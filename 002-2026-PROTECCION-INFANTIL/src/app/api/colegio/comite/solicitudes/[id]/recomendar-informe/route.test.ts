@@ -8,6 +8,7 @@
  *     (regla dura del CEO: aviso ≠ acción de negocio).
  */
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 
 const mockProgramar = vi.hoisted(() => vi.fn(async () => ({ programadas: 1, canceladasPorReemplazo: 0 })));
 
@@ -44,7 +45,7 @@ async function seedCasoConAnalisis(analisis: string | null = "Análisis del comi
         },
     });
     const plataforma = await crearPlataforma("whatsapp", "WhatsApp", "mensajeria");
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${Date.now()}${Math.floor(Math.random() * 1000)}`,
             plataformaId: plataforma.id,

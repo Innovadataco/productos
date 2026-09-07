@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { mkdtempSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -67,7 +68,7 @@ describe("POST /api/apelaciones", () => {
         const plat = await crearPlataforma();
         // N-3 (002-PI-056): apelar exige que el identificador tenga reportes asociados.
         // Los tests de este archivo usan el identificador por defecto de crearRequestApelacion.
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: "+573009990001",
                 plataformaId: plat.id,

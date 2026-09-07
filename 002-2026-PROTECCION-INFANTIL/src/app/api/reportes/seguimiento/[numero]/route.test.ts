@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -20,7 +21,7 @@ async function crearReporteBase(
 ) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     const usuario = await crearUsuario("PARENT");
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma!.id,
@@ -71,7 +72,7 @@ async function crearReporteClasificadoVisible(numeroSeguimiento: string, identif
 // resuelve al estado y la categoría VIVOS del original en tiempo de lectura.
 async function crearDuplicadoDe(numeroSeguimiento: string, identificador: string, reporteOrigenId: string) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma!.id,
@@ -250,7 +251,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
             create: { clave: "otro", nombre: "Otra plataforma", categoria: "otro" },
         });
         const usuario = await crearUsuario("PARENT");
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300OTRO",
                 plataformaId: plataformaOtro.id,
@@ -298,7 +299,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
         async function crearReporteAjenoAprobado(identificador: string, texto: string) {
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
             const otroPadre = await crearUsuario("PARENT");
-            const ajeno = await prisma.reporte.create({
+            const ajeno = await crearReporteFixture(prisma, {
                 data: {
                     identificador,
                     plataformaId: plataforma!.id,
@@ -429,7 +430,7 @@ describe("GET /api/reportes/seguimiento/[numero]", () => {
             await crearReporteClasificadoVisible("RPT-PEND99", "+57300PENDI");
             const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
             const otroPadre = await crearUsuario("PARENT");
-            await prisma.reporte.create({
+            await crearReporteFixture(prisma, {
                 data: {
                     identificador: "+57300PENDI",
                     plataformaId: plataforma!.id,

@@ -6,6 +6,7 @@
  */
 import { EstadoExpediente, EstadoGuiaAccion } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
+import { descifrarCamposReporte } from "@/lib/dal/services/descifrar-contenido";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { getParametroSistemaValor } from "@/lib/parametros";
 import {
@@ -115,6 +116,12 @@ export async function obtenerDetalleConsolidacion(expedienteId: string) {
     }
 
     const categoriaDominante = categoriaDominanteDe(expediente.categoriasDominantesJson);
+    // S-C (D-116/D-117): el relato de cada evento vive cifrado en ContenidoReporte. Se descifra el
+    // lote entero con 2 queries (batch) y se mapea por contenidoId (fail-loud si falta uno).
+    const textosEventos = await descifrarCamposReporte(
+        expediente.eventos.map((e) => e.contenidoId),
+        "texto"
+    );
     const guiasDisponibles = guias.items.map((g) => ({
         id: g.id,
         categoria: g.categoria,
@@ -155,7 +162,7 @@ export async function obtenerDetalleConsolidacion(expedienteId: string) {
                 id: e.id,
                 ordenSecuencial: e.ordenSecuencial,
                 fecha: e.fechaEvento.toISOString(),
-                descripcion: e.texto,
+                descripcion: textosEventos.get(e.contenidoId)!,
                 categoriaDetectada: e.categoriaDetectada,
                 plataforma: e.plataforma,
             })),

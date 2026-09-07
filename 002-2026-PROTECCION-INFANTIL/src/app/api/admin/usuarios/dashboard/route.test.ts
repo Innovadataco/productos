@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -77,7 +78,7 @@ describe("GET /api/admin/usuarios/dashboard", () => {
         const operador = await crearUsuario("OPERADOR", "op@example.com");
         await prisma.perfilOperador.create({ data: { usuarioId: operador.id, creadoPorId: admin.id, cupoMaximo: 1 } });
         const plataforma = await crearPlataforma();
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: "a",
                 plataformaId: plataforma.id,

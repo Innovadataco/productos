@@ -12,7 +12,7 @@ import {
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
 import { sendReporte } from "@/lib/queue";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 
 vi.mock("@/lib/queue", () => ({
     sendReporte: vi.fn().mockResolvedValue({ encolado: true }),
@@ -36,21 +36,21 @@ describe("POST /api/reportes", () => {
         await crearPaisCiudad();
     });
 
-    it("cifra textoOriginal al crear reporte", async () => {
-        if (!process.env.PARAM_ENCRYPTION_KEY) {
-            process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
-        }
+    it("cifra el contenido (trabajo + original) al crear reporte", async () => {
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido);
         const res = await POST(req);
         expect(res.status).toBe(201);
 
         const body = await res.json();
-        const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
-        expect(reporte?.textoOriginal).toMatch(/^enc:/);
-        // SPEC-130 (BL-4): el texto de trabajo también va cifrado en reposo;
-        // el contenido se conserva íntegro al descifrar (la evidencia no se altera).
-        expect(reporte?.texto).toMatch(/^enc:/);
-        expect(descifrarTextoReporte(reporte!.texto)).toBe(reporteValido.texto);
+        const reporte = await prisma.reporte.findUniqueOrThrow({ where: { id: body.reporte.id } });
+        // S-C (D-116/D-117): el relato vive cifrado en ContenidoReporte (DEK por fila), no en columnas
+        // del reporte. A rest ni el trabajo ni el original quedan en claro; ambos descifran íntegros
+        // por el camino central (al crear, trabajo == original == relato del reportante).
+        const contenido = await prisma.contenidoReporte.findUniqueOrThrow({ where: { id: reporte.contenidoId } });
+        expect(contenido.textoCifrado).not.toBe(reporteValido.texto);
+        expect(contenido.textoOriginalCifrado).not.toBe(reporteValido.texto);
+        expect(await descifrarCampo(prisma, reporte.contenidoId, "texto")).toBe(reporteValido.texto);
+        expect(await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal")).toBe(reporteValido.texto);
     });
 
     // ─── A-70 · B1 · "Datos inválidos" mudo ────────────────────────────────

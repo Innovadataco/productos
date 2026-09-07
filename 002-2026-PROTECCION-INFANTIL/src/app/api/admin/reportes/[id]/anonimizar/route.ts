@@ -11,8 +11,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { z } from "zod";
 import { idSchema } from "@/lib/validators";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
-import { encryptParameter } from "@/lib/param-encryption";
-import { cifrarTextoReporte, descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { resellarCampo } from "@/lib/reporte-texto-contenido";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { ParametroRepository } from "@/lib/dal/repositories/parametro";
@@ -88,25 +87,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
         const piiEliminada = reporte.clasificacion?.piiDetectada || [];
 
-        // SPEC-130 (BL-4): el original puede venir cifrado (textoOriginal) o la copia
-        // de trabajo cifrada (texto); el plano sale SOLO por el helper único (O-3).
-        const originalPlano = reporte.textoOriginal
-            ? descifrarTextoReporte(reporte.textoOriginal)
-            : descifrarTextoReporte(reporte.texto);
-        let textoOriginalCifrado: string;
-        try {
-            textoOriginalCifrado = encryptParameter(originalPlano);
-        } catch (err) {
-            logger.error("[ANONIMIZAR] Error cifrando texto original:", err);
-            return NextResponse.json(
-                { error: { message: "Error de seguridad almacenando el original", code: ERROR_CODES.INTERNAL_ERROR } },
-                { status: 500 }
-            );
-        }
-
         const responsableTipo = responsableTipoFromRol(user.rol) ?? "ADMIN";
 
-        // Transacción: registrar transición, preservar original cifrado y actualizar texto y estado
+        // S-C (D-116/D-117): el original (evidencia) YA está sellado write-once en ContenidoReporte
+        // desde el alta (`sellarTextoNuevo` fija el original cifrado). La anonimización SOLO re-sella
+        // el texto de TRABAJO con la versión anonimizada; el original NUNCA se re-escribe (política CEO).
+        // Transacción: registrar transición, re-sellar el trabajo y avanzar el estado.
         await withUnitOfWork(async (tx) => {
             await registrarTransicion({
                 reporteId,
@@ -117,10 +103,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
                 motivo: "Texto anonimizado por admin",
                 tx,
             });
+            await resellarCampo(tx, reporte.contenidoId, "texto", textoAnonimizado);
             await new ReporteRepository(tx).actualizarEstado(reporteId, {
-                textoOriginal: textoOriginalCifrado,
-                // SPEC-130 (BL-4): el texto anonimizado también se guarda cifrado.
-                texto: cifrarTextoReporte(textoAnonimizado),
                 estado: "CLASIFICADO",
             });
         });

@@ -50,7 +50,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         const evento = await repo.agregarEvento(input);
 
-        return NextResponse.json({ evento }, { status: 201 });
+        // S-C (D-116/D-117): el relato del evento ya no es una columna — vive cifrado en
+        // ContenidoReporte. El contrato de esta ruta devuelve el `texto` al cliente que lo
+        // acaba de enviar; se hace eco del input (sin re-descifrar; es el mismo padre autor).
+        return NextResponse.json({ evento: { ...evento, texto: input.texto } }, { status: 201 });
     } catch (err: unknown) {
         if (err instanceof AppError) {
             return NextResponse.json(

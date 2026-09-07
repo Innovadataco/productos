@@ -2,6 +2,8 @@
  * SPEC-230 (002-PI-130): tests del ExpedienteRepository.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { EstadoExpediente } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -156,8 +158,9 @@ describe("ExpedienteRepository", () => {
 
         const result = await repo.obtenerExpedientePorId(expediente.id);
         expect(result?.eventos).toHaveLength(2);
-        expect(result?.eventos[0].texto).toBe("A");
-        expect(result?.eventos[1].texto).toBe("B");
+        // S-C (D-116/D-117): el relato del evento se descifra desde ContenidoReporte.
+        expect(await descifrarCampo(prisma, result!.eventos[0].contenidoId, "texto")).toBe("A");
+        expect(await descifrarCampo(prisma, result!.eventos[1].contenidoId, "texto")).toBe("B");
     });
 
     it("agregarEvento crea un Reporte cuando no se recibe reporteId", async () => {
@@ -181,7 +184,7 @@ describe("ExpedienteRepository", () => {
         const repo = new ExpedienteRepository();
         const padre = await crearPadre();
         const expediente = await crearExpediente(repo, padre.id);
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: expediente.identificadorReportado,
                 plataformaId: await idDePlataforma("whatsapp"),

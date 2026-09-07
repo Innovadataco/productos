@@ -3,6 +3,7 @@
  * BD real (regla arch:check (e): prohibido mockear el singleton de Prisma).
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
@@ -64,7 +65,7 @@ async function sembrarActividad(params: {
     const clasificacionIds: string[] = [];
     for (let i = 0; i < total; i++) {
         seq += 1;
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: `+57300DER${seq}`,
                 plataformaId: plataforma!.id,

@@ -3,6 +3,7 @@
  * agregados en hora Bogotá.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { cargarCasoConHechos } from "./hechos-caso";
 import { armarPayload } from "../expediente/analisis/armar-payload";
 import { resetDatabase } from "@/lib/test-utils";
@@ -40,7 +41,7 @@ async function seedCaso() {
     });
 
     // Reporte NOCTURNO Bogotá: 21:15 COT = 02:15 UTC del día siguiente.
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificador.valor,
             plataformaId: plataforma.id,

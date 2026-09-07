@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { CategoriaConducta } from "@prisma/client";
 
 const ADMIN_EMAIL = "admin-reasignar@proteccion.local";
@@ -60,7 +61,7 @@ async function crearReporteRevisionManual(operadorId: string, categoria: Categor
     if (!plataforma) throw new Error("Plataforma whatsapp no encontrada");
 
     const numeroSeguimiento = `RPT-REA-${crypto.randomUUID().replace(/-/g, "").toUpperCase().slice(0, 8)}`;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `+57300REA${Date.now()}`,
             plataformaId: plataforma.id,

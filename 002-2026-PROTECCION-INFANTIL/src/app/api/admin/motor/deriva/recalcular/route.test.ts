@@ -3,6 +3,7 @@
  * /api/admin/motor/deriva/recalcular. BD real; solo se mockea verifyAuth.
  */
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -38,7 +39,7 @@ async function sembrarClasificaciones(categoria: CategoriaConducta, n: number, c
     const admin = await crearUsuario("ADMIN");
     for (let i = 0; i < n; i++) {
         seq += 1;
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: `+57300REC${seq}`,
                 plataformaId: plataforma!.id,

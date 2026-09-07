@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { buscarReporteSimilar, buscarSimilitudMaxima } from "@/lib/ai/similarity";
 import { registrarTransicion } from "@/lib/reporte-transiciones";
 import { registrarPaso } from "@/lib/expediente/pasos";
-import { MARCADOR_TEXTO_PURGADO } from "@/lib/texto-reporte-cifrado";
+import { purgarTextoTrabajo } from "@/lib/reporte-texto-contenido";
 import { NextResponse } from "next/server";
 
 export async function detectarDuplicado({
@@ -43,17 +43,18 @@ export async function detectarDuplicado({
                 metadatos: { reporteOrigenId: similar.reporteId },
                 tx,
             });
-            await tx.reporte.update({
+            const reporte = await tx.reporte.update({
                 where: { id: reporteId },
                 data: {
                     estado: "DUPLICADO",
                     reporteOrigenId: similar.reporteId,
-                    // SPEC-130 (D4): en DUPLICADO el texto se purga a marcador
-                    // no-identificable (sin uso posterior). La evidencia íntegra
-                    // queda en textoOriginal, siempre cifrada.
-                    texto: MARCADOR_TEXTO_PURGADO,
                 },
+                select: { contenidoId: true },
             });
+            // SPEC-130 (D4) · S-C: en DUPLICADO el texto de TRABAJO se purga a marcador
+            // no-identificable (sin uso posterior). La evidencia íntegra queda en el
+            // textoOriginal cifrado (purgarTextoTrabajo nunca lo toca).
+            await purgarTextoTrabajo(tx, reporte.contenidoId);
         });
         await registrarPaso(reporteId, "deduplicacion", {
             veredicto: "duplicado",

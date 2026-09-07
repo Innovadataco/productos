@@ -5,6 +5,7 @@
  * SC-002 (dos notas ⇒ 2 notas, 1 solo SeguimientoCaso, 2 filas de audit).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -49,7 +50,7 @@ async function fixtureAlerta(identificadorValor: string) {
         plataformaId: plataforma!.id,
         etiquetaRelacion: "ESTUDIANTE",
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificadorValor,
             plataformaId: plataforma!.id,
