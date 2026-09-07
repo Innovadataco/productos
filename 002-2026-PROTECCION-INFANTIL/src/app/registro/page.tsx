@@ -22,6 +22,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
+import { SugerenciaDominio } from "@/components/modules/SugerenciaDominio";
+import { AtajosDominioCorreo } from "@/components/modules/AtajosDominioCorreo";
 
 export default function RegistroPage() {
     const [step, setStep] = useState<"correo" | "aviso">("correo");
@@ -101,6 +103,8 @@ export default function RegistroPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
+                                <SugerenciaDominio email={email} onAplicar={setEmail} />
+                                <AtajosDominioCorreo email={email} onAplicar={setEmail} />
                                 {error && (
                                     <Alerta tono="advertencia" className="text-center">
                                         {error}

@@ -5,6 +5,8 @@
  */
 export const UNIT_TEST_INCLUDES: string[] = [
     "prisma/seed-security.test.ts",
+    // 3003: detector de typo de dominio (gmaail.com → gmail.com), puro.
+    "src/lib/email-typo.test.ts",
     "scripts/arch/no-prisma-mocks.test.ts",
     // CEO 06-09: parseArgs de scripts/demo ABORTA ante flag desconocido (no traga banderas en un script destructivo).
     "scripts/demo/parseargs-estricto.candado.test.ts",

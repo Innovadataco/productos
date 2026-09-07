@@ -19,6 +19,8 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
+import { SugerenciaDominio } from "@/components/modules/SugerenciaDominio";
+import { AtajosDominioCorreo } from "@/components/modules/AtajosDominioCorreo";
 
 export default function RegistroColegioPage() {
     const [step, setStep] = useState<"solicitar" | "aviso">("solicitar");
@@ -113,6 +115,8 @@ export default function RegistroColegioPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
+                                <SugerenciaDominio email={email} onAplicar={setEmail} />
+                                <AtajosDominioCorreo email={email} onAplicar={setEmail} />
                                 <Input
                                     label="Nombre del colegio"
                                     type="text"
