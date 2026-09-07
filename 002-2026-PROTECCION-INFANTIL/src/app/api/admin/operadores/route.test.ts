@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { GET, POST } from "./route";
+import { POST as loginPOST } from "../../auth/login/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
@@ -12,6 +13,7 @@ vi.mock("next/headers", () => ({
     cookies: async () => ({
         get: (name: string) =>
             name === "token" && mockToken ? { name: "token", value: mockToken } : undefined,
+        set: vi.fn(),
     }),
 }));
 
@@ -54,6 +56,61 @@ describe("/api/admin/operadores", () => {
         });
         expect(usuario?.perfilOperador?.esComite).toBe(true);
     });
+
+    // SPEC-579 (bug real 2026-09-07): operador creado como «Jelkin…» no podía
+    // iniciar sesión — el login busca en minúsculas (loginSchema) y la creación
+    // administrativa guardaba el email tal cual. La normalización vive en el
+    // repositorio (punto único de escritura/lectura por email).
+    it("SPEC-579: operador creado con email en mayúsculas queda en minúsculas y puede iniciar sesión", async () => {
+        const admin = await crearUsuario("ADMIN");
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+
+        const res = await POST(
+            new Request("http://localhost:5005/api/admin/operadores", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
+                body: JSON.stringify({
+                    email: "Operador.Mayusculas@Test.COM",
+                    nombre: "Operador Mayus",
+                    rol: "OPERADOR",
+                }),
+            })
+        );
+
+        expect(res.status).toBe(201);
+        const json = await res.json();
+        expect(json.operador.email).toBe("operador.mayusculas@test.com");
+
+        const enBd = await prisma.usuario.findUnique({ where: { id: json.operador.id } });
+        expect(enBd?.email).toBe("operador.mayusculas@test.com");
+
+        // Duplicado con otro casing: lo detecta como duplicado (no 500 del unique).
+        const dup = await POST(
+            new Request("http://localhost:5005/api/admin/operadores", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", cookie: `token=${mockToken}` },
+                body: JSON.stringify({
+                    email: "OPERADOR.MAYUSCULAS@test.com",
+                    nombre: "Operador Duplicado",
+                    rol: "OPERADOR",
+                }),
+            })
+        );
+        expect(dup.status).toBe(409);
+
+        // Login digitando el email en mayúsculas (como hace el usuario real).
+        const loginRes = await loginPOST(
+            new Request("http://localhost:5005/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: "Operador.Mayusculas@Test.COM",
+                    password: json.passwordTemporal,
+                }),
+            })
+        );
+        expect(loginRes.status).toBe(200);
+    }, 30_000);
 
     it("rechaza crear OPERADOR con esComite=true", async () => {
         const admin = await crearUsuario("ADMIN");

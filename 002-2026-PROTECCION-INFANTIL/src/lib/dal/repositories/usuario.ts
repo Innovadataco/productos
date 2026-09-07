@@ -24,8 +24,13 @@ export class UsuarioRepository {
         this.db = tx ?? prisma;
     }
 
+    // SPEC-579: el login normaliza el email a minúsculas (loginSchema); toda
+    // lectura/escritura por email pasa por aquí, así que la normalización en
+    // este único punto cubre TODOS los flujos (operadores, comité, verificadores,
+    // registro). Bug real 2026-09-07: operador creado como «Jelkin…» no podía
+    // iniciar sesión («Credenciales inválidas») porque el lookup era en minúsculas.
     findByEmail(email: string) {
-        return this.db.usuario.findUnique({ where: { email } });
+        return this.db.usuario.findUnique({ where: { email: email.trim().toLowerCase() } });
     }
 
     /** SPEC-240 (002-PI-143): usuario por token de invitación (incluye colegio/tenant para activación). */
@@ -54,11 +59,17 @@ export class UsuarioRepository {
     }
 
     crear(data: Prisma.UsuarioUncheckedCreateInput) {
-        return this.db.usuario.create({ data });
+        return this.db.usuario.create({ data: { ...data, email: data.email.trim().toLowerCase() } });
     }
 
     actualizar(id: string, data: Prisma.UsuarioUncheckedUpdateInput) {
-        return this.db.usuario.update({ where: { id }, data });
+        // SPEC-579: mismo criterio que crear — un email string se guarda en
+        // minúsculas; null/absente/ops anidadas quedan tal cual.
+        const datos =
+            typeof data.email === "string"
+                ? { ...data, email: data.email.trim().toLowerCase() }
+                : data;
+        return this.db.usuario.update({ where: { id }, data: datos });
     }
 
     // SPEC-334: perfil del padre (6 campos + nombres de país/ciudad para mostrar).
@@ -129,7 +140,10 @@ export class UsuarioRepository {
 
     /** Alta de operador/comité con perfil anidado. */
     crearConPerfil(data: Prisma.UsuarioUncheckedCreateInput) {
-        return this.db.usuario.create({ data, include: { perfilOperador: true } });
+        return this.db.usuario.create({
+            data: { ...data, email: data.email.trim().toLowerCase() },
+            include: { perfilOperador: true },
+        });
     }
 
     /** Recarga con perfil (respuesta de PATCH). */
