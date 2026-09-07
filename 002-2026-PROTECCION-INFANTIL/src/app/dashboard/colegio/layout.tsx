@@ -13,9 +13,13 @@ import type { RolUsuario } from "@prisma/client";
 const ROLES_COLEGIO = new Set<RolUsuario>(["SCHOOL_ADMIN", "COMITE_CONVIVENCIA"]);
 
 /**
- * SPEC-287 (002-PI-187): layout UI puro. Todos los guardianes de acceso
- * (sesión, consentimiento, cambiar-password, vigencia) viven ahora en
- * `middleware.ts`. Este layout NO ejecuta `redirect(...)`.
+ * SPEC-287 (002-PI-187): layout UI puro. La sesión, el consentimiento, el
+ * cambio-de-contraseña y la vigencia se guardan en `middleware.ts`; este layout
+ * NO ejecuta `redirect(...)`.
+ *
+ * SPEC-571 (I-353): la autorización POR ROL NO se aplica en runtime; vive EN
+ * CADA PÁGINA (`verifyAuth(<rol>)`), y la deuda pendiente la vigila
+ * `guardia-rol-pagina.candado.test.ts`.
  */
 export default async function ColegioLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();

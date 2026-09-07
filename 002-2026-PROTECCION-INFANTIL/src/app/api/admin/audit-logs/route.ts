@@ -9,7 +9,11 @@ import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 
 export async function GET(req: Request) {
     try {
-        const user = await verifyAuth();
+        // SPEC-571 (I-353): backstop de ROL además del módulo. `audit_logs` es
+        // hoy mono-rol (ADMIN), así que esto no deja a nadie afuera; crea la
+        // segunda capa para que, si el grant del módulo se ensancha, el acceso a
+        // los logs de auditoría no se abra sin control de rol (API y página).
+        const user = await verifyAuth("ADMIN");
         await assertModulo(user, "audit_logs");
         if (String(user.rol) !== "ADMIN") {
             return NextResponse.json(

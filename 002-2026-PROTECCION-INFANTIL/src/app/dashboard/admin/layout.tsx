@@ -7,9 +7,15 @@ import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 type AdminRol = "ADMIN" | "OPERADOR" | "COMITE_VALIDACION";
 
 /**
- * SPEC-287 (002-PI-187): layout UI puro. Todos los guardianes de acceso
- * (sesión, permisos de rol, cambiar-password) viven ahora en `middleware.ts`.
- * Este layout NO ejecuta `redirect(...)` — el ratchet estático lo bloquea.
+ * SPEC-287 (002-PI-187): layout UI puro. La sesión, el consentimiento, la
+ * vigencia y el cambio-de-contraseña se guardan en `middleware.ts`; este layout
+ * NO ejecuta `redirect(...)` — el ratchet estático lo bloquea.
+ *
+ * SPEC-571 (I-353): la autorización POR ROL NO se aplica en runtime — ni el
+ * middleware ni este layout la imponen (el comentario anterior decía que los
+ * «permisos de rol» vivían en el middleware; era FALSO y por eso nadie miró).
+ * La guardia de rol vive EN CADA PÁGINA (`verifyAuth(<rol>)`); las páginas que
+ * aún no la tienen son deuda vigilada por `guardia-rol-pagina.candado.test.ts`.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const cookieStore = await cookies();

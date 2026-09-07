@@ -8,10 +8,14 @@ import { Alerta } from "@/components/ui/Alerta";
 import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
 
 /**
- * SPEC-287 (002-PI-187): layout UI puro. Todos los guardianes de acceso
- * (sesión, consentimiento, cambiar-password, vigencia) viven ahora en
- * `middleware.ts` — este layout NO ejecuta `redirect(...)`. El ratchet
- * `no-redirect-en-layout-de-dashboard` bloquea el merge si vuelve a nacer.
+ * SPEC-287 (002-PI-187): layout UI puro. La sesión, el consentimiento, el
+ * cambio-de-contraseña y la vigencia viven en `middleware.ts` — este layout NO
+ * ejecuta `redirect(...)`. El ratchet `no-redirect-en-layout-de-dashboard`
+ * bloquea el merge si vuelve a nacer.
+ *
+ * SPEC-571 (I-353): la autorización POR ROL NO se aplica en runtime (ni el
+ * middleware ni este layout la imponen); vive EN CADA PÁGINA (verifyAuth/
+ * verificarAccesoPagina). No es «todos los guardianes viven en el middleware».
  *
  * Este componente solo:
  *  - lee el usuario (para el sidebar y el banner)
