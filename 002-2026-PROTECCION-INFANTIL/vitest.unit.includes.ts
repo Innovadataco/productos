@@ -59,6 +59,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/sesion-estado-emitter.test.ts",
     // 002-PI-232 (A-65 · I-225): borrado FK-safe de Expediente/EventoExpediente en scripts de limpieza.
     "scripts/limpieza/borrar-limpieza.test.ts",
+    // SPEC-578 (D-113): purga total — cobertura de las 94 entidades BORRAR,
+    // preservación de config, orden FK-safe y compuerta (fake stateful, sin BD).
+    "scripts/limpieza/purga-total.candado.test.ts",
     // SPEC-329 (002-PI-229): guardianes de estado devuelven JSON 403 en /api/ (contraprueba 302 en pantallas).
     "src/middleware-api-guardias.test.ts",
     // SPEC-531 (CEO): el CSP con nonce del área privada NO cae sobre la pública prerenderizada
