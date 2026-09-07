@@ -1,11 +1,15 @@
 /**
  * SPEC-265 (002-PI-168) — reset total de data de prueba del piloto.
+ * SPEC-578 (D-113, 2026-09-07) — modo --purga-total y flag --backup-ya-tomado.
  *
  * Uso:
  *   node --env-file=.env --import tsx scripts/limpieza/reset-piloto.ts \
  *     --motivo="reset piloto agosto 2026" --confirm --backup=/tmp/backup.sql
  *
- * REQUIERE --confirm y --backup obligatorios. Sin cualquiera de los dos → error.
+ * REQUIERE --confirm y exactamente uno de --backup / --backup-ya-tomado.
+ * --backup ejecuta pg_dump; --backup-ya-tomado=<ruta> NO genera backup: solo
+ * verifica que el archivo exista, pese >1KB y contenga "CREATE TABLE" antes de
+ * tocar nada. Son mutuamente excluyentes.
  *
  * Orquesta borrar-colegio + borrar-padre + borrar-reporte + borrar-simulacion.
  *
@@ -15,26 +19,37 @@
  * y conserva intacto lo real, contándolo antes y después. Sin la bandera, el
  * comportamiento es exactamente el de siempre.
  *
+ * SPEC-578 (D-113) — modo purga total:
+ *   ... --purga-total
+ * Borra TODO lo que la decisión del dueño del producto clasifica como dato de
+ * prueba (incluidos los 3 reportes «evidencia viva» RPT-1RR278, RPT-2JFULR y
+ * RPT-FA1C23 — D-113 revoca D-001 §5: en producción todo es data de prueba) y
+ * preserva siempre la configuración del producto. Regla: preservar = config,
+ * borrar = dato de prueba. Ver scripts/limpieza/CLASIFICACION-PURGA.md.
+ *
  * PRESERVA SIEMPRE:
  *  - usuario `soporte@innovadataco.com`
- *  - reportes RPT-1RR278, RPT-2JFULR, RPT-FA1C23 (D-001 §5 evidencia viva)
- *  - seed permanente (ParametroSistema, Plan, notificacion_*, geo, ModuloPermisible,
- *    GuiaAccionCategoria, FuenteReporte, DatasetEntrenamiento, EmbeddingDataset, AuditLog)
+ *  - seed/config permanente (ParametroSistema, Plan, notificacion_plantillas,
+ *    notificacion_reglas, geo, Plataforma, TipoDocumento, ModuloPermisible y
+ *    grants, GuiaAccionCategoria, ReglaRecomendacion, DatasetEntrenamiento,
+ *    EmbeddingDataset, AuditLog)
  */
 import { execSync } from "node:child_process";
-import { statSync } from "node:fs";
+import { openSync, readSync, closeSync, statSync } from "node:fs";
 import { prisma } from "../../src/lib/prisma";
 import {
     parseArgs,
     requerirMotivo,
     registrarAuditoria,
     log,
-    PRESERVADOS,
+    PRESERVA_SIEMPRE,
+    validarFlagsResetPiloto,
 } from "./_common";
 import { borrarColegio } from "./borrar-colegio";
 import { borrarPadre } from "./borrar-padre";
 import { borrarReporte } from "./borrar-reporte";
 import { borrarSimulacion } from "./borrar-simulacion";
+import { purgarTodo } from "./purga-total";
 import { planDeBorrado, ejecutarBorrado } from "../demo/_borrado-marcado";
 
 interface ResumenReset {
@@ -53,6 +68,35 @@ function ejecutarBackup(rutaBackup: string): number {
     const size = statSync(rutaBackup).size;
     if (size < 1024) throw new Error(`[reset-piloto] Backup sospechosamente pequeño: ${size}B`);
     log("reset-piloto", `Backup OK — ${size} bytes`);
+    return size;
+}
+
+/**
+ * SPEC-578 · sanidad mínima de un backup tomado por fuera: existe, pesa >1KB y
+ * los primeros 64KB contienen "CREATE TABLE" (pg_dump lo emite al inicio). Se
+ * lee solo un buffer acotado: un dump real puede pesar cientos de MB.
+ */
+function verificarBackupYaTomado(ruta: string): number {
+    let size: number;
+    try {
+        size = statSync(ruta).size;
+    } catch {
+        throw new Error(`[reset-piloto] --backup-ya-tomado: no existe el archivo: ${ruta}`);
+    }
+    if (size < 1024) {
+        throw new Error(`[reset-piloto] --backup-ya-tomado: archivo sospechosamente pequeño: ${size}B`);
+    }
+    const fd = openSync(ruta, "r");
+    try {
+        const buffer = Buffer.alloc(64 * 1024);
+        const leidos = readSync(fd, buffer, 0, buffer.length, 0);
+        if (!buffer.subarray(0, leidos).toString("utf8").includes("CREATE TABLE")) {
+            throw new Error('[reset-piloto] --backup-ya-tomado: el archivo no parece un pg_dump (sin "CREATE TABLE" en los primeros 64KB)');
+        }
+    } finally {
+        closeSync(fd);
+    }
+    log("reset-piloto", `Backup previo verificado — ${size} bytes`);
     return size;
 }
 
@@ -93,16 +137,29 @@ async function resetSoloSembrado(motivo: string, backupSize: number): Promise<vo
 async function main(): Promise<void> {
     const args = parseArgs(process.argv);
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);
-    const backup = typeof args.backup === "string" ? args.backup : "";
-    if (!backup) throw new Error("[reset-piloto] Falta --backup=<ruta.sql>");
-    if (args.confirm !== true) throw new Error("[reset-piloto] Falta --confirm");
+    const flags = validarFlagsResetPiloto(args);
 
-    const backupSize = ejecutarBackup(backup);
+    const backupSize = flags.backupYaTomado
+        ? verificarBackupYaTomado(flags.backupYaTomado)
+        : ejecutarBackup(flags.backup);
 
     // SPEC-412: modo quirúrgico. Cae SOLO lo que está en `demo_marcado`; lo real
     // se cuenta antes y después y tiene que quedar igual.
-    if (args["solo-sembrado"] === true) {
+    if (flags.soloSembrado) {
         await resetSoloSembrado(motivo, backupSize);
+        return;
+    }
+
+    // SPEC-578 (D-113): purga total. Borra todo lo clasificado como dato de
+    // prueba (incluidos los 3 reportes «evidencia viva») y deja intacta la
+    // config; con compuerta de preservados + Reporte=0 al final.
+    if (flags.purgaTotal) {
+        const resumen = await purgarTodo(prisma, {
+            motivo,
+            confirm: true,
+            emailsPreservados: PRESERVA_SIEMPRE.usuarios,
+        });
+        log("reset-piloto", `REALIZADO --purga-total backup=${backupSize}B filas=${resumen.filasBorradas} compuerta=OK`);
         return;
     }
 
@@ -137,7 +194,7 @@ async function main(): Promise<void> {
     const padres = await prisma.usuario.findMany({
         where: {
             rol: "PARENT",
-            email: { notIn: [...PRESERVADOS.usuarios] },
+            email: { notIn: [...PRESERVA_SIEMPRE.usuarios] },
         },
         select: { id: true, email: true },
     });
@@ -146,11 +203,12 @@ async function main(): Promise<void> {
         await borrarPadre(p.email, motivo, { confirm: true, client: prisma });
     }
 
+    // SPEC-578 (D-113): la exclusión de «evidencia viva» quedó anulada — los
+    // reportes RPT-1RR278/RPT-2JFULR/RPT-FA1C23 también son dato de prueba.
     const reportesHuerfanos = await prisma.reporte.findMany({
         where: {
             tenantId: null,
             usuarioId: null,
-            numeroSeguimiento: { notIn: [...PRESERVADOS.reportesExcluidos] },
         },
         select: { id: true, numeroSeguimiento: true },
     });
