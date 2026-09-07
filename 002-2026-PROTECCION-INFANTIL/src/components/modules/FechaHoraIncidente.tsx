@@ -19,6 +19,12 @@
  *  3. El contrato de `onChange` no cambia: sigue emitiendo "YYYY-MM-DDTHH:00",
  *     así que el borrador en sessionStorage del wizard sigue funcionando igual.
  *  4. Siempre hora en punto: los minutos van en 00.
+ *
+ * SPEC-580 · el modo «no recuerdo la hora» es un checkbox: apagado, el control
+ * es el de siempre; encendido, la hora exacta se oculta y la única salida sin
+ * hora es elegir franja (SPEC-438). Así se cumple «si no registra la hora se
+ * asigna la franja» sin fabricar horas: el wizard bloquea avanzar con valor
+ * vacío, y este control vacía el valor hasta que hay franja elegida.
  */
 import { desdePartesHoraLocal, partesHoraLocal, type Meridiano } from "@/lib/format/fecha";
 
@@ -28,6 +34,7 @@ import {
     ETIQUETA_FRANJA,
     esFranja,
     instanteDeFranja,
+    type FranjaAproximada,
 } from "@/lib/reportes/franja-aproximada";
 
 type Props = {
@@ -71,6 +78,20 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
         if (fechaDelValor !== "") setDiaElegido(fechaDelValor);
     }, [fechaDelValor]);
     const fecha = fechaDelValor !== "" ? fechaDelValor : diaElegido;
+
+    /**
+     * SPEC-580 · el modo «no recuerdo la hora» es un interruptor, no un select
+     * siempre visible. Con el interruptor apagado el control es exactamente el
+     * de siempre (día + hora + meridiano); al encenderlo, la hora exacta se
+     * OCULTA y la única salida sin hora es elegir franja — así «si no registra
+     * la hora, se asigna la franja» queda garantizado por construcción: el
+     * wizard bloquea «Siguiente» mientras el valor esté vacío.
+     */
+    const [modoFranja, setModoFranja] = useState(false);
+    // La franja elegida se recuerda en estado local: el ISO emitido no dice qué
+    // franja lo generó (guarda solo la hora representativa), así que derivarla
+    // del valor entrante sería adivinar.
+    const [franjaElegida, setFranjaElegida] = useState<FranjaAproximada | null>(null);
     const maxFecha = max.slice(0, 10);
     const minFecha = min ? min.slice(0, 10) : undefined;
     const maxHora24 = Number.parseInt(max.slice(11, 13), 10);
@@ -80,7 +101,7 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
     const esHoy = fecha !== "" && fecha === maxFecha;
     const topeHora = esHoy && !Number.isNaN(maxHora24) ? maxHora24 : 23;
 
-    function emitir(nuevaFecha: string, nuevaHora: number | null, nuevoMeridiano: Meridiano) {
+    function emitir(nuevaFecha: string, nuevaHora: number | null, nuevoMeridiano: Meridiano, aproximada?: boolean) {
         const compuesto = desdePartesHoraLocal(nuevaFecha, nuevaHora, nuevoMeridiano);
         if (!compuesto) {
             onChange("");
@@ -88,12 +109,48 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
         }
         // Red de seguridad: aunque las opciones futuras estén deshabilitadas,
         // nunca dejamos salir un valor por encima del tope.
-        onChange(compuesto > max ? `${maxFecha}T${String(topeHora).padStart(2, "0")}:00` : compuesto);
+        const resultado = compuesto > max ? `${maxFecha}T${String(topeHora).padStart(2, "0")}:00` : compuesto;
+        // SPEC-580: solo el cambio de modo a hora exacta emite `false` explícito
+        // (el wizard trata `undefined` como no aproximada). Sin esta guarda, el
+        // argumento extra rompería el contrato de emisiones históricas.
+        if (aproximada === undefined) onChange(resultado);
+        else onChange(resultado, aproximada);
+    }
+
+    /** SPEC-438: la franja se emite como instante representativo marcado aproximado. */
+    function emitirFranja(dia: string, franja: FranjaAproximada) {
+        const instante = instanteDeFranja(dia, franja);
+        // Se emite en el mismo formato local que el control: el contrato del
+        // wizard no cambia.
+        const local = new Date(instante.getTime() - instante.getTimezoneOffset() * 60_000);
+        onChange(local.toISOString().slice(0, 16), true);
+    }
+
+    function cambiarModoFranja(activar: boolean) {
+        setModoFranja(activar);
+        if (activar) {
+            // Franja → si ya había una elegida (ida y vuelta del modo) se
+            // re-emite; si no, "" hasta que elija — el wizard bloquea avanzar.
+            if (franjaElegida !== null && fecha !== "") emitirFranja(fecha, franjaElegida);
+            else onChange("");
+            return;
+        }
+        // Hora exacta → se re-emite la hora que se veía; sin día+hora válidos,
+        // "" hasta que elija (mismo bloqueo del wizard).
+        if (hora12 !== null && fecha !== "") emitir(fecha, hora12, meridiano, false);
+        else onChange("");
     }
 
     function cambiarFecha(nuevaFecha: string) {
         const recortada = nuevaFecha > maxFecha ? maxFecha : nuevaFecha;
         setDiaElegido(recortada);
+        // En modo franja no hay hora exacta que recortar al tope de hoy: se
+        // re-emite la misma franja sobre el día nuevo.
+        if (modoFranja) {
+            if (franjaElegida !== null) emitirFranja(recortada, franjaElegida);
+            else onChange("");
+            return;
+        }
         // Si al cambiar de día la hora elegida queda en el futuro, se baja al tope.
         const limite = recortada === maxFecha && !Number.isNaN(maxHora24) ? maxHora24 : 23;
         if (hora12 !== null && a24(hora12, meridiano) > limite) {
@@ -122,66 +179,82 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
                     onChange={(e) => cambiarFecha(e.target.value)}
                     className="h-12 min-w-0 flex-1 basis-40 rounded-xl border border-tinta/15 bg-papel px-3 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
                 />
-                <select
-                    aria-label="Hora del incidente"
-                    value={hora12 ?? ""}
-                    onChange={(e) => emitir(fecha, e.target.value ? Number(e.target.value) : null, meridiano)}
-                    className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
-                >
-                    <option value="">Hora</option>
-                    {HORAS.map((h) => (
-                        <option key={h} value={h} disabled={esHoy && a24(h, meridiano) > topeHora}>
-                            {h}
-                        </option>
-                    ))}
-                </select>
-                <select
-                    aria-label="a.m. o p.m."
-                    value={meridiano}
-                    onChange={(e) => emitir(fecha, hora12, e.target.value as Meridiano)}
-                    className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
-                >
-                    <option value="am">a.m.</option>
-                    <option value="pm" disabled={pmDeshabilitado}>
-                        p.m.
-                    </option>
-                </select>
+                {/* SPEC-580: en modo franja la hora exacta se OCULTA, no se
+                    deshabilita: un select deshabilitado sugiere que sigue
+                    compitiendo con la franja. */}
+                {!modoFranja && (
+                    <>
+                        <select
+                            aria-label="Hora del incidente"
+                            value={hora12 ?? ""}
+                            onChange={(e) => emitir(fecha, e.target.value ? Number(e.target.value) : null, meridiano)}
+                            className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                        >
+                            <option value="">Hora</option>
+                            {HORAS.map((h) => (
+                                <option key={h} value={h} disabled={esHoy && a24(h, meridiano) > topeHora}>
+                                    {h}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            aria-label="a.m. o p.m."
+                            value={meridiano}
+                            onChange={(e) => emitir(fecha, hora12, e.target.value as Meridiano)}
+                            className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                        >
+                            <option value="am">a.m.</option>
+                            <option value="pm" disabled={pmDeshabilitado}>
+                                p.m.
+                            </option>
+                        </select>
+                    </>
+                )}
+            </div>
+            {/* SPEC-580 · el interruptor del modo. `aria-controls` anuncia la
+                región que aparece al activarlo (el select de franja). */}
+            <div className="flex items-center gap-2">
+                <input
+                    type="checkbox"
+                    id="modo-franja-aproximada"
+                    checked={modoFranja}
+                    onChange={(e) => cambiarModoFranja(e.target.checked)}
+                    aria-controls="franja-aproximada"
+                    className="h-4 w-4 rounded border-tinta/25 accent-pino"
+                />
+                <label htmlFor="modo-franja-aproximada" className="text-sm text-body">
+                    No recuerdo la hora
+                </label>
             </div>
             {/* SPEC-438 (I-305): la salida para quien NO recuerda la hora. Antes,
                 dejar la hora vacía hacía que el sistema guardara el instante del
                 envío como hora del hecho: un dato falso. Ahora se elige la franja
                 y queda MARCADA como aproximada. */}
-            <div className="flex flex-wrap items-center gap-2">
-                <label htmlFor="franja-aproximada" className="text-sm text-muted">
-                    ¿No recuerdas la hora?
-                </label>
-                <select
-                    id="franja-aproximada"
-                    aria-label="Franja aproximada del incidente"
-                    value=""
-                    disabled={fecha === ""}
-                    onChange={(e) => {
-                        const v = e.target.value;
-                        if (!esFranja(v) || fecha === "") return;
-                        const instante = instanteDeFranja(fecha, v);
-                        // Se emite en el mismo formato local que el control: el
-                        // contrato del wizard no cambia.
-                        const local = new Date(instante.getTime() - instante.getTimezoneOffset() * 60_000);
-                        onChange(local.toISOString().slice(0, 16), true);
-                    }}
-                    className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
-                >
-                    <option value="">Elige una franja</option>
-                    {FRANJAS.map((f) => (
-                        <option key={f} value={f}>
-                            {ETIQUETA_FRANJA[f]}
-                        </option>
-                    ))}
-                </select>
-            </div>
-            <p className="text-sm text-muted">
-                Si eliges una franja, queda registrada como hora aproximada — no inventamos una hora exacta.
-            </p>
+            {modoFranja && (
+                <div id="grupo-franja-aproximada" className="flex flex-col gap-1.5">
+                    <select
+                        id="franja-aproximada"
+                        aria-label="Franja aproximada del incidente"
+                        value={franjaElegida ?? ""}
+                        disabled={fecha === ""}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            if (!esFranja(v) || fecha === "") return;
+                            setFranjaElegida(v);
+                            emitirFranja(fecha, v);
+                        }}
+                        className="h-12 w-fit shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                    >
+                        <option value="">Elige una franja</option>
+                        {FRANJAS.map((f) => (
+                            <option key={f} value={f}>
+                                {ETIQUETA_FRANJA[f]}
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-sm text-muted">Registraremos la hora como aproximada dentro de esa franja.</p>
+                </div>
+            )}
             {error && (
                 <p role="alert" className="text-sm text-ambar">
                     {error}

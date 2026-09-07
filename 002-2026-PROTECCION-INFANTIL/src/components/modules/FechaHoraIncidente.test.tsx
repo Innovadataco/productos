@@ -80,3 +80,127 @@ describe("FechaHoraIncidente · control amable de la fecha del hecho", () => {
         expect(screen.getByRole("alert").textContent).toContain("Fecha y hora del incidente");
     });
 });
+
+/**
+ * SPEC-580 · el modo «no recuerdo la hora» es un checkbox que intercambia la
+ * hora exacta por la franja aproximada (SPEC-438). El contrato `onChange` no
+ * cambia: franja → `(isoRepresentativo, true)`; sin valor posible → `""` (el
+ * wizard bloquea «Siguiente» y la única salida sin hora exacta es la franja).
+ */
+describe("FechaHoraIncidente · SPEC-580 · modo «no recuerdo la hora»", () => {
+    const MAX = "2026-09-02T10:00";
+
+    // El componente emite wall-time en la zona del proceso; las franjas se
+    // definen en hora de Bogotá, así que las comparaciones se hacen SIEMPRE
+    // convertidas a Bogotá (independiente del TZ donde corra el test).
+    function partesBogota(valorLocal: string): { dia: string; hora: number } {
+        const d = new Date(valorLocal);
+        const dia = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(d);
+        const hora = Number(
+            new Intl.DateTimeFormat("en-US", {
+                timeZone: "America/Bogota",
+                hour: "numeric",
+                hour12: false,
+            }).format(d)
+        );
+        return { dia, hora };
+    }
+
+    function pintar(value: string, onChange = vi.fn()) {
+        render(<FechaHoraIncidente value={value} max={MAX} onChange={onChange} />);
+        return onChange;
+    }
+
+    const CHECKBOX = "No recuerdo la hora";
+    const SELECT_FRANJA = "Franja aproximada del incidente";
+
+    it("renderiza el checkbox «No recuerdo la hora» accesible (label htmlFor)", () => {
+        pintar("");
+        const checkbox = screen.getByLabelText(CHECKBOX) as HTMLInputElement;
+        expect(checkbox.type).toBe("checkbox");
+        expect(checkbox.checked).toBe(false);
+    });
+
+    it("por defecto NO muestra la franja y SÍ los selects de hora exacta", () => {
+        pintar("");
+        expect(screen.queryByLabelText(SELECT_FRANJA)).toBeNull();
+        expect(screen.getByLabelText("Hora del incidente")).toBeTruthy();
+        expect(screen.getByLabelText("a.m. o p.m.")).toBeTruthy();
+    });
+
+    it("al activar el checkbox: aparece la franja y desaparecen hora y meridiano", () => {
+        pintar("");
+        fireEvent.click(screen.getByLabelText(CHECKBOX));
+        expect(screen.getByLabelText(SELECT_FRANJA)).toBeTruthy();
+        expect(screen.queryByLabelText("Hora del incidente")).toBeNull();
+        expect(screen.queryByLabelText("a.m. o p.m.")).toBeNull();
+        // El día sigue editable en modo franja.
+        expect(screen.getByLabelText("Día del incidente")).toBeTruthy();
+    });
+
+    it("con checkbox activo y sin franja elegida emite cadena vacía (el wizard bloquea avanzar)", () => {
+        const onChange = pintar("2026-09-01T09:00");
+        fireEvent.click(screen.getByLabelText(CHECKBOX));
+        expect(onChange).toHaveBeenLastCalledWith("");
+    });
+
+    it("el select de franja está deshabilitado hasta que hay día elegido", () => {
+        pintar("");
+        fireEvent.click(screen.getByLabelText(CHECKBOX));
+        expect((screen.getByLabelText(SELECT_FRANJA) as HTMLSelectElement).disabled).toBe(true);
+    });
+
+    it("elegir franja (con día elegido) emite el instante representativo marcado aproximado", () => {
+        const onChange = pintar("");
+        fireEvent.change(screen.getByLabelText("Día del incidente"), { target: { value: "2026-09-01" } });
+        fireEvent.click(screen.getByLabelText(CHECKBOX));
+        fireEvent.change(screen.getByLabelText(SELECT_FRANJA), { target: { value: "tarde" } });
+
+        const llamada = onChange.mock.calls.at(-1);
+        expect(llamada?.[1]).toBe(true);
+        const emitido = partesBogota(String(llamada?.[0]));
+        // HORA_REPRESENTATIVA.tarde = 15 (centro de 12–18), en el día elegido.
+        expect(emitido.dia).toBe("2026-09-01");
+        expect(emitido.hora).toBe(15);
+    });
+
+    it("el select de franja es controlado: refleja la franja elegida", () => {
+        pintar("");
+        fireEvent.change(screen.getByLabelText("Día del incidente"), { target: { value: "2026-09-01" } });
+        fireEvent.click(screen.getByLabelText(CHECKBOX));
+        fireEvent.change(screen.getByLabelText(SELECT_FRANJA), { target: { value: "noche" } });
+        expect((screen.getByLabelText(SELECT_FRANJA) as HTMLSelectElement).value).toBe("noche");
+    });
+
+    it("en modo franja no es posible tocar la hora: los selects no existen en el documento", () => {
+        pintar("");
+        fireEvent.change(screen.getByLabelText("Día del incidente"), { target: { value: "2026-09-01" } });
+        fireEvent.click(screen.getByLabelText(CHECKBOX));
+        fireEvent.change(screen.getByLabelText(SELECT_FRANJA), { target: { value: "manana" } });
+        expect(screen.queryByLabelText("Hora del incidente")).toBeNull();
+        expect(screen.queryByLabelText("a.m. o p.m.")).toBeNull();
+    });
+
+    it("al desactivar el checkbox vuelve la hora exacta y se re-emite con aproximada=false", () => {
+        const onChange = pintar("2026-09-01T09:00");
+        const checkbox = screen.getByLabelText(CHECKBOX);
+        fireEvent.click(checkbox); // activa franja → ""
+        fireEvent.click(checkbox); // vuelve a hora exacta
+        expect(screen.getByLabelText("Hora del incidente")).toBeTruthy();
+        expect(onChange).toHaveBeenLastCalledWith("2026-09-01T09:00", false);
+    });
+
+    it("cambiar el día en modo franja re-emite la misma franja sobre el día nuevo", () => {
+        const onChange = pintar("");
+        fireEvent.change(screen.getByLabelText("Día del incidente"), { target: { value: "2026-09-01" } });
+        fireEvent.click(screen.getByLabelText(CHECKBOX));
+        fireEvent.change(screen.getByLabelText(SELECT_FRANJA), { target: { value: "noche" } });
+        fireEvent.change(screen.getByLabelText("Día del incidente"), { target: { value: "2026-08-31" } });
+
+        const llamada = onChange.mock.calls.at(-1);
+        expect(llamada?.[1]).toBe(true);
+        const emitido = partesBogota(String(llamada?.[0]));
+        expect(emitido.dia).toBe("2026-08-31");
+        expect(emitido.hora).toBe(21);
+    });
+});
