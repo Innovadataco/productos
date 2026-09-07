@@ -49,7 +49,13 @@ function makeModel(seed: number): StoreModel {
         updateMany: vi.fn(async () => ({ count: 0 })),
         findMany: vi.fn(async () => []),
         findFirst: vi.fn(async () => null),
-        create: vi.fn(async () => ({})),
+        // Stateful: registrarAuditoria INSERTA la constancia de la purga en
+        // AuditLog (append-only). Sin esto el fake no reproduce la compuerta
+        // real (detectado en ensayo contra clon, 2026-09-07).
+        create: vi.fn(async () => {
+            model.n += 1;
+            return {};
+        }),
     };
     return model;
 }
@@ -253,6 +259,24 @@ describe("purga-total · ejecución contra fake stateful", () => {
 
         expect(fake.modelos.get("reporte")?.n).toBe(0);
         expect(fake.usuarios.map((u) => u.email)).toEqual(["soporte@innovadataco.com"]);
+    });
+
+    it("AuditLog crece exactamente en 1 (constancia de la purga) y la compuerta pasa", async () => {
+        const resumen = await purgarTodo(fake.client, { motivo: "purga de prueba total", confirm: true });
+
+        expect(resumen.preservadosAntes.AuditLog).toBe(300);
+        expect(resumen.preservadosDespues.AuditLog).toBe(301);
+    });
+
+    it("COMPUERTA: si AuditLog se movió de más (≠ +1), tira error", async () => {
+        const auditLog = fake.modelos.get("auditLog")!;
+        auditLog.create = vi.fn(async () => {
+            auditLog.n += 2;
+            return {};
+        });
+        await expect(
+            purgarTodo(fake.client, { motivo: "purga de prueba total", confirm: true }),
+        ).rejects.toThrow(/COMPUERTA FALLIDA.*AuditLog/);
     });
 
     it("usuario.deleteMany excluye a soporte@ (filtro email notIn)", async () => {

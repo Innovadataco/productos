@@ -268,7 +268,12 @@ export async function purgarTodo(
     const noPreservados = usuariosRestantes.map((u) => u.email).filter((e) => !emails.includes(e));
     if (noPreservados.length > 0) fallos.push(`usuarios no preservados: ${noPreservados.join(", ")}`);
     for (const entidad of modeloPreservados) {
-        if (preservadosDespues[entidad] !== preservadosAntes[entidad]) {
+        // AuditLog es append-only y la propia purga deja su constancia ahí
+        // (registrarAuditoria): el conteo esperado crece EXACTAMENTE en 1.
+        // Detectado en ensayo real contra clon (2026-09-07): con igualdad
+        // estricta la compuerta no podía pasar nunca.
+        const deltaEsperada = entidad === "AuditLog" ? 1 : 0;
+        if (preservadosDespues[entidad] !== preservadosAntes[entidad] + deltaEsperada) {
             fallos.push(`${entidad}: ${preservadosAntes[entidad]} → ${preservadosDespues[entidad]} (conteo preservado movido)`);
         }
     }
