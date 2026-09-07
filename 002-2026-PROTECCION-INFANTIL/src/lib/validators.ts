@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CategoriaConducta, EstadoReporte, AccionAudit, MotivoBajaReporte } from "@prisma/client";
-import { sugerirDominioCorreo } from "@/lib/email-typo";
+import { sugerirDominioCorreo } from "./email-typo";
 
 const motivosBaja = Object.values(MotivoBajaReporte) as [string, ...string[]];
 export const darDeBajaReporteSchema = z.object({
