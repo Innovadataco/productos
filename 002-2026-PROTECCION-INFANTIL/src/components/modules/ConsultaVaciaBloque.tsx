@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alerta } from "@/components/ui/Alerta";
+import { Modal } from "@/components/ui/Modal";
 import { dejarHandoffReportar } from "@/lib/reportar-handoff";
 import { CanalesOficiales } from "./CanalesOficiales";
 
@@ -9,6 +11,10 @@ import { CanalesOficiales } from "./CanalesOficiales";
  * F3 (N-5): bloque curado del estado vacío de la consulta pública.
  * Contenido 100% estático (viene de parámetros curados, NADA de IA).
  * Presunción de inocencia: lenguaje descriptivo, nunca "es seguro/peligroso".
+ *
+ * 3002: las señales y acciones viven tras un enlace informativo (modal) para no
+ * saturar el estado vacío. Disclaimer, CTA de reporte y canales oficiales se
+ * mantienen SIEMPRE visibles (restricción de producto).
  */
 export type ConsultaVaciaBloqueData = {
     disclaimer?: string;
@@ -23,6 +29,7 @@ type ConsultaVaciaBloqueProps = {
 
 export function ConsultaVaciaBloque({ bloque, identificador }: ConsultaVaciaBloqueProps) {
     const router = useRouter();
+    const [mostrarConsejos, setMostrarConsejos] = useState(false);
 
     // El identificador consultado NO puede quedar en la URL de /reportar (spec
     // 091-US2 / 093-US4): esta es una pantalla pública y la URL termina en el
@@ -45,33 +52,21 @@ export function ConsultaVaciaBloque({ bloque, identificador }: ConsultaVaciaBloq
         });
     };
 
+    const hayConsejos = (bloque.senales?.length ?? 0) > 0 || (bloque.acciones?.length ?? 0) > 0;
+
     return (
         <div className="space-y-4 text-left">
             {bloque.disclaimer && <Alerta tono="advertencia">{bloque.disclaimer}</Alerta>}
 
-            {bloque.senales && bloque.senales.length > 0 && (
-                <div className="glass rounded-2xl p-5">
-                    <h3 className="text-sm font-semibold text-body mb-3 uppercase tracking-wide">
-                        Señales de alerta a las que estar atento
-                    </h3>
-                    <ul className="list-disc space-y-1.5 pl-5 text-sm text-body">
-                        {bloque.senales.map((senal) => (
-                            <li key={senal}>{senal}</li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-
-            {bloque.acciones && bloque.acciones.length > 0 && (
-                <div className="glass rounded-2xl p-5">
-                    <h3 className="text-sm font-semibold text-body mb-3 uppercase tracking-wide">
-                        Qué puedes hacer
-                    </h3>
-                    <ul className="list-disc space-y-1.5 pl-5 text-sm text-body">
-                        {bloque.acciones.map((accion) => (
-                            <li key={accion}>{accion}</li>
-                        ))}
-                    </ul>
+            {hayConsejos && (
+                <div className="text-center">
+                    <button
+                        type="button"
+                        onClick={() => setMostrarConsejos(true)}
+                        className="text-sm font-medium text-accent underline-offset-2 transition hover:underline"
+                    >
+                        Ver señales de alerta y qué puedes hacer
+                    </button>
                 </div>
             )}
 
@@ -86,6 +81,41 @@ export function ConsultaVaciaBloque({ bloque, identificador }: ConsultaVaciaBloq
             </div>
 
             <CanalesOficiales />
+
+            <Modal
+                isOpen={mostrarConsejos}
+                onClose={() => setMostrarConsejos(false)}
+                title="Señales de alerta y qué puedes hacer"
+                size="md"
+            >
+                <div className="space-y-5 text-left">
+                    {bloque.senales && bloque.senales.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-semibold text-body mb-3 uppercase tracking-wide">
+                                Señales de alerta a las que estar atento
+                            </h3>
+                            <ul className="list-disc space-y-1.5 pl-5 text-sm text-body">
+                                {bloque.senales.map((senal) => (
+                                    <li key={senal}>{senal}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {bloque.acciones && bloque.acciones.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-semibold text-body mb-3 uppercase tracking-wide">
+                                Qué puedes hacer
+                            </h3>
+                            <ul className="list-disc space-y-1.5 pl-5 text-sm text-body">
+                                {bloque.acciones.map((accion) => (
+                                    <li key={accion}>{accion}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 }

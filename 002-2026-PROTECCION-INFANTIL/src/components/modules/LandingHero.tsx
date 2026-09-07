@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ConsultaForm } from "./ConsultaForm";
 import { ConsultaVaciaBloque, type ConsultaVaciaBloqueData } from "./ConsultaVaciaBloque";
 import { formatPlataformasResumen } from "@/lib/plataforma";
+import { CATEGORIAS_LABELS } from "@/lib/labels";
 import { RPT_STORAGE_KEY } from "./HomePageClient";
 
 type Ubicacion = { pais: string; ciudad?: string; fecha?: string };
@@ -21,6 +22,8 @@ export type ResultadoConsulta = {
     actividad?: "baja" | "alta";
     plataformas?: Plataforma[];
     ubicaciones?: Ubicacion[];
+    /** 3001: clasificaciones agregadas (únicas, ordenadas por gravedad) para la línea separada por comas. */
+    categorias?: { categoria: string; total: number }[];
     mensaje?: string;
     // F3 (N-5): contenido curado del estado vacío (parámetros, sin IA).
     bloqueVacia?: ConsultaVaciaBloqueData;
@@ -227,6 +230,15 @@ export function LandingHero({
                                         <div className="space-y-2 text-sm text-white/90">
                                             {!!resultado.plataformas?.length && (
                                                 <p>{formatPlataformasResumen(resultado.plataformas, resultado.totalReportes)}</p>
+                                            )}
+                                            {/* 3001: clasificaciones agregadas, separadas por comas, sin repetir. */}
+                                            {!!resultado.categorias?.length && (
+                                                <p>
+                                                    Clasificaciones:{" "}
+                                                    {resultado.categorias
+                                                        .map((c) => CATEGORIAS_LABELS[c.categoria] ?? c.categoria)
+                                                        .join(", ")}
+                                                </p>
                                             )}
                                             {/* Anónimo: ubicación SOLO por países (spec 089-US5) */}
                                             {!!resultado.ubicaciones?.length && (

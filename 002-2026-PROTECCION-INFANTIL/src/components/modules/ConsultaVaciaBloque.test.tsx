@@ -32,20 +32,26 @@ describe("ConsultaVaciaBloque (F3)", () => {
         sessionStorage.clear();
     });
 
-    it("renderiza disclaimer, señales, acciones y canales oficiales", () => {
+    it("renderiza disclaimer, enlace informativo y canales oficiales; las listas van en el modal (3002)", () => {
         render(<ConsultaVaciaBloque bloque={BLOQUE} identificador="+57300111222" />);
 
         expect(screen.getByText(BLOQUE.disclaimer)).toBeTruthy();
-        for (const senal of BLOQUE.senales) {
-            expect(screen.getByText(senal)).toBeTruthy();
-        }
-        for (const accion of BLOQUE.acciones) {
-            expect(screen.getByText(accion)).toBeTruthy();
-        }
         // Canales oficiales siempre visibles (regla de producto).
         expect(screen.getByText("Línea 141")).toBeTruthy();
         expect(screen.getByText("CAI Virtual")).toBeTruthy();
         expect(screen.getByText("Te Protejo")).toBeTruthy();
+
+        // Las listas NO están visibles hasta abrir el modal.
+        expect(screen.queryByText(BLOQUE.senales[0])).toBeNull();
+        fireEvent.click(screen.getByRole("button", { name: "Ver señales de alerta y qué puedes hacer" }));
+        expect(screen.getByText(BLOQUE.senales[0])).toBeTruthy();
+        expect(screen.getByText(BLOQUE.acciones[0])).toBeTruthy();
+        expect(screen.getByText("Señales de alerta a las que estar atento")).toBeTruthy();
+        expect(screen.getByText("Qué puedes hacer")).toBeTruthy();
+
+        // Cerrar el modal vuelve a ocultar las listas.
+        fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+        expect(screen.queryByText(BLOQUE.senales[0])).toBeNull();
     });
 
     // Antes este CTA era un <Link> con `?identificador=` en el href: dejaba el
@@ -82,6 +88,7 @@ describe("ConsultaVaciaBloque (F3)", () => {
         render(<ConsultaVaciaBloque bloque={{ disclaimer: "Solo aviso." }} identificador="@nick" />);
 
         expect(screen.getByText("Solo aviso.")).toBeTruthy();
+        expect(screen.queryByText("Ver señales de alerta y qué puedes hacer")).toBeNull();
         expect(screen.queryByText("Señales de alerta a las que estar atento")).toBeNull();
         expect(screen.queryByText("Qué puedes hacer")).toBeNull();
         expect(screen.getByRole("button", { name: "Reportar una conducta" })).toBeTruthy();

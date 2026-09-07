@@ -93,4 +93,26 @@ describe("LandingHero — UN SOLO formato de resultado (spec 091-A)", () => {
         expect(body).not.toContain("Nivel de riesgo");
         expect(document.querySelector('a[href*="/consulta"]')).toBeNull();
     });
+
+    it("3001: muestra las clasificaciones separadas por comas, sin repetir", () => {
+        renderHero(
+            {
+                ...RESULTADO_BASE,
+                categorias: [
+                    { categoria: "SOLICITUD_MATERIAL", total: 2 },
+                    { categoria: "CIBERACOSO", total: 1 },
+                    { categoria: "CONTACTO_INSISTENTE", total: 1 },
+                ],
+            },
+            true,
+        );
+        const body = document.body.textContent ?? "";
+        expect(body).toContain("Clasificaciones: Solicitud de material, Ciberacoso, Contacto insistente");
+    });
+
+    it("3001: sin clasificaciones no muestra la línea", () => {
+        renderHero({ ...RESULTADO_BASE, categorias: [] }, true);
+        const body = document.body.textContent ?? "";
+        expect(body).not.toContain("Clasificaciones:");
+    });
 });
