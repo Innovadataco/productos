@@ -124,7 +124,7 @@ export async function borrarReporte(
 }
 
 async function main(): Promise<void> {
-    const args = parseArgs(process.argv);
+    const args = parseArgs(process.argv, ["id", "motivo", "confirm"]);
     const id = typeof args.id === "string" ? args.id : "";
     if (!id) throw new Error("[borrar-reporte] Falta --id=<reporteId>");
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);

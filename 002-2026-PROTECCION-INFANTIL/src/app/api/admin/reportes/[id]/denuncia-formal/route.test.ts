@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -52,7 +53,7 @@ const TEXTO_REPORTE = "Texto del reporte que NUNCA viaja a la denuncia ni a la a
 
 async function crearReporteClasificado(overrides: { estado?: "PENDIENTE" | "CLASIFICADO" | "POSIBLE_SPAM"; eliminado?: boolean } = {}) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+57300DENUNCIA",
             plataformaId: plataforma!.id,

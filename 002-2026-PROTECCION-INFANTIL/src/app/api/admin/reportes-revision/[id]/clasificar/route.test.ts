@@ -7,6 +7,7 @@
  * daba 409, ambos por la misma razón — exigían una clasificación que no existía.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { POST as POSTConfirmar } from "../confirmar/route";
 import { prisma } from "@/lib/prisma";
@@ -45,7 +46,7 @@ describe("POST /api/admin/reportes-revision/[id]/clasificar (A-70 · B2)", () =>
     async function reporteAtascado(operadorId?: string) {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const usuario = await crearUsuario("PARENT");
-        return prisma.reporte.create({
+        return crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300ATASCADO",
                 plataformaId: plataforma!.id,

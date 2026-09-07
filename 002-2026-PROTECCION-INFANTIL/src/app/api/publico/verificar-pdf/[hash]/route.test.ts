@@ -2,6 +2,7 @@
  * SPEC-234 (002-PI-134): tests del endpoint público de verificación de PDF.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -80,7 +81,7 @@ describe("GET /api/publico/verificar-pdf/[hash] · InformeCaso (SPEC-351)", () =
         const curso = await crearCurso(colegio.id);
         const estudiante = await crearEstudiante(curso.id, colegio.id);
         const identificador = await crearIdentificadorEstudiante(estudiante.id, { plataformaId: plataforma.id });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: identificador.valor, plataformaId: plataforma.id, texto: "x",
                 fechaIncidente: new Date(), ciudad: "Bogotá", pais: "CO", estado: "CLASIFICADO",

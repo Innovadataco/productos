@@ -143,7 +143,7 @@ export async function borrarPadre(
 }
 
 async function main(): Promise<void> {
-    const args = parseArgs(process.argv);
+    const args = parseArgs(process.argv, ["email", "motivo", "confirm"]);
     const email = typeof args.email === "string" ? args.email : "";
     if (!email) throw new Error("[borrar-padre] Falta --email=<email>");
     const motivo = requerirMotivo(typeof args.motivo === "string" ? args.motivo : undefined);

@@ -3,6 +3,7 @@
  * el botón del expediente. FR-009 dedicado: el blindaje de ajenos.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 
 let mockToken: string | undefined;
 vi.mock("next/headers", () => ({
@@ -133,7 +134,7 @@ describe("SPEC-340 · el hilo de datos", { timeout: 60_000 }, () => {
 
         // Ajeno ANÓNIMO aprobado al mismo identificador.
         const plataforma = await prisma.plataforma.findFirstOrThrow();
-        const ajenoBd = await prisma.reporte.create({
+        const ajenoBd = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300hilo04".toLowerCase(),
                 plataformaId: plataforma.id,

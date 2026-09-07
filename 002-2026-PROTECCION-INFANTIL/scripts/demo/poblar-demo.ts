@@ -29,7 +29,7 @@
  */
 import { PrismaClient, Prisma } from "@prisma/client";
 import { hashPassword } from "../../src/lib/auth";
-import { cifrarTextoReporte } from "../../src/lib/texto-reporte-cifrado";
+import { crearReporteConTexto } from "../../src/lib/dal/services/crear-reporte-con-texto";
 import {
     DEMO,
     DEMO_PLATAFORMAS,
@@ -465,7 +465,10 @@ async function ejecutar(motivo: string, confirm: boolean, semilla: number) {
     // Preparo por lotes de 500 para no reventar memoria ni el pool.
     const LOTE = 500;
     for (let base = 0; base < DEMO.nReportesTotal; base += LOTE) {
-        const reportes: ConId<Prisma.ReporteCreateManyInput>[] = [];
+        // S-C (D-116/D-117): el alta pasa por el factory (ContenidoReporte+LlaveReporte por fila);
+        // ya no hay `texto`/`textoOriginal` como columnas. Llevamos el texto PLANO aparte y el resto
+        // de los campos del reporte en `datos` para pasarlos al factory en el loop de inserción.
+        const reportes: Array<{ textoPlano: string; datos: ConId<Omit<Prisma.ReporteUncheckedCreateInput, "contenidoId">> }> = [];
         const clasifs: ConId<Prisma.ClasificacionIACreateManyInput>[] = [];
         const alertas: ConId<Prisma.AlertaColegioCreateManyInput>[] = [];
 
@@ -495,29 +498,30 @@ async function ejecutar(motivo: string, confirm: boolean, semilla: number) {
             const cat: CategoriaDemo = esSpam ? "SPAM" : pick(r, DEMO_CATEGORIAS_REPORTE);
 
             reportes.push({
-                id: rId,
-                identificador: nick,
-                plataformaId,
-                texto: cifrarTextoReporte(texto),
-                textoOriginal: null,
-                fechaIncidente: fecha,
-                ciudad: nombreCiudad,
-                pais: paisCodigo,
-                paisId: ciudad?.paisId ?? null,
-                ciudadId: ciudad?.id ?? null,
-                estado: estado as never,
-                esAnonimo: r() < 0.6,
-                edadVictima: 10 + Math.floor(r() * 8),
-                usuarioId: null,
-                origenRol: null,
-                tenantId: null,
-                prioridadAlta: !esSpam && r() < 0.05,
-                keywordsDetectadas: [],
-                esRafaga: false,
-                fuenteConfianza: 0.4 + r() * 0.6,
-                eliminado: false,
-                creadoEn: fecha,
-                actualizadoEn: fecha,
+                textoPlano: texto,
+                datos: {
+                    id: rId,
+                    identificador: nick,
+                    plataformaId,
+                    fechaIncidente: fecha,
+                    ciudad: nombreCiudad,
+                    pais: paisCodigo,
+                    paisId: ciudad?.paisId ?? null,
+                    ciudadId: ciudad?.id ?? null,
+                    estado: estado as never,
+                    esAnonimo: r() < 0.6,
+                    edadVictima: 10 + Math.floor(r() * 8),
+                    usuarioId: null,
+                    origenRol: null,
+                    tenantId: null,
+                    prioridadAlta: !esSpam && r() < 0.05,
+                    keywordsDetectadas: [],
+                    esRafaga: false,
+                    fuenteConfianza: 0.4 + r() * 0.6,
+                    eliminado: false,
+                    creadoEn: fecha,
+                    actualizadoEn: fecha,
+                },
             });
 
             clasifs.push({
@@ -556,11 +560,21 @@ async function ejecutar(motivo: string, confirm: boolean, semilla: number) {
             }
         }
 
-        await prisma.$transaction([
-            prisma.reporte.createMany({ data: reportes, skipDuplicates: true }),
-            prisma.clasificacionIA.createMany({ data: clasifs, skipDuplicates: true }),
-            ...(alertas.length ? [prisma.alertaColegio.createMany({ data: alertas, skipDuplicates: true })] : []),
-        ]);
+        // S-C: los reportes se crean por el factory (uno por fila, sella su contenido cifrado) y
+        // luego las clasificaciones/alertas en lote, todo en una tx interactiva con timeout amplio
+        // (500 reportes × 3 inserts por lote no caben en el timeout por defecto de 5s).
+        await prisma.$transaction(
+            async (tx) => {
+                for (const { textoPlano, datos } of reportes) {
+                    await crearReporteConTexto(tx, { texto: textoPlano, reporte: datos });
+                }
+                await tx.clasificacionIA.createMany({ data: clasifs, skipDuplicates: true });
+                if (alertas.length) {
+                    await tx.alertaColegio.createMany({ data: alertas, skipDuplicates: true });
+                }
+            },
+            { timeout: 120_000 }
+        );
         conteos.reportes += reportes.length;
         conteos.clasificaciones += clasifs.length;
         conteos.alertas += alertas.length;

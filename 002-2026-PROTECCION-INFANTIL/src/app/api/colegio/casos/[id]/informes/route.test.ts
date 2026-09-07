@@ -2,6 +2,7 @@
  * SPEC-351 (T033 + FR-004-bis) · POST/GET /api/colegio/casos/[id]/informes.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST, GET } from "./route";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -49,7 +50,7 @@ async function seedCaso() {
     const denunciante = await prisma.usuario.create({
         data: { email: EMAIL_DENUNCIANTE, passwordHash: "x", rol: "PARENT", estado: "activo" },
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificador.valor,
             plataformaId: plataforma.id,

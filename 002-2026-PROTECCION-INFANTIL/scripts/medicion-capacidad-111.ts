@@ -5,6 +5,7 @@
  * No estima: ejecuta y cronometra. Uso: node --env-file=.env --import tsx scripts/medicion-capacidad-111.ts
  */
 import { prisma } from "../src/lib/prisma";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "../src/app/api/reportes/procesar/route";
 
 const TEXTO_BANCO =
@@ -12,7 +13,7 @@ const TEXTO_BANCO =
 
 async function medirUnReporte(etiqueta: string): Promise<number> {
     const plataforma = await prisma.plataforma.findFirst();
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `medicion-capacidad-${Date.now()}`,
             plataformaId: plataforma!.id,

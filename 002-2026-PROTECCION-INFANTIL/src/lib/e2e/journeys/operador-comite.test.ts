@@ -8,6 +8,7 @@
  * apelaciones del comité (bandeja → tomar → resolver ACEPTADA con ocultamiento).
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -17,8 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { sembrarBase, datosCiclo } from "../seed-ciclo";
 import { entrarComo, verificarAuditLog, HOME_POR_ROL, salirYExigirSesionMuerta } from "../helpers";
 import { crearTokenUsuario } from "@/lib/reporte-test-utils";
-import { encryptParameter } from "@/lib/param-encryption";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 
 const CICLO = Number(process.env.E2E_CICLO ?? "1");
 
@@ -47,7 +47,7 @@ async function crearUsuarioInterno(adminToken: string, email: string, nombre: st
 async function crearCasoRevision(operadorId: string, tag: string) {
     const datos = datosCiclo(CICLO);
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: datos.identificadorComun,
             plataformaId: plataforma!.id,
@@ -210,12 +210,13 @@ describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 },
         // con el original cifrado y la copia de trabajo anonimizada por la IA.
         const sembrarCasoAnonimizacion = async (tag: string, operadorId: string | null) => {
             const original = `${datos.textoBase} (caso ${tag}, con nombre propio: María Pérez)`;
-            const reporte = await prisma.reporte.create({
+            const reporte = await crearReporteFixture(prisma, {
                 data: {
                     identificador: datos.identificadorPocos,
                     plataformaId: plataforma.id,
                     texto: `Caso ${tag}: un adulto insiste en pedir fotos a [MENOR] ofreciéndole dinero.`,
-                    textoOriginal: encryptParameter(original),
+                    // S-C: el original va EN PLANO al fixture (el factory lo cifra con la DEK por fila).
+                    textoOriginal: original,
                     fechaIncidente: new Date("2026-07-20T10:00:00Z"),
                     ciudad: "Bogotá",
                     pais: "Colombia",
@@ -247,8 +248,9 @@ describe(`SPEC-114 · operador y comité (ciclo ${CICLO})`, { timeout: 30_000 },
         // §9 camino 1: estado final, texto de trabajo = anonimizado, original intacto, transición y auditoría
         const bdAdmin = (await prisma.reporte.findUnique({ where: { id: casoAdmin.reporte.id } }))!;
         expect(bdAdmin.estado, "§9: el caso anonimizado pasa a CLASIFICADO").toBe("CLASIFICADO");
-        expect(descifrarTextoReporte(bdAdmin.texto), "§9: el texto de trabajo queda anonimizado").toBe(textoAnonimizado);
-        expect(descifrarTextoReporte(bdAdmin.textoOriginal!), "§9: el original se preserva intacto (evidencia)").toBe(casoAdmin.original);
+        // S-C: el trabajo pasa a la versión anonimizada; el original (evidencia) queda intacto.
+        expect(await descifrarCampo(prisma, bdAdmin.contenidoId, "texto"), "§9: el texto de trabajo queda anonimizado").toBe(textoAnonimizado);
+        expect(await descifrarCampo(prisma, bdAdmin.contenidoId, "textoOriginal"), "§9: el original se preserva intacto (evidencia)").toBe(casoAdmin.original);
         const transicionAdmin = await prisma.transicionReporte.findFirst({
             where: { reporteId: casoAdmin.reporte.id, estadoNuevo: "CLASIFICADO" },
         });

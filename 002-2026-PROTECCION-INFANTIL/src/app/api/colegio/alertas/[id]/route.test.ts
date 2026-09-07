@@ -5,6 +5,8 @@
  * (I-28/I-29: sin valor del identificador, texto del reporte ni scores).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { GET } from "./route";
 import { PATCH as PATCH_ESTADO } from "./estado/route";
 import { POST as POST_NOTA } from "./notas/route";
@@ -41,7 +43,7 @@ async function setupSchoolAdmin() {
 }
 
 async function crearReporte(identificador: string, plataformaId: string, estado: EstadoReporte) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,
@@ -198,8 +200,9 @@ describe("GET /api/colegio/alertas/[id] (SPEC-159)", () => {
         const json = await res.json();
         const serializado = JSON.stringify(json);
 
+        const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
         expect(serializado).not.toContain("+57300SECRETO");
-        expect(serializado).not.toContain(reporte.texto);
+        expect(serializado).not.toContain(textoReporte);
         expect(serializado).not.toContain("Bogotá");
         expect(serializado).not.toContain("Colombia");
         expect(serializado).not.toContain("score");

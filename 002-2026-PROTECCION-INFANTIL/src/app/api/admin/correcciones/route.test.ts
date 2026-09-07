@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -58,7 +59,7 @@ describe("POST /api/admin/correcciones", () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const usuario = await crearUsuario("PARENT");
         const operador = await crearUsuario("OPERADOR");
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300CORRECCION",
                 plataformaId: plataforma!.id,
@@ -90,7 +91,7 @@ describe("POST /api/admin/correcciones", () => {
     async function setupReporteConPii() {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const usuario = await crearUsuario("PARENT");
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300CORRECCION",
                 plataformaId: plataforma!.id,

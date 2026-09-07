@@ -8,12 +8,13 @@
  */
 import type { Prisma } from "@prisma/client";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { diasHabilesTranscurridos, estaEnAvisoPrevio, getAvisoPrevioDias } from "@/lib/apelaciones";
 import { ApelacionStorageError, leerDocumentoDescifrado, sha256Hex } from "@/lib/apelacion-storage";
 import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampos } from "@/lib/reporte-texto-contenido";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { ApelacionRepository } from "../repositories/apelacion";
@@ -77,6 +78,13 @@ export class ComiteApelacionesService {
 
         // El comité decide bajas: ve los reportes del identificador + plataforma.
         const reportes = await this.reportes.findPorIdentificadorYPlataforma(apelacion.identificador, apelacion.plataformaId);
+        // S-C (D-116/D-117, O-2): el relato sale descifrado SOLO por este camino autorizado del
+        // comité. Batch (2 queries, fail-loud); un reporte purgado devuelve el marcador tal cual.
+        const textosReportes = await descifrarCampos(
+            this.tx ?? prisma,
+            reportes.map((r) => r.contenidoId),
+            "texto"
+        );
 
         const avisoPrevioDias = await getAvisoPrevioDias();
         const ahora = new Date();
@@ -134,9 +142,8 @@ export class ComiteApelacionesService {
                 creadoEn: r.creadoEn,
                 ciudad: r.ciudad,
                 pais: r.pais,
-                // SPEC-130 (BL-4, O-2): el texto sale descifrado solo por este camino
-                // autorizado del comité; purgado → marcador tal cual.
-                texto: descifrarTextoReporte(r.texto, { reporteId: r.id }),
+                // SPEC-130 (BL-4, O-2) · S-C: descifrado por lote arriba; purgado → marcador tal cual.
+                texto: textosReportes.get(r.contenidoId)!,
                 categoria: r.clasificacion?.categoria ?? null,
                 confianza: r.clasificacion?.confianza ?? null,
             })),

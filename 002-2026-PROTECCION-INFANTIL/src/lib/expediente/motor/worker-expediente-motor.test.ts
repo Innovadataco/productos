@@ -10,6 +10,7 @@ import { createRequire } from "node:module";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
+import { descifrarCampo, sellarTextoNuevo, MARCADOR_TEXTO_PURGADO } from "@/lib/reporte-texto-contenido";
 import {
     cerrarExpedientesInactivos,
     vigilarSlaComite,
@@ -177,12 +178,14 @@ describe("worker-expediente-motor (SPEC-236)", () => {
             estado: "CERRADO",
             fechaCierre: hace25Meses,
         });
+        // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte (contenidoId propio).
+        const { contenidoId: contenidoEvento } = await sellarTextoNuevo(prisma, { texto: "texto sensible original" });
         const evento = await prisma.eventoExpediente.create({
             data: {
                 expedienteId: exp.id,
                 ordenSecuencial: 1,
                 fechaEvento: hace25Meses,
-                texto: "texto sensible original",
+                contenidoId: contenidoEvento,
             },
         });
         const informe = await prisma.informeConsolidado.create({
@@ -204,7 +207,16 @@ describe("worker-expediente-motor (SPEC-236)", () => {
         // No se eliminaron filas; solo se sobrescribieron campos.
         const eventoDespues = await prisma.eventoExpediente.findUnique({ where: { id: evento.id } });
         expect(eventoDespues).not.toBeNull();
-        expect(eventoDespues?.texto).toBe(TEXTO_RETENIDO);
+        // S-C · candado de retención en DOS direcciones (CEO 06-09): tras la purga, NI el texto de
+        // TRABAJO NI el ORIGINAL del evento quedan legibles. El original es la fuga que en el modelo
+        // viejo no existía (evento de columna única). Mutación: quitar `resellarCampo` deja el trabajo
+        // legible; quitar `purgarOriginal` deja el original legible — cualquiera pone esto en ROJO.
+        expect(await descifrarCampo(prisma, eventoDespues!.contenidoId, "texto")).toBe(TEXTO_RETENIDO);
+        expect(await descifrarCampo(prisma, eventoDespues!.contenidoId, "textoOriginal")).toBe(MARCADOR_TEXTO_PURGADO);
+        const contenidoDespues = await prisma.contenidoReporte.findUniqueOrThrow({
+            where: { id: eventoDespues!.contenidoId },
+        });
+        expect(contenidoDespues.origenEvidencia).toBe("PURGADA");
         const informeDespues = await prisma.informeConsolidado.findUnique({ where: { id: informe.id } });
         expect(informeDespues?.resumenTextoGenerado).toBe(TEXTO_RETENIDO);
         expect(informeDespues?.pdfUrl).toBe(TEXTO_RETENIDO);
@@ -226,14 +238,15 @@ describe("worker-expediente-motor (SPEC-236)", () => {
     it("purga: CERRADO dentro del plazo NO se modifica (US3.4)", async () => {
         const padre = await crearUsuario("PARENT");
         const exp = await crearExpediente(padre.id, { estado: "CERRADO", fechaCierre: new Date() });
+        const { contenidoId: contenidoVigente } = await sellarTextoNuevo(prisma, { texto: "vigente" });
         await prisma.eventoExpediente.create({
-            data: { expedienteId: exp.id, ordenSecuencial: 1, fechaEvento: new Date(), texto: "vigente" },
+            data: { expedienteId: exp.id, ordenSecuencial: 1, fechaEvento: new Date(), contenidoId: contenidoVigente },
         });
 
         const purgados = await purgarRetenidos(new Date());
         expect(purgados).toBe(0);
         const evento = await prisma.eventoExpediente.findFirst({ where: { expedienteId: exp.id } });
-        expect(evento?.texto).toBe("vigente");
+        expect(await descifrarCampo(prisma, evento!.contenidoId, "texto")).toBe("vigente");
     });
 
     it("advisory lock: una segunda instancia no adquiere el lock (US2.5)", async () => {

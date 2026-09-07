@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -43,7 +44,7 @@ async function revocarModulo(rol: RolUsuario, clave: string) {
 
 async function crearReporteClasificado() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+57300FORPDF",
             plataformaId: plataforma!.id,

@@ -14,6 +14,7 @@ import { marcarDemo } from "./lib/marcar";
 import { CORRIDA } from "./lib/config";
 import { nombrePersona, textoDemo, numeroSeguimientoDemo, telefonoDemo } from "./lib/datos";
 import { hashIdentificacion } from "@/lib/hash-identificacion";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import type { EstadoReporte } from "@prisma/client";
 
 export interface CtxDesbloqueo {
@@ -54,26 +55,29 @@ async function crearReporteDemo(
     extra: { operadorId?: string; comiteId?: string } = {},
 ): Promise<{ id: string; identificador: string }> {
     const identificador = telefonoDemo(920000 + idx);
-    const reporte = await prisma.reporte.create({
-        data: {
-            identificador,
-            plataformaId: ctx.plataformaId,
+    // S-C (D-116/D-117): el alta pasa por el factory (texto sellado en ContenidoReporte).
+    const reporte = await prisma.$transaction((tx) =>
+        crearReporteConTexto(tx, {
             texto: textoDemo("CONTACTO_INSISTENTE"),
-            fechaIncidente: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
-            ciudad: "Bogotá",
-            pais: "Colombia",
-            paisId: ctx.paisId,
-            ciudadId: ctx.ciudadId,
-            estado,
-            esAnonimo: false,
-            edadVictima: 13,
-            numeroSeguimiento: `RPT-DESBLOQ-${String(idx).padStart(4, "0")}`,
-            creadoEn: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
-            usuarioId: ctx.padreId,
-            ...(extra.operadorId ? { operadorId: extra.operadorId } : {}),
-            ...(extra.comiteId ? { comiteId: extra.comiteId } : {}),
-        },
-    });
+            reporte: {
+                identificador,
+                plataformaId: ctx.plataformaId,
+                fechaIncidente: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
+                ciudad: "Bogotá",
+                pais: "Colombia",
+                paisId: ctx.paisId,
+                ciudadId: ctx.ciudadId,
+                estado,
+                esAnonimo: false,
+                edadVictima: 13,
+                numeroSeguimiento: `RPT-DESBLOQ-${String(idx).padStart(4, "0")}`,
+                creadoEn: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
+                usuarioId: ctx.padreId,
+                ...(extra.operadorId ? { operadorId: extra.operadorId } : {}),
+                ...(extra.comiteId ? { comiteId: extra.comiteId } : {}),
+            },
+        })
+    );
     await marcarDemo("Reporte", reporte.id, MARCA);
     return { id: reporte.id, identificador };
 }

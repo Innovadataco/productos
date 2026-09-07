@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
@@ -28,7 +29,7 @@ describe("patrón coordinado", () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const reporteIds: string[] = [];
         for (let i = 0; i < 5; i++) {
-            const r = await prisma.reporte.create({
+            const r = await crearReporteFixture(prisma, {
                 data: {
                     identificador: `+5730000000${i}`,
                     plataformaId: plataforma!.id,
@@ -45,7 +46,7 @@ describe("patrón coordinado", () => {
             await insertarEmbedding(r.id, vector(768, 0.5));
         }
 
-        const candidato = await prisma.reporte.create({
+        const candidato = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300000999",
                 plataformaId: plataforma!.id,
@@ -77,7 +78,7 @@ describe("patrón coordinado", () => {
     it("no detecta patrón con menos de 5 identificadores distintos", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 3; i++) {
-            const r = await prisma.reporte.create({
+            const r = await crearReporteFixture(prisma, {
                 data: {
                     identificador: `+5730000000${i}`,
                     plataformaId: plataforma!.id,
@@ -93,7 +94,7 @@ describe("patrón coordinado", () => {
             await insertarEmbedding(r.id, vector(768, 0.5));
         }
 
-        const candidato = await prisma.reporte.create({
+        const candidato = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300000999",
                 plataformaId: plataforma!.id,
@@ -120,7 +121,7 @@ describe("patrón coordinado", () => {
     it("ignora reportes fuera de la ventana de tiempo", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         for (let i = 0; i < 5; i++) {
-            const r = await prisma.reporte.create({
+            const r = await crearReporteFixture(prisma, {
                 data: {
                     identificador: `+5730000000${i}`,
                     plataformaId: plataforma!.id,
@@ -137,7 +138,7 @@ describe("patrón coordinado", () => {
             await insertarEmbedding(r.id, vector(768, 0.5));
         }
 
-        const candidato = await prisma.reporte.create({
+        const candidato = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300000999",
                 plataformaId: plataforma!.id,

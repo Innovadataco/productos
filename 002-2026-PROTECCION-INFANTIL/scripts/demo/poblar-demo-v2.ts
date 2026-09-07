@@ -23,7 +23,7 @@
  *  6) Nunca fechas futuras (dato sucio para BI) y hora en punto (G20).
  */
 import { PrismaClient, Prisma } from "@prisma/client";
-import { cifrarTextoReporte } from "../../src/lib/texto-reporte-cifrado";
+import { crearReporteConTexto } from "../../src/lib/dal/services/crear-reporte-con-texto";
 import { rng, pick, parseArgs, requerirMotivo, log, registrarAuditoriaDemo } from "./_common";
 import {
     DEMO2,
@@ -45,7 +45,10 @@ const LOTE = 250;
 const CUPO_OPERADOR_DEFAULT = "500";
 
 type Fila = {
-    reporte: Prisma.ReporteCreateManyInput;
+    // S-C (D-116/D-117): el alta pasa por el factory (ContenidoReporte+LlaveReporte por fila); ya no
+    // hay columnas `texto`/`textoOriginal`. Llevamos el texto PLANO aparte de los campos del reporte.
+    textoPlano: string;
+    reporte: Omit<Prisma.ReporteUncheckedCreateInput, "contenidoId">;
     clasificacion: Prisma.ClasificacionIACreateManyInput;
     anio: number;
     categoria: CategoriaDemo2;
@@ -79,12 +82,11 @@ function construirFilas(
         filas.push({
             anio: fecha.getUTCFullYear(),
             categoria,
+            textoPlano: texto,
             reporte: {
                 id: rId,
                 identificador: pick(r, NICKS_DEMO2),
                 plataformaId: pick(r, plataformas).id,
-                texto: cifrarTextoReporte(texto),
-                textoOriginal: null,
                 fechaIncidente: fecha,
                 ciudad: ciudad?.nombre ?? nombreCiudad,
                 pais: paisCodigo,
@@ -169,17 +171,20 @@ async function ejecutar(motivo: string, confirm: boolean, semilla: number) {
     let creados = 0;
     for (let base = 0; base < filas.length; base += LOTE) {
         const lote = filas.slice(base, base + LOTE);
-        await prisma.$transaction(async (tx) => {
-            const res = await tx.reporte.createMany({
-                data: lote.map((f) => f.reporte),
-                skipDuplicates: true,
-            });
-            await tx.clasificacionIA.createMany({
-                data: lote.map((f) => f.clasificacion),
-                skipDuplicates: true,
-            });
-            creados += res.count;
-        });
+        await prisma.$transaction(
+            async (tx) => {
+                // S-C: cada reporte por el factory (sella su contenido cifrado); clasificaciones en lote.
+                for (const f of lote) {
+                    await crearReporteConTexto(tx, { texto: f.textoPlano, reporte: f.reporte });
+                    creados++;
+                }
+                await tx.clasificacionIA.createMany({
+                    data: lote.map((f) => f.clasificacion),
+                    skipDuplicates: true,
+                });
+            },
+            { timeout: 120_000 }
+        );
         log("poblar-v2", `lote ${base / LOTE + 1}: ${creados} reportes acumulados`);
     }
 

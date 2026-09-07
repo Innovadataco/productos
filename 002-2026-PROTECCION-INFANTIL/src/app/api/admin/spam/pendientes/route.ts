@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { spamPendientesQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permisos";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCamposReporte } from "@/lib/dal/services/descifrar-contenido";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { getParametroSistema } from "@/lib/parametros";
@@ -92,14 +92,16 @@ export async function GET(req: Request) {
             }
         })();
 
+        // S-C: descifrado en LOTE (2 queries) del texto de cada reporte de la bandeja.
+        const textos = await descifrarCamposReporte(reportes.map((r) => r.contenidoId), "texto");
         return NextResponse.json({
             reportes: reportes.map((r) => {
+                const texto = textos.get(r.contenidoId)!;
                 const secundarias = (r.clasificacion?.categoriasSecundarias as { categoria: string; score: number }[] | null) ?? null;
                 // SPEC-130 (BL-4, O-2): texto descifrado solo en este camino autorizado.
-                // SPEC-520: se descifra UNA vez y alimenta TANTO el motivo COMO la vista.
-                // Antes `derivarMotivoIngreso` recibía `r.texto` CIFRADO y el motivo se
-                // calculaba sobre el ciphertext desde que existe el cifrado (BL-4).
-                const texto = descifrarTextoReporte(r.texto, { reporteId: r.id });
+                // SPEC-520 + S-C: se descifra UNA vez (en lote, S-C) y alimenta TANTO el
+                // motivo COMO la vista — el motivo se deriva sobre el PLANO (antes miraba
+                // el ciphertext desde que existe el cifrado, BL-4).
                 const { motivo, confianzaSpam } = derivarMotivoIngreso({
                     categoria: r.clasificacion?.categoria ?? null,
                     confianza: r.clasificacion?.confianza ?? null,

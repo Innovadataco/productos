@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -34,7 +35,7 @@ describe("POST /api/reportes/fallback", () => {
 
     it("mueve reporte a REVISION_MANUAL y registra transición al agotar reintentos", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300FALLBACK",
                 plataformaId: plataforma!.id,
@@ -70,7 +71,7 @@ describe("POST /api/reportes/fallback", () => {
 
     it("es idempotente si el reporte ya está en REVISION_MANUAL", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300FALLBACK2",
                 plataformaId: plataforma!.id,
@@ -94,7 +95,7 @@ describe("POST /api/reportes/fallback", () => {
 
     it("registra transición desde PENDIENTE si nunca se inició procesamiento", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300FALLBACK3",
                 plataformaId: plataforma!.id,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -24,7 +25,7 @@ async function crearReporteClasificado(
         where: { nombre_paisId: { nombre: "Bogotá", paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
     });
     const numeroSeguimiento = `RPT-${identificador.replace(/\D/g, "").slice(0, 6)}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma!.id,
@@ -106,7 +107,7 @@ describe("GET /api/consulta/detalle", () => {
 
     it("devuelve sin reportes cuando no hay reportes clasificados", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: "3003333333",
                 plataformaId: plataforma!.id,
@@ -142,7 +143,7 @@ describe("GET /api/consulta/detalle", () => {
                 },
             },
         });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "3004444444",
                 plataformaId: plataformaOtro.id,

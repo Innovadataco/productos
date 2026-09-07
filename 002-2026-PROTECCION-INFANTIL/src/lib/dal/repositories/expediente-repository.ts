@@ -6,8 +6,9 @@
 import type { Prisma } from "@prisma/client";
 import { EstadoExpediente } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
+import { sellarTextoNuevo, descifrarCampos } from "@/lib/reporte-texto-contenido";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import type { DbClient } from "../unit-of-work";
 import { withUnitOfWork } from "../unit-of-work";
 
@@ -135,12 +136,16 @@ export class ExpedienteRepository {
         const ordenSecuencial = await this.siguienteOrdenSecuencial(expediente.id);
         const reporteId = input.reporteId ?? (await this.crearReporteVinculado(expediente, input, fechaEvento));
 
+        // S-C: el texto del evento vive cifrado en SU PROPIO ContenidoReporte (contenidoId
+        // NOT NULL @unique; el XOR trigger prohíbe compartirlo con el reporte). Lo sella el
+        // factory de bajo nivel dentro de esta misma transacción.
+        const { contenidoId } = await sellarTextoNuevo(this.db, { texto: input.texto });
         const eventoData: Prisma.EventoExpedienteUncheckedCreateInput = {
             expedienteId: expediente.id,
             ordenSecuencial,
             reporteId,
             fechaEvento,
-            texto: input.texto,
+            contenidoId,
             plataforma: input.plataforma ?? null,
         };
         if (input.adjuntosMetaJson !== undefined) {
@@ -178,12 +183,14 @@ export class ExpedienteRepository {
             input.reporteACrear?.plataformaId ?? expediente.plataformaId ?? "otro";
         const plataformaId = await this.resolverPlataformaId(plataformaClave);
 
-        const reporte = await this.db.reporte.create({
-            data: {
+        // S-C: por el factory (única vía; sella el texto cifrado + crea el Reporte con su
+        // propio contenidoId — el XOR trigger exige que reporte y evento NO compartan uno).
+        const reporte = await crearReporteConTexto(this.db, {
+            texto: input.reporteACrear?.texto ?? input.texto,
+            reporte: {
                 identificador:
                     input.reporteACrear?.identificador ?? expediente.identificadorReportado,
                 plataformaId,
-                texto: input.reporteACrear?.texto ?? input.texto,
                 fechaIncidente: input.reporteACrear?.fechaIncidente ?? fechaEvento,
                 ciudad: input.reporteACrear?.ciudad ?? "No especificado",
                 pais: input.reporteACrear?.pais ?? "No especificado",
@@ -368,12 +375,12 @@ export class ExpedienteRepository {
                 id: true,
                 ordenSecuencial: true,
                 fechaEvento: true,
-                texto: true,
+                contenidoId: true,
                 plataforma: true,
                 reporteId: true,
                 reporte: {
                     select: {
-                        texto: true,
+                        contenidoId: true,
                         ciudad: true,
                         pais: true,
                         fechaIncidente: true,
@@ -383,10 +390,15 @@ export class ExpedienteRepository {
             },
         });
 
+        // S-C: descifrado en LOTE del texto del reporte de cada evento (2 queries).
+        const contenidoIdsEventos = eventosPropiosRaw
+            .map((ev) => ev.reporte?.contenidoId)
+            .filter((c): c is string => Boolean(c));
+        const textosEventos = await descifrarCampos(this.db, contenidoIdsEventos, "texto");
         const eventosPropios = eventosPropiosRaw.map((ev) => ({
             ...ev,
             // C/AD-3: descifrado en memoria, no persistido.
-            textoDescifrado: ev.reporte?.texto ? descifrarTextoReporte(ev.reporte.texto) : "",
+            textoDescifrado: ev.reporte?.contenidoId ? textosEventos.get(ev.reporte.contenidoId)! : "",
         }));
 
         // Contexto de otros: solo fecha/ciudad/país/clasificación (Ley 1581 § SELECT).

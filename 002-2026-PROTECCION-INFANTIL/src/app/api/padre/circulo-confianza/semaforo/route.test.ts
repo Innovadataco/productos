@@ -2,6 +2,7 @@
  * SPEC-305 (A-50): tests de integración de GET /api/padre/circulo-confianza/semaforo.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +41,7 @@ async function crearReporteVisible(
     categoria: CategoriaConducta
 ) {
     const plataforma = await crearPlataforma("whatsapp", "WhatsApp");
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma.id,

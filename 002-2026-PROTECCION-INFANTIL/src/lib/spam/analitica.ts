@@ -1,5 +1,6 @@
 import { subDays } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
+import { descifrarCamposReporte } from "@/lib/dal/services/descifrar-contenido";
 import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 import { SpamReporteRepository } from "@/lib/dal/repositories/spam-reporte";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
@@ -224,10 +225,15 @@ export interface SugerenciaBanco {
 export async function generarSugerenciasBanco(limit = 100): Promise<SugerenciaBanco[]> {
     const { inicio } = inicioFinDias(30);
     const reportes = await new SpamReporteRepository().findSugerenciasBancoSpam(inicio, limit);
+    // S-C (D-116/D-117): el relato vive cifrado en ContenidoReporte. Batch (2 queries, fail-loud).
+    const textos = await descifrarCamposReporte(
+        reportes.map((r) => r.contenidoId),
+        "texto"
+    );
 
     return reportes.map((r) => ({
         id: r.id,
-        texto: r.texto,
+        texto: textos.get(r.contenidoId)!,
         categoriaEsperada: "SPAM" as const,
         secundariaEsperada: null,
         ruido: false,

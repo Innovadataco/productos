@@ -11,6 +11,7 @@
  * enteraba porque `allSettled` se comía el error.
  */
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -34,7 +35,7 @@ async function autenticarAdmin() {
 async function crearReporteHuerfanoViejo(horasAtras: number) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     const creadoEn = new Date(Date.now() - horasAtras * 3600 * 1000);
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${Date.now()}${Math.floor(Math.random() * 1000)}`,
             plataformaId: plataforma!.id,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad } from "@/lib/reporte-test-utils";
@@ -27,7 +28,7 @@ describe("buscarReporteSimilar", () => {
     it("encuentra reporte similar para el mismo identificador y plataforma", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const [origen, candidato] = await Promise.all([
-            prisma.reporte.create({
+            crearReporteFixture(prisma, {
                 data: {
                     identificador: "+573001234567",
                     plataformaId: plataforma!.id,
@@ -40,7 +41,7 @@ describe("buscarReporteSimilar", () => {
                     estado: "CLASIFICADO",
                 },
             }),
-            prisma.reporte.create({
+            crearReporteFixture(prisma, {
                 data: {
                     identificador: "+573001234567",
                     plataformaId: plataforma!.id,
@@ -68,7 +69,7 @@ describe("buscarReporteSimilar", () => {
     it("ignora reportes de otro identificador", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const [otro, candidato] = await Promise.all([
-            prisma.reporte.create({
+            crearReporteFixture(prisma, {
                 data: {
                     identificador: "+573009999999",
                     plataformaId: plataforma!.id,
@@ -81,7 +82,7 @@ describe("buscarReporteSimilar", () => {
                     estado: "CLASIFICADO",
                 },
             }),
-            prisma.reporte.create({
+            crearReporteFixture(prisma, {
                 data: {
                     identificador: "+573001234567",
                     plataformaId: plataforma!.id,
@@ -106,7 +107,7 @@ describe("buscarReporteSimilar", () => {
     it("ignora reportes marcados como DUPLICADO o POSIBLE_SPAM", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const [duplicado, spam, candidato] = await Promise.all([
-            prisma.reporte.create({
+            crearReporteFixture(prisma, {
                 data: {
                     identificador: "+573001234567",
                     plataformaId: plataforma!.id,
@@ -119,7 +120,7 @@ describe("buscarReporteSimilar", () => {
                     estado: "DUPLICADO",
                 },
             }),
-            prisma.reporte.create({
+            crearReporteFixture(prisma, {
                 data: {
                     identificador: "+573001234567",
                     plataformaId: plataforma!.id,
@@ -132,7 +133,7 @@ describe("buscarReporteSimilar", () => {
                     estado: "POSIBLE_SPAM",
                 },
             }),
-            prisma.reporte.create({
+            crearReporteFixture(prisma, {
                 data: {
                     identificador: "+573001234567",
                     plataformaId: plataforma!.id,

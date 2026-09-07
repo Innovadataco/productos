@@ -20,6 +20,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearPlataforma } from "@/lib/reporte-test-utils";
+import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
 import { listarCadenasPadre } from "./cadenas-padre";
 
@@ -38,20 +39,22 @@ async function crearReporte(opts: {
     ciudad: string;
     categoria?: CategoriaConducta;
 }): Promise<void> {
-    const r = await prisma.reporte.create({
-        data: {
-            usuarioId: opts.usuarioId,
-            plataformaId: opts.plataformaId,
-            identificador: IDENT,
+    // S-C (D-116/D-117): el alta pasa por el factory (texto sellado en ContenidoReporte).
+    const r = await prisma.$transaction((tx) =>
+        crearReporteConTexto(tx, {
             texto: opts.texto,
-            fechaIncidente: new Date("2026-08-30T21:00:00Z"),
-            estado: opts.estado,
-            esAnonimo: opts.esAnonimo,
-            pais: "Colombia",
-            ciudad: opts.ciudad,
-        },
-        select: { id: true },
-    });
+            reporte: {
+                usuarioId: opts.usuarioId,
+                plataformaId: opts.plataformaId,
+                identificador: IDENT,
+                fechaIncidente: new Date("2026-08-30T21:00:00Z"),
+                estado: opts.estado,
+                esAnonimo: opts.esAnonimo,
+                pais: "Colombia",
+                ciudad: opts.ciudad,
+            },
+        })
+    );
     if (opts.categoria) {
         await prisma.clasificacionIA.create({
             data: { reporteId: r.id, categoria: opts.categoria, confianza: 0.9, modeloUsado: "llama3.1:8b", latenciaMs: 100 },

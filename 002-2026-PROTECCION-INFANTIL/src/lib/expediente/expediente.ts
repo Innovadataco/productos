@@ -1,5 +1,5 @@
 import { getParametroSistema } from "@/lib/parametros";
-import { decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
+import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { PasoProcesamientoRepository } from "@/lib/dal/repositories/paso-procesamiento";
 import type {
@@ -65,6 +65,12 @@ export type ReporteExpediente = Reporte & {
 export interface DatosExpediente {
     reporte: ReporteExpediente;
     pasos: PasoProcesamiento[];
+    /**
+     * S-C (D-116/D-117): el texto ORIGINAL (PII) ya no es una columna del reporte — vive cifrado en
+     * ContenidoReporte. `armarEtapas` lo descifra UNA sola vez y solo cuando `revelar` (gated +
+     * auditado por el caller) y lo deja acá para que `construirPartes` lo proyecte. null si no se reveló.
+     */
+    textoOriginalPlano?: string | null;
 }
 
 function iso(fecha: Date | null | undefined): string | null {
@@ -115,16 +121,6 @@ function pickCampos(disponibles: Record<string, unknown>, lista: string[]): Reco
         salida[clave] = disponibles[clave] ?? null;
     }
     return salida;
-}
-
-function descifrarTextoOriginal(textoOriginal: string | null): string | null {
-    if (!textoOriginal) return null;
-    if (!isEncryptedValue(textoOriginal)) return textoOriginal; // compat pre-cifrado
-    try {
-        return decryptParameter(textoOriginal);
-    } catch {
-        return null;
-    }
 }
 
 interface PartesEtapa {
@@ -301,7 +297,7 @@ function construirPartes(config: EtapaConfig, datos: DatosExpediente): PartesEta
                     anonimizacionValidadaPorId: r.anonimizacionValidadaPorId,
                     anonimizacionValidadaEn: iso(r.anonimizacionValidadaEn),
                 },
-                disponiblesGated: { textoOriginal: r.textoOriginal },
+                disponiblesGated: { textoOriginal: datos.textoOriginalPlano ?? null },
                 actividad: "Detección y anonimización de datos personales (PII) en el texto",
                 evaluacion: c
                     ? c.contienePii
@@ -375,21 +371,23 @@ function construirPartes(config: EtapaConfig, datos: DatosExpediente): PartesEta
  * `revelar: true` incluye los camposGated (textoOriginal se descifra aquí; el
  * AuditLog lo registra el caller — ver endpoint del expediente).
  */
-export function armarEtapas(
+export async function armarEtapas(
     datos: DatosExpediente,
     config: EtapaConfig[],
     opciones: { revelar?: boolean } = {}
-): EtapaExpediente[] {
+): Promise<EtapaExpediente[]> {
     const revelar = opciones.revelar === true;
+    // S-C (D-116/D-117): el original (PII) se descifra UNA sola vez y solo si se revela; el caller
+    // audita el reveal. `construirPartes` lo proyecta desde `datos.textoOriginalPlano`.
+    const datosConOriginal: DatosExpediente = revelar
+        ? { ...datos, textoOriginalPlano: await descifrarCampoReporte(datos.reporte.contenidoId, "textoOriginal") }
+        : datos;
     return config.map((etapa) => {
-        const partes = construirPartes(etapa, datos);
+        const partes = construirPartes(etapa, datosConOriginal);
         const campos = pickCampos(partes.disponibles, etapa.campos);
         const camposGated = etapa.camposGated ?? [];
         if (revelar && camposGated.length > 0) {
             const gated = pickCampos(partes.disponiblesGated, camposGated);
-            if (typeof gated.textoOriginal === "string") {
-                gated.textoOriginal = descifrarTextoOriginal(gated.textoOriginal);
-            }
             Object.assign(campos, gated);
         }
         return {

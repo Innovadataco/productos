@@ -8,7 +8,7 @@ import { proxy } from "@/lib/proxy";
 import { prisma } from "@/lib/prisma";
 import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { crearTokenUsuario, crearUsuario } from "@/lib/reporte-test-utils";
-import { decryptParameter } from "@/lib/param-encryption";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import type { RolUsuario, AccionAudit } from "@prisma/client";
 
 export interface Sesion {
@@ -100,15 +100,17 @@ export async function salirYExigirSesionMuerta(sesion: Sesion, rutaPrivada: stri
     }
 }
 
-/** §9: el texto original persistido descifra al texto enviado (intacto, nunca en claro). */
+/** §9 · S-C: el texto original persistido (ContenidoReporte) descifra al enviado (intacto, nunca en claro). */
 export async function verificarTextoIntacto(reporteId: string, textoEnviado: string) {
     const reporte = await prisma.reporte.findUnique({ where: { id: reporteId } });
     if (!reporte) throw new Error("Reporte no persistido");
-    if (!reporte.textoOriginal) throw new Error("§9: textoOriginal no persistido");
-    if (reporte.textoOriginal === textoEnviado) {
+    // S-C (D-116/D-117): el original ya no es columna del reporte — vive cifrado en ContenidoReporte.
+    const contenido = await prisma.contenidoReporte.findUnique({ where: { id: reporte.contenidoId } });
+    if (!contenido?.textoOriginalCifrado) throw new Error("§9: textoOriginal no persistido");
+    if (contenido.textoOriginalCifrado === textoEnviado) {
         throw new Error("§9: textoOriginal quedó EN CLARO en BD (debe ir cifrado)");
     }
-    const descifrado = decryptParameter(reporte.textoOriginal);
+    const descifrado = await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal");
     if (descifrado !== textoEnviado) {
         throw new Error("§9: el texto original no se conserva intacto (descifrado difiere del enviado)");
     }

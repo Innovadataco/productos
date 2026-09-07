@@ -6,6 +6,7 @@
  * clasificado NO se manda nada que la UI pueda pintar como si fuera análisis.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearPlataforma } from "@/lib/reporte-test-utils";
@@ -23,7 +24,7 @@ async function crearReporte(
         edadVictima?: number;
     }
 ) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             usuarioId,
             plataformaId,
@@ -36,7 +37,6 @@ async function crearReporte(
             ciudad: datos.ciudad ?? "Bogotá",
             ...(datos.edadVictima !== undefined ? { edadVictima: datos.edadVictima } : {}),
         },
-        select: { id: true },
     });
 }
 

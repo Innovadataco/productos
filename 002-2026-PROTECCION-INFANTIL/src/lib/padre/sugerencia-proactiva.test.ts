@@ -2,6 +2,7 @@
  * SPEC-307 (A-50): tests unitarios del motor de sugerencia proactiva del padre.
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { EstadoReporte, CategoriaConducta, EstadoExpediente } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -35,7 +36,7 @@ async function crearReporteVisible(
     const creadoEn = new Date();
     creadoEn.setDate(creadoEn.getDate() - diasAtras);
 
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma.id,

@@ -4,6 +4,7 @@
  * NO sección nueva). Sin denunciantes ni textos en el payload.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -21,7 +22,7 @@ vi.mock("next/headers", () => ({
 const TAG = Math.random().toString(36).slice(2, 8);
 
 async function crearSolicitud(identificadorValor: string, plataformaId: string, conMatchInterCiudad: boolean) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificadorValor,
             plataformaId,

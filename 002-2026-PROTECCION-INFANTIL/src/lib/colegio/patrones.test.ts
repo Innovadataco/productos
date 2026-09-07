@@ -5,6 +5,7 @@
  * desgloses (ZEUS D-2) y tendencia.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -47,7 +48,7 @@ async function crearReportePara(
     opciones: { categoria?: CategoriaConducta; estado?: EstadoReporte } = {}
 ) {
     correlativo += 1;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearParametrosExpediente } from "@/lib/reporte-test-utils";
@@ -8,7 +9,7 @@ const MODELOS = ["gemma2:27b", "qwen2.5:14b", "aya-expanse:32b"];
 
 async function crearReporteConClasificacion() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: "+57300TEST000",
             plataformaId: plataforma!.id,
@@ -44,9 +45,14 @@ async function crearReporteConClasificacion() {
                 },
             },
         },
-        include: { clasificacion: { include: { rubricaVotos: true } } },
     });
-    return reporte.clasificacion! as ClasificacionConVotos;
+    // S-C: el fixture ya no propaga `include`; la clasificación se creó anidada en `data`,
+    // la traemos con sus votos (misma forma que devolvía el include).
+    const clasificacion = await prisma.clasificacionIA.findFirstOrThrow({
+        where: { reporteId: reporte.id },
+        include: { rubricaVotos: true },
+    });
+    return clasificacion as ClasificacionConVotos;
 }
 
 describe("votacion (T021) — matriz y detalle pregunta por pregunta", () => {
@@ -112,7 +118,7 @@ describe("votacion (T021) — matriz y detalle pregunta por pregunta", () => {
 
     it("motor legacy (sin ClasificacionRubricaVoto): matriz y detalle vacíos", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300TEST000",
                 plataformaId: plataforma!.id,
@@ -132,9 +138,12 @@ describe("votacion (T021) — matriz y detalle pregunta por pregunta", () => {
                     },
                 },
             },
-            include: { clasificacion: { include: { rubricaVotos: true } } },
         });
-        const votacion = await armarVotacionExpediente(reporte.clasificacion! as ClasificacionConVotos);
+        const clasificacion = await prisma.clasificacionIA.findFirstOrThrow({
+            where: { reporteId: reporte.id },
+            include: { rubricaVotos: true },
+        });
+        const votacion = await armarVotacionExpediente(clasificacion as ClasificacionConVotos);
         expect(votacion.matriz).toEqual({});
         expect(votacion.detallePorCategoria).toEqual([]);
         expect(votacion.categorias).toEqual(["OTRO"]);

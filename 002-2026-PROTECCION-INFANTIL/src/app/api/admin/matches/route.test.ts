@@ -3,6 +3,7 @@
  * + tendencia, solo ADMIN, y guard FR-009 (nunca denunciantes ni textos).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -25,7 +26,7 @@ async function crearEvento(identificadorValor: string, plataformaId: string, opc
         update: {},
         create: { identificador: identificadorValor, plataformaId, totalReportes: 2, reportesAprobados: 2 },
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificadorValor,
             plataformaId,

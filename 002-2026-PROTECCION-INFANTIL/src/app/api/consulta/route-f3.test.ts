@@ -3,6 +3,7 @@
  * evento analítico CONSULTA_SIN_RESULTADOS SIN el identificador (privacidad).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -31,7 +32,7 @@ async function sembrarParamsF3() {
 }
 
 async function crearReporteVisible(identificador: string, plataformaId: string) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             // SPEC-377 (I-267): replica la canónica del write real (trim+lower).
             identificador: normalizarIdentificador(identificador),

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -25,7 +26,7 @@ function getUsuario(id: string, token?: string) {
 
 async function crearReporteParaUsuario(usuarioId: string) {
     const plataforma = await crearPlataforma();
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+573001234567",
             plataformaId: plataforma.id,

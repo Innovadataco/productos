@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -42,11 +43,11 @@ describe("GET /api/admin/estadisticas/clasificacion", () => {
         await prisma.perfilOperador.create({ data: { usuarioId: operador.id, creadoPorId: admin.id, cupoMaximo: 5 } });
 
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        await prisma.reporte.createMany({
-            data: [
-                { identificador: "a", plataformaId: plataforma!.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true },
-                { identificador: "b", plataformaId: plataforma!.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true, operadorId: operador.id },
-            ],
+        await crearReporteFixture(prisma, {
+            data: { identificador: "a", plataformaId: plataforma!.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true },
+        });
+        await crearReporteFixture(prisma, {
+            data: { identificador: "b", plataformaId: plataforma!.id, texto: "t", fechaIncidente: new Date(), ciudad: "Bogotá", pais: "Colombia", estado: "REVISION_MANUAL", esAnonimo: true, operadorId: operador.id },
         });
 
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
