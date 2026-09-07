@@ -428,6 +428,8 @@
 | [491](491-publicas-auth-slate/spec.md) | SPEC-491 · Mini-barrido de públicas de auth (recuperar + reportar): slate→neutro | 🟢 IMPLEMENTADO |
 | [492](492-portada-forma-afinado/spec.md) | SPEC-492 · Afinado de forma de la portada (radio, titular fluido, estados de la consulta) | 🟢 IMPLEMENTADO |
 | [493](493-dashboard-profesional-forma/spec.md) | SPEC-493 · Afinado de forma: dashboard-público + profesional (concretos) | 🟢 IMPLEMENTADO |
+| [494](494-mueble-skeleton/spec.md) | SPEC-494 · El mueble Skeleton: matar el spinner de página (§4.8) | 🟢 IMPLEMENTADO |
+| [495](495-residual-slate-chrome/spec.md) | SPEC-495 · El slate que sobrevivió a tres barridos (y el candado que no miraba el chrome) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

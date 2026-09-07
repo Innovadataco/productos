@@ -66,7 +66,7 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
     if (loading) {
         return (
             <div className="p-6">
-                <p className="text-slate-600 dark:text-slate-400">Cargando detalle...</p>
+                <p className="text-muted">Cargando detalle...</p>
             </div>
         );
     }

@@ -16,6 +16,15 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
     // SPEC-463 (D-107): el colegio habla de usted; el padre conserva «tú».
     "src/app/dashboard/colegio/voz-usted.candado.test.ts",
+    // SPEC-501 (CEO · Jelkin): padre + público hablan de «tú» (sin voseo); BFS del
+    // árbol de render + lexemas exactos. Mixta PreferenciasNotificaciones §D exenta.
+    "src/app/voz-tu-padre-publico.candado.test.ts",
+    // SPEC-504 (CEO): voz del profesional (usted) sin voseo; borde Unicode. Test de
+    // fs puro → lane unit (antes solo lo globaba integración, con tax de BD).
+    "src/app/perfil-profesional/completar/voz.candado.test.ts",
+    // SPEC-505 (CEO · Jelkin): el ÁREA del profesional habla usted (sin voseo);
+    // dirs profesional + §B en dirs compartidos. Evita §C (cita.service, FichaVerif).
+    "src/app/registro-profesional/voz-usted-profesional.candado.test.ts",
     // SPEC-435 (Jelkin 04-09): la cuenta VERIFICADOR nace con un solo módulo
     // (no hereda operador/comité/padre). Fuente: `prisma/seed-modulos-grants.ts`.
     "src/lib/verificador-modulos.candado.test.ts",
@@ -396,6 +405,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-420: el borrado va por lotes — PostgreSQL admite 32.767 parámetros
     // por sentencia y producción tenía 37.176 marcas.
     "scripts/demo/lotes.test.ts",
+    // SPEC-499: el profesional demo aparece/es reservable (ACTIVO + verificación
+    // vigente) y es purgable (orden FK-seguro en ORDEN_BORRADO).
+    "scripts/demo-prod/profesional-demo.candado.test.ts",
     // SPEC-378: Inicio del administrador (server component + tarjetas ámbar).
     "src/app/dashboard/admin/inicio/page.test.tsx",
     // SPEC-379: membrete institucional compartido + candado UI materia-profesor.

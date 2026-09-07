@@ -165,7 +165,7 @@ export function SolicitarCitaPanel({
         <section aria-labelledby="reservar" className="glass rounded-2xl p-5 anim-entrada">
             <h2 id="reservar" className="text-sm font-semibold text-body">Solicitar cita</h2>
             <p className="mt-1 text-xs text-muted">
-                Elegí una franja libre. El pago se aprueba luego con un admin;
+                Elige una franja libre. El pago se aprueba luego con un admin;
                 mientras tanto la franja queda reservada.
             </p>
 
@@ -197,7 +197,7 @@ export function SolicitarCitaPanel({
             {!esReasignacion && (
                 <div className="mt-4">
                     <label htmlFor="presentacion" className="text-xs font-semibold text-body">
-                        Contanos qué pasa (mín. 20 caracteres)
+                        Cuéntanos qué pasa (mín. 20 caracteres)
                     </label>
                     <textarea
                         id="presentacion"
@@ -308,8 +308,8 @@ export function SolicitarCitaPanel({
                         </p>
                         <p className="mt-3 text-xs text-subtle">
                             {esReasignacion
-                                ? "Se crea una solicitud nueva con este profesional y el pago viaja con ella; no se cobra otra vez. Tenés 48 h de espera nuevamente."
-                                : "El pago se aprueba manualmente por un admin. La franja queda reservada mientras tanto; si el profesional no confirma en 48h, podés elegir otro sin volver a pagar."}
+                                ? "Se crea una solicitud nueva con este profesional y el pago viaja con ella; no se cobra otra vez. Tienes 48 h de espera nuevamente."
+                                : "El pago se aprueba manualmente por un admin. La franja queda reservada mientras tanto; si el profesional no confirma en 48h, puedes elegir otro sin volver a pagar."}
                         </p>
 
                         {expedienteIdSugerido && (

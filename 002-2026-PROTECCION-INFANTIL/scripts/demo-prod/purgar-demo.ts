@@ -13,6 +13,7 @@
  *   node --env-file=.env.test --import tsx scripts/demo-prod/purgar-demo.ts [--dry-run]
  */
 import { prisma } from "./lib/prisma";
+import { ORDEN_BORRADO } from "./lib/orden-borrado";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -193,24 +194,9 @@ async function main() {
     }
 
     // ------------------------------------------------------------------
-    // Fase 5: entidades marcadas directamente (hojas primero, padres después)
+    // Fase 5: entidades marcadas directamente (hojas primero, padres después).
+    // El orden vive en ./lib/orden-borrado (fuente única, testeable).
     // ------------------------------------------------------------------
-    const ORDEN_BORRADO: string[] = [
-        "AuditLog",
-        "Reporte",
-        "IdentificadorContacto",
-        "ContactoConfianza",
-        "AlertaSuscripcion",
-        "PerfilOperador",
-        "IntegranteComite",
-        "Estudiante",
-        "Curso",
-        "Profesor",
-        "Usuario",
-        "Colegio",
-        "Tenant",
-    ];
-
     for (const entidad of ORDEN_BORRADO) {
         const marcados = await prisma.demoMarcado.findMany({
             where: { entidad },

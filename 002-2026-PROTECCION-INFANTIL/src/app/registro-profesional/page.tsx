@@ -31,7 +31,7 @@ export default function RegistroProfesionalPage() {
         });
         if (!res.ok) {
             const json = await res.json().catch(() => null);
-            throw new Error(json?.error?.message || "No pudimos enviar el enlace. Intentá de nuevo.");
+            throw new Error(json?.error?.message || "No pudimos enviar el enlace. Intente de nuevo.");
         }
     };
 
@@ -39,7 +39,7 @@ export default function RegistroProfesionalPage() {
         e.preventDefault();
         const valor = email.trim();
         if (!valor) {
-            setError("Escribí tu correo.");
+            setError("Escriba su correo.");
             return;
         }
         setError("");
@@ -50,7 +50,7 @@ export default function RegistroProfesionalPage() {
             setStep("aviso");
             setReenviado(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "No pudimos enviar el enlace. Intentá de nuevo.");
+            setError(err instanceof Error ? err.message : "No pudimos enviar el enlace. Intente de nuevo.");
         } finally {
             setEnviando(false);
         }
@@ -63,7 +63,7 @@ export default function RegistroProfesionalPage() {
             await solicitar(email);
             setReenviado(true);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "No pudimos reenviar el enlace. Intentá de nuevo.");
+            setError(err instanceof Error ? err.message : "No pudimos reenviar el enlace. Intente de nuevo.");
         } finally {
             setEnviando(false);
         }
@@ -80,7 +80,7 @@ export default function RegistroProfesionalPage() {
                             </h1>
                             <p className="mt-2 text-sm text-muted">
                                 Dejanos tu correo y te enviamos un enlace para crear tu cuenta.
-                                Después completás tu perfil y subís tu autorización.
+                                Después completa su perfil y sube su autorización.
                             </p>
                         </div>
 
@@ -106,7 +106,7 @@ export default function RegistroProfesionalPage() {
                         </GlassCard>
 
                         <p className="mt-4 text-center text-sm text-muted">
-                            ¿Ya tenés cuenta?{" "}
+                            ¿Ya tiene cuenta?{" "}
                             <Link href="/login" className="font-medium text-accent hover:underline">
                                 Iniciá sesión
                             </Link>
@@ -125,7 +125,7 @@ export default function RegistroProfesionalPage() {
                         <GlassCard>
                             <div className="space-y-4 text-center">
                                 <p className="text-sm text-muted">
-                                    Si no lo ves en unos minutos, mirá en <strong>correo no deseado</strong>.
+                                    Si no lo ve en unos minutos, mire en <strong>correo no deseado</strong>.
                                     El enlace vence en 24 horas.
                                 </p>
                                 {reenviado && (
@@ -149,7 +149,7 @@ export default function RegistroProfesionalPage() {
                                     }}
                                     className="text-sm font-medium text-accent hover:underline"
                                 >
-                                    Escribí otro correo
+                                    Escriba otro correo
                                 </button>
                             </div>
                         </GlassCard>

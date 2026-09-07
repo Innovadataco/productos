@@ -96,7 +96,7 @@ export function DirectorioProfesionales({
             .then((j) => setItems(j.items))
             .catch(() => {
                 setItems([]);
-                setError("No pudimos cargar la lista. Volvé a intentar en un momento.");
+                setError("No pudimos cargar la lista. Vuelve a intentar en un momento.");
             });
     }, [seed, ciudadId, especialidad, modalidad]);
 

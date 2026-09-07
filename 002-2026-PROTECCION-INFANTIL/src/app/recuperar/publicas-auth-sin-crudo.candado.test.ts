@@ -1,71 +1,81 @@
 /**
- * SPEC-491 · las públicas de auth (recuperar contraseña + reportar) sin crudo.
+ * SPEC-491/495 · las públicas de auth + su CHROME sin crudo.
  *
- * Lección dura (auditoría CEO, 2 veces en este mismo candado): **no armar la
- * lista de escaneo a mano.** Un candado cuyo título nombra una pantalla pero solo
- * escanea el directorio de la ruta certifica en verde una pantalla que SIGUE rota
- * — la pantalla se ARMA desde `components/` (recuperar monta RecuperarForm; reportar
- * monta ReporteWizard + CanalesOficiales). Acá se **resuelve el árbol de render**:
- * se parte de las páginas y se siguen los componentes que MONTAN (imports de
- * `@/components` + relativos), y se escanan esos archivos.
+ * Lección dura, tres niveles (auditoría CEO + verificación por HTTP en prod):
+ *  1. escanear el directorio de la ruta NO alcanza — la pantalla se arma desde components/.
+ *  2. escanear el árbol de imports de la PÁGINA tampoco — falta el layout.
+ *  3. **la página renderizada = page.tsx + el/los layout.tsx que la envuelven + TODO lo
+ *     que ese chrome monta** (root layout → NavHeader → ThemeToggle). El slate de
+ *     ThemeToggle sobrevivió a 3 barridos por esto (I-324).
  *
- * Muere por mutación: reintroducir `text-slate-*` en cualquier página o en un
- * componente que ellas montan → rojo.
+ * Por eso este candado hace **BFS transitivo** desde las páginas Y los layouts,
+ * siguiendo los imports `@/…`/relativos que resuelven a archivos de render bajo
+ * `src/` (components/app), con set de visitados. Escanea todo lo alcanzable.
+ * Excluye data-viz (Sparkline) y tests. Muere por mutación en cualquier nodo del
+ * render, incluido el chrome del layout.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 const SRC = path.resolve(__dirname, "..", ".."); // .../src
+const APP = path.join(SRC, "app");
 
-const PAGINAS = [
-    path.join(__dirname, "page.tsx"), // recuperar/page.tsx
-    path.join(__dirname, "[token]", "page.tsx"), // recuperar/[token]/page.tsx
-    path.resolve(__dirname, "..", "reportar", "page.tsx"), // reportar/page.tsx
+// Raíces: las páginas públicas + su cadena de layouts (el chrome las envuelve).
+const RAICES = [
+    path.join(__dirname, "page.tsx"), // recuperar
+    path.join(__dirname, "[token]", "page.tsx"),
+    path.join(APP, "reportar", "page.tsx"),
+    path.join(APP, "layout.tsx"), // root layout: monta NavHeader → ThemeToggle
+    path.join(APP, "reportar", "layout.tsx"),
 ];
 
-/** Resuelve un especificador de import a un archivo real bajo src/, o null. */
-function resolverImport(spec: string, desde: string): string | null {
+// data-viz (color = valor): fuera del barrido, lo define Diseño.
+const EXCLUYE = /Sparkline\.tsx$|\.test\.tsx?$/;
+
+function resolver(spec: string, desde: string): string | null {
     let base: string;
     if (spec.startsWith("@/")) base = path.join(SRC, spec.slice(2));
     else if (spec.startsWith(".")) base = path.resolve(path.dirname(desde), spec);
-    else return null; // paquete externo
-    for (const suf of [".tsx", ".ts", path.join("index.tsx"), path.join("index.ts")]) {
-        const cand = suf.startsWith("index") ? path.join(base, suf) : base + suf;
+    else return null;
+    for (const cand of [base + ".tsx", base + ".ts", path.join(base, "index.tsx"), path.join(base, "index.ts")]) {
         if (fs.existsSync(cand) && fs.statSync(cand).isFile()) return cand;
     }
     return fs.existsSync(base) && fs.statSync(base).isFile() ? base : null;
 }
 
-function importsDe(archivo: string): string[] {
-    return [...fs.readFileSync(archivo, "utf-8").matchAll(/from\s+["']([^"']+)["']/g)].map((m) => m[1]);
-}
-
-/** Páginas + los COMPONENTES que montan (un nivel: el render propio de la pantalla). */
-function arbolDeRender(paginas: string[]): string[] {
-    const set = new Set<string>(paginas);
-    for (const pagina of paginas) {
-        for (const spec of importsDe(pagina)) {
-            const r = resolverImport(spec, pagina);
-            if (r && r.includes(`${path.sep}components${path.sep}`)) set.add(r);
+/** BFS transitivo del árbol de render bajo src/, con visitados. */
+function arbolDeRender(raices: string[]): Set<string> {
+    const visto = new Set<string>();
+    const cola = raices.filter((r) => fs.existsSync(r));
+    while (cola.length) {
+        const archivo = cola.shift()!;
+        if (visto.has(archivo)) continue;
+        visto.add(archivo);
+        const src = fs.readFileSync(archivo, "utf-8");
+        for (const m of src.matchAll(/from\s+["']([^"']+)["']/g)) {
+            const r = resolver(m[1], archivo);
+            if (r && r.startsWith(SRC) && !visto.has(r)) cola.push(r);
         }
     }
-    return [...set];
+    return visto;
 }
 
-// Con infijo direccional (lección SPEC-490).
 const CRUDO = /\b(?:text|bg|border|ring|from|to|via|divide|fill|stroke)(?:-[ltrbxy])?-(?:slate|gray)-[0-9]{2,3}(?:\/[0-9]{1,3})?\b/;
 
-describe("SPEC-491 · públicas de auth (recuperar + reportar) sin slate crudo", () => {
-    it("0 crudo slate/gray en el RENDER de recuperar + reportar (páginas + lo que montan)", () => {
-        const archivos = arbolDeRender(PAGINAS);
-        // Guardas de la propia resolución: si el árbol se rompe, el candado no debe
-        // pasar en falso por escanear poco.
-        expect(archivos.length, "el árbol de render quedó vacío").toBeGreaterThan(PAGINAS.length);
-        expect(archivos.some((a) => a.endsWith("ReporteWizard.tsx")), "el render de reportar debe incluir ReporteWizard").toBe(true);
+describe("SPEC-491/495 · públicas de auth + su chrome sin slate crudo", () => {
+    const arbol = [...arbolDeRender(RAICES)].filter((a) => !EXCLUYE.test(a));
 
+    it("el árbol de render incluye el chrome (ThemeToggle vía layout→NavHeader)", () => {
+        // Guarda anti-falso-verde: si la resolución no llega al chrome, el candado
+        // no debe pasar por escanear poco (así se coló el slate de ThemeToggle).
+        expect(arbol.some((a) => a.endsWith("ThemeToggle.tsx")), "el BFS no alcanzó el chrome del layout").toBe(true);
+        expect(arbol.some((a) => a.endsWith("ReporteWizard.tsx")), "el BFS no alcanzó ReporteWizard").toBe(true);
+    });
+
+    it("0 crudo slate/gray en todo el render (páginas + chrome + lo que montan)", () => {
         const hits: string[] = [];
-        for (const archivo of archivos) {
+        for (const archivo of arbol) {
             for (const [i, linea] of fs.readFileSync(archivo, "utf-8").split("\n").entries()) {
                 if (CRUDO.test(linea)) hits.push(`${path.relative(SRC, archivo)}:${i + 1}: ${linea.trim().slice(0, 80)}`);
             }

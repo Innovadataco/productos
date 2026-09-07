@@ -83,7 +83,7 @@ export default function CambiarPasswordPage() {
                     </h1>
                     <p className="mt-2 text-sm text-muted">
                         {user.debeCambiarPassword
-                            ? "Debés cambiar tu contraseña temporal antes de continuar."
+                            ? "Debe cambiar su contraseña temporal antes de continuar."
                             : "Actualice su contraseña de acceso."}
                     </p>
                 </div>

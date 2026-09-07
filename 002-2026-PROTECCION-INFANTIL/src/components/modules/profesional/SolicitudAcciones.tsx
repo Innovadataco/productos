@@ -34,7 +34,7 @@ export function SolicitudAcciones({ solicitudId }: { solicitudId: string }) {
             router.refresh();
         } catch (e) {
             console.error("[SolicitudAcciones]", e);
-            setError("No pudimos comunicarnos con el servidor. Revisá tu conexión e intentá de nuevo.");
+            setError("No pudimos comunicarnos con el servidor. Revise su conexión e intente de nuevo.");
         } finally {
             setEnCurso(null);
         }

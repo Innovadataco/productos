@@ -71,6 +71,18 @@ export function PreferenciasNotificaciones({ rol, correo }: Props = {}) {
     const [guardando, setGuardando] = useState<Set<string>>(new Set());
 
     const esPadre = rol === "PARENT";
+    // SPEC-506 (decisión de Jelkin · barrido de voz §D): la voz del CUERPO va por
+    // AUDIENCIA, igual que el título por rol (TEMA_POR_ROL en la page). §1.9:
+    // padre = «tú» (sin voseo) · colegio/profesional/admin/interno = «usted».
+    const voz = esPadre
+        ? {
+            errorTitulo: "No pudimos cargar tus preferencias",
+            sinConfig: "No hay notificaciones configurables para tu rol.",
+        }
+        : {
+            errorTitulo: "No pudimos cargar sus preferencias",
+            sinConfig: "No hay notificaciones configurables para su rol.",
+        };
 
     async function cargar() {
         setLoading(true);
@@ -164,7 +176,7 @@ export function PreferenciasNotificaciones({ rol, correo }: Props = {}) {
     }
 
     if (error && grupos.length === 0) {
-        return <ErrorState title="No pudimos cargar tus preferencias" description={error} onRetry={() => void cargar()} />;
+        return <ErrorState title={voz.errorTitulo} description={error} onRetry={() => void cargar()} />;
     }
 
     // ── SPEC-326 §3.1: vista en frases para el padre ──────────────────────────
@@ -197,7 +209,7 @@ export function PreferenciasNotificaciones({ rol, correo }: Props = {}) {
 
                 {/* Toggles reales */}
                 <section className="glass rounded-2xl p-5">
-                    <h3 className="text-base font-semibold text-body">¿Qué querés que te avisemos?</h3>
+                    <h3 className="text-base font-semibold text-body">¿Qué quieres que te avisemos?</h3>
                     <div className="mt-4 space-y-4">
                         {frases.map((f) => {
                             const grupo = f.grupo!;
@@ -248,7 +260,7 @@ export function PreferenciasNotificaciones({ rol, correo }: Props = {}) {
     if (grupos.length === 0) {
         return (
             <div className="glass rounded-2xl p-8 text-center text-muted">
-                No hay notificaciones configurables para tu rol.
+                {voz.sinConfig}
             </div>
         );
     }

@@ -9,15 +9,15 @@
 import { z } from "zod";
 
 export const perfilProfesionalUpdateSchema = z.object({
-    nombreVisible: z.string().trim().min(1, "Escribe cómo querés que te vean").max(120).optional(),
+    nombreVisible: z.string().trim().min(1, "Escriba cómo quiere que lo vean").max(120).optional(),
     fotoUrl: z.string().url().max(2048).nullable().optional(),
     tituloProfesional: z.string().trim().min(1, "Escribe tu título profesional").max(150).optional(),
-    especialidades: z.array(z.string().trim().min(1).max(80)).min(1, "Elegí al menos una especialidad").max(20).optional(),
-    ciudadId: z.string().min(1, "Elegí tu ciudad").optional(),
+    especialidades: z.array(z.string().trim().min(1).max(80)).min(1, "Elija al menos una especialidad").max(20).optional(),
+    ciudadId: z.string().min(1, "Elija su ciudad").optional(),
     atiendeVirtual: z.boolean().optional(),
     atiendePresencial: z.boolean().optional(),
     aniosExperiencia: z.number().int().min(0).max(80).optional(),
-    presentacion: z.string().trim().min(20, "Contale a los padres quién sos, en pocas palabras").max(1500).optional(),
+    presentacion: z.string().trim().min(20, "Cuénteles a los padres quién es, en pocas palabras").max(1500).optional(),
     tarifaConsultaCOP: z.number().int().min(1).max(10_000_000).optional(),
     duracionMinutos: z.number().int().min(15).max(240).optional(),
     emiteFactura: z.boolean().optional(),

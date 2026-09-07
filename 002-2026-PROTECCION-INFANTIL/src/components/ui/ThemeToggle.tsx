@@ -18,7 +18,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
                 {mounted && theme === "dark" ? (
                     <SunIcon className="h-4 w-4 text-amber-400" />
                 ) : (
-                    <MoonIcon className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    <MoonIcon className="h-4 w-4 text-muted" />
                 )}
             </button>
         </Tooltip>
