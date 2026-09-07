@@ -11,11 +11,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
-import { SugerenciaDominio } from "@/components/modules/SugerenciaDominio";
-import { AtajosDominioCorreo } from "@/components/modules/AtajosDominioCorreo";
+import { CampoCorreoDominio } from "@/components/modules/CampoCorreoDominio";
 
 export default function RegistroProfesionalPage() {
     const [step, setStep] = useState<"correo" | "aviso">("correo");
@@ -88,16 +86,7 @@ export default function RegistroProfesionalPage() {
 
                         <GlassCard>
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                <Input
-                                    label="Su correo"
-                                    type="email"
-                                    placeholder="tucorreo@ejemplo.com"
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
-                                <SugerenciaDominio email={email} onAplicar={setEmail} />
-                                <AtajosDominioCorreo email={email} onAplicar={setEmail} />
+                                <CampoCorreoDominio label="Su correo" value={email} onChange={setEmail} />
                                 {error && (
                                     <Alerta tono="advertencia" className="text-center">
                                         {error}

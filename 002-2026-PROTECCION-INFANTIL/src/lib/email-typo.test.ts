@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sugerirDominioCorreo, aplicarSugerenciaDominio, completarDominio, distanciaDamerau } from "./email-typo";
+import { sugerirDominioCorreo, aplicarSugerenciaDominio, completarDominio, distanciaDamerau, partirEntradaCorreo, limpiarDominioLibre } from "./email-typo";
 
 describe("sugerirDominioCorreo (3003)", () => {
     it("detecta inserción: gmaail.com → gmail.com", () => {
@@ -89,5 +89,41 @@ describe("distanciaDamerau", () => {
     });
     it("igualdad cuesta 0", () => {
         expect(distanciaDamerau("gmail", "gmail")).toBe(0);
+    });
+});
+
+describe("partirEntradaCorreo (3003 · campo inteligente)", () => {
+    it("solo parte local → dominio null", () => {
+        expect(partirEntradaCorreo("jelkinx")).toEqual({ local: "jelkinx", dominio: null });
+    });
+
+    it("correo completo → parte local + dominio en minúsculas", () => {
+        expect(partirEntradaCorreo("jelkinx@Gmail.COM")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+    });
+
+    it("doble @@ colapsa al pegar («jelkinx@@gmail.com» → igual que el simple)", () => {
+        expect(partirEntradaCorreo("jelkinx@@gmail.com")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+    });
+
+    it("espacios sueltos se quitan (« jelkin x @ gma il.com » → limpio)", () => {
+        expect(partirEntradaCorreo(" jelkin x @ gma il.com ")).toEqual({ local: "jelkinx", dominio: "gmail.com" });
+    });
+
+    it("termina en @ → dominio null (no inventa nada)", () => {
+        expect(partirEntradaCorreo("jelkinx@")).toEqual({ local: "jelkinx", dominio: null });
+    });
+
+    it("vacío → local vacío y dominio null", () => {
+        expect(partirEntradaCorreo("")).toEqual({ local: "", dominio: null });
+    });
+});
+
+describe("limpiarDominioLibre (modo «Otro»)", () => {
+    it("quita espacios y minúsculas («Colegio.Edu.Co » → «colegio.edu.co»)", () => {
+        expect(limpiarDominioLibre("Colegio.Edu.Co ")).toBe("colegio.edu.co");
+    });
+
+    it("quita @ sueltos («@@x.com» → «x.com»)", () => {
+        expect(limpiarDominioLibre("@@x.com")).toBe("x.com");
     });
 });

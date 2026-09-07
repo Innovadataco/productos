@@ -118,3 +118,28 @@ export function completarDominio(email: string, dominio: string): string {
     if (indice === -1) return `${email}@${dominio}`;
     return `${email.slice(0, indice)}@${dominio}`;
 }
+
+/**
+ * 3003 · inteligencia del campo de correo: la persona escribe o PEGA cualquier
+ * cosa en la parte local («jelkinx», «jelkinx@gmail.com», «jelkinx@@gmail.com»,
+ * con espacios) y esto lo normaliza. El «@» es estructural: nunca se teclea.
+ * - Quita espacios (inválidos en un correo).
+ * - Con «@»: parte local a la izquierda, dominio a la derecha; los «@»
+ *   repetidos colapsan (queda el primero).
+ * - Devuelve también si el dominio detectado es un atajo conocido (para
+ *   auto-seleccionar el chip) o libre (modo «Otro»).
+ */
+export function partirEntradaCorreo(raw: string): { local: string; dominio: string | null } {
+    const limpio = raw.replace(/\s+/g, "").replace(/@+/g, "@");
+    const indice = limpio.indexOf("@");
+    if (indice === -1) return { local: limpio, dominio: null };
+    return {
+        local: limpio.slice(0, indice),
+        dominio: limpio.slice(indice + 1).toLowerCase() || null,
+    };
+}
+
+/** Dominio tecleado en modo «Otro»: minúsculas, sin espacios ni «@». */
+export function limpiarDominioLibre(raw: string): string {
+    return raw.replace(/\s+/g, "").replace(/@+/g, "").toLowerCase();
+}

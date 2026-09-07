@@ -19,8 +19,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
-import { SugerenciaDominio } from "@/components/modules/SugerenciaDominio";
-import { AtajosDominioCorreo } from "@/components/modules/AtajosDominioCorreo";
+import { CampoCorreoDominio } from "@/components/modules/CampoCorreoDominio";
 
 export default function RegistroColegioPage() {
     const [step, setStep] = useState<"solicitar" | "aviso">("solicitar");
@@ -107,16 +106,7 @@ export default function RegistroColegioPage() {
 
                         <GlassCard>
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                <Input
-                                    label="Correo del rector"
-                                    type="email"
-                                    placeholder="rectoria@sucolegio.edu.co"
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
-                                <SugerenciaDominio email={email} onAplicar={setEmail} />
-                                <AtajosDominioCorreo email={email} onAplicar={setEmail} />
+                                <CampoCorreoDominio label="Correo del rector" placeholderLocal="rectoria" value={email} onChange={setEmail} />
                                 <Input
                                     label="Nombre del colegio"
                                     type="text"
