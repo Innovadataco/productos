@@ -13,10 +13,13 @@ export class PaisRepository {
         this.db = tx ?? prisma;
     }
 
-    /** GET /api/paises: activos, alfabéticos. */
-    listarActivos() {
+    /** GET /api/paises: activos, alfabéticos. SPEC-580: filtro opcional por códigos ISO. */
+    listarActivos(codigos?: string[]) {
         return this.db.pais.findMany({
-            where: { esActivo: true },
+            where: {
+                esActivo: true,
+                ...(codigos && codigos.length > 0 ? { codigo: { in: codigos } } : {}),
+            },
             orderBy: { nombre: "asc" },
             select: { id: true, codigo: true, nombre: true },
         });

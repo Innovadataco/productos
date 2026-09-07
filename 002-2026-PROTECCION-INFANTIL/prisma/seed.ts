@@ -2436,6 +2436,24 @@ async function main() {
         });
     }
 
+    // SPEC-580 (002-PI): países visibles en el formulario público de reporte (/reportar).
+    // El filtro aplica SOLO al contexto "reporte" de GET /api/paises; los otros
+    // consumidores (registro de colegio, perfiles) siempre ven todos los activos.
+    // Se siembra con update: {} para no pisar ajustes del CEO (patrón SPEC-187).
+    await prisma.parametroSistema.upsert({
+        where: { clave: "geo.paises_reporte" },
+        update: {},
+        create: {
+            clave: "geo.paises_reporte",
+            valor: "",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            descripcion:
+                "Códigos ISO (2 letras) de países mostrados en el formulario de reporte /reportar. Vacío = todos los activos. Separados por coma, ej: CO,VE",
+        },
+    });
+
     console.log("Parámetros por defecto creados");
 
     // SPEC-210 (002-PI-110): seed del módulo de pagos.
