@@ -13,9 +13,9 @@ export function EstadoTransicion({ enProceso }: { enProceso: boolean }) {
         <div className="flex items-center gap-3" data-testid="estado-transicion">
             <style>{`
                 @keyframes et-travel {
-                    0%   { transform: translateX(0);      background-color: rgb(148, 163, 184); }
-                    70%  { background-color: rgb(148, 163, 184); }
-                    100% { transform: translateX(120px);  background-color: rgb(34, 197, 94); }
+                    0%   { transform: translateX(0);      background-color: rgb(var(--tinta-subtle-rgb)); }
+                    70%  { background-color: rgb(var(--tinta-subtle-rgb)); }
+                    100% { transform: translateX(120px);  background-color: rgb(var(--pino-rgb)); }
                 }
                 @keyframes et-pulse {
                     0%, 100% { opacity: 1; transform: scale(1); }
@@ -43,24 +43,24 @@ export function EstadoTransicion({ enProceso }: { enProceso: boolean }) {
             `}</style>
 
             {/* Extremos SIEMPRE visibles */}
-            <span className={`text-xs font-medium ${enProceso ? "text-amber-600" : "et-end-dim text-muted"}`} data-testid="et-extremo-proceso">
+            <span className={`text-xs font-medium ${enProceso ? "text-estado-ambar" : "et-end-dim text-muted"}`} data-testid="et-extremo-proceso">
                 En proceso
             </span>
 
             <div className="relative h-2.5 w-[128px] rounded-full bg-slate-200 dark:bg-slate-700" data-testid="et-track">
                 <span
-                    className={`absolute left-0 top-0 h-2.5 w-2.5 rounded-full ${enProceso ? "et-pill-pulse bg-amber-500" : "et-pill-travel"}`}
+                    className={`absolute left-0 top-0 h-2.5 w-2.5 rounded-full ${enProceso ? "et-pill-pulse bg-ambar" : "et-pill-travel"}`}
                     data-testid="et-pill"
                 />
             </div>
 
             <span
-                className={`flex items-center gap-1 text-xs font-medium ${enProceso ? "et-end-dim text-muted" : "et-end-lit text-green-600"}`}
+                className={`flex items-center gap-1 text-xs font-medium ${enProceso ? "et-end-dim text-muted" : "et-end-lit text-estado-pino"}`}
                 data-testid="et-extremo-procesado"
             >
                 Procesado
                 {!enProceso && (
-                    <span className="et-check text-green-500" data-testid="et-check">
+                    <span className="et-check text-pino" data-testid="et-check">
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>

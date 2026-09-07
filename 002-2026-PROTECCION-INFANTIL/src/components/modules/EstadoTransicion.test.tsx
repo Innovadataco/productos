@@ -29,9 +29,9 @@ describe("EstadoTransicion (spec 091-C)", () => {
         const estilos = container.querySelector("style")?.textContent ?? "";
         // El objeto cambia de posición en el tiempo: keyframes con translateX
         expect(estilos).toContain("translateX(120px)");
-        // Cambio gris → verde durante el viaje
-        expect(estilos).toContain("rgb(148, 163, 184)");
-        expect(estilos).toContain("rgb(34, 197, 94)");
+        // Cambio gris → verde (tokens: tinta-subtle → pino) durante el viaje
+        expect(estilos).toContain("rgb(var(--tinta-subtle-rgb))");
+        expect(estilos).toContain("rgb(var(--pino-rgb))");
         // Arranca tras ~400ms, corre UNA vez
         expect(estilos).toContain("0.4s 1 forwards");
         expect(estilos).not.toContain("et-travel 1s ease-in-out 0.4s infinite");

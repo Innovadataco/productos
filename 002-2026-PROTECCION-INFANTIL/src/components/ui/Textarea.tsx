@@ -25,8 +25,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                     aria-describedby={error ? `${id}-error` : undefined}
                     {...props}
                 />
+                {/* SPEC-467 (extensión SPEC-577) · el error en token semántico: `rubi`
+                    (criticidad), nunca rojo crudo. El token voltea solo en oscuro. */}
                 {error && (
-                    <p id={`${id}-error`} className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                    <p id={`${id}-error`} className="mt-1.5 text-sm text-rubi">
                         {error}
                     </p>
                 )}
