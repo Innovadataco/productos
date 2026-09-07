@@ -42,6 +42,11 @@ export function ReporteStepDetalle({
     }) => void;
 }) {
     const [paises, setPaises] = useState<PaisOption[]>([]);
+    // SPEC-580: filtro departamento del cascade país→departamento→ciudad. Es solo
+    // un filtro de búsqueda (la ciudad guardada ya lleva su departamentoId), por
+    // eso vive en estado local del paso y no en el estado del wizard.
+    const [departamentos, setDepartamentos] = useState<{ id: string; nombre: string }[]>([]);
+    const [departamentoId, setDepartamentoId] = useState("");
     const [otraCiudad, setOtraCiudad] = useState(ciudadId === "otra" ? ciudad : "");
     // SPEC-340 §2 (T017): día Y hora del incidente. Formato datetime-local (YYYY-MM-DDTHH:mm).
     //
@@ -66,12 +71,26 @@ export function ReporteStepDetalle({
         return local.toISOString().slice(0, 16);
     })();
 
+    // SPEC-580: contexto=reporte para que el servidor filtre por geo.paises_reporte.
     useEffect(() => {
-        fetch("/api/paises", { credentials: "include" })
+        fetch("/api/paises?contexto=reporte", { credentials: "include" })
             .then((r) => r.json())
             .then((json) => setPaises(json.paises || []))
             .catch(() => setPaises([]));
     }, []);
+
+    // SPEC-580: los departamentos del país elegido alimentan el filtro del cascade.
+    useEffect(() => {
+        if (!paisId) {
+            setDepartamentos([]);
+            setDepartamentoId("");
+            return;
+        }
+        fetch(`/api/departamentos?paisId=${encodeURIComponent(paisId)}`, { credentials: "include" })
+            .then((r) => r.json())
+            .then((json) => setDepartamentos(json.departamentos || []))
+            .catch(() => setDepartamentos([]));
+    }, [paisId]);
 
     const esOtraCiudad = ciudadId === "otra";
 
@@ -81,6 +100,23 @@ export function ReporteStepDetalle({
         onChange({
             paisId: selectedId,
             pais: selectedNombre,
+            ciudad: "",
+            ciudadId: "",
+            fechaIncidente,
+            edadVictima,
+            texto,
+            horaAproximada,
+        });
+        setDepartamentoId("");
+        setOtraCiudad("");
+    };
+
+    // SPEC-580: cambiar de departamento invalida la ciudad elegida (el filtro cambió).
+    const handleDepartamentoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setDepartamentoId(e.target.value);
+        onChange({
+            paisId,
+            pais,
             ciudad: "",
             ciudadId: "",
             fechaIncidente,
@@ -116,6 +152,9 @@ export function ReporteStepDetalle({
                 horaAproximada,
             });
         } else {
+            // La ciudad trae su departamento: el filtro queda sincronizado con la
+            // elección (si el usuario vuelve a buscar, ya ve el departamento acertado).
+            if (opcion.departamentoId) setDepartamentoId(opcion.departamentoId);
             onChange({
                 ciudadId: opcion.id,
                 ciudad: opcion.nombre,
@@ -171,8 +210,20 @@ export function ReporteStepDetalle({
                     onChange={handlePaisChange}
                 />
 
+                <Select
+                    label="Departamento (opcional)"
+                    options={[
+                        { value: "", label: "Todos los departamentos" },
+                        ...departamentos.map((d) => ({ value: d.id, label: d.nombre })),
+                    ]}
+                    value={departamentoId}
+                    onChange={handleDepartamentoChange}
+                    disabled={!paisId}
+                />
+
                 <CiudadSearchSelect
                     paisId={paisId}
+                    departamentoId={departamentoId || undefined}
                     value={ciudadSeleccionada}
                     onSelect={handleCiudadSelect}
                     disabled={!paisId}

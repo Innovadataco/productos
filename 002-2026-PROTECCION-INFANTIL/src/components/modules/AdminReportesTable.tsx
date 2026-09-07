@@ -310,6 +310,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                     <TablaHead>
                         <tr>
                             <th className="px-4 py-3 font-medium">Seguimiento</th>
+                            <th className="px-4 py-3 font-medium">Cuenta</th>
                             <th className="px-4 py-3 font-medium">Plataforma</th>
                             <th className="px-4 py-3 font-medium">Estado</th>
                             <th className="px-4 py-3 font-medium">Señales</th>
@@ -323,13 +324,13 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                     <TablaBody>
                         {loading ? (
                             <tr>
-                                <td colSpan={9} className="px-4 py-2 text-center text-subtle">
+                                <td colSpan={10} className="px-4 py-2 text-center text-subtle">
                                     <Cargando tamano="sm" />
                                 </td>
                             </tr>
                         ) : reportes.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="px-4 py-2">
+                                <td colSpan={10} className="px-4 py-2">
                                     <EmptyState
                                         title="No hay reportes que coincidan"
                                         description="Prueba ajustar los filtros o vuelve más tarde."
@@ -340,6 +341,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                             reportes.map((r) => (
                                 <tr key={r.id} className="hover:bg-tinta/5 transition">
                                     <td className="px-4 py-3 font-mono text-xs text-body">{r.numeroSeguimiento}</td>
+                                    <td className="px-4 py-3 font-mono text-xs text-body max-w-[160px] truncate" title={r.identificador}>{r.identificador}</td>
                                     <td className="px-4 py-3 text-body">{r.plataforma.nombre}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap gap-1">
