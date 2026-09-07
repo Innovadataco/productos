@@ -82,7 +82,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
 
         const config = await obtenerConfigEtapas();
-        const etapas = armarEtapas(datos, config, { revelar });
+        const etapas = await armarEtapas(datos, config, { revelar });
 
         const c = datos.reporte.clasificacion;
         const preguntas = await cargarPreguntasRubrica();

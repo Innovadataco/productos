@@ -5,7 +5,7 @@ import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { logAudit } from "@/lib/audit";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
-import { MARCADOR_TEXTO_PURGADO, cifrarTextoReporte, descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampo, estaPurgado, purgarTextoTrabajo, restaurarTextoTrabajo } from "@/lib/reporte-texto-contenido";
 import { revertirPatronPorReporte } from "@/lib/colegio/patrones";
 import { MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import type { MotivoBajaReporte, Prisma } from "@prisma/client";
@@ -107,12 +107,11 @@ export async function darDeBajaReporte(params: {
                 notaBaja: nota,
                 eliminadoEn: new Date(),
                 eliminadoPorId: adminId,
-                // SPEC-130 (D4): toda resolución que NO termina CLASIFICADO/CORREGIDO
-                // purga el texto a marcador no-identificable. La evidencia íntegra
-                // queda en textoOriginal, siempre cifrada (reactivar la restaura).
-                texto: MARCADOR_TEXTO_PURGADO,
             },
         });
+        // SPEC-130 (D4) · S-C: purga el texto de TRABAJO a marcador CIFRADO (+ purgadoEn).
+        // La evidencia (textoOriginalCifrado) queda intacta; reactivar la restaura.
+        await purgarTextoTrabajo(tx, reporte.contenidoId);
 
         // SPEC-142 (F6, FR-004): reversa exacta del aporte al patrón institucional
         // (decremento con piso 0 vía marcador de la alerta), dentro de la misma tx.
@@ -223,12 +222,15 @@ export async function reactivarReporte(params: {
     }
 
     const modeloEmbedding = await getEmbeddingModel();
-    // SPEC-130 (D4): tras la baja el texto quedó purgado a marcador; la copia de
-    // trabajo se restaura desde la evidencia (textoOriginal, siempre cifrada).
-    const textoParaReactivar =
-        reporte.texto === MARCADOR_TEXTO_PURGADO
-            ? descifrarTextoReporte(reporte.textoOriginal ?? "")
-            : descifrarTextoReporte(reporte.texto);
+    // SPEC-130 (D4) · S-C: tras la baja el trabajo quedó purgado; el embedding se genera del
+    // ORIGINAL (que `restaurarTextoTrabajo` vuelve a poner como trabajo). Si no está purgado,
+    // del trabajo actual. La lectura no necesita tx (2 findUnique).
+    const purgado = await estaPurgado(prisma, reporte.contenidoId);
+    const textoParaReactivar = await descifrarCampo(
+        prisma,
+        reporte.contenidoId,
+        purgado ? "textoOriginal" : "texto"
+    );
     const vector = await generarEmbedding(modeloEmbedding, textoParaReactivar);
     const vectorStr = "[" + vector.join(",") + "]";
     const embeddingId = crypto.randomUUID();
@@ -240,7 +242,7 @@ export async function reactivarReporte(params: {
             throw new Error("REPORTE_NO_ELIMINADO");
         }
 
-        // 1. Desmarcar eliminado y restaurar la copia de trabajo (cifrada en reposo).
+        // 1. Desmarcar eliminado.
         await tx.reporte.update({
             where: { id: reporteId },
             data: {
@@ -249,9 +251,11 @@ export async function reactivarReporte(params: {
                 notaBaja: null,
                 eliminadoEn: null,
                 eliminadoPorId: null,
-                texto: cifrarTextoReporte(textoParaReactivar),
             },
         });
+        // S-C: restaura el texto de TRABAJO desde el original SOLO si estaba purgado y limpia
+        // purgadoEn. El original nunca se toca; la DEK es la misma (re-sellado idempotente).
+        await restaurarTextoTrabajo(tx, reporte.contenidoId);
 
         // 2. Insertar embedding regenerado.
         await tx.$executeRaw`

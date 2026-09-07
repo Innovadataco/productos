@@ -3,6 +3,8 @@
  * confianza.
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { sellarTextoNuevo } from "@/lib/reporte-texto-contenido";
 import type { EstadoReporte, CategoriaConducta } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -41,7 +43,7 @@ async function crearReporteVisible(
     const creadoEn = new Date();
     creadoEn.setDate(creadoEn.getDate() - diasAtras);
 
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId: plataforma.id,
@@ -89,12 +91,14 @@ async function crearExpedienteConEvento(
     const fechaEvento = new Date();
     fechaEvento.setDate(fechaEvento.getDate() - diasAtrasEvento);
 
+    // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte (contenidoId propio).
+    const { contenidoId } = await sellarTextoNuevo(prisma, { texto });
     const evento = await prisma.eventoExpediente.create({
         data: {
             expedienteId: expediente.id,
             ordenSecuencial: 1,
             fechaEvento,
-            texto,
+            contenidoId,
             categoriaDetectada: null,
         },
     });

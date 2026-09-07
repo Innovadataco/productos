@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
-import { decryptParameter, isEncryptedValue } from "@/lib/param-encryption";
+import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
 function getClientInfo(request: Request) {
@@ -41,7 +41,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         // E-8: la lectura (solo textoOriginal cifrado) vive en el repo; el
         // descifrado sigue por el helper autorizado de SPEC-130.
-        const reporte = await new ReporteRepository().findTextoOriginalCifrado(reporteId);
+        const reporte = await new ReporteRepository().findContenidoId(reporteId);
         if (!reporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
@@ -49,20 +49,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             );
         }
 
-        if (!reporte.textoOriginal) {
-            return NextResponse.json(
-                { error: { message: "No hay texto original para este reporte", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-
-        let textoOriginal: string;
-        if (isEncryptedValue(reporte.textoOriginal)) {
-            textoOriginal = decryptParameter(reporte.textoOriginal);
-        } else {
-            // Compatibilidad con registros previos a la encriptación.
-            textoOriginal = reporte.textoOriginal;
-        }
+        // S-C: el textoOriginal (evidencia inmutable) vive cifrado en ContenidoReporte; se
+        // descifra por su contenidoId. Fail-loud: si la DEK murió (cripto-shred) LANZA — no
+        // muestra vacío ni el sobre crudo.
+        const textoOriginal = await descifrarCampoReporte(reporte.contenidoId, "textoOriginal");
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
@@ -72,8 +62,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             usuarioId: user.id,
             ipAddress,
             userAgent,
-            // No se almacena el texto original ni la contraseña de cifrado.
-            metadatos: { cifrado: isEncryptedValue(reporte.textoOriginal) },
+            // No se almacena el texto original ni la clave. S-C: el original SIEMPRE está
+            // cifrado (DEK por denuncia en ContenidoReporte), no hay rama en claro.
+            metadatos: { cifrado: true },
         });
 
         return NextResponse.json({ textoOriginal });

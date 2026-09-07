@@ -8,6 +8,7 @@
  * auditoría del colegio (solo COLEGIO_* del propio colegio). Todo cierra en BD (§9).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import "../mock-headers";
 import { jar, limpiarJar } from "../mock-headers";
 import { prisma } from "@/lib/prisma";
@@ -268,7 +269,7 @@ describe(`SPEC-114 · colegio (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
                 etiquetaRelacion: "ESTUDIANTE",
             },
         });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: identificador.valor,
                 plataformaId: plataforma.id,

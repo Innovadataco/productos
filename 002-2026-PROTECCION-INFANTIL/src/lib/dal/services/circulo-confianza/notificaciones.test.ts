@@ -3,6 +3,7 @@
  * Confianza (`notificarCambioCirculoSiCorresponde`).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { notificarCambioCirculoSiCorresponde } from "./notificaciones";
@@ -69,7 +70,7 @@ async function crearReporte(
             },
         },
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             // SPEC-325: prod normaliza al crear el reporte; el helper lo replica.
             identificador: normalizarIdentificador(identificador),

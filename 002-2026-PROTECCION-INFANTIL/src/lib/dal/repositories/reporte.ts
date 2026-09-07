@@ -82,7 +82,7 @@ const SELECT_DETALLE_REVISION = {
     identificador: true,
     numeroSeguimiento: true,
     estado: true,
-    texto: true,
+    contenidoId: true,
     esAnonimo: true,
     prioridadAlta: true,
     keywordsDetectadas: true,
@@ -120,7 +120,7 @@ const SELECT_BANDEJA_SPAM = {
     id: true,
     identificador: true,
     plataforma: { select: { id: true, nombre: true, clave: true } },
-    texto: true,
+    contenidoId: true,
     estado: true,
     creadoEn: true,
     prioridadAlta: true,
@@ -248,11 +248,11 @@ export class ReporteRepository {
         ]);
     }
 
-    /** E-8: solo textoOriginal cifrado (revelar-original; el descifrado es de la ruta). */
-    findTextoOriginalCifrado(id: string) {
+    /** E-8 · S-C: el contenidoId del reporte (revelar-original descifra textoOriginal por él). */
+    findContenidoId(id: string) {
         return this.db.reporte.findUnique({
             where: { id },
-            select: { textoOriginal: true },
+            select: { contenidoId: true },
         });
     }
 
@@ -332,10 +332,6 @@ export class ReporteRepository {
         return this.db.reporte
             .findUnique({ where: { numeroSeguimiento }, select: { id: true } })
             .then((r) => r !== null);
-    }
-
-    crear(data: Prisma.ReporteUncheckedCreateInput) {
-        return this.db.reporte.create({ data });
     }
 
     actualizarEstado(id: string, data: Prisma.ReporteUncheckedUpdateInput) {
@@ -452,7 +448,7 @@ export class ReporteRepository {
                 creadoEn: true,
                 ciudad: true,
                 pais: true,
-                texto: true,
+                contenidoId: true,
                 clasificacion: { select: { categoria: true, confianza: true } },
             },
         });

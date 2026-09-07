@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { GET, POST } from "./route";
 import { PATCH } from "./[id]/estado/route";
 import { prisma } from "@/lib/prisma";
@@ -60,7 +62,7 @@ async function crearReporte(
     const ciudad = await prisma.ciudad.findUnique({
         where: { nombre_paisId: { nombre: "Bogotá", paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
     });
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,
@@ -166,7 +168,8 @@ describe("/api/colegio/alertas", () => {
             const alerta = json.items[0];
 
             const respuesta = JSON.stringify(json);
-            expect(respuesta).not.toContain(reporte.texto);
+            const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
+            expect(respuesta).not.toContain(textoReporte);
             expect(respuesta).not.toContain("Bogotá");
             expect(respuesta).not.toContain("Colombia");
             expect(respuesta).not.toContain(reporte.id);

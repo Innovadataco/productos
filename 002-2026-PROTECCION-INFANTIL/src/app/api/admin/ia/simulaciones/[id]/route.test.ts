@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -20,7 +21,7 @@ describe("GET /api/admin/ia/simulaciones/[id]", () => {
 
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "instagram" } }) ||
             await prisma.plataforma.create({ data: { clave: "instagram", nombre: "Instagram" } });
-        const r1 = await prisma.reporte.create({
+        const r1 = await crearReporteFixture(prisma, {
             data: {
                 identificador: "SIM-1-001",
                 plataformaId: plataforma.id,
@@ -33,7 +34,7 @@ describe("GET /api/admin/ia/simulaciones/[id]", () => {
                 estado: "CLASIFICADO",
             },
         });
-        const r2 = await prisma.reporte.create({
+        const r2 = await crearReporteFixture(prisma, {
             data: {
                 identificador: "SIM-1-002",
                 plataformaId: plataforma.id,

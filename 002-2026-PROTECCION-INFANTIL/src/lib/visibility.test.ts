@@ -5,6 +5,7 @@
  * O-2: tras cada recálculo los contadores del agregado == predicado.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "./prisma";
 import { resetDatabase } from "./test-utils";
 import { crearParametrosReportes, crearPlataforma } from "./reporte-test-utils";
@@ -21,7 +22,7 @@ async function crearReporte(
     esAnonimo: boolean,
     eliminado = false
 ) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,

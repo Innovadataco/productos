@@ -103,7 +103,7 @@ export class SpamReporteRepository {
             },
             select: {
                 id: true,
-                texto: true,
+                contenidoId: true,
                 eliminadoEn: true,
             },
             orderBy: { eliminadoEn: "desc" },

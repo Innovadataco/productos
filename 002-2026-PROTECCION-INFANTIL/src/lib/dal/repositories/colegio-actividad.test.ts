@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -21,7 +22,7 @@ async function crearReporte(
         creadoEn?: Date;
     } = {}
 ) {
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: data.identificador ?? `+57${Date.now()}${Math.floor(Math.random() * 1000)}`,
             plataformaId,

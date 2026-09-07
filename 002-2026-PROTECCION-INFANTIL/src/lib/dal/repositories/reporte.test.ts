@@ -3,6 +3,7 @@
  * mismos select/orden/paginación que tenían las rutas migradas.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +20,7 @@ async function crearReporteDePrueba(
     const plataforma = await crearPlataforma();
     const usuario = await crearUsuario("PARENT");
     correlativo += 1;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${TAG}${correlativo}`,
             plataformaId: plataforma.id,
@@ -86,14 +87,12 @@ describe("ReporteRepository (E-8 LOTE 2: bandeja admin)", () => {
         expect("estado" in row!).toBe(false);
     });
 
-    it("findTextoOriginalCifrado solo expone textoOriginal", async () => {
+    it("findContenidoId solo expone el contenidoId", async () => {
+        // S-C (D-116/D-117): el original ya no es columna del reporte; revelar-original lo descifra
+        // por el contenidoId. El método mínimo expone SOLO esa llave de acceso al contenido cifrado.
         const reporte = await crearReporteDePrueba();
-        await prisma.reporte.update({
-            where: { id: reporte.id },
-            data: { textoOriginal: "cifrado::texto-original" },
-        });
-        const row = await new ReporteRepository().findTextoOriginalCifrado(reporte.id);
-        expect(row).toEqual({ textoOriginal: "cifrado::texto-original" });
+        const row = await new ReporteRepository().findContenidoId(reporte.id);
+        expect(row).toEqual({ contenidoId: reporte.contenidoId });
     });
 
     it("findByIdConClasificacionYEmbedding incluye clasificación y embedding (null si no hay)", async () => {
@@ -154,7 +153,8 @@ describe("ReporteRepository (E-8 LOTE 2: bandeja admin)", () => {
         expect(total).toBe(1);
         expect(rows[0].clasificacion).toMatchObject({ categoria: "SPAM", confianza: 0.9 });
         expect(rows[0].plataforma).toMatchObject({ clave: "whatsapp" });
-        expect(typeof rows[0].texto).toBe("string");
+        // S-C (D-116/D-117): la bandeja selecciona contenidoId (el lector descifra por lote aparte).
+        expect(typeof rows[0].contenidoId).toBe("string");
     });
 
     it("contarPorUsuarios: conteo agregado por autor, solo de los ids pedidos", async () => {

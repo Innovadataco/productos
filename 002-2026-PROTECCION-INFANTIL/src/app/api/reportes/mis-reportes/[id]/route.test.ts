@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -10,7 +11,7 @@ let parentUser: Awaited<ReturnType<typeof crearUsuario>>;
 
 async function crearReporte(estado: "PENDIENTE" | "CLASIFICADO", usuarioId: string, eliminado = false) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+573001112233",
             plataformaId: plataforma!.id,

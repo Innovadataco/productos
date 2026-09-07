@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -42,7 +44,7 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
 
     async function setupReporteSpam(operadorId?: string) {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300SPAMRES",
                 plataformaId: plataforma!.id,
@@ -103,6 +105,9 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
         const operador = await crearUsuario("OPERADOR", "op@test.com");
         const reporte = await setupReporteSpam(operador.id);
         mockToken = await crearTokenUsuario(operador.id, "OPERADOR");
+        // S-C: capturar el texto de TRABAJO ANTES del POST — la confirmación de spam da de baja el
+        // reporte y purga el trabajo al marcador; el dataset guarda el texto real (pre-purga).
+        const textoReporte = await descifrarCampo(prisma, reporte.contenidoId, "texto");
 
         const req = crearRequestResolver(reporte.id, { decision: "es_spam", motivo: "Contenido promocional" }, mockToken);
         const res = await POST(req, { params: Promise.resolve({ id: reporte.id }) });
@@ -117,7 +122,7 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
         expect(actualizado?.motivoBaja).toBe("RETIRO_LIMPIEZA");
 
         const dataset = await prisma.datasetEntrenamiento.findFirst({
-            where: { texto: reporte.texto, clasificacionCorrecta: "SPAM" },
+            where: { texto: textoReporte, clasificacionCorrecta: "SPAM" },
         });
         expect(dataset).not.toBeNull();
         expect(dataset?.fuente).toBe("spam_revisado");
@@ -161,7 +166,7 @@ describe("POST /api/admin/reportes/[id]/resolver-spam", () => {
     it("rechaza si el reporte no está en revisión de spam", async () => {
         const admin = await crearUsuario("ADMIN");
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300NORMAL",
                 plataformaId: plataforma!.id,

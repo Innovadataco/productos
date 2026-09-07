@@ -22,6 +22,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5005";
 const WORKER_SECRET = process.env.WORKER_SECRET || "worker-secret-local";
@@ -139,17 +140,26 @@ async function verificarPersistencia(reporteId: string): Promise<{
     } | null;
     embedding: { id: string } | null;
 }> {
-    const reporte = await prisma.reporte.findUnique({
+    const reporteRow = await prisma.reporte.findUnique({
         where: { id: reporteId },
         select: {
             estado: true,
-            texto: true,
-            textoOriginal: true,
+            contenidoId: true,
             prioridadAlta: true,
             keywordsDetectadas: true,
         },
     });
-    if (!reporte) throw new Error("Reporte no encontrado en BD");
+    if (!reporteRow) throw new Error("Reporte no encontrado en BD");
+    // S-C (D-116/D-117): el relato vive cifrado en ContenidoReporte; se descifra por el camino central.
+    const texto = await descifrarCampo(prisma, reporteRow.contenidoId, "texto");
+    const textoOriginal = await descifrarCampo(prisma, reporteRow.contenidoId, "textoOriginal");
+    const reporte = {
+        estado: reporteRow.estado,
+        texto,
+        textoOriginal,
+        prioridadAlta: reporteRow.prioridadAlta,
+        keywordsDetectadas: reporteRow.keywordsDetectadas,
+    };
 
     const clasificacion = await prisma.clasificacionIA.findUnique({
         where: { reporteId },
@@ -249,7 +259,9 @@ async function main(): Promise<void> {
 
         // El texto de prueba contiene PII (teléfono y dirección).
         // El pipeline debe haber detectado PII y anonimizado el texto.
-        if (persistido.reporte.textoOriginal) {
+        // S-C (D-116/D-117): el original SIEMPRE existe (sellado al alta), así que «se anonimizó» ya
+        // no se infiere de textoOriginal!=null, sino de que el texto de TRABAJO divergió del original.
+        if (persistido.reporte.texto !== persistido.reporte.textoOriginal) {
             assert(
                 persistido.reporte.texto !== TEXTO_PRUEBA,
                 "el texto no fue anonimizado aunque se preservó el original"
@@ -265,7 +277,7 @@ async function main(): Promise<void> {
                 console.log("   ✅ PII detectada y texto anonimizado");
             }
         } else if (persistido.clasificacion?.contienePii) {
-            console.log("   ⚠️  PII detectada pero no se preservó textoOriginal (estado inesperado)");
+            console.log("   ⚠️  PII detectada pero el texto de trabajo no se anonimizó (estado inesperado)");
         } else {
             console.log("   ℹ️  No se detectó PII en este texto");
         }

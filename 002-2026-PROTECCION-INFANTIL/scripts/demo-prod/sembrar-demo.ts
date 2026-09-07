@@ -8,6 +8,7 @@
  *   DEMO_PASSWORD=DemoSeguro2026! node --env-file=.env --import tsx scripts/demo-prod/sembrar-demo.ts [--force] [--min]
  */
 import { spawnSync } from "node:child_process";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "./lib/prisma";
 import { marcarDemo } from "./lib/marcar";
 import { auditarDemo } from "./lib/auditar";
@@ -645,7 +646,7 @@ async function main() {
         };
         if (usuarioId) reporteData.usuarioId = usuarioId;
 
-        const reporte = await prisma.reporte.create({ data: reporteData });
+        const reporte = await crearReporteFixture(prisma, { data: reporteData });
         await marcarDemo("Reporte", reporte.id, {
             corrida: CORRIDA,
             script: "sembrar-demo",

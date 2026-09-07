@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -66,7 +67,7 @@ describe("GET /api/apelaciones/mias", () => {
     }
 
     async function crearReporteDelIdentificador(identificador: string, plataformaId: string) {
-        return prisma.reporte.create({
+        return crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId,

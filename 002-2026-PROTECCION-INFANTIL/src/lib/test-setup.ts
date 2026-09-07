@@ -22,6 +22,12 @@ process.env.RESEND_WEBHOOK_SECRET = "dGVzdHNlY3JldA==";
 process.env.ENCRYPTION_KEY = "test-encryption-32-chars-key!!";
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test";
 process.env.WORKER_SECRET = "worker-secret-test";
+// S-D · KEK de test para la capa DEK-por-denuncia (ContenidoReporte/LlaveReporte). Se siembra
+// GLOBAL una vez para que cualquier fixture que cree un Reporte vía `crearReporteConTexto`
+// pueda sellar/descifrar (si falta, la capa es fail-loud y revienta). `??=` respeta una KEK
+// provista por el entorno; valor fijo de 32 bytes → base64 canónica, determinista.
+process.env.REPORTE_TEXTO_KEY_V1 ??= Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
+process.env.REPORTE_TEXTO_KEY_ACTIVA ??= "1";
 
 // Higiene intra-archivo: un test que espía métodos del singleton de Prisma y no
 // restaura rompería a sus vecinos del MISMO archivo. Entre archivos ya no hace

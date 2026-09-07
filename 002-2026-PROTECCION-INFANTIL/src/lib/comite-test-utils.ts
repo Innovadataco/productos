@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { hashPassword } from "./auth";
 import { AlertaColegioRepository } from "./dal/repositories/alerta-colegio";
 import { crearColegioConAdmin, crearPlataforma, crearCurso, crearEstudiante, crearIdentificadorEstudiante } from "./reporte-test-utils";
@@ -29,7 +30,7 @@ export async function crearAlertaEstudiante(colegioId: string) {
         plataformaId: plataforma.id,
     });
 
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificador.valor,
             plataformaId: plataforma.id,

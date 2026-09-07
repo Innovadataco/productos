@@ -11,6 +11,7 @@
  * activos.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST as POST_CLASIFICAR } from "./[id]/clasificar/route";
 import { POST as POST_CONFIRMAR } from "./[id]/confirmar/route";
 import { PATCH as PATCH_REASIGNAR } from "@/app/api/admin/operadores/reasignar/route";
@@ -31,7 +32,7 @@ vi.mock("next/headers", () => ({
 
 async function crearReporte() {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300COM${Date.now()}`,
             plataformaId: plataforma!.id,

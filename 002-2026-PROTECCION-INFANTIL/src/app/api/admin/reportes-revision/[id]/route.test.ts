@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -25,7 +26,7 @@ async function crearReporteDePrueba({ operadorId }: { operadorId?: string } = {}
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
     const textoOriginal = "Mi hija María estudia en el colegio San José y su teléfono es 3001234567.";
     const textoAnonimizado = "Mi hija [NOMBRE] estudia en [COLEGIO] y su teléfono es [TELEFONO].";
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: "+57300TEST000",
             plataformaId: plataforma!.id,

@@ -6,6 +6,7 @@
  * la misma de siempre. Cola y email MOCKEADOS (como avisos.test.ts).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -62,7 +63,7 @@ async function escenarioBase(valorIdentificador = "+573001234567") {
 }
 
 async function crearAlertaNueva(colegioId: string, identificadorValor: string, plataformaId: string, identificadorId: string) {
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: identificadorValor,
             plataformaId,

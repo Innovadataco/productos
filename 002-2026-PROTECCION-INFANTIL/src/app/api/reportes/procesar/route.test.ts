@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import type { CategoriaConducta } from "@prisma/client";
-import { decryptParameter } from "@/lib/param-encryption";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 
 const mockClasificar = vi.fn();
 const mockPii = vi.fn();
@@ -105,7 +105,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("clasifica un reporte y actualiza estado a CLASIFICADO", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+573001234567",
                 plataformaId: plataforma!.id,
@@ -144,7 +144,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("marca reporte como POSIBLE_SPAM cuando la IA clasifica SPAM con alta confianza", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300SPAM",
                 plataformaId: plataforma!.id,
@@ -183,7 +183,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("anonimiza reporte con PII y lo clasifica", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300PII01",
                 plataformaId: plataforma!.id,
@@ -232,16 +232,19 @@ describe("POST /api/reportes/procesar", () => {
 
         const actualizado = await prisma.reporte.findUnique({ where: { id: reporte.id } });
         expect(actualizado?.estado).toBe("CLASIFICADO");
-        expect(actualizado?.textoOriginal).toMatch(/^enc:/);
-        expect(decryptParameter(actualizado!.textoOriginal!)).toBe("Mi hija María del colegio San José recibió mensajes.");
-        // SPEC-130 (BL-4): el texto anonimizado también queda cifrado en reposo.
-        expect(actualizado?.texto).toMatch(/^enc:/);
-        expect(descifrarTextoReporte(actualizado!.texto)).toBe("Mi hija [NOMBRE] del [COLEGIO] recibió mensajes.");
+        // S-C (D-116/D-117): la anonimización re-sella SOLO el texto de TRABAJO; el original
+        // (evidencia) queda intacto. Ambos descifran por el camino central (contenidoId no cambia).
+        expect(await descifrarCampo(prisma, reporte.contenidoId, "textoOriginal")).toBe(
+            "Mi hija María del colegio San José recibió mensajes."
+        );
+        expect(await descifrarCampo(prisma, reporte.contenidoId, "texto")).toBe(
+            "Mi hija [NOMBRE] del [COLEGIO] recibió mensajes."
+        );
     });
 
     it("no muta estado en errores transitorios de anonimización (reintentable)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300PIIERR",
                 plataformaId: plataforma!.id,
@@ -291,7 +294,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("marca reporte anónimo duplicado cuando supera el umbral de similitud", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const origen = await prisma.reporte.create({
+        const origen = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300DUP001",
                 plataformaId: plataforma!.id,
@@ -321,7 +324,7 @@ describe("POST /api/reportes/procesar", () => {
         const resOrigen = await POST(crearRequestProcesar(origen.id));
         expect(resOrigen.status).toBe(200);
 
-        const duplicado = await prisma.reporte.create({
+        const duplicado = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300DUP001",
                 plataformaId: plataforma!.id,
@@ -353,7 +356,7 @@ describe("POST /api/reportes/procesar", () => {
         // resolver el estado del original en tiempo de lectura.
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
         const usuario = await crearUsuario("PARENT");
-        const origen = await prisma.reporte.create({
+        const origen = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300INV001",
                 plataformaId: plataforma!.id,
@@ -380,7 +383,7 @@ describe("POST /api/reportes/procesar", () => {
         await POST(crearRequestProcesar(origen.id));
 
         // Segundo reporte IDÉNTICO (mismo identificador y embedding) pero CON CUENTA.
-        const conCuenta = await prisma.reporte.create({
+        const conCuenta = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300INV001",
                 plataformaId: plataforma!.id,
@@ -406,7 +409,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("no reprocesa reporte ya en estado final", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300FINAL",
                 plataformaId: plataforma!.id,
@@ -427,7 +430,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("no muta estado en errores transitorios del embedding (reintentable)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300ERR01",
                 plataformaId: plataforma!.id,
@@ -466,7 +469,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("envía alerta de revisión cuando el procesamiento falla con error no transitorio", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300ALERT",
                 plataformaId: plataforma!.id,
@@ -537,7 +540,7 @@ describe("POST /api/reportes/procesar", () => {
             // Espaciar creadoEn para evitar que la guarda de ráfagas dispare
             // (N=3 en 24h). 25h entre cada reporte evita la ventana.
             const creadoEn = new Date(Date.now() - (8 - i) * 25 * 60 * 60 * 1000);
-            const reporte = await prisma.reporte.create({
+            const reporte = await crearReporteFixture(prisma, {
                 data: {
                     identificador: "+57300CRITICO",
                     plataformaId: plataforma!.id,
@@ -571,7 +574,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("persiste posibleAgresorPar", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300MULTI",
                 plataformaId: plataforma!.id,
@@ -617,7 +620,7 @@ describe("POST /api/reportes/procesar", () => {
 
     it("guarda previa: doxing CORTA a revisión manual SIN clasificar (spec 092-US4)", async () => {
         const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300DOX",
                 plataformaId: plataforma!.id,
@@ -663,7 +666,7 @@ describe("POST /api/reportes/procesar", () => {
         const identificador = "+57300RAFAGA";
         const reportes = [];
         for (let i = 0; i < 3; i++) {
-            const reporte = await prisma.reporte.create({
+            const reporte = await crearReporteFixture(prisma, {
                 data: {
                     identificador,
                     plataformaId: plataforma!.id,
@@ -712,7 +715,7 @@ describe("POST /api/reportes/procesar", () => {
         const identificador = "+57300CORROBORA";
         const reportes = [];
         for (let i = 0; i < 3; i++) {
-            const reporte = await prisma.reporte.create({
+            const reporte = await crearReporteFixture(prisma, {
                 data: {
                     identificador,
                     plataformaId: plataforma!.id,
@@ -761,7 +764,7 @@ describe("POST /api/reportes/procesar", () => {
         const identificador = "+57300RAFBAJA";
         // Mismo origen en los tres para aislar la variable bajo prueba (dado de baja):
         // aun así no hay ráfaga porque el eliminado no cuenta → 2 < 3.
-        const activoPrevio = await prisma.reporte.create({
+        const activoPrevio = await crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -774,7 +777,7 @@ describe("POST /api/reportes/procesar", () => {
                 estado: "CLASIFICADO",
             },
         });
-        const eliminadoPrevio = await prisma.reporte.create({
+        const eliminadoPrevio = await crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -789,7 +792,7 @@ describe("POST /api/reportes/procesar", () => {
             },
         });
 
-        const nuevo = await prisma.reporte.create({
+        const nuevo = await crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -832,7 +835,7 @@ describe("POST /api/reportes/procesar", () => {
         // Histórico y nuevo del MISMO origen: el historial previo (fuera de ventana)
         // corta la ráfaga aunque el origen coincida — es una relación sostenida, no
         // un pico súbito.
-        const historico = await prisma.reporte.create({
+        const historico = await crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -847,7 +850,7 @@ describe("POST /api/reportes/procesar", () => {
             },
         });
 
-        const nuevo = await prisma.reporte.create({
+        const nuevo = await crearReporteFixture(prisma, {
             data: {
                 identificador,
                 plataformaId: plataforma!.id,
@@ -885,7 +888,7 @@ describe("POST /api/reportes/procesar", () => {
         });
         mockEmbedding.mockResolvedValue(new Array(768).fill(0.1));
 
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: "+57300KEYWORDS",
                 plataformaId: plataforma!.id,

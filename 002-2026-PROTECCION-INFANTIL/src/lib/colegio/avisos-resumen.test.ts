@@ -6,6 +6,7 @@
  * preferencia deshabilitada y colegio vencido.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import {
@@ -33,7 +34,7 @@ async function crearReporteVisible(identificador: string, plataformaId: string) 
     const ciudad = await prisma.ciudad.findUnique({
         where: { nombre_paisId: { nombre: "Bogotá", paisId: (await prisma.pais.findUnique({ where: { codigo: "CO" } }))!.id } },
     });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,

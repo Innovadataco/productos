@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { PATCH } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -39,7 +40,7 @@ async function crearOperador(suffix: string) {
 
 async function crearReporteRevisionManual(operadorId?: string) {
     const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300${Date.now()}`,
             plataformaId: plataforma!.id,
@@ -117,7 +118,7 @@ describe("PATCH /api/admin/operadores/reasignar (SPEC-193 Fase 2)", () => {
         await autenticarAdmin();
         const origen = await crearOperador("origen");
         const destino = await crearOperador("destino");
-        const reporte = await prisma.reporte.create({
+        const reporte = await crearReporteFixture(prisma, {
             data: {
                 identificador: `+57300${Date.now()}`,
                 plataformaId: (await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } }))!.id,

@@ -212,8 +212,7 @@ export async function procesarReporte(request: Request): Promise<NextResponse> {
         if (piiResult?.contienePii && estadoFinal !== "POSIBLE_SPAM") {
             const resultado = await anonimizarReporte({
                 reporteId: reporte.id,
-                textoActual: reporte.texto,
-                textoOriginalCifrado: reporte.textoOriginal,
+                contenidoId: reporte.contenidoId,
                 piiDetectada: piiResult.piiDetectada,
                 modeloAnonimizacion: parametros.modeloAnonimizacion,
             });

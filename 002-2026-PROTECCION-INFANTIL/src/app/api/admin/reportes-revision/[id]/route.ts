@@ -6,7 +6,7 @@ import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
 import { esEstadoCargaOperador } from "@/lib/operadores/estados";
-import { descifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
+import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -77,8 +77,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
         // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
         // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
+        const texto = await descifrarCampoReporte(reporte.contenidoId, "texto");
         return NextResponse.json({
-            reporte: { ...reporte, texto: descifrarTextoReporte(reporte.texto) },
+            reporte: { ...reporte, texto },
             puedeRevelarOriginal: esAdminRol(user.rol) || user.rol === "OPERADOR" || esComiteRol(user.rol),
             puedeEscalar: (user.rol === "OPERADOR" && reporte?.operador?.id === user.id && esEstadoCargaOperador(reporte.estado)) || esAdminRol(user.rol),
         });

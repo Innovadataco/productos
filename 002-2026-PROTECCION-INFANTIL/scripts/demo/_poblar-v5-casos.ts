@@ -27,7 +27,7 @@
  * el producto no produce.
  */
 import type { PrismaClient, Prisma } from "@prisma/client";
-import { cifrarTextoReporte } from "../../src/lib/texto-reporte-cifrado";
+import { crearReporteConTexto } from "../../src/lib/dal/services/crear-reporte-con-texto";
 import { pick, log } from "./_common";
 import { cadenaParaEstado, fechasEscalonadas } from "./_common-v3";
 import { marcar, type OpcionesMarcado } from "./_marcado";
@@ -153,11 +153,13 @@ function planearCorrida(args: ArgsCasos): PlanReporte[] {
     return plan;
 }
 
+// S-C (D-116/D-117): el alta pasa por el factory; ya no hay columnas `texto`/`textoOriginal`.
+// Devolvemos el texto PLANO aparte de los campos del reporte para pasarlos a `crearReporteConTexto`.
 function filaReporte(
     p: PlanReporte,
     args: ArgsCasos,
     idPorIndice: Map<number, string>,
-): Prisma.ReporteCreateManyInput {
+): { textoPlano: string; reporte: Omit<Prisma.ReporteUncheckedCreateInput, "contenidoId"> } {
     const { r, plataformas, ciudades } = args;
     const [codigoPais = "CO", nombreCiudad = ""] = p.codigoCiudad.split(":");
     const ciudad = ciudades.get(p.codigoCiudad);
@@ -168,27 +170,28 @@ function filaReporte(
     const principal = p.indicePrincipal !== null ? idPorIndice.get(p.indicePrincipal) ?? null : null;
 
     return {
-        identificador: p.sujeto?.nick ?? pick(r, NICKS_EXTERNOS_V5),
-        plataformaId: p.sujeto?.plataformaId ?? pick(r, plataformas).id,
-        texto: cifrarTextoReporte(texto),
-        textoOriginal: null,
-        fechaIncidente: p.fecha,
-        ciudad: ciudad?.nombre ?? nombreCiudad,
-        pais: codigoPais,
-        paisId: ciudad?.paisId ?? null,
-        ciudadId: ciudad?.id ?? null,
-        estado: p.estado,
-        esAnonimo: r() < 0.6,
-        edadVictima: 10 + Math.floor(r() * 8),
-        numeroSeguimiento: p.numeroSeguimiento,
-        reportePrincipalId: principal,
-        prioridadAlta: p.categoria !== "SPAM" && r() < 0.05,
-        keywordsDetectadas: [],
-        esRafaga: false,
-        fuenteConfianza: 0.4 + r() * 0.6,
-        eliminado: false,
-        creadoEn: p.fecha,
-        actualizadoEn: p.fecha,
+        textoPlano: texto,
+        reporte: {
+            identificador: p.sujeto?.nick ?? pick(r, NICKS_EXTERNOS_V5),
+            plataformaId: p.sujeto?.plataformaId ?? pick(r, plataformas).id,
+            fechaIncidente: p.fecha,
+            ciudad: ciudad?.nombre ?? nombreCiudad,
+            pais: codigoPais,
+            paisId: ciudad?.paisId ?? null,
+            ciudadId: ciudad?.id ?? null,
+            estado: p.estado,
+            esAnonimo: r() < 0.6,
+            edadVictima: 10 + Math.floor(r() * 8),
+            numeroSeguimiento: p.numeroSeguimiento,
+            reportePrincipalId: principal,
+            prioridadAlta: p.categoria !== "SPAM" && r() < 0.05,
+            keywordsDetectadas: [],
+            esRafaga: false,
+            fuenteConfianza: 0.4 + r() * 0.6,
+            eliminado: false,
+            creadoEn: p.fecha,
+            actualizadoEn: p.fecha,
+        },
     };
 }
 
@@ -213,10 +216,14 @@ async function sembrarLote(
         // ── Reportes ────────────────────────────────────────────────────────
         // `numeroSeguimiento` es @unique: sirve de clave de negocio para volver
         // a encontrar la fila sin depender del orden en que Prisma las devuelva.
-        const creados = await tx.reporte.createManyAndReturn({
-            data: lote.map((p) => filaReporte(p, args, idPorIndice)),
-            select: { id: true, numeroSeguimiento: true },
-        });
+        // S-C (D-116/D-117): cada reporte se crea por el factory (sella su contenido cifrado en
+        // ContenidoReporte+LlaveReporte); recolectamos {id, numeroSeguimiento} igual que antes.
+        const creados: { id: string; numeroSeguimiento: string | null }[] = [];
+        for (const p of lote) {
+            const { textoPlano, reporte } = filaReporte(p, args, idPorIndice);
+            const rep = await crearReporteConTexto(tx, { texto: textoPlano, reporte });
+            creados.push({ id: rep.id, numeroSeguimiento: rep.numeroSeguimiento });
+        }
         await marcar(tx, "Reporte", creados.map((c) => c.id), opciones);
         conteos.reportes += creados.length;
 
@@ -273,7 +280,7 @@ async function sembrarLote(
             await marcar(tx, "TransicionReporte", creadas.map((t) => t.id), opciones);
             conteos.transiciones += creadas.length;
         }
-    });
+    }, { timeout: 120_000 });
 }
 
 /**

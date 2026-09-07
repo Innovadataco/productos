@@ -6,6 +6,7 @@
  * jamás está en el payload del listado.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 
 let mockToken: string | undefined;
 let mockSello: string | undefined;
@@ -26,7 +27,6 @@ import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import { createToken, hashPassword } from "@/lib/auth";
-import { cifrarTextoReporte } from "@/lib/texto-reporte-cifrado";
 import { firmarSelloStepUp } from "@/lib/routing/stepup-sello";
 
 const PASSWORD = "MiClave123!";
@@ -39,11 +39,12 @@ async function crearPadreConReporte() {
         data: { passwordHash: await hashPassword(PASSWORD) },
     });
     const plataforma = await prisma.plataforma.findFirstOrThrow();
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: "300stepup",
             plataformaId: plataforma.id,
-            texto: cifrarTextoReporte(TEXTO),
+            // S-C: el fixture cifra con la DEK; se pasa el texto EN PLANO (no pre-cifrado).
+            texto: TEXTO,
             fechaIncidente: new Date(),
             ciudad: "Bogotá",
             pais: "Colombia",

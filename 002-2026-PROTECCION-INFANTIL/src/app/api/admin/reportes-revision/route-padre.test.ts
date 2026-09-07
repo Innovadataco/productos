@@ -4,6 +4,7 @@
  * no tienen usuario y nunca coinciden).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { GET } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -41,13 +42,13 @@ describe("GET /api/admin/reportes-revision — filtro por padre (N-2)", () => {
             pais: "Colombia",
             estado: "REVISION_MANUAL" as const,
         };
-        const deMaria = await prisma.reporte.create({
+        const deMaria = await crearReporteFixture(prisma, {
             data: { ...base, identificador: "+57300AAAAAA1", numeroSeguimiento: "RPT-N2-MARIA", esAnonimo: false, usuarioId: padreA.id },
         });
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: { ...base, identificador: "+57300BBBBBB2", numeroSeguimiento: "RPT-N2-JUAN", esAnonimo: false, usuarioId: padreB.id },
         });
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: { ...base, identificador: "+57300CCCCCC3", numeroSeguimiento: "RPT-N2-ANON", esAnonimo: true },
         });
         return deMaria;

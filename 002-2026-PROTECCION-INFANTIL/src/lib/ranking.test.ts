@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { calcularRanking, calcularNivelRiesgo } from "./ranking";
 import { prisma } from "./prisma";
 import { resetDatabase } from "./test-utils";
@@ -13,7 +14,7 @@ async function crearReporteClasificado(
     creadoEn: Date
 ) {
     const numeroSeguimiento = `RPT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const reporte = await prisma.reporte.create({
+    const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador,
             plataformaId,

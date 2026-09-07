@@ -3,6 +3,7 @@
  * purga por retención (la lógica de hash queda en el módulo anti-abuso).
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPlataforma } from "@/lib/reporte-test-utils";
@@ -14,7 +15,7 @@ let contador = 0;
 async function sembrarReporte(estado: "CLASIFICADO" | "POSIBLE_SPAM" = "CLASIFICADO") {
     const plataforma = (await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } }))!;
     contador += 1;
-    return prisma.reporte.create({
+    return crearReporteFixture(prisma, {
         data: {
             identificador: `+57300FUE${TAG}`,
             plataformaId: plataforma.id,

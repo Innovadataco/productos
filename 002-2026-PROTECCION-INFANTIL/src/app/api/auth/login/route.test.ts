@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
+import { descifrarCampo } from "@/lib/reporte-texto-contenido";
 import { POST } from "./route";
 import { GET as GETConsulta } from "@/app/api/consulta/route";
 import { PATCH as PATCHVigencia } from "@/app/api/admin/padres/[id]/vigencia/route";
@@ -171,7 +173,7 @@ describe("POST /api/auth/login — vigencia del cliente (SPEC-119)", () => {
     it("vencer NO borra nada: los reportes del padre vencido siguen intactos", async () => {
         const padre = await crearUsuario("PARENT", "conreportes@example.com");
         const plataforma = await crearPlataforma();
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: "+573009990001",
                 plataformaId: plataforma.id,
@@ -191,14 +193,15 @@ describe("POST /api/auth/login — vigencia del cliente (SPEC-119)", () => {
 
         const reportes = await prisma.reporte.findMany({ where: { usuarioId: padre.id } });
         expect(reportes).toHaveLength(1);
-        expect(reportes[0].texto).toBe("Texto original del reporte de prueba");
+        const texto = await descifrarCampo(prisma, reportes[0].contenidoId, "texto");
+        expect(texto).toBe("Texto original del reporte de prueba");
         expect(reportes[0].eliminado).toBe(false);
     });
 
     it("la consulta pública sin sesión sigue 200 aunque el reportante esté vencido", async () => {
         const padre = await crearUsuario("PARENT", "reportante@example.com");
         const plataforma = await crearPlataforma();
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: "+573009990002",
                 plataformaId: plataforma.id,

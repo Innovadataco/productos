@@ -5,6 +5,7 @@
  * (activo=false, recuperable). Antes ambos eran baja lógica y se confundían.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearParametrosReportes, crearPlataforma } from "@/lib/reporte-test-utils";
@@ -120,7 +121,7 @@ describe("contactos vigilo (SPEC-325)", () => {
         // Alguien reporta el mismo identificador en minúsculas. Insertamos el
         // reporte ya en la forma canónica (como lo deja el embudo de creación de
         // reporte, reporte-creation.ts) en un estado que cruza (REVISION_MANUAL).
-        await prisma.reporte.create({
+        await crearReporteFixture(prisma, {
             data: {
                 identificador: "tiojuan1",
                 plataformaId: plat.id,
