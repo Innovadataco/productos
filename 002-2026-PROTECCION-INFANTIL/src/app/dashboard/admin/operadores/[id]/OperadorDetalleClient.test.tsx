@@ -1,10 +1,13 @@
 /**
  * SPEC-189 (002-PI-084): test de renderizado de la ficha de operador.
+ * SPEC-571: el componente cliente se extrajo de page.tsx (split de guardia) a
+ * OperadorDetalleClient.tsx; este test lo prueba directamente (page.tsx es ahora
+ * el wrapper de servidor que guarda el rol).
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import AdminOperadorDetallePage from "./page";
+import AdminOperadorDetallePage from "./OperadorDetalleClient";
 
 const pushMock = vi.fn();
 
