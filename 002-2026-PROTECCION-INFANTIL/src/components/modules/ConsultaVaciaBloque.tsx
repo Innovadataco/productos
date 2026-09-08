@@ -1,20 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Alerta } from "@/components/ui/Alerta";
-import { Modal } from "@/components/ui/Modal";
-import { dejarHandoffReportar } from "@/lib/reportar-handoff";
-import { CanalesOficiales } from "./CanalesOficiales";
 
 /**
- * F3 (N-5): bloque curado del estado vacío de la consulta pública.
- * Contenido 100% estático (viene de parámetros curados, NADA de IA).
- * Presunción de inocencia: lenguaje descriptivo, nunca "es seguro/peligroso".
+ * SPEC-596 (decisión CEO 06-09): rediseño del resultado vacío de la consulta
+ * pública. La tarjeta de señales y acciones pasa a ser el PROTAGONISTA visual:
+ * expandida siempre (sin modal ni enlace previo), más importante que el estado
+ * anterior. Contenido 100% estático (parámetros curados, NADA de IA) y solo
+ * informativo. Presunción de inocencia: lenguaje descriptivo, nunca
+ * "es seguro/peligroso".
  *
- * 3002: las señales y acciones viven tras un enlace informativo (modal) para no
- * saturar el estado vacío. Disclaimer, CTA de reporte y canales oficiales se
- * mantienen SIEMPRE visibles (restricción de producto).
+ * Sale de esta pantalla, por decisión del CEO: el CTA «Reportar una conducta»
+ * y el bloque de canales oficiales (141 / CAI Virtual / Te Protejo). La
+ * restricción de constitución («toda interfaz de reporte muestra canales
+ * oficiales») aplica a los FLUJOS DE REPORTE: /reportar los sigue mostrando
+ * (CanalesOficiales montado ahí) y la portada los mantiene arriba del todo
+ * (candado SPEC-456). La consulta vacía queda limpia e informativa.
  */
 export type ConsultaVaciaBloqueData = {
     disclaimer?: string;
@@ -22,100 +23,67 @@ export type ConsultaVaciaBloqueData = {
     acciones?: string[];
 };
 
-type ConsultaVaciaBloqueProps = {
-    bloque: ConsultaVaciaBloqueData;
-    identificador: string;
-};
-
-export function ConsultaVaciaBloque({ bloque, identificador }: ConsultaVaciaBloqueProps) {
-    const router = useRouter();
-    const [mostrarConsejos, setMostrarConsejos] = useState(false);
-
-    // El identificador consultado NO puede quedar en la URL de /reportar (spec
-    // 091-US2 / 093-US4): esta es una pantalla pública y la URL termina en el
-    // historial, en el `Referer` y en los logs. Viaja por sessionStorage, sin
-    // `fijar`: acá es un prellenado de cortesía y el usuario puede corregirlo.
-    const irAReportar = () => {
-        registrarCta();
-        dejarHandoffReportar(identificador, { fijar: false });
-        router.push("/reportar");
-    };
-
-    // Evento analítico fire-and-forget: NUNCA lleva el identificador (privacidad).
-    const registrarCta = () => {
-        fetch("/api/consulta/evento", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ evento: "consulta_vacia_cta_reportar" }),
-        }).catch(() => {
-            // Analítica best-effort: nunca bloquea la navegación al wizard.
-        });
-    };
-
-    const hayConsejos = (bloque.senales?.length ?? 0) > 0 || (bloque.acciones?.length ?? 0) > 0;
+export function ConsultaVaciaBloque({ bloque }: { bloque: ConsultaVaciaBloqueData }) {
+    const haySenales = (bloque.senales?.length ?? 0) > 0;
+    const hayAcciones = (bloque.acciones?.length ?? 0) > 0;
+    const hayTarjeta = haySenales || hayAcciones;
 
     return (
         <div className="space-y-4 text-left">
             {bloque.disclaimer && <Alerta tono="advertencia">{bloque.disclaimer}</Alerta>}
 
-            {hayConsejos && (
-                <div className="text-center">
-                    <button
-                        type="button"
-                        onClick={() => setMostrarConsejos(true)}
-                        className="text-sm font-medium text-accent underline-offset-2 transition hover:underline"
-                    >
-                        Ver señales de alerta y qué puedes hacer
-                    </button>
-                </div>
-            )}
-
-            <div className="text-center">
-                <button
-                    type="button"
-                    onClick={irAReportar}
-                    className="inline-flex rounded-xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:opacity-90"
+            {hayTarjeta && (
+                <section
+                    aria-labelledby="consulta-vacia-senales-titulo"
+                    className="overflow-hidden rounded-2xl border border-ambar/40 bg-papel shadow-lg"
                 >
-                    Reportar una conducta
-                </button>
-            </div>
+                    <div className="bg-ambar/10 px-5 py-4">
+                        <h2
+                            id="consulta-vacia-senales-titulo"
+                            className="text-base font-semibold text-tinta"
+                        >
+                            Señales de alerta y qué puedes hacer
+                        </h2>
+                        <p className="mt-1 text-sm text-muted">
+                            Información de prevención para cuidar a los menores.
+                        </p>
+                    </div>
 
-            <CanalesOficiales />
+                    <div className="space-y-5 px-5 py-5">
+                        {haySenales && (
+                            <div>
+                                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-body">
+                                    Señales de alerta a las que estar atento
+                                </h3>
+                                <ul className="space-y-2">
+                                    {bloque.senales?.map((senal) => (
+                                        <li key={senal} className="flex items-start gap-2 text-sm text-body">
+                                            <span aria-hidden="true" className="mt-0.5 text-ambar">●</span>
+                                            <span>{senal}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
-            <Modal
-                isOpen={mostrarConsejos}
-                onClose={() => setMostrarConsejos(false)}
-                title="Señales de alerta y qué puedes hacer"
-                size="md"
-            >
-                <div className="space-y-5 text-left">
-                    {bloque.senales && bloque.senales.length > 0 && (
-                        <div>
-                            <h3 className="text-sm font-semibold text-body mb-3 uppercase tracking-wide">
-                                Señales de alerta a las que estar atento
-                            </h3>
-                            <ul className="list-disc space-y-1.5 pl-5 text-sm text-body">
-                                {bloque.senales.map((senal) => (
-                                    <li key={senal}>{senal}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-
-                    {bloque.acciones && bloque.acciones.length > 0 && (
-                        <div>
-                            <h3 className="text-sm font-semibold text-body mb-3 uppercase tracking-wide">
-                                Qué puedes hacer
-                            </h3>
-                            <ul className="list-disc space-y-1.5 pl-5 text-sm text-body">
-                                {bloque.acciones.map((accion) => (
-                                    <li key={accion}>{accion}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-            </Modal>
+                        {hayAcciones && (
+                            <div>
+                                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-body">
+                                    Qué puedes hacer
+                                </h3>
+                                <ul className="space-y-2">
+                                    {bloque.acciones?.map((accion) => (
+                                        <li key={accion} className="flex items-start gap-2 text-sm text-body">
+                                            <span aria-hidden="true" className="mt-0.5 text-pino">●</span>
+                                            <span>{accion}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
         </div>
     );
 }
