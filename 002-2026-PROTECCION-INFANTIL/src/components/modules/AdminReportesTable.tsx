@@ -7,6 +7,8 @@ import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { AdminReporteDetalle } from "./AdminReporteDetalle";
 import { AdminReporteExpediente } from "./AdminReporteExpediente";
+import { ReporteDetalleSoloLectura } from "./reporte-detalle/ReporteDetalleSoloLectura";
+import type { SeccionBandeja } from "@/lib/validators";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
@@ -90,6 +92,15 @@ interface AdminReportesTableProps {
 
 const OPERADOR_ROLES = new Set(["OPERADOR", "COMITE_VALIDACION"]);
 
+const SECCIONES: { id: SeccionBandeja; label: string }[] = [
+    { id: "pendientes", label: "Pendientes" },
+    { id: "procesados", label: "Procesados" },
+];
+
+function seccionDesdeUrl(valor: string | null): SeccionBandeja {
+    return valor === "procesados" ? "procesados" : "pendientes";
+}
+
 export function AdminReportesTable({ rol }: AdminReportesTableProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -103,6 +114,11 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
     const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
     const [selectedReporteId, setSelectedReporteId] = useState<string | null>(null);
     const [expedienteReporteId, setExpedienteReporteId] = useState<string | null>(null);
+    const [soloLecturaReporteId, setSoloLecturaReporteId] = useState<string | null>(null);
+    // SPEC-595: sección activa de la bandeja (pendientes accionables / procesados solo
+    // visualización) y contadores por sección que devuelve la API.
+    const [seccion, setSeccion] = useState<SeccionBandeja>(() => seccionDesdeUrl(searchParams.get("seccion")));
+    const [secciones, setSecciones] = useState<{ pendientes: number; procesados: number } | null>(null);
 
     const [estado, setEstado] = useState(searchParams.get("estado") || "");
     const [plataformaId, setPlataformaId] = useState(searchParams.get("plataformaId") || "");
@@ -150,6 +166,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
             if (padre.trim()) params.set("padre", padre.trim());
             if (operadorId) params.set("operadorId", operadorId);
             params.set("orden", orden);
+            params.set("seccion", seccion);
             params.set("pageSize", pageSize);
             params.set("page", String(page));
             Object.entries(override).forEach(([k, v]) => {
@@ -158,7 +175,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
             });
             return params.toString();
         },
-        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q, padre, orden, operadorId]
+        [estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, pageSize, page, q, padre, orden, operadorId, seccion]
     );
 
     const fetchReportes = useCallback(async () => {
@@ -175,6 +192,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
             setError("");
             setReportes(json.reportes || []);
             setPagination(json.pagination);
+            setSecciones(json.secciones ?? null);
         } catch {
             setError("Error cargando reportes");
         } finally {
@@ -188,6 +206,12 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
 
     const applyFilters = () => {
         router.push(`${pathname}?${buildQueryString({ page: "1" })}`);
+    };
+
+    const cambiarSeccion = (nueva: SeccionBandeja) => {
+        if (nueva === seccion) return;
+        setSeccion(nueva);
+        router.push(`${pathname}?${buildQueryString({ page: "1", seccion: nueva })}`);
     };
 
     const goToPage = (newPage: number) => {
@@ -210,6 +234,36 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                 <h1 className="text-2xl font-bold text-body">Bandeja de reportes</h1>
                 <p className="text-sm text-muted">Revisar, clasificar y gestionar los reportes de la comunidad.</p>
             </div>
+
+            {/* SPEC-595: separación pendientes (accionables) / procesados (solo visualización). */}
+            <div role="tablist" aria-label="Secciones de la bandeja" className="flex gap-2 border-b border-tinta/10 pb-1">
+                {SECCIONES.map((s) => (
+                    <button
+                        key={s.id}
+                        role="tab"
+                        aria-selected={seccion === s.id}
+                        onClick={() => cambiarSeccion(s.id)}
+                        className={`px-4 py-2 text-sm font-semibold transition ${
+                            seccion === s.id
+                                ? "border-b-2 border-sky-600 text-sky-700"
+                                : "text-muted hover:text-body"
+                        }`}
+                    >
+                        {s.label}
+                        {secciones && (
+                            <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${seccion === s.id ? "bg-sky-600/10 text-sky-700" : "bg-tinta/10 text-subtle"}`}>
+                                {secciones[s.id]}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {seccion === "procesados" && (
+                <p className="text-sm text-subtle">
+                    Casos ya atendidos. Esta sección es de solo visualización: no hay acciones de clasificación ni corrección.
+                </p>
+            )}
 
             <div className="glass rounded-2xl p-4 sm:p-5">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -393,10 +447,16 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                                     <td className="px-4 py-3 text-subtle">{r.esAnonimo ? "Anónimo" : (r.usuario?.email ?? "Autenticado")}</td>
                                     <td className="px-4 py-3">
                                         <div className="flex flex-wrap gap-2">
-                                            <Button onClick={() => setSelectedReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
+                                            {/* SPEC-595: en procesados el detalle abre solo-lectura; las
+                                                acciones (clasificar, corregir, expediente) quedan en pendientes. */}
+                                            <Button
+                                                onClick={() => (seccion === "procesados" ? setSoloLecturaReporteId(r.id) : setSelectedReporteId(r.id))}
+                                                variant="outline"
+                                                className="py-2 px-3 text-xs"
+                                            >
                                                     Ver detalle
                                             </Button>
-                                            {!esRolConBandejaPropia && (
+                                            {!esRolConBandejaPropia && seccion !== "procesados" && (
                                                 <Button onClick={() => setExpedienteReporteId(r.id)} variant="outline" className="py-2 px-3 text-xs">
                                                     Ver proceso
                                                 </Button>
@@ -438,6 +498,13 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                 <AdminReporteExpediente
                     reporteId={expedienteReporteId}
                     onClose={() => setExpedienteReporteId(null)}
+                />
+            )}
+
+            {soloLecturaReporteId && (
+                <ReporteDetalleSoloLectura
+                    reporteId={soloLecturaReporteId}
+                    onClose={() => setSoloLecturaReporteId(null)}
                 />
             )}
         </div>

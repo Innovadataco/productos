@@ -176,6 +176,12 @@ const categoriasPermitidas = Object.values(CategoriaConducta) as [string, ...str
 export const ordenBandejaSchema = z.enum(["prioridad", "recientes", "antiguos"]).optional().default("prioridad");
 export type OrdenBandeja = z.infer<typeof ordenBandejaSchema>;
 
+// SPEC-595: secciones de la bandeja de reportes. «Pendientes» agrupa los casos
+// accionables; «Procesados» los atendidos (solo visualización en la UI). La
+// asignación de estados a cada sección vive en route.ts (`whereSeccion`).
+export const SECCIONES_BANDEJA = ["pendientes", "procesados"] as const;
+export type SeccionBandeja = (typeof SECCIONES_BANDEJA)[number];
+
 export const reportesRevisionQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
@@ -190,6 +196,9 @@ export const reportesRevisionQuerySchema = z.object({
     padre: z.string().min(3).max(120).optional(),
     q: z.string().min(3).max(120).optional(),
     orden: ordenBandejaSchema,
+    // SPEC-595: sección de la bandeja (pendientes accionables / procesados solo
+    // visualización). Default pendientes: la bandeja abre sobre el trabajo.
+    seccion: z.enum(SECCIONES_BANDEJA).optional().default("pendientes"),
 });
 
 // SPEC-181 (Tarea B): bandeja de spam con barra completa (búsqueda, estado, orden, paginación).

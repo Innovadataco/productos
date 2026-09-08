@@ -36,9 +36,16 @@ function reporteBase(overrides: Record<string, unknown> = {}) {
     };
 }
 
-function mockFetchConBandeja(reportes: unknown[], operadores: unknown[] = []) {
+function mockFetchConBandeja(reportes: unknown[], operadores: unknown[] = [], detalle: unknown = null) {
     return vi.spyOn(global, "fetch").mockImplementation(async (url) => {
         const u = String(url);
+        if (detalle && u.includes("/api/admin/reportes-revision/reporte-")) {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ reporte: detalle }),
+            } as Response;
+        }
         if (u.includes("/api/plataformas")) {
             return {
                 ok: true,
@@ -59,6 +66,7 @@ function mockFetchConBandeja(reportes: unknown[], operadores: unknown[] = []) {
                 status: 200,
                 json: async () => ({
                     reportes,
+                    secciones: { pendientes: reportes.length, procesados: 0 },
                     pagination: { page: 1, pageSize: 25, total: reportes.length, totalPages: 1 },
                 }),
             } as Response;
@@ -138,4 +146,132 @@ describe("AdminReportesTable", () => {
         });
         expect(screen.queryByLabelText("Operador")).toBeNull();
     });
+
+    // ── SPEC-595: separación pendientes / procesados ─────────────────────────
+
+    it("muestra las pestañas con contadores y abre en Pendientes por defecto", async () => {
+        mockFetchConBandeja([reporteBase()]);
+
+        render(<AdminReportesTable rol="ADMIN" />);
+
+        await waitFor(() => {
+            expect(screen.getByText("RPT-TEST001")).toBeTruthy();
+        });
+
+        const tabPendientes = screen.getByRole("tab", { name: /Pendientes/ });
+        const tabProcesados = screen.getByRole("tab", { name: /Procesados/ });
+        expect(tabPendientes.getAttribute("aria-selected")).toBe("true");
+        expect(tabProcesados.getAttribute("aria-selected")).toBe("false");
+        // La bandeja se carga sin «seccion» en la URL → default pendientes.
+        expect(pushMock).not.toHaveBeenCalled();
+    });
+
+    it("al cambiar a Procesados navega con seccion=procesados y reinicia página", async () => {
+        mockFetchConBandeja([reporteBase()]);
+
+        render(<AdminReportesTable rol="ADMIN" />);
+
+        await waitFor(() => {
+            expect(screen.getByText("RPT-TEST001")).toBeTruthy();
+        });
+
+        fireEvent.click(screen.getByRole("tab", { name: /Procesados/ }));
+
+        await waitFor(() => {
+            expect(pushMock).toHaveBeenCalled();
+        });
+        const url = pushMock.mock.calls[0][0] as string;
+        expect(url).toContain("seccion=procesados");
+        expect(url).toContain("page=1");
+    });
+
+    it("en Procesados no ofrece «Ver proceso» y solo permite «Ver detalle» solo-lectura", async () => {
+        // El detalle solo-lectura hace su propio fetch; se sirve con `detalle`.
+        mockFetchConBandeja([reporteBase({ estado: "CORREGIDO" })], [], detalleProcesado());
+
+        searchParams = new URLSearchParams("seccion=procesados");
+        render(<AdminReportesTable rol="ADMIN" />);
+
+        await waitFor(() => {
+            expect(screen.getByText("RPT-TEST001")).toBeTruthy();
+        });
+
+        // Aviso de solo visualización y sin acción «Ver proceso».
+        expect(screen.getByText(/solo visualización/i)).toBeTruthy();
+        expect(screen.queryByText("Ver proceso")).toBeNull();
+
+        fireEvent.click(screen.getByText("Ver detalle"));
+
+        // El modal solo-lectura abre con su título y la estructura de campos.
+        await waitFor(() => {
+            expect(screen.getByText("Detalle del reporte — solo visualización")).toBeTruthy();
+        });
+        expect(screen.getByText("RPT-PROCES01")).toBeTruthy();
+        expect(screen.getByText("Clasificación IA")).toBeTruthy();
+        expect(screen.getByText("Historial de intentos de procesamiento")).toBeTruthy();
+        // Sin acciones del detalle editable.
+        expect(screen.queryByText("Confirmar clasificación")).toBeNull();
+        expect(screen.queryByText(/Revelar original/i)).toBeNull();
+    });
+
+    it("en Pendientes mantiene «Ver proceso» y no muestra el aviso de solo visualización", async () => {
+        mockFetchConBandeja([reporteBase()]);
+
+        render(<AdminReportesTable rol="ADMIN" />);
+
+        await waitFor(() => {
+            expect(screen.getByText("RPT-TEST001")).toBeTruthy();
+        });
+
+        expect(screen.getByText("Ver proceso")).toBeTruthy();
+        expect(screen.queryByText(/solo visualización/i)).toBeNull();
+    });
 });
+
+function detalleProcesado() {
+    return {
+        id: "reporte-123",
+        identificador: "+57300TEST000",
+        numeroSeguimiento: "RPT-PROCES01",
+        estado: "CORREGIDO",
+        esAnonimo: false,
+        prioridadAlta: false,
+        keywordsDetectadas: [],
+        esRafaga: false,
+        eliminado: false,
+        motivoBaja: null,
+        notaBaja: null,
+        eliminadoEn: null,
+        creadoEn: "2026-07-10T10:00:00Z",
+        fechaIncidente: "2026-07-10T10:00:00Z",
+        ciudad: "Bogotá",
+        pais: "Colombia",
+        plataforma: { nombre: "WhatsApp", clave: "whatsapp" },
+        texto: "Texto anonimizado del reporte.",
+        clasificacion: {
+            categoria: "CONTACTO_INSISTENTE",
+            confianza: 0.8,
+            contienePii: false,
+            piiDetectada: [],
+            modeloUsado: "ornith:9b",
+            latenciaMs: 1200,
+            categoriasSecundarias: [],
+            posibleAgresorPar: false,
+            correccion: {
+                categoriaOriginal: "CONTACTO_INSISTENTE",
+                categoriaCorregida: "CONTACTO_INSISTENTE",
+                motivo: null,
+                creadoEn: "2026-07-10T11:00:00Z",
+            },
+        },
+        reintentos: [
+            {
+                id: "reintento-1",
+                intento: 1,
+                exitoso: true,
+                error: null,
+                creadoEn: "2026-07-10T10:05:00Z",
+            },
+        ],
+    };
+}

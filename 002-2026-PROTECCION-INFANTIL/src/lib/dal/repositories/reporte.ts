@@ -225,6 +225,11 @@ export class ReporteRepository {
         ]);
     }
 
+    /** SPEC-595: conteo para los totales por sección de la bandeja (mismos filtros, sin sección). */
+    contarBandejaRevision(where: Prisma.ReporteWhereInput): Promise<number> {
+        return this.db.reporte.count({ where });
+    }
+
     /** E-8: detalle de revisión con reintentos y corrección (select exacto de la ruta). */
     findDetalleRevision(id: string) {
         return this.db.reporte.findUnique({
