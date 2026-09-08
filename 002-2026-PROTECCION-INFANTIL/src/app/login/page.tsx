@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Alerta } from "@/components/ui/Alerta";
 import { homeParaRol } from "@/lib/auth/home-para-rol";
+import { BotonContinuaConGoogle } from "@/components/modules/BotonContinuaConGoogle";
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -51,6 +52,9 @@ export default function LoginPage() {
 
                 <GlassCard>
                     <LoginForm onLogin={handleLogin} />
+                    <div className="mt-4">
+                        <BotonContinuaConGoogle />
+                    </div>
                     {error && (
                         <Alerta tono="error" className="mt-4 text-center">
                             {error}
