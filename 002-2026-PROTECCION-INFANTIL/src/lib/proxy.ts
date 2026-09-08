@@ -34,6 +34,11 @@ const PROFESIONAL_ROUTES = [
     "/dashboard/profesional",
     // Verificación + ficha (SPEC-424).
     "/perfil-profesional",
+    // SPEC-584 (Fase 3): canje del código temporal de acceso al texto del reporte
+    // (el profesional canjea el código que le pasa el padre) y su pantalla. Los
+    // handlers validan rol y estado del código por separado.
+    "/api/reportes/acceso",
+    "/canjear-acceso",
     // Superficie API del rol: /api/profesional/{panel,perfil,autorizacion,
     // solicitudes,verificacion,franjas}. Cada handler valida rol PROFESIONAL
     // por separado; esta línea impide que otro rol siquiera llegue al handler
@@ -124,6 +129,15 @@ function isProfesionalRoute(pathname: string): boolean {
     return PROFESIONAL_ROUTES.some((route) => matchesRoute(pathname, route));
 }
 
+// SPEC-584 (Fase 3): canje del código temporal — el padre TAMBIÉN puede canjear
+// (decisión 4 del dueño: profesional o el mismo padre), así que estas rutas se
+// eximen del candado bidireccional «área exclusiva del profesional».
+const RUTAS_CANJE_COMPARTIDAS = ["/api/reportes/acceso", "/canjear-acceso"];
+
+function esRutaCanjeCompartida(pathname: string): boolean {
+    return RUTAS_CANJE_COMPARTIDAS.some((route) => matchesRoute(pathname, route));
+}
+
 /**
  * SPEC-426 (A-75 · orden CEO 23:0x) · lista blanca del PROFESIONAL.
  *
@@ -197,6 +211,8 @@ export function esDestinoPermitidoPorRol(rol: string | null | undefined, pathnam
     // 403 en vez de volver a lo suyo. Lección I-299: cada rol vuelve a su área,
     // nunca a un error. Se cierran las áreas exclusivas del resto de roles.
     if (pathname.startsWith("/dashboard/admin") || pathname.startsWith("/api/admin")) return false;
+    // SPEC-584: el canje del código es compartido padre/profesional (decisión 4).
+    if (esRutaCanjeCompartida(pathname)) return true;
     if (isProfesionalRoute(pathname)) return false;
     if (isColegioRoute(pathname)) return false;
     if (isComiteConvivenciaRoute(pathname)) return false;
@@ -347,6 +363,8 @@ async function proxyCore(request: NextRequest) {
     // error. Redirigimos al padre a `/dashboard/padre` cuando pisa el área de
     // otro rol (colegio, comité, profesional). En APIs devolvemos 403 JSON.
     if (rol === "PARENT") {
+        // SPEC-584: el canje del código es compartido con el profesional (decisión 4).
+        if (esRutaCanjeCompartida(pathname)) return NextResponse.next();
         const enAreaDeOtroRol =
             isProfesionalRoute(pathname) ||
             isColegioRoute(pathname) ||
