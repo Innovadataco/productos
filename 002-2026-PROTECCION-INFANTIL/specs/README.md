@@ -444,6 +444,7 @@
 | [597](597-oauth-sin-selector/spec.md) | SPEC-597 · Quitar selector de cuenta del OAuth de Google | 🟢 IMPLEMENTADO |
 | [598](598-crear-password-oauth/spec.md) | SPEC-598 · «Crear contraseña» para cuentas Google (sin contraseña local) | 🟢 IMPLEMENTADO |
 | [599](599-registro-hijos-wizard/spec.md) | SPEC-599 · Wizard de registro de hijo con círculo de confianza vivo | 🟢 IMPLEMENTADO |
+| [600](600-middleware-src/spec.md) | SPEC-600 · middleware.ts en `src/` (Next no lo autodetectaba en la raíz) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

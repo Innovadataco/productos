@@ -22,6 +22,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/middleware-auth-screens.candado.test.ts",
     // SPEC-572 (loop-cap · residual de Datos): urlSinMarcaRebote borra solo `_rv`, preserva el resto.
     "src/lib/routing/marca-rebote-url.test.ts",
+    // SPEC-600: con App Router en src/, Next solo autodetecta src/middleware.ts — la raíz queda inerte.
+    "src/middleware-ubicacion.candado.test.ts",
     // SPEC-416 (I-118): fuente única de "titular del dato" y "con camino guiado".
     "src/lib/routing/roles-titulares.test.ts",
     // SPEC-598: códigos de email con propósito (step-up vs crear contraseña) no se reciclan.
