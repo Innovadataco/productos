@@ -607,6 +607,14 @@ model Usuario {
   // email: si el padre edita su email (ahora puede, SPEC-590), el próximo login
   // con Google sigue encontrando LA MISMA cuenta en vez de duplicarla.
   googleSub                   String?          @unique
+  // SPEC-598: cuándo se creó la contraseña LOCAL actual. Las cuentas OAuth
+  // (SPEC-587) nacen con un hash aleatorio (no es una clave elegida por el
+  // dueño), así que el criterio «tiene contraseña propia» NO puede ser
+  // «passwordHash existe» — es «googleSub == null O passwordCreadaEn != null».
+  // Se escribe en registrar/completarRegistro/cambiarPassword/restablecerPassword
+  // y en crearPassword (SPEC-598). null en cuentas OAuth sin clave propia:
+  // ahí el menú ofrece «Crear contraseña» en vez de «Cambiar contraseña».
+  passwordCreadaEn            DateTime?
   nombre                      String?
   // SPEC-334: datos de perfil del padre (aditivos, nullable). "Nombres" = `nombre`.
   apellidos                   String?

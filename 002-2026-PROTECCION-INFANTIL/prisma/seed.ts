@@ -2045,6 +2045,18 @@ async function seedAccesoCifradoTextos() {
         "{{codigo}}\n\n" +
         "El código vence en {{vigenciaMinutos}} minutos. Si no lo solicitaste, ignora este correo.";
 
+    // SPEC-598: código temporal para «Crear contraseña» en cuentas OAuth sin
+    // clave local. El correo ES el factor de posesión; sin regla activa la
+    // solicitud falla (fail-closed, mismo patrón que padre.stepup.codigo).
+    const eventoCrearPasswordCodigo = "auth.crear_password.codigo";
+    const asuntoCrearPasswordCodigo = "Tu código para crear tu contraseña";
+    const cuerpoCrearPasswordCodigoEmail =
+        "Hola,\n\n" +
+        "Este es el código para crear la contraseña de tu cuenta:\n\n" +
+        "{{codigo}}\n\n" +
+        "El código vence en {{vigenciaMinutos}} minutos. Si no lo solicitaste, ignora este correo " +
+        "y tu cuenta seguirá entrando con Google.";
+
     const plantillas: Array<{
         clave: string;
         canal: "EMAIL" | "IN_APP";
@@ -2078,6 +2090,13 @@ async function seedAccesoCifradoTextos() {
             canal: "EMAIL",
             asunto: asuntoStepupCodigo,
             cuerpoMarkdown: cuerpoStepupCodigoEmail,
+            variables: { codigo: { type: "string" }, vigenciaMinutos: { type: "number" } },
+        },
+        {
+            clave: `${eventoCrearPasswordCodigo}.email`,
+            canal: "EMAIL",
+            asunto: asuntoCrearPasswordCodigo,
+            cuerpoMarkdown: cuerpoCrearPasswordCodigoEmail,
             variables: { codigo: { type: "string" }, vigenciaMinutos: { type: "number" } },
         },
     ];
@@ -2130,6 +2149,14 @@ async function seedAccesoCifradoTextos() {
         rol: "PARENT",
         canal: "EMAIL",
         plantillaClave: `${eventoStepupCodigo}.email`,
+        obligatoria: true,
+        activa: true,
+    });
+    await upsertNotificacionRegla({
+        evento: eventoCrearPasswordCodigo,
+        rol: "PARENT",
+        canal: "EMAIL",
+        plantillaClave: `${eventoCrearPasswordCodigo}.email`,
         obligatoria: true,
         activa: true,
     });

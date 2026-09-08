@@ -20,7 +20,10 @@ vi.mock("@/lib/contexts/AuthContext", () => ({
 
 import { useAuth } from "@/lib/contexts/AuthContext";
 
-function mockAuth(user: { id: string; email: string; nombre: string; rol: string } | null, isLoading = false) {
+function mockAuth(
+    user: { id: string; email: string; nombre: string; rol: string; googleSub?: string | null; passwordCreadaEn?: string | null } | null,
+    isLoading = false
+) {
     (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
         user,
         isLoading,
@@ -192,6 +195,37 @@ describe("NavHeader", () => {
                 expect(container.querySelector('[data-estado="calma"]')).not.toBeNull();
             });
             expect(fetchMock).not.toHaveBeenCalledWith("/api/notificaciones/resumen", expect.anything());
+        });
+    });
+
+    // SPEC-598: cuentas OAuth sin contraseña local ven «Crear contraseña»; el
+    // resto ve «Cambiar contraseña». Mismo destino (/cambiar-password), la
+    // página decide el flujo según la sesión.
+    describe("SPEC-598 · «Crear contraseña» solo en cuentas OAuth sin clave local", () => {
+        function abrirMenu(user: { googleSub?: string | null; passwordCreadaEn?: string | null }) {
+            mockAuth({ id: "u1", email: "padre@test.com", nombre: "Padre", rol: "PARENT", ...user });
+            render(<NavHeader />);
+            const toggle = screen.getByText("Padre").closest("button");
+            if (toggle) fireEvent.click(toggle);
+        }
+
+        it("OAuth sin contraseña propia: «Crear contraseña» apuntando a /cambiar-password", () => {
+            abrirMenu({ googleSub: "sub-google", passwordCreadaEn: null });
+            const enlace = screen.getByText("Crear contraseña").closest("a");
+            expect(enlace?.getAttribute("href")).toBe("/cambiar-password");
+            expect(screen.queryByText("Cambiar contraseña")).toBeNull();
+        });
+
+        it("OAuth que YA creó contraseña: «Cambiar contraseña» (regresión al caso normal)", () => {
+            abrirMenu({ googleSub: "sub-google", passwordCreadaEn: "2026-09-08T00:00:00.000Z" });
+            expect(screen.getByText("Cambiar contraseña").closest("a")?.getAttribute("href")).toBe("/cambiar-password");
+            expect(screen.queryByText("Crear contraseña")).toBeNull();
+        });
+
+        it("cuenta de email+contraseña: «Cambiar contraseña»", () => {
+            abrirMenu({ googleSub: null, passwordCreadaEn: "2026-09-01T00:00:00.000Z" });
+            expect(screen.getByText("Cambiar contraseña")).not.toBeNull();
+            expect(screen.queryByText("Crear contraseña")).toBeNull();
         });
     });
 });
