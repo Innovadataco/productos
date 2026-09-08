@@ -431,10 +431,12 @@
 | [494](494-mueble-skeleton/spec.md) | SPEC-494 · El mueble Skeleton: matar el spinner de página (§4.8) | 🟢 IMPLEMENTADO |
 | [495](495-residual-slate-chrome/spec.md) | SPEC-495 · El slate que sobrevivió a tres barridos (y el candado que no miraba el chrome) | 🟢 IMPLEMENTADO |
 | [496](496-profesional-modulo-gatea/spec.md) | SPEC-496 · El interruptor que aparenta revocar y no revoca (`profesional_*` solo-NAV) | 🟢 IMPLEMENTADO |
+| [584](584-acceso-cifrado-textos/spec.md) | SPEC-584 · Control de acceso auditado al texto cifrado del reporte (Fases 2 y 3) | 🟡 DESARROLLO |
 | [587](587-oauth-google/spec.md) | SPEC-587 · «Continúa con Google» (OAuth 2.0 web flow, flujo PADRE) | 🟡 DESARROLLO |
 | [589](589-hijo-sin-documento/spec.md) | SPEC-589 · Quitar el documento de la ficha del hijo (DROP de columnas, decisión CEO) | 🟢 IMPLEMENTADO |
 | [590](590-perfil-email-auditoria/spec.md) | SPEC-590 · Perfil del padre: email editable + historial de cambios (decisión CEO) | 🟢 IMPLEMENTADO |
-| [591](591-reportar-atado-a-hijo/spec.md) | SPEC-591 · Reportar atado a hijo/familiar (padre autenticado, decisión CEO) | 🟢 IMPLEMENTADO |
+| [591](591-reportar-atado-a-hijo/spec.md) | SPEC-591 · Reportar atado a hijo/familiar (decisión CEO) | 🟢 IMPLEMENTADO |
+| [593](593-padre-refresh-cadenas/spec.md) | SPEC-593 · Panel del padre: clasificación sin refresh + rediseño de «Otros reportes» | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
