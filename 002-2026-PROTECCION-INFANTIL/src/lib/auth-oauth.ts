@@ -89,7 +89,11 @@ export function callbackUriDe(request: Request): string {
     return new URL("/api/auth/oauth/google/callback", request.url).toString();
 }
 
-/** Auth URL de Google (scope openid email profile · prompt select_account). */
+/**
+ * Auth URL de Google (scope openid email profile · sin `prompt`). SPEC-597:
+ * omitir `prompt=select_account` para que Google use la sesión recordada y
+ * entre directo cuando ya hay consentimiento previo.
+ */
 export function buildGoogleAuthUrl(state: string, redirectUri: string): string {
     const params = new URLSearchParams({
         client_id: requireEnv("GOOGLE_CLIENT_ID"),
@@ -97,7 +101,6 @@ export function buildGoogleAuthUrl(state: string, redirectUri: string): string {
         response_type: "code",
         scope: "openid email profile",
         state,
-        prompt: "select_account",
     });
     return `${AUTH_URL}?${params.toString()}`;
 }
