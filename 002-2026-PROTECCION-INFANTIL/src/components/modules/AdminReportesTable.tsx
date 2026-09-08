@@ -245,13 +245,13 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                         onClick={() => cambiarSeccion(s.id)}
                         className={`px-4 py-2 text-sm font-semibold transition ${
                             seccion === s.id
-                                ? "border-b-2 border-sky-600 text-sky-700"
+                                ? "border-b-2 border-cielo-600 text-cielo-700"
                                 : "text-muted hover:text-body"
                         }`}
                     >
                         {s.label}
                         {secciones && (
-                            <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${seccion === s.id ? "bg-sky-600/10 text-sky-700" : "bg-tinta/10 text-subtle"}`}>
+                            <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${seccion === s.id ? "bg-cielo-600/10 text-cielo-700" : "bg-tinta/10 text-subtle"}`}>
                                 {secciones[s.id]}
                             </span>
                         )}
