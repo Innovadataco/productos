@@ -76,3 +76,19 @@ export async function enviarAlertaHijoReporte(payload: {
         throw new Error("Sin reglas activas para padre.hijo.reporte");
     }
 }
+
+/**
+ * SPEC-590 (decisión CEO 06-09): aviso de seguridad al correo NUEVO cuando el
+ * padre cambia su email desde «Mi perfil». Va al buzón nuevo (el viejo pudo
+ * dejar de ser suyo); si el envío falla, la ruta lo registra en log y NO
+ * revierte el cambio.
+ */
+export async function enviarAvisoCambioEmail(email: string): Promise<void> {
+    const result = await programar({
+        evento: "padre.perfil.email_cambiado",
+        destinatarios: [{ email, variables: { urlLogin: `${baseUrl()}/login` } }],
+    });
+    if (result.programadas === 0) {
+        throw new Error("Sin reglas activas para padre.perfil.email_cambiado");
+    }
+}

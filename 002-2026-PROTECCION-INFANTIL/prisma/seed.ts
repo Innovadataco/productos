@@ -1047,6 +1047,16 @@ async function seedEventosEmailMigrados() {
             },
         },
         {
+            // SPEC-590 (decisión CEO 06-09): aviso de seguridad al correo NUEVO
+            // cuando el padre cambia su email desde «Mi perfil». Obligatoria — es
+            // un correo de seguridad, no marketing.
+            clave: "padre.perfil.email_cambiado.email",
+            asunto: "Tu correo de Protección Infantil cambió",
+            cuerpoMarkdown:
+                "Hola,\n\nEl correo de tu cuenta de Protección Infantil cambió a este buzón. Si fuiste tú, no tienes que hacer nada.\n\nSi NO fuiste tú, escríbenos de inmediato respondiendo a este correo.\n\nEntra a tu cuenta:\n{{urlLogin}}",
+            variablesSchema: { type: "object", properties: { urlLogin: { type: "string" } } },
+        },
+        {
             clave: "colegio.reporte_nuevo.email",
             asunto: "Te avisamos: tienes un reporte nuevo para revisar",
             cuerpoMarkdown:
@@ -1195,6 +1205,8 @@ async function seedEventosEmailMigrados() {
         // interruptor (notificacionesHijos), independiente del círculo.
         { evento: "padre.hijo.reporte", plantillaClave: "padre.hijo.reporte.email", rol: "PARENT", obligatoria: false },
         { evento: "padre.circulo_confianza.reporte_enriquecido", plantillaClave: "padre.circulo_confianza.reporte_enriquecido.email", rol: "PARENT", obligatoria: false },
+        // SPEC-590: correo de seguridad al cambiar el email del perfil. Obligatoria.
+        { evento: "padre.perfil.email_cambiado", plantillaClave: "padre.perfil.email_cambiado.email", rol: "PARENT", obligatoria: true },
         { evento: "colegio.reporte_nuevo", plantillaClave: "colegio.reporte_nuevo.email", rol: "SCHOOL_ADMIN", obligatoria: false },
         { evento: "colegio.curso.umbral", plantillaClave: "colegio.curso.umbral.email", rol: "SCHOOL_ADMIN", obligatoria: false },
         { evento: "colegio.estudiante.repetido", plantillaClave: "colegio.estudiante.repetido.email", rol: "SCHOOL_ADMIN", obligatoria: false },

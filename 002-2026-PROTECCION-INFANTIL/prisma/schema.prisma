@@ -382,6 +382,10 @@ enum AccionAudit {
   // texto del reporte (solicitud por el padre dueño + canje por profesional/padre).
   CODIGO_ACCESO_SOLICITADO
   CODIGO_ACCESO_CANJEADO
+  // SPEC-590: cada cambio de campo del perfil del padre (PATCH /api/padre/perfil)
+  // escribe una fila con {campo, anterior→nuevo}. Es la fuente del «Historial de
+  // cambios» de «Mi perfil» (decisión CEO 06-09-2026).
+  PERFIL_CAMBIO
 }
 
 enum TipoPeriodoServicio {
@@ -598,6 +602,11 @@ enum TipoPatronExpediente {
 model Usuario {
   id                          String           @id @default(cuid())
   email                       String           @unique
+  // SPEC-590: sub de Google para cuentas que entraron por «Continúa con Google»
+  // (SPEC-587). La resolución OAuth busca PRIMERO por este sub y DESPUÉS por
+  // email: si el padre edita su email (ahora puede, SPEC-590), el próximo login
+  // con Google sigue encontrando LA MISMA cuenta en vez de duplicarla.
+  googleSub                   String?          @unique
   nombre                      String?
   // SPEC-334: datos de perfil del padre (aditivos, nullable). "Nombres" = `nombre`.
   apellidos                   String?
