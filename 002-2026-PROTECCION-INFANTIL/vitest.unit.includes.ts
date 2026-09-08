@@ -18,6 +18,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/http/sesion-refresh-interceptor.test.ts",
     // SPEC-572 (I-236): cerrojo fail-closed — sin cookie sesion_estado, los 3 muros + /api/** cierran.
     "src/lib/routing/middleware-fail-closed.candado.test.ts",
+    // SPEC-588 (vivo con el OAuth 06-09): pantallas de auth con sesión válida mandan al home del rol.
+    "src/lib/routing/middleware-auth-screens.candado.test.ts",
     // SPEC-572 (loop-cap · residual de Datos): urlSinMarcaRebote borra solo `_rv`, preserva el resto.
     "src/lib/routing/marca-rebote-url.test.ts",
     // SPEC-416 (I-118): fuente única de "titular del dato" y "con camino guiado".

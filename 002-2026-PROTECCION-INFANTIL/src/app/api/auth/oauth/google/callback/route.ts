@@ -10,8 +10,9 @@
  *   aleatorio imposible de adivinar ES la ausencia de clave local) + AuditLog.
  * - Existe con OTRO rol → login igual: es su cuenta, el rol manda.
  *
- * Destino: homeParaRol (fuente única SPEC-319); la cuenta nueva sella además la
- * cookie sesion_estado para caer directo en el Paso 1, como /registro/completar.
+ * Destino: homeParaRol (fuente única SPEC-319) para cuentas existentes;
+ * la cuenta NUEVA va directo a /consentimiento (Paso 1, SPEC-588) y sella
+ * además la cookie sesion_estado, como /registro/completar.
  */
 import { NextResponse } from "next/server";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -117,8 +118,16 @@ export async function GET(request: Request) {
 
         // El origen público sale de NEXT_PUBLIC_APP_URL: request.url refleja el
         // host interno del contenedor (0.0.0.0:3000) detrás del reverse proxy.
+        // SPEC-588: la cuenta NUEVA aterriza DIRECTO en /consentimiento (Paso 1
+        // del camino), no en homeParaRol: /consentimiento es pública y valida el
+        // token en la página, así el Paso 1 funciona con o sin la cookie
+        // sesion_estado que se sella abajo. Antes el hop por /dashboard/padre
+        // dependía de esa cookie en el middleware; si el re-sellado fallaba, el
+        // loop-cap (SPEC-572) terminaba en /login?mensaje=sesion mostrando el
+        // formulario de login a un usuario recién autenticado (visto en vivo).
         const origen = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
-        const res = NextResponse.redirect(new URL(homeParaRol(usuario.rol), origen), 302);
+        const destino = esNuevo ? "/consentimiento" : homeParaRol(usuario.rol);
+        const res = NextResponse.redirect(new URL(destino, origen), 302);
         // El state es de un solo uso: se borra con los mismos atributos.
         res.cookies.set(OAUTH_STATE_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
 
