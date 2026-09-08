@@ -46,6 +46,8 @@
 - [x] T040 · `spec.md` + `plan.md` + `tasks.md` — `specs/584-acceso-cifrado-textos/`
 - [x] T041 · Entrada en `specs/README.md`
 - [x] T042 · Regenerar artefactos arch si hay drift (01-modelo-datos) y dejar `arch:check` verde
-- [ ] T043 · Compuertas: tsc, lint, test:unit, tests integración nuevos, build,
-      arch:check, indices:check
-- [ ] T044 · Commits locales (español, staging solo `002-2026-PROTECCION-INFANTIL/...`)
+- [x] T043 · Compuertas: tsc, lint, test:unit, tests integración nuevos, build,
+      arch:check, indices:check (todas verdes: tsc 0 err, lint 0 err,
+      suite completa 3026 passed/1 skipped, build OK, arch:check VERDE,
+      índices 5/5)
+- [x] T044 · Commits locales (español, staging solo `002-2026-PROTECCION-INFANTIL/...`)
