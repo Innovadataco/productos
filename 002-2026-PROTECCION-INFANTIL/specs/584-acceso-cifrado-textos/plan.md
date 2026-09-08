@@ -84,7 +84,7 @@ interna y jamás sale por la vía externa.
 | GET | `/api/admin/reportes/[id]/accesos-texto` | ADMIN/OPERADOR/COMITE (caso) | Historial de accesos al texto |
 | POST | `/api/reportes/[id]/solicitar-acceso` | PARENT dueño | Genera código (201 `{codigo, vigenteHasta}`) |
 | POST | `/api/reportes/acceso/canjar` | PARENT/PROFESIONAL | Canjea (`{tokenSesion, expiraEn, reporteId}`; 404/409/410) |
-| GET | `/api/reportes/acceso/ver?token=` | PARENT/PROFESIONAL + sesión | Texto de trabajo (`{texto, expiraEn}`; 410 vencida) |
+| GET | `/api/reportes/acceso/ver` (query `token`) | PARENT/PROFESIONAL + sesión | Texto de trabajo (`{texto, expiraEn}`; 410 vencida) |
 
 Eventos Motor Notif (seed aditivo `seedAccesoCifradoTextos`):
 `padre.reporte.texto_leido` (email+in_app), `padre.reporte.acceso_codigo` (email),
