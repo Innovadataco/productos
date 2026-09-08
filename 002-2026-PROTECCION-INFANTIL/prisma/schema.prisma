@@ -1919,6 +1919,13 @@ model Reporte {
   esAnonimo                  Boolean            @default(true)
   edadVictima                Int?
   usuarioId                  String?
+  // SPEC-591 (decisión CEO 06-09): el reporte del padre AUTENTICADO va atado a
+  // una ficha «A quién protego» (Hijo) activa — «el padre autenticado solo
+  // puede reportar situaciones de sus hijos». El anónimo jamás lleva vínculo.
+  // SetNull: el reporte es EVIDENCIA — si el padre borra/inactiva la ficha, el
+  // reporte sobrevive desvinculado; una acción sobre la lista del padre no puede
+  // destruir la evidencia que ya existía.
+  hijoId                     String?
   // SPEC-295 (002-PI-196 · I-146): rol del origen del reporte. NULL para
   // anónimos (histórico y nuevos). "PARENT" cuando el padre autenticado
   // reporta desde /dashboard/padre/reportar. Fase 2 puede migrar a enum.
@@ -1960,6 +1967,9 @@ model Reporte {
   embedding                EmbeddingReporte?
   fuente                   FuenteReporte?
   tenant                   Tenant?             @relation(fields: [tenantId], references: [id])
+  // SPEC-591: ficha «A quién protego» a la que va dirigido (solo reportes del
+  // padre autenticado; el anónimo nunca tiene). SetNull: ver nota en `hijoId`.
+  hijo                     Hijo?               @relation(fields: [hijoId], references: [id], onDelete: SetNull)
   paisRel                  Pais?               @relation(fields: [paisId], references: [id])
   ciudadRel                Ciudad?             @relation(fields: [ciudadId], references: [id])
   transiciones             TransicionReporte[]
@@ -1992,6 +2002,7 @@ model Reporte {
   @@index([identificador, plataformaId])
   @@index([estado])
   @@index([usuarioId, identificador])
+  @@index([hijoId])
   @@index([creadoEn])
   @@index([numeroSeguimiento])
   @@index([paisId])
@@ -2420,6 +2431,9 @@ model Hijo {
   actualizadoEn   DateTime @updatedAt
 
   usuario         Usuario             @relation("HijosDelPadre", fields: [usuarioId], references: [id], onDelete: Cascade)
+  // SPEC-591: reportes del padre atados a esta ficha (SetNull del lado reporte:
+  // borrar/inactivar la ficha nunca destruye la evidencia).
+  reportes        Reporte[]
   identificadores IdentificadorHijo[]
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   padres          HijoPadre[]

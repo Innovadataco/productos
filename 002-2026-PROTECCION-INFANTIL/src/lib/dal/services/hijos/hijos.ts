@@ -99,6 +99,20 @@ export async function registrarHijo(usuarioId: string, data: RegistrarHijoInput)
 }
 
 /**
+ * SPEC-591: ficha del padre para atar un reporte (POST /api/reportes). Regla
+ * del módulo: un `hijoId` nunca se consulta sin acotar por el `usuarioId` del
+ * padre — si no existe o no es suya, el resultado es el mismo `null` (la ruta
+ * responde 403 sin distinguir, para no enumerar fichas ajenas). El estado se
+ * devuelve y lo valida la ruta (mensaje distinto para ficha inactiva).
+ */
+export async function obtenerHijoDePadre(hijoId: string, usuarioId: string) {
+    return prisma.hijo.findFirst({
+        where: { id: hijoId, usuarioId },
+        select: { id: true, estado: true },
+    });
+}
+
+/**
  * Lista los menores de ESTE padre.
  *
  * SPEC-339 (D-4): se acota por `Hijo.usuarioId`. Ya no hace falta filtrar los

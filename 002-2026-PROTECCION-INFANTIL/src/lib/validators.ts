@@ -61,6 +61,10 @@ export const crearReporteSchema = z.object({
     otraPlataforma: z.string().max(100).optional(),
     edadVictima: z.number().int().min(0).max(120).optional(),
     reportePrevioId: z.string().min(1).optional(),
+    // SPEC-591 (decisión CEO 06-09): vínculo a la ficha «A quién protego» del
+    // padre autenticado. Obligatorio para el padre con sesión, prohibido para
+    // el anónimo — la obligatoriedad la impone la ruta (conoce la sesión).
+    hijoId: z.string().min(1).optional(),
 });
 
 export type CrearReporteInput = z.infer<typeof crearReporteSchema>;

@@ -45,6 +45,11 @@ function categoriasDeSecundarias(value: unknown): string[] {
     return cats;
 }
 
+/** SPEC-591: nombre completo de la ficha a la que va dirigido el reporte. */
+function nombreHijo(hijo: { nombre: string; apellidos: string } | null): string | null {
+    return hijo ? `${hijo.nombre} ${hijo.apellidos}`.trim() : null;
+}
+
 export class ReporteQueryService {
     private readonly reportes: ReporteRepository;
     private readonly identificadores: IdentificadorReportadoRepository;
@@ -114,6 +119,7 @@ export class ReporteQueryService {
                             }
                             : null,
                     ranking,
+                    hijoNombre: nombreHijo(r.hijo),
                 };
             })
         );
@@ -252,6 +258,7 @@ export class ReporteQueryService {
             estadoVisual: estadoUsuario.estadoVisual,
             badge: estadoUsuario.badge,
             enProceso: estadoUsuario.enProceso,
+            hijoNombre: nombreHijo(reporte.hijo),
         };
 
         const clasificacion = reporte.clasificacion;

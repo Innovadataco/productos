@@ -2,6 +2,7 @@
 export {
     registrarHijo,
     listarHijos,
+    obtenerHijoDePadre,
     actualizarHijo,
     desvincularIdentificador,
     cambiarEstadoHijo,

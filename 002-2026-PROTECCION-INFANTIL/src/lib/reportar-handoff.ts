@@ -67,6 +67,8 @@ const LLAVE_BORRADOR = "pi:borrador-reporte";
 
 /** Campos del borrador — el mismo shape que el wizard, todos opcionales. */
 export type BorradorReporte = Partial<{
+    // SPEC-591: ficha elegida en el paso «¿A quién va dirigido?» (modo autenticado).
+    hijoId: string;
     identificador: string;
     plataforma: string;
     otraPlataforma: string;

@@ -29,6 +29,8 @@ interface EventoCadena {
     analisisIa: AnalisisIaDto | null;
     ficha: FichaHechoDto;
     esPrincipal: boolean;
+    /** SPEC-591: ficha a la que va dirigido este evento (null si no aplica). */
+    hijoNombre: string | null;
 }
 
 interface OtroReporte {
@@ -178,6 +180,7 @@ export function MisReportesCadenas() {
                                             {fechaHoraSinMinutos(ev.fechaIncidente)}
                                             {ev.esPrincipal ? " · el primero" : ""}
                                             {ev.categoriaLabel ? ` · ${ev.categoriaLabel}` : ""}
+                                            {ev.hijoNombre ? ` · dirigido a ${ev.hijoNombre}` : ""}
                                         </p>
                                         <div className="mt-2">
                                             <TextoSensible reporteId={ev.id} retapadoMinutos={retapadoMinutos} />

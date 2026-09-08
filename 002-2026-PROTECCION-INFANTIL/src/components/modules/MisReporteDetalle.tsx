@@ -21,6 +21,8 @@ interface DetalleReporte {
     estadoVisual: string;
     badge: BadgeVisual;
     enProceso: boolean;
+    /** SPEC-591: ficha a la que va dirigido (null si no aplica). */
+    hijoNombre?: string | null;
 }
 
 interface ConductaConfirmada {
@@ -120,6 +122,9 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
                         <p className="mt-0.5 text-xs text-subtle">
                             Reportado el {new Date(reporte.creadoEn).toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
                         </p>
+                        {reporte.hijoNombre ? (
+                            <p className="mt-0.5 text-xs text-subtle">Dirigido a {reporte.hijoNombre}</p>
+                        ) : null}
                     </div>
                     <span className={estadoBadgeClass(reporte.badge)}>{reporte.estadoVisual}</span>
                 </div>
