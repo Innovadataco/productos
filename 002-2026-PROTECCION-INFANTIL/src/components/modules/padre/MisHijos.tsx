@@ -6,6 +6,12 @@
 // de padre (A-62): esto NO es vigilancia, es cuidar a los tuyos.
 // SPEC-589: la ficha del menor ya NO pide documento (decisión CEO 06-09-2026).
 //
+// SPEC-599: el ALTA pasa de formulario plano a wizard (RegistroHijoWizard),
+// aprobado sobre el mockup design/padre-hijos-registro-mockup.html. La lógica
+// de negocio no cambia: validaciones (documento-menor), alta múltiple de
+// identificadores y payload del POST intactos. Este archivo conserva la carga
+// de datos, el contador de cupo y las acciones de las tarjetas existentes.
+//
 // SPEC-325 (extensión UI) · el alta acepta VARIOS identificadores y cada tarjeta
 // expone las cuatro acciones del backend, que NO son equivalentes:
 //   · activar/inactivar HIJO ....... estado del hijo (`cambiarEstadoHijo`).
@@ -18,33 +24,11 @@
 // nombra el alcance en el texto visible, no solo en el aria-label.
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
-import {
-    validarEdadMenor,
-    anioDesdeEdad,
-    edadDesdeAnio,
-    edadesMenor,
-} from "@/lib/padre/documento-menor";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { Badge } from "@/components/ui/Badge";
-import { BitacoraMenor } from "./BitacoraMenor";
 
 // SPEC-539: la tarjeta del menor, sus tipos y catálogos viven en HijoCard.tsx
 // (MisHijos.tsx superaba el máximo de líneas al sumar la edición inline).
-import { HijoCard, SEXOS, type Hijo, type Plataforma } from "./HijoCard";
-
-/** Identificador aún no guardado: se acumula en el formulario de alta. */
-type IdentificadorNuevo = { valor: string; plataformaId: string };
-
-const FORM_VACIO = {
-    nombre: "",
-    apellidos: "",
-    // SPEC-361 (F8): se pide la EDAD; el año de nacimiento se deriva de ella.
-    edad: "",
-    sexo: "",
-};
+import { HijoCard, type Hijo, type Plataforma } from "./HijoCard";
+import { RegistroHijoWizard } from "./registro-hijo/RegistroHijoWizard";
 
 /**
  * SPEC-339: `onListaCambio` avisa al Paso 3 del camino cuántos menores activos
@@ -60,12 +44,6 @@ export function MisHijos({
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [form, setForm] = useState(FORM_VACIO);
-    // Identificadores del alta: se agregan a una lista ANTES de crear al hijo,
-    // así el padre carga todos los que conoce (Roblox, teléfono, correo) de una.
-    const [nuevos, setNuevos] = useState<IdentificadorNuevo[]>([]);
-    const [borrador, setBorrador] = useState<IdentificadorNuevo>({ valor: "", plataformaId: "" });
-    const [guardando, setGuardando] = useState(false);
 
     // SPEC-361 (F5/F6): el cupo se mide SOLO con los activos. Inactivar es
     // decisión del padre y libera lugar solo; el producto nunca inactiva.
@@ -92,7 +70,7 @@ export function MisHijos({
         // puede registrar el identificador "suelto" (plataformaId null).
         fetch("/api/plataformas")
             .then((res) => (res.ok ? res.json() : { plataformas: [] }))
-            .then((json) => setPlataformas(json.plataformas ?? []))
+            .then((json: { plataformas?: Plataforma[] }) => setPlataformas(json.plataformas ?? []))
             .catch(() => setPlataformas([]));
     }, []);
 
@@ -107,79 +85,6 @@ export function MisHijos({
         { value: "", label: "Elige una plataforma" },
         ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
     ];
-
-    function agregarBorrador() {
-        const valor = borrador.valor.trim();
-        if (!valor) return;
-        setNuevos((lista) => [...lista, { valor, plataformaId: borrador.plataformaId }]);
-        setBorrador({ valor: "", plataformaId: "" });
-    }
-
-    async function registrar(e: React.FormEvent) {
-        e.preventDefault();
-        // SPEC-362 (A-70 · F4, hallazgo de Dev PI-1): el formulario dejaba enviar
-        // sin apellidos y el servidor respondía 400. Los apellidos son
-        // obligatorios desde SPEC-339 (FR-019) porque salen en el expediente y
-        // en los informes: se avisa acá, nombrando el campo, antes de enviar.
-        if (!form.nombre.trim()) {
-            setError("Escribe el nombre del menor.");
-            return;
-        }
-        if (!form.apellidos.trim()) {
-            setError("Escribe los apellidos del menor.");
-            return;
-        }
-
-        // SPEC-361 (F8): avisar ANTES de enviar, nombrando el campo. El
-        // servidor vuelve a validar: esto es cortesía, no la única defensa.
-        const edadNum = form.edad ? Number(form.edad) : null;
-        const errorEdad = validarEdadMenor(edadNum);
-        if (errorEdad) {
-            setError(errorEdad);
-            return;
-        }
-
-        setGuardando(true);
-        setError(null);
-        // El identificador escrito pero no "agregado" no se pierde: entra igual.
-        const pendiente = borrador.valor.trim()
-            ? [...nuevos, { valor: borrador.valor.trim(), plataformaId: borrador.plataformaId }]
-            : nuevos;
-        try {
-            const body: Record<string, unknown> = {
-                nombre: form.nombre.trim(),
-                apellidos: form.apellidos.trim(),
-                anioNacimiento: edadNum !== null ? anioDesdeEdad(edadNum) : undefined,
-                sexo: form.sexo || undefined,
-                identificadores: pendiente.length
-                    ? pendiente.map((i) => ({
-                        valor: i.valor,
-                        ...(i.plataformaId ? { plataformaId: i.plataformaId } : {}),
-                    }))
-                    : undefined,
-            };
-            const res = await fetch("/api/padre/hijos", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-            if (!res.ok) {
-                // SPEC-361 (F4): el servidor explica el motivo (tope alcanzado,
-                // campo faltante). Antes se descartaba y la pantalla decía "No se
-                // pudo registrar" a todo.
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data?.error?.message ?? "No pudimos registrar al menor. Revisa los datos e intenta de nuevo.");
-            }
-            setForm(FORM_VACIO);
-            setNuevos([]);
-            setBorrador({ valor: "", plataformaId: "" });
-            await cargar();
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Error");
-        } finally {
-            setGuardando(false);
-        }
-    }
 
     /** Envuelve una acción del backend: limpia el error y recarga la lista. */
     async function accion(fn: () => Promise<Response>, mensajeError: string) {
@@ -292,76 +197,9 @@ export function MisHijos({
                 )}
             </header>
 
-            <GlassCard className="p-4">
-                <form onSubmit={registrar} className="space-y-3" data-testid="form-hijo">
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <Input label="Nombres" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-                        <Input label="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} required />
-                        <Select
-                            label="Edad"
-                            options={[
-                                { value: "", label: "Sin especificar" },
-                                ...edadesMenor().map((e) => ({ value: String(e), label: `${e} años` })),
-                            ]}
-                            value={form.edad}
-                            onChange={(e) => setForm({ ...form, edad: e.target.value })}
-                        />
-                        <Select label="Sexo" options={SEXOS} value={form.sexo} onChange={(e) => setForm({ ...form, sexo: e.target.value })} />
-                    </div>
-
-                    <div className="rounded-xl border border-cielo/40 p-3 dark:border-cielo/30">
-                        <p className="text-sm font-medium text-body">Sus cuentas</p>
-                        <p className="mb-2 text-xs text-muted">
-                            Agrega todos los que conozcas: su usuario de Roblox, su teléfono, su correo.
-                            Puedes sumar más después.
-                        </p>
-                        {nuevos.length > 0 && (
-                            <ul className="mb-2 flex flex-wrap gap-2" data-testid="identificadores-nuevos">
-                                {nuevos.map((i, idx) => (
-                                    <li key={`${i.valor}-${i.plataformaId}-${idx}`} className="inline-flex items-center gap-1">
-                                        <Badge>
-                                            {i.valor}
-                                            {i.plataformaId
-                                                ? ` · ${plataformas.find((p) => p.id === i.plataformaId)?.nombre ?? ""}`
-                                                : ""}
-                                        </Badge>
-                                        <button
-                                            type="button"
-                                            aria-label={`Sacar ${i.valor} de la lista`}
-                                            className="text-xs text-muted hover:text-rubi"
-                                            onClick={() => setNuevos((lista) => lista.filter((_, j) => j !== idx))}
-                                        >
-                                            ✕
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
-                            <Input
-                                label="Cuenta"
-                                placeholder="su Roblox, teléfono, correo…"
-                                value={borrador.valor}
-                                onChange={(e) => setBorrador({ ...borrador, valor: e.target.value })}
-                            />
-                            <Select
-                                label="Plataforma"
-                                options={opcionesPlataforma}
-                                value={borrador.plataformaId}
-                                onChange={(e) => setBorrador({ ...borrador, plataformaId: e.target.value })}
-                            />
-                            <Button type="button" variant="outline" onClick={agregarBorrador} disabled={!borrador.valor.trim()}>
-                                Agregar otro
-                            </Button>
-                        </div>
-                    </div>
-
-                    <Button type="submit" isLoading={guardando} disabled={guardando}>
-                        Registrar
-                    </Button>
-                </form>
-                {error && <p className="mt-2 text-sm text-rubi" data-testid="mis-hijos-error">{error}</p>}
-            </GlassCard>
+            {/* SPEC-599: el alta es un wizard aprobado sobre el mockup de diseño;
+                la lógica de negocio (POST, validaciones) vive en el orquestador. */}
+            <RegistroHijoWizard opcionesPlataforma={opcionesPlataforma} onRegistrado={cargar} />
 
             {cargando ? (
                 <p className="text-sm text-muted">Cargando…</p>
@@ -384,6 +222,7 @@ export function MisHijos({
                     ))}
                 </ul>
             )}
+            {error && <p className="text-sm text-rubi" data-testid="mis-hijos-error">{error}</p>}
         </section>
     );
 }
