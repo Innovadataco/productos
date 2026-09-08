@@ -82,13 +82,13 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         vi.unstubAllGlobals();
     });
 
-    it("cuenta NUEVA: crea PARENT con email en minúsculas, JWT, sesion_estado y AuditLog; redirige a /dashboard/padre", async () => {
+    it("cuenta NUEVA: crea PARENT con email en minúsculas, JWT, sesion_estado y AuditLog; redirige a /consentimiento (Paso 1, SPEC-588)", async () => {
         userinfo = { sub: "google-sub-nuevo", email: "Nuevo.Padre@Example.COM", email_verified: true, name: "Padre Nuevo" };
         const state = firmarState();
         const res = await GET(makeCallbackRequest("code-123", state, state));
 
         expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe("http://localhost:5005/dashboard/padre");
+        expect(res.headers.get("location")).toBe("http://localhost:5005/consentimiento");
 
         const creado = await prisma.usuario.findUnique({ where: { email: "nuevo.padre@example.com" } });
         expect(creado).not.toBeNull();
