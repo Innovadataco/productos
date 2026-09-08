@@ -735,6 +735,8 @@
 - **Numeración duplicada:** existen `02-reportes-comunitarios` y la serie `0NN` estándar (conviven por historia del repo).
 - **Clúster 085–095:** headers `FINALIZADO (pendiente ACTA → CERRADA)`; el snapshot de gestión (2026-07-29) las contó como CERRADA. Divergencia reportada a ZEUS en 002-PI-047.
 
+- **SPEC-584** · [`584-acceso-cifrado-textos`](584-acceso-cifrado-textos/) — Fases 2 y 3 del control de acceso al texto cifrado: auditoría de cada lectura (LecturaReporte, actor por AsyncLocalStorage, hash del contenido, notificación al padre dueño) + acceso externo por código temporal (CodigoAccesoContenido: 30 min/1 canje/sesión 15 min, endpoints solicitar-acceso/canjar/ver). Status: DESARROLLO.
+
 ## Convención de archivos por spec
 
 Cada spec cerrada debe contener al menos: `spec.md` (alcance), `plan.md` (plan) y `reporte-cierre.md`/`cierre.md` (evidencia de cierre, en la carpeta de la spec o en `docs/cierre-NNN.md`).

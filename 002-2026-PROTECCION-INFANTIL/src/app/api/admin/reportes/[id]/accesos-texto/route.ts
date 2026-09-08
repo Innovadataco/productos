@@ -5,18 +5,20 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, puedeGestionarReporte } from "@/lib/operadores/permisos";
-import { esEstadoCargaOperador } from "@/lib/operadores/estados";
-import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
-import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
+import { LecturaReporteRepository } from "@/lib/dal/repositories/lectura-reporte";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
+/**
+ * GET /api/admin/reportes/[id]/accesos-texto — SPEC-584 (Fase 2).
+ *
+ * «Historial de accesos al texto» del reporte: quién (usuario/rol o actor
+ * externo), cuándo y qué campo vio. Visible para ADMIN/OPERADOR/COMITE_VALIDACION
+ * con permiso sobre el caso (misma autorización fina que el detalle de revisión).
+ * Los padres NO ven este historial. Solo metadatos: nunca contenido.
+ */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth();
-        // SPEC-384 · I-278: `bandeja_reportes` (operador/admin) O
-        // `comite_bandeja` (comité) — nunca sustituir, para no romper la
-        // separación de poderes de I-274. La autorización fina por caso queda
-        // intacta más abajo (rama `comiteId`).
         await assertAnyModulo(user, ["bandeja_reportes", "comite_bandeja"]);
         if (!esAdminRol(user.rol) && user.rol !== "OPERADOR" && !esComiteRol(user.rol)) {
             return NextResponse.json(
@@ -43,23 +45,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
         const id = parsedId.data;
 
-        // E-8: las lecturas viven en el repo; la ruta no toca prisma.
         const permisosReporte = await new ReporteRepository().findPermisosRevision(id);
-
         if (!permisosReporte) {
             return NextResponse.json(
                 { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
                 { status: 404 }
             );
         }
-
         if (user.rol === "COMITE_VALIDACION" && permisosReporte.comiteId !== user.id) {
             return NextResponse.json(
                 { error: { message: "No tiene permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
                 { status: 403 }
             );
         }
-
         if (user.rol !== "COMITE_VALIDACION" && !puedeGestionarReporte(user, permisosReporte)) {
             return NextResponse.json(
                 { error: { message: "No tiene permiso para ver este caso", code: ERROR_CODES.FORBIDDEN } },
@@ -67,28 +65,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        // SPEC-584 (Fase 2): el descifrado audita la lectura con el actor del hilo ALS.
-        const reporteDetalle = await conActor(actorDesdeRequest(user, request), async () => {
-            const detalle = await new ReporteRepository().findDetalleRevision(id);
-            if (!detalle) return null;
-            // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
-            // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
-            const texto = await descifrarCampoReporte(detalle.contenidoId, "texto");
-            return { ...detalle, texto };
-        });
-
-        if (!reporteDetalle) {
-            return NextResponse.json(
-                { error: { message: "Reporte no encontrado", code: ERROR_CODES.NOT_FOUND } },
-                { status: 404 }
-            );
-        }
-
-        return NextResponse.json({
-            reporte: reporteDetalle,
-            puedeRevelarOriginal: esAdminRol(user.rol) || user.rol === "OPERADOR" || esComiteRol(user.rol),
-            puedeEscalar: (user.rol === "OPERADOR" && reporteDetalle.operador?.id === user.id && esEstadoCargaOperador(reporteDetalle.estado)) || esAdminRol(user.rol),
-        });
+        const items = await new LecturaReporteRepository().historialPorReporte(id);
+        return NextResponse.json({ items });
     } catch (error) {
         if (error instanceof AppError) {
             return NextResponse.json(error.toJSON(), { status: error.statusCode });

@@ -5,6 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { idSchema } from "@/lib/validators";
+import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 
@@ -51,8 +52,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         // S-C: el textoOriginal (evidencia inmutable) vive cifrado en ContenidoReporte; se
         // descifra por su contenidoId. Fail-loud: si la DEK murió (cripto-shred) LANZA — no
-        // muestra vacío ni el sobre crudo.
-        const textoOriginal = await descifrarCampoReporte(reporte.contenidoId, "textoOriginal");
+        // muestra vacío ni el sobre crudo. SPEC-584: la lectura queda auditada (actor ALS).
+        const textoOriginal = await conActor(actorDesdeRequest(user, request), () =>
+            descifrarCampoReporte(reporte.contenidoId, "textoOriginal")
+        );
 
         const { ipAddress, userAgent } = getClientInfo(request);
         await logAudit({
