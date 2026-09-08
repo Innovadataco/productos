@@ -19,9 +19,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
+import { CampoCorreoDominio } from "@/components/modules/CampoCorreoDominio";
 
 export default function RegistroPage() {
     const [step, setStep] = useState<"correo" | "aviso">("correo");
@@ -93,14 +93,7 @@ export default function RegistroPage() {
 
                         <GlassCard>
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                <Input
-                                    label="Tu correo"
-                                    type="email"
-                                    placeholder="tucorreo@ejemplo.com"
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
+                                <CampoCorreoDominio label="Tu correo" value={email} onChange={setEmail} />
                                 {error && (
                                     <Alerta tono="advertencia" className="text-center">
                                         {error}

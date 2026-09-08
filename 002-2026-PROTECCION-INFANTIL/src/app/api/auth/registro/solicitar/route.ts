@@ -14,11 +14,21 @@ import { logger } from "@/lib/logger";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { registroSolicitarSchema } from "@/lib/validators";
+import { sugerirDominioCorreo } from "@/lib/email-typo";
 import { enviarEnlaceRegistro, enviarEmailCuentaExistente } from "@/lib/email";
 import { RegistroEnlaceService } from "@/lib/dal/services/registro-enlace";
 
 // Contrato del frontend (registro/page.tsx). NUNCA cambia según exista el correo.
 const MENSAJE_EXITO = "Si el correo es válido, te enviamos un enlace para crear tu contraseña.";
+
+/** 3003: extrae el email del body crudo (sin `any`) para poder sugerir el dominio. */
+function extraerEmail(raw: unknown): string {
+    if (raw && typeof raw === "object" && "email" in raw) {
+        const valor = (raw as { email: unknown }).email;
+        return typeof valor === "string" ? valor : "";
+    }
+    return "";
+}
 
 function maskEmail(email: string): string {
     return email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
@@ -29,8 +39,15 @@ export async function POST(request: Request) {
         const bodyRaw = await request.json().catch(() => undefined);
         const parsed = registroSolicitarSchema.safeParse(bodyRaw);
         if (!parsed.success) {
+            // 3003: ante dominio mal escrito devolvemos la sugerencia (gmaail.com → gmail.com).
+            const mensaje = parsed.error.issues[0]?.message ?? "Email inválido";
+            const emailRaw = extraerEmail(bodyRaw);
+            const sugerencia = sugerirDominioCorreo(emailRaw);
             return NextResponse.json(
-                { error: { message: "Email inválido", code: ERROR_CODES.VALIDATION_ERROR } },
+                {
+                    error: { message: mensaje, code: ERROR_CODES.VALIDATION_ERROR },
+                    ...(sugerencia ? { sugerencia } : {}),
+                },
                 { status: 400 }
             );
         }
