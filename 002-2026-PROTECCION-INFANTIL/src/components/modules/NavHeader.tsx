@@ -306,10 +306,12 @@ export function NavHeader() {
                                             </>
                                         )}
                                         <hr className="my-1 border-tinta/10" />
-                                        {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible para TODOS los roles */}
+                                        {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible para TODOS los roles.
+                                            SPEC-598: en cuentas OAuth sin contraseña local la entrada dice «Crear contraseña»
+                                            (el flujo no pide la actual y verifica por código de un solo uso al correo). */}
                                         {esEnlaceNavegable("/cambiar-password") && (
                                             <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
-                                                Cambiar contraseña
+                                                {user.googleSub && !user.passwordCreadaEn ? "Crear contraseña" : "Cambiar contraseña"}
                                             </NavDropdownLink>
                                         )}
                                         <button

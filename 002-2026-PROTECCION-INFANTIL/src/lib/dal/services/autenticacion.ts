@@ -134,6 +134,7 @@ export class AutenticacionService {
             email,
             nombre: input.nombre || null,
             passwordHash: await hashPassword(input.password),
+            passwordCreadaEn: new Date(),
             rol: input.rol as never,
             tenantId: input.tenantId || null,
         });
@@ -154,7 +155,40 @@ export class AutenticacionService {
         }
 
         const hash = await hashPassword(input.passwordNueva);
-        await this.usuarios.actualizar(input.usuarioId, { passwordHash: hash, debeCambiarPassword: false });
+        await this.usuarios.actualizar(input.usuarioId, {
+            passwordHash: hash,
+            passwordCreadaEn: new Date(),
+            debeCambiarPassword: false,
+        });
+        return { ok: true };
+    }
+
+    /**
+     * SPEC-598 — POST /api/auth/crear-password: primera contraseña local de una
+     * cuenta OAuth (googleSub != null, sin passwordCreadaEn). NO pide contraseña
+     * actual: la verificación de posesión la hace el código de un solo uso que la
+     * ruta valida antes de llamar acá. La cuenta queda con AMBOS métodos
+     * (Google + email/contraseña).
+     */
+    async crearPassword(input: {
+        usuarioId: string;
+        passwordNueva: string;
+        googleSub: string | null;
+        passwordCreadaEn: Date | null;
+    }): Promise<ResultadoCambioPassword> {
+        if (input.googleSub === null) {
+            return { ok: false, tipo: "incorrecta" };
+        }
+        if (input.passwordCreadaEn !== null) {
+            return { ok: false, tipo: "incorrecta" };
+        }
+
+        const hash = await hashPassword(input.passwordNueva);
+        await this.usuarios.actualizar(input.usuarioId, {
+            passwordHash: hash,
+            passwordCreadaEn: new Date(),
+            debeCambiarPassword: false,
+        });
         return { ok: true };
     }
 
@@ -236,6 +270,9 @@ export class AutenticacionService {
                 // al guard de /cambiar-password (que pide contraseña actual). Simetría con
                 // cambiarPassword() (:157), que ya lo limpia.
                 debeCambiarPassword: false,
+                // SPEC-598: el reset por email crea una clave local propia — también en
+                // cuentas OAuth, que desde aquí pueden usar «Cambiar contraseña» normal.
+                passwordCreadaEn: new Date(),
             });
             await new TokenRecuperacionRepository(tx).marcarUsado(tokenId);
         });
@@ -305,6 +342,7 @@ export class AutenticacionService {
             email,
             nombre: nombre || null,
             passwordHash: await hashPassword(password),
+            passwordCreadaEn: new Date(),
             rol: "PARENT",
         });
 

@@ -2,7 +2,17 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-type User = { id: string; email: string; nombre: string; rol: string; debeCambiarPassword?: boolean };
+type User = {
+    id: string;
+    email: string;
+    nombre: string;
+    rol: string;
+    debeCambiarPassword?: boolean;
+    // SPEC-598: cuenta OAuth (Google) y si ya creó contraseña local. Con
+    // googleSub y sin passwordCreadaEn, el menú ofrece «Crear contraseña».
+    googleSub?: string | null;
+    passwordCreadaEn?: string | null;
+};
 
 type AuthCtx = {
     user: User | null;

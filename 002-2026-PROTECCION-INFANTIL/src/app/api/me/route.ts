@@ -12,6 +12,10 @@ export async function GET() {
             rol: user.rol,
             tenantId: user.tenantId,
             debeCambiarPassword: user.debeCambiarPassword,
+            // SPEC-598: el cliente decide si ofrece «Crear contraseña» (cuenta
+            // OAuth sin clave local) o «Cambiar contraseña».
+            googleSub: user.googleSub,
+            passwordCreadaEn: user.passwordCreadaEn,
         });
     } catch (error) {
         if (error instanceof AppError) {
