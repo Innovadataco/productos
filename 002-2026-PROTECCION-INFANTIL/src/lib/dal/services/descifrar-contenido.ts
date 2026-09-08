@@ -51,9 +51,26 @@ async function resolverDuenos(contenidoIds: string[]): Promise<Map<string, Dueno
     return duenos;
 }
 
+/**
+ * SPEC-592 (2026-09-08): el RENDER de una pantalla NO es una acción de lectura.
+ * `registrarLecturaTexto` acepta `{ registrarLectura: false }` para los caminos
+ * donde el texto acompaña la vista pero el dueño no hizo clic en «Revelar» ni en
+ * «Ver texto» (p. ej. el detalle de la bandeja admin). La auditoría (y el aviso
+ * al padre) quedan reservadas para las acciones explícitas.
+ */
+export interface OpcionesDescifrado {
+    /** Default true. false = no escribir fila en LecturaReporte (render, no acción). */
+    registrarLectura?: boolean;
+}
+
 /** Descifra UN campo ("texto" | "textoOriginal") de un contenido, con el singleton de Prisma. */
-export async function descifrarCampoReporte(contenidoId: string, campo: CampoContenido): Promise<string> {
+export async function descifrarCampoReporte(
+    contenidoId: string,
+    campo: CampoContenido,
+    opciones: OpcionesDescifrado = {}
+): Promise<string> {
     const texto = await descifrarCampo(prisma, contenidoId, campo);
+    if (opciones.registrarLectura === false) return texto;
     const duenos = await resolverDuenos([contenidoId]);
     await registrarLecturaTexto(contenidoId, campo, texto, duenos.get(contenidoId) ?? {});
     return texto;
