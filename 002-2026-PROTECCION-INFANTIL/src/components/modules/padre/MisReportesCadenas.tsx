@@ -6,8 +6,9 @@
  * UNA tarjeta por cadena: nick + plataforma, clasificación dominante, cantidad
  * de eventos, fecha del último; acordeón cronológico con «Ver análisis», texto
  * tapado y «Agregar otro evento» (campos fijos — el sistema ya sabe sobre qué
- * está parado); «Otros reportes» blindados; y el botón Crear/Ver expediente.
- * Voz del mockup en tuteo. «Nada se cierra: puedes volver cuando lo necesites.»
+ * está parado); «Otros reportes sobre este identificador» (SPEC-593: tarjeta con
+ * contador prominente, eventos con fecha/lugar/clasificación en badges y nota de
+ * privacidad; se retira el copy motivacional del mockup); y Crear/Ver expediente.
  */
 import { fechaHoraSinMinutos } from "@/lib/format/fecha";
 import { useCallback, useEffect, useState } from "react";
@@ -215,40 +216,66 @@ export function MisReportesCadenas() {
                                     </Button>
                                 )}
 
-                                <section>
-                                    <h4 className="text-sm font-medium text-body">Otros reportes</h4>
+                                <section
+                                    aria-label="Otros reportes sobre este identificador"
+                                    className="rounded-xl border border-tinta/10 bg-papel/80 p-3 dark:border-papel/10 dark:bg-tinta/60"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h4 className="text-sm font-medium text-body">
+                                            Otros reportes sobre este identificador
+                                        </h4>
+                                        {cadena.otrosReportes.length > 0 && (
+                                            <span className="rounded-full bg-cielo/10 px-2.5 py-0.5 text-xs font-semibold text-estado-cielo">
+                                                {cadena.otrosReportes.length === 1
+                                                    ? "1 persona más"
+                                                    : `${cadena.otrosReportes.length} personas más`}
+                                            </span>
+                                        )}
+                                    </div>
                                     {cadena.otrosReportes.length === 0 ? (
-                                        <p className="mt-1 text-sm text-muted">Sin otros reportes por ahora.</p>
+                                        <p className="mt-2 text-sm text-muted">Sin otros reportes por ahora.</p>
                                     ) : (
                                         <>
-                                            <p className="mt-1 text-sm text-muted">
-                                                No estás solo: {cadena.otrosReportes.length}{" "}
-                                                {cadena.otrosReportes.length === 1 ? "persona más reportó" : "personas más reportaron"}{" "}
-                                                a {cadena.identificador}.
+                                            <p className="mt-2 text-sm text-muted">
+                                                {cadena.otrosReportes.length === 1 ? (
+                                                    <>
+                                                        Una persona más reportó a{" "}
+                                                        <strong className="text-body">{cadena.identificador}</strong>.
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <strong className="text-body">
+                                                            {cadena.otrosReportes.length} personas más
+                                                        </strong>{" "}
+                                                        reportaron a <strong className="text-body">{cadena.identificador}</strong>.
+                                                    </>
+                                                )}
                                             </p>
-                                            <ul className="mt-2 space-y-1">
+                                            <ul className="mt-3 space-y-2">
                                                 {cadena.otrosReportes.map((o) => (
-                                                    <li key={o.id} className="text-sm text-muted">
-                                                        {fmtFechaHora.format(new Date(o.creadoEn))}
-                                                        {o.ciudad ? ` · ${o.ciudad}` : ""}
-                                                        {o.categoriaLabel ? ` · ${o.categoriaLabel}` : ""}
-                                                        {" · "}
-                                                        <span className="text-xs">{o.esAnonimo ? "anónimo" : "otro padre"}</span>
+                                                    <li
+                                                        key={o.id}
+                                                        className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+                                                    >
+                                                        <span className="text-muted">
+                                                            {fmtFechaHora.format(new Date(o.creadoEn))}
+                                                        </span>
+                                                        {o.ciudad ? <span className="text-muted">· {o.ciudad}</span> : null}
+                                                        {o.categoriaLabel ? (
+                                                            <span className="rounded-full bg-tinta/5 px-2 py-0.5 text-xs font-medium text-body dark:bg-papel/10">
+                                                                {o.categoriaLabel}
+                                                            </span>
+                                                        ) : null}
                                                     </li>
                                                 ))}
                                             </ul>
-                                            <p className="mt-1 text-xs text-muted">
+                                            <p className="mt-3 text-xs text-subtle">
                                                 Por privacidad, de otros reportes solo ves fecha, lugar y clasificación —
                                                 nunca el texto ni quién reportó.
                                             </p>
                                         </>
                                     )}
                                 </section>
-
-                                <p className="text-xs text-muted">
-                                    Cada evento que agregas fortalece tu expediente. Nada se cierra: puedes volver
-                                    cuando lo necesites.
-                                </p>
                             </div>
                         )}
                     </article>

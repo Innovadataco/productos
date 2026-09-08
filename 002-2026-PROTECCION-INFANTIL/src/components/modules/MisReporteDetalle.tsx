@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -51,6 +51,12 @@ function estadoBadgeClass(badge: BadgeVisual): string {
     }
 }
 
+// SPEC-593: el reporte se procesa en segundo plano (cola + worker). Mientras el
+// estado sea pendiente/procesando, esta vista lo refresca sola cada 15 s —
+// el mismo ritmo del polling de AnalisisExpediente (SPEC-341, R-7) — y corta
+// al llegar a un estado final, así el padre no tiene que salir y volver a entrar.
+const INTERVALO_POLLING_MS = 15_000;
+
 /**
  * Detalle PRIVADO de un reporte del usuario (spec 090 US3; vista rehecha en
  * spec 116). El padre ve SOLO tres cosas: qué conductas se identificaron
@@ -63,25 +69,67 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
     const router = useRouter();
     const [data, setData] = useState<DetalleResponse | null>(null);
     const [error, setError] = useState("");
-    const [loading, setLoading] = useState(true);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Espejo de `data` para consultas dentro de callbacks sin re-crearlos
+    // (un fallo de polling solo setea error cuando aún no hay nada en pantalla).
+    const dataRef = useRef<DetalleResponse | null>(null);
+    // push vive en un ref para que `cargar` sea estable entre renders: si
+    // dependiera del objeto router, cada render lo re-crearía y el efecto de
+    // carga (y el polling) se re-dispararían en cadena.
+    const pushRef = useRef<(href: string) => void>(() => {});
+    useEffect(() => {
+        pushRef.current = router.push;
+    }, [router]);
+
+    const cargar = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/reportes/mis-reportes/${encodeURIComponent(reporteId)}`, {
+                credentials: "include",
+            });
+            if (res.status === 401) {
+                pushRef.current("/login");
+                return;
+            }
+            if (res.status === 403) throw new Error("Este reporte pertenece a otro usuario.");
+            if (res.status === 404) throw new Error("No encontramos este reporte.");
+            if (!res.ok) throw new Error("Error al cargar el detalle del reporte");
+            const json = (await res.json()) as DetalleResponse;
+            dataRef.current = json;
+            setError("");
+            setData(json);
+        } catch (err) {
+            // Un fallo de refresco (polling) no borra lo que ya se está mostrando:
+            // solo surfaceamos error cuando aún no hay datos.
+            if (dataRef.current === null) {
+                setError(err instanceof Error ? err.message : "Error");
+            }
+        }
+    }, [reporteId]);
 
     useEffect(() => {
-        setLoading(true);
-        setError("");
-        fetch(`/api/reportes/mis-reportes/${encodeURIComponent(reporteId)}`, { credentials: "include" })
-            .then(async (res) => {
-                if (res.status === 401) {
-                    router.push("/login");
-                    return;
-                }
-                if (res.status === 403) throw new Error("Este reporte pertenece a otro usuario.");
-                if (res.status === 404) throw new Error("No encontramos este reporte.");
-                if (!res.ok) throw new Error("Error al cargar el detalle del reporte");
-                setData(await res.json());
-            })
-            .catch((err) => setError(err instanceof Error ? err.message : "Error"))
-            .finally(() => setLoading(false));
-    }, [reporteId, router]);
+        void cargar();
+    }, [cargar]);
+
+    // SPEC-593: polling ligero SOLO mientras el reporte está en procesamiento;
+    // al llegar a estado final (enProceso false) se corta el interval. La
+    // limpieza garantiza que no haya setState ni fetches tras el desmontaje.
+    useEffect(() => {
+        if (data?.reporte.enProceso) {
+            timerRef.current = setInterval(() => void cargar(), INTERVALO_POLLING_MS);
+            return () => {
+                if (timerRef.current) clearInterval(timerRef.current);
+                timerRef.current = null;
+            };
+        }
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+        return undefined;
+    }, [data?.reporte.enProceso, cargar]);
+
+    // El estado de carga es derivado: mientras no hay datos ni error, cargamos.
+    const loading = data === null && error === "";
 
     if (loading) {
         return (
@@ -144,11 +192,24 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
             </GlassCard>
 
             {!clasificacion ? (
-                <GlassCard className="p-6">
-                    <p className="text-sm text-muted">
-                        Tu reporte aún está en proceso. Cuando termine la revisión, aquí verás qué conductas se
-                        identificaron y qué puedes hacer.
-                    </p>
+                <GlassCard className="p-6" aria-live="polite">
+                    {reporte.enProceso ? (
+                        <>
+                            <p className="flex items-center gap-2 text-sm font-medium text-body">
+                                <span aria-hidden="true" className="inline-block h-2 w-2 animate-pulse rounded-full bg-ambar" />
+                                Estamos procesando tu reporte
+                            </p>
+                            <p className="mt-2 text-sm text-muted">
+                                La revisión está en curso y esta pantalla se actualiza sola — no necesitas salir y volver
+                                a entrar. Cuando termine, aquí verás qué conductas se identificaron y qué puedes hacer.
+                            </p>
+                        </>
+                    ) : (
+                        <p className="text-sm text-muted">
+                            Tu reporte aún está en proceso. Cuando termine la revisión, aquí verás qué conductas se
+                            identificaron y qué puedes hacer.
+                        </p>
+                    )}
                 </GlassCard>
             ) : (
                 <GlassCard className="p-6">
