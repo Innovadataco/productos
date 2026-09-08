@@ -115,7 +115,10 @@ export async function GET(request: Request) {
         });
         await setSessionCookie(request, token);
 
-        const res = NextResponse.redirect(new URL(homeParaRol(usuario.rol), request.url), 302);
+        // El origen público sale de NEXT_PUBLIC_APP_URL: request.url refleja el
+        // host interno del contenedor (0.0.0.0:3000) detrás del reverse proxy.
+        const origen = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+        const res = NextResponse.redirect(new URL(homeParaRol(usuario.rol), origen), 302);
         // El state es de un solo uso: se borra con los mismos atributos.
         res.cookies.set(OAUTH_STATE_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
 
