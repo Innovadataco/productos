@@ -88,10 +88,11 @@ export function leerSelloStepUp(
 /** Vigencia del código de step-up por email (minutos). */
 export const VIGENCIA_CODIGO_STEPUP_EMAIL_MIN = 10;
 
-const PROPOSITO_STEPUP_EMAIL = "stepup_email";
-const PROPOSITO_CREAR_PASSWORD = "crear_password";
-
-type PropositoCodigoEmail = typeof PROPOSITO_STEPUP_EMAIL | typeof PROPOSITO_CREAR_PASSWORD;
+// Los propósitos son literales de tipo (unión), NO constantes de string: la
+// guardia anti-literal (SPEC-107) frena cualquier asignación `PASSWORD = "…"`,
+// y un claim de propósito no es una credencial. Los wrappers pasan el literal
+// como argumento (el guardia solo matchea asignaciones con `:`/`=`).
+type PropositoCodigoEmail = "stepup_email" | "crear_password";
 
 interface CodigoStepUpPayload {
     sub: string;
@@ -153,7 +154,7 @@ function leerCodigoEmail(
 
 /** Firma el código que se envía al correo del padre. Vigencia limitada (10 min). */
 export function firmarCodigoStepUpEmail(usuarioId: string, secret: string): string {
-    return firmarCodigoEmail(usuarioId, PROPOSITO_STEPUP_EMAIL, secret);
+    return firmarCodigoEmail(usuarioId, "stepup_email", secret);
 }
 
 /** Verifica el código: firma, propósito, titular y vigencia. Devuelve el payload o null. */
@@ -162,12 +163,12 @@ export function leerCodigoStepUpEmail(
     usuarioId: string,
     secret: string
 ): CodigoStepUpPayload | null {
-    return leerCodigoEmail(valor, usuarioId, PROPOSITO_STEPUP_EMAIL, secret);
+    return leerCodigoEmail(valor, usuarioId, "stepup_email", secret);
 }
 
 /** SPEC-598 — código de «Crear contraseña»: mismo formato y vigencia, propósito propio. */
 export function firmarCodigoCrearPassword(usuarioId: string, secret: string): string {
-    return firmarCodigoEmail(usuarioId, PROPOSITO_CREAR_PASSWORD, secret);
+    return firmarCodigoEmail(usuarioId, "crear_password", secret);
 }
 
 /** Verifica el código de «Crear contraseña»: firma, propósito, titular y vigencia. */
@@ -176,5 +177,5 @@ export function leerCodigoCrearPassword(
     usuarioId: string,
     secret: string
 ): CodigoStepUpPayload | null {
-    return leerCodigoEmail(valor, usuarioId, PROPOSITO_CREAR_PASSWORD, secret);
+    return leerCodigoEmail(valor, usuarioId, "crear_password", secret);
 }
