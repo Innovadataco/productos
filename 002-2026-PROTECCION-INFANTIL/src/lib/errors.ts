@@ -6,6 +6,8 @@ export const ERROR_CODES = {
     VALIDATION_ERROR: "VALIDATION_ERROR",
     CONFLICT: "CONFLICT",
     RATE_LIMITED: "RATE_LIMITED",
+    // SPEC-587: fallo de un proveedor externo (OAuth de Google) — 502.
+    BAD_GATEWAY: "BAD_GATEWAY",
     INTERNAL_ERROR: "INTERNAL_ERROR",
     SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
 } as const;
