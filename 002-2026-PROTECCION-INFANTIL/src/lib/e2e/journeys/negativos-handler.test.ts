@@ -178,6 +178,10 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
         sesionEnJar(padreA.token);
 
         // A reporta autenticado por el camino real
+        // SPEC-591: el padre autenticado reporta siempre atado a una ficha activa.
+        const hijoA = await prisma.hijo.create({
+            data: { usuarioId: padreA.usuarioId, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+        });
         const { POST: reportesPOST } = await import("@/app/api/reportes/route");
         const resReporte = await reportesPOST(
             new Request("http://localhost:5005/api/reportes", {
@@ -190,6 +194,7 @@ describe(`SPEC-133 · negativos a nivel handler (ciclo ${CICLO})`, { timeout: 30
                     fechaIncidente: "2026-07-21T10:00:00Z",
                     ciudad: "Bogotá",
                     pais: "Colombia",
+                    hijoId: hijoA.id,
                 }),
             })
         );

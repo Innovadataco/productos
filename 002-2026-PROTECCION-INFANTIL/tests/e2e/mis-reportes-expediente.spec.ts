@@ -41,11 +41,14 @@ async function crearPadreCompleto(email: string) {
             consentimientoVersion: version?.valor ?? "1.0",
         },
     });
-    await prisma.hijo.create({
+    // SPEC-591: el reporte autenticado del padre EXIGE una ficha activa de
+    // «A quién protego» — el setup ya la crea; solo falta devolver su id.
+    const hijo = await prisma.hijo.create({
         data: {
             usuarioId: padre.id,
             nombre: "Menor",
             apellidos: "Del Hilo",
+            estado: "activo",
         },
     });
     const admin = await prisma.usuario.findFirst({ where: { rol: "ADMIN" } });
@@ -65,7 +68,7 @@ async function crearPadreCompleto(email: string) {
         });
     }
     void admin;
-    return padre;
+    return { padre, hijoId: hijo.id };
 }
 
 async function login(page: Page, email: string) {
@@ -73,7 +76,7 @@ async function login(page: Page, email: string) {
     expect(res.status()).toBe(200);
 }
 
-async function reportar(page: Page, identificador: string) {
+async function reportar(page: Page, identificador: string, hijoId: string) {
     const res = await page.request.post("/api/reportes", {
         data: {
             identificador,
@@ -82,6 +85,8 @@ async function reportar(page: Page, identificador: string) {
             fechaIncidente: "2026-08-25T21:30:00Z",
             ciudad: "Bogotá",
             pais: "Colombia",
+            // SPEC-591: el reporte autenticado del padre va atado a una ficha activa.
+            hijoId,
         },
     });
     expect(res.status()).toBe(201);
@@ -91,9 +96,9 @@ async function reportar(page: Page, identificador: string) {
 test.describe("SPEC-340 · Mis reportes y el expediente", () => {
     test("la tarjeta de la cadena: contadores, evento con campos fijos y texto tapado", async ({ page }) => {
         const email = emailUnico();
-        const padre = await crearPadreCompleto(email);
+        const { padre, hijoId } = await crearPadreCompleto(email);
         await login(page, email);
-        const r1 = await reportar(page, `+5730055${Date.now() % 100000}`);
+        const r1 = await reportar(page, `+5730055${Date.now() % 100000}`, hijoId);
 
         // Evento por la ruta con herencia.
         const resEv = await page.request.post(`/api/reportes/${r1}/evento`, {
@@ -116,9 +121,9 @@ test.describe("SPEC-340 · Mis reportes y el expediente", () => {
 
     test("el expediente nace del botón y muestra la historia + informes", async ({ page }) => {
         const email = emailUnico();
-        await crearPadreCompleto(email);
+        const { hijoId } = await crearPadreCompleto(email);
         await login(page, email);
-        const r1 = await reportar(page, `+5730066${Date.now() % 100000}`);
+        const r1 = await reportar(page, `+5730066${Date.now() % 100000}`, hijoId);
 
         // Crear por API (el botón llama esto mismo) y abrir la ventana.
         const resExp = await page.request.post("/api/padre/expedientes", { data: { reportePrincipalId: r1 } });
@@ -150,9 +155,9 @@ test.describe("SPEC-340 · Mis reportes y el expediente", () => {
 
     test("390px: sin desborde horizontal en Mis reportes ni en el expediente", async ({ page }) => {
         const email = emailUnico();
-        await crearPadreCompleto(email);
+        const { hijoId } = await crearPadreCompleto(email);
         await login(page, email);
-        const r1 = await reportar(page, `+5730077${Date.now() % 100000}`);
+        const r1 = await reportar(page, `+5730077${Date.now() % 100000}`, hijoId);
         const { expedienteId } = await (await page.request.post("/api/padre/expedientes", { data: { reportePrincipalId: r1 } })).json();
 
         for (const ruta of ["/mis-reportes", `/dashboard/padre/expedientes/${expedienteId}`]) {

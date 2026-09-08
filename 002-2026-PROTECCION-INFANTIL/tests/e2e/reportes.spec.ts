@@ -83,6 +83,14 @@ test.describe("Flujo de reportes comunitarios", () => {
         const email = `e2e-parent-${Date.now()}@example.com`;
         await registrarUsuario(request, email, "TestPass123", "Parent E2E");
 
+        // SPEC-591: el reporte autenticado del padre EXIGE una ficha activa de
+        // «A quién protego» — se crea por API y viaja en hijoId.
+        const ficha = await request.post("/api/padre/hijos", {
+            data: { nombre: "Menor", apellidos: "E2E Dup" },
+        });
+        expect(ficha.status()).toBe(201);
+        const { id: hijoId } = await ficha.json();
+
         const { paisId, ciudadId } = await obtenerColombiaBogota(request);
         const identificador = `+57300DUP${Date.now()}`;
 
@@ -95,6 +103,7 @@ test.describe("Flujo de reportes comunitarios", () => {
             pais: "Colombia",
             paisId,
             ciudadId,
+            hijoId,
         };
 
         const primer = await request.post("/api/reportes", { data: body });
