@@ -2012,17 +2012,9 @@ async function seedEjecucionAcciones() {
 // Tres eventos del Motor Notif. Idempotente (upsert por clave + upsertNotificacionRegla,
 // patrón SPEC-247). Los textos NUNCA viajan en estas notificaciones: solo metadatos.
 async function seedAccesoCifradoTextos() {
-    const eventoLeido = "padre.reporte.texto_leido";
-    const asuntoLeido = "Aviso de lectura de tu reporte";
-    const cuerpoLeidoEmail =
-        "Hola,\n\n" +
-        "Te avisamos que un miembro de nuestro equipo ({{rolLector}}) leyó el {{campo}} de tu reporte sobre " +
-        "{{identificador}} el {{fechaLectura}}.\n\n" +
-        "Cada acceso queda registrado y puedes solicitar los detalles de las lecturas de tus reportes " +
-        "ejerciendo tu derecho de habeas data (Ley 1581 de 2012).";
-    const cuerpoLeidoInApp =
-        "Un miembro de nuestro equipo ({{rolLector}}) leyó el {{campo}} de tu reporte sobre {{identificador}}.";
-
+    // SPEC-594: `padre.reporte.texto_leido` se eliminó — las lecturas internas son
+    // operación normal (cero correos al padre, queda la auditoría LecturaReporte)
+    // y las externas avisan en el CANJE del código, no en cada lectura.
     const eventoCodigo = "padre.reporte.acceso_codigo";
     const asuntoCodigo = "Tu código de acceso al texto del reporte";
     const cuerpoCodigoEmail =
@@ -2042,6 +2034,17 @@ async function seedAccesoCifradoTextos() {
     const cuerpoCanjeadoInApp =
         "{{nombreCanjeador}} ({{rolCanjeador}}) usó tu código de acceso al texto de tu reporte sobre {{identificador}}.";
 
+    // SPEC-592: código temporal de step-up por email (cuentas OAuth sin contraseña).
+    // El correo ES el factor de posesión; sin regla activa la solicitud falla
+    // (fail-closed, mismo patrón que auth.codigo_verificacion).
+    const eventoStepupCodigo = "padre.stepup.codigo";
+    const asuntoStepupCodigo = "Tu código para ver el texto de tu reporte";
+    const cuerpoStepupCodigoEmail =
+        "Hola,\n\n" +
+        "Este es el código para confirmar tu identidad y ver el texto de tu reporte:\n\n" +
+        "{{codigo}}\n\n" +
+        "El código vence en {{vigenciaMinutos}} minutos. Si no lo solicitaste, ignora este correo.";
+
     const plantillas: Array<{
         clave: string;
         canal: "EMAIL" | "IN_APP";
@@ -2049,20 +2052,6 @@ async function seedAccesoCifradoTextos() {
         cuerpoMarkdown: string;
         variables: Record<string, { type: string }>;
     }> = [
-        {
-            clave: `${eventoLeido}.email`,
-            canal: "EMAIL",
-            asunto: asuntoLeido,
-            cuerpoMarkdown: cuerpoLeidoEmail,
-            variables: { identificador: { type: "string" }, campo: { type: "string" }, rolLector: { type: "string" }, fechaLectura: { type: "string" } },
-        },
-        {
-            clave: `${eventoLeido}.in_app`,
-            canal: "IN_APP",
-            asunto: undefined,
-            cuerpoMarkdown: cuerpoLeidoInApp,
-            variables: { identificador: { type: "string" }, campo: { type: "string" }, rolLector: { type: "string" } },
-        },
         {
             clave: `${eventoCodigo}.email`,
             canal: "EMAIL",
@@ -2083,6 +2072,13 @@ async function seedAccesoCifradoTextos() {
             asunto: undefined,
             cuerpoMarkdown: cuerpoCanjeadoInApp,
             variables: { nombreCanjeador: { type: "string" }, rolCanjeador: { type: "string" }, identificador: { type: "string" } },
+        },
+        {
+            clave: `${eventoStepupCodigo}.email`,
+            canal: "EMAIL",
+            asunto: asuntoStepupCodigo,
+            cuerpoMarkdown: cuerpoStepupCodigoEmail,
+            variables: { codigo: { type: "string" }, vigenciaMinutos: { type: "number" } },
         },
     ];
 
@@ -2108,17 +2104,9 @@ async function seedAccesoCifradoTextos() {
         });
     }
 
-    // Solo el padre dueño recibe estos avisos (rol PARENT).
-    for (const canal of ["EMAIL", "IN_APP"] as const) {
-        await upsertNotificacionRegla({
-            evento: eventoLeido,
-            rol: "PARENT",
-            canal,
-            plantillaClave: `${eventoLeido}.${canal.toLowerCase()}`,
-            obligatoria: false,
-            activa: true,
-        });
-    }
+    // SPEC-594: el evento `padre.reporte.texto_leido` dejó de existir (las
+    // lecturas internas son operación normal y ya no notifican — el seed no
+    // crea regla ni plantilla para un evento que nadie programa).
     await upsertNotificacionRegla({
         evento: eventoCodigo,
         rol: "PARENT",
@@ -2137,6 +2125,14 @@ async function seedAccesoCifradoTextos() {
             activa: true,
         });
     }
+    await upsertNotificacionRegla({
+        evento: eventoStepupCodigo,
+        rol: "PARENT",
+        canal: "EMAIL",
+        plantillaClave: `${eventoStepupCodigo}.email`,
+        obligatoria: true,
+        activa: true,
+    });
     console.log("[SEED] Eventos de acceso cifrado al texto (SPEC-584) listos");
 }
 
