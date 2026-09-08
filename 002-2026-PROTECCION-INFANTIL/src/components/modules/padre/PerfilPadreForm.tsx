@@ -21,6 +21,7 @@ function fechaHaceAnios(anios: number): string {
 type PaisOption = { id: string; nombre: string };
 
 type Perfil = {
+    email: string;
     nombre: string | null;
     apellidos: string | null;
     documentoTipo: string | null;
@@ -58,6 +59,10 @@ export function PerfilPadreForm({
 
     const [nombre, setNombre] = useState("");
     const [apellidos, setApellidos] = useState("");
+    // SPEC-590 (decisión CEO 06-09): el email del padre es editable desde el
+    // perfil (unico por cuenta). En el camino no se pide: el Paso 2 exige otros
+    // 7 campos y el email se fijó al registrarse.
+    const [email, setEmail] = useState("");
     // SPEC-339 (§2.3): documento del padre — da validez al expediente.
     const [documentoTipo, setDocumentoTipo] = useState("");
     const [documentoNumero, setDocumentoNumero] = useState("");
@@ -77,6 +82,7 @@ export function PerfilPadreForm({
                 setPaises(paisJson.paises || []);
                 if (pRes.ok) {
                     const { perfil } = (await pRes.json()) as { perfil: Perfil };
+                    setEmail(perfil.email ?? "");
                     setNombre(perfil.nombre ?? "");
                     setApellidos(perfil.apellidos ?? "");
                     setDocumentoTipo(perfil.documentoTipo ?? "");
@@ -124,6 +130,9 @@ export function PerfilPadreForm({
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({
+                    // SPEC-590: el email solo se edita desde la página de perfil,
+                    // no en el Paso 2 del camino.
+                    ...(esCamino ? {} : { email: email.trim() || undefined }),
                     nombre: nombre.trim() || undefined,
                     apellidos: apellidos.trim() || undefined,
                     documentoTipo: documentoTipo || undefined,
@@ -154,6 +163,15 @@ export function PerfilPadreForm({
     return (
         <form onSubmit={guardar} className="glass space-y-4 rounded-2xl p-5 sm:p-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {!esCamino && (
+                    <Input
+                        label="Correo electrónico"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="tucorreo@ejemplo.com"
+                    />
+                )}
                 <Input label="Nombres" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Tus nombres" />
                 <Input label="Apellidos" value={apellidos} onChange={(e) => setApellidos(e.target.value)} placeholder="Tus apellidos" />
                 <Select

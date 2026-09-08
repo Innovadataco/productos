@@ -69,8 +69,15 @@ describe("SPEC-438 · el sistema NUNCA rellena la hora del hecho", () => {
 describe("SPEC-438 · sin fecha y hora no se puede enviar", () => {
     it("el wizard no deja pasar del paso del detalle sin `fechaIncidente`", () => {
         const wizard = sinComentarios(leer("src/components/modules/ReporteWizard.tsx"));
-        // La guardia del paso 2 tiene que exigir la fecha, no solo país/ciudad/texto.
-        expect(wizard).toMatch(/step === 2 &&[\s\S]*!data\.fechaIncidente/);
+        // La guardia del paso del detalle tiene que exigir la fecha, no solo
+        // país/ciudad/texto. SPEC-591 añadió un paso inicial (hijo) en modo
+        // autenticado: el paso del detalle ya no es un literal fijo, es la
+        // constante STEP_DETALLE (= 3 autenticado / 2 anónimo). El candado
+        // pincha el bloque `disabled={...}` para no casar condiciones de
+        // render (`{step === STEP_DETALLE && (...)}`), que también existen.
+        expect(wizard).toMatch(
+            /disabled=\{[\s\S]{0,600}?step === STEP_DETALLE\s*&&[\s\S]{0,400}?!data\.fechaIncidente/,
+        );
     });
 
     it("el esquema del servidor la exige (no es opcional ni tiene default)", () => {

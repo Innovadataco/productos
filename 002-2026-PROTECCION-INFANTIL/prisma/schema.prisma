@@ -382,6 +382,10 @@ enum AccionAudit {
   // texto del reporte (solicitud por el padre dueño + canje por profesional/padre).
   CODIGO_ACCESO_SOLICITADO
   CODIGO_ACCESO_CANJEADO
+  // SPEC-590: cada cambio de campo del perfil del padre (PATCH /api/padre/perfil)
+  // escribe una fila con {campo, anterior→nuevo}. Es la fuente del «Historial de
+  // cambios» de «Mi perfil» (decisión CEO 06-09-2026).
+  PERFIL_CAMBIO
 }
 
 enum TipoPeriodoServicio {
@@ -598,6 +602,11 @@ enum TipoPatronExpediente {
 model Usuario {
   id                          String           @id @default(cuid())
   email                       String           @unique
+  // SPEC-590: sub de Google para cuentas que entraron por «Continúa con Google»
+  // (SPEC-587). La resolución OAuth busca PRIMERO por este sub y DESPUÉS por
+  // email: si el padre edita su email (ahora puede, SPEC-590), el próximo login
+  // con Google sigue encontrando LA MISMA cuenta en vez de duplicarla.
+  googleSub                   String?          @unique
   nombre                      String?
   // SPEC-334: datos de perfil del padre (aditivos, nullable). "Nombres" = `nombre`.
   apellidos                   String?
@@ -1910,6 +1919,13 @@ model Reporte {
   esAnonimo                  Boolean            @default(true)
   edadVictima                Int?
   usuarioId                  String?
+  // SPEC-591 (decisión CEO 06-09): el reporte del padre AUTENTICADO va atado a
+  // una ficha «A quién protego» (Hijo) activa — «el padre autenticado solo
+  // puede reportar situaciones de sus hijos». El anónimo jamás lleva vínculo.
+  // SetNull: el reporte es EVIDENCIA — si el padre borra/inactiva la ficha, el
+  // reporte sobrevive desvinculado; una acción sobre la lista del padre no puede
+  // destruir la evidencia que ya existía.
+  hijoId                     String?
   // SPEC-295 (002-PI-196 · I-146): rol del origen del reporte. NULL para
   // anónimos (histórico y nuevos). "PARENT" cuando el padre autenticado
   // reporta desde /dashboard/padre/reportar. Fase 2 puede migrar a enum.
@@ -1951,6 +1967,9 @@ model Reporte {
   embedding                EmbeddingReporte?
   fuente                   FuenteReporte?
   tenant                   Tenant?             @relation(fields: [tenantId], references: [id])
+  // SPEC-591: ficha «A quién protego» a la que va dirigido (solo reportes del
+  // padre autenticado; el anónimo nunca tiene). SetNull: ver nota en `hijoId`.
+  hijo                     Hijo?               @relation(fields: [hijoId], references: [id], onDelete: SetNull)
   paisRel                  Pais?               @relation(fields: [paisId], references: [id])
   ciudadRel                Ciudad?             @relation(fields: [ciudadId], references: [id])
   transiciones             TransicionReporte[]
@@ -1983,6 +2002,7 @@ model Reporte {
   @@index([identificador, plataformaId])
   @@index([estado])
   @@index([usuarioId, identificador])
+  @@index([hijoId])
   @@index([creadoEn])
   @@index([numeroSeguimiento])
   @@index([paisId])
@@ -2377,10 +2397,10 @@ model ContactoConfianza {
 }
 
 // ─── SPEC-325 (002-PI-225) · "A quién protejo" — módulo de hijos/familiares ───
-// PII de menor: acceso solo por el padre dueño, nunca por id suelto en URL, sin
-// logs con el documento en claro. Entidad separada de `ContactoConfianza`
-// (protejo lleva documento obligatorio, vigilo no), pero UN mismo mecanismo de
-// monitoreo (el cruce identificador→alerta es uno solo).
+// PII de menor: acceso solo por el padre dueño, nunca por id suelto en URL.
+// Entidad separada de `ContactoConfianza`, pero UN mismo mecanismo de
+// monitoreo (el cruce identificador→alerta es uno solo). SPEC-589: la ficha ya
+// NO lleva documento del menor (decisión CEO 06-09-2026, columnas eliminadas).
 //
 // SPEC-339 (A-67 · D-4, 31-08-2026): la ficha del menor tiene DUEÑO. Antes era
 // global y única por documento en todo el sistema, y dos padres compartían la
@@ -2399,8 +2419,10 @@ model Hijo {
   usuarioId       String
   nombre          String
   apellidos       String   @default("")
-  documentoTipo   String // set cerrado en Zod: RC|TI|CC|CE|PASAPORTE|OTRO (OBLIGATORIO)
-  documentoNumero String // OBLIGATORIO
+  // SPEC-589 (06-09-2026): el CEO ordenó quitar el documento de la ficha del
+  // menor — las columnas documentoTipo/documentoNumero se ELIMINAN (DROP, datos
+  // de prueba del dueño, borrado autorizado). Única excepción a la regla de
+  // migraciones aditivas. El documento del PADRE (Usuario) sí se conserva.
   anioNacimiento  Int? // durable (no `edad`) · consistente con A-58; la UI calcula la edad
   sexo            String? // set cerrado en Zod
   // SPEC-325 (extensión): estado activo/inactivo del hijo (patrón Profesor/Estudiante, A-58).
@@ -2409,16 +2431,14 @@ model Hijo {
   actualizadoEn   DateTime @updatedAt
 
   usuario         Usuario             @relation("HijosDelPadre", fields: [usuarioId], references: [id], onDelete: Cascade)
+  // SPEC-591: reportes del padre atados a esta ficha (SetNull del lado reporte:
+  // borrar/inactivar la ficha nunca destruye la evidencia).
+  reportes        Reporte[]
   identificadores IdentificadorHijo[]
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   padres          HijoPadre[]
 
-  // SPEC-339: la unicidad del documento es POR PADRE, no global. Un mismo padre
-  // no repite un documento; dos padres distintos sí pueden tener al mismo menor,
-  // cada uno con su propia ficha. Reemplaza a @@unique([documentoTipo, documentoNumero]).
-  @@unique([usuarioId, documentoTipo, documentoNumero])
   @@index([usuarioId])
-  @@index([documentoTipo, documentoNumero])
   @@index([estado])
 }
 

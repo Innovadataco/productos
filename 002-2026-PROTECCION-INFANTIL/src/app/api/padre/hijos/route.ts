@@ -3,21 +3,20 @@ import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { registrarHijo, listarHijos, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
+import { registrarHijo, listarHijos, SEXOS } from "@/lib/dal/services/hijos";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
-import { validarDocumentoMenor, validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
+import { validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
 
 // SPEC-325 (002-PI-225) · "A quién protejo". PII de menor: solo el padre dueño
-// (verifyAuth PARENT) accede; el DAL acota por HijoPadre. Documento OBLIGATORIO.
+// (verifyAuth PARENT) accede; el DAL acota por Hijo.usuarioId. SPEC-589: la
+// ficha ya NO lleva documento del menor (el documento del PADRE sí se conserva).
 const createSchema = z.object({
     // SPEC-361 (F4): cada mensaje nombra su campo — el padre tiene que saber qué corregir.
     nombre: z.string({ error: "Escribe el nombre del menor." }).min(1, "Escribe el nombre del menor.").max(120, "El nombre es muy largo."),
     // SPEC-339 (FR-019): obligatorios. Las fichas viejas sin apellidos se conservan;
     // lo que cambia es la validación de las nuevas.
     apellidos: z.string({ error: "Escribe los apellidos del menor." }).min(1, "Escribe los apellidos del menor.").max(120, "Los apellidos son muy largos."),
-    documentoTipo: z.enum(DOCUMENTO_TIPOS, { error: "Elige el tipo de documento del menor." }),
-    documentoNumero: z.string({ error: "Escribe el número de documento del menor." }).min(1, "Escribe el número de documento del menor.").max(40, "El número de documento es muy largo."),
     anioNacimiento: z.number().int().min(1900).max(2100).optional(),
     sexo: z.enum(SEXOS).optional(),
     identificadores: z
@@ -62,16 +61,6 @@ export async function POST(request: Request) {
                         code: ERROR_CODES.VALIDATION_ERROR,
                     },
                 },
-                { status: 400 }
-            );
-        }
-
-        // SPEC-361 (A-70 · F7): la forma del número según su tipo. Se valida acá
-        // además de en la pantalla: el servidor es quien manda.
-        const errorDocumento = validarDocumentoMenor(parsed.data.documentoTipo, parsed.data.documentoNumero);
-        if (errorDocumento) {
-            return NextResponse.json(
-                { error: { message: errorDocumento, code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
             );
         }

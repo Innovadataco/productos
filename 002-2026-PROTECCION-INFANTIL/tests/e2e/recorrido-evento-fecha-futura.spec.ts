@@ -63,6 +63,16 @@ async function crearPadreCompleto(email: string) {
             consentimientoVersion: version?.valor ?? "1.0",
         },
     });
+    // SPEC-591: el reporte autenticado del padre EXIGE una ficha activa de
+    // «A quién protego» — sin ella el POST /api/reportes responde 400.
+    const hijo = await prisma.hijo.create({
+        data: {
+            usuarioId: padre.id,
+            nombre: "Menor",
+            apellidos: "Fecha Futura",
+            estado: "activo",
+        },
+    });
     const plan = await prisma.plan.findFirst({ where: { esFreemium: true } });
     if (plan) {
         await prisma.suscripcion.create({
@@ -78,7 +88,7 @@ async function crearPadreCompleto(email: string) {
             },
         });
     }
-    return padre;
+    return { padre, hijoId: hijo.id };
 }
 
 async function login(page: Page, email: string) {
@@ -87,7 +97,7 @@ async function login(page: Page, email: string) {
 }
 
 /** Reporte base con fecha PASADA (el POST principal ya cota el futuro, SPEC-438). */
-async function reportar(page: Page, identificador: string): Promise<string> {
+async function reportar(page: Page, identificador: string, hijoId: string): Promise<string> {
     const res = await page.request.post("/api/reportes", {
         data: {
             identificador,
@@ -96,6 +106,8 @@ async function reportar(page: Page, identificador: string): Promise<string> {
             fechaIncidente: "2026-08-25T21:30:00Z",
             ciudad: "Bogotá",
             pais: "Colombia",
+            // SPEC-591: el reporte autenticado del padre va atado a una ficha activa.
+            hijoId,
         },
     });
     expect(res.status()).toBe(201);
@@ -107,9 +119,9 @@ test.describe("Candado · POST /api/reportes/[id]/evento no acepta fecha futura"
         // SPEC-513 (PA-21): el bodySchema del evento ya reusa `fechaIncidenteSchema`
         // (cota de futuro). Se RETIRÓ el `test.fail`: esto es la no-regresión viva.
         const email = emailUnico();
-        await crearPadreCompleto(email);
+        const { hijoId } = await crearPadreCompleto(email);
         await login(page, email);
-        const r1 = await reportar(page, `+5730099${Date.now() % 100000}`);
+        const r1 = await reportar(page, `+5730099${Date.now() % 100000}`, hijoId);
 
         // Fecha deliberadamente futura (una semana adelante del reloj del runner).
         const fechaFutura = new Date(Date.now() + 7 * 86400000).toISOString();

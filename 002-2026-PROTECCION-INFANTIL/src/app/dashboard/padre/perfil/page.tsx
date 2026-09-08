@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { verifyAuth } from "@/lib/auth";
 import { PerfilPadreForm } from "@/components/modules/padre/PerfilPadreForm";
+import { HistorialCambiosPerfil } from "@/components/modules/padre/HistorialCambiosPerfil";
 
 export const metadata: Metadata = {
     title: "Mi perfil",
@@ -18,6 +19,10 @@ export default async function PadrePerfilPage() {
                     <p className="mt-1 text-sm text-muted">Completa tus datos. Puedes editarlos cuando quieras.</p>
                 </div>
                 <PerfilPadreForm />
+                <div className="mt-6">
+                    {/* SPEC-590 (decisión CEO 06-09): historial de cambios del perfil. */}
+                    <HistorialCambiosPerfil />
+                </div>
             </div>
         </main>
     );

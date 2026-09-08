@@ -27,6 +27,9 @@ vi.mock("next/headers", () => ({
 const IDENTIFICADOR = "+57300ATOM001";
 const TEXTO = "Un adulto contacta a una menor por chat insistiendo en pedirle fotos personales varias veces.";
 
+// SPEC-591: el padre autenticado reporta siempre atado a una ficha activa.
+let hijoIdDelTest: string | null = null;
+
 function requestReporte(identificador = IDENTIFICADOR, texto = TEXTO): Request {
     return new Request("http://localhost:5005/api/reportes", {
         method: "POST",
@@ -38,6 +41,7 @@ function requestReporte(identificador = IDENTIFICADOR, texto = TEXTO): Request {
             fechaIncidente: "2026-07-20T10:00:00Z",
             ciudad: "Bogotá",
             pais: "Colombia",
+            ...(hijoIdDelTest ? { hijoId: hijoIdDelTest } : {}),
         }),
     });
 }
@@ -45,6 +49,10 @@ function requestReporte(identificador = IDENTIFICADOR, texto = TEXTO): Request {
 async function setupUsuario(): Promise<Usuario> {
     const usuario = await crearUsuario("PARENT", `atom-${Date.now()}@test.local`);
     mockToken = await crearTokenUsuario(usuario.id, "PARENT");
+    const hijo = await prisma.hijo.create({
+        data: { usuarioId: usuario.id, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+    });
+    hijoIdDelTest = hijo.id;
     return usuario;
 }
 
@@ -58,6 +66,7 @@ describe("SPEC-137 · POST /api/reportes — atomicidad", { timeout: 30_000 }, (
         await crearPlataforma();
         await crearPaisCiudad();
         mockToken = undefined;
+        hijoIdDelTest = null;
         vi.restoreAllMocks();
     });
 

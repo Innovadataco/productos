@@ -46,6 +46,8 @@ const EVENTOS_MIGRADOS = [
     "padre.circulo_confianza.pendientes",
     // SPEC-339: aviso al padre cuando una cuenta de su hijo aparece en un reporte.
     "padre.hijo.reporte",
+    // SPEC-590: aviso de seguridad al correo nuevo cuando el padre cambia su email.
+    "padre.perfil.email_cambiado",
     "padre.circulo_confianza.reporte_enriquecido",
     "colegio.reporte_nuevo",
     "colegio.curso.umbral",

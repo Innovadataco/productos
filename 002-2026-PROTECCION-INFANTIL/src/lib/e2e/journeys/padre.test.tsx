@@ -157,6 +157,10 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         const { POST: reportesPOST } = await import("@/app/api/reportes/route");
 
         const textoAuth = `${datos.textoBase} (reporte autenticado del padre)`;
+        // SPEC-591: el padre autenticado reporta siempre atado a una ficha activa.
+        const hijo = await prisma.hijo.create({
+            data: { usuarioId: sesion.usuarioId, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+        });
         jar.set("token", { name: "token", value: sesion.token });
         const resAuth = await reportesPOST(
             new Request("http://localhost:5005/api/reportes", {
@@ -169,6 +173,7 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
                     fechaIncidente: "2026-07-21T10:00:00Z",
                     ciudad: "Bogotá",
                     pais: "Colombia",
+                    hijoId: hijo.id,
                 }),
             })
         );
@@ -230,6 +235,10 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
         expect(lista.status).toBe(200);
 
         // Seguimiento del propio reporte
+        // SPEC-591: el padre autenticado reporta siempre atado a una ficha activa.
+        const hijo = await prisma.hijo.create({
+            data: { usuarioId: sesion.usuarioId, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+        });
         const { POST: reportesPOST } = await import("@/app/api/reportes/route");
         const resRep = await reportesPOST(
             new Request("http://localhost:5005/api/reportes", {
@@ -242,6 +251,7 @@ describe(`SPEC-114 · padre (ciclo ${CICLO})`, { timeout: 30_000 }, () => {
                     fechaIncidente: "2026-07-21T12:00:00Z",
                     ciudad: "Bogotá",
                     pais: "Colombia",
+                    hijoId: hijo.id,
                 }),
             })
         );

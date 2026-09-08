@@ -8,10 +8,18 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
     sellarCookieSesionEstado: vi.fn(),
+    // SPEC-590: el aviso de cambio de email pasa por el motor de notificaciones;
+    // en test no hay reglas sembradas (resetDatabase trunca todo) y el envío es
+    // colateral al cambio — se aisla para afirmar que SÍ se dispara.
+    enviarAvisoCambioEmail: vi.fn(),
 }));
 
 vi.mock("@/lib/routing/sellar-sesion-estado", () => ({
     sellarCookieSesionEstado: mocks.sellarCookieSesionEstado,
+}));
+
+vi.mock("@/lib/email-padre", () => ({
+    enviarAvisoCambioEmail: mocks.enviarAvisoCambioEmail,
 }));
 
 let mockToken: string | undefined;
@@ -41,6 +49,7 @@ describe("PATCH /api/padre/perfil (SPEC-339)", { timeout: 30_000 }, () => {
         await resetDatabase();
         vi.clearAllMocks();
         mocks.sellarCookieSesionEstado.mockResolvedValue(true);
+        mocks.enviarAvisoCambioEmail.mockResolvedValue(undefined);
     });
 
     async function comoPadre() {
@@ -151,5 +160,71 @@ describe("PATCH /api/padre/perfil (SPEC-339)", { timeout: 30_000 }, () => {
         await comoPadre();
         const res = await PATCH(crearRequest({ presentacionEstandar: "corta" }));
         expect(res.status).toBe(400);
+    });
+
+    // ── SPEC-590 (decisión CEO 06-09): email editable + historial de cambios ──
+
+    it("SPEC-590: guarda el email nuevo normalizado a minúsculas y avisa al buzón nuevo", async () => {
+        const padre = await comoPadre();
+        const res = await PATCH(crearRequest({ email: "Nuevo@Mail.COM" }));
+        expect(res.status).toBe(200);
+        const enBd = await prisma.usuario.findUnique({ where: { id: padre.id } });
+        expect(enBd?.email).toBe("nuevo@mail.com");
+        expect(mocks.enviarAvisoCambioEmail).toHaveBeenCalledWith("nuevo@mail.com");
+    });
+
+    it("SPEC-590: 409 cuando el email lo tiene OTRO usuario", async () => {
+        await comoPadre();
+        await crearUsuario("PARENT", "ocupado@example.com");
+        const res = await PATCH(crearRequest({ email: "ocupado@example.com" }));
+        expect(res.status).toBe(409);
+        expect(mocks.enviarAvisoCambioEmail).not.toHaveBeenCalled();
+    });
+
+    it("SPEC-590: aceptar su propio email no escribe auditoría ni dispara aviso", async () => {
+        const padre = await comoPadre();
+        const res = await PATCH(crearRequest({ email: padre.email }));
+        expect(res.status).toBe(200);
+        const auditoria = await prisma.auditLog.count({
+            where: { usuarioId: padre.id, accion: "PERFIL_CAMBIO" },
+        });
+        expect(auditoria).toBe(0);
+        expect(mocks.enviarAvisoCambioEmail).not.toHaveBeenCalled();
+    });
+
+    it("SPEC-590: rechaza un email inválido", async () => {
+        await comoPadre();
+        const res = await PATCH(crearRequest({ email: "no-es-un-correo" }));
+        expect(res.status).toBe(400);
+    });
+
+    it("SPEC-590: cada campo cambiado escribe una fila AuditLog PERFIL_CAMBIO con anterior→nuevo", async () => {
+        const padre = await comoPadre();
+        const res = await PATCH(crearRequest({ telefono: "+57 300 123 4567" }));
+        expect(res.status).toBe(200);
+        const filas = await prisma.auditLog.findMany({
+            where: { usuarioId: padre.id, accion: "PERFIL_CAMBIO" },
+        });
+        expect(filas).toHaveLength(1);
+        expect(JSON.parse(filas[0].valorAnterior ?? "{}")).toEqual({ campo: "telefono", valor: null });
+        expect(JSON.parse(filas[0].valorNuevo ?? "{}")).toEqual({ campo: "telefono", valor: "+57 300 123 4567" });
+    });
+
+    it("SPEC-590: un PATCH sin cambios no escribe auditoría", async () => {
+        const padre = await comoPadre();
+        // paisId ya es null: null→null no es un cambio.
+        const res = await PATCH(crearRequest({ paisId: null }));
+        expect(res.status).toBe(200);
+        const filas = await prisma.auditLog.findMany({
+            where: { usuarioId: padre.id, accion: "PERFIL_CAMBIO" },
+        });
+        expect(filas).toHaveLength(0);
+    });
+
+    it("SPEC-590: GET devuelve el email del perfil", async () => {
+        const padre = await comoPadre();
+        const res = await GET();
+        const json = await res.json();
+        expect(json.perfil.email).toBe(padre.email);
     });
 });

@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 
 let mockToken: string | undefined;
+let hijoId: string;
 vi.mock("next/headers", () => ({
     cookies: async () => ({
         get: (name: string) => (name === "token" && mockToken ? { name: "token", value: mockToken } : undefined),
@@ -34,6 +35,8 @@ function reqReporte(identificador: string, reportePrevioId?: string): Request {
             fechaIncidente: "2026-08-20T21:30:00Z",
             ciudad: "Bogotá",
             pais: "Colombia",
+            // SPEC-591: el reporte autenticado del padre va atado a una ficha activa.
+            hijoId,
             ...(reportePrevioId ? { reportePrevioId } : {}),
         }),
     });
@@ -75,6 +78,11 @@ describe("SPEC-340 · el hilo de datos", { timeout: 60_000 }, () => {
         await resetRateLimitStore();
         const padre = await crearUsuario("PARENT", `hilo-${Date.now()}@test.local`);
         mockToken = await crearTokenUsuario(padre.id, "PARENT");
+        // SPEC-591: el reporte autenticado del padre va atado a una ficha activa.
+        const hijo = await prisma.hijo.create({
+            data: { usuarioId: padre.id, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+        });
+        hijoId = hijo.id;
     });
 
     it("agregar evento HEREDA los datos del principal en servidor y guarda la hora", async () => {

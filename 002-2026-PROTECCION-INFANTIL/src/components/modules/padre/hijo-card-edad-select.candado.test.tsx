@@ -24,13 +24,11 @@ function hijo(): Hijo {
         id: "h1",
         nombre: "Juan",
         apellidos: "Pérez",
-        documentoTipo: "TI",
-        documentoNumero: "1030000001",
         anioNacimiento: anioDesdeEdad(12), // 12 años en el año en curso
         sexo: "M",
         estado: "activo",
         identificadores: [],
-    } as Hijo;
+    };
 }
 
 function renderEditando() {

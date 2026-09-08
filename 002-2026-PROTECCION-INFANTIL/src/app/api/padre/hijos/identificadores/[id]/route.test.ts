@@ -49,8 +49,6 @@ async function sembrarMenorConIdentificador() {
     const { hijoId } = await registrarHijo(padre.id, {
         nombre: "Ana",
         apellidos: "Ramírez",
-        documentoTipo: "TI",
-        documentoNumero: "1030512345",
     });
     await agregarIdentificador(padre.id, hijoId, { valor: VALOR_PII });
     const ident = await prisma.identificadorHijo.findFirstOrThrow({ where: { hijoId } });

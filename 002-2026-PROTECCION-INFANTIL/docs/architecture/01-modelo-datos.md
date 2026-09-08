@@ -936,14 +936,13 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | usuarioId | String | — |
 | nombre | String | — |
 | apellidos | String | — |
-| documentoTipo | String | — |
-| documentoNumero | String | — |
 | anioNacimiento | Int | opcional |
 | sexo | String | opcional |
 | estado | String | — |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 | usuario | Usuario | relación |
+| reportes | Reporte | lista, relación |
 | identificadores | IdentificadorHijo | lista, relación |
 | padres | HijoPadre | lista, relación |
 
@@ -1867,6 +1866,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | esAnonimo | Boolean | — |
 | edadVictima | Int | opcional |
 | usuarioId | String | opcional |
+| hijoId | String | opcional |
 | origenRol | String | opcional |
 | operadorId | String | opcional |
 | comiteId | String | opcional |
@@ -1900,6 +1900,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | embedding | EmbeddingReporte | opcional, relación |
 | fuente | FuenteReporte | opcional, relación |
 | tenant | Tenant | opcional, relación (FK) |
+| hijo | Hijo | opcional, relación (FK) |
 | paisRel | Pais | opcional, relación (FK) |
 | ciudadRel | Ciudad | opcional, relación (FK) |
 | transiciones | TransicionReporte | lista, relación |
@@ -2139,6 +2140,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | --- | --- | --- |
 | id | String | id |
 | email | String | único |
+| googleSub | String | único, opcional |
 | nombre | String | opcional |
 | apellidos | String | opcional |
 | documentoTipo | String | opcional |
@@ -2310,6 +2312,7 @@ erDiagram
     GuiaAccionCategoria ||--o{ AnalisisExpediente : "guiaAccion (opcional)"
     Hijo ||--o{ HijoPadre : "hijo"
     Hijo ||--o{ IdentificadorHijo : "hijo"
+    Hijo ||--o{ Reporte : "hijo (opcional)"
     IdentificadorAcudiente ||--o{ AlertaColegio : "identificadorAcudiente (opcional)"
     IdentificadorEstudiante ||--o{ AlertaColegio : "identificadorEstudiante (opcional)"
     IdentificadorHijo ||--o{ IdentificadorHijoDesvinculado : "identificador"

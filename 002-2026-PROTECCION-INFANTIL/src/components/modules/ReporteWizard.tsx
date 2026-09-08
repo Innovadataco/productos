@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ReporteStepPlataforma } from "./ReporteStepPlataforma";
 import { ReporteStepDetalle } from "./ReporteStepDetalle";
 import { ReporteStepConfirmar } from "./ReporteStepConfirmar";
+import { ReporteStepHijo, type HijoParaElegir } from "./ReporteStepHijo";
 import { ConfirmacionReporte } from "./ConfirmacionReporte";
 import { ReporteBloqueoRol } from "./ReporteBloqueoRol";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +13,8 @@ import { useMinTextoReporte } from "./use-min-texto-reporte";
 import { tomarHandoffReportar, guardarBorradorReporte, leerBorradorReporte, borrarBorradorReporte } from "@/lib/reportar-handoff";
 
 type WizardData = {
+    // SPEC-591: ficha «A quién protego» a la que va dirigido (modo autenticado).
+    hijoId: string;
     identificador: string;
     plataforma: string;
     otraPlataforma: string;
@@ -49,6 +52,15 @@ export function ReporteWizard({
     modoAutenticado?: boolean;
 } = {}) {
     const [step, setStep] = useState(1);
+    // SPEC-591: en modo autenticado el paso 1 es «¿A quién va dirigido?» y los
+    // demás se corren un lugar. En anónimo el flujo queda exactamente como era.
+    const STEP_PLATAFORMA = modoAutenticado ? 2 : 1;
+    const STEP_DETALLE = modoAutenticado ? 3 : 2;
+    const STEP_CONFIRMAR = modoAutenticado ? 4 : 3;
+    const TOTAL_PASOS = modoAutenticado ? 4 : 3;
+    // SPEC-591: fichas «A quién protego» activas del padre (modo autenticado).
+    const [hijos, setHijos] = useState<HijoParaElegir[]>([]);
+    const [cargandoHijos, setCargandoHijos] = useState(modoAutenticado);
     const [user, setUser] = useState<SessionUser>(null);
     const [checkingSession, setCheckingSession] = useState(true);
     // Las dos pantallas que mandan al padre acá con un identificador ya escrito
@@ -61,6 +73,7 @@ export function ReporteWizard({
     const identificadorFijado = handoff?.fijar ? handoff.identificador : null;
     const [data, setData] = useState<WizardData>(() => {
         const vacio: WizardData = {
+            hijoId: "",
             identificador: handoff?.identificador ?? "",
             plataforma: "",
             otraPlataforma: "",
@@ -129,6 +142,21 @@ export function ReporteWizard({
             .finally(() => setCheckingSession(false));
     }, []);
 
+    // SPEC-591: en modo autenticado, la lista de fichas para «¿A quién va
+    // dirigido?». Solo ACTIVOS entran al select (el backend además lo exige).
+    useEffect(() => {
+        if (!modoAutenticado) return;
+        fetch("/api/padre/hijos", { credentials: "include" })
+            .then(async (res) => {
+                if (!res.ok) return [];
+                const json = await res.json().catch(() => []);
+                return Array.isArray(json) ? (json as HijoParaElegir[]) : [];
+            })
+            .then((lista) => setHijos(lista.filter((h) => h.estado === "activo")))
+            .catch(() => setHijos([]))
+            .finally(() => setCargandoHijos(false));
+    }, [modoAutenticado]);
+
     async function handleLogout() {
         await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
         window.location.reload();
@@ -163,6 +191,8 @@ export function ReporteWizard({
                     edadVictima: data.edadVictima ? Number(data.edadVictima) : undefined,
                     // SPEC-323 (US1): señal de vinculación intencional (presente solo en el 2º reporte).
                     ...(reportePrevioId ? { reportePrevioId } : {}),
+                    // SPEC-591: vínculo obligatorio del padre autenticado.
+                    ...(modoAutenticado && data.hijoId ? { hijoId: data.hijoId } : {}),
                 }),
             });
             const json = await res.json().catch(() => null);
@@ -236,7 +266,7 @@ export function ReporteWizard({
                         onClick={() => {
                             setReportePrevioId(oferta.reporteExistenteId);
                             update({ identificador: oferta.identificador });
-                            setStep(1);
+                            setStep(STEP_PLATAFORMA);
                             setOferta(null);
                         }}
                     >
@@ -262,7 +292,7 @@ export function ReporteWizard({
                 de SPEC-295 se retiró — Jelkin: no es necesario. La identidad sigue
                 derivándose de la sesión en el backend; nada cambia en los datos. */}
             <div className="mb-6 flex items-center justify-between">
-                {[1, 2, 3].map((s) => (
+                {Array.from({ length: TOTAL_PASOS }, (_, i) => i + 1).map((s) => (
                     <div key={s} className="flex flex-1 items-center">
                         <div
                             className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${s <= step
@@ -272,7 +302,7 @@ export function ReporteWizard({
                         >
                             {s}
                         </div>
-                        {s < 3 && (
+                        {s < TOTAL_PASOS && (
                             <div
                                 className={`mx-2 h-1 flex-1 rounded transition ${s < step ? "bg-primary-600" : "bg-tinta/10"
                                 }`}
@@ -282,7 +312,15 @@ export function ReporteWizard({
                 ))}
             </div>
 
-            {step === 1 && (
+            {step === 1 && modoAutenticado && (
+                <ReporteStepHijo
+                    hijos={hijos}
+                    cargando={cargandoHijos}
+                    seleccionado={data.hijoId}
+                    onChange={(hijoId) => update({ hijoId })}
+                />
+            )}
+            {step === STEP_PLATAFORMA && (
                 <ReporteStepPlataforma
                     identificador={data.identificador}
                     plataforma={data.plataforma}
@@ -291,7 +329,7 @@ export function ReporteWizard({
                     onChange={(v: { identificador: string; plataforma: string; otraPlataforma: string }) => update(v)}
                 />
             )}
-            {step === 2 && (
+            {step === STEP_DETALLE && (
                 <ReporteStepDetalle
                     ciudad={data.ciudad}
                     pais={data.pais}
@@ -304,7 +342,7 @@ export function ReporteWizard({
                     onChange={(v) => update(v)}
                 />
             )}
-            {step === 3 && (
+            {step === STEP_CONFIRMAR && (
                 <ReporteStepConfirmar
                     data={data}
                     onSubmit={handleSubmit}
@@ -319,13 +357,14 @@ export function ReporteWizard({
                         Atrás
                     </Button>
                 )}
-                {step < 3 && (
+                {step < STEP_CONFIRMAR && (
                     <Button
                         className="ml-auto"
                         onClick={() => setStep((s) => s + 1)}
                         disabled={
-                            (step === 1 && (!data.identificador.trim() || !data.plataforma)) ||
-                            (step === 2 &&
+                            (step === 1 && modoAutenticado && !data.hijoId) ||
+                            (step === STEP_PLATAFORMA && (!data.identificador.trim() || !data.plataforma)) ||
+                            (step === STEP_DETALLE &&
                                 (!data.paisId ||
                                     !data.ciudadId ||
                                     (data.ciudadId === "otra" && !data.ciudad) ||

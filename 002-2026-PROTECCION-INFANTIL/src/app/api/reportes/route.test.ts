@@ -27,6 +27,19 @@ const reporteValido = {
     pais: "Colombia",
 };
 
+// SPEC-591: desde esta spec, el reporte del padre autenticado va atado a una
+// ficha «A quién protego» activa — todos los tests con sesión PARENT la crean.
+async function crearHijoActivo(usuarioId: string) {
+    return prisma.hijo.create({
+        data: { usuarioId, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+    });
+}
+
+async function reporteAutenticadoValido(usuarioId: string) {
+    const hijo = await crearHijoActivo(usuarioId);
+    return { ...reporteValido, hijoId: hijo.id };
+}
+
 describe("POST /api/reportes", () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -112,7 +125,7 @@ describe("POST /api/reportes", () => {
     it("crea un reporte autenticado vinculado al usuario", async () => {
         const user = await crearUsuario("PARENT");
         const token = await crearTokenUsuario(user.id, "PARENT");
-        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", await reporteAutenticadoValido(user.id), token);
         const res = await POST(req);
         expect(res.status).toBe(201);
         const body = await res.json();
@@ -197,14 +210,15 @@ describe("POST /api/reportes", () => {
     it("detecta duplicado autenticado dentro de 30 días → oferta de vinculación (200)", async () => {
         const user = await crearUsuario("PARENT");
         const token = await crearTokenUsuario(user.id, "PARENT");
-        const req1 = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const payload = await reporteAutenticadoValido(user.id);
+        const req1 = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", payload, token);
         const res1 = await POST(req1);
         expect(res1.status).toBe(201);
         const body1 = await res1.json();
         const reporteId = body1.reporte.id as string;
 
         const req2 = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
-            ...reporteValido,
+            ...payload,
             texto: "Otro texto descriptivo del mismo incidente reportado.",
         }, token);
         const res = await POST(req2);
@@ -373,7 +387,7 @@ describe("POST /api/reportes", () => {
     it("asigna prioridad alta a reportes autenticados y encola con prioridad 10", async () => {
         const user = await crearUsuario("PARENT");
         const token = await crearTokenUsuario(user.id, "PARENT");
-        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", await reporteAutenticadoValido(user.id), token);
         const res = await POST(req);
         expect(res.status).toBe(201);
 
@@ -559,7 +573,7 @@ describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
         await prisma.usuario.update({ where: { id: user.id }, data: { finServicio: ayer } });
         const token = await crearTokenUsuario(user.id, "PARENT");
 
-        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", await reporteAutenticadoValido(user.id), token);
         const res = await POST(req);
         expect(res.status, "el plan vencido NUNCA bloquea un reporte").toBe(201);
 
@@ -573,7 +587,7 @@ describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
     it("padre sin vigencia definida reporta con normalidad (201)", async () => {
         const user = await crearUsuario("PARENT");
         const token = await crearTokenUsuario(user.id, "PARENT");
-        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", await reporteAutenticadoValido(user.id), token);
         const res = await POST(req);
         expect(res.status).toBe(201);
     });
@@ -607,4 +621,84 @@ describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
         expect(r?.horaAproximada).toBe(false);
     });
 
+});
+
+// ─── SPEC-591 (decisión CEO 06-09) — «el padre autenticado SOLO puede reportar
+// situaciones de sus hijos; si quiere anónimo, cierra sesión y reporta». ───
+describe("POST /api/reportes — vínculo obligatorio a hijo (SPEC-591)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearParametrosReportes();
+        await crearPlataforma();
+        await crearPaisCiudad();
+    });
+
+    it("padre autenticado SIN hijoId → 400 que nombra la elección", async () => {
+        const user = await crearUsuario("PARENT");
+        const token = await crearTokenUsuario(user.id, "PARENT");
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido, token);
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message).toContain("Elige a quién va dirigido");
+        expect(await prisma.reporte.count()).toBe(0);
+    });
+
+    it("padre autenticado con hijo de OTRO padre → 403 (sin distinguir existencia)", async () => {
+        const user = await crearUsuario("PARENT");
+        const token = await crearTokenUsuario(user.id, "PARENT");
+        const otro = await crearUsuario("PARENT");
+        const hijoAjeno = await crearHijoActivo(otro.id);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", { ...reporteValido, hijoId: hijoAjeno.id }, token);
+        const res = await POST(req);
+        expect(res.status).toBe(403);
+        expect(await prisma.reporte.count()).toBe(0);
+    });
+
+    it("padre autenticado con hijo INACTIVO → 409", async () => {
+        const user = await crearUsuario("PARENT");
+        const token = await crearTokenUsuario(user.id, "PARENT");
+        const hijo = await prisma.hijo.create({
+            data: { usuarioId: user.id, nombre: "Valeria", apellidos: "Pérez", estado: "inactivo" },
+        });
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", { ...reporteValido, hijoId: hijo.id }, token);
+        const res = await POST(req);
+        expect(res.status).toBe(409);
+        expect(await prisma.reporte.count()).toBe(0);
+    });
+
+    it("padre autenticado con hijo propio activo → 201 y reporte.hijoId persistido", async () => {
+        const user = await crearUsuario("PARENT");
+        const token = await crearTokenUsuario(user.id, "PARENT");
+        const hijo = await crearHijoActivo(user.id);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", { ...reporteValido, hijoId: hijo.id }, token);
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+        const body = await res.json();
+        const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
+        expect(reporte?.hijoId).toBe(hijo.id);
+        expect(reporte?.esAnonimo).toBe(false);
+    });
+
+    it("anónimo con hijoId → 400 (jamás se confía en el payload)", async () => {
+        const user = await crearUsuario("PARENT");
+        const hijo = await crearHijoActivo(user.id);
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", { ...reporteValido, hijoId: hijo.id });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.error.message).toContain("anónimos");
+        expect(await prisma.reporte.count()).toBe(0);
+    });
+
+    it("anónimo normal → 201 sin vínculo (regresión)", async () => {
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", reporteValido);
+        const res = await POST(req);
+        expect(res.status).toBe(201);
+        const body = await res.json();
+        const reporte = await prisma.reporte.findUnique({ where: { id: body.reporte.id } });
+        expect(reporte?.hijoId).toBeNull();
+        expect(reporte?.esAnonimo).toBe(true);
+    });
 });

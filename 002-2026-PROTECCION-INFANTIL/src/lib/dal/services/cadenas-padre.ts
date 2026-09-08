@@ -51,6 +51,8 @@ export interface EventoCadenaDto {
     };
     textoDisponible: boolean;
     esPrincipal: boolean;
+    /** SPEC-591: ficha a la que va dirigido este evento (null si no aplica). */
+    hijoNombre: string | null;
 }
 
 export interface OtroReporteCadenaDto {
@@ -79,6 +81,8 @@ const ESTADOS_FINALES = ["CLASIFICADO", "CORREGIDO"];
 type ReporteConDetalle = Prisma.ReporteGetPayload<{
     include: {
         plataforma: { select: { nombre: true; clave: true } };
+        // SPEC-591: ficha a la que va dirigido (null para el anónimo).
+        hijo: { select: { nombre: true; apellidos: true } };
         // A-70 · F11: el resultado REAL del motor, no solo la categoría.
         clasificacion: {
             select: {
@@ -134,6 +138,7 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
         where: whereReporteVigente({ usuarioId }),
         include: {
             plataforma: { select: { nombre: true, clave: true } },
+            hijo: { select: { nombre: true, apellidos: true } },
             clasificacion: {
                 select: {
                     categoria: true,
@@ -251,6 +256,7 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
                 },
                 textoDisponible: true,
                 esPrincipal: r.id === principalId,
+                hijoNombre: r.hijo ? `${r.hijo.nombre} ${r.hijo.apellidos}`.trim() : null,
             })),
             otrosReportes: otros.map((o) => ({
                 id: o.id,
