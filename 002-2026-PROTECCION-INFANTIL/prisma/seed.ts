@@ -1995,6 +1995,139 @@ async function seedEjecucionAcciones() {
     console.log("[SEED] Eventos analisis.alerta.admin y analisis.operador.asignacion listos (SPEC-226)");
 }
 
+
+// ── SPEC-584 (Fases 2 y 3): control de acceso auditado al texto del reporte ──
+// Tres eventos del Motor Notif. Idempotente (upsert por clave + upsertNotificacionRegla,
+// patrón SPEC-247). Los textos NUNCA viajan en estas notificaciones: solo metadatos.
+async function seedAccesoCifradoTextos() {
+    const eventoLeido = "padre.reporte.texto_leido";
+    const asuntoLeido = "Aviso de lectura de tu reporte";
+    const cuerpoLeidoEmail =
+        "Hola,\n\n" +
+        "Te avisamos que un miembro de nuestro equipo ({{rolLector}}) leyó el {{campo}} de tu reporte sobre " +
+        "{{identificador}} el {{fechaLectura}}.\n\n" +
+        "Cada acceso queda registrado y puedes solicitar los detalles de las lecturas de tus reportes " +
+        "ejerciendo tu derecho de habeas data (Ley 1581 de 2012).";
+    const cuerpoLeidoInApp =
+        "Un miembro de nuestro equipo ({{rolLector}}) leyó el {{campo}} de tu reporte sobre {{identificador}}.";
+
+    const eventoCodigo = "padre.reporte.acceso_codigo";
+    const asuntoCodigo = "Tu código de acceso al texto del reporte";
+    const cuerpoCodigoEmail =
+        "Hola,\n\n" +
+        "Este es el código para compartir el texto de tu reporte sobre {{identificador}} con tu profesional:\n\n" +
+        "{{codigo}}\n\n" +
+        "El código vence en {{vigenteMinutos}} minutos y solo se puede usar una vez. Compártelo solo con quien " +
+        "deba leer el texto.";
+
+    const eventoCanjeado = "padre.reporte.acceso_canjeado";
+    const asuntoCanjeado = "Tu código de acceso fue usado";
+    const cuerpoCanjeadoEmail =
+        "Hola,\n\n" +
+        "Te avisamos que {{nombreCanjeador}} ({{rolCanjeador}}) usó el código de acceso al texto de tu reporte " +
+        "sobre {{identificador}} el {{fechaCanje}}. Puede leer el texto durante los próximos 15 minutos.\n\n" +
+        "Si no reconoces este acceso, contáctanos de inmediato.";
+    const cuerpoCanjeadoInApp =
+        "{{nombreCanjeador}} ({{rolCanjeador}}) usó tu código de acceso al texto de tu reporte sobre {{identificador}}.";
+
+    const plantillas: Array<{
+        clave: string;
+        canal: "EMAIL" | "IN_APP";
+        asunto: string | undefined;
+        cuerpoMarkdown: string;
+        variables: Record<string, { type: string }>;
+    }> = [
+        {
+            clave: `${eventoLeido}.email`,
+            canal: "EMAIL",
+            asunto: asuntoLeido,
+            cuerpoMarkdown: cuerpoLeidoEmail,
+            variables: { identificador: { type: "string" }, campo: { type: "string" }, rolLector: { type: "string" }, fechaLectura: { type: "string" } },
+        },
+        {
+            clave: `${eventoLeido}.in_app`,
+            canal: "IN_APP",
+            asunto: undefined,
+            cuerpoMarkdown: cuerpoLeidoInApp,
+            variables: { identificador: { type: "string" }, campo: { type: "string" }, rolLector: { type: "string" } },
+        },
+        {
+            clave: `${eventoCodigo}.email`,
+            canal: "EMAIL",
+            asunto: asuntoCodigo,
+            cuerpoMarkdown: cuerpoCodigoEmail,
+            variables: { codigo: { type: "string" }, identificador: { type: "string" }, vigenteMinutos: { type: "number" } },
+        },
+        {
+            clave: `${eventoCanjeado}.email`,
+            canal: "EMAIL",
+            asunto: asuntoCanjeado,
+            cuerpoMarkdown: cuerpoCanjeadoEmail,
+            variables: { nombreCanjeador: { type: "string" }, rolCanjeador: { type: "string" }, identificador: { type: "string" }, fechaCanje: { type: "string" } },
+        },
+        {
+            clave: `${eventoCanjeado}.in_app`,
+            canal: "IN_APP",
+            asunto: undefined,
+            cuerpoMarkdown: cuerpoCanjeadoInApp,
+            variables: { nombreCanjeador: { type: "string" }, rolCanjeador: { type: "string" }, identificador: { type: "string" } },
+        },
+    ];
+
+    for (const pl of plantillas) {
+        const variablesSchema: Prisma.InputJsonValue = { type: "object", properties: pl.variables };
+        await prisma.notificacionPlantilla.upsert({
+            where: { clave: pl.clave },
+            update: {
+                canal: pl.canal,
+                asunto: pl.asunto ?? null,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema,
+                activa: true,
+            },
+            create: {
+                clave: pl.clave,
+                canal: pl.canal,
+                asunto: pl.asunto ?? null,
+                cuerpoMarkdown: pl.cuerpoMarkdown,
+                variablesSchema,
+                activa: true,
+            },
+        });
+    }
+
+    // Solo el padre dueño recibe estos avisos (rol PARENT).
+    for (const canal of ["EMAIL", "IN_APP"] as const) {
+        await upsertNotificacionRegla({
+            evento: eventoLeido,
+            rol: "PARENT",
+            canal,
+            plantillaClave: `${eventoLeido}.${canal.toLowerCase()}`,
+            obligatoria: false,
+            activa: true,
+        });
+    }
+    await upsertNotificacionRegla({
+        evento: eventoCodigo,
+        rol: "PARENT",
+        canal: "EMAIL",
+        plantillaClave: `${eventoCodigo}.email`,
+        obligatoria: false,
+        activa: true,
+    });
+    for (const canal of ["EMAIL", "IN_APP"] as const) {
+        await upsertNotificacionRegla({
+            evento: eventoCanjeado,
+            rol: "PARENT",
+            canal,
+            plantillaClave: `${eventoCanjeado}.${canal.toLowerCase()}`,
+            obligatoria: false,
+            activa: true,
+        });
+    }
+    console.log("[SEED] Eventos de acceso cifrado al texto (SPEC-584) listos");
+}
+
 async function main() {
     // Admin inicial: SOLO desde variable de entorno, SOLO si no existe (spec 105, I-31).
     // Nunca un literal en el repo; el seed nunca pisa una credencial ya rotada.
@@ -4080,6 +4213,9 @@ async function main() {
 
     // ── SPEC-237: SLA de consolidación de la bandeja del comité ──
     await seedParametrosComiteConsolidacion();
+
+    // ── SPEC-584: acceso auditado al texto (auditoría + código temporal) ──
+    await seedAccesoCifradoTextos();
 
     // ── SPEC-218: TTL de caché de la analítica dinero-vs-valor ──
     await seedParametrosAnaliticaPagos();

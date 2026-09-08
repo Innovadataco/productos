@@ -378,6 +378,10 @@ enum AccionAudit {
   CITA_PROFESIONAL_VENCIDA_PROFESIONAL
   CITA_PROFESIONAL_ALARMA_TASA_VENCIMIENTOS
   CITA_PROFESIONAL_SUSPENDIDO_POR_VENCIMIENTOS
+  // SPEC-584 (Fase 3): ciclo de vida del código temporal de acceso externo al
+  // texto del reporte (solicitud por el padre dueño + canje por profesional/padre).
+  CODIGO_ACCESO_SOLICITADO
+  CODIGO_ACCESO_CANJEADO
 }
 
 enum TipoPeriodoServicio {
@@ -672,6 +676,11 @@ model Usuario {
   contactosConfianza               ContactoConfianza[]
   // SPEC-339: los menores de este padre (ficha propia, no compartida).
   hijosPropios                     Hijo[]                          @relation("HijosDelPadre")
+  // SPEC-584 (Fase 2/3): lecturas de textos que este usuario hizo (o canjeó) y
+  // códigos temporales de acceso externo que solicitó o canjeó.
+  lecturasTexto                    LecturaReporte[]
+  codigosAccesoSolicitados         CodigoAccesoContenido[]         @relation("CodigosAccesoSolicitados")
+  codigosAccesoCanjeados           CodigoAccesoContenido[]         @relation("CodigosAccesoCanjeados")
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   hijos                            HijoPadre[]
   identificadoresHijoDesvinculados IdentificadorHijoDesvinculado[]
@@ -1965,6 +1974,10 @@ model Reporte {
   // se borra un contenido mientras un reporte lo referencia; el trigger lo borra DESPUÉS de
   // que el reporte se fue (ver la migración).
   contenido                ContenidoReporte    @relation(fields: [contenidoId], references: [id], onDelete: Restrict)
+  // SPEC-584 (Fase 2/3): auditoría de lecturas del texto + códigos temporales de
+  // acceso externo vinculados a este reporte.
+  lecturasTexto            LecturaReporte[]
+  codigosAcceso            CodigoAccesoContenido[]
 
   @@index([reportePrincipalId])
   @@index([identificador, plataformaId])
@@ -2024,6 +2037,74 @@ model LlaveReporte {
   creadoEn    DateTime @default(now()) @db.Timestamptz(6)
 
   contenido ContenidoReporte @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
+}
+
+// SPEC-584 (Fase 2) · Auditoría de lectura del texto del reporte (decisión 3 del
+// dueño, 2026-09-07): CADA visualización de un campo cifrado queda registrada con
+// QUIÉN (usuario de plataforma o actor externo con su código), QUÉ campo vio y el
+// HASH sha-256 del contenido visto — NUNCA el texto literal. `reporteId`/`eventoId`
+// son la identidad del dueño del contenido (exactamente uno; la frontera DAL lo
+// garantiza al resolver el contenidoId).
+model LecturaReporte {
+  id             String   @id @default(cuid())
+  reporteId      String?
+  eventoId       String?
+  contenidoId    String
+  // Campo visto: "texto" (trabajo) | "textoOriginal" (evidencia).
+  campo          String
+  // PLATAFORMA (admin/operador/comité autenticados) | EXTERNO (sesión por código temporal).
+  tipoActor      String
+  // Quién vio: usuario de plataforma o el profesional/padre que canjeó el código.
+  usuarioId      String?
+  // Snapshot del rol al momento de la lectura (investigaciones sin JOIN histórico).
+  rol            String?
+  // Vínculo con el código temporal canjeado (solo lecturas EXTERNO).
+  codigoAccesoId String?
+  // sha-256 del texto descifrado visto. Rastreable sin exponer el contenido.
+  hashContenido  String
+  ip             String?
+  userAgent      String?
+  creadoEn       DateTime @default(now()) @db.Timestamptz(6)
+
+  reporte  Reporte?              @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  evento   EventoExpediente?     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario  Usuario?              @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  codigo   CodigoAccesoContenido? @relation(fields: [codigoAccesoId], references: [id], onDelete: SetNull)
+
+  @@index([reporteId, creadoEn])
+  @@index([usuarioId])
+}
+
+// SPEC-584 (Fase 3) · Código temporal de acceso externo al texto (decisión 2 del
+// dueño): el padre dueño del reporte lo solicita, se envía por correo y un
+// profesional (o el mismo padre) autenticado lo canjea UNA sola vez dentro de
+// 30 min; el canje abre una sesión de visualización de 15 min. En reposo vive
+// SOLO el hash del código y el hash del token de sesión — jamás en claro.
+// Un solo código activo por reporte: una nueva solicitud expira los anteriores.
+model CodigoAccesoContenido {
+  id              String    @id @default(cuid())
+  reporteId       String
+  // sha-256 del código (8 caracteres sin ambigüedades). NUNCA el código en claro.
+  codigoHash      String    @unique
+  solicitadoPorId String
+  // Vigencia para CANJEAR (creadoEn + 30 min).
+  vigenteHasta    DateTime  @db.Timestamptz(6)
+  canjeadoEn      DateTime? @db.Timestamptz(6)
+  canjeadoPorId   String?
+  // Vigencia de la sesión de visualización (canjeadoEn + 15 min).
+  sesionExpiraEn  DateTime? @db.Timestamptz(6)
+  // sha-256 del token opaco de sesión (UUID aleatorio). NUNCA el token en claro.
+  sesionTokenHash String?   @unique
+  ipSolicitud     String?
+  ipCanje         String?
+  creadoEn        DateTime  @default(now()) @db.Timestamptz(6)
+
+  reporte       Reporte  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  solicitadoPor Usuario  @relation(fields: [solicitadoPorId], references: [id], name: "CodigosAccesoSolicitados")
+  canjeadoPor   Usuario? @relation(fields: [canjeadoPorId], references: [id], name: "CodigosAccesoCanjeados", onDelete: SetNull)
+  lecturas      LecturaReporte[]
+
+  @@index([reporteId])
 }
 
 model SolicitudComite {
@@ -2842,6 +2923,8 @@ model EventoExpediente {
   expediente Expediente @relation(fields: [expedienteId], references: [id])
   reporte    Reporte?   @relation(fields: [reporteId], references: [id])
   contenido  ContenidoReporte @relation(fields: [contenidoId], references: [id], onDelete: Restrict)
+  // SPEC-584 (Fase 2): cada lectura del relato del evento queda auditada.
+  lecturasTexto LecturaReporte[]
 
   @@unique([expedienteId, ordenSecuencial])
   // SPEC-323: un reporte entra UNA sola vez al expediente. Postgres admite varios

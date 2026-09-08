@@ -41,6 +41,13 @@ const JUSTIFICADAS: ReadonlyArray<{ ruta: string; razon: string }> = [
             "de antes de la migración + cuid nuevo. `materiaIdSchema` es la unión de " +
             "los dos. Es dato histórico real, no una convención a copiar.",
     },
+    {
+        ruta: "src/app/api/reportes/acceso/ver/route.ts",
+        razon:
+            "SPEC-584: el token de sesión de visualización SÍ es un UUID aleatorio " +
+            "(crypto.randomUUID() al canjear), no un id de entidad de PI. " +
+            "`z.string().uuid()` es la validación correcta acá.",
+    },
 ];
 
 /** Fuente sin comentarios: explicar el defecto no puede poner el gate en rojo. */

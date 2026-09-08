@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **113** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **115** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (65)
+### Otros (sin regla de dominio) (67)
 
 #### `AclaracionExpediente`
 
@@ -648,6 +648,27 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | expiraEn | DateTime | — |
 | colegio | Colegio | relación (FK) |
+
+#### `CodigoAccesoContenido`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| reporteId | String | — |
+| codigoHash | String | único |
+| solicitadoPorId | String | — |
+| vigenteHasta | DateTime | — |
+| canjeadoEn | DateTime | opcional |
+| canjeadoPorId | String | opcional |
+| sesionExpiraEn | DateTime | opcional |
+| sesionTokenHash | String | único, opcional |
+| ipSolicitud | String | opcional |
+| ipCanje | String | opcional |
+| creadoEn | DateTime | — |
+| reporte | Reporte | relación (FK) |
+| solicitadoPor | Usuario | relación (FK) |
+| canjeadoPor | Usuario | opcional, relación (FK) |
+| lecturas | LecturaReporte | lista, relación |
 
 #### `CodigoReferidoUso`
 
@@ -805,6 +826,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | expediente | Expediente | relación (FK) |
 | reporte | Reporte | opcional, relación (FK) |
 | contenido | ContenidoReporte | relación (FK) |
+| lecturasTexto | LecturaReporte | lista, relación |
 
 #### `EventoMatch`
 
@@ -1093,6 +1115,28 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | generadoPorId | String | — |
 | expediente | Expediente | relación (FK) |
 | generadoPor | Usuario | relación |
+
+#### `LecturaReporte`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| reporteId | String | opcional |
+| eventoId | String | opcional |
+| contenidoId | String | — |
+| campo | String | — |
+| tipoActor | String | — |
+| usuarioId | String | opcional |
+| rol | String | opcional |
+| codigoAccesoId | String | opcional |
+| hashContenido | String | — |
+| ip | String | opcional |
+| userAgent | String | opcional |
+| creadoEn | DateTime | — |
+| reporte | Reporte | opcional, relación (FK) |
+| evento | EventoExpediente | opcional, relación (FK) |
+| usuario | Usuario | opcional, relación (FK) |
+| codigo | CodigoAccesoContenido | opcional, relación (FK) |
 
 #### `LlaveReporte`
 
@@ -1869,6 +1913,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reportePrincipal | Reporte | opcional, relación |
 | eventosDeCadena | Reporte | lista, relación |
 | contenido | ContenidoReporte | relación (FK) |
+| lecturasTexto | LecturaReporte | lista, relación |
+| codigosAcceso | CodigoAccesoContenido | lista, relación |
 
 #### `SolicitudComite`
 
@@ -2146,6 +2192,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | bonosBeneficiario | BonoPromocional | lista, relación |
 | contactosConfianza | ContactoConfianza | lista, relación |
 | hijosPropios | Hijo | lista, relación |
+| lecturasTexto | LecturaReporte | lista, relación |
+| codigosAccesoSolicitados | CodigoAccesoContenido | lista, relación |
+| codigosAccesoCanjeados | CodigoAccesoContenido | lista, relación |
 | hijos | HijoPadre | lista, relación |
 | identificadoresHijoDesvinculados | IdentificadorHijoDesvinculado | lista, relación |
 | notificacionesCirculo | Boolean | — |
@@ -2213,6 +2262,7 @@ erDiagram
     Ciudad ||--o{ Reporte : "ciudadRel (opcional)"
     ClasificacionIA ||--o{ ClasificacionRubricaVoto : "clasificacionIA"
     ClasificacionIA ||--o{ CorreccionAdmin : "clasificacion"
+    CodigoAccesoContenido ||--o{ LecturaReporte : "codigo (opcional)"
     Colegio ||--o{ AlertaColegio : "colegio"
     Colegio ||--o{ AuditLog : "colegio (opcional)"
     Colegio ||--o{ CargaRosterSesion : "colegio"
@@ -2248,6 +2298,7 @@ erDiagram
     Estudiante ||--o{ AcudienteEstudiante : "estudiante"
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
+    EventoExpediente ||--o{ LecturaReporte : "evento (opcional)"
     Expediente ||--o{ AclaracionExpediente : "expediente"
     Expediente ||--o{ AnalisisExpediente : "expediente (opcional)"
     Expediente ||--o{ EventoExpediente : "expediente"
@@ -2301,10 +2352,12 @@ erDiagram
     ReglaRecomendacion ||--o{ ReglaRecomendacionHistorial : "regla"
     Reporte ||--o{ AlertaColegio : "reporte"
     Reporte ||--o{ ClasificacionIA : "reporte"
+    Reporte ||--o{ CodigoAccesoContenido : "reporte"
     Reporte ||--o{ EmbeddingReporte : "reporte"
     Reporte ||--o{ EventoExpediente : "reporte (opcional)"
     Reporte ||--o{ EventoMatch : "reporteNuevo"
     Reporte ||--o{ FuenteReporte : "reporte"
+    Reporte ||--o{ LecturaReporte : "reporte (opcional)"
     Reporte ||--o{ PasoProcesamiento : "reporte"
     Reporte ||--o{ ReintentoReporte : "reporte"
     Reporte ||--o{ SolicitudComite : "reporte"
@@ -2332,6 +2385,8 @@ erDiagram
     Usuario ||--o{ BlockList : "creadoPor"
     Usuario ||--o{ BonoPromocional : "beneficiario (opcional)"
     Usuario ||--o{ BonoPromocional : "creadoPor"
+    Usuario ||--o{ CodigoAccesoContenido : "canjeadoPor (opcional)"
+    Usuario ||--o{ CodigoAccesoContenido : "solicitadoPor"
     Usuario ||--o{ CodigoReferidoUso : "revisadaPor (opcional)"
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
     Usuario ||--o{ ContactoConfianza : "usuario"
@@ -2346,6 +2401,7 @@ erDiagram
     Usuario ||--o{ IntegranteComite : "comite"
     Usuario ||--o{ IntegranteComite : "creadoPor"
     Usuario ||--o{ IntegranteComite : "modificadoPor (opcional)"
+    Usuario ||--o{ LecturaReporte : "usuario (opcional)"
     Usuario ||--o{ NotaSeguimiento : "autor"
     Usuario ||--o{ NotificacionInApp : "usuario"
     Usuario ||--o{ Pago : "autorizadoPor (opcional)"

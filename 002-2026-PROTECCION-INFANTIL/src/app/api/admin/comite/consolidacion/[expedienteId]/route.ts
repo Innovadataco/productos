@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -35,7 +36,11 @@ export async function GET(
         }
 
         const { expedienteId } = await params;
-        const detalle = await obtenerDetalleConsolidacion(expedienteId);
+        // SPEC-584: el detalle descifra los relatos de los eventos; cada lectura
+        // queda auditada (actor ALS).
+        const detalle = await conActor(actorDesdeRequest(user, request), () =>
+            obtenerDetalleConsolidacion(expedienteId)
+        );
 
         const puedeActuar = esComiteRol(user.rol) && estadoPermiteAccion(detalle.informe.estadoAprobacion);
         return NextResponse.json({

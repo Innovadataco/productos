@@ -9,6 +9,7 @@ import { ReporteDetalleInfo } from "./reporte-detalle/ReporteDetalleInfo";
 import { TextoOriginalPanel } from "./reporte-detalle/TextoOriginalPanel";
 import { AccionesReporte } from "./reporte-detalle/AccionesReporte";
 import { AvisoDeshacerConfirmacion } from "./reporte-detalle/AvisoDeshacerConfirmacion";
+import { HistorialAccesosTexto } from "./reporte-detalle/HistorialAccesosTexto";
 
 interface AdminReporteDetalleProps {
     reporteId: string;
@@ -114,6 +115,9 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
                 loadingRevelar={loadingRevelar}
                 onRevelar={handleRevelarOriginal}
             />
+
+            {/* SPEC-584 (Fase 2): trazabilidad de quién vio el texto y cuándo. */}
+            <HistorialAccesosTexto reporteId={reporteId} />
 
             <AccionesReporte
                 reporte={reporte}

@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
+import { CompartirTextoProfesional } from "@/components/modules/padre/CompartirTextoProfesional";
 
 type BadgeVisual = "warning" | "success" | "muted";
 
@@ -150,6 +151,9 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
                     <p className="mt-2 text-sm text-muted whitespace-pre-line">{clasificacion.mensaje}</p>
                 </GlassCard>
             )}
+
+            {/* SPEC-584 (Fase 3): el padre comparte el texto con un profesional por código temporal. */}
+            <CompartirTextoProfesional reporteId={reporte.id} />
 
             <CanalesOficiales />
         </div>
