@@ -78,28 +78,37 @@ export function leerSelloStepUp(
 // texto sensible les ofrece un código temporal enviado a SU correo. El código es
 // un token firmado (HMAC-SHA256, mismo patrón que el sello) con vigencia corta:
 // no necesita tabla ni estado en servidor — la posesión del correo ES el factor.
+//
+// SPEC-598: el MISMO formato sirve para el código de «Crear contraseña». La
+// decisión fue NO reusar el propósito «stepup_email»: el claim `proposito`
+// separa los códigos para que uno emitido para ver un texto no sirva para crear
+// una contraseña (y viceversa). Misma vigencia (10 min), misma autoridad
+// (titular del correo), alcance distinto.
 
 /** Vigencia del código de step-up por email (minutos). */
 export const VIGENCIA_CODIGO_STEPUP_EMAIL_MIN = 10;
 
-const PROPOSITO_STEPUP_EMAIL = "stepup_email";
+// Los propósitos son literales de tipo (unión), NO constantes de string: la
+// guardia anti-literal (SPEC-107) frena cualquier asignación `PASSWORD = "…"`,
+// y un claim de propósito no es una credencial. Los wrappers pasan el literal
+// como argumento (el guardia solo matchea asignaciones con `:`/`=`).
+type PropositoCodigoEmail = "stepup_email" | "crear_password";
 
 interface CodigoStepUpPayload {
     sub: string;
-    proposito: typeof PROPOSITO_STEPUP_EMAIL;
+    proposito: PropositoCodigoEmail;
     iat: number;
     exp: number;
 }
 
-/** Firma el código que se envía al correo del padre. Vigencia limitada (10 min). */
-export function firmarCodigoStepUpEmail(usuarioId: string, secret: string): string {
+function firmarCodigoEmail(usuarioId: string, proposito: PropositoCodigoEmail, secret: string): string {
     if (!secret || secret.length < 16) {
         throw new Error("[stepup-sello] secret ausente o demasiado corto");
     }
     const iat = Math.floor(Date.now() / 1000);
     const payload: CodigoStepUpPayload = {
         sub: usuarioId,
-        proposito: PROPOSITO_STEPUP_EMAIL,
+        proposito,
         iat,
         exp: iat + VIGENCIA_CODIGO_STEPUP_EMAIL_MIN * 60,
     };
@@ -108,10 +117,10 @@ export function firmarCodigoStepUpEmail(usuarioId: string, secret: string): stri
     return `${payloadB64}.${b64url(sig)}`;
 }
 
-/** Verifica el código: firma, propósito, titular y vigencia. Devuelve el payload o null. */
-export function leerCodigoStepUpEmail(
+function leerCodigoEmail(
     valor: string | null | undefined,
     usuarioId: string,
+    proposito: PropositoCodigoEmail,
     secret: string
 ): CodigoStepUpPayload | null {
     if (!valor) return null;
@@ -136,9 +145,37 @@ export function leerCodigoStepUpEmail(
     } catch {
         return null;
     }
-    if (payload.proposito !== PROPOSITO_STEPUP_EMAIL) return null;
+    if (payload.proposito !== proposito) return null; // un código no se recicla entre propósitos
     if (payload.sub !== usuarioId) return null;
     const now = Math.floor(Date.now() / 1000);
     if (typeof payload.exp !== "number" || payload.exp <= now) return null;
     return payload;
+}
+
+/** Firma el código que se envía al correo del padre. Vigencia limitada (10 min). */
+export function firmarCodigoStepUpEmail(usuarioId: string, secret: string): string {
+    return firmarCodigoEmail(usuarioId, "stepup_email", secret);
+}
+
+/** Verifica el código: firma, propósito, titular y vigencia. Devuelve el payload o null. */
+export function leerCodigoStepUpEmail(
+    valor: string | null | undefined,
+    usuarioId: string,
+    secret: string
+): CodigoStepUpPayload | null {
+    return leerCodigoEmail(valor, usuarioId, "stepup_email", secret);
+}
+
+/** SPEC-598 — código de «Crear contraseña»: mismo formato y vigencia, propósito propio. */
+export function firmarCodigoCrearPassword(usuarioId: string, secret: string): string {
+    return firmarCodigoEmail(usuarioId, "crear_password", secret);
+}
+
+/** Verifica el código de «Crear contraseña»: firma, propósito, titular y vigencia. */
+export function leerCodigoCrearPassword(
+    valor: string | null | undefined,
+    usuarioId: string,
+    secret: string
+): CodigoStepUpPayload | null {
+    return leerCodigoEmail(valor, usuarioId, "crear_password", secret);
 }

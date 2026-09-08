@@ -2141,6 +2141,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | id | String | id |
 | email | String | único |
 | googleSub | String | único, opcional |
+| passwordCreadaEn | DateTime | opcional |
 | nombre | String | opcional |
 | apellidos | String | opcional |
 | documentoTipo | String | opcional |

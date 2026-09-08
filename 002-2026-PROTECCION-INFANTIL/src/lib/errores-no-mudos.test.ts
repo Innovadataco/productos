@@ -37,6 +37,7 @@ const AVISOS_DE_SEGURIDAD = [
     "src/app/api/admin/operadores/[id]/regenerar-password/route.ts",
     "src/app/api/auth/activar/route.ts",
     "src/app/api/auth/cambiar-password/route.ts",
+    "src/app/api/auth/crear-password/route.ts",
     "src/app/api/auth/recuperar/restablecer/route.ts",
 ] as const;
 

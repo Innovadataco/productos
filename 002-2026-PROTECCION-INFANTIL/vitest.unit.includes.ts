@@ -24,6 +24,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/marca-rebote-url.test.ts",
     // SPEC-416 (I-118): fuente única de "titular del dato" y "con camino guiado".
     "src/lib/routing/roles-titulares.test.ts",
+    // SPEC-598: códigos de email con propósito (step-up vs crear contraseña) no se reciclan.
+    "src/lib/routing/stepup-sello.test.ts",
     // SPEC-423 (I-298): la credencial de respaldo se muestra SIEMPRE en admin.
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
     // SPEC-463 (D-107): el colegio habla de usted; el padre conserva «tú».
