@@ -53,8 +53,6 @@ function menor(n: number) {
     return {
         nombre: `Menor ${n}`,
         apellidos: "De Prueba",
-        documentoTipo: "TI",
-        documentoNumero: `10300000${n}`,
     };
 }
 
@@ -154,22 +152,17 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         expect(json.error.message).not.toMatch(/Menor \d/);
     });
 
-    it("F7: el documento se valida por tipo — el caso de Jelkin (letras en una TI) se rechaza", async () => {
-        const res = await POST(reqCrear({ ...menor(1), documentoTipo: "TI", documentoNumero: "84opkioniby" }));
-        expect(res.status).toBe(400);
-        const json = await res.json();
-        expect(json.error.message).toContain("solo números");
-        expect(json.error.message).toContain("tarjeta de identidad");
-        expect(await prisma.hijo.count(), "no se guardó nada").toBe(0);
-    });
-
-    it("F7: el pasaporte SÍ admite letras (no se valida todo con la misma regla)", async () => {
-        const res = await POST(reqCrear({ ...menor(1), documentoTipo: "PASAPORTE", documentoNumero: "AV123456" }));
+    it("SPEC-589: los campos de documento del menor ya no existen — si llegan, se ignoran sin guardarse", async () => {
+        const res = await POST(reqCrear({ ...menor(1), documentoTipo: "TI", documentoNumero: "103000001" }));
         expect(res.status).toBe(201);
+        const enBd = await prisma.hijo.findUnique({ where: { id: (await res.json()).hijoId } });
+        expect(enBd).not.toBeNull();
+        expect("documentoTipo" in enBd!).toBe(false);
+        expect("documentoNumero" in enBd!).toBe(false);
     });
 
     it("F4: un campo faltante responde nombrando el campo, no 'Datos inválidos'", async () => {
-        const res = await POST(reqCrear({ apellidos: "Sin Nombre", documentoTipo: "TI", documentoNumero: "1030999999" }));
+        const res = await POST(reqCrear({ apellidos: "Sin Nombre" }));
         expect(res.status).toBe(400);
         const json = await res.json();
         expect(json.error.message).toBe("Escribe el nombre del menor.");
@@ -177,7 +170,7 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
     });
 
     it("apellidos ahora son obligatorios (FR-019)", async () => {
-        const res = await POST(reqCrear({ nombre: "Sin", documentoTipo: "TI", documentoNumero: "999" }));
+        const res = await POST(reqCrear({ nombre: "Sin" }));
         expect(res.status).toBe(400);
     });
 
@@ -194,8 +187,7 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         const json = await res.json();
         expect(json.error.message).toContain("entre 5 y 17");
         // Nada de fila creada en BD (el servidor cortó antes del DAL).
-        const enBd = await prisma.hijo.findFirst({ where: { documentoNumero: "10300000" + 9 } });
-        expect(enBd).toBeNull();
+        expect(await prisma.hijo.count()).toBe(0);
     });
 
     it("SPEC-372 (A-74 P4 · I-262): un año dentro del rango 5-17 sí queda registrado", async () => {
@@ -227,7 +219,6 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         { edad: 18, espera: "rechaza" }, // un anio mas viejo -> 400
     ])("SPEC-565: POST borde edad $edad -> $espera", async ({ edad, espera }) => {
         const anioActual = new Date().getFullYear();
-        const doc = menor(edad).documentoNumero;
         const res = await POST(reqCrear({ ...menor(edad), anioNacimiento: anioActual - edad }));
         if (espera === "pasa") {
             expect(res.status, `edad ${edad} debe pasar`).toBe(201);
@@ -236,7 +227,7 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         } else {
             expect(res.status, `edad ${edad} debe rechazarse`).toBe(400);
             expect((await res.json()).error.message).toContain("entre 5 y 17");
-            expect(await prisma.hijo.findFirst({ where: { documentoNumero: doc } })).toBeNull();
+            expect(await prisma.hijo.count()).toBe(0);
         }
     });
 });
@@ -259,14 +250,13 @@ describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }
         return (await res.json()).hijoId as string;
     }
 
-    it("corrige nombre, apellidos y documento de un menor ya creado", async () => {
+    it("corrige nombre y apellidos de un menor ya creado", async () => {
         const hijoId = await crearMenor();
-        const [req, ctx] = reqPatch(hijoId, { apellidos: "Corregido", documentoNumero: "20400001" });
+        const [req, ctx] = reqPatch(hijoId, { apellidos: "Corregido" });
         const res = await PATCH(req, ctx);
         expect(res.status).toBe(200);
         const enBd = await prisma.hijo.findUnique({ where: { id: hijoId } });
         expect(enBd?.apellidos).toBe("Corregido");
-        expect(enBd?.documentoNumero).toBe("20400001");
     });
 
     it("sigue aceptando { estado } solo — el consumidor viejo (MisHijos) no se rompe", async () => {
@@ -279,18 +269,21 @@ describe("PATCH /api/padre/hijos/[id] (SPEC-339 · FR-022)", { timeout: 60_000 }
         expect(mocks.sellarCookieSesionEstado).toHaveBeenCalled();
     });
 
-    it("corregir el documento hacia uno ya usado en la propia lista → 409", async () => {
-        await crearMenor(1);
-        const hijo2 = await crearMenor(2);
-        const [req, ctx] = reqPatch(hijo2, { documentoNumero: "103000001" });
-        const res = await PATCH(req, ctx);
-        expect(res.status).toBe(409);
+    it("SPEC-589: el documento del menor ya no existe — un PATCH con esos campos ignora lo que sobre y 400 si no hay nada real", async () => {
+        const hijoId = await crearMenor();
+        // Solo campos muertos: nada que corregir → el refine del schema lo corta.
+        const [req, ctx] = reqPatch(hijoId, { documentoTipo: "TI", documentoNumero: "999" });
+        expect((await PATCH(req, ctx)).status).toBe(400);
+        // Mezclado con un campo real: la corrección real pasa y el documento se descarta.
+        const [req2, ctx2] = reqPatch(hijoId, { apellidos: "Nuevo", documentoNumero: "999" });
+        expect((await PATCH(req2, ctx2)).status).toBe(200);
+        expect((await prisma.hijo.findUnique({ where: { id: hijoId } }))?.apellidos).toBe("Nuevo");
     });
 
     it("el menor de OTRO padre → 404 (PII acceso-solo-dueño)", async () => {
         const otro = await crearUsuario("PARENT");
         const ajeno = await prisma.hijo.create({
-            data: { usuarioId: otro.id, nombre: "Ajeno", apellidos: "X", documentoTipo: "TI", documentoNumero: "777" },
+            data: { usuarioId: otro.id, nombre: "Ajeno", apellidos: "X" },
         });
         const [req, ctx] = reqPatch(ajeno.id, { nombre: "Robado" });
         const res = await PATCH(req, ctx);
@@ -437,7 +430,7 @@ describe("GET /api/padre/hijos", { timeout: 30_000 }, () => {
         await setTope("5");
         await POST(reqCrear(menor(1)));
         await prisma.hijo.create({
-            data: { usuarioId: otro.id, nombre: "Ajeno", apellidos: "X", documentoTipo: "TI", documentoNumero: "888" },
+            data: { usuarioId: otro.id, nombre: "Ajeno", apellidos: "X" },
         });
         const res = await GET();
         const lista = await res.json();

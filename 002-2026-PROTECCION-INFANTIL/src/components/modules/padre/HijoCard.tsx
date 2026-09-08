@@ -3,7 +3,8 @@
 /**
  * SPEC-539: la tarjeta de un menor, extraída de MisHijos.tsx (que superaba el
  * máximo de líneas). Incluye la edición inline de los datos del hijo (nombre,
- * apellidos, documento, año, sexo) contra el PATCH /api/padre/hijos/[id] existente.
+ * apellidos, año, sexo) contra el PATCH /api/padre/hijos/[id] existente.
+ * SPEC-589: el documento del menor ya no existe en la ficha (decisión CEO).
  */
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -14,14 +15,6 @@ import { Badge } from "@/components/ui/Badge";
 import { BitacoraMenor } from "./BitacoraMenor";
 import { edadesMenor, anioDesdeEdad } from "@/lib/padre/documento-menor";
 
-export const DOCUMENTO_TIPOS = [
-    { value: "RC", label: "Registro civil" },
-    { value: "TI", label: "Tarjeta de identidad" },
-    { value: "CC", label: "Cédula" },
-    { value: "CE", label: "Cédula de extranjería" },
-    { value: "PASAPORTE", label: "Pasaporte" },
-    { value: "OTRO", label: "Otro" },
-];
 export const SEXOS = [
     { value: "", label: "Prefiero no decir" },
     { value: "M", label: "Masculino" },
@@ -41,8 +34,6 @@ export type Hijo = {
     id: string;
     nombre: string;
     apellidos: string;
-    documentoTipo: string;
-    documentoNumero: string;
     anioNacimiento: number | null;
     sexo: string | null;
     estado: string;
@@ -66,8 +57,6 @@ export function HijoCard({
         datos: {
             nombre: string;
             apellidos: string;
-            documentoTipo: string;
-            documentoNumero: string;
             anioNacimiento: number | null;
             sexo: string | null;
         }
@@ -84,8 +73,6 @@ export function HijoCard({
     const [edicion, setEdicion] = useState({
         nombre: hijo.nombre,
         apellidos: hijo.apellidos,
-        documentoTipo: hijo.documentoTipo,
-        documentoNumero: hijo.documentoNumero,
         anioNacimiento: hijo.anioNacimiento ? String(hijo.anioNacimiento) : "",
         sexo: hijo.sexo ?? "",
     });
@@ -98,8 +85,6 @@ export function HijoCard({
             await onEditarHijo(hijo.id, {
                 nombre: edicion.nombre.trim(),
                 apellidos: edicion.apellidos.trim(),
-                documentoTipo: edicion.documentoTipo,
-                documentoNumero: edicion.documentoNumero.trim(),
                 anioNacimiento: edicion.anioNacimiento ? Number(edicion.anioNacimiento) : null,
                 sexo: edicion.sexo || null,
             });
@@ -133,8 +118,7 @@ export function HijoCard({
                         )}
                     </div>
                     <div className="text-xs text-muted">
-                        {hijo.documentoTipo} {hijo.documentoNumero}
-                        {hijo.anioNacimiento ? ` · ${new Date().getFullYear() - hijo.anioNacimiento} años` : ""}
+                        {hijo.anioNacimiento ? `${new Date().getFullYear() - hijo.anioNacimiento} años` : ""}
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -156,8 +140,6 @@ export function HijoCard({
                     <div className="grid gap-3 sm:grid-cols-2">
                         <Input label="Nombres" value={edicion.nombre} onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })} />
                         <Input label="Apellidos" value={edicion.apellidos} onChange={(e) => setEdicion({ ...edicion, apellidos: e.target.value })} />
-                        <Select label="Tipo de documento" options={DOCUMENTO_TIPOS} value={edicion.documentoTipo} onChange={(e) => setEdicion({ ...edicion, documentoTipo: e.target.value })} />
-                        <Input label="Número de documento" value={edicion.documentoNumero} onChange={(e) => setEdicion({ ...edicion, documentoNumero: e.target.value })} />
                         {/* SPEC-565 (I-348): edad por SELECTOR (5-17), como en el alta — F8 de
                             SPEC-361: teclear el año a mano llevaba a valores absurdos. El value
                             es el AÑO derivado de la edad, así que siempre cae en el rango que el

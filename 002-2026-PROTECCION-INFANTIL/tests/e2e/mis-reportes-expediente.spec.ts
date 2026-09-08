@@ -46,8 +46,6 @@ async function crearPadreCompleto(email: string) {
             usuarioId: padre.id,
             nombre: "Menor",
             apellidos: "Del Hilo",
-            documentoTipo: "TI",
-            documentoNumero: `10${Date.now() % 100000000}`,
         },
     });
     const admin = await prisma.usuario.findFirst({ where: { rol: "ADMIN" } });

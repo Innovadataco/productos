@@ -47,14 +47,12 @@ async function completarPerfil(usuarioId: string) {
     });
 }
 
-async function agregarMenor(usuarioId: string, documentoNumero = "1030000001") {
+async function agregarMenor(usuarioId: string) {
     return prisma.hijo.create({
         data: {
             usuarioId,
             nombre: "Menor",
             apellidos: "De Prueba",
-            documentoTipo: "TI",
-            documentoNumero,
         },
     });
 }

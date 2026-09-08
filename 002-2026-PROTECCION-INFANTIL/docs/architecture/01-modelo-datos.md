@@ -936,8 +936,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | usuarioId | String | — |
 | nombre | String | — |
 | apellidos | String | — |
-| documentoTipo | String | — |
-| documentoNumero | String | — |
 | anioNacimiento | Int | opcional |
 | sexo | String | opcional |
 | estado | String | — |

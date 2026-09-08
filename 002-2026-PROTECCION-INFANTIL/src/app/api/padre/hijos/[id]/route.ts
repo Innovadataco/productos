@@ -3,21 +3,19 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
-import { actualizarHijo, cambiarEstadoHijo, DOCUMENTO_TIPOS, SEXOS } from "@/lib/dal/services/hijos";
+import { actualizarHijo, cambiarEstadoHijo, SEXOS } from "@/lib/dal/services/hijos";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
 import { validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
 
 // SPEC-325 · SPEC-339 (FR-022): antes este PATCH aceptaba SOLO { estado } — el
 // padre no podía corregir un apellido mal escrito. Ahora acepta la corrección
-// completa. El DAL exige que el padre sea dueño (PII acceso-solo-dueño) y
-// rechaza el documento repetido DENTRO de su propia lista (D-4).
+// completa. El DAL exige que el padre sea dueño (PII acceso-solo-dueño).
+// SPEC-589: el documento del menor ya no existe — no hay campo que corregir.
 const patchSchema = z
     .object({
         nombre: z.string().trim().min(1).max(120).optional(),
         apellidos: z.string().trim().min(1).max(120).optional(),
-        documentoTipo: z.enum(DOCUMENTO_TIPOS).optional(),
-        documentoNumero: z.string().trim().min(1).max(40).optional(),
         anioNacimiento: z.number().int().min(1900).max(2100).optional(),
         sexo: z.enum(SEXOS).optional(),
         estado: z.enum(["activo", "inactivo"]).optional(),

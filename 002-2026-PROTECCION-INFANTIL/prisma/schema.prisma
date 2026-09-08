@@ -2377,10 +2377,10 @@ model ContactoConfianza {
 }
 
 // ─── SPEC-325 (002-PI-225) · "A quién protejo" — módulo de hijos/familiares ───
-// PII de menor: acceso solo por el padre dueño, nunca por id suelto en URL, sin
-// logs con el documento en claro. Entidad separada de `ContactoConfianza`
-// (protejo lleva documento obligatorio, vigilo no), pero UN mismo mecanismo de
-// monitoreo (el cruce identificador→alerta es uno solo).
+// PII de menor: acceso solo por el padre dueño, nunca por id suelto en URL.
+// Entidad separada de `ContactoConfianza`, pero UN mismo mecanismo de
+// monitoreo (el cruce identificador→alerta es uno solo). SPEC-589: la ficha ya
+// NO lleva documento del menor (decisión CEO 06-09-2026, columnas eliminadas).
 //
 // SPEC-339 (A-67 · D-4, 31-08-2026): la ficha del menor tiene DUEÑO. Antes era
 // global y única por documento en todo el sistema, y dos padres compartían la
@@ -2399,8 +2399,10 @@ model Hijo {
   usuarioId       String
   nombre          String
   apellidos       String   @default("")
-  documentoTipo   String // set cerrado en Zod: RC|TI|CC|CE|PASAPORTE|OTRO (OBLIGATORIO)
-  documentoNumero String // OBLIGATORIO
+  // SPEC-589 (06-09-2026): el CEO ordenó quitar el documento de la ficha del
+  // menor — las columnas documentoTipo/documentoNumero se ELIMINAN (DROP, datos
+  // de prueba del dueño, borrado autorizado). Única excepción a la regla de
+  // migraciones aditivas. El documento del PADRE (Usuario) sí se conserva.
   anioNacimiento  Int? // durable (no `edad`) · consistente con A-58; la UI calcula la edad
   sexo            String? // set cerrado en Zod
   // SPEC-325 (extensión): estado activo/inactivo del hijo (patrón Profesor/Estudiante, A-58).
@@ -2413,12 +2415,7 @@ model Hijo {
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   padres          HijoPadre[]
 
-  // SPEC-339: la unicidad del documento es POR PADRE, no global. Un mismo padre
-  // no repite un documento; dos padres distintos sí pueden tener al mismo menor,
-  // cada uno con su propia ficha. Reemplaza a @@unique([documentoTipo, documentoNumero]).
-  @@unique([usuarioId, documentoTipo, documentoNumero])
   @@index([usuarioId])
-  @@index([documentoTipo, documentoNumero])
   @@index([estado])
 }
 

@@ -1,9 +1,10 @@
 /**
- * SPEC-361 (A-70 · F7 · F8) — reglas del documento y la edad del menor.
+ * SPEC-361 (A-70 · F8) — reglas de la edad del menor.
+ * El validador del documento (F7) vivió acá hasta SPEC-589: se eliminó junto
+ * con las columnas documentoTipo/documentoNumero de Hijo (decisión CEO).
  */
 import { describe, it, expect } from "vitest";
 import {
-    validarDocumentoMenor,
     validarEdadMenor,
     validarAnioNacimientoMenor,
     anioDesdeEdad,
@@ -11,33 +12,6 @@ import {
     edadesMenor,
     edadesReporte,
 } from "./documento-menor";
-
-describe("validarDocumentoMenor (F7)", () => {
-    it("rechaza el caso exacto del recorrido de Jelkin: letras en una TI", () => {
-        const error = validarDocumentoMenor("TI", "84opkioniby");
-        expect(error).toBe("El número de tarjeta de identidad debe tener solo números, sin letras ni espacios.");
-    });
-
-    it("acepta documentos colombianos numéricos y rechaza espacios o símbolos", () => {
-        expect(validarDocumentoMenor("TI", "1094567890")).toBeNull();
-        expect(validarDocumentoMenor("RC", "1030512345")).toBeNull();
-        expect(validarDocumentoMenor("CC", "51355355")).toBeNull();
-        expect(validarDocumentoMenor("CC", "51 355 355")).toContain("solo números");
-        expect(validarDocumentoMenor("CC", "5135-5355")).toContain("solo números");
-    });
-
-    it("pasaporte y OTRO admiten alfanumérico con guiones", () => {
-        expect(validarDocumentoMenor("PASAPORTE", "AV123456")).toBeNull();
-        expect(validarDocumentoMenor("OTRO", "ABC-123")).toBeNull();
-        expect(validarDocumentoMenor("PASAPORTE", "AV 123 456")).toContain("letras, números y guiones");
-    });
-
-    it("nombra el campo y el tipo en cada mensaje; nunca deja pasar el vacío", () => {
-        expect(validarDocumentoMenor("TI", "   ")).toBe("Escribe el número de documento del menor.");
-        expect(validarDocumentoMenor("CC", "123")).toContain("cédula de ciudadanía");
-        expect(validarDocumentoMenor("CC", "1234567890123456")).toContain("muy largo");
-    });
-});
 
 describe("edad del menor (F8) — el año se deriva, no se escribe", () => {
     it("el año sale de la edad contra el año en curso (no envejece con el código)", () => {

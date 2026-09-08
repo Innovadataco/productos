@@ -23,15 +23,10 @@ async function crearPadre(sufijo: string) {
     return crearUsuario("PARENT", `padre-bitacora-${sufijo}-${Date.now()}@test.local`);
 }
 
-let secuenciaDocumento = 0;
-
 async function crearMenor(usuarioId: string, nombre = "Sofía") {
-    secuenciaDocumento += 1;
     const { hijoId } = await registrarHijo(usuarioId, {
         nombre,
         apellidos: "Pérez",
-        documentoTipo: "TI",
-        documentoNumero: `${Date.now()}${secuenciaDocumento}`.slice(-10),
     });
     return hijoId;
 }
