@@ -78,8 +78,6 @@ async function cargarMenor(page: Page, n = 1) {
         data: {
             nombre: `Menor ${n}`,
             apellidos: "Del Camino",
-            documentoTipo: "TI",
-            documentoNumero: `10${Date.now() % 10000000}${n}`,
         },
     });
     expect(res.status()).toBe(201);

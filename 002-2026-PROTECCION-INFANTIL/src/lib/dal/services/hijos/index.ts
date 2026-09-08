@@ -2,6 +2,7 @@
 export {
     registrarHijo,
     listarHijos,
+    obtenerHijoDePadre,
     actualizarHijo,
     desvincularIdentificador,
     cambiarEstadoHijo,
@@ -10,5 +11,5 @@ export {
 } from "./hijos";
 // SPEC-339: el cruce identificador-de-hijo → aviso al padre (punto 4 Calidad).
 export { notificarHijosSiCorresponde } from "./notificaciones";
-export { DOCUMENTO_TIPOS, SEXOS } from "./tipos";
-export type { RegistrarHijoInput, ActualizarHijoInput, IdentificadorHijoInput, DocumentoTipo, Sexo } from "./tipos";
+export { SEXOS } from "./tipos";
+export type { RegistrarHijoInput, ActualizarHijoInput, IdentificadorHijoInput, Sexo } from "./tipos";

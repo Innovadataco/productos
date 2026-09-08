@@ -141,4 +141,24 @@ describe("listarCadenasPadre · análisis real (A-70 · F11)", () => {
         expect(JSON.stringify(cadenas)).not.toContain("Relato de prueba");
         expect(cadenas[0].eventos[0].textoDisponible).toBe(true);
     });
+
+    it("SPEC-591: el evento expone el nombre de la ficha a la que va dirigido (y null sin vínculo)", async () => {
+        const padre = await crearUsuario("PARENT", `padre-591-${Date.now()}@test.local`);
+        const plataforma = await crearPlataforma();
+        const hijo = await prisma.hijo.create({
+            data: { usuarioId: padre.id, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+        });
+        await crearReporte(padre.id, plataforma.id, { estado: "CLASIFICADO", identificador: "con_hijo_01" });
+        await prisma.reporte.updateMany({
+            where: { usuarioId: padre.id, identificador: "con_hijo_01" },
+            data: { hijoId: hijo.id },
+        });
+        await crearReporte(padre.id, plataforma.id, { estado: "CLASIFICADO", identificador: "sin_hijo_01" });
+
+        const cadenas = await listarCadenasPadre(padre.id);
+        const conHijo = cadenas.find((c) => c.identificador === "con_hijo_01");
+        const sinHijo = cadenas.find((c) => c.identificador === "sin_hijo_01");
+        expect(conHijo?.eventos[0].hijoNombre).toBe("Valeria Pérez");
+        expect(sinHijo?.eventos[0].hijoNombre).toBeNull();
+    });
 });

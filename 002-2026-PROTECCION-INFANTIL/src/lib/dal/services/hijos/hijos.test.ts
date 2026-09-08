@@ -30,8 +30,6 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const { hijoId } = await registrarHijo(padre.id, {
             nombre: "Juan",
             apellidos: "Pérez",
-            documentoTipo: "TI",
-            documentoNumero: "1001",
             anioNacimiento: 2015,
             sexo: "M",
             identificadores: [{ valor: "RobloxJuan" }],
@@ -48,8 +46,6 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         await registrarHijo(padre.id, {
             nombre: "Santiago",
             apellidos: "Sobrino",
-            documentoTipo: "RC",
-            documentoNumero: "2002",
         });
         expect(await listarHijos(padre.id)).toHaveLength(1);
     });
@@ -60,11 +56,11 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const papa = await crearUsuario("PARENT");
         const mama = await crearUsuario("PARENT");
         const r1 = await registrarHijo(papa.id, {
-            nombre: "Ana", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "3003",
+            nombre: "Ana", apellidos: "Gómez",
             identificadores: [{ valor: "AnaRoblox" }],
         });
         const r2 = await registrarHijo(mama.id, {
-            nombre: "Ana", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "3003",
+            nombre: "Ana", apellidos: "Gómez",
         });
 
         expect(r2.hijoId).not.toBe(r1.hijoId);
@@ -75,17 +71,20 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         expect(listaMama[0].identificadores).toHaveLength(0);
     });
 
-    it("un padre no puede repetir el mismo documento dentro de su propia lista", async () => {
+    // SPEC-589: sin documento ya no hay dedup en el alta — dos fichas con el
+    // mismo nombre y apellidos coexisten (son personas distintas o un error del
+    // padre, que puede corregir o inactivar; no es del servidor decidir).
+    it("SPEC-589: dos menores con el mismo nombre y apellidos coexisten en la lista", async () => {
         const padre = await crearUsuario("PARENT");
         await registrarHijo(padre.id, {
-            nombre: "Ana", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "3100",
+            nombre: "Ana", apellidos: "Gómez",
         });
         await expect(
             registrarHijo(padre.id, {
-                nombre: "Ana María", apellidos: "Gómez", documentoTipo: "TI", documentoNumero: "3100",
+                nombre: "Ana María", apellidos: "Gómez",
             })
-        ).rejects.toThrow(/ya está en tu lista/i);
-        expect(await listarHijos(padre.id)).toHaveLength(1);
+        ).resolves.toBeDefined();
+        expect(await listarHijos(padre.id)).toHaveLength(2);
     });
 
     // SPEC-339 (D-4) · el defecto que motivó el cambio: el interruptor era global.
@@ -93,10 +92,10 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const papa = await crearUsuario("PARENT");
         const mama = await crearUsuario("PARENT");
         const r1 = await registrarHijo(papa.id, {
-            nombre: "Leo", apellidos: "Ruiz", documentoTipo: "TI", documentoNumero: "3200",
+            nombre: "Leo", apellidos: "Ruiz",
         });
         await registrarHijo(mama.id, {
-            nombre: "Leo", apellidos: "Ruiz", documentoTipo: "TI", documentoNumero: "3200",
+            nombre: "Leo", apellidos: "Ruiz",
         });
 
         await cambiarEstadoHijo(papa.id, r1.hijoId, "inactivo");
@@ -110,10 +109,10 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const papa = await crearUsuario("PARENT");
         const mama = await crearUsuario("PARENT");
         const r1 = await registrarHijo(papa.id, {
-            nombre: "Sofia", apellidos: "Mal Escrito", documentoTipo: "TI", documentoNumero: "3300",
+            nombre: "Sofia", apellidos: "Mal Escrito",
         });
         await registrarHijo(mama.id, {
-            nombre: "Sofía", apellidos: "Restrepo", documentoTipo: "TI", documentoNumero: "3300",
+            nombre: "Sofía", apellidos: "Restrepo",
         });
 
         await actualizarHijo(papa.id, r1.hijoId, { apellidos: "Restrepo" });
@@ -123,24 +122,11 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         expect(await prisma.hijo.count()).toBe(2);
     });
 
-    it("corregir el documento hacia uno que ya está en la propia lista se rechaza", async () => {
-        const padre = await crearUsuario("PARENT");
-        await registrarHijo(padre.id, {
-            nombre: "Uno", apellidos: "Uno", documentoTipo: "TI", documentoNumero: "3400",
-        });
-        const segundo = await registrarHijo(padre.id, {
-            nombre: "Dos", apellidos: "Dos", documentoTipo: "TI", documentoNumero: "3401",
-        });
-        await expect(
-            actualizarHijo(padre.id, segundo.hijoId, { documentoNumero: "3400" })
-        ).rejects.toThrow(/ya está en tu lista/i);
-    });
-
     it("PII: un padre no dueño no puede corregir los datos de un menor ajeno", async () => {
         const dueno = await crearUsuario("PARENT");
         const ajeno = await crearUsuario("PARENT");
         const { hijoId } = await registrarHijo(dueno.id, {
-            nombre: "Mia", apellidos: "Cruz", documentoTipo: "TI", documentoNumero: "3500",
+            nombre: "Mia", apellidos: "Cruz",
         });
         await expect(actualizarHijo(ajeno.id, hijoId, { nombre: "Otro" })).rejects.toThrow(/no encontrado/i);
     });
@@ -151,11 +137,11 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const papa = await crearUsuario("PARENT");
         const mama = await crearUsuario("PARENT");
         await registrarHijo(papa.id, {
-            nombre: "Leo", apellidos: "Ruiz", documentoTipo: "TI", documentoNumero: "4004",
+            nombre: "Leo", apellidos: "Ruiz",
             identificadores: [{ valor: "LeoGamer" }],
         });
         await registrarHijo(mama.id, {
-            nombre: "Leo", apellidos: "Ruiz", documentoTipo: "TI", documentoNumero: "4004",
+            nombre: "Leo", apellidos: "Ruiz",
             identificadores: [{ valor: "LeoGamer" }],
         });
 
@@ -174,8 +160,6 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         await registrarHijo(dueno.id, {
             nombre: "Mia",
             apellidos: "Cruz",
-            documentoTipo: "TI",
-            documentoNumero: "5005",
             identificadores: [{ valor: "MiaX" }],
         });
         const identId = (await listarHijos(dueno.id))[0].identificadores[0].id;
@@ -187,7 +171,7 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const padre = await crearUsuario("PARENT");
         const ajeno = await crearUsuario("PARENT");
         const { hijoId } = await registrarHijo(padre.id, {
-            nombre: "Sara", apellidos: "Prueba", documentoTipo: "TI", documentoNumero: "6006",
+            nombre: "Sara", apellidos: "Prueba",
         });
         expect((await listarHijos(padre.id))[0].estado).toBe("activo");
 
@@ -203,7 +187,7 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const padre = await crearUsuario("PARENT");
         const ajeno = await crearUsuario("PARENT");
         const { hijoId } = await registrarHijo(padre.id, {
-            nombre: "Dan", apellidos: "Prueba", documentoTipo: "TI", documentoNumero: "7007",
+            nombre: "Dan", apellidos: "Prueba",
             identificadores: [{ valor: "DanRoblox" }],
         });
         await agregarIdentificador(padre.id, hijoId, { valor: "DanTel", tipo: "telefono" });
@@ -222,7 +206,7 @@ describe("hijos · protejo (SPEC-325 · SPEC-339)", () => {
         const padre = await crearUsuario("PARENT");
         const ajeno = await crearUsuario("PARENT");
         await registrarHijo(padre.id, {
-            nombre: "Emi", apellidos: "Prueba", documentoTipo: "TI", documentoNumero: "8008",
+            nombre: "Emi", apellidos: "Prueba",
             identificadores: [{ valor: "EmiChat" }],
         });
         const ident = (await listarHijos(padre.id))[0].identificadores[0];

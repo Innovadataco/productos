@@ -1,9 +1,10 @@
 "use client";
 
 // SPEC-325 (002-PI-225) · "A quién protejo" — el padre registra hijos y
-// familiares cercanos con su documento e identificadores. Si alguien reporta el
+// familiares cercanos con sus identificadores. Si alguien reporta el
 // identificador de un hijo, el padre se entera (mecanismo compartido). Lenguaje
 // de padre (A-62): esto NO es vigilancia, es cuidar a los tuyos.
+// SPEC-589: la ficha del menor ya NO pide documento (decisión CEO 06-09-2026).
 //
 // SPEC-325 (extensión UI) · el alta acepta VARIOS identificadores y cada tarjeta
 // expone las cuatro acciones del backend, que NO son equivalentes:
@@ -21,20 +22,18 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import {
-    validarDocumentoMenor,
     validarEdadMenor,
     anioDesdeEdad,
     edadDesdeAnio,
     edadesMenor,
 } from "@/lib/padre/documento-menor";
-import type { DocumentoTipo } from "@/lib/dal/services/hijos/tipos";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
 import { BitacoraMenor } from "./BitacoraMenor";
 
 // SPEC-539: la tarjeta del menor, sus tipos y catálogos viven en HijoCard.tsx
 // (MisHijos.tsx superaba el máximo de líneas al sumar la edición inline).
-import { HijoCard, DOCUMENTO_TIPOS, SEXOS, type Hijo, type Plataforma } from "./HijoCard";
+import { HijoCard, SEXOS, type Hijo, type Plataforma } from "./HijoCard";
 
 /** Identificador aún no guardado: se acumula en el formulario de alta. */
 type IdentificadorNuevo = { valor: string; plataformaId: string };
@@ -42,8 +41,6 @@ type IdentificadorNuevo = { valor: string; plataformaId: string };
 const FORM_VACIO = {
     nombre: "",
     apellidos: "",
-    documentoTipo: "TI",
-    documentoNumero: "",
     // SPEC-361 (F8): se pide la EDAD; el año de nacimiento se deriva de ella.
     edad: "",
     sexo: "",
@@ -132,18 +129,9 @@ export function MisHijos({
             setError("Escribe los apellidos del menor.");
             return;
         }
-        if (!form.documentoNumero.trim()) {
-            setError("Escribe el número de documento del menor.");
-            return;
-        }
 
-        // SPEC-361 (F7/F8): avisar ANTES de enviar, nombrando el campo. El
+        // SPEC-361 (F8): avisar ANTES de enviar, nombrando el campo. El
         // servidor vuelve a validar: esto es cortesía, no la única defensa.
-        const errorDoc = validarDocumentoMenor(form.documentoTipo as DocumentoTipo, form.documentoNumero);
-        if (errorDoc) {
-            setError(errorDoc);
-            return;
-        }
         const edadNum = form.edad ? Number(form.edad) : null;
         const errorEdad = validarEdadMenor(edadNum);
         if (errorEdad) {
@@ -161,8 +149,6 @@ export function MisHijos({
             const body: Record<string, unknown> = {
                 nombre: form.nombre.trim(),
                 apellidos: form.apellidos.trim(),
-                documentoTipo: form.documentoTipo,
-                documentoNumero: form.documentoNumero.trim(),
                 anioNacimiento: edadNum !== null ? anioDesdeEdad(edadNum) : undefined,
                 sexo: form.sexo || undefined,
                 identificadores: pendiente.length
@@ -178,9 +164,9 @@ export function MisHijos({
                 body: JSON.stringify(body),
             });
             if (!res.ok) {
-                // SPEC-361 (F4): el servidor explica el motivo (documento repetido,
-                // tope alcanzado, campo faltante). Antes se descartaba y la
-                // pantalla decía "No se pudo registrar" a todo.
+                // SPEC-361 (F4): el servidor explica el motivo (tope alcanzado,
+                // campo faltante). Antes se descartaba y la pantalla decía "No se
+                // pudo registrar" a todo.
                 const data = await res.json().catch(() => ({}));
                 throw new Error(data?.error?.message ?? "No pudimos registrar al menor. Revisa los datos e intenta de nuevo.");
             }
@@ -222,7 +208,7 @@ export function MisHijos({
             "No se pudo cambiar el estado"
         );
 
-    // SPEC-539: editar los datos de un menor (nombre, apellidos, documento, año, sexo).
+    // SPEC-539: editar los datos de un menor (nombre, apellidos, año, sexo).
     // El endpoint PATCH /api/padre/hijos/[id] ya lo soporta (patchSchema · actualizarHijo);
     // lo que faltaba era la UI. `estado` va por su propio botón, no acá.
     const editarHijo = (
@@ -230,8 +216,6 @@ export function MisHijos({
         datos: {
             nombre: string;
             apellidos: string;
-            documentoTipo: string;
-            documentoNumero: string;
             anioNacimiento: number | null;
             sexo: string | null;
         }
@@ -313,8 +297,6 @@ export function MisHijos({
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <Input label="Nombres" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
                         <Input label="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} required />
-                        <Select label="Tipo de documento" options={DOCUMENTO_TIPOS} value={form.documentoTipo} onChange={(e) => setForm({ ...form, documentoTipo: e.target.value })} />
-                        <Input label="Número de documento" value={form.documentoNumero} onChange={(e) => setForm({ ...form, documentoNumero: e.target.value })} required />
                         <Select
                             label="Edad"
                             options={[

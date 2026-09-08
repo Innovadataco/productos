@@ -230,8 +230,6 @@ async function sembrarPadreConCaminoCompleto(): Promise<string> {
             usuarioId: padre!.id,
             nombre: "Menor",
             apellidos: "Carrillo",
-            documentoTipo: "TI",
-            documentoNumero: `${DOC_PADRE}1`,
             estado: "activo",
         },
     });

@@ -47,6 +47,9 @@ export interface CrearReporteInput {
     // aceptar la oferta de CADENA para el 2º (y posteriores) reportes del mismo
     // identificador (el expediente ya no nace acá — lo crea el padre con el botón).
     reportePrevioId?: string | undefined;
+    // SPEC-591 (decisión CEO 06-09): ficha «A quién protego» a la que va
+    // dirigido. Solo el padre autenticado la trae; el anónimo siempre null.
+    hijoId?: string | null;
 }
 
 export interface ReporteCreadoDto {
@@ -149,6 +152,7 @@ export class ReporteCreationService {
                 estado: input.estadoInicial,
                 prioridadAlta: input.prioridadAlta,
                 keywordsDetectadas: input.keywordsDetectadas,
+                hijoId: input.hijoId ?? null,
             },
         });
 

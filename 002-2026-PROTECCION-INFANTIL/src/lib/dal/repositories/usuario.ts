@@ -80,6 +80,9 @@ export class UsuarioRepository {
             where: { id },
             select: {
                 id: true,
+                // SPEC-590: el email es editable desde el perfil — la pantalla lo
+                // precarga como cualquier otro campo.
+                email: true,
                 nombre: true,
                 apellidos: true,
                 // SPEC-339 (A-67 §2.3): documento del padre, obligatorio en el Paso 2.
@@ -105,6 +108,7 @@ export class UsuarioRepository {
         id: string,
         data: Pick<
             Prisma.UsuarioUncheckedUpdateInput,
+            | "email"
             | "nombre"
             | "apellidos"
             // SPEC-339 (A-67 §2.3): documento del padre.

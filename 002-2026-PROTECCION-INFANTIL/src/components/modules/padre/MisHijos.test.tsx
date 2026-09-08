@@ -45,8 +45,6 @@ function hijoBase(over: Record<string, unknown> = {}) {
         id: "h1",
         nombre: "Juan",
         apellidos: "Pérez",
-        documentoTipo: "TI",
-        documentoNumero: "1001",
         anioNacimiento: 2015,
         sexo: "M",
         estado: "activo",
@@ -106,18 +104,20 @@ describe("MisHijos", () => {
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
 
-        // SPEC-363 (rojo CI #241): payload REAL — documento válido para TI
-        // (>= 5 dígitos) y apellidos, que ahora se validan antes de enviar. Con
-        // "3003" (4 dígitos) la validación F7 cortaba el submit antes del POST.
+        // SPEC-363: payload REAL — nombre y apellidos, que se validan antes de
+        // enviar. El documento del menor ya no existe (SPEC-589): el formulario
+        // no lo pide ni lo envía.
         fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
         fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
-        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "1030512345" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
 
         await waitFor(() => {
             const post = llamada("POST", "/api/padre/hijos");
             expect(post).toBeDefined();
-            expect(String(post![1].body)).toContain("Ana");
+            const body = JSON.parse(String(post![1].body));
+            expect(body.nombre).toBe("Ana");
+            expect(body).not.toHaveProperty("documentoTipo");
+            expect(body).not.toHaveProperty("documentoNumero");
         });
     });
 
@@ -132,7 +132,6 @@ describe("MisHijos", () => {
 
         fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
         fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
-        fireEvent.change(screen.getByLabelText("Número de documento"), { target: { value: "1030512345" } });
 
         // 1º con plataforma → se acumula en la lista
         fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "anaroblox" } });

@@ -47,6 +47,8 @@ export interface ReporteListItemDto {
     creadoEn: string;
     clasificacion: ClasificacionUsuarioDto | null;
     ranking: RankingResumenDto | null;
+    /** SPEC-591: ficha «A quién protego» a la que va dirigido (null si no aplica). */
+    hijoNombre: string | null;
 }
 
 export interface MisReportesDto {
@@ -107,6 +109,8 @@ export interface ReporteDetallePadreDto {
     estadoVisual: string;
     badge: string;
     enProceso: boolean;
+    /** SPEC-591: ficha «A quién protego» a la que va dirigido (null si no aplica). */
+    hijoNombre: string | null;
 }
 
 export interface ConductaConfirmadaDto {

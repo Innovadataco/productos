@@ -52,8 +52,6 @@ async function padreConHijo(identificador: string, nombre = "Juan David") {
     const { hijoId } = await registrarHijo(padre.id, {
         nombre,
         apellidos: "De Prueba",
-        documentoTipo: "TI",
-        documentoNumero: `doc-${Math.random().toString(36).slice(2, 8)}`,
         identificadores: [{ valor: identificador }],
     });
     return { padre, hijoId };

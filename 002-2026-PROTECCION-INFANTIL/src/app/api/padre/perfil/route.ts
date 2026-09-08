@@ -8,11 +8,26 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { DOCUMENTO_TIPOS_PADRE } from "@/lib/validators";
 import { validarFechaNacimientoPadre } from "@/lib/padre/fecha-nacimiento-padre";
+import { detectarCambiosPerfil } from "@/lib/padre/perfil-cambios";
+import { logAudit } from "@/lib/audit";
+import { enviarAvisoCambioEmail } from "@/lib/email-padre";
+
+function getClientInfo(request: Request) {
+    return {
+        ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+    };
+}
 
 // SPEC-334: teléfono con validación mínima (7-20 dígitos, permite + espacios guiones).
 const telefonoRegex = /^[+\d][\d\s-]{6,19}$/;
 
 const perfilSchema = z.object({
+    // SPEC-590 (decisión CEO 06-09): el email del padre es editable desde el
+    // perfil. Se normaliza a minúsculas + trim — el mismo criterio que login
+    // (SPEC-579) y OAuth (SPEC-587) — para que la unicidad case-insensitive
+    // sea una unicidad real.
+    email: z.string().trim().toLowerCase().email("Escribe un correo válido").max(255).optional(),
     nombre: z.string().trim().min(1, "Escribe tus nombres").max(120).optional(),
     apellidos: z.string().trim().min(1, "Escribe tus apellidos").max(120).optional(),
     // SPEC-339 (A-67 §2.3): documento del padre — obligatorio en el Paso 2 del
@@ -65,6 +80,64 @@ export async function GET() {
     }
 }
 
+// SPEC-590: unicidad case-insensitive del email (ya normalizado por Zod).
+async function verificarEmailDisponible(userId: string, email: string): Promise<void> {
+    const ocupante = await new UsuarioRepository().findByEmail(email);
+    if (ocupante && ocupante.id !== userId) {
+        throw new AppError("Ese correo ya está en uso.", ERROR_CODES.CONFLICT, 409);
+    }
+}
+
+type CambioPerfil = ReturnType<typeof detectarCambiosPerfil>[number];
+
+// Solo incluimos las claves presentes (evita pasar `undefined` explícito).
+function construirDataActualizacion(d: z.infer<typeof perfilSchema>): Prisma.UsuarioUncheckedUpdateInput {
+    const data: Prisma.UsuarioUncheckedUpdateInput = {};
+    if (d.email !== undefined) data.email = d.email;
+    if (d.nombre !== undefined) data.nombre = d.nombre;
+    if (d.apellidos !== undefined) data.apellidos = d.apellidos;
+    if (d.documentoTipo !== undefined) data.documentoTipo = d.documentoTipo;
+    if (d.documentoNumero !== undefined) data.documentoNumero = d.documentoNumero;
+    if (d.telefono !== undefined) data.telefono = d.telefono;
+    if (d.paisId !== undefined) data.paisId = d.paisId;
+    if (d.ciudadId !== undefined) data.ciudadId = d.ciudadId;
+    if (d.fechaNacimiento !== undefined) {
+        data.fechaNacimiento = d.fechaNacimiento ? new Date(`${d.fechaNacimiento}T00:00:00.000Z`) : null;
+    }
+    if (d.presentacionEstandar !== undefined) data.presentacionEstandar = d.presentacionEstandar;
+    if (d.urgenciaEstandar !== undefined) data.urgenciaEstandar = d.urgenciaEstandar;
+    return data;
+}
+
+// SPEC-590: historial de cambios de «Mi perfil» (decisión CEO). Una fila por
+// campo, con anterior→nuevo; el email completo SÍ (dato del propio titular y
+// el CEO lo pidió explícito). Nunca texto de reportes.
+async function auditarCambiosPerfil(userId: string, cambios: CambioPerfil[], request: Request): Promise<void> {
+    const { ipAddress, userAgent } = getClientInfo(request);
+    for (const cambio of cambios) {
+        await logAudit({
+            accion: "PERFIL_CAMBIO",
+            tipoRecurso: "Usuario",
+            recursoId: userId,
+            usuarioId: userId,
+            valorAnterior: JSON.stringify({ campo: cambio.campo, valor: cambio.anterior }),
+            valorNuevo: JSON.stringify({ campo: cambio.campo, valor: cambio.nuevo }),
+            ipAddress,
+            userAgent,
+        });
+    }
+}
+
+// SPEC-590: aviso de seguridad al correo NUEVO cuando cambia. Si el envío
+// falla NO se bloquea el cambio: el aviso queda en log.
+async function avisarCambioEmail(cambios: CambioPerfil[], emailNuevo: string | undefined): Promise<void> {
+    if (cambios.some((c) => c.campo === "email") && emailNuevo) {
+        await enviarAvisoCambioEmail(emailNuevo).catch((e: unknown) => {
+            console.error("[PerfilPadre] Aviso cambio email: fallo —", e instanceof Error ? e.message : e);
+        });
+    }
+}
+
 export async function PATCH(request: Request) {
     try {
         const user = await verifyAuth("PARENT");
@@ -76,23 +149,46 @@ export async function PATCH(request: Request) {
                 { status: 400 }
             );
         }
-        // Solo incluimos las claves presentes (evita pasar `undefined` explícito).
+        // Solo incluimos las claves presentes — ver `construirDataActualizacion`.
         const d = parsed.data;
-        const data: Prisma.UsuarioUncheckedUpdateInput = {};
-        if (d.nombre !== undefined) data.nombre = d.nombre;
-        if (d.apellidos !== undefined) data.apellidos = d.apellidos;
-        if (d.documentoTipo !== undefined) data.documentoTipo = d.documentoTipo;
-        if (d.documentoNumero !== undefined) data.documentoNumero = d.documentoNumero;
-        if (d.telefono !== undefined) data.telefono = d.telefono;
-        if (d.paisId !== undefined) data.paisId = d.paisId;
-        if (d.ciudadId !== undefined) data.ciudadId = d.ciudadId;
-        if (d.fechaNacimiento !== undefined) {
-            data.fechaNacimiento = d.fechaNacimiento ? new Date(`${d.fechaNacimiento}T00:00:00.000Z`) : null;
+        if (d.email !== undefined) {
+            await verificarEmailDisponible(user.id, d.email);
         }
-        if (d.presentacionEstandar !== undefined) data.presentacionEstandar = d.presentacionEstandar;
-        if (d.urgenciaEstandar !== undefined) data.urgenciaEstandar = d.urgenciaEstandar;
-        await new UsuarioRepository().actualizarPerfilPadre(user.id, data);
-        const perfil = await new UsuarioRepository().obtenerPerfilPadre(user.id);
+        const repo = new UsuarioRepository();
+        // SPEC-590: la auditoría compara contra el valor ANTERIOR — se lee antes
+        // de escribir. Un AuditLog por campo cambiado (AccionAudit PERFIL_CAMBIO).
+        const anterior = await repo.obtenerPerfilPadre(user.id);
+        const cambios = anterior
+            ? detectarCambiosPerfil(
+                {
+                    email: anterior.email,
+                    nombre: anterior.nombre,
+                    apellidos: anterior.apellidos,
+                    documentoTipo: anterior.documentoTipo,
+                    documentoNumero: anterior.documentoNumero,
+                    fechaNacimiento: anterior.fechaNacimiento,
+                    telefono: anterior.telefono,
+                    paisId: anterior.paisId,
+                    ciudadId: anterior.ciudadId,
+                },
+                {
+                    email: d.email,
+                    nombre: d.nombre,
+                    apellidos: d.apellidos,
+                    documentoTipo: d.documentoTipo,
+                    documentoNumero: d.documentoNumero,
+                    telefono: d.telefono,
+                    paisId: d.paisId,
+                    ciudadId: d.ciudadId,
+                    ...(d.fechaNacimiento !== undefined ? { fechaNacimiento: d.fechaNacimiento } : {}),
+                }
+            )
+            : [];
+        const data = construirDataActualizacion(d);
+        await repo.actualizarPerfilPadre(user.id, data);
+        await auditarCambiosPerfil(user.id, cambios, request);
+        await avisarCambioEmail(cambios, d.email);
+        const perfil = await repo.obtenerPerfilPadre(user.id);
         const res = NextResponse.json({ perfil });
         // SPEC-339 (T072): guardar el perfil puede CERRAR el Paso 2 del camino.
         // Sin re-sellar acá, el padre completa sus datos y la cookie sigue

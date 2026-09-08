@@ -12,6 +12,9 @@ import type { DbClient } from "../unit-of-work";
 const INCLUDE_CON_DETALLE = {
     plataforma: { select: { nombre: true, clave: true } },
     clasificacion: true,
+    // SPEC-591: ficha «A quién protego» a la que va dirigido (null para el
+    // anónimo o si la ficha fue borrada — SetNull del lado reporte).
+    hijo: { select: { nombre: true, apellidos: true } },
 } satisfies Prisma.ReporteInclude;
 
 const SELECT_SEGUIMIENTO = {

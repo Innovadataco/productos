@@ -30,6 +30,9 @@ vi.mock("next/headers", () => ({
 const IDENTIFICADOR = "+57300VINC001";
 const TEXTO = "Un adulto contacta a una menor por chat insistiendo en pedirle fotos personales varias veces.";
 
+// SPEC-591: el padre autenticado reporta siempre atado a una ficha activa.
+let hijoIdDelTest: string | null = null;
+
 function requestReporte(reportePrevioId?: string): Request {
     return new Request("http://localhost:5005/api/reportes", {
         method: "POST",
@@ -42,6 +45,7 @@ function requestReporte(reportePrevioId?: string): Request {
             ciudad: "Bogotá",
             pais: "Colombia",
             ...(reportePrevioId ? { reportePrevioId } : {}),
+            ...(hijoIdDelTest ? { hijoId: hijoIdDelTest } : {}),
         }),
     });
 }
@@ -63,10 +67,15 @@ describe("SPEC-340 · POST /api/reportes — la vinculación arma CADENA, no exp
         await crearPlataforma();
         await crearPaisCiudad();
         mockToken = undefined;
+        hijoIdDelTest = null;
         vi.restoreAllMocks();
 
         const usuario = await crearUsuario("PARENT", `vinc-${Date.now()}@test.local`);
         mockToken = await crearTokenUsuario(usuario.id, "PARENT");
+        const hijo = await prisma.hijo.create({
+            data: { usuarioId: usuario.id, nombre: "Valeria", apellidos: "Pérez", estado: "activo" },
+        });
+        hijoIdDelTest = hijo.id;
     });
 
     it("2º reporte vinculado: entra a la CADENA del 1º y NO nace ningún expediente (SPEC-340)", async () => {

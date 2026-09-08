@@ -339,8 +339,6 @@ test.describe.serial("Ciclo completo del padre: reserva → pago → confirmaci�
                 usuarioId: padreId,
                 nombre: "Hijo",
                 apellidos: "Prueba",
-                documentoTipo: "TI",
-                documentoNumero: `HIJO-${CORRIDA}`,
                 estado: "activo",
             },
         });

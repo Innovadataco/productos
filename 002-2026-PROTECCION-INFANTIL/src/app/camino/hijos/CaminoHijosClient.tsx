@@ -3,9 +3,9 @@
 /**
  * SPEC-339 (A-67 §2.4) — Paso 3 de 4: ¿a quién vas a cuidar?
  *
- * Reusa el módulo de menores completo (alta con documento, cuentas opcionales,
- * tope del parámetro). El «Siguiente» se enciende con el primer menor ACTIVO —
- * la misma condición que el guardián deriva (FR-018).
+ * Reusa el módulo de menores completo (alta con nombre y apellidos, cuentas
+ * opcionales, tope del parámetro). El «Siguiente» se enciende con el primer
+ * menor ACTIVO — la misma condición que el guardián deriva (FR-018).
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";

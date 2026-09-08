@@ -10,7 +10,46 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { crearFuenteReporte, calcularFingerprintServerSide } from "@/lib/anti-abuso/fuente-reporte";
 import { validarSecretoSimulacion } from "@/lib/anti-abuso/simulador-secreto";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
+import { obtenerHijoDePadre } from "@/lib/dal/services/hijos";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
+
+/**
+ * SPEC-591 (decisión CEO 06-09): «el padre autenticado SOLO puede reportar
+ * situaciones de sus hijos; si quiere anónimo, cierra sesión y reporta». La
+ * regla se aplica SIEMPRE en el servidor — el cliente solo sugiere:
+ * · padre con sesión → hijoId OBLIGATORIO, debe ser una ficha SUya activa;
+ * · anónimo → hijoId PROHIBIDO (jamás se confía en el payload).
+ */
+async function resolverHijoDelReporte(params: {
+    esAnonimo: boolean;
+    usuarioId: string | null;
+    hijoId: string | undefined;
+}): Promise<string | null> {
+    const { esAnonimo, usuarioId, hijoId } = params;
+    if (esAnonimo) {
+        if (hijoId) {
+            throw new AppError("Los reportes anónimos no pueden vincularse a una ficha.", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        return null;
+    }
+    if (!hijoId) {
+        throw new AppError("Elige a quién va dirigido el reporte.", ERROR_CODES.VALIDATION_ERROR, 400);
+    }
+    if (!usuarioId) {
+        // Inalcanzable (esAnonimo = !usuarioId), pero sin `as` ni sorpresas.
+        throw new AppError("Sesión no válida.", ERROR_CODES.AUTH_INVALID, 401);
+    }
+    // 403 único para «no existe o no es tuya»: no se distingue, para no
+    // enumerar fichas de otros padres.
+    const hijo = await obtenerHijoDePadre(hijoId, usuarioId);
+    if (!hijo) {
+        throw new AppError("Esa ficha no está en tu lista.", ERROR_CODES.FORBIDDEN, 403);
+    }
+    if (hijo.estado !== "activo") {
+        throw new AppError("Esa ficha está inactiva. Reactívala o elige otra.", ERROR_CODES.CONFLICT, 409);
+    }
+    return hijo.id;
+}
 
 /**
  * A-70 · B1(c): nombre humano del campo para el mensaje de error. El padre lee
@@ -26,6 +65,7 @@ function etiquetaCampoReporte(campo: unknown): string {
         pais: "País",
         edadVictima: "Edad aproximada del menor",
         otraPlataforma: "Otra plataforma",
+        hijoId: "A quién va dirigido",
     };
     return (typeof campo === "string" && etiquetas[campo]) || "Datos del reporte";
 }
@@ -71,6 +111,14 @@ export async function POST(request: Request) {
             );
         }
         const esAnonimo = !user;
+
+        // SPEC-591: vínculo obligatorio (padre autenticado) / prohibido (anónimo).
+        // Se resuelve ANTES de los rate limits: un 400/403 claro no gasta cuota.
+        const hijoId = await resolverHijoDelReporte({
+            esAnonimo,
+            usuarioId: user?.id ?? null,
+            hijoId: parsed.data.hijoId,
+        });
 
         // SPEC-356 (I-253) · DEROGADO el guard de vigencia de SPEC-119 en esta ruta.
         //
@@ -176,6 +224,8 @@ export async function POST(request: Request) {
                 prioridadAlta,
                 keywordsDetectadas,
                 reportePrevioId,
+                // SPEC-591: vínculo a la ficha del menor (null para el anónimo).
+                hijoId,
             });
 
             // SPEC-340: vinculación aceptada → el nuevo reporte entra a la CADENA.
