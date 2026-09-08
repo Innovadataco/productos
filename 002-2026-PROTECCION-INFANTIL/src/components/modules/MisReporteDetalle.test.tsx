@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MisReporteDetalle } from "./MisReporteDetalle";
 
 vi.mock("next/navigation", () => ({
@@ -133,8 +133,80 @@ describe("MisReporteDetalle", () => {
         });
         render(<MisReporteDetalle reporteId="r1" />);
 
-        expect(await screen.findByText(/aún está en proceso/)).toBeTruthy();
+        expect(await screen.findByText(/aún está en proceso|Estamos procesando tu reporte/)).toBeTruthy();
         expect(screen.queryByText("Qué significa esto")).toBeNull();
         expect(screen.queryByText("Conductas identificadas:")).toBeNull();
+    });
+
+    describe("SPEC-593 · refresco en vivo mientras procesa", () => {
+        it("refresca solo cada 15 s y corta el polling al llegar a estado final", async () => {
+            const EN_PROCESO = {
+                ...DETALLE,
+                reporte: { ...DETALLE.reporte, estadoVisual: "En proceso", badge: "warning", enProceso: true },
+                clasificacion: null,
+            };
+            const fetchMock = vi.spyOn(global, "fetch");
+            fetchMock.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => EN_PROCESO,
+            } as Response);
+            fetchMock.mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: async () => DETALLE,
+            } as Response);
+
+            // Timers falsos DESDE el inicio: así el interval de polling se crea
+            // ya bajo control del test (si se creara con timers reales, el salto
+            // a fake timers no lo capturaría).
+            vi.useFakeTimers();
+            render(<MisReporteDetalle reporteId="r1" />);
+            // La carga inicial es un fetch mockeado: basta flush de microtareas.
+            await act(async () => {});
+            expect(screen.getByText("Estamos procesando tu reporte")).toBeTruthy();
+            expect(screen.getByText(/esta pantalla se actualiza sola/)).toBeTruthy();
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(15_000);
+            });
+            // Llegó el estado final: se muestra la clasificación…
+            expect(screen.getByText("Qué significa esto")).toBeTruthy();
+            expect(screen.getByText("Procesado")).toBeTruthy();
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+
+            // …y el polling se detuvo: pasar más tiempo no dispara más fetches.
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(60_000);
+            });
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+        });
+
+        it("no dispara fetches de polling tras el desmontaje", async () => {
+            const EN_PROCESO = {
+                ...DETALLE,
+                reporte: { ...DETALLE.reporte, estadoVisual: "En proceso", badge: "warning", enProceso: true },
+                clasificacion: null,
+            };
+            const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: async () => EN_PROCESO,
+            } as Response);
+
+            vi.useFakeTimers();
+            const { unmount } = render(<MisReporteDetalle reporteId="r1" />);
+            await act(async () => {});
+            expect(screen.getByText("Estamos procesando tu reporte")).toBeTruthy();
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+
+            unmount();
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(60_000);
+            });
+            // Solo la carga inicial: el interval murió con el componente.
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
     });
 });
