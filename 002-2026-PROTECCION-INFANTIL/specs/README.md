@@ -440,6 +440,8 @@
 | [591](591-reportar-atado-a-hijo/spec.md) | SPEC-591 · Reportar atado a hijo/familiar (padre autenticado, decisión CEO) | 🟢 IMPLEMENTADO |
 | [596](596-consulta-vacia/spec.md) | SPEC-596 · Rediseño del resultado vacío de la consulta pública (decisión CEO) | 🟢 IMPLEMENTADO |
 | [595](595-bandeja-procesados/spec.md) | SPEC-595 · Bandeja: separar pendientes (accionables) de procesados (solo visualización) | 🟢 IMPLEMENTADO |
+| [592](592-revelado-auditado/spec.md) | Feature Specification: Revelado auditado del texto (fixes en vivo del dueño) | 🟢 IMPLEMENTADO |
+| [594](594-correos-lectura/spec.md) | Feature Specification: Correos de lectura — reglas del dueño | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

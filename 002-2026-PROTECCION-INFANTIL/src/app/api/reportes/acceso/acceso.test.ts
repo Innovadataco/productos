@@ -237,7 +237,7 @@ describe("SPEC-584 (Fase 3) · acceso externo por código temporal", () => {
     });
 });
 
-describe("SPEC-584 (Fase 2) · lectura admin real: auditoría + notificación al padre", () => {
+describe("SPEC-592/594 · render del detalle admin y notificaciones al padre", () => {
     beforeEach(async () => {
         await resetDatabase();
         await resetRateLimitStore();
@@ -267,11 +267,11 @@ describe("SPEC-584 (Fase 2) · lectura admin real: auditoría + notificación al
         });
     }
 
-    it("el detalle admin deja la fila de auditoría y notifica al padre dueño", async () => {
+    it("SPEC-592: el GET del detalle admin es un RENDER — ni audita ni notifica", async () => {
         await sembrarReglaTextoLeido();
         const padre = await crearUsuario("PARENT");
         const reporte = await crearReporteDePrueba(padre.id);
-        const admin = await autenticar("ADMIN");
+        await autenticar("ADMIN");
 
         const res = await GET_DETALLE_ADMIN(
             new Request(`http://localhost/api/admin/reportes-revision/${reporte.id}`, {
@@ -283,34 +283,46 @@ describe("SPEC-584 (Fase 2) · lectura admin real: auditoría + notificación al
         const data = await res.json();
         expect(data.reporte.texto).toBe("Relato de prueba del flujo de código temporal");
 
-        const auditoria = await prisma.lecturaReporte.findFirstOrThrow({ where: { reporteId: reporte.id } });
-        expect(auditoria.tipoActor).toBe("PLATAFORMA");
-        expect(auditoria.usuarioId).toBe(admin.id);
-        expect(auditoria.campo).toBe("texto");
-        expect(auditoria.hashContenido).toMatch(/^[0-9a-f]{64}$/);
-
-        // Notificación encolada al padre dueño (sin el texto).
-        const notificaciones = await prisma.notificacion.findMany({ where: { evento: "padre.reporte.texto_leido" } });
-        expect(notificaciones).toHaveLength(1);
-        expect(notificaciones[0].destinatarioUsuarioId).toBe(padre.id);
-        expect(JSON.stringify(notificaciones[0].variables)).not.toContain("Relato de prueba");
+        // El render no es una acción de lectura: cero filas de auditoría…
+        expect(await prisma.lecturaReporte.count({ where: { reporteId: reporte.id } })).toBe(0);
+        // …y cero notificaciones al padre (SPEC-594: rol interno lee → cero correos).
+        expect(await prisma.notificacion.count({ where: { evento: "padre.reporte.texto_leido" } })).toBe(0);
     });
 
-    it("reporte ANÓNIMO: el detalle admin audita pero NO genera notificación (no hay padre)", async () => {
+    it("SPEC-594: la corrección (acción interna) tampoco notifica al padre", async () => {
         await sembrarReglaTextoLeido();
-        const reporte = await crearReporteDePrueba(); // anónimo
-        await autenticar("ADMIN");
+        const padre = await crearUsuario("PARENT");
+        const reporte = await crearReporteDePrueba(padre.id);
+        const admin = await autenticar("ADMIN");
+        await prisma.clasificacionIA.create({
+            data: {
+                reporteId: reporte.id,
+                categoria: "CONTACTO_INSISTENTE",
+                confianza: 0.8,
+                contienePii: false,
+                piiDetectada: [],
+                modeloUsado: "test:spec-594",
+                latenciaMs: 1,
+            },
+        });
 
-        const res = await GET_DETALLE_ADMIN(
-            new Request(`http://localhost/api/admin/reportes-revision/${reporte.id}`, {
-                headers: { cookie: `token=${activeToken}` },
-            }),
-            { params: Promise.resolve({ id: reporte.id }) }
+        const { POST: POST_CORRECCIONES } = await import("@/app/api/admin/correcciones/route");
+        const res = await POST_CORRECCIONES(
+            crearRequestAutenticado("POST", "http://localhost/api/admin/correcciones", {
+                reporteId: reporte.id,
+                categoriaCorregida: "EXTORSION",
+                comentario: "Corrección de prueba SPEC-594",
+            })
         );
         expect(res.status).toBe(200);
 
-        expect(await prisma.lecturaReporte.count({ where: { reporteId: reporte.id } })).toBe(1);
+        // Antes del fix el padre recibía DOS correos idénticos (una por cada
+        // campo descifrado: texto + textoOriginal). Ahora: ninguno.
         expect(await prisma.notificacion.count({ where: { evento: "padre.reporte.texto_leido" } })).toBe(0);
+        // La auditoría interna sigue viva (quién leyó qué campo y cuándo).
+        const auditorias = await prisma.lecturaReporte.findMany({ where: { reporteId: reporte.id } });
+        expect(auditorias.length).toBeGreaterThan(0);
+        expect(auditorias.every((a) => a.usuarioId === admin.id)).toBe(true);
     });
 
     it("accesos-texto: el historial es visible para el operador con permiso sobre el caso", async () => {
@@ -320,13 +332,15 @@ describe("SPEC-584 (Fase 2) · lectura admin real: auditoría + notificación al
         const operador = await autenticar("OPERADOR");
         await prisma.reporte.update({ where: { id: reporte.id }, data: { operadorId: operador.id } });
 
-        // Primero genera una lectura (detalle admin).
-        await GET_DETALLE_ADMIN(
-            new Request(`http://localhost/api/admin/reportes-revision/${reporte.id}`, {
-                headers: { cookie: `token=${activeToken}` },
-            }),
+        // SPEC-592: el RENDER del detalle ya no audita; la fila de historial nace de
+        // una acción explícita de lectura (acá: revelar el original, módulo otorgado
+        // por resetDatabase).
+        const { POST: POST_REVELAR } = await import("@/app/api/admin/reportes/[id]/revelar-original/route");
+        const resRevelar = await POST_REVELAR(
+            crearRequestAutenticado("POST", `http://localhost/api/admin/reportes/${reporte.id}/revelar-original`, {}),
             { params: Promise.resolve({ id: reporte.id }) }
         );
+        expect(resRevelar.status).toBe(200);
 
         const res = await GET_ACCESOS_TEXTO(
             new Request(`http://localhost/api/admin/reportes/${reporte.id}/accesos-texto`, {
@@ -337,7 +351,7 @@ describe("SPEC-584 (Fase 2) · lectura admin real: auditoría + notificación al
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data.items).toHaveLength(1);
-        expect(data.items[0].campo).toBe("texto");
+        expect(data.items[0].campo).toBe("textoOriginal");
         expect(data.items[0].tipoActor).toBe("PLATAFORMA");
     });
 });

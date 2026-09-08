@@ -47,11 +47,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         );
 
         if (!sesionJoven && !sello) {
+            // SPEC-592: las cuentas OAuth (googleSub != null, SPEC-590) no tienen
+            // contraseña que confirmar — su alternativa es el código temporal por
+            // email (POST /api/padre/step-up/codigo + /verificar). El cliente usa
+            // `metodos` para decidir qué UI mostrar.
+            const metodos = usuario.googleSub !== null ? (["codigo_email"] as const) : (["password"] as const);
             return NextResponse.json(
                 {
                     error: {
                         message: "Por tu seguridad, confirma tu contraseña para ver este texto.",
                         code: "STEP_UP_REQUERIDO",
+                        metodos: [...metodos],
                     },
                 },
                 { status: 403 }

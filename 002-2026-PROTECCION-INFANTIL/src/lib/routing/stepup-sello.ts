@@ -70,3 +70,75 @@ export function leerSelloStepUp(
     if (now - payload.iat > maxAgeSec) return null;
     return payload;
 }
+
+// ── SPEC-592 · código temporal de step-up por email (cuentas OAuth) ──────────
+//
+// Las cuentas que entraron por «Continúa con Google» no tienen contraseña que
+// revalidar (su passwordHash es aleatorio, SPEC-587), así que el step-up del
+// texto sensible les ofrece un código temporal enviado a SU correo. El código es
+// un token firmado (HMAC-SHA256, mismo patrón que el sello) con vigencia corta:
+// no necesita tabla ni estado en servidor — la posesión del correo ES el factor.
+
+/** Vigencia del código de step-up por email (minutos). */
+export const VIGENCIA_CODIGO_STEPUP_EMAIL_MIN = 10;
+
+const PROPOSITO_STEPUP_EMAIL = "stepup_email";
+
+interface CodigoStepUpPayload {
+    sub: string;
+    proposito: typeof PROPOSITO_STEPUP_EMAIL;
+    iat: number;
+    exp: number;
+}
+
+/** Firma el código que se envía al correo del padre. Vigencia limitada (10 min). */
+export function firmarCodigoStepUpEmail(usuarioId: string, secret: string): string {
+    if (!secret || secret.length < 16) {
+        throw new Error("[stepup-sello] secret ausente o demasiado corto");
+    }
+    const iat = Math.floor(Date.now() / 1000);
+    const payload: CodigoStepUpPayload = {
+        sub: usuarioId,
+        proposito: PROPOSITO_STEPUP_EMAIL,
+        iat,
+        exp: iat + VIGENCIA_CODIGO_STEPUP_EMAIL_MIN * 60,
+    };
+    const payloadB64 = b64url(Buffer.from(JSON.stringify(payload), "utf8"));
+    const sig = createHmac("sha256", secret).update(payloadB64).digest();
+    return `${payloadB64}.${b64url(sig)}`;
+}
+
+/** Verifica el código: firma, propósito, titular y vigencia. Devuelve el payload o null. */
+export function leerCodigoStepUpEmail(
+    valor: string | null | undefined,
+    usuarioId: string,
+    secret: string
+): CodigoStepUpPayload | null {
+    if (!valor) return null;
+    const partes = valor.split(".");
+    if (partes.length !== 2) return null;
+    const [payloadB64, sigB64] = partes;
+
+    let sigProvista: Buffer;
+    try {
+        sigProvista = Buffer.from(sigB64, "base64url");
+    } catch {
+        return null;
+    }
+    const sigEsperada = createHmac("sha256", secret).update(payloadB64).digest();
+    if (sigProvista.length !== sigEsperada.length || !timingSafeEqual(sigProvista, sigEsperada)) {
+        return null;
+    }
+
+    let payload: CodigoStepUpPayload;
+    try {
+        payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as CodigoStepUpPayload;
+    } catch {
+        return null;
+    }
+    if (payload.proposito !== PROPOSITO_STEPUP_EMAIL) return null;
+    if (payload.sub !== usuarioId) return null;
+    const now = Math.floor(Date.now() / 1000);
+    if (typeof payload.exp !== "number" || payload.exp <= now) return null;
+    return payload;
+}
