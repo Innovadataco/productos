@@ -53,6 +53,8 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     verificar_pdf: { windowSeconds: 60, maxRequests: 30 },
     // SPEC-235 (002-PI-135): consulta pública de guías de acción.
     guias_accion_publica: { windowSeconds: 60, maxRequests: 30 },
+    // SPEC-587: arranque y callback de OAuth de Google (flujo PADRE).
+    oauth_google: { windowSeconds: 600, maxRequests: 30 },
 };
 
 export function getScopeDefaults(scope: string): ScopeDefaults {

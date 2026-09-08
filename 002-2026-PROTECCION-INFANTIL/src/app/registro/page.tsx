@@ -22,6 +22,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
 import { CampoCorreoDominio } from "@/components/modules/CampoCorreoDominio";
+import { BotonContinuaConGoogle } from "@/components/modules/BotonContinuaConGoogle";
 
 export default function RegistroPage() {
     const [step, setStep] = useState<"correo" | "aviso">("correo");
@@ -102,6 +103,7 @@ export default function RegistroPage() {
                                 <Button type="submit" isLoading={enviando} className="w-full">
                                     Continuar
                                 </Button>
+                                <BotonContinuaConGoogle />
                             </form>
                         </GlassCard>
 
