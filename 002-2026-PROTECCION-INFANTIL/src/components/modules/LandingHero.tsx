@@ -210,7 +210,7 @@ export function LandingHero({
                                             {resultado?.mensaje || "Sin reportes registrados para esta cuenta."}
                                         </p>
                                         {resultado?.bloqueVacia && (
-                                            <ConsultaVaciaBloque bloque={resultado.bloqueVacia} identificador={resultado.identificador} />
+                                            <ConsultaVaciaBloque bloque={resultado.bloqueVacia} />
                                         )}
                                     </div>
                                 )}

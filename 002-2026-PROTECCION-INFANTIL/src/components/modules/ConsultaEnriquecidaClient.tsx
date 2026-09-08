@@ -147,7 +147,7 @@ export function ConsultaEnriquecidaClient() {
                     <div className="rounded-xl glass p-6 text-center">
                         <p className="text-body">{data.mensaje || "Sin reportes registrados para esta cuenta."}</p>
                     </div>
-                    {data.bloqueVacia && <ConsultaVaciaBloque bloque={data.bloqueVacia} identificador={data.identificador} />}
+                    {data.bloqueVacia && <ConsultaVaciaBloque bloque={data.bloqueVacia} />}
                 </div>
             )}
 
