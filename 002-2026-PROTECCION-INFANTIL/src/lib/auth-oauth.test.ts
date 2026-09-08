@@ -57,7 +57,7 @@ describe("auth-oauth · state (SPEC-587)", () => {
 });
 
 describe("auth-oauth · auth URL (SPEC-587)", () => {
-    it("arma la URL de Google con scope, prompt y redirect", () => {
+    it("arma la URL de Google con scope y redirect, sin prompt (SPEC-597)", () => {
         const url = buildGoogleAuthUrl("state-123", "http://localhost:5005/api/auth/oauth/google/callback");
         expect(url.startsWith("https://accounts.google.com/o/oauth2/v2/auth?")).toBe(true);
         const params = new URL(url).searchParams;
@@ -65,8 +65,9 @@ describe("auth-oauth · auth URL (SPEC-587)", () => {
         expect(params.get("redirect_uri")).toBe("http://localhost:5005/api/auth/oauth/google/callback");
         expect(params.get("response_type")).toBe("code");
         expect(params.get("scope")).toBe("openid email profile");
-        expect(params.get("prompt")).toBe("select_account");
         expect(params.get("state")).toBe("state-123");
+        expect(params.get("prompt")).toBeNull();
+        expect(url).not.toContain("select_account");
     });
 });
 
