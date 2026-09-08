@@ -10,13 +10,14 @@
  */
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { anioDesdeEdad, validarEdadMenor } from "@/lib/padre/documento-menor";
+import { validarEdadMenor } from "@/lib/padre/documento-menor";
 import { WizardStepper } from "./WizardStepper";
 import { PasoBienvenidaRegistro } from "./PasoBienvenidaRegistro";
 import { PasoDatosHijo } from "./PasoDatosHijo";
 import { PasoCirculoConfianza } from "./PasoCirculoConfianza";
 import { ResumenRegistro } from "./ResumenRegistro";
-import { FORM_VACIO, IDENTIFICADOR_VACIO, type DatosHijoForm, type ErroresPasoDatos, type IdentificadorNuevo } from "./types";
+import { FORM_VACIO, IDENTIFICADOR_VACIO, type DatosHijoForm, type ErroresPasoDatos } from "./types";
+import { construirPayloadAltaHijo, type IdentificadorNuevo } from "./payload";
 
 const ULTIMO_PASO = 3;
 
@@ -84,15 +85,16 @@ export function RegistroHijoWizard({
         setErrorEnvio(null);
         const pendiente = identificadoresPendientes();
         try {
-            const body: Record<string, unknown> = {
-                nombre: form.nombre.trim(),
-                apellidos: form.apellidos.trim(),
-                ...(form.edad !== null ? { anioNacimiento: anioDesdeEdad(form.edad) } : {}),
-                ...(form.sexo ? { sexo: form.sexo } : {}),
-                ...(pendiente.length
-                    ? { identificadores: pendiente.map((i) => ({ valor: i.valor, ...(i.plataformaId ? { plataformaId: i.plataformaId } : {}) })) }
-                    : {}),
-            };
+            // SPEC-601 · el payload comparte constructor con la variante formulario.
+            const body = construirPayloadAltaHijo(
+                {
+                    nombre: form.nombre.trim(),
+                    apellidos: form.apellidos.trim(),
+                    edad: form.edad,
+                    sexo: form.sexo,
+                },
+                pendiente,
+            );
             const res = await fetch("/api/padre/hijos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

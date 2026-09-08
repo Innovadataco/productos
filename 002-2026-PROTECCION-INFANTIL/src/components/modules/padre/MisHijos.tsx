@@ -29,17 +29,27 @@ import { useEffect, useState } from "react";
 // (MisHijos.tsx superaba el máximo de líneas al sumar la edición inline).
 import { HijoCard, type Hijo, type Plataforma } from "./HijoCard";
 import { RegistroHijoWizard } from "./registro-hijo/RegistroHijoWizard";
+import { FormularioAltaHijo } from "./FormularioAltaHijo";
 
 /**
  * SPEC-339: `onListaCambio` avisa al Paso 3 del camino cuántos menores activos
  * hay, para habilitar el "Siguiente" sin duplicar la consulta.
+ *
+ * SPEC-601 · `varianteAlta`: el wizard de SPEC-599 queda en /dashboard/padre/hijos
+ * (default "wizard"); el camino /camino/hijos vuelve al formulario inline
+ * pre-599 ("formulario"), que es lo que el dueño pidió revertir allí.
  */
 export function MisHijos({
     onListaCambio,
     // SPEC-361 (F6): el tope llega del servidor (parámetro `padre.hijos.maximo`)
     // para poder mostrar "3 de 5" sin que la pantalla lo adivine.
     maximoActivos,
-}: { onListaCambio?: (activos: number) => void; maximoActivos?: number } = {}) {
+    varianteAlta = "wizard",
+}: {
+    onListaCambio?: (activos: number) => void;
+    maximoActivos?: number;
+    varianteAlta?: "wizard" | "formulario";
+} = {}) {
     const [hijos, setHijos] = useState<Hijo[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [cargando, setCargando] = useState(true);
@@ -198,8 +208,13 @@ export function MisHijos({
             </header>
 
             {/* SPEC-599: el alta es un wizard aprobado sobre el mockup de diseño;
-                la lógica de negocio (POST, validaciones) vive en el orquestador. */}
-            <RegistroHijoWizard opcionesPlataforma={opcionesPlataforma} onRegistrado={cargar} />
+                SPEC-601: el camino del padre conserva la variante formulario inline.
+                La lógica de negocio (POST, validaciones) vive en cada componente. */}
+            {varianteAlta === "formulario" ? (
+                <FormularioAltaHijo opcionesPlataforma={opcionesPlataforma} onRegistrado={cargar} />
+            ) : (
+                <RegistroHijoWizard opcionesPlataforma={opcionesPlataforma} onRegistrado={cargar} />
+            )}
 
             {cargando ? (
                 <p className="text-sm text-muted">Cargando…</p>

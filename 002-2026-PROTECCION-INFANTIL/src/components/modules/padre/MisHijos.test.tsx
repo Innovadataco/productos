@@ -63,6 +63,30 @@ function llamada(metodo: string, url?: string) {
 }
 
 describe("MisHijos", () => {
+    // SPEC-601 · el camino del padre (/camino/hijos) usa la variante formulario:
+    // el alta inline pre-599 está visible de entrada, sin wizard.
+    it("varianteAlta=\"formulario\" renderiza el alta inline y registra por POST", async () => {
+        mockRutas([], { hijoId: "h9", vinculadoAExistente: false });
+        render(<MisHijos varianteAlta="formulario" />);
+        await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
+        // sin wizard: el formulario está de entrada (botón «Registrar», no «Registrar a mi hijo»)
+        expect(screen.getByTestId("form-hijo")).toBeDefined();
+        expect(screen.queryByRole("button", { name: /Registrar a mi hijo/i })).toBeNull();
+
+        fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
+        fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
+        fireEvent.submit(screen.getByTestId("form-hijo"));
+
+        await waitFor(() => {
+            const post = llamada("POST", "/api/padre/hijos");
+            expect(post).toBeDefined();
+            const body = JSON.parse(String(post![1].body));
+            expect(body.nombre).toBe("Ana");
+            expect(body).not.toHaveProperty("documentoTipo");
+            expect(body).not.toHaveProperty("documentoNumero");
+        });
+    });
+
     it("muestra el vacío cuando no hay hijos", async () => {
         mockRutas([]);
         render(<MisHijos />);
