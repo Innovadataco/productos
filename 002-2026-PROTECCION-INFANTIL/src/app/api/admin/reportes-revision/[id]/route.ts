@@ -67,13 +67,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        // SPEC-584 (Fase 2): el descifrado audita la lectura con el actor del hilo ALS.
+        // SPEC-592: el GET del detalle es un RENDER, no una acción de lectura —
+        // NO audita ni notifica. La auditoría queda para acciones explícitas
+        // («Revelar original», canje de código, correcciones).
         const reporteDetalle = await conActor(actorDesdeRequest(user, request), async () => {
             const detalle = await new ReporteRepository().findDetalleRevision(id);
             if (!detalle) return null;
             // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
             // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
-            const texto = await descifrarCampoReporte(detalle.contenidoId, "texto");
+            const texto = await descifrarCampoReporte(detalle.contenidoId, "texto", { registrarLectura: false });
             return { ...detalle, texto };
         });
 

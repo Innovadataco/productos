@@ -112,6 +112,7 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
             <TextoOriginalPanel
                 puedeRevelarOriginal={puedeRevelarOriginal}
                 textoOriginalRevelado={textoOriginalRevelado}
+                textoActual={reporte.texto}
                 loadingRevelar={loadingRevelar}
                 onRevelar={handleRevelarOriginal}
             />
