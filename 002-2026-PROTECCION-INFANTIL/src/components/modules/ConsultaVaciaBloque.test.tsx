@@ -1,20 +1,15 @@
 /**
- * F3 (N-5): ConsultaVaciaBloque — render del contenido curado y CTA con
- * prefill del identificador + evento analítico fire-and-forget al click.
+ * SPEC-596 (decisión CEO): ConsultaVaciaBloque — la tarjeta de señales y
+ * acciones es el PROTAGONISTA del resultado vacío: visible siempre, sin modal
+ * ni enlace previo. La pantalla ya NO lleva el CTA «Reportar una conducta»
+ * ni el bloque de canales oficiales (la constitución los exige en las
+ * INTERFACES DE REPORTE: /reportar los sigue mostrando; la portada, en
+ * CanalesOficiales montado antes de la consulta — candado SPEC-456).
  */
 import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterEach } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { ConsultaVaciaBloque } from "./ConsultaVaciaBloque";
-import { tomarHandoffReportar } from "@/lib/reportar-handoff";
-
-// `vi.mock` se iza por encima de las constantes del módulo: el mock del router
-// tiene que declararse con `vi.hoisted` para poder usarse dentro de la factory.
-const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
-
-vi.mock("next/navigation", () => ({
-    useRouter: () => ({ push: pushMock }),
-}));
 
 const BLOQUE = {
     disclaimer: "Que no haya reportes no significa que sea seguro.",
@@ -22,75 +17,55 @@ const BLOQUE = {
     acciones: ["Habla sin juzgar", "Guarda evidencia", "Canales oficiales"],
 };
 
-describe("ConsultaVaciaBloque (F3)", () => {
-    beforeEach(() => {
-        vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
-        pushMock.mockClear();
-    });
-
+describe("ConsultaVaciaBloque (SPEC-596)", () => {
     afterEach(() => {
         sessionStorage.clear();
     });
 
-    it("renderiza disclaimer, enlace informativo y canales oficiales; las listas van en el modal (3002)", () => {
-        render(<ConsultaVaciaBloque bloque={BLOQUE} identificador="+57300111222" />);
+    it("la tarjeta de señales y acciones es protagonista: visible sin click, con sus dos secciones", () => {
+        render(<ConsultaVaciaBloque bloque={BLOQUE} />);
 
         expect(screen.getByText(BLOQUE.disclaimer)).toBeTruthy();
-        // Canales oficiales siempre visibles (regla de producto).
-        expect(screen.getByText("Línea 141")).toBeTruthy();
-        expect(screen.getByText("CAI Virtual")).toBeTruthy();
-        expect(screen.getByText("Te Protejo")).toBeTruthy();
-
-        // Las listas NO están visibles hasta abrir el modal.
-        expect(screen.queryByText(BLOQUE.senales[0])).toBeNull();
-        fireEvent.click(screen.getByRole("button", { name: "Ver señales de alerta y qué puedes hacer" }));
-        expect(screen.getByText(BLOQUE.senales[0])).toBeTruthy();
-        expect(screen.getByText(BLOQUE.acciones[0])).toBeTruthy();
+        // Titular de la tarjeta protagonista.
+        expect(screen.getByText("Señales de alerta y qué puedes hacer")).toBeTruthy();
+        // Las dos secciones y TODOS sus items visibles de entrada (sin modal).
         expect(screen.getByText("Señales de alerta a las que estar atento")).toBeTruthy();
         expect(screen.getByText("Qué puedes hacer")).toBeTruthy();
-
-        // Cerrar el modal vuelve a ocultar las listas.
-        fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
-        expect(screen.queryByText(BLOQUE.senales[0])).toBeNull();
+        for (const senal of BLOQUE.senales) {
+            expect(screen.getByText(senal)).toBeTruthy();
+        }
+        for (const accion of BLOQUE.acciones) {
+            expect(screen.getByText(accion)).toBeTruthy();
+        }
+        // Accesibilidad: la tarjeta es una sección etiquetada por su titular.
+        expect(screen.getByRole("region", { name: "Señales de alerta y qué puedes hacer" })).toBeTruthy();
     });
 
-    // Antes este CTA era un <Link> con `?identificador=` en el href: dejaba el
-    // identificador consultado en la URL de una pantalla pública (historial,
-    // Referer, logs). Ahora viaja por sessionStorage y la URL va limpia.
-    it("el CTA lleva el identificador a /reportar por sessionStorage y NUNCA por la URL", () => {
-        render(<ConsultaVaciaBloque bloque={BLOQUE} identificador="+57300 111" />);
+    it("ya no muestra el CTA de reporte ni los canales oficiales (decisión CEO)", () => {
+        render(<ConsultaVaciaBloque bloque={BLOQUE} />);
 
-        fireEvent.click(screen.getByRole("button", { name: "Reportar una conducta" }));
-
-        // La navegación es a la URL limpia, sin rastro del identificador.
-        expect(pushMock).toHaveBeenCalledWith("/reportar");
-        expect(pushMock.mock.calls.every(([url]) => !String(url).includes("identificador"))).toBe(true);
-        expect(pushMock.mock.calls.every(([url]) => !String(url).includes("57300"))).toBe(true);
-
-        // El valor va por la llave de un solo uso, sin fijar el campo: acá es un
-        // prellenado de cortesía y el usuario puede corregirlo.
-        expect(tomarHandoffReportar()).toEqual({ identificador: "+57300 111", fijar: false });
-    });
-
-    it("dispara el evento analítico al click, sin el identificador en el body", () => {
-        render(<ConsultaVaciaBloque bloque={BLOQUE} identificador="+57300 111" />);
-
-        fireEvent.click(screen.getByRole("button", { name: "Reportar una conducta" }));
-
-        expect(fetch).toHaveBeenCalledWith("/api/consulta/evento", expect.objectContaining({ method: "POST" }));
-        // Privacidad: el body del evento NUNCA lleva el identificador.
-        const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string);
-        expect(body).toEqual({ evento: "consulta_vacia_cta_reportar" });
-        expect(JSON.stringify(body)).not.toContain("57300");
+        expect(screen.queryByRole("button", { name: "Reportar una conducta" })).toBeNull();
+        expect(screen.queryByText("Línea 141")).toBeNull();
+        expect(screen.queryByText("CAI Virtual")).toBeNull();
+        expect(screen.queryByText("Te Protejo")).toBeNull();
+        // Sin interacción alguna: ni enlace al modal ni botones.
+        expect(screen.queryByRole("button", { name: "Ver señales de alerta y qué puedes hacer" })).toBeNull();
     });
 
     it("omite secciones ausentes (degradación limpia)", () => {
-        render(<ConsultaVaciaBloque bloque={{ disclaimer: "Solo aviso." }} identificador="@nick" />);
+        render(<ConsultaVaciaBloque bloque={{ disclaimer: "Solo aviso." }} />);
 
         expect(screen.getByText("Solo aviso.")).toBeTruthy();
-        expect(screen.queryByText("Ver señales de alerta y qué puedes hacer")).toBeNull();
+        expect(screen.queryByText("Señales de alerta y qué puedes hacer")).toBeNull();
         expect(screen.queryByText("Señales de alerta a las que estar atento")).toBeNull();
         expect(screen.queryByText("Qué puedes hacer")).toBeNull();
-        expect(screen.getByRole("button", { name: "Reportar una conducta" })).toBeTruthy();
+    });
+
+    it("tarjeta con una sola sección: renderiza la que hay y omite la otra", () => {
+        render(<ConsultaVaciaBloque bloque={{ senales: BLOQUE.senales }} />);
+
+        expect(screen.getByText("Señales de alerta a las que estar atento")).toBeTruthy();
+        expect(screen.queryByText("Qué puedes hacer")).toBeNull();
+        expect(screen.getByText(BLOQUE.senales[0])).toBeTruthy();
     });
 });
