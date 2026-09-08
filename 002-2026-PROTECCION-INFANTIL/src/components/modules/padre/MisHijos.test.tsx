@@ -67,8 +67,8 @@ describe("MisHijos", () => {
         mockRutas([]);
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
-        // sección distinguible con el título de protejo
-        expect(screen.getByText("A quién protejo")).toBeDefined();
+        // sección distinguible con el título de protejo (el wizard también lo nombra en su entrada)
+        expect(screen.getByRole("heading", { name: "A quién protejo" })).toBeDefined();
     });
 
     it("lista un hijo con su identificador", async () => {
@@ -103,6 +103,8 @@ describe("MisHijos", () => {
         mockRutas([], { hijoId: "h9", vinculadoAExistente: false });
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
+        // SPEC-599: el alta es un wizard; el formulario de datos es el paso 2.
+        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/i }));
 
         // SPEC-363: payload REAL — nombre y apellidos, que se validan antes de
         // enviar. El documento del menor ya no existe (SPEC-589): el formulario
@@ -110,6 +112,8 @@ describe("MisHijos", () => {
         fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
         fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
+        // SPEC-599: el POST se dispara al confirmar en el paso 3.
+        fireEvent.click(screen.getByRole("button", { name: /Confirmar registro/i }));
 
         await waitFor(() => {
             const post = llamada("POST", "/api/padre/hijos");
@@ -127,6 +131,8 @@ describe("MisHijos", () => {
         mockRutas([], { hijoId: "h9", vinculadoAExistente: false });
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
+        // SPEC-599: el alta es un wizard; el formulario de datos es el paso 2.
+        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/i }));
         // el catálogo de plataformas ya llegó
         await waitFor(() => expect(screen.getByRole("option", { name: "Roblox" })).toBeDefined());
 
@@ -142,6 +148,7 @@ describe("MisHijos", () => {
         // 2º sin plataforma, escrito pero NO "agregado": debe entrar igual.
         fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "+573001112233" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
+        fireEvent.click(screen.getByRole("button", { name: /Confirmar registro/i }));
 
         await waitFor(() => {
             const post = llamada("POST", "/api/padre/hijos");

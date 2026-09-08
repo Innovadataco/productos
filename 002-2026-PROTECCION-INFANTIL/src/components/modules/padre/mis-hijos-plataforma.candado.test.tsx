@@ -16,7 +16,7 @@
  * Integración (jsdom) por el glob src/**: no toca vitest.unit.includes.ts.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { MisHijos } from "./MisHijos";
 
 const fetchMock = vi.fn();
@@ -51,6 +51,8 @@ describe("SPEC-555 · el select de plataforma no ofrece «Sin plataforma»", () 
         mockRutas();
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
+        // SPEC-599: el alta es un wizard; el select vive en el paso 2.
+        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/ }));
 
         const select = screen.getByLabelText("Plataforma") as HTMLSelectElement;
         const etiquetas = within(select).queryAllByRole("option").map((o) => o.textContent);
@@ -61,6 +63,8 @@ describe("SPEC-555 · el select de plataforma no ofrece «Sin plataforma»", () 
         mockRutas();
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
+        // SPEC-599: el alta es un wizard; el select vive en el paso 2.
+        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/ }));
 
         const select = screen.getByLabelText("Plataforma") as HTMLSelectElement;
         const etiquetas = within(select).queryAllByRole("option").map((o) => o.textContent);
