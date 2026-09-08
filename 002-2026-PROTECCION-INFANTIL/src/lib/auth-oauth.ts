@@ -76,8 +76,16 @@ export function verificarState(state: string, ahora: number = Date.now()): boole
     }
 }
 
-/** URL del callback registrada en Google: origen del request + ruta fija. */
+/**
+ * URL del callback registrada en Google. El origen SIEMPRE sale de
+ * `NEXT_PUBLIC_APP_URL` (canalón canónico de URLs públicas del producto):
+ * `request.url` refleja el host interno del contenedor (0.0.0.0:3000) cuando
+ * el reverse proxy no reescribe Host, y Google exige coincidencia exacta con
+ * la URI autorizada. Fallback a request solo si el env falta.
+ */
 export function callbackUriDe(request: Request): string {
+    const base = process.env.NEXT_PUBLIC_APP_URL;
+    if (base) return new URL("/api/auth/oauth/google/callback", base).toString();
     return new URL("/api/auth/oauth/google/callback", request.url).toString();
 }
 

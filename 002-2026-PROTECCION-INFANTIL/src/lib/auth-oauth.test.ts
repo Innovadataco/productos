@@ -4,7 +4,7 @@
  * Firma/verificación del state OAuth: válido, expirado, con payload alterado,
  * con firma alterada y mal formado; y la auth URL de Google (scope, prompt).
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import {
     buildGoogleAuthUrl,
     firmarState,
@@ -67,5 +67,28 @@ describe("auth-oauth · auth URL (SPEC-587)", () => {
         expect(params.get("scope")).toBe("openid email profile");
         expect(params.get("prompt")).toBe("select_account");
         expect(params.get("state")).toBe("state-123");
+    });
+});
+
+describe("auth-oauth · callbackUriDe (SPEC-587 · fix prod)", () => {
+    const appUrlOriginal = process.env.NEXT_PUBLIC_APP_URL;
+
+    afterEach(() => {
+        if (appUrlOriginal === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+        else process.env.NEXT_PUBLIC_APP_URL = appUrlOriginal;
+    });
+
+    it("usa NEXT_PUBLIC_APP_URL aunque el request venga del host interno (0.0.0.0:3000)", async () => {
+        process.env.NEXT_PUBLIC_APP_URL = "https://pi.innovadataco.com";
+        const { callbackUriDe } = await import("./auth-oauth");
+        const request = new Request("https://0.0.0.0:3000/api/auth/oauth/google");
+        expect(callbackUriDe(request)).toBe("https://pi.innovadataco.com/api/auth/oauth/google/callback");
+    });
+
+    it("sin NEXT_PUBLIC_APP_URL cae al origen del request", async () => {
+        delete process.env.NEXT_PUBLIC_APP_URL;
+        const { callbackUriDe } = await import("./auth-oauth");
+        const request = new Request("http://localhost:5005/api/auth/oauth/google");
+        expect(callbackUriDe(request)).toBe("http://localhost:5005/api/auth/oauth/google/callback");
     });
 });
