@@ -6,6 +6,8 @@
 
 **Status**: IMPLEMENTADO
 
+## Impacto en arquitectura: no (cambio interno de componentes y servicios existentes; sin cambios en schema Prisma, proxy ni navegación)
+
 **Input**: Bugs mostrados en vivo por el dueño (2026-09-07/08) en el detalle del reporte de la bandeja admin y en el texto propio del padre OAuth.
 
 ---

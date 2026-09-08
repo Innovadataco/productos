@@ -6,6 +6,8 @@
 
 **Status**: IMPLEMENTADO
 
+## Impacto en arquitectura: no (cambio interno de componentes y servicios existentes; sin cambios en schema Prisma, proxy ni navegación)
+
 **Input**: Bugs mostrados en vivo por el dueño (2026-09-07/08): correos de «lectura» al padre por lecturas internas, doble correo al clasificar, y aviso disparado al abrir pantallas en vez de al revelar.
 
 ---
