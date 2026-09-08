@@ -6,6 +6,7 @@ import { spamPendientesQuerySchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol, esOperadorRol } from "@/lib/operadores/permisos";
 import { descifrarCamposReporte } from "@/lib/dal/services/descifrar-contenido";
+import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { getParametroSistema } from "@/lib/parametros";
@@ -93,7 +94,10 @@ export async function GET(req: Request) {
         })();
 
         // S-C: descifrado en LOTE (2 queries) del texto de cada reporte de la bandeja.
-        const textos = await descifrarCamposReporte(reportes.map((r) => r.contenidoId), "texto");
+        // SPEC-584: cada lectura queda auditada (actor ALS), una fila por reporte.
+        const textos = await conActor(actorDesdeRequest(user, req), () =>
+            descifrarCamposReporte(reportes.map((r) => r.contenidoId), "texto")
+        );
         return NextResponse.json({
             reportes: reportes.map((r) => {
                 const texto = textos.get(r.contenidoId)!;

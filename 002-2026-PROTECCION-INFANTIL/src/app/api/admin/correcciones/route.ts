@@ -10,6 +10,7 @@ import { anonimizarTexto } from "@/lib/ai/anonimizador";
 import { generarEmbedding } from "@/lib/ai/embedder";
 import { MODELO_ANONIMIZACION_DEFAULT, MODELO_EMBEDDING_DEFAULT } from "@/lib/ai/defaults";
 import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
+import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
@@ -103,7 +104,10 @@ export async function POST(request: Request) {
             );
         }
         // SPEC-130 (BL-4): el texto va cifrado en reposo; el plano solo en memoria (O-3).
-        const texto = await descifrarCampoReporte(reporteRow.contenidoId, "texto");
+        // SPEC-584: la lectura queda auditada (actor ALS).
+        const texto = await conActor(actorDesdeRequest(user, request), () =>
+            descifrarCampoReporte(reporteRow.contenidoId, "texto")
+        );
         const reporte = { ...reporteRow, texto };
 
         if (!puedeGestionarReporte(user, reporte)) {
@@ -216,7 +220,9 @@ export async function POST(request: Request) {
         // S-C (D-116/D-117): el original (evidencia) SIEMPRE está sellado desde el alta, así que
         // «ya anonimizado» ya NO se infiere de textoOriginal!=null — se infiere de que el texto de
         // TRABAJO divergió del original. La lectura del original es fail-loud (fuera del try de IA).
-        const textoOriginalPlano = await descifrarCampoReporte(reporteRow.contenidoId, "textoOriginal");
+        const textoOriginalPlano = await conActor(actorDesdeRequest(user, request), () =>
+            descifrarCampoReporte(reporteRow.contenidoId, "textoOriginal")
+        );
         const yaAnonimizado = reporte.texto !== textoOriginalPlano;
         let textoDataset = reporte.texto;
         let datasetAnonimizado = false;

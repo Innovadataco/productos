@@ -290,6 +290,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/colegio/carga/validator.test.ts",
     // SPEC-352 (hotfix): guard del resetDatabase — jamás truncar una BD sin "test".
     "src/lib/validar-bd-de-test.test.ts",
+    // SPEC-584 (Fase 2): hilo conductor del actor de lectura (ALS, sin BD).
+    "src/lib/auditoria-lectura/actor.test.ts",
+    // SPEC-584 (Fase 3): generador/normalizador/hash del código temporal (puro).
+    "src/lib/acceso-codigo.test.ts",
     // SPEC-344 (A-69 · C1): test-candado de la plantilla de profesores.
     "src/lib/colegio/carga-profesores/plantilla-autoconsistente.test.ts",
     // SPEC-344 (FR-026-ter · cierra I-245): test-candado de la plantilla de alumnos.

@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo, puedeAccederAModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
+import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { obtenerSeveridades } from "@/lib/scoring";
@@ -82,7 +83,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         }
 
         const config = await obtenerConfigEtapas();
-        const etapas = await armarEtapas(datos, config, { revelar });
+        // SPEC-584: si revela, el original se descifra dentro de armarEtapas y la
+        // lectura queda auditada (actor ALS).
+        const etapas = await conActor(actorDesdeRequest(user, request), () => armarEtapas(datos, config, { revelar }));
 
         const c = datos.reporte.clasificacion;
         const preguntas = await cargarPreguntasRubrica();

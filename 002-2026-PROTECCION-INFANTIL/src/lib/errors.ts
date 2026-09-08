@@ -10,6 +10,9 @@ export const ERROR_CODES = {
     BAD_GATEWAY: "BAD_GATEWAY",
     INTERNAL_ERROR: "INTERNAL_ERROR",
     SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
+    // SPEC-584 (Fase 3): recurso que existió pero ya no está disponible
+    // (código temporal expirado, sesión de visualización vencida).
+    GONE: "GONE",
 } as const;
 
 export class AppError extends Error {
