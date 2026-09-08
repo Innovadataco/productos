@@ -3,11 +3,12 @@ import { verifyAuth } from "@/lib/auth";
 import { assertAnyModulo } from "@/lib/permisos-modulos";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { reportesRevisionQuerySchema } from "@/lib/validators";
+import type { SeccionBandeja } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
-import type { Prisma } from "@prisma/client";
+import type { EstadoReporte, Prisma } from "@prisma/client";
 
 const MAX_PAGE_SIZE = 100;
 
@@ -42,7 +43,7 @@ export async function GET(req: Request) {
             );
         }
 
-        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, padre, q, orden } = parsedQuery.data;
+        const { page, pageSize, estado, plataformaId, categoria, fechaDesde, fechaHasta, incluirEliminados, operadorId, padre, q, orden, seccion } = parsedQuery.data;
         const skip = (page - 1) * pageSize;
 
         // SPEC-122: la bandeja excluye bajas lógicas salvo que se pidan explícitamente.
@@ -96,10 +97,38 @@ export async function GET(req: Request) {
         }
 
         // E-8: la bandeja vive en el repo (mismo select/orden/paginación); la ruta no toca prisma.
-        const [reportes, total] = await new ReporteRepository().findBandejaRevision(where, { skip, take: pageSize }, orden);
+        // SPEC-595: la sección (pendientes/procesados) se aplica como AND sobre los filtros
+        // base; los totales por sección usan los mismos filtros sin paginar. Un CLASIFICADO
+        // solo es «procesado» si un humano ya confirmó/corrigió (CorreccionAdmin existe).
+        const ESTADOS_PENDIENTES_ACCIONABLES: EstadoReporte[] = ["PENDIENTE", "PROCESANDO", "REVISION_MANUAL", "REQUIERE_ANONIMIZACION"];
+        const ESTADOS_PROCESADOS_TERMINALES: EstadoReporte[] = ["POSIBLE_SPAM", "DUPLICADO", "CORREGIDO"];
+        const condicionSeccion: Record<SeccionBandeja, Prisma.ReporteWhereInput> = {
+            pendientes: {
+                OR: [
+                    { estado: { in: ESTADOS_PENDIENTES_ACCIONABLES } },
+                    { estado: "CLASIFICADO", clasificacion: { correccion: null } },
+                ],
+            },
+            procesados: {
+                OR: [
+                    { estado: { in: ESTADOS_PROCESADOS_TERMINALES } },
+                    { estado: "CLASIFICADO", clasificacion: { correccion: { isNot: null } } },
+                ],
+            },
+        };
+        const whereConSeccion: Prisma.ReporteWhereInput = { ...where, AND: [condicionSeccion[seccion]] };
+
+        const repo = new ReporteRepository();
+        const [resultado, totalPendientes, totalProcesados] = await Promise.all([
+            repo.findBandejaRevision(whereConSeccion, { skip, take: pageSize }, orden),
+            repo.contarBandejaRevision({ ...where, AND: [condicionSeccion.pendientes] }),
+            repo.contarBandejaRevision({ ...where, AND: [condicionSeccion.procesados] }),
+        ]);
+        const [reportes, total] = resultado;
 
         return NextResponse.json({
             reportes,
+            secciones: { pendientes: totalPendientes, procesados: totalProcesados },
             pagination: {
                 page,
                 pageSize,
