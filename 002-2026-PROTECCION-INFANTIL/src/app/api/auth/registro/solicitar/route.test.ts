@@ -116,6 +116,22 @@ describe("POST /api/auth/registro/solicitar (SPEC-339)", { timeout: 30_000 }, ()
         expect(res.status).toBe(400);
     });
 
+    it("3003: dominio mal escrito → 400 con sugerencia (gmaail.com → gmail.com) y sin token", async () => {
+        const res = await POST(makeRequest({ email: "jelkin.carrillo+padre01@gmaail.com" }));
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body.sugerencia).toBe("gmail.com");
+        expect(await prisma.tokenRegistro.count({ where: { email: "jelkin.carrillo+padre01@gmaail.com" } })).toBe(0);
+        expect(mocks.enviarEnlaceRegistro).not.toHaveBeenCalled();
+    });
+
+    it("3003: dominio institucional válido pasa sin sugerencia", async () => {
+        const res = await POST(makeRequest({ email: "rector@colegiosanpedro.edu.co" }));
+        expect(res.status).toBe(202);
+        const body = await res.json();
+        expect(body.sugerencia).toBeUndefined();
+    });
+
     it("NO toca el flujo del código de 6 dígitos: cero CodigoVerificacion creados", async () => {
         await POST(makeRequest({ email: "nuevo3@example.com" }));
         expect(await prisma.codigoVerificacion.count()).toBe(0);

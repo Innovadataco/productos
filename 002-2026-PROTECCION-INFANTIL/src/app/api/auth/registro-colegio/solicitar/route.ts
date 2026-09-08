@@ -19,6 +19,7 @@ import { logger } from "@/lib/logger";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { registroColegioSolicitarSchema } from "@/lib/validators";
+import { sugerirDominioCorreo } from "@/lib/email-typo";
 import {
     enviarEnlaceRegistroColegio,
     enviarCuentaExistenteColegio,
@@ -35,17 +36,30 @@ function maskEmail(email: string): string {
     return email.replace(/^(.{1})(.*)(@.*)$/, "$1***$3");
 }
 
+/** 3003: extrae el email del body crudo (sin `any`) para poder sugerir el dominio. */
+function extraerEmail(raw: unknown): string {
+    if (raw && typeof raw === "object" && "email" in raw) {
+        const valor = (raw as { email: unknown }).email;
+        return typeof valor === "string" ? valor : "";
+    }
+    return "";
+}
+
 export async function POST(request: Request) {
     try {
         const bodyRaw = await request.json().catch(() => undefined);
         const parsed = registroColegioSolicitarSchema.safeParse(bodyRaw);
         if (!parsed.success) {
+            // 3003: ante dominio mal escrito devolvemos la sugerencia (gmaail.com → gmail.com).
+            const emailRaw = extraerEmail(bodyRaw);
+            const sugerencia = sugerirDominioCorreo(emailRaw);
             return NextResponse.json(
                 {
                     error: {
                         message: parsed.error.issues[0]?.message ?? "Datos inválidos",
                         code: ERROR_CODES.VALIDATION_ERROR,
                     },
+                    ...(sugerencia ? { sugerencia } : {}),
                 },
                 { status: 400 },
             );

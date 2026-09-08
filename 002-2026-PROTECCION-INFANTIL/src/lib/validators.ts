@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CategoriaConducta, EstadoReporte, AccionAudit, MotivoBajaReporte } from "@prisma/client";
+import { sugerirDominioCorreo } from "./email-typo";
 
 const motivosBaja = Object.values(MotivoBajaReporte) as [string, ...string[]];
 export const darDeBajaReporteSchema = z.object({
@@ -245,12 +246,21 @@ export type VerificarCompletarInput = z.infer<typeof verificarCompletarSchema>;
 export const DOCUMENTO_TIPOS_PADRE = ["CC", "CE", "PASAPORTE", "NIT", "OTRO"] as const;
 export type DocumentoTipoPadre = (typeof DOCUMENTO_TIPOS_PADRE)[number];
 
+// 3003: la barrera de verdad contra el dominio mal escrito (`gmaail.com`).
+// El cliente sugiere en vivo; el servidor detiene la solicitud con la
+// sugerencia. Sugerir NUNCA corrige en silencio: corregir solo podría enviar
+// el enlace de registro al buzón de un tercero.
+export const emailSinTypoSchema = z.string({ error: "Email inválido" }).trim().toLowerCase().min(1, "Email inválido")
+    .refine((val) => val.includes("@"), { message: "Email inválido" })
+    .refine((val) => sugerirDominioCorreo(val) === null, {
+        message: "El dominio del correo parece estar mal escrito. Verifica si es el servicio correcto.",
+    });
+
 // SPEC-339 (A-67 §2.1): la puerta del padre por enlace. Las dos condiciones
 // visibles del brief: 8 caracteres y que coincidan; se conserva letra+número
 // del estándar del sitio.
 export const registroSolicitarSchema = z.object({
-    email: z.string({ error: "Email inválido" }).trim().toLowerCase().min(1, "Email inválido")
-        .refine((val) => val.includes("@"), { message: "Email inválido" }),
+    email: emailSinTypoSchema,
 });
 export type RegistroSolicitarInput = z.infer<typeof registroSolicitarSchema>;
 
@@ -275,8 +285,7 @@ export type RegistroCompletarInput = z.infer<typeof registroCompletarSchema>;
 // respuesta hacia la pantalla es idéntica en las cuatro combinaciones
 // (matiz CEO 03:18). El aviso, cuando corresponde, va SOLO al buzón.
 export const registroColegioSolicitarSchema = z.object({
-    email: z.string({ error: "Email inválido" }).trim().toLowerCase().min(1, "Email inválido")
-        .refine((val) => val.includes("@"), { message: "Email inválido" }),
+    email: emailSinTypoSchema,
     nombreColegio: z.string().trim().min(2, "Nombre del colegio: mínimo 2 caracteres").max(150),
     nit: z.string().trim().min(1, "Falta el NIT del colegio").max(50),
 });
