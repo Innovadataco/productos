@@ -448,6 +448,7 @@
 | [601](601-camino-hijos-revert/spec.md) | SPEC-601 · Revert acotado: formulario inline en el camino de hijos | 🟢 IMPLEMENTADO |
 | [602](602-login-autenticado-redirect/spec.md) | SPEC-602 · Redirect de pantallas de autenticación con sesión válida | 🟢 IMPLEMENTADO |
 | [603](603-sesion-huerfana/spec.md) | SPEC-603 · Sesión huérfana: JWT de usuario eliminado tumba /reportar (P2003) y /api/me en loop | 🟢 IMPLEMENTADO |
+| [607](607-menu-perfil-hijos/spec.md) | SPEC-607 · Menú definitivo del padre + «Mi perfil» unificado + hijos sin documento | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
