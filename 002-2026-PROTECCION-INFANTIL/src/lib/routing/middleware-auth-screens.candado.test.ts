@@ -1,6 +1,11 @@
 /**
  * SPEC-588 (I-3xx · vivo 06-09 con el OAuth) — CANDADO: las pantallas de
  * autenticación no se le ofrecen a una sesión válida.
+ * SPEC-602 — generalización: la condición ya no es una terna hardcodeada en
+ * el middleware sino `GUARDIAS_ACCESO.pantallasAuth` (fuente única, matching
+ * exacto). NO es `GUARDIAS_ACCESO.sesion`: esa lista son rutas de
+ * infraestructura de la sesión (logout, muros, refresh, /api/me) que deben
+ * seguir alcanzables con JWT válido.
  *
  * Vivo: el dueño entró con «Continúa con Google», la sesión quedó creada
  * (USER_CREATE + JWT vivos) y aun así aterrizó en /login viendo el formulario
@@ -89,6 +94,34 @@ describe("SPEC-588 · pantallas de auth con sesión válida → home del rol", (
 
     it("JWT inválido en /login → next() (se comporta como anónimo, el formulario es correcto)", async () => {
         const res = await middleware(req("/login", "token=jwt.basura.invalido"));
+        expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+});
+
+describe("SPEC-602 · generalización por GUARDIAS_ACCESO.pantallasAuth", () => {
+    it.each([
+        ["PARENT", "/dashboard/padre"],
+        ["OPERADOR", "/dashboard/admin"],
+        ["PROFESIONAL", "/dashboard/profesional"],
+    ])("rol %s en /login → 307 a %s", async (rol, home) => {
+        const res = await middleware(req("/login", `token=${await jwt(rol)}`));
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe(home);
+    });
+
+    it("PARENT autenticado en /registro → 307 a /dashboard/padre", async () => {
+        const res = await middleware(req("/registro", `token=${await jwt("PARENT")}`));
+        expect(res.status).toBe(307);
+        expect(new URL(res.headers.get("location") ?? "").pathname).toBe("/dashboard/padre");
+    });
+
+    it("/registro-colegio CON sesión → next() (puerta de registro institucional no se bloquea)", async () => {
+        const res = await middleware(req("/registro-colegio", `token=${await jwt("PARENT")}`));
+        expect(res.headers.get("x-middleware-next")).toBe("1");
+    });
+
+    it("/registro-profesional CON sesión → next() (puerta de registro profesional no se bloquea)", async () => {
+        const res = await middleware(req("/registro-profesional", `token=${await jwt("PROFESIONAL")}`));
         expect(res.headers.get("x-middleware-next")).toBe("1");
     });
 });
