@@ -169,9 +169,17 @@ describe("POST /api/padre/hijos (SPEC-339)", { timeout: 60_000 }, () => {
         expect(json.error.message).not.toBe("Datos inválidos");
     });
 
-    it("apellidos ahora son obligatorios (FR-019)", async () => {
-        const res = await POST(reqCrear({ nombre: "Sin" }));
-        expect(res.status).toBe(400);
+    it("SPEC-604: alta «solo nombre» (sin apellidos) → 201, la ficha queda con apellidos vacíos", async () => {
+        // Deroga parcialmente FR-019 (SPEC-339): el paso 0 del wizard de reporte
+        // crea la ficha con solo el nombre («+ Nuevo hijo (solo nombre)» del
+        // mockup aprobado); el padre completa los datos después.
+        const res = await POST(reqCrear({ nombre: "Valentina" }));
+        expect(res.status).toBe(201);
+        const enBd = await prisma.hijo.findUnique({ where: { id: (await res.json()).hijoId } });
+        expect(enBd).not.toBeNull();
+        expect(enBd!.nombre).toBe("Valentina");
+        expect(enBd!.apellidos).toBe("");
+        expect(enBd!.estado).toBe("activo");
     });
 
     it("SPEC-372 (A-74 P4 · I-262): un año fuera de rango por API directa se rechaza en el servidor", async () => {

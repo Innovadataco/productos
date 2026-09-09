@@ -15,6 +15,8 @@ import { tomarHandoffReportar, guardarBorradorReporte, leerBorradorReporte, borr
 type WizardData = {
     // SPEC-591: ficha «A quién protego» a la que va dirigido (modo autenticado).
     hijoId: string;
+    /** SPEC-604: nombre para crear la ficha inline («Nuevo hijo · solo nombre»). */
+    hijoNuevoNombre: string;
     identificador: string;
     plataforma: string;
     otraPlataforma: string;
@@ -61,6 +63,10 @@ export function ReporteWizard({
     // SPEC-591: fichas «A quién protego» activas del padre (modo autenticado).
     const [hijos, setHijos] = useState<HijoParaElegir[]>([]);
     const [cargandoHijos, setCargandoHijos] = useState(modoAutenticado);
+    // SPEC-604: el padre puede crear la ficha inline con solo el nombre. Cuando
+    // no tiene fichas activas, ese modo queda forzado (es su única vía).
+    const [modoNuevoHijoElegido, setModoNuevoHijoElegido] = useState(false);
+    const modoNuevoHijo = modoAutenticado && (modoNuevoHijoElegido || (!cargandoHijos && hijos.length === 0));
     const [user, setUser] = useState<SessionUser>(null);
     const [checkingSession, setCheckingSession] = useState(true);
     // Las dos pantallas que mandan al padre acá con un identificador ya escrito
@@ -74,6 +80,7 @@ export function ReporteWizard({
     const [data, setData] = useState<WizardData>(() => {
         const vacio: WizardData = {
             hijoId: "",
+            hijoNuevoNombre: "",
             identificador: handoff?.identificador ?? "",
             plataforma: "",
             otraPlataforma: "",
@@ -126,6 +133,24 @@ export function ReporteWizard({
 
     const update = (partial: Partial<WizardData>) => setData((d) => ({ ...d, ...partial }));
 
+    // SPEC-604: al elegir ficha, la edad del reporte se DERIVA del año de
+    // nacimiento registrado — el paso 2 ya no la pide en modo autenticado
+    // (el anónimo conserva el campo). Ficha «sin edad» → el reporte va sin edad.
+    const elegirHijo = (hijoId: string) => {
+        setModoNuevoHijoElegido(false);
+        const ficha = hijos.find((h) => h.id === hijoId);
+        const edad = ficha?.anioNacimiento
+            ? String(Math.max(0, new Date().getFullYear() - ficha.anioNacimiento))
+            : "";
+        update({ hijoId, edadVictima: edad });
+    };
+
+    const elegirNuevoHijo = () => {
+        setModoNuevoHijoElegido(true);
+        // La ficha nueva nace con solo nombre: sin año → sin edad derivada.
+        update({ hijoId: "", edadVictima: "" });
+    };
+
     useEffect(() => {
         fetch("/api/me", { credentials: "include" })
             .then(async (res) => {
@@ -166,6 +191,26 @@ export function ReporteWizard({
         setIsSubmitting(true);
         setError("");
         try {
+            // SPEC-604: «Nuevo hijo (solo nombre)» — la ficha se crea AHORA, al
+            // enviar el reporte (no al teclear en el paso 0): un wizard abandonado
+            // no deja fichas huérfanas en «A quién protego».
+            let hijoId = data.hijoId;
+            if (modoAutenticado && !hijoId && data.hijoNuevoNombre.trim()) {
+                const resHijo = await fetch("/api/padre/hijos", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ nombre: data.hijoNuevoNombre.trim() }),
+                });
+                const jsonHijo = await resHijo.json().catch(() => null);
+                if (!resHijo.ok || !jsonHijo?.hijoId) {
+                    setError(jsonHijo?.error?.message || "No pudimos registrar la ficha del menor. Intenta de nuevo.");
+                    setIsSubmitting(false);
+                    return;
+                }
+                hijoId = jsonHijo.hijoId as string;
+            }
+
             const res = await fetch("/api/reportes", {
                 method: "POST",
                 credentials: "include",
@@ -192,7 +237,8 @@ export function ReporteWizard({
                     // SPEC-323 (US1): señal de vinculación intencional (presente solo en el 2º reporte).
                     ...(reportePrevioId ? { reportePrevioId } : {}),
                     // SPEC-591: vínculo obligatorio del padre autenticado.
-                    ...(modoAutenticado && data.hijoId ? { hijoId: data.hijoId } : {}),
+                    // SPEC-604: puede venir de la ficha recién creada (solo nombre).
+                    ...(modoAutenticado && hijoId ? { hijoId } : {}),
                 }),
             });
             const json = await res.json().catch(() => null);
@@ -317,7 +363,11 @@ export function ReporteWizard({
                     hijos={hijos}
                     cargando={cargandoHijos}
                     seleccionado={data.hijoId}
-                    onChange={(hijoId) => update({ hijoId })}
+                    onChange={elegirHijo}
+                    modoNuevo={modoNuevoHijo}
+                    nuevoNombre={data.hijoNuevoNombre}
+                    onElegirNuevo={elegirNuevoHijo}
+                    onNuevoNombre={(hijoNuevoNombre) => update({ hijoNuevoNombre })}
                 />
             )}
             {step === STEP_PLATAFORMA && (
@@ -340,6 +390,10 @@ export function ReporteWizard({
                     edadVictima={data.edadVictima}
                     texto={data.texto}
                     onChange={(v) => update(v)}
+                    // SPEC-604: con ficha elegida la edad se deriva del año de
+                    // nacimiento — el campo se OCULTA en modo autenticado (el
+                    // anónimo, que no tiene fichas, lo conserva).
+                    ocultarEdad={modoAutenticado}
                 />
             )}
             {step === STEP_CONFIRMAR && (
@@ -348,6 +402,16 @@ export function ReporteWizard({
                     onSubmit={handleSubmit}
                     isSubmitting={isSubmitting}
                     error={error}
+                    hijoNombre={
+                        modoAutenticado
+                            ? modoNuevoHijo
+                                ? data.hijoNuevoNombre.trim() || null
+                                : (() => {
+                                    const ficha = hijos.find((h) => h.id === data.hijoId);
+                                    return ficha ? `${ficha.nombre} ${ficha.apellidos}`.trim() : null;
+                                })()
+                            : null
+                    }
                 />
             )}
 
@@ -362,7 +426,10 @@ export function ReporteWizard({
                         className="ml-auto"
                         onClick={() => setStep((s) => s + 1)}
                         disabled={
-                            (step === 1 && modoAutenticado && !data.hijoId) ||
+                            (step === 1 &&
+                                modoAutenticado &&
+                                !data.hijoId &&
+                                !(modoNuevoHijo && data.hijoNuevoNombre.trim())) ||
                             (step === STEP_PLATAFORMA && (!data.identificador.trim() || !data.plataforma)) ||
                             (step === STEP_DETALLE &&
                                 (!data.paisId ||

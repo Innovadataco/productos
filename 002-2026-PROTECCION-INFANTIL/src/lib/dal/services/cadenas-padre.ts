@@ -170,7 +170,8 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
         explicaciones.set(cat, await getParametroSistemaValor(`padre.analisis.explicacion.${cat}`));
     }
 
-    // Expedientes activos del padre, por identificador (para Crear/Ver).
+    // Expedientes activos del padre, por identificador (para «Ver expediente»;
+    // SPEC-604: nacen solos en el alta — ya no hay botón «Crear»).
     const expedientes = await prisma.expediente.findMany({
         where: { padreUsuarioId: usuarioId, estado: "ACTIVO" },
         select: { id: true, identificadorReportado: true },

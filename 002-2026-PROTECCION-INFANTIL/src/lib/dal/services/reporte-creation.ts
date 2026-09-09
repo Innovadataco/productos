@@ -45,7 +45,8 @@ export interface CrearReporteInput {
     keywordsDetectadas: string[];
     // SPEC-323 → SPEC-340: vinculación intencional. El cliente lo incluye tras
     // aceptar la oferta de CADENA para el 2º (y posteriores) reportes del mismo
-    // identificador (el expediente ya no nace acá — lo crea el padre con el botón).
+    // identificador. SPEC-604: el expediente nace de nuevo en el alta (automático,
+    // deroga el botón de SPEC-340) — lo escribe la RUTA tras llamar a este servicio.
     reportePrevioId?: string | undefined;
     // SPEC-591 (decisión CEO 06-09): ficha «A quién protego» a la que va
     // dirigido. Solo el padre autenticado la trae; el anónimo siempre null.

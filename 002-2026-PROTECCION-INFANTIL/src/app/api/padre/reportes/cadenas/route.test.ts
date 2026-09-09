@@ -1,6 +1,8 @@
 /**
  * SPEC-340 (A-68 · T015) — cadenas para las tarjetas + evento con herencia +
- * el botón del expediente. FR-009 dedicado: el blindaje de ajenos.
+ * el expediente de la cadena. FR-009 dedicado: el blindaje de ajenos.
+ * SPEC-604: el expediente nace solo en el alta (el botón está derogado); el
+ * endpoint POST /api/padre/expedientes queda como backfill idempotente.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
@@ -98,6 +100,8 @@ describe("SPEC-340 · el hilo de datos", { timeout: 60_000 }, () => {
         expect(nuevo.identificador).toBe(principal.identificador);
         expect(nuevo.ciudad).toBe(principal.ciudad);
         expect(nuevo.pais).toBe(principal.pais);
+        // SPEC-604: la ficha del menor también se hereda del principal.
+        expect(nuevo.hijoId).toBe(principal.hijoId);
         // La HORA del hecho se guarda (brief §2.2).
         expect(nuevo.fechaIncidente.toISOString()).toBe("2026-08-22T22:15:00.000Z");
     });
@@ -187,28 +191,31 @@ describe("SPEC-340 · el hilo de datos", { timeout: 60_000 }, () => {
         expect(cadena.otrosReportes).toEqual([]);
     });
 
-    it("T016 · el botón crea el expediente UNA vez (idempotente) DESDE la cadena, origen PADRE", async () => {
+    it("SPEC-604 · el expediente nace SOLO en el alta; el endpoint legado es idempotente y no duplica", async () => {
         const r1 = await reportar("+57300HILO06");
+
+        // El primer reporte abrió el expediente (origen AUTOMATICO) con 1 evento.
+        const expediente = await prisma.expediente.findFirstOrThrow();
+        expect(expediente.origenCreacion).toBe("AUTOMATICO");
+        expect(await prisma.eventoExpediente.count({ where: { expedienteId: expediente.id } })).toBe(1);
+
+        // «Agregar otro evento» se suma al mismo expediente.
         const [qa, ca] = reqEvento(r1);
         await postEvento(qa, ca);
+        expect(await prisma.eventoExpediente.count({ where: { expedienteId: expediente.id } })).toBe(2);
+        expect((await prisma.expediente.findUniqueOrThrow({ where: { id: expediente.id } })).numEventos).toBe(2);
 
+        // El endpoint legado (backfill de cadenas sin expediente) devuelve el
+        // existente: ni duplica ni crea — dos toques, un solo expediente.
         const res1 = await postExpediente(reqExpediente(r1));
-        expect(res1.status).toBe(201);
-        const { expedienteId } = await res1.json();
-
-        const exp = await prisma.expediente.findUniqueOrThrow({ where: { id: expedienteId } });
-        expect(exp.origenCreacion).toBe("PADRE");
-        // Los eventos del expediente se armaron DESDE la cadena (2 reportes).
-        expect(await prisma.eventoExpediente.count({ where: { expedienteId } })).toBe(2);
-
-        // Idempotencia: segundo toque devuelve el mismo.
+        expect(res1.status).toBe(200);
+        expect((await res1.json()).expedienteId).toBe(expediente.id);
         const res2 = await postExpediente(reqExpediente(r1));
         expect(res2.status).toBe(200);
-        expect((await res2.json()).expedienteId).toBe(expedienteId);
         expect(await prisma.expediente.count()).toBe(1);
     });
 
-    it("T016 · el reporte de OTRO padre → 404; y la tarjeta refleja Crear/Ver según exista", async () => {
+    it("SPEC-604 · el reporte de OTRO padre → 404; y la tarjeta trae «Ver expediente» desde el evento 1", async () => {
         const r1 = await reportar("+57300HILO07");
         const otro = await crearUsuario("PARENT", `otro-${Date.now()}@test.local`);
         const tokenPropio = mockToken;
@@ -216,13 +223,9 @@ describe("SPEC-340 · el hilo de datos", { timeout: 60_000 }, () => {
         expect((await postExpediente(reqExpediente(r1))).status).toBe(404);
         mockToken = tokenPropio;
 
-        let res = await getCadenas();
-        let cadena = (await res.json()).cadenas.find((c: { reportePrincipalId: string }) => c.reportePrincipalId === r1);
-        expect(cadena.expedienteId, "sin expediente → botón Crear").toBeNull();
-
-        await postExpediente(reqExpediente(r1));
-        res = await getCadenas();
-        cadena = (await res.json()).cadenas.find((c: { reportePrincipalId: string }) => c.reportePrincipalId === r1);
-        expect(cadena.expedienteId, "con expediente → botón Ver").not.toBeNull();
+        // El expediente nació con el primer reporte: la tarjeta muestra «Ver».
+        const res = await getCadenas();
+        const cadena = (await res.json()).cadenas.find((c: { reportePrincipalId: string }) => c.reportePrincipalId === r1);
+        expect(cadena.expedienteId, "toda cadena del padre tiene expediente desde el evento 1").not.toBeNull();
     });
 });
