@@ -8,7 +8,12 @@
  * tapado y «Agregar otro evento» (campos fijos — el sistema ya sabe sobre qué
  * está parado); «Otros reportes sobre este identificador» (SPEC-593: tarjeta con
  * contador prominente, eventos con fecha/lugar/clasificación en badges y nota de
- * privacidad; se retira el copy motivacional del mockup); y Crear/Ver expediente.
+ * privacidad; se retira el copy motivacional del mockup); y «Ver expediente».
+ *
+ * SPEC-604 (modelo EXPEDIENTE · cimientos): el expediente nace SOLO en el alta
+ * del primer reporte — el botón «Crear expediente» desaparece (queda «Ver»).
+ * Una cadena legada sin expediente simplemente no muestra acción; el endpoint
+ * POST /api/padre/expedientes sigue vivo como backfill.
  */
 import { fechaHoraSinMinutos } from "@/lib/format/fecha";
 import { useCallback, useEffect, useState } from "react";
@@ -71,7 +76,6 @@ export function MisReportesCadenas() {
     const [error, setError] = useState("");
     const [abierta, setAbierta] = useState<string | null>(null);
     const [agregandoEn, setAgregandoEn] = useState<string | null>(null);
-    const [creandoExp, setCreandoExp] = useState<string | null>(null);
 
     const cargar = useCallback(async () => {
         try {
@@ -88,27 +92,6 @@ export function MisReportesCadenas() {
     useEffect(() => {
         void cargar();
     }, [cargar]);
-
-    const crearExpediente = useCallback(
-        async (cadena: Cadena) => {
-            setCreandoExp(cadena.reportePrincipalId);
-            try {
-                const res = await fetch("/api/padre/expedientes", {
-                    method: "POST",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ reportePrincipalId: cadena.reportePrincipalId }),
-                });
-                if (!res.ok) throw new Error("No pudimos crear el expediente. Intenta de nuevo.");
-                const { expedienteId } = await res.json();
-                router.push(`/dashboard/padre/expedientes/${expedienteId}`);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "No pudimos crear el expediente.");
-                setCreandoExp(null);
-            }
-        },
-        [router]
-    );
 
     if (error) return <p className="text-sm text-ambar">{error}</p>;
     if (cadenas === null) return <Cargando texto="Cargando tus reportes…" />;
@@ -145,20 +128,14 @@ export function MisReportesCadenas() {
                                 </p>
                             </div>
                             <div className="flex gap-2">
-                                {cadena.expedienteId ? (
+                                {/* SPEC-604: el expediente nace solo en el alta;
+                                    ya no hay «Crear expediente», solo «Ver». */}
+                                {cadena.expedienteId && (
                                     <Button
                                         variant="secondary"
                                         onClick={() => router.push(`/dashboard/padre/expedientes/${cadena.expedienteId}`)}
                                     >
                                         Ver expediente
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        variant="secondary"
-                                        isLoading={creandoExp === cadena.reportePrincipalId}
-                                        onClick={() => void crearExpediente(cadena)}
-                                    >
-                                        Crear expediente
                                     </Button>
                                 )}
                             </div>

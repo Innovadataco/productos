@@ -9,6 +9,8 @@
  * Por debajo reusa el alta completa (cifrado, número de seguimiento, estado
  * inicial, encolado del clasificador) con la vinculación de SPEC-137/#202
  * intacta, y escribe la CADENA (reportePrincipalId) como el alta normal.
+ * SPEC-604: hereda también la ficha del menor (hijoId) y suma el evento al
+ * expediente de la cadena (toda cadena del padre tiene expediente).
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -18,6 +20,7 @@ import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteCreationService } from "@/lib/dal/services/reporte-creation";
+import { asegurarExpedienteParaReporte } from "@/lib/dal/services/expediente-automatico";
 import { sendReporte } from "@/lib/queue";
 import { fechaIncidenteSchema } from "@/lib/validators";
 
@@ -73,6 +76,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     edadVictima: true,
                     tenantId: true,
                     creadoEn: true,
+                    // SPEC-604: la ficha del menor también se hereda — todo reporte
+                    // del padre queda atado a la misma ficha que abrió la cadena.
+                    hijoId: true,
                 },
             });
 
@@ -105,6 +111,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 prioridadAlta: true,
                 keywordsDetectadas: [],
                 reportePrevioId: masReciente?.id,
+                hijoId: principal.hijoId,
             });
 
             if (resultado.ok) {
@@ -116,6 +123,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     where: { id: resultado.reporte.id },
                     data: { reportePrincipalId: principal.id },
                 });
+                // SPEC-604: el evento se suma al expediente de la cadena (el alta
+                // del primer reporte ya lo abrió; para cadenas legadas anteriores
+                // a SPEC-604 se abre aquí — misma regla, mismo lugar).
+                await asegurarExpedienteParaReporte(tx, resultado.reporte.id);
             }
             return { resultado, principalId: principal.id };
         });
