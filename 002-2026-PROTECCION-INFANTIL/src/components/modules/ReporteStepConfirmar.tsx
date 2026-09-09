@@ -21,11 +21,14 @@ export function ReporteStepConfirmar({
     onSubmit,
     isSubmitting,
     error,
+    hijoNombre = null,
 }: {
     data: WizardData;
     onSubmit: () => void;
     isSubmitting: boolean;
     error: string;
+    /** SPEC-604: ficha a la que va dirigido (solo modo autenticado). */
+    hijoNombre?: string | null;
 }) {
     const [checked, setChecked] = useState(false);
 
@@ -43,6 +46,12 @@ export function ReporteStepConfirmar({
             <h2 className="text-lg font-semibold text-body">Revisa y confirma</h2>
 
             <div className="glass rounded-xl p-4 space-y-3 text-sm">
+                {hijoNombre && (
+                    <div className="flex justify-between">
+                        <span className="text-subtle">Para quién es</span>
+                        <span className="font-medium text-body">{hijoNombre}</span>
+                    </div>
+                )}
                 <div className="flex justify-between">
                     <span className="text-subtle">Identificador</span>
                     <span className="font-medium text-body">{data.identificador}</span>
@@ -92,6 +101,15 @@ export function ReporteStepConfirmar({
             >
                 Enviar reporte
             </Button>
+
+            {/* SPEC-604: toda cadena del padre tiene expediente desde el evento 1 —
+                el envío abre el expediente de la cuenta o suma el evento al que ya existe. */}
+            {hijoNombre && (
+                <p className="text-xs text-subtle text-center">
+                    Al enviar, se crea o se actualiza el expediente de{" "}
+                    <span className="font-medium text-body">{data.identificador}</span>.
+                </p>
+            )}
         </div>
     );
 }

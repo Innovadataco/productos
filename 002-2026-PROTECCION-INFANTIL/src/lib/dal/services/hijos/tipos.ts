@@ -15,9 +15,10 @@ export interface IdentificadorHijoInput {
 
 export interface RegistrarHijoInput {
     nombre: string;
-    // SPEC-339 (FR-019): obligatorios. Antes eran opcionales y el requisito del
-    // brief los exige; una ficha de menor sin apellidos no sirve como expediente.
-    apellidos: string;
+    // SPEC-604: opcionales desde el alta «solo nombre» del wizard de reporte
+    // (deroga parcialmente SPEC-339 FR-019). El formulario completo de «A quién
+    // protejo» sigue enviándolos; la ficha se completa después.
+    apellidos?: string | undefined;
     anioNacimiento?: number | undefined;
     sexo?: Sexo | undefined;
     identificadores?: IdentificadorHijoInput[] | undefined;

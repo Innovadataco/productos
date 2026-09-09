@@ -20,6 +20,7 @@ export function ReporteStepDetalle({
     edadVictima,
     texto,
     onChange,
+    ocultarEdad = false,
 }: {
     ciudad: string;
     pais: string;
@@ -40,6 +41,9 @@ export function ReporteStepDetalle({
         edadVictima: string;
         texto: string;
     }) => void;
+    /** SPEC-604: en modo autenticado la edad se deriva de la ficha del menor —
+        el campo no se muestra (el anónimo, sin fichas, lo conserva). */
+    ocultarEdad?: boolean;
 }) {
     const [paises, setPaises] = useState<PaisOption[]>([]);
     // SPEC-580: filtro departamento del cascade país→departamento→ciudad. Es solo
@@ -260,18 +264,21 @@ export function ReporteStepDetalle({
 
                 {/* SPEC-361 (A-70 · F9): la edad se ELIGE de una lista de 4 a 17,
                     el rango del producto. Antes era un campo libre de 1 a 120,
-                    donde cabía cualquier número que no describe a un menor. */}
-                <Select
-                    label="Edad aproximada del menor (opcional)"
-                    options={[
-                        { value: "", label: "Sin especificar" },
-                        ...edadesReporte().map((e) => ({ value: String(e), label: `${e} años` })),
-                    ]}
-                    value={edadVictima}
-                    onChange={(e) =>
-                        onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto , horaAproximada })
-                    }
-                />
+                    donde cabía cualquier número que no describe a un menor.
+                    SPEC-604: oculta en modo autenticado (se deriva de la ficha). */}
+                {!ocultarEdad && (
+                    <Select
+                        label="Edad aproximada del menor (opcional)"
+                        options={[
+                            { value: "", label: "Sin especificar" },
+                            ...edadesReporte().map((e) => ({ value: String(e), label: `${e} años` })),
+                        ]}
+                        value={edadVictima}
+                        onChange={(e) =>
+                            onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto , horaAproximada })
+                        }
+                    />
+                )}
             </div>
 
             {esOtraCiudad && (

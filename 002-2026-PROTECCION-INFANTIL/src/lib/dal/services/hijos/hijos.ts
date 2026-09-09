@@ -73,7 +73,8 @@ export async function registrarHijo(usuarioId: string, data: RegistrarHijoInput)
             data: {
                 usuarioId,
                 nombre: data.nombre.slice(0, 120),
-                apellidos: data.apellidos.slice(0, 120),
+                // SPEC-604: alta «solo nombre» → la columna queda con su default "".
+                apellidos: (data.apellidos ?? "").slice(0, 120),
                 ...(data.anioNacimiento !== undefined ? { anioNacimiento: data.anioNacimiento } : {}),
                 ...(data.sexo !== undefined ? { sexo: data.sexo } : {}),
                 ...(identificadores.length > 0

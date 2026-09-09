@@ -14,9 +14,12 @@ import { validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
 const createSchema = z.object({
     // SPEC-361 (F4): cada mensaje nombra su campo — el padre tiene que saber qué corregir.
     nombre: z.string({ error: "Escribe el nombre del menor." }).min(1, "Escribe el nombre del menor.").max(120, "El nombre es muy largo."),
-    // SPEC-339 (FR-019): obligatorios. Las fichas viejas sin apellidos se conservan;
-    // lo que cambia es la validación de las nuevas.
-    apellidos: z.string({ error: "Escribe los apellidos del menor." }).min(1, "Escribe los apellidos del menor.").max(120, "Los apellidos son muy largos."),
+    // SPEC-604 (modelo EXPEDIENTE · deroga parcialmente SPEC-339 FR-019): los
+    // apellidos pasan a OPCIONALES para permitir el alta «solo nombre» desde el
+    // paso 0 del wizard de reporte (mockup aprobado: «+ Nuevo hijo (solo
+    // nombre)»). Las fichas completas siguen pudiendo traerlos; la columna tiene
+    // default "" y el padre los completa después en «A quién protejo».
+    apellidos: z.string().max(120, "Los apellidos son muy largos.").optional(),
     anioNacimiento: z.number().int().min(1900).max(2100).optional(),
     sexo: z.enum(SEXOS).optional(),
     identificadores: z
