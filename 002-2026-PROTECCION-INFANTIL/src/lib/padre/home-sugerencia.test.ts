@@ -15,7 +15,8 @@ describe("calcularSugerenciaHome", () => {
         });
         expect(sugerencia.prioridad).toBe("alta");
         expect(sugerencia.texto).toContain("período de gracia");
-        expect(sugerencia.accionHref).toBe("/dashboard/padre/suscripcion");
+        // SPEC-607: apunta directo al acordeón «Suscripción» dentro de Mi perfil.
+        expect(sugerencia.accionHref).toBe("/dashboard/padre/perfil#suscripcion");
     });
 
     // SPEC-340: la acción apunta a Mis reportes (el hilo vivo), no a una lista

@@ -287,6 +287,18 @@ export const GUARDIAS_ACCESO = {
             destino: "/dashboard/padre/suscripcion",
             exentas: [
                 "/dashboard/padre/suscripcion",
+                // SPEC-607: la suscripción vive dentro de «Mi perfil» y la ruta
+                // vieja redirige a `/dashboard/padre/perfil#suscripcion`. SIN esta
+                // exención el padre sin vigencia rebotaría sin fin: guardián →
+                // suscripcion → redirect → perfil → guardián (bucle I-25 otra vez).
+                // El perfil queda alcanzable sin plan: sus datos y sus avisos son
+                // suyos, y el acordeón de Suscripción (que nace abierto para él)
+                // ES la pantalla de pago — el muro sigue existiendo, misma puerta.
+                "/dashboard/padre/perfil",
+                // SPEC-607: el acordeón «Notificaciones» del perfil llama estos
+                // endpoints; sin la exención, el padre sin vigencia vería el
+                // acordeón en error dentro de una página que sí le dejamos abrir.
+                "/api/notificaciones",
                 "/api/pagos",
                 // SPEC-339: sin esto, un padre nuevo (SIN_SUSCRIPCION) rebota
                 // sin fin entre el guardián del camino y el de vigencia: camino

@@ -60,7 +60,7 @@ export default async function CaminoListoPage() {
                 </Link>
 
                 <Link
-                    href="/dashboard/padre/notificaciones"
+                    href="/dashboard/padre/perfil#notificaciones"
                     className="group rounded-2xl border border-tinta/10 bg-papel/50 p-5 transition hover:border-cielo/50 dark:bg-tinta/40"
                 >
                     <h2 className="text-base font-semibold text-body">Elige qué avisos recibes</h2>
