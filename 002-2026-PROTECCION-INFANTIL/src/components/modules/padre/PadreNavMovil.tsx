@@ -13,6 +13,8 @@
  * única del lateral, cero listas paralelas. «Reportar» se queda (decisión CEO,
  * precedente I-38).
  *
+ * SPEC-607: los grupos colapsables del lateral («Reportar», «Ayuda profesional»)
+ * se APLANAN acá — en la barra cada destino queda a un toque, sin acordeones.
  * Con más destinos de los que caben en 390 px, la barra desplaza horizontal
  * DENTRO de sí misma (scroll propio, sin desbordar la página).
  */
@@ -23,6 +25,8 @@ import { PADRE_NAV_ITEMS } from "@/lib/nav-items";
 export function PadreNavMovil() {
     const pathname = usePathname();
     const raiz = PADRE_NAV_ITEMS[0]?.href;
+    // Aplanado: un ítem con hijos aporta sus hijos a la barra, no su etiqueta.
+    const destinos = PADRE_NAV_ITEMS.flatMap((item) => item.children ?? [item]);
     const esActivo = (href: string) =>
         pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false));
 
@@ -32,7 +36,7 @@ export function PadreNavMovil() {
             className="fixed inset-x-0 bottom-0 z-40 border-t border-cielo/40 bg-papel/95 backdrop-blur-xl sm:hidden dark:border-cielo/30 dark:bg-tinta/95"
         >
             <ul className="flex overflow-x-auto px-1 py-1.5">
-                {PADRE_NAV_ITEMS.map((item) => {
+                {destinos.map((item) => {
                     const activo = esActivo(item.href);
                     return (
                         <li key={item.href} className="min-w-fit flex-1">
