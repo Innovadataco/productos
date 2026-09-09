@@ -21,6 +21,7 @@ import {
     GUARDIAS_ACCESO,
     esRutaPublica,
     esRutaSesion,
+    esPantallaAuth,
     esExentaConsentimiento,
     esExentaCambiarPassword,
     esExentaCamino,
@@ -172,18 +173,21 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
     // Paso 1: rutas públicas → pasan sin token.
     if (esRutaPublica(pathname)) {
-        // SPEC-588: las pantallas de autenticación NO se le ofrecen a una sesión
-        // válida. Vivo con el OAuth (06-09): el dueño aterrizó en /login CON la
-        // sesión viva y vio el formulario "Bienvenido / correo / contraseña".
-        // Cualquier rebote viejo, link compartido o refresh ahora manda al home
-        // del rol. `?mensaje=sesion` queda EXENTO a propósito: es el terminal
-        // del loop-cap (SPEC-572) — redirigirlo reabriría el bucle
+        // SPEC-588 · SPEC-602: las pantallas de autenticación NO se le ofrecen
+        // a una sesión válida. Vivo con el OAuth (06-09): el dueño aterrizó en
+        // /login CON la sesión viva y vio el formulario "Bienvenido / correo /
+        // contraseña". Cualquier rebote viejo, link compartido o refresh ahora
+        // manda al home del rol. La lista vive en GUARDIAS_ACCESO.pantallasAuth
+        // (matching exacto) — NO en `sesion`, que son rutas de infraestructura
+        // (logout, muros, refresh) que deben seguir alcanzables con sesión.
+        // `?mensaje=sesion` queda EXENTO a propósito: es el terminal del
+        // loop-cap (SPEC-572) — redirigirlo reabriría el bucle
         // (home → middleware → rebote → /login → home). Solo rutas EXACTAS:
         // los flujos de /registro/crear-clave/<token> y /recuperar deben seguir
         // alcanzables con sesión (soporte creando claves, usuario cambiando la
         // suya). `homeParaRol` es la fuente única (SPEC-319), pura y Edge-safe.
         if (
-            (pathname === "/login" || pathname === "/registro" || pathname === "/registro/inicio") &&
+            esPantallaAuth(pathname) &&
             request.nextUrl.searchParams.get("mensaje") !== "sesion"
         ) {
             const tokenAuth =
