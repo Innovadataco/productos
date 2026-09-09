@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReporteWizard } from "./ReporteWizard";
 import { REPORTAR_STORAGE_KEY, dejarHandoffReportar } from "@/lib/reportar-handoff";
@@ -242,6 +242,218 @@ describe("ReporteWizard", () => {
             await waitFor(() => expect(campoIdentificador()).toBeDefined());
             expect(campoIdentificador().value).toBe("");
             expect(campoIdentificador().readOnly).toBe(false);
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SPEC-604 (modelo EXPEDIENTE · cimientos): paso 0 con edad derivada y alta
+    // «solo nombre»; la edad se oculta en el paso 2 del modo autenticado.
+    // ─────────────────────────────────────────────────────────────────────
+    describe("SPEC-604 · paso 0 y edad automática", () => {
+        type Llamada = { url: string; method: string; body?: unknown };
+        // El envío en modo autenticado redirige con `window.location.href`;
+        // jsdom no navega — se reemplaza el objeto location (patrón de
+        // ModalConsentimiento.test.tsx, SPEC-362 I-256).
+        beforeAll(() => {
+            Object.defineProperty(window, "location", {
+                configurable: true,
+                value: { ...window.location, href: "" },
+            });
+        });
+
+        beforeEach(() => {
+            // El borrador del wizard vive en sessionStorage: sin limpiarlo, un
+            // test hereda el hijoId/relato del anterior.
+            sessionStorage.clear();
+        });
+
+        afterEach(() => {
+            sessionStorage.clear();
+        });
+
+        const HIJO_LAURA = { id: "h1", nombre: "Laura", apellidos: "Gómez", estado: "activo", anioNacimiento: 2015 };
+
+        function mockFetchPadre(hijosLista: unknown[]): Llamada[] {
+            const llamadas: Llamada[] = [];
+            vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+                const url = String(input);
+                const method = init?.method ?? "GET";
+                const body = init?.body ? (JSON.parse(String(init.body)) as unknown) : undefined;
+                llamadas.push({ url, method, body });
+                const json = (payload: unknown, ok = true, status = 200) =>
+                    ({ ok, status, json: async () => payload }) as Response;
+                if (url.includes("/api/me")) {
+                    return json({ id: "u-padre", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
+                }
+                if (url.includes("/api/padre/hijos") && method === "POST") return json({ hijoId: "hijo-nuevo-1" }, true, 201);
+                if (url.includes("/api/padre/hijos")) return json(hijosLista);
+                if (url.includes("/api/config/parametros/publicos")) {
+                    return json({ "reportes.spam.min_text_length": { valor: "20" } });
+                }
+                if (url.includes("/api/plataformas")) {
+                    return json({ plataformas: [{ id: "p1", clave: "whatsapp", nombre: "WhatsApp" }] });
+                }
+                if (url.includes("/api/paises")) return json({ paises: [{ id: "co", nombre: "Colombia" }] });
+                if (url.includes("/api/departamentos")) return json({ departamentos: [] });
+                if (url.includes("/api/ciudades/buscar")) {
+                    return json({ ciudades: [{ id: "bog", nombre: "Bogotá", paisId: "co", departamentoId: null, departamento: null }] });
+                }
+                if (url.includes("/api/reportes") && method === "POST") {
+                    return json(
+                        { reporte: { id: "rep-1", numeroSeguimiento: "RPT-ABC123", estado: "PENDIENTE" }, expedienteId: "exp-1" },
+                        true,
+                        201
+                    );
+                }
+                return json({});
+            });
+            return llamadas;
+        }
+
+        /** Del paso 1 (plataforma) al paso 3 (confirmar), con los datos mínimos válidos. */
+        async function caminarHastaConfirmar() {
+            fireEvent.change(await screen.findByLabelText(/La cuenta/i), { target: { value: "+573001234567" } });
+            await screen.findByRole("option", { name: "WhatsApp" });
+            fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            await screen.findByText("Detalles del incidente");
+            await screen.findByRole("option", { name: "Colombia" });
+            fireEvent.change(screen.getByLabelText(/País/i), { target: { value: "co" } });
+            fireEvent.change(screen.getByRole("combobox", { name: /Ciudad/i }), { target: { value: "Bog" } });
+            fireEvent.click(await screen.findByRole("option", { name: /Bogotá/ }));
+            fireEvent.change(screen.getByLabelText(/Día del incidente/i), { target: { value: "2026-07-10" } });
+            fireEvent.change(screen.getByLabelText(/^Hora del incidente$/i), { target: { value: "10" } });
+            fireEvent.change(screen.getByPlaceholderText(/Describe la conducta observada/i), {
+                target: { value: "Le escribió de madrugada insistiendo en fotos." },
+            });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+            await screen.findByText("Revisa y confirma");
+        }
+
+        it("paso 0 lista SOLO fichas activas, con la edad registrada y la opción «solo nombre»", async () => {
+            mockFetchPadre([
+                HIJO_LAURA,
+                { id: "h2", nombre: "Nicolás", apellidos: "Gómez", estado: "inactivo", anioNacimiento: 2018 },
+            ]);
+            render(<ReporteWizard modoAutenticado />);
+
+            await screen.findByRole("option", { name: /Laura Gómez · 11 años/ });
+            expect(screen.queryByRole("option", { name: /Nicolás/ }), "la ficha inactiva no se ofrece").toBeNull();
+            expect(screen.getByRole("button", { name: /Nuevo hijo \(solo nombre\)/i })).toBeDefined();
+        });
+
+        it("con ficha elegida el paso 2 OCULTA la edad y el envío lleva la edad derivada del año de nacimiento", async () => {
+            const llamadas = mockFetchPadre([HIJO_LAURA]);
+            render(<ReporteWizard modoAutenticado />);
+
+            fireEvent.click(await screen.findByRole("option", { name: /Laura/ }));
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            // Paso 1 → paso 2: el campo «Edad aproximada del menor» no existe.
+            fireEvent.change(await screen.findByLabelText(/La cuenta/i), { target: { value: "+573001234567" } });
+            await screen.findByRole("option", { name: "WhatsApp" });
+            fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+            await screen.findByText("Detalles del incidente");
+            expect(screen.queryByLabelText(/Edad aproximada del menor/i), "la edad se deriva de la ficha").toBeNull();
+
+            // Completar y enviar.
+            await screen.findByRole("option", { name: "Colombia" });
+            fireEvent.change(screen.getByLabelText(/País/i), { target: { value: "co" } });
+            fireEvent.change(screen.getByRole("combobox", { name: /Ciudad/i }), { target: { value: "Bog" } });
+            fireEvent.click(await screen.findByRole("option", { name: /Bogotá/ }));
+            fireEvent.change(screen.getByLabelText(/Día del incidente/i), { target: { value: "2026-07-10" } });
+            fireEvent.change(screen.getByLabelText(/^Hora del incidente$/i), { target: { value: "10" } });
+            fireEvent.change(screen.getByPlaceholderText(/Describe la conducta observada/i), {
+                target: { value: "Le escribió de madrugada insistiendo en fotos." },
+            });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+            await screen.findByText("Revisa y confirma");
+            fireEvent.click(screen.getByRole("checkbox"));
+            fireEvent.click(screen.getByRole("button", { name: /Enviar reporte/i }));
+
+            await waitFor(() => {
+                const alta = llamadas.find((l) => l.url.includes("/api/reportes") && l.method === "POST");
+                expect(alta, "se envió el reporte").toBeTruthy();
+                const cuerpo = alta!.body as { hijoId?: string; edadVictima?: number };
+                expect(cuerpo.hijoId).toBe("h1");
+                expect(cuerpo.edadVictima, "edad derivada: año en curso − año de nacimiento").toBe(
+                    new Date().getFullYear() - 2015
+                );
+            });
+            // La ficha ya existía: el alta «solo nombre» NO se llamó.
+            expect(llamadas.some((l) => l.url.includes("/api/padre/hijos") && l.method === "POST")).toBe(false);
+        });
+
+        it("«Nuevo hijo (solo nombre)»: crea la ficha AL ENVIAR y ata el reporte a ella", async () => {
+            const llamadas = mockFetchPadre([]); // sin fichas → alta inline forzada
+            render(<ReporteWizard modoAutenticado />);
+
+            // Sin fichas, el paso 0 muestra el alta inline directamente.
+            const input = await screen.findByLabelText(/Nombre del menor/i);
+            fireEvent.change(input, { target: { value: "Valentina" } });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            await caminarHastaConfirmar();
+            fireEvent.click(screen.getByRole("checkbox"));
+            fireEvent.click(screen.getByRole("button", { name: /Enviar reporte/i }));
+
+            await waitFor(() => {
+                const altaHijo = llamadas.find((l) => l.url.includes("/api/padre/hijos") && l.method === "POST");
+                const altaReporte = llamadas.find((l) => l.url.includes("/api/reportes") && l.method === "POST");
+                expect(altaHijo, "la ficha se crea con solo el nombre").toBeTruthy();
+                expect(altaHijo!.body).toEqual({ nombre: "Valentina" });
+                expect(altaReporte, "el reporte sale después").toBeTruthy();
+                expect(
+                    llamadas.indexOf(altaHijo!) < llamadas.indexOf(altaReporte!),
+                    "primero la ficha, después el reporte"
+                ).toBe(true);
+                const cuerpo = altaReporte!.body as { hijoId?: string; edadVictima?: number };
+                expect(cuerpo.hijoId, "el reporte queda atado a la ficha recién creada").toBe("hijo-nuevo-1");
+                expect(cuerpo.edadVictima, "ficha «solo nombre»: sin año → sin edad").toBeUndefined();
+            });
+        });
+
+        it("sin elegir ficha ni escribir nombre, el paso 0 no deja avanzar", async () => {
+            mockFetchPadre([HIJO_LAURA]);
+            render(<ReporteWizard modoAutenticado />);
+
+            await screen.findByRole("option", { name: /Laura/ });
+            const boton = screen.getByRole("button", { name: /Siguiente/i });
+            expect(boton).toHaveProperty("disabled", true);
+        });
+
+        it("el anónimo NO tiene paso 0 y el paso 2 SÍ muestra «Edad aproximada del menor» (regresión)", async () => {
+            vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+                const url = String(input);
+                const json = (payload: unknown, ok = true) => ({ ok, json: async () => payload }) as Response;
+                if (url.includes("/api/me")) return json({ error: { message: "No autenticado" } }, false);
+                if (url.includes("/api/config/parametros/publicos")) {
+                    return json({ "reportes.spam.min_text_length": { valor: "20" } });
+                }
+                if (url.includes("/api/plataformas")) {
+                    return json({ plataformas: [{ id: "p1", clave: "whatsapp", nombre: "WhatsApp" }] });
+                }
+                if (url.includes("/api/paises")) return json({ paises: [{ id: "co", nombre: "Colombia" }] });
+                if (url.includes("/api/ciudades/buscar")) return json({ ciudades: [] });
+                return json({});
+            });
+            render(<ReporteWizard />);
+
+            // Arranca en el paso de plataforma (no hay «¿Para quién reportas?»).
+            await waitFor(() => {
+                expect(document.body.textContent).toContain("¿Qué cuenta está asociada a la situación?");
+            });
+            expect(document.body.textContent).not.toContain("¿Para quién reportas?");
+
+            fireEvent.change(await screen.findByLabelText(/La cuenta/i), { target: { value: "+573001234567" } });
+            await screen.findByRole("option", { name: "WhatsApp" });
+            fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            await screen.findByText("Detalles del incidente");
+            expect(screen.getByLabelText(/Edad aproximada del menor/i), "el anónimo conserva el campo").toBeDefined();
         });
     });
 });

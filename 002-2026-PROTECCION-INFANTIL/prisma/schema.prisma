@@ -2888,9 +2888,10 @@ model Expediente {
   fechaCierre                     DateTime?        @db.Timestamptz(6)
   fechaEscalado                   DateTime?        @db.Timestamptz(6)
   estado                          EstadoExpediente
-  // SPEC-340 (A-68 §4): quién creó el expediente. "AUTOMATICO" = los legados de
-  // SPEC-323 (la creación al 2º reporte, DEROGADA); "PADRE" = el botón. El
-  // default documenta el pasado sin backfill.
+  // SPEC-604 (modelo EXPEDIENTE · cimientos): el expediente nace SOLO en el alta
+  // del primer reporte del padre (deroga el botón de SPEC-340). "AUTOMATICO" es
+  // de nuevo el origen normal; "PADRE" queda para los backfills del endpoint
+  // legado POST /api/padre/expedientes (cadenas anteriores a SPEC-604).
   origenCreacion                  String           @default("AUTOMATICO")
   scoreGravedadActual             ScoreGravedad    @default(VERDE)
   categoriasDominantesJson        Json?

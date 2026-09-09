@@ -1,9 +1,13 @@
 /**
- * SPEC-340 (A-68 §4) — POST /api/padre/expedientes · el botón «Crear expediente».
+ * SPEC-340 (A-68 §4) — POST /api/padre/expedientes.
  *
- * El expediente lo crea EL PADRE, a propósito. Razón de Jelkin: el automático
- * (SPEC-323, derogado) nacía sin que el padre supiera qué era; si él lo crea,
- * entiende qué es — SU carpeta deliberada para llevar a una autoridad.
+ * SPEC-604 (modelo EXPEDIENTE · cimientos): el expediente nace SOLO en el alta
+ * del primer reporte (ver `expediente-automatico.ts`) y el botón «Crear
+ * expediente» desapareció de Mis reportes. Este endpoint queda como vía de
+ * BACKFILL para cadenas legadas anteriores a SPEC-604 (sin expediente): la
+ * llamada crea el expediente desde la cadena, igual que antes, y su
+ * idempotencia (padre+identificador, cualquier estado) lo hace seguro a dobles
+ * toques y a cruces con el alta automática (devuelve el existente).
  *
  * Idempotente: la cadena con expediente devuelve el existente (dos toques no
  * crean dos). Los eventos del expediente se arman DESDE la cadena
