@@ -105,6 +105,26 @@ export const GUARDIAS_ACCESO = {
     ] as const,
 
     /**
+     * SPEC-602 — Pantallas de autenticación: con sesión válida el middleware
+     * (Paso 1) redirige a `homeParaRol(rol)` en vez de mostrar el formulario;
+     * sin sesión siguen siendo públicas como siempre.
+     *
+     * OJO: NO es `GUARDIAS_ACCESO.sesion` — `sesion` son rutas de
+     * infraestructura de la sesión (logout, muros, refresh, `/api/me`) que
+     * DEBEN seguir alcanzables con JWT válido; redirigirlas rompería el
+     * logout y los muros de consentimiento/cambio de password. Además ninguna
+     * es pública, así que `esRutaPublica ∧ esRutaSesion` jamás dispararía.
+     *
+     * Matching EXACTO a propósito (no `matcheaRuta`): `/registro` como
+     * prefijo cubriría `/registro/crear-clave/<token>` y bloquearía el flujo
+     * de creación de clave. Excluye a propósito (candado SPEC-588):
+     * `/registro/crear-clave/<token>`, `/recuperar`, `/registro-colegio` y
+     * `/registro-profesional` deben seguir alcanzables con sesión (soporte
+     * creando claves y usuarios gestionando la suya).
+     */
+    pantallasAuth: ["/login", "/registro", "/registro/inicio"] as const,
+
+    /**
      * Guardián de consentimiento (SPEC-241 · I-111).
      * `destino` es la página del muro; `exentas` son las rutas que el usuario
      * DEBE poder alcanzar aunque no haya firmado (para poder firmar).
@@ -474,6 +494,14 @@ export function esRutaPublica(pathname: string): boolean {
 
 export function esRutaSesion(pathname: string): boolean {
     return GUARDIAS_ACCESO.sesion.some((r) => matcheaRuta(pathname, r));
+}
+
+/**
+ * SPEC-602: ¿es `pathname` una pantalla de autenticación? Matching EXACTO —
+ * ver la nota de `GUARDIAS_ACCESO.pantallasAuth` por qué no `matcheaRuta`.
+ */
+export function esPantallaAuth(pathname: string): boolean {
+    return GUARDIAS_ACCESO.pantallasAuth.some((r) => pathname === r);
 }
 
 export function esExentaConsentimiento(pathname: string): boolean {

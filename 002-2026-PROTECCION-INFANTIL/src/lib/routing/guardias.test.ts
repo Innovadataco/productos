@@ -11,6 +11,7 @@ import {
     matcheaRuta,
     esRutaPublica,
     esRutaSesion,
+    esPantallaAuth,
     esExentaConsentimiento,
     esExentaCambiarPassword,
     esExentaCamino,
@@ -80,6 +81,28 @@ describe("esRutaSesion", () => {
 
     it("clasifica /dashboard/padre como NO sesión (necesita más gates)", () => {
         expect(esRutaSesion("/dashboard/padre")).toBe(false);
+    });
+});
+
+describe("SPEC-602 · esPantallaAuth", () => {
+    it("las tres pantallas de auth matchean exacto", () => {
+        expect(esPantallaAuth("/login")).toBe(true);
+        expect(esPantallaAuth("/registro")).toBe(true);
+        expect(esPantallaAuth("/registro/inicio")).toBe(true);
+    });
+
+    it("NO usa prefijo: /registro/crear-clave/<token> NO es pantalla de auth", () => {
+        expect(esPantallaAuth("/registro/crear-clave/abc123")).toBe(false);
+    });
+
+    it("los flujos de soporte quedan fuera a propósito (candado SPEC-588)", () => {
+        expect(esPantallaAuth("/recuperar")).toBe(false);
+        expect(esPantallaAuth("/registro-colegio")).toBe(false);
+        expect(esPantallaAuth("/registro-profesional")).toBe(false);
+    });
+
+    it("subrutas de /login no matchean (matching exacto)", () => {
+        expect(esPantallaAuth("/login/cualquier-cosa")).toBe(false);
     });
 });
 
