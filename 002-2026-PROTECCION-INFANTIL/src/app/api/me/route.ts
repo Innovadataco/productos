@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAuth } from "@/lib/auth";
+import { verifyAuth, sessionCookieAttributes } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 
 export async function GET() {
@@ -19,7 +19,17 @@ export async function GET() {
         });
     } catch (error) {
         if (error instanceof AppError) {
-            return NextResponse.json(error.toJSON(), { status: error.statusCode });
+            const res = NextResponse.json(error.toJSON(), { status: error.statusCode });
+            if (error.statusCode === 401) {
+                // SPEC-603: un 401 acá significa que la sesión no sirve (token inválido
+                // o expirado, o usuario ya eliminado de la BD con JWT aún vigente). El
+                // proxy solo limpia cookies cuando la FIRMA falla; la sesión huérfana la
+                // atrapa verifyAuth. Expiramos ambas cookies en la respuesta (mismos
+                // atributos que logout, Spec 106) o el navegador reintenta en loop.
+                res.cookies.set("__Host-token", "", { ...sessionCookieAttributes(true), maxAge: 0 });
+                res.cookies.set("token", "", { ...sessionCookieAttributes(false), maxAge: 0 });
+            }
+            return res;
         }
         return NextResponse.json({ error: { message: "Error interno" } }, { status: 500 });
     }
