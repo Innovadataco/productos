@@ -16,6 +16,10 @@ El proxy (edge) no puede cortarlo: solo verifica la firma del JWT, que es válid
 
 Como visitante con una cookie de sesión huérfana (mi usuario fue eliminado), quiero que el servidor trate mi sesión como NO autenticada, para poder usar las páginas públicas (reportar, consultar) sin errores y volver a /login limpio.
 
+## Impacto en arquitectura: no
+
+Sin cambios de schema, proxy, navegación ni stack. Se agrega un helper de sesión en `src/lib/auth.ts` (`getSessionUser`), se consume en el layout de `/reportar` y `/api/me` expira cookies en 401. La línea base de `docs/architecture/` queda intacta (`npm run arch:check` en VERDE).
+
 ## Fix (estándar de industria)
 
 En el servidor, una sesión cuyo usuario no existe en BD se trata como **no autenticada**:
