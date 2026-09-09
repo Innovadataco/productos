@@ -103,6 +103,36 @@ export async function getUserFromToken(request: Request) {
     }
 }
 
+/**
+ * SPEC-603 (hotfix): resuelve el usuario de sesión para Server Components
+ * (layouts/páginas que no reciben `Request`, a diferencia de `getUserFromToken`).
+ *
+ * Un JWT con firma válida cuyo `sub` ya no existe en BD (usuario purgado) es una
+ * SESIÓN HUÉRFANA y se trata como NO autenticada: devuelve null, igual que si no
+ * hubiera token. Nunca propagar ese `sub` a consultas ni auditorías: las
+ * escrituras con FK a Usuario (p. ej. AuditLog) explotan con P2003 y tumban el
+ * render de páginas públicas (visto en producción en GET /reportar).
+ *
+ * La cookie huérfana no puede borrarse desde un Server Component; la expira la
+ * respuesta 401 de /api/me (route handler), que el cliente consulta siempre.
+ */
+export async function getSessionUser() {
+    try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get(HOST_COOKIE_NAME)?.value ?? cookieStore.get(LEGACY_COOKIE_NAME)?.value;
+        if (!token) return null;
+        const payload = await verifyToken(token);
+        if (!payload || !payload.sub) return null;
+        const user = await prisma.usuario.findUnique({
+            where: { id: payload.sub as string },
+        });
+        if (!user || user.estado !== "activo") return null;
+        return user;
+    } catch {
+        return null;
+    }
+}
+
 export async function verifyAuth(requiredRol?: RolUsuario | RolUsuario[]) {
     let token: string | undefined;
     try {
