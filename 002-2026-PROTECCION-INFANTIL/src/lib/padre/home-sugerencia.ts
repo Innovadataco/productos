@@ -25,7 +25,8 @@ export function calcularSugerenciaHome(input: DatosSugerenciaInput): SugerenciaH
     if (enPeriodoGracia) {
         return {
             texto: "Tu suscripción está en período de gracia. Renueva para seguir recibiendo alertas del círculo.",
-            accionHref: "/dashboard/padre/suscripcion",
+            // SPEC-607: la suscripción vive en el acordeón «Suscripción» de Mi perfil.
+            accionHref: "/dashboard/padre/perfil#suscripcion",
             accionTexto: "Renovar plan",
             prioridad: "alta",
         };

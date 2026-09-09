@@ -98,36 +98,52 @@ export const COMITE_COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio/comite/casos", label: "Gestión de casos", modulo: "colegios_comite_bandeja" },
 ];
 
-// SPEC-231 (002-PI-131): menú del padre — 7 entradas planas, sin grupos expandibles.
+// SPEC-231 (002-PI-131): menú del padre.
 // SPEC-285 (002-PI-185, I-135): sin campo `modulo` — el área padre no usa permisos
 // granulares por módulo; el proxy controla el acceso por rol (`padre` fue retirado
 // del catálogo por 0 usos como candado real).
 export interface PadreNavItem {
     href: string;
     label: string;
+    /** Hijos para nodos expandibles (SPEC-607: «Reportar» y «Ayuda profesional»). */
+    children?: PadreNavItem[];
 }
+// SPEC-607 (diseño final aprobado · design/expediente-final-mockup.html): menú
+// definitivo del padre — 6 entradas, dos con submódulos colapsables (chevron en
+// escritorio; la barra móvil aplana los hijos para acceso directo, I-38).
+//
+// Salen del menú (las rutas SIGUEN existiendo):
+//  - «Mis reportes» (/mis-reportes): el expediente es el módulo único; el listado
+//    plano queda accesible por URL y desde enlaces internos.
+//  - «Suscripción» y «Notificaciones» como ítems sueltos: viven dentro de
+//    «Mi perfil» (/dashboard/padre/perfil, acordeones); sus rutas viejas
+//    redirigen con ancla para no romper enlaces.
 export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     { href: "/dashboard/padre", label: "Inicio" },
-    { href: "/dashboard/padre/expedientes", label: "Mis expedientes" },
-    // SPEC-324: acceso directo al listado de reportes individuales del padre.
-    // Ruta top-level (fuera del shell /dashboard/padre) reutilizada, no hay página nueva.
-    { href: "/mis-reportes", label: "Mis reportes" },
-    { href: "/dashboard/padre/reportar", label: "Reportar" },
-    // SPEC-392 (L3 · brief A-75): el directorio de psicólogos verificados. Va
-    // arriba de "Suscripción" porque es el frente nuevo y el que arma la red;
-    // exento del guardián de vigencia (padre sin suscripción también lo ve).
-    { href: "/dashboard/padre/profesionales", label: "Encontrar psicólogo" },
-    // SPEC-545: el listado de citas del padre. Va tras «Encontrar psicólogo» (buscar
-    // es la entrada; las citas, el seguimiento) y antes de «Suscripción».
-    { href: "/dashboard/padre/citas", label: "Mis citas" },
-    { href: "/dashboard/padre/suscripcion", label: "Suscripción" },
     { href: "/dashboard/padre/hijos", label: "A quién protejo" }, // SPEC-325
     { href: "/dashboard/padre/circulo-confianza", label: "A quién vigilo" }, // SPEC-325 (antes "Círculo confianza")
-    { href: "/dashboard/padre/notificaciones", label: "Notificaciones" },
-    // SPEC-440 P4 (Jelkin vivo 04-09) · «el perfil del padre no deja editar sus datos».
-    // La pantalla existe desde SPEC-334 (formulario completo con los campos del brief
-    // A-67 §59: nombres, apellidos, tipo/número documento, teléfono, país, ciudad) pero
-    // SPEC-317 la había retirado del menú por hueco temporal. Se reincorpora acá.
+    {
+        // Nodo expandible (href "#", no navegable — patrón "Usuarios" del colegio).
+        // «Reportar» queda también como primer hijo: un clic para la acción crítica.
+        href: "#",
+        label: "Reportar",
+        children: [
+            { href: "/dashboard/padre/reportar", label: "Reportar" },
+            { href: "/dashboard/padre/expedientes", label: "Mis expedientes" },
+        ],
+    },
+    {
+        // SPEC-392 (L3 · brief A-75): el directorio de psicólogos verificados es
+        // la entrada; SPEC-545: las citas son el seguimiento — mismo grupo.
+        href: "#",
+        label: "Ayuda profesional",
+        children: [
+            { href: "/dashboard/padre/profesionales", label: "Encontrar psicólogo" },
+            { href: "/dashboard/padre/citas", label: "Mis citas" },
+        ],
+    },
+    // SPEC-607: ítem ÚNICO de cuenta — una sola página con tres acordeones
+    // (Información general · Notificaciones · Suscripción).
     { href: "/dashboard/padre/perfil", label: "Mi perfil" },
 ];
 

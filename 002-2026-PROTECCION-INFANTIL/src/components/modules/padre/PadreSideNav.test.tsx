@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { PadreSideNav } from "./PadreSideNav";
 
 const mockPathname = { value: "/dashboard/padre" };
@@ -17,28 +17,64 @@ vi.mock("next/link", () => ({
     ),
 }));
 
-describe("PadreSideNav (SPEC-231)", () => {
-    // SPEC-440 P4 (Jelkin vivo 04-09): «el perfil del padre no deja editar sus datos».
-    // La pantalla existe desde SPEC-334; SPEC-317 la había retirado del nav por
-    // hueco temporal — reincorporada acá para que el padre pueda llegar a editarla.
-    it("renderiza los 11 items del menú padre (SPEC-545 agrega «Mis citas» tras «Encontrar psicólogo»; SPEC-440 P4 Mi perfil)", () => {
+/**
+ * SPEC-607 · menú definitivo del padre (diseño aprobado,
+ * design/expediente-final-mockup.html): 6 entradas — Inicio, A quién protejo,
+ * A quién vigilo, Reportar (grupo), Ayuda profesional (grupo), Mi perfil.
+ */
+describe("PadreSideNav (SPEC-607)", () => {
+    it("renderiza las 6 entradas del menú definitivo, con los 4 submódulos", () => {
         mockPathname.value = "/dashboard/padre";
         render(<PadreSideNav />);
 
-        const labels = ["Inicio", "Mis expedientes", "Mis reportes", "Reportar", "Encontrar psicólogo", "Mis citas", "Suscripción", "A quién protejo", "A quién vigilo", "Notificaciones", "Mi perfil"];
-        for (const label of labels) {
-            expect(screen.getByRole("link", { name: label })).toBeDefined();
-        }
+        // Ítems navegables de primer nivel.
+        expect(screen.getByRole("link", { name: "Inicio" }).getAttribute("href")).toBe("/dashboard/padre");
+        expect(screen.getByRole("link", { name: "A quién protejo" }).getAttribute("href")).toBe("/dashboard/padre/hijos");
+        expect(screen.getByRole("link", { name: "A quién vigilo" }).getAttribute("href")).toBe("/dashboard/padre/circulo-confianza");
         expect(screen.getByRole("link", { name: "Mi perfil" }).getAttribute("href")).toBe("/dashboard/padre/perfil");
-        // SPEC-324: "Mis reportes" apunta a la ruta top-level /mis-reportes (fuera del shell).
-        expect(screen.getByRole("link", { name: "Mis reportes" }).getAttribute("href")).toBe("/mis-reportes");
-        // SPEC-392 (L3): "Encontrar psicólogo" al directorio del padre.
+
+        // Grupos (botón con chevron, no son enlaces).
+        expect(screen.getByRole("button", { name: /Reportar/ })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Ayuda profesional/ })).toBeDefined();
+
+        // Submódulos: los grupos nacen expandidos.
+        const reportar = screen.getAllByRole("link", { name: "Reportar" });
+        expect(reportar).toHaveLength(1);
+        expect(reportar[0]!.getAttribute("href")).toBe("/dashboard/padre/reportar");
+        expect(screen.getByRole("link", { name: "Mis expedientes" }).getAttribute("href")).toBe("/dashboard/padre/expedientes");
         expect(screen.getByRole("link", { name: "Encontrar psicólogo" }).getAttribute("href")).toBe("/dashboard/padre/profesionales");
-        // SPEC-545: «Mis citas» va inmediatamente tras «Encontrar psicólogo».
         expect(screen.getByRole("link", { name: "Mis citas" }).getAttribute("href")).toBe("/dashboard/padre/citas");
-        const rotulos = screen.getAllByRole("link").map((a) => a.textContent);
-        expect(rotulos.indexOf("Mis citas")).toBe(rotulos.indexOf("Encontrar psicólogo") + 1);
-        expect(screen.getAllByRole("link")).toHaveLength(11);
+
+        // Total: 4 de primer nivel + 4 submódulos.
+        expect(screen.getAllByRole("link")).toHaveLength(8);
+    });
+
+    it("los ítems retirados ya NO están: Mis reportes, Suscripción y Notificaciones sueltos", () => {
+        mockPathname.value = "/dashboard/padre";
+        render(<PadreSideNav />);
+
+        expect(screen.queryByRole("link", { name: "Mis reportes" })).toBeNull();
+        expect(screen.queryByRole("link", { name: "Suscripción" })).toBeNull();
+        expect(screen.queryByRole("link", { name: "Notificaciones" })).toBeNull();
+    });
+
+    it("el chevron colapsa y expande el grupo (aria-expanded)", () => {
+        mockPathname.value = "/dashboard/padre";
+        render(<PadreSideNav />);
+
+        const boton = screen.getByRole("button", { name: /Reportar/ });
+        expect(boton.getAttribute("aria-expanded")).toBe("true");
+        expect(screen.getByRole("link", { name: "Mis expedientes" })).toBeDefined();
+
+        fireEvent.click(boton);
+        expect(boton.getAttribute("aria-expanded")).toBe("false");
+        expect(screen.queryByRole("link", { name: "Mis expedientes" })).toBeNull();
+        // El otro grupo no se toca.
+        expect(screen.getByRole("link", { name: "Mis citas" })).toBeDefined();
+
+        fireEvent.click(boton);
+        expect(boton.getAttribute("aria-expanded")).toBe("true");
+        expect(screen.getByRole("link", { name: "Mis expedientes" })).toBeDefined();
     });
 
     it("marca Inicio como activo en la raíz", () => {
@@ -50,23 +86,22 @@ describe("PadreSideNav (SPEC-231)", () => {
         expect(inicio.className).toContain("bg-cielo");
     });
 
-    it("marca Mis expedientes como activo en subruta", () => {
-        mockPathname.value = "/dashboard/padre/expedientes";
+    it("marca Mis expedientes activo en subruta y NO marca Inicio", () => {
+        mockPathname.value = "/dashboard/padre/expedientes/EXP-1";
         render(<PadreSideNav />);
 
         const expedientes = screen.getByRole("link", { name: "Mis expedientes" });
         expect(expedientes.getAttribute("aria-current")).toBe("page");
-        const inicio = screen.getByRole("link", { name: "Inicio" });
-        expect(inicio.getAttribute("aria-current")).toBeNull();
+        expect(screen.getByRole("link", { name: "Inicio" }).getAttribute("aria-current")).toBeNull();
     });
 
-    it("marca Suscripción como activo en su ruta", () => {
-        mockPathname.value = "/dashboard/padre/suscripcion";
+    it("el grupo del destino activo se pinta en cielo aunque el padre no sea enlace", () => {
+        mockPathname.value = "/dashboard/padre/citas";
         render(<PadreSideNav />);
 
-        const suscripcion = screen.getByRole("link", { name: "Suscripción" });
-        expect(suscripcion.getAttribute("aria-current")).toBe("page");
-        expect(suscripcion.getAttribute("href")).toBe("/dashboard/padre/suscripcion");
+        const ayuda = screen.getByRole("button", { name: /Ayuda profesional/ });
+        expect(ayuda.className).toContain("text-cielo");
+        expect(screen.getByRole("link", { name: "Mis citas" }).getAttribute("aria-current")).toBe("page");
     });
 
     it("aplica clases de color cielo al sidebar", () => {

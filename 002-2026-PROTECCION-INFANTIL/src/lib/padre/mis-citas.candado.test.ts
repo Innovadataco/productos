@@ -2,7 +2,8 @@
  * SPEC-545 · CANDADO del listado «Mis citas» del padre. Tres garantías:
  *  (1) la RUTA /dashboard/padre/citas existe (que muera si alguien la borra y deja
  *      el item del menú vivo → enlace a 404, justo lo que 545 vino a evitar);
- *  (2) el nav del padre tiene 11 items y «Mis citas» va tras «Encontrar psicólogo»;
+ *  (2) el nav del padre tiene 6 entradas (SPEC-607) y «Mis citas» va tras
+ *      «Encontrar psicólogo» dentro del grupo «Ayuda profesional»;
  *  (3) el mapeo estado→token: cada EstadoSolicitudCita tiene badge y NINGÚN estado
  *      cae en rubí (una cita es proceso, no criticidad) — mutación en las dos
  *      direcciones (pintar un estado de rubí → rojo; quitar un estado → rojo).
@@ -21,21 +22,24 @@ const SRC = path.resolve(__dirname, "..", ".."); // .../src
 
 describe("SPEC-545 · «Mis citas» en el menú y su pantalla", () => {
     it("(1) la ruta /dashboard/padre/citas existe (no es un enlace a 404)", () => {
-        const item = PADRE_NAV_ITEMS.find((i) => i.label === "Mis citas");
+        // SPEC-607: «Mis citas» vive dentro del grupo «Ayuda profesional».
+        const item = PADRE_NAV_ITEMS.flatMap((i) => i.children ?? [i]).find((i) => i.label === "Mis citas");
         expect(item, "falta el item «Mis citas» en el nav").toBeTruthy();
         const rel = item!.href.replace(/^\//, "");
         const page = path.join(SRC, "app", rel, "page.tsx");
         expect(fs.existsSync(page), `falta la pantalla ${item!.href}/page.tsx`).toBe(true);
     });
 
-    it("(2) el nav del padre tiene 11 items y «Mis citas» va tras «Encontrar psicólogo»", () => {
-        expect(PADRE_NAV_ITEMS.length).toBe(11);
-        const labels = PADRE_NAV_ITEMS.map((i) => i.label);
+    it("(2) el nav del padre tiene 6 entradas y «Mis citas» va tras «Encontrar psicólogo» (SPEC-607)", () => {
+        expect(PADRE_NAV_ITEMS.length).toBe(6);
+        const ayuda = PADRE_NAV_ITEMS.find((i) => i.label === "Ayuda profesional");
+        expect(ayuda?.children, "«Ayuda profesional» debe ser un grupo con hijos").toBeTruthy();
+        const labels = ayuda!.children!.map((i) => i.label);
         const iPsico = labels.indexOf("Encontrar psicólogo");
         const iCitas = labels.indexOf("Mis citas");
         expect(iPsico).toBeGreaterThanOrEqual(0);
         expect(iCitas).toBe(iPsico + 1);
-        expect(PADRE_NAV_ITEMS[iCitas]!.href).toBe("/dashboard/padre/citas");
+        expect(ayuda!.children![iCitas]!.href).toBe("/dashboard/padre/citas");
     });
 
     it("(3) todo estado tiene badge y NINGUNO cae en rubí (cita = proceso)", () => {
