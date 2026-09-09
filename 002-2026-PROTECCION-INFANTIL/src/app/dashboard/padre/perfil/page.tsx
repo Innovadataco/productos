@@ -1,28 +1,270 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { verifyAuth } from "@/lib/auth";
+import { PagosClienteRepository } from "@/lib/dal/repositories/pagos-cliente-repository";
+import { obtenerVistaSuscripcion, obtenerSuscripcionTitular } from "@/lib/pagos/suscripcion-vista.service";
+import { solicitarPlan } from "@/lib/pagos/suscripcion-solicitud.service";
+import { activarFreemiumConRateLimit } from "@/lib/pagos/freemium-activacion.service";
+import { sellarCookieSesionEstadoEnAccion } from "@/lib/routing/sellar-sesion-estado";
+import { anioBogota } from "@/lib/pagos/renovacion-calculos";
+import { obtenerTasaIva, ivaAplicaA } from "@/lib/pagos/parametros-pagos";
+import { obtenerCuponesRecompensaDelUsuario } from "@/lib/pagos/entregar-cupones-recompensa.service";
+import { SuscripcionVista } from "@/components/modules/cliente/suscripcion/SuscripcionVista";
+import { PlanesSelector } from "@/components/modules/pagos/PlanesSelector";
+import { EsperandoAutorizacion } from "@/components/modules/pagos/EsperandoAutorizacion";
 import { PerfilPadreForm } from "@/components/modules/padre/PerfilPadreForm";
 import { HistorialCambiosPerfil } from "@/components/modules/padre/HistorialCambiosPerfil";
+import { PreferenciasNotificaciones } from "@/components/modules/perfil/PreferenciasNotificaciones";
+import type { PlanSelectorDTO } from "@/lib/pagos/planes-selector.types";
 
 export const metadata: Metadata = {
     title: "Mi perfil",
-    description: "Tus datos de contacto.",
+    description: "Tus datos de contacto, tus notificaciones y tu suscripción.",
 };
 
-// SPEC-334: pantalla real del perfil del padre (reemplaza el placeholder).
-export default async function PadrePerfilPage() {
-    await verifyAuth("PARENT");
+interface PageProps {
+    searchParams: Promise<{ bienvenida?: string }>;
+}
+
+// SPEC-289 (002-PI-189 · Fase 1): idem colegio — el DTO conserva `precioBaseUSD`
+// (candado §4 brief) pero lo cero-emitimos. La vista del cliente colombiano NO
+// lee el precio USD. (Movido intacto desde /dashboard/padre/suscripcion, SPEC-607.)
+function planToSelectorDTO(plan: {
+    id: string;
+    nombre: string;
+    descripcion: string | null;
+    duracion: string;
+    precioBaseCOP: number | null;
+    descuentoAnualPct: number | null;
+    esFreemium: boolean;
+    activo: boolean;
+}): PlanSelectorDTO {
+    return {
+        id: plan.id,
+        nombre: plan.nombre,
+        descripcion: plan.descripcion,
+        duracion: plan.duracion,
+        precioBaseCOP: plan.precioBaseCOP ?? 0,
+        precioBaseUSD: 0,
+        descuentoAnualPct: plan.descuentoAnualPct,
+        esFreemium: plan.esFreemium,
+        activo: plan.activo,
+    };
+}
+
+async function actionSolicitarPlan(planId: string, codigoBono?: string) {
+    "use server";
+
+    const usuario = await verifyAuth("PARENT");
+    await solicitarPlan({
+        usuario: {
+            id: usuario.id,
+            rol: usuario.rol,
+            colegioId: usuario.colegioId,
+            email: usuario.email,
+            nombre: usuario.nombre,
+        },
+        planId,
+        codigoBono,
+        rolDueño: usuario.rol,
+    });
+    // SPEC-342: cualquier suscripción registrada cumple el Paso 4 (decisión CEO)
+    // — el plan pagado también debe abrir al instante.
+    await sellarCookieSesionEstadoEnAccion(usuario.id);
+
+    revalidatePath("/dashboard/padre/perfil");
+}
+
+async function actionActivarFreemium() {
+    "use server";
+
+    const headersList = await headers();
+    const ipAddress = headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip") ?? "unknown";
+    const userAgent = headersList.get("user-agent") ?? undefined;
+
+    const usuario = await verifyAuth("PARENT");
+    await activarFreemiumConRateLimit({
+        usuario: {
+            id: usuario.id,
+            rol: usuario.rol,
+            colegioId: usuario.colegioId,
+            email: usuario.email,
+            nombre: usuario.nombre,
+        },
+        aceptaTerminos: true,
+        ipAddress,
+        userAgent,
+    });
+    // SPEC-342 (I-227): la activación cambia la vigencia Y cierra el Paso 4 del
+    // camino — re-sellar AQUÍ, en la acción, que es el flujo real del botón.
+    await sellarCookieSesionEstadoEnAccion(usuario.id);
+
+    // SPEC-287 (I-141): la Server Action NO termina con redirect(<misma ruta>);
+    // el POST-redirect-GET lo hace el navegador. revalidatePath re-renderiza
+    // la página con el nuevo estado de vigencia (freemium ya ACTIVA).
+    revalidatePath("/dashboard/padre/perfil");
+}
+
+/**
+ * SPEC-607 (diseño final · design/expediente-final-mockup.html): acordeón nativo
+ * `<details>`/`<summary>` — funciona sin JavaScript y la URL con ancla
+ * (`/dashboard/padre/perfil#suscripcion`) lo abre sola en el navegador, que es
+ * como las rutas viejas aterrizan en su sección.
+ */
+function Acordeon({
+    id,
+    abierto,
+    titulo,
+    subtitulo,
+    children,
+}: {
+    id: string;
+    abierto: boolean;
+    titulo: string;
+    subtitulo: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <details id={id} data-testid={`acordeon-${id}`} className="group glass overflow-hidden rounded-2xl shadow-sm" open={abierto}>
+            <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 py-3 text-base font-semibold text-body transition-colors hover:bg-tinta/5 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 flex-1">
+                    {titulo}
+                    <span className="block text-sm font-normal text-subtle">{subtitulo}</span>
+                </span>
+                <span aria-hidden="true" className="inline-block text-subtle transition-transform group-open:rotate-90">
+                    ▶
+                </span>
+            </summary>
+            <div className="border-t border-tinta/10 px-4 py-4 sm:px-6">{children}</div>
+        </details>
+    );
+}
+
+/**
+ * SPEC-607 · «Mi perfil» unificado: UNA página con tres acordeones —
+ * Información general, Notificaciones y Suscripción. El contenido de
+ * Notificaciones y Suscripción es el que vivía en sus rutas propias, que ahora
+ * redirigen acá con ancla (`#notificaciones`, `#suscripcion`).
+ *
+ * Sin cobertura (sin plan o vencido) el acordeón de Suscripción nace ABIERTO:
+ * esta página es el destino del guardián de vigencia (vía el redirect de
+ * /dashboard/padre/suscripcion) y lo que el padre tiene que resolver es el plan.
+ */
+export default async function PadrePerfilPage({ searchParams }: PageProps) {
+    const params = await searchParams;
+    const mostrarBienvenida = params.bienvenida === "1";
+    const usuario = await verifyAuth("PARENT");
+    const suscripcion = await obtenerSuscripcionTitular({
+        id: usuario.id,
+        rol: usuario.rol,
+        colegioId: usuario.colegioId,
+    });
+
+    const conCobertura =
+        suscripcion !== null && (suscripcion.estado === "ACTIVA" || suscripcion.estado === "EN_GRACIA");
+
+    let contenidoSuscripcion: React.ReactNode = null;
+    if (conCobertura) {
+        const [vista, cupones] = await Promise.all([
+            obtenerVistaSuscripcion({
+                id: usuario.id,
+                rol: usuario.rol,
+                colegioId: usuario.colegioId,
+            }),
+            obtenerCuponesRecompensaDelUsuario(usuario.id),
+        ]);
+        if (vista) {
+            contenidoSuscripcion = (
+                <SuscripcionVista
+                    vista={vista}
+                    color="cielo"
+                    mostrarContrato={false}
+                    cupones={cupones}
+                    mostrarBienvenida={mostrarBienvenida}
+                />
+            );
+        }
+    }
+    if (!contenidoSuscripcion && suscripcion && suscripcion.estado === "PENDIENTE_AUTORIZACION") {
+        contenidoSuscripcion = (
+            <EsperandoAutorizacion
+                suscripcion={{
+                    id: suscripcion.id,
+                    estado: suscripcion.estado,
+                    fechaInicio: suscripcion.fechaInicio.toISOString(),
+                    fechaFin: suscripcion.fechaFin.toISOString(),
+                    plan: { nombre: suscripcion.planActual.nombre },
+                }}
+                rol="PARENT"
+            />
+        );
+    }
+    if (!contenidoSuscripcion) {
+        const [planes, tasaIva, aplicaIva] = await Promise.all([
+            new PagosClienteRepository().listarPlanesActivosPorTitular("PADRE", anioBogota()),
+            obtenerTasaIva(),
+            ivaAplicaA("PADRE"),
+        ]);
+        contenidoSuscripcion = (
+            <PlanesSelector
+                planes={planes.map(planToSelectorDTO)}
+                usuario={{
+                    id: usuario.id,
+                    rol: "PARENT",
+                    nombre: usuario.nombre,
+                    email: usuario.email,
+                }}
+                color="cielo"
+                onSeleccionar={actionSolicitarPlan}
+                onFreemium={actionActivarFreemium}
+                tasaIva={tasaIva}
+                aplicaIva={aplicaIva}
+            />
+        );
+    }
+
+    // SPEC-598: «Crear contraseña» solo aplica a cuentas OAuth (Google) sin
+    // clave local; el resto ya tiene la suya y el enlace sobra acá.
+    const pendienteCrearPassword = Boolean(usuario.googleSub) && !usuario.passwordCreadaEn;
+
     return (
         <main className="min-h-screen bg-page px-4 py-8 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-3xl">
+            <div className="mx-auto max-w-3xl space-y-4">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-body">Mi perfil</h1>
-                    <p className="mt-1 text-sm text-muted">Completa tus datos. Puedes editarlos cuando quieras.</p>
+                    <p className="mt-1 text-sm text-muted">Tus datos, tus avisos y tu plan en una sola ventana.</p>
                 </div>
-                <PerfilPadreForm />
-                <div className="mt-6">
-                    {/* SPEC-590 (decisión CEO 06-09): historial de cambios del perfil. */}
-                    <HistorialCambiosPerfil />
-                </div>
+
+                <Acordeon id="general" abierto={conCobertura} titulo="Información general" subtitulo="Tus datos de contacto y acceso">
+                    <PerfilPadreForm />
+                    {pendienteCrearPassword && (
+                        <div className="mt-4" data-testid="crear-password">
+                            <Link
+                                href="/cambiar-password"
+                                className="inline-flex items-center justify-center rounded-xl border border-cielo/50 px-4 py-2 text-sm font-semibold text-cielo transition hover:bg-cielo/10"
+                            >
+                                Crear contraseña
+                            </Link>
+                            <p className="mt-2 text-xs text-muted">
+                                Tu cuenta se creó con Google y todavía no tiene contraseña propia.
+                            </p>
+                        </div>
+                    )}
+                    <div className="mt-6">
+                        {/* SPEC-590 (decisión CEO 06-09): historial de cambios del perfil. */}
+                        <HistorialCambiosPerfil />
+                    </div>
+                </Acordeon>
+
+                <Acordeon id="notificaciones" abierto={false} titulo="Notificaciones" subtitulo="Qué avisos quieres recibir">
+                    <PreferenciasNotificaciones rol={usuario.rol} correo={usuario.email} />
+                </Acordeon>
+
+                <Acordeon id="suscripcion" abierto={!conCobertura} titulo="Suscripción" subtitulo="Plan, prueba y facturación">
+                    {contenidoSuscripcion}
+                </Acordeon>
             </div>
         </main>
     );
