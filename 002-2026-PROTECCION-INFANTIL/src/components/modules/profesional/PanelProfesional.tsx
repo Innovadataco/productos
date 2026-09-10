@@ -34,6 +34,29 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
                 </p>
             </header>
 
+            {/* SPEC-610 (I-372): la ENTRADA VISIBLE al canje del pase. Antes
+                `/canjear-acceso` no estaba enlazada desde ningún lado (solo en
+                proxy.ts) y el profesional tenía que adivinar la URL — la función
+                vivió muerta. Es la primera acción de su área, como en el mockup
+                aprobado. El candado de cableado muere si este enlace desaparece
+                del árbol de render del profesional. */}
+            <GlassCard className="p-5">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="min-w-0">
+                        <h2 className="text-base font-semibold text-body">Abrir un caso con un pase</h2>
+                        <p className="mt-1 text-sm text-muted">
+                            Pídale el pase al padre o a la madre. Son 8 caracteres.
+                        </p>
+                    </div>
+                    <Link
+                        href="/canjear-acceso"
+                        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-2xl accent-gradient px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                    >
+                        Abrir un caso
+                    </Link>
+                </div>
+            </GlassCard>
+
             <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
                 <div className="space-y-6">
                     <Solicitudes data={data} />
