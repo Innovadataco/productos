@@ -654,7 +654,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | Campo | Tipo | Atributos |
 | --- | --- | --- |
 | id | String | id |
-| reporteId | String | — |
+| expedienteId | String | — |
 | codigoHash | String | único |
 | solicitadoPorId | String | — |
 | vigenteHasta | DateTime | — |
@@ -665,7 +665,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ipSolicitud | String | opcional |
 | ipCanje | String | opcional |
 | creadoEn | DateTime | — |
-| reporte | Reporte | relación (FK) |
+| expediente | Expediente | relación (FK) |
 | solicitadoPor | Usuario | relación (FK) |
 | canjeadoPor | Usuario | opcional, relación (FK) |
 | lecturas | LecturaReporte | lista, relación |
@@ -880,6 +880,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | updatedAt | DateTime | — |
 | padre | Usuario | opcional, relación (FK) |
 | eventos | EventoExpediente | lista, relación |
+| codigosAcceso | CodigoAccesoContenido | lista, relación |
 | informes | InformeConsolidado | lista, relación |
 | patrones | PatronExpediente | lista, relación |
 | expedienteAnterior | Expediente | opcional, relación |
@@ -1928,7 +1929,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | eventosDeCadena | Reporte | lista, relación |
 | contenido | ContenidoReporte | relación (FK) |
 | lecturasTexto | LecturaReporte | lista, relación |
-| codigosAcceso | CodigoAccesoContenido | lista, relación |
 
 #### `SolicitudComite`
 
@@ -2318,6 +2318,7 @@ erDiagram
     EventoExpediente ||--o{ LecturaReporte : "evento (opcional)"
     Expediente ||--o{ AclaracionExpediente : "expediente"
     Expediente ||--o{ AnalisisExpediente : "expediente (opcional)"
+    Expediente ||--o{ CodigoAccesoContenido : "expediente"
     Expediente ||--o{ EventoExpediente : "expediente"
     Expediente ||--o{ InformeConsolidado : "expediente"
     Expediente ||--o{ InformePadre : "expediente"
@@ -2370,7 +2371,6 @@ erDiagram
     ReglaRecomendacion ||--o{ ReglaRecomendacionHistorial : "regla"
     Reporte ||--o{ AlertaColegio : "reporte"
     Reporte ||--o{ ClasificacionIA : "reporte"
-    Reporte ||--o{ CodigoAccesoContenido : "reporte"
     Reporte ||--o{ EmbeddingReporte : "reporte"
     Reporte ||--o{ EventoExpediente : "reporte (opcional)"
     Reporte ||--o{ EventoMatch : "reporteNuevo"

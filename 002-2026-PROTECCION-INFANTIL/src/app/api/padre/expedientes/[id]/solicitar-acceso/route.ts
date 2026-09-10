@@ -6,15 +6,17 @@ import { idSchema } from "@/lib/validators";
 import { solicitarCodigoAcceso } from "@/lib/dal/services/codigo-acceso";
 
 /**
- * POST /api/reportes/[id]/solicitar-acceso — SPEC-584 (Fase 3).
+ * POST /api/padre/expedientes/[id]/solicitar-acceso — SPEC-610 (I-372 · D-123/D-129).
  *
- * El PADRE dueño del reporte (reportante autenticado, no anónimo) solicita un
- * código temporal para compartir el texto con un profesional. Genera un código
- * de 8 caracteres sin ambigüedades, vigente 30 min para canjear, un solo código
- * activo por reporte; el código viaja por correo (canal oficial) y se devuelve
- * acá para mostrarlo UNA sola vez en pantalla.
+ * El PADRE dueño del EXPEDIENTE genera «el pase para su psicólogo»: 8 caracteres
+ * sin ambigüedades, vigente 30 min para canjear, un solo pase activo por
+ * expediente. El pase abre el EXPEDIENTE COMPLETO (todos sus eventos), no un
+ * reporte suelto — ese era I-372: el mecanismo existía pero abría de menos y no
+ * se alcanzaba. Vive bajo `/api/padre/**` (territorio del padre; el profesional
+ * NO genera pases, solo los canjea), junto al resto de rutas del expediente.
  *
- * Response: { codigo, vigenteHasta } — el padre lo pasa al profesional.
+ * El pase viaja por correo (canal oficial) y se devuelve acá para mostrarlo UNA
+ * sola vez en pantalla. Response: { codigo, vigenteHasta }.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -38,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         }
 
         const resultado = await solicitarCodigoAcceso({
-            reporteId: parsedId.data,
+            expedienteId: parsedId.data,
             solicitadoPorId: user.id,
             ip: getClientIp(request),
         });
