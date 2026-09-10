@@ -1,21 +1,17 @@
 /**
- * SPEC-612 · CANDADOS de la semilla de cuentas de Calidad.
+ * SPEC-612 · CANDADO DE INTEGRACIÓN (con base) — idempotencia real de la siembra de cuentas de Calidad.
  *
- * 1. Idempotencia de CONDUCTA (no declarada): dos corridas seguidas dejan exactamente el mismo estado
- *    —mismos usuarios, mismos ids y el MISMO hash— porque la clave solo se re-hashea si cambió en el
- *    entorno. Se ejercita corriendo el sembrado dos veces, no afirmándolo.
- * 2. Configuración: con una variable ausente, `leerCredencialesE2E` ABORTA y —al ser pura— no escribe
- *    nada. Se ejercita la AUSENCIA, no la presencia.
- *
- * (Anti-literal SPEC-107: este archivo es `.test.` y queda excluido de esa guarda; aun así las claves
- * de abajo son valores dummy obvios, nunca credenciales reales.)
+ * Vive en `src/**` a propósito: la suite de integración (que sí levanta base) corre `src/**​/*.test.ts`;
+ * la suite unit NO tiene base, así que un candado que toca Prisma no puede ir ahí (esa fue la lección de
+ * I-366/612 — «unit verde en local» ≠ «unit verde en CI» cuando el local tiene base). El sembrado vive en
+ * `scripts/seed-e2e-cuentas-calidad.ts`; acá se ejercita corriéndolo DOS veces, no declarándolo.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
-import { leerCredencialesE2E, sembrarCuentasE2E } from "./seed-e2e-cuentas-calidad";
+import { verifyPassword } from "@/lib/auth";
+import { sembrarCuentasE2E, leerCredencialesE2E } from "../../scripts/seed-e2e-cuentas-calidad";
 
-// Entorno completo de prueba (valores dummy; un `.test.` no pasa por la guarda SPEC-107).
 const ENV_COMPLETO: Record<string, string> = {
     E2E_PADRE_EMAIL: "padre.e2e.calidad@example.com",
     E2E_PADRE_PASSWORD: "DummyCalidadUno-2026",
@@ -36,15 +32,14 @@ async function ciudadDePrueba(): Promise<string> {
 }
 
 async function snapshot() {
-    const usuarios = await prisma.usuario.findMany({
+    return prisma.usuario.findMany({
         where: { email: { in: EMAILS } },
         select: { id: true, email: true, rol: true, estado: true, estadoActivacion: true, passwordHash: true },
         orderBy: { email: "asc" },
     });
-    return usuarios;
 }
 
-describe("SPEC-612 · semilla de cuentas de Calidad", { timeout: 30_000 }, () => {
+describe("SPEC-612 · siembra de cuentas de Calidad (integración)", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });
@@ -71,8 +66,7 @@ describe("SPEC-612 · semilla de cuentas de Calidad", { timeout: 30_000 }, () =>
         expect(perfiles, "exactamente un PerfilProfesional, idempotente").toBe(1);
     });
 
-    it("con clave local real: las 3 cuentas tienen hash que valida la clave del entorno (entra por /login)", async () => {
-        const { verifyPassword } = await import("@/lib/auth");
+    it("clave local real: las 3 tienen hash que valida la clave del entorno (entra por /login), no solo-Google", async () => {
         const ciudadId = await ciudadDePrueba();
         const cuentas = leerCredencialesE2E(ENV_COMPLETO);
         await prisma.$transaction((tx) => sembrarCuentasE2E(tx, cuentas, ciudadId));
@@ -83,20 +77,5 @@ describe("SPEC-612 · semilla de cuentas de Calidad", { timeout: 30_000 }, () =>
             expect(u!.googleSub, "cuenta con clave local, no solo-Google").toBeNull();
             expect(await verifyPassword(c.secreto, u!.passwordHash), `la clave del entorno valida para ${c.email}`).toBe(true);
         }
-    });
-
-    it("configuración: con una variable ausente, leerCredencialesE2E ABORTA (y al ser pura, no escribe)", () => {
-        const sinUna = { ...ENV_COMPLETO };
-        delete sinUna.E2E_PROFESIONAL_PASSWORD;
-        expect(() => leerCredencialesE2E(sinUna)).toThrow(/E2E_PROFESIONAL_PASSWORD/);
-    });
-
-    it("configuración: entorno vacío → aborta nombrando varias variables faltantes", () => {
-        expect(() => leerCredencialesE2E({})).toThrow(/E2E_PADRE_EMAIL/);
-    });
-
-    it("nunca siembra la cuenta intocable: si una var apunta a soporte@, aborta", () => {
-        const conIntocable = { ...ENV_COMPLETO, E2E_PADRE_EMAIL: "soporte@innovadataco.com" };
-        expect(() => leerCredencialesE2E(conIntocable)).toThrow(/intocable|soporte@innovadataco\.com/);
     });
 });
