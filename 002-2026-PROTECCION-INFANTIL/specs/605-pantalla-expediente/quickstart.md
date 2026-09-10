@@ -1,0 +1,12 @@
+# Quickstart · SPEC-605 — verificación manual
+
+1. Levantar entorno: `docker compose up -d db` y `./scripts/dev-restart.sh` (app en :5005).
+2. Entrar como padre (cuenta PARENT) con al menos una cadena (si no hay, reportar desde `/dashboard/padre/reportar` — SPEC-604 abre el expediente solo).
+3. **Lista** `/dashboard/padre/expedientes`: las tarjetas se ordenan por urgencia (rubí «Alerta prioritaria» → ámbar «Requiere atención» → menta «Sin novedades» → gris «Sin clasificar»; un cerrado va al final), cada una con barra de color al borde, chip del menor, `EXP-XXXXXX`, identificador, plataforma, «N eventos tuyos · M familias más reportaron», última actividad y los botones [Abrir expediente] [+ Reportar evento]. Arriba a la derecha, «+ Reportar una situación» lleva a `/dashboard/padre/reportar`.
+4. **Detalle** (Abrir expediente): los 5 bloques en orden — ① cabecera con chip del menor (nombre + edad), EXP/id, identificador, plataforma, pill «En proceso»/«Procesado», botón «Consultar estado» y el semáforo grande con la explicación («Nivel alto — esta cuenta tiene X reportes registrados por N familias…»); ② «¿Qué ha pasado con esta cuenta?» con los «tú» y las «familias más» (con ciudades, sin textos) y la nota de privacidad; ③ «Tu evidencia» con el texto tapado y «Revelar texto» (step-up de siempre); ④ «El análisis» con dominante, % confianza, quién revisó, «También consideró», ficha, «¿Qué significa?» y tendencia; ⑤ «Qué puedes hacer» con «+ Agregar evento», «Llevar a un profesional» y los canales oficiales.
+5. **Consultar estado**: con un evento recién enviado (PENDIENTE) el pill dice «En proceso · 1 evento tuyo sigue en clasificación»; pulsar «Consultar estado» tras procesarse (o forzar `update "Reporte" set estado='CLASIFICADO'`) cambia el pill a «Procesado» sin recargar la página.
+6. **Agregar evento**: bloque ⑤ → «+ Agregar evento» → texto + día/hora → guardar: la línea de tiempo gana un «tú» nuevo arriba (estado «en proceso de clasificación»).
+7. **Llevar a un profesional**: abre `/dashboard/padre/profesionales?expedienteId=<id>` con el expediente preseleccionado (flujo SPEC-428).
+8. **Candado de blindaje**: en DevTools → Network, la respuesta de la página jamás trae el texto de NINGÚN reporte (propio ni de otras familias); revelar el propio exige el step-up de siempre.
+
+Verificación en BD (opcional): la dominante de la tarjeta corresponde a la categoría más repetida entre `ClasificacionIA` de los reportes (propios finales + ajenos aprobados/duplicados) del identificador.

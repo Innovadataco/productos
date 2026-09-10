@@ -145,10 +145,12 @@ const PATRONES = LEXEMAS_VOSEO.map(vos);
 
 // Nodos que el BFS DEBE alcanzar. Guarda anti-falso-verde: si la resolución se
 // rompe y el árbol queda corto, el candado no debe pasar por escanear poco.
+// SPEC-605: la pantalla madre del expediente (`ExpedienteMadreClient`) reemplaza
+// a `ExpedienteVivo` en la ruta [id]; el ancla se mueve al componente nuevo.
 const NODOS_CLAVE = [
     "ReporteWizard.tsx", "FechaHoraIncidente.tsx", "EsperaCitaPanel.tsx",
     "SolicitarCitaPanel.tsx", "PresentacionUrgenciaForm.tsx",
-    "DirectorioProfesionales.tsx", "ExpedienteVivo.tsx",
+    "DirectorioProfesionales.tsx", "ExpedienteMadreClient.tsx",
 ];
 
 describe("SPEC-501 · padre + público hablan de «tú» (sin voseo)", () => {
