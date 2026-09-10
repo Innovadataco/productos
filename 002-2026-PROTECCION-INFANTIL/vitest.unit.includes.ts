@@ -591,4 +591,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-576 (I-358/I-359): resumen de auditoría = lista declarada (nunca el payload); título sin duplicar.
     "src/lib/colegio/confianza-auditoria-resumen.candado.test.ts",
     "src/lib/docs/quitar-titulo-h1.candado.test.ts",
+    // I-366: el pre-flight de purga compara IGUALDAD vieja↔nueva (no solo legibilidad). Unit puro
+    // (decisión con leerNuevo inyectado, sin base) → va acá y no rompe la suite sin base.
+    "scripts/i366-verificar-copia-nueva.candado.test.ts",
 ];
