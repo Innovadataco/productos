@@ -118,23 +118,30 @@ export async function GET(request: Request) {
 
         // El origen público sale de NEXT_PUBLIC_APP_URL: request.url refleja el
         // host interno del contenedor (0.0.0.0:3000) detrás del reverse proxy.
-        // SPEC-588: la cuenta NUEVA aterriza DIRECTO en /consentimiento (Paso 1
-        // del camino), no en homeParaRol: /consentimiento es pública y valida el
-        // token en la página, así el Paso 1 funciona con o sin la cookie
-        // sesion_estado que se sella abajo. Antes el hop por /dashboard/padre
-        // dependía de esa cookie en el middleware; si el re-sellado fallaba, el
-        // loop-cap (SPEC-572) terminaba en /login?mensaje=sesion mostrando el
-        // formulario de login a un usuario recién autenticado (visto en vivo).
+        //
+        // SPEC-588: la cuenta NUEVA aterriza en /consentimiento (Paso 1 del camino); la
+        // EXISTENTE, en homeParaRol(rol). Ambas son rutas DESPUÉS del login, no el login.
+        //
+        // SPEC-608 (I-371): se sella `sesion_estado` en AMBAS ramas (antes solo la NUEVA).
+        // Importa porque la cuenta existente aterriza en /dashboard/padre —ruta GATEADA—:
+        // sin la cookie, el middleware rebota a /api/sesion/al-dia y, si el re-sello no pega
+        // en el cliente (visto en prod), el loop-cap (SPEC-572) termina en /login con la
+        // sesión YA creada —el encabezado saluda al usuario parado en el login—. Es el MISMO
+        // mecanismo que SPEC-588 evitó un piso más arriba yendo a /consentimiento (ruta de
+        // sesión, que no lee esa cookie), pero seguía vivo en la rama existente. Sellar acá
+        // hace que el destino —gateado o no— NO dependa del rebote: el middleware lee el
+        // estado y sirve la página (o el muro de consentimiento/password/vigencia que
+        // corresponda), nunca el login.
         const origen = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
         const destino = esNuevo ? "/consentimiento" : homeParaRol(usuario.rol);
         const res = NextResponse.redirect(new URL(destino, origen), 302);
         // El state es de un solo uso: se borra con los mismos atributos.
         res.cookies.set(OAUTH_STATE_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
 
-        if (esNuevo) {
-            // Directo al Paso 1 del camino, como el registro por enlace.
-            await sellarCookieSesionEstado(res, usuario.id);
-        }
+        // Sella el estado de sesión para que el destino no dependa del rebote del middleware.
+        // Fallo suave (sellarCookieSesionEstado devuelve false y no bloquea): en el peor caso
+        // cae al rebote de antes — estrictamente no peor que la conducta previa.
+        await sellarCookieSesionEstado(res, usuario.id);
 
         return res;
     } catch (error) {
