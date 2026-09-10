@@ -32,14 +32,27 @@ function LogoGoogle() {
     );
 }
 
-export function BotonContinuaConGoogle() {
+/**
+ * `label`/`conSeparador` son opcionales y por defecto mantienen el botón de siempre («Continúa con
+ * Google», con separador «o») — login y registro no cambian. SPEC-623 lo reusa en la vista de
+ * «olvidé mi contraseña» con label «Entrar con Google» y sin separador (una sola pieza de OAuth).
+ */
+export function BotonContinuaConGoogle({
+    label = "Continúa con Google",
+    conSeparador = true,
+}: {
+    label?: string;
+    conSeparador?: boolean;
+} = {}) {
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-3" role="separator" aria-label="o continúa con Google">
-                <span className="h-px flex-1 bg-tinta/10" aria-hidden="true" />
-                <span className="text-xs text-muted">o</span>
-                <span className="h-px flex-1 bg-tinta/10" aria-hidden="true" />
-            </div>
+            {conSeparador && (
+                <div className="flex items-center gap-3" role="separator" aria-label="o continúa con Google">
+                    <span className="h-px flex-1 bg-tinta/10" aria-hidden="true" />
+                    <span className="text-xs text-muted">o</span>
+                    <span className="h-px flex-1 bg-tinta/10" aria-hidden="true" />
+                </div>
+            )}
             <Button
                 type="button"
                 variant="secondary"
@@ -50,7 +63,7 @@ export function BotonContinuaConGoogle() {
             >
                 <span className="flex items-center justify-center gap-2">
                     <LogoGoogle />
-                    Continúa con Google
+                    {label}
                 </span>
             </Button>
         </div>
