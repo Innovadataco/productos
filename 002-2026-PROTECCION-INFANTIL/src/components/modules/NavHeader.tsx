@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { cuentaSinContrasenaLocal } from "@/lib/auth/cuenta-password";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -306,12 +307,15 @@ export function NavHeader() {
                                             </>
                                         )}
                                         <hr className="my-1 border-tinta/10" />
-                                        {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible para TODOS los roles.
-                                            SPEC-598: en cuentas OAuth sin contraseña local la entrada dice «Crear contraseña»
-                                            (el flujo no pide la actual y verifica por código de un solo uso al correo). */}
-                                        {esEnlaceNavegable("/cambiar-password") && (
+                                        {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible.
+                                            SPEC-616 (I-375 · reparo de SPEC-609): una cuenta creada por Google que nunca
+                                            creó clave local NO tiene contraseña que cambiar, y ofrecerle «Crear contraseña»
+                                            sin que la pida contradice «una cuenta, una puerta» (orden de Jelkin, revierte
+                                            SPEC-598). Se OCULTA la entrada para esas cuentas; `cuentaSinContrasenaLocal`
+                                            es la fuente única del predicado (perfil y «olvidé mi contraseña» ya la usan). */}
+                                        {esEnlaceNavegable("/cambiar-password") && !cuentaSinContrasenaLocal(user) && (
                                             <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
-                                                {user.googleSub && !user.passwordCreadaEn ? "Crear contraseña" : "Cambiar contraseña"}
+                                                Cambiar contraseña
                                             </NavDropdownLink>
                                         )}
                                         <button
