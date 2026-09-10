@@ -78,6 +78,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-466: el piso de tokens:check dejó de serializar merges (guard <= +
     // barrido --tension). Merge real estilo 432 + conducta del guard.
     "scripts/tokens-ratchet-sin-serializar.candado.test.ts",
+    // SPEC-612: semilla de cuentas de Calidad — idempotencia real + aborta ante variable ausente.
+    "scripts/seed-e2e-cuentas-calidad.candado.test.ts",
     // SPEC-280 (002-PI-180): constructor puro del resumen del CI, sin BD ni red.
     "scripts/ci/resumen.test.mjs",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
