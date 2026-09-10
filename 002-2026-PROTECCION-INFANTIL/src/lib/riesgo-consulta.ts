@@ -20,7 +20,12 @@ export interface RiesgoConsultaParams {
     pesoGravedad: number;
 }
 
-const SEVERIDAD_CATEGORIA: Record<CategoriaConducta, number> = {
+/**
+ * SPEC-605: exportada para que la urgencia del expediente del padre (lista y
+ * cabecera) use la MISMA escala de severidad que la consulta pública — una sola
+ * fuente, nunca dos tablas que diverjan.
+ */
+export const SEVERIDAD_CATEGORIA: Record<CategoriaConducta, number> = {
     CONTACTO_INSISTENTE: 30,
     SOLICITUD_MATERIAL: 80,
     OFRECIMIENTO_REGALOS: 60,
