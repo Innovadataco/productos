@@ -17,7 +17,9 @@ describe("auth utils", () => {
         expect(getCookieName(false)).toBe("token");
     });
 
-    it("sessionCookieAttributes refleja secure", () => {
+    // SPEC-617 (I-371 · D-131): sameSite se QUEDA en Strict en prod (protege la bitácora de auditoría
+    // de GET cross-site); el retorno de Google se arregla con el puente same-site, no aflojando la cookie.
+    it("sessionCookieAttributes refleja secure (Strict en prod)", () => {
         expect(sessionCookieAttributes(true)).toEqual({
             httpOnly: true,
             secure: true,

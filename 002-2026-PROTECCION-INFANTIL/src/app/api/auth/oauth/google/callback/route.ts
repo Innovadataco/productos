@@ -19,6 +19,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { createToken, setSessionCookie } from "@/lib/auth";
 import { homeParaRol } from "@/lib/auth/home-para-rol";
+import { construirAterrizajeOAuth, origenPublicoPuente } from "@/lib/auth/puente-aterrizaje-oauth";
 import { AutenticacionOauthService } from "@/lib/dal/services/autenticacion-oauth";
 import { SessionLogService } from "@/lib/dal/services/session-log";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
@@ -116,8 +117,9 @@ export async function GET(request: Request) {
         });
         await setSessionCookie(request, token);
 
-        // El origen público sale de NEXT_PUBLIC_APP_URL: request.url refleja el
-        // host interno del contenedor (0.0.0.0:3000) detrás del reverse proxy.
+        // El origen público sale de NEXT_PUBLIC_APP_URL (estricto, aborta ruidoso si falta): NUNCA de
+        // request.url, que dentro de Docker refleja el host interno (0.0.0.0:3000) y mandaría el
+        // aterrizaje a la nada SIN error (I-361). `origenPublicoPuente` lo gatea.
         //
         // SPEC-588: la cuenta NUEVA aterriza en /consentimiento (Paso 1 del camino); la
         // EXISTENTE, en homeParaRol(rol). Ambas son rutas DESPUÉS del login, no el login.
@@ -132,9 +134,16 @@ export async function GET(request: Request) {
         // hace que el destino —gateado o no— NO dependa del rebote: el middleware lee el
         // estado y sirve la página (o el muro de consentimiento/password/vigencia que
         // corresponda), nunca el login.
-        const origen = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+        const origen = origenPublicoPuente();
         const destino = esNuevo ? "/consentimiento" : homeParaRol(usuario.rol);
-        const res = NextResponse.redirect(new URL(destino, origen), 302);
+        // SPEC-617 (I-371 · D-131): PUENTE same-site, NO un 302 cross-site. El JWT es SameSite=Strict a
+        // propósito (protege la bitácora de auditoría de GET cross-site). Un redirect al destino
+        // heredaría el origen cross-site del retorno de Google → el navegador NO mandaría el JWT recién
+        // sellado → el Paso 2 del middleware no lo ve → /login (esa era I-371). Esta página (mismo
+        // origen) navega ELLA MISMA al destino: la navegación es same-site, el JWT Strict viaja y el
+        // middleware lo ve. `destino` se deriva del ROL en el servidor (homeParaRol / consentimiento),
+        // nunca de la URL → no es un redirector abierto.
+        const res = construirAterrizajeOAuth(new URL(destino, origen).toString());
         // El state es de un solo uso: se borra con los mismos atributos.
         res.cookies.set(OAUTH_STATE_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
 

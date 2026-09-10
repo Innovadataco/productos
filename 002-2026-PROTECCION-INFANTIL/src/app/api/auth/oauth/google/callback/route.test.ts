@@ -89,8 +89,8 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         const state = firmarState();
         const res = await GET(makeCallbackRequest("code-123", state, state));
 
-        expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe("http://localhost:5005/consentimiento");
+        expect(res.status).toBe(200); // SPEC-617: puente same-site (200), no 302
+        expect(await destinoDelPuente(res)).toBe("http://localhost:5005/consentimiento");
 
         const creado = await prisma.usuario.findUnique({ where: { email: "nuevo.padre@example.com" } });
         expect(creado).not.toBeNull();
@@ -127,8 +127,8 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         const state = firmarState();
         const res = await GET(makeCallbackRequest("code-456", state, state));
 
-        expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe("http://localhost:5005/dashboard/padre");
+        expect(res.status).toBe(200);
+        expect(await destinoDelPuente(res)).toBe("http://localhost:5005/dashboard/padre");
         expect(await prisma.usuario.count()).toBe(1);
 
         const sesiones = await prisma.sesionLog.findMany({ where: { usuarioId: existente.id } });
@@ -142,20 +142,30 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         const state = firmarState();
         const res = await GET(makeCallbackRequest("code-789", state, state));
 
-        expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe("http://localhost:5005/dashboard/admin");
+        expect(res.status).toBe(200);
+        expect(await destinoDelPuente(res)).toBe("http://localhost:5005/dashboard/admin");
         expect(await prisma.usuario.count()).toBe(1);
         // No es creación: sin AuditLog USER_CREATE.
         expect(await prisma.auditLog.count({ where: { accion: "USER_CREATE" } })).toBe(0);
     });
 
-    // ── SPEC-608 (I-371) · CANDADO DE CONDUCTA: la cadena post-Google no pasa por /login ──────────
-    // No basta con «responde 302»: se sigue el salto siguiente por el middleware real, que es donde
-    // vivía el defecto. Con el estado sellado el destino —gateado o no— se sirve directo; sin sellar,
-    // /dashboard/padre rebota a /api/sesion/al-dia y en prod el loop-cap terminaba en /login.
+    // ── SPEC-608/617 (I-371) · CANDADO DE CONDUCTA: la cadena post-Google no pasa por /login ──────
+    // No basta con «entrega el destino»: se sigue el salto siguiente por el middleware real, que es
+    // donde vivía el defecto. SPEC-617: la navegación del puente es same-site, así que el JWT Strict
+    // viaja — acá se modela con el `token` presente en la cookie. Con el estado sellado el destino
+    // —gateado o no— se sirve directo; sin sellar, /dashboard/padre rebota a /api/sesion/al-dia y en
+    // prod el loop-cap terminaba en /login.
     function tokenSellado(): string {
         const call = cookiesSet.mock.calls.find(([n]) => n === "token" || n === "__Host-token");
         return call?.[1] as string;
+    }
+    // SPEC-617 (I-371 · D-131): el callback ya no devuelve un 302 (que perdería el JWT Strict en el
+    // retorno cross-site) sino el PUENTE same-site — una página 200 que navega al destino. El destino
+    // sale del meta-refresh, no de `location`.
+    async function destinoDelPuente(res: Response): Promise<string> {
+        const html = await res.text();
+        const m = html.match(/http-equiv="refresh" content="0; url=([^"]+)"/i);
+        return m ? m[1] : "";
     }
     async function saltoSiguiente(location: string, sesionEstado: string | undefined): Promise<string | null> {
         const cookie = [`token=${tokenSellado()}`, sesionEstado ? `sesion_estado=${sesionEstado}` : ""]
@@ -172,7 +182,7 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         const state = firmarState();
         const res = await GET(makeCallbackRequest("code-land-ex", state, state));
 
-        expect(res.headers.get("location")).toBe("http://localhost:5005/dashboard/padre");
+        expect(await destinoDelPuente(res)).toBe("http://localhost:5005/dashboard/padre");
         // El arreglo: el callback sella sesion_estado también para la cuenta existente.
         const sesionEstado = res.cookies.get("sesion_estado")?.value;
         expect(sesionEstado, "el callback debe sellar sesion_estado para no depender del rebote").toBeTruthy();
@@ -188,7 +198,7 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         const state = firmarState();
         const res = await GET(makeCallbackRequest("code-land-new", state, state));
 
-        expect(res.headers.get("location")).toBe("http://localhost:5005/consentimiento");
+        expect(await destinoDelPuente(res)).toBe("http://localhost:5005/consentimiento");
         const sesionEstado = res.cookies.get("sesion_estado")?.value;
         const destino = await saltoSiguiente("http://localhost:5005/consentimiento", sesionEstado);
         expect(destino, "el nuevo no puede caer al login con la sesión ya creada").not.toBe("/login");

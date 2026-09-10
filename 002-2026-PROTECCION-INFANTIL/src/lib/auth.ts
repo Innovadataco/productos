@@ -7,6 +7,7 @@ import { requireEnv } from "./env";
 import type { RolUsuario } from "@prisma/client";
 import { getParametroSistema } from "./parametros";
 import { SessionLogService } from "./dal/services/session-log";
+import { sessionCookieAttributes } from "./auth/session-cookie-attrs";
 
 const LEGACY_COOKIE_NAME = "token";
 const HOST_COOKIE_NAME = "__Host-token";
@@ -202,17 +203,10 @@ export function requireSchoolAdmin() {
     return () => verifyAuth("SCHOOL_ADMIN");
 }
 
-// Spec 106: fuente única de atributos de la cookie de sesión. La creación (login) y el
-// borrado (logout) DEBEN usar los mismos atributos: un Set-Cookie de borrado sin ellos es
-// rechazado por el navegador (prefijo __Host- exige Secure + Path=/).
-export function sessionCookieAttributes(secure: boolean) {
-    return {
-        httpOnly: true,
-        secure,
-        sameSite: secure ? ("strict" as const) : ("lax" as const),
-        path: "/",
-    };
-}
+// Spec 106: `sessionCookieAttributes` es la fuente única de los atributos de la cookie de sesión
+// (SameSite=Strict en prod, D-131). Se extrajo a `./auth/session-cookie-attrs` (sin Prisma ni env
+// pesado) para poder probarla en aislamiento; se re-exporta acá para no tocar a sus llamadores.
+export { sessionCookieAttributes };
 
 export async function setSessionCookie(request: Request, token: string): Promise<void> {
     const secure = isSecureRequest(request);
