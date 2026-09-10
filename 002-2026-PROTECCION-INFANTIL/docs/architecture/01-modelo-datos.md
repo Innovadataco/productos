@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **115** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **116** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (67)
+### Otros (sin regla de dominio) (68)
 
 #### `AclaracionExpediente`
 
@@ -689,6 +689,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | referidor | Suscripcion | relación (FK) |
 | referida | Suscripcion | relación (FK) |
 | revisadaPor | Usuario | opcional, relación (FK) |
+
+#### `CodigoStepUp`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| usuarioId | String | — |
+| codigoHash | String | — |
+| vigenteHasta | DateTime | — |
+| intentos | Int | — |
+| consumidoEn | DateTime | opcional |
+| creadoEn | DateTime | — |
+| usuario | Usuario | relación (FK) |
 
 #### `ContactoEmergencia`
 
@@ -2198,6 +2211,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | lecturasTexto | LecturaReporte | lista, relación |
 | codigosAccesoSolicitados | CodigoAccesoContenido | lista, relación |
 | codigosAccesoCanjeados | CodigoAccesoContenido | lista, relación |
+| codigosStepUp | CodigoStepUp | lista, relación |
 | hijos | HijoPadre | lista, relación |
 | identificadoresHijoDesvinculados | IdentificadorHijoDesvinculado | lista, relación |
 | notificacionesCirculo | Boolean | — |
@@ -2392,6 +2406,7 @@ erDiagram
     Usuario ||--o{ CodigoAccesoContenido : "canjeadoPor (opcional)"
     Usuario ||--o{ CodigoAccesoContenido : "solicitadoPor"
     Usuario ||--o{ CodigoReferidoUso : "revisadaPor (opcional)"
+    Usuario ||--o{ CodigoStepUp : "usuario"
     Usuario ||--o{ CodigoVerificacion : "usuario (opcional)"
     Usuario ||--o{ ContactoConfianza : "usuario"
     Usuario ||--o{ ContactoEmergencia : "padre"
