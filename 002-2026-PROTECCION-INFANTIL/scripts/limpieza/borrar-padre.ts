@@ -15,6 +15,7 @@ import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
 import { parseArgs, requerirMotivo, registrarAuditoria, log, PRESERVADOS, bloquearSiHayConsentimiento, contarConsentimientos } from "./_common";
 import { borrarReporte } from "./borrar-reporte";
+import { borrarSubarbolExpediente } from "./_borrar-expediente";
 
 export interface ResultadoBorrarPadre {
     usuarioId: string;
@@ -102,21 +103,11 @@ export async function borrarPadre(
     }
 
     return client.$transaction(async (tx) => {
-        // Expedientes del padre: borrar en orden FK-safe antes de borrar el Usuario.
-        // Orden: nullear self-relation → AclaracionExpediente → InformeConsolidado →
-        // PatronExpediente → EventoExpediente → Expediente.
+        // SPEC-615 (I-374): el subárbol del expediente en orden FK-safe, en UN solo lugar
+        // (`borrarSubarbolExpediente`). Antes estaba duplicado acá y en borrar-colegio, y ambas
+        // copias olvidaron InformePadre → la purga abortaba en expediente.deleteMany.
         // borrarReporte (ejecutado antes) ya puso EventoExpediente.reporteId = null.
-        if (expedienteIds.length > 0) {
-            await tx.expediente.updateMany({
-                where: { id: { in: expedienteIds } },
-                data: { expedienteRelacionadoAnteriorId: null },
-            });
-            await tx.aclaracionExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
-            await tx.informeConsolidado.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
-            await tx.patronExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
-            await tx.eventoExpediente.deleteMany({ where: { expedienteId: { in: expedienteIds } } });
-            await tx.expediente.deleteMany({ where: { padreUsuarioId: usuario.id } });
-        }
+        await borrarSubarbolExpediente(tx, expedienteIds);
 
         const cc = await tx.contactoConfianza.deleteMany({ where: { usuarioId: usuario.id } });
         const cv = await tx.codigoVerificacion.deleteMany({ where: { usuarioId: usuario.id } });
