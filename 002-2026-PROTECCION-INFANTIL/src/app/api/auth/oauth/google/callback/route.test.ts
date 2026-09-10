@@ -20,7 +20,9 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
+import { NextRequest } from "next/server";
 import { GET } from "./route";
+import { middleware } from "../../../../../../../middleware";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { resetDatabase } from "@/lib/test-utils";
@@ -145,6 +147,51 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         expect(await prisma.usuario.count()).toBe(1);
         // No es creación: sin AuditLog USER_CREATE.
         expect(await prisma.auditLog.count({ where: { accion: "USER_CREATE" } })).toBe(0);
+    });
+
+    // ── SPEC-608 (I-371) · CANDADO DE CONDUCTA: la cadena post-Google no pasa por /login ──────────
+    // No basta con «responde 302»: se sigue el salto siguiente por el middleware real, que es donde
+    // vivía el defecto. Con el estado sellado el destino —gateado o no— se sirve directo; sin sellar,
+    // /dashboard/padre rebota a /api/sesion/al-dia y en prod el loop-cap terminaba en /login.
+    function tokenSellado(): string {
+        const call = cookiesSet.mock.calls.find(([n]) => n === "token" || n === "__Host-token");
+        return call?.[1] as string;
+    }
+    async function saltoSiguiente(location: string, sesionEstado: string | undefined): Promise<string | null> {
+        const cookie = [`token=${tokenSellado()}`, sesionEstado ? `sesion_estado=${sesionEstado}` : ""]
+            .filter(Boolean)
+            .join("; ");
+        const res = await middleware(new NextRequest(location, { headers: { cookie } }));
+        const loc = res.headers.get("location");
+        return loc ? new URL(loc).pathname : null; // null = servido directo (next())
+    }
+
+    it("SPEC-608: cuenta EXISTENTE → sella sesion_estado y el destino gateado se sirve sin rebote ni /login", async () => {
+        await crearUsuario("PARENT", "landing.existente@example.com");
+        userinfo = { sub: "google-sub-land-ex", email: "landing.existente@example.com", email_verified: true };
+        const state = firmarState();
+        const res = await GET(makeCallbackRequest("code-land-ex", state, state));
+
+        expect(res.headers.get("location")).toBe("http://localhost:5005/dashboard/padre");
+        // El arreglo: el callback sella sesion_estado también para la cuenta existente.
+        const sesionEstado = res.cookies.get("sesion_estado")?.value;
+        expect(sesionEstado, "el callback debe sellar sesion_estado para no depender del rebote").toBeTruthy();
+
+        // Se sigue la cadena: el middleware sobre /dashboard/padre con esas cookies NO rebota ni va a login.
+        const destino = await saltoSiguiente("http://localhost:5005/dashboard/padre", sesionEstado);
+        expect(destino, "la cadena no puede terminar en /login").not.toBe("/login");
+        expect(destino, "con el estado sellado no puede depender del rebote a al-dia").not.toBe("/api/sesion/al-dia");
+    });
+
+    it("SPEC-608: cuenta NUEVA → /consentimiento se sirve directo (ruta de sesión), nunca /login", async () => {
+        userinfo = { sub: "google-sub-land-new", email: "landing.nuevo@example.com", email_verified: true, name: "Nuevo" };
+        const state = firmarState();
+        const res = await GET(makeCallbackRequest("code-land-new", state, state));
+
+        expect(res.headers.get("location")).toBe("http://localhost:5005/consentimiento");
+        const sesionEstado = res.cookies.get("sesion_estado")?.value;
+        const destino = await saltoSiguiente("http://localhost:5005/consentimiento", sesionEstado);
+        expect(destino, "el nuevo no puede caer al login con la sesión ya creada").not.toBe("/login");
     });
 
     it("email_verified=false → 403 y no crea cuenta", async () => {
