@@ -20,6 +20,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/middleware-fail-closed.candado.test.ts",
     // SPEC-588 (vivo con el OAuth 06-09): pantallas de auth con sesión válida mandan al home del rol.
     "src/lib/routing/middleware-auth-screens.candado.test.ts",
+    // SPEC-617 (I-371 · D-131): el puente same-site del callback → el retorno de Google llega al home del rol, no a /login.
+    "src/lib/routing/puente-aterrizaje-oauth.candado.test.ts",
     // SPEC-572 (loop-cap · residual de Datos): urlSinMarcaRebote borra solo `_rv`, preserva el resto.
     "src/lib/routing/marca-rebote-url.test.ts",
     // SPEC-600: con App Router en src/, Next solo autodetecta src/middleware.ts — la raíz queda inerte.
