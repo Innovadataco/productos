@@ -97,7 +97,9 @@ async function seedParametrosPadre() {
         // SPEC-340 (A-68 §3.3-bis): el step-up del texto sensible. Dos relojes:
         // re-tapado (ergonomía, cliente) y umbral de contraseña (SERVIDOR).
         { clave: "padre.texto.retapado_minutos", valor: "10", tipo: TipoParametro.INTEGER, descripcion: "Minutos hasta que el texto revelado se vuelve a tapar solo" },
-        { clave: "padre.texto.stepup_minutos", valor: "30", tipo: TipoParametro.INTEGER, descripcion: "Edad de sesión (min) a partir de la cual revelar el texto exige la contraseña" },
+        { clave: "padre.texto.stepup_minutos", valor: "30", tipo: TipoParametro.INTEGER, descripcion: "Edad de sesión (min) a partir de la cual revelar el texto exige revalidar identidad (código por correo, SPEC-606)" },
+        // SPEC-606: vigencia del código de 6 dígitos del step-up por correo.
+        { clave: "padre.texto.codigo_minutos", valor: "10", tipo: TipoParametro.INTEGER, descripcion: "Minutos de vigencia del código de 6 dígitos del step-up por correo (SPEC-606)" },
         // SPEC-340 (A-68 §3.3): la clasificación EXPLICADA en lenguaje de padre.
         // El admin las edita; el fallback si falta una clave es un texto genérico.
         { clave: "padre.analisis.explicacion.CONTACTO_INSISTENTE", valor: "Encontramos señales de contacto insistente: alguien que escribe una y otra vez aunque no le respondan. Documentarlo ayuda a mostrar el patrón.", tipo: TipoParametro.STRING, descripcion: "Explicación de la categoría para el padre" },
@@ -2035,8 +2037,10 @@ async function seedAccesoCifradoTextos() {
         "{{nombreCanjeador}} ({{rolCanjeador}}) usó tu código de acceso al texto de tu reporte sobre {{identificador}}.";
 
     // SPEC-592: código temporal de step-up por email (cuentas OAuth sin contraseña).
-    // El correo ES el factor de posesión; sin regla activa la solicitud falla
-    // (fail-closed, mismo patrón que auth.codigo_verificacion).
+    // SPEC-606: el código pasa a ser de 6 dígitos con estado en BD y vale para
+    // TODA cuenta (reemplaza al step-up por contraseña). El correo ES el factor
+    // de posesión; sin regla activa la solicitud falla (fail-closed, mismo
+    // patrón que auth.codigo_verificacion).
     const eventoStepupCodigo = "padre.stepup.codigo";
     const asuntoStepupCodigo = "Tu código para ver el texto de tu reporte";
     const cuerpoStepupCodigoEmail =

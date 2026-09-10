@@ -1,10 +1,12 @@
 /**
- * SPEC-592 (2026-09-08) — step-up por código temporal para cuentas OAuth.
+ * SPEC-606 (2026-09-09) — step-up del texto sensible con código de 6 dígitos.
  *
- * El padre que entró con Google no tiene contraseña que revalidar: el 403 de
- * STEP_UP_REQUERIDO trae `metodos: ["codigo_email"]`, el código firmado viaja a
- * SU correo (10 min de vigencia) y al verificarlo se emite el MISMO sello
- * step-up de la vía por contraseña. La autoridad posterior no distingue el camino.
+ * El código viaja al correo del padre (cualquier cuenta PARENT, con o sin
+ * contraseña), en BD vive SOLO su sha-256, vence en `padre.texto.codigo_minutos`
+ * (default 10), aguanta 5 intentos, es de un solo uso y hay un solo código
+ * vigente por usuario con cooldown de reenvío de 60 s. Al verificar se emite
+ * el MISMO sello step-up de siempre: la autoridad posterior no distingue el
+ * camino. Todo queda en AuditLog SIN el código ni el texto.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
@@ -29,19 +31,30 @@ import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { crearParametrosReportes, crearPlataforma, crearPaisCiudad, crearUsuario } from "@/lib/reporte-test-utils";
 import { createToken } from "@/lib/auth";
+import { hashCodigoStepUp, MAX_INTENTOS_CODIGO_STEPUP } from "@/lib/dal/services/stepup-codigo";
 
-const TEXTO = "El texto sensible que el padre OAuth debe poder revelar con el código de su correo.";
+const TEXTO = "El texto sensible que el padre revela con el código de su correo.";
 
-async function crearPadreOAuthConReporte() {
-    const padre = await crearUsuario("PARENT", `oauth-stepup-${Date.now()}@test.local`);
-    await prisma.usuario.update({
-        where: { id: padre.id },
-        data: { googleSub: `google-sub-${Date.now()}` },
+const reqCodigo = () => new Request("http://localhost:5005/api/padre/step-up/codigo", { method: "POST" });
+const reqVerificar = (codigo: string) =>
+    new Request("http://localhost:5005/api/padre/step-up/verificar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo }),
     });
+
+async function crearPadreConReporte(email: string, opciones?: { oauth?: boolean }) {
+    const padre = await crearUsuario("PARENT", email);
+    if (opciones?.oauth) {
+        await prisma.usuario.update({
+            where: { id: padre.id },
+            data: { googleSub: `google-sub-${Date.now()}` },
+        });
+    }
     const plataforma = await prisma.plataforma.findFirstOrThrow();
     const reporte = await crearReporteFixture(prisma, {
         data: {
-            identificador: "300oauthstepup",
+            identificador: `300${Date.now()}`,
             plataformaId: plataforma.id,
             texto: TEXTO,
             fechaIncidente: new Date(),
@@ -50,7 +63,7 @@ async function crearPadreOAuthConReporte() {
             esAnonimo: false,
             usuarioId: padre.id,
             estado: "CLASIFICADO",
-            numeroSeguimiento: `SUO-${Date.now()}`,
+            numeroSeguimiento: `SU-${Date.now()}`,
         },
     });
     return { padre, reporte };
@@ -88,7 +101,24 @@ async function sembrarReglaStepupCodigo() {
     });
 }
 
-describe("step-up por código temporal (SPEC-592)", { timeout: 60_000 }, () => {
+/** Lee el código de 6 dígitos que el motor encoló para el padre. */
+async function leerCodigoDelCorreo(padreId: string): Promise<string> {
+    const notificacion = await prisma.notificacion.findFirstOrThrow({
+        where: { evento: "padre.stepup.codigo", destinatarioUsuarioId: padreId },
+        orderBy: { createdAt: "desc" },
+    });
+    return (notificacion.variables as { codigo: string }).codigo;
+}
+
+/** Retrocede el reloj de creación del código: salta el cooldown de reenvío. */
+async function saltarCooldown(padreId: string) {
+    await prisma.codigoStepUp.updateMany({
+        where: { usuarioId: padreId },
+        data: { creadoEn: new Date(Date.now() - 120_000) },
+    });
+}
+
+describe("step-up con código de 6 dígitos (SPEC-606)", { timeout: 60_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearParametrosReportes();
@@ -104,147 +134,260 @@ describe("step-up por código temporal (SPEC-592)", { timeout: 60_000 }, () => {
         });
     });
 
-    it("cuenta OAuth: el 403 ofrece el método codigo_email (no contraseña)", async () => {
-        const { padre, reporte } = await crearPadreOAuthConReporte();
-        mockToken = await tokenViejo(padre.id);
-
-        const res = await getTexto(
-            new Request(`http://localhost:5005/api/padre/reportes/${reporte.id}/texto`),
-            { params: Promise.resolve({ id: reporte.id }) }
+    it("el 403 del texto ofrece SIEMPRE codigo_email (con o sin contraseña)", async () => {
+        const { padre: padreOAuth, reporte: reporteOAuth } = await crearPadreConReporte(
+            `oauth-606-${Date.now()}@test.local`,
+            { oauth: true }
         );
-        expect(res.status).toBe(403);
-        const data = await res.json();
-        expect(data.error.code).toBe("STEP_UP_REQUERIDO");
-        expect(data.error.metodos).toEqual(["codigo_email"]);
+        const { padre: padreClave, reporte: reporteClave } = await crearPadreConReporte(
+            `clave-606-${Date.now()}@test.local`
+        );
+
+        mockToken = await tokenViejo(padreOAuth.id);
+        const resOAuth = await getTexto(
+            new Request(`http://localhost:5005/api/padre/reportes/${reporteOAuth.id}/texto`),
+            { params: Promise.resolve({ id: reporteOAuth.id }) }
+        );
+        expect(resOAuth.status).toBe(403);
+        expect((await resOAuth.json()).error.metodos).toEqual(["codigo_email"]);
+
+        mockToken = await tokenViejo(padreClave.id);
+        const resClave = await getTexto(
+            new Request(`http://localhost:5005/api/padre/reportes/${reporteClave.id}/texto`),
+            { params: Promise.resolve({ id: reporteClave.id }) }
+        );
+        expect(resClave.status).toBe(403);
+        const dataClave = await resClave.json();
+        expect(dataClave.error.metodos).toEqual(["codigo_email"]);
+        expect(dataClave.error.message).toContain("código");
     });
 
-    it("cuenta con contraseña: el 403 sigue pidiendo password", async () => {
-        const padre = await crearUsuario("PARENT", `pwd-stepup-${Date.now()}@test.local`);
-        const plataforma = await prisma.plataforma.findFirstOrThrow();
-        const reporte = await crearReporteFixture(prisma, {
-            data: {
-                identificador: "300pwdstepup",
-                plataformaId: plataforma.id,
-                texto: TEXTO,
-                fechaIncidente: new Date(),
-                ciudad: "Bogotá",
-                pais: "Colombia",
-                esAnonimo: false,
-                usuarioId: padre.id,
-                estado: "CLASIFICADO",
-                numeroSeguimiento: `SUP-${Date.now()}`,
-            },
-        });
-        mockToken = await tokenViejo(padre.id);
-
-        const res = await getTexto(
-            new Request(`http://localhost:5005/api/padre/reportes/${reporte.id}/texto`),
-            { params: Promise.resolve({ id: reporte.id }) }
-        );
-        expect(res.status).toBe(403);
-        const data = await res.json();
-        expect(data.error.metodos).toEqual(["password"]);
-    });
-
-    it("solicita el código: lo encola por correo y sin regla activa falla (502)", async () => {
-        const { padre } = await crearPadreOAuthConReporte();
+    it("solicitar: envía el correo con 6 dígitos, guarda SOLO el hash y audita sin el código", async () => {
+        const { padre } = await crearPadreConReporte(`sol-606-${Date.now()}@test.local`);
         mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
 
         // Sin regla activa: fail-closed, no promete un correo que no saldrá.
-        const resSinRegla = await postCodigo(new Request("http://localhost:5005/api/padre/step-up/codigo", { method: "POST" }));
+        const resSinRegla = await postCodigo(reqCodigo());
         expect(resSinRegla.status).toBe(502);
+        // La fila creada quedó expirada: el reintento no paga cooldown por un correo que no salió.
+        const resAunSinRegla = await postCodigo(reqCodigo());
+        expect(resAunSinRegla.status).toBe(502);
 
         await sembrarReglaStepupCodigo();
-        const res = await postCodigo(new Request("http://localhost:5005/api/padre/step-up/codigo", { method: "POST" }));
+        const res = await postCodigo(reqCodigo());
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data.enviado).toBe(true);
         expect(data.vigenciaMinutos).toBe(10);
+        expect(data.cooldownSegundos).toBe(60);
+        expect(data.correoEnmascarado).toMatch(/^.•••••@test\.local$/);
 
-        const notificacion = await prisma.notificacion.findFirstOrThrow({
-            where: { evento: "padre.stepup.codigo", destinatarioUsuarioId: padre.id },
+        const codigo = await leerCodigoDelCorreo(padre.id);
+        expect(codigo).toMatch(/^\d{6}$/);
+
+        // En reposo SOLO el hash: jamás el código en claro.
+        const registro = await prisma.codigoStepUp.findFirstOrThrow({ where: { usuarioId: padre.id } });
+        expect(registro.codigoHash).toBe(hashCodigoStepUp(codigo));
+        expect(registro.codigoHash).not.toBe(codigo);
+        expect(registro.intentos).toBe(0);
+        expect(registro.consumidoEn).toBeNull();
+
+        // Auditoría de la solicitud SIN el código (hubo 3 solicitudes: 2 sin
+        // regla + la buena — cada una con SU hash, nunca el plano).
+        const auditorias = await prisma.auditLog.findMany({
+            where: { accion: "STEP_UP_CODIGO_SOLICITADO", usuarioId: padre.id },
         });
-        const variables = notificacion.variables as { codigo?: string; vigenciaMinutos?: number };
-        expect(typeof variables.codigo).toBe("string");
-        expect(variables.codigo!.length).toBeGreaterThan(20);
+        expect(auditorias.length).toBeGreaterThan(0);
+        for (const fila of auditorias) {
+            const meta = fila.metadatos as { codigoHash?: string };
+            expect(meta.codigoHash).toBeDefined();
+            expect(meta.codigoHash).not.toBe(codigo);
+        }
+        expect(
+            auditorias.some((fila) => (fila.metadatos as { codigoHash?: string }).codigoHash === hashCodigoStepUp(codigo))
+        ).toBe(true);
     });
 
-    it("cuenta con contraseña: solicitar código responde 409 (usa la contraseña)", async () => {
-        const padre = await crearUsuario("PARENT", `pwd2-stepup-${Date.now()}@test.local`);
+    it("cuenta CON contraseña también pide el código (deroga el candado solo-OAuth)", async () => {
+        const { padre } = await crearPadreConReporte(`clave2-606-${Date.now()}@test.local`);
         mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
         await sembrarReglaStepupCodigo();
 
-        const res = await postCodigo(new Request("http://localhost:5005/api/padre/step-up/codigo", { method: "POST" }));
-        expect(res.status).toBe(409);
+        const res = await postCodigo(reqCodigo());
+        expect(res.status).toBe(200);
     });
 
-    it("verifica el código: emite el sello y el texto se entrega; código errado → 401", async () => {
-        const { padre, reporte } = await crearPadreOAuthConReporte();
+    it("cooldown de reenvío: el segundo pedido inmediato responde 429 con reintentaEnSegundos", async () => {
+        const { padre } = await crearPadreConReporte(`cool-606-${Date.now()}@test.local`);
         mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
         await sembrarReglaStepupCodigo();
 
-        await postCodigo(new Request("http://localhost:5005/api/padre/step-up/codigo", { method: "POST" }));
-        const notificacion = await prisma.notificacion.findFirstOrThrow({
-            where: { evento: "padre.stepup.codigo", destinatarioUsuarioId: padre.id },
+        expect((await postCodigo(reqCodigo())).status).toBe(200);
+        const res = await postCodigo(reqCodigo());
+        expect(res.status).toBe(429);
+        const data = await res.json();
+        expect(data.error.reintentaEnSegundos).toBeGreaterThan(0);
+        expect(data.error.reintentaEnSegundos).toBeLessThanOrEqual(60);
+        expect(data.error.correoEnmascarado).toContain("@test.local");
+
+        // Pasado el cooldown (reloj retrocedido), el reenvío sí sale.
+        await saltarCooldown(padre.id);
+        expect((await postCodigo(reqCodigo())).status).toBe(200);
+    });
+
+    it("un solo código vigente: un nuevo pedido expira el anterior", async () => {
+        const { padre } = await crearPadreConReporte(`unico-606-${Date.now()}@test.local`);
+        mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
+        await sembrarReglaStepupCodigo();
+
+        await postCodigo(reqCodigo());
+        const codigoViejo = await leerCodigoDelCorreo(padre.id);
+        await saltarCooldown(padre.id);
+        await postCodigo(reqCodigo());
+        const codigoNuevo = await leerCodigoDelCorreo(padre.id);
+        expect(codigoNuevo).not.toBe(codigoViejo);
+
+        // El viejo quedó expirado en BD y ya no verifica (401 contra el vigente).
+        const registros = await prisma.codigoStepUp.findMany({
+            where: { usuarioId: padre.id },
+            orderBy: { creadoEn: "asc" },
         });
-        const codigo = (notificacion.variables as { codigo: string }).codigo;
+        expect(registros).toHaveLength(2);
+        expect(registros[0].vigenteHasta.getTime()).toBeLessThanOrEqual(Date.now());
+        expect(registros[1].vigenteHasta.getTime()).toBeGreaterThan(Date.now());
 
-        // Código errado: 401 y sin sello.
-        const resErrado = await postVerificar(
-            new Request("http://localhost:5005/api/padre/step-up/verificar", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ codigo: "codigo.totalmente.errado" }),
-            })
-        );
-        expect(resErrado.status).toBe(401);
+        expect((await postVerificar(reqVerificar(codigoViejo))).status).toBe(401);
+        expect((await postVerificar(reqVerificar(codigoNuevo))).status).toBe(204);
+    });
 
-        // Código correcto: 204 con Set-Cookie del sello step-up.
-        const resOk = await postVerificar(
-            new Request("http://localhost:5005/api/padre/step-up/verificar", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ codigo }),
-            })
-        );
+    it("rate limit del scope propio (stepup_codigo): superado el máximo responde 429", async () => {
+        // .env.test trae DISABLE_RATE_LIMIT=true: este test lo enciende a propósito
+        // (mismo patrón que oauth/google/route.test.ts).
+        const estabaApagado = process.env.DISABLE_RATE_LIMIT === "true";
+        if (estabaApagado) process.env.DISABLE_RATE_LIMIT = "false";
+        try {
+            const { padre } = await crearPadreConReporte(`rl-606-${Date.now()}@test.local`);
+            mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
+            await sembrarReglaStepupCodigo();
+            await prisma.parametroSistema.create({
+                data: { clave: "ratelimit.stepup_codigo.max_requests", valor: "1", tipo: "INTEGER", categoria: "SYSTEM", descripcion: "t" },
+            });
+
+            expect((await postCodigo(reqCodigo())).status).toBe(200);
+            await saltarCooldown(padre.id); // aisla el rate limit del cooldown
+            const res = await postCodigo(reqCodigo());
+            expect(res.status).toBe(429);
+            expect((await res.json()).error.code).toBe("RATE_LIMITED");
+        } finally {
+            if (estabaApagado) process.env.DISABLE_RATE_LIMIT = "true";
+        }
+    });
+
+    it("verificar correcto → 204 + sello + texto fluye; el código es de UN solo uso", async () => {
+        const { padre, reporte } = await crearPadreConReporte(`ok-606-${Date.now()}@test.local`, { oauth: true });
+        mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
+        await sembrarReglaStepupCodigo();
+
+        await postCodigo(reqCodigo());
+        const codigo = await leerCodigoDelCorreo(padre.id);
+
+        const resOk = await postVerificar(reqVerificar(codigo));
         expect(resOk.status).toBe(204);
         const setCookie = resOk.headers.get("set-cookie") ?? "";
         expect(setCookie).toContain("stepup_sello=");
         mockSello = /stepup_sello=([^;]+)/.exec(setCookie)?.[1];
 
-        // Con sello fresco el texto se entrega (autoridad idéntica a la vía password).
+        // Consumido: un segundo canje del mismo código ya no vale.
+        const registro = await prisma.codigoStepUp.findFirstOrThrow({ where: { usuarioId: padre.id } });
+        expect(registro.consumidoEn).not.toBeNull();
+        expect((await postVerificar(reqVerificar(codigo))).status).toBe(401);
+
+        // Auditoría de la verificación SIN el código.
+        const auditorias = await prisma.auditLog.findMany({
+            where: { accion: "STEP_UP_CODIGO_VERIFICADO", usuarioId: padre.id },
+        });
+        expect(auditorias).toHaveLength(1);
+        const meta = auditorias[0].metadatos as { codigoHash?: string };
+        expect(meta.codigoHash).toBe(hashCodigoStepUp(codigo));
+        expect(meta.codigoHash).not.toBe(codigo);
+
+        // Con sello fresco el texto se entrega (autoridad idéntica a la vía vieja).
         mockToken = await tokenViejo(padre.id);
         const resTexto = await getTexto(
             new Request(`http://localhost:5005/api/padre/reportes/${reporte.id}/texto`),
             { params: Promise.resolve({ id: reporte.id }) }
         );
         expect(resTexto.status).toBe(200);
-        const dataTexto = await resTexto.json();
-        expect(dataTexto.texto).toBe(TEXTO);
+        expect((await resTexto.json()).texto).toBe(TEXTO);
     });
 
-    it("el código firmado para OTRO usuario no vale (no transferible)", async () => {
-        const { padre } = await crearPadreOAuthConReporte();
-        const otro = await crearUsuario("PARENT", `otro-oauth-stepup-${Date.now()}@test.local`);
+    it("incorrecto ×5: cuatro 401 con intentos restantes y el 5º bloquea (429) matando el código", async () => {
+        const { padre } = await crearPadreConReporte(`fallos-606-${Date.now()}@test.local`);
         mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
         await sembrarReglaStepupCodigo();
 
-        await postCodigo(new Request("http://localhost:5005/api/padre/step-up/codigo", { method: "POST" }));
-        const notificacion = await prisma.notificacion.findFirstOrThrow({
-            where: { evento: "padre.stepup.codigo", destinatarioUsuarioId: padre.id },
-        });
-        const codigo = (notificacion.variables as { codigo: string }).codigo;
+        await postCodigo(reqCodigo());
+        const codigo = await leerCodigoDelCorreo(padre.id);
+        const errado = codigo === "000000" ? "000001" : "000000";
 
-        // El OTRO padre (OAuth también) intenta usar el código ajeno.
-        await prisma.usuario.update({ where: { id: otro.id }, data: { googleSub: `otro-sub-${Date.now()}` } });
-        mockToken = await createToken({ sub: otro.id, rol: "PARENT" });
-        const res = await postVerificar(
-            new Request("http://localhost:5005/api/padre/step-up/verificar", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ codigo }),
-            })
-        );
-        expect(res.status).toBe(401);
+        for (let i = 1; i < MAX_INTENTOS_CODIGO_STEPUP; i++) {
+            const res = await postVerificar(reqVerificar(errado));
+            expect(res.status).toBe(401);
+            const data = await res.json();
+            expect(data.error.message).toContain(`${MAX_INTENTOS_CODIGO_STEPUP - i}`);
+        }
+
+        const resBloqueo = await postVerificar(reqVerificar(errado));
+        expect(resBloqueo.status).toBe(429);
+
+        // El código quedó consumido: ni siquiera el código CORRECTO ya vale.
+        const registro = await prisma.codigoStepUp.findFirstOrThrow({ where: { usuarioId: padre.id } });
+        expect(registro.consumidoEn).not.toBeNull();
+        expect(registro.intentos).toBe(MAX_INTENTOS_CODIGO_STEPUP);
+        expect((await postVerificar(reqVerificar(codigo))).status).toBe(401);
+
+        // Cada fallo auditado con motivo, JAMÁS con el código digitado.
+        const auditorias = await prisma.auditLog.findMany({
+            where: { accion: "STEP_UP_CODIGO_FALLIDO", usuarioId: padre.id },
+        });
+        expect(auditorias).toHaveLength(MAX_INTENTOS_CODIGO_STEPUP);
+        const motivos: string[] = [];
+        for (const fila of auditorias) {
+            const meta = fila.metadatos as Record<string, unknown>;
+            expect(Object.values(meta)).not.toContain(errado);
+            expect(Object.values(meta)).not.toContain(codigo);
+            motivos.push(String(meta.motivo));
+        }
+        expect(motivos).toContain("bloqueado");
+        expect(motivos).toContain("incorrecto");
+    });
+
+    it("código vencido → 403", async () => {
+        const { padre } = await crearPadreConReporte(`vence-606-${Date.now()}@test.local`);
+        mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
+        await sembrarReglaStepupCodigo();
+
+        await postCodigo(reqCodigo());
+        const codigo = await leerCodigoDelCorreo(padre.id);
+        await prisma.codigoStepUp.updateMany({
+            where: { usuarioId: padre.id },
+            data: { vigenteHasta: new Date(Date.now() - 1000) },
+        });
+
+        const res = await postVerificar(reqVerificar(codigo));
+        expect(res.status).toBe(403);
+        expect((await res.json()).error.message).toContain("venció");
+    });
+
+    it("verificación exige formato de 6 dígitos (400) y sesión (401)", async () => {
+        const { padre } = await crearPadreConReporte(`formato-606-${Date.now()}@test.local`);
+        mockToken = await createToken({ sub: padre.id, rol: "PARENT" });
+
+        expect((await postVerificar(reqVerificar("abc"))).status).toBe(400);
+        expect((await postVerificar(reqVerificar("12345"))).status).toBe(400);
+
+        mockToken = undefined;
+        expect((await postVerificar(reqVerificar("123456"))).status).toBe(401);
+        expect((await postCodigo(reqCodigo())).status).toBe(401);
     });
 });

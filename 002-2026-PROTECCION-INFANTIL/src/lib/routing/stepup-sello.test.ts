@@ -1,16 +1,14 @@
 /**
- * SPEC-598 — códigos de email con propósito (step-up vs crear contraseña).
+ * SPEC-598 — código de email con propósito «Crear contraseña».
  *
- * Mismo formato y vigencia; el claim `proposito` separa los códigos para que
- * uno emitido para ver un texto no sirva para crear una contraseña (y
- * viceversa). Sin BD.
+ * SPEC-606: el step-up del texto sensible dejó de usar este token firmado
+ * (ahora es un código de 6 dígitos con estado en BD, ver `stepup-codigo.ts`);
+ * este formato queda EXCLUSIVO de «Crear contraseña». Sin BD.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import {
     firmarCodigoCrearPassword,
-    firmarCodigoStepUpEmail,
     leerCodigoCrearPassword,
-    leerCodigoStepUpEmail,
     VIGENCIA_CODIGO_STEPUP_EMAIL_MIN,
 } from "./stepup-sello";
 
@@ -20,17 +18,10 @@ beforeAll(() => {
     process.env.JWT_SECRET ??= SECRET;
 });
 
-describe("códigos de email por propósito (SPEC-598)", () => {
+describe("código de email para «Crear contraseña» (SPEC-598)", () => {
     it("el código de crear contraseña verifica contra su propio propósito", () => {
         const codigo = firmarCodigoCrearPassword("user-1", SECRET);
         expect(leerCodigoCrearPassword(codigo, "user-1", SECRET)).not.toBeNull();
-    });
-
-    it("el código de crear contraseña NO sirve para step-up (y viceversa)", () => {
-        const crear = firmarCodigoCrearPassword("user-1", SECRET);
-        const stepup = firmarCodigoStepUpEmail("user-1", SECRET);
-        expect(leerCodigoStepUpEmail(crear, "user-1", SECRET)).toBeNull();
-        expect(leerCodigoCrearPassword(stepup, "user-1", SECRET)).toBeNull();
     });
 
     it("no es transferible: el código de otro usuario no verifica", () => {
