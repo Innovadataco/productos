@@ -56,6 +56,42 @@ describe("POST /api/auth/recuperar/solicitar", { timeout: 30_000 }, () => {
         expect(data.message).toBe(MENSAJE_EXITO);
     });
 
+    // ── SPEC-609 (reparo 2) · CANDADO DE CONDUCTA: una cuenta de Google no recibe correo inútil ──
+    it("SPEC-609: cuenta de Google sin contraseña → NO genera correo/token y responde «entra con Google»", async () => {
+        const u = await crearUsuario("PARENT", "google.padre@example.com");
+        // Cuenta creada por Google sin clave local: googleSub presente, passwordCreadaEn null.
+        await prisma.usuario.update({ where: { id: u.id }, data: { googleSub: "g-sub-609", passwordCreadaEn: null } });
+
+        const res = await POST(makeRequest({ email: "google.padre@example.com" }, "203.0.113.201"));
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.emailSent).toBe(false);
+        expect(data.message).toContain("entra con Google");
+        expect(data.devToken, "no hay contraseña que restablecer: no se genera token").toBeUndefined();
+        const tokens = await prisma.tokenRecuperacion.count({ where: { email: "google.padre@example.com" } });
+        expect(tokens, "una cuenta de Google no genera token de restablecimiento").toBe(0);
+    });
+
+    it("SPEC-609 (contraprueba): cuenta con contraseña local SÍ genera el restablecimiento", async () => {
+        await crearUsuario("PARENT", "local.padre@example.com"); // googleSub null → tiene clave local
+        const res = await POST(makeRequest({ email: "local.padre@example.com" }, "203.0.113.202"));
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.message).toBe(MENSAJE_EXITO); // mensaje genérico, no «entra con Google»
+        const tokens = await prisma.tokenRecuperacion.count({ where: { email: "local.padre@example.com" } });
+        expect(tokens, "una cuenta con contraseña local sí genera token").toBe(1);
+    });
+
+    it("SPEC-609: el borde de enumeración NO se abre para cuentas que no son de Google (inexistente == con-clave)", async () => {
+        // Inexistente y cuenta-con-contraseña comparten el MISMO mensaje genérico: indistinguibles.
+        const inexistente = await (await POST(makeRequest({ email: "no.existe@example.com" }, "203.0.113.203"))).json();
+        await crearUsuario("PARENT", "con.clave@example.com");
+        const conClave = await (await POST(makeRequest({ email: "con.clave@example.com" }, "203.0.113.204"))).json();
+        expect(inexistente.message).toBe(MENSAJE_EXITO);
+        expect(conClave.message).toBe(MENSAJE_EXITO);
+        expect(conClave.message).not.toContain("Google");
+    });
+
     it("bloquea tras exceder el límite por IP", async () => {
         const ip = "203.0.113.50";
         for (let i = 0; i < 5; i++) {
