@@ -7,7 +7,6 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
-import { CompartirTextoProfesional } from "@/components/modules/padre/CompartirTextoProfesional";
 
 type BadgeVisual = "warning" | "success" | "muted";
 
@@ -218,9 +217,11 @@ export function MisReporteDetalle({ reporteId }: { reporteId: string }) {
                 </GlassCard>
             )}
 
-            {/* SPEC-584 (Fase 3): el padre comparte el texto con un profesional por código temporal. */}
-            <CompartirTextoProfesional reporteId={reporte.id} />
-
+            {/* SPEC-610 (I-372 · D-123): el pase se genera DESDE EL EXPEDIENTE, no
+                desde la pantalla vieja de «Mis reportes». Dejarlo acá creaba dos
+                formas de compartir con alcances distintos (un relato vs el caso) —
+                la confusión que D-129 (llave/pase) deshizo. El generador vive ahora
+                en el expediente; esta pantalla ya no comparte. */}
             <CanalesOficiales />
         </div>
     );
