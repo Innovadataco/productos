@@ -4,9 +4,10 @@
  * Envía a SU correo el código de un solo uso que habilita «Crear contraseña»
  * en cuentas OAuth (Google) sin clave local (SPEC-587: su passwordHash es
  * aleatorio; SPEC-598: passwordCreadaEn == null). El email ya está verificado
- * —vino de Google—; el código confirma posesión del correo. Mismo patrón que
- * el step-up por email (SPEC-592): token firmado con vigencia de 10 minutos,
- * sin tabla de estado en servidor.
+ * —vino de Google—; el código confirma posesión del correo. Token firmado con
+ * vigencia de 10 minutos, sin tabla de estado en servidor. (El step-up del
+ * texto sensible dejó este formato en SPEC-606: allá el código es de 6 dígitos
+ * con estado en BD; acá el token firmado queda — decisión SPEC-598.)
  *
  * Fail-closed: si el motor no tiene regla activa para el evento, se lanza — la
  * ruta responde error y el usuario no queda con la expectativa de un correo

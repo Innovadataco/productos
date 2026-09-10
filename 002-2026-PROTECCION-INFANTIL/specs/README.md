@@ -450,6 +450,7 @@
 | [603](603-sesion-huerfana/spec.md) | SPEC-603 · Sesión huérfana: JWT de usuario eliminado tumba /reportar (P2003) y /api/me en loop | 🟢 IMPLEMENTADO |
 | [607](607-menu-perfil-hijos/spec.md) | SPEC-607 · Menú definitivo del padre + «Mi perfil» unificado + hijos sin documento | 🟢 IMPLEMENTADO |
 | [604](604-expediente-unico/spec.md) | SPEC-604 · Modelo EXPEDIENTE (cimientos): toda cadena del padre nace con expediente | 🟢 IMPLEMENTADO |
+| [606](606-revelar-codigo/spec.md) | SPEC-606 · Revelar texto con código de 6 dígitos por correo (step-up sin contraseña) | 🟢 IMPLEMENTADO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |

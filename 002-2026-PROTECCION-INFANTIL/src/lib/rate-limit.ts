@@ -63,6 +63,11 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     acceso_canje: { windowSeconds: 3600, maxRequests: 10 },
     // SPEC-584 (Fase 3): lecturas con la sesión de visualización (15 min).
     acceso_lectura: { windowSeconds: 60, maxRequests: 30 },
+    // SPEC-606: solicitud del código de step-up (cada una dispara un correo).
+    stepup_codigo: { windowSeconds: 3600, maxRequests: 5 },
+    // SPEC-606: verificación del código (la BD ya impone 5 intentos por código;
+    // esto frena el reintento seriado pidiendo códigos nuevos).
+    stepup_verificar: { windowSeconds: 600, maxRequests: 15 },
 };
 
 export function getScopeDefaults(scope: string): ScopeDefaults {

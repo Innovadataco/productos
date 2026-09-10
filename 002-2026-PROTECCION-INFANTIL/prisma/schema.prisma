@@ -382,6 +382,11 @@ enum AccionAudit {
   // texto del reporte (solicitud por el padre dueño + canje por profesional/padre).
   CODIGO_ACCESO_SOLICITADO
   CODIGO_ACCESO_CANJEADO
+  // SPEC-606: ciclo de vida del código de step-up del texto sensible (6 dígitos
+  // por correo). NUNCA se audita el código ni el texto: solo metadatos.
+  STEP_UP_CODIGO_SOLICITADO
+  STEP_UP_CODIGO_VERIFICADO
+  STEP_UP_CODIGO_FALLIDO
   // SPEC-590: cada cambio de campo del perfil del padre (PATCH /api/padre/perfil)
   // escribe una fila con {campo, anterior→nuevo}. Es la fuente del «Historial de
   // cambios» de «Mi perfil» (decisión CEO 06-09-2026).
@@ -698,6 +703,8 @@ model Usuario {
   lecturasTexto                    LecturaReporte[]
   codigosAccesoSolicitados         CodigoAccesoContenido[]         @relation("CodigosAccesoSolicitados")
   codigosAccesoCanjeados           CodigoAccesoContenido[]         @relation("CodigosAccesoCanjeados")
+  // SPEC-606: códigos de step-up del texto sensible enviados a su correo.
+  codigosStepUp                    CodigoStepUp[]
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   hijos                            HijoPadre[]
   identificadoresHijoDesvinculados IdentificadorHijoDesvinculado[]
@@ -2133,6 +2140,31 @@ model CodigoAccesoContenido {
   lecturas      LecturaReporte[]
 
   @@index([reporteId])
+}
+
+// SPEC-606 · Código de step-up del texto sensible (relevación con correo, sin
+// contraseña): 6 dígitos CSPRNG enviados al correo del padre. En reposo vive
+// SOLO el sha-256 del código — jamás en claro. Un solo código vigente por
+// usuario: una nueva solicitud expira los anteriores sin consumir. Máximo 5
+// intentos de verificación por código (al agotarlos queda consumido); al
+// verificar bien se consume (un solo uso). Vigencia = parámetro
+// `padre.texto.codigo_minutos` (default 10 min).
+model CodigoStepUp {
+  id           String    @id @default(cuid())
+  usuarioId    String
+  // sha-256 del código de 6 dígitos. NUNCA el código en claro.
+  codigoHash   String
+  // Vigencia para VERIFICAR (creadoEn + padre.texto.codigo_minutos).
+  vigenteHasta DateTime  @db.Timestamptz(6)
+  // Intentos fallidos de verificación (tope 5: al llegar, el código se consume).
+  intentos     Int       @default(0)
+  // Marca de consumo (verificado o bloqueado por intentos). Un solo uso.
+  consumidoEn  DateTime? @db.Timestamptz(6)
+  creadoEn     DateTime  @default(now()) @db.Timestamptz(6)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
 
 model SolicitudComite {
