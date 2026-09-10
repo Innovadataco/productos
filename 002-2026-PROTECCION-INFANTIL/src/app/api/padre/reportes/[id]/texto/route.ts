@@ -5,8 +5,9 @@
  * lo incluye (tapar con CSS un texto ya presente en el DOM sería teatro de
  * seguridad — research R-4). La AUTORIDAD es de este servidor:
  *   - sesión joven (< M minutos desde el login, iat del JWT) → entrega,
- *   - o sello de step-up fresco (contraseña revalidada)     → entrega,
- *   - si no → 403 STEP_UP_REQUERIDO y el cliente pide la contraseña.
+ *   - o sello de step-up fresco (identidad revalidada)         → entrega,
+ *   - si no → 403 STEP_UP_REQUERIDO y el cliente pide el código de 6 dígitos
+ *     que llega al correo del padre (SPEC-606; antes contraseña, SPEC-340).
  *
  * El PDF queda EXENTO por diseño: es el entregable deliberado (brief §3.3-bis).
  */
@@ -47,17 +48,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         );
 
         if (!sesionJoven && !sello) {
-            // SPEC-592: las cuentas OAuth (googleSub != null, SPEC-590) no tienen
-            // contraseña que confirmar — su alternativa es el código temporal por
-            // email (POST /api/padre/step-up/codigo + /verificar). El cliente usa
-            // `metodos` para decidir qué UI mostrar.
-            const metodos = usuario.googleSub !== null ? (["codigo_email"] as const) : (["password"] as const);
+            // SPEC-606: el step-up es SIEMPRE el código de 6 dígitos por correo
+            // (POST /api/padre/step-up/codigo + /verificar), para toda cuenta —
+            // la vía por contraseña quedó eliminada (las cuentas Google no
+            // tienen clave que revalidar: el código es su único camino, y se
+            // volvió el camino de todas). El cliente usa `metodos` para decidir
+            // qué UI mostrar.
             return NextResponse.json(
                 {
                     error: {
-                        message: "Por tu seguridad, confirma tu contraseña para ver este texto.",
+                        message: "Por tu seguridad, te enviamos un código a tu correo para ver este texto.",
                         code: "STEP_UP_REQUERIDO",
-                        metodos: [...metodos],
+                        metodos: ["codigo_email"],
                     },
                 },
                 { status: 403 }

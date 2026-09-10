@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { resetRateLimitStore } from "@/lib/rate-limit";
 import { crearUsuario, crearTokenUsuario, crearRequestAutenticado } from "@/lib/reporte-test-utils";
-import { firmarCodigoCrearPassword, firmarCodigoStepUpEmail } from "@/lib/routing/stepup-sello";
+import { firmarCodigoCrearPassword } from "@/lib/routing/stepup-sello";
 
 let mockToken: string | undefined;
 
@@ -44,6 +44,20 @@ function codigoExpirado(usuarioId: string): string {
     const secret = process.env.JWT_SECRET ?? "";
     const iat = Math.floor(Date.now() / 1000) - 20 * 60;
     const payload = { sub: usuarioId, proposito: "crear_password", iat, exp: iat + 10 * 60 };
+    const payloadB64 = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+    const sig = createHmac("sha256", secret).update(payloadB64).digest();
+    return `${payloadB64}.${sig.toString("base64url")}`;
+}
+
+/**
+ * Código de OTRO propósito (mismo formato HMAC, firma válida). SPEC-606: el
+ * step-up del texto ya no usa este formato — «stepup_email» queda como el
+ * propósito ajeno canónico que «Crear contraseña» debe rechazar.
+ */
+function codigoPropositoAjeno(usuarioId: string): string {
+    const secret = process.env.JWT_SECRET ?? "";
+    const iat = Math.floor(Date.now() / 1000);
+    const payload = { sub: usuarioId, proposito: "stepup_email", iat, exp: iat + 10 * 60 };
     const payloadB64 = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
     const sig = createHmac("sha256", secret).update(payloadB64).digest();
     return `${payloadB64}.${sig.toString("base64url")}`;
@@ -120,16 +134,16 @@ describe("POST /api/auth/crear-password (SPEC-598)", { timeout: 60_000 }, () => 
         expect(res.status).toBe(401);
     });
 
-    it("rechaza un código de OTRO propósito (step-up) con 401: los códigos no se reciclan", async () => {
+    it("rechaza un código de OTRO propósito con 401: los códigos no se reciclan", async () => {
         const padre = await crearPadreOAuth("oauth-cruzado@test.local");
         mockToken = await crearTokenUsuario(padre.id, "PARENT");
-        const codigoStepup = firmarCodigoStepUpEmail(padre.id, process.env.JWT_SECRET ?? "");
+        const codigoAjeno = codigoPropositoAjeno(padre.id);
 
         const res = await POST(
             crearRequestAutenticado(
                 "POST",
                 URL_CREAR,
-                { codigo: codigoStepup, passwordNueva: "ClavePropia123", passwordConfirmar: "ClavePropia123" },
+                { codigo: codigoAjeno, passwordNueva: "ClavePropia123", passwordConfirmar: "ClavePropia123" },
                 mockToken
             )
         );
