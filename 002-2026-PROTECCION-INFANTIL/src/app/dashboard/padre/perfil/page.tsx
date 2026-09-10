@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { cuentaSinContrasenaLocal } from "@/lib/auth/cuenta-password";
 import { headers } from "next/headers";
 import { verifyAuth } from "@/lib/auth";
 import { PagosClienteRepository } from "@/lib/dal/repositories/pagos-cliente-repository";
@@ -225,9 +225,17 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
         );
     }
 
-    // SPEC-598: «Crear contraseña» solo aplica a cuentas OAuth (Google) sin
-    // clave local; el resto ya tiene la suya y el enlace sobra acá.
-    const pendienteCrearPassword = Boolean(usuario.googleSub) && !usuario.passwordCreadaEn;
+    // SPEC-609 (reparo 3, revierte SPEC-598 · DECISIÓN DE JELKIN, no defecto): el perfil ya NO ofrece
+    // «Crear contraseña». En su lugar MUESTRA cómo entra la cuenta. Nadie entendía ese botón y no
+    // resolvía nada; si algún día hace falta una segunda puerta, se ofrece con nombre claro y desde un
+    // lugar deliberado, no sin que nadie la pida. NO volver a agregar acá un control que ofrezca crear
+    // contraseña a una cuenta sin contraseña local (hay candado antirregresión de la clase).
+    const soloGoogle = cuentaSinContrasenaLocal(usuario);
+    const comoEntras = soloGoogle
+        ? "Con Google"
+        : usuario.googleSub
+            ? "Con Google o con correo y contraseña"
+            : "Con correo y contraseña";
 
     return (
         <main className="min-h-screen bg-page px-4 py-8 sm:px-6 lg:px-8">
@@ -239,19 +247,10 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
 
                 <Acordeon id="general" abierto={conCobertura} titulo="Información general" subtitulo="Tus datos de contacto y acceso">
                     <PerfilPadreForm />
-                    {pendienteCrearPassword && (
-                        <div className="mt-4" data-testid="crear-password">
-                            <Link
-                                href="/cambiar-password"
-                                className="inline-flex items-center justify-center rounded-xl border border-cielo/50 px-4 py-2 text-sm font-semibold text-cielo transition hover:bg-cielo/10"
-                            >
-                                Crear contraseña
-                            </Link>
-                            <p className="mt-2 text-xs text-muted">
-                                Tu cuenta se creó con Google y todavía no tiene contraseña propia.
-                            </p>
-                        </div>
-                    )}
+                    <div className="mt-4" data-testid="como-entras">
+                        <span className="text-xs font-medium text-muted">Cómo entras</span>
+                        <p className="mt-1 text-sm text-body">{comoEntras}</p>
+                    </div>
                     <div className="mt-6">
                         {/* SPEC-590 (decisión CEO 06-09): historial de cambios del perfil. */}
                         <HistorialCambiosPerfil />

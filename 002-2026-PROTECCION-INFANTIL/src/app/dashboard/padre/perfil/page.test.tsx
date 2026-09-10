@@ -1,13 +1,14 @@
 /**
  * SPEC-607 · «Mi perfil» unificado: UNA página con tres acordeones nativos
- * (Información general · Notificaciones · Suscripción), «Crear contraseña»
- * condicional (SPEC-598) y el acordeón de Suscripción abierto por defecto
- * cuando el padre no tiene cobertura (es el destino del guardián de vigencia).
+ * (Información general · Notificaciones · Suscripción) y el acordeón de Suscripción
+ * abierto por defecto cuando el padre no tiene cobertura (destino del guardián de vigencia).
  *
- * Candado de conducta: mockea auth + servicios de pagos + componentes hijos
- * (sin BD). Muere por mutación: cerrar un acordeón que debe nacer abierto,
- * cambiar un id (rompe los redirects con ancla) o soltar «Crear contraseña»
- * para cuentas con clave propia → rojo.
+ * SPEC-609 (reparo 3, revierte SPEC-598): ya NO hay botón «Crear contraseña». En su lugar, la fila
+ * «Cómo entras» muestra el estado real de la cuenta (Con Google / Con correo y contraseña).
+ *
+ * Candado de conducta: mockea auth + servicios de pagos + componentes hijos (sin BD). Muere por
+ * mutación: cerrar un acordeón que debe nacer abierto, cambiar un id (rompe los redirects con ancla),
+ * o re-ofrecer «Crear contraseña» → rojo (ver también una-cuenta-una-puerta.candado.test.ts).
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -154,19 +155,21 @@ describe("SPEC-607 · /dashboard/padre/perfil — una ventana, tres acordeones",
         expect(screen.getByTestId("esperando-autorizacion")).toBeTruthy();
     });
 
-    it("cuenta OAuth sin clave local: ofrece «Crear contraseña» a /cambiar-password (SPEC-598)", async () => {
+    it("SPEC-609: cuenta de Google sin clave → «Cómo entras: Con Google» y NINGÚN «Crear contraseña»", async () => {
         verifyAuthMock.mockResolvedValue(usuario({ googleSub: "g-123", passwordCreadaEn: null }));
         const jsx = await PadrePerfilPage({ searchParams: SIN_PARAMS });
         render(jsx as React.ReactElement);
 
-        const enlace = screen.getByText("Crear contraseña").closest("a");
-        expect(enlace?.getAttribute("href")).toBe("/cambiar-password");
+        expect(screen.getByTestId("como-entras").textContent).toContain("Con Google");
+        // SPEC-609 revierte SPEC-598: el botón «Crear contraseña» ya no se ofrece.
+        expect(screen.queryByText("Crear contraseña")).toBeNull();
     });
 
-    it("cuenta con clave propia: NO muestra «Crear contraseña»", async () => {
+    it("SPEC-609: cuenta con contraseña local → «Cómo entras: Con correo y contraseña», sin «Crear contraseña»", async () => {
         const jsx = await PadrePerfilPage({ searchParams: SIN_PARAMS });
         render(jsx as React.ReactElement);
 
+        expect(screen.getByTestId("como-entras").textContent).toContain("Con correo y contraseña");
         expect(screen.queryByText("Crear contraseña")).toBeNull();
     });
 

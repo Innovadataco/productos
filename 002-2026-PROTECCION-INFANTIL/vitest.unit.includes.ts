@@ -588,6 +588,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/PerfilPadreForm.test.tsx",
     // SPEC-536 (bandeja admin + permisos AD-06 + simulador anti-abuso AD-14): color crudo por arbol de render (frontera Dev1 #458 = Historial).
     "src/components/modules/crudo-admin-reportes-permisos-simulador.candado.test.ts",
+    // SPEC-609: el área del padre no ofrece crear contraseña (antirregresión de clase, revierte 598).
+    "src/app/dashboard/padre/una-cuenta-una-puerta.candado.test.ts",
     // SPEC-576 (I-358/I-359): resumen de auditoría = lista declarada (nunca el payload); título sin duplicar.
     "src/lib/colegio/confianza-auditoria-resumen.candado.test.ts",
     "src/lib/docs/quitar-titulo-h1.candado.test.ts",

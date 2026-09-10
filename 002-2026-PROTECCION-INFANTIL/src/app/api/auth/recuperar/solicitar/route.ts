@@ -62,6 +62,22 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: MENSAJE_EXITO, emailSent: false }, { status: 200 });
         }
 
+        if (resultado.tipo === "solo_google") {
+            // SPEC-609 (reparo 2): cuenta de Google sin contraseña local — NO se manda correo de
+            // restablecimiento (sería inútil) y se dice lo que pasa. El correo se incluye porque el
+            // usuario acaba de escribirlo; no se revela nada que no haya tecleado. El borde de
+            // enumeración para cuentas que NO son de Google queda cerrado: inexistente y cuenta-con-
+            // contraseña comparten el MENSAJE_EXITO genérico (arriba y abajo), indistinguibles.
+            return NextResponse.json(
+                {
+                    message: `Tu cuenta no tiene contraseña: entra con Google, con el correo ${email}.`,
+                    emailSent: false,
+                    metodo: "google",
+                },
+                { status: 200 }
+            );
+        }
+
         const token = resultado.token;
         let emailSent = false;
         let emailError: string | null = null;
