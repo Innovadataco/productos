@@ -9,6 +9,7 @@ import type { Prisma } from "@prisma/client";
 import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { verifyPassword, hashPassword } from "@/lib/auth";
+import { cuentaSinContrasenaLocal } from "@/lib/auth/cuenta-password";
 import { generarTokenRecuperacion, hashToken, verificarTokenHash } from "@/lib/token-recuperacion";
 import { withUnitOfWork } from "../unit-of-work";
 import { UsuarioRepository } from "../repositories/usuario";
@@ -202,6 +203,14 @@ export class AutenticacionService {
         if (!usuario) {
             // Email no registrado: respuesta idéntica para evitar enumeración.
             return { ok: true, tipo: "sin_usuario" };
+        }
+
+        // SPEC-609 (reparo 2): una cuenta de Google sin contraseña local no tiene qué restablecer.
+        // Mandarle un correo de restablecimiento es inútil; la ruta responde «entra con Google». El
+        // borde de enumeración para cuentas que NO son de Google no se abre: esas siguen con la misma
+        // respuesta genérica que un email inexistente (ver la ruta).
+        if (cuentaSinContrasenaLocal(usuario)) {
+            return { ok: true, tipo: "solo_google" };
         }
 
         const desde = new Date(Date.now() - VENTANA_MS);
