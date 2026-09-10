@@ -9,10 +9,14 @@
  *
  * Para estas cuentas «olvidé mi contraseña» no tiene sentido (no hay contraseña que restablecer) y
  * ofrecerles «crear contraseña» sin que la pidan confunde (reparos 2 y 3 de Jelkin, revierte SPEC-598).
+ *
+ * SPEC-616 (I-375): también es la fuente única en el CLIENTE — el `NavHeader` la usa para no ofrecer
+ * «Crear contraseña» en el menú. El servidor la llama con `passwordCreadaEn: Date`; el cliente, con la
+ * forma serializada (`string`). Por eso el parámetro acepta ambas: el predicado solo mira si es nula.
  */
 export function cuentaSinContrasenaLocal(usuario: {
-    googleSub: string | null;
-    passwordCreadaEn: Date | null;
+    googleSub?: string | null;
+    passwordCreadaEn?: Date | string | null;
 }): boolean {
     return Boolean(usuario.googleSub) && usuario.passwordCreadaEn == null;
 }
