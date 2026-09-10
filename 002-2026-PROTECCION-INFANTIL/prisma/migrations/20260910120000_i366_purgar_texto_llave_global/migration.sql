@@ -7,9 +7,12 @@
 -- (shred parcial e invisible). Jelkin (2026-09-10) decidió borrarlas — esta migración es el
 -- paso final que la 581 planeó («drop DESPUÉS del backfill»).
 --
--- ORDEN OBLIGATORIO: correr ANTES `scripts/i366-verificar-copia-nueva.ts` — verifica que la
--- copia NUEVA (ContenidoReporte) descifra para las 5 filas. Sin ese verde esto es PÉRDIDA
--- DE DATOS, no limpieza. El CEO corre el psql; no se ejecuta por `migrate deploy` a ciegas.
+-- ORDEN OBLIGATORIO (corregido): `deploy-prod.sh` corre `prisma migrate deploy` en cada deploy,
+-- así que ESTA migración se aplica SOLA en el deploy que sigue al merge — NO a mano por psql.
+-- Por eso el pre-flight es un GATE PRE-MERGE: `scripts/i366-verificar-copia-nueva.ts` verde en
+-- las 5 filas CONTRA PRODUCCIÓN *antes* de mergear (el merge dispara el deploy que aplica esto).
+-- Sin ese verde esto es PÉRDIDA DE DATOS, no limpieza. NO MERGEAR hasta el pre-flight en verde.
+-- El `belt` de abajo solo prueba que la fila EXISTA (contenidoId), no que DESCIFRE — eso es el pre-flight.
 
 -- Belt (la compuerta real es el pre-flight): abortar si hay texto viejo sin copia nueva.
 DO $$
