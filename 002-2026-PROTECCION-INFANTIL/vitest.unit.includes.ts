@@ -648,4 +648,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/cita/worker-cableado.candado.test.ts",
     // SPEC-660 (ola 2): marcarTieneReportes — booleano (no conteo), criterio del aviso. Puro, fs-libre.
     "src/lib/dal/services/hijos/tiene-reportes.candado.test.ts",
+    // SPEC-660: gráfico «A quién protejo» — render puro (jsdom, sin base): nunca rojo, hueco=cielo, sin contador de reportantes.
+    "src/components/modules/padre/GraficoProteccion.candado.test.tsx",
 ];
