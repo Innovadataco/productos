@@ -23,6 +23,7 @@ interface FakeModels {
     aclaracionExpediente: { deleteMany: AnyFn };
     informeConsolidado: { deleteMany: AnyFn };
     patronExpediente: { deleteMany: AnyFn };
+    informePadre: { deleteMany: AnyFn };
     usuario: { findUnique: AnyFn; delete: AnyFn };
     auditConsentimiento: { count: AnyFn }; // SPEC-508
     contactoConfianza: { count: AnyFn; deleteMany: AnyFn };
@@ -82,6 +83,7 @@ function makeFakeClient(): { client: PrismaClient; tx: FakeModels } {
         aclaracionExpediente: makeModel(),
         informeConsolidado: makeModel(),
         patronExpediente: makeModel(),
+        informePadre: makeModel(),
         usuario: makeModel(),
         auditConsentimiento: makeModel(), // SPEC-508 · count → 0 por defecto
         contactoConfianza: makeModel(),
@@ -234,10 +236,11 @@ describe("borrarPadre — A-65 · borrado de Expediente antes del Usuario", () =
         expect(expDeleteOrder).toBeLessThan(userDeleteOrder);
     });
 
-    it("confirm: borra AclaracionExpediente, InformeConsolidado, PatronExpediente, EventoExpediente en orden", async () => {
+    it("confirm: borra InformePadre + Aclaracion/Informe/Patron/Evento ANTES del Expediente (I-374)", async () => {
         const { borrarPadre } = await import("./borrar-padre");
         await borrarPadre("padre@test.com", "test", { confirm: true, client });
 
+        const infPadreOrder = tx.informePadre.deleteMany.mock.invocationCallOrder[0];
         const aclOrder = tx.aclaracionExpediente.deleteMany.mock.invocationCallOrder[0];
         const infOrder = tx.informeConsolidado.deleteMany.mock.invocationCallOrder[0];
         const patOrder = tx.patronExpediente.deleteMany.mock.invocationCallOrder[0];
@@ -248,6 +251,9 @@ describe("borrarPadre — A-65 · borrado de Expediente antes del Usuario", () =
         expect(infOrder).toBeLessThan(patOrder);
         expect(patOrder).toBeLessThan(evOrder);
         expect(evOrder).toBeLessThan(expOrder);
+        // SPEC-615 (I-374): InformePadre (FK RESTRICT → Expediente) DEBE caer antes del Expediente.
+        // Era la hija que faltaba y por la que la purga abortó en producción.
+        expect(infPadreOrder).toBeLessThan(expOrder);
     });
 
     it("confirm: sin expedientes, omite la cadena de borrado", async () => {

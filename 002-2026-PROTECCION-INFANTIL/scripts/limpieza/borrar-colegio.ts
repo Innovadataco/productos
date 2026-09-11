@@ -28,6 +28,7 @@ import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
 import { parseArgs, requerirMotivo, registrarAuditoria, log, bloquearSiHayConsentimiento } from "./_common";
 import { borrarReporte } from "./borrar-reporte";
+import { borrarSubarbolExpediente } from "./_borrar-expediente";
 
 export interface ResultadoBorrarColegio {
     colegioId: string;
@@ -205,17 +206,9 @@ export async function borrarColegio(
                 select: { id: true },
             });
             const expColegioIds = expsColegio.map((e) => e.id);
-            if (expColegioIds.length > 0) {
-                await tx.expediente.updateMany({
-                    where: { id: { in: expColegioIds } },
-                    data: { expedienteRelacionadoAnteriorId: null },
-                });
-                await tx.aclaracionExpediente.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
-                await tx.informeConsolidado.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
-                await tx.patronExpediente.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
-                await tx.eventoExpediente.deleteMany({ where: { expedienteId: { in: expColegioIds } } });
-                await tx.expediente.deleteMany({ where: { padreUsuarioId: { in: usuariosColegio } } });
-            }
+            // SPEC-615 (I-374): mismo subárbol FK-safe que borrar-padre, vía el mismo helper
+            // (incluye InformePadre). Antes acá había una copia que también lo olvidaba.
+            await borrarSubarbolExpediente(tx, expColegioIds);
         }
 
         // SPEC-508: no destruir evidencia de consentimiento por el cascade. Si el
