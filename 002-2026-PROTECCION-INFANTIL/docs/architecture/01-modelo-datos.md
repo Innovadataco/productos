@@ -2214,7 +2214,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | codigosStepUp | CodigoStepUp | lista, relación |
 | hijos | HijoPadre | lista, relación |
 | identificadoresHijoDesvinculados | IdentificadorHijoDesvinculado | lista, relación |
-| notificacionesCirculo | Boolean | — |
 | ultimaNotificacionCirculoEn | DateTime | opcional |
 | notificacionesHijos | Boolean | — |
 | ultimaNotificacionHijosEn | DateTime | opcional |

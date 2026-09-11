@@ -138,17 +138,6 @@ describe("notificarHijosSiCorresponde (SPEC-339)", { timeout: 60_000 }, () => {
         expect(enviarMock).toHaveBeenCalledOnce();
     });
 
-    it("INDEPENDENCIA 2: apagar los avisos del CÍRCULO no apaga los del hijo", async () => {
-        const { padre } = await padreConHijo("Indep2");
-        await prisma.usuario.update({
-            where: { id: padre.id },
-            data: { notificacionesCirculo: false },
-        });
-        const reporte = await crearReporte("Indep2");
-        await notificarHijosSiCorresponde(reporte.id);
-        expect(enviarMock).toHaveBeenCalledOnce();
-    });
-
     it("enfriamiento PROPIO: dos reportes seguidos = un solo aviso", async () => {
         await padreConHijo("Seguidos");
         const r1 = await crearReporte("Seguidos");

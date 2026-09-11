@@ -23,7 +23,6 @@ import { DetallePersona } from "./DetallePersona";
 import { EstadoVacio } from "./EstadoVacio";
 import { IlustracionCirculo } from "./IlustracionCirculo";
 import { PanelAgregar, type DatoNuevo } from "./PanelAgregar";
-import { QueRecibes } from "./QueRecibes";
 import { TarjetaPersona } from "./TarjetaPersona";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
@@ -49,7 +48,6 @@ export function CirculoConfianzaClient() {
     const [contactos, setContactos] = useState<Contacto[]>([]);
     const [tope, setTope] = useState(20);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
-    const [avisoCorreo, setAvisoCorreo] = useState(true);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState("");
     const [errorPanel, setErrorPanel] = useState("");
@@ -63,19 +61,14 @@ export function CirculoConfianzaClient() {
 
     const cargar = useCallback(async () => {
         try {
-            const [resLista, resPref, resPlat] = await Promise.all([
+            const [resLista, resPlat] = await Promise.all([
                 fetch("/api/circulo-confianza"),
-                fetch("/api/circulo-confianza/preferencias"),
                 fetch("/api/plataformas"),
             ]);
             if (!resLista.ok) throw new Error("No pudimos cargar tu círculo");
             const lista = await resLista.json();
             setContactos(lista.contactos ?? []);
             if (typeof lista.tope === "number") setTope(lista.tope);
-            if (resPref.ok) {
-                const pref = await resPref.json();
-                setAvisoCorreo(pref.notificacionesCirculo !== false);
-            }
             if (resPlat.ok) {
                 const plat = await resPlat.json();
                 setPlataformas(Array.isArray(plat) ? plat : (plat.plataformas ?? []));
@@ -247,22 +240,6 @@ export function CirculoConfianzaClient() {
             setError(e instanceof Error ? e.message : "No pudimos quitar a esta persona");
         } finally {
             setGuardando(false);
-        }
-    }
-
-    async function cambiarAviso() {
-        const siguiente = !avisoCorreo;
-        setAvisoCorreo(siguiente);
-        try {
-            const res = await fetch("/api/circulo-confianza/preferencias", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ notificacionesCirculo: siguiente }),
-            });
-            if (!res.ok) throw new Error();
-        } catch {
-            setAvisoCorreo(!siguiente);
-            setError("No pudimos guardar tu preferencia de aviso");
         }
     }
 
@@ -451,8 +428,6 @@ export function CirculoConfianzaClient() {
                                     </p>
                                 )}
                             </section>
-
-                            <QueRecibes avisoCorreo={avisoCorreo} onCambiar={cambiarAviso} />
                         </>
                     )}
                 </>

@@ -13,5 +13,4 @@ export {
 export { listarContactos, obtenerDetalleContacto } from "./contactos";
 export { agregarContacto, actualizarContacto, eliminarContacto, verificarUnicidadIdentificador } from "./contactos-mutaciones";
 export { obtenerVistaAgregada } from "./agregado";
-export { toggleNotificacionesCirculo, obtenerPreferenciasCirculo } from "./preferencias";
 export { notificarCambioCirculoSiCorresponde } from "./notificaciones";
