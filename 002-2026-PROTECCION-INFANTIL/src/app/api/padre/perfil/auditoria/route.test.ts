@@ -79,7 +79,9 @@ describe("GET /api/padre/perfil/auditoria (SPEC-590)", { timeout: 30_000 }, () =
         expect(res.status).toBe(200);
         const json = await res.json();
         expect(json.items).toHaveLength(1);
-        expect(json.items[0].campo).toBe("telefono");
+        // SPEC-628: el item ya no expone `campo` (nombre de columna interno).
+        expect(json.items[0].campo).toBeUndefined();
+        expect(json.items[0].tipo).toBe("dato");
         expect(json.items[0].etiqueta).toBe("Teléfono");
         expect(json.items[0].anterior).toBeNull();
         expect(json.items[0].nuevo).toBe("+57 300 111 2233");
@@ -117,12 +119,41 @@ describe("GET /api/padre/perfil/auditoria (SPEC-590)", { timeout: 30_000 }, () =
         const primera = await GET(url("?page=1&pageSize=1"));
         const json1 = await primera.json();
         expect(json1.items).toHaveLength(1);
-        expect(json1.items[0].campo).toBe("email");
+        expect(json1.items[0].etiqueta).toBe("Correo electrónico");
         expect(json1.pagination).toEqual({ page: 1, pageSize: 1, total: 2, totalPages: 2 });
 
         const segunda = await GET(url("?page=2&pageSize=1"));
         const json2 = await segunda.json();
-        expect(json2.items[0].campo).toBe("telefono");
+        expect(json2.items[0].etiqueta).toBe("Teléfono");
+    });
+
+    // SPEC-628: prender/apagar un aviso (ya auditado como
+    // NOTIFICACION_PREFERENCIA_ACTUALIZADA) también aparece en el historial,
+    // resuelto a su frase — nunca la clave técnica del evento.
+    it("incluye los cambios de aviso, resueltos a su frase (sin la clave del evento)", async () => {
+        const padre = await crearUsuario("PARENT");
+        mockToken = await crearTokenUsuario(padre.id, "PARENT");
+
+        await prisma.auditLog.create({
+            data: {
+                accion: "NOTIFICACION_PREFERENCIA_ACTUALIZADA",
+                tipoRecurso: "NotificacionPreferencia",
+                usuarioId: padre.id,
+                valorNuevo: JSON.stringify({ eventoRegla: "reporte.resuelto.EMAIL", habilitado: true }),
+                ipAddress: "127.0.0.1",
+                userAgent: "vitest",
+            },
+        });
+
+        const res = await GET(url());
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.items).toHaveLength(1);
+        expect(json.items[0].tipo).toBe("aviso");
+        expect(json.items[0].etiqueta).toBe("Cuando se resuelva un reporte que hice");
+        expect(json.items[0].estado).toBe("activado");
+        // La clave técnica del evento NUNCA viaja al cliente.
+        expect(JSON.stringify(json.items[0])).not.toContain("reporte.resuelto");
     });
 
     it("rechaza pageSize fuera de rango", async () => {

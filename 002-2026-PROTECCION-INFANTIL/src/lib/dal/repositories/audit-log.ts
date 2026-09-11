@@ -163,23 +163,29 @@ export class AuditLogRepository {
     }
 
     /**
-     * SPEC-590: «Historial de cambios» de «Mi perfil» del padre — los
-     * PERFIL_CAMBIO del PROPIO usuario, del más reciente al más viejo, con
-     * shape [items, total] estándar del repo.
+     * SPEC-590 · «Historial de cambios» de «Mi perfil» del padre, del más
+     * reciente al más viejo, con shape [items, total] estándar del repo.
+     * SPEC-628: incluye TAMBIÉN los cambios de aviso (ya auditados como
+     * NOTIFICACION_PREFERENCIA_ACTUALIZADA) para que prender/apagar un aviso
+     * deje rastro; el `accion` viaja para que la capa de lectura distinga.
      */
     cambiosPerfilPaginados(
         usuarioId: string,
         paginacion: { skip: number; take: number }
-    ): Promise<[Prisma.AuditLogGetPayload<{ select: { id: true; valorAnterior: true; valorNuevo: true; creadoEn: true } }>[], number]> {
+    ): Promise<[Prisma.AuditLogGetPayload<{ select: { id: true; accion: true; valorAnterior: true; valorNuevo: true; creadoEn: true } }>[], number]> {
+        const where = {
+            usuarioId,
+            accion: { in: ["PERFIL_CAMBIO", "NOTIFICACION_PREFERENCIA_ACTUALIZADA"] },
+        } satisfies Prisma.AuditLogWhereInput;
         return Promise.all([
             this.db.auditLog.findMany({
-                where: { accion: "PERFIL_CAMBIO", usuarioId },
+                where,
                 orderBy: { creadoEn: "desc" },
                 skip: paginacion.skip,
                 take: paginacion.take,
-                select: { id: true, valorAnterior: true, valorNuevo: true, creadoEn: true },
+                select: { id: true, accion: true, valorAnterior: true, valorNuevo: true, creadoEn: true },
             }),
-            this.db.auditLog.count({ where: { accion: "PERFIL_CAMBIO", usuarioId } }),
+            this.db.auditLog.count({ where }),
         ]);
     }
 }
