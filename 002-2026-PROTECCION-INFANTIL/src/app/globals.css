@@ -460,7 +460,9 @@
    SPEC-231 (002-PI-131): área del padre usa la familia cielo como acento.
    ========================================================================== */
 /* SPEC-460: el acento del territorio (padre = cielo). */
-.theme-padre { --accent-rgb: var(--cielo-rgb); }
+/* SPEC-632: cielo es medio-claro → el rótulo del Primario va oscuro (papel casi-blanco
+   sobre cielo daba 2.37:1 en claro). El acento (cielo) NO cambia. */
+.theme-padre { --accent-rgb: var(--cielo-rgb); --pi-accent-ink-rgb: var(--pi-ink-oscuro-rgb); }
 
 .theme-padre .text-accent,
 .theme-padre.text-accent {
@@ -562,7 +564,8 @@
    Comparte el acento cielo del padre (Sistema §3.2: «cielo con firma de forma»);
    se diferencia por forma, no por color.
    ========================================================================== */
-.theme-profesional { --accent-rgb: var(--cielo-rgb); }
+/* SPEC-632: comparte el acento cielo del padre → mismo rótulo oscuro del Primario. */
+.theme-profesional { --accent-rgb: var(--cielo-rgb); --pi-accent-ink-rgb: var(--pi-ink-oscuro-rgb); }
 
 .theme-profesional .text-accent,
 .theme-profesional.text-accent {
@@ -646,6 +649,14 @@
     --pi-btn-grano: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     /* Acento por defecto (fallback). SPEC-460 lo sobrescribe por rol en el layout. */
     --pi-accent: var(--accent, rgb(var(--pino-rgb)));
+    /* SPEC-632 · rótulo legible del Primario, DERIVADO del acento por tema (no fijo).
+       Default = papel, que VOLTEA con el tema (blanco en claro / casi-negro en oscuro)
+       y por eso cumple AA sobre pino, ámbar-ink y rubí en los dos temas. Los acentos
+       medio-claros (cielo = padre/profesional) lo fijan a --pi-ink-oscuro-rgb. */
+    --pi-accent-ink-rgb: var(--papel-rgb);
+    /* Rótulo oscuro FIJO (no voltea): cielo es medio-claro en AMBOS temas, así que
+       su rótulo es oscuro en ambos. Medido WCAG: 6.84:1 claro / 8.51:1 oscuro. */
+    --pi-ink-oscuro-rgb: 8 20 38; /* #081426 */
 }
 
 .btn-ds {
@@ -659,7 +670,9 @@
 /* Primario — el único sólido, y el único con firma. */
 .btn-ds--primary {
     background: linear-gradient(135deg, var(--pi-accent), color-mix(in srgb, var(--pi-accent) 72%, rgb(var(--cielo-rgb))));
-    color: rgb(var(--papel-rgb));
+    /* SPEC-632 · el rótulo se DERIVA del acento por tema (antes: papel fijo → 2.37:1
+       sobre cielo en claro). El acento NO se toca; solo el rótulo. */
+    color: rgb(var(--pi-accent-ink-rgb, var(--papel-rgb)));
     box-shadow: 0 6px 20px color-mix(in srgb, var(--pi-accent) 30%, transparent), inset 0 1px 0 rgb(255 255 255 / 0.22);
     overflow: hidden;
 }

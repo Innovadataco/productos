@@ -603,4 +603,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // I-366: el pre-flight de purga compara IGUALDAD vieja↔nueva (no solo legibilidad). Unit puro
     // (decisión con leerNuevo inyectado, sin base) → va acá y no rompe la suite sin base.
     "scripts/i366-verificar-copia-nueva.candado.test.ts",
+    // SPEC-632: contraste AA del Primario del Sistema (rótulo derivado del acento por tema).
+    // Lee globals.css y calcula WCAG en JS → unit puro, sin base.
+    "src/components/ui/primario-contraste.candado.test.ts",
 ];
