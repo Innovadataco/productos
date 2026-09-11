@@ -152,7 +152,7 @@ export function MisReportesCadenas() {
                         </button>
 
                         {expandida && (
-                            <div className="mt-3 space-y-4 border-t border-tinta/10 pt-3 dark:border-papel/10">
+                            <div className="mt-3 space-y-4 border-t border-tinta/10 pt-3 dark:border-tinta/12">
                                 {cadena.eventos.map((ev) => (
                                     <div key={ev.id} className="rounded-xl border border-tinta/10 bg-superficie-2 p-3 dark:border-tinta/12">
                                         <p className="text-xs text-muted">
