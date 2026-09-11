@@ -618,4 +618,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-635: candado de voz de la puerta del profesional (morfología voseo +
     // tuteo + comentario que miente). fs-puro → pasa de integración a unit.
     "src/app/registro-profesional/voz-usted-puerta-profesional.candado.test.ts",
+    // SPEC-627 (D-133): el área del padre no ofrece «Simular reporte» ni wizard de alta.
+    "src/components/modules/padre/sin-simulador-alta-hijo.candado.test.ts",
 ];
