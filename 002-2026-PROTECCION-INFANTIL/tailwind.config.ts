@@ -29,6 +29,14 @@ const config: Config = {
                 rubi: "rgb(var(--rubi-rgb) / <alpha-value>)",
                 papel: "rgb(var(--papel-rgb) / <alpha-value>)",
                 tinta: "rgb(var(--tinta-rgb) / <alpha-value>)",
+                /* SPEC-646 (I-381): superficies OPACAS acotadas para tarjetas. SIN
+                   `<alpha-value>` a propósito — la tinta invierte su papel por tema y
+                   NUNCA es superficie; un token opaco no se apila (no hay alfas que
+                   componer al anidar). La elevación la da el borde hairline, no el
+                   relleno. Medido: `text-muted` (el peor) ≥ 4.5:1 sobre cada nivel en
+                   LOS DOS temas (candado superficie-contraste). */
+                "superficie-1": "rgb(var(--superficie-1-rgb))",
+                "superficie-2": "rgb(var(--superficie-2-rgb))",
                 /* Mapeo legacy: primary = familia cielo, accent = familia pino */
                 primary: {
                     50: "rgb(var(--cielo-rgb) / 0.06)",

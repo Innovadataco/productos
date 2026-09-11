@@ -135,7 +135,7 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
 
     if (error) {
         return (
-            <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+            <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
                 <p className="text-sm text-muted">{error}</p>
             </section>
         );
@@ -143,7 +143,7 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
 
     if (!data) {
         return (
-            <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+            <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
                 <p className="text-sm text-muted">Cargando análisis…</p>
             </section>
         );
@@ -156,7 +156,7 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
 
     return (
         <section
-            className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40"
+            className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12"
             aria-label="Análisis detallado del expediente"
         >
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -208,7 +208,7 @@ export function AnalisisExpediente({ expedienteId }: { expedienteId: string }) {
                     <p className="mt-2 whitespace-pre-wrap text-body">{vigente.texto}</p>
 
                     {vigente.guiaAccion && guiaPasos.length > 0 && (
-                        <div className="mt-4 rounded-xl bg-papel/80 p-3 dark:bg-tinta/60">
+                        <div className="mt-4 rounded-xl border border-tinta/10 bg-superficie-2 p-3 dark:border-tinta/12">
                             <p className="font-medium text-body">{vigente.guiaAccion.tituloEmocional}</p>
                             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-body">
                                 {guiaPasos.map((p) => (

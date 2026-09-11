@@ -75,7 +75,7 @@ export function VerAnalisis({
                 Ver análisis
             </button>
             {abierto && (
-                <div className="mt-2 space-y-3 rounded-xl border border-tinta/10 bg-papel/60 p-3 text-sm dark:border-papel/10 dark:bg-tinta/40">
+                <div className="mt-2 space-y-3 rounded-xl border border-tinta/10 bg-superficie-1 p-3 text-sm dark:border-tinta/12">
                     {/* La misma transición del reporte anónimo (F11). */}
                     <EstadoTransicion enProceso={enProceso} />
 
@@ -104,7 +104,7 @@ export function VerAnalisis({
                             </div>
 
                             {explicacion && (
-                                <div className="rounded-lg bg-papel/80 p-2 dark:bg-tinta/60">
+                                <div className="rounded-lg border border-tinta/10 bg-superficie-2 p-2 dark:border-tinta/12">
                                     <p className="text-xs font-medium uppercase tracking-wide text-subtle">
                                         Qué significa
                                     </p>
