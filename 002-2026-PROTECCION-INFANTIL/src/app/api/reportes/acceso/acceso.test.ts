@@ -15,6 +15,7 @@ import {
     crearRequestAutenticado,
 } from "@/lib/reporte-test-utils";
 import { POST as POST_SOLICITAR } from "@/app/api/padre/expedientes/[id]/solicitar-acceso/route";
+import { GET as GET_ACCESOS } from "@/app/api/padre/expedientes/[id]/accesos/route";
 import { POST as POST_CANJEAR } from "./canjar/route";
 import { GET as GET_VER } from "./ver/route";
 import { GET as GET_DETALLE_ADMIN } from "@/app/api/admin/reportes-revision/[id]/route";
@@ -434,6 +435,66 @@ describe("SPEC-610 · candados del pase (I-372 · gates del CEO)", () => {
         expect(manual?.categoria).toBeNull();
         expect(deReporte?.esManual).toBe(false);
         expect(deReporte?.categoria).toBe("CONTACTO_INSISTENTE");
+    });
+});
+
+describe("SPEC-610 · «quién ha leído el expediente» (/accesos, lado del padre)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        activeToken = null;
+    });
+
+    function requestAccesos(expedienteId: string): Request {
+        return new Request(`http://localhost/api/padre/expedientes/${expedienteId}/accesos`, {
+            headers: { cookie: `token=${activeToken}` },
+        });
+    }
+
+    it("el padre dueño ve quién canjeó su pase, con metadatos y SIN contenido", async () => {
+        const padre = await autenticar("PARENT");
+        const tokenPadre = activeToken;
+        const { expediente } = await crearExpedienteDePrueba(padre.id);
+
+        // Un profesional canjea el pase y LEE el expediente (crea las filas de auditoría).
+        const tokenSesion = await abrirSesionSobre(expediente.id);
+        await GET_VER(requestVer(tokenSesion));
+
+        // De vuelta como el padre dueño.
+        activeToken = tokenPadre;
+        const res = await GET_ACCESOS(requestAccesos(expediente.id), {
+            params: Promise.resolve({ id: expediente.id }),
+        });
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.items).toHaveLength(1);
+        expect(data.items[0].rol).toBe("PROFESIONAL");
+        // Leyó los DOS eventos del expediente.
+        expect(data.items[0].eventosLeidos).toBe(2);
+        // Metadatos, jamás el relato: ni el texto de trabajo ni el original salen por acá.
+        const crudo = JSON.stringify(data);
+        expect(crudo).not.toContain(TEXTO_EVENTO_REPORTE);
+        expect(crudo).not.toContain(TEXTO_EVENTO_MANUAL);
+        expect(crudo).not.toContain(ORIGINAL_EVENTO_REPORTE);
+        expect(crudo).not.toContain(ORIGINAL_EVENTO_MANUAL);
+    });
+
+    // GATE de titularidad: el historial de accesos es de CADA padre sobre SU expediente.
+    // Quitar el `obtenerExpedientePorId(id, user.id)` del endpoint (o dejar de scopar por
+    // titular) haría que un padre viera los accesos del expediente de otro → 200 en vez de 404.
+    it("GATE titularidad: un padre NO ve los accesos del expediente de otro (404)", async () => {
+        const padreDueno = await autenticar("PARENT");
+        const { expediente } = await crearExpedienteDePrueba(padreDueno.id);
+        await abrirSesionSobre(expediente.id); // deja un acceso real en el expediente ajeno
+
+        // Otro padre autenticado pide los accesos del expediente ajeno.
+        await autenticar("PARENT");
+        const res = await GET_ACCESOS(requestAccesos(expediente.id), {
+            params: Promise.resolve({ id: expediente.id }),
+        });
+        expect(res.status).toBe(404);
     });
 });
 

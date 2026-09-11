@@ -62,4 +62,23 @@ export class CodigoAccesoContenidoRepository {
             },
         });
     }
+
+    /**
+     * SPEC-610 (I-372 · D-129) · «Quién ha leído este expediente»: los pases de ESTE
+     * expediente que ya se CANJEARON — quién los canjeó y cuándo, y cuántos eventos se
+     * leyeron con cada uno (`_count.lecturas`). SOLO metadatos: nunca el contenido. El
+     * ámbito lo pone el `expedienteId` (el llamador ya verificó la titularidad del padre).
+     */
+    listarAccesosPorExpediente(expedienteId: string) {
+        return this.db.codigoAccesoContenido.findMany({
+            where: { expedienteId, canjeadoEn: { not: null } },
+            orderBy: { canjeadoEn: "desc" },
+            select: {
+                id: true,
+                canjeadoEn: true,
+                canjeadoPor: { select: { nombre: true, rol: true } },
+                _count: { select: { lecturas: true } },
+            },
+        });
+    }
 }

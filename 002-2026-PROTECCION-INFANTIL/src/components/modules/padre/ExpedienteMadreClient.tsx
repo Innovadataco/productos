@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/Button";
 import { fechaCorta, fechaHoraSinMinutos } from "@/lib/format/fecha";
 import { TextoSensible } from "./TextoSensible";
 import { AgregarEvento } from "./AgregarEvento";
+import { GenerarPase } from "./GenerarPase";
+import { QuienHaLeido } from "./QuienHaLeido";
 import type { EstadoExpediente, EstadoReporte } from "@prisma/client";
 
 type Urgencia = "alta" | "media" | "baja" | "sin_clasificar";
@@ -432,6 +434,16 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                     <b className="text-cielo">Si un menor está en riesgo ahora:</b> Línea 141 del ICBF · CAI Virtual
                     de la Policía · Te Protejo. Este expediente es una señal comunitaria de prevención, no un canal
                     oficial de denuncia.
+                </div>
+            </section>
+
+            {/* ⑥ El pase para tu psicólogo (SPEC-610 · I-372 · D-129): genera el pase que
+                abre este expediente completo y muestra quién lo ha abierto. */}
+            <section aria-labelledby="bloque-pase">
+                <h2 id="bloque-pase" className="mb-3 text-sm font-bold text-body">El pase para tu psicólogo</h2>
+                <GenerarPase expedienteId={expediente.id} />
+                <div className="mt-4">
+                    <QuienHaLeido expedienteId={expediente.id} />
                 </div>
             </section>
         </div>
