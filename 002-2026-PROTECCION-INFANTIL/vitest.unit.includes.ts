@@ -141,6 +141,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/AdminNav.test.tsx",
     // SPEC-512: candado de voz «la cuenta» (identificador/nick → cuenta en padre+público).
     "src/components/modules/voz-cuenta.candado.test.ts",
+    // SPEC-669: candado de clase — el servicio del padre no afirma alcance compartido (ficha propia · D-4).
+    "src/lib/dal/services/hijos/alcance-ficha-propia.candado.test.ts",
     "src/components/modules/AdminAntiAbusoSimulador.test.tsx",
     "src/components/modules/AdminAntiAbusoSimulacion.test.tsx",
     "src/components/modules/AdminReporteDetalle.test.tsx",
