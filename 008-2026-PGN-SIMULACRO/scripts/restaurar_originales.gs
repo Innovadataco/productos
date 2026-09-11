@@ -737,6 +737,7 @@ var PREGUNTAS_ORIGINALES = [
   "El interés superior del niño, niña y adolescente",
   "El principio de obediencia a los padres",
   "El principio de solidaridad familiar",
+  1,
   "El interés superior del NNA es el principio rector del Código de Infancia y Adolescencia. Toda decisión debe considerar su bienestar primero.",
   "Ley 1098/2006 — Art. 8 | Convención sobre los DDRR del Niño",
   "facil"
