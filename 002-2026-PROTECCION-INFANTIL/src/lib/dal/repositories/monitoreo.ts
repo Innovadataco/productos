@@ -68,6 +68,20 @@ export class MonitoreoRepository {
         );
     }
 
+    /**
+     * SPEC-663 / I-396: último HealthProbe EXITOSO (ok=true) de una señal,
+     * cualquier método. Es la marca de la última verificación ACTIVA que salió
+     * bien — para `ollama_smoke` incluye el piggyback (una clasificación real) y
+     * el smoke real (una generación real). Distinto de `ultimosProbesPorSenal`,
+     * que trae el último probe aunque haya fallado.
+     */
+    async ultimoProbeExitosoDe(senal: string): Promise<HealthProbe | null> {
+        return this.db.healthProbe.findFirst({
+            where: { senal, ok: true },
+            orderBy: { creadoEn: "desc" },
+        });
+    }
+
     /** Historial paginado de incidentes, más recientes primero. */
     async incidentesPaginados(
         where: Prisma.IncidenteInfraWhereInput,

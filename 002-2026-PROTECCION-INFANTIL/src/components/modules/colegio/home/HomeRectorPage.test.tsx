@@ -25,7 +25,7 @@ function fixture(parcial: Partial<HomeRector> = {}): HomeRector {
         cobertura: { vigilancia: 0.7, reaccion: 0.5, sinRedes: 3, sinContacto: 5 },
         semaforo: { alertasNuevas: 0, alertas72h: 0 },
         ultimaSenal: new Date(),
-        latidoSistema: new Date(),
+        motorClasificacion: { motorVivo: true, ultimaVerificacionEn: new Date() },
         tendencia: {
             semanal: [{ periodo: "2026-07-27T00:00:00.000Z", reportes: 2 }],
             mensual: [{ periodo: "2026-08-01T00:00:00.000Z", reportes: 4 }],

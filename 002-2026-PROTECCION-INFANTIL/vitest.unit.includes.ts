@@ -82,6 +82,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-612: guarda de credenciales de la semilla de Calidad — PURA (sin base). El candado de
     // idempotencia (con base) vive en src/lib/seed-cuentas-calidad-siembra.candado.test.ts (integración).
     "scripts/lib/credenciales-e2e-calidad.candado.test.ts",
+    // SPEC-671 (I-397): los avisos de coincidencia sobreviven al motor caído (cableado del worker).
+    "scripts/worker-reportes-avisos.test.mjs",
     // SPEC-280 (002-PI-180): constructor puro del resumen del CI, sin BD ni red.
     "scripts/ci/resumen.test.mjs",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
@@ -349,6 +351,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/ai/sandbox.test.ts",
     "src/lib/monitoreo/worker-logger.test.ts",
     "src/lib/monitoreo/tick-vida.test.ts",
+    // SPEC-670 / I-396: el latido del MOTOR (sonda activa), no el del worker (unit, repo falso).
+    "src/lib/monitoreo/latido-motor.candado.test.ts",
     "src/lib/servicios/docker-adapter.test.ts",
     "src/lib/servicios/compose.ratchet.test.ts",
     "src/lib/servicios/tick-vida.ratchet.test.ts",
@@ -594,6 +598,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/crudo-padre-reportes.candado.test.ts",
     // SPEC-541: la fecha de nacimiento del padre es 18-100 anios y no futura.
     "src/lib/padre/fecha-nacimiento-padre.candado.test.ts",
+    // SPEC-663 (I-396): el home del padre expone estadoClasificador tal cual (no inventa la frescura).
+    "src/lib/padre/home-estado-clasificador.candado.test.ts",
     // SPEC-541 (cliente): el input de fecha de nacimiento del perfil acota 18-100.
     "src/components/modules/padre/PerfilPadreForm.test.tsx",
     // SPEC-536 (bandeja admin + permisos AD-06 + simulador anti-abuso AD-14): color crudo por arbol de render (frontera Dev1 #458 = Historial).
@@ -636,4 +642,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/cita/cron-barrido.test.ts",
     // SPEC-657 (I-389): candado de CABLEADO — el barrido de citas tiene quien lo llame + registrado en todos los sitios.
     "src/lib/profesional/cita/worker-cableado.candado.test.ts",
+    // SPEC-660 (ola 2): marcarTieneReportes — booleano (no conteo), criterio del aviso. Puro, fs-libre.
+    "src/lib/dal/services/hijos/tiene-reportes.candado.test.ts",
 ];

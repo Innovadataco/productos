@@ -28,11 +28,22 @@ import { notificarHijosSiCorresponde } from "../src/lib/dal/services/hijos/index
 import { notificarColegioSiCorresponde } from "../src/lib/colegio/alertas.ts";
 import { detectarYRegistrarMatch } from "../src/lib/dal/services/evento-match.ts";
 import { agregarPatronPorReporte } from "../src/lib/colegio/patrones.ts";
+// SPEC-671 (I-397): orquesta los avisos de coincidencia en las DOS rutas (éxito y rescate).
+import { dispararAvisosDeCoincidencia, rescatarYAvisar } from "./worker-reportes-avisos.mjs";
 import { boss, getWorkerParams, drainPending, ensureStarted } from "../src/lib/queue.ts";
 import { guardarReintento } from "../src/lib/reporte-reintentos.ts";
 import { getParametroSistemaValor } from "../src/lib/parametros.ts";
 import { registrarScheduleDigestSemanal } from "./digest-semanal-schedule.mjs";
 import { workerLogger } from "../src/lib/monitoreo/worker-logger.ts";
+
+// SPEC-671 (I-397): los tres avisos de COINCIDENCIA (comparan un identificador, no
+// miran la categoría). Se disparan en la ruta de éxito Y tras un rescate exitoso
+// (motor caído → REVISION_MANUAL, que es un estado visible → el aviso corre).
+const avisosCoincidencia = {
+    circulo: notificarCambioCirculoSiCorresponde,
+    hijos: notificarHijosSiCorresponde,
+    colegio: notificarColegioSiCorresponde,
+};
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -189,7 +200,8 @@ async function start() {
                 console.error(`[WORKER] ERROR reporte=${reporteId} ${msg}`);
                 await guardarReintento({ reporteId, intento, exitoso: false, error: msg });
                 if (esUltimoIntento) {
-                    await llamarFallback(reporteId, msg);
+                    // SPEC-671 (I-397): rescatar Y avisar — el reporte queda visible (REVISION_MANUAL).
+                    await rescatarYAvisar(reporteId, msg, { llamarFallback, avisos: avisosCoincidencia });
                 }
                 throw new Error(msg);
             }
@@ -213,9 +225,10 @@ async function start() {
                     const msg = `HTTP ${res.status}: worker processing failed`;
                     console.error(`[WORKER] ERROR reporte=${reporteId} status=${res.status} latencia=${latencia}ms intento=${intento} error=${body}`);
                     await guardarReintento({ reporteId, intento, exitoso: false, error: msg });
-                    if (esUltimoIntento) {
-                        await llamarFallback(reporteId, msg);
-                    }
+                    // SPEC-671 (I-397): el rescate (y sus avisos) lo hace el `catch` de abajo, UNA
+                    // sola vez — este throw cae ahí. Antes se rescataba también acá, así que el reporte
+                    // se mandaba a fallback dos veces; con los avisos nuevos eso sería un doble aviso.
+                    // El `catch` es el único punto de rescate de lo que ocurre dentro del try.
                     throw new Error(msg);
                 }
 
@@ -223,27 +236,16 @@ async function start() {
 
                 await guardarReintento({ reporteId, intento, exitoso: true, error: undefined });
 
-                notificarCambioCirculoSiCorresponde(reporteId).catch((err) => {
-                    console.error(`[WORKER] Error notificando círculo reporte=${reporteId}:`, err.message);
-                });
-
-                // SPEC-339: mismo mecanismo, presentación de hijo. Errores aislados:
-                // un fallo acá no toca el círculo ni el procesamiento.
-                notificarHijosSiCorresponde(reporteId).catch((err) => {
-                    console.error(`[WORKER] Error notificando hijos reporte=${reporteId}:`, err.message);
-                });
-
-                notificarColegioSiCorresponde(reporteId)
-                    .catch((err) => {
-                        console.error(`[WORKER] Error notificando colegio reporte=${reporteId}:`, err.message);
-                    })
-                    .finally(() => {
-                        // SPEC-142 (F6): la agregación de patrones usa las alertas como
-                        // marcador de idempotencia — corre DESPUÉS del hook de alertas.
-                        agregarPatronPorReporte(reporteId).catch((err) => {
-                            console.error(`[WORKER] Error agregando patrón institucional reporte=${reporteId}:`, err.message);
-                        });
+                // SPEC-671 (I-397): los tres avisos de COINCIDENCIA (círculo, hijos,
+                // colegio) se disparan igual tras un rescate — ver la ruta de fallback.
+                // Acá, en la ruta de éxito, encadenamos además la agregación de patrones
+                // (INFERENCIA, F6: usa las alertas como marcador de idempotencia) DESPUÉS
+                // de las alertas del colegio. La inferencia NO entra al rescate.
+                dispararAvisosDeCoincidencia(reporteId, avisosCoincidencia).finally(() => {
+                    agregarPatronPorReporte(reporteId).catch((err) => {
+                        console.error(`[WORKER] Error agregando patrón institucional reporte=${reporteId}:`, err.message);
                     });
+                });
 
                 // SPEC-139 (F5): post-hook aditivo del match (fail-open, FR-005).
                 detectarYRegistrarMatch(reporteId).catch((err) => {
@@ -267,7 +269,10 @@ async function start() {
                 await guardarReintento({ reporteId, intento, exitoso: false, error: msg });
                 if (esUltimoIntento) {
                     try {
-                        await llamarFallback(reporteId, msg);
+                        // SPEC-671 (I-397): rescatar Y avisar — el reporte queda VISIBLE
+                        // (REVISION_MANUAL) y los tres avisos de coincidencia salen aunque la
+                        // clasificación haya fallado. Único punto de rescate del try.
+                        await rescatarYAvisar(reporteId, msg, { llamarFallback, avisos: avisosCoincidencia });
                     } catch (fallbackErr) {
                         console.error(`[WORKER] ERROR fallback reporte=${reporteId}:`, fallbackErr instanceof Error ? fallbackErr.message : fallbackErr);
                     }

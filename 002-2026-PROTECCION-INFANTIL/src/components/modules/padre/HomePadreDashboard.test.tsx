@@ -34,6 +34,8 @@ const payloadBase: HomePadrePayload = {
         { label: "Reportar", href: "/dashboard/padre/reportar" },
         { label: "Círculo", href: "/dashboard/padre/circulo-confianza" },
     ],
+    // SPEC-663 (I-396): estado del motor de clasificación (contrato con SPEC-660).
+    estadoClasificador: { motorVivo: true, ultimaVerificacionEn: new Date("2026-08-28T09:00:00Z") },
 };
 
 describe("HomePadreDashboard", () => {
@@ -77,6 +79,7 @@ describe("HomePadreDashboard", () => {
                 prioridad: "baja",
             },
             accesos: [{ label: "Círculo", href: "/dashboard/padre/circulo-confianza" }],
+            estadoClasificador: { motorVivo: false, ultimaVerificacionEn: null },
         };
 
         render(<HomePadreDashboard data={vacio} />);

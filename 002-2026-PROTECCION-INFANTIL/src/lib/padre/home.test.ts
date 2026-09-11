@@ -65,6 +65,9 @@ describe("obtenerHomePadre", () => {
         expect(home.timeline).toEqual([]);
         expect(home.sugerencia.accionHref).toBe("/dashboard/padre/circulo-confianza");
         expect(home.accesos.length).toBeGreaterThanOrEqual(3);
+        // SPEC-663 (I-396): sin probes en la BD limpia el motor no tiene señal →
+        // motorVivo false y SIN reloj inventado (ultimaVerificacionEn null).
+        expect(home.estadoClasificador).toEqual({ motorVivo: false, ultimaVerificacionEn: null });
     });
 
     it("calcula resumen y semáforo con contactos y reportes", async () => {
