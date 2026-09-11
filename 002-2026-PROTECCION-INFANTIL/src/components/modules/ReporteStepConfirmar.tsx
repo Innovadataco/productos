@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { formatPlataforma } from "@/lib/plataforma";
 import { fechaHechoLegible } from "@/lib/format/fecha";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 
 type WizardData = {
     identificador: string;
@@ -13,6 +14,9 @@ type WizardData = {
     pais: string;
     fechaIncidente: string;
     horaAproximada: boolean;
+    // SPEC-644: la franja declarada (null = hora exacta). La confirmación muestra lo
+    // que el padre eligió, no una derivación.
+    franja: FranjaAproximada | null;
     edadVictima: string;
     texto: string;
 };
@@ -39,7 +43,7 @@ export function ReporteStepConfirmar({
     // Antes se mostraba el string crudo del `datetime-local` ("2026-08-30T21:15").
     const fechaMostrar = data.fechaIncidente
         // A-70 · G20: día + hora con a.m./p.m., sin minutos.
-        ? fechaHechoLegible(new Date(data.fechaIncidente).toISOString(), data.horaAproximada)
+        ? fechaHechoLegible(new Date(data.fechaIncidente).toISOString(), data.horaAproximada, data.franja)
         : "No especificada";
 
     return (

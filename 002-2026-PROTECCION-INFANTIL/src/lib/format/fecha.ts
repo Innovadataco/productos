@@ -4,7 +4,7 @@
  * Funcionan en cliente y servidor (Node 22 + Intl.DateTimeFormat).
  */
 
-import { ETIQUETA_FRANJA, franjaDeInstante } from "@/lib/reportes/franja-aproximada";
+import { ETIQUETA_FRANJA, franjaDeInstante, type FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 
 const TZ_BOGOTA = "America/Bogota";
 const LOCALE = "es-CO";
@@ -79,15 +79,18 @@ export function fechaHoraSinMinutos(iso: string | null | undefined): string {
 export function fechaHechoLegible(
     iso: string | null | undefined,
     horaAproximada?: boolean | null,
+    franjaPersistida?: FranjaAproximada | null,
 ): string {
     if (horaAproximada) {
         const fecha = formatear(iso, { year: "numeric", month: "short", day: "numeric" });
         if (fecha === "—") return "—";
-        // I-379: la hora representativa (3/9/15/21) es un cálculo INTERNO y NUNCA
-        // se muestra como hora de reloj cuando es aproximada. Se muestra la FRANJA
-        // (derivada del centro, fuente única en franja-aproximada); si por un dato
-        // inesperado no cae en un centro, solo la fecha — jamás una hora.
-        const franja = iso ? franjaDeInstante(iso) : null;
+        // SPEC-644 (I-379): se muestra la FRANJA que el padre DECLARÓ. Fuente: la franja
+        // PERSISTIDA (`franjaPersistida`) — lo que dijo, no una aritmética nuestra. La
+        // derivación del centro (`franjaDeInstante`) queda solo de RESPALDO para filas
+        // legadas sin franja guardada; el día que se mueva un centro, esa derivación
+        // mentiría, pero la franja persistida no. La hora representativa (3/9/15/21) es
+        // un cálculo INTERNO y NUNCA se muestra como hora de reloj.
+        const franja = franjaPersistida ?? (iso ? franjaDeInstante(iso) : null);
         return franja ? `${fecha} · ${ETIQUETA_FRANJA[franja]}` : fecha;
     }
     return fechaHoraSinMinutos(iso);

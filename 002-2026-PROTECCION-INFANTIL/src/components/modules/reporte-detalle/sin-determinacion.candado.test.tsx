@@ -25,6 +25,7 @@ function reporteCon(confianza: number, categoria = "OTRO"): DetalleReporte {
         pais: "Colombia",
         fechaIncidente: "2026-07-10T10:00:00Z",
         horaAproximada: false,
+        franja: null,
         esAnonimo: false,
         numeroSeguimiento: "RPT-558",
         creadoEn: "2026-07-10T12:00:00Z",

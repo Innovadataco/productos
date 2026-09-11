@@ -424,6 +424,93 @@ describe("ReporteWizard", () => {
             expect(boton).toHaveProperty("disabled", true);
         });
 
+        // ─────────────────────────────────────────────────────────────────────
+        // SPEC-644 (I-379) · CANDADO del contrato de entrada: cuando el padre NO
+        // recuerda la hora, el envío DEBE llevar la franja declarada. La ruta
+        // convirtió `franja ⟺ horaAproximada` en un contrato duro (400 + CHECK de
+        // BD); si el formulario mandara `horaAproximada:true` sin `franja`, el
+        // reporte de un padre no entraría el día del deploy (la trampa de I-391).
+        // Se vigila la CONDUCTA en las dos direcciones: que la franja viaje, y que
+        // sin franja NO se pueda siquiera avanzar a enviar.
+        // ─────────────────────────────────────────────────────────────────────
+        it("SPEC-644: «No recuerdo la hora» + franja → el envío lleva horaAproximada:true Y la franja declarada", async () => {
+            const llamadas = mockFetchPadre([HIJO_LAURA]);
+            render(<ReporteWizard modoAutenticado />);
+
+            fireEvent.click(await screen.findByRole("option", { name: /Laura/ }));
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            fireEvent.change(await screen.findByLabelText(/La cuenta/i), { target: { value: "+573001234567" } });
+            await screen.findByRole("option", { name: "WhatsApp" });
+            fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            await screen.findByText("Detalles del incidente");
+            await screen.findByRole("option", { name: "Colombia" });
+            fireEvent.change(screen.getByLabelText(/País/i), { target: { value: "co" } });
+            fireEvent.change(screen.getByRole("combobox", { name: /Ciudad/i }), { target: { value: "Bog" } });
+            fireEvent.click(await screen.findByRole("option", { name: /Bogotá/ }));
+            fireEvent.change(screen.getByLabelText(/Día del incidente/i), { target: { value: "2026-07-10" } });
+            // El camino aproximado: se enciende el modo y se elige la franja (el día
+            // se recuerda aunque el modo limpie la hora, SPEC-438).
+            fireEvent.click(screen.getByLabelText(/No recuerdo la hora/i));
+            fireEvent.change(screen.getByLabelText(/Franja aproximada del incidente/i), { target: { value: "manana" } });
+            fireEvent.change(screen.getByPlaceholderText(/Describe la conducta observada/i), {
+                target: { value: "Le escribió por la mañana insistiendo en fotos." },
+            });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+            await screen.findByText("Revisa y confirma");
+            fireEvent.click(screen.getByRole("checkbox"));
+            fireEvent.click(screen.getByRole("button", { name: /Enviar reporte/i }));
+
+            await waitFor(() => {
+                const alta = llamadas.find((l) => l.url.includes("/api/reportes") && l.method === "POST");
+                expect(alta, "se envió el reporte").toBeTruthy();
+                const cuerpo = alta!.body as { horaAproximada?: boolean; franja?: string };
+                expect(cuerpo.horaAproximada, "la hora estimada viaja marcada").toBe(true);
+                // Sin ESTA franja en el body, el guard de la ruta responde 400 y el
+                // reporte del padre NO entra. El envío tiene que llevarla.
+                expect(cuerpo.franja, "SPEC-644: la franja declarada viaja en el body").toBe("manana");
+            });
+        });
+
+        it("SPEC-644 (contraprueba): «No recuerdo la hora» SIN franja elegida BLOQUEA el avance — imposible enviar aproximada sin franja", async () => {
+            mockFetchPadre([HIJO_LAURA]);
+            render(<ReporteWizard modoAutenticado />);
+
+            fireEvent.click(await screen.findByRole("option", { name: /Laura/ }));
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            fireEvent.change(await screen.findByLabelText(/La cuenta/i), { target: { value: "+573001234567" } });
+            await screen.findByRole("option", { name: "WhatsApp" });
+            fireEvent.change(screen.getByLabelText(/Plataforma/i), { target: { value: "whatsapp" } });
+            fireEvent.click(screen.getByRole("button", { name: /Siguiente/i }));
+
+            await screen.findByText("Detalles del incidente");
+            await screen.findByRole("option", { name: "Colombia" });
+            fireEvent.change(screen.getByLabelText(/País/i), { target: { value: "co" } });
+            fireEvent.change(screen.getByRole("combobox", { name: /Ciudad/i }), { target: { value: "Bog" } });
+            fireEvent.click(await screen.findByRole("option", { name: /Bogotá/ }));
+            fireEvent.change(screen.getByLabelText(/Día del incidente/i), { target: { value: "2026-07-10" } });
+            fireEvent.change(screen.getByPlaceholderText(/Describe la conducta observada/i), {
+                target: { value: "Le escribió insistiendo en fotos; no recuerdo la hora." },
+            });
+            // Modo franja encendido pero SIN elegir franja: el control emite valor
+            // vacío. País/ciudad/texto ya están completos, así que el ÚNICO faltante
+            // es la franja → «Siguiente» bloqueado. No hay forma de llegar a enviar.
+            fireEvent.click(screen.getByLabelText(/No recuerdo la hora/i));
+            expect(
+                screen.getByRole("button", { name: /Siguiente/i }),
+                "sin franja el valor del hecho queda vacío y el paso no avanza"
+            ).toHaveProperty("disabled", true);
+            // Elegir la franja es EXACTAMENTE lo que lo desbloquea.
+            fireEvent.change(screen.getByLabelText(/Franja aproximada del incidente/i), { target: { value: "noche" } });
+            expect(
+                screen.getByRole("button", { name: /Siguiente/i }),
+                "con la franja elegida, el paso ya avanza"
+            ).toHaveProperty("disabled", false);
+        });
+
         it("el anónimo NO tiene paso 0 y el paso 2 SÍ muestra «Edad aproximada del menor» (regresión)", async () => {
             vi.spyOn(global, "fetch").mockImplementation(async (input) => {
                 const url = String(input);

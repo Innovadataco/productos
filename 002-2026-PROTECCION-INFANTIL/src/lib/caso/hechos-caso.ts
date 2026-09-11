@@ -13,11 +13,14 @@
  */
 import { prisma } from "../prisma";
 import { whereReporteAprobado } from "../reportes-acceso";
-import type { AgregadoColegio } from "../expediente/analisis/armar-payload";
-import type { CategoriaConducta } from "@prisma/client";
+import { type AgregadoColegio, FRANJA_MODELO } from "../expediente/analisis/armar-payload";
+import type { CategoriaConducta, FranjaHoraria } from "@prisma/client";
 
 export interface HechoCaso {
     fecha: Date;
+    /** SPEC-644: la franja declarada, persistida (null = hora exacta/legado). El agregado
+     *  por franja la usa tal cual; deriva de la hora solo si no hay. */
+    franjaHoraria: FranjaHoraria | null;
     ciudad: string | null;
     pais: string | null;
     plataforma: string | null;
@@ -106,6 +109,7 @@ export async function cargarCasoConHechos(casoId: string): Promise<CasoConHechos
         orderBy: { fechaIncidente: "asc" },
         select: {
             fechaIncidente: true,
+            franjaHoraria: true,
             ciudad: true,
             pais: true,
             plataforma: { select: { clave: true } },
@@ -116,6 +120,7 @@ export async function cargarCasoConHechos(casoId: string): Promise<CasoConHechos
 
     const hechos: HechoCaso[] = reportes.map((r) => ({
         fecha: r.fechaIncidente,
+        franjaHoraria: r.franjaHoraria,
         ciudad: r.ciudadRel?.nombre ?? r.ciudad,
         pais: r.pais,
         plataforma: r.plataforma.clave,
@@ -130,7 +135,8 @@ export async function cargarCasoConHechos(casoId: string): Promise<CasoConHechos
     const cursoAgregado = curso ?? alerta.tipoSujeto; // sin curso (profesor/acudiente): el tipo de sujeto agrupa
     for (const h of hechos) {
         if (!h.categoria) continue; // sin clasificación no aporta al agregado
-        const franja = franjaBogota(h.fecha);
+        // SPEC-644: la franja DECLARADA (persistida) gana; se deriva solo si no hay.
+        const franja = h.franjaHoraria ? FRANJA_MODELO[h.franjaHoraria] : franjaBogota(h.fecha);
         const clave = `${cursoAgregado}|${h.plataforma ?? "?"}|${franja}|${h.categoria}`;
         const previo = conteo.get(clave);
         if (previo) {

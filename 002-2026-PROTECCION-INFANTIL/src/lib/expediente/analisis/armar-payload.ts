@@ -12,7 +12,7 @@
  * El módulo colegio (C3) importa `armarPayloadColegio` y llama al mismo ejecutor;
  * cero código nuevo de motor cuando llegue.
  */
-import type { AlcanceAnalisis, CategoriaConducta } from "@prisma/client";
+import type { AlcanceAnalisis, CategoriaConducta, FranjaHoraria } from "@prisma/client";
 
 export interface HechoPadre {
     fecha: Date;
@@ -23,6 +23,13 @@ export interface HechoPadre {
      * análisis con el mismo peso que una que alguien recordaba de verdad.
      */
     horaAproximada: boolean;
+    /**
+     * SPEC-644 (I-379): la franja que el padre DECLARÓ, persistida. Cuando existe, el
+     * agregado de franja la usa TAL CUAL en vez de re-derivarla del centro guardado
+     * (que hoy coincide pero mentiría el día que se mueva un centro). null = hora exacta
+     * o fila legada → el agregado deriva de la hora real (franjaDe).
+     */
+    franjaHoraria: FranjaHoraria | null;
     ciudad: string | null;
     pais: string | null;
     plataforma: string | null;
@@ -88,6 +95,25 @@ function franjaDe(fecha: Date): string {
     return "18-24";
 }
 
+/** SPEC-644: la franja PERSISTIDA (enum) → el formato del modelo. DEBE coincidir con los
+ *  bloques de `franjaDe`: madrugada 0-6, mañana 6-12, tarde 12-18, noche 18-24. */
+export const FRANJA_MODELO: Record<FranjaHoraria, string> = {
+    MADRUGADA: "0-6",
+    MANANA: "6-12",
+    TARDE: "12-18",
+    NOCHE: "18-24",
+};
+
+/**
+ * La franja del hecho PARA EL MODELO: la DECLARADA (persistida) si existe; si no, la
+ * derivada de la hora (real en los exactos, respaldo en filas legadas). Cierra 626-p2:
+ * cuando el padre YA dijo la franja, NO se re-deriva del centro fabricado — así un cambio
+ * de centro no le mueve la franja a un hecho ya guardado del lado del análisis tampoco.
+ */
+function franjaDelHecho(h: { fecha: Date; franjaHoraria: FranjaHoraria | null }): string {
+    return h.franjaHoraria ? FRANJA_MODELO[h.franjaHoraria] : franjaDe(h.fecha);
+}
+
 /** El primero de una serie ordenada `[valor, cantidad]` DESC por cantidad. null si empate en 0. */
 function dominante<T>(pares: Array<[T, number]>): T | null {
     if (!pares.length) return null;
@@ -107,7 +133,9 @@ export function armarPayloadPadre(input: {
 
     for (const h of hechos) {
         if (h.categoria) catCount.set(h.categoria, (catCount.get(h.categoria) ?? 0) + 1);
-        franjaCount.set(franjaDe(h.fecha), (franjaCount.get(franjaDe(h.fecha)) ?? 0) + 1);
+        // SPEC-644: la franja DECLARADA (persistida) gana; se deriva solo si no hay.
+        const franja = franjaDelHecho(h);
+        franjaCount.set(franja, (franjaCount.get(franja) ?? 0) + 1);
         if (h.ciudad) ciudadCount.set(h.ciudad, (ciudadCount.get(h.ciudad) ?? 0) + 1);
     }
 

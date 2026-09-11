@@ -4,6 +4,7 @@
  * `armado.ts` y las consultas en `index.ts`.
  */
 import type { CategoriaConducta, EstadoExpediente, EstadoReporte, Prisma } from "@prisma/client";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 
 export type UrgenciaExpediente = "alta" | "media" | "baja" | "sin_clasificar";
 
@@ -41,6 +42,9 @@ export interface TimelineItemDto {
      * hora exacta — el padre dijo «no recuerdo la hora» y el centro de la franja
      * no es un dato. Viaja junto a `fecha` para que ninguna superficie la invente. */
     horaAproximada: boolean;
+    /** SPEC-644: la franja PERSISTIDA que el padre declaró (null = hora exacta o fila
+     * legada sin franja guardada). La UI la muestra directo; NO se re-deriva del centro. */
+    franja: FranjaAproximada | null;
     esPropio: boolean;
     categoriaLabel: string | null;
     /** Severidad de la categoría del ítem (color del punto); null sin clasificar. */
@@ -62,6 +66,8 @@ export interface EventoEvidenciaDto {
     fecha: Date;
     /** Hora aproximada del hecho (SPEC-653): la UI honra la franja, no inventa hora. */
     horaAproximada: boolean;
+    /** SPEC-644: la franja persistida (null = hora exacta o legado sin franja). */
+    franja: FranjaAproximada | null;
     categoriaLabel: string | null;
     /** Severidad de la categoría del evento (color del chip); null sin clasificar. */
     nivel: "alta" | "media" | "baja" | null;
@@ -147,6 +153,7 @@ export type ReportePropioRow = Prisma.ReporteGetPayload<{
         identificador: true;
         fechaIncidente: true;
         horaAproximada: true;
+        franjaHoraria: true;
         creadoEn: true;
         estado: true;
         hijoId: true;
@@ -165,6 +172,7 @@ export type ReporteAjenoRow = Prisma.ReporteGetPayload<{
         identificador: true;
         fechaIncidente: true;
         horaAproximada: true;
+        franjaHoraria: true;
         creadoEn: true;
         usuarioId: true;
         esAnonimo: true;
@@ -179,6 +187,7 @@ export const SELECT_PROPIO = {
     identificador: true,
     fechaIncidente: true,
     horaAproximada: true,
+    franjaHoraria: true,
     creadoEn: true,
     estado: true,
     hijoId: true,
@@ -195,6 +204,7 @@ export const SELECT_AJENO = {
     identificador: true,
     fechaIncidente: true,
     horaAproximada: true,
+    franjaHoraria: true,
     creadoEn: true,
     usuarioId: true,
     esAnonimo: true,

@@ -605,13 +605,32 @@ describe("POST /api/reportes — vigencia del padre (SPEC-119)", () => {
     });
 
     it("SPEC-438: una hora ESTIMADA queda marcada como aproximada en la base", async () => {
+        // SPEC-644: una hora estimada YA no viaja sola — trae la franja DECLARADA.
+        // El contrato es franja presente ⟺ horaAproximada (lo sostiene el CHECK de BD),
+        // así que la franja acompaña a la marca. 14:30Z = 09:30 Bogotá → «mañana».
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
             ...reporteValido,
             horaAproximada: true,
+            franja: "manana",
         });
         expect((await POST(req)).status).toBe(201);
         const r = await prisma.reporte.findFirst({ orderBy: { creadoEn: "desc" } });
         expect(r?.horaAproximada, "sin la marca, una hora estimada se lee como precisa").toBe(true);
+        // SPEC-644: la franja declarada queda PERSISTIDA como enum, no re-derivada del centro.
+        expect(r?.franjaHoraria, "SPEC-644: la franja declarada se persiste tal cual").toBe("MANANA");
+    });
+
+    it("SPEC-644: una hora estimada SIN franja se rechaza (400) — el borde honra el CHECK", async () => {
+        // El invariante franjaHoraria ⟺ horaAproximada vive en un CHECK de BD; el borde
+        // lo valida antes con un 400 limpio en vez de dejar caer el 500 del constraint.
+        // (Contrato inverso del test de arriba: la marca sin franja es incoherente.)
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/reportes", {
+            ...reporteValido,
+            horaAproximada: true,
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        expect((await res.json()).error?.campo, "el cliente puede resaltar la franja").toBe("franja");
     });
 
     it("SPEC-438: una hora EXACTA no queda marcada como aproximada", async () => {

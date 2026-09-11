@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CategoriaConducta, EstadoReporte, AccionAudit, MotivoBajaReporte } from "@prisma/client";
 import { sugerirDominioCorreo } from "./email-typo";
+import { FRANJAS } from "./reportes/franja-aproximada";
 
 const motivosBaja = Object.values(MotivoBajaReporte) as [string, ...string[]];
 export const darDeBajaReporteSchema = z.object({
@@ -54,6 +55,14 @@ export const crearReporteSchema = z.object({
      * necesita poder distinguir una hora precisa de una estimada.
      */
     horaAproximada: z.boolean().optional(),
+    /**
+     * SPEC-644 (I-379/I-388): la FRANJA que el reportante declaró cuando eligió
+     * «no recuerdo la hora». Se persiste tal cual (no se deriva del centro). Debe
+     * ser coherente con `horaAproximada` (presente ⟺ true); la ruta lo valida
+     * antes de escribir y el CHECK de BD lo respalda. Que la lista quede
+     * desincronizada con `FranjaAproximada` lo caza que ésta la deriva.
+     */
+    franja: z.enum(FRANJAS).optional(),
     ciudad: z.string().min(1).max(100),
     pais: z.string().min(1).max(100),
     paisId: z.string().optional(),

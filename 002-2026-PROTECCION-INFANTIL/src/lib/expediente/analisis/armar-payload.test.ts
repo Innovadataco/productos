@@ -22,7 +22,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         {
             // 2026-08-01 22:30 Bogotá
             fecha: new Date("2026-08-02T03:30:00Z"),
-            horaAproximada: false,
+            horaAproximada: false, franjaHoraria: null,
             ciudad: "Riohacha",
             pais: "CO",
             plataforma: "whatsapp",
@@ -32,7 +32,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         {
             // 2026-08-15 21:15 Bogotá
             fecha: new Date("2026-08-16T02:15:00Z"),
-            horaAproximada: false,
+            horaAproximada: false, franjaHoraria: null,
             ciudad: "Riohacha",
             pais: "CO",
             plataforma: "whatsapp",
@@ -42,7 +42,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         {
             // 2026-08-20 09:00 Bogotá
             fecha: new Date("2026-08-20T14:00:00Z"),
-            horaAproximada: false,
+            horaAproximada: false, franjaHoraria: null,
             ciudad: "Valledupar",
             pais: "CO",
             plataforma: "instagram",
@@ -58,7 +58,7 @@ describe("armarPayload · PADRE_COMPLETO", () => {
             hechos: [
                 {
                     fecha,
-                    horaAproximada: false,
+                    horaAproximada: false, franjaHoraria: null,
                     ciudad: "Riohacha",
                     pais: "CO",
                     plataforma: "whatsapp",
@@ -96,6 +96,29 @@ describe("armarPayload · PADRE_COMPLETO", () => {
         // Uno por uno, para que un empate de conteos no pueda tapar un error:
         // el dominante del conjunto podría acertar por casualidad.
         expect(hechos.map((h) => franjaDeUnHecho(h.fecha))).toEqual(["18-24", "18-24", "6-12"]);
+    });
+
+    it("SPEC-644 · el agregado usa la franja PERSISTIDA, no la derivada del centro", () => {
+        // Hecho aproximado cuya hora (14:00 UTC = 09:00 Bogotá) DERIVARÍA «6-12», pero el
+        // padre DECLARÓ noche. El agregado tiene que reportar la franja declarada, no la
+        // aritmética del centro fabricado. Muere si armar-payload vuelve a derivar (626-p2).
+        const p = armarPayloadPadre({
+            hechos: [
+                {
+                    fecha: new Date("2026-08-20T14:00:00Z"), // franjaDe → "6-12"
+                    horaAproximada: true,
+                    franjaHoraria: "NOCHE",
+                    ciudad: "Riohacha",
+                    pais: "CO",
+                    plataforma: "whatsapp",
+                    categoria: "CONTACTO_INSISTENTE" as CategoriaConducta,
+                    edadReportada: 12,
+                },
+            ],
+            hijoCruzado: null,
+        });
+        expect(p.franjaHorariaDominante).toBe("18-24");
+        expect(p.franjaHorariaDominante, "no debe re-derivar del centro fabricado").not.toBe("6-12");
     });
 
     it("SPEC-431 · los bordes del día caen donde deben", () => {

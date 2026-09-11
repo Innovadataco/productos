@@ -1,3 +1,5 @@
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
+
 export type DetalleReporte = {
     id: string;
     identificador: string;
@@ -8,6 +10,9 @@ export type DetalleReporte = {
     pais: string;
     fechaIncidente: string;
     horaAproximada: boolean;
+    /** SPEC-644: la franja DECLARADA (persistida); el detalle la usa en vez de derivarla
+     *  de la hora. null = hora exacta o fila legada → `fechaHechoLegible` deriva. */
+    franja: FranjaAproximada | null;
     esAnonimo: boolean;
     numeroSeguimiento: string;
     creadoEn: string;

@@ -7,7 +7,9 @@ import { formatCategoria } from "../../../labels";
 import { formatPlataforma } from "../../../plataforma";
 import { fechaISO } from "../../../format/fecha";
 import { SEVERIDAD_CATEGORIA } from "../../../riesgo-consulta";
-import type { CategoriaConducta, EstadoExpediente } from "@prisma/client";
+import { ENUM_A_FRANJA } from "../../../reportes/franja-enum";
+import type { CategoriaConducta, EstadoExpediente, FranjaHoraria } from "@prisma/client";
+import type { FranjaAproximada } from "../../../reportes/franja-aproximada";
 import {
     ESTADOS_EN_PROCESO,
     ESTADOS_FINALES,
@@ -108,6 +110,12 @@ export function resumenHijo(hijo: { nombre: string; apellidos: string; anioNacim
 /** Línea de tiempo unificada: cada evento propio es un ítem («tú»); los ajenos
  * se agrupan por (día Bogotá, categoría) como «N familias más» — nunca texto,
  * nunca autor. Orden cronológico descendente (lo último arriba, como el mockup). */
+/** SPEC-644: el enum persistido → franja de dominio para el DTO. La lectura muestra la
+ *  franja GUARDADA; la derivación del centro vive solo como respaldo en `fechaHechoLegible`. */
+export function franjaDom(fh: FranjaHoraria | null): FranjaAproximada | null {
+    return fh ? ENUM_A_FRANJA[fh] : null;
+}
+
 export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoRow[]): TimelineItemDto[] {
     const primerPropioId = propios[0]?.id ?? null; // propios vienen creadoEn asc
     const items: TimelineItemDto[] = propios.map((r) => {
@@ -116,6 +124,7 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
         return {
             fecha: r.fechaIncidente,
             horaAproximada: r.horaAproximada,
+            franja: franjaDom(r.franjaHoraria),
             esPropio: true,
             categoriaLabel: categoria ? formatCategoria(categoria) : null,
             nivel: categoria ? nivelDeCategoria(categoria) : null,
@@ -127,7 +136,7 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
         };
     });
 
-    const grupos = new Map<string, { fecha: Date; horaAproximada: boolean; categoria: CategoriaConducta | null; usuarios: Set<string>; anonimos: number; ciudades: Set<string> }>();
+    const grupos = new Map<string, { fecha: Date; horaAproximada: boolean; franja: FranjaAproximada | null; categoria: CategoriaConducta | null; usuarios: Set<string>; anonimos: number; ciudades: Set<string> }>();
     for (const r of ajenos) {
         const dia = fechaISO(r.fechaIncidente.toISOString());
         const categoria = r.clasificacion?.categoria ?? null;
@@ -135,6 +144,7 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
         const grupo = grupos.get(clave) ?? {
             fecha: r.fechaIncidente,
             horaAproximada: r.horaAproximada,
+            franja: franjaDom(r.franjaHoraria),
             categoria,
             usuarios: new Set<string>(),
             anonimos: 0,
@@ -145,6 +155,7 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
         if (r.fechaIncidente > grupo.fecha) {
             grupo.fecha = r.fechaIncidente;
             grupo.horaAproximada = r.horaAproximada;
+            grupo.franja = franjaDom(r.franjaHoraria);
         }
         if (r.usuarioId) grupo.usuarios.add(r.usuarioId);
         else grupo.anonimos += 1;
@@ -156,6 +167,7 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
         items.push({
             fecha: g.fecha,
             horaAproximada: g.horaAproximada,
+            franja: g.franja,
             esPropio: false,
             categoriaLabel: g.categoria ? formatCategoria(g.categoria) : null,
             nivel: g.categoria ? nivelDeCategoria(g.categoria) : null,

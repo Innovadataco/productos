@@ -10,6 +10,8 @@ import type { EstadoReporte, Prisma } from "@prisma/client";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { prisma } from "@/lib/prisma";
 import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
+import { FRANJA_A_ENUM } from "@/lib/reportes/franja-enum";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 import { ReporteRepository } from "../repositories/reporte";
 import { IdentificadorReportadoRepository } from "../repositories/identificador-reportado";
 import { PlataformaRepository } from "../repositories/plataforma";
@@ -28,6 +30,10 @@ export interface CrearReporteInput {
     fechaIncidente: string;
     /** SPEC-438: la hora la estimó el reportante (eligió franja). */
     horaAproximada?: boolean | undefined;
+    /** SPEC-644: la franja que el padre DECLARÓ (cuando horaAproximada). Se persiste
+     *  tal cual; NO se reconstruye del centro guardado. Coherente con horaAproximada
+     *  (CHECK en BD: franjaHoraria presente ⟺ horaAproximada). */
+    franja?: FranjaAproximada | undefined;
     ciudad: string;
     pais: string;
     paisId?: string | undefined;
@@ -139,6 +145,13 @@ export class ReporteCreationService {
                 plataformaId: input.plataformaId,
                 fechaIncidente: new Date(input.fechaIncidente),
                 horaAproximada: input.horaAproximada ?? false,
+                // SPEC-644: la franja declarada, persistida como enum. Hora exacta → se OMITE la
+                // clave (spread condicional, no `null` ni `undefined`): Prisma no la nombra en el
+                // INSERT y la fila cae al default NULL igual — resiliente si el esquema aún no tiene
+                // la columna (ventana de deploy I-391) y sin ensuciar el INSERT de los exactos.
+                // (`: undefined` explícito no compila bajo exactOptionalPropertyTypes.) El CHECK de BD
+                // exige franjaHoraria!=null ⟺ horaAproximada; la ruta ya lo validó.
+                ...(input.franja ? { franjaHoraria: FRANJA_A_ENUM[input.franja] } : {}),
                 ciudad: input.ciudad,
                 pais: input.pais,
                 paisId: input.ciudadId === "otra" ? null : input.paisId || null,
