@@ -21,7 +21,21 @@
  * círculo. La derivación (de `listarHijos`) y el cableado viven en la pantalla.
  */
 
-/** Estado del hijo en el gráfico. `atencion` (ámbar por reporte) llega en ola-2. */
+/**
+ * Estado del hijo en el gráfico. La derivación vive en la PANTALLA (Fase B), no
+ * acá: este componente solo pinta el estado que recibe. Extender = sumar un valor
+ * a la unión + su entrada en `COLOR` y `SUBTITULO` (TS obliga la exhaustividad,
+ * no es una reescritura). Estados PENDIENTES, preparados para entrar sin re-escribir:
+ *  - `atencion` (ámbar): un reporte visible tocó una cuenta del hijo. Dato: #573
+ *    `tieneReportes: boolean` (booleano, no conteo — Diseño prohibió números sobre
+ *    nodos). Es OLA-2, en espera del cableado.
+ *  - `degradado`/`sin-confirmar`: I-396 — con el motor caído, `tieneReportes` de un
+ *    hijo REPORTADO devuelve `false`, y pintar «tranquilo» sería calma sobre un niño
+ *    recién reportado (tercera superficie del mismo defecto). Si Diseño decide que el
+ *    gráfico consuma el helper de liveness (SPEC-670) y tenga su propio estado
+ *    degradado, entra por acá. **Por eso `tranquilo` es PROVISIONAL: no cerrar su copy
+ *    como «no pasó nada» hasta que Diseño conteste.**
+ */
 export type EstadoHijoGrafico = "tranquilo" | "sin-cuentas" | "en-pausa";
 
 export interface HijoGrafico {
