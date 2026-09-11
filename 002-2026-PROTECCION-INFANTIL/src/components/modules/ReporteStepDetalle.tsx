@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/Select";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
 import { FechaHoraIncidente } from "./FechaHoraIncidente";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 
 type PaisOption = { id: string; nombre: string };
 
@@ -15,6 +16,7 @@ export function ReporteStepDetalle({
     pais,
     fechaIncidente,
     horaAproximada,
+    franja,
     paisId,
     ciudadId,
     edadVictima,
@@ -27,6 +29,9 @@ export function ReporteStepDetalle({
     fechaIncidente: string;
     /** SPEC-438: la hora la estimó el reportante (eligió franja). */
     horaAproximada: boolean;
+    /** SPEC-644: la franja declarada (null = hora exacta). Se echa en CADA emisión
+     *  (como horaAproximada) para que ningún cambio de otro campo la pierda. */
+    franja: FranjaAproximada | null;
     paisId: string;
     ciudadId: string;
     edadVictima: string;
@@ -36,6 +41,7 @@ export function ReporteStepDetalle({
         pais: string;
         fechaIncidente: string;
         horaAproximada: boolean;
+        franja: FranjaAproximada | null;
         paisId: string;
         ciudadId: string;
         edadVictima: string;
@@ -110,6 +116,7 @@ export function ReporteStepDetalle({
             edadVictima,
             texto,
             horaAproximada,
+            franja,
         });
         setDepartamentoId("");
         setOtraCiudad("");
@@ -127,6 +134,7 @@ export function ReporteStepDetalle({
             edadVictima,
             texto,
             horaAproximada,
+            franja,
         });
         setOtraCiudad("");
     };
@@ -141,7 +149,7 @@ export function ReporteStepDetalle({
 
     const handleCiudadSelect = (opcion: CiudadOpcion | null) => {
         if (!opcion) {
-            onChange({ ciudadId: "", ciudad: "", pais, paisId, fechaIncidente, horaAproximada, edadVictima, texto });
+            onChange({ ciudadId: "", ciudad: "", pais, paisId, fechaIncidente, horaAproximada, franja, edadVictima, texto });
             return;
         }
         if (opcion.id === "otra") {
@@ -154,6 +162,7 @@ export function ReporteStepDetalle({
                 edadVictima,
                 texto,
                 horaAproximada,
+                franja,
             });
         } else {
             // La ciudad trae su departamento: el filtro queda sincronizado con la
@@ -168,6 +177,7 @@ export function ReporteStepDetalle({
                 edadVictima,
                 texto,
                 horaAproximada,
+                franja,
             });
             setOtraCiudad("");
         }
@@ -186,6 +196,7 @@ export function ReporteStepDetalle({
                 edadVictima,
                 texto,
                 horaAproximada,
+                franja,
             });
         }
     };
@@ -245,14 +256,17 @@ export function ReporteStepDetalle({
                     value={fechaIncidente}
                     max={hoy}
                     min={hace2Anios}
-                    onChange={(elegido, aproximada) =>
-                        // Una sola emisión: la fecha y su marca viajan juntas.
-                        // Elegir hora EXACTA (sin marca) apaga la aproximación.
+                    onChange={(elegido, aproximada, franjaEmitida) =>
+                        // Una sola emisión: la fecha, su marca y la franja viajan juntas.
+                        // Elegir hora EXACTA (sin marca) apaga la aproximación Y la franja.
+                        // SPEC-644: la franja solo es no-nula cuando es aproximada (invariante
+                        // franja ⟺ horaAproximada; lo respaldan el guard de la ruta y el CHECK de BD).
                         onChange({
                             ciudad,
                             pais,
                             fechaIncidente: elegido,
                             horaAproximada: aproximada === true,
+                            franja: aproximada === true ? (franjaEmitida ?? null) : null,
                             paisId,
                             ciudadId,
                             edadVictima,
@@ -275,7 +289,7 @@ export function ReporteStepDetalle({
                         ]}
                         value={edadVictima}
                         onChange={(e) =>
-                            onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto , horaAproximada })
+                            onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima: e.target.value, texto , horaAproximada, franja })
                         }
                     />
                 )}
@@ -298,7 +312,7 @@ export function ReporteStepDetalle({
                     className="w-full rounded-xl px-4 py-3 text-sm text-body placeholder-subtle outline-none transition min-h-[160px] resize-y glass-input ring-accent-input"
                     placeholder="Describe la conducta observada con el mayor detalle posible..."
                     value={texto}
-                    onChange={(e) => onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima, texto: e.target.value , horaAproximada })}
+                    onChange={(e) => onChange({ ciudad, pais, fechaIncidente, paisId, ciudadId, edadVictima, texto: e.target.value , horaAproximada, franja })}
                     maxLength={max}
                 />
                 <div className="mt-1.5 flex justify-between text-xs">

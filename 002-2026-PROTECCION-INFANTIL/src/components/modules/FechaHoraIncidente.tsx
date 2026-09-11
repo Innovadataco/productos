@@ -48,8 +48,12 @@ type Props = {
      * SPEC-438 (I-305): `aproximada` viaja EN LA MISMA emisión que el valor.
      * Con dos callbacks separados, el segundo llegaba con el `fechaIncidente`
      * viejo del closure y pisaba la fecha recién elegida.
+     * SPEC-644 (I-379): y la FRANJA elegida viaja también en la misma emisión —
+     * el instante representativo NO dice qué franja lo generó, así que si no la
+     * emitimos acá se pierde (era el defecto: se guardaba solo el centro).
+     * `null`/ausente = hora exacta (no aproximada).
      */
-    onChange: (valor: string, aproximada?: boolean) => void;
+    onChange: (valor: string, aproximada?: boolean, franja?: FranjaAproximada | null) => void;
     error?: string | undefined;
 };
 
@@ -113,8 +117,10 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
         // SPEC-580: solo el cambio de modo a hora exacta emite `false` explícito
         // (el wizard trata `undefined` como no aproximada). Sin esta guarda, el
         // argumento extra rompería el contrato de emisiones históricas.
+        // SPEC-644: emitir hora EXACTA limpia la franja (null). El camino aproximado
+        // NO pasa por acá — usa `emitirFranja`, que sí manda la franja elegida.
         if (aproximada === undefined) onChange(resultado);
-        else onChange(resultado, aproximada);
+        else onChange(resultado, aproximada, null);
     }
 
     /** SPEC-438: la franja se emite como instante representativo marcado aproximado. */
@@ -123,7 +129,9 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
         // Se emite en el mismo formato local que el control: el contrato del
         // wizard no cambia.
         const local = new Date(instante.getTime() - instante.getTimezoneOffset() * 60_000);
-        onChange(local.toISOString().slice(0, 16), true);
+        // SPEC-644: la franja viaja con el valor (misma emisión) para que se persista
+        // tal como se dijo, en vez de re-derivarla del centro guardado.
+        onChange(local.toISOString().slice(0, 16), true, franja);
     }
 
     function cambiarModoFranja(activar: boolean) {

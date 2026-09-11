@@ -1871,6 +1871,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | plataformaId | String | — |
 | fechaIncidente | DateTime | — |
 | horaAproximada | Boolean | — |
+| franjaHoraria | FranjaHoraria | opcional |
 | ciudad | String | — |
 | pais | String | — |
 | paisId | String | opcional |
