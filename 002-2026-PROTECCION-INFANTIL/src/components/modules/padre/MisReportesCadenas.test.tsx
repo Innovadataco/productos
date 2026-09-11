@@ -32,7 +32,7 @@ const CADENA_BASE: Cadena = {
         {
             id: "ev1",
             fechaIncidente: "2026-09-07T17:00:00.000Z",
-        horaAproximada: false,
+            horaAproximada: false,
             creadoEn: "2026-09-07T17:30:00.000Z",
             estado: "CLASIFICADO",
             categoriaLabel: "Solicitud de material",
