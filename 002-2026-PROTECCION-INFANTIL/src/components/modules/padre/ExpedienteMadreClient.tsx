@@ -92,7 +92,7 @@ const SEMAFORO_CLASES: Record<Urgencia, { caja: string; bol: string; titulo: str
     alta: { caja: "border-rubi/45 bg-rubi/10", bol: "bg-rubi shadow-[0_0_12px_rgb(var(--rubi-rgb)/0.7)]", titulo: "text-rubi" },
     media: { caja: "border-ambar/45 bg-ambar/10", bol: "bg-ambar shadow-[0_0_12px_rgb(var(--ambar-rgb)/0.7)]", titulo: "text-ambar" },
     baja: { caja: "border-pino/45 bg-pino/10", bol: "bg-pino shadow-[0_0_12px_rgb(var(--pino-rgb)/0.7)]", titulo: "text-pino" },
-    sin_clasificar: { caja: "border-tinta/20 bg-tinta/5 dark:border-papel/20", bol: "bg-tinta/40 dark:bg-papel/40", titulo: "text-body" },
+    sin_clasificar: { caja: "border-tinta/20 bg-tinta/5 dark:border-tinta/15", bol: "bg-tinta/40 dark:bg-papel/40", titulo: "text-body" },
 };
 
 const DOT_NIVEL: Record<Exclude<NivelItem, null>, string> = {
@@ -117,7 +117,7 @@ function iniciales(nombre: string): string {
 }
 
 function ChipCategoria({ label, nivel }: { label: string; nivel: NivelItem }) {
-    const clases = nivel ? CHIP_NIVEL[nivel] : "border-tinta/20 bg-tinta/5 text-muted dark:border-papel/20";
+    const clases = nivel ? CHIP_NIVEL[nivel] : "border-tinta/20 bg-tinta/5 text-muted dark:border-tinta/15";
     return (
         <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide ${clases}`}>
             {label}
@@ -178,7 +178,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
             <header className="space-y-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                     {hijo && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-tinta/15 bg-tinta/5 py-0.5 pl-0.5 pr-2.5 text-xs font-semibold text-body dark:border-papel/15 dark:bg-papel/10">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-tinta/15 bg-tinta/5 py-0.5 pl-0.5 pr-2.5 text-xs font-semibold text-body dark:border-tinta/15 dark:bg-papel/10">
                             <span className="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-pino to-cielo text-[9px] font-extrabold text-papel">
                                 {iniciales(hijo.nombre)}
                             </span>
@@ -235,7 +235,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                 </div>
                 <ol className="flex flex-col">
                     {timeline.map((item, i) => (
-                        <li key={`${item.reporteId ?? `ajeno-${item.fecha}`}-${i}`} className={`flex items-start gap-3 py-2 ${i > 0 ? "border-t border-dashed border-tinta/10 dark:border-papel/10" : ""}`}>
+                        <li key={`${item.reporteId ?? `ajeno-${item.fecha}`}-${i}`} className={`flex items-start gap-3 py-2 ${i > 0 ? "border-t border-dashed border-tinta/10 dark:border-tinta/12" : ""}`}>
                             <span className="w-24 flex-none pt-0.5 font-mono text-[10px] text-subtle">{fechaHechoLegible(item.fecha, item.horaAproximada)}</span>
                             <span
                                 className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.nivel ? DOT_NIVEL[item.nivel] : "bg-tinta/30 dark:bg-papel/30"}`}
@@ -259,7 +259,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                                     </>
                                 ) : (
                                     <>
-                                        <span className="mr-1.5 inline-flex items-center rounded-full border border-tinta/15 bg-tinta/5 px-2.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-widest text-muted dark:border-papel/15 dark:bg-papel/10">
+                                        <span className="mr-1.5 inline-flex items-center rounded-full border border-tinta/15 bg-tinta/5 px-2.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-widest text-muted dark:border-tinta/15 dark:bg-papel/10">
                                             {item.familias === 1 ? "una familia más" : `${item.familias} familias más`}
                                         </span>
                                         {item.categoriaLabel && <ChipCategoria label={item.categoriaLabel} nivel={item.nivel} />}
@@ -294,7 +294,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                 </div>
                 <div className="space-y-3">
                     {evidencia.map((ev) => (
-                        <div key={ev.reporteId} className="rounded-xl border border-tinta/10 bg-tinta/5 p-3.5 dark:border-papel/10 dark:bg-papel/5">
+                        <div key={ev.reporteId} className="rounded-xl border border-tinta/10 bg-tinta/5 p-3.5 dark:border-tinta/12 dark:bg-papel/5">
                             <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted">
                                 <span className="font-mono text-[10.5px] text-subtle">{fechaHechoLegible(ev.fecha, ev.horaAproximada)}</span>
                                 {ev.categoriaLabel && <ChipCategoria label={ev.categoriaLabel} nivel={ev.nivel} />}
@@ -372,7 +372,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                                 ? "border-ambar/35 bg-ambar/10 text-body"
                                 : tendencia.direccion === "bajando"
                                     ? "border-pino/35 bg-pino/10 text-body"
-                                    : "border-tinta/15 bg-tinta/5 text-body dark:border-papel/15 dark:bg-papel/5"
+                                    : "border-tinta/15 bg-tinta/5 text-body dark:border-tinta/15 dark:bg-papel/5"
                         }`}
                     >
                         <TendenciaIcon
@@ -413,7 +413,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                     )}
                     <Link
                         href={`/dashboard/padre/profesionales?expedienteId=${encodeURIComponent(expediente.id)}`}
-                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-tinta/25 px-4 text-sm font-semibold text-body transition hover:bg-tinta/5 dark:border-papel/25 dark:hover:bg-papel/10"
+                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-tinta/25 px-4 text-sm font-semibold text-body transition hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-papel/10"
                     >
                         Llevar a un profesional
                     </Link>

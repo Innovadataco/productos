@@ -125,7 +125,7 @@ export function VerAnalisis({
 
                     {/* A-70 · F11: la ficha de datos del hecho. */}
                     {ficha && (
-                        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-tinta/10 pt-2 text-xs dark:border-papel/10">
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-tinta/10 pt-2 text-xs dark:border-tinta/12">
                             {categoriaLabel && (
                                 <>
                                     <dt className="text-subtle">Clasificación</dt>
