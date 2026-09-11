@@ -28,6 +28,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/roles-titulares.test.ts",
     // SPEC-423 (I-298): la credencial de respaldo se muestra SIEMPRE en admin.
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
+    // SPEC-672 (I-399): el camino de autenticación lee el Usuario con select explícito (nunca todos los escalares).
+    "src/lib/auth-select-explicito.candado.test.ts",
     // SPEC-463 (D-107): el colegio habla de usted; el padre conserva «tú».
     "src/app/dashboard/colegio/voz-usted.candado.test.ts",
     // SPEC-514: candado de clase — el área interna (admin/operador/comité/verificador) sin voseo.

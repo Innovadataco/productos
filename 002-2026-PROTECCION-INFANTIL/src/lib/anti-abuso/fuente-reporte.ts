@@ -194,7 +194,7 @@ export async function crearFuenteReporte(
     reporteId: string,
     opts: {
         request?: Request;
-        usuario?: Usuario | null;
+        usuario?: Pick<Usuario, "id" | "creadoEn"> | null;
         identificador: string;
         plataformaId: string;
     },

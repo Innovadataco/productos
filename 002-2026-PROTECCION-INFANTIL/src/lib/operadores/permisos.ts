@@ -28,7 +28,7 @@ export function requireComiteOAdmin(user: Usuario) {
     }
 }
 
-export function puedeGestionarReporte(user: Usuario, reporte: RecursoConOperadorYTenant) {
+export function puedeGestionarReporte(user: Pick<Usuario, "id" | "rol">, reporte: RecursoConOperadorYTenant) {
     if (esAdminRol(user.rol)) {
         return true;
     }
