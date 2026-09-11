@@ -111,7 +111,7 @@ export function MisReportesCadenas() {
                 return (
                     <article
                         key={cadena.reportePrincipalId}
-                        className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40"
+                        className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12"
                     >
                         <header className="flex flex-wrap items-start justify-between gap-2">
                             <div>
@@ -153,7 +153,7 @@ export function MisReportesCadenas() {
                         {expandida && (
                             <div className="mt-3 space-y-4 border-t border-tinta/10 pt-3 dark:border-papel/10">
                                 {cadena.eventos.map((ev) => (
-                                    <div key={ev.id} className="rounded-xl bg-papel/80 p-3 dark:bg-tinta/60">
+                                    <div key={ev.id} className="rounded-xl border border-tinta/10 bg-superficie-2 p-3 dark:border-tinta/12">
                                         <p className="text-xs text-muted">
                                             {fechaHoraSinMinutos(ev.fechaIncidente)}
                                             {ev.esPrincipal ? " · el primero" : ""}
@@ -195,7 +195,7 @@ export function MisReportesCadenas() {
 
                                 <section
                                     aria-label="Otros reportes sobre este identificador"
-                                    className="rounded-xl border border-tinta/10 bg-papel/80 p-3 dark:border-papel/10 dark:bg-tinta/60"
+                                    className="rounded-xl border border-tinta/10 bg-superficie-2 p-3 dark:border-tinta/12"
                                 >
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <h4 className="text-sm font-medium text-body">

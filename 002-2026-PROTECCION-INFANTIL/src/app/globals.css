@@ -73,6 +73,12 @@
 
         /* SPEC-494 · relleno del mueble Skeleton (§4.8): ~6% tinta, se ve sin gritar. */
         --skeleton: rgb(var(--tinta-rgb) / 0.06);
+
+        /* SPEC-646 (I-381) · superficies OPACAS de tarjeta. En claro son un lift
+           sutil sobre papel (#eef1ef). `muted` (#4d5552, el peor) queda muy por
+           encima de 4.5 sobre ambos niveles. Opacas ⇒ no se apilan al anidar. */
+        --superficie-1-rgb: 244 246 245; /* #f4f6f5 */
+        --superficie-2-rgb: 252 253 252; /* #fcfdfc — nivel más profundo */
     }
 
     .dark {
@@ -113,6 +119,14 @@
 
         --sombra-sm: 0 1px 2px rgb(0 0 0 / 0.4);
         --sombra-md: 0 4px 12px rgb(0 0 0 / 0.5);
+
+        /* SPEC-646 (I-381) · superficies OPACAS de tarjeta en oscuro. La tarjeta se
+           queda OSCURA (papel-based) — jamás el velo de tinta que ACLARA e invierte.
+           Muy por debajo de ~#474747 (donde `muted` cruza 4.5), así `muted` (#b0b5b2)
+           conserva ~8:1 en el nivel más profundo. La elevación la da el borde hairline
+           claro (border-tinta), no aclarar el relleno. Opacas ⇒ no se apilan. */
+        --superficie-1-rgb: 18 25 22; /* #121916 */
+        --superficie-2-rgb: 26 34 30; /* #1a221e — nivel más profundo */
     }
 
     body {

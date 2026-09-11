@@ -344,7 +344,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                         </p>
                     )}
 
-                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-tinta/10 bg-papel/40 p-3 sm:grid-cols-3 dark:border-papel/10 dark:bg-tinta/30">
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-tinta/10 bg-superficie-1 p-3 sm:grid-cols-3 dark:border-tinta/12">
                         <FichaItem label="Eventos totales" valor={`${ficha.eventosTotales} (tuyos: ${ficha.tuyos})`} />
                         <FichaItem
                             label="Familias que reportan"
@@ -357,7 +357,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                     </dl>
 
                     {analisis?.queSignifica && (
-                        <div className="mt-3 rounded-lg border border-cielo/25 bg-papel/40 p-3 text-xs text-body dark:bg-tinta/30">
+                        <div className="mt-3 rounded-lg border border-cielo/25 bg-superficie-1 p-3 text-xs text-body">
                             <b className="text-cielo">¿Qué significa?</b> {analisis.queSignifica}
                         </div>
                     )}

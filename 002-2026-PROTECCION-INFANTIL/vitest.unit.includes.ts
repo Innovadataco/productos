@@ -620,4 +620,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/registro-profesional/voz-usted-puerta-profesional.candado.test.ts",
     // SPEC-627 (D-133): el área del padre no ofrece «Simular reporte» ni wizard de alta.
     "src/components/modules/padre/sin-simulador-alta-hijo.candado.test.ts",
+    // SPEC-646 (I-381): la superficie que se invierte en oscuro. (a) el árbol de
+    // render del padre no puede usar dark:bg-tinta/N; (b) text-muted ≥ 4.5 sobre
+    // cada --superficie-* en los dos temas. fs + WCAG en JS → unit puro, sin base.
+    "src/components/modules/padre/superficie-invertida-i381.candado.test.ts",
 ];

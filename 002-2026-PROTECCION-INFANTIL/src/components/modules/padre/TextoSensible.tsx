@@ -274,7 +274,7 @@ export function TextoSensible({ reporteId, retapadoMinutos = 10 }: TextoSensible
         const completo = digitos.every((d) => d !== "");
         return (
             <div
-                className="space-y-3 rounded-xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40"
+                className="space-y-3 rounded-xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12"
                 role="dialog"
                 aria-label="Código de verificación enviado a tu correo"
             >
