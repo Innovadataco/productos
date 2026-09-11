@@ -35,10 +35,10 @@ export const HORA_REPRESENTATIVA: Record<FranjaAproximada, number> = {
 };
 
 export const ETIQUETA_FRANJA: Record<FranjaAproximada, string> = {
-    madrugada: "Madrugada (12 a.m. – 6 a.m.)",
-    manana: "Mañana (6 a.m. – 12 m.)",
-    tarde: "Tarde (12 m. – 6 p.m.)",
-    noche: "Noche (6 p.m. – 12 a.m.)",
+    madrugada: "Madrugada (12\u00A0a.m. – 6\u00A0a.m.)",
+    manana: "Mañana (6\u00A0a.m. – 12\u00A0m.)",
+    tarde: "Tarde (12\u00A0m. – 6\u00A0p.m.)",
+    noche: "Noche (6\u00A0p.m. – 12\u00A0a.m.)",
 };
 
 export function esFranja(valor: string): valor is FranjaAproximada {

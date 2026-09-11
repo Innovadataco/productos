@@ -153,8 +153,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/IdentificadorBusquedaClient.test.tsx",
     // SPEC-317: menú lateral del área padre (sin BD).
     "src/components/modules/padre/PadreSideNav.test.tsx",
-    // I-261: el expediente vivo pinta fecha + hora sin minutos (helper compartido).
-    "src/components/modules/padre/ExpedienteVivo.test.tsx",
     // SPEC-606: el texto sensible se revela con el código de 6 dígitos del correo (sin BD).
     "src/components/modules/padre/TextoSensible.test.tsx",
     // SPEC-392 (L3): tarjeta del directorio (tarifa por delante, "Nuevo en la red").
