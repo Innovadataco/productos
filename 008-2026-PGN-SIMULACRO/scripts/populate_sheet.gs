@@ -2801,16 +2801,6 @@ const PREGUNTAS_LOTE1 = [
   }
 ];
 
-function writePreguntas_lote1() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName('preguntas');
-  if (!sheet) throw new Error('No existe la pestaña preguntas');
-  const startRow = sheet.getLastRow() + 1;
-  const data = PREGUNTAS_LOTE1.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
-  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
-  Logger.log('Lote 1 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
-}
-
 const PREGUNTAS_LOTE2 = [
   {
     "perfil": "Diana",
@@ -3463,16 +3453,6 @@ const PREGUNTAS_LOTE2 = [
     "dificultad": "dificil"
   }
 ];
-
-function writePreguntas_lote2() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName('preguntas');
-  if (!sheet) throw new Error('No existe la pestaña preguntas');
-  const startRow = sheet.getLastRow() + 1;
-  const data = PREGUNTAS_LOTE2.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
-  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
-  Logger.log('Lote 2 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
-}
 
 const PREGUNTAS_LOTE3 = [
   {
@@ -4127,16 +4107,6 @@ const PREGUNTAS_LOTE3 = [
   }
 ];
 
-function writePreguntas_lote3() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName('preguntas');
-  if (!sheet) throw new Error('No existe la pestaña preguntas');
-  const startRow = sheet.getLastRow() + 1;
-  const data = PREGUNTAS_LOTE3.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
-  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
-  Logger.log('Lote 3 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
-}
-
 const PREGUNTAS_LOTE4 = [
   {
     "perfil": "Diana",
@@ -4790,16 +4760,6 @@ const PREGUNTAS_LOTE4 = [
   }
 ];
 
-function writePreguntas_lote4() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName('preguntas');
-  if (!sheet) throw new Error('No existe la pestaña preguntas');
-  const startRow = sheet.getLastRow() + 1;
-  const data = PREGUNTAS_LOTE4.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
-  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
-  Logger.log('Lote 4 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
-}
-
 const PREGUNTAS_LOTE5 = [
   {
     "perfil": "Jelkin",
@@ -5128,10 +5088,45 @@ const PREGUNTAS_LOTE5 = [
   }
 ];
 
+function writePreguntas_lote1() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = getSheetByNameInsensitive(ss, 'preguntas') || createPreguntasSheet(ss);
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE1.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 1 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
+function writePreguntas_lote2() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = getSheetByNameInsensitive(ss, 'preguntas') || createPreguntasSheet(ss);
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE2.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 2 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
+function writePreguntas_lote3() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = getSheetByNameInsensitive(ss, 'preguntas') || createPreguntasSheet(ss);
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE3.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 3 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
+function writePreguntas_lote4() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = getSheetByNameInsensitive(ss, 'preguntas') || createPreguntasSheet(ss);
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE4.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 4 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
 function writePreguntas_lote5() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName('preguntas');
-  if (!sheet) throw new Error('No existe la pestaña preguntas');
+  const sheet = getSheetByNameInsensitive(ss, 'preguntas') || createPreguntasSheet(ss);
   const startRow = sheet.getLastRow() + 1;
   const data = PREGUNTAS_LOTE5.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
   sheet.getRange(startRow, 1, data.length, 12).setValues(data);
@@ -5139,10 +5134,24 @@ function writePreguntas_lote5() {
 }
 
 
+function getSheetByNameInsensitive(ss, name) {
+  const sheets = ss.getSheets();
+  const target = name.toLowerCase().trim();
+  for (let i = 0; i < sheets.length; i++) {
+    if (sheets[i].getName().toLowerCase().trim() === target) return sheets[i];
+  }
+  return null;
+}
+
+function createPreguntasSheet(ss) {
+  const sheet = ss.insertSheet('preguntas');
+  sheet.appendRow(['id', 'perfil', 'tema', 'pregunta', 'opcion_0', 'opcion_1', 'opcion_2', 'opcion_3', 'respuesta', 'explicacion', 'norma', 'dificultad']);
+  return sheet;
+}
+
 function populateResumenes() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName('resumenes');
-  if (!sheet) sheet = ss.insertSheet('resumenes');
+  let sheet = getSheetByNameInsensitive(ss, 'resumenes') || ss.insertSheet('resumenes');
   sheet.clear();
   sheet.appendRow(['id', 'perfil', 'tema', 'titulo_seccion', 'contenido_html', 'fuente_url', 'orden']);
   const rows = RESUMENES.map(r => [r.id, r.perfil, r.tema, r.titulo_seccion, r.contenido_html, r.fuente_url, r.orden]);
@@ -5152,8 +5161,7 @@ function populateResumenes() {
 
 function populateFlashcards() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName('flashcards');
-  if (!sheet) sheet = ss.insertSheet('flashcards');
+  let sheet = getSheetByNameInsensitive(ss, 'flashcards') || ss.insertSheet('flashcards');
   sheet.clear();
   sheet.appendRow(['id', 'perfil', 'tema', 'frente', 'reverso', 'norma']);
   const rows = FLASHCARDS.map(f => [f.id, f.perfil, f.tema, f.frente, f.reverso, f.norma]);
