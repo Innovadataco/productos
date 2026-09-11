@@ -18,11 +18,11 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Badge } from "@/components/ui/Badge";
-import { anioDesdeEdad, edadesMenor, validarEdadMenor } from "@/lib/padre/documento-menor";
+import { aniosNacimientoMenor, edadDesdeAnio, validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
 import { SEXOS } from "./HijoCard";
 import { construirPayloadAltaHijo, type IdentificadorNuevo } from "./registro-hijo/payload";
 
-const FORM_VACIO = { nombre: "", apellidos: "", edad: "", sexo: "" };
+const FORM_VACIO = { nombre: "", apellidos: "", anioNacimiento: "", sexo: "" };
 const BORRADOR_VACIO: IdentificadorNuevo = { valor: "", plataformaId: "" };
 
 export function FormularioAltaHijo({
@@ -57,12 +57,12 @@ export function FormularioAltaHijo({
             setError("Escribe los apellidos del menor.");
             return;
         }
-        // SPEC-361 (F7/F8): avisar ANTES de enviar, nombrando el campo. El
-        // servidor vuelve a validar: esto es cortesía, no la única defensa.
-        const edadNum = form.edad ? Number(form.edad) : null;
-        const errorEdad = validarEdadMenor(edadNum);
-        if (errorEdad) {
-            setError(errorEdad);
+        // SPEC-361 (F7) / SPEC-627 (D-134): avisar ANTES de enviar, nombrando el
+        // campo. El servidor vuelve a validar: esto es cortesía, no la única defensa.
+        const anioNum = form.anioNacimiento ? Number(form.anioNacimiento) : null;
+        const errorAnio = validarAnioNacimientoMenor(anioNum);
+        if (errorAnio) {
+            setError(errorAnio);
             return;
         }
 
@@ -79,7 +79,7 @@ export function FormularioAltaHijo({
                         {
                             nombre: form.nombre.trim(),
                             apellidos: form.apellidos.trim(),
-                            edad: edadNum,
+                            anioNacimiento: anioNum,
                             sexo: form.sexo,
                         },
                         pendiente,
@@ -110,13 +110,16 @@ export function FormularioAltaHijo({
                     <Input label="Nombres" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
                     <Input label="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} required />
                     <Select
-                        label="Edad"
+                        label="Año de nacimiento"
                         options={[
                             { value: "", label: "Sin especificar" },
-                            ...edadesMenor().map((edad) => ({ value: String(edad), label: `${edad} años` })),
+                            ...aniosNacimientoMenor().map((anio) => ({
+                                value: String(anio),
+                                label: `${anio} (${edadDesdeAnio(anio)} años)`,
+                            })),
                         ]}
-                        value={form.edad}
-                        onChange={(e) => setForm({ ...form, edad: e.target.value })}
+                        value={form.anioNacimiento}
+                        onChange={(e) => setForm({ ...form, anioNacimiento: e.target.value })}
                     />
                     <Select label="Sexo" options={SEXOS} value={form.sexo} onChange={(e) => setForm({ ...form, sexo: e.target.value })} />
                 </div>

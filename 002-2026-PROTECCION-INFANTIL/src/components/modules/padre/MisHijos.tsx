@@ -6,11 +6,12 @@
 // de padre (A-62): esto NO es vigilancia, es cuidar a los tuyos.
 // SPEC-589: la ficha del menor ya NO pide documento (decisión CEO 06-09-2026).
 //
-// SPEC-599: el ALTA pasa de formulario plano a wizard (RegistroHijoWizard),
-// aprobado sobre el mockup design/padre-hijos-registro-mockup.html. La lógica
-// de negocio no cambia: validaciones (documento-menor), alta múltiple de
-// identificadores y payload del POST intactos. Este archivo conserva la carga
-// de datos, el contador de cupo y las acciones de las tarjetas existentes.
+// SPEC-627 (D-133): el ALTA es el formulario inline simple (`FormularioAltaHijo`),
+// una sola acción alineada a «A quién vigilo» (mockup del área del padre firmado).
+// DEROGA el wizard de SPEC-599 (borrado con su simulador). La lógica de negocio
+// no cambia: validaciones (documento-menor), alta múltiple de identificadores y
+// payload del POST intactos. Este archivo conserva la carga de datos, el contador
+// de cupo y las acciones de las tarjetas existentes.
 //
 // SPEC-325 (extensión UI) · el alta acepta VARIOS identificadores y cada tarjeta
 // expone las cuatro acciones del backend, que NO son equivalentes:
@@ -28,27 +29,25 @@ import { useEffect, useState } from "react";
 // SPEC-539: la tarjeta del menor, sus tipos y catálogos viven en HijoCard.tsx
 // (MisHijos.tsx superaba el máximo de líneas al sumar la edición inline).
 import { HijoCard, type Hijo, type Plataforma } from "./HijoCard";
-import { RegistroHijoWizard } from "./registro-hijo/RegistroHijoWizard";
 import { FormularioAltaHijo } from "./FormularioAltaHijo";
 
 /**
  * SPEC-339: `onListaCambio` avisa al Paso 3 del camino cuántos menores activos
  * hay, para habilitar el "Siguiente" sin duplicar la consulta.
  *
- * SPEC-601 · `varianteAlta`: el wizard de SPEC-599 queda en /dashboard/padre/hijos
- * (default "wizard"); el camino /camino/hijos vuelve al formulario inline
- * pre-599 ("formulario"), que es lo que el dueño pidió revertir allí.
+ * SPEC-627 (D-133): el alta es SIEMPRE el formulario inline simple («una sola
+ * acción», mockup del área del padre firmado). Deroga el wizard de SPEC-599
+ * (`RegistroHijoWizard` + su simulador), borrado; Jelkin lo ratificó dos veces
+ * («cuatro pasos, mucho texto» + aprobar el mockup). Ya no hay `varianteAlta`.
  */
 export function MisHijos({
     onListaCambio,
     // SPEC-361 (F6): el tope llega del servidor (parámetro `padre.hijos.maximo`)
     // para poder mostrar "3 de 5" sin que la pantalla lo adivine.
     maximoActivos,
-    varianteAlta = "wizard",
 }: {
     onListaCambio?: (activos: number) => void;
     maximoActivos?: number;
-    varianteAlta?: "wizard" | "formulario";
 } = {}) {
     const [hijos, setHijos] = useState<Hijo[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
@@ -207,14 +206,9 @@ export function MisHijos({
                 )}
             </header>
 
-            {/* SPEC-599: el alta es un wizard aprobado sobre el mockup de diseño;
-                SPEC-601: el camino del padre conserva la variante formulario inline.
-                La lógica de negocio (POST, validaciones) vive en cada componente. */}
-            {varianteAlta === "formulario" ? (
-                <FormularioAltaHijo opcionesPlataforma={opcionesPlataforma} onRegistrado={cargar} />
-            ) : (
-                <RegistroHijoWizard opcionesPlataforma={opcionesPlataforma} onRegistrado={cargar} />
-            )}
+            {/* SPEC-627 (D-133): una sola acción — el formulario inline simple,
+                alineado a «A quién vigilo». El wizard de SPEC-599 quedó derogado. */}
+            <FormularioAltaHijo opcionesPlataforma={opcionesPlataforma} onRegistrado={cargar} />
 
             {cargando ? (
                 <p className="text-sm text-muted">Cargando…</p>

@@ -51,9 +51,7 @@ describe("SPEC-555 · el select de plataforma no ofrece «Sin plataforma»", () 
         mockRutas();
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
-        // SPEC-599: el alta es un wizard; el select vive en el paso 2.
-        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/ }));
-
+        // SPEC-627 (D-133): alta inline — el select de plataforma está de entrada, sin wizard.
         const select = screen.getByLabelText("Plataforma") as HTMLSelectElement;
         const etiquetas = within(select).queryAllByRole("option").map((o) => o.textContent);
         expect(etiquetas).not.toContain("Sin plataforma");
@@ -63,9 +61,7 @@ describe("SPEC-555 · el select de plataforma no ofrece «Sin plataforma»", () 
         mockRutas();
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
-        // SPEC-599: el alta es un wizard; el select vive en el paso 2.
-        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/ }));
-
+        // SPEC-627 (D-133): alta inline — el select de plataforma está de entrada, sin wizard.
         const select = screen.getByLabelText("Plataforma") as HTMLSelectElement;
         const etiquetas = within(select).queryAllByRole("option").map((o) => o.textContent);
         expect(etiquetas).toContain("Elige una plataforma");
