@@ -117,6 +117,7 @@ async function ejecutarJobPadre(expedienteId: string, hashCadena: string, alcanc
                                 edadVictima: true,
                                 fechaIncidente: true,
                                 horaAproximada: true,
+                                franjaHoraria: true,
                                 plataforma: { select: { clave: true } },
                                 clasificacion: { select: { categoria: true } },
                             },
@@ -143,6 +144,9 @@ async function ejecutarJobPadre(expedienteId: string, hashCadena: string, alcanc
             // SPEC-438: si el hecho no viene de un Reporte, la fecha es la del
             // evento y NO se puede afirmar que sea una hora precisa.
             horaAproximada: e.reporte?.horaAproximada ?? true,
+            // SPEC-644: la franja declarada, persistida (null si no hay reporte o es
+            // exacta) → el agregado usa la franja del padre, no la re-deriva del centro.
+            franjaHoraria: e.reporte?.franjaHoraria ?? null,
             ciudad: e.reporte?.ciudad ?? null,
             pais: e.reporte?.pais ?? null,
             plataforma: e.plataforma ?? e.reporte?.plataforma?.clave ?? null,
