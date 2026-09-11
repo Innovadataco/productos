@@ -284,6 +284,32 @@ services:
       timeout: 5s
       retries: 3
 
+  # SPEC-657 (I-389): barrido de citas — aviso 48h al padre + plazo de pago.
+  # Cablea los barredores de SPEC-395 que nadie invocaba. Cadencia 15 min por
+  # `cita.barrido.cron`; instancia única por advisory lock 123456801.
+  pi-citas:
+    image: pi-app:${PI_APP_TAG:-latest}
+    container_name: pi-citas
+    restart: always
+    env_file: .env.production
+    command: node --import tsx scripts/worker-citas.mjs
+    environment:
+      TZ: America/Bogota
+      # SPEC-291: tick-vida de iniciarTickVida("pi-citas") para el monitor.
+      WORKER_RUN_DIR: /app/run
+    volumes:
+      - pi_worker_run:/app/run
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /app/run/tick-vida-pi-citas && test $(($(date +%s) - $(stat -c %Y /app/run/tick-vida-pi-citas))) -lt 90 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # SPEC-221 (002-PI-122): motor de reglas de recomendación (dinero-vs-valor).
   # Tick loop 30s (override ANALISIS_REGLAS_TICK_MS); cadencia real por regla
   # (frecuenciaMin). Advisory lock propio: instancia única.

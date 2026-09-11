@@ -118,3 +118,20 @@ export async function barrerPlazoPagoDelPadre(
     }
     return resumen;
 }
+
+export interface ResumenBarridoCitas {
+    aviso48h: ResumenBarridoAviso48h;
+    plazoPago: ResumenBarridoPlazoPago;
+}
+
+/**
+ * SPEC-657 (I-389) · la corrida del worker de citas: invoca los DOS barredores.
+ * Antes de SPEC-657 estos barredores estaban escritos, probados y con candado de
+ * repetición, pero NADIE los llamaba — función construida y nunca cableada. Esta
+ * es la corrida que el worker (`scripts/worker-citas.mjs`) ejecuta cada 15 min.
+ */
+export async function ejecutarBarridoCitas(now: Date = new Date()): Promise<ResumenBarridoCitas> {
+    const aviso48h = await barrerAvisoVencimiento48h(now);
+    const plazoPago = await barrerPlazoPagoDelPadre(now);
+    return { aviso48h, plazoPago };
+}

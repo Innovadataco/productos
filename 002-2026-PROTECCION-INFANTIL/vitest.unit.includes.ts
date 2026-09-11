@@ -630,4 +630,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/boton-frontera.candado.test.ts",
     // SPEC-654: módulos de src/ sin importador de producción — ratchet, scan estático del grafo de imports.
     "scripts/arch/modulos-huerfanos.test.ts",
+    // SPEC-657 (I-389): cadencia del barrido de citas (validador de cron, fs-libre).
+    "src/lib/profesional/cita/cron-barrido.test.ts",
+    // SPEC-657 (I-389): candado de CABLEADO — el barrido de citas tiene quien lo llame + registrado en todos los sitios.
+    "src/lib/profesional/cita/worker-cableado.candado.test.ts",
 ];

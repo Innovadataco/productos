@@ -36,13 +36,15 @@ describe("docker-adapter · whitelist", () => {
         expect(mockRunner.mock.calls[0][1]).toBe("/containers/pi-analisis-score/restart");
     });
 
-    it("acepta las 33 combinaciones de whitelist (3 cmds × 11 contenedores)", async () => {
+    it("acepta TODAS las combinaciones de la whitelist (cmds × contenedores)", async () => {
         for (const cmd of COMANDOS_SERVICIO) {
             for (const cont of CONTENEDORES_PERMITIDOS) {
                 await ejecutarAccionDocker(cmd, cont);
             }
         }
-        expect(mockRunner).toHaveBeenCalledTimes(33);
+        // Derivado de las constantes, no un literal: agregar un contenedor
+        // (p. ej. `pi-citas`, SPEC-657) no debe requerir tocar un número acá.
+        expect(mockRunner).toHaveBeenCalledTimes(COMANDOS_SERVICIO.length * CONTENEDORES_PERMITIDOS.length);
     });
 
     it("rechaza comandos peligrosos (kill, rm, exec, up, down, cadenas vacías, interpolación)", async () => {
