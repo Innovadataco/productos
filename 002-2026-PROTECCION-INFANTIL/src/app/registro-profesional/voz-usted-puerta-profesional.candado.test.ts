@@ -24,6 +24,20 @@
  * Alcance = el del mapa: `app/registro-profesional/**` + `app/perfil-profesional/**`.
  * Los mensajes «Completa tu perfil» de `api/profesional` (fuera del árbol) se
  * candan por ANCLA positiva. Verificado por MUTACIÓN en varios sentidos.
+ *
+ * SPEC-635 (CEO · auditoría de Diseño 10-09) — cierra tres huecos por los que pasó
+ * la primera pantalla del profesional («Sumate… completa… sube»), la que Jelkin va
+ * a caminar con SPEC-631:
+ *  - VOSEO enclítico: `sumate` no lo caza la morfología -ás/-és/-ís (grave, sin
+ *    tilde) ni ninguna lista → se agrega a los enclíticos (como contale/abrilo).
+ *  - TUTEO imperativo `completa`/`sube`: morfológicamente AMBIGUO con la 3ª persona
+ *    y el adjetivo (probado: «ficha completa», «quien revisa su solicitud»), así que
+ *    NO hay morfología honesta; van por lexema, y SOLO sobre copy visible (el
+ *    `completa su ficha` de un comentario de perfil queda excluido por sinComentarios).
+ *  - COMENTARIO que MIENTE: un `// Voz voseo consistente` en un área de usted
+ *    reproduce el defecto en la próxima mano. Se caza aparte, sobre el texto de los
+ *    comentarios (lo que el archivo afirma sobre sí mismo).
+ * Este candado pasa de INTEGRACIÓN a UNIT (es fs-puro; no necesita base).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -52,6 +66,8 @@ const VOSEO = [
     "elegí", "contá", "contale", "escribí", "indicá", "adjuntá", "revisá", "intentá",
     "reenviá", "mirá", "volvé", "avisá", "completá", "cargá", "creá", "dejá", "dejanos",
     "abrí", "abrilo", "iniciá", "armá", "sos", "andá", "poné", "hacé", "vení", "salí",
+    // SPEC-635: enclítico voseo grave (sin tilde → fuera de la morfología -ás/-és/-ís).
+    "sumate", "sumá",
 ];
 // Tuteo por lexema (pronombres/posesivos/enclíticos + 2ª singular inequívoca).
 const TUTEO = [
@@ -59,7 +75,11 @@ const TUTEO = [
     "tienes", "puedes", "quieres", "debes", "necesitas", "sabes", "ves", "eres",
     "prefieres", "deseas", "vas", "estás",
 ];
-const LEXEMAS = [...VOSEO, ...TUTEO].map(rx);
+// SPEC-635: imperativos TUTEO (-a de -ar / -e de -er,-ir). Colisionan con la 3ª
+// persona y el adjetivo, así que NO hay morfología honesta: van por lexema y solo
+// sobre copy visible (sinComentarios). El usted es «complete»/«suba».
+const TUTEO_IMPERATIVOS = ["completa", "sube"];
+const LEXEMAS = [...VOSEO, ...TUTEO, ...TUTEO_IMPERATIVOS].map(rx);
 
 // CLASE voseo: presente en -ás/-és/-ís (acentuado + s). Excepciones = palabras que
 // terminan igual pero no son voseo (fuera de la clase, no defectos exculpados).
@@ -109,5 +129,31 @@ describe("SPEC-559 · la puerta del profesional habla de «usted» (sin voseo ni
         expect(docs).toContain("Complete su perfil antes de cargar documentos.");
         expect(autz).toContain("Complete su perfil antes de subir la autorización.");
         expect(docs.includes("Completa tu perfil") || autz.includes("Completa tu perfil")).toBe(false);
+    });
+
+    it("SPEC-635 · ningún comentario del árbol afirma que la voz es «voseo» (el área es usted)", () => {
+        // Un comentario que declara la voz equivocada reproduce el defecto en la
+        // próxima mano (I-«el texto que miente sostiene el hueco»). Se caza sobre el
+        // TEXTO de los comentarios, no el copy. «sin voseo» no matchea.
+        const MIENTE = /\bvoz\s+voseo\b|\bvoseo\s+consistente\b/i;
+        const hits: string[] = [];
+        for (const archivo of archivos) {
+            const raw = fs.readFileSync(archivo, "utf-8");
+            const comentarios = [
+                ...[...raw.matchAll(/\/\*[\s\S]*?\*\//g)].map((m) => m[0]),
+                ...[...raw.matchAll(/(?:^|[^:])\/\/[^\n]*/g)].map((m) => m[0]),
+            ];
+            for (const c of comentarios) {
+                if (MIENTE.test(c)) {
+                    hits.push(`${path.relative(SRC, archivo)} → «${c.trim().slice(0, 80)}»`);
+                }
+            }
+        }
+        expect(
+            hits,
+            ["SPEC-635 — un comentario afirma que la voz es voseo, y el área habla de usted:",
+                ...hits, "",
+                "Corrija el comentario a usted (D-107). Un texto que miente sostiene el hueco."].join("\n"),
+        ).toEqual([]);
     });
 });
