@@ -292,8 +292,10 @@ export async function cambiarEstadoHijo(
 
 /**
  * Agrega un identificador a un hijo YA creado (valor normalizado · candado 22).
- * El identificador es compartido entre los dos padres; si ya existe uno igual
- * (valor + plataforma) no se duplica.
+ * SPEC-339 (D-4): el identificador pertenece a la ficha de ESTE padre (`hijoId` +
+ * `exigirDueno`); la dedup es dentro de su propia ficha (mismo `hijoId` + valor +
+ * plataforma). El otro padre tiene su propia ficha con su propia fila. Lo que
+ * cruza a los dos es el mecanismo de monitoreo (candado 22), no la fila.
  */
 export async function agregarIdentificador(
     usuarioId: string,
