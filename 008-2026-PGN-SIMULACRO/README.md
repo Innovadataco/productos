@@ -11,15 +11,22 @@ Stack: **Next.js 14 (App Router) + Tailwind CSS + TypeScript**. Sin auth, sin ba
 
 ```bash
 npm install
-cp .env.local.example .env.local   # y edita NEXT_PUBLIC_SHEET_ID
 npm run dev
 ```
 
 Abre http://localhost:3000.
 
+El `NEXT_PUBLIC_SHEET_ID` ya está configurado como fallback en `lib/sheets.ts`. Si necesitas sobreescribirlo, crea `.env.local`:
+
+```bash
+NEXT_PUBLIC_SHEET_ID=16S3fArXSV_2yAFOcK-49GD8yOzlG7du3mr8ztPGjEYI
+```
+
 ## Google Sheets (banco de preguntas)
 
-1. Crea una hoja pública (o con acceso "cualquiera con el enlace") en Google Sheets.
+Hoja pública actual: https://docs.google.com/spreadsheets/d/16S3fArXSV_2yAFOcK-49GD8yOzlG7du3mr8ztPGjEYI/gviz/tq?tqx=out:json
+
+1. Si creas una hoja nueva, ponla como **público o "cualquiera con el enlace → Lector"**.
 2. Pega esta fila 1 (encabezados, columnas A–L):
 
 ```
@@ -40,16 +47,7 @@ id | perfil | tema | pregunta | opcion_0 | opcion_1 | opcion_2 | opcion_3 | resp
 | K | `norma` | texto (opcional) |
 | L | `dificultad` | `facil` \| `medio` \| `dificil` |
 
-4. Copia el ID de la hoja (la parte larga de la URL):
-   `https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit`
-
-5. Ponlo en `.env.local` (y en Vercel como variable de entorno):
-
-```bash
-NEXT_PUBLIC_SHEET_ID={SHEET_ID}
-```
-
-La app consume la hoja vía `https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:json` (parsing en `lib/sheets.ts`).
+4. La app consume la hoja vía `https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:json` (parsing en `lib/sheets.ts`).
 
 ## Temas por perfil
 
@@ -72,18 +70,29 @@ lib/            types.ts (temas y tipos), sheets.ts (fetch + parser gviz + cache
 - `pgn_perfil` → `Jelkin` | `Diana`
 - `pgn_progress` → `{ Jelkin: { [tema]: {correct,total} }, Diana: { ... } }`
 
-## Deploy en Vercel (pr.innovadataco.com)
+## Build y deploy (estilo PIWEB)
 
-1. Sube el repo a GitHub.
-2. En [Vercel](https://vercel.com) → **Add New Project** → importa el repo (framework Next.js se detecta solo).
-3. **Environment Variables** → agrega `NEXT_PUBLIC_SHEET_ID` con el ID de la hoja.
-4. Deploy.
-5. Para el dominio `pr.innovadataco.com`: **Settings → Domains** → agrega el dominio y apunta el DNS (CNAME hacia `cname.vercel-dns.com`) en el proveedor DNS.
+La app se exporta como sitio estático y se sirve con nginx en Docker, igual que `007-2026-PIWEB`.
 
-O con la CLI:
+### Local
 
 ```bash
-npm i -g vercel
-vercel                 # preview
-vercel --prod          # producción
+npm run build          # genera ./dist/
+docker compose up -d   # levanta en http://127.0.0.1:5018
 ```
+
+### Producción (VPS)
+
+1. Clona/actualiza el repo en el VPS, por ejemplo `/opt/pgn-simulacro/`.
+2. Build:
+   ```bash
+   cd /opt/pgn-simulacro/
+   git pull
+   npm ci
+   npm run build
+   docker compose up -d
+   ```
+3. El contenedor expone `127.0.0.1:5018:80` (puerto elegido para no chocar con PIWEB en 5017).
+4. En el túnel Cloudflare del VPS, rutea `pr.innovadataco.com` a `http://127.0.0.1:5018`.
+
+**No olvidar:** cualquier cambio requiere `npm run build` + `docker compose up -d` (o `docker compose restart`) para regenerar `./dist`.
