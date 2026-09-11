@@ -36,7 +36,7 @@ function TarjetaCita({ cita, atenuada }: { cita: CitaParaPadreDto; atenuada: boo
     const badge = badgeDeCita(cita.estado);
     const esCancelada = grupoDeCita(cita.estado, new Date(cita.franja.inicio) > new Date()) === "canceladas";
     return (
-        <article className={`rounded-2xl border border-tinta/10 p-4 ${atenuada ? "bg-papel opacity-90" : "bg-white dark:bg-tinta/20"}`}>
+        <article className={`rounded-2xl border border-tinta/10 p-4 ${atenuada ? "bg-papel opacity-90" : "bg-superficie-1"}`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-cielo/15 text-sm font-bold text-cielo">

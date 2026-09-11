@@ -39,7 +39,7 @@ export function TarjetaPersona({ contacto, onVerDetalle, onAgregarDato, onPausar
     const marco = enAtencion
         ? "border-ambar/45 shadow-[0_6px_18px_rgb(var(--ambar-rgb)/0.10)]"
         : "border-tinta/10";
-    const fondo = enPausa ? "bg-papel" : "bg-white dark:bg-tinta/20";
+    const fondo = enPausa ? "bg-papel" : "bg-superficie-1";
 
     return (
         <article className={`flex flex-col gap-3 rounded-2xl border p-4 ${marco} ${fondo}`}>

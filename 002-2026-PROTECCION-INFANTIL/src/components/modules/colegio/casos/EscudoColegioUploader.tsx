@@ -54,7 +54,7 @@ export function EscudoColegioUploader() {
     }, [verificar]);
 
     return (
-        <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+        <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
             <h2 className="font-medium text-body">Escudo del colegio</h2>
             <p className="mt-1 text-sm text-muted">
                 Cargue el escudo institucional (PNG o JPG, máximo 500 KB). Todos los
@@ -67,7 +67,7 @@ export function EscudoColegioUploader() {
                     <img
                         src={`/api/colegio/configuracion/escudo?v=${version}`}
                         alt="Escudo del colegio"
-                        className="h-16 w-16 rounded-lg border border-tinta/10 object-contain dark:border-papel/10"
+                        className="h-16 w-16 rounded-lg border border-tinta/10 object-contain dark:border-tinta/12"
                     />
                 )}
                 <input
