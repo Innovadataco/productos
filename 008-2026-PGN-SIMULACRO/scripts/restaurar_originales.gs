@@ -894,19 +894,6 @@ function restaurarOriginales() {
   var lastRow = sh.getLastRow();
   Logger.log('Filas actuales (incl. header): ' + lastRow);
 
-  // Anti-duplicado: revisa si el id 1 ya esta presente
-  if (lastRow > 1) {
-    var idsExistentes = sh.getRange(2, 1, lastRow - 1, 1).getValues()
-                          .map(function(r) { return Number(r[0]); });
-    var yaEstan = PREGUNTAS_ORIGINALES.filter(function(p) {
-      return idsExistentes.indexOf(p[0]) !== -1;
-    });
-    if (yaEstan.length > 0) {
-      Logger.log('ABORTADO: ' + yaEstan.length + ' de los ids originales ya existen. No se duplica nada.');
-      return;
-    }
-  }
-
   // Header si la hoja esta vacia
   if (lastRow === 0) {
     sh.getRange(1, 1, 1, 12).setValues([[
@@ -916,15 +903,30 @@ function restaurarOriginales() {
     lastRow = 1;
   }
 
+  // Calcular el siguiente id libre para evitar duplicados
+  var maxId = 0;
+  if (lastRow > 1) {
+    var idsExistentes = sh.getRange(2, 1, lastRow - 1, 1).getValues()
+                          .map(function(r) { return Number(r[0]); });
+    maxId = Math.max.apply(null, idsExistentes);
+  }
+
+  // Reenumerar las preguntas originales a partir del maxId + 1
+  var nextId = maxId + 1;
+  var dataToWrite = PREGUNTAS_ORIGINALES.map(function(p, i) {
+    var row = p.slice();
+    row[0] = nextId + i;
+    return row;
+  });
+
   // Escritura en UN SOLO setValues (sin timeout)
   var startRow = lastRow + 1;
-  sh.getRange(startRow, 1, PREGUNTAS_ORIGINALES.length, 12)
-    .setValues(PREGUNTAS_ORIGINALES);
+  sh.getRange(startRow, 1, dataToWrite.length, 12).setValues(dataToWrite);
 
   SpreadsheetApp.flush();
 
   var total = sh.getLastRow() - 1;
-  Logger.log('OK: insertadas ' + PREGUNTAS_ORIGINALES.length + ' preguntas.');
+  Logger.log('OK: insertadas ' + dataToWrite.length + ' preguntas con ids ' + nextId + ' a ' + (nextId + dataToWrite.length - 1));
   Logger.log('Total de preguntas en la hoja: ' + total);
 }
 
