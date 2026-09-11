@@ -115,6 +115,7 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
             r.clasificacion && ESTADOS_FINALES.includes(r.estado) ? r.clasificacion.categoria : null;
         return {
             fecha: r.fechaIncidente,
+            horaAproximada: r.horaAproximada,
             esPropio: true,
             categoriaLabel: categoria ? formatCategoria(categoria) : null,
             nivel: categoria ? nivelDeCategoria(categoria) : null,
@@ -126,19 +127,25 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
         };
     });
 
-    const grupos = new Map<string, { fecha: Date; categoria: CategoriaConducta | null; usuarios: Set<string>; anonimos: number; ciudades: Set<string> }>();
+    const grupos = new Map<string, { fecha: Date; horaAproximada: boolean; categoria: CategoriaConducta | null; usuarios: Set<string>; anonimos: number; ciudades: Set<string> }>();
     for (const r of ajenos) {
         const dia = fechaISO(r.fechaIncidente.toISOString());
         const categoria = r.clasificacion?.categoria ?? null;
         const clave = `${dia}|${categoria ?? "sin"}`;
         const grupo = grupos.get(clave) ?? {
             fecha: r.fechaIncidente,
+            horaAproximada: r.horaAproximada,
             categoria,
             usuarios: new Set<string>(),
             anonimos: 0,
             ciudades: new Set<string>(),
         };
-        if (r.fechaIncidente > grupo.fecha) grupo.fecha = r.fechaIncidente;
+        // La fecha del grupo es la MÁS reciente; la bandera viaja con ella, así la
+        // franja mostrada corresponde al hecho cuya hora se está enseñando.
+        if (r.fechaIncidente > grupo.fecha) {
+            grupo.fecha = r.fechaIncidente;
+            grupo.horaAproximada = r.horaAproximada;
+        }
         if (r.usuarioId) grupo.usuarios.add(r.usuarioId);
         else grupo.anonimos += 1;
         const ciudad = r.ciudadRel?.nombre ?? r.ciudad;
@@ -148,6 +155,7 @@ export function armarTimeline(propios: ReportePropioRow[], ajenos: ReporteAjenoR
     for (const g of grupos.values()) {
         items.push({
             fecha: g.fecha,
+            horaAproximada: g.horaAproximada,
             esPropio: false,
             categoriaLabel: g.categoria ? formatCategoria(g.categoria) : null,
             nivel: g.categoria ? nivelDeCategoria(g.categoria) : null,

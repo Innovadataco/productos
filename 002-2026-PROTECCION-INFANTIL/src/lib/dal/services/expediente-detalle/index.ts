@@ -71,7 +71,7 @@ export { codigoExpediente, urgenciaDeCategoria } from "./armado";
 
 /** El menor vinculado: ficha del reporte propio más reciente que la tenga
  * (SPEC-591/604); si ninguno la tiene, la ficha que vigila ese identificador
- * (IdentificadorHijo activo, mismo criterio que `lecturaDelExpediente`). */
+ * (IdentificadorHijo activo — la ficha que vigila ese identificador). */
 async function resolverHijo(
     usuarioId: string,
     identificador: string,
@@ -239,6 +239,7 @@ export async function detalleExpedientePadre(expedienteId: string, usuarioId: st
                 return {
                     reporteId: r.id,
                     fecha: r.fechaIncidente,
+                    horaAproximada: r.horaAproximada,
                     categoriaLabel: categoria ? formatCategoria(categoria) : null,
                     nivel: categoria ? nivelDeCategoria(categoria) : null,
                     estadoReporte: r.estado,
