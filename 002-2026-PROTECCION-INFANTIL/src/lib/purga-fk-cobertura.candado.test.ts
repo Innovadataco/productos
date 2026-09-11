@@ -13,7 +13,9 @@
  * ve un orden de FK. El ensayo sobre clon con datos reales (carril del CEO) es el complemento.
  */
 import { describe, it, expect } from "vitest";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { HIJAS_RESTRICT_EXPEDIENTE } from "../../scripts/limpieza/_borrar-expediente";
 
 // Núcleo que la purga total borra y que el CEO nombró (I-374). Ampliá acá si sumás otra raíz.
 const PADRES_PURGABLES = ["Expediente", "Reporte", "ContenidoReporte"] as const;
@@ -64,5 +66,30 @@ describe("SPEC-615 · cobertura FK de la purga (derivada del catálogo)", () => 
         const actuales = new Set(filas.map((f) => f.conname));
         const obsoletas = Object.keys(COBERTURA_FK).filter((c) => !actuales.has(c));
         expect(obsoletas, "entradas de COBERTURA_FK que ya no existen en el catálogo (quitalas)").toEqual([]);
+    });
+
+    it("HIJAS_RESTRICT_EXPEDIENTE = EXACTAMENTE las hijas RESTRICT de Expediente en el catálogo (origen único, derivado)", async () => {
+        // Cierra la segunda mitad del hueco: no basta con que la cobertura DETECTE una FK nueva (arriba);
+        // `HIJAS_RESTRICT_EXPEDIENTE` —la constante que el helper borra y que el ensayo de subárbol itera—
+        // tiene que SER exactamente las hijas RESTRICT de Expediente según pg_constraint. Se deriva el
+        // nombre de tabla de cada modelo por el DMMF de Prisma (respeta `@@map`), sin lista a mano.
+        const filas = await prisma.$queryRawUnsafe<Array<{ child: string }>>(
+            `SELECT child.relname AS child
+               FROM pg_constraint con
+               JOIN pg_class child ON child.oid = con.conrelid
+               JOIN pg_class parent ON parent.oid = con.confrelid
+              WHERE con.contype='f' AND con.confdeltype IN ('r','a') AND parent.relname = 'Expediente'`,
+        );
+        const catalogo = [...new Set(filas.map((f) => f.child))].sort();
+        const tablaDe = (modelo: string) =>
+            Prisma.dmmf.datamodel.models.find((m) => m.name === modelo)?.dbName ?? modelo;
+        const constante = [...new Set(HIJAS_RESTRICT_EXPEDIENTE.map(tablaDe))].sort();
+
+        expect(catalogo.length, "el catálogo debe tener hijas RESTRICT de Expediente (si da 0, algo está mal)").toBeGreaterThan(0);
+        expect(
+            constante,
+            "HIJAS_RESTRICT_EXPEDIENTE debe ser EXACTAMENTE las hijas RESTRICT de Expediente en pg_constraint: " +
+                "si el catálogo gana/pierde una, actualizá la constante Y su deleteMany en _borrar-expediente.ts",
+        ).toEqual(catalogo);
     });
 });

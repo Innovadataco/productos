@@ -15,7 +15,19 @@ import { randomBytes, randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { sellarTextoNuevo } from "@/lib/reporte-texto-contenido";
-import { borrarSubarbolExpediente } from "../../scripts/limpieza/_borrar-expediente";
+import { borrarSubarbolExpediente, HIJAS_RESTRICT_EXPEDIENTE } from "../../scripts/limpieza/_borrar-expediente";
+
+/**
+ * Delegate de Prisma para un modelo de `HIJAS_RESTRICT_EXPEDIENTE`. El cliente nombra los delegates en
+ * camelCase del modelo (independiente de `@@map`): `InformePadre` → `prisma.informePadre`. Así el
+ * candado ITERA la constante (membresía) para afirmar la CONDUCTA real (la fila se fue), por ENTRADA.
+ */
+function contarHija(modelo: string, expedienteId: string): Promise<number> {
+    const delegate = (prisma as unknown as Record<string, { count: (a: unknown) => Promise<number> }>)[
+        modelo.charAt(0).toLowerCase() + modelo.slice(1)
+    ];
+    return delegate.count({ where: { expedienteId } });
+}
 
 /** Siembra un Expediente con UNA fila en CADA hija con FK RESTRICT → Expediente. */
 async function sembrarSubarbolCompleto(): Promise<string> {
@@ -72,20 +84,26 @@ describe("SPEC-615 · borrarSubarbolExpediente contra BD real (I-374)", () => {
         process.env.REPORTE_TEXTO_KEY_ACTIVA = "1";
     });
 
-    it("borra el subárbol COMPLETO (5 hijas RESTRICT + expediente) sin violar ninguna FK", async () => {
+    it("borra el subárbol COMPLETO, ITERANDO la constante y afirmando por ENTRADA (no en agregado)", async () => {
         const expId = await sembrarSubarbolCompleto();
-        // Precondición: la hija que faltaba (InformePadre) existe → sin el fix, el DROP aborta.
-        expect(await prisma.informePadre.count({ where: { expedienteId: expId } })).toBe(1);
 
-        // La operación exacta que abortó en producción — ahora completa sin excepción.
+        // PRE · la semilla cubre CADA entrada de HIJAS_RESTRICT_EXPEDIENTE. Si alguien agrega una hija
+        // a la constante y NO la siembra acá, esto es rojo NOMBRÁNDOLA — el rehearsal no puede probar
+        // el borrado de algo que no sembró (la lección de la madrugada: cero nodos ≠ árbol limpio).
+        for (const hija of HIJAS_RESTRICT_EXPEDIENTE) {
+            expect(await contarHija(hija, expId), `la semilla debe incluir ${hija}`).toBe(1);
+        }
+
+        // La operación exacta que abortó en producción — ahora completa sin excepción. Si el helper
+        // olvida un `deleteMany`, la FK RESTRICT real tumba `expediente.deleteMany` acá y esto rechaza,
+        // nombrando la constraint (p.ej. `InformePadre_expedienteId_fkey`).
         await expect(prisma.$transaction((tx) => borrarSubarbolExpediente(tx, [expId]))).resolves.toBeUndefined();
 
-        // Post: expediente y TODAS las hijas en 0.
-        expect(await prisma.expediente.count({ where: { id: expId } })).toBe(0);
-        expect(await prisma.informePadre.count({ where: { expedienteId: expId } })).toBe(0);
-        expect(await prisma.aclaracionExpediente.count({ where: { expedienteId: expId } })).toBe(0);
-        expect(await prisma.informeConsolidado.count({ where: { expedienteId: expId } })).toBe(0);
-        expect(await prisma.patronExpediente.count({ where: { expedienteId: expId } })).toBe(0);
-        expect(await prisma.eventoExpediente.count({ where: { expedienteId: expId } })).toBe(0);
+        // POST · afirmación POR ENTRADA (no un conteo global que taparía una hija sin borrar): cada
+        // entrada de la constante quedó en 0, nombrando cuál si sobrevive.
+        for (const hija of HIJAS_RESTRICT_EXPEDIENTE) {
+            expect(await contarHija(hija, expId), `${hija} debió quedar en 0 tras la purga`).toBe(0);
+        }
+        expect(await prisma.expediente.count({ where: { id: expId } }), "el expediente quedó en 0").toBe(0);
     });
 });
