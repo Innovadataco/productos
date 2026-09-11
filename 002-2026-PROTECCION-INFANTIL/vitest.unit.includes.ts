@@ -349,6 +349,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/ai/sandbox.test.ts",
     "src/lib/monitoreo/worker-logger.test.ts",
     "src/lib/monitoreo/tick-vida.test.ts",
+    // SPEC-670 / I-396: el latido del MOTOR (sonda activa), no el del worker (unit, repo falso).
+    "src/lib/monitoreo/latido-motor.candado.test.ts",
     "src/lib/servicios/docker-adapter.test.ts",
     "src/lib/servicios/compose.ratchet.test.ts",
     "src/lib/servicios/tick-vida.ratchet.test.ts",

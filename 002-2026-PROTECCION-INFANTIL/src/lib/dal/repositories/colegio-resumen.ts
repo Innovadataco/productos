@@ -14,7 +14,8 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
-import { leerHeartbeatWorker } from "@/lib/worker-heartbeat";
+import { leerLatidoMotor, type LatidoMotor } from "@/lib/monitoreo/latido-motor";
+import { MonitoreoRepository } from "./monitoreo";
 import type { DbClient } from "../unit-of-work";
 import { ColegioRepository } from "./colegio";
 import { CursoRepository } from "./curso";
@@ -110,7 +111,12 @@ export interface HomeRector {
     };
     semaforo: { alertasNuevas: number; alertas72h: number };
     ultimaSenal: Date | null;
-    latidoSistema: Date | null;
+    /**
+     * SPEC-670 / I-396: latido del MOTOR de clasificación (no del worker). La
+     * franja lo usa para no afirmar frescura que no tiene: sale de la sonda
+     * activa (`ollama_smoke`/incidentes), nunca del `worker.heartbeat`.
+     */
+    motorClasificacion: LatidoMotor;
     tendencia: {
         semanal: PuntoTendencia[];
         mensual: PuntoTendencia[];
@@ -218,6 +224,7 @@ export class ColegioResumenRepository {
             casosComite,
             ultimaAlertaSinAbrirEn,
             identificadorCruzado,
+            motorClasificacion,
         ] = await Promise.all([
             colegioRepo.obtenerFichaHome(colegioId),
             estudianteRepo.contarCobertura(colegioId),
@@ -238,6 +245,8 @@ export class ColegioResumenRepository {
             new ComiteConvivenciaSolicitudesRepository(tx).abiertosConAntiguedad(colegioId),
             alertaRepo.ultimaAlertaSinAbrir(colegioId),
             alertaRepo.identificadorCruzado7d(colegioId),
+            // SPEC-670 / I-396: latido del MOTOR (sonda activa), no el del worker.
+            leerLatidoMotor(new MonitoreoRepository(tx)),
         ]);
 
         if (!colegio) {
@@ -280,7 +289,7 @@ export class ColegioResumenRepository {
             },
             semaforo,
             ultimaSenal,
-            latidoSistema: leerHeartbeatWorker(),
+            motorClasificacion,
             tendencia: {
                 semanal: rellenarSerie(serieSemanal, semanas),
                 mensual: rellenarSerie(serieMensual, meses),
