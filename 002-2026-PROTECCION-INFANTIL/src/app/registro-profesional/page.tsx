@@ -15,6 +15,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
 import { CampoCorreoDominio } from "@/components/modules/CampoCorreoDominio";
+import { BotonContinuaConGoogle } from "@/components/modules/BotonContinuaConGoogle";
 
 export default function RegistroProfesionalPage() {
     const [step, setStep] = useState<"correo" | "aviso">("correo");
@@ -96,6 +97,10 @@ export default function RegistroProfesionalPage() {
                                 <Button type="submit" isLoading={enviando} className="w-full">
                                     Continuar
                                 </Button>
+                                {/* SPEC-631 §2: Google DENTRO del registro de profesional, llevando el rol
+                                    PROFESIONAL firmado en el state. Rótulo por defecto «Continuar con Google»
+                                    (infinitivo voz-neutra, sirve al «usted» de esta puerta). */}
+                                <BotonContinuaConGoogle rol="PROFESIONAL" />
                             </form>
                         </GlassCard>
 

@@ -25,7 +25,7 @@ describe("auth-oauth · state (SPEC-587)", () => {
 
     it("state expirado no verifica", () => {
         const haceOnceMinutos = Date.now() - (OAUTH_STATE_TTL_SEG + 60) * 1000;
-        const state = firmarState(haceOnceMinutos);
+        const state = firmarState(undefined, haceOnceMinutos);
         expect(verificarState(state)).toBe(false);
     });
 

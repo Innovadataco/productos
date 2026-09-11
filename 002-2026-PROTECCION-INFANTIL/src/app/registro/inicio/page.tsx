@@ -1,9 +1,23 @@
 import Link from "next/link";
+import { Alerta } from "@/components/ui/Alerta";
 
-export default function RegistroInicioPage() {
+export default async function RegistroInicioPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ desde?: string }>;
+}) {
+    // SPEC-631 §1 (Diseño): el rebote «entré con Google y no tengo cuenta» del callback marca
+    // `desde=google`. Banner info (no error), voz tú, SOLO en ese rebote; el encabezado se conserva.
+    const desdeGoogleSinCuenta = (await searchParams).desde === "google";
     return (
         <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-12">
             <div className="w-full max-w-2xl animate-fadeIn">
+                {desdeGoogleSinCuenta && (
+                    <Alerta tono="info" role="status" className="mb-8">
+                        Iniciaste sesión con Google. Todavía no tienes un perfil en Protección
+                        Infantil — elige tu espacio y lo creamos ahora.
+                    </Alerta>
+                )}
                 <div className="mb-10 text-center">
                     <h1 className="font-serif text-4xl font-normal text-body">
                         ¿Quién eres?

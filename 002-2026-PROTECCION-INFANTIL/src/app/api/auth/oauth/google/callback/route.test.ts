@@ -84,40 +84,59 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         vi.unstubAllGlobals();
     });
 
-    it("cuenta NUEVA: crea PARENT con email en minúsculas, JWT, sesion_estado y AuditLog; redirige a /consentimiento (Paso 1, SPEC-588)", async () => {
+    it("SPEC-631 (gate 3 · el defecto): botón de /login (state SIN rol) + correo desconocido → NO crea nada y va a /registro/inicio", async () => {
+        userinfo = { sub: "google-sub-desconocido", email: "desconocido@example.com", email_verified: true, name: "X" };
+        const state = firmarState(); // login: sin rol firmado
+        const res = await GET(makeCallbackRequest("code-login", state, state));
+
+        // SPEC-631 §1: aterriza por el MISMO puente same-site (200) que toda salida del callback
+        // (SPEC-617/I-371), a /registro/inicio con la marca del banner. NO emite sesión (sin JWT); el
+        // rol NUNCA viaja por la URL, `desde=google` es solo la señal de UI (no revela nada que el
+        // destino no revele ya).
+        expect(res.status, "puente same-site (200), nunca un 302 que perdería el Strict").toBe(200);
+        const destino = new URL(await destinoDelPuente(res));
+        expect(destino.origin + destino.pathname).toBe("http://localhost:5005/registro/inicio");
+        expect(destino.searchParams.get("desde"), "marca del banner §1").toBe("google");
+        expect([...destino.searchParams.keys()], "la URL no lleva rol ni nada más").toEqual(["desde"]);
+        expect(await prisma.usuario.count(), "hoy nacía PARENT en silencio; ahora 0").toBe(0);
+        // No emite sesión: la cookie JWT (vía cookies()) NUNCA se setea.
+        expect(cookiesSet).not.toHaveBeenCalled();
+    });
+
+    it("SPEC-631: registro de FAMILIA (state rol=PARENT) + correo desconocido → crea PARENT, JWT, sesion_estado, AuditLog, /consentimiento", async () => {
         userinfo = { sub: "google-sub-nuevo", email: "Nuevo.Padre@Example.COM", email_verified: true, name: "Padre Nuevo" };
-        const state = firmarState();
+        const state = firmarState("PARENT");
         const res = await GET(makeCallbackRequest("code-123", state, state));
 
-        expect(res.status).toBe(200); // SPEC-617: puente same-site (200), no 302
+        expect(res.status).toBe(200); // SPEC-617: puente same-site (200)
         expect(await destinoDelPuente(res)).toBe("http://localhost:5005/consentimiento");
 
         const creado = await prisma.usuario.findUnique({ where: { email: "nuevo.padre@example.com" } });
-        expect(creado).not.toBeNull();
         expect(creado?.rol).toBe("PARENT");
-        expect(creado?.estado).toBe("activo");
-        expect(creado?.nombre).toBe("Padre Nuevo");
-        // Sin clave local real: hash presente (schema lo exige) pero de un secreto aleatorio.
-        expect(creado?.passwordHash).toMatch(/^\$2/);
+        expect(creado?.googleSub).toBe("google-sub-nuevo");
+        expect(creado?.passwordCreadaEn, "SPEC-613: cuenta Google sin clave local").toBeNull();
 
-        // Cookie JWT sellada vía cookies() con el sub del usuario.
         expect(cookiesSet).toHaveBeenCalled();
         const llamadoSesion = cookiesSet.mock.calls.find(([nombre]) => nombre === "token" || nombre === "__Host-token");
-        expect(llamadoSesion).toBeDefined();
         const payload = await verifyToken(llamadoSesion?.[1] as string);
         expect(payload?.sub).toBe(creado?.id);
-
-        // Cookie de estado de onboarding (directo al Paso 1, como /registro/completar).
         expect(res.headers.get("set-cookie") ?? "").toContain("sesion_estado=");
 
-        // AuditLog de la mutación crítica, sin PII sensible en metadatos.
         const auditoria = await prisma.auditLog.findMany({ where: { accion: "USER_CREATE" } });
         expect(auditoria).toHaveLength(1);
-        expect(auditoria[0].recursoId).toBe(creado?.id);
-        const metadatos = auditoria[0].metadatos as { origen?: string; proveedorSub?: string; email?: string };
-        expect(metadatos.origen).toBe("oauth_google");
-        expect(metadatos.proveedorSub).toBe("google-sub-nuevo");
-        expect(metadatos.email).toBeUndefined();
+        expect((auditoria[0].metadatos as { rol?: string }).rol).toBe("PARENT");
+    });
+
+    it("SPEC-631 (paridad gate 4): registro de PROFESIONAL (state rol=PROFESIONAL) → crea PROFESIONAL, su panel, SIN PerfilProfesional", async () => {
+        userinfo = { sub: "google-sub-pro", email: "pro@example.com", email_verified: true, name: "Pro" };
+        const state = firmarState("PROFESIONAL");
+        const res = await GET(makeCallbackRequest("code-pro", state, state));
+
+        expect(res.status).toBe(200);
+        expect(await destinoDelPuente(res)).toBe("http://localhost:5005/dashboard/profesional");
+        const creado = await prisma.usuario.findUnique({ where: { email: "pro@example.com" } });
+        expect(creado?.rol).toBe("PROFESIONAL");
+        expect(await prisma.perfilProfesional.count({ where: { usuarioId: creado!.id } }), "nace pelado: gate de casos es downstream").toBe(0);
     });
 
     it("EXISTENTE: el email de Google con mayúsculas resuelve la cuenta (case-insensitive), registra sesión y redirige a su home", async () => {
@@ -135,18 +154,36 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
         expect(sesiones).toHaveLength(1);
     });
 
-    it("EXISTENTE con OTRO rol: el rol manda y redirige a su panel", async () => {
+    it("SPEC-631 (gate 5 · no promueve): OPERADOR existente + state rol=PARENT → entra a SU rol real, NO se asciende ni se degrada", async () => {
         await crearUsuario("OPERADOR", "operador@example.com");
         userinfo = { sub: "google-sub-op", email: "operador@example.com", email_verified: true };
 
-        const state = firmarState();
+        // Empezar el registro por la puerta de «familia» NO puede cambiar el rol de una cuenta que existe.
+        const state = firmarState("PARENT");
         const res = await GET(makeCallbackRequest("code-789", state, state));
 
         expect(res.status).toBe(200);
         expect(await destinoDelPuente(res)).toBe("http://localhost:5005/dashboard/admin");
         expect(await prisma.usuario.count()).toBe(1);
-        // No es creación: sin AuditLog USER_CREATE.
-        expect(await prisma.auditLog.count({ where: { accion: "USER_CREATE" } })).toBe(0);
+        expect((await prisma.usuario.findUniqueOrThrow({ where: { email: "operador@example.com" } })).rol, "el rol NO cambió").toBe("OPERADOR");
+        expect(await prisma.auditLog.count({ where: { accion: "USER_CREATE" } }), "no es creación").toBe(0);
+    });
+
+    it("SPEC-631 (§3 · aviso otro-rol): PARENT existente + state rol=PROFESIONAL → aterriza en familia con ?aviso=cuenta-familia, no promueve", async () => {
+        await crearUsuario("PARENT", "familia.ya@example.com");
+        userinfo = { sub: "google-sub-fam", email: "familia.ya@example.com", email_verified: true };
+
+        // Intentar el registro de PROFESIONAL con un correo que YA es familia: entra a su rol real
+        // (gate 5) y aterriza en su espacio de familia con el aviso «de una vez» (§3), sin ascender.
+        const state = firmarState("PROFESIONAL");
+        const res = await GET(makeCallbackRequest("code-fam-prof", state, state));
+
+        expect(res.status).toBe(200);
+        const destino = new URL(await destinoDelPuente(res));
+        expect(destino.origin + destino.pathname, "aterriza en su espacio de familia").toBe("http://localhost:5005/dashboard/padre");
+        expect(destino.searchParams.get("aviso"), "marca del aviso §3").toBe("cuenta-familia");
+        expect((await prisma.usuario.findUniqueOrThrow({ where: { email: "familia.ya@example.com" } })).rol, "NO promueve a PROFESIONAL").toBe("PARENT");
+        expect(await prisma.auditLog.count({ where: { accion: "USER_CREATE" } }), "no es creación").toBe(0);
     });
 
     // ── SPEC-608/617 (I-371) · CANDADO DE CONDUCTA: la cadena post-Google no pasa por /login ──────
@@ -195,7 +232,7 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
 
     it("SPEC-608: cuenta NUEVA → /consentimiento se sirve directo (ruta de sesión), nunca /login", async () => {
         userinfo = { sub: "google-sub-land-new", email: "landing.nuevo@example.com", email_verified: true, name: "Nuevo" };
-        const state = firmarState();
+        const state = firmarState("PARENT"); // SPEC-631: crear un padre nuevo va por el registro de familia
         const res = await GET(makeCallbackRequest("code-land-new", state, state));
 
         expect(await destinoDelPuente(res)).toBe("http://localhost:5005/consentimiento");
@@ -232,7 +269,7 @@ describe("GET /api/auth/oauth/google/callback (SPEC-587)", { timeout: 30_000 }, 
 
     it("state expirado → 400", async () => {
         const haceOnceMinutos = Date.now() - (OAUTH_STATE_TTL_SEG + 60) * 1000;
-        const state = firmarState(haceOnceMinutos);
+        const state = firmarState(undefined, haceOnceMinutos);
         const res = await GET(makeCallbackRequest("code-w", state, state));
         expect(res.status).toBe(400);
     });

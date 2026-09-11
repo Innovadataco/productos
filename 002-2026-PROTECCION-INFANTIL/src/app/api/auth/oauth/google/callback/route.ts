@@ -1,18 +1,17 @@
 /**
- * SPEC-587 — GET /api/auth/oauth/google/callback.
+ * SPEC-587 / SPEC-631 — GET /api/auth/oauth/google/callback.
  *
- * Vuelta de Google: valida el state contra la cookie httpOnly, intercambia el
- * code, lee userinfo y exige email_verified. Resolución de cuenta por email
- * (minúsculas + trim, mismo criterio que el login):
- * - Existe → login directo (JWT 24 h, sesión registrada, vigencia como el login).
- * - No existe → cuenta PARENT nueva con contraseña aleatoria bcrypteada (el
- *   schema exige passwordHash; no hay campo de proveedor, así que el hash
- *   aleatorio imposible de adivinar ES la ausencia de clave local) + AuditLog.
- * - Existe con OTRO rol → login igual: es su cuenta, el rol manda.
+ * Vuelta de Google: valida el state contra la cookie httpOnly, intercambia el code, lee userinfo y
+ * exige email_verified. El `state` firmado trae el ROL (SPEC-631) si el arranque fue un REGISTRO por
+ * rol; ausente = botón de /login (solo autentica). Resolución por sub y luego email (mismo criterio del
+ * login):
+ * - Existe → login a SU rol real. El rol del state NO promueve (nunca se asciende una cuenta existente).
+ * - No existe + SIN rol (login) → NO se crea nada: a /registro/inicio a clasificarse.
+ * - No existe + CON rol firmado (registro) → se crea con ESE rol, re-validado contra el allowlist AL
+ *   CREAR (Datos): un rol privilegiado forjado no crea nada.
  *
- * Destino: homeParaRol (fuente única SPEC-319) para cuentas existentes;
- * la cuenta NUEVA va directo a /consentimiento (Paso 1, SPEC-588) y sella
- * además la cookie sesion_estado, como /registro/completar.
+ * Destino: cuenta NUEVA de padre → /consentimiento (Paso 1, SPEC-588); todo lo demás → homeParaRol
+ * (fuente única SPEC-319). Aterriza por el puente same-site (SPEC-617) y sella `sesion_estado`.
  */
 import { NextResponse } from "next/server";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -28,7 +27,7 @@ import {
     intercambiarCodePorToken,
     obtenerInfoUsuarioGoogle,
     OAUTH_STATE_COOKIE,
-    verificarState,
+    leerState,
 } from "@/lib/auth-oauth";
 
 function leerStateCookie(request: Request): string | null {
@@ -36,6 +35,11 @@ function leerStateCookie(request: Request): string | null {
     if (!cookieHeader) return null;
     const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${OAUTH_STATE_COOKIE}=([^;]+)`));
     return match ? decodeURIComponent(match[1]) : null;
+}
+
+function borrarStateCookie(res: NextResponse): void {
+    // El state es de un solo uso: se borra con los mismos atributos con que se sembró.
+    res.cookies.set(OAUTH_STATE_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
 }
 
 export async function GET(request: Request) {
@@ -53,8 +57,10 @@ export async function GET(request: Request) {
         const state = url.searchParams.get("state");
         const stateCookie = leerStateCookie(request);
 
-        // CSRF: el state firmado debe coincidir con la cookie de arranque.
-        if (!code || !state || !stateCookie || state !== stateCookie || !verificarState(state)) {
+        // CSRF: el state firmado debe coincidir con la cookie de arranque. `leerState` trae además el
+        // ROL firmado (SPEC-631) — que viaja SOLO acá, en el HMAC, jamás en la URL.
+        const { valido, rol } = leerState(state ?? "");
+        if (!code || !state || !stateCookie || state !== stateCookie || !valido) {
             return NextResponse.json(
                 { error: { message: "La sesión de registro expiró o no es válida. Intenta de nuevo.", code: ERROR_CODES.VALIDATION_ERROR } },
                 { status: 400 }
@@ -71,15 +77,35 @@ export async function GET(request: Request) {
             );
         }
 
-        // Mismo criterio del login (AutenticacionService): minúsculas + trim;
-        // la resolución/creación vive en el DAL (frontera Q-3).
-        const { usuario, esNuevo } = await new AutenticacionOauthService().resolverODeCrearCuenta({
-            email: info.email,
-            nombre: info.nombre ?? null,
-            proveedorSub: info.sub,
-            ipAddress: getClientIp(request),
-            userAgent: request.headers.get("user-agent") ?? "unknown",
-        });
+        const origen = origenPublicoPuente();
+        const servicio = new AutenticacionOauthService();
+        const ipAddress = getClientIp(request);
+        const userAgent = request.headers.get("user-agent") ?? "unknown";
+
+        // SPEC-631: PRIMERO resolver (nunca crear). La creación es un paso aparte y condicionado.
+        let usuario = await servicio.resolver({ email: info.email, proveedorSub: info.sub });
+        let esNuevo = false;
+        if (!usuario) {
+            if (rol === undefined) {
+                // Botón de /login con correo SIN cuenta: clasificarse ANTES de existir. NO se crea nada
+                // (así nadie nace padre en silencio). Marca `desde=google` para el banner info de
+                // /registro/inicio (SPEC-631 §1 de Diseño). NO es enumeración de SPEC-630: Google ya
+                // certificó que la persona controla ESE correo (autoconocimiento, no sondeo de terceros)
+                // y el propio destino ya lo revela. El rol NUNCA viaja por la URL (eso sigue en el state).
+                // Aterriza por el MISMO puente same-site que las demás salidas (SPEC-617/I-371): esta
+                // rama no emite JWT, pero mantener TODA salida en el puente evita que un cambio futuro
+                // que sí selle sesión aquí pierda el Strict en el primer salto. Sin excepción al candado.
+                const destinoSinCuenta = new URL("/registro/inicio", origen);
+                destinoSinCuenta.searchParams.set("desde", "google");
+                const aRegistro = construirAterrizajeOAuth(destinoSinCuenta.toString());
+                borrarStateCookie(aRegistro);
+                return aRegistro;
+            }
+            // Registro por rol: crear con el rol FIRMADO. `crearConRol` re-valida el allowlist y LANZA
+            // si el rol no es auto-registrable (gate 2) → cae al catch (500), sin crear.
+            usuario = await servicio.crearConRol({ email: info.email, nombre: info.nombre ?? null, proveedorSub: info.sub, rol, ipAddress, userAgent });
+            esNuevo = true;
+        }
 
         if (!esNuevo && usuario.estado !== "activo") {
             return NextResponse.json(
@@ -100,15 +126,11 @@ export async function GET(request: Request) {
             }
         }
 
-        // La cuenta nueva sigue el molde de /registro/completar: sin sesionLogId
-        // (la sesión registrada exigiría fila previa); la existente registra sesión
-        // como el login, así verifyAuth valida su ciclo de vida.
+        // La cuenta nueva sigue el molde de /registro/completar: sin sesionLogId (la sesión registrada
+        // exigiría fila previa); la existente registra sesión como el login.
         let sesionLogId: string | undefined;
         if (!esNuevo) {
-            sesionLogId = await new SessionLogService().registrarInicioSesion(request, {
-                id: usuario.id,
-                rol: usuario.rol,
-            });
+            sesionLogId = await new SessionLogService().registrarInicioSesion(request, { id: usuario.id, rol: usuario.rol });
         }
         const token = await createToken({
             sub: usuario.id,
@@ -117,39 +139,22 @@ export async function GET(request: Request) {
         });
         await setSessionCookie(request, token);
 
-        // El origen público sale de NEXT_PUBLIC_APP_URL (estricto, aborta ruidoso si falta): NUNCA de
-        // request.url, que dentro de Docker refleja el host interno (0.0.0.0:3000) y mandaría el
-        // aterrizaje a la nada SIN error (I-361). `origenPublicoPuente` lo gatea.
-        //
-        // SPEC-588: la cuenta NUEVA aterriza en /consentimiento (Paso 1 del camino); la
-        // EXISTENTE, en homeParaRol(rol). Ambas son rutas DESPUÉS del login, no el login.
-        //
-        // SPEC-608 (I-371): se sella `sesion_estado` en AMBAS ramas (antes solo la NUEVA).
-        // Importa porque la cuenta existente aterriza en /dashboard/padre —ruta GATEADA—:
-        // sin la cookie, el middleware rebota a /api/sesion/al-dia y, si el re-sello no pega
-        // en el cliente (visto en prod), el loop-cap (SPEC-572) termina en /login con la
-        // sesión YA creada —el encabezado saluda al usuario parado en el login—. Es el MISMO
-        // mecanismo que SPEC-588 evitó un piso más arriba yendo a /consentimiento (ruta de
-        // sesión, que no lee esa cookie), pero seguía vivo en la rama existente. Sellar acá
-        // hace que el destino —gateado o no— NO dependa del rebote: el middleware lee el
-        // estado y sirve la página (o el muro de consentimiento/password/vigencia que
-        // corresponda), nunca el login.
-        const origen = origenPublicoPuente();
-        const destino = esNuevo ? "/consentimiento" : homeParaRol(usuario.rol);
-        // SPEC-617 (I-371 · D-131): PUENTE same-site, NO un 302 cross-site. El JWT es SameSite=Strict a
-        // propósito (protege la bitácora de auditoría de GET cross-site). Un redirect al destino
-        // heredaría el origen cross-site del retorno de Google → el navegador NO mandaría el JWT recién
-        // sellado → el Paso 2 del middleware no lo ve → /login (esa era I-371). Esta página (mismo
-        // origen) navega ELLA MISMA al destino: la navegación es same-site, el JWT Strict viaja y el
-        // middleware lo ve. `destino` se deriva del ROL en el servidor (homeParaRol / consentimiento),
-        // nunca de la URL → no es un redirector abierto.
-        const res = construirAterrizajeOAuth(new URL(destino, origen).toString());
-        // El state es de un solo uso: se borra con los mismos atributos.
-        res.cookies.set(OAUTH_STATE_COOKIE, "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
-
-        // Sella el estado de sesión para que el destino no dependa del rebote del middleware.
-        // Fallo suave (sellarCookieSesionEstado devuelve false y no bloquea): en el peor caso
-        // cae al rebote de antes — estrictamente no peor que la conducta previa.
+        // SPEC-588: la cuenta NUEVA de PADRE aterriza en /consentimiento (Paso 1 del camino); el
+        // profesional nuevo y toda cuenta existente, en homeParaRol(rol). SPEC-608/617: se sella
+        // `sesion_estado` y se aterriza por el PUENTE same-site (el JWT es Strict; un 302 cross-site lo
+        // perdería → /login, que era I-371). `destino` se deriva del ROL en el servidor, nunca de la URL.
+        const destino = esNuevo && usuario.rol === "PARENT" ? "/consentimiento" : homeParaRol(usuario.rol);
+        const urlDestino = new URL(destino, origen);
+        // SPEC-631 §3 (Diseño): intentó el registro de PROFESIONAL con Google pero el correo YA es una
+        // cuenta de FAMILIA → entra a su rol real (gate 5, no promueve) y aterriza en su espacio de
+        // familia con un aviso «de una vez» (info, descartable) que explica por qué. Solo esa dirección
+        // (la que Diseño redactó); otros desajustes de rol no llevan aviso. La marca va por el puente
+        // (misma navegación same-site); el rol viaja firmado en el state, nunca en la URL.
+        if (rol === "PROFESIONAL" && !esNuevo && usuario.rol === "PARENT") {
+            urlDestino.searchParams.set("aviso", "cuenta-familia");
+        }
+        const res = construirAterrizajeOAuth(urlDestino.toString());
+        borrarStateCookie(res);
         await sellarCookieSesionEstado(res, usuario.id);
 
         return res;

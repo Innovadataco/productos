@@ -33,17 +33,29 @@ function LogoGoogle() {
 }
 
 /**
- * `label`/`conSeparador` son opcionales y por defecto mantienen el botón de siempre («Continúa con
- * Google», con separador «o») — login y registro no cambian. SPEC-623 lo reusa en la vista de
- * «olvidé mi contraseña» con label «Entrar con Google» y sin separador (una sola pieza de OAuth).
+ * SPEC-631: `rol` elige el ENDPOINT de arranque (no viaja como parámetro editable — cada endpoint fija
+ * su rol en el servidor y lo firma en el state). Sin `rol` → /login (solo autentica, no crea);
+ * PARENT → registro de familia; PROFESIONAL → registro de profesional.
+ * `label`/`conSeparador` (SPEC-623) mantienen por defecto el botón con separador. SPEC-631 (§2 de
+ * Diseño, D-107): el rótulo por defecto es INFINITIVO «Continuar con Google» —voz-neutra que sirve a
+ * familia (tú) y a colegio/profesional (usted)— en lugar del viejo «Continúa» (tú), que era defecto de
+ * voz vivo en las puertas de usted. `recuperar` sigue pasando «Entrar con Google» (infinitivo neutro).
  */
+const ENDPOINT_ARRANQUE: Record<"PARENT" | "PROFESIONAL", string> = {
+    PARENT: "/api/auth/oauth/google/registro/familia",
+    PROFESIONAL: "/api/auth/oauth/google/registro/profesional",
+};
+
 export function BotonContinuaConGoogle({
-    label = "Continúa con Google",
+    label = "Continuar con Google",
     conSeparador = true,
+    rol,
 }: {
     label?: string;
     conSeparador?: boolean;
+    rol?: "PARENT" | "PROFESIONAL";
 } = {}) {
+    const destino = rol ? ENDPOINT_ARRANQUE[rol] : "/api/auth/oauth/google";
     return (
         <div className="space-y-4">
             {conSeparador && (
@@ -58,7 +70,7 @@ export function BotonContinuaConGoogle({
                 variant="secondary"
                 className="w-full"
                 onClick={() => {
-                    window.location.href = "/api/auth/oauth/google";
+                    window.location.href = destino;
                 }}
             >
                 <span className="flex items-center justify-center gap-2">
