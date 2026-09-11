@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { ExpedienteCard } from "./ExpedienteCard";
 import { MAX_IDENTIFICADOR_LENGTH } from "@/lib/expediente/identificador-param";
 import type { EstadoExpediente, ScoreGravedad } from "@prisma/client";
@@ -50,12 +51,7 @@ export function IdentificadorBusquedaClient({ identificador, expedientes }: Iden
                     aria-label="Buscar por cuenta"
                     className="w-full flex-1 rounded-xl border border-cielo/30 bg-white/70 px-4 py-2.5 text-sm text-body placeholder:text-muted focus:border-primary-500 focus:outline-none"
                 />
-                <button
-                    type="submit"
-                    className="rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cielo/25 transition hover:opacity-90"
-                >
-                    Buscar
-                </button>
+                <Button type="submit">Buscar</Button>
             </form>
 
             {expedientes.length === 0 ? (
@@ -66,7 +62,7 @@ export function IdentificadorBusquedaClient({ identificador, expedientes }: Iden
                     </p>
                     <Link
                         href="/dashboard/padre/reportar"
-                        className="mt-5 inline-block rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cielo/25 transition hover:opacity-90"
+                        className="mt-5 inline-block rounded-xl bg-cielo px-5 py-2.5 text-sm font-semibold text-acento-ink shadow-lg shadow-cielo/25 transition hover:opacity-90"
                     >
                         Reportar una situación
                     </Link>

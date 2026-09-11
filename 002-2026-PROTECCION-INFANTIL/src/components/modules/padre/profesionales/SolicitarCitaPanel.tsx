@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
 import { leerBorradorConsulta, borrarBorradorConsulta } from "@/lib/padre/borrador-consulta";
 
 interface Franja {
@@ -227,7 +228,7 @@ export function SolicitarCitaPanel({
                                 onClick={() => setUrgencia(u)}
                                 className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
                                     urgencia === u
-                                        ? "bg-cielo text-white shadow"
+                                        ? "bg-cielo text-acento-ink shadow"
                                         : "bg-tinta/5 text-body hover:bg-tinta/10"
                                 }`}
                             >
@@ -275,16 +276,9 @@ export function SolicitarCitaPanel({
                 )}
             </div>
 
-            <button
-                type="button"
-                disabled={!puedeContinuar}
-                onClick={() => setModalAbierto(true)}
-                className={`mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${
-                    puedeContinuar ? "bg-pino hover:bg-pino/90" : "bg-tinta/30 cursor-not-allowed"
-                }`}
-            >
+            <Button type="button" disabled={!puedeContinuar} onClick={() => setModalAbierto(true)} className="mt-4 w-full">
                 {esReasignacion ? "Elegir a este profesional" : "Pagar y solicitar la cita"}
-            </button>
+            </Button>
 
             {/* Modal de confirmación */}
             {modalAbierto && franjaSel && (
@@ -332,19 +326,12 @@ export function SolicitarCitaPanel({
                         )}
 
                         <div className="mt-5 flex justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setModalAbierto(false)}
-                                className="rounded-full bg-tinta/5 px-4 py-2 text-sm text-body hover:bg-tinta/10 transition"
-                            >Volver</button>
-                            <button
-                                type="button"
-                                disabled={enviando}
-                                onClick={() => void enviar()}
-                                className="rounded-full bg-pino px-4 py-2 text-sm font-semibold text-white hover:bg-pino/90 transition disabled:cursor-not-allowed disabled:opacity-50"
-                            >
+                            <Button variant="ghost" type="button" onClick={() => setModalAbierto(false)}>
+                                Volver
+                            </Button>
+                            <Button type="button" disabled={enviando} onClick={() => void enviar()}>
                                 {enviando ? "Enviando…" : esReasignacion ? "Confirmar reasignación" : "Confirmar y pagar"}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

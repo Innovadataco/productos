@@ -80,7 +80,7 @@ export function TimelineEventoItem({
                 <div className="mt-4">
                     <Link
                         href={`/dashboard/padre/expedientes/${expedienteId}`}
-                        className="inline-flex items-center rounded-lg bg-cielo px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cielo/90"
+                        className="inline-flex items-center rounded-lg bg-cielo px-3 py-1.5 text-xs font-semibold text-acento-ink transition hover:bg-cielo/90"
                     >
                         Abrir expediente
                     </Link>

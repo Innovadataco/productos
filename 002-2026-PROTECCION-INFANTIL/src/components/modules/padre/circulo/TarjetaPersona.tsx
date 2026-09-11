@@ -18,6 +18,7 @@ import {
     tonoDeContacto,
     type Contacto,
 } from "./tipos";
+import { Button } from "@/components/ui/Button";
 
 type Props = {
     contacto: Contacto;
@@ -102,47 +103,23 @@ export function TarjetaPersona({ contacto, onVerDetalle, onAgregarDato, onPausar
 
             <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                 {tieneReportes && (
-                    <button
-                        type="button"
-                        onClick={() => onVerDetalle(contacto)}
-                        className="inline-flex h-9 items-center rounded-xl bg-pino px-3 text-sm font-semibold text-white transition hover:brightness-110"
-                    >
+                    <Button variant="secondary" type="button" onClick={() => onVerDetalle(contacto)}>
                         Ver de qué se trata
-                    </button>
+                    </Button>
                 )}
-                <button
-                    type="button"
-                    onClick={() => onAgregarDato(contacto)}
-                    disabled={ocupado}
-                    className="inline-flex h-9 items-center rounded-xl px-3 text-sm font-semibold text-pino transition hover:bg-pino/10 disabled:opacity-50"
-                >
+                <Button variant="ghost" type="button" onClick={() => onAgregarDato(contacto)} disabled={ocupado}>
                     + Otro dato
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onEditar(contacto)}
-                    disabled={ocupado}
-                    className="inline-flex h-9 items-center rounded-xl px-3 text-sm font-semibold text-body transition hover:bg-tinta/5 disabled:opacity-50"
-                >
+                </Button>
+                <Button variant="ghost" type="button" onClick={() => onEditar(contacto)} disabled={ocupado}>
                     Editar
-                </button>
+                </Button>
                 <span className="ml-auto flex items-center gap-1">
-                    <button
-                        type="button"
-                        onClick={() => onPausar(contacto)}
-                        disabled={ocupado}
-                        className="inline-flex h-9 items-center rounded-xl px-2.5 text-sm text-muted transition hover:text-body disabled:opacity-50"
-                    >
+                    <Button variant="ghost" type="button" onClick={() => onPausar(contacto)} disabled={ocupado}>
                         {enPausa ? "Reanudar" : "Pausar"}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => onQuitar(contacto)}
-                        disabled={ocupado}
-                        className="inline-flex h-9 items-center rounded-xl px-2.5 text-sm text-muted transition hover:text-body disabled:opacity-50"
-                    >
+                    </Button>
+                    <Button variant="ghost" type="button" onClick={() => onQuitar(contacto)} disabled={ocupado}>
                         Quitar
-                    </button>
+                    </Button>
                 </span>
             </div>
         </article>

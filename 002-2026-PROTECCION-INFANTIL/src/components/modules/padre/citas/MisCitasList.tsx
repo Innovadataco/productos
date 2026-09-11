@@ -63,7 +63,7 @@ function TarjetaCita({ cita, atenuada }: { cita: CitaParaPadreDto; atenuada: boo
                 {esCancelada && (
                     <Link
                         href="/dashboard/padre/profesionales"
-                        className="inline-flex h-9 items-center rounded-xl bg-pino px-3 text-sm font-semibold text-white transition hover:brightness-110"
+                        className="inline-flex h-9 items-center rounded-xl bg-cielo px-3 text-sm font-semibold text-acento-ink transition hover:brightness-110"
                     >
                         Pedir otra cita
                     </Link>
@@ -102,7 +102,7 @@ export function MisCitasList({ citas }: { citas: CitaParaPadreDto[] }) {
                 </p>
                 <Link
                     href="/dashboard/padre/profesionales"
-                    className="mt-5 inline-flex h-11 items-center rounded-xl bg-pino px-5 font-semibold text-white transition hover:brightness-110"
+                    className="mt-5 inline-flex h-11 items-center rounded-xl bg-cielo px-5 font-semibold text-acento-ink transition hover:brightness-110"
                 >
                     Encontrar psicólogo
                 </Link>

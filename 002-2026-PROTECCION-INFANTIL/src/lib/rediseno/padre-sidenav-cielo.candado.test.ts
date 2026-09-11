@@ -16,7 +16,11 @@ const src = readFileSync(
 ).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 const lineas = src.split("\n");
-const activo = lineas.find((l) => /text-white shadow-lg/.test(l)) ?? "";
+// El ítem activo se ancla por su SOMBRA (`shadow-lg shadow-cielo`), no por el
+// rótulo: SPEC-633 pasó el texto del activo de `text-white` a `text-acento-ink`
+// (contraste por tema, SPEC-632). La sombra identifica al activo sin depender
+// del color del texto, y la contraprueba sigue viva (bg-cielo→bg-sky = rojo).
+const activo = lineas.find((l) => /shadow-lg shadow-cielo/.test(l)) ?? "";
 const inactivo = lineas.find((l) => /hover:bg-cielo\/10|hover:text-cielo/.test(l)) ?? "";
 
 describe("SPEC-479 · PadreSideNav en cielo (0 sky)", () => {

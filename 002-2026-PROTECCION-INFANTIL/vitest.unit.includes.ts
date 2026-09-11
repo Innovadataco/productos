@@ -628,4 +628,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/canjear-acceso/canjear-acceso.candado.test.tsx",
     // SPEC-619 (I-371): candado de superficie GET-que-muta — scan estático, sin base.
     "scripts/arch/no-get-muta.test.ts",
+    // SPEC-633: frontera del botón — ratchet de cromo crudo fuera de <Button> + primario en .map.
+    "src/components/modules/padre/boton-frontera.candado.test.ts",
 ];

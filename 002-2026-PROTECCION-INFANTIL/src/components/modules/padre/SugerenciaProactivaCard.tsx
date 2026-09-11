@@ -54,7 +54,7 @@ export function SugerenciaProactivaCard({ sugerencia }: SugerenciaProactivaCardP
                     <div className="mt-3">
                         <Link
                             href={sugerencia.accion.href}
-                            className="inline-flex items-center rounded-lg bg-cielo px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cielo/90"
+                            className="inline-flex items-center rounded-lg bg-cielo px-3 py-1.5 text-xs font-semibold text-acento-ink transition hover:bg-cielo/90"
                         >
                             {sugerencia.accion.etiqueta}
                         </Link>

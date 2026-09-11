@@ -460,16 +460,12 @@ export function CirculoConfianzaClient() {
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
                 {!sinCupo && contactos.length > 0 && (
-                    <button
-                        type="button"
-                        onClick={abrirAgregar}
-                        className="inline-flex h-12 items-center gap-2 rounded-xl bg-pino px-5 font-semibold text-white transition hover:brightness-110"
-                    >
+                    <Button type="button" onClick={abrirAgregar}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
                             <path d="M12 5v14M5 12h14" />
                         </svg>
                         Agregar a alguien
-                    </button>
+                    </Button>
                 )}
                 <Link
                     href="/dashboard/padre/hijos"
