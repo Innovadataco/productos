@@ -16,7 +16,7 @@
  */
 import { useState } from "react";
 import { EstadoTransicion } from "@/components/modules/EstadoTransicion";
-import { fechaHoraSinMinutos } from "@/lib/format/fecha";
+import { fechaHechoLegible } from "@/lib/format/fecha";
 
 export interface AnalisisIaDto {
     categoriaLabel: string;
@@ -44,6 +44,8 @@ interface VerAnalisisProps {
     ficha?: FichaHechoDto | undefined;
     /** Fecha del hecho, para la ficha (G20: se muestra sin minutos). */
     fechaIncidente?: string | undefined;
+    /** SPEC-626: la hora fue aproximada — la ficha muestra solo la fecha. */
+    horaAproximada?: boolean | undefined;
     /** Estado del reporte — distingue "en revisión por una persona". */
     estado?: string | undefined;
 }
@@ -58,6 +60,7 @@ export function VerAnalisis({
     analisisIa = null,
     ficha,
     fechaIncidente,
+    horaAproximada,
     estado,
 }: VerAnalisisProps) {
     const [abierto, setAbierto] = useState(false);
@@ -150,7 +153,7 @@ export function VerAnalisis({
                             {fechaIncidente && (
                                 <>
                                     <dt className="text-subtle">Fecha del hecho</dt>
-                                    <dd className="text-body">{fechaHoraSinMinutos(fechaIncidente)}</dd>
+                                    <dd className="text-body">{fechaHechoLegible(fechaIncidente, horaAproximada)}</dd>
                                 </>
                             )}
                             <dt className="text-subtle">Origen</dt>

@@ -2,7 +2,7 @@
 
 import type { DetalleReporte } from "./types";
 import { formatCategoria, formatEstado } from "./types";
-import { fechaHoraSinMinutos } from "@/lib/format/fecha";
+import { fechaHechoLegible } from "@/lib/format/fecha";
 
 interface ReporteDetalleInfoProps {
     reporte: DetalleReporte;
@@ -38,7 +38,7 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                         hora en a.m./p.m., SIN minutos. Antes esta vista mostraba
                         solo la fecha, con un formateador propio; el minuto exacto
                         de un hecho no se conoce y fingirlo es peor (G20). */}
-                    <p>{fechaHoraSinMinutos(reporte.fechaIncidente)}</p>
+                    <p>{fechaHechoLegible(reporte.fechaIncidente, reporte.horaAproximada)}</p>
                 </div>
                 <div>
                     <span className="font-medium text-subtle">Origen</span>

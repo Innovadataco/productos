@@ -4,6 +4,8 @@
  * Funcionan en cliente y servidor (Node 22 + Intl.DateTimeFormat).
  */
 
+import { ETIQUETA_FRANJA, franjaDeInstante } from "@/lib/reportes/franja-aproximada";
+
 const TZ_BOGOTA = "America/Bogota";
 const LOCALE = "es-CO";
 
@@ -64,6 +66,31 @@ export function fechaHoraSinMinutos(iso: string | null | undefined): string {
     const hora = formatear(iso, { hour: "numeric", hour12: true });
     if (hora === "—") return "—";
     return `${fecha} · ${hora}`;
+}
+
+/**
+ * SPEC-626 · fecha del HECHO respetando `horaAproximada`. Cuando el reportante
+ * NO dio la hora (`horaAproximada = true`), se muestra SOLO la fecha — NUNCA una
+ * hora que no dijo. Fingir precisión en un caso sobre un menor es peor que no
+ * tenerla: la bandera se guarda en la captura (D-126/626) y TODA superficie que
+ * muestre la fecha del hecho debe pasar por acá, no por `fechaHoraSinMinutos`
+ * directo (candado de clase). Con hora precisa: día + hora sin minutos.
+ */
+export function fechaHechoLegible(
+    iso: string | null | undefined,
+    horaAproximada?: boolean | null,
+): string {
+    if (horaAproximada) {
+        const fecha = formatear(iso, { year: "numeric", month: "short", day: "numeric" });
+        if (fecha === "—") return "—";
+        // I-379: la hora representativa (3/9/15/21) es un cálculo INTERNO y NUNCA
+        // se muestra como hora de reloj cuando es aproximada. Se muestra la FRANJA
+        // (derivada del centro, fuente única en franja-aproximada); si por un dato
+        // inesperado no cae en un centro, solo la fecha — jamás una hora.
+        const franja = iso ? franjaDeInstante(iso) : null;
+        return franja ? `${fecha} · ${ETIQUETA_FRANJA[franja]}` : fecha;
+    }
+    return fechaHoraSinMinutos(iso);
 }
 
 /**
