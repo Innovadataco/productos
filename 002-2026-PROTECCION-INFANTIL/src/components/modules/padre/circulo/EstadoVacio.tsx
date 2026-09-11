@@ -5,6 +5,8 @@
  * No se muestra un vacío: se muestra qué hacer, con ideas concretas para que el
  * padre no tenga que pensar a quién poner.
  */
+import { Button } from "@/components/ui/Button";
+
 const PASOS = [
     { n: 1, titulo: "Agrega a la persona", detalle: "Su nombre y qué es de tus hijos." },
     { n: 2, titulo: "Escribe cómo la encuentran", detalle: "Su celular o su usuario en Instagram, TikTok, Roblox…" },
@@ -34,16 +36,12 @@ export function EstadoVacio({ onAgregar }: { onAgregar: () => void }) {
             </ol>
 
             <div className="mt-6 flex flex-col gap-3">
-                <button
-                    type="button"
-                    onClick={onAgregar}
-                    className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-pino px-7 text-lg font-semibold text-white transition hover:brightness-110 sm:w-auto"
-                >
+                <Button type="button" size="hero" onClick={onAgregar} className="w-full sm:w-auto">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
                         <path d="M12 5v14M5 12h14" />
                     </svg>
                     Agregar a la primera persona
-                </button>
+                </Button>
                 <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
                     Ideas:
                     {IDEAS.map((i) => (
