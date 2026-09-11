@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import TopicCard from '@/components/TopicCard'
 import SkeletonCard from '@/components/SkeletonCard'
+import StageBadge from '@/components/StageBadge'
 import { useProfile } from '@/hooks/useProfile'
 import { useProgress } from '@/hooks/useProgress'
 import { fetchQuestions, filterQuestions, matchesPerfil } from '@/lib/sheets'
-import { getTopicStats, perfilTotals } from '@/lib/storage'
-import { CONV_BADGE, Question, TOPICS } from '@/lib/types'
+import { getStageStats, getTopicStats, perfilTotals } from '@/lib/storage'
+import { CONV_BADGE, Question, StageKey, StageStats, TOPICS } from '@/lib/types'
 
 export default function Home() {
   const router = useRouter()
@@ -90,12 +91,17 @@ export default function Home() {
       ) : (
         <div className="space-y-3">
           {TOPICS[perfil].map((t) => (
-            <TopicCard
-              key={t.key}
-              topic={t}
-              count={counts[t.key] ?? 0}
-              stats={getTopicStats(progress, perfil, t.key)}
-            />
+            <div key={t.key}>
+              <TopicCard
+                topic={t}
+                count={counts[t.key] ?? 0}
+                stats={getTopicStats(progress, perfil, t.key)}
+              />
+              <StageRow
+                stats={getStageStats(progress, perfil, t.key)}
+                tema={t.key}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -117,4 +123,43 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="mt-0.5 text-[11px] font-medium text-gray-500">{label}</p>
     </div>
   )
+}
+
+function StageRow({ stats, tema }: { stats: StageStats; tema: string }) {
+  const router = useRouter()
+  const next = nextPendingStage(stats)
+  const stages: StageKey[] = ['resumen', 'flashcards', 'quiz', 'resultado']
+
+  return (
+    <div className="mt-2 flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+      <div className="flex items-center gap-3">
+        {stages.map((stage) => (
+          <div key={stage} className="flex flex-col items-center gap-1">
+            <StageBadge stage={stage} stats={stats} />
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() =>
+          router.push(
+            next
+              ? `/modulo/${encodeURIComponent(tema)}/${next}/`
+              : `/modulo/${encodeURIComponent(tema)}/`
+          )
+        }
+        className="rounded-lg px-3 py-1.5 text-xs font-bold text-white"
+        style={{ backgroundColor: '#0b6e5a' }}
+      >
+        {next ? 'Continuar' : 'Ver'}
+      </button>
+    </div>
+  )
+}
+
+function nextPendingStage(stats: StageStats): StageKey | null {
+  if (!stats.resumen_done) return 'resumen'
+  if (!stats.flashcards_done) return 'flashcards'
+  if (stats.quiz_total === 0) return 'quiz'
+  if (!stats.resultado_seen) return 'resultado'
+  return null
 }

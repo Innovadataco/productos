@@ -10,6 +10,7 @@ import SkeletonCard from '@/components/SkeletonCard'
 import { useProfile } from '@/hooks/useProfile'
 import { useProgress } from '@/hooks/useProgress'
 import { useQuestions } from '@/hooks/useQuestions'
+import { saveLastQuizSession } from '@/lib/storage'
 import { CONV_BADGE, TOPICS } from '@/lib/types'
 
 export default function QuizClient({ temaKey }: { temaKey: string }) {
@@ -21,6 +22,7 @@ export default function QuizClient({ temaKey }: { temaKey: string }) {
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [correctCount, setCorrectCount] = useState(0)
+  const [answers, setAnswers] = useState<number[]>([])
 
   useEffect(() => {
     if (ready && !perfil) router.replace('/')
@@ -93,13 +95,22 @@ export default function QuizClient({ temaKey }: { temaKey: string }) {
   const choose = (i: number) => {
     if (selected !== null) return
     setSelected(i)
+    setAnswers((prev) => [...prev, i])
     if (i === question.respuesta) setCorrectCount((n) => n + 1)
   }
 
   const next = () => {
     if (isLast) {
       addResult(temaKey, correctCount, questions.length)
-      router.push(`/result/${encodeURIComponent(temaKey)}?correct=${correctCount}&total=${questions.length}`)
+      saveLastQuizSession({
+        tema: temaKey,
+        questions,
+        answers: [...answers, selected ?? -1],
+        correct: correctCount,
+        total: questions.length,
+        at: Date.now(),
+      })
+      router.push(`/modulo/${encodeURIComponent(temaKey)}/resultado?correct=${correctCount}&total=${questions.length}`)
     } else {
       setIndex((n) => n + 1)
       setSelected(null)
