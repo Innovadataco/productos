@@ -5209,3 +5209,12 @@ function mergeLegacyPreguntas() {
   }
   Logger.log('Preguntas consolidadas. Total filas: ' + canonical.getLastRow());
 }
+
+function diagnoseSheets() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheets = ss.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    const s = sheets[i];
+    Logger.log('Sheet: "' + s.getName() + '" | rows: ' + s.getLastRow());
+  }
+}
