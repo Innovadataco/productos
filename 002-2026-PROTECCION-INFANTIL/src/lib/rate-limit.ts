@@ -53,8 +53,6 @@ const DEFAULTS: Record<string, ScopeDefaults> = {
     verificar_pdf: { windowSeconds: 60, maxRequests: 30 },
     // SPEC-235 (002-PI-135): consulta pública de guías de acción.
     guias_accion_publica: { windowSeconds: 60, maxRequests: 30 },
-    // SPEC-587: arranque y callback de OAuth de Google (flujo PADRE).
-    oauth_google: { windowSeconds: 600, maxRequests: 30 },
     // SPEC-584 (Fase 3): solicitud de código temporal de acceso al texto.
     // Estricto por diseño del dueño (2026-09-07): máx 3 solicitudes/hora por padre.
     acceso_codigo: { windowSeconds: 3600, maxRequests: 3 },

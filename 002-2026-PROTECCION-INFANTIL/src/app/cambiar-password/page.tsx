@@ -16,14 +16,8 @@ export default function CambiarPasswordPage() {
     const [passwordActual, setPasswordActual] = useState("");
     const [passwordNueva, setPasswordNueva] = useState("");
     const [passwordConfirmar, setPasswordConfirmar] = useState("");
-    // SPEC-598 — cuentas OAuth sin contraseña local: el código de un solo uso
-    // enviado a SU correo reemplaza a la «contraseña actual» que no existe.
-    const [codigo, setCodigo] = useState("");
-    const [codigoEnviado, setCodigoEnviado] = useState(false);
-    const [enviandoCodigo, setEnviandoCodigo] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
-    const [aviso, setAviso] = useState("");
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
@@ -31,31 +25,6 @@ export default function CambiarPasswordPage() {
             router.push("/login");
         }
     }, [isLoading, user, router]);
-
-    const modoCrear = !!user?.googleSub && !user?.passwordCreadaEn;
-
-    const handleEnviarCodigo = async () => {
-        setError("");
-        setAviso("");
-        setEnviandoCodigo(true);
-        try {
-            const res = await fetch("/api/auth/crear-password/codigo", {
-                method: "POST",
-                credentials: "include",
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                setError(data.error?.message || "No pudimos enviar el código. Intente de nuevo.");
-                return;
-            }
-            setCodigoEnviado(true);
-            setAviso(`Enviamos un código a su correo. Vence en ${data.vigenciaMinutos ?? 10} minutos.`);
-        } catch {
-            setError("Error de red. Intente de nuevo.");
-        } finally {
-            setEnviandoCodigo(false);
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -72,32 +41,22 @@ export default function CambiarPasswordPage() {
 
         setIsSubmitting(true);
         try {
-            const res = await fetch(
-                modoCrear ? "/api/auth/crear-password" : "/api/auth/cambiar-password",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(
-                        modoCrear
-                            ? { codigo, passwordNueva, passwordConfirmar }
-                            : { passwordActual, passwordNueva }
-                    ),
-                }
-            );
+            const res = await fetch("/api/auth/cambiar-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ passwordActual, passwordNueva }),
+            });
             const data = await res.json();
             if (!res.ok) {
                 setError(data.error?.message || "Error al guardar la contraseña");
                 return;
             }
             setSuccess(true);
-            // SPEC-598: refrescar la sesión para que el menú pase a ofrecer
-            // «Cambiar contraseña» (la cuenta ya tiene clave local propia).
             await checkSession();
             setTimeout(() => {
-                // SPEC-319: fuente única rol→home. La copia local omitía
-                // COMITE_VALIDACION y COMITE_CONVIVENCIA (el comité nace
-                // debeCambiarPassword:true, así que ESTE es su camino real).
+                // SPEC-319: fuente única rol→home. El comité nace debeCambiarPassword:true,
+                // así que ESTE es su camino real.
                 window.location.href = homeParaRol(user?.rol);
             }, 1200);
         } catch {
@@ -120,61 +79,30 @@ export default function CambiarPasswordPage() {
             <div className="w-full max-w-md animate-fadeIn">
                 <div className="mb-8 text-center">
                     <h1 className="text-3xl font-bold text-body">
-                        <span className="text-gradient">{modoCrear ? "Crear contraseña" : "Cambiar contraseña"}</span>
+                        <span className="text-gradient">Cambiar contraseña</span>
                     </h1>
                     <p className="mt-2 text-sm text-muted">
                         {user.debeCambiarPassword
                             ? "Debe cambiar su contraseña temporal antes de continuar."
-                            : modoCrear
-                                ? "Defina una contraseña para también entrar con su correo. Enviamos un código de verificación a su correo; su sesión de Google sigue funcionando."
-                                : "Actualice su contraseña de acceso."}
+                            : "Actualice su contraseña de acceso."}
                     </p>
                 </div>
 
                 <GlassCard>
                     {success ? (
                         <Alerta tono="exito" role="status" className="p-4 text-center">
-                            Contraseña {modoCrear ? "creada" : "actualizada"}. Redirigiendo...
+                            Contraseña actualizada. Redirigiendo...
                         </Alerta>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            {modoCrear && (
-                                <>
-                                    <div className="flex items-end gap-2">
-                                        <div className="flex-1">
-                                            <Input
-                                                label="Código de verificación"
-                                                type="text"
-                                                inputMode="numeric"
-                                                value={codigo}
-                                                onChange={(e) => setCodigo(e.target.value)}
-                                                required
-                                                autoComplete="one-time-code"
-                                            />
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            isLoading={enviandoCodigo}
-                                            onClick={handleEnviarCodigo}
-                                            disabled={enviandoCodigo}
-                                        >
-                                            {codigoEnviado ? "Reenviar" : "Enviar código"}
-                                        </Button>
-                                    </div>
-                                    {aviso && <Alerta tono="info">{aviso}</Alerta>}
-                                </>
-                            )}
-                            {!modoCrear && (
-                                <Input
-                                    label="Contraseña actual"
-                                    type="password"
-                                    value={passwordActual}
-                                    onChange={(e) => setPasswordActual(e.target.value)}
-                                    required
-                                    autoComplete="current-password"
-                                />
-                            )}
+                            <Input
+                                label="Contraseña actual"
+                                type="password"
+                                value={passwordActual}
+                                onChange={(e) => setPasswordActual(e.target.value)}
+                                required
+                                autoComplete="current-password"
+                            />
                             <Input
                                 label="Nueva contraseña"
                                 type="password"
@@ -197,7 +125,7 @@ export default function CambiarPasswordPage() {
                                 </Alerta>
                             )}
                             <Button type="submit" isLoading={isSubmitting} className="w-full">
-                                {modoCrear ? "Crear contraseña" : "Guardar contraseña"}
+                                Guardar contraseña
                             </Button>
                         </form>
                     )}

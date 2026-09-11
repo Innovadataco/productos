@@ -25,9 +25,6 @@ export type ResultadoCambioPassword =
 export type ResultadoSolicitudRecuperacion =
     | { ok: true; tipo: "ok"; token: string }
     | { ok: true; tipo: "sin_usuario" }
-    // SPEC-609: cuenta creada por Google sin contraseña local — no hay contraseña que restablecer,
-    // no se genera token ni correo; la ruta responde «entra con Google».
-    | { ok: true; tipo: "solo_google" }
     | { ok: false; tipo: "limite" };
 
 export type ResultadoValidacionToken =
