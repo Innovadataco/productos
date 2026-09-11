@@ -68,6 +68,10 @@ function arbolDeRender(entrada: string): Array<{ archivo: string; codigo: string
     const vistos = new Set<string>();
     const cola = [entrada];
     const importRe = /(?:import[\s\S]*?from|import)\s*["']([^"']+)["']/g;
+    // Los `page.tsx` de rutas re-exportan la página real (`export { default } from "…"`,
+    // SPEC-317). Sin seguir el re-export, el BFS desde esa raíz no recorre NADA (el
+    // wrapper no tiene imports) → falso verde. Se siguen también `export … from`.
+    const reexportRe = /export\s+(?:\*(?:\s+as\s+\w+)?|\{[^}]*\})\s+from\s*["']([^"']+)["']/g;
     const salida: Array<{ archivo: string; codigo: string }> = [];
     while (cola.length) {
         const actual = cola.shift()!;
@@ -75,12 +79,54 @@ function arbolDeRender(entrada: string): Array<{ archivo: string; codigo: string
         vistos.add(actual);
         const codigo = fs.readFileSync(actual, "utf-8");
         salida.push({ archivo: actual, codigo });
-        for (const m of codigo.matchAll(importRe)) {
-            const destino = resolver(m[1]!, actual);
-            if (destino && !vistos.has(destino)) cola.push(destino);
+        for (const re of [importRe, reexportRe]) {
+            for (const m of codigo.matchAll(re)) {
+                const destino = resolver(m[1]!, actual);
+                if (destino && !vistos.has(destino)) cola.push(destino);
+            }
         }
     }
     return salida;
+}
+
+// Un walker codifica una suposición de CÓMO se conecta el árbol; el framework tiene
+// más de una forma (import, import(), export … from, export *, layouts del router).
+// Cada forma que el walker no conoce es un SUB-ÁRBOL entero invisible, no una hoja — y
+// "cero nodos sospechosos" es indistinguible de "árbol limpio" (verde perpetuo). Este
+// guard barato mata ese punto ciego: si una raíz recorre casi nada, es un bug del
+// walker, no un árbol limpio. (Este PR ya cayó en él: los page.tsx del padre re-exportan
+// la página real (SPEC-317) y el BFS, que solo seguía `import`, salía con 1 nodo.)
+// Cada raíz declara el COMPONENTE que su árbol DEBE alcanzar. Afirmar el componente
+// nombrado (no solo «≥N archivos») caza también la raíz PARCIALMENTE muerta: la que
+// recorre algo pero NO llega a su objetivo porque el objetivo cuelga de una sintaxis
+// que el walker no sigue. El error nombra la RAÍZ muerta, nunca un total agregado.
+const MARCA_RAIZ: Record<string, string> = {
+    [path.join(SRC, "app/mis-reportes/page.tsx")]: "MisReportesCadenas",
+    [path.join(SRC, "app/mis-reportes/layout.tsx")]: "PadreNavMovil",
+    [path.join(SRC, "app/dashboard/padre/expedientes/[id]/page.tsx")]: "ExpedienteMadreClient",
+    [path.join(SRC, "app/dashboard/padre/layout.tsx")]: "PadreNavMovil",
+    [path.join(SRC, "app/dashboard/colegio/alertas/[id]/page.tsx")]: "CasoVivoColegio",
+    [path.join(SRC, "app/dashboard/padre/citas/page.tsx")]: "MisCitasList",
+    [path.join(SRC, "app/dashboard/padre/perfil/page.tsx")]: "HistorialCambiosPerfil",
+    [path.join(SRC, "app/dashboard/padre/circulo-confianza/page.tsx")]: "CirculoConfianzaClient",
+    [path.join(SRC, "app/camino/listo/page.tsx")]: "camino/listo/page", // el arreglo vive en el propio page
+    [path.join(SRC, "app/consentimiento/page.tsx")]: "ModalConsentimiento",
+};
+
+function afirmarCobertura(raices: string[]): void {
+    for (const raiz of raices) {
+        const marca = MARCA_RAIZ[raiz];
+        expect(marca, `Falta declarar MARCA_RAIZ para ${path.relative(SRC, raiz)}`).toBeDefined();
+        const arbol = arbolDeRender(raiz);
+        const alcanza = arbol.some(({ archivo }) => archivo.includes(marca!));
+        expect(
+            alcanza,
+            `La raíz ${path.relative(SRC, raiz)} recorrió ${arbol.length} archivo(s) pero NO alcanzó su ` +
+                `componente esperado "${marca}". Una raíz que re-exporta o conecta por una sintaxis que el walker ` +
+                "no sigue (`export … from`, `import()`, `export *`, convención del router) deja un sub-árbol " +
+                "INVISIBLE — y «cero nodos sospechosos» es indistinguible de «árbol limpio». Revisá el walker."
+        ).toBe(true);
+    }
 }
 
 // ---- (b) medición de contraste ----------------------------------------------
@@ -121,6 +167,10 @@ describe("SPEC-646 (I-381) · (a) la superficie que se invierte no se puede escr
         });
     }
 
+    it("cada raíz recorre un árbol de render real (no un wrapper de re-export vacío)", () => {
+        afirmarCobertura(RAICES);
+    });
+
     it("ningún archivo del árbol de render (Mis reportes + expediente) usa dark:bg-tinta/N", () => {
         const infractores: string[] = [];
         let totalArchivos = 0;
@@ -139,6 +189,57 @@ describe("SPEC-646 (I-381) · (a) la superficie que se invierte no se puede escr
                 "que se invierte en oscuro (dark:bg-tinta/N) y aclara la tarjeta hasta romper el texto (I-381). " +
                 "La tinta es texto/trazo, nunca superficie: usá `bg-superficie-1|2` (opaco) + borde hairline " +
                 "claro (border-tinta) para la elevación. Infractores: " + infractores.join(", ")
+        ).toEqual([]);
+    });
+});
+
+// ---- SPEC-650 · el resto de la familia I-381 + el hueco SIMÉTRICO del borde --------
+// El de 646 vigila el RELLENO (`dark:bg-tinta/N`); nadie vigilaba el BORDE. El borde
+// falla igual por inversión: `dark:border-papel/N` sobre una superficie de papel es
+// INVISIBLE en oscuro (papel sobre papel). Regla dura de Diseño: la tinta es texto y
+// trazo, NUNCA superficie; y `papel` NUNCA es borde en oscuro. Este candado extiende
+// las raíces a las áreas que migra SPEC-650 y prohíbe AMBAS inversiones ahí.
+const RAICES_650 = [
+    path.join(SRC, "app/dashboard/colegio/alertas/[id]/page.tsx"), // CasoVivoColegio, InformesCasoPanel, EscudoColegioUploader
+    path.join(SRC, "app/dashboard/padre/citas/page.tsx"), // MisCitasList
+    path.join(SRC, "app/dashboard/padre/perfil/page.tsx"), // nota de suscripción en pausa (borde)
+    path.join(SRC, "app/dashboard/padre/circulo-confianza/page.tsx"), // círculo: tarjetas + option-chips migrados
+    path.join(SRC, "app/camino/listo/page.tsx"),
+    path.join(SRC, "app/consentimiento/page.tsx"), // ModalConsentimiento
+];
+
+// Relleno de tinta O borde de papel en oscuro = las dos caras de la inversión I-381.
+const INVERSION_650 = /dark:bg-tinta\/|dark:border-papel\//;
+
+describe("SPEC-650 (I-381 · resto) · ni relleno de tinta ni borde de papel en oscuro", () => {
+    for (const raiz of RAICES_650) {
+        it(`existe la raíz ${path.basename(path.dirname(raiz))}/${path.basename(raiz)}`, () => {
+            expect(fs.existsSync(raiz), `No encontré ${raiz}`).toBe(true);
+        });
+    }
+
+    it("cada raíz recorre un árbol de render real (no un wrapper de re-export vacío)", () => {
+        afirmarCobertura(RAICES_650);
+    });
+
+    it("ningún archivo de las áreas migradas usa dark:bg-tinta/N ni dark:border-papel/N", () => {
+        const infractores: string[] = [];
+        let totalArchivos = 0;
+        for (const raiz of RAICES_650) {
+            for (const { archivo, codigo } of arbolDeRender(raiz)) {
+                totalArchivos++;
+                if (INVERSION_650.test(sinComentarios(codigo))) {
+                    infractores.push(path.relative(SRC, archivo));
+                }
+            }
+        }
+        expect(totalArchivos, "El BFS no recorrió nada — revisá las raíces.").toBeGreaterThan(5);
+        expect(
+            [...new Set(infractores)],
+            "Estos archivos de las áreas migradas por SPEC-650 aún invierten la superficie en oscuro: " +
+                "`dark:bg-tinta/N` (relleno que aclara la tarjeta) o `dark:border-papel/N` (borde que se " +
+                "vuelve invisible sobre papel). Usá `bg-superficie-1|2` (opaco) y `dark:border-tinta/12` " +
+                "(hairline claro). Infractores: " + [...new Set(infractores)].join(", ")
         ).toEqual([]);
     });
 });

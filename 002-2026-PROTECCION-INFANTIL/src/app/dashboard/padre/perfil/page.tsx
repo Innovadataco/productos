@@ -269,7 +269,7 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
                     <div
                         data-testid="suscripcion-en-pausa"
                         role="note"
-                        className="rounded-xl border border-tinta/15 bg-tinta/5 px-4 py-3 text-sm text-muted dark:border-papel/10"
+                        className="rounded-xl border border-tinta/15 bg-superficie-1 px-4 py-3 text-sm text-muted dark:border-tinta/12"
                     >
                         La suscripción y el código de referido no están disponibles por ahora.
                     </div>

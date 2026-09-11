@@ -78,7 +78,7 @@ export function HistorialCambiosPerfil() {
             {items !== null && items.length > 0 && (
                 <ul className="mt-4 space-y-3">
                     {items.map((c) => (
-                        <li key={c.id} className="border-t border-tinta/10 pt-3 text-sm dark:border-papel/10">
+                        <li key={c.id} className="border-t border-tinta/10 pt-3 text-sm dark:border-tinta/12">
                             <p className="text-body">{c.tipo === "aviso" ? fraseAvisoItem(c) : fraseDato(c)}</p>
                             <span className="mt-0.5 block text-xs text-muted">{formatoFechaHoraBogota(c.creadoEn)}</span>
                         </li>
