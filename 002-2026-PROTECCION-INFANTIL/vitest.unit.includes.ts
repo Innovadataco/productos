@@ -606,4 +606,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-632: contraste AA del Primario del Sistema (rótulo derivado del acento por tema).
     // Lee globals.css y calcula WCAG en JS → unit puro, sin base.
     "src/components/ui/primario-contraste.candado.test.ts",
+    // SPEC-635: candado de voz de la puerta del profesional (morfología voseo +
+    // tuteo + comentario que miente). fs-puro → pasa de integración a unit.
+    "src/app/registro-profesional/voz-usted-puerta-profesional.candado.test.ts",
 ];
