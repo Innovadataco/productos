@@ -2148,7 +2148,7 @@ const FLASHCARDS = [
   }
 ];
 
-const PREGUNTAS = [
+const PREGUNTAS_LOTE1 = [
   {
     "perfil": "Jelkin",
     "tema": "Contratación",
@@ -2798,7 +2798,20 @@ const PREGUNTAS = [
     "explicacion": "La sentencia que declara la nulidad de un acto administrativo en un proceso tiene fuerza de cosa juzgada erga omnes.",
     "norma": "Art. 189 Ley 1437 de 2011",
     "dificultad": "dificil"
-  },
+  }
+];
+
+function writePreguntas_lote1() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('preguntas');
+  if (!sheet) throw new Error('No existe la pestaña preguntas');
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE1.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 1 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
+const PREGUNTAS_LOTE2 = [
   {
     "perfil": "Diana",
     "tema": "Derecho civil",
@@ -3448,7 +3461,20 @@ const PREGUNTAS = [
     "explicacion": "La Jurisdicción Especial para la Paz (JEP) fue creada como parte del Acuerdo Final de Paz suscrito entre el Gobierno Nacional y las FARC-EP en 2016, posteriormente incorporado al ordenamiento constitucional.",
     "norma": "Constitución Política, arts. 3, 6 y 7 del Acto Legislativo 01 de 2017",
     "dificultad": "dificil"
-  },
+  }
+];
+
+function writePreguntas_lote2() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('preguntas');
+  if (!sheet) throw new Error('No existe la pestaña preguntas');
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE2.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 2 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
+const PREGUNTAS_LOTE3 = [
   {
     "perfil": "Diana",
     "tema": "Derecho laboral",
@@ -4098,7 +4124,20 @@ const PREGUNTAS = [
     "explicacion": "El artículo 15º regula la territorialidad por extensión, aplicable a conductas cometidas a bordo de naves o aeronaves del Estado o explotadas por este fuera del territorio nacional.",
     "norma": "Código Penal, art. 15º",
     "dificultad": "dificil"
-  },
+  }
+];
+
+function writePreguntas_lote3() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('preguntas');
+  if (!sheet) throw new Error('No existe la pestaña preguntas');
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE3.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 3 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
+const PREGUNTAS_LOTE4 = [
   {
     "perfil": "Diana",
     "tema": "Infancia y familia",
@@ -4748,7 +4787,20 @@ const PREGUNTAS = [
     "explicacion": "El artículo 36 de la Ley 1952 de 2019 establece que, cumplidas las sanciones de destitución e inhabilidad o suspensión e inhabilidad especial, se produce la rehabilitación automática, salvo lo dispuesto en la Constitución.",
     "norma": "Ley 1952 de 2019 art. 36",
     "dificultad": "dificil"
-  },
+  }
+];
+
+function writePreguntas_lote4() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('preguntas');
+  if (!sheet) throw new Error('No existe la pestaña preguntas');
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE4.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 4 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
+}
+
+const PREGUNTAS_LOTE5 = [
   {
     "perfil": "Jelkin",
     "tema": "Técnicos TI",
@@ -5076,46 +5128,46 @@ const PREGUNTAS = [
   }
 ];
 
-function populateSheet() {
+function writePreguntas_lote5() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  writeResumenes(ss);
-  writeFlashcards(ss);
-  writePreguntas(ss);
-  SpreadsheetApp.flush();
-  Logger.log('Listo. Resúmenes: ' + RESUMENES.length + ', Flashcards: ' + FLASHCARDS.length + ', Preguntas: ' + PREGUNTAS.length);
+  const sheet = ss.getSheetByName('preguntas');
+  if (!sheet) throw new Error('No existe la pestaña preguntas');
+  const startRow = sheet.getLastRow() + 1;
+  const data = PREGUNTAS_LOTE5.map((q, i) => [startRow + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
+  sheet.getRange(startRow, 1, data.length, 12).setValues(data);
+  Logger.log('Lote 5 escrito: ' + data.length + ' preguntas desde fila ' + startRow);
 }
 
-function writeResumenes(ss) {
+
+function populateResumenes() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
   let sheet = ss.getSheetByName('resumenes');
-  if (!sheet) {
-    sheet = ss.insertSheet('resumenes');
-  }
+  if (!sheet) sheet = ss.insertSheet('resumenes');
   sheet.clear();
   sheet.appendRow(['id', 'perfil', 'tema', 'titulo_seccion', 'contenido_html', 'fuente_url', 'orden']);
   const rows = RESUMENES.map(r => [r.id, r.perfil, r.tema, r.titulo_seccion, r.contenido_html, r.fuente_url, r.orden]);
   if (rows.length) sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  Logger.log('Resúmenes escritos: ' + rows.length);
 }
 
-function writeFlashcards(ss) {
+function populateFlashcards() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
   let sheet = ss.getSheetByName('flashcards');
-  if (!sheet) {
-    sheet = ss.insertSheet('flashcards');
-  }
+  if (!sheet) sheet = ss.insertSheet('flashcards');
   sheet.clear();
   sheet.appendRow(['id', 'perfil', 'tema', 'frente', 'reverso', 'norma']);
   const rows = FLASHCARDS.map(f => [f.id, f.perfil, f.tema, f.frente, f.reverso, f.norma]);
   if (rows.length) sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  Logger.log('Flashcards escritas: ' + rows.length);
 }
 
-function writePreguntas(ss) {
-  const sheet = ss.getSheetByName('preguntas');
-  if (!sheet) throw new Error('No existe la pestaña preguntas');
-  const lastRow = sheet.getLastRow();
-  let nextId = 1;
-  if (lastRow > 1) {
-    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().filter(v => typeof v === 'number');
-    nextId = Math.max(0, ...ids) + 1;
-  }
-  const rows = PREGUNTAS.map((q, i) => [nextId + i, q.perfil, q.tema, q.pregunta, q.opcion_0, q.opcion_1, q.opcion_2, q.opcion_3, q.respuesta, q.explicacion, q.norma, q.dificultad]);
-  if (rows.length) sheet.getRange(lastRow + 1, 1, rows.length, rows[0].length).setValues(rows);
+function populateAll() {
+  populateResumenes();
+  populateFlashcards();
+  writePreguntas_lote1();
+  writePreguntas_lote2();
+  writePreguntas_lote3();
+  writePreguntas_lote4();
+  writePreguntas_lote5();
+  Logger.log('Proceso completo.');
 }
