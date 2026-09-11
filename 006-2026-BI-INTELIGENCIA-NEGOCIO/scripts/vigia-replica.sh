@@ -94,14 +94,16 @@ bien() {
 
 # ── 1. Suscripción y apply worker (bi-db) ───────────────────────────────────
 LAGMIN="-"; PID="-"; ATRASADAS="?"
-SUB=$(sql_bi "SELECT subenabled::int, COALESCE(pid::text,'-'),
-                     COALESCE(round(EXTRACT(EPOCH FROM (now() - last_msg_receipt_time))/60)::int::text,'-')
-                FROM pg_stat_subscription WHERE subname = '$SUB_NAME'" | head -1)
+SUB=$(sql_bi "SELECT s.subenabled::int, COALESCE(st.pid::text,'-'),
+                     COALESCE(round(EXTRACT(EPOCH FROM (now() - st.last_msg_receipt_time))/60)::int::text,'-')
+                FROM pg_subscription s
+                LEFT JOIN pg_stat_subscription st ON st.subname = s.subname AND st.relid IS NULL
+               WHERE s.subname = '$SUB_NAME'" | head -1)
 
 if [ -z "$SUB" ]; then
     avisar SUB_FALTANTE "pg_stat_subscription no devuelve fila para $SUB_NAME — la suscripción no existe o bi-db no responde"
 else
-    read -r ENABLED PID LAGMIN <<< "$SUB"
+    IFS='|' read -r ENABLED PID LAGMIN <<< "$SUB"
     if [ "$ENABLED" = "0" ]; then
         avisar SUB_DESHABILITADA "suscripción $SUB_NAME deshabilitada (subenabled=f)"
     else
@@ -131,7 +133,9 @@ else
     fi
 
     if [ "$LAGMIN" = "-" ] || [ "$LAGMIN" -ge "$MAX_MIN_SIN_MENSAJES" ]; then
-        avisar SIN_MENSAJES "sin mensajes aplicados hace ${LAGMIN}+ min (umbral $MAX_MIN_SIN_MENSAJES) — PI escribe continuamente; este silencio es la réplica caída"
+        texto_lag="∞ (jamás llegó uno)"
+        [ "$LAGMIN" != "-" ] && texto_lag="${LAGMIN} min"
+        avisar SIN_MENSAJES "sin mensajes aplicados hace ${texto_lag} (umbral ${MAX_MIN_SIN_MENSAJES}) — PI escribe continuamente; este silencio es la réplica caída"
     else
         bien SIN_MENSAJES "mensajes fluyendo de nuevo (lag ${LAGMIN} min)"
     fi
@@ -153,13 +157,13 @@ if [ -z "$(sql_pi 'SELECT 1')" ]; then
     avisar SONDA_PI_FALLA "no se pudo sondear el publicador (contenedor $PI_CONTAINER caído o sin red)"
 else
     bien SONDA_PI_FALLA "publicador sondeable de nuevo"
-    SLOTROW=$(sql_pi "SELECT active::int || ' ' ||
+    SLOTROW=$(sql_pi "SELECT active::int || '|' ||
                              round(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)/1024/1024)::int
                         FROM pg_replication_slots WHERE slot_name = '$SLOT'" | head -1)
     if [ -z "$SLOTROW" ]; then
         avisar SLOT_FALTANTE "slot $SLOT no existe en el publicador — si la réplica no fue retirada, esto tumba la tolerancia a caídas"
     else
-        read -r SACTIVE WALMB <<< "$SLOTROW"
+        IFS='|' read -r SACTIVE WALMB <<< "$SLOTROW"
         if [ "$SACTIVE" = "0" ]; then
             avisar SLOT_INACTIVO "slot $SLOT inactivo — el apply worker está caído o la suscripción deshabilitada (WAL retenido: ${WALMB} MB)"
         else
