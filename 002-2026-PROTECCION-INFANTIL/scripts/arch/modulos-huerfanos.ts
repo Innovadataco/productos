@@ -14,9 +14,15 @@ import allowlistJson from "./modulos-huerfanos-allowlist.json";
  * producción importa.
  *
  * ALCANCE (declarado, no tapado): detecta MÓDULOS (archivos) huérfanos, NO exports/imports muertos
- * DENTRO de un archivo vivo. De los tres casos que lo motivaron, caza `ExpedienteVivo.tsx` (componente
- * que solo importa su propio test); NO caza `hechosDelExpediente` (export muerto en un archivo vivo) ni
+ * DENTRO de un archivo vivo. De los tres casos que lo motivaron, cazó `ExpedienteVivo.tsx` (componente
+ * que solo importaba su propio test); NO caza `hechosDelExpediente` (export muerto en un archivo vivo) ni
  * el import muerto de `lecturaCapa1` — eso es análisis a nivel de símbolo (ts-prune/knip), otro chequeo.
+ *
+ * PERO EL ALCANCE CRECE CON EL TIEMPO: la deuda de SÍMBOLO migra a deuda de MÓDULO cuando se va el ÚLTIMO
+ * consumidor. Caso observado (SPEC-654 · re-baseline post-#558): `lecturaCapa1` era un import muerto dentro
+ * de un archivo vivo —símbolo, fuera de alcance—; cuando su consumidor dejó de importarlo, `lectura-capa1.ts`
+ * quedó huérfano de MÓDULO y el ratchet lo registró solo. No cubrimos el símbolo de entrada, pero lo
+ * recogemos el día que se vuelve módulo — el detector cubre MÁS de lo declarado, no de entrada sino con el tiempo.
  *
  * EL MODO DE FALLA ES EL FALSO POSITIVO (marcar vivo como muerto). Lo que lo evita:
  *  - Aristas desde TODO el producto, no solo `src/`: los workers `.mjs`/`.js` importan módulos de `src/`
