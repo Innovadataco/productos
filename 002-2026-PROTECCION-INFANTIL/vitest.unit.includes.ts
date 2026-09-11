@@ -243,6 +243,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/chrome-nav-footer.candado.test.ts",
     // SPEC-623 (I-376): la vista de éxito de recuperar es IDÉNTICA para los tres casos (anti-enumeración); ofrece «Entrar con Google».
     "src/components/modules/recuperar-exito-sin-enumeracion.candado.test.tsx",
+    // SPEC-630 (I-377): el lado API — cuerpo 200 byte-idéntico en los 3 casos + envío fire-and-forget
+    // (tiempo plano por construcción). Deps mockeadas, fuerza NODE_ENV=production. Sin BD.
+    "src/app/api/auth/recuperar/solicitar/recuperar-solicitar-sin-enumeracion.candado.test.ts",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",

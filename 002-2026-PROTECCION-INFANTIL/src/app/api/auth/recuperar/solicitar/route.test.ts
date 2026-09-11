@@ -17,6 +17,12 @@ function makeRequest(body: unknown, ip = "203.0.113.10"): Request {
     });
 }
 
+/**
+ * Estas pruebas corren en NO-PROD (camino SÍNCRONO): la ruta espera el trabajo y expone `devToken` en
+ * fallo de envío para el arnés (no puede leer el correo). La UNIFORMIDAD de enumeración es propiedad de
+ * PRODUCCIÓN (cuerpo byte-idéntico, sin devToken, tiempo plano) y la fija el candado
+ * `recuperar-solicitar-sin-enumeracion.candado.test.ts` (SPEC-630), que fuerza NODE_ENV=production.
+ */
 describe("POST /api/auth/recuperar/solicitar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -40,50 +46,49 @@ describe("POST /api/auth/recuperar/solicitar", { timeout: 30_000 }, () => {
         expect(data.error.code).toBe("VALIDATION_ERROR");
     });
 
-    it("retorna respuesta uniforme para email no registrado", async () => {
+    it("email no registrado: 200 con el mensaje genérico y SIN campos de estado (emailSent/metodo fuera)", async () => {
         const res = await POST(makeRequest({ email: "no-registrado@example.com" }));
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data.message).toBe(MENSAJE_EXITO);
-        expect(data.emailSent).toBe(false);
+        // SPEC-630: el cuerpo ya no delata existencia — sin `emailSent` ni `metodo`, y sin token (no hay cuenta).
+        expect(data.emailSent, "emailSent salió del cuerpo (era oráculo de existencia)").toBeUndefined();
+        expect(data.metodo, "metodo salió del cuerpo").toBeUndefined();
+        expect(data.devToken, "sin cuenta no hay token").toBeUndefined();
     });
 
-    it("retorna respuesta uniforme para email registrado", async () => {
+    it("email registrado con clave local: 200, mensaje genérico, y (no-prod) devToken en fallo de envío", async () => {
         await crearUsuario("PARENT", "registrado@example.com");
         const res = await POST(makeRequest({ email: "registrado@example.com" }));
         expect(res.status).toBe(200);
         const data = await res.json();
         expect(data.message).toBe(MENSAJE_EXITO);
+        expect(data.emailSent, "sin emailSent también para el existente").toBeUndefined();
+        // No-prod: el arnés obtiene el token porque el envío falla sin proveedor real.
+        expect(data.devToken, "no-prod expone el token para el arnés").toBeDefined();
+        const tokens = await prisma.tokenRecuperacion.count({ where: { email: "registrado@example.com" } });
+        expect(tokens, "la cuenta con clave local sí genera token").toBe(1);
     });
 
-    // ── SPEC-609 (reparo 2) · CANDADO DE CONDUCTA: una cuenta de Google no recibe correo inútil ──
-    it("SPEC-609: cuenta de Google sin contraseña → NO genera correo/token y responde «entra con Google»", async () => {
+    // SPEC-630 cierra el mensaje propio de SPEC-609: una cuenta de Google respondía «entra con Google»,
+    // lo que delataba que ese correo es de Google. Ahora responde el MISMO mensaje genérico que un correo
+    // inexistente. La CONDUCTA de SPEC-609 (no genera token/correo inútil) se conserva.
+    it("cuenta de Google sin clave: mensaje genérico (indistinguible), y NO genera token (conducta SPEC-609)", async () => {
         const u = await crearUsuario("PARENT", "google.padre@example.com");
-        // Cuenta creada por Google sin clave local: googleSub presente, passwordCreadaEn null.
         await prisma.usuario.update({ where: { id: u.id }, data: { googleSub: "g-sub-609", passwordCreadaEn: null } });
 
         const res = await POST(makeRequest({ email: "google.padre@example.com" }, "203.0.113.201"));
         expect(res.status).toBe(200);
         const data = await res.json();
-        expect(data.emailSent).toBe(false);
-        expect(data.message).toContain("entra con Google");
+        expect(data.message, "genérico, ya NO «entra con Google»").toBe(MENSAJE_EXITO);
+        expect(data.message).not.toContain("Google");
+        expect(data.metodo, "sin metodo=google (era el delator de SPEC-609)").toBeUndefined();
         expect(data.devToken, "no hay contraseña que restablecer: no se genera token").toBeUndefined();
         const tokens = await prisma.tokenRecuperacion.count({ where: { email: "google.padre@example.com" } });
         expect(tokens, "una cuenta de Google no genera token de restablecimiento").toBe(0);
     });
 
-    it("SPEC-609 (contraprueba): cuenta con contraseña local SÍ genera el restablecimiento", async () => {
-        await crearUsuario("PARENT", "local.padre@example.com"); // googleSub null → tiene clave local
-        const res = await POST(makeRequest({ email: "local.padre@example.com" }, "203.0.113.202"));
-        expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.message).toBe(MENSAJE_EXITO); // mensaje genérico, no «entra con Google»
-        const tokens = await prisma.tokenRecuperacion.count({ where: { email: "local.padre@example.com" } });
-        expect(tokens, "una cuenta con contraseña local sí genera token").toBe(1);
-    });
-
-    it("SPEC-609: el borde de enumeración NO se abre para cuentas que no son de Google (inexistente == con-clave)", async () => {
-        // Inexistente y cuenta-con-contraseña comparten el MISMO mensaje genérico: indistinguibles.
+    it("el mensaje es idéntico para inexistente y cuenta-con-clave (indistinguibles por texto)", async () => {
         const inexistente = await (await POST(makeRequest({ email: "no.existe@example.com" }, "203.0.113.203"))).json();
         await crearUsuario("PARENT", "con.clave@example.com");
         const conClave = await (await POST(makeRequest({ email: "con.clave@example.com" }, "203.0.113.204"))).json();
@@ -120,23 +125,11 @@ describe("POST /api/auth/recuperar/solicitar", { timeout: 30_000 }, () => {
         expect(data.error.code).toBe("RATE_LIMITED");
     });
 
-    it("en desarrollo expone devToken cuando el email falla; en producción NUNCA (BL-3)", async () => {
+    it("no-prod expone devToken en fallo de envío (el arnés lo necesita; prod NUNCA — ver candado BL-3)", async () => {
         await crearUsuario("PARENT", "bl3@example.com");
-
         const dev = await POST(makeRequest({ email: "bl3@example.com" }));
         const devData = await dev.json();
-        expect(devData.emailSent).toBe(false);
-        expect(devData.devToken).toBeDefined();
-
-        const envOriginal = process.env.NODE_ENV;
-        (process.env as { NODE_ENV: string }).NODE_ENV = "production";
-        try {
-            const prod = await POST(makeRequest({ email: "bl3@example.com" }, "203.0.113.111"));
-            const prodData = await prod.json();
-            expect(prodData.emailSent).toBe(false);
-            expect(prodData.devToken).toBeUndefined();
-        } finally {
-            (process.env as { NODE_ENV: string }).NODE_ENV = envOriginal ?? "test";
-        }
+        expect(devData.devToken, "no-prod: token disponible para el arnés").toBeDefined();
+        expect(devData.emailSent, "sin emailSent en ningún caso").toBeUndefined();
     });
 });
