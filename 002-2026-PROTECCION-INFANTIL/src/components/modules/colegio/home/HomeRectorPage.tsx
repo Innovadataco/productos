@@ -81,7 +81,7 @@ export function HomeRectorPage({ nombreUsuario, datos, cobertura }: HomeRectorPa
                 <div className="anim-entrada" style={retardo(140)}>
                     <FranjaVigilancia
                         ultimaSenal={datos.ultimaSenal}
-                        latidoSistema={datos.latidoSistema}
+                        motor={datos.motorClasificacion}
                         reportesSemana={kpis.reportesSemana}
                         deltaSemana={kpis.deltaSemana}
                     />
