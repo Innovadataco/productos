@@ -58,6 +58,12 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 APP_BUILD_SHA=$APP_BUILD_SHA
 # su release (16 en 3.20, 17 en 3.21+) y ambas cumplen `cliente >= servidor` (prod es PG16);
 # fijar `postgresql16-client` rompería el build en un alpine que ya sirve 17.
 RUN apk add --no-cache openssl postgresql-client && addgroup -S nodejs && adduser -S nextjs -G nodejs
+# SPEC-648: verificar que el apk EFECTIVAMENTE dejó pg_dump. CI NO buildea la imagen (los
+# `image:` de ci.yml son el servicio pgvector, no un docker build), así que esta capa es lo
+# ÚNICO que caza un paquete renombrado o un fallo de red en apk ANTES de prod: el build falla
+# ruidoso en el deploy, en vez de que reset-piloto aborte fail-closed recién en vivo. `--version`
+# además loguea la versión (confirma cliente >= servidor PG16), no solo la presencia.
+RUN pg_dump --version || (echo "pg_dump ausente: postgresql-client no lo proveyo (rename en Alpine / fallo de apk)" && exit 1)
 
 # App standalone (server.js en la raíz del standalone)
 COPY --from=builder /app/public ./public
