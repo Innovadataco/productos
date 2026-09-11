@@ -8,6 +8,12 @@
  * la suite de integración), no en la próxima ventana con el borrado a medias. El ensayo sobre el CLON
  * con datos de producción (carril del CEO) es el complemento autoritativo, no el sustituto.
  *
+ * Dos mecanismos, un ensayo: las hijas RESTRICT las borra el helper EXPLÍCITO (su orden es el bug de
+ * I-374); el hijo CASCADE —el pase de acceso externo `CodigoAccesoContenido` (SPEC-610), que desde
+ * #549 cuelga del Expediente con `onDelete: Cascade`— lo arrastra la BD al borrar el Expediente, sin
+ * que el helper lo toque. Los dos se siembran y se afirman POR ENTRADA (=1 antes, =0 después): sin la
+ * siembra, el «=0» post-purga se lee idéntico a «borró bien» aunque nunca hubiera nada que borrar.
+ *
  * Integración: usa la BD (constraints reales tras migrate deploy).
  */
 import { describe, it, expect, beforeEach } from "vitest";
@@ -29,7 +35,7 @@ function contarHija(modelo: string, expedienteId: string): Promise<number> {
     return delegate.count({ where: { expedienteId } });
 }
 
-/** Siembra un Expediente con UNA fila en CADA hija con FK RESTRICT → Expediente. */
+/** Siembra un Expediente con UNA fila en cada hija RESTRICT → Expediente y una en el hijo CASCADE. */
 async function sembrarSubarbolCompleto(): Promise<string> {
     const padre = await prisma.usuario.create({
         data: { email: `padre-615-${randomUUID()}@example.com`, passwordHash: "x".repeat(60), rol: "PARENT" },
@@ -74,6 +80,18 @@ async function sembrarSubarbolCompleto(): Promise<string> {
     await prisma.eventoExpediente.create({
         data: { expedienteId: exp.id, ordenSecuencial: 1, fechaEvento: new Date(), contenidoId },
     });
+    // Hijo CASCADE (NO RESTRICT, fuera de HIJAS_RESTRICT_EXPEDIENTE): el pase de acceso externo cuelga
+    // del Expediente con `onDelete: Cascade` (SPEC-610, #549). El helper NO lo borra —lo arrastra la BD
+    // al borrar el Expediente—, así que lo sembramos para EJERCITAR esa cascada: el candado solo caza
+    // lo que siembra. Mínimo viable; sus nietos (LecturaReporte) son SetNull, no bloquean.
+    await prisma.codigoAccesoContenido.create({
+        data: {
+            expedienteId: exp.id,
+            codigoHash: `sha-${randomUUID()}`,
+            solicitadoPorId: padre.id,
+            vigenteHasta: new Date(Date.now() + 30 * 60 * 1000),
+        },
+    });
     return exp.id;
 }
 
@@ -93,6 +111,12 @@ describe("SPEC-615 · borrarSubarbolExpediente contra BD real (I-374)", () => {
         for (const hija of HIJAS_RESTRICT_EXPEDIENTE) {
             expect(await contarHija(hija, expId), `la semilla debe incluir ${hija}`).toBe(1);
         }
+        // PRE · y el hijo CASCADE: el pase está sembrado y colgado de ESTE expediente. Mismo principio
+        // por-entrada — sin esta fila, el «=0» de abajo no probaría la cascada (cero antes = cero después).
+        expect(
+            await prisma.codigoAccesoContenido.count({ where: { expedienteId: expId } }),
+            "la semilla debe incluir el pase CASCADE (CodigoAccesoContenido)",
+        ).toBe(1);
 
         // La operación exacta que abortó en producción — ahora completa sin excepción. Si el helper
         // olvida un `deleteMany`, la FK RESTRICT real tumba `expediente.deleteMany` acá y esto rechaza,
@@ -104,6 +128,13 @@ describe("SPEC-615 · borrarSubarbolExpediente contra BD real (I-374)", () => {
         for (const hija of HIJAS_RESTRICT_EXPEDIENTE) {
             expect(await contarHija(hija, expId), `${hija} debió quedar en 0 tras la purga`).toBe(0);
         }
+        // POST · el hijo CASCADE se fue SOLO porque se borró el Expediente (la BD lo arrastró; el helper
+        // no lo toca). Como `expedienteId` es NOT NULL, una fila sobreviviente conservaría el expedienteId
+        // y esto la cazaría; si la FK dejara de ser CASCADE (p.ej. RESTRICT), la purga habría abortado arriba.
+        expect(
+            await prisma.codigoAccesoContenido.count({ where: { expedienteId: expId } }),
+            "el pase CASCADE (CodigoAccesoContenido) debió irse con el Expediente",
+        ).toBe(0);
         expect(await prisma.expediente.count({ where: { id: expId } }), "el expediente quedó en 0").toBe(0);
     });
 });
