@@ -82,6 +82,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-612: guarda de credenciales de la semilla de Calidad — PURA (sin base). El candado de
     // idempotencia (con base) vive en src/lib/seed-cuentas-calidad-siembra.candado.test.ts (integración).
     "scripts/lib/credenciales-e2e-calidad.candado.test.ts",
+    // SPEC-671 (I-397): los avisos de coincidencia sobreviven al motor caído (cableado del worker).
+    "scripts/worker-reportes-avisos.test.mjs",
     // SPEC-280 (002-PI-180): constructor puro del resumen del CI, sin BD ni red.
     "scripts/ci/resumen.test.mjs",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
