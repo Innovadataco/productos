@@ -124,7 +124,9 @@ describe("SPEC-607 · /dashboard/padre/perfil — una ventana, tres acordeones",
         expect(screen.getByTestId("perfil-form")).toBeTruthy();
         expect(screen.getByTestId("historial-cambios")).toBeTruthy();
         expect(screen.getByTestId("preferencias-notificaciones")).toBeTruthy();
-        expect(screen.getByTestId("suscripcion-vista")).toBeTruthy();
+        // SPEC-628 #4: Suscripción muestra la NOTA «en pausa», no la vista viva.
+        expect(screen.getByTestId("suscripcion-en-pausa")).toBeTruthy();
+        expect(screen.queryByTestId("suscripcion-vista")).toBeNull();
     });
 
     it("con cobertura ACTIVA: «Información general» nace abierta y «Suscripción» cerrada", async () => {
@@ -136,23 +138,39 @@ describe("SPEC-607 · /dashboard/padre/perfil — una ventana, tres acordeones",
         expect(screen.getByTestId("acordeon-notificaciones").hasAttribute("open")).toBe(false);
     });
 
-    it("SIN suscripción: «Suscripción» nace ABIERTA con el selector de planes (destino del guardián de vigencia)", async () => {
+    it("SIN suscripción (SPEC-628 #4): «Suscripción» muestra la nota de pausa, SIN selector de planes", async () => {
         suscripcionTitularMock.mockResolvedValue(null);
         const jsx = await PadrePerfilPage({ searchParams: SIN_PARAMS });
         render(jsx as React.ReactElement);
 
-        expect(screen.getByTestId("acordeon-suscripcion").hasAttribute("open")).toBe(true);
-        expect(screen.getByTestId("acordeon-general").hasAttribute("open")).toBe(false);
-        expect(screen.getByTestId("planes-selector")).toBeTruthy();
+        // «Quieto = apagado»: ni siquiera sin cobertura se ofrece el selector vivo
+        // (sus precios son placeholders declarados). Solo la nota honesta.
+        expect(screen.getByTestId("suscripcion-en-pausa")).toBeTruthy();
+        expect(screen.queryByTestId("planes-selector")).toBeNull();
     });
 
-    it("PENDIENTE_AUTORIZACION: «Suscripción» abierta con la pantalla de espera", async () => {
+    it("PENDIENTE_AUTORIZACION (SPEC-628 #4): «Suscripción» también muestra la nota, sin la pantalla de espera", async () => {
         suscripcionTitularMock.mockResolvedValue({ ...SUSCRIPCION_ACTIVA, estado: "PENDIENTE_AUTORIZACION" });
         const jsx = await PadrePerfilPage({ searchParams: SIN_PARAMS });
         render(jsx as React.ReactElement);
 
-        expect(screen.getByTestId("acordeon-suscripcion").hasAttribute("open")).toBe(true);
-        expect(screen.getByTestId("esperando-autorizacion")).toBeTruthy();
+        expect(screen.getByTestId("suscripcion-en-pausa")).toBeTruthy();
+        expect(screen.queryByTestId("esperando-autorizacion")).toBeNull();
+    });
+
+    it("SPEC-628 #4: con la pausa NINGÚN control vivo de suscripción se renderiza, en los tres estados", async () => {
+        // El test que de verdad cierra la pausa: no basta con que la nota aparezca;
+        // hay que afirmar la AUSENCIA de los controles vivos (selector/vista/espera).
+        for (const sus of [SUSCRIPCION_ACTIVA, null, { ...SUSCRIPCION_ACTIVA, estado: "PENDIENTE_AUTORIZACION" }]) {
+            suscripcionTitularMock.mockResolvedValue(sus);
+            const jsx = await PadrePerfilPage({ searchParams: SIN_PARAMS });
+            const { unmount } = render(jsx as React.ReactElement);
+            expect(screen.getByTestId("suscripcion-en-pausa")).toBeTruthy();
+            expect(screen.queryByTestId("planes-selector")).toBeNull();
+            expect(screen.queryByTestId("suscripcion-vista")).toBeNull();
+            expect(screen.queryByTestId("esperando-autorizacion")).toBeNull();
+            unmount();
+        }
     });
 
     it("SPEC-609: cuenta de Google sin clave → «Cómo entras: Con Google» y NINGÚN «Crear contraseña»", async () => {
@@ -173,10 +191,13 @@ describe("SPEC-607 · /dashboard/padre/perfil — una ventana, tres acordeones",
         expect(screen.queryByText("Crear contraseña")).toBeNull();
     });
 
-    it("?bienvenida=1 llega a la vista de suscripción (lo conserva el redirect de la ruta vieja)", async () => {
+    it("?bienvenida=1 sigue llegando al acordeón de suscripción (el redirect de la ruta vieja no se rompe aunque esté en pausa)", async () => {
         const jsx = await PadrePerfilPage({ searchParams: Promise.resolve({ bienvenida: "1" }) });
         render(jsx as React.ReactElement);
 
-        expect(screen.getByTestId("suscripcion-vista")).toBeTruthy();
+        // El ancla/acordeón sigue existiendo (no dejamos un enlace muerto en el
+        // producto); hoy muestra la nota en pausa, no la vista viva.
+        expect(screen.getByTestId("acordeon-suscripcion").id).toBe("suscripcion");
+        expect(screen.getByTestId("suscripcion-en-pausa")).toBeTruthy();
     });
 });

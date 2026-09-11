@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/Switch";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Cargando } from "@/components/ui/Cargando";
+import { AVISOS_PADRE } from "@/lib/padre/avisos-perfil";
 
 type Canal = "EMAIL" | "IN_APP";
 
@@ -35,19 +36,9 @@ const LABEL_CANAL: Record<Canal, string> = {
 
 // SPEC-326 §3.1 (diseño CEO-aprobado 2026-08-30): las 2 notificaciones que el padre
 // controla, en frases. Mapeadas a eventos REALES del motor (verificado en seed.ts).
-// El evento 2 (identificador de hijos) y el 5 (resumen semanal) NO existen → no aparecen.
-const TOGGLES_PADRE: Array<{ evento: string; titulo: string; detalle: string }> = [
-    {
-        evento: "padre.circulo_confianza.reporte_enriquecido",
-        titulo: "Cuando alguien reporte a una persona de mi círculo",
-        detalle: "Te avisamos apenas aparezca un reporte sobre alguien que estás vigilando.",
-    },
-    {
-        evento: "reporte.resuelto",
-        titulo: "Cuando se resuelva un reporte que hice",
-        detalle: "Te contamos cuando tu reporte quede resuelto.",
-    },
-];
+// SPEC-628: la fuente única de estas frases vive en `@/lib/padre/avisos-perfil`,
+// para que el historial de «Mi perfil» resuelva el evento a la MISMA frase.
+const TOGGLES_PADRE = AVISOS_PADRE;
 
 // Avisos que siempre llegan (plan + seguridad): se muestran para que el padre sepa
 // que existen, sin interruptor. `suscripcion.por_vencer` es obligatoria en el motor.

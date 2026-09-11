@@ -624,4 +624,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // render del padre no puede usar dark:bg-tinta/N; (b) text-muted ≥ 4.5 sobre
     // cada --superficie-* en los dos temas. fs + WCAG en JS → unit puro, sin base.
     "src/components/modules/padre/superficie-invertida-i381.candado.test.ts",
+    // SPEC-628: el historial de «Mi perfil» no expone identificadores internos
+    // (id/cuid/DANE/clave-evento/columna) y cubre los cambios de aviso. Builder puro.
+    "src/lib/padre/perfil-historial-sin-codigos.candado.test.ts",
 ];
