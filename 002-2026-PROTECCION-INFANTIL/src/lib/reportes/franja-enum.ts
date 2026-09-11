@@ -15,3 +15,12 @@ export const FRANJA_A_ENUM: Record<FranjaAproximada, FranjaHoraria> = {
     tarde: "TARDE",
     noche: "NOCHE",
 };
+
+/** Inverso: el enum persistido → la franja de dominio, para la LECTURA (la capa de
+ *  display/análisis trabaja en `FranjaAproximada`). Explícito por el mismo motivo. */
+export const ENUM_A_FRANJA: Record<FranjaHoraria, FranjaAproximada> = {
+    MADRUGADA: "madrugada",
+    MANANA: "manana",
+    TARDE: "tarde",
+    NOCHE: "noche",
+};

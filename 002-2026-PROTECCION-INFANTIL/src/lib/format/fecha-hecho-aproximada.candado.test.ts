@@ -88,6 +88,20 @@ describe("SPEC-626 (I-379) · la hora aproximada se lee como FRANJA, la exacta c
         expect(aproximada).toContain("2026");
     });
 
+    it("(helper·SPEC-644) la franja PERSISTIDA gana sobre la derivada — cambiar un centro NO mueve una franja guardada", () => {
+        // ISO_MANANA (centro 9) DERIVA a «mañana». Pero el padre DECLARÓ «noche»: la
+        // lectura muestra lo GUARDADO, no la aritmética del centro. Éste es el candado del
+        // radicado: el día que alguien mueva un centro representativo o agregue una 5ª
+        // franja, la derivación empieza a mentir en silencio; la franja persistida no.
+        // Muere si `fechaHechoLegible` vuelve a derivar ignorando el 3er argumento.
+        const conPersistida = fechaHechoLegible(ISO_MANANA, true, "noche");
+        expect(conPersistida).toContain(ETIQUETA_FRANJA.noche);
+        expect(conPersistida).not.toContain(ETIQUETA_FRANJA.manana);
+        // Fila LEGADA (sin franja guardada) → respaldo derivado del centro (mañana).
+        const sinPersistida = fechaHechoLegible(ISO_MANANA, true, null);
+        expect(sinPersistida).toContain(ETIQUETA_FRANJA.manana);
+    });
+
     it("(helper·EXACTA) muestra la hora tal cual — con el flag en false Y sin flag", () => {
         // Ejercitar el flag en FALSE, no solo en true: si no, no sabríamos si
         // rompimos el caso donde la hora SÍ es real y debe verse (condición CEO).
