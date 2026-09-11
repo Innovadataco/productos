@@ -438,6 +438,60 @@ describe("SPEC-610 · candados del pase (I-372 · gates del CEO)", () => {
     });
 });
 
+describe("SPEC-610 · bordes de enumeración (no delatar existencia · no adivinable)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await resetRateLimitStore();
+        await crearPlataforma();
+        await crearPaisCiudad();
+        activeToken = null;
+    });
+
+    // Un id de formato válido (idSchema: 25 alfanuméricos) que NO existe en la BD.
+    const ID_INEXISTENTE = "a1b2c3d4e5f6a1b2c3d4e5f6a";
+
+    // GATE «no delata si el expediente existe»: pedir un pase para un expediente
+    // INEXISTENTE y para uno AJENO tiene que responder IDÉNTICO — mismo status y
+    // mismo cuerpo entero. Misma clase que 630/641 (enumeración por correo). Mutar
+    // `exigirTitular` para devolver 403 en el ajeno (o un mensaje distinto) los separa
+    // → este candado se pone rojo.
+    it("solicitar: expediente inexistente y ajeno responden IDÉNTICO (no delata existencia)", async () => {
+        await autenticar("PARENT");
+        const otro = await crearUsuario("PARENT");
+        const { expediente: ajeno } = await crearExpedienteDePrueba(otro.id);
+
+        const resAjeno = await POST_SOLICITAR(
+            crearRequestAutenticado("POST", `http://localhost/api/padre/expedientes/${ajeno.id}/solicitar-acceso`, {}),
+            { params: Promise.resolve({ id: ajeno.id }) }
+        );
+        const resInexistente = await POST_SOLICITAR(
+            crearRequestAutenticado("POST", `http://localhost/api/padre/expedientes/${ID_INEXISTENTE}/solicitar-acceso`, {}),
+            { params: Promise.resolve({ id: ID_INEXISTENTE }) }
+        );
+
+        expect(resAjeno.status).toBe(404);
+        expect(resInexistente.status).toBe(resAjeno.status);
+        // Mismo cuerpo ENTERO, mismas claves: no se puede distinguir «no es tuyo» de «no existe».
+        expect(await resInexistente.json()).toEqual(await resAjeno.json());
+        expect(await prisma.codigoAccesoContenido.count()).toBe(0);
+    });
+
+    // GATE «no adivinable/enumerable»: dos pases equivocados (formato válido, sin
+    // match) responden IDÉNTICO. Nada en la respuesta permite acercarse a un pase real.
+    it("canjar: dos pases equivocados responden IDÉNTICO (no enumerable)", async () => {
+        await autenticar("PROFESIONAL");
+        const r1 = await POST_CANJEAR(
+            crearRequestAutenticado("POST", "http://localhost/api/reportes/acceso/canjar", { codigo: "ZZZZ9999" })
+        );
+        const r2 = await POST_CANJEAR(
+            crearRequestAutenticado("POST", "http://localhost/api/reportes/acceso/canjar", { codigo: "QQQQ8888" })
+        );
+        expect(r1.status).toBe(404);
+        expect(r2.status).toBe(r1.status);
+        expect(await r2.json()).toEqual(await r1.json());
+    });
+});
+
 describe("SPEC-610 · «quién ha leído el expediente» (/accesos, lado del padre)", () => {
     beforeEach(async () => {
         await resetDatabase();
