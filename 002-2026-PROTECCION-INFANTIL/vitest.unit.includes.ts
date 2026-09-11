@@ -628,4 +628,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/arch/no-get-muta.test.ts",
     // SPEC-633: frontera del botón — ratchet de cromo crudo fuera de <Button> + primario en .map.
     "src/components/modules/padre/boton-frontera.candado.test.ts",
+    // SPEC-654: módulos de src/ sin importador de producción — ratchet, scan estático del grafo de imports.
+    "scripts/arch/modulos-huerfanos.test.ts",
 ];

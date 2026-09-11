@@ -36,6 +36,7 @@ import {
     entradasObsoletas as getMutaObsoletas,
     frontierSinCallsite as getMutaSinCallsite,
 } from "./no-get-muta";
+import { huerfanosNuevos as modulosHuerfanosNuevos, entradasObsoletas as huerfanosObsoletos } from "./modulos-huerfanos";
 import { RUTA_DOCS_ARCH, RUTA_EXCEPCIONES, RUTA_SCHEMA } from "./lib/paths";
 import { modelosHuerfanos, parsearSchemaPrisma } from "./lib/schema-prisma";
 
@@ -114,6 +115,23 @@ function chequearGetMuta(): boolean {
     for (const o of getObsoletas) console.error(`  - entrada obsoleta (archivo inexistente): ${o}`);
     for (const n of sinCallsite)
         console.error(`  - regex de frontier SIN pegar en ninguna llamada viva en src/ (¿rename total o parcial? el scanner quedó ciego): ${n} — apuntá NOMBRES_FRONTIER_* al nombre vivo en no-get-muta.ts`);
+    return true;
+}
+
+/** (i) SPEC-654: ningún módulo de src/ NUEVO sin importador de producción (ratchet). true si hay rojo. */
+function chequearModulosHuerfanos(): boolean {
+    console.log("[Arch:check] (i) Módulos de src/ sin importador de producción (SPEC-654 · ratchet)…");
+    const nuevos = modulosHuerfanosNuevos();
+    const obsoletos = huerfanosObsoletos();
+    if (nuevos.length === 0 && obsoletos.length === 0) {
+        console.log("[Arch:check] (i) VERDE: ningún huérfano nuevo; línea base de modulos-huerfanos-allowlist.json al día.");
+        return false;
+    }
+    console.error("[Arch:check] (i) ROJO: módulos huérfanos desalineados (SPEC-654):");
+    for (const n of nuevos)
+        console.error(`  - huérfano nuevo (sin importador de producción): ${n} — borralo si está muerto, o declaralo en modulos-huerfanos-allowlist.json con motivo y quién`);
+    for (const o of obsoletos)
+        console.error(`  - entrada obsoleta (ya no es huérfana — se cableó o se borró): ${o} — sacala de la allowlist (el ratchet solo baja)`);
     return true;
 }
 
@@ -209,6 +227,8 @@ async function main() {
     }
 
     if (chequearGetMuta()) rojo = true;
+
+    if (chequearModulosHuerfanos()) rojo = true;
 
     if (rojo) {
         console.error("[Arch:check] ROJO: la línea base no está al día o hay un desalineo real. Ver entradas arriba.");
