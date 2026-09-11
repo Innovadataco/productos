@@ -55,10 +55,19 @@ const EXENTOS_ANALISIS_644 = [
  *                  carga también `horaAproximada`, para que ninguna superficie pueda
  *                  inventarla. El defecto NACIÓ en un servicio sin la bandera.
  *
- * LÍMITE CONFESADO: (clase·servicio) vigila PANTALLA. Los servicios de ANÁLISIS
+ * LÍMITE CONFESADO 1: (clase·servicio) vigila PANTALLA. Los servicios de ANÁLISIS
  * (EXENTOS_ANALISIS_644) quedan FUERA a propósito — esa es otra falla (franja
  * falsa al modelo) y necesita su propia señal en SPEC-644. El verde acá NO dice
  * que el análisis esté sano.
+ *
+ * LÍMITE CONFESADO 2 (hallazgo de Datos, forma de SPEC-619): (clase·servicio) se
+ * apoya en el LITERAL `fechaIncidente` y NO tiene control positivo. La CIEGAN un
+ * renombre del campo, un alias (`fecha: fi`) o el shorthand (`fecha,`): cero hits
+ * se lee como VERDE con las pantallas sin vigilar. Caza el defecto de HOY (I-385,
+ * mutación-verificado), no es a prueba de renombres. El control positivo —afirmar
+ * que las pantallas del expediente SÍ pasan por el camino con la bandera— lo suma
+ * Datos en SPEC-644, donde ya estará por los exentos de análisis. (clase·display)
+ * NO comparte esta debilidad: allowlista lo legítimo y marca todo lo demás.
  *
  * Muere por mutación: `fechaHoraSinMinutos(x.fecha)` de un hecho → rojo (display);
  * quitar `horaAproximada` de un mapeo de pantalla → rojo (servicio); mostrar la
