@@ -165,8 +165,14 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
     const conCobertura =
         suscripcion !== null && (suscripcion.estado === "ACTIVA" || suscripcion.estado === "EN_GRACIA");
 
+    // SPEC-628 #4 · «quieto, NO borrado» (Jelkin): la suscripción y el referido
+    // quedan FUNCIONALMENTE APAGADOS por ahora. El flag deja el código intacto y
+    // reversible: en `true` NO se computa (cero fetches) ni se renderiza ningún
+    // control vivo — solo la nota. Reactivar = ponerlo en `false`.
+    const SUSCRIPCION_EN_PAUSA = true;
+
     let contenidoSuscripcion: React.ReactNode = null;
-    if (conCobertura) {
+    if (!SUSCRIPCION_EN_PAUSA && conCobertura) {
         const [vista, cupones] = await Promise.all([
             obtenerVistaSuscripcion({
                 id: usuario.id,
@@ -187,7 +193,7 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
             );
         }
     }
-    if (!contenidoSuscripcion && suscripcion && suscripcion.estado === "PENDIENTE_AUTORIZACION") {
+    if (!SUSCRIPCION_EN_PAUSA && !contenidoSuscripcion && suscripcion && suscripcion.estado === "PENDIENTE_AUTORIZACION") {
         contenidoSuscripcion = (
             <EsperandoAutorizacion
                 suscripcion={{
@@ -201,7 +207,7 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
             />
         );
     }
-    if (!contenidoSuscripcion) {
+    if (!SUSCRIPCION_EN_PAUSA && !contenidoSuscripcion) {
         const [planes, tasaIva, aplicaIva] = await Promise.all([
             new PagosClienteRepository().listarPlanesActivosPorTitular("PADRE", anioBogota()),
             obtenerTasaIva(),
@@ -261,8 +267,21 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
                     <PreferenciasNotificaciones rol={usuario.rol} correo={usuario.email} />
                 </Acordeon>
 
-                <Acordeon id="suscripcion" abierto={!conCobertura} titulo="Suscripción" subtitulo="Plan, prueba y facturación">
-                    {contenidoSuscripcion}
+                <Acordeon id="suscripcion" abierto={false} titulo="Suscripción" subtitulo="Plan, prueba y facturación">
+                    {/* SPEC-628 #4 (Jelkin: «ese tema de suscripción le podemos dar por
+                        ahora quieto mientras estabilizamos el software»). «Quieto» =
+                        FUNCIONALMENTE APAGADO (decisión CEO/Diseño): una NOTA sola, SIN
+                        controles vivos —nada de renovar, cancelar o aplicar bono bajo un
+                        texto que dice «no disponible»; un control vivo ahí se contradice
+                        solo—. Copy aprobado por Diseño (no promete plazo ni confiesa
+                        inestabilidad). Tono neutro: es informativo, no atención pendiente. */}
+                    <div
+                        data-testid="suscripcion-en-pausa"
+                        role="note"
+                        className="rounded-xl border border-tinta/15 bg-tinta/5 px-4 py-3 text-sm text-muted dark:border-papel/10"
+                    >
+                        La suscripción y el código de referido no están disponibles por ahora.
+                    </div>
                 </Acordeon>
             </div>
         </main>
