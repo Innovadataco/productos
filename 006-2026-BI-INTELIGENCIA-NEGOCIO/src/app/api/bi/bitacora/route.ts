@@ -19,9 +19,10 @@ const POR_PAGINA = 25;
 /** Estados finales del motor filtrables (el transitorio "pendiente" no se filtra). */
 const ESTADOS_FILTRABLES = new Set(["ok", "sin_datos", "clarificacion", "rechazada", "error"]);
 
-/** Acciones canónicas de la bitácora general (espejo de ACCION_AUDIT — la ruta
-    no importa el helper para mantener el set de filtrado explícito y estable). */
-const ACCIONES_FILTRABLES = new Set(["LOGIN_OK", "LOGIN_FALLIDO", "CONFIG_CAMBIO", "EXPORTACION"]);
+/** Acciones canónicas de la bitácora general (espejo de ACCION_AUDIT más
+    VIGIA_REPLICA, acción propia del 006 que escribe scripts/vigia-replica.sh
+    — la ruta no importa el helper para mantener el set explícito y estable). */
+const ACCIONES_FILTRABLES = new Set(["LOGIN_OK", "LOGIN_FALLIDO", "CONFIG_CAMBIO", "EXPORTACION", "VIGIA_REPLICA"]);
 
 /** Valida "YYYY-MM-DD" estricto, incluidas fechas inexistentes (2026-02-30 → inválida). */
 function esFechaIso(valor: string): boolean {

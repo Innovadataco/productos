@@ -158,7 +158,7 @@ DECLARE
     --   ↑ columna publicada real (autorizada 2026-09-02). NOTAS: bi-db tenía
     --     columnas bootstrap huérfanas (notasInternas/creadoPorId/creadoEn/
     --     ultimoEmailNotificacionEn) que NUNCA viajaron por la réplica — se
-    --     dropean del suscriptor en 09-bi-db-limpieza-contenido.sql.
+    --     dropean del suscriptor en 09b-bi-db-limpieza-contenido.sql.
     ARRAY['Plan', 'id,nombre,descripcion,precio,creadoEn,tipoTitular,duracion,anio,precioBaseUSD,descuentoAnualPct,activo,creadoPorAdminId,createdAt,updatedAt,precioBaseCOP,esFreemium,usosMaximosPorCliente'],
     ARRAY['Plataforma', 'id,clave,nombre,categoria,esActiva,creadoEn'],
     ARRAY['Profesor', 'id,colegioId,estado,createdAt,updatedAt,anioNacimiento,sexo'],
@@ -271,7 +271,7 @@ DECLARE
     -- PerfilOperador: columna canónica publicada (2026-09-02). Las columnas
     -- bootstrap del suscriptor (notasInternas/creadoPorId/creadoEn/
     -- ultimoEmailNotificacionEn) nunca viajaron por la réplica — se dropean
-    -- en 09-bi-db-limpieza-contenido.sql.
+    -- en 09b-bi-db-limpieza-contenido.sql.
     ARRAY['PerfilOperador', 'notasInternas'], ARRAY['PerfilOperador', 'creadoPorId']
   ];
 

@@ -105,6 +105,7 @@ const FILTROS_ACCION = [
     { id: "LOGIN_FALLIDO", etiqueta: "ingresos fallidos" },
     { id: "CONFIG_CAMBIO", etiqueta: "cambios de config" },
     { id: "EXPORTACION", etiqueta: "exportaciones" },
+    { id: "VIGIA_REPLICA", etiqueta: "vigía réplica" },
 ] as const;
 
 const MENSAJE_SESION_VENCIDA = "Tu sesión venció. Recargá la página y volvé a entrar.";
@@ -149,7 +150,8 @@ function PildoraEstado({ estado }: { estado: string }) {
 }
 
 /** Píldora de acción de la bitácora general:
-    LOGIN_OK pino · LOGIN_FALLIDO rubí · CONFIG_CAMBIO cielo · EXPORTACION ámbar. */
+    LOGIN_OK pino · LOGIN_FALLIDO rubí · CONFIG_CAMBIO cielo · EXPORTACION ámbar
+    · VIGIA_REPLICA rubí (la réplica caída es lo peor que le pasa a BI). */
 function PildoraAccion({ accion }: { accion: string }) {
     let clases: string;
     let etiqueta: string;
@@ -169,6 +171,10 @@ function PildoraAccion({ accion }: { accion: string }) {
         case "EXPORTACION":
             clases = "text-estado-ambar bg-[rgb(var(--ambar-rgb)/0.12)] border-[rgb(var(--ambar-rgb)/0.3)]";
             etiqueta = "exportación";
+            break;
+        case "VIGIA_REPLICA":
+            clases = "text-estado-rubi bg-[rgb(var(--rubi-rgb)/0.12)] border-[rgb(var(--rubi-rgb)/0.3)]";
+            etiqueta = "vigía réplica";
             break;
         default:
             clases = "text-muted bg-[rgb(var(--tinta-rgb)/0.05)] border-[rgb(var(--tinta-rgb)/0.12)]";
