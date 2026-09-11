@@ -1,19 +1,24 @@
 /**
  * SPEC-460 · El acento por territorio — `--accent` por rol.
  *
- * El Button del Sistema de Diseño (SPEC-454) lee `--accent`; esta spec lo
- * enciende por territorio: ámbar-ink (IDC/admin) · pino (colegio) · cielo
- * (padre + profesional). El mecanismo: un triplet `--accent-rgb` por tema
- * (.theme-*) alimenta la familia Tailwind `accent` (con alpha) y el color
- * `--accent` que consume el Button.
+ * El acento del territorio se enciende por rol: ámbar-ink (IDC/admin) · pino
+ * (colegio) · cielo (padre + profesional). El contrato por tema es el triplet
+ * `--accent-rgb` (.theme-*), que alimenta la familia Tailwind `accent` (con alpha).
  *
- * Candado por CONDUCTA en dos capas:
- *  (1) globals.css declara `--accent-rgb` por tema con el color correcto y
- *      `--accent` derivado; la familia Tailwind lee `--accent-rgb` (no pino fijo).
+ * Este candado verifica la ESTRUCTURA leyendo el TEXTO del CSS (regex):
+ *  (1) globals.css declara `--accent-rgb` por tema con el color correcto;
+ *      la familia Tailwind lee `--accent-rgb` (no pino fijo).
  *  (2) cada layout de rol aplica su clase de tema.
- * jsdom no computa la cascada de CSS vars por clase, así que se verifica leyendo
- * los archivos. Verificado por mutación: cambiar el color de un tema, quitar la
- * var, o sacar la clase del layout mata el candado correspondiente.
+ * Verificado por mutación: cambiar el color de un tema, quitar la var, o sacar la
+ * clase del layout mata el candado correspondiente.
+ *
+ * LÍMITE (la lección de I-392): jsdom/regex NO computan la cascada de custom
+ * properties por clase, así que este candado de TEXTO NO prueba que el color
+ * EFECTIVO llegue al botón. De hecho el fondo del Primario leía `--pi-accent`,
+ * congelado en :root, y salía pino en todos los temas mientras este candado
+ * seguía verde. El COLOR EFECTIVO lo vigila el candado de RENDER (Chromium +
+ * getComputedStyle): scripts/render/acento-primario.render.ts (`npm run render:check`,
+ * job `render-check`). Regex-verde ≠ render-correcto.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
