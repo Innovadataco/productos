@@ -707,7 +707,6 @@ model Usuario {
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   hijos                            HijoPadre[]
   identificadoresHijoDesvinculados IdentificadorHijoDesvinculado[]
-  notificacionesCirculo            Boolean                         @default(true)
   ultimaNotificacionCirculoEn      DateTime?
   // SPEC-339 (A-67 · punto 4 Calidad): interruptor y enfriamiento PROPIOS de los
   // avisos sobre hijos. NO se comparten con los del círculo: un aviso sobre un

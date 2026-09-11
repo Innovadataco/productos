@@ -105,7 +105,6 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
                     select: {
                         id: true,
                         email: true,
-                        notificacionesCirculo: true,
                     },
                 },
                 identificadores: {
@@ -120,19 +119,12 @@ export async function notificarCambioCirculoSiCorresponde(reporteId: string) {
             return;
         }
 
-        // SPEC-544 (I-332): una alerta enriquecida por contacto impactado. El opt-out
-        // del usuario (notificacionesCirculo) sigue mandando. El COOLDOWN ya NO se
-        // evalúa acá: pasó a ser POR CONTACTO y solo para el canal EMAIL (IN_APP no
-        // tiene cooldown). Se decide contacto por contacto en el envío, más abajo.
-        const contactosANotificar = contactos.filter((contacto) => {
-            if (!contacto.usuario.notificacionesCirculo) {
-                logger.info(`[CIRCULO] Notificación omitida: usuario ${contacto.usuario.id} desactivó notificaciones`);
-                return false;
-            }
-            return true;
-        });
-
-        if (contactosANotificar.length === 0) return;
+        // SPEC-665: el opt-out del aviso vive SOLO en el perfil (regla del motor
+        // `padre.circulo_confianza.reporte_enriquecido`), que el motor consulta POR USUARIO
+        // y canal al programar el envío. Se quitó la bandera duplicada `notificacionesCirculo`
+        // (medido en prod: cohorte en desacuerdo = 0). El COOLDOWN sigue siendo POR CONTACTO
+        // y solo para EMAIL — se decide contacto por contacto más abajo.
+        const contactosANotificar = contactos;
 
         // Precargar en lotes para evitar N+1: nombres de plataforma de los
         // identificadores de contacto y expedientes de los padres candidatos.
