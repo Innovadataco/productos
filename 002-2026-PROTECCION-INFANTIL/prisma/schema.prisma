@@ -554,6 +554,17 @@ enum EstadoReporte {
   CORREGIDO
 }
 
+// SPEC-644 (I-379): la franja horaria que el padre DECLARA cuando no recuerda la
+// hora exacta. Se persiste (Reporte.franjaHoraria) en vez de derivarla del centro
+// guardado. Espeja `FranjaAproximada` de src/lib/reportes/franja-aproximada.ts (esa
+// es minúscula por historia; el mapeo vive en ese módulo, fuente única del franja).
+enum FranjaHoraria {
+  MADRUGADA
+  MANANA
+  TARDE
+  NOCHE
+}
+
 enum EstadoApelacion {
   RECIBIDA
   EN_REVISION
@@ -1923,6 +1934,13 @@ model Reporte {
   // elección queda marcada acá para que el análisis pueda distinguir una hora
   // precisa de una estimada, en vez de tratarlas igual.
   horaAproximada             Boolean  @default(false)
+  // SPEC-644 (I-379): la FRANJA que el padre DECLARÓ cuando no recordaba la hora.
+  // Se GUARDA tal como la dijo, no se reconstruye por aritmética desde el centro
+  // (`franjaDeInstante`) — esa derivación miente en silencio el día que se cambie
+  // un centro o se agregue una 5ª franja. NULL ⟺ hora exacta (horaAproximada=false).
+  // Invariante estructural (CHECK en la BD, no una regla): horaAproximada =
+  // (franjaHoraria IS NOT NULL) — las dos columnas NO pueden discrepar.
+  franjaHoraria              FranjaHoraria?
   ciudad                     String
   pais                       String
   paisId                     String?
