@@ -24,7 +24,14 @@ Los **hijos mandan**, el **círculo acompaña**. Un familiar **nunca iguala a un
 - **US3 (P1 · ola-1) — El hueco de cobertura:** un hijo **activo con 0 cuentas activas** aparece como un **pendiente cielo/neutro** («A *X* no le agregaste ninguna cuenta: agrégale una para poder cuidarlo» + «Agregar una cuenta»). **NUNCA ámbar** (no es alarma, es un por-hacer).
 - **US4 (P2 · ola-2) — Enterarse con reporte:** cuando reportan una cuenta de un hijo, el gráfico enciende ese hijo en **ámbar** y su **detalle** trae clasificación · cuándo · dónde + conteo honesto (verificados vs anónimos, nunca sumados) + guía + psicólogo.
   - **Dato (Datos, #573): `tieneReportes: boolean` por hijo** — booleano, NO conteo (Diseño prohibió números sobre nodos; no hay entero con el que componer «N personas»). Criterio IDÉNTICO al del aviso (identificador activo del hijo = identificador de un reporte VISIBLE) → gráfico y correo dicen lo mismo. SPEC-644 (franja) ya en main.
-  - **⚠️ I-396 (tercera superficie) — el estado «tranquilo» NO se cierra todavía:** la visibilidad la pone la clasificación; **con el motor caído, un hijo REPORTADO devuelve `tieneReportes:false`** y el gráfico lo pintaría «tranquilo» = calma sobre un niño recién reportado. SPEC-671 (Dev 2) lo cierra al disparar avisos sobre `REVISION_MANUAL` (visible); hasta que despliegue, el hueco existe. **Decisión de forma PENDIENTE de Diseño:** si «tranquilo» puede seguir leyéndose como «no pasó nada», o si el gráfico consume el helper de liveness (SPEC-670) y tiene su propio **estado degradado/sin-confirmar**. El componente ya está **preparado para aceptar ese estado sin reescritura** (unión + mapas exhaustivos; la derivación vive en la pantalla). **No cerrar el copy de «tranquilo» hasta la respuesta de Diseño.**
+  - **I-396 (tercera superficie) — RESUELTO por Diseño (defensa en forma):** el gráfico consume el `LatidoMotor` de **SPEC-670** (#572) de forma PERMANENTE. Asimetría clave: el motor caído vuelve no-confiable la **AUSENCIA** de reportes, no la **PRESENCIA** — un `tieneReportes:true` es hecho verificado. Por eso:
+
+    | | motor VIVO | motor CAÍDO |
+    |---|---|---|
+    | hijo **sin** reportes | verde · `tranquilo` | **neutro · `en-revision`** |
+    | hijo **con** reportes | ámbar · `atencion` | **sigue ámbar · `atencion`** |
+
+    **Nunca falsa calma, nunca falsa alarma.** «en revisión» es un estado del sistema (nodo neutro, nunca rojo), no «tus hijos en peligro». Implementado en `GraficoProteccion` (`derivarEstadoHijo` toma `tieneReportes` + `motorVivo`) + candado de la asimetría. Defensa en profundidad con **SPEC-671** (Dev 2), que lo cierra en el DATO (avisos sobre `REVISION_MANUAL` → el booleano se enciende): dos mecanismos independientes contra la misma mentira.
 
 ## Requisitos funcionales (ola-1)
 - **FR-001:** «A quién protejo» NO renderiza ningún formulario de alta/edición; el CRUD de menores vive en Mi perfil › «Menores de edad». El alta es un botón que abre el panel **a pedido** (no siempre visible).
