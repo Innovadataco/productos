@@ -63,13 +63,13 @@ function llamada(metodo: string, url?: string) {
 }
 
 describe("MisHijos", () => {
-    // SPEC-601 · el camino del padre (/camino/hijos) usa la variante formulario:
-    // el alta inline pre-599 está visible de entrada, sin wizard.
-    it("varianteAlta=\"formulario\" renderiza el alta inline y registra por POST", async () => {
+    // SPEC-627 (D-133): el alta es SIEMPRE el formulario inline simple; el wizard
+    // de SPEC-599 quedó derogado y borrado.
+    it("renderiza el alta inline (una sola acción, sin wizard) y registra por POST", async () => {
         mockRutas([], { hijoId: "h9", vinculadoAExistente: false });
-        render(<MisHijos varianteAlta="formulario" />);
+        render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
-        // sin wizard: el formulario está de entrada (botón «Registrar», no «Registrar a mi hijo»)
+        // sin wizard: el formulario está de entrada; no existe la puerta «Registrar a mi hijo»
         expect(screen.getByTestId("form-hijo")).toBeDefined();
         expect(screen.queryByRole("button", { name: /Registrar a mi hijo/i })).toBeNull();
 
@@ -91,7 +91,7 @@ describe("MisHijos", () => {
         mockRutas([]);
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
-        // sección distinguible con el título de protejo (el wizard también lo nombra en su entrada)
+        // sección distinguible con el título del área del padre
         expect(screen.getByRole("heading", { name: "A quién protejo" })).toBeDefined();
     });
 
@@ -127,17 +127,13 @@ describe("MisHijos", () => {
         mockRutas([], { hijoId: "h9", vinculadoAExistente: false });
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
-        // SPEC-599: el alta es un wizard; el formulario de datos es el paso 2.
-        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/i }));
-
+        // SPEC-627 (D-133): alta inline — el formulario está de entrada, sin wizard.
         // SPEC-363: payload REAL — nombre y apellidos, que se validan antes de
         // enviar. El documento del menor ya no existe (SPEC-589): el formulario
         // no lo pide ni lo envía.
         fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
         fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
-        // SPEC-599: el POST se dispara al confirmar en el paso 3.
-        fireEvent.click(screen.getByRole("button", { name: /Confirmar registro/i }));
 
         await waitFor(() => {
             const post = llamada("POST", "/api/padre/hijos");
@@ -155,8 +151,7 @@ describe("MisHijos", () => {
         mockRutas([], { hijoId: "h9", vinculadoAExistente: false });
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
-        // SPEC-599: el alta es un wizard; el formulario de datos es el paso 2.
-        fireEvent.click(screen.getByRole("button", { name: /Registrar a mi hijo/i }));
+        // SPEC-627 (D-133): alta inline, sin wizard — el formulario está de entrada.
         // el catálogo de plataformas ya llegó
         await waitFor(() => expect(screen.getByRole("option", { name: "Roblox" })).toBeDefined());
 
@@ -172,7 +167,6 @@ describe("MisHijos", () => {
         // 2º sin plataforma, escrito pero NO "agregado": debe entrar igual.
         fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "+573001112233" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
-        fireEvent.click(screen.getByRole("button", { name: /Confirmar registro/i }));
 
         await waitFor(() => {
             const post = llamada("POST", "/api/padre/hijos");

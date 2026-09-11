@@ -25,7 +25,7 @@ export function CaminoHijosClient({ maximoActivos }: { maximoActivos: number }) 
                 un teléfono— súmalas; es opcional y puedes hacerlo después.
             </p>
 
-            <MisHijos onListaCambio={setActivos} maximoActivos={maximoActivos} varianteAlta="formulario" />
+            <MisHijos onListaCambio={setActivos} maximoActivos={maximoActivos} />
 
             <div className="mt-6">
                 <Button

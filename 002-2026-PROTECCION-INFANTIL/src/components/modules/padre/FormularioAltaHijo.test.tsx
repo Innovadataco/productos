@@ -32,12 +32,14 @@ function renderForm() {
 }
 
 describe("FormularioAltaHijo (SPEC-607 · hijos sin documento)", () => {
-    it("el formulario NO pide tipo ni número de documento; conserva nombres, apellidos, edad, sexo y cuentas", () => {
+    it("el formulario NO pide tipo ni número de documento; conserva nombres, apellidos, año de nacimiento, sexo y cuentas", () => {
         renderForm();
 
         expect(screen.getByLabelText("Nombres")).toBeDefined();
         expect(screen.getByLabelText("Apellidos")).toBeDefined();
-        expect(screen.getByLabelText("Edad")).toBeDefined();
+        // SPEC-627 (D-134): el campo de edad pasa a AÑO DE NACIMIENTO (durable).
+        expect(screen.getByLabelText("Año de nacimiento")).toBeDefined();
+        expect(screen.queryByLabelText("Edad")).toBeNull();
         expect(screen.getByLabelText("Sexo")).toBeDefined();
         expect(screen.getByLabelText("Cuenta")).toBeDefined();
 
@@ -65,6 +67,23 @@ describe("FormularioAltaHijo (SPEC-607 · hijos sin documento)", () => {
         expect(body).not.toHaveProperty("sexo");
 
         await waitFor(() => expect(onRegistrado).toHaveBeenCalledOnce());
+    });
+
+    it("SPEC-627 (D-134): elegir el AÑO de nacimiento manda `anioNacimiento` (el año, no una edad)", async () => {
+        renderForm();
+
+        fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Mara" } });
+        fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Díaz" } });
+        // El selector ofrece AÑOS de nacimiento; elegimos uno dentro del rango de menor.
+        const anio = String(new Date().getFullYear() - 10); // ~10 años
+        fireEvent.change(screen.getByLabelText("Año de nacimiento"), { target: { value: anio } });
+        fireEvent.submit(screen.getByTestId("form-hijo"));
+
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+        const body = JSON.parse(String(fetchMock.mock.calls[0]![1]?.body));
+        // El AÑO viaja (durable, D-127); nunca una `edad` congelada.
+        expect(body.anioNacimiento).toBe(Number(anio));
+        expect(body).not.toHaveProperty("edad");
     });
 
     it("la validación NO exige documento: sin nombre frena, con nombre y apellidos pasa", async () => {

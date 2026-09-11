@@ -43,6 +43,20 @@ export function edadesReporte(): number[] {
     return Array.from({ length: EDAD_REPORTE_MAX - EDAD_REPORTE_MIN + 1 }, (_, i) => EDAD_REPORTE_MIN + i);
 }
 
+/**
+ * SPEC-627 (D-134 · reversión de F8, ratificada por Jelkin) — la ficha del hijo
+ * pide el AÑO DE NACIMIENTO, no la edad: una edad tecleada se CONGELA (un «13»
+ * sigue siendo 13 el año que viene) y la edad del menor entra en la clasificación
+ * de un caso. El año de nacimiento no envejece mal; la edad se DERIVA (D-127).
+ * El motivo por el que F8 había elegido edad —Jelkin se equivocaba tecleando el
+ * año— se cubre ofreciendo los años en un SELECT, no en texto libre.
+ * Los años válidos se DERIVAN del rango de edad, así el sistema no envejece;
+ * se ofrecen del más reciente (menor) al más antiguo (mayor).
+ */
+export function aniosNacimientoMenor(anioActual: number = new Date().getFullYear()): number[] {
+    return edadesMenor().map((edad) => anioDesdeEdad(edad, anioActual));
+}
+
 /** Valida la edad del menor en el camino; `null` si está bien. */
 export function validarEdadMenor(edad: number | null | undefined): string | null {
     if (edad === null || edad === undefined) return null; // opcional
