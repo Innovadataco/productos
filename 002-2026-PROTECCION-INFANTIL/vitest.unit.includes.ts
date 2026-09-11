@@ -321,6 +321,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/dal/repositories/analytics-colegio-helpers.test.ts",
     "src/lib/colegio/fechas-humano.test.ts",
     "src/lib/colegio/normalizacion.test.ts",
+    // SPEC-674: ata la normalización de colegio a la del núcleo — divergir rompe el match del colegio en silencio.
+    "src/lib/colegio/normalizacion-atada-al-nucleo.candado.test.ts",
     "src/lib/colegio/periodo.test.ts",
     // SPEC-361 (A-70 · F7/F8): documento por tipo y edad del menor.
     "src/lib/padre/documento-menor.test.ts",
