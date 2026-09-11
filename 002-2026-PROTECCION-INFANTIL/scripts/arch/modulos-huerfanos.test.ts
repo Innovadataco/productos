@@ -30,9 +30,17 @@ describe("SPEC-654 · módulos huérfanos (ratchet de módulos sin importador)",
         expect(modulosHuerfanos()).toContain("src/components/modules/padre/ExpedienteVivo.tsx");
     });
 
-    // Control negativo sobre el árbol REAL: un módulo muy importado NO se marca (no es falso positivo).
-    it("un módulo vivo y muy importado NO se marca (src/lib/prisma.ts)", () => {
-        expect(modulosHuerfanos()).not.toContain("src/lib/prisma.ts");
+    // Control negativo sobre el árbol REAL. El par hermano del incidente (evidencia del CEO): el
+    // componente VIVO ExpedienteMadreClient.tsx —importado desde dashboard/padre/expedientes/[id]/page.tsx—
+    // NO se marca, aunque su hermano MUERTO ExpedienteVivo.tsx (solo lo importa su propio test) SÍ. El par
+    // prueba que el detector distingue vivo de muerto entre dos archivos del mismo módulo y tipo. Más un
+    // ancla genérica (prisma.ts) por si el detector se rompiera de raíz.
+    it("un módulo vivo NO se marca: el hermano ExpedienteMadreClient y un ancla muy importada (prisma.ts)", () => {
+        const h = modulosHuerfanos();
+        expect(h, "el hermano vivo no debe marcarse (lo importa una page real)").not.toContain(
+            "src/components/modules/padre/ExpedienteMadreClient.tsx",
+        );
+        expect(h, "un módulo núcleo muy importado no debe marcarse (ancla)").not.toContain("src/lib/prisma.ts");
     });
 
     // Las DOS direcciones sobre el núcleo PURO (sin FS): con importador no es huérfano; al quitar la
