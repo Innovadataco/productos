@@ -112,6 +112,7 @@ Comando por defecto: `["node", "server.js"]`.
 | --- | --- | --- | --- |
 | app | build local (Dockerfile) | `pi-app-dev` | 5005:3000 |
 | db | `pgvector/pgvector:pg16` | — | 5433:5432 |
+| pi-citas | build local (Dockerfile) | `pi-citas-dev` | — |
 | pi-sesiones | build local (Dockerfile) | `pi-sesiones-dev` | — |
 | pi-verificacion-vencimiento | build local (Dockerfile) | `pi-verificacion-vencimiento-dev` | — |
 | pi-vigencia | build local (Dockerfile) | `pi-vigencia-dev` | — |
@@ -127,6 +128,7 @@ Comando por defecto: `["node", "server.js"]`.
 | pi-analisis-reglas | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-reglas` | — |
 | pi-analisis-score | `pi-app:${PI_APP_TAG:-latest}` | `pi-analisis-score` | — |
 | pi-anomalias | `pi-app:${PI_APP_TAG:-latest}` | `pi-anomalias` | — |
+| pi-citas | `pi-app:${PI_APP_TAG:-latest}` | `pi-citas` | — |
 | pi-expediente-motor | `pi-app:${PI_APP_TAG:-latest}` | `pi-expediente-motor` | — |
 | pi-notificaciones | `pi-app:${PI_APP_TAG:-latest}` | `pi-notificaciones` | — |
 | pi-senal-comunitaria | `pi-app:${PI_APP_TAG:-latest}` | `pi-senal-comunitaria` | — |

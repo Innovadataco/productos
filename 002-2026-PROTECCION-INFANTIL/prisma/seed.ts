@@ -4281,6 +4281,7 @@ async function main() {
     //    el ConfigPanel; la tarifa del profesional aplica desde la 2ª cita en
     //    adelante (informativa acá, informativa allá).
     await seedParametrosPrimeraCita();
+    await seedParametrosBarridoCitas();
 
     // ── SPEC-439: el aviso al padre que YA reportó ese identificador ──────
     //    Plantilla y regla sembradas (no quemadas): el admin edita el texto y
@@ -4297,7 +4298,7 @@ async function main() {
     prismaInstance = null;
 }
 
-export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion, seedParametrosPrimeraCita, seedCorroboracionPadre, seedVencimientoVerificacion };
+export { main, seedParametrosPadre, seedParametrosSenalComunitaria, seedConsentimiento, seedGuiasAccion, seedParametrosAnalisis, seedAnomalias, seedDigestSemanal, seedMotorExpediente, seedParametrosComiteConsolidacion, seedReglasRecomendacion, seedParametrosPanelAnalisis, seedParametrosHistorialRecomendaciones, seedEmergenciaExpediente, seedParametrosReglasAdmin, seedEjecucionAcciones, seedInvitacionColegio, seedInvitacionComite, seedEventosSuscripcion, seedEventosRecompensa, seedRequisitosVerificacion, seedParametrosPrimeraCita, seedParametrosBarridoCitas, seedCorroboracionPadre, seedVencimientoVerificacion };
 
 // ── SPEC-428 (A-75 · brief §9 M4 §4): precio estándar de la primera cita ──
 // Orden permanente de Jelkin (§4): nada quemado. Se siembra idempotente
@@ -4317,6 +4318,26 @@ async function seedParametrosPrimeraCita() {
         },
     });
     console.log("[SEED] parámetro profesional.cita.precio_estandar_primera_cita_cop listo");
+}
+
+// ── SPEC-657 (I-389): cadencia del barrido de citas (worker-citas) ──
+// Cada 15 min por defecto (decisión CEO). Sembrado idempotente para que el admin
+// ajuste sin desplegar; el worker cae al default si el valor no es un cron válido.
+async function seedParametrosBarridoCitas() {
+    await prisma.parametroSistema.upsert({
+        where: { clave: "cita.barrido.cron" },
+        update: {},
+        create: {
+            clave: "cita.barrido.cron",
+            valor: "*/15 * * * *",
+            tipo: TipoParametro.STRING,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "Cadencia (cron de 5 campos, America/Bogota) del worker de barrido de citas profesionales (aviso 48h al padre + plazo de pago del padre). Default cada 15 min; si el valor no es un cron válido el worker cae al default. SPEC-657.",
+        },
+    });
+    console.log("[SEED] parámetro cita.barrido.cron listo");
 }
 
 // ── SPEC-408 (A-75 · brief §9): la lista de 4 requisitos que el Verificador chequea ──
