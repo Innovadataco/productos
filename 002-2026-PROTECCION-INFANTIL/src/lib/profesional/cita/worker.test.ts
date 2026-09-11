@@ -1,14 +1,17 @@
 /**
- * SPEC-395 (L4) — el worker del aviso 48h aplica el mismo candado del patrón
- * I-280 (SPEC-387) que le puso freno al job de spam después de mandar 1.894
- * correos en 24h sobre 135 casos. Antes de este candado, cualquier vuelta del
- * cron avanzaba la solicitud otra vez y volvía a "avisar": misma cita, mismo
- * profesional, el buzón del padre lleno.
+ * SPEC-395/657 (L4) — el worker del vencimiento 48h: cuando el profesional deja
+ * pasar sus 48 h sobre una cita YA PAGADA, la marca VENCIDA_SIN_RESPUESTA, libera
+ * la franja y registra `CITA_PROFESIONAL_VENCIDA_PROFESIONAL` (el hecho veraz).
  *
- * Regla: se compara `AuditLog.CITA_PROFESIONAL_AVISO_48H_ENVIADO.creadoEn`
- * contra `SolicitudCita.actualizadoEn`. Si el aviso quedó DESPUÉS del último
- * cambio, se salta. Cuando el estado se mueve, `actualizadoEn` se recalcula
- * y la vuelta siguiente vuelve a evaluar.
+ * Idempotencia (SPEC-657): la da la transición one-way de estado, NO un audit.
+ * `listarVencidasSinAvisar48h` filtra por `estado: PAGADA_PENDIENTE`; al vencer,
+ * la cita sale del conjunto de candidatas para siempre, así que la vuelta
+ * siguiente del cron no la reprocesa. Antes había un skip que comparaba
+ * `AuditLog.CITA_PROFESIONAL_AVISO_48H_ENVIADO.creadoEn` contra
+ * `SolicitudCita.actualizadoEn`; defendía una repetición que la máquina de
+ * estados ya hace imposible — se quitó en SPEC-657. Ese audit además mentía:
+ * decía ENVIADO y nada se enviaba (I-385), por eso hay un candado abajo que
+ * verifica que NO vuelva a escribirse.
  *
  * También verificamos el segundo pilar: la franja se LIBERA cuando el
  * profesional deja pasar las 48h (para que otro padre la pueda tomar).
@@ -112,7 +115,7 @@ async function seedSolicitudSinConfirmarPlazoVencido(
     });
 }
 
-describe("SPEC-395 · barrerAvisoVencimiento48h · candado I-280", { timeout: 30_000 }, () => {
+describe("SPEC-395/657 · barrerAvisoVencimiento48h · vencimiento + idempotencia por estado", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
     });
@@ -120,7 +123,7 @@ describe("SPEC-395 · barrerAvisoVencimiento48h · candado I-280", { timeout: 30
         await prisma.$disconnect();
     });
 
-    it("dos corridas seguidas → UN solo audit CITA_PROFESIONAL_AVISO_48H_ENVIADO", async () => {
+    it("dos corridas seguidas → un solo audit VENCIDA_PROFESIONAL (idempotencia por estado)", async () => {
         const padre = await crearUsuario("PARENT");
         const pro = await seedProfesional();
         const franja = await seedFranja(pro.id);
@@ -130,20 +133,19 @@ describe("SPEC-395 · barrerAvisoVencimiento48h · candado I-280", { timeout: 30
         const r1 = await barrerAvisoVencimiento48h();
         const r2 = await barrerAvisoVencimiento48h();
 
-        expect(r1.avisadas).toBe(1);
+        expect(r1.vencidas).toBe(1);
         // Segunda vuelta: la solicitud ya no está PAGADA_PENDIENTE (pasó a
         // VENCIDA_SIN_RESPUESTA), así que ni siquiera aparece como candidata.
-        // El candado I-280 no se prueba acá (no hay repetición posible por diseño);
-        // se prueba en el escenario "el audit queda antes de que otro cambio
-        // reabra la ventana" — al aparecer una fila PAGADA_PENDIENTE nueva con
-        // audit previo se aplica el mismo mecanismo del spam SLA. Lo importante:
-        // el aviso NUNCA se registra dos veces para la misma vida de la solicitud.
-        expect(r2.avisadas).toBe(0);
+        // La idempotencia la da la transición one-way de estado, NO un audit
+        // (SPEC-657: se quitó el skip por `AVISO_48H_ENVIADO`, que defendía una
+        // transición que la máquina de estados ya hace imposible). La cita nunca
+        // se procesa dos veces en su misma vida.
+        expect(r2.vencidas).toBe(0);
 
         const audits = await prisma.auditLog.findMany({
-            where: { accion: "CITA_PROFESIONAL_AVISO_48H_ENVIADO", recursoId: solicitud.id },
+            where: { accion: "CITA_PROFESIONAL_VENCIDA_PROFESIONAL", recursoId: solicitud.id },
         });
-        expect(audits, "el aviso 48h se registra una única vez por vencimiento").toHaveLength(1);
+        expect(audits, "el vencimiento se registra una única vez").toHaveLength(1);
 
         // La solicitud quedó vencida y la franja liberada.
         const solTras = await prisma.solicitudCita.findUnique({ where: { id: solicitud.id } });
@@ -152,40 +154,25 @@ describe("SPEC-395 · barrerAvisoVencimiento48h · candado I-280", { timeout: 30
         expect(franjaTras?.tomada, "la franja se libera para que otro padre la tome").toBe(false);
     });
 
-    it("candado I-280: audit previo con creadoEn ≥ actualizadoEn hace que el worker SALTE (defensa en profundidad)", async () => {
-        // Escenario adverso: alguien insertó un audit previo (o un run previo lo
-        // dejó por otra razón) y el estado quedó PAGADA_PENDIENTE. El worker
-        // debe verificar el candado y SALTAR, no volver a avisar. Es el patrón
-        // exacto del spam SLA (I-280) que evitó los 1.894 correos.
+    it("no escribe el audit mentiroso AVISO_48H_ENVIADO — nada se le avisó al padre (I-385)", async () => {
+        // El barredor todavía NO avisa (aviso en espera de política de reembolso,
+        // Jelkin). El audit que existía, `..._AVISO_48H_ENVIADO`, afirmaba un
+        // envío que nunca ocurrió; este candado impide que vuelva.
         const padre = await crearUsuario("PARENT");
         const pro = await seedProfesional();
         const franja = await seedFranja(pro.id);
         const hace49h = new Date(Date.now() - 49 * 60 * 60 * 1000);
         const solicitud = await seedSolicitudPagadaPendiente(padre.id, pro.id, franja.id, hace49h);
 
-        // Un audit del aviso ya existe, MÁS reciente que `actualizadoEn`.
-        await prisma.auditLog.create({
-            data: {
-                accion: "CITA_PROFESIONAL_AVISO_48H_ENVIADO",
-                tipoRecurso: "SolicitudCita",
-                recursoId: solicitud.id,
-                ipAddress: "test",
-                userAgent: "test-fixture",
-                creadoEn: new Date(hace49h.getTime() + 60 * 1000),
-            },
+        await barrerAvisoVencimiento48h();
+
+        const avisos = await prisma.auditLog.findMany({
+            where: { accion: "CITA_PROFESIONAL_AVISO_48H_ENVIADO", recursoId: solicitud.id },
         });
-
-        const r = await barrerAvisoVencimiento48h();
-        expect(r.encontradas).toBe(1);
-        expect(r.avisadas, "candado I-280 debe saltar el segundo aviso").toBe(0);
-        expect(r.saltadas).toBe(1);
-
-        // El estado NO se movió (el candado impide el cambio también).
-        const solTras = await prisma.solicitudCita.findUnique({ where: { id: solicitud.id } });
-        expect(solTras?.estado).toBe("PAGADA_PENDIENTE");
+        expect(avisos, "no puede haber audit de aviso: nada se envió").toHaveLength(0);
     });
 
-    it("una solicitud PAGADA_PENDIENTE con < 48h desde el pago NO se avisa", async () => {
+    it("una solicitud PAGADA_PENDIENTE con < 48h desde el pago NO se vence", async () => {
         const padre = await crearUsuario("PARENT");
         const pro = await seedProfesional();
         const franja = await seedFranja(pro.id);
@@ -193,7 +180,7 @@ describe("SPEC-395 · barrerAvisoVencimiento48h · candado I-280", { timeout: 30
         await seedSolicitudPagadaPendiente(padre.id, pro.id, franja.id, hace10h);
 
         const r = await barrerAvisoVencimiento48h();
-        expect(r.avisadas).toBe(0);
+        expect(r.vencidas).toBe(0);
     });
 });
 

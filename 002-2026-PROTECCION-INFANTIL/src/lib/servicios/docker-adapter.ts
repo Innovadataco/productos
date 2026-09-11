@@ -33,6 +33,7 @@ export const CONTENEDORES_PERMITIDOS = [
     "pi-analisis-reglas",
     "pi-expediente-motor",
     "pi-anomalias",
+    "pi-citas",
 ] as const;
 export type ContenedorPermitido = (typeof CONTENEDORES_PERMITIDOS)[number];
 

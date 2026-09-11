@@ -27,6 +27,10 @@ export const SENALES_TICK_VIDA = [
     // worker legal que se muere en silencio es el mismo defecto que la spec
     // cierra, con otro disfraz.
     "verificacion_vencimiento",
+    // SPEC-657 (I-389): el barrido de citas. Al monitor porque un worker legal
+    // que se muere en silencio es el mismo defecto —el barrido sin correr— con
+    // otro disfraz: la franja no se libera y el padre no se entera.
+    "citas",
 ] as const;
 export type SenalTickVida = (typeof SENALES_TICK_VIDA)[number];
 
@@ -39,6 +43,7 @@ const NOMBRE_CONTENEDOR_POR_SENAL: Record<SenalTickVida, string> = {
     expediente_motor: "pi-expediente-motor",
     anomalias: "pi-anomalias",
     verificacion_vencimiento: "pi-verificacion-vencimiento",
+    citas: "pi-citas",
 };
 
 export const SENALES_MONITOREO = [
