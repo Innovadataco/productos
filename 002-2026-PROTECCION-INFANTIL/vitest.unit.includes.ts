@@ -596,6 +596,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/crudo-padre-reportes.candado.test.ts",
     // SPEC-541: la fecha de nacimiento del padre es 18-100 anios y no futura.
     "src/lib/padre/fecha-nacimiento-padre.candado.test.ts",
+    // SPEC-663 (I-396): el home del padre expone estadoClasificador tal cual (no inventa la frescura).
+    "src/lib/padre/home-estado-clasificador.candado.test.ts",
     // SPEC-541 (cliente): el input de fecha de nacimiento del perfil acota 18-100.
     "src/components/modules/padre/PerfilPadreForm.test.tsx",
     // SPEC-536 (bandeja admin + permisos AD-06 + simulador anti-abuso AD-14): color crudo por arbol de render (frontera Dev1 #458 = Historial).
