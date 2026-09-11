@@ -26,6 +26,11 @@ export function faltaModalidad(m: { atiendeVirtual: boolean; atiendePresencial: 
 export const MENSAJE_MODALIDAD_REQUERIDA =
     "Falta elegir cómo atiende —virtual, presencial o ambas—. Es lo que permite que las familias lo encuentren, así que su perfil no puede pasar a revisión sin eso.";
 
+// Indicador de campo/estado persistente (Diseño, FORMA-SPEC673-I398): más corto
+// que el de envío bloqueado; hace legible el hueco todo el tiempo, no al intentar.
+export const MENSAJE_MODALIDAD_FALTA_CAMPO =
+    "Falta elegir cómo atiende: virtual, presencial o ambas.";
+
 /**
  * Lanza si `estado` no es BORRADOR y no hay ninguna modalidad. BORRADOR se exime
  * a propósito: un borrador puede estar incompleto; lo que no puede es SALIR de
