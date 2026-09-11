@@ -4,6 +4,10 @@ export const ERROR_CODES = {
     FORBIDDEN: "FORBIDDEN",
     NOT_FOUND: "NOT_FOUND",
     VALIDATION_ERROR: "VALIDATION_ERROR",
+    // SPEC-673 (I-398): falta ≥1 modalidad en un perfil que sale de BORRADOR.
+    // Código PROPIO (no VALIDATION_ERROR genérico) para que el cliente señale el
+    // CAMPO (modalidad) sin tener que parsear el texto del mensaje.
+    MODALIDAD_REQUERIDA: "MODALIDAD_REQUERIDA",
     CONFLICT: "CONFLICT",
     RATE_LIMITED: "RATE_LIMITED",
     // SPEC-587: fallo de un proveedor externo (OAuth de Google) — 502.

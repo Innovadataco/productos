@@ -11,6 +11,7 @@ import type { EstadoPerfilProfesional } from "@prisma/client";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
 import { leerRequisitosVerificacion, type ItemChecklist } from "./requisitos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
+import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
 
 export interface ObservacionParaProfesional {
     requisito: string; // nombre humano del ítem
@@ -111,5 +112,9 @@ export async function reenviarParaVerificacion(usuarioId: string): Promise<void>
             409,
         );
     }
+    // SPEC-673 (I-398): reenviar salía a EN_REVISION sin exigir modalidad (a
+    // diferencia del PUT, que pasa por perfilCompletoParaRevision). La invariante
+    // es del estado: no se sale de BORRADOR sin al menos una modalidad.
+    exigirModalidadParaEstado("EN_REVISION", perfil);
     await repo.cambiarEstadoPerfil(perfil.id, "EN_REVISION");
 }
