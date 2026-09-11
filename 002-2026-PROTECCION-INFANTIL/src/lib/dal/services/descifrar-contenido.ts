@@ -18,6 +18,8 @@
 import { prisma } from "@/lib/prisma";
 import { descifrarCampo, descifrarCampos } from "@/lib/reporte-texto-contenido";
 import type { CampoContenido } from "@/lib/reporte-texto-llaves";
+import { actorActual } from "@/lib/auditoria-lectura/actor";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { registrarLecturaTexto, type DuenoContenido } from "./auditoria-lectura";
 
 /**
@@ -70,7 +72,20 @@ export async function descifrarCampoReporte(
     opciones: OpcionesDescifrado = {}
 ): Promise<string> {
     const texto = await descifrarCampo(prisma, contenidoId, campo);
-    if (opciones.registrarLectura === false) return texto;
+    if (opciones.registrarLectura === false) {
+        // SPEC-610: una lectura por PASE (actor EXTERNO) NUNCA puede evadir la
+        // auditoría. `registrarLectura:false` es para RENDER interno (SPEC-592), no
+        // para la vía del pase. Si un camino EXTERNO intenta saltear la fila, es un
+        // error de programación: o hay fila, o hay excepción — nunca lectura muda.
+        if (actorActual()?.tipoActor === "EXTERNO") {
+            throw new AppError(
+                "Una lectura por pase no puede evadir la auditoría (actor EXTERNO).",
+                ERROR_CODES.INTERNAL_ERROR,
+                500
+            );
+        }
+        return texto;
+    }
     const duenos = await resolverDuenos([contenidoId]);
     await registrarLecturaTexto(contenidoId, campo, texto, duenos.get(contenidoId) ?? {});
     return texto;

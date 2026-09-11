@@ -244,6 +244,47 @@ describe("SPEC-650 (I-381 · resto) · ni relleno de tinta ni borde de papel en 
     });
 });
 
+// ---- SPEC-610 (#549) · el pase · sus componentes nuevos no reintroducen la inversión ----
+// Diseño encontró en GenerarPase un `dark:border-papel/N` (papel como trazo = borde
+// INVISIBLE en oscuro) que este candado NO cazó: el bloque 646 alcanza el árbol del
+// expediente (expediente → ExpedienteMadreClient → GenerarPase) pero solo miraba el
+// RELLENO; el chequeo de BORDE vivía solo en el bloque 650, cuyas raíces no incluyen el
+// expediente. El borde invertido cayó en la COSTURA entre los dos bloques.
+//
+// El barrido de BORDE de todo el árbol padre-núcleo (ExpedienteMadreClient, MisReportes-
+// Cadenas, VerAnalisis — todos PREEXISTENTES, byte-idénticos en la base, ajenos a #549)
+// es SPEC-651: arregla primero y DESPUÉS voltea el bloque 646 al combinado, para que quede
+// verde por construcción y no por exención. Acá, #549 cierra la costura SOLO para sus
+// PROPIOS componentes nuevos, sin holgura y sin esperar a 651.
+//
+// Aserción POSITIVA y por-archivo (no un barrido «cero infractores»): nombra el archivo y
+// exige que EXISTA. Un rename que la evada falla por «archivo ausente», nunca por «cero
+// nodos» (el falso verde que ya nos mordió una capa más abajo). Mide las DOS caras
+// (relleno de tinta + borde de papel) con el mismo INVERSION_650 combinado.
+const COMPONENTES_NUEVOS_610 = [
+    path.join(SRC, "components/modules/padre/GenerarPase.tsx"),
+    path.join(SRC, "components/modules/padre/QuienHaLeido.tsx"),
+];
+
+describe("SPEC-610 (#549) · el pase · sus componentes nuevos no invierten la superficie en oscuro", () => {
+    for (const archivo of COMPONENTES_NUEVOS_610) {
+        it(`${path.basename(archivo)}: ni dark:bg-tinta/N ni dark:border-papel/N`, () => {
+            expect(
+                fs.existsSync(archivo),
+                `No encontré ${path.relative(SRC, archivo)} — ¿renombrado? La aserción de #549 quedaría sin objeto ` +
+                    "(un rename dejaría la costura abierta con verde falso). Reapuntá esta lista al nuevo nombre."
+            ).toBe(true);
+            const encontrado = sinComentarios(fs.readFileSync(archivo, "utf-8")).match(INVERSION_650);
+            expect(
+                encontrado,
+                `${path.relative(SRC, archivo)} invierte la superficie en oscuro (${encontrado?.[0] ?? ""}). ` +
+                    "La tinta es texto y trazo, NUNCA superficie; papel NUNCA es borde en oscuro. Usá " +
+                    "`bg-superficie-1|2` (opaco) para el relleno y `dark:border-tinta/12` (hairline claro) para el trazo."
+            ).toBeNull();
+        });
+    }
+});
+
 describe("SPEC-646 (I-381) · (b) text-muted ≥ 4.5:1 sobre cada --superficie-* en LOS DOS temas", () => {
     const css = fs.readFileSync(GLOBALS, "utf-8");
     // Bloque claro = el :root que define las superficies; oscuro = .dark.
