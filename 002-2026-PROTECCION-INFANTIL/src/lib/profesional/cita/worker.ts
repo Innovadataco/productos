@@ -5,37 +5,40 @@
  *
  *  1) `barrerAvisoVencimiento48h(now)` — el reloj del profesional.
  *     Toma solicitudes PAGADA_PENDIENTE con `pagoAprobadoEn + 48h` pasado, las
- *     marca VENCIDA_SIN_RESPUESTA, libera la franja, y avisa al padre con el
- *     contacto abierto. **Candado de repetición (patrón I-280)**: consulta el
- *     último audit `CITA_PROFESIONAL_AVISO_48H_ENVIADO` y salta si
- *     `audit.creadoEn >= solicitud.actualizadoEn`. El aviso solo se marca tras
- *     enviar bien (si el correo trueca, la siguiente vuelta reintenta).
- *     Después de vencer, evalúa suspensión y alarma del profesional.
+ *     marca VENCIDA_SIN_RESPUESTA (vencida POR el profesional: tuvo 48 h y no
+ *     respondió) y libera la franja para que otro padre la tome. Registra el
+ *     audit `CITA_PROFESIONAL_VENCIDA_PROFESIONAL` —el hecho que SÍ ocurre—,
+ *     simétrico con `PAGO_EXPIRADA` del otro barredor. Después de vencer,
+ *     evalúa suspensión y alarma del profesional.
+ *
+ *     Idempotencia (SPEC-657): NO por audit, sino por la transición one-way de
+ *     estado. `listarVencidasSinAvisar48h` filtra por `estado: PAGADA_PENDIENTE`;
+ *     al marcar VENCIDA la solicitud sale del conjunto de candidatas para
+ *     siempre, así que una segunda corrida no la reprocesa. (Antes había un skip
+ *     por el audit `AVISO_48H_ENVIADO`; defendía una transición que la máquina de
+ *     estados ya hace imposible — se quitó con su lógica, decisión CEO SPEC-657.)
+ *
+ *     NOTA (I-385): este barredor todavía NO avisa al padre. El aviso queda en
+ *     espera de la política de reembolso (decisión de Jelkin); hasta entonces no
+ *     se escribe copy ni variables de aviso. El padre ya ve la cita como
+ *     cancelada en "Mis citas". El nombre `Aviso…` es aspiracional: cuando el
+ *     aviso exista, vive acá.
  *
  *  2) `barrerPlazoPagoDelPadre(now)` — el plazo del padre.
  *     Toma solicitudes SIN_CONFIRMAR con `venceEn` pasado (sin pago aprobado),
  *     las marca VENCIDA_SIN_RESPUESTA y **libera la franja** — si no, cualquiera
  *     bloquea la agenda de un profesional sin poner un peso (aviso CEO 09:50).
+ *     Registra `CITA_PROFESIONAL_PAGO_EXPIRADA`.
  */
 import { logAudit } from "@/lib/audit";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
-import { AuditLogRepository } from "@/lib/dal/repositories/audit-log";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { evaluarSuspensionYAlarma } from "./cita.service";
 
-/**
- * @internal — expuesto para el test. Idempotencia del aviso 48h.
- * Devuelve la fecha del último aviso emitido para esta solicitud, o null.
- */
-export function ultimoAviso48h(solicitudId: string): Promise<{ creadoEn: Date } | null> {
-    return new AuditLogRepository().ultimoPorAccionYRecurso("CITA_PROFESIONAL_AVISO_48H_ENVIADO", solicitudId);
-}
-
 export interface ResumenBarridoAviso48h {
     encontradas: number;
-    avisadas: number;
-    saltadas: number;
+    vencidas: number;
     profesionalesEvaluados: number;
 }
 
@@ -46,34 +49,28 @@ export async function barrerAvisoVencimiento48h(
     const candidatas = await repo.listarVencidasSinAvisar48h(now);
     const resumen: ResumenBarridoAviso48h = {
         encontradas: candidatas.length,
-        avisadas: 0,
-        saltadas: 0,
+        vencidas: 0,
         profesionalesEvaluados: 0,
     };
     const profesionalesTocados = new Set<string>();
     for (const solicitud of candidatas) {
-        // Candado I-280: si ya avisamos DESPUÉS del último cambio de la
-        // solicitud, no repetimos hasta que el estado se mueva.
-        const prev = await ultimoAviso48h(solicitud.id);
-        if (prev && prev.creadoEn.getTime() >= solicitud.actualizadoEn.getTime()) {
-            resumen.saltadas += 1;
-            continue;
-        }
-        // Mueve el estado y libera la franja, atómico.
+        // Mueve el estado y libera la franja, atómico. La transición one-way a
+        // VENCIDA saca a la solicitud del conjunto PAGADA_PENDIENTE para
+        // siempre: eso es lo que da idempotencia, no un audit (SPEC-657).
         await withUnitOfWork(async (tx) => {
             await new SolicitudCitaRepository(tx).marcarVencida48h(solicitud.id);
             await new FranjaDisponibleRepository(tx).liberar(solicitud.franjaId);
         });
-        // El audit se registra SOLO tras el cambio; el candado se compara con
-        // `solicitud.actualizadoEn` que Prisma recalculó al marcar vencida.
+        // Audit VERAZ del hecho que ocurre: la cita venció por el profesional.
+        // NO es un aviso — nada se le envía al padre todavía (ver NOTA I-385).
         await logAudit({
-            accion: "CITA_PROFESIONAL_AVISO_48H_ENVIADO",
+            accion: "CITA_PROFESIONAL_VENCIDA_PROFESIONAL",
             tipoRecurso: "SolicitudCita",
             recursoId: solicitud.id,
             ipAddress: "worker",
-            userAgent: "cita/aviso-48h",
+            userAgent: "cita/vencimiento-48h",
         });
-        resumen.avisadas += 1;
+        resumen.vencidas += 1;
         profesionalesTocados.add(solicitud.profesionalId);
     }
     // Después de cada barrido, evalúa suspensión y alarma por profesional

@@ -89,8 +89,8 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 async function correr() {
     const r = await ejecutarBarridoCitas();
     console.log(
-        `[CITAS] Barrido terminado: aviso48h ${r.aviso48h.avisadas}/${r.aviso48h.encontradas} avisadas ` +
-            `(${r.aviso48h.saltadas} saltadas, ${r.aviso48h.profesionalesEvaluados} profesionales evaluados); ` +
+        `[CITAS] Barrido terminado: 48h ${r.aviso48h.vencidas}/${r.aviso48h.encontradas} vencidas ` +
+            `(${r.aviso48h.profesionalesEvaluados} profesionales evaluados); ` +
             `plazo-pago ${r.plazoPago.expiradas}/${r.plazoPago.encontradas} expiradas, ` +
             `${r.plazoPago.franjasLiberadas} franjas liberadas por impago.`
     );

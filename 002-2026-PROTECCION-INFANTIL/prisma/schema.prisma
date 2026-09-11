@@ -365,12 +365,11 @@ enum AccionAudit {
   PROFESIONAL_VERIFICACION_MAS_INFO
   PROFESIONAL_VERIFICACION_VENCIDA
   // SPEC-395 (L4 · veredicto CEO 09:50): valores de la cita profesional.
-  // El worker de 48h usa CITA_PROFESIONAL_AVISO_48H_ENVIADO como candado de
-  // repetición (patrón I-280 SPAM_ALERTA_REVISION_ENVIADA — no volver a
-  // avisar hasta que la solicitud cambie).
+  // SPEC-657: el worker de 48h registra CITA_PROFESIONAL_VENCIDA_PROFESIONAL al
+  // vencer; la idempotencia la da la transición one-way de estado, no un audit.
   CITA_PROFESIONAL_PAGO_APROBADO
   CITA_PROFESIONAL_PAGO_EXPIRADA
-  CITA_PROFESIONAL_AVISO_48H_ENVIADO
+  CITA_PROFESIONAL_AVISO_48H_ENVIADO // DEPRECADO (SPEC-657): no lo escribe nadie; se conserva por el enum publicado a BI. No reusar.
   CITA_PROFESIONAL_CONFIRMADA
   CITA_PROFESIONAL_RECHAZADA_PROFESIONAL
   CITA_PROFESIONAL_REPROGRAMADA
