@@ -227,7 +227,7 @@ export function SolicitarCitaPanel({
                                 onClick={() => setUrgencia(u)}
                                 className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
                                     urgencia === u
-                                        ? "bg-cielo text-white shadow"
+                                        ? "bg-cielo text-acento-ink shadow"
                                         : "bg-tinta/5 text-body hover:bg-tinta/10"
                                 }`}
                             >

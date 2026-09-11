@@ -199,14 +199,14 @@ export function ExpedienteVivo({
                     <div className="flex flex-wrap gap-2">
                         <a
                             href="tel:141"
-                            className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-white transition hover:bg-cielo/90"
+                            className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
                         >
                             <span className="font-mono text-xs">141</span>
                             Llamar a la línea
                         </a>
                         <a
                             href={`/dashboard/padre/profesionales?expedienteId=${encodeURIComponent(expedienteId)}`}
-                            className="inline-flex items-center gap-2 rounded-full bg-pino px-4 py-2 text-sm font-semibold text-white transition hover:bg-pino/90"
+                            className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
                         >
                             Recibir apoyo
                         </a>

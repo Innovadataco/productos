@@ -22,7 +22,7 @@ export function EstadoVacio({ onAgregar }: { onAgregar: () => void }) {
             <ol className="mt-5 grid gap-3 md:grid-cols-3">
                 {PASOS.map((p) => (
                     <li key={p.n} className="flex gap-3 rounded-xl bg-papel p-3.5">
-                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-pino text-sm font-bold text-white">
+                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-cielo text-sm font-bold text-acento-ink">
                             {p.n}
                         </span>
                         <span>

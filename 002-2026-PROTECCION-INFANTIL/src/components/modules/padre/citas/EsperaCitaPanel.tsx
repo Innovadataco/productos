@@ -193,7 +193,7 @@ export function EsperaCitaPanel({ citaInicial }: Props) {
                     </p>
                     <Link
                         href={`/dashboard/padre/profesionales?heredarDe=${encodeURIComponent(cita.id)}`}
-                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-pino px-4 py-2 text-sm font-semibold text-white transition hover:bg-pino/90"
+                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
                     >
                         Elegir otro profesional
                     </Link>

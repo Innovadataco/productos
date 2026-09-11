@@ -66,7 +66,7 @@ export function IdentificadorBusquedaClient({ identificador, expedientes }: Iden
                     </p>
                     <Link
                         href="/dashboard/padre/reportar"
-                        className="mt-5 inline-block rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cielo/25 transition hover:opacity-90"
+                        className="mt-5 inline-block rounded-xl bg-cielo px-5 py-2.5 text-sm font-semibold text-acento-ink shadow-lg shadow-cielo/25 transition hover:opacity-90"
                     >
                         Reportar una situación
                     </Link>
