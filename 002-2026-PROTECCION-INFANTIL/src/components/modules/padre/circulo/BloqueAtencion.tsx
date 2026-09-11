@@ -4,6 +4,7 @@
  * A-73 (SPEC-367) · "Necesita tu atención": lo que apremia, primero.
  * Solo aparece cuando hay algo. Ámbar, nunca rojo.
  */
+import { Button } from "@/components/ui/Button";
 import { nombreVisible, type Contacto } from "./tipos";
 
 export function BloqueAtencion({
@@ -44,13 +45,9 @@ export function BloqueAtencion({
                     Míralo con calma: ahí te contamos de qué se trata.
                 </p>
             </div>
-            <button
-                type="button"
-                onClick={() => onVer(primera)}
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-pino px-5 font-semibold text-white transition hover:brightness-110"
-            >
+            <Button type="button" onClick={() => onVer(primera)}>
                 Ver de qué se trata
-            </button>
+            </Button>
         </div>
     );
 }

@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
 import { leerBorradorConsulta, borrarBorradorConsulta } from "@/lib/padre/borrador-consulta";
 
 interface Franja {
@@ -275,16 +276,9 @@ export function SolicitarCitaPanel({
                 )}
             </div>
 
-            <button
-                type="button"
-                disabled={!puedeContinuar}
-                onClick={() => setModalAbierto(true)}
-                className={`mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition ${
-                    puedeContinuar ? "bg-pino hover:bg-pino/90" : "bg-tinta/30 cursor-not-allowed"
-                }`}
-            >
+            <Button type="button" disabled={!puedeContinuar} onClick={() => setModalAbierto(true)} className="mt-4 w-full">
                 {esReasignacion ? "Elegir a este profesional" : "Pagar y solicitar la cita"}
-            </button>
+            </Button>
 
             {/* Modal de confirmación */}
             {modalAbierto && franjaSel && (
