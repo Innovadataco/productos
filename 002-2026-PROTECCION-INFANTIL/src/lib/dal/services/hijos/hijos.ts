@@ -174,6 +174,15 @@ export async function listarHijos(usuarioId: string) {
     // eliminado. UNA consulta para toda la lista (los valores activos que aparecen en algún
     // reporte visible); el `@@index([identificador, plataformaId])` la cubre. Solo el SI/NO
     // cruza a la pantalla — nunca cuántos.
+    //
+    // ⚠️ DEGRADACIÓN CONOCIDA (I-396, 3ª vez): «VISIBLE» = ESTADOS_VISIBLES (clasificado o en
+    // revisión). Un reporte sin clasificar queda PENDIENTE = NO visible. Con el MOTOR CAÍDO un
+    // hijo reportado da `tieneReportes = false` y el gráfico lo pinta «tranquilo» sobre un niño
+    // recién reportado. NO se arregla acá cambiando el criterio: divergir del aviso da DOS
+    // VERDADES (el gráfico contaría distinto del correo), que es peor. Lo cierra SPEC-671 (los
+    // avisos disparan sobre REVISION_MANUAL, que SÍ es visible → `tieneReportes` se enciende
+    // también), sin tocar este código. Mientras 671 no esté en producción, «tranquilo» NO puede
+    // leerse como «no pasó nada» en el copy del gráfico (forma → decide Diseño).
     const valoresActivos = [
         ...new Set(hijos.flatMap((h) => h.identificadores.filter((i) => i.activo).map((i) => i.valor))),
     ];
