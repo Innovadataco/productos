@@ -2,10 +2,12 @@ import { Question, Perfil, PerfilSheet, Dificultad } from './types'
 
 let cache: Question[] | null = null
 
+// Sheet público del banco de preguntas (ID no sensible; el env var lo puede sobrescribir)
+const DEFAULT_SHEET_ID = '1YUaeT30qe8noSRecCWuTb-Aah12iEt4fEcCThN2BDKU'
+
 export async function fetchQuestions(): Promise<Question[]> {
   if (cache) return cache
-  const sheetId = process.env.NEXT_PUBLIC_SHEET_ID
-  if (!sheetId) throw new Error('Falta NEXT_PUBLIC_SHEET_ID')
+  const sheetId = process.env.NEXT_PUBLIC_SHEET_ID || DEFAULT_SHEET_ID
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
   const res = await fetch(url)
   if (!res.ok) throw new Error('No se pudo cargar el banco de preguntas')
