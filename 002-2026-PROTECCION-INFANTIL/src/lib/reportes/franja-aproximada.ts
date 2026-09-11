@@ -57,3 +57,18 @@ export function instanteDeFranja(dia: string, franja: FranjaAproximada): Date {
     const comoSiFueraUtc = Date.UTC(anio, mes - 1, d, HORA_REPRESENTATIVA[franja], 0, 0, 0);
     return new Date(comoSiFueraUtc + OFFSET_BOGOTA_MS);
 }
+
+/**
+ * SPEC-626 (I-379) · INVERSO de la hora representativa: la franja de un instante
+ * guardado. Solo es unívoco cuando `horaAproximada = true` (la hora es uno de los
+ * cuatro centros). Fuente ÚNICA del mapeo hora→franja, en hora de Bogotá; sirve a
+ * la capa de LECTURA para mostrar la franja sin re-derivar el offset en otro lado.
+ * Devuelve `null` si la hora no es un centro (dato inesperado: el llamador muestra
+ * solo la fecha, nunca una hora de reloj).
+ */
+export function franjaDeInstante(iso: string | Date): FranjaAproximada | null {
+    const d = typeof iso === "string" ? new Date(iso) : iso;
+    if (Number.isNaN(d.getTime())) return null;
+    const horaBogota = (d.getUTCHours() - 5 + 24) % 24;
+    return FRANJAS.find((f) => HORA_REPRESENTATIVA[f] === horaBogota) ?? null;
+}

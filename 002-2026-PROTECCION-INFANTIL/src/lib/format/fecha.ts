@@ -4,6 +4,8 @@
  * Funcionan en cliente y servidor (Node 22 + Intl.DateTimeFormat).
  */
 
+import { ETIQUETA_FRANJA, franjaDeInstante } from "@/lib/reportes/franja-aproximada";
+
 const TZ_BOGOTA = "America/Bogota";
 const LOCALE = "es-CO";
 
@@ -79,7 +81,14 @@ export function fechaHechoLegible(
     horaAproximada?: boolean | null,
 ): string {
     if (horaAproximada) {
-        return formatear(iso, { year: "numeric", month: "short", day: "numeric" });
+        const fecha = formatear(iso, { year: "numeric", month: "short", day: "numeric" });
+        if (fecha === "—") return "—";
+        // I-379: la hora representativa (3/9/15/21) es un cálculo INTERNO y NUNCA
+        // se muestra como hora de reloj cuando es aproximada. Se muestra la FRANJA
+        // (derivada del centro, fuente única en franja-aproximada); si por un dato
+        // inesperado no cae en un centro, solo la fecha — jamás una hora.
+        const franja = iso ? franjaDeInstante(iso) : null;
+        return franja ? `${fecha} · ${ETIQUETA_FRANJA[franja]}` : fecha;
     }
     return fechaHoraSinMinutos(iso);
 }

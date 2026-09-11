@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fechaHechoLegible, fechaHoraSinMinutos } from "./fecha";
+import { ETIQUETA_FRANJA } from "@/lib/reportes/franja-aproximada";
 
 /**
  * SPEC-626 · CANDADO: cuando la hora del hecho es APROXIMADA, ninguna superficie
@@ -21,23 +22,28 @@ import { fechaHechoLegible, fechaHoraSinMinutos } from "./fecha";
  * fs + helper puro → unit, sin base.
  */
 
-describe("SPEC-626 · la hora aproximada no se muestra como precisa", () => {
-    const iso = "2026-09-08T15:00:00.000Z";
+describe("SPEC-626 (I-379) · la hora aproximada se lee como FRANJA, la exacta como hora", () => {
+    // Centro de «mañana» en Bogotá = 9:00 a.m. = UTC 14:00. Con horaAproximada=true,
+    // la hora guardada es siempre uno de los centros {3,9,15,21}.
+    const ISO_MANANA = "2026-09-08T14:00:00.000Z";
 
-    it("(helper) con horaAproximada=true NO aparece hora; con precisa SÍ", () => {
-        const aproximada = fechaHechoLegible(iso, true);
-        const precisa = fechaHechoLegible(iso, false);
-        // La versión precisa lleva el separador « · » + hora; la aproximada no.
-        expect(precisa).toBe(fechaHoraSinMinutos(iso));
-        expect(precisa).toContain("·");
-        expect(aproximada).not.toContain("·");
-        expect(aproximada).not.toMatch(/\d\s*(a\.?\s*m\.?|p\.?\s*m\.?)/i);
-        // La FECHA sí está en ambas.
+    it("(helper·APROXIMADA) muestra la FRANJA, NUNCA la hora representativa (9)", () => {
+        const aproximada = fechaHechoLegible(ISO_MANANA, true);
+        // la franja, con su rango (de ETIQUETA_FRANJA) — no la hora de reloj.
+        expect(aproximada).toContain(ETIQUETA_FRANJA.manana);
+        // la hora representativa (9) JAMÁS como hora de reloj (I-379 aceptación #1).
+        expect(aproximada).not.toMatch(/\b9\s*(a\.?\s*m\.?|:00)/i);
         expect(aproximada).toContain("2026");
     });
 
-    it("(helper) sin bandera (undefined) se comporta como precisa — compatibilidad", () => {
-        expect(fechaHechoLegible(iso)).toBe(fechaHoraSinMinutos(iso));
+    it("(helper·EXACTA) muestra la hora tal cual — con el flag en false Y sin flag", () => {
+        // Ejercitar el flag en FALSE, no solo en true: si no, no sabríamos si
+        // rompimos el caso donde la hora SÍ es real y debe verse (condición CEO).
+        const exacta = fechaHechoLegible(ISO_MANANA, false);
+        expect(exacta).toBe(fechaHoraSinMinutos(ISO_MANANA));
+        expect(exacta).toMatch(/9\s*a\.?\s*m\.?/i); // la hora real SÍ aparece
+        // sin bandera (undefined) = exacta — compatibilidad con llamadas viejas.
+        expect(fechaHechoLegible(ISO_MANANA)).toBe(exacta);
     });
 
     it("(clase) ningún fuente formatea `fechaIncidente` con `fechaHoraSinMinutos` directo", () => {
