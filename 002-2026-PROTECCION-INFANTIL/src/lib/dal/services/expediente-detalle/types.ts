@@ -37,6 +37,10 @@ export interface ExpedienteListaItemDto {
 export interface TimelineItemDto {
     /** Fecha del hecho (fechaIncidente); la UI la muestra sin minutos (A-70 · G20). */
     fecha: Date;
+    /** Hora aproximada (SPEC-626/653): si true, la UI muestra la FRANJA, no la
+     * hora exacta — el padre dijo «no recuerdo la hora» y el centro de la franja
+     * no es un dato. Viaja junto a `fecha` para que ninguna superficie la invente. */
+    horaAproximada: boolean;
     esPropio: boolean;
     categoriaLabel: string | null;
     /** Severidad de la categoría del ítem (color del punto); null sin clasificar. */
@@ -56,6 +60,8 @@ export interface TimelineItemDto {
 export interface EventoEvidenciaDto {
     reporteId: string;
     fecha: Date;
+    /** Hora aproximada del hecho (SPEC-653): la UI honra la franja, no inventa hora. */
+    horaAproximada: boolean;
     categoriaLabel: string | null;
     /** Severidad de la categoría del evento (color del chip); null sin clasificar. */
     nivel: "alta" | "media" | "baja" | null;
@@ -140,6 +146,7 @@ export type ReportePropioRow = Prisma.ReporteGetPayload<{
         id: true;
         identificador: true;
         fechaIncidente: true;
+        horaAproximada: true;
         creadoEn: true;
         estado: true;
         hijoId: true;
@@ -157,6 +164,7 @@ export type ReporteAjenoRow = Prisma.ReporteGetPayload<{
         id: true;
         identificador: true;
         fechaIncidente: true;
+        horaAproximada: true;
         creadoEn: true;
         usuarioId: true;
         esAnonimo: true;
@@ -170,6 +178,7 @@ export const SELECT_PROPIO = {
     id: true,
     identificador: true,
     fechaIncidente: true,
+    horaAproximada: true,
     creadoEn: true,
     estado: true,
     hijoId: true,
@@ -185,6 +194,7 @@ export const SELECT_AJENO = {
     id: true,
     identificador: true,
     fechaIncidente: true,
+    horaAproximada: true,
     creadoEn: true,
     usuarioId: true,
     esAnonimo: true,

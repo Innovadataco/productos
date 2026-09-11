@@ -239,6 +239,7 @@ export async function detalleExpedientePadre(expedienteId: string, usuarioId: st
                 return {
                     reporteId: r.id,
                     fecha: r.fechaIncidente,
+                    horaAproximada: r.horaAproximada,
                     categoriaLabel: categoria ? formatCategoria(categoria) : null,
                     nivel: categoria ? nivelDeCategoria(categoria) : null,
                     estadoReporte: r.estado,
