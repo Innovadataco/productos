@@ -7,6 +7,7 @@ export type DetalleReporte = {
     ciudad: string;
     pais: string;
     fechaIncidente: string;
+    horaAproximada: boolean;
     esAnonimo: boolean;
     numeroSeguimiento: string;
     creadoEn: string;

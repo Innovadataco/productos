@@ -630,4 +630,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-628: el historial de «Mi perfil» no expone identificadores internos
     // (id/cuid/DANE/clave-evento/columna) y cubre los cambios de aviso. Builder puro.
     "src/lib/padre/perfil-historial-sin-codigos.candado.test.ts",
+    // SPEC-626: la hora aproximada del hecho no se muestra como precisa (helper + clase).
+    "src/lib/format/fecha-hecho-aproximada.candado.test.ts",
 ];

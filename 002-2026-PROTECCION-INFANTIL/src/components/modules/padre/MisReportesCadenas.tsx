@@ -15,7 +15,7 @@
  * Una cadena legada sin expediente simplemente no muestra acción; el endpoint
  * POST /api/padre/expedientes sigue vivo como backfill.
  */
-import { fechaHoraSinMinutos } from "@/lib/format/fecha";
+import { fechaHoraSinMinutos, fechaHechoLegible } from "@/lib/format/fecha";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +27,7 @@ import { AgregarEvento } from "./AgregarEvento";
 interface EventoCadena {
     id: string;
     fechaIncidente: string;
+    horaAproximada: boolean;
     creadoEn: string;
     estado: string;
     categoriaLabel: string | null;
@@ -155,7 +156,7 @@ export function MisReportesCadenas() {
                                 {cadena.eventos.map((ev) => (
                                     <div key={ev.id} className="rounded-xl border border-tinta/10 bg-superficie-2 p-3 dark:border-tinta/12">
                                         <p className="text-xs text-muted">
-                                            {fechaHoraSinMinutos(ev.fechaIncidente)}
+                                            {fechaHechoLegible(ev.fechaIncidente, ev.horaAproximada)}
                                             {ev.esPrincipal ? " · el primero" : ""}
                                             {ev.categoriaLabel ? ` · ${ev.categoriaLabel}` : ""}
                                             {ev.hijoNombre ? ` · dirigido a ${ev.hijoNombre}` : ""}
@@ -170,6 +171,7 @@ export function MisReportesCadenas() {
                                                 analisisIa={ev.analisisIa}
                                                 ficha={ev.ficha}
                                                 fechaIncidente={ev.fechaIncidente}
+                                                horaAproximada={ev.horaAproximada}
                                                 estado={ev.estado}
                                             />
                                         </div>

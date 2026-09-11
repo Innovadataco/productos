@@ -96,6 +96,7 @@ const SELECT_DETALLE_REVISION = {
     eliminadoEn: true,
     creadoEn: true,
     fechaIncidente: true,
+    horaAproximada: true,
     ciudad: true,
     pais: true,
     edadVictima: true,

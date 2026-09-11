@@ -67,6 +67,24 @@ export function fechaHoraSinMinutos(iso: string | null | undefined): string {
 }
 
 /**
+ * SPEC-626 · fecha del HECHO respetando `horaAproximada`. Cuando el reportante
+ * NO dio la hora (`horaAproximada = true`), se muestra SOLO la fecha — NUNCA una
+ * hora que no dijo. Fingir precisión en un caso sobre un menor es peor que no
+ * tenerla: la bandera se guarda en la captura (D-126/626) y TODA superficie que
+ * muestre la fecha del hecho debe pasar por acá, no por `fechaHoraSinMinutos`
+ * directo (candado de clase). Con hora precisa: día + hora sin minutos.
+ */
+export function fechaHechoLegible(
+    iso: string | null | undefined,
+    horaAproximada?: boolean | null,
+): string {
+    if (horaAproximada) {
+        return formatear(iso, { year: "numeric", month: "short", day: "numeric" });
+    }
+    return fechaHoraSinMinutos(iso);
+}
+
+/**
  * A-70 · G20 — normaliza a hora en punto para persistir. Recibe y devuelve el
  * valor del input `datetime-local` ("YYYY-MM-DDTHH:mm"); si viene con minutos
  * los pone en `00`. Cadena vacía pasa tal cual (campo sin llenar).
