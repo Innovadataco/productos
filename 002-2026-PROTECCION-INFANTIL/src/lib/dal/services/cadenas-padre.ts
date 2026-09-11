@@ -14,12 +14,18 @@ import { formatCategoria } from "../../labels";
 import { formatPlataforma } from "../../plataforma";
 import { whereReporteVigente, ESTADOS_APROBADOS, CATEGORIAS_NO_APROBADAS } from "../../reportes-acceso";
 import { getParametroSistemaValor } from "../../parametros";
+import { ENUM_A_FRANJA } from "../../reportes/franja-enum";
+import type { FranjaAproximada } from "../../reportes/franja-aproximada";
 import type { Prisma, EstadoReporte } from "@prisma/client";
 
 export interface EventoCadenaDto {
     id: string;
     fechaIncidente: Date;
     horaAproximada: boolean;
+    /** SPEC-644 (I-379): la franja DECLARADA (dominio), persistida. null = hora exacta o
+     *  fila legada — la lectura la deriva de la hora solo entonces. Que la lectura muestre
+     *  lo GUARDADO y no una aritmética del centro que mentiría si se mueve un centro. */
+    franja: FranjaAproximada | null;
     creadoEn: Date;
     estado: string;
     categoriaLabel: string | null;
@@ -227,6 +233,8 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
                 id: r.id,
                 fechaIncidente: r.fechaIncidente,
                 horaAproximada: r.horaAproximada,
+                // SPEC-644: el enum persistido → la franja de dominio para la lectura.
+                franja: r.franjaHoraria ? ENUM_A_FRANJA[r.franjaHoraria] : null,
                 creadoEn: r.creadoEn,
                 estado: r.estado,
                 categoriaLabel:

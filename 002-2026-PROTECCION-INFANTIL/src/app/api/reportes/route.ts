@@ -91,7 +91,24 @@ export async function POST(request: Request) {
             );
         }
 
-        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, horaAproximada, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima, reportePrevioId } = parsed.data;
+        const { identificador, plataforma: plataformaClave, texto, fechaIncidente, horaAproximada, franja, ciudad, pais, paisId, ciudadId, otraPlataforma, edadVictima, reportePrevioId } = parsed.data;
+
+        // SPEC-644 (I-379): la franja y `horaAproximada` tienen que ser coherentes —
+        // franja presente ⟺ hora aproximada. Se valida ACÁ (400 limpio, fail-loud en el
+        // borde) antes de escribir; el CHECK de BD es el respaldo estructural, no la
+        // primera línea. Sin esto, un payload incoherente moriría como 500 del CHECK.
+        if ((franja != null) !== (horaAproximada === true)) {
+            return NextResponse.json(
+                {
+                    error: {
+                        message: "Datos inválidos: la franja aproximada y la marca de hora aproximada deben ser coherentes.",
+                        code: ERROR_CODES.VALIDATION_ERROR,
+                        campo: "franja",
+                    },
+                },
+                { status: 400 }
+            );
+        }
 
         // Spec 092-US5: la longitud mínima es un parámetro (ADR_004), no un literal.
         const paramMinTexto = await getParametroSistema("reportes.spam.min_text_length");
@@ -210,6 +227,7 @@ export async function POST(request: Request) {
                 texto,
                 fechaIncidente,
                 horaAproximada,
+                franja,
                 ciudad,
                 pais,
                 paisId,

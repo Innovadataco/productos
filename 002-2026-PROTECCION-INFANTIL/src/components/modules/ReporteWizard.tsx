@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { SkeletonContainer, SkeletonText } from "@/components/ui/Skeleton";
 import { useMinTextoReporte } from "./use-min-texto-reporte";
 import { tomarHandoffReportar, guardarBorradorReporte, leerBorradorReporte, borrarBorradorReporte } from "@/lib/reportar-handoff";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 
 type WizardData = {
     // SPEC-591: ficha «A quién protego» a la que va dirigido (modo autenticado).
@@ -27,6 +28,9 @@ type WizardData = {
     fechaIncidente: string;
     /** SPEC-438: la hora la estimó el reportante (eligió franja). */
     horaAproximada: boolean;
+    /** SPEC-644: la franja declarada (null = hora exacta). Viaja al server para
+     *  persistirse; coherente con horaAproximada (franja ⟺ aproximada). */
+    franja: FranjaAproximada | null;
     edadVictima: string;
     texto: string;
     esAnonimo: boolean;
@@ -90,6 +94,7 @@ export function ReporteWizard({
             ciudadId: "",
             fechaIncidente: "",
             horaAproximada: false,
+            franja: null,
             edadVictima: "",
             texto: "",
             // SPEC-295: en modo autenticado el default es NO anónimo — el padre
@@ -229,6 +234,9 @@ export function ReporteWizard({
                     // obligatoria y el sistema no rellena nada.
                     fechaIncidente: new Date(data.fechaIncidente).toISOString(),
                     horaAproximada: data.horaAproximada,
+                    // SPEC-644: la franja declarada viaja para persistirse (solo si la hay;
+                    // el schema la valida opcional y la ruta exige franja ⟺ horaAproximada).
+                    ...(data.franja ? { franja: data.franja } : {}),
                     ciudad: data.ciudad,
                     pais: data.pais,
                     paisId: data.paisId || null,
@@ -385,6 +393,7 @@ export function ReporteWizard({
                     pais={data.pais}
                     fechaIncidente={data.fechaIncidente}
                     horaAproximada={data.horaAproximada}
+                    franja={data.franja}
                     paisId={data.paisId}
                     ciudadId={data.ciudadId}
                     edadVictima={data.edadVictima}

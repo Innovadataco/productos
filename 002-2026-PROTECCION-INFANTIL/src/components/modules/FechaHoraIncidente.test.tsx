@@ -158,6 +158,9 @@ describe("FechaHoraIncidente · SPEC-580 · modo «no recuerdo la hora»", () =>
 
         const llamada = onChange.mock.calls.at(-1);
         expect(llamada?.[1]).toBe(true);
+        // SPEC-644 (I-379): la FRANJA elegida viaja en la MISMA emisión (3er arg) — es lo
+        // que permite persistirla en vez de re-derivarla del centro. Antes se perdía acá.
+        expect(llamada?.[2]).toBe("tarde");
         const emitido = partesBogota(String(llamada?.[0]));
         // HORA_REPRESENTATIVA.tarde = 15 (centro de 12–18), en el día elegido.
         expect(emitido.dia).toBe("2026-09-01");
@@ -187,7 +190,9 @@ describe("FechaHoraIncidente · SPEC-580 · modo «no recuerdo la hora»", () =>
         fireEvent.click(checkbox); // activa franja → ""
         fireEvent.click(checkbox); // vuelve a hora exacta
         expect(screen.getByLabelText("Hora del incidente")).toBeTruthy();
-        expect(onChange).toHaveBeenLastCalledWith("2026-09-01T09:00", false);
+        // SPEC-644: volver a hora exacta apaga la aproximación Y limpia la franja (null),
+        // para que no quede una franja huérfana con horaAproximada=false (viola el CHECK).
+        expect(onChange).toHaveBeenLastCalledWith("2026-09-01T09:00", false, null);
     });
 
     it("cambiar el día en modo franja re-emite la misma franja sobre el día nuevo", () => {

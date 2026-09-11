@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { fechaCorta, fechaHechoLegible } from "@/lib/format/fecha";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 import { TextoSensible } from "./TextoSensible";
 import { AgregarEvento } from "./AgregarEvento";
 import { GenerarPase } from "./GenerarPase";
@@ -52,6 +53,7 @@ export interface ExpedienteMadreDto {
     timeline: Array<{
         fecha: string;
         horaAproximada: boolean;
+        franja: FranjaAproximada | null;
         esPropio: boolean;
         categoriaLabel: string | null;
         nivel: NivelItem;
@@ -65,6 +67,7 @@ export interface ExpedienteMadreDto {
         reporteId: string;
         fecha: string;
         horaAproximada: boolean;
+        franja: FranjaAproximada | null;
         categoriaLabel: string | null;
         nivel: NivelItem;
         estadoReporte: EstadoReporte;
@@ -236,7 +239,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                 <ol className="flex flex-col">
                     {timeline.map((item, i) => (
                         <li key={`${item.reporteId ?? `ajeno-${item.fecha}`}-${i}`} className={`flex items-start gap-3 py-2 ${i > 0 ? "border-t border-dashed border-tinta/10 dark:border-tinta/12" : ""}`}>
-                            <span className="w-24 flex-none pt-0.5 font-mono text-[10px] text-subtle">{fechaHechoLegible(item.fecha, item.horaAproximada)}</span>
+                            <span className="w-24 flex-none pt-0.5 font-mono text-[10px] text-subtle">{fechaHechoLegible(item.fecha, item.horaAproximada, item.franja)}</span>
                             <span
                                 className={`mt-1.5 h-2 w-2 flex-none rounded-full ${item.nivel ? DOT_NIVEL[item.nivel] : "bg-tinta/30 dark:bg-papel/30"}`}
                                 aria-hidden="true"
@@ -296,7 +299,7 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                     {evidencia.map((ev) => (
                         <div key={ev.reporteId} className="rounded-xl border border-tinta/10 bg-tinta/5 p-3.5 dark:border-tinta/12 dark:bg-papel/5">
                             <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-                                <span className="font-mono text-[10.5px] text-subtle">{fechaHechoLegible(ev.fecha, ev.horaAproximada)}</span>
+                                <span className="font-mono text-[10.5px] text-subtle">{fechaHechoLegible(ev.fecha, ev.horaAproximada, ev.franja)}</span>
                                 {ev.categoriaLabel && <ChipCategoria label={ev.categoriaLabel} nivel={ev.nivel} />}
                                 <span className="inline-flex items-center rounded-full bg-pino px-2.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-widest text-papel">
                                     tú

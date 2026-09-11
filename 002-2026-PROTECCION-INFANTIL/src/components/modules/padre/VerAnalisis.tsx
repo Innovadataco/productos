@@ -17,6 +17,7 @@
 import { useState } from "react";
 import { EstadoTransicion } from "@/components/modules/EstadoTransicion";
 import { fechaHechoLegible } from "@/lib/format/fecha";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 
 export interface AnalisisIaDto {
     categoriaLabel: string;
@@ -46,6 +47,8 @@ interface VerAnalisisProps {
     fechaIncidente?: string | undefined;
     /** SPEC-626: la hora fue aproximada — la ficha muestra solo la fecha. */
     horaAproximada?: boolean | undefined;
+    /** SPEC-644: la franja DECLARADA (persistida); la lectura la usa en vez de derivarla. */
+    franja?: FranjaAproximada | null | undefined;
     /** Estado del reporte — distingue "en revisión por una persona". */
     estado?: string | undefined;
 }
@@ -61,6 +64,7 @@ export function VerAnalisis({
     ficha,
     fechaIncidente,
     horaAproximada,
+    franja,
     estado,
 }: VerAnalisisProps) {
     const [abierto, setAbierto] = useState(false);
@@ -153,7 +157,7 @@ export function VerAnalisis({
                             {fechaIncidente && (
                                 <>
                                     <dt className="text-subtle">Fecha del hecho</dt>
-                                    <dd className="text-body">{fechaHechoLegible(fechaIncidente, horaAproximada)}</dd>
+                                    <dd className="text-body">{fechaHechoLegible(fechaIncidente, horaAproximada, franja)}</dd>
                                 </>
                             )}
                             <dt className="text-subtle">Origen</dt>

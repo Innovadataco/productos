@@ -16,6 +16,7 @@
  * POST /api/padre/expedientes sigue vivo como backfill.
  */
 import { fechaHoraSinMinutos, fechaHechoLegible } from "@/lib/format/fecha";
+import type { FranjaAproximada } from "@/lib/reportes/franja-aproximada";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -28,6 +29,9 @@ interface EventoCadena {
     id: string;
     fechaIncidente: string;
     horaAproximada: boolean;
+    /** SPEC-644: la franja DECLARADA (persistida). La lectura la usa tal cual;
+     *  null (hora exacta o fila legada) deja que `fechaHechoLegible` derive de la hora. */
+    franja: FranjaAproximada | null;
     creadoEn: string;
     estado: string;
     categoriaLabel: string | null;
@@ -156,7 +160,7 @@ export function MisReportesCadenas() {
                                 {cadena.eventos.map((ev) => (
                                     <div key={ev.id} className="rounded-xl border border-tinta/10 bg-superficie-2 p-3 dark:border-tinta/12">
                                         <p className="text-xs text-muted">
-                                            {fechaHechoLegible(ev.fechaIncidente, ev.horaAproximada)}
+                                            {fechaHechoLegible(ev.fechaIncidente, ev.horaAproximada, ev.franja)}
                                             {ev.esPrincipal ? " · el primero" : ""}
                                             {ev.categoriaLabel ? ` · ${ev.categoriaLabel}` : ""}
                                             {ev.hijoNombre ? ` · dirigido a ${ev.hijoNombre}` : ""}
@@ -172,6 +176,7 @@ export function MisReportesCadenas() {
                                                 ficha={ev.ficha}
                                                 fechaIncidente={ev.fechaIncidente}
                                                 horaAproximada={ev.horaAproximada}
+                                                franja={ev.franja}
                                                 estado={ev.estado}
                                             />
                                         </div>

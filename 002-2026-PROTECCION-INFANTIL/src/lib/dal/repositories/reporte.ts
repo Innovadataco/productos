@@ -97,6 +97,9 @@ const SELECT_DETALLE_REVISION = {
     creadoEn: true,
     fechaIncidente: true,
     horaAproximada: true,
+    // SPEC-644: la franja DECLARADA (persistida); el detalle la muestra en vez de
+    // derivarla de la hora representativa fabricada.
+    franjaHoraria: true,
     ciudad: true,
     pais: true,
     edadVictima: true,

@@ -38,7 +38,7 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                         hora en a.m./p.m., SIN minutos. Antes esta vista mostraba
                         solo la fecha, con un formateador propio; el minuto exacto
                         de un hecho no se conoce y fingirlo es peor (G20). */}
-                    <p>{fechaHechoLegible(reporte.fechaIncidente, reporte.horaAproximada)}</p>
+                    <p>{fechaHechoLegible(reporte.fechaIncidente, reporte.horaAproximada, reporte.franja)}</p>
                 </div>
                 <div>
                     <span className="font-medium text-subtle">Origen</span>
