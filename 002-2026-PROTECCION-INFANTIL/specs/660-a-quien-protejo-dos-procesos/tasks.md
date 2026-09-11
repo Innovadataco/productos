@@ -18,7 +18,7 @@ Orden por dependencias. `[#569]` = espera el merge de #569 (Dev 3, toca `MisHijo
 
 ## Fase C — Configurar en Mi perfil › «Menores de edad» · `[#569]`
 - **T020 [#569]** Mover el CRUD de menores (alta a pedido + tarjetas + las 4 acciones) de `MisHijos.tsx` a la sección «Menores de edad» del perfil. Alta = **un botón** que abre el panel a pedido; cada menor = una línea que se despliega. Conservar: validaciones documento-menor, alta múltiple de identificadores, payload POST, cupo (activos; reactivar cuenta, `hijos.ts:259`), edad por AÑO (D-127/D-134). **NO** revivir `RegistroHijoWizard` (D-133).
-- **T021 [#569]** Corregir los docstrings STALE: `MisHijos.tsx:20-21` y `hijos.ts:342` dicen «flag GLOBAL compartido §3.1-bis, afecta a ambos» → decir **local per-padre (D-4)**. **NO tocar `hijos.ts:295` ni `:23`** (SPEC-669, Dev 3). El copy de las acciones declara **local** («no toca al otro padre»), consistente con la conducta verificada (`cambiarEstadoIdentificador`).
+- **T021 [HECHO por #569 — verificado]** Los docstrings STALE («§3.1-bis GLOBAL, afecta a ambos») ya los corrigió #569 (SPEC-668): `MisHijos.tsx:18-25` dice «...la ficha de ESTE padre... NO afecta al otro padre» (D-4) y el docstring de `cambiarEstadoIdentificador` dice «...de la ficha de ESTE padre... NO afecta al otro padre». Post-rebase sobre #569 no queda nada que corregir acá; solo mantener el copy de las acciones (Fase D) consistente con esa conducta local.
 
 ## Fase D — el par Pausar/Quitar (re-corte de Diseño, `FORMA-SPEC660-RECORTE-PAR-PAUSAR-QUITAR`) · ÚLTIMO
 - **T030 [#569]** Copy exacto del re-corte:
