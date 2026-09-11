@@ -1,0 +1,9 @@
+services:
+  pgn-simulacro:
+    image: nginx:alpine
+    container_name: pgn-simulacro
+    restart: always
+    ports:
+      - "127.0.0.1:5018:80"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
