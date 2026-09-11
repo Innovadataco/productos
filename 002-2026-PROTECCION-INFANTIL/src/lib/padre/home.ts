@@ -13,8 +13,12 @@ import type { TimelineHomeItem } from "./home-timeline";
 import { obtenerTimelineHome } from "./home-timeline";
 import type { SugerenciaHome } from "./home-sugerencia";
 import { calcularSugerenciaHome, contarPorColor } from "./home-sugerencia";
+// SPEC-663 (I-396): el latido del MOTOR de clasificación — la MISMA señal honesta
+// que el rector (SPEC-670). Acá solo se EXPONE el dato; la forma de la cara del
+// padre (ocultar reloj en degradado, sin jerga) la decide el render (Dev 1, SPEC-660).
+import { leerLatidoMotor, type LatidoMotor } from "@/lib/monitoreo/latido-motor";
 
-export type { ColorSemaforo, SemaforoHomeItem, TimelineHomeItem, SugerenciaHome };
+export type { ColorSemaforo, SemaforoHomeItem, TimelineHomeItem, SugerenciaHome, LatidoMotor };
 export { colorSemaforo, calcularSemaforoHome, obtenerTimelineHome, calcularSugerenciaHome, contarPorColor };
 
 export type ResumenCirculoHome = {
@@ -38,6 +42,14 @@ export type HomePadrePayload = {
     timeline: TimelineHomeItem[];
     sugerencia: SugerenciaHome;
     accesos: AccesoRapido[];
+    /**
+     * SPEC-663 (I-396): estado del motor de clasificación, tal cual lo da
+     * `leerLatidoMotor` — `motorVivo` + `ultimaVerificacionEn` (último éxito REAL o
+     * null, jamás «ahora» ni el latido del worker). Contrato con SPEC-660 (Dev 1),
+     * que lo consume para la línea de calma y el gráfico. Este orquestador NO
+     * inventa la frescura: solo la pasa.
+     */
+    estadoClasificador: LatidoMotor;
 };
 
 const ESTADOS_CLASIFICADOS = ["CLASIFICADO", "CORREGIDO"] as const;
@@ -128,10 +140,13 @@ export async function obtenerHomePadre(
     nombre: string | null,
     opciones?: { enPeriodoGracia?: boolean }
 ): Promise<HomePadrePayload> {
-    const [resumen, semaforo, timeline] = await Promise.all([
+    const [resumen, semaforo, timeline, estadoClasificador] = await Promise.all([
         obtenerResumenCirculo(usuarioId),
         calcularSemaforoHome(usuarioId),
         obtenerTimelineHome(usuarioId),
+        // SPEC-663 (I-396): la señal honesta de vida del motor. Se pasa tal cual;
+        // la frescura JAMÁS se inventa acá (sale del último ollama_smoke verde o null).
+        leerLatidoMotor(),
     ]);
 
     const conteo = contarPorColor(semaforo);
@@ -151,5 +166,6 @@ export async function obtenerHomePadre(
         timeline,
         sugerencia,
         accesos: accesosRapidos(),
+        estadoClasificador,
     };
 }
