@@ -20,16 +20,12 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/routing/middleware-fail-closed.candado.test.ts",
     // SPEC-588 (vivo con el OAuth 06-09): pantallas de auth con sesión válida mandan al home del rol.
     "src/lib/routing/middleware-auth-screens.candado.test.ts",
-    // SPEC-617 (I-371 · D-131): el puente same-site del callback → el retorno de Google llega al home del rol, no a /login.
-    "src/lib/routing/puente-aterrizaje-oauth.candado.test.ts",
     // SPEC-572 (loop-cap · residual de Datos): urlSinMarcaRebote borra solo `_rv`, preserva el resto.
     "src/lib/routing/marca-rebote-url.test.ts",
     // SPEC-600: con App Router en src/, Next solo autodetecta src/middleware.ts — la raíz queda inerte.
     "src/middleware-ubicacion.candado.test.ts",
     // SPEC-416 (I-118): fuente única de "titular del dato" y "con camino guiado".
     "src/lib/routing/roles-titulares.test.ts",
-    // SPEC-598: códigos de email con propósito (step-up vs crear contraseña) no se reciclan.
-    "src/lib/routing/stepup-sello.test.ts",
     // SPEC-423 (I-298): la credencial de respaldo se muestra SIEMPRE en admin.
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
     // SPEC-463 (D-107): el colegio habla de usted; el padre conserva «tú».
@@ -53,6 +49,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/voz-tu-padre-publico.candado.test.ts",
     // SPEC-525: /registro/inicio — tarjetas de rol en «usted», puerta pública en «tú».
     "src/app/registro/inicio/voz-tarjetas.candado.test.ts",
+    // SPEC-647 (D-136): Google fuera de TODAS las puertas + sin ruta OAuth alcanzable, pero la pantalla
+    // de clasificación (/registro/inicio, 3 caminos) se queda como paso previo al alta. fs + fuente.
+    "src/app/registro/inicio/google-fuera-clasificacion-queda.candado.test.ts",
     // SPEC-504 (CEO): voz del profesional (usted) sin voseo; borde Unicode. Test de
     // fs puro → lane unit (antes solo lo globaba integración, con tax de BD).
     "src/app/perfil-profesional/completar/voz.candado.test.ts",
@@ -300,14 +299,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // repositorios Prisma al evaluarse; lo movemos a integration.
     "src/lib/api-handler.test.ts",
     "src/lib/auth.test.ts",
-    // SPEC-587: state OAuth de Google (firma HMAC, expiración, auth URL) — puro.
-    "src/lib/auth-oauth.test.ts",
-    // SPEC-631 (I-378): el rol de un alta por Google viaja FIRMADO en el state, nunca en la
-    // URL (round-trip cripto + ancla de fuente de los endpoints de arranque) — puro, sin BD.
-    "src/lib/auth/arrancar-oauth-google.candado.test.ts",
-    // SPEC-631 §3: el aviso «entré con Google como profesional pero mi correo ya es familia» aparece
-    // SOLO con ?aviso=cuenta-familia, con el copy aprobado, y es descartable (jsdom, sin BD).
-    "src/components/modules/padre/AvisoRolDesdeGoogle.candado.test.tsx",
     // SPEC-310 (002-PI-211): whitelist de returnTo del puente PI→BI — función pura, sin BD.
     "src/lib/auth/validar-return-to.test.ts",
     // SPEC-319 (002-PI-219 · I-212): fuente única rol→home — función pura, sin BD.

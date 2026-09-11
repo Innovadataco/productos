@@ -16,7 +16,8 @@ import { AutenticacionService } from "@/lib/dal/services/autenticacion";
  *
  * Cierre POR CONSTRUCCIÓN (no por margen tolerante, que sería ciego, [[ceo-candado-umbral-con-holgura-cruzar-el-vivo]]):
  * en producción TODO el trabajo caso-dependiente (lookup + hashToken + token + envío) se DESPACHA fuera
- * del camino síncrono; la respuesta mide idéntico en los 3 casos (sin_usuario / solo_google / con_clave).
+ * del camino síncrono; la respuesta mide idéntico en todos los casos (sin_usuario / con_clave). (SPEC-647/
+ * D-136 sacó Google: ya no hay cuentas sin clave local ni rama `solo_google`.)
  * Los fallos de envío se loguean — no hay canal al usuario sin delatar existencia; el mensaje ya es
  * condicional («si el email está registrado…»).
  *
@@ -45,7 +46,7 @@ function buildRateLimitResponse(retryAfter: number, headers: Record<string, stri
  */
 async function ejecutarRecuperacion(email: string): Promise<{ token: string | null; enviado: boolean }> {
     const resultado = await new AutenticacionService().solicitarRecuperacion(email);
-    // sin_usuario / solo_google / limite → no hay token ni correo. La respuesta ya salió (constante).
+    // sin_usuario / limite → no hay token ni correo. La respuesta ya salió (constante).
     if (!resultado.ok || resultado.tipo !== "ok") return { token: null, enviado: false };
 
     try {

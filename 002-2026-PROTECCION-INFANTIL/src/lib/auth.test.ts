@@ -17,8 +17,9 @@ describe("auth utils", () => {
         expect(getCookieName(false)).toBe("token");
     });
 
-    // SPEC-617 (I-371 · D-131): sameSite se QUEDA en Strict en prod (protege la bitácora de auditoría
-    // de GET cross-site); el retorno de Google se arregla con el puente same-site, no aflojando la cookie.
+    // D-131 · SPEC-619: sameSite se QUEDA en Strict en prod (protege la bitácora de auditoría de GET
+    // cross-site, D-129/SPEC-611). Ratchet: no aflojar a Lax sin el chequeo de Origin. (SPEC-647/D-136
+    // sacó Google; la entrada es solo correo+contraseña, same-site — no hay retorno cross-site.)
     it("sessionCookieAttributes refleja secure (Strict en prod)", () => {
         expect(sessionCookieAttributes(true)).toEqual({
             httpOnly: true,

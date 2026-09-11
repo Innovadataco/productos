@@ -70,23 +70,9 @@ describe("POST /api/auth/recuperar/solicitar", { timeout: 30_000 }, () => {
         expect(tokens, "la cuenta con clave local sí genera token").toBe(1);
     });
 
-    // SPEC-630 cierra el mensaje propio de SPEC-609: una cuenta de Google respondía «entra con Google»,
-    // lo que delataba que ese correo es de Google. Ahora responde el MISMO mensaje genérico que un correo
-    // inexistente. La CONDUCTA de SPEC-609 (no genera token/correo inútil) se conserva.
-    it("cuenta de Google sin clave: mensaje genérico (indistinguible), y NO genera token (conducta SPEC-609)", async () => {
-        const u = await crearUsuario("PARENT", "google.padre@example.com");
-        await prisma.usuario.update({ where: { id: u.id }, data: { googleSub: "g-sub-609", passwordCreadaEn: null } });
-
-        const res = await POST(makeRequest({ email: "google.padre@example.com" }, "203.0.113.201"));
-        expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.message, "genérico, ya NO «entra con Google»").toBe(MENSAJE_EXITO);
-        expect(data.message).not.toContain("Google");
-        expect(data.metodo, "sin metodo=google (era el delator de SPEC-609)").toBeUndefined();
-        expect(data.devToken, "no hay contraseña que restablecer: no se genera token").toBeUndefined();
-        const tokens = await prisma.tokenRecuperacion.count({ where: { email: "google.padre@example.com" } });
-        expect(tokens, "una cuenta de Google no genera token de restablecimiento").toBe(0);
-    });
+    // SPEC-647 (D-136): Google salió del producto; ya no hay cuentas sin clave local ni rama
+    // `solo_google`. Toda cuenta registrada se trata igual (crea token + envía). La no-enumeración se
+    // preserva por el cuerpo constante (abajo) y el candado de SPEC-630.
 
     it("el mensaje es idéntico para inexistente y cuenta-con-clave (indistinguibles por texto)", async () => {
         const inexistente = await (await POST(makeRequest({ email: "no.existe@example.com" }, "203.0.113.203"))).json();

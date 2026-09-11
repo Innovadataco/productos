@@ -9,7 +9,6 @@ import type { Prisma } from "@prisma/client";
 import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { verifyPassword, hashPassword } from "@/lib/auth";
-import { cuentaSinContrasenaLocal } from "@/lib/auth/cuenta-password";
 import { generarTokenRecuperacion, hashToken, verificarTokenHash } from "@/lib/token-recuperacion";
 import { withUnitOfWork } from "../unit-of-work";
 import { UsuarioRepository } from "../repositories/usuario";
@@ -165,35 +164,6 @@ export class AutenticacionService {
     }
 
     /**
-     * SPEC-598 — POST /api/auth/crear-password: primera contraseña local de una
-     * cuenta OAuth (googleSub != null, sin passwordCreadaEn). NO pide contraseña
-     * actual: la verificación de posesión la hace el código de un solo uso que la
-     * ruta valida antes de llamar acá. La cuenta queda con AMBOS métodos
-     * (Google + email/contraseña).
-     */
-    async crearPassword(input: {
-        usuarioId: string;
-        passwordNueva: string;
-        googleSub: string | null;
-        passwordCreadaEn: Date | null;
-    }): Promise<ResultadoCambioPassword> {
-        if (input.googleSub === null) {
-            return { ok: false, tipo: "incorrecta" };
-        }
-        if (input.passwordCreadaEn !== null) {
-            return { ok: false, tipo: "incorrecta" };
-        }
-
-        const hash = await hashPassword(input.passwordNueva);
-        await this.usuarios.actualizar(input.usuarioId, {
-            passwordHash: hash,
-            passwordCreadaEn: new Date(),
-            debeCambiarPassword: false,
-        });
-        return { ok: true };
-    }
-
-    /**
      * POST /api/auth/recuperar/solicitar — crea el token de recuperación.
      * Devuelve el token en claro para que la RUTA lo envíe por email (adaptador)
      * o lo exponga como devToken si el envío falla.
@@ -203,14 +173,6 @@ export class AutenticacionService {
         if (!usuario) {
             // Email no registrado: respuesta idéntica para evitar enumeración.
             return { ok: true, tipo: "sin_usuario" };
-        }
-
-        // SPEC-609 (reparo 2): una cuenta de Google sin contraseña local no tiene qué restablecer.
-        // Mandarle un correo de restablecimiento es inútil; la ruta responde «entra con Google». El
-        // borde de enumeración para cuentas que NO son de Google no se abre: esas siguen con la misma
-        // respuesta genérica que un email inexistente (ver la ruta).
-        if (cuentaSinContrasenaLocal(usuario)) {
-            return { ok: true, tipo: "solo_google" };
         }
 
         const desde = new Date(Date.now() - VENTANA_MS);

@@ -4,7 +4,7 @@
  * tolerante sería ciego al oráculo del hashToken — [[ceo-candado-umbral-con-holgura-cruzar-el-vivo]]).
  *
  * Cierra dos fugas:
- *  (a) CUERPO — el 200 es byte-idéntico para los 3 casos (sin_usuario / solo_google / con_clave). Se
+ *  (a) CUERPO — el 200 es byte-idéntico para los casos del DAL (sin_usuario / limite / con_clave). Se
  *      compara el cuerpo ENTERO (deep-equal, claves incluidas): la fuente gemela (verificar/solicitar,
  *      SPEC-641) vivía en la PRESENCIA de una clave, no en su valor — un `expect(message).toBe(message)`
  *      la dejaría pasar. Se afirma además que NO hay clave de más.
@@ -65,15 +65,15 @@ describe("SPEC-630 · recuperar/solicitar no enumera (prod)", () => {
 
     it("(a) el cuerpo 200 es byte-idéntico en los 3 casos, y no lleva clave de más", async () => {
         const sinUsuario = await cuerpoPara({ ok: true, tipo: "sin_usuario" });
-        const soloGoogle = await cuerpoPara({ ok: true, tipo: "solo_google" });
+        const limite = await cuerpoPara({ ok: false, tipo: "limite" });
         const conClave = await cuerpoPara({ ok: true, tipo: "ok", token: "tok-secreto-123" });
 
         // Deep-equal del cuerpo ENTERO (no solo `message`): la fuga gemela vive en la PRESENCIA de claves.
         expect(conClave.body, "con_clave vs sin_usuario").toEqual(sinUsuario.body);
-        expect(soloGoogle.body, "solo_google vs sin_usuario").toEqual(sinUsuario.body);
+        expect(limite.body, "limite vs sin_usuario").toEqual(sinUsuario.body);
         expect(sinUsuario.body).toEqual({ message: MENSAJE_EXITO });
         expect(Object.keys(sinUsuario.body).sort(), "ninguna clave de más (presencia = fuga)").toEqual(["message"]);
-        for (const c of [sinUsuario, soloGoogle, conClave]) expect(c.status).toBe(200);
+        for (const c of [sinUsuario, limite, conClave]) expect(c.status).toBe(200);
     });
 
     it("(b) fire-and-forget: si el envío NUNCA resuelve, la respuesta igual retorna (sin await en el handler)", async () => {

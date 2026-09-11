@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { verifyAuth } from "@/lib/auth";
 import { obtenerHomePadre } from "@/lib/padre/home";
 import { HomePadreDashboard } from "@/components/modules/padre/HomePadreDashboard";
-import { AvisoRolDesdeGoogle } from "@/components/modules/padre/AvisoRolDesdeGoogle";
 
 export const metadata: Metadata = {
     title: "Inicio",
@@ -16,11 +14,6 @@ export default async function PadreInicioPage() {
 
     return (
         <main className="min-h-screen bg-page py-4">
-            {/* SPEC-631 §3: aviso «de una vez» cuando el correo de Google ya era familia (useSearchParams
-                → Suspense). Solo aparece con ?aviso=cuenta-familia; es descartable y no bloquea. */}
-            <Suspense fallback={null}>
-                <AvisoRolDesdeGoogle />
-            </Suspense>
             <HomePadreDashboard data={data} />
         </main>
     );

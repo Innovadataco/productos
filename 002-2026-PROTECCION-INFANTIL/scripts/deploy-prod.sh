@@ -48,6 +48,17 @@ if [ "$BUILD_SECONDS" -gt 480 ]; then
     echo "⚠️  WARN: build tardó ${BUILD_SECONDS}s (> 5 min · umbral blando SPEC-294)"
 fi
 
+# SPEC-647 · freno de VENTANA (transitorio). La app aún deja entrar por Google entre este
+# deploy y el apagado; si al momento del deploy existe una cuenta Google-only, PARAR — sacar
+# Google la encierra (sin clave local + sin Google = sin puerta).
+# RETIRAR al eliminar la columna googleSub: sin Google ninguna cuenta Google-only nace, el
+# invariante se vuelve trivial y esto queda como guarda que no puede fallar. Muere con googleSub.
+HUERFANOS=$($COMPOSE exec -T db psql -U proteccion -d proteccion_infantil -tAc "SELECT count(*) FROM \"Usuario\" WHERE \"googleSub\" IS NOT NULL AND \"passwordCreadaEn\" IS NULL")
+if [ "${HUERFANOS//[[:space:]]/}" != "0" ]; then
+  echo "❌ ABORT SPEC-647: $HUERFANOS cuenta(s) Google sin clave local — sacar Google las encerraría. Resolvé antes de desplegar."
+  exit 1
+fi
+
 echo "==> Up (app + worker + db)"
 $COMPOSE up -d
 

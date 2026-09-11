@@ -8,11 +8,6 @@ type User = {
     nombre: string;
     rol: string;
     debeCambiarPassword?: boolean;
-    // Cuenta OAuth (Google) y si ya creó contraseña local. SPEC-616 (I-375):
-    // con googleSub y sin passwordCreadaEn (`cuentaSinContrasenaLocal`), el
-    // menú NO ofrece cambiar/crear contraseña — esa cuenta entra por Google.
-    googleSub?: string | null;
-    passwordCreadaEn?: string | null;
 };
 
 type AuthCtx = {
