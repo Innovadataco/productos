@@ -413,11 +413,15 @@
 }
 
 @layer components {
-    /* Focus-visible fallback for native buttons and links without ring-accent */
+    /* Fallback de foco para botones/enlaces nativos SIN `.ring-accent`.
+       SPEC-667: era `currentColor` → la visibilidad del foco dependía del color del
+       PROPIO elemento (un enlace en `cielo` daba 2.37:1, bajo el mínimo de 3:1). Pasa a
+       la MISMA tinta neutra que `.ring-accent` (~15.89:1 claro / ~18.29:1 oscuro): el foco
+       no depende de un color variable. Cierra la clase que abrió SPEC-662 — el último rincón. */
     button:focus-visible,
     a:focus-visible,
     [role="button"]:focus-visible {
-        outline: 2px solid currentColor;
+        outline: 2px solid rgb(var(--tinta-rgb));
         outline-offset: 2px;
     }
 

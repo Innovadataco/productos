@@ -8,16 +8,29 @@
  * OUTLINE de tinta neutra (`--tinta-rgb`), que el overflow no recorta, mismo color en los 4
  * temas (la tinta voltea por modo, no por tema).
  *
+ * SPEC-667 · TERCER consumidor del foco: el FALLBACK nativo
+ * (`button/a/[role=button]:focus-visible`) usaba `outline: currentColor` → la visibilidad
+ * dependía del COLOR del propio elemento (un enlace en `cielo` = 2.37:1). Ahora es la misma
+ * tinta neutra. Cierra la clase que abrió SPEC-662, el último rincón.
+ *
  * Vara PROPIA (no la de contraste de texto): el foco es un componente de UI → WCAG 1.4.11
- * pide ≥ 3:1. Este candado afirma, para `.ring-accent` (:focus-visible, botones/enlaces) y
- * `.ring-accent-input` (:focus, formularios), en los 4 temas × claro/oscuro:
+ * pide ≥ 3:1. Este candado afirma, para los TRES consumidores —`.ring-accent`
+ * (:focus-visible, botones/enlaces), `.ring-accent-input` (:focus, formularios) y el FALLBACK
+ * nativo (<a>/<button> sin .ring-accent)— en los 4 temas × claro/oscuro:
  *   (1) EXISTE un outline al enfocar (outline-style ≠ none y ancho > 0) — no un box-shadow.
  *   (2) contraste outline↔fondo ≥ 3:1.
- *   (3) el color del outline es NEUTRO: el mismo en los 4 temas (no sigue al rol).
- * El foco se dispara con Tab (teclado) para que `:focus-visible` matchee de verdad.
+ *   (3) el color del outline es NEUTRO: el mismo en los 4 temas (no sigue al rol ni al color
+ *       del elemento).
+ * El foco se dispara con Tab (teclado), nunca `.focus()`, para que `:focus-visible` matchee.
  *
- * Ejercido las dos caras: con el fix, verde; volviendo a un `ring`/box-shadow (outline:none)
- * o a un color por rol, se pone rojo.
+ * EL SUJETO AÍSLA LA REGLA (lección afinada, SPEC-667): el sujeto de prueba no es «el más
+ * desnudo» por principio, sino el que aísla la regla bajo prueba. Para `.ring-accent` el
+ * sujeto es un <span tabindex> SIN fallback nativo (si fuera <button>, el fallback lo pintaría
+ * y daría falso verde). Para el FALLBACK es al revés: un <a>/<button> nativo, que ES quien
+ * trae la regla. Mismo candado, sujetos opuestos, según qué se mide.
+ *
+ * Ejercido las dos caras: con el fix, verde; volviendo a `ring`/box-shadow, a color por rol,
+ * o a `currentColor` en el fallback, se pone rojo.
  */
 import { chromium } from "playwright";
 import { readFileSync } from "node:fs";
@@ -63,12 +76,16 @@ async function main(): Promise<void> {
             const modo = dark ? "oscuro" : "claro";
             const colorBoton: string[] = [];
             const colorInput: string[] = [];
+            const colorFallback: string[] = [];
             for (const clase of TEMAS) {
-                // El elemento de `.ring-accent` es un <span tabindex> a propósito, NO un
-                // <button>: hay un fallback `button:focus-visible { outline: currentColor }`
-                // que le daría outline al botón aunque `.ring-accent` esté rota → enmascara
-                // la regla. Un span aísla la regla de `.ring-accent` (sin fallback nativo).
-                const html = `<!doctype html><html class="${dark ? "dark" : ""}"><head><style>${CSS}</style></head><body><div class="${clase}"><span class="ring-accent" id="boton" tabindex="0">Elemento</span><input class="ring-accent-input" id="campo" /><span id="papel" style="background: rgb(var(--papel-rgb))"></span></div></body></html>`;
+                // El SUJETO aísla la REGLA bajo prueba (la lección afinada por SPEC-667):
+                //  · `.ring-accent` → <span tabindex>, NO <button>: si fuera botón, el fallback
+                //    nativo le daría outline aunque `.ring-accent` esté rota (falso verde). El
+                //    span no trae fallback propio: lo único que pinta el contorno es la regla probada.
+                //  · el FALLBACK nativo → al revés: un <a> nativo SIN `.ring-accent`, con color de
+                //    acento (`text-accent`), que es justo el caso que fallaba (enlace `cielo` = 2.37
+                //    con `currentColor`). Acá el fallback ES la regla, así que el sujeto debe traerlo.
+                const html = `<!doctype html><html class="${dark ? "dark" : ""}"><head><style>${CSS}</style></head><body><div class="${clase}"><span class="ring-accent" id="boton" tabindex="0">Elemento</span><input class="ring-accent-input" id="campo" /><a class="text-accent" id="fallback" href="#">Enlace</a><span id="papel" style="background: rgb(var(--papel-rgb))"></span></div></body></html>`;
                 await page.setContent(html);
                 const medir = (id: string): Promise<Medida> =>
                     page.evaluate((elId) => {
@@ -88,11 +105,20 @@ async function main(): Promise<void> {
                 // Segundo Tab → el input (su regla es :focus, keyboard también lo dispara).
                 await page.keyboard.press("Tab");
                 const i = await medir("campo");
+                // Tercer Tab → el <a> nativo (fallback). Su color es el acento, así que
+                // `currentColor` daría un outline de acento (cielo = 2.37); la regla correcta
+                // lo pinta de tinta neutra sin importar el color del elemento.
+                await page.keyboard.press("Tab");
+                const f = await medir("fallback");
 
-                for (const [rol, m] of [["botón (.ring-accent)", b], ["input (.ring-accent-input)", i]] as const) {
+                for (const [rol, m, coleccion] of [
+                    ["botón (.ring-accent)", b, colorBoton],
+                    ["input (.ring-accent-input)", i, colorInput],
+                    ["enlace nativo sin .ring-accent (fallback)", f, colorFallback],
+                ] as const) {
                     const col = parse(m.outlineColor), papel = parse(m.papel);
                     if (m.outlineStyle === "none" || parseFloat(m.outlineWidth) === 0 || !col) {
-                        fallos.push(`${clase}/${modo}: el ${rol} NO tiene outline al enfocar (style=${m.outlineStyle} width=${m.outlineWidth}) — ¿volvió a un ring/box-shadow? El box-shadow lo recorta overflow:hidden (SPEC-662).`);
+                        fallos.push(`${clase}/${modo}: el ${rol} NO tiene outline al enfocar (style=${m.outlineStyle} width=${m.outlineWidth}).`);
                         continue;
                     }
                     if (papel) {
@@ -101,8 +127,7 @@ async function main(): Promise<void> {
                             fallos.push(`${clase}/${modo}: el outline del ${rol} ${fmt(col)} da ${c.toFixed(2)} < 3:1 sobre papel (WCAG 1.4.11).`);
                         }
                     }
-                    if (rol.startsWith("botón")) colorBoton.push(m.outlineColor);
-                    else colorInput.push(m.outlineColor);
+                    coleccion.push(m.outlineColor);
                 }
             }
             const neutro = (colores: string[], rol: string) => {
@@ -113,6 +138,7 @@ async function main(): Promise<void> {
             };
             neutro(colorBoton, "botón");
             neutro(colorInput, "input");
+            neutro(colorFallback, "enlace/fallback nativo");
         }
     } finally {
         await browser.close();
@@ -121,7 +147,7 @@ async function main(): Promise<void> {
         console.error("[render:foco] SPEC-662 · el foco de teclado NO cumple:\n  " + fallos.join("\n  "));
         process.exit(1);
     }
-    console.log("[render:foco] VERDE: el foco de `.ring-accent` y `.ring-accent-input` es un OUTLINE visible (≥ 3:1) y neutro (mismo color en los 4 temas × 2 modos). No lo recorta overflow:hidden.");
+    console.log("[render:foco] VERDE: el foco de `.ring-accent`, `.ring-accent-input` y el FALLBACK nativo (button/a/[role=button] sin .ring-accent) es un OUTLINE visible (≥ 3:1) y neutro (mismo color en los 4 temas × 2 modos). No depende del color del elemento ni lo recorta overflow:hidden.");
 }
 
 void main();
