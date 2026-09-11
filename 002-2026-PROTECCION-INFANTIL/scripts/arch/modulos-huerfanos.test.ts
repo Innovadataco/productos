@@ -25,16 +25,18 @@ describe("SPEC-654 · módulos huérfanos (ratchet de módulos sin importador)",
     });
 
     // Control positivo sobre el árbol REAL: «un vacío no es evidencia hasta probar que el detector
-    // encuentra lo presente». El caso que lo motivó (componente que solo importa su propio test).
-    it("control positivo: detecta el huérfano conocido ExpedienteVivo.tsx", () => {
-        expect(modulosHuerfanos()).toContain("src/components/modules/padre/ExpedienteVivo.tsx");
+    // encuentra lo presente». Se afirma que el set NO es vacío (detecta la línea base), SIN fijar un
+    // archivo volátil: el caso canónico ExpedienteVivo.tsx —el que destapó Dev 2— ya fue LIMPIADO por
+    // otro merge (el ratchet funcionando), y fijar un archivo muerto rompe el test cuando alguien lo
+    // limpia. La igualdad detectado==allowlist la prueban los dos ratchet de arriba (nuevos/obsoletas=[]).
+    it("control positivo: el detector encuentra los huérfanos presentes (no da vacío)", () => {
+        expect(modulosHuerfanos().length, "debe detectar la línea base de huérfanos, no un set vacío").toBeGreaterThan(0);
     });
 
-    // Control negativo sobre el árbol REAL. El par hermano del incidente (evidencia del CEO): el
-    // componente VIVO ExpedienteMadreClient.tsx —importado desde dashboard/padre/expedientes/[id]/page.tsx—
-    // NO se marca, aunque su hermano MUERTO ExpedienteVivo.tsx (solo lo importa su propio test) SÍ. El par
-    // prueba que el detector distingue vivo de muerto entre dos archivos del mismo módulo y tipo. Más un
-    // ancla genérica (prisma.ts) por si el detector se rompiera de raíz.
+    // Control negativo sobre el árbol REAL. El componente VIVO ExpedienteMadreClient.tsx —importado desde
+    // dashboard/padre/expedientes/[id]/page.tsx— NO se marca, aunque padre/AnalisisExpediente.tsx (muerto,
+    // en la allowlist) SÍ. Un vivo y un muerto del mismo módulo prueban que el detector DISCRIMINA, no solo
+    // que reacciona. Más un ancla genérica (prisma.ts) por si el detector se rompiera de raíz.
     it("un módulo vivo NO se marca: el hermano ExpedienteMadreClient y un ancla muy importada (prisma.ts)", () => {
         const h = modulosHuerfanos();
         expect(h, "el hermano vivo no debe marcarse (lo importa una page real)").not.toContain(
