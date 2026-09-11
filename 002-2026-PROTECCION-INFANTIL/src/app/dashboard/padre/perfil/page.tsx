@@ -262,6 +262,20 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
                 </Acordeon>
 
                 <Acordeon id="suscripcion" abierto={!conCobertura} titulo="Suscripción" subtitulo="Plan, prueba y facturación">
+                    {/* SPEC-628 #4 · «en pausa» (Jelkin: «ese tema de suscripción le
+                        podemos dar por ahora quieto mientras estabilizamos el software»).
+                        Quieto, NO borrado: la sección se ve y se anuncia que no está
+                        disponible ahora; el contenido real queda debajo. Tono neutro (no
+                        ámbar: «en pausa» es informativo, no atención pendiente). El copy
+                        exacto lo certifica Diseño (pedido por el CEO). */}
+                    <div
+                        data-testid="suscripcion-en-pausa"
+                        role="note"
+                        className="mb-4 rounded-xl border border-tinta/15 bg-tinta/5 px-4 py-3 text-sm text-muted dark:border-papel/10"
+                    >
+                        La suscripción y el código de referido están en pausa mientras
+                        estabilizamos el software. Pronto podrás usarlos.
+                    </div>
                     {contenidoSuscripcion}
                 </Acordeon>
             </div>
