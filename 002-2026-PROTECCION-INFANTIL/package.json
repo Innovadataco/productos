@@ -33,6 +33,7 @@
     "tokens:check": "tsx scripts/tokens-check.ts",
     "arch:check": "tsx scripts/arch/arch-check.ts",
     "render:check": "tsx scripts/render/acento-primario.render.ts",
+    "render:foco:check": "tsx scripts/render/foco-outline.render.ts",
     "locks:check": "tsx scripts/locks-check.ts",
     "ratchets:no-x-invoke-path": "tsx scripts/lint/no-x-invoke-path.ts",
     "ratchets:no-redirect-layout": "tsx scripts/lint/no-redirect-en-layout-de-dashboard.ts",
