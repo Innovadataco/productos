@@ -3,8 +3,8 @@
  * (Información general · Notificaciones · Suscripción) y el acordeón de Suscripción
  * abierto por defecto cuando el padre no tiene cobertura (destino del guardián de vigencia).
  *
- * SPEC-609 (reparo 3, revierte SPEC-598): ya NO hay botón «Crear contraseña». En su lugar, la fila
- * «Cómo entras» muestra el estado real de la cuenta (Con Google / Con correo y contraseña).
+ * SPEC-647 (D-136): Google salió del producto → ya NO hay botón «Crear contraseña» ni cuentas sin
+ * clave local. La fila «Cómo entras» muestra siempre «Con correo y contraseña».
  *
  * Candado de conducta: mockea auth + servicios de pagos + componentes hijos (sin BD). Muere por
  * mutación: cerrar un acordeón que debe nacer abierto, cambiar un id (rompe los redirects con ancla),
@@ -171,16 +171,6 @@ describe("SPEC-607 · /dashboard/padre/perfil — una ventana, tres acordeones",
             expect(screen.queryByTestId("esperando-autorizacion")).toBeNull();
             unmount();
         }
-    });
-
-    it("SPEC-609: cuenta de Google sin clave → «Cómo entras: Con Google» y NINGÚN «Crear contraseña»", async () => {
-        verifyAuthMock.mockResolvedValue(usuario({ googleSub: "g-123", passwordCreadaEn: null }));
-        const jsx = await PadrePerfilPage({ searchParams: SIN_PARAMS });
-        render(jsx as React.ReactElement);
-
-        expect(screen.getByTestId("como-entras").textContent).toContain("Con Google");
-        // SPEC-609 revierte SPEC-598: el botón «Crear contraseña» ya no se ofrece.
-        expect(screen.queryByText("Crear contraseña")).toBeNull();
     });
 
     it("SPEC-609: cuenta con contraseña local → «Cómo entras: Con correo y contraseña», sin «Crear contraseña»", async () => {

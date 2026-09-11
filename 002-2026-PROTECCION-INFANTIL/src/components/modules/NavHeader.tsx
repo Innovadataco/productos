@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { cuentaSinContrasenaLocal } from "@/lib/auth/cuenta-password";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
 import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -308,12 +307,9 @@ export function NavHeader() {
                                         )}
                                         <hr className="my-1 border-tinta/10" />
                                         {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible.
-                                            SPEC-616 (I-375 · reparo de SPEC-609): una cuenta creada por Google que nunca
-                                            creó clave local NO tiene contraseña que cambiar, y ofrecerle «Crear contraseña»
-                                            sin que la pida contradice «una cuenta, una puerta» (orden de Jelkin, revierte
-                                            SPEC-598). Se OCULTA la entrada para esas cuentas; `cuentaSinContrasenaLocal`
-                                            es la fuente única del predicado (perfil y «olvidé mi contraseña» ya la usan). */}
-                                        {esEnlaceNavegable("/cambiar-password") && !cuentaSinContrasenaLocal(user) && (
+                                            SPEC-647 (D-136): sin Google, toda cuenta tiene contraseña local → sin el gate
+                                            de «cuenta sin clave» que existía para las cuentas OAuth. */}
+                                        {esEnlaceNavegable("/cambiar-password") && (
                                             <NavDropdownLink href="/cambiar-password" onClick={() => setOpen(false)}>
                                                 Cambiar contraseña
                                             </NavDropdownLink>

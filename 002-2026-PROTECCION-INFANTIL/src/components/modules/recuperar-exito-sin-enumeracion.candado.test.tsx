@@ -10,9 +10,12 @@
  * El diseño (Diseño, D del 10-09): NO se personaliza por caso. Mostrar «tu cuenta es de Google»
  * confirmaría que ese correo tiene cuenta en la plataforma; en protección infantil, saber que un correo
  * está registrado puede delatar que un padre denunció. Un ÚNICO estado de éxito, ciego a
- * `metodo`/`message`/`emailSent`, con las dos salidas en condicional y el botón «Entrar con Google»
- * SIEMPRE. Este candado exige que los tres casos rindan EXACTAMENTE la misma pantalla — aserción
- * binaria: si alguien re-personaliza por `metodo`, el HTML del caso Google difiere y esto MUERE.
+ * `metodo`/`message`/`emailSent`. Este candado exige que los casos rindan EXACTAMENTE la misma pantalla
+ * — aserción binaria: si alguien re-personaliza por `metodo`, el HTML del caso Google difiere y MUERE.
+ *
+ * SPEC-647 (D-136): Google salió del producto — la vista de éxito ya no ofrece «Entrar con Google»
+ * (eso vive ahora en el candado de conducta de SPEC-647). Lo que este candado preserva es la
+ * INDISTINGUIBILIDAD: el mensaje genérico es idéntico para todo correo.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, fireEvent, waitFor, within } from "@testing-library/react";
@@ -55,10 +58,5 @@ describe("SPEC-623 · la vista de éxito de recuperar es idéntica para los tres
             google,
             "Google debe ser indistinguible de los otros dos: personalizarlo confirmaría que el correo tiene cuenta (enumeración)",
         ).toBe(inexistente);
-    });
-
-    it("el éxito ofrece una salida real (Entrar con Google), no solo esperar un correo", async () => {
-        const c = await contenedorExito({ message: MENSAJE_GENERICO, emailSent: false });
-        expect(within(c).getByRole("button", { name: /entrar con google/i }), "debe haber una puerta, no solo la bandeja").toBeTruthy();
     });
 });
