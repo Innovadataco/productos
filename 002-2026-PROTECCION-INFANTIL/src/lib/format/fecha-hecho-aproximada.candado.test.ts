@@ -29,15 +29,11 @@ function archivosFuente(): { rel: string; src: string }[] {
  *  hecho, que fue el defecto I-385) tiene que ir por `fechaHechoLegible`. */
 const TIMESTAMPS_REALES = ["ultimoEventoEn", "cuando"];
 
-/** EXENTOS del (clase·servicio), A PROPÓSITO: servicios de ANÁLISIS, NO de
- *  pantalla. Reusar `horaAproximada` en el análisis es UNSOUND (mete la franja
- *  del hecho como dato sin gate — nudo de 626-p2); el true-skip espera su PROPIA
- *  señal en SPEC-644. Se dejan NOMBRADOS con archivo para que Datos tome 644 con
- *  la lista hecha. El candado vigila PANTALLA, no afirma que el análisis esté sano. */
-const EXENTOS_ANALISIS_644 = [
-    "lib/caso/hechos-caso.ts", // fecha: r.fechaIncidente (hechos del caso → modelo)
-    "lib/expediente/analisis/ejecutar-analisis.ts", // fecha del hecho para el jurado
-];
+// SPEC-644 RESUELTO — ya NO hay exentos. Los servicios de ANÁLISIS (hechos-caso,
+// ejecutar-analisis) que antes se dejaban FUERA («franja falsa al modelo, espera 644»)
+// ahora cargan la franja PERSISTIDA (`franjaHoraria`) y el agregado la usa en vez de
+// re-derivarla del centro fabricado (cierra 626-p2). El (clase·servicio) los cubre como
+// a cualquier otro: la SEÑAL DE FRANJA —horaAproximada O franjaHoraria— viaja con la fecha.
 
 /**
  * SPEC-626/653 · CANDADO de CONDUCTA: cuando la hora del hecho es APROXIMADA,
@@ -51,27 +47,20 @@ const EXENTOS_ANALISIS_644 = [
  *                  (ultimoEventoEn, cuando). Cualquier otro argumento —incluida una
  *                  `.fecha` de hecho, aunque NO diga literalmente `fechaIncidente`,
  *                  que fue justo el hueco de I-385— es rojo.
- *  (clase·servicio) todo servicio que ENTREGA a PANTALLA un `fecha: X.fechaIncidente`
- *                  carga también `horaAproximada`, para que ninguna superficie pueda
- *                  inventarla. El defecto NACIÓ en un servicio sin la bandera.
+ *  (clase·servicio) todo servicio que ENTREGA la fecha del hecho (`fecha: X.fechaIncidente`)
+ *                  carga la SEÑAL DE FRANJA —`horaAproximada` o la `franjaHoraria` persistida—
+ *                  para que ninguna superficie NI el modelo inventen la hora. Con CONTROL
+ *                  POSITIVO: el regex tiene que pegar en ≥1 archivo, o un rename de
+ *                  `fechaIncidente` lo cegaría en silencio (forma de SPEC-619).
  *
- * LÍMITE CONFESADO 1: (clase·servicio) vigila PANTALLA. Los servicios de ANÁLISIS
- * (EXENTOS_ANALISIS_644) quedan FUERA a propósito — esa es otra falla (franja
- * falsa al modelo) y necesita su propia señal en SPEC-644. El verde acá NO dice
- * que el análisis esté sano.
+ * SPEC-644 CERRÓ los dos límites que este candado confesaba: (1) los servicios de ANÁLISIS
+ * ya NO están exentos — cargan `franjaHoraria` y el agregado la usa en vez de re-derivarla del
+ * centro fabricado (cierra 626-p2); (2) el control positivo reemplaza la ceguera-por-rename del
+ * literal. La (clase·display) allowlista lo legítimo, sin esa debilidad.
  *
- * LÍMITE CONFESADO 2 (hallazgo de Datos, forma de SPEC-619): (clase·servicio) se
- * apoya en el LITERAL `fechaIncidente` y NO tiene control positivo. La CIEGAN un
- * renombre del campo, un alias (`fecha: fi`) o el shorthand (`fecha,`): cero hits
- * se lee como VERDE con las pantallas sin vigilar. Caza el defecto de HOY (I-385,
- * mutación-verificado), no es a prueba de renombres. El control positivo —afirmar
- * que las pantallas del expediente SÍ pasan por el camino con la bandera— lo suma
- * Datos en SPEC-644, donde ya estará por los exentos de análisis. (clase·display)
- * NO comparte esta debilidad: allowlista lo legítimo y marca todo lo demás.
- *
- * Muere por mutación: `fechaHoraSinMinutos(x.fecha)` de un hecho → rojo (display);
- * quitar `horaAproximada` de un mapeo de pantalla → rojo (servicio); mostrar la
- * hora con el flag → rojo (helper). fs + helper puro → unit, sin base.
+ * Muere por mutación: `fechaHoraSinMinutos(x.fecha)` de un hecho → rojo (display); quitar la
+ * señal de franja de un mapeo → rojo (servicio); mostrar la hora con el flag → rojo (helper);
+ * la franja PERSISTIDA perdiendo contra la derivada → rojo (helper·SPEC-644). fs + puro → unit.
  */
 
 describe("SPEC-626 (I-379) · la hora aproximada se lee como FRANJA, la exacta como hora", () => {
@@ -141,30 +130,39 @@ describe("SPEC-626 (I-379) · la hora aproximada se lee como FRANJA, la exacta c
         ).toEqual([]);
     });
 
-    it("(clase·servicio) todo `fecha: X.fechaIncidente` de PANTALLA carga `horaAproximada`", () => {
+    it("(clase·servicio) todo `fecha: X.fechaIncidente` carga la señal de franja (horaAproximada o franjaHoraria)", () => {
         const RE = /fecha:\s*[A-Za-z_.?]*\.fechaIncidente/;
+        // SPEC-644: la señal es la bandera O la franja persistida — cualquiera deja a la
+        // superficie/al modelo honrar la franja sin inventar una hora.
+        const SENAL = /horaAproximada|franjaHoraria/;
         const hits: string[] = [];
+        let pegados = 0; // control positivo (forma de SPEC-619): el regex TIENE que pegar
         for (const { rel, src } of archivosFuente()) {
-            if (EXENTOS_ANALISIS_644.includes(rel)) continue; // análisis: fuera a propósito (644)
             const lineas = src.split("\n");
             lineas.forEach((linea, i) => {
                 if (!RE.test(linea)) return;
-                // El literal que entrega la fecha del hecho debe cargar la bandera
-                // a su lado (ventana del mismo objeto).
+                pegados++;
+                // El literal que entrega la fecha del hecho debe cargar la señal a su lado
+                // (ventana del mismo objeto).
                 const ventana = lineas.slice(Math.max(0, i - 6), i + 7).join("\n");
-                if (!/horaAproximada/.test(ventana)) {
+                if (!SENAL.test(ventana)) {
                     hits.push(`${rel}:${i + 1}: ${linea.trim().slice(0, 80)}`);
                 }
             });
         }
+        // CONTROL POSITIVO: si alguien renombra `fechaIncidente`, RE deja de pegar y `hits`
+        // queda vacío → VERDE FALSO. Exigir ≥1 match prueba que la sonda todavía ve el árbol.
+        expect(
+            pegados,
+            "el regex `fecha: X.fechaIncidente` no pegó en NINGÚN archivo — ¿renombraron el campo? el candado quedó ciego",
+        ).toBeGreaterThan(0);
         expect(
             hits,
-            ["SPEC-653 — servicio de PANTALLA entrega la fecha del hecho SIN `horaAproximada`:",
+            ["SPEC-644 — servicio entrega la fecha del hecho SIN señal de franja (horaAproximada/franjaHoraria):",
                 ...hits, "",
-                "Agregá `horaAproximada: X.horaAproximada` al mismo objeto (y al select): el defecto",
-                "I-385 nació porque el servicio no la entregaba y la pantalla no podía honrarla.",
-                `FUERA a propósito (análisis, esperan SPEC-644): ${EXENTOS_ANALISIS_644.join(", ")}.`,
-                "Este candado vigila PANTALLA; no afirma que el análisis esté sano."].join("\n"),
+                "Agregá `horaAproximada` y/o `franjaHoraria` al mismo objeto (y al select). El defecto I-385",
+                "nació porque el servicio no entregaba la señal y la superficie no podía honrar la franja.",
+                "SPEC-644: el análisis YA no está exento — carga franjaHoraria como el resto."].join("\n"),
         ).toEqual([]);
     });
 });

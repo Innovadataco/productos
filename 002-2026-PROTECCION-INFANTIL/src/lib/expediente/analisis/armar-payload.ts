@@ -97,7 +97,7 @@ function franjaDe(fecha: Date): string {
 
 /** SPEC-644: la franja PERSISTIDA (enum) → el formato del modelo. DEBE coincidir con los
  *  bloques de `franjaDe`: madrugada 0-6, mañana 6-12, tarde 12-18, noche 18-24. */
-const FRANJA_MODELO: Record<FranjaHoraria, string> = {
+export const FRANJA_MODELO: Record<FranjaHoraria, string> = {
     MADRUGADA: "0-6",
     MANANA: "6-12",
     TARDE: "12-18",
