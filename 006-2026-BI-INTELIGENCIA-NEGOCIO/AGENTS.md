@@ -311,6 +311,7 @@ Cuando cualquier SPEC toque estos archivos · Fábrica exige recorrido E2E de TO
 - `.env.bi.production` lo crea Jelkin (permisos 600, fuera de git) en `006-2026-BI-INTELIGENCIA-NEGOCIO/` dentro de ese clon. La IA define solo NOMBRES de variables y se los pide; nunca escribe ni lee ese archivo.
 - Réplica: reusar rol `bi_replica` y PUBLICACIÓN `bi_replica` del Postgres de PI (lista explícita de tablas operativas). PROHIBIDO replicar tablas con PII cruda (`Usuario`, `Password`, `Session`): datos de menores jamás llegan a BI (Ley 1581). Tabla nueva en la publicación = se pide por nombre y la autoriza Jelkin.
 - Slot de réplica: apagar la réplica un rato no pasa nada; retirarla DE FORMA PERMANENTE sin `pg_drop_replication_slot` acumula cambios hasta llenar el disco y TUMBAR PI. El slot del 005 ya fue eliminado: se parte de cero.
+- Vigía de réplica (I-390 · 2026-09-11): `scripts/vigia-replica.sh` corre por cron del VPS cada 5 min (al lado de `refresh-mv.sh`). Detecta lo que `subenabled` no ve: apply worker muerto o reiniciando en bucle (pid churn), mensajes sin aplicar, y WAL retenido creciendo del lado PI (solo lectura). Alarma escribiendo en `bi_audit_log` (acción `VIGIA_REPLICA`, visible en `/admin/bitácora`, filtro «vigía réplica») + `/var/log/bi-vigia.log`. Configurable por env `VIGIA_*` (la prueba rompe una réplica desechable, nunca prod).
 
 ---
 

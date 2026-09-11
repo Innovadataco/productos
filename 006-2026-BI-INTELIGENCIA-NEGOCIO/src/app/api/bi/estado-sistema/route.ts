@@ -13,6 +13,10 @@ type EstadoReplica = "activa" | "sin_configurar" | "error";
 // nunca se inventa un dato que no se pudo medir (candado 9).
 type SaludReplica = {
     estado: EstadoReplica;
+    /** Apply worker de la suscripción con proceso vivo (pg_stat_subscription) */
+    workerVivo?: boolean;
+    /** Minutos desde el último mensaje aplicado; null = nunca llegó uno */
+    minDesdeUltimoMensaje?: number | null;
     tablasReplicando?: number;
     mvPobladas?: number;
     mvTotales?: number;
@@ -20,6 +24,12 @@ type SaludReplica = {
 
 // Timeout corto: es un healthcheck, no debe colgar el contenedor (D1).
 const TIMEOUT_DB_MS = 2500;
+
+// I-390 (2026-09-11): la réplica estuvo caída 3 días con subenabled='t' —
+// el apply worker moría en bucle y el conteo de suscripciones no lo notaba.
+// 'activa' exige worker vivo y lag razonable; la línea de defensa completa
+// es scripts/vigia-replica.sh (cron del VPS · alertas en bi_audit_log).
+const LAG_MAX_MIN = 15; // PI escribe continuamente (worker_logs/AuditLog)
 
 /**
  * Sondeo mínimo de la BD propia del 006. Jamás expone detalles de la
@@ -68,7 +78,41 @@ async function saludReplica(db: EstadoDb): Promise<SaludReplica> {
     }
     if (suscripciones === 0) return { estado: "sin_configurar" };
 
-    const salud: SaludReplica = { estado: "activa" };
+    // Worker vivo y frescura del último mensaje aplicado. Estos DOS campos
+    // son los que faltaban el 08-09: la suscripción existía y el conteo daba
+    // 'activa' mientras el apply worker reiniciaba en bucle cada 5 s.
+    let workerVivo: boolean | undefined;
+    let minDesdeUltimoMensaje: number | null | undefined;
+    try {
+        const filas = await prisma.$queryRaw<{ vivo: boolean; lag: number | null }[]>`
+            SELECT pid IS NOT NULL AS vivo,
+                   round(EXTRACT(EPOCH FROM (now() - last_msg_receipt_time))/60)::int AS lag
+              FROM pg_stat_subscription
+             WHERE subname = 'bi006_replica_sub'`;
+        const fila = filas[0];
+        workerVivo = fila?.vivo;
+        minDesdeUltimoMensaje = fila?.lag ?? null;
+    } catch {
+        // Omite ambos campos: queda el criterio previo (conteo de tablas).
+    }
+
+    // 'activa' con worker muerto o mensajes estancados es exactamente el
+    // cero falso de I-390: se reporta 'error' aunque subenabled diga lo
+    // contrario. undefined = sondeo fallido (no se condena por lo no
+    // medido, candado 9); null = lag medido que nunca existió → réplica
+    // que jamás aplicó un mensaje: también error.
+    // undefined (sondeo fallido, candado 9) y null (lag medido que nunca
+    // existió: réplica que jamás aplicó un mensaje) se tratan distinto:
+    // el primero perdona, el segundo condena.
+    const lagSano =
+        minDesdeUltimoMensaje === undefined ||
+        (minDesdeUltimoMensaje !== null && minDesdeUltimoMensaje < LAG_MAX_MIN);
+    const sana = workerVivo !== false && lagSano;
+    const salud: SaludReplica = {
+        estado: sana ? "activa" : "error",
+        workerVivo,
+        minDesdeUltimoMensaje,
+    };
 
     // Tablas ya sincronizadas con la publicación (srsubstate 'r'). Si este
     // sondeo falla se reporta solo el estado, sin el conteo.
