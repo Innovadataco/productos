@@ -173,9 +173,18 @@ export class AuditLogRepository {
         usuarioId: string,
         paginacion: { skip: number; take: number }
     ): Promise<[Prisma.AuditLogGetPayload<{ select: { id: true; accion: true; valorAnterior: true; valorNuevo: true; creadoEn: true } }>[], number]> {
+        // SPEC-628: PARES acción↔tipoRecurso (no un filtro plano). Un `tipoRecurso`
+        // plano dropearía los avisos (viven con "NotificacionPreferencia"); y el par
+        // endurece el lector contra un ESCRITOR futuro: un PERFIL_CAMBIO con OTRO
+        // tipoRecurso no entra. Hoy NO hay fuga: el único escritor de PERFIL_CAMBIO
+        // es SPEC-590 (padre/perfil/route.ts) y siempre pone "Usuario" — verificado
+        // por Datos. Esto es hardening, no un defecto vivo.
         const where = {
             usuarioId,
-            accion: { in: ["PERFIL_CAMBIO", "NOTIFICACION_PREFERENCIA_ACTUALIZADA"] },
+            OR: [
+                { accion: "PERFIL_CAMBIO", tipoRecurso: "Usuario" },
+                { accion: "NOTIFICACION_PREFERENCIA_ACTUALIZADA", tipoRecurso: "NotificacionPreferencia" },
+            ],
         } satisfies Prisma.AuditLogWhereInput;
         return Promise.all([
             this.db.auditLog.findMany({

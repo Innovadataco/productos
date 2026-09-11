@@ -3,6 +3,7 @@ import {
     construirItemsHistorial,
     resolverValorCampo,
     ETIQUETAS_CAMPO_PERFIL,
+    CAMPOS_CON_CODIGO_INTERNO,
     VALOR_NO_DISPONIBLE,
     type FilaAudit,
     type MapasResolucion,
@@ -170,5 +171,30 @@ describe("SPEC-628 · el historial no expone identificadores internos", () => {
         expect(resolverValorCampo("ciudadId", "clcity_borrada_9999", mapas)).toBe(VALOR_NO_DISPONIBLE);
         // Un campo ya legible pasa tal cual.
         expect(resolverValorCampo("email", "nuevo@correo.com", mapas)).toBe("nuevo@correo.com");
+    });
+
+    // RATCHET (pedido por Datos) · vigila la CLASE, no los 3 fixtures: un campo con
+    // id/FK agregado mañana a las etiquetas SIN resolutor mostraría su id crudo y el
+    // candado de contenido (fixtures fijos) no lo cazaría. Acá cada etiqueta O resuelve
+    // (RESOLUTORES) O nace legible (el valor del usuario ya es texto: correo, nombre…).
+    it("(ratchet) todo campo de ETIQUETAS está en RESOLUTORES o en la allowlist «nace-legible»", () => {
+        const NACEN_LEGIBLES = new Set([
+            "email", "nombre", "apellidos", "documentoNumero", "fechaNacimiento", "telefono",
+        ]);
+        for (const campo of Object.keys(ETIQUETAS_CAMPO_PERFIL)) {
+            const cubierto = CAMPOS_CON_CODIGO_INTERNO.has(campo) || NACEN_LEGIBLES.has(campo);
+            expect(
+                cubierto,
+                `campo «${campo}»: ni en RESOLUTORES ni en la allowlist nace-legible → mostraría su valor crudo. Agregale un resolutor o, si nace legible, sumalo a la allowlist.`,
+            ).toBe(true);
+        }
+    });
+
+    it("(exención documentada) el `id` de cada entrada es el cuid de la fila de AuditLog — key de React, opaco, NO PII", () => {
+        // Datos marcó esta exención: emitimos `id` = cuid de la fila como key. Es
+        // opaco (no revela nada del menor ni del padre), no es un identificador de
+        // dominio del usuario; por eso no lo cuenta el candado de contenido.
+        const items = construirItemsHistorial([filas[0]!], mapas);
+        expect(items[0]!.id).toBe(filas[0]!.id);
     });
 });

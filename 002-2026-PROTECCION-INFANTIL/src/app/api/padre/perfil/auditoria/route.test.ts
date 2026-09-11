@@ -74,6 +74,20 @@ describe("GET /api/padre/perfil/auditoria (SPEC-590)", { timeout: 30_000 }, () =
                 userAgent: "vitest",
             },
         });
+        // SPEC-628 (hardening del par acción↔tipoRecurso): un PERFIL_CAMBIO del
+        // PROPIO usuario con OTRO tipoRecurso NO entra. Hoy no lo produce nadie
+        // (el único escritor, SPEC-590, pone "Usuario"); candamos el futuro.
+        await prisma.auditLog.create({
+            data: {
+                accion: "PERFIL_CAMBIO",
+                tipoRecurso: "OtraCosa",
+                recursoId: padre.id,
+                usuarioId: padre.id,
+                valorNuevo: JSON.stringify({ campo: "telefono", valor: "NO-DEBE-APARECER" }),
+                ipAddress: "127.0.0.1",
+                userAgent: "vitest",
+            },
+        });
 
         const res = await GET(url());
         expect(res.status).toBe(200);
