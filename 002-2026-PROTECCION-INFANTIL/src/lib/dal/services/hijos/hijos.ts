@@ -38,6 +38,7 @@ import { logAudit } from "../../../audit";
 import { AppError, ERROR_CODES } from "../../../errors";
 import type { Prisma } from "@prisma/client";
 import { normalizarIdentificador } from "../../identificadores/normalizar";
+import { ESTADOS_VISIBLES } from "../circulo-confianza/tipos";
 import type { RegistrarHijoInput, ActualizarHijoInput, IdentificadorHijoInput } from "./tipos";
 
 function normalizarIdentificadores(identificadores: IdentificadorHijoInput[]) {
@@ -114,14 +115,36 @@ export async function obtenerHijoDePadre(hijoId: string, usuarioId: string) {
 }
 
 /**
- * Lista los menores de ESTE padre.
+ * SPEC-660 (ola 2) · marca por hijo SI tiene reportes — un BOOLEANO, jamás un conteo.
+ *
+ * El gráfico del rediseño de `/dashboard/padre/hijos` muestra ESTADO (encendido / en
+ * calma), no cantidad de reportantes: Diseño prohibió números ahí. Devolver los conteos
+ * en esta lista sería ponerle a la pantalla justo el número que tiene prohibido mostrar
+ * —y el que llega en tres meses ve dos enteros a mano y compone un «N personas»—, así que
+ * la lista solo dice SI hay. Los conteos van SEPARADOS (verificado ≠ anónimo, FORMA-SPEC666)
+ * en el DETALLE de un solo hijo, en función aparte, DESPUÉS de SPEC-644.
+ *
+ * Función pura (la consulta a BD arma `identificadoresConReporte`; esto solo cruza): un
+ * hijo tiene reportes si alguno de sus identificadores ACTIVOS aparece en el conjunto.
+ */
+export function marcarTieneReportes<
+    H extends { identificadores: { valor: string; activo: boolean }[] },
+>(hijos: H[], identificadoresConReporte: ReadonlySet<string>): (H & { tieneReportes: boolean })[] {
+    return hijos.map((h) => ({
+        ...h,
+        tieneReportes: h.identificadores.some((i) => i.activo && identificadoresConReporte.has(i.valor)),
+    }));
+}
+
+/**
+ * Lista los menores de ESTE padre, cada uno con `tieneReportes` (SPEC-660).
  *
  * SPEC-339 (D-4): se acota por `Hijo.usuarioId`. Ya no hace falta filtrar los
  * identificadores "desvinculados por este padre": con ficha propia, lo que el
  * padre quita, queda quitado.
  */
 export async function listarHijos(usuarioId: string) {
-    return prisma.hijo.findMany({
+    const hijos = await prisma.hijo.findMany({
         where: { usuarioId },
         select: {
             id: true,
@@ -145,6 +168,30 @@ export async function listarHijos(usuarioId: string) {
         },
         orderBy: { creadoEn: "desc" },
     });
+
+    // SPEC-660: ¿tiene reportes? — MISMO criterio que el aviso (`hijos/notificaciones.ts`):
+    // identificador ACTIVO del hijo = `Reporte.identificador` de un reporte VISIBLE y no
+    // eliminado. UNA consulta para toda la lista (los valores activos que aparecen en algún
+    // reporte visible); el `@@index([identificador, plataformaId])` la cubre. Solo el SI/NO
+    // cruza a la pantalla — nunca cuántos.
+    const valoresActivos = [
+        ...new Set(hijos.flatMap((h) => h.identificadores.filter((i) => i.activo).map((i) => i.valor))),
+    ];
+    let identificadoresConReporte: ReadonlySet<string> = new Set();
+    if (valoresActivos.length > 0) {
+        const conReporte = await prisma.reporte.findMany({
+            where: {
+                identificador: { in: valoresActivos },
+                estado: { in: ESTADOS_VISIBLES },
+                eliminado: false,
+            },
+            select: { identificador: true },
+            distinct: ["identificador"],
+        });
+        identificadoresConReporte = new Set(conReporte.map((r) => r.identificador));
+    }
+
+    return marcarTieneReportes(hijos, identificadoresConReporte);
 }
 
 /**
