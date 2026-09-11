@@ -10,8 +10,17 @@
  * variables de entorno; este módulo nunca los loguea.
  */
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import type { RolUsuario } from "@prisma/client";
 import { requireEnv } from "./env";
 import { AppError, ERROR_CODES } from "./errors";
+
+/**
+ * SPEC-631 (I-378): roles que un usuario PUEDE auto-registrarse por Google. SCHOOL_ADMIN queda AFUERA
+ * (el colegio es por invitación de admin, multi-entidad: Colegio+Tenant+rector); los internos
+ * (ADMIN, OPERADOR, los COMITE y VERIFICADOR) los crea un admin. El rol de un alta por Google viaja SOLO en
+ * el `state` firmado (HMAC), jamás en la URL, y se re-valida contra este allowlist AL CREAR (Datos).
+ */
+export const ROLES_AUTORREGISTRABLES_GOOGLE: readonly RolUsuario[] = ["PARENT", "PROFESIONAL"];
 
 /** Vida útil del state (y de su cookie): 10 minutos. */
 export const OAUTH_STATE_TTL_SEG = 600;
@@ -35,45 +44,65 @@ function b64url(datos: string | Buffer): string {
 export interface EstadoOauth {
     nonce: string;
     exp: number;
+    /** SPEC-631: presente SOLO en el arranque de un REGISTRO por rol; ausente = login (no crea). */
+    rol?: RolUsuario;
 }
 
 /**
- * Firma un state nuevo: `<base64url(json)>.<base64url(hmac)>`. `ahora` es
- * inyectable para tests (expiración determinista).
+ * Firma un state nuevo: `<base64url(json)>.<base64url(hmac)>`. `ahora` es inyectable para tests.
+ * SPEC-631: si se pide con `rol`, tiene que ser auto-registrable por Google (defensa en el firmado;
+ * el allowlist se re-valida AL CREAR). El botón de /login firma SIN rol → el callback no crea.
  */
-export function firmarState(ahora: number = Date.now()): string {
+export function firmarState(rol?: RolUsuario, ahora: number = Date.now()): string {
+    if (rol !== undefined && !ROLES_AUTORREGISTRABLES_GOOGLE.includes(rol)) {
+        throw new Error(`[oauth-state] rol no auto-registrable por Google: ${rol}`);
+    }
     const payload: EstadoOauth = {
         nonce: randomBytes(16).toString("hex"),
         exp: Math.floor(ahora / 1000) + OAUTH_STATE_TTL_SEG,
+        ...(rol !== undefined ? { rol } : {}),
     };
     const datos = b64url(JSON.stringify(payload));
     const firma = createHmac("sha256", claveHmac()).update(datos).digest();
     return `${datos}.${b64url(firma)}`;
 }
 
+export interface StateLeido {
+    valido: boolean;
+    /** El rol FIRMADO (si lo hay). Viene del payload HMAC, NUNCA de la URL. Ausente = login. */
+    rol?: RolUsuario;
+}
+
 /**
- * Verifica firma (comparación con tiempo constante) y expiración del state.
+ * Verifica firma (tiempo constante) + expiración y devuelve el rol firmado. La validación de allowlist
+ * AL CREAR vive en el servicio (gate de Datos, SPEC-631): acá solo se lee lo que el HMAC ampara.
  */
-export function verificarState(state: string, ahora: number = Date.now()): boolean {
+export function leerState(state: string, ahora: number = Date.now()): StateLeido {
     const punto = state.indexOf(".");
-    if (punto <= 0 || punto === state.length - 1) return false;
+    if (punto <= 0 || punto === state.length - 1) return { valido: false };
     const datos = state.slice(0, punto);
     const firmaRecibida = Buffer.from(state.slice(punto + 1), "base64url");
     const firmaEsperada = createHmac("sha256", claveHmac()).update(datos).digest();
     if (firmaRecibida.length !== firmaEsperada.length || !timingSafeEqual(firmaRecibida, firmaEsperada)) {
-        return false;
+        return { valido: false };
     }
     try {
         const payload = JSON.parse(Buffer.from(datos, "base64url").toString("utf8")) as EstadoOauth;
-        return (
+        const ok =
             typeof payload.nonce === "string" &&
             payload.nonce.length > 0 &&
             typeof payload.exp === "number" &&
-            payload.exp * 1000 > ahora
-        );
+            payload.exp * 1000 > ahora;
+        if (!ok) return { valido: false };
+        return payload.rol !== undefined ? { valido: true, rol: payload.rol } : { valido: true };
     } catch {
-        return false;
+        return { valido: false };
     }
+}
+
+/** Compat (CSRF booleano del callback): un state es válido si `leerState` lo ampara. */
+export function verificarState(state: string, ahora: number = Date.now()): boolean {
+    return leerState(state, ahora).valido;
 }
 
 /**

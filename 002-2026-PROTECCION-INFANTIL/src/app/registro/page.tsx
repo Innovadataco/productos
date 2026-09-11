@@ -103,7 +103,7 @@ export default function RegistroPage() {
                                 <Button type="submit" isLoading={enviando} className="w-full">
                                     Continuar
                                 </Button>
-                                <BotonContinuaConGoogle />
+                                <BotonContinuaConGoogle rol="PARENT" />
                             </form>
                         </GlassCard>
 
