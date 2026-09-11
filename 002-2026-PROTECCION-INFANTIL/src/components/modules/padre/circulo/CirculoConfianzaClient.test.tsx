@@ -49,9 +49,6 @@ const CARLOS = {
 /** Responde cada endpoint que la pantalla consulta al cargar. */
 function mockearFetch(contactos: unknown[]) {
     const fetchMock = vi.fn(async (url: string) => {
-        if (url.startsWith("/api/circulo-confianza/preferencias")) {
-            return { ok: true, json: async () => ({ notificacionesCirculo: true }) };
-        }
         if (url === "/api/circulo-confianza") {
             return { ok: true, json: async () => ({ contactos, resumen: {}, tope: 20 }) };
         }

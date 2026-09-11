@@ -10,8 +10,6 @@ import {
     obtenerDetalleContacto,
     obtenerVistaAgregada,
     determinarEstadoContacto,
-    obtenerPreferenciasCirculo,
-    toggleNotificacionesCirculo,
     notificarCambioCirculoSiCorresponde,
 } from "./circulo-confianza";
 import {
@@ -348,18 +346,6 @@ describe("circulo-confianza", () => {
         });
     });
 
-    describe("preferencias", () => {
-        it("toggle de notificaciones", async () => {
-            const usuario = await crearUsuario("PARENT");
-            const prefs = await obtenerPreferenciasCirculo(usuario.id);
-            expect(prefs.notificacionesCirculo).toBe(true);
-
-            await toggleNotificacionesCirculo(usuario.id, false);
-            const actualizadas = await obtenerPreferenciasCirculo(usuario.id);
-            expect(actualizadas.notificacionesCirculo).toBe(false);
-        });
-    });
-
     describe("notificarCambioCirculoSiCorresponde", () => {
         beforeEach(() => {
             vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mockClear();
@@ -421,20 +407,6 @@ describe("circulo-confianza", () => {
             // El aviso sale igual (IN_APP no tiene cooldown), pero sin el canal EMAIL.
             expect(enviarAlertaCirculoConfianzaEnriquecida).toHaveBeenCalledOnce();
             expect(vi.mocked(enviarAlertaCirculoConfianzaEnriquecida).mock.calls[0][0].canales).toEqual(["IN_APP"]);
-        });
-
-        it("respeta la preferencia del usuario desactivada", async () => {
-            const usuario = await crearUsuario("PARENT");
-            await toggleNotificacionesCirculo(usuario.id, false);
-            const plataforma = await prisma.plataforma.findUnique({ where: { clave: "whatsapp" } });
-            await agregarContacto(usuario.id, {
-                identificadores: [{ valor: "+57300OFF", plataformaId: plataforma!.id }],
-            });
-            const reporte = await crearReporte("+57300OFF", plataforma!.id, "CLASIFICADO", "SOLICITUD_MATERIAL");
-
-            await notificarCambioCirculoSiCorresponde(reporte.id);
-
-            expect(enviarAlertaCirculoConfianzaEnriquecida).not.toHaveBeenCalled();
         });
 
         it("no envía alerta cuando el reporte no está en estado visible", async () => {
