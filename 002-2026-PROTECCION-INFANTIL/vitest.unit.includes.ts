@@ -626,4 +626,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-610 (I-372): vista del profesional — D-130 (evento manual sin chip de análisis)
     // y D-129 (léxico del «pase», nunca «código») por render + escaneo de fuente.
     "src/app/canjear-acceso/canjear-acceso.candado.test.tsx",
+    // SPEC-619 (I-371): candado de superficie GET-que-muta — scan estático, sin base.
+    "scripts/arch/no-get-muta.test.ts",
 ];

@@ -31,6 +31,11 @@ import { ejecutarAsercionBBis } from "./asercion-menu-no-redirige-a-otro-item";
 import { buscarInfractores } from "./no-prisma-mocks";
 import { buscarInfractores as buscarAliasWorker } from "./no-worker-alias";
 import { buscarInfractores as buscarReporteCreate } from "./no-reporte-create-directo";
+import {
+    buscarInfractores as buscarGetMuta,
+    entradasObsoletas as getMutaObsoletas,
+    frontierSinCallsite as getMutaSinCallsite,
+} from "./no-get-muta";
 import { RUTA_DOCS_ARCH, RUTA_EXCEPCIONES, RUTA_SCHEMA } from "./lib/paths";
 import { modelosHuerfanos, parsearSchemaPrisma } from "./lib/schema-prisma";
 
@@ -92,6 +97,24 @@ function verificarHuerfanos(): string[] {
     return huerfanos
         .filter((h) => !permitidos.has(h))
         .map((h) => `modelo huérfano NO declarado: ${h} (declararlo en scripts/arch/excepciones.json solo por decisión explícita de ZEUS)`);
+}
+
+/** (h) SPEC-619 (I-371): ningún GET-que-muta fuera de la superficie declarada. true si hay rojo. */
+function chequearGetMuta(): boolean {
+    console.log("[Arch:check] (h) GET que muta fuera de la superficie declarada (SPEC-619 · I-371)…");
+    const getMuta = buscarGetMuta();
+    const getObsoletas = getMutaObsoletas();
+    const sinCallsite = getMutaSinCallsite();
+    if (getMuta.length === 0 && getObsoletas.length === 0 && sinCallsite.length === 0) {
+        console.log("[Arch:check] (h) VERDE: ningún GET-que-muta nuevo; superficie compartida al día; regex de frontier pegando en llamadas vivas.");
+        return false;
+    }
+    console.error("[Arch:check] (h) ROJO: superficie de GET-que-muta desalineada (SPEC-619):");
+    for (const f of getMuta) console.error(`  - sin declarar: ${f.archivo}:${f.linea} [${f.patron}] — agregalo a SUPERFICIE_GET_MUTA o sacá la escritura del GET`);
+    for (const o of getObsoletas) console.error(`  - entrada obsoleta (archivo inexistente): ${o}`);
+    for (const n of sinCallsite)
+        console.error(`  - regex de frontier SIN pegar en ninguna llamada viva en src/ (¿rename total o parcial? el scanner quedó ciego): ${n} — apuntá NOMBRES_FRONTIER_* al nombre vivo en no-get-muta.ts`);
+    return true;
 }
 
 async function main() {
@@ -184,6 +207,8 @@ async function main() {
         console.error(`[Arch:check] (g) ROJO: ${reporteCreate.length} usos de reporte.create fuera del factory (migrá a crearReporteConTexto):`);
         for (const f of reporteCreate) console.error(`  - ${f.archivo}:${f.linea} ${f.texto}`);
     }
+
+    if (chequearGetMuta()) rojo = true;
 
     if (rojo) {
         console.error("[Arch:check] ROJO: la línea base no está al día o hay un desalineo real. Ver entradas arriba.");
