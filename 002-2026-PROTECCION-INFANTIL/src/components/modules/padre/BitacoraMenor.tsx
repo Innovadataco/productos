@@ -55,7 +55,7 @@ export function BitacoraMenor({ hijoId }: { hijoId: string }) {
     }
 
     return (
-        <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+        <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
             <h2 className="font-medium text-body">Bitácora de {datos.nombre}</h2>
             {datos.monitoreadoDesde && (
                 <p className="mt-1 text-sm text-muted">
