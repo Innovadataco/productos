@@ -9,6 +9,7 @@ import { esEstadoCargaOperador } from "@/lib/operadores/estados";
 import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
+import { ENUM_A_FRANJA } from "@/lib/reportes/franja-enum";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -76,7 +77,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
             // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
             const texto = await descifrarCampoReporte(detalle.contenidoId, "texto", { registrarLectura: false });
-            return { ...detalle, texto };
+            // SPEC-644: enum persistido → franja de dominio (server-side, como en la
+            // capa de análisis) para que el detalle muestre lo GUARDADO, no la derivada.
+            const franja = detalle.franjaHoraria ? ENUM_A_FRANJA[detalle.franjaHoraria] : null;
+            return { ...detalle, texto, franja };
         });
 
         if (!reporteDetalle) {
