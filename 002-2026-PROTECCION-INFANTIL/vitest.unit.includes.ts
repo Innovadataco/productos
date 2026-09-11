@@ -650,4 +650,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/dal/services/hijos/tiene-reportes.candado.test.ts",
     // SPEC-660: gráfico «A quién protejo» — render puro (jsdom, sin base): nunca rojo, hueco=cielo, sin contador de reportantes.
     "src/components/modules/padre/GraficoProteccion.candado.test.tsx",
+    // SPEC-660: línea de estado — el reloj «Revisado hace X» NO se pinta en degradado aunque el dato traiga valor (I-396).
+    "src/components/modules/padre/LineaEstadoProteccion.candado.test.tsx",
 ];

@@ -48,6 +48,10 @@ Los **hijos mandan**, el **círculo acompaña**. Un familiar **nunca iguala a un
 - **Lógica de negocio intacta:** validaciones (documento-menor), alta múltiple de identificadores, payload del POST, contador de cupo (activos; reactivar cuenta), las cuatro acciones. Edad por año (D-127/D-134). El simulador no vuelve.
 - **I-397 (CEO):** el aviso está **encadenado a la clasificación** y con el motor caído no sale. **PROHIBIDO** escribir «te avisamos» como **garantía incondicional** en cualquier pantalla de ola-1 hasta que I-397 cierre. El copy de calma dice qué se vigila, no promete el aviso.
 
+## Contrato con Dev 2 (fijado, para no chocar)
+- **Dev 2 (SPEC-663)** expone en `obtenerHomePadre` el campo **`estadoClasificador: { motorVivo, ultimaVerificacionEn }`** (de `leerLatidoMotor`, SPEC-670). Dev 2 = el DATO + su candado; yo (SPEC-660) = el RENDER + su candado. **Consumir ese nombre exacto** (Dev 2 lo fija con test de contrato), no uno paralelo.
+- **El dato llega HONESTO:** `ultimaVerificacionEn` = último éxito real o `null`; Dev 2 **NO** lo recorta con el motor caído (el rector muestra el reloj en degradado). ⇒ la decisión de **NO pintar «Revisado hace {X}» en la cara del padre cuando está degradado es del RENDER** (`LineaEstadoProteccion`), aunque el dato traiga valor — y el candado vigila ese caso real (no solo el `null`).
+
 ## Dependencias y secuencia
 - **#569 (Dev 3, SPEC-668)** ya empujado toca `MisHijos.tsx` + `hijos.ts`. **Rebasar sobre main después de que #569 mergee** antes de tocar esos archivos (el CEO avisa). Mientras tanto se construyen componentes NUEVOS sin conflicto.
 - **Ola-2 bloqueada** en: (a) cruce de reportes **por hijo** (Datos, pedido por el CEO) — el mismo que ya tiene el círculo para contactos; (b) **SPEC-644** (franja persistida) para el detalle; (c) el mockup vigente que Diseño está por actualizar con la capa círculo-en-gráfico.
