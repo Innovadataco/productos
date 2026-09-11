@@ -51,8 +51,13 @@ WORKDIR /app
 # por request (layout dinámico), y el ENV del stage builder no llega al runner.
 ARG APP_BUILD_SHA
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 APP_BUILD_SHA=$APP_BUILD_SHA
-# libssl/libcrypto en runtime para el query engine de Prisma
-RUN apk add --no-cache openssl && addgroup -S nodejs && adduser -S nextjs -G nodejs
+# openssl: libssl/libcrypto en runtime para el query engine de Prisma.
+# postgresql-client (SPEC-648/I-381): trae `pg_dump`, que `reset-piloto` EXIGE como
+# respaldo antes de una purga; sin él el script aborta (fail-closed) y la herramienta de
+# purga no puede correr en prod. Genérico a propósito: alpine ata la versión del cliente a
+# su release (16 en 3.20, 17 en 3.21+) y ambas cumplen `cliente >= servidor` (prod es PG16);
+# fijar `postgresql16-client` rompería el build en un alpine que ya sirve 17.
+RUN apk add --no-cache openssl postgresql-client && addgroup -S nodejs && adduser -S nextjs -G nodejs
 
 # App standalone (server.js en la raíz del standalone)
 COPY --from=builder /app/public ./public
