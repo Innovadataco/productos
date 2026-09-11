@@ -55,23 +55,23 @@ export function GenerarPase({ expedienteId }: { expedienteId: string }) {
     };
 
     return (
-        <div className="rounded-xl border border-tinta/10 bg-tinta/5 p-3.5 dark:border-papel/10 dark:bg-papel/5">
+        <div className="rounded-xl border border-tinta/10 bg-tinta/5 p-3.5 dark:border-tinta/12 dark:bg-papel/5">
             <p className="text-xs text-muted">
-                Genera un pase de 8 caracteres y dáselo a tu psicólogo. Con él puede abrir este expediente completo
-                durante 15 minutos. Cada vez que alguien lo use, te avisamos por correo.
+                Genera un pase de 8 caracteres y dáselo a tu psicólogo. Cada vez que alguien lo use, te avisamos por
+                correo.
             </p>
 
             {pase ? (
                 <div className="mt-3 space-y-2">
                     <p className="font-mono text-2xl font-bold tracking-[0.35em] text-body">{pase.codigo}</p>
                     <p className="text-[11px] text-subtle">
-                        Sirve para abrir el expediente hasta las{" "}
+                        Tu psicólogo tiene hasta las{" "}
                         {new Date(pase.vigenteHasta).toLocaleTimeString("es-CO", {
                             timeZone: "America/Bogota",
                             hour: "2-digit",
                             minute: "2-digit",
-                        })}
-                        . Se muestra una sola vez.
+                        })}{" "}
+                        para usar el pase; una vez que entra, ve el expediente 15 minutos. Se muestra una sola vez.
                     </p>
                     <div className="flex flex-wrap gap-2.5">
                         <Button variant="secondary" onClick={() => void copiar()}>
