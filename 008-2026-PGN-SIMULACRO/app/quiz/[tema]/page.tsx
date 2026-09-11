@@ -1,14 +1,10 @@
-import { TOPICS } from '@/lib/types'
-import QuizClient from './QuizClient'
+import { generateTopicParams } from '@/lib/static'
+import QuizRedirectClient from './QuizRedirectClient'
 
 export async function generateStaticParams() {
-  const keys = new Set<string>()
-  Object.values(TOPICS)
-    .flat()
-    .forEach((t) => keys.add(t.key))
-  return Array.from(keys).map((tema) => ({ tema }))
+  return generateTopicParams()
 }
 
-export default function QuizPage({ params }: { params: { tema: string } }) {
-  return <QuizClient temaKey={decodeURIComponent(params.tema)} />
+export default function QuizRedirectPage() {
+  return <QuizRedirectClient />
 }
