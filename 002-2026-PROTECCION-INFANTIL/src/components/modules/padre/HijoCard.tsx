@@ -175,17 +175,16 @@ export function HijoCard({
                                 {i.plataforma ? ` · ${i.plataforma.nombre}` : ""}
                             </Badge>
                             {!i.activo && <span className="text-xs text-muted">inactivo</span>}
-                            {/* Flag GLOBAL: también le cambia al otro padre del niño. */}
+                            {/* Local a ESTE padre (SPEC-339/D-4): pausa/reactiva el aviso de esta cuenta en SU ficha; no toca al otro padre. */}
                             <button
                                 type="button"
-                                aria-label={`${i.activo ? "Inactivar" : "Activar"} ${i.valor} para todos`}
-                                title="La cuenta es del niño: el cambio también aplica al otro padre"
+                                aria-label={`${i.activo ? "Inactivar" : "Activar"} ${i.valor}`}
                                 className="text-xs text-muted underline hover:text-body"
                                 onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
                             >
                                 {i.activo ? "Inactivar" : "Activar"}
                             </button>
-                            {/* Solo esta cuenta: no borra el registro compartido. */}
+                            {/* Local a ESTE padre: BORRA la fila de esta cuenta en SU ficha; el otro padre tiene la suya y la conserva. */}
                             <button
                                 type="button"
                                 aria-label={`Quitar ${i.valor}`}

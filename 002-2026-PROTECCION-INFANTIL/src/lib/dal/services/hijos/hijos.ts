@@ -339,7 +339,8 @@ export async function agregarIdentificador(
     });
 }
 
-/** Activa/inactiva un identificador de un hijo (flag global compartido · §3.1-bis). */
+/** Activa/inactiva un identificador de la ficha de ESTE padre. SPEC-339 (D-4):
+ * cada padre tiene su ficha y sus interruptores — NO afecta al otro padre. */
 export async function cambiarEstadoIdentificador(
     usuarioId: string,
     identificadorId: string,
