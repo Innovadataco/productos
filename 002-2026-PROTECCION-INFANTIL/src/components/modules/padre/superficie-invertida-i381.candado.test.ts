@@ -1,32 +1,36 @@
 /**
- * SPEC-646 (I-381) · CANDADO — la superficie que se invierte en oscuro.
+ * I-381 · CANDADO — la superficie que se invierte en oscuro (relleno Y borde).
  *
- * Jelkin, en producción y en OSCURO: «no se entiende nada del texto». Causa: una
- * tarjeta pintada con el token de TINTA a baja opacidad (`dark:bg-tinta/N`). En
- * oscuro `--tinta` se vuelve casi blanco, así que ese velo ACLARA la tarjeta (y se
- * apila al anidar); el texto claro (`muted`/`subtle`), calibrado contra `--papel`,
- * colapsa a 1.11:1 (AA pide 4.5). La inversión traicionera: `muted` se lee PEOR que
- * `subtle`, así que «subir el tono» lo empeora.
+ * Jelkin, en producción y en OSCURO: «no se entiende nada del texto». Causa raíz: en
+ * oscuro `--tinta` se vuelve casi blanco y `--papel` casi negro. Dos caras del mismo
+ * defecto:
+ *   · RELLENO — `dark:bg-tinta/N` ACLARA la tarjeta (y se apila al anidar); el texto
+ *     claro (`muted`/`subtle`), calibrado contra `--papel`, colapsa a ~1.1:1 (AA pide 4.5).
+ *     La inversión traicionera: `muted` se lee PEOR que `subtle`, así que «subir el tono» lo empeora.
+ *   · BORDE — `dark:border-papel/N` sobre una superficie de papel es INVISIBLE (papel
+ *     sobre papel): la caja bordeada en claro queda sin contorno en oscuro.
  *
- * Regla dura (Diseño, autoridad de forma): **la tinta es texto y trazo, NUNCA
- * superficie** — su papel se invierte por tema. Las superficies son `papel` u
- * OPACAS (`bg-superficie-*`); la elevación la da un borde hairline claro, no
- * aclarar el relleno.
+ * Regla dura (Diseño, autoridad de forma): **la tinta es texto y trazo, NUNCA superficie;
+ * y el papel NUNCA es borde en oscuro.** Las superficies son `papel` u OPACAS
+ * (`bg-superficie-*`); la elevación la da un borde hairline claro (`dark:border-tinta/12`),
+ * no aclarar el relleno ni un trazo de papel.
  *
- * En vez de MEDIR el apilamiento (un compositor estático no sabe cuán profundo se
- * anida un componente en runtime → puntos ciegos), se hace la clase IMPOSIBLE
+ * En vez de MEDIR el apilamiento (un compositor estático no sabe cuán profundo se anida un
+ * componente en runtime → puntos ciegos), se hace la clase IMPOSIBLE
  * (ver [[dev-imposibilidad-estructural-mejor-que-regla]]):
  *
- *   (a) CONDUCTA · en el árbol de render de las pantallas del padre que Jelkin toca
- *       (Mis reportes + el expediente) NO existe `dark:bg-tinta/N`: la superficie que
- *       se invierte no se puede escribir ahí.
- *   (b) TOKEN · `text-muted` (el peor de los dos) ≥ 4.5:1 sobre CADA `--superficie-*`,
- *       en LOS DOS temas. Opaco ⇒ una medición por token cubre cualquier anidamiento
+ *   (a) CONDUCTA · en el árbol de render del padre-núcleo (Mis reportes + expediente +
+ *       layouts) y de las áreas migradas, NO existe NINGUNA de las dos inversiones.
+ *   (b) TOKEN · `text-muted` (el peor de los dos) ≥ 4.5:1 sobre CADA `--superficie-*`, en
+ *       LOS DOS temas. Opaco ⇒ una medición por token cubre cualquier anidamiento
  *       (ver [[diseno-candado-contraste-debe-medir-ambos-temas]]).
  *
- * ALCANCE (orden del CEO): este PR arregla el área del padre (reportes/expediente).
- * Colegio, compartido y los sub-árboles de círculo/citas van en PRs siguientes; su
- * `dark:bg-tinta/N` sigue vivo fuera de este árbol y NO lo cubre este candado todavía.
+ * LA COSTURA (SPEC-651 · lección durable): había DOS bloques y ninguno estaba mal — el 646
+ * miraba el árbol del padre-núcleo con la regla INCOMPLETA (solo relleno) y el 650 tenía la
+ * regla COMPLETA (relleno + borde) sobre el árbol INCOMPLETO. El borde invertido cayó justo
+ * en el HUECO entre ambos: así se coló `GenerarPase.tsx:58` (`dark:border-papel/10`) en
+ * código NUEVO, la misma noche que cerramos la clase. Aquí se UNIFICA: una sola regla
+ * completa (relleno + borde) sobre la UNIÓN de los dos árboles.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
@@ -35,10 +39,9 @@ import * as path from "node:path";
 const SRC = path.resolve(__dirname, "../../..");
 const GLOBALS = path.join(SRC, "app/globals.css");
 
-// Las pantallas del padre que Jelkin recorre y donde vivía el defecto (I-381).
-// Se incluyen los LAYOUTS del padre: la barra de navegación móvil (PadreNavMovil)
-// vive ahí y sufría el mismo velo invertido (`dark:bg-tinta/95` → barra casi blanca
-// en oscuro, en el teléfono), así que también queda bajo el candado.
+// Las pantallas del padre-núcleo que Jelkin recorre y donde vivía el defecto (I-381).
+// Se incluyen los LAYOUTS del padre: la barra de navegación móvil (PadreNavMovil) vive ahí
+// y sufría el mismo velo invertido (`dark:bg-tinta/95` → barra casi blanca en oscuro).
 const RAICES = [
     path.join(SRC, "app/mis-reportes/page.tsx"),
     path.join(SRC, "app/mis-reportes/layout.tsx"),
@@ -46,7 +49,21 @@ const RAICES = [
     path.join(SRC, "app/dashboard/padre/layout.tsx"),
 ];
 
-const VELO_INVERTIDO = /dark:bg-tinta\//; // tinta como superficie en oscuro = el bug
+// Las áreas que migró SPEC-650 (colegio · citas · perfil · círculo · camino · consentimiento).
+const RAICES_650 = [
+    path.join(SRC, "app/dashboard/colegio/alertas/[id]/page.tsx"), // CasoVivoColegio, InformesCasoPanel, EscudoColegioUploader
+    path.join(SRC, "app/dashboard/padre/citas/page.tsx"), // MisCitasList
+    path.join(SRC, "app/dashboard/padre/perfil/page.tsx"), // nota de suscripción en pausa (borde)
+    path.join(SRC, "app/dashboard/padre/circulo-confianza/page.tsx"), // círculo: tarjetas + option-chips migrados
+    path.join(SRC, "app/camino/listo/page.tsx"),
+    path.join(SRC, "app/consentimiento/page.tsx"), // ModalConsentimiento
+];
+
+// La UNIÓN de los dos árboles: una sola regla completa corre sobre TODO (SPEC-651 cierra la costura).
+const RAICES_TODAS = [...RAICES, ...RAICES_650];
+
+// Relleno de tinta O borde de papel en oscuro = las dos caras de la inversión I-381.
+const INVERSION_I381 = /dark:bg-tinta\/|dark:border-papel\//;
 
 // Un enlace/clase COMENTADO no cuenta: se escanea el código SIN comentarios, si no
 // esta misma cabecera o un `// dark:bg-tinta/40` daría un falso positivo/negativo.
@@ -160,75 +177,24 @@ function triple(bloque: string, nombre: string): [number, number, number] {
     return [Number(m[1]), Number(m[2]), Number(m[3])];
 }
 
-describe("SPEC-646 (I-381) · (a) la superficie que se invierte no se puede escribir en el árbol del padre", () => {
-    for (const raiz of RAICES) {
+describe("SPEC-651 (I-381) · una sola regla completa (relleno + borde) sobre la UNIÓN de los árboles", () => {
+    for (const raiz of RAICES_TODAS) {
         it(`existe la raíz ${path.basename(path.dirname(raiz))}/${path.basename(raiz)}`, () => {
             expect(fs.existsSync(raiz), `No encontré ${raiz}`).toBe(true);
         });
     }
 
     it("cada raíz recorre un árbol de render real (no un wrapper de re-export vacío)", () => {
-        afirmarCobertura(RAICES);
+        afirmarCobertura(RAICES_TODAS);
     });
 
-    it("ningún archivo del árbol de render (Mis reportes + expediente) usa dark:bg-tinta/N", () => {
+    it("ningún archivo del árbol (padre-núcleo + áreas migradas) usa dark:bg-tinta/N ni dark:border-papel/N", () => {
         const infractores: string[] = [];
         let totalArchivos = 0;
-        for (const raiz of RAICES) {
+        for (const raiz of RAICES_TODAS) {
             for (const { archivo, codigo } of arbolDeRender(raiz)) {
                 totalArchivos++;
-                if (VELO_INVERTIDO.test(sinComentarios(codigo))) {
-                    infractores.push(path.relative(SRC, archivo));
-                }
-            }
-        }
-        expect(totalArchivos, "El BFS no recorrió nada — revisá las raíces.").toBeGreaterThan(5);
-        expect(
-            infractores,
-            "Estos archivos del árbol de render del padre pintan una superficie con el velo de TINTA " +
-                "que se invierte en oscuro (dark:bg-tinta/N) y aclara la tarjeta hasta romper el texto (I-381). " +
-                "La tinta es texto/trazo, nunca superficie: usá `bg-superficie-1|2` (opaco) + borde hairline " +
-                "claro (border-tinta) para la elevación. Infractores: " + infractores.join(", ")
-        ).toEqual([]);
-    });
-});
-
-// ---- SPEC-650 · el resto de la familia I-381 + el hueco SIMÉTRICO del borde --------
-// El de 646 vigila el RELLENO (`dark:bg-tinta/N`); nadie vigilaba el BORDE. El borde
-// falla igual por inversión: `dark:border-papel/N` sobre una superficie de papel es
-// INVISIBLE en oscuro (papel sobre papel). Regla dura de Diseño: la tinta es texto y
-// trazo, NUNCA superficie; y `papel` NUNCA es borde en oscuro. Este candado extiende
-// las raíces a las áreas que migra SPEC-650 y prohíbe AMBAS inversiones ahí.
-const RAICES_650 = [
-    path.join(SRC, "app/dashboard/colegio/alertas/[id]/page.tsx"), // CasoVivoColegio, InformesCasoPanel, EscudoColegioUploader
-    path.join(SRC, "app/dashboard/padre/citas/page.tsx"), // MisCitasList
-    path.join(SRC, "app/dashboard/padre/perfil/page.tsx"), // nota de suscripción en pausa (borde)
-    path.join(SRC, "app/dashboard/padre/circulo-confianza/page.tsx"), // círculo: tarjetas + option-chips migrados
-    path.join(SRC, "app/camino/listo/page.tsx"),
-    path.join(SRC, "app/consentimiento/page.tsx"), // ModalConsentimiento
-];
-
-// Relleno de tinta O borde de papel en oscuro = las dos caras de la inversión I-381.
-const INVERSION_650 = /dark:bg-tinta\/|dark:border-papel\//;
-
-describe("SPEC-650 (I-381 · resto) · ni relleno de tinta ni borde de papel en oscuro", () => {
-    for (const raiz of RAICES_650) {
-        it(`existe la raíz ${path.basename(path.dirname(raiz))}/${path.basename(raiz)}`, () => {
-            expect(fs.existsSync(raiz), `No encontré ${raiz}`).toBe(true);
-        });
-    }
-
-    it("cada raíz recorre un árbol de render real (no un wrapper de re-export vacío)", () => {
-        afirmarCobertura(RAICES_650);
-    });
-
-    it("ningún archivo de las áreas migradas usa dark:bg-tinta/N ni dark:border-papel/N", () => {
-        const infractores: string[] = [];
-        let totalArchivos = 0;
-        for (const raiz of RAICES_650) {
-            for (const { archivo, codigo } of arbolDeRender(raiz)) {
-                totalArchivos++;
-                if (INVERSION_650.test(sinComentarios(codigo))) {
+                if (INVERSION_I381.test(sinComentarios(codigo))) {
                     infractores.push(path.relative(SRC, archivo));
                 }
             }
@@ -236,31 +202,21 @@ describe("SPEC-650 (I-381 · resto) · ni relleno de tinta ni borde de papel en 
         expect(totalArchivos, "El BFS no recorrió nada — revisá las raíces.").toBeGreaterThan(5);
         expect(
             [...new Set(infractores)],
-            "Estos archivos de las áreas migradas por SPEC-650 aún invierten la superficie en oscuro: " +
-                "`dark:bg-tinta/N` (relleno que aclara la tarjeta) o `dark:border-papel/N` (borde que se " +
-                "vuelve invisible sobre papel). Usá `bg-superficie-1|2` (opaco) y `dark:border-tinta/12` " +
-                "(hairline claro). Infractores: " + [...new Set(infractores)].join(", ")
+            "Estos archivos del árbol invierten la superficie en oscuro: `dark:bg-tinta/N` (relleno que " +
+                "aclara la tarjeta) o `dark:border-papel/N` (borde que se vuelve invisible sobre papel). La tinta " +
+                "es texto y trazo, NUNCA superficie; el papel NUNCA es borde en oscuro. Usá `bg-superficie-1|2` " +
+                "(opaco) para el relleno y `dark:border-tinta/12` (hairline claro) para el trazo. Infractores: " +
+                [...new Set(infractores)].join(", ")
         ).toEqual([]);
     });
 });
 
-// ---- SPEC-610 (#549) · el pase · sus componentes nuevos no reintroducen la inversión ----
-// Diseño encontró en GenerarPase un `dark:border-papel/N` (papel como trazo = borde
-// INVISIBLE en oscuro) que este candado NO cazó: el bloque 646 alcanza el árbol del
-// expediente (expediente → ExpedienteMadreClient → GenerarPase) pero solo miraba el
-// RELLENO; el chequeo de BORDE vivía solo en el bloque 650, cuyas raíces no incluyen el
-// expediente. El borde invertido cayó en la COSTURA entre los dos bloques.
-//
-// El barrido de BORDE de todo el árbol padre-núcleo (ExpedienteMadreClient, MisReportes-
-// Cadenas, VerAnalisis — todos PREEXISTENTES, byte-idénticos en la base, ajenos a #549)
-// es SPEC-651: arregla primero y DESPUÉS voltea el bloque 646 al combinado, para que quede
-// verde por construcción y no por exención. Acá, #549 cierra la costura SOLO para sus
-// PROPIOS componentes nuevos, sin holgura y sin esperar a 651.
-//
-// Aserción POSITIVA y por-archivo (no un barrido «cero infractores»): nombra el archivo y
-// exige que EXISTA. Un rename que la evada falla por «archivo ausente», nunca por «cero
-// nodos» (el falso verde que ya nos mordió una capa más abajo). Mide las DOS caras
-// (relleno de tinta + borde de papel) con el mismo INVERSION_650 combinado.
+// ---- I-381 · guarda POSITIVA complementaria sobre los componentes nuevos del pase ----
+// El bloque unificado de arriba YA cubre GenerarPase y QuienHaLeido (cuelgan del árbol del
+// expediente) para las DOS caras. Esta guarda positiva es complementaria: nombra el archivo
+// y exige que EXISTA, así un RENAME que lo saque del árbol falla por «archivo ausente» y no
+// por «cero nodos» (el falso verde que ya nos mordió una capa abajo). Mantiene el foco en los
+// dos componentes que Diseño más miró la noche del pase (#549).
 const COMPONENTES_NUEVOS_610 = [
     path.join(SRC, "components/modules/padre/GenerarPase.tsx"),
     path.join(SRC, "components/modules/padre/QuienHaLeido.tsx"),
@@ -274,7 +230,7 @@ describe("SPEC-610 (#549) · el pase · sus componentes nuevos no invierten la s
                 `No encontré ${path.relative(SRC, archivo)} — ¿renombrado? La aserción de #549 quedaría sin objeto ` +
                     "(un rename dejaría la costura abierta con verde falso). Reapuntá esta lista al nuevo nombre."
             ).toBe(true);
-            const encontrado = sinComentarios(fs.readFileSync(archivo, "utf-8")).match(INVERSION_650);
+            const encontrado = sinComentarios(fs.readFileSync(archivo, "utf-8")).match(INVERSION_I381);
             expect(
                 encontrado,
                 `${path.relative(SRC, archivo)} invierte la superficie en oscuro (${encontrado?.[0] ?? ""}). ` +
