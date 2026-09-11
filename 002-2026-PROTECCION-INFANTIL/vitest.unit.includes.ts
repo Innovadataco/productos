@@ -241,6 +241,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-485 (Lote-2): el chrome compartido (NavHeader + LandingFooter) sin crudo,
     // logout neutro (cero rojo). violet OPERADOR queda flagueado (sin token).
     "src/components/modules/chrome-nav-footer.candado.test.ts",
+    // SPEC-623 (I-376): la vista de éxito de recuperar es IDÉNTICA para los tres casos (anti-enumeración); ofrece «Entrar con Google».
+    "src/components/modules/recuperar-exito-sin-enumeracion.candado.test.tsx",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",
