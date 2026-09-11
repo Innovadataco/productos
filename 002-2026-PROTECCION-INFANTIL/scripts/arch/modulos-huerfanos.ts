@@ -31,6 +31,15 @@ import allowlistJson from "./modulos-huerfanos-allowlist.json";
  *    — `*-test-utils`, `fixtures`/`test-fixtures`, `src/lib/e2e/**`, `src/lib/test-mocks/**`. No entran al
  *    ratchet de deuda; un archivo así que NO importe ni un test igual cae (es deuda, no soporte vivo).
  *
+ * LÍMITE DECLARADO (aristas por LITERAL, no por plantilla): las tres expresiones de abajo exigen una
+ * cadena con comillas. Un import dinámico armado con PLANTILLA —`import(`./workers/${nombre}.ts`)`— o un
+ * `require()` con ruta computada NO se ven como arista, y su módulo destino podría aparecer huérfano
+ * estando VIVO (falso positivo). Medido el 2026-09-11: CERO imports con backtick y CERO `require()` con
+ * ruta relativa/`@/` en `src/` y `scripts/` — control positivo: el mismo patrón SÍ encuentra los 226
+ * `import()` con comillas que existen, así que el cero es real, no un patrón roto. El día que alguien
+ * escriba un import con plantilla y el ratchet se ponga rojo sobre un módulo VIVO: el módulo NO es basura
+ * — sumá acá el manejo del especificador-plantilla (o exímelo con razón), NUNCA desactives el candado.
+ *
  * RATCHET (no muro: un muro rojo el día uno se desactiva): la línea base de huérfanos vive en
  * `modulos-huerfanos-allowlist.json` con motivo y quién. `huerfanosNuevos()` (uno fuera de la lista) y
  * `entradasObsoletas()` (una entrada que ya no es huérfana — se cableó o se borró) ponen rojo. El número
