@@ -638,4 +638,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/cita/cron-barrido.test.ts",
     // SPEC-657 (I-389): candado de CABLEADO — el barrido de citas tiene quien lo llame + registrado en todos los sitios.
     "src/lib/profesional/cita/worker-cableado.candado.test.ts",
+    // SPEC-660 (ola 2): marcarTieneReportes — booleano (no conteo), criterio del aviso. Puro, fs-libre.
+    "src/lib/dal/services/hijos/tiene-reportes.candado.test.ts",
 ];
