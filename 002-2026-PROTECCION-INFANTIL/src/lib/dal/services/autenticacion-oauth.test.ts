@@ -1,20 +1,18 @@
 /**
- * SPEC-590 — resolución de cuenta OAuth: primero por `googleSub` (inmutable),
- * después por email con backfill del sub. El email del padre es editable desde
- * el perfil; la resolución por sub es lo que evita cuentas duplicadas cuando
- * cambia.
+ * SPEC-590 + SPEC-631 — el servicio OAuth se parte en dos: `resolver` (solo busca por sub, luego email
+ * con backfill; NUNCA crea) y `crearConRol` (alta con el rol firmado, allowlist forzado AL CREAR).
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { AutenticacionOauthService } from "./autenticacion-oauth";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
+import { cuentaSinContrasenaLocal } from "@/lib/auth/cuenta-password";
 
 const CTX = { ipAddress: "127.0.0.1", userAgent: "vitest" };
 
-describe("AutenticacionOauthService (SPEC-590)", { timeout: 30_000 }, () => {
+describe("AutenticacionOauthService · resolver (SPEC-590/631)", { timeout: 30_000 }, () => {
     const svc = new AutenticacionOauthService();
-
     beforeEach(async () => {
         await resetDatabase();
     });
@@ -22,68 +20,67 @@ describe("AutenticacionOauthService (SPEC-590)", { timeout: 30_000 }, () => {
     it("resuelve por googleSub aunque el email del token sea distinto (no duplica)", async () => {
         const cuenta = await crearUsuario("PARENT", "viejo@example.com");
         await prisma.usuario.update({ where: { id: cuenta.id }, data: { googleSub: "sub-1" } });
-
-        const r = await svc.resolverODeCrearCuenta({
-            email: "otro@example.com",
-            nombre: "Padre",
-            proveedorSub: "sub-1",
-            ...CTX,
-        });
-
-        expect(r.esNuevo).toBe(false);
-        expect(r.usuario.id).toBe(cuenta.id);
-        // El email de la cuenta NO se pisa con el del token: el sub manda.
-        expect(r.usuario.email).toBe("viejo@example.com");
+        const u = await svc.resolver({ email: "otro@example.com", proveedorSub: "sub-1" });
+        expect(u?.id).toBe(cuenta.id);
+        expect(u?.email).toBe("viejo@example.com"); // el sub manda; el email no se pisa
     });
 
     it("backfill: cuenta sin googleSub recibe el sub al resolverse por email", async () => {
         const cuenta = await crearUsuario("PARENT", "padre@example.com");
-
-        const r = await svc.resolverODeCrearCuenta({
-            email: "Padre@Example.com",
-            nombre: null,
-            proveedorSub: "sub-2",
-            ...CTX,
-        });
-
-        expect(r.esNuevo).toBe(false);
-        expect(r.usuario.id).toBe(cuenta.id);
-        expect(r.usuario.googleSub).toBe("sub-2");
+        const u = await svc.resolver({ email: "Padre@Example.com", proveedorSub: "sub-2" });
+        expect(u?.id).toBe(cuenta.id);
+        expect(u?.googleSub).toBe("sub-2");
     });
 
-    it("no pisa un sub distinto: la cuenta del email se devuelve intacta", async () => {
+    it("no pisa un sub distinto: devuelve la cuenta del email intacta", async () => {
         const cuenta = await crearUsuario("PARENT", "x@example.com");
         await prisma.usuario.update({ where: { id: cuenta.id }, data: { googleSub: "sub-x" } });
-
-        const r = await svc.resolverODeCrearCuenta({
-            email: "x@example.com",
-            nombre: null,
-            proveedorSub: "sub-y",
-            ...CTX,
-        });
-
-        expect(r.esNuevo).toBe(false);
-        expect(r.usuario.id).toBe(cuenta.id);
-        expect(r.usuario.googleSub).toBe("sub-x");
+        const u = await svc.resolver({ email: "x@example.com", proveedorSub: "sub-y" });
+        expect(u?.id).toBe(cuenta.id);
+        expect(u?.googleSub).toBe("sub-x");
     });
 
-    it("cuenta nueva: persiste googleSub, rol PARENT y auditoría USER_CREATE", async () => {
-        const r = await svc.resolverODeCrearCuenta({
-            email: "Nueva@Example.com",
-            nombre: "Nueva",
-            proveedorSub: "sub-nueva",
-            ...CTX,
-        });
+    it("SPEC-631: correo SIN cuenta → null, y NO crea nada", async () => {
+        const u = await svc.resolver({ email: "desconocido@example.com", proveedorSub: "sub-none" });
+        expect(u).toBeNull();
+        expect(await prisma.usuario.count()).toBe(0);
+    });
+});
 
-        expect(r.esNuevo).toBe(true);
-        expect(r.usuario.email).toBe("nueva@example.com");
-        expect(r.usuario.googleSub).toBe("sub-nueva");
-        expect(r.usuario.rol).toBe("PARENT");
-        expect(r.usuario.estado).toBe("activo");
+describe("AutenticacionOauthService · crearConRol (SPEC-631)", { timeout: 30_000 }, () => {
+    const svc = new AutenticacionOauthService();
+    beforeEach(async () => {
+        await resetDatabase();
+    });
 
-        const auditoria = await prisma.auditLog.findFirst({
-            where: { usuarioId: r.usuario.id, accion: "USER_CREATE" },
-        });
-        expect(auditoria).not.toBeNull();
+    it("PARENT: googleSub, passwordCreadaEn null (SPEC-613 → cuentaSinContrasenaLocal) y auditoría", async () => {
+        const u = await svc.crearConRol({ email: "Nueva@Example.com", nombre: "Nueva", proveedorSub: "sub-p", rol: "PARENT", ...CTX });
+        expect(u.email).toBe("nueva@example.com");
+        expect(u.googleSub).toBe("sub-p");
+        expect(u.rol).toBe("PARENT");
+        expect(u.passwordCreadaEn).toBeNull();
+        expect(cuentaSinContrasenaLocal(u)).toBe(true);
+        expect(await prisma.auditLog.findFirst({ where: { usuarioId: u.id, accion: "USER_CREATE" } })).not.toBeNull();
+    });
+
+    it("PARIDAD (gate 4): el PROFESIONAL nace SIN VerificacionProfesional ni PerfilProfesional (verificación downstream)", async () => {
+        const u = await svc.crearConRol({ email: "profe@example.com", nombre: "Pro", proveedorSub: "sub-pro", rol: "PROFESIONAL", ...CTX });
+        expect(u.rol).toBe("PROFESIONAL");
+        expect(u.googleSub).toBe("sub-pro");
+        expect(u.passwordCreadaEn).toBeNull();
+        // Idéntico al alta por correo: nace PELADO — sin PerfilProfesional, así que NO es visible en el
+        // directorio (solo con PerfilProfesional.estado=ACTIVO) ni puede ver casos. La verificación es
+        // downstream (verificador) y cuelga del perfil: sin perfil, no hay verificación que saltar.
+        expect(await prisma.perfilProfesional.count({ where: { usuarioId: u.id } }), "nace sin perfil").toBe(0);
+    });
+
+    it("PRIVILEGIO (gate 2): un rol NO auto-registrable → LANZA y no crea (ADMIN, SCHOOL_ADMIN)", async () => {
+        await expect(
+            svc.crearConRol({ email: "hacker@example.com", nombre: "H", proveedorSub: "sub-h", rol: "ADMIN", ...CTX }),
+        ).rejects.toThrow(/no auto-registrable/);
+        await expect(
+            svc.crearConRol({ email: "colegio@example.com", nombre: "C", proveedorSub: "sub-c", rol: "SCHOOL_ADMIN", ...CTX }),
+        ).rejects.toThrow(/no auto-registrable/);
+        expect(await prisma.usuario.count(), "un rol privilegiado forjado no crea NADA").toBe(0);
     });
 });
