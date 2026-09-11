@@ -25,6 +25,7 @@ import {
     perfilCompletoParaRevision,
     toPerfilProfesionalPropio,
 } from "@/lib/profesional/dto";
+import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
 
 async function requireProfesional() {
     const user = await verifyAuth();
@@ -125,6 +126,15 @@ export async function PUT(request: Request) {
             // El 1er PUT no puede completar (sin autorización).
             return NextResponse.json({ perfil: toPerfilProfesionalPropio(creado) }, { status: 201 });
         }
+
+        // SPEC-673 (I-398): la edición no puede dejar un perfil que ya salió de
+        // BORRADOR sin modalidad (un ACTIVO desmarcando ambas quedaba ACTIVO e
+        // invisible, sin poder crear franjas). La invariante es del estado; el PUT
+        // que completa un BORRADOR ya pasa por `perfilCompletoParaRevision`.
+        exigirModalidadParaEstado(existente.estado, {
+            atiendeVirtual: parsed.data.atiendeVirtual ?? existente.atiendeVirtual,
+            atiendePresencial: parsed.data.atiendePresencial ?? existente.atiendePresencial,
+        });
 
         const actualizado = await repo.actualizarParcial(existente.id, armarUpdate(parsed.data));
 

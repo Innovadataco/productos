@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
 import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
+import { MENSAJE_MODALIDAD_REQUERIDA, MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
 
 type Perfil = {
     id: string;
@@ -221,6 +222,12 @@ export default function CompletarPerfilProfesionalPage() {
     // un mensaje humano.
     const yaEnRevision = perfil?.estado === "EN_REVISION";
 
+    // SPEC-673 (I-398 · Diseño opción ii): la aptitud de ENVÍO se evalúa en el
+    // cliente (distinta del guard de servidor, que exime BORRADOR a propósito).
+    // Hace la incompletitud legible SIEMPRE — no recién al intentar enviar — así
+    // el profesional no queda «terminado y trabado» sin saber qué falta.
+    const faltaModalidad = !atiendeVirtual && !atiendePresencial;
+
     return (
         <main className="mx-auto max-w-3xl px-4 py-8">
             <h1 className="font-serif text-3xl text-body">Complete su perfil</h1>
@@ -280,6 +287,12 @@ export default function CompletarPerfilProfesionalPage() {
                             Atiendo presencial
                         </label>
                     </div>
+                    {/* SPEC-673 (I-398): la incompletitud, legible SIEMPRE (no al intentar). */}
+                    {faltaModalidad && (
+                        <p role="status" className="text-sm text-estado-ambar">
+                            {MENSAJE_MODALIDAD_FALTA_CAMPO}
+                        </p>
+                    )}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         {/* SPEC-434 punto 4 · años como selector 1..50. */}
                         <Select
@@ -323,6 +336,12 @@ export default function CompletarPerfilProfesionalPage() {
                         <Alerta tono="advertencia" className="text-center">
                             {errorPerfil}
                         </Alerta>
+                    )}
+                    {/* SPEC-673 (I-398 · pieza 3): junto al botón, la razón por la que
+                        guardar no pasa a revisión. Guardar sigue permitido (opción ii);
+                        no es un botón gris sin explicación. */}
+                    {faltaModalidad && (
+                        <p className="text-sm text-estado-ambar">{MENSAJE_MODALIDAD_REQUERIDA}</p>
                     )}
                     <Button type="submit" isLoading={guardando} className="w-full">
                         Guardar perfil
