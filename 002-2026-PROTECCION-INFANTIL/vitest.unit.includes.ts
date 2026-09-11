@@ -246,6 +246,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-630 (I-377): el lado API — cuerpo 200 byte-idéntico en los 3 casos + envío fire-and-forget
     // (tiempo plano por construcción). Deps mockeadas, fuerza NODE_ENV=production. Sin BD.
     "src/app/api/auth/recuperar/solicitar/recuperar-solicitar-sin-enumeracion.candado.test.ts",
+    // SPEC-641 (I-377 · gemelo de 630): verificar/solicitar — cuerpo 202 byte-idéntico (existente/nuevo/
+    // límite) + envío fire-and-forget. Deps mockeadas, fuerza NODE_ENV=production. Sin BD.
+    "src/app/api/auth/verificar/solicitar/verificar-solicitar-sin-enumeracion.candado.test.ts",
     // SPEC-336 (marca El Guardián): reglas duras del símbolo (hueco del niño, tallas, ámbar).
     "src/components/ui/Guardian.test.tsx",
     "src/components/ui/Anillo.test.tsx",
