@@ -3,7 +3,7 @@ import { Question, Perfil, PerfilSheet, Dificultad } from './types'
 let cache: Question[] | null = null
 
 // Sheet público del banco de preguntas (ID no sensible; el env var lo puede sobrescribir)
-const DEFAULT_SHEET_ID = '1YUaeT30qe8noSRecCWuTb-Aah12iEt4fEcCThN2BDKU'
+const DEFAULT_SHEET_ID = '16S3fArXSV_2yAFOcK-49GD8yOzlG7du3mr8ztPGjEYI'
 
 export async function fetchQuestions(): Promise<Question[]> {
   if (cache) return cache
