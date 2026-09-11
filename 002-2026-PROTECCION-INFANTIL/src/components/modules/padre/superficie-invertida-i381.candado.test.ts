@@ -36,9 +36,14 @@ const SRC = path.resolve(__dirname, "../../..");
 const GLOBALS = path.join(SRC, "app/globals.css");
 
 // Las pantallas del padre que Jelkin recorre y donde vivía el defecto (I-381).
+// Se incluyen los LAYOUTS del padre: la barra de navegación móvil (PadreNavMovil)
+// vive ahí y sufría el mismo velo invertido (`dark:bg-tinta/95` → barra casi blanca
+// en oscuro, en el teléfono), así que también queda bajo el candado.
 const RAICES = [
     path.join(SRC, "app/mis-reportes/page.tsx"),
+    path.join(SRC, "app/mis-reportes/layout.tsx"),
     path.join(SRC, "app/dashboard/padre/expedientes/[id]/page.tsx"),
+    path.join(SRC, "app/dashboard/padre/layout.tsx"),
 ];
 
 const VELO_INVERTIDO = /dark:bg-tinta\//; // tinta como superficie en oscuro = el bug
