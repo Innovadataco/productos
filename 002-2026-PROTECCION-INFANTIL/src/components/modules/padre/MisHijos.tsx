@@ -17,12 +17,15 @@
 // expone las cuatro acciones del backend, que NO son equivalentes:
 //   · activar/inactivar HIJO ....... estado del hijo (`cambiarEstadoHijo`).
 //   · agregar identificador ........ a un hijo ya creado (`agregarIdentificador`).
-//   · activar/inactivar IDENTIFICADOR → flag GLOBAL compartido (§3.1-bis: los
-//     datos del niño son compartidos entre sus dos padres). Afecta a ambos.
-//   · quitar identificador ......... desvincula de la vista de ESTE padre; el
-//     registro compartido NO se borra (`desvincularIdentificador`).
-// Las dos últimas se ven parecidas y hacen cosas distintas: la UI las separa y
-// nombra el alcance en el texto visible, no solo en el aria-label.
+//   · activar/inactivar IDENTIFICADOR → pausa/reactiva el aviso de esa cuenta en
+//     la ficha de ESTE padre (`cambiarEstadoIdentificador`). SPEC-339 (D-4): cada
+//     padre tiene SU ficha; NO afecta al otro padre. Reversible.
+//   · quitar identificador ......... BORRA la fila del identificador de la ficha
+//     de ESTE padre (`desvincularIdentificador`); el otro padre tiene la suya y
+//     la sigue viendo.
+// Las dos últimas se parecen y hacen cosas distintas —pausar-y-conservar vs
+// quitar-y-borrar, ambas LOCALES a este padre—: la UI tiene que nombrar esa
+// diferencia (no un alcance "global", que SPEC-339 eliminó).
 
 import { useEffect, useState } from "react";
 
@@ -144,7 +147,8 @@ export function MisHijos({
             "No se pudieron guardar los cambios"
         );
 
-    // Flag GLOBAL: el identificador es del niño, no del padre (§3.1-bis).
+    // Local a ESTE padre (SPEC-339 · D-4): pausa/reactiva el aviso de esa cuenta
+    // en SU ficha; no toca al otro padre.
     const cambiarEstadoIdentificador = (identificadorId: string, activo: boolean) =>
         accion(
             () =>
