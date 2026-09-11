@@ -8,7 +8,7 @@
  */
 export function QueRecibes({ avisoCorreo, onCambiar }: { avisoCorreo: boolean; onCambiar: () => void }) {
     return (
-        <section className="mt-8 rounded-2xl border border-tinta/10 bg-white p-5 dark:bg-tinta/20">
+        <section className="mt-8 rounded-2xl border border-tinta/10 bg-superficie-1 p-5">
             <h2 className="text-xl font-semibold text-body">Qué recibes cuando pasa algo</h2>
             <p className="mt-1 text-sm text-muted">
                 Así te avisamos, con un ejemplo. Nunca le llega nada a la persona que vigilas.

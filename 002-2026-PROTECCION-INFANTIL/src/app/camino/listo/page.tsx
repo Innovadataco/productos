@@ -47,7 +47,7 @@ export default async function CaminoListoPage() {
             <div className="mx-auto mt-8 grid max-w-2xl gap-4 text-left sm:grid-cols-2">
                 <Link
                     href="/dashboard/padre/circulo-confianza"
-                    className="group rounded-2xl border border-tinta/10 bg-papel/50 p-5 transition hover:border-cielo/50 dark:bg-tinta/40"
+                    className="group rounded-2xl border border-tinta/10 bg-superficie-1 p-5 transition hover:border-cielo/50"
                 >
                     <h2 className="text-base font-semibold text-body">Suma tu círculo de confianza</h2>
                     <p className="mt-1 text-sm text-muted">
@@ -61,7 +61,7 @@ export default async function CaminoListoPage() {
 
                 <Link
                     href="/dashboard/padre/perfil#notificaciones"
-                    className="group rounded-2xl border border-tinta/10 bg-papel/50 p-5 transition hover:border-cielo/50 dark:bg-tinta/40"
+                    className="group rounded-2xl border border-tinta/10 bg-superficie-1 p-5 transition hover:border-cielo/50"
                 >
                     <h2 className="text-base font-semibold text-body">Elige qué avisos recibes</h2>
                     <p className="mt-1 text-sm text-muted">

@@ -112,7 +112,7 @@ export function InformesCasoPanel({ casoId }: { casoId: string }) {
     }, [casoId, seleccion, cargar]);
 
     return (
-        <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+        <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
             <h2 className="font-medium text-body">Informe firmado</h2>
             <p className="mt-1 text-sm text-muted">
                 Genere un documento membretado con los hechos y la actuación del colegio,
@@ -157,7 +157,7 @@ export function InformesCasoPanel({ casoId }: { casoId: string }) {
                 ) : (
                     <ul className="mt-2 space-y-2">
                         {informes.map((i) => (
-                            <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-papel/80 p-3 text-sm dark:bg-tinta/60">
+                            <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-tinta/10 bg-superficie-2 p-3 text-sm dark:border-tinta/12">
                                 <span>
                                     <strong>{i.correlativo}</strong>
                                     {" · "}

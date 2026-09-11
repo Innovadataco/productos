@@ -186,7 +186,7 @@ export function ModalConsentimiento({
                             ref={scrollRef}
                             onScroll={marcarSiLlegoAlFinal}
                             data-testid="documento-scroll"
-                            className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-papel/50 p-4 text-sm text-body dark:bg-tinta/50"
+                            className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-superficie-1 p-4 text-sm text-body dark:border-tinta/12"
                         >
                             <div className="prose prose-sm max-w-none dark:prose-invert">
                                 {/* Sin rehype-raw: el HTML embebido se escapa como texto (FR-009).

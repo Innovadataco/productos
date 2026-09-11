@@ -171,14 +171,14 @@ export function CasoVivoColegio({ casoId }: { casoId: string }) {
 
     if (error) {
         return (
-            <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+            <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
                 <p className="text-sm text-muted">{error}</p>
             </section>
         );
     }
     if (!data) {
         return (
-            <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+            <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
                 <p className="text-sm text-muted">Cargando el caso…</p>
             </section>
         );
@@ -217,7 +217,7 @@ export function CasoVivoColegio({ casoId }: { casoId: string }) {
     return (
         <div className="space-y-4">
             {/* ── El mapa con la historia (D6: mismo componente del padre) ── */}
-            <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+            <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
                 <h2 className="font-medium text-body">Dónde está ocurriendo</h2>
                 <div className="mt-3 h-64 overflow-hidden rounded-xl">
                     <MapaUbicaciones puntos={puntos} sinUbicacion={sinUbicacion} />
@@ -226,7 +226,7 @@ export function CasoVivoColegio({ casoId }: { casoId: string }) {
 
             {/* ── Capa 1 · cifras en vivo ── */}
             {hechos.length > 0 ? (
-                <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+                <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
                     <div className="flex items-baseline justify-between">
                         <h2 className="font-medium text-body">Lo que muestra este caso</h2>
                         <span className="text-xs uppercase tracking-wide text-pino">En vivo</span>
@@ -252,14 +252,14 @@ export function CasoVivoColegio({ casoId }: { casoId: string }) {
                     </ul>
                 </section>
             ) : (
-                <section className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40">
+                <section className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12">
                     <p className="text-sm text-muted">Este caso aún no tiene eventos analizables.</p>
                 </section>
             )}
 
             {/* ── Capa 2 · Análisis detallado (IA) ── */}
             <section
-                className="rounded-2xl border border-tinta/10 bg-papel/60 p-4 dark:border-papel/10 dark:bg-tinta/40"
+                className="rounded-2xl border border-tinta/10 bg-superficie-1 p-4 dark:border-tinta/12"
                 aria-label="Análisis detallado del caso"
             >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -309,7 +309,7 @@ export function CasoVivoColegio({ casoId }: { casoId: string }) {
                         <p className="mt-2 whitespace-pre-wrap text-body">{vigente.texto}</p>
 
                         {vigente.guiaAccion && guiaPasos.length > 0 && (
-                            <div className="mt-4 rounded-xl bg-papel/80 p-3 dark:bg-tinta/60">
+                            <div className="mt-4 rounded-xl border border-tinta/10 bg-superficie-2 p-3 dark:border-tinta/12">
                                 <p className="font-medium text-body">{vigente.guiaAccion.tituloEmocional}</p>
                                 <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-body">
                                     {guiaPasos.map((p) => (

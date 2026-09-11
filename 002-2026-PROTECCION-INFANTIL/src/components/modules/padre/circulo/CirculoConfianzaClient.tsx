@@ -350,7 +350,7 @@ export function CirculoConfianzaClient() {
 
                     {contactos.length > 0 && (
                         <>
-                            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-full border border-tinta/10 bg-white px-4 py-3 text-sm text-muted dark:bg-tinta/20">
+                            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-full border border-tinta/10 bg-superficie-1 px-4 py-3 text-sm text-muted">
                                 <span>
                                     <b className="font-semibold text-body">
                                         {activos.length} {activos.length === 1 ? "persona" : "personas"}
@@ -473,7 +473,7 @@ export function CirculoConfianzaClient() {
                 )}
                 <Link
                     href="/dashboard/padre/hijos"
-                    className="inline-flex h-12 items-center rounded-xl border border-tinta/15 bg-white px-5 font-semibold text-body transition hover:bg-papel dark:bg-tinta/20"
+                    className="inline-flex h-12 items-center rounded-xl border border-tinta/15 bg-superficie-1 px-5 font-semibold text-body transition hover:bg-papel"
                 >
                     Ir a &ldquo;A quién protejo&rdquo;
                 </Link>

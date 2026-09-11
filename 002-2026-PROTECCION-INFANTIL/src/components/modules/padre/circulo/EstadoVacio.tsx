@@ -15,7 +15,7 @@ const IDEAS = ["El tío", "La niñera", "El entrenador", "Un vecino", "El profes
 
 export function EstadoVacio({ onAgregar }: { onAgregar: () => void }) {
     return (
-        <section className="mt-7 rounded-2xl border border-tinta/10 bg-white p-6 dark:bg-tinta/20">
+        <section className="mt-7 rounded-2xl border border-tinta/10 bg-superficie-1 p-6">
             <h2 className="text-xl font-semibold text-body">Todavía no vigilas a nadie</h2>
             <p className="mt-1 text-muted">Empieza por quien más tiempo pasa con tus hijos.</p>
 
