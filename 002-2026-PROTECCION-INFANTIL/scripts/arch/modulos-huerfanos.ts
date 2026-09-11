@@ -160,7 +160,9 @@ export function modulosHuerfanos(): string[] {
     return huerfanosDe(g.candidatos, g.importadoresNoTest);
 }
 
-const allowlist: { modulos: Array<{ archivo: string; motivo: string; quien: string }> } = allowlistJson;
+// `clase` separa las dos deudas (ver descripcion del JSON): un componente huérfano es basura; un
+// servicio huérfano puede ser funcionalidad sin cablear (p.ej. `cita/worker.ts` → I-389).
+const allowlist: { modulos: Array<{ archivo: string; clase: string; motivo: string; quien: string }> } = allowlistJson;
 const PERMITIDOS = new Set(allowlist.modulos.map((m) => m.archivo));
 
 /** Huérfanos NUEVOS (fuera de la allowlist) → el número subió: ROJO. */
