@@ -6,8 +6,8 @@
  * mismo — los tests fijan el contrato de cada una para que no se confundan:
  *   · PATCH /api/padre/hijos/[id] .......................... estado del hijo
  *   · POST  /api/padre/hijos/identificadores ............... agregar a hijo ya creado
- *   · PATCH /api/padre/hijos/identificadores/[id] .......... flag GLOBAL compartido
- *   · DELETE /api/padre/hijos/identificadores/[id] ......... quitar solo de este padre
+ *   · PATCH /api/padre/hijos/identificadores/[id] .......... pausa/reactiva la cuenta en la ficha de ESTE padre (local · SPEC-339)
+ *   · DELETE /api/padre/hijos/identificadores/[id] ......... BORRA la cuenta de la ficha de este padre
  *
  * El mock enruta por URL (no por orden de llamada): al montar, el componente
  * pide /api/padre/hijos y /api/plataformas, y encadenar `mockReturnValueOnce`
@@ -216,14 +216,14 @@ describe("MisHijos", () => {
     });
 
     // Contraste con el DELETE de arriba: mismo identificador, acción distinta.
-    // Este PATCH toca el flag GLOBAL (compartido con el otro padre); el DELETE
-    // solo saca el identificador de la vista de este padre.
-    it("inactivar un identificador hace PATCH global, NO el DELETE de desvincular", async () => {
+    // El PATCH pausa la cuenta en la ficha de ESTE padre (local · SPEC-339); el
+    // DELETE la BORRA de su lista. Ninguna de las dos toca al otro padre.
+    it("inactivar un identificador hace PATCH (pausar), NO el DELETE de desvincular", async () => {
         mockRutas([hijoBase()], { ok: true, activo: false });
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
 
-        fireEvent.click(screen.getByLabelText("Inactivar robloxjuan para todos"));
+        fireEvent.click(screen.getByLabelText("Inactivar robloxjuan"));
         await waitFor(() => {
             const patch = llamada("PATCH", "/api/padre/hijos/identificadores/i1");
             expect(patch).toBeDefined();
@@ -238,7 +238,7 @@ describe("MisHijos", () => {
         ]);
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
-        fireEvent.click(screen.getByLabelText("Activar robloxjuan para todos"));
+        fireEvent.click(screen.getByLabelText("Activar robloxjuan"));
         await waitFor(() => {
             const patch = llamada("PATCH", "/api/padre/hijos/identificadores/i1");
             expect(JSON.parse(String(patch![1].body))).toEqual({ activo: true });

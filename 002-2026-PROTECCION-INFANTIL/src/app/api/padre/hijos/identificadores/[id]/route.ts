@@ -7,8 +7,9 @@ import { desvincularIdentificador, cambiarEstadoIdentificador } from "@/lib/dal/
 
 const patchSchema = z.object({ activo: z.boolean() });
 
-// SPEC-325 (extensión) · activar/inactivar un identificador del hijo (flag global
-// compartido). El DAL exige que el padre sea dueño (PII acceso-solo-dueño).
+// SPEC-325 · pausar/reactivar un identificador en la ficha de ESTE padre
+// (SPEC-339 · D-4: local, no toca al otro padre). El DAL exige que el padre sea
+// dueño (PII acceso-solo-dueño).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const usuario = await verifyAuth("PARENT");
@@ -40,9 +41,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 }
 
-// SPEC-325 · "quitar" un identificador del hijo = desvincularlo de la vista de
-// ESTE padre (no borra · es compartido con el otro padre · §3.1-bis). El DAL
-// exige que el padre sea dueño del hijo (PII acceso-solo-dueño).
+// SPEC-325 · "quitar" un identificador = BORRAR la fila de la ficha de ESTE
+// padre (SPEC-339 · D-4: local; el otro padre tiene la suya y la conserva). El
+// DAL exige que el padre sea dueño del hijo (PII acceso-solo-dueño).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const usuario = await verifyAuth("PARENT");
