@@ -179,6 +179,7 @@ export function HijoCard({
                             <button
                                 type="button"
                                 aria-label={`${i.activo ? "Inactivar" : "Activar"} ${i.valor}`}
+                                title="Activa o inactiva la vigilancia de esta cuenta."
                                 className="text-xs text-muted underline hover:text-body"
                                 onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
                             >
@@ -188,7 +189,7 @@ export function HijoCard({
                             <button
                                 type="button"
                                 aria-label={`Quitar ${i.valor}`}
-                                title="Lo saca de tu lista; el otro padre lo sigue viendo"
+                                title="La quita de tu lista. El otro padre la sigue viendo en la suya."
                                 className="text-xs text-muted underline hover:text-rubi"
                                 onClick={() => onDesvincular(i.id)}
                             >
