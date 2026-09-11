@@ -35,16 +35,57 @@ function leerCodigo(rel: string): string {
         .join("\n");
 }
 
-describe("SPEC-439 · candado de cableado: los avisos tienen un llamador REAL", () => {
-    it("el aviso al círculo lo sigue disparando el worker de reportes", () => {
-        const worker = leerCodigo("scripts/worker-reportes.mjs");
+/**
+ * Sigue la cadena: dado el código de `fuenteRel` y el nombre de un símbolo
+ * importado, devuelve la ruta (relativa a RAIZ) del módulo del que se importa.
+ * Deja que el candado atraviese la indirección sin fijar en qué archivo vive la
+ * llamada literal (SPEC-671: el aviso pasó a un despachador; el candado no puede
+ * romperse por eso — tiene que vigilar la CONDUCTA, no dónde está escrita).
+ */
+function resolverModuloImportado(fuenteRel: string, fuente: string, nombre: string): string {
+    const m = fuente.match(
+        new RegExp(`import\\s*\\{[^}]*\\b${nombre}\\b[^}]*\\}\\s*from\\s*["']([^"']+)["']`)
+    );
+    if (!m) throw new Error(`No se encontró el import de ${nombre} en ${fuenteRel}`);
+    return path.normalize(path.join(path.dirname(fuenteRel), m[1]));
+}
 
+describe("SPEC-439 · candado de cableado: los avisos tienen un llamador REAL", () => {
+    it("el aviso al círculo sigue alcanzable DESDE el worker, atravesando la indirección", () => {
+        const WORKER_REL = "scripts/worker-reportes.mjs";
+        const worker = leerCodigo(WORKER_REL);
+        const PORQUE =
+            "El aviso del círculo (SPEC-135 · E-2, enriquecido por SPEC-308) se dispara " +
+            "desde `scripts/worker-reportes.mjs`. Ese llamador vive FUERA de `src/`, que es " +
+            "justo por qué un barrido descuidado lo dio por muerto (I-389). SPEC-671 lo movió " +
+            "detrás de un despachador (`dispararAvisosDeCoincidencia`), así que este candado " +
+            "sigue la CADENA en vez del texto: si cualquier eslabón se corta, el padre que " +
+            "vigila deja de enterarse y nada avisa.";
+
+        // 1. El worker importa el aviso del círculo (el símbolo real, fuera de src/).
         expect(
-            /notificarCambioCirculoSiCorresponde\s*\(\s*reporteId\s*\)/.test(worker),
-            "El aviso del círculo (SPEC-135 · E-2, enriquecido por SPEC-308) se llama " +
-                "desde `scripts/worker-reportes.mjs`. Ese llamador vive FUERA de `src/`, " +
-                "que es justo por qué un barrido descuidado lo dio por muerto. Si la " +
-                "línea desaparece, el padre que vigila deja de enterarse y nada avisa.",
+            /import\s*\{[^}]*\bnotificarCambioCirculoSiCorresponde\b[^}]*\}\s*from\s*["'][^"']*circulo-confianza/.test(worker),
+            PORQUE + " [eslabón 1: el worker ya no importa el aviso del círculo]",
+        ).toBe(true);
+
+        // 2. Lo CABLEA en el despacho de avisos (la función real, no otra cosa).
+        expect(
+            /circulo\s*:\s*notificarCambioCirculoSiCorresponde\b/.test(worker),
+            PORQUE + " [eslabón 2: el aviso del círculo ya no está cableado como `circulo`]",
+        ).toBe(true);
+
+        // 3. El worker DISPARA ese despacho (ruta de éxito y/o de rescate).
+        expect(
+            /\b(dispararAvisosDeCoincidencia|rescatarYAvisar)\s*\(/.test(worker),
+            PORQUE + " [eslabón 3: el worker ya no dispara el despacho de avisos]",
+        ).toBe(true);
+
+        // 4. Y el despachador —viva en el archivo que viva— INVOCA el aviso cableado.
+        const despachadorRel = resolverModuloImportado(WORKER_REL, worker, "dispararAvisosDeCoincidencia");
+        const despachador = leerCodigo(despachadorRel);
+        expect(
+            /avisos\.circulo\s*\(/.test(despachador),
+            PORQUE + ` [eslabón 4: ${despachadorRel} ya no invoca \`avisos.circulo(\`]`,
         ).toBe(true);
     });
 
