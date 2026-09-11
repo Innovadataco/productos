@@ -2011,7 +2011,7 @@ model Reporte {
   // SPEC-584 (Fase 2/3): auditoría de lecturas del texto + códigos temporales de
   // acceso externo vinculados a este reporte.
   lecturasTexto            LecturaReporte[]
-  codigosAcceso            CodigoAccesoContenido[]
+  // SPEC-610: el pase cuelga del Expediente, no del Reporte (back-relation movida allá).
 
   @@index([reportePrincipalId])
   @@index([identificador, plataformaId])
@@ -2118,7 +2118,7 @@ model LecturaReporte {
 // Un solo código activo por reporte: una nueva solicitud expira los anteriores.
 model CodigoAccesoContenido {
   id              String    @id @default(cuid())
-  reporteId       String
+  expedienteId    String
   // sha-256 del código (8 caracteres sin ambigüedades). NUNCA el código en claro.
   codigoHash      String    @unique
   solicitadoPorId String
@@ -2134,12 +2134,12 @@ model CodigoAccesoContenido {
   ipCanje         String?
   creadoEn        DateTime  @default(now()) @db.Timestamptz(6)
 
-  reporte       Reporte  @relation(fields: [reporteId], references: [id], onDelete: Cascade)
+  expediente    Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
   solicitadoPor Usuario  @relation(fields: [solicitadoPorId], references: [id], name: "CodigosAccesoSolicitados")
   canjeadoPor   Usuario? @relation(fields: [canjeadoPorId], references: [id], name: "CodigosAccesoCanjeados", onDelete: SetNull)
   lecturas      LecturaReporte[]
 
-  @@index([reporteId])
+  @@index([expedienteId])
 }
 
 // SPEC-606 · Código de step-up del texto sensible (relevación con correo, sin
@@ -2937,6 +2937,7 @@ model Expediente {
 
   padre                  Usuario?              @relation(fields: [padreUsuarioId], references: [id])
   eventos                EventoExpediente[]
+  codigosAcceso          CodigoAccesoContenido[] // SPEC-610: pases de acceso a este expediente
   // SPEC-234 (002-PI-134): informes consolidados y patrones N1 del expediente.
   informes               InformeConsolidado[]
   patrones               PatronExpediente[]

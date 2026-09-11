@@ -14,78 +14,90 @@ import { descifrarCampoReporte } from "./descifrar-contenido";
 import { CodigoAccesoContenidoRepository } from "../repositories/codigo-acceso";
 
 /**
- * SPEC-584 (Fase 3) · Ciclo de vida del código temporal de acceso externo al texto.
+ * SPEC-584 (Fase 3) + SPEC-610 (D-123/D-129/D-130) · Ciclo de vida del PASE de
+ * acceso externo — que ahora cuelga del EXPEDIENTE, no de un reporte suelto.
  *
- * Flujo (decisiones 2, 3 y 4 del dueño, 2026-09-07):
- * 1. El PADRE dueño del reporte solicita un código: 8 caracteres sin ambigüedades,
- *    vigencia de 30 min para CANJEAR, un solo código activo por reporte. El código
- *    viaja al padre por correo (canal oficial) y se muestra una sola vez en pantalla.
- * 2. Un profesional (o el mismo padre) autenticado lo CANJEA una sola vez: el canje
- *    abre una sesión de visualización de 15 min y devuelve un token opaco (UUID cuyo
- *    sha-256 es lo único que se persiste). La auditoría queda con AMBOS responsables
- *    (solicitante y canjeador) y el solicitante recibe correo avisando quién canjeó.
- * 3. Con el token se lee el texto: cada lectura revalida la expiración y queda en
- *    `LecturaReporte` como actor EXTERNO.
+ * Flujo:
+ * 1. El PADRE dueño del EXPEDIENTE genera un pase: 8 caracteres sin ambigüedades,
+ *    30 min para CANJEAR, un solo pase activo por expediente. Viaja por correo y se
+ *    muestra una sola vez en pantalla. (D-129: es «el pase», nunca «código».)
+ * 2. El profesional (o el padre) autenticado lo CANJEA una vez → sesión de 15 min +
+ *    token opaco (solo su sha-256 se persiste). El solicitante recibe correo de quién canjeó.
+ * 3. Con el token se lee el EXPEDIENTE COMPLETO: TODOS sus eventos (con o sin
+ *    `reporteId`). CADA evento leído escribe su PROPIA fila en `LecturaReporte` (por
+ *    `eventoId`, actor EXTERNO). Solo `texto` (trabajo) — nunca `textoOriginal`.
  *
- * El reporte ANÓNIMO no tiene flujo externo (decisión 6): los tres pasos lo rechazan.
+ * Alcance por construcción: `/ver` deriva el `expedienteId` del token (nunca del
+ * cliente); un pase de un expediente no abre otro.
  */
 
 const VIGENCIA_CODIGO_MS = 30 * 60 * 1000;
 const VIGENCIA_SESION_MS = 15 * 60 * 1000;
 
+// NOTA (deuda): las claves de evento conservan «reporte» por compatibilidad con las
+// reglas de notificación ya sembradas; renombrarlas a «expediente» exige nuevas
+// reglas y es entrega aparte. El sujeto sí es el expediente.
 const EVENTO_CODIGO_SOLICITADO = "padre.reporte.acceso_codigo";
 const EVENTO_CODIGO_CANJEADO = "padre.reporte.acceso_canjeado";
 
-/** Datos del reporte necesarios para validar titularidad y armar correos. */
-interface ReporteParaCodigo {
+/** Datos del expediente para validar titularidad y armar correos. */
+interface ExpedienteParaPase {
     id: string;
-    esAnonimo: boolean;
-    usuarioId: string | null;
-    contenidoId: string;
-    identificador: string;
+    padreUsuarioId: string;
+    identificadorReportado: string;
 }
 
-async function cargarReporteParaCodigo(reporteId: string): Promise<ReporteParaCodigo | null> {
-    return prisma.reporte.findUnique({
-        where: { id: reporteId },
-        select: { id: true, esAnonimo: true, usuarioId: true, contenidoId: true, identificador: true },
+/** Un evento del expediente tal como lo ve el profesional al canjear (D-130). */
+export interface EventoLeidoDto {
+    eventoId: string;
+    fecha: Date;
+    texto: string;
+    /** true = «Anotado por la familia» (sin reporte, sin chip de gravedad, D-130). */
+    esManual: boolean;
+    /** Categoría del análisis; SOLO en eventos de origen reporte. null en los manuales. */
+    categoria: string | null;
+}
+
+async function cargarExpedienteParaPase(expedienteId: string): Promise<ExpedienteParaPase | null> {
+    return prisma.expediente.findUnique({
+        where: { id: expedienteId },
+        select: { id: true, padreUsuarioId: true, identificadorReportado: true },
     });
 }
 
-/** Garantiza titularidad autenticada: solo el dueño no anónimo avanza (decisiones 4 y 6). */
-function exigirTitular(reporte: ReporteParaCodigo | null, usuarioId: string): ReporteParaCodigo {
-    if (!reporte || reporte.esAnonimo || reporte.usuarioId !== usuarioId) {
-        // 404 deliberado (no 403): no revelar la existencia ni titularidad del reporte.
-        throw new AppError("Reporte no encontrado", ERROR_CODES.NOT_FOUND, 404);
+/** Solo el PADRE dueño del expediente puede generar su pase (D-126: expediente = padre autenticado). */
+function exigirTitular(exp: ExpedienteParaPase | null, usuarioId: string): ExpedienteParaPase {
+    if (!exp || exp.padreUsuarioId !== usuarioId) {
+        // 404 deliberado (no 403): no revelar la existencia ni titularidad del expediente.
+        throw new AppError("Expediente no encontrado", ERROR_CODES.NOT_FOUND, 404);
     }
-    return reporte;
+    return exp;
 }
 
 /**
- * PASO 1 · El padre dueño solicita el código. Devuelve el código en claro (para
- * mostrarlo UNA vez en pantalla) junto a su vigencia; en reposo queda solo el hash.
+ * PASO 1 · El padre dueño genera el pase del expediente. Devuelve el pase en claro
+ * (para mostrarlo UNA vez en pantalla) junto a su vigencia; en reposo queda solo el hash.
  */
 export async function solicitarCodigoAcceso(params: {
-    reporteId: string;
+    expedienteId: string;
     solicitadoPorId: string;
     ip?: string;
 }): Promise<{ codigo: string; vigenteHasta: Date }> {
-    const reporte = exigirTitular(await cargarReporteParaCodigo(params.reporteId), params.solicitadoPorId);
+    const expediente = exigirTitular(await cargarExpedienteParaPase(params.expedienteId), params.solicitadoPorId);
 
     const codigo = generarCodigoAcceso();
     const ahora = new Date();
     const vigenteHasta = new Date(ahora.getTime() + VIGENCIA_CODIGO_MS);
 
     await prisma.$transaction(async (tx) => {
-        // Un solo código activo por reporte (decisión 2): la nueva solicitud
-        // expira los anteriores sin canjear.
+        // Un solo pase activo por EXPEDIENTE: la nueva solicitud expira los anteriores sin canjear.
         await tx.codigoAccesoContenido.updateMany({
-            where: { reporteId: reporte.id, canjeadoEn: null, vigenteHasta: { gt: ahora } },
+            where: { expedienteId: expediente.id, canjeadoEn: null, vigenteHasta: { gt: ahora } },
             data: { vigenteHasta: ahora },
         });
         await tx.codigoAccesoContenido.create({
             data: {
-                reporteId: reporte.id,
+                expedienteId: expediente.id,
                 codigoHash: hashCodigoAcceso(codigo),
                 solicitadoPorId: params.solicitadoPorId,
                 vigenteHasta,
@@ -96,70 +108,69 @@ export async function solicitarCodigoAcceso(params: {
 
     await logAudit({
         accion: "CODIGO_ACCESO_SOLICITADO",
-        tipoRecurso: "Reporte",
-        recursoId: reporte.id,
+        tipoRecurso: "Expediente",
+        recursoId: expediente.id,
         usuarioId: params.solicitadoPorId,
         ipAddress: params.ip ?? "unknown",
         userAgent: "unknown",
-        // El código en claro NUNCA va a la auditoría: solo su hash (rastreable, no usable).
+        // El pase en claro NUNCA va a la auditoría: solo su hash (rastreable, no usable).
         metadatos: { codigoHash: hashCodigoAcceso(codigo) },
     });
 
-    // Correo con el código (canal oficial). Best-effort con log: el padre ya lo ve en pantalla.
+    // Correo con el pase (canal oficial). Best-effort con log: el padre ya lo ve en pantalla.
     try {
         const resultado = await programar({
             evento: EVENTO_CODIGO_SOLICITADO,
-            sujetoTipo: "Reporte",
-            sujetoId: reporte.id,
+            sujetoTipo: "Expediente",
+            sujetoId: expediente.id,
             destinatarios: [
                 {
                     usuarioId: params.solicitadoPorId,
                     rol: "PARENT",
                     variables: {
                         codigo,
-                        identificador: reporte.identificador,
+                        identificador: expediente.identificadorReportado,
                         vigenteMinutos: 30,
                     },
                 },
             ],
         });
         if (resultado.programadas === 0) {
-            logger.info(`[CodigoAcceso] Sin regla activa para ${EVENTO_CODIGO_SOLICITADO} (reporte=${reporte.id}).`);
+            logger.info(`[Pase] Sin regla activa para ${EVENTO_CODIGO_SOLICITADO} (expediente=${expediente.id}).`);
         }
     } catch (error) {
-        logger.error("[CodigoAcceso] Error encolando el correo con el código:", error);
+        logger.error("[Pase] Error encolando el correo con el pase:", error);
     }
 
     return { codigo, vigenteHasta };
 }
 
 /**
- * PASO 2 · Profesional (o padre) autenticado canjea el código. Devuelve el token
- * opaco de la sesión de visualización (15 min). Un solo canje: la condición
- * `canjeadoEn: null` en el update hace que una carrera dé 409 a perdedor.
+ * PASO 2 · Profesional (o padre) autenticado canjea el pase. Devuelve el token opaco
+ * de la sesión de visualización (15 min). Un solo canje: la condición `canjeadoEn: null`
+ * en el update hace que una carrera dé 409 al perdedor.
  */
 export async function canjearCodigoAcceso(params: {
     codigoCrudo: string;
     canjeadoPor: { id: string; nombre: string | null; rol: string };
     ip?: string;
-}): Promise<{ tokenSesion: string; expiraEn: Date; reporteId: string }> {
+}): Promise<{ tokenSesion: string; expiraEn: Date; expedienteId: string }> {
     const codigo = normalizarCodigoAcceso(params.codigoCrudo);
     if (!/^[A-Z2-9]{6,12}$/.test(codigo)) {
-        throw new AppError("Código inválido", ERROR_CODES.VALIDATION_ERROR, 400);
+        throw new AppError("Pase inválido", ERROR_CODES.VALIDATION_ERROR, 400);
     }
 
     const registro = await new CodigoAccesoContenidoRepository().findPorCodigoHash(hashCodigoAcceso(codigo));
-    // Código inexistente O reporte anónimo (sin flujo externo, decisión 6): mismo 404 genérico.
-    if (!registro || registro.reporte.esAnonimo) {
-        throw new AppError("Código no válido", ERROR_CODES.NOT_FOUND, 404);
+    if (!registro) {
+        throw new AppError("Pase no válido", ERROR_CODES.NOT_FOUND, 404);
     }
 
     const ahora = new Date();
     if (registro.vigenteHasta.getTime() <= ahora.getTime()) {
-        throw new AppError("El código expiró. Solicite uno nuevo al padre o tutor.", ERROR_CODES.GONE, 410);
+        throw new AppError("El pase expiró. Pídale uno nuevo al padre o la madre.", ERROR_CODES.GONE, 410);
     }
     if (registro.canjeadoEn) {
-        throw new AppError("El código ya fue usado. Solicite uno nuevo al padre o tutor.", ERROR_CODES.CONFLICT, 409);
+        throw new AppError("El pase ya fue usado. Pídale uno nuevo al padre o la madre.", ERROR_CODES.CONFLICT, 409);
     }
 
     const tokenSesion = randomUUID();
@@ -175,25 +186,25 @@ export async function canjearCodigoAcceso(params: {
         },
     });
     if (actualizado.count === 0) {
-        throw new AppError("El código ya fue usado. Solicite uno nuevo al padre o tutor.", ERROR_CODES.CONFLICT, 409);
+        throw new AppError("El pase ya fue usado. Pídale uno nuevo al padre o la madre.", ERROR_CODES.CONFLICT, 409);
     }
 
     await logAudit({
         accion: "CODIGO_ACCESO_CANJEADO",
-        tipoRecurso: "Reporte",
-        recursoId: registro.reporteId,
+        tipoRecurso: "Expediente",
+        recursoId: registro.expedienteId,
         usuarioId: params.canjeadoPor.id,
         ipAddress: params.ip ?? "unknown",
         userAgent: "unknown",
         metadatos: { codigoAccesoId: registro.id, solicitadoPorId: registro.solicitadoPorId },
     });
 
-    // Decisión 5: el padre solicitante recibe correo avisando QUIÉN canjeó su código.
+    // D-129: el padre solicitante recibe correo avisando QUIÉN canjeó su pase.
     try {
         const resultado = await programar({
             evento: EVENTO_CODIGO_CANJEADO,
-            sujetoTipo: "Reporte",
-            sujetoId: registro.reporteId,
+            sujetoTipo: "Expediente",
+            sujetoId: registro.expedienteId,
             destinatarios: [
                 {
                     usuarioId: registro.solicitadoPorId,
@@ -201,44 +212,47 @@ export async function canjearCodigoAcceso(params: {
                     variables: {
                         nombreCanjeador: params.canjeadoPor.nombre ?? "Un profesional",
                         rolCanjeador: params.canjeadoPor.rol,
-                        identificador: registro.reporte.identificador,
+                        identificador: registro.expediente.identificadorReportado,
                         fechaCanje: ahora.toLocaleString("es-CO", { timeZone: "America/Bogota" }),
                     },
                 },
             ],
         });
         if (resultado.programadas === 0) {
-            logger.info(`[CodigoAcceso] Sin regla activa para ${EVENTO_CODIGO_CANJEADO} (reporte=${registro.reporteId}).`);
+            logger.info(`[Pase] Sin regla activa para ${EVENTO_CODIGO_CANJEADO} (expediente=${registro.expedienteId}).`);
         }
     } catch (error) {
-        logger.error("[CodigoAcceso] Error encolando el aviso de canje al solicitante:", error);
+        logger.error("[Pase] Error encolando el aviso de canje al solicitante:", error);
     }
 
-    return { tokenSesion, expiraEn, reporteId: registro.reporteId };
+    return { tokenSesion, expiraEn, expedienteId: registro.expedienteId };
 }
 
 /**
- * PASO 3 · Lectura del texto con la sesión. Revalida la expiración en CADA
- * llamada y audita como actor EXTERNO vinculado al código canjeado (decisión 7).
+ * PASO 3 · Lectura del EXPEDIENTE COMPLETO con la sesión. Revalida la expiración en
+ * CADA llamada. Devuelve TODOS los eventos (D-130: manuales incluidos, marcados). Por
+ * CADA evento leído se descifra su `texto` (nunca `textoOriginal`) DENTRO de `conActor`
+ * como actor EXTERNO → una fila `LecturaReporte` por evento (por su `eventoId`, gate del CEO).
+ * El `expedienteId` sale del token, jamás del cliente.
  */
-export async function leerTextoConSesion(params: {
+export async function leerExpedienteConSesion(params: {
     tokenSesion: string;
     ip?: string;
     userAgent?: string;
-}): Promise<{ texto: string; expiraEn: Date }> {
+}): Promise<{ eventos: EventoLeidoDto[]; gravedad: string; expiraEn: Date }> {
     const registro = await new CodigoAccesoContenidoRepository().findPorTokenSesion(
         hashCodigoAcceso(params.tokenSesion)
     );
     const ahora = new Date();
     if (!registro || !registro.sesionExpiraEn || registro.sesionExpiraEn.getTime() <= ahora.getTime()) {
         throw new AppError(
-            "La sesión de visualización expiró. Solicite un nuevo código al padre o tutor.",
+            "La sesión de visualización expiró. Pídale un nuevo pase al padre o la madre.",
             ERROR_CODES.GONE,
             410
         );
     }
 
-    const texto = await conActor(
+    const eventos = await conActor(
         {
             ...(registro.canjeadoPor?.id ? { usuarioId: registro.canjeadoPor.id } : {}),
             ...(registro.canjeadoPor?.rol ? { rol: registro.canjeadoPor.rol } : {}),
@@ -247,8 +261,24 @@ export async function leerTextoConSesion(params: {
             ...(params.ip ? { ip: params.ip } : {}),
             ...(params.userAgent ? { userAgent: params.userAgent } : {}),
         },
-        () => descifrarCampoReporte(registro.reporte.contenidoId, "texto")
+        async () => {
+            const salida: EventoLeidoDto[] = [];
+            for (const ev of registro.expediente.eventos) {
+                // Cada descifrado escribe su propia fila LecturaReporte (por eventoId,
+                // vía resolverDuenos en la frontera DAL). Nunca textoOriginal.
+                const texto = await descifrarCampoReporte(ev.contenidoId, "texto");
+                salida.push({
+                    eventoId: ev.id,
+                    fecha: ev.fechaEvento,
+                    texto,
+                    esManual: ev.reporteId === null,
+                    // D-130: los manuales no llevan clasificación; solo los de origen reporte.
+                    categoria: ev.reporteId === null ? null : ev.categoriaDetectada,
+                });
+            }
+            return salida;
+        }
     );
 
-    return { texto, expiraEn: registro.sesionExpiraEn };
+    return { eventos, gravedad: registro.expediente.scoreGravedadActual, expiraEn: registro.sesionExpiraEn };
 }

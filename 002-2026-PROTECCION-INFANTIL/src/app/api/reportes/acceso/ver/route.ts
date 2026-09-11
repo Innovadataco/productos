@@ -4,18 +4,20 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { hashCodigoAcceso } from "@/lib/acceso-codigo";
-import { leerTextoConSesion } from "@/lib/dal/services/codigo-acceso";
+import { leerExpedienteConSesion } from "@/lib/dal/services/codigo-acceso";
 
 /**
- * GET /api/reportes/acceso/ver?token=... — SPEC-584 (Fase 3).
+ * GET /api/reportes/acceso/ver?token=... — SPEC-584 (Fase 3) + SPEC-610 (D-123/D-130).
  *
- * Lectura del texto del reporte con la sesión abierta al canjear el código.
- * CADA llamada revalida la expiración de la sesión (15 min desde el canje);
- * expirada → 410 con mensaje claro. Devuelve SOLO el texto de trabajo (la
- * evidencia `textoOriginal` es interna y jamás sale por esta vía) y la lectura
- * queda auditada como actor EXTERNO vinculado al código canjeado.
+ * Lectura del EXPEDIENTE COMPLETO con la sesión abierta al canjear el pase: TODOS
+ * sus eventos (con o sin reporte), no un relato suelto — eso era I-372. El
+ * `expedienteId` sale del token (nunca del cliente): el pase de un expediente no
+ * abre otro. CADA llamada revalida la expiración de la sesión (15 min desde el
+ * canje); expirada → 410 con mensaje claro. De cada evento sale SOLO el `texto` de
+ * trabajo (la evidencia `textoOriginal` es interna y jamás sale por esta vía) y
+ * cada lectura escribe su propia fila de auditoría como actor EXTERNO (por evento).
  *
- * Response: { texto, expiraEn }.
+ * Response: { eventos: [{ eventoId, fecha, texto, esManual, categoria }], gravedad, expiraEn }.
  */
 const verQuerySchema = z.object({
     token: z.string().uuid("Token de sesión inválido"),
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
         }
 
         const userAgent = request.headers.get("user-agent");
-        const resultado = await leerTextoConSesion({
+        const resultado = await leerExpedienteConSesion({
             tokenSesion: parsed.data.token,
             ip: getClientIp(request),
             ...(userAgent ? { userAgent } : {}),

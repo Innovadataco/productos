@@ -85,9 +85,19 @@ describe("SPEC-584 · auditoría de lectura en la frontera del descifrado", () =
     it("la lectura EXTERNO (tipoActor del ALS) queda marcada y vinculable a su código", async () => {
         const padre = await crearUsuario("PARENT");
         const reporte = await crearReporteDePrueba(padre.id);
+        // SPEC-610: el pase cuelga del EXPEDIENTE. Un expediente mínimo da el FK del
+        // código; la lectura sigue siendo sobre el contenido del reporte.
+        const expediente = await prisma.expediente.create({
+            data: {
+                padreUsuarioId: padre.id,
+                identificadorReportado: reporte.identificador,
+                fechaApertura: new Date(),
+                estado: "ACTIVO",
+            },
+        });
         const codigo = await prisma.codigoAccesoContenido.create({
             data: {
-                reporteId: reporte.id,
+                expedienteId: expediente.id,
                 codigoHash: "hash-de-prueba",
                 solicitadoPorId: padre.id,
                 vigenteHasta: new Date(Date.now() + 30 * 60 * 1000),

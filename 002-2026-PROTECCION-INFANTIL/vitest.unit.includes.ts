@@ -623,4 +623,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/padre/perfil-historial-sin-codigos.candado.test.ts",
     // SPEC-626: la hora aproximada del hecho no se muestra como precisa (helper + clase).
     "src/lib/format/fecha-hecho-aproximada.candado.test.ts",
+    // SPEC-610 (I-372): vista del profesional — D-130 (evento manual sin chip de análisis)
+    // y D-129 (léxico del «pase», nunca «código») por render + escaneo de fuente.
+    "src/app/canjear-acceso/canjear-acceso.candado.test.tsx",
 ];

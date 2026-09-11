@@ -6,15 +6,16 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { canjearCodigoAcceso } from "@/lib/dal/services/codigo-acceso";
 
 /**
- * POST /api/reportes/acceso/canjar — SPEC-584 (Fase 3).
+ * POST /api/reportes/acceso/canjar — SPEC-584 (Fase 3) + SPEC-610 (D-123).
  *
- * Profesional (o el mismo padre) autenticado canjea el código que le pasaron:
+ * Profesional (o el mismo padre) autenticado canjea el pase que le pasaron:
  * valida hash + vigencia (30 min) + un solo canje, abre la sesión de
  * visualización de 15 min y devuelve el token opaco de sesión. La auditoría
- * queda con AMBOS responsables (solicitante en la fila del código, canjeador
- * acá) y el padre solicitante recibe correo avisando quién canjeó.
+ * queda con AMBOS responsables (solicitante en la fila del pase, canjeador
+ * acá) y el padre solicitante recibe correo avisando quién canjeó. El pase
+ * abre el EXPEDIENTE (no un reporte), por eso el sujeto es el expediente.
  *
- * Body: { codigo: string }. Response: { tokenSesion, expiraEn, reporteId }.
+ * Body: { codigo: string }. Response: { tokenSesion, expiraEn, expedienteId }.
  */
 const canjarSchema = z.object({
     codigo: z.string().min(4).max(20),
