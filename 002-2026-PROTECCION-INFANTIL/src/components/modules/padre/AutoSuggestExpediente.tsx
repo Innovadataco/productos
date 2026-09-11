@@ -24,7 +24,7 @@ export function AutoSuggestExpediente({ expedienteId, identificadorReportado, ul
                 <div className="flex flex-wrap gap-2">
                     <Link
                         href={`/dashboard/padre/expedientes/${expedienteId}`}
-                        className="rounded-xl accent-gradient px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+                        className="rounded-xl bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink shadow-md transition hover:opacity-90"
                     >
                         Agregar nueva situación
                     </Link>

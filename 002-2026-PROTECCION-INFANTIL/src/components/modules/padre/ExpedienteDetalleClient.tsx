@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { TimelineEventos } from "./TimelineEventos";
 import { AgregarEventoForm } from "./AgregarEventoForm";
@@ -60,13 +61,9 @@ export function ExpedienteDetalleClient({ expediente, eventos }: ExpedienteDetal
                 </div>
                 {esEditable && (
                     <div className="mt-4">
-                        <button
-                            type="button"
-                            onClick={() => setMostrarFormulario(true)}
-                            className="rounded-xl accent-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
-                        >
+                        <Button type="button" onClick={() => setMostrarFormulario(true)}>
                             Agregar nueva situación
-                        </button>
+                        </Button>
                     </div>
                 )}
             </GlassCard>

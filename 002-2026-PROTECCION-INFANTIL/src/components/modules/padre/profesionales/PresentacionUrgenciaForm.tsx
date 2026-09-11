@@ -19,6 +19,7 @@
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
 import { CanalesOficiales } from "@/components/modules/CanalesOficiales";
 import { guardarBorradorConsulta, leerBorradorConsulta } from "@/lib/padre/borrador-consulta";
 
@@ -176,13 +177,9 @@ export function PresentacionUrgenciaForm({
                     </label>
                 </fieldset>
 
-                <button
-                    type="submit"
-                    disabled={!listo}
-                    className="w-full rounded-xl bg-cielo px-4 py-3 text-sm font-semibold text-white shadow-lg  disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cielo/90 transition"
-                >
+                <Button type="submit" disabled={!listo} className="w-full">
                     Ver profesionales verificados
-                </button>
+                </Button>
             </form>
 
             <CanalesOficiales />

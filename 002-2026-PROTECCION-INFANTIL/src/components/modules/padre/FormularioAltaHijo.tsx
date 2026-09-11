@@ -2,15 +2,17 @@
 
 /**
  * SPEC-601 · FormularioAltaHijo — alta inline simple de hijo, restaurada de la
- * versión pre-SPEC-599 de `MisHijos.tsx` (commit e74e1a44a^). Es la variante
- * del PASO 3 del camino del padre (`/camino/hijos`), donde el dueño pidió
+ * versión pre-SPEC-599 de `MisHijos.tsx` (commit e74e1a44a^). El dueño pidió
  * revertir el wizard: «esta ventana estaba bien, reversa el último cambio».
- * El wizard (SPEC-599) sigue siendo la variante de `/dashboard/padre/hijos`.
+ * El wizard (SPEC-599) se retiró: hoy esta alta inline es la ÚNICA variante,
+ * tanto en `/camino/hijos` (paso 3) como en `/dashboard/padre/hijos` (vía
+ * `MisHijos`).
  *
- * Mismo contrato que el wizard: validaciones de `documento-menor`, alta
- * múltiple de identificadores y payload del POST /api/padre/hijos sin cambios
- * (SPEC-589: sin documento; nombre/apellidos obligatorios; edad/sexo/cuentas
- * opcionales). El payload compartido vive en `registro-hijo/payload.ts`.
+ * Contrato del POST `/api/padre/hijos`: validaciones de `documento-menor`,
+ * alta múltiple de identificadores y payload sin documento (SPEC-589: nombre y
+ * apellidos obligatorios; año de nacimiento/sexo/cuentas opcionales — el AÑO,
+ * no una edad congelada, por SPEC-627 D-134). El payload compartido vive en
+ * `registro-hijo/payload.ts`.
  */
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";

@@ -1,9 +1,11 @@
 import { forwardRef } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+export type ButtonSize = "md" | "hero";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: ButtonVariant;
+    size?: ButtonSize;
     isLoading?: boolean;
 };
 
@@ -36,15 +38,26 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
     danger: "btn-ds btn-ds--fantasma-rubi",
 };
 
+/**
+ * Escala del control (SPEC-633 · frontera de Diseño 11-09-2026). `hero` es la
+ * versión grande del primario para la ÚNICA llamada de una pantalla vacía: es
+ * una ESCALA del primario, no una piel a mano. `md` reproduce exactamente la
+ * base anterior (px-5 text-sm) → las ~160 llamadas vigentes no cambian.
+ */
+const SIZE_CLASS: Record<ButtonSize, string> = {
+    md: "px-5 text-sm",
+    hero: "px-7 text-lg h-14",
+};
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-    ({ children, variant = "primary", isLoading, className = "", ...props }, ref) => {
+    ({ children, variant = "primary", size = "md", isLoading, className = "", ...props }, ref) => {
         const base =
-            "inline-flex items-center justify-center gap-2 px-5 text-sm font-semibold active:scale-[0.98]";
+            "inline-flex items-center justify-center gap-2 font-semibold active:scale-[0.98]";
 
         return (
             <button
                 ref={ref}
-                className={`${base} ${VARIANT_CLASS[variant]} ${className}`}
+                className={`${base} ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant]} ${className}`}
                 disabled={isLoading || props.disabled}
                 {...props}
             >

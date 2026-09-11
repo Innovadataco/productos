@@ -45,7 +45,7 @@ export function PadreSideNav() {
                                     href={item.href}
                                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                                         active
-                                            ? "bg-cielo text-white shadow-lg shadow-cielo/25"
+                                            ? "bg-cielo text-acento-ink shadow-lg shadow-cielo/25"
                                             : "text-muted hover:bg-cielo/10 hover:text-cielo"
                                     }`}
                                     aria-current={active ? "page" : undefined}
@@ -94,7 +94,7 @@ export function PadreSideNav() {
                                                     href={hijo.href}
                                                     className={`block rounded-xl px-3 py-2 text-sm font-medium transition ${
                                                         active
-                                                            ? "bg-cielo text-white shadow-lg shadow-cielo/25"
+                                                            ? "bg-cielo text-acento-ink shadow-lg shadow-cielo/25"
                                                             : "text-muted hover:bg-cielo/10 hover:text-cielo"
                                                     }`}
                                                     aria-current={active ? "page" : undefined}

@@ -9,6 +9,7 @@
  * ahí solo se muestra la tercera pregunta.
  */
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { nombreVisible, type Contacto, type Plataforma } from "./tipos";
 
 /** Lista cerrada + "Otro" (que abre texto libre): el campo de BD sigue libre. */
@@ -226,17 +227,13 @@ export function PanelAgregar({
             )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <button
-                    type="submit"
-                    disabled={!puedeGuardar}
-                    className="inline-flex h-13 min-h-[52px] flex-1 items-center justify-center rounded-xl bg-pino px-6 text-base font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
-                >
+                <Button type="submit" disabled={!puedeGuardar} className="flex-1">
                     {guardando
                         ? "Guardando…"
                         : esPersona
                             ? `Empezar a vigilar${primerNombre ? ` a ${primerNombre}` : ""}`
                             : "Guardar el dato"}
-                </button>
+                </Button>
                 <button
                     type="button"
                     onClick={onCancelar}

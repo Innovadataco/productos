@@ -20,7 +20,7 @@ export function SugerenciaProactiva({ sugerencia }: SugerenciaProactivaProps) {
             {sugerencia.accionHref && sugerencia.accionTexto && (
                 <a
                     href={sugerencia.accionHref}
-                    className="mt-4 inline-flex rounded-xl bg-cielo px-4 py-2 text-sm font-semibold text-white hover:bg-cielo/90"
+                    className="mt-4 inline-flex rounded-xl bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink hover:bg-cielo/90"
                 >
                     {sugerencia.accionTexto}
                 </a>

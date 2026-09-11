@@ -162,6 +162,16 @@
         color: rgb(var(--pino-rgb));
     }
 
+    /* SPEC-633 · rótulo legible SOBRE el acento del territorio (companion del token
+       de SPEC-632). Para elementos que llevan un relleno del acento del tema (nav
+       activa, chips, badges) FUERA del <Button>: en el área del padre (theme-padre)
+       resuelve al rótulo oscuro sobre cielo; en otros temas cae a papel. Los rellenos
+       que NO son el acento del tema (p. ej. bg-pino en el área del padre) usan
+       `text-papel`, que voltea con el tema y pasa AA en ambos. */
+    .text-acento-ink {
+        color: rgb(var(--pi-accent-ink-rgb, var(--papel-rgb)));
+    }
+
     /* Vidrio §4.6: saturate(185%) blur(22px); en oscuro luz interior en vez de sombras */
     .glass {
         background: rgb(var(--papel-rgb) / 0.7);
