@@ -28,6 +28,7 @@ function reporteRevision(): DetalleReporte {
         id: "r1", identificador: "+57300", plataforma: { nombre: "WhatsApp", clave: "whatsapp" },
         texto: "…", estado: "REVISION_MANUAL", ciudad: "Bogotá", pais: "Colombia",
         fechaIncidente: "2026-07-10T10:00:00Z", esAnonimo: false, numeroSeguimiento: "RPT-562",
+        horaAproximada: false,
         creadoEn: "2026-07-10T12:00:00Z", prioridadAlta: false, keywordsDetectadas: [],
         esRafaga: false, eliminado: false, motivoBaja: null, notaBaja: null, eliminadoEn: null,
         clasificacion: {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { formatPlataforma } from "@/lib/plataforma";
-import { fechaHoraSinMinutos } from "@/lib/format/fecha";
+import { fechaHechoLegible } from "@/lib/format/fecha";
 
 type WizardData = {
     identificador: string;
@@ -12,6 +12,7 @@ type WizardData = {
     ciudad: string;
     pais: string;
     fechaIncidente: string;
+    horaAproximada: boolean;
     edadVictima: string;
     texto: string;
 };
@@ -38,7 +39,7 @@ export function ReporteStepConfirmar({
     // Antes se mostraba el string crudo del `datetime-local` ("2026-08-30T21:15").
     const fechaMostrar = data.fechaIncidente
         // A-70 · G20: día + hora con a.m./p.m., sin minutos.
-        ? fechaHoraSinMinutos(new Date(data.fechaIncidente).toISOString())
+        ? fechaHechoLegible(new Date(data.fechaIncidente).toISOString(), data.horaAproximada)
         : "No especificada";
 
     return (

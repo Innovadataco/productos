@@ -19,6 +19,7 @@ import type { Prisma, EstadoReporte } from "@prisma/client";
 export interface EventoCadenaDto {
     id: string;
     fechaIncidente: Date;
+    horaAproximada: boolean;
     creadoEn: Date;
     estado: string;
     categoriaLabel: string | null;
@@ -225,6 +226,7 @@ export async function listarCadenasPadre(usuarioId: string): Promise<CadenaDto[]
             eventos: grupo.map((r) => ({
                 id: r.id,
                 fechaIncidente: r.fechaIncidente,
+                horaAproximada: r.horaAproximada,
                 creadoEn: r.creadoEn,
                 estado: r.estado,
                 categoriaLabel:
