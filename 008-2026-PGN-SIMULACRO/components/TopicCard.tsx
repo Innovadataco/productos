@@ -14,7 +14,7 @@ export default function TopicCard({ topic, count, stats }: Props) {
   const barPct = stats.total > 0 ? Math.round((stats.total / Math.max(count, 1)) * 100) : 0
   return (
     <Link
-      href={`/quiz/${encodeURIComponent(topic.key)}`}
+      href={`/modulo/${encodeURIComponent(topic.key)}/`}
       className="block rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-2">
