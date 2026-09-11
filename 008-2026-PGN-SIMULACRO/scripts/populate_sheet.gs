@@ -5179,3 +5179,33 @@ function populateAll() {
   writePreguntas_lote5();
   Logger.log('Proceso completo.');
 }
+
+function mergeLegacyPreguntas() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheets = ss.getSheets();
+  let canonical = null;
+  const candidates = [];
+  for (let i = 0; i < sheets.length; i++) {
+    const s = sheets[i];
+    if (s.getName().toLowerCase().trim() === 'preguntas') {
+      if (s.getName() === 'preguntas') canonical = s;
+      else candidates.push(s);
+    }
+  }
+  if (!canonical) {
+    if (candidates.length === 0) throw new Error('No se encontró ninguna pestaña de preguntas');
+    canonical = candidates.shift();
+    canonical.setName('preguntas');
+  }
+  for (let i = 0; i < candidates.length; i++) {
+    const s = candidates[i];
+    const lastRow = s.getLastRow();
+    if (lastRow <= 1) continue;
+    const data = s.getRange(2, 1, lastRow - 1, 12).getValues();
+    let nextId = canonical.getLastRow();
+    for (let r = 0; r < data.length; r++) data[r][0] = nextId + r;
+    if (data.length) canonical.getRange(nextId + 1, 1, data.length, 12).setValues(data);
+    ss.deleteSheet(s);
+  }
+  Logger.log('Preguntas consolidadas. Total filas: ' + canonical.getLastRow());
+}
