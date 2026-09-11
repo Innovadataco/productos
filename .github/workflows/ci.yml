@@ -481,12 +481,38 @@ jobs:
           ANTI_ABUSO_SALT: build-placeholder-salt-min-32-chars
           DATABASE_URL: postgresql://build:build@localhost:5432/build
 
+  # I-392 · CANDADO DE RENDER. El acento por rol que llega al FONDO del <Button> Primario
+  # NO se puede medir con regex ni jsdom (la cascada de custom properties por clase la
+  # computa un navegador): un candado de texto (accent-por-rol) estuvo VERDE meses mientras
+  # el defecto vivía. Este job trae Chromium y mide el COLOR EFECTIVO con getComputedStyle.
+  # DEDICADO a propósito (no dentro de `verificaciones`): un rojo de "render-check" dice qué
+  # vigila y no se confunde con infra ajena — y va a crecer (todo el contraste real es de
+  # esta clase). Alcance A: solo el Primario; el Fantasma es SPEC-659. Entra al veredicto
+  # agregado vía `pi-gate` (el sentinel requerido).
+  render-check:
+    runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run render:check
+
   # SPEC-280 (002-PI-180): resumen legible al final de cada corrida. Corre siempre
   # que el CI haya arrancado (verde, rojo o cancelado) — la pestaña "Summary" debe
   # existir aunque un shard se cayera. Nunca rompe el gate.
   resumen:
     runs-on: ubuntu-latest
-    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build, render-check]
     if: ${{ needs.should-skip.outputs.skip != 'true' && always() }}
     defaults:
       run:
@@ -516,7 +542,7 @@ jobs:
 
   gate:
     runs-on: ubuntu-latest
-    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build, render-check]
     if: needs.should-skip.outputs.skip != 'true'
     steps:
       - name: Gate passed
@@ -529,7 +555,7 @@ jobs:
   # Correr `if: always()` es lo que permite que reporte también cuando algún job fue skipped.
   pi-gate:
     runs-on: ubuntu-latest
-    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build]
+    needs: [should-skip, verificaciones, test-unit, test-integration, test-integration-coverage, journeys, build, render-check]
     if: always()
     steps:
       - name: Evaluar veredicto agregado

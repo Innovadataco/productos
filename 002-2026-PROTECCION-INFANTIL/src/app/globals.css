@@ -159,7 +159,11 @@
     }
 
     .text-accent {
-        color: rgb(var(--pino-rgb));
+        /* I-392 (limpieza): el acento del TEXTO sigue al rol vía `--accent-rgb` (== lo que
+           cada `.theme-*` hardcodeaba). Antes: pino fijo + un override por tema (rodeo).
+           Comportamiento idéntico, sin el rodeo. (No cambia el contraste de `cielo` como
+           texto — es preexistente y ajeno a I-392.) */
+        color: rgb(var(--accent-rgb));
     }
 
     /* SPEC-633 · rótulo legible SOBRE el acento del territorio (companion del token
@@ -435,11 +439,6 @@
    Sistema de Diseño (--accent) y la familia Tailwind `accent` (--accent-rgb). */
 .theme-colegio { --accent-rgb: var(--pino-rgb); }
 
-.theme-colegio .text-accent,
-.theme-colegio.text-accent {
-    color: rgb(var(--pino-rgb));
-}
-
 .theme-colegio .text-gradient,
 .theme-colegio.text-gradient {
     background-clip: text;
@@ -488,11 +487,6 @@
    sobre cielo daba 2.37:1 en claro). El acento (cielo) NO cambia. */
 .theme-padre { --accent-rgb: var(--cielo-rgb); --pi-accent-ink-rgb: var(--pi-ink-oscuro-rgb); }
 
-.theme-padre .text-accent,
-.theme-padre.text-accent {
-    color: rgb(var(--cielo-rgb));
-}
-
 .theme-padre .text-gradient,
 .theme-padre.text-gradient {
     background-clip: text;
@@ -538,11 +532,6 @@
    crudo no cumple contraste como texto, se usa ámbar-ink #8a5c06, 5.11:1).
    ========================================================================== */
 .theme-admin { --accent-rgb: var(--ambar-ink-rgb); }
-
-.theme-admin .text-accent,
-.theme-admin.text-accent {
-    color: rgb(var(--ambar-ink-rgb));
-}
 
 .theme-admin .text-gradient,
 .theme-admin.text-gradient {
@@ -590,11 +579,6 @@
    ========================================================================== */
 /* SPEC-632: comparte el acento cielo del padre → mismo rótulo oscuro del Primario. */
 .theme-profesional { --accent-rgb: var(--cielo-rgb); --pi-accent-ink-rgb: var(--pi-ink-oscuro-rgb); }
-
-.theme-profesional .text-accent,
-.theme-profesional.text-accent {
-    color: rgb(var(--cielo-rgb));
-}
 
 .theme-profesional .text-gradient,
 .theme-profesional.text-gradient {
@@ -693,6 +677,22 @@
 
 /* Primario — el único sólido, y el único con firma. */
 .btn-ds--primary {
+    /* I-392 · el acento del Primario resuelve POR TEMA acá, en el componente, no en
+       :root: `--pi-accent` se declaraba una sola vez en :root (var(--accent) → pino) y
+       una custom property con var() se sustituye donde se DECLARA, así que re-declarar
+       `--accent-rgb` por tema no reabría `--pi-accent` → el FONDO salía pino en todos los
+       temas mientras el rótulo (derivado por tema, SPEC-632) quedaba ilegible: 2.98:1 en
+       claro en el área del padre. Re-declarándolo sobre el Primario, `--accent-rgb`
+       (heredado del tema) resuelve al color del rol (padre 6.84 claro / 8.51 oscuro) SIN
+       tocar a nadie más.
+       EL FANTASMA ES NEUTRO POR DISEÑO (SPEC-659) — decisión CERRADA, no deuda. El `pino`
+       actual es INTERINO: pasa a TINTA NEUTRA, NO al acento del tema. Un acento COMO TEXTO
+       falla para los acentos claros (`cielo` = 2.37:1 sobre papel); una tinta neutra
+       contrasta siempre. El color del territorio es la identidad del PRIMARIO — la firma no
+       se reparte. Por eso NO re-declarar `--pi-accent` en un ancestro común ni en :root:
+       le daría al Fantasma el acento del rol y reintroduce el 2.37. El candado de render lo
+       afirma (Fantasma neutro: mismo color en los 4 temas, contraste ≥ 4.5). */
+    --pi-accent: rgb(var(--accent-rgb));
     background: linear-gradient(135deg, var(--pi-accent), color-mix(in srgb, var(--pi-accent) 72%, rgb(var(--cielo-rgb))));
     /* SPEC-632 · el rótulo se DERIVA del acento por tema (antes: papel fijo → 2.37:1
        sobre cielo en claro). El acento NO se toca; solo el rótulo. */
