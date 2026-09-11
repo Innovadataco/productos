@@ -51,8 +51,7 @@ function estadoBadgeClass(badge: BadgeVisual): string {
 }
 
 // SPEC-593: el reporte se procesa en segundo plano (cola + worker). Mientras el
-// estado sea pendiente/procesando, esta vista lo refresca sola cada 15 s —
-// el mismo ritmo del polling de AnalisisExpediente (SPEC-341, R-7) — y corta
+// estado sea pendiente/procesando, esta vista lo refresca sola cada 15 s y corta
 // al llegar a un estado final, así el padre no tiene que salir y volver a entrar.
 const INTERVALO_POLLING_MS = 15_000;
 
