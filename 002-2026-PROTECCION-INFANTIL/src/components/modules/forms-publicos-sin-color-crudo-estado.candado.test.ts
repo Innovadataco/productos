@@ -44,7 +44,9 @@ const CRUDO_ESTADO =
 
 // Guarda anti-falso-verde: el alcance debe resolver estos forms conocidos.
 const CLAVE = [
-    "LoginForm.tsx", "RegistroForm.tsx", "RegistroColegioForm.tsx",
+    // SPEC-636: RegistroColegioForm.tsx borrado (flujo OTP viejo de SPEC-320,
+    // superado por SPEC-344, sin montar). Sale de CLAVE con el archivo.
+    "LoginForm.tsx", "RegistroForm.tsx",
     "RecuperarForm.tsx", "RestablecerForm.tsx", "VerificacionForm.tsx",
     "ReporteStepDetalle.tsx", "ConfirmacionReporte.tsx", "ReporteBloqueoRol.tsx",
 ];
