@@ -326,19 +326,12 @@ export function SolicitarCitaPanel({
                         )}
 
                         <div className="mt-5 flex justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setModalAbierto(false)}
-                                className="rounded-full bg-tinta/5 px-4 py-2 text-sm text-body hover:bg-tinta/10 transition"
-                            >Volver</button>
-                            <button
-                                type="button"
-                                disabled={enviando}
-                                onClick={() => void enviar()}
-                                className="rounded-full bg-pino px-4 py-2 text-sm font-semibold text-white hover:bg-pino/90 transition disabled:cursor-not-allowed disabled:opacity-50"
-                            >
+                            <Button variant="ghost" type="button" onClick={() => setModalAbierto(false)}>
+                                Volver
+                            </Button>
+                            <Button type="button" disabled={enviando} onClick={() => void enviar()}>
                                 {enviando ? "Enviando…" : esReasignacion ? "Confirmar reasignación" : "Confirmar y pagar"}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
