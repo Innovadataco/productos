@@ -6,7 +6,8 @@
  * recibe un enlace y elige su contraseña en /registro-profesional/crear-clave/[token].
  *
  * Anti-enumeración (SPEC-338): la pantalla de aviso es idéntica exista o no el
- * correo; el aviso real viaja al buzón. Voz voseo consistente con el resto.
+ * correo; el aviso real viaja al buzón. Voz «usted» (D-107): el área del
+ * profesional habla de usted, sin voseo ni tuteo (SPEC-505/559/635).
  */
 import { useState } from "react";
 import Link from "next/link";
@@ -76,11 +77,11 @@ export default function RegistroProfesionalPage() {
                     <>
                         <div className="mb-6 text-center">
                             <h1 className="font-serif text-3xl text-body">
-                                Sumate a la Red de Profesionales.
+                                Súmese a la Red de Profesionales.
                             </h1>
                             <p className="mt-2 text-sm text-muted">
                                 Déjenos su correo y le enviamos un enlace para crear su cuenta.
-                                Después completa su perfil y sube su autorización.
+                                Después complete su perfil y suba su autorización.
                             </p>
                         </div>
 
