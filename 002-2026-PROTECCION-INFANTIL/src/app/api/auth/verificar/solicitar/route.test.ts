@@ -17,6 +17,12 @@ function makeRequest(body: unknown, ip = "203.0.113.20"): Request {
     });
 }
 
+/**
+ * NO-PROD (camino SÍNCRONO): la ruta espera el trabajo y expone `devCode` en fallo de envío para el
+ * arnés. La UNIFORMIDAD de enumeración es propiedad de PRODUCCIÓN (cuerpo byte-idéntico, sin devCode,
+ * tiempo plano) y la fija `verificar-solicitar-sin-enumeracion.candado.test.ts` (SPEC-641), que fuerza
+ * NODE_ENV=production.
+ */
 describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -40,7 +46,7 @@ describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
         expect(data.error.code).toBe("VALIDATION_ERROR");
     });
 
-    it("email registrado: respuesta uniforme en pantalla + avisa al buzón (I-226)", async () => {
+    it("email registrado: 202, mensaje genérico SIN emailSent + avisa al buzón (I-226/SPEC-338)", async () => {
         await crearUsuario("PARENT", "registrado-verificar@example.com");
         // El motor necesita la plantilla + regla del aviso "ya tenés una cuenta".
         await prisma.notificacionPlantilla.create({
@@ -65,8 +71,9 @@ describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
         const res = await POST(makeRequest({ email: "registrado-verificar@example.com" }));
         expect(res.status).toBe(202);
         const data = await res.json();
-        // Anti-enumeración: la pantalla NO revela que el correo existe.
+        // Anti-enumeración: la pantalla NO revela existencia — mensaje genérico y SIN `emailSent`.
         expect(data.message).toBe(MENSAJE_EXITO);
+        expect(data.emailSent, "emailSent salió del cuerpo (era el delator por PRESENCIA)").toBeUndefined();
 
         // I-226: pero el buzón SÍ recibe el aviso "ya tenés una cuenta".
         const notif = await prisma.notificacion.findFirst({
@@ -78,16 +85,15 @@ describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
         expect(notif?.canal).toBe("EMAIL");
     });
 
-    it("genera código para email no registrado", async () => {
+    it("email no registrado: 202, mensaje genérico SIN emailSent, y (no-prod) devCode en fallo de envío", async () => {
         const res = await POST(makeRequest({ email: "nuevo-verificar@example.com" }));
         expect(res.status).toBe(202);
         const data = await res.json();
-        expect(data.emailSent).toBe(false);
-        expect(data.devCode).toBeDefined();
+        expect(data.message).toBe(MENSAJE_EXITO);
+        expect(data.emailSent, "sin emailSent también para el nuevo").toBeUndefined();
+        expect(data.devCode, "no-prod expone el código para el arnés").toBeDefined();
 
-        const codes = await prisma.codigoVerificacion.count({
-            where: { email: "nuevo-verificar@example.com" },
-        });
+        const codes = await prisma.codigoVerificacion.count({ where: { email: "nuevo-verificar@example.com" } });
         expect(codes).toBe(1);
     });
 
@@ -106,8 +112,7 @@ describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
     });
 
     it("bloquea tras exceder el límite por email", async () => {
-        // Se usa un email registrado para que el endpoint no cree códigos
-        // y el único límite aplicable sea el rate limit por identificador.
+        // Email registrado para que el endpoint no cree códigos y el único límite sea el rate limit por id.
         const email = "registrado-rl-email@example.com";
         await crearUsuario("PARENT", email);
         for (let i = 0; i < 5; i++) {
@@ -121,18 +126,11 @@ describe("POST /api/auth/verificar/solicitar", { timeout: 30_000 }, () => {
         expect(data.error.code).toBe("RATE_LIMITED");
     });
 
-    it("en producción NUNCA expone devCode cuando el email falla (BL-3)", async () => {
-        const envOriginal = process.env.NODE_ENV;
-        (process.env as { NODE_ENV: string }).NODE_ENV = "production";
-        try {
-            const res = await POST(makeRequest({ email: "bl3-prod@example.com" }, "203.0.113.112"));
-            expect(res.status).toBe(202);
-            const data = await res.json();
-            expect(data.emailSent).toBe(false);
-            expect(data.devCode).toBeUndefined();
-            expect(data.message).toContain("intenta de nuevo más tarde");
-        } finally {
-            (process.env as { NODE_ENV: string }).NODE_ENV = envOriginal ?? "test";
-        }
+    it("no-prod expone devCode en fallo de envío (el arnés lo necesita; prod NUNCA — ver candado BL-3)", async () => {
+        const res = await POST(makeRequest({ email: "bl3-nonprod@example.com" }, "203.0.113.112"));
+        expect(res.status).toBe(202);
+        const data = await res.json();
+        expect(data.devCode, "no-prod: código disponible para el arnés").toBeDefined();
+        expect(data.emailSent, "sin emailSent en ningún caso").toBeUndefined();
     });
 });
