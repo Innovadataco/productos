@@ -6,6 +6,24 @@ import type { Prisma, RolUsuario } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
+// SPEC-672 (I-399): el LOGIN tampoco lee el Usuario entero. Sin `select`, un DROP de
+// columna rompe el login (mismo defecto que el camino de auth en cada request). El
+// conjunto sale de los CONSUMIDORES de `findByEmail` (login/registro/cambio-correo),
+// verificado por el type-checker — no de leer la función. El candado vigila la FORMA.
+const USUARIO_LOGIN_SELECT = {
+    id: true,
+    email: true,
+    passwordHash: true,
+    estado: true,
+    rol: true,
+    nombre: true,
+    // lockout: el login cuenta intentos fallidos y respeta el bloqueo temporal.
+    intentosFallidos: true,
+    bloqueadoHasta: true,
+    // el login redirige a cambiar contraseña si corresponde.
+    debeCambiarPassword: true,
+} satisfies Prisma.UsuarioSelect;
+
 export type CrearRectorConTokenInput = {
     email: string;
     nombre?: string | undefined;
@@ -30,7 +48,7 @@ export class UsuarioRepository {
     // registro). Bug real 2026-09-07: operador creado como «Jelkin…» no podía
     // iniciar sesión («Credenciales inválidas») porque el lookup era en minúsculas.
     findByEmail(email: string) {
-        return this.db.usuario.findUnique({ where: { email: email.trim().toLowerCase() } });
+        return this.db.usuario.findUnique({ where: { email: email.trim().toLowerCase() }, select: USUARIO_LOGIN_SELECT });
     }
 
     /** SPEC-240 (002-PI-143): usuario por token de invitación (incluye colegio/tenant para activación). */
