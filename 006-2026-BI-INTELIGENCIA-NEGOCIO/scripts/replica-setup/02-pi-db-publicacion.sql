@@ -163,7 +163,12 @@ DECLARE
     ARRAY['Plataforma', 'id,clave,nombre,categoria,esActiva,creadoEn'],
     ARRAY['Profesor', 'id,colegioId,estado,createdAt,updatedAt,anioNacimiento,sexo'],
     ARRAY['ReintentoReporte', 'id,reporteId,intento,exitoso,creadoEn'],
-    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,ciudad,pais,estado,esAnonimo,reporteOrigenId,numeroSeguimiento,tenantId,creadoEn,actualizadoEn,paisId,ciudadId,otraPlataforma,edadVictima,prioridadAlta,esRafaga,eliminado,eliminadoEn,motivoBaja,fuenteConfianza,anonimizacionValidadaEn,origenRol,reportePrincipalId,operadorId'],
+    ARRAY['Reporte', 'id,plataformaId,fechaIncidente,ciudad,pais,estado,esAnonimo,reporteOrigenId,numeroSeguimiento,tenantId,creadoEn,actualizadoEn,paisId,ciudadId,otraPlataforma,edadVictima,prioridadAlta,esRafaga,eliminado,eliminadoEn,motivoBaja,fuenteConfianza,anonimizacionValidadaEn,origenRol,reportePrincipalId,operadorId,franjaHoraria,horaAproximada'],
+    --   ↑ añadidas 2026-09-11 (paso 3 autorizado por CEO tras deploy SPEC-644):
+    --     franjaHoraria (enum) + horaAproximada (bool) — ambas nullable, bi-db
+    --     ya las tiene. OJO medido por PI: solo ~1 reporte sembrado tiene franja
+    --     (el poblador crea horas exactas): la columna llegará NULL casi siempre
+    --     hasta que exista un poblador que marque aproximados.
     --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): keywordsDetectadas
     ARRAY['SolicitudComite', 'id,reporteId,numero,estado,comiteId,operadorId,creadoEn,resueltoEn,alertaColegioId,colegioId,creadoPorId,integranteFirmanteId,analisisActualizadoEn,analisisPorId,recomendacionInformeEn,recomendacionPorId'],
     --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): analisis, motivo, resolucion
