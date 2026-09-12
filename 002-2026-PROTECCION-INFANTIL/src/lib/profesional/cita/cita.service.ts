@@ -65,7 +65,10 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
     // y respeta el candado H-2 de campos internos — para validar «existe y
     // acepta citas» alcanza. `tarifaConsultaCOP` está en el DTO público, así
     // que el cálculo de montos sigue funcionando sin destapar campos internos.
-    const pro = await new PerfilProfesionalRepository().obtenerPublicoPorId(input.profesionalId);
+    // SPEC-655: el visor es el PADRE de la sesión (input.padreUsuarioId sale de
+    // verifyAuth("PARENT") en la ruta) — un padre demo puede agendar con un pro demo;
+    // un padre real no puede agendar con un fantasma (obtenerPublicoPorId → null).
+    const pro = await new PerfilProfesionalRepository().obtenerPublicoPorId(input.profesionalId, input.padreUsuarioId);
     if (!pro) {
         throw new AppError(
             "Este profesional no está disponible o no acepta nuevas citas",

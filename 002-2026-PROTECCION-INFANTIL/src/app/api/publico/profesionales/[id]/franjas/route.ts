@@ -14,7 +14,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         const { id } = await context.params;
         // L3 (#298): `obtenerPublicoPorId` filtra por `estado = ACTIVO` con la
         // allowlist del brief §5 — no destapa contacto ni campos internos.
-        const perfil = await new PerfilProfesionalRepository().obtenerPublicoPorId(id);
+        // SPEC-655: ruta PÚBLICA (sin sesión) → visor null → se excluyen los sembrados
+        // (un visitante real no ve profesionales demo). El agendar de un padre demo pasa
+        // por cita.service, que sí tiene sesión.
+        const perfil = await new PerfilProfesionalRepository().obtenerPublicoPorId(id, null);
         if (!perfil) {
             throw new AppError("Profesional no disponible", ERROR_CODES.NOT_FOUND, 404);
         }

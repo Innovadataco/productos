@@ -22,7 +22,7 @@ export async function GET() {
             throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
         }
         const repo = new PerfilProfesionalRepository();
-        return NextResponse.json(await repo.facetas());
+        return NextResponse.json(await repo.facetas(user.id)); // SPEC-655: visor de la sesión
     } catch (error) {
         return errorToResponse(error, "[PADRE/PROFESIONALES/FACETAS]");
     }
