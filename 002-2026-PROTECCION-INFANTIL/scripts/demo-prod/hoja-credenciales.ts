@@ -103,7 +103,7 @@ function main() {
     lineas.push("");
     lineas.push("### Purgar todo el demo");
     lineas.push("```bash");
-    lineas.push("node --env-file=.env --import tsx scripts/demo-prod/purgar-demo.ts");
+    lineas.push("node --env-file=.env --import tsx scripts/demo-prod/purgar-demo.ts --confirmar-total");
     lineas.push("```");
     lineas.push("");
 
