@@ -202,7 +202,7 @@ export function SolicitarCitaPanel({
                     </label>
                     <textarea
                         id="presentacion"
-                        className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                        className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body ring-accent-input"
                         rows={3}
                         value={presentacion}
                         onChange={(e) => setPresentacion(e.target.value)}

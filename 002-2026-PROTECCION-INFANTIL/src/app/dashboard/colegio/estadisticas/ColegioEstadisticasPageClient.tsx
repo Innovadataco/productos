@@ -165,7 +165,7 @@ export default function ColegioEstadisticasPageClient({ datos }: ColegioEstadist
                                     value={mesInforme}
                                     onChange={(e) => setMesInforme(e.target.value)}
                                     disabled={descargandoInforme}
-                                    className="rounded-lg border border-pino/30 bg-tinta/5 px-3 py-2 text-sm text-body focus:border-pino focus:outline-none"
+                                    className="rounded-lg border border-pino/30 bg-tinta/5 px-3 py-2 text-sm text-body ring-accent-input"
                                 />
                                 <Button
                                     onClick={descargarInformeMensual}

@@ -135,7 +135,7 @@ function TabCuentas() {
         <div className="space-y-4 anim-entrada">
             <div className="flex gap-2">
                 <input
-                    className="flex-1 rounded-full border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                    className="flex-1 rounded-full border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body ring-accent-input"
                     placeholder="Buscar por email o nombre…"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
