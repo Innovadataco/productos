@@ -16,6 +16,9 @@ import { prisma } from "@/lib/db";
 export interface MotorData {
     kpis: {
         clasificaciones24h: number;
+        /** Semilla/simulación de esas clasificaciones (own-mark ClasificacionIA
+         *  O simulación vía reporteId) · NULL si el sondeo de kpis falló */
+        clasificaciones24hDemo: number | null;
         confianzaMedia24h: number | null;
         /** Correcciones humanas del mes / clasificaciones del mes (%) */
         correccionMesPct: number | null;
@@ -57,6 +60,7 @@ export interface MotorData {
 // ─── Filas crudas ────────────────────────────────────────────────────────────
 interface FilaKpis {
     clasif_24h: number;
+    clasif_24h_demo: number;
     confianza_24h: number | null;
     correcciones_mes: number;
     clasif_mes: number;
@@ -99,6 +103,7 @@ interface FilaErrorW {
 
 const KPIS_VACIOS: FilaKpis = {
     clasif_24h: 0,
+    clasif_24h_demo: 0,
     confianza_24h: null,
     correcciones_mes: 0,
     clasif_mes: 0,
@@ -135,6 +140,14 @@ export async function getMotor(): Promise<MotorData> {
                     SELECT
                       (SELECT count(*) FROM "ClasificacionIA"
                         WHERE "creadoEn" >= now() - interval '24 hours')::int AS clasif_24h,
+                      (SELECT count(*) FROM "ClasificacionIA" c
+                        WHERE c."creadoEn" >= now() - interval '24 hours'
+                          AND (EXISTS (
+                            SELECT 1 FROM demo_marcado dm
+                            WHERE dm.entidad = 'ClasificacionIA' AND dm."entidadId" = c."id")
+                          OR EXISTS (
+                            SELECT 1 FROM simulacion_reportes sr
+                            WHERE sr."reporteId" = c."reporteId")))::int AS clasif_24h_demo,
                       (SELECT avg("confianza") FROM "ClasificacionIA"
                         WHERE "creadoEn" >= now() - interval '24 hours')::float AS confianza_24h,
                       (SELECT count(*) FROM "CorreccionAdmin"
@@ -233,6 +246,7 @@ export async function getMotor(): Promise<MotorData> {
     return {
         kpis: {
             clasificaciones24h: k.clasif_24h,
+            clasificaciones24hDemo: filasKpis[0] ? k.clasif_24h_demo : null,
             confianzaMedia24h: k.confianza_24h,
             correccionMesPct:
                 k.clasif_mes > 0

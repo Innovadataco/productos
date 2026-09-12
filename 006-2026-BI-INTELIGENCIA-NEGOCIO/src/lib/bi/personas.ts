@@ -42,6 +42,10 @@ export interface PersonasData {
     profesoresVigilados: number;
     alumnos: number;
     acudientes: number;
+    /** Semilla por tipo (demo_marcado con el nombre del modelo en PI) — con
+     *  la mezcla, el «reales = total − demo» aísla a los pocos reales (CEO
+     *  12-09: la segmentación pesa MÁS donde hay mezcla, no menos) */
+    demo: { profesores: number; alumnos: number; acudientes: number };
     /** relacion normalizada = 'madre' (exacta; otras relaciones no se reparten) */
     acudientesMadres: number;
     /** relacion normalizada = 'padre' */
@@ -72,6 +76,9 @@ interface FilaBase {
     acudientes: number;
     acudientes_madres: number;
     acudientes_padres: number;
+    profesores_demo: number;
+    alumnos_demo: number;
+    acudientes_demo: number;
 }
 interface FilaIdentificadores {
     alumnos: number;
@@ -104,6 +111,9 @@ const BASE_VACIA: FilaBase = {
     acudientes: 0,
     acudientes_madres: 0,
     acudientes_padres: 0,
+    profesores_demo: 0,
+    alumnos_demo: 0,
+    acudientes_demo: 0,
 };
 const IDS_VACIOS: FilaIdentificadores = { alumnos: 0, acudientes: 0, profesores: 0 };
 const CIRCULO_VACIO: FilaCirculo = {
@@ -165,7 +175,26 @@ export async function getPersonas(): Promise<PersonasData> {
                     AS acudientes_madres,
                   (SELECT count(*) FROM "AcudienteEstudiante"
                     WHERE "estado" = 'activo' AND lower(btrim("relacion")) = 'padre')::int
-                    AS acudientes_padres`,
+                    AS acudientes_padres,
+                  -- Desglose semilla (CEO 12-09): la mezcla es donde el falso
+                  -- se disfraza de real — el «· N reales» explícito aísla a los
+                  -- pocos reales (marcas con el NOMBRE DEL MODELO en PI:
+                  -- Estudiante, aunque la tabla en BI sea Alumno por @@map).
+                  (SELECT count(*) FROM "Profesor" p
+                    WHERE p."estado" = 'activo' AND EXISTS (
+                      SELECT 1 FROM demo_marcado dm
+                      WHERE dm.entidad = 'Profesor' AND dm."entidadId" = p."id"))::int
+                    AS profesores_demo,
+                  (SELECT count(*) FROM "Alumno" a
+                    WHERE a."estado" = 'activo' AND EXISTS (
+                      SELECT 1 FROM demo_marcado dm
+                      WHERE dm.entidad = 'Estudiante' AND dm."entidadId" = a."id"))::int
+                    AS alumnos_demo,
+                  (SELECT count(*) FROM "AcudienteEstudiante" ae
+                    WHERE ae."estado" = 'activo' AND EXISTS (
+                      SELECT 1 FROM demo_marcado dm
+                      WHERE dm.entidad = 'AcudienteEstudiante' AND dm."entidadId" = ae."id"))::int
+                    AS acudientes_demo`,
         ),
         intentar(
             "identificadores",
@@ -235,6 +264,11 @@ export async function getPersonas(): Promise<PersonasData> {
         profesoresVigilados: base.profesores_vigilados,
         alumnos: base.alumnos,
         acudientes: base.acudientes,
+        demo: {
+            profesores: base.profesores_demo,
+            alumnos: base.alumnos_demo,
+            acudientes: base.acudientes_demo,
+        },
         acudientesMadres: base.acudientes_madres,
         acudientesPadres: base.acudientes_padres,
         identificadores: {

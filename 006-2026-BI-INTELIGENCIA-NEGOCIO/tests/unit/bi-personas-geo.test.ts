@@ -93,6 +93,9 @@ describe("getPersonas · datos reales mockeados", () => {
                 acudientes: 2818,
                 acudientes_madres: 1900,
                 acudientes_padres: 850,
+                profesores_demo: 298,
+                alumnos_demo: 1997,
+                acudientes_demo: 2806,
             }]],
             [F.identificadores, [{ alumnos: 1384, acudientes: 1207, profesores: 129 }]],
             [F.porSujeto, [
@@ -124,6 +127,7 @@ describe("getPersonas · datos reales mockeados", () => {
             profesoresVigilados: 285,
             alumnos: 2003,
             acudientes: 2818,
+            demo: { profesores: 298, alumnos: 1997, acudientes: 2806 },
             acudientesMadres: 1900,
             acudientesPadres: 850,
             identificadores: {
