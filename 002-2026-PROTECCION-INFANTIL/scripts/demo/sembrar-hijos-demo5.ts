@@ -1,5 +1,5 @@
 /**
- * PI · Spec 678 — Hijos activos demo5 (poblador liviano · tapa-hueco entrega 2).
+ * PI · Spec 678 — Hijos + identificadores activos demo5 (poblador liviano · tapa-hueco entrega 2).
  *
  * Último eslabón del camino del padre. Tras #593 (consentimiento + perfil) los 60
  * padres demo5 quedan en el paso «hijos» (estado.ts:74-77 exige ≥1 `Hijo` con
@@ -7,18 +7,24 @@
  * rediseño de «A quién protejo» (Fases B/C/D). Este script los destraba por el
  * CARRIL DEL POBLADOR, no a mano.
  *
+ * Además siembra 1–2 IdentificadorHijo ACTIVOS por hijo: sin ellos el tablero entra
+ * al estado hueco-cobertura (hijo sin cuenta vigilada) y el GRÁFICO de protección
+ * sale vacío. Con ellos, Jelkin camina el rediseño poblado. Crear identificadores es
+ * un create en la misma tx + logAudit — NO despierta workers: el motor de señal
+ * comunitaria matchea al procesar un REPORTE (reporte-side), no al crear el
+ * identificador; no hay middleware ni trigger de insert (verificado contra registrarHijo).
+ *
  * SALVAGUARDA (misma que #593): SOLO usuarios marcados `demo_marcado` corrida v5.
  * Un usuario real nunca está marcado → no entra jamás. Y SOLO rol PARENT: el paso
  * «hijos» es del camino del padre; un rector (SCHOOL_ADMIN) no tiene hijos.
  *
- * MARCADO ≠ FORJADO: cada `Hijo` sembrado se ETIQUETA en `demo_marcado` (corrida v5)
- * vía `marcar()`. Además `Hijo` se agregó a ENTIDADES_ORDEN_BORRADO: la fila cae por
- * cascada al borrar el Usuario (onDelete: Cascade), pero su marca es polimórfica (sin
- * FK) y no caería — el borrador ahora la limpia (mismo patrón que AuditConsentimiento).
+ * MARCADO ≠ FORJADO: cada `Hijo` y cada `IdentificadorHijo` sembrado se ETIQUETA en
+ * `demo_marcado` (corrida v5) vía `marcar()`. Y ambos se agregaron a ENTIDADES_ORDEN_BORRADO
+ * (IdentificadorHijo → Hijo → Usuario): las filas caen por cascada al borrar el Usuario,
+ * pero sus marcas son polimórficas (sin FK) y no caerían — el borrador ahora las limpia.
  *
- * NO dispara notificación: crear un `Hijo` no encola nada. `notificarHijosSiCorresponde`
- * corre en la cadena del worker al procesar un REPORTE (por reporteId), no al crear la
- * ficha; sembrar hijos es silencioso (I-402 no aplica acá, verificado).
+ * `valor` del identificador pasa por `normalizarIdentificador` (trim+lowercase): la MISMA
+ * forma canónica que escribe el núcleo, para que el sembrado sea estructuralmente idéntico.
  *
  * Uso (lo corre el CEO; Datos no escribe prod a mano):
  *   node --import tsx scripts/demo/sembrar-hijos-demo5.ts --dry-run
@@ -29,6 +35,7 @@
  */
 import { createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { normalizarIdentificador } from "../../src/lib/dal/identificadores/normalizar";
 import { CORRIDA_V5, enLotes, marcar } from "./_marcado";
 
 const prisma = new PrismaClient();
@@ -63,6 +70,13 @@ interface Ficha {
     estado: string;
 }
 
+interface IdentData {
+    valor: string;
+    tipo: string;
+    plataformaId: string | null;
+    activo: boolean;
+}
+
 // 1–2 fichas por padre, deterministas. `apellidos` reusa el del padre (familia) o cae
 // a un demo si el padre no lo tiene.
 function fichasDe(padreId: string, apellidosPadre: string | null): Ficha[] {
@@ -81,6 +95,31 @@ function fichasDe(padreId: string, apellidosPadre: string | null): Ficha[] {
         });
     }
     return fichas;
+}
+
+// 1–2 identificadores activos por hijo. Keyed on (padreId, hijoIdx, identIdx) para que el
+// dry-run (sin hijo.id) prediga lo mismo que el run real. plataformaId sale del catálogo.
+function identificadoresDe(
+    padreId: string,
+    hijoIdx: number,
+    nombre: string,
+    plataformas: { id: string }[],
+): IdentData[] {
+    const base = nombre.toLowerCase();
+    const cuantos = 1 + (hashInt(padreId, `n-ident-${hijoIdx}`) % 2); // 1 o 2
+    const out: IdentData[] = [];
+    for (let i = 0; i < cuantos; i++) {
+        const handle = `${base}.${hashInt(padreId, `handle-${hijoIdx}-${i}`) % 1000}`;
+        out.push({
+            valor: normalizarIdentificador(handle), // MISMA forma canónica que el núcleo
+            tipo: "usuario",
+            plataformaId: plataformas.length > 0
+                ? plataformas[hashInt(padreId, `plat-${hijoIdx}-${i}`) % plataformas.length].id
+                : null,
+            activo: true,
+        });
+    }
+    return out;
 }
 
 async function main() {
@@ -103,6 +142,10 @@ async function main() {
         )
     ).flat();
 
+    // Catálogo de plataformas para las cuentas vigiladas (no se siembra, se referencia).
+    const plataformas = await prisma.plataforma.findMany({ where: { esActiva: true }, select: { id: true, nombre: true } });
+    if (plataformas.length === 0) console.warn("[hijos-demo5] AVISO: no hay plataformas activas — los identificadores quedan sin plataformaId.");
+
     // Idempotencia: ¿qué padres YA tienen ≥1 hijo activo? (mismo criterio que estado.ts:74-77).
     const conHijoActivo = new Set(
         (
@@ -119,30 +162,40 @@ async function main() {
     );
 
     const pendientes = padres.filter((p) => !conHijoActivo.has(p.id));
-    console.log(`[hijos-demo5] padres v5 (PARENT): ${padres.length} · con hijo activo: ${conHijoActivo.size} · pendientes: ${pendientes.length}${DRY_RUN ? "  (DRY-RUN, no escribe)" : ""}`);
+    console.log(`[hijos-demo5] padres v5 (PARENT): ${padres.length} · con hijo activo: ${conHijoActivo.size} · pendientes: ${pendientes.length} · plataformas activas: ${plataformas.length}${DRY_RUN ? "  (DRY-RUN, no escribe)" : ""}`);
 
     let hijosCreados = 0;
+    let identsCreados = 0;
     for (const padre of pendientes) {
         const fichas = fichasDe(padre.id, padre.apellidos);
 
         if (DRY_RUN) {
-            const detalle = fichas.map((f) => `${f.nombre} ${f.apellidos} (${f.sexo}, ${f.anioNacimiento})`).join(" · ");
-            console.log(`  [dry] ${padre.email} → ${fichas.length} hijo(s): ${detalle}`);
+            for (let hi = 0; hi < fichas.length; hi++) {
+                const f = fichas[hi];
+                const idents = identificadoresDe(padre.id, hi, f.nombre, plataformas);
+                console.log(`  [dry] ${padre.email} → ${f.nombre} ${f.apellidos} (${f.sexo}, ${f.anioNacimiento}) · cuentas: ${idents.map((d) => d.valor).join(", ")}`);
+                identsCreados += idents.length;
+            }
             hijosCreados += fichas.length;
             continue;
         }
 
         await prisma.$transaction(async (tx) => {
-            for (const ficha of fichas) {
-                const hijo = await tx.hijo.create({ data: { usuarioId: padre.id, ...ficha }, select: { id: true } });
-                // Marca en la MISMA tx que la creó (regla _marcado.ts).
+            for (let hi = 0; hi < fichas.length; hi++) {
+                const hijo = await tx.hijo.create({ data: { usuarioId: padre.id, ...fichas[hi] }, select: { id: true } });
                 await marcar(tx, "Hijo", [hijo.id], { script: SCRIPT, notas: "hijo demo5 (camino del padre)" });
+
+                for (const identData of identificadoresDe(padre.id, hi, fichas[hi].nombre, plataformas)) {
+                    const ident = await tx.identificadorHijo.create({ data: { hijoId: hijo.id, ...identData }, select: { id: true } });
+                    await marcar(tx, "IdentificadorHijo", [ident.id], { script: SCRIPT, notas: "cuenta vigilada demo5" });
+                    identsCreados++;
+                }
             }
         });
         hijosCreados += fichas.length;
     }
 
-    console.log(`[hijos-demo5] ${DRY_RUN ? "crearía" : "creados"}: ${hijosCreados} hijo(s) para ${pendientes.length} padre(s).`);
+    console.log(`[hijos-demo5] ${DRY_RUN ? "crearía" : "creados"}: ${hijosCreados} hijo(s) + ${identsCreados} identificador(es) para ${pendientes.length} padre(s).`);
     await prisma.$disconnect();
 }
 
