@@ -95,15 +95,23 @@ export function PlanesSelector({
 
     return (
         <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-8">
-            {/* SPEC-355: voz por rol — al rector se le habla de usted (Colombia). */}
-            <header>
-                <h1 className="text-2xl font-bold text-body">{esColegio ? "Elija su plan" : "Elige tu plan"}</h1>
-                <p className="mt-1 text-sm text-muted">
-                    {esColegio
-                        ? "Seleccione el plan institucional para su colegio."
-                        : "Selecciona el plan que mejor se ajuste a tu familia."}
-                </p>
-            </header>
+            {/* SPEC-355: voz por rol — al rector se le habla de usted (Colombia).
+                SPEC-652 (FORMA guarda #2): con los pagos en pausa queda UNA sola
+                tarjeta (la prueba gratis); «Elige tu plan» sobre una única opción
+                lee como un selector amputado. Cuando no hay planes pagos que
+                elegir, se suprime el encabezado propio del selector —el de la
+                página del alta ya enmarca «Arranca gratis 30 días…»— y el paso
+                lee como el camino gratis, no como un «elige» con una sola opción. */}
+            {planesOrdenados.length > 0 && (
+                <header>
+                    <h1 className="text-2xl font-bold text-body">{esColegio ? "Elija su plan" : "Elige tu plan"}</h1>
+                    <p className="mt-1 text-sm text-muted">
+                        {esColegio
+                            ? "Seleccione el plan institucional para su colegio."
+                            : "Selecciona el plan que mejor se ajuste a tu familia."}
+                    </p>
+                </header>
+            )}
 
             {errorFreemium && <Alerta tono="error">{errorFreemium}</Alerta>}
 

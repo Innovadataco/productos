@@ -79,6 +79,8 @@ describe("SPEC-652 · el alta en pausa: prueba gratis sí, precios pagos no", ()
         expect(screen.queryByRole("button", { name: "Elegir" })).toBeNull();
         // Y ningún rastro del precio placeholder anual.
         expect(screen.queryByText(/1\.?190\.?000|1\.000\.000/)).toBeNull();
+        // FORMA guarda #2: con una sola tarjeta, nada de «elige» — no hay selector.
+        expect(screen.queryByText("Elige tu plan")).toBeNull();
     });
 
     it("render colegio: su prueba gratis sembrada lo deja avanzar sin pagos", () => {
@@ -95,6 +97,8 @@ describe("SPEC-652 · el alta en pausa: prueba gratis sí, precios pagos no", ()
         );
         expect(screen.getByRole("button", { name: /Activar prueba gratis/i })).toBeTruthy();
         expect(screen.queryByRole("button", { name: "Elegir" })).toBeNull();
+        // FORMA guarda #2, voz usted: tampoco «Elija su plan» con una sola tarjeta.
+        expect(screen.queryByText("Elija su plan")).toBeNull();
     });
 
     it("estructural: las DOS páginas del alta enrutan sus planes por la pausa", () => {
