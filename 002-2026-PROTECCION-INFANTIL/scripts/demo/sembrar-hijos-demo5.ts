@@ -37,29 +37,18 @@ import { createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { normalizarIdentificador } from "../../src/lib/dal/identificadores/normalizar";
 import { CORRIDA_V5, enLotes, marcar } from "./_marcado";
+import { NOMBRES_NINO, sexoDemoDeNombre } from "./_sexo-hijo-demo";
 
 const prisma = new PrismaClient();
 const DRY_RUN = process.argv.includes("--dry-run");
 const SCRIPT = "sembrar-hijos-demo5";
 const ANIO_ACTUAL = new Date().getFullYear();
 
-const NOMBRES_NINO = [
-    "Mateo", "Emma", "Samuel", "Sofía", "Martín", "Valentina", "Tomás", "Isabella",
-    "Emiliano", "Luciana", "Benjamín", "Antonella", "Gabriel", "Salomé", "Daniel", "Mariana",
-];
 const APELLIDOS_FALLBACK = ["Gómez", "Rodríguez", "Martínez", "López", "García", "Pérez"];
 
 // Entero determinista por (id, sal): el dry-run muestra exactamente lo que escribirá el run real.
 function hashInt(id: string, sal: string): number {
     return createHash("sha1").update(sal + id).digest().readUInt32BE(0);
-}
-
-// sexo: set cerrado en Zod (src/lib/schemas/identidad.ts:12 → "M" | "F" | "OTRO").
-// Peso realista: ~10% OTRO, resto M/F repartido — un tablero con 1/3 OTRO se ve raro.
-function sexoDemo(id: string, i: number): string {
-    const r = hashInt(id, `sexo${i}`) % 10;
-    if (r === 0) return "OTRO";
-    return r % 2 === 0 ? "M" : "F";
 }
 
 interface Ficha {
@@ -86,11 +75,12 @@ function fichasDe(padreId: string, apellidosPadre: string | null): Ficha[] {
     const cuantos = 1 + (hashInt(padreId, "cuantos") % 2); // 1 o 2
     const fichas: Ficha[] = [];
     for (let i = 0; i < cuantos; i++) {
+        const nombre = NOMBRES_NINO[hashInt(padreId, `nombre${i}`) % NOMBRES_NINO.length];
         fichas.push({
-            nombre: NOMBRES_NINO[hashInt(padreId, `nombre${i}`) % NOMBRES_NINO.length],
+            nombre,
             apellidos,
             anioNacimiento: ANIO_ACTUAL - (6 + (hashInt(padreId, `edad${i}`) % 12)), // 6–17 años
-            sexo: sexoDemo(padreId, i),
+            sexo: sexoDemoDeNombre(nombre, `${padreId}:${i}`), // M/F del nombre + ~10% OTRO
             estado: "activo",
         });
     }
