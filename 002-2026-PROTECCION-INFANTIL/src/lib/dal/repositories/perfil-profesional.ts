@@ -235,16 +235,61 @@ export class PerfilProfesionalRepository {
     }
 
     /**
+     * SPEC-655 (I-387) · ids de los perfiles SEMBRADOS (demo). Se EXCLUYEN del
+     * directorio público y del agendamiento: un padre real no puede ver —ni AGENDAR
+     * con— un profesional que no existe (pagaría una primera cita a un fantasma;
+     * irreversible, y el costo cae sobre el padre).
+     *
+     * Predicado canónico «es sembrado» (SPEC-414) = marca en `demo_marcado` O
+     * pertenencia a `simulacion_reportes`. Para `PerfilProfesional` SOLO puede
+     * aplicar `demo_marcado`: `simulacion_reportes` guarda `reporteId` —un
+     * profesional NUNCA está ahí—, igual que `inicio-admin.ts` omite ese join para
+     * Colegio/Usuario. No es recortar el predicado: para esta entidad, `demo_marcado`
+     * ES el completo. `demo_marcado` es polimórfica y sin relación Prisma → se traen
+     * los ids y se excluyen con `NOT id in`, que conserva el allowlist H-2 del
+     * `select` (raw SQL lo saltaría).
+     *
+     * LÍMITE (SPEC-420): `NOT id in <ids>` gasta un parámetro de bind por id y
+     * Postgres corta en 32.767 (reventó de verdad con 37.176 marcas). Con ~50
+     * profesionales sembrados sobra de lejos; si este patrón se lleva a una entidad
+     * de VOLUMEN, cambiar a un anti-join (`LEFT JOIN … IS NULL`) ANTES de acercarse
+     * a ese piso.
+     */
+    private async idsSembrados(): Promise<string[]> {
+        const marcas = await this.db.demoMarcado.findMany({
+            where: { entidad: "PerfilProfesional" },
+            select: { entidadId: true },
+        });
+        return marcas.map((m) => m.entidadId);
+    }
+
+    /**
+     * SPEC-655 · WHERE del directorio público: el filtro legal (estado ACTIVO ∧
+     * vigencia, SPEC-449) MÁS la exclusión de sembrados. Vive en el repositorio, en
+     * el MISMO carril que el filtro legal, para que CUALQUIER superficie que consulte
+     * el repo herede ambos sin enterarse. Los campos obligatorios van al final: un
+     * `extra` del llamador no puede sobreescribir estado/vigencia/exclusión.
+     */
+    private async whereDirectorioPublico(
+        ahora: Date,
+        extra: Prisma.PerfilProfesionalWhereInput = {},
+    ): Promise<Prisma.PerfilProfesionalWhereInput> {
+        return {
+            ...extra,
+            estado: "ACTIVO",
+            ...PerfilProfesionalRepository.vigenciaVigente(ahora),
+            NOT: { id: { in: await this.idsSembrados() } },
+        };
+    }
+
+    /**
      * Lista PÚBLICA (para el directorio del padre). Solo `estado = ACTIVO`.
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
      * (candado H-4 · «da turno a todos» sin marear al padre al filtrar).
      */
     async listarActivos(filtros: FiltrosDirectorio, ahora: Date = new Date()): Promise<PerfilPublicoDTO[]> {
-        const where: Prisma.PerfilProfesionalWhereInput = {
-            estado: "ACTIVO",
-            // SPEC-449: estado ∧ vigencia. Ver `vigenciaVigente`.
-            ...PerfilProfesionalRepository.vigenciaVigente(ahora),
-        };
+        // SPEC-449 estado ∧ vigencia + SPEC-655 exclusión de sembrados (compartido).
+        const where = await this.whereDirectorioPublico(ahora);
         if (filtros.ciudadId) where.ciudadId = filtros.ciudadId;
         if (filtros.especialidad) where.especialidades = { has: filtros.especialidad };
         if (filtros.modalidad === "virtual") where.atiendeVirtual = true;
@@ -266,12 +311,7 @@ export class PerfilProfesionalRepository {
      * proyecta ningún campo ⇒ nada que ver con el allowlist H-2.
      */
     async contarActivos(ahora: Date = new Date()): Promise<number> {
-        return this.db.perfilProfesional.count({
-            where: {
-                estado: "ACTIVO",
-                ...PerfilProfesionalRepository.vigenciaVigente(ahora),
-            },
-        });
+        return this.db.perfilProfesional.count({ where: await this.whereDirectorioPublico(ahora) });
     }
 
     /**
@@ -285,7 +325,7 @@ export class PerfilProfesionalRepository {
             // tiene TRES consumidores, y uno es `cita.service.ts`, que lo usa
             // para validar al profesional al crear la cita: filtrar acá bloquea
             // de paso las citas nuevas contra un profesional vencido.
-            where: { id, estado: "ACTIVO", ...PerfilProfesionalRepository.vigenciaVigente(ahora) },
+            where: await this.whereDirectorioPublico(ahora, { id }),
             select: SELECT_TARJETA_PUBLICA,
         });
         return row ? toPublicoDTO(row) : null;
@@ -301,8 +341,11 @@ export class PerfilProfesionalRepository {
      * perfiles ACTIVO todavía) — la UI debe soportarlo sin romperse.
      */
     async facetas(): Promise<{ ciudades: Array<{ id: string; nombre: string }>; especialidades: string[] }> {
+        // SPEC-655: las facetas tampoco derivan de sembrados — no pueblan los filtros
+        // con la ciudad/especialidad de un profesional que no existe. Mantiene el
+        // predicado propio de facetas (`estado: ACTIVO`); solo suma la exclusión.
         const rows = await this.db.perfilProfesional.findMany({
-            where: { estado: "ACTIVO" },
+            where: { estado: "ACTIVO", NOT: { id: { in: await this.idsSembrados() } } },
             select: {
                 especialidades: true,
                 ciudad: { select: { id: true, nombre: true } },
