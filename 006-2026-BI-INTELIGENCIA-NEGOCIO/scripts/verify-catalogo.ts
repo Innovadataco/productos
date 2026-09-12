@@ -90,14 +90,21 @@ async function verificarFrescura(desfases: Desfase[]): Promise<void> {
     for (const f of TABLAS_FLUJO) {
         // La tabla debe existir (el contrato ya lo reporta si no); acá solo
         // medimos recencia. Una fila por tabla, parametrizada vía Prisma.
-        const filas = await prisma.$queryRaw<Array<{ tabla: string; ultima: Date | null }>>(
+        const filas = await prisma.$queryRaw<Array<{ tabla: string; total: number; ultima: Date | null }>>(
             Prisma.raw(
-                `SELECT '${f.tabla}' AS tabla, max("${f.columnaTemporal}") AS ultima FROM "${f.tabla}"`,
+                `SELECT '${f.tabla}' AS tabla, count(*)::int AS total, max("${f.columnaTemporal}") AS ultima FROM "${f.tabla}"`,
             ),
         );
-        const ultima = filas[0]?.ultima ?? null;
+        const { total, ultima } = filas[0] ?? { total: 0, ultima: null };
+        // Tabla VACÍA: no es congelamiento, es ausencia. El DEFECTO 1 que
+        // originó este chequeo fue una tabla con datos que dejó de recibir
+        // escrituras (HijoPadre) — una tabla sin filas no presenta nada
+        // congelado como vivo. Pre-lanzamiento varias tablas de flujo son
+        // legítimamente cero (p.ej. CorreccionAdmin sin correcciones aún,
+        // CEO 11-09-2026): fallar ahí bloquearía TODO deploy indefinidamente.
+        if (total === 0) continue;
         if (!ultima) {
-            desfases.push({ tipo: "frescura", detalle: `tabla de flujo "${f.tabla}" sin escrituras o vacía: no hay max("${f.columnaTemporal}")` });
+            desfases.push({ tipo: "frescura", detalle: `tabla de flujo "${f.tabla}" con ${total} filas pero sin max("${f.columnaTemporal}") — columna temporal en NULL, revisar` });
             continue;
         }
         const dias = (Date.now() - new Date(ultima).getTime()) / 86_400_000;
