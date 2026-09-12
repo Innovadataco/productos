@@ -77,7 +77,7 @@ async function main(): Promise<void> {
                 // Un solo template literal (interpolado). Primario (mide su fondo) + Fantasma
                 // (mide su texto) + sondas: `rol` = rgb(var(--accent-rgb)) (color del rol),
                 // `pino` = rgb(var(--pino-rgb)) (el color congelado del bug), `papel` = fondo.
-                const html = `<!doctype html><html class="${dark ? "dark" : ""}"><head><style>${CSS}</style></head><body><div class="${clase}"><button class="btn-ds btn-ds--primary" id="prim">Etiqueta</button><button class="btn-ds btn-ds--fantasma" id="fan">Etiqueta</button><span id="rol" style="color: rgb(var(--accent-rgb))"></span><span id="pino" style="color: rgb(var(--pino-rgb))"></span><span id="papel" style="background: rgb(var(--papel-rgb))"></span></div></body></html>`;
+                const html = `<!doctype html><html class="${dark ? "dark" : ""}"><head><style>${CSS}</style></head><body><div class="${clase}"><button class="btn-ds btn-ds--primary" id="prim">Etiqueta</button><button class="btn-ds btn-ds--fantasma" id="fan">Etiqueta</button><span id="rol" style="color: rgb(var(--accent-rgb))"></span><span id="pino" style="color: rgb(var(--pino-rgb))"></span><span id="tinta" style="color: rgb(var(--tinta-rgb))"></span><span id="papel" style="background: rgb(var(--papel-rgb))"></span></div></body></html>`;
                 await page.setContent(html);
                 const r = await page.evaluate(() => {
                     const prim = document.getElementById("prim")!;
@@ -88,14 +88,15 @@ async function main(): Promise<void> {
                         ink: getComputedStyle(prim).color,
                         rol: getComputedStyle(document.getElementById("rol")!).color,
                         pino: getComputedStyle(document.getElementById("pino")!).color,
+                        tinta: getComputedStyle(document.getElementById("tinta")!).color,
                         fan: getComputedStyle(document.getElementById("fan")!).color,
                         papel: getComputedStyle(document.getElementById("papel")!).backgroundColor,
                     };
                 });
                 const acc = parse(r.accent), ink = parse(r.ink), rol = parse(r.rol), pino = parse(r.pino);
-                const fan = parse(r.fan), papel = parse(r.papel);
-                if (!acc || !ink || !rol || !pino || !fan || !papel) {
-                    fallos.push(`${clase}/${modo}: no pude medir (acc=${r.accent} ink=${r.ink} fan=${r.fan}). ¿Cambiaron los nombres .btn-ds--primary/--fantasma o el gradiente?`);
+                const fan = parse(r.fan), papel = parse(r.papel), tinta = parse(r.tinta);
+                if (!acc || !ink || !rol || !pino || !fan || !papel || !tinta) {
+                    fallos.push(`${clase}/${modo}: no pude medir (acc=${r.accent} ink=${r.ink} fan=${r.fan} tinta=${r.tinta}). ¿Cambiaron los nombres .btn-ds--primary/--fantasma o el gradiente?`);
                     continue;
                 }
                 // (1) el fondo del Primario resuelve al color del rol.
@@ -114,6 +115,13 @@ async function main(): Promise<void> {
                 const cFan = contraste(fan, papel);
                 if (cFan < 4.5) {
                     fallos.push(`${clase}/${modo}: el TEXTO del Fantasma ${fmt(fan)} da ${cFan.toFixed(2)} < 4.5 sobre papel — dejó de ser neutro/legible (SPEC-659: el Fantasma NO lleva el acento del rol).`);
+                }
+                // (3-bis) SPEC-659 / I-403 · ancla CONCRETA: el TEXTO del Fantasma es la tinta
+                // neutra (`--tinta-rgb`), no «cualquier color neutro». El pino interino pasaba
+                // (3)+(4) —es theme-invariante y ≥4.5— pero es un verde junto al Primario cielo.
+                // Atar al valor concreto hace que el pino (u otro color) caiga.
+                if (!eq(fan, tinta)) {
+                    fallos.push(`${clase}/${modo}: el TEXTO del Fantasma ${fmt(fan)} NO es la tinta neutra concreta ${fmt(tinta)} (--tinta-rgb) — si es pino, es el interino de SPEC-659 (aterrícelo a la marca neutra); si es el acento, reintroduce el 2.37.`);
                 }
                 fantasmaPorTema.push({ clase, color: fan });
             }

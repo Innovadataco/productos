@@ -88,7 +88,7 @@ export function ExpedientesListClient({ expedientes }: { expedientes: Expediente
                 </div>
                 <Link
                     href="/dashboard/padre/reportar"
-                    className="inline-flex h-9 items-center justify-center rounded-[10px] bg-pino px-4 text-sm font-bold text-papel transition hover:bg-pino/90"
+                    className="inline-flex h-9 items-center justify-center rounded-[10px] bg-cielo px-4 text-sm font-bold text-acento-ink transition hover:brightness-110"
                 >
                     + Reportar una situación
                 </Link>
@@ -188,7 +188,7 @@ function TarjetaExpediente({ exp }: { exp: ExpedienteListaItemSerializable }) {
             <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                     href={`/dashboard/padre/expedientes/${exp.expedienteId}`}
-                    className="inline-flex h-8 items-center justify-center rounded-[9px] bg-pino px-3.5 text-xs font-bold text-papel transition hover:bg-pino/90"
+                    className="inline-flex h-8 items-center justify-center rounded-[9px] bg-cielo px-3.5 text-xs font-bold text-acento-ink transition hover:brightness-110"
                 >
                     Abrir expediente
                 </Link>

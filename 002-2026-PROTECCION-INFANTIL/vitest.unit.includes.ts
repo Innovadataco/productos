@@ -667,4 +667,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/padre/directorio-vacio.candado.test.ts",
     // SPEC-656: render del directorio vacío — la señal del total (hayVerificados) voltea la copy; estructural=canales, por-filtro=reset.
     "src/components/modules/padre/profesionales/DirectorioProfesionales.candado.test.tsx",
+    // SPEC-659/I-403: el relleno del padre sale de la tubería del acento — ningún bg-pino sólido literal en una acción.
+    "src/components/modules/padre/acento-relleno-sin-pino-crudo.candado.test.ts",
 ];

@@ -38,7 +38,7 @@ export function AQuienProtejoView({ hijos, estadoClasificador, circulo }: AQuien
                     <p className="mt-1 text-sm text-muted">Registra a tus hijos y sus cuentas para poder cuidarlos.</p>
                     <Link
                         href={RUTA_PERFIL_MENORES}
-                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-pino px-4 py-2.5 text-sm font-semibold text-white"
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cielo px-4 py-2.5 text-sm font-semibold text-acento-ink transition hover:brightness-110"
                     >
                         Agregar un menor
                     </Link>
