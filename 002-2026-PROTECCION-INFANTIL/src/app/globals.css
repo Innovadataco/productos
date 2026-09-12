@@ -630,13 +630,14 @@
        claro en el área del padre. Re-declarándolo sobre el Primario, `--accent-rgb`
        (heredado del tema) resuelve al color del rol (padre 6.84 claro / 8.51 oscuro) SIN
        tocar a nadie más.
-       EL FANTASMA ES NEUTRO POR DISEÑO (SPEC-659) — decisión CERRADA, no deuda. El `pino`
-       actual es INTERINO: pasa a TINTA NEUTRA, NO al acento del tema. Un acento COMO TEXTO
-       falla para los acentos claros (`cielo` = 2.37:1 sobre papel); una tinta neutra
-       contrasta siempre. El color del territorio es la identidad del PRIMARIO — la firma no
-       se reparte. Por eso NO re-declarar `--pi-accent` en un ancestro común ni en :root:
-       le daría al Fantasma el acento del rol y reintroduce el 2.37. El candado de render lo
-       afirma (Fantasma neutro: mismo color en los 4 temas, contraste ≥ 4.5). */
+       EL FANTASMA ES NEUTRO POR DISEÑO (SPEC-659 / I-403) — decisión CERRADA. Ya ATERRIZÓ:
+       su texto y borde son TINTA NEUTRA (`--tinta-rgb`, ver `.btn-ds--fantasma`), NO el
+       acento del tema. Un acento COMO TEXTO falla para los acentos claros (`cielo` = 2.37:1
+       sobre papel); `--tinta-rgb` es role-invariante y da ~15.89/18.29. El color del
+       territorio es la identidad del PRIMARIO — la firma no se reparte. Por eso NO re-declarar
+       `--pi-accent` en un ancestro común ni en :root: le daría al Fantasma el acento del rol y
+       reintroduce el 2.37. El candado de render lo afirma (Fantasma = la tinta neutra concreta,
+       mismo color en los 4 temas, contraste ≥ 4.5). */
     --pi-accent: rgb(var(--accent-rgb));
     background: linear-gradient(135deg, var(--pi-accent), color-mix(in srgb, var(--pi-accent) 72%, rgb(var(--cielo-rgb))));
     /* SPEC-632 · el rótulo se DERIVA del acento por tema (antes: papel fijo → 2.37:1
@@ -683,13 +684,16 @@
     100% { left: 20px; top: -3.5px; }
 }
 
-/* Fantasma — transparente + borde del acento. secondary y outline. */
+/* Fantasma — transparente + MARCA (texto y borde) en TINTA NEUTRA. secondary y outline.
+   SPEC-659 / I-403: la marca NO lleva el acento del rol (cielo como texto/borde = 2.37:1
+   sobre papel) ni el pino interino (un verde junto al Primario cielo se lee como dos
+   acentos). `--tinta-rgb` es role-invariante (mismo en los 4 temas) y mode-aware. */
 .btn-ds--fantasma {
     background: transparent;
-    color: var(--pi-accent);
-    border: 1.5px solid var(--pi-accent);
+    color: rgb(var(--tinta-rgb));
+    border: 1.5px solid rgb(var(--tinta-rgb));
 }
-.btn-ds--fantasma:hover { background: color-mix(in srgb, var(--pi-accent) 12%, transparent); }
+.btn-ds--fantasma:hover { background: color-mix(in srgb, rgb(var(--tinta-rgb)) 8%, transparent); }
 
 /* Fantasma-rubí — danger. El sólido rubí queda reservado al «confirmar» del modal. */
 .btn-ds--fantasma-rubi {
