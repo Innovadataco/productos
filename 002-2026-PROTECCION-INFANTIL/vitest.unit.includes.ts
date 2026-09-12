@@ -654,4 +654,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/LineaEstadoProteccion.candado.test.tsx",
     // SPEC-660: bloque de hueco de cobertura — cielo nunca ámbar, nombra al hijo, sin «te avisamos».
     "src/components/modules/padre/BloqueHuecoCobertura.candado.test.tsx",
+    // SPEC-660: estado vacío de «A quién protejo» (superficie de día-uno en prod) — nunca rojo, CTA a /perfil#menores, rama vacía.
+    "src/components/modules/padre/AQuienProtejoView.candado.test.tsx",
 ];
