@@ -452,6 +452,9 @@
 | [605](605-pantalla-expediente/spec.md) | SPEC-605 · Pantalla madre del EXPEDIENTE (5 bloques) + lista por urgencia | 🟢 IMPLEMENTADO |
 | [606](606-revelar-codigo/spec.md) | SPEC-606 · Revelar texto con CÓDIGO por correo (step-up sin contraseña) | 🟢 IMPLEMENTADO |
 | [607](607-menu-perfil-hijos/spec.md) | SPEC-607 · Menú definitivo del padre + «Mi perfil» unificado + hijos sin documento | 🟢 IMPLEMENTADO |
+| [656](656-directorio-vacio-estructural/spec.md) | SPEC-656 · «Encontrar psicólogo» sin psicólogos: separar el vacío estructural del vacío por filtro | 🟡 DESARROLLO |
+| [659](659-fantasma-marca-neutra/spec.md) | SPEC-659 / I-403 · El acento del padre por superficie — relleno CIELO, marca TINTA NEUTRA | 🟡 DESARROLLO |
+| [660](660-a-quien-protejo-dos-procesos/spec.md) | SPEC-660 · «A quién protejo» — dos procesos (configurar y enterarse) | 🟡 DESARROLLO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
