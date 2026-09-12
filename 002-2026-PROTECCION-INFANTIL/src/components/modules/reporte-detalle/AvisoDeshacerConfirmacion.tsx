@@ -51,10 +51,17 @@ export function AvisoDeshacerConfirmacion({ mensaje, onDeshacer, onExpirar, desh
             <div className="pointer-events-auto w-full max-w-md overflow-hidden rounded-2xl border border-cielo/40 bg-superficie-2 shadow-lg dark:border-cielo/30">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <p className="min-w-0 flex-1 text-sm text-body">{mensaje}</p>
+                    {/* I-404 (FORMA, Diseño): cielo es seguro como RELLENO solo si el
+                        rótulo carga el contraste. `text-white` sobre bg-cielo daba
+                        2.70 claro / 2.17 oscuro (bajo el piso de 3:1). La tinta va
+                        OSCURA y FIJA —`--pi-ink-oscuro-rgb`, global en ambos temas,
+                        6.84/8.51—, NO `--pi-accent-ink-rgb` (su default es blanco y
+                        solo voltea en .theme-padre/profesional; este toast lo montan
+                        padre Y admin con bg-cielo → en admin el bug sobreviviría). */}
                     <button
                         type="button"
                         onClick={onDeshacer}
-                        className="shrink-0 rounded-xl bg-cielo px-3 py-2 text-sm font-semibold text-white transition hover:bg-cielo/90"
+                        className="shrink-0 rounded-xl bg-cielo px-3 py-2 text-sm font-semibold text-[rgb(var(--pi-ink-oscuro-rgb))] transition hover:bg-cielo/90"
                     >
                         {deshacerLabel}
                     </button>

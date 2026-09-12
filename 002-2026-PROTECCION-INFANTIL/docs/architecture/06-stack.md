@@ -85,6 +85,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `ratchets:no-x-invoke-path` | `tsx scripts/lint/no-x-invoke-path.ts` |
 | `reglas:check` | `tsx scripts/verify-reglas-notificacion.ts` |
 | `render:check` | `tsx scripts/render/acento-primario.render.ts` |
+| `render:deshacer:check` | `tsx scripts/render/deshacer-contraste.render.ts` |
 | `render:foco:check` | `tsx scripts/render/foco-outline.render.ts` |
 | `start` | `next start -p 5005` |
 | `test` | `node --env-file=.env.test --import tsx ./node_modules/vitest/vitest.mjs run` |
