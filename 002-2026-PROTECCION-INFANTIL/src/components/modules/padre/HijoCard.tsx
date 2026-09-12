@@ -229,7 +229,7 @@ export function HijoCard({
             {/* A-70 · F10 — la historia del cuidado, bajo demanda: si se cargara
                 sola, abrir "A quién protejo" dispararía una consulta por cada
                 menor de la lista para algo que casi nunca se mira. */}
-            <div className="mt-3 border-t border-tinta/10 pt-3 dark:border-papel/10">
+            <div className="mt-3 border-t border-tinta/10 pt-3 dark:border-tinta/12">
                 <button
                     type="button"
                     className="text-xs text-muted underline hover:text-body"
