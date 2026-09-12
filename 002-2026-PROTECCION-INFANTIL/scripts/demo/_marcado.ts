@@ -183,6 +183,10 @@ export const ENTIDADES_ORDEN_BORRADO: readonly string[] = [
     // Colegio
     "PreferenciaAlertaColegio",
     "OnboardingColegio",
+    // AuditConsentimiento cuelga de Usuario (onDelete: Cascade): la fila cae por FK al
+    // borrar el Usuario, PERO su marca en `demo_marcado` es polimórfica (sin FK) y no
+    // caería. Se lista para que el borrador la limpie. Lo siembra sembrar-consentimiento-demo5.
+    "AuditConsentimiento",
     "Usuario",
     "Colegio",
     "Tenant",
