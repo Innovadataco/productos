@@ -264,21 +264,52 @@ export class PerfilProfesionalRepository {
     }
 
     /**
+     * SPEC-655 (corregido) · ¿el VISOR es un usuario sembrado? Un usuario demo está
+     * marcado en `demo_marcado` con entidad "Usuario" (el poblador marca así a los
+     * padres demo). Para un Usuario solo aplica esa marca — `simulacion_reportes`
+     * guarda `reporteId`, nunca un usuario.
+     */
+    private async esUsuarioSembrado(usuarioId: string): Promise<boolean> {
+        const marca = await this.db.demoMarcado.findFirst({
+            where: { entidad: "Usuario", entidadId: usuarioId },
+            select: { id: true },
+        });
+        return marca !== null;
+    }
+
+    /**
+     * SPEC-655 (corregido) · fragmento de exclusión de sembrados CONDICIONADO al VISOR.
+     * La invariante correcta no es «un sembrado no es alcanzable por un padre» sino
+     * «un sembrado es visible SOLO para un usuario sembrado»: un padre real no puede
+     * pagarle a un fantasma, pero un padre demo viendo profesionales demo ES el demo.
+     * Si el visor está sembrado → sin exclusión (ve los demo). Si no lo está, o no hay
+     * sesión (visor null) → se excluyen los sembrados. El visor SIEMPRE viene de la
+     * sesión del servidor; un muro cuya condición pone el cliente falla ABIERTO.
+     */
+    private async exclusionSembradosPara(
+        viewerUsuarioId: string | null,
+    ): Promise<Prisma.PerfilProfesionalWhereInput> {
+        if (viewerUsuarioId && (await this.esUsuarioSembrado(viewerUsuarioId))) return {};
+        return { NOT: { id: { in: await this.idsSembrados() } } };
+    }
+
+    /**
      * SPEC-655 · WHERE del directorio público: el filtro legal (estado ACTIVO ∧
-     * vigencia, SPEC-449) MÁS la exclusión de sembrados. Vive en el repositorio, en
-     * el MISMO carril que el filtro legal, para que CUALQUIER superficie que consulte
-     * el repo herede ambos sin enterarse. Los campos obligatorios van al final: un
-     * `extra` del llamador no puede sobreescribir estado/vigencia/exclusión.
+     * vigencia, SPEC-449) MÁS la exclusión de sembrados CONDICIONADA al visor. Vive en
+     * el repositorio, en el MISMO carril que el filtro legal, para que CUALQUIER
+     * superficie que consulte el repo herede ambos sin enterarse. Los campos
+     * obligatorios van al final: un `extra` del llamador no puede sobreescribirlos.
      */
     private async whereDirectorioPublico(
         ahora: Date,
+        viewerUsuarioId: string | null,
         extra: Prisma.PerfilProfesionalWhereInput = {},
     ): Promise<Prisma.PerfilProfesionalWhereInput> {
         return {
             ...extra,
             estado: "ACTIVO",
             ...PerfilProfesionalRepository.vigenciaVigente(ahora),
-            NOT: { id: { in: await this.idsSembrados() } },
+            ...(await this.exclusionSembradosPara(viewerUsuarioId)),
         };
     }
 
@@ -287,9 +318,13 @@ export class PerfilProfesionalRepository {
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
      * (candado H-4 · «da turno a todos» sin marear al padre al filtrar).
      */
-    async listarActivos(filtros: FiltrosDirectorio, ahora: Date = new Date()): Promise<PerfilPublicoDTO[]> {
-        // SPEC-449 estado ∧ vigencia + SPEC-655 exclusión de sembrados (compartido).
-        const where = await this.whereDirectorioPublico(ahora);
+    async listarActivos(
+        filtros: FiltrosDirectorio,
+        viewerUsuarioId: string | null,
+        ahora: Date = new Date(),
+    ): Promise<PerfilPublicoDTO[]> {
+        // SPEC-449 estado ∧ vigencia + SPEC-655 exclusión de sembrados CONDICIONADA al visor.
+        const where = await this.whereDirectorioPublico(ahora, viewerUsuarioId);
         if (filtros.ciudadId) where.ciudadId = filtros.ciudadId;
         if (filtros.especialidad) where.especialidades = { has: filtros.especialidad };
         if (filtros.modalidad === "virtual") where.atiendeVirtual = true;
@@ -310,8 +345,8 @@ export class PerfilProfesionalRepository {
      * búsqueda del padre cuando el problema es que no hay gente. Un `count` no
      * proyecta ningún campo ⇒ nada que ver con el allowlist H-2.
      */
-    async contarActivos(ahora: Date = new Date()): Promise<number> {
-        return this.db.perfilProfesional.count({ where: await this.whereDirectorioPublico(ahora) });
+    async contarActivos(viewerUsuarioId: string | null, ahora: Date = new Date()): Promise<number> {
+        return this.db.perfilProfesional.count({ where: await this.whereDirectorioPublico(ahora, viewerUsuarioId) });
     }
 
     /**
@@ -319,13 +354,17 @@ export class PerfilProfesionalRepository {
      * detalle no destapa campos internos. El contacto se entrega en L4, al
      * confirmar la cita, no acá.
      */
-    async obtenerPublicoPorId(id: string, ahora: Date = new Date()): Promise<PerfilPublicoDTO | null> {
+    async obtenerPublicoPorId(
+        id: string,
+        viewerUsuarioId: string | null,
+        ahora: Date = new Date(),
+    ): Promise<PerfilPublicoDTO | null> {
         const row = await this.db.perfilProfesional.findFirst({
             // SPEC-449: mismo par estado ∧ vigencia que la lista. Este método
             // tiene TRES consumidores, y uno es `cita.service.ts`, que lo usa
             // para validar al profesional al crear la cita: filtrar acá bloquea
             // de paso las citas nuevas contra un profesional vencido.
-            where: await this.whereDirectorioPublico(ahora, { id }),
+            where: await this.whereDirectorioPublico(ahora, viewerUsuarioId, { id }),
             select: SELECT_TARJETA_PUBLICA,
         });
         return row ? toPublicoDTO(row) : null;
@@ -340,12 +379,12 @@ export class PerfilProfesionalRepository {
      * ORDENADAS alfabéticamente. Ambas listas pueden venir vacías (sin
      * perfiles ACTIVO todavía) — la UI debe soportarlo sin romperse.
      */
-    async facetas(): Promise<{ ciudades: Array<{ id: string; nombre: string }>; especialidades: string[] }> {
-        // SPEC-655: las facetas tampoco derivan de sembrados — no pueblan los filtros
-        // con la ciudad/especialidad de un profesional que no existe. Mantiene el
-        // predicado propio de facetas (`estado: ACTIVO`); solo suma la exclusión.
+    async facetas(viewerUsuarioId: string | null): Promise<{ ciudades: Array<{ id: string; nombre: string }>; especialidades: string[] }> {
+        // SPEC-655: las facetas tampoco derivan de sembrados para un visor real — no
+        // pueblan los filtros con la ciudad/especialidad de un profesional que no
+        // existe. Exclusión CONDICIONADA al visor, igual que la lista.
         const rows = await this.db.perfilProfesional.findMany({
-            where: { estado: "ACTIVO", NOT: { id: { in: await this.idsSembrados() } } },
+            where: { estado: "ACTIVO", ...(await this.exclusionSembradosPara(viewerUsuarioId)) },
             select: {
                 especialidades: true,
                 ciudad: { select: { id: true, nombre: true } },

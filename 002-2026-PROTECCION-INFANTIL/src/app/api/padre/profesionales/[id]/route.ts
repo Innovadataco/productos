@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             throw new AppError("Permisos insuficientes", ERROR_CODES.FORBIDDEN, 403);
         }
         const { id } = withValidation.params(z.object({ id: cuidIdSchema }))(await params);
-        const perfil = await new PerfilProfesionalRepository().obtenerPublicoPorId(id);
+        const perfil = await new PerfilProfesionalRepository().obtenerPublicoPorId(id, user.id); // SPEC-655: visor de la sesión
         if (!perfil) {
             return NextResponse.json(
                 { error: { message: "Profesional no encontrado.", code: ERROR_CODES.NOT_FOUND } },

@@ -36,7 +36,7 @@ export default async function PadreProfesionalPerfilPage({
     const hrefVolverQuery = paramsVolver.toString() ? `?${paramsVolver.toString()}` : "";
 
     const [perfil, precioEstandarPrimeraCitaCOP] = await Promise.all([
-        new PerfilProfesionalRepository().obtenerPublicoPorId(id),
+        new PerfilProfesionalRepository().obtenerPublicoPorId(id, user.id), // SPEC-655: visor de la sesión
         leerPrecioEstandarPrimeraCita(),
     ]);
     if (!perfil) notFound();

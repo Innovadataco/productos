@@ -58,13 +58,13 @@ export async function GET(request: Request) {
             ciudadId: parsed.data.ciudadId,
             especialidad: parsed.data.especialidad,
             modalidad: parsed.data.modalidad,
-        });
+        }, user.id); // SPEC-655: visor de la sesión — un padre demo ve a los profesionales demo
         const barajados = barajarConSemilla(items, parsed.data.seed);
         // SPEC-656 (I-387): cuando la lista (ya filtrada) sale vacía, el cliente
         // necesita distinguir el vacío ESTRUCTURAL (0 verificados en total) del
         // vacío POR FILTRO. La consulta base sin filtros solo corre cuando hace
         // falta —lista vacía—; con resultados en mano, no se cuenta de nuevo.
-        const hayVerificados = barajados.length > 0 ? true : (await repo.contarActivos()) > 0;
+        const hayVerificados = barajados.length > 0 ? true : (await repo.contarActivos(user.id)) > 0;
         return NextResponse.json({ items: barajados, hayVerificados });
     } catch (error) {
         return errorToResponse(error, "[PADRE/PROFESIONALES/LISTAR]");
