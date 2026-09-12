@@ -100,7 +100,10 @@ async function verificarIdempotencia(): Promise<void> {
 
     console.log(`[sembrar-demo] --force: purgando corrida previa ${CORRIDA}...`);
     const purgarScript = new URL("purgar-demo.ts", import.meta.url).pathname;
-    const resultado = spawnSync(process.execPath, ["--import", "tsx", purgarScript], {
+    // SPEC-679 (I-405, 2ª instancia): acotado a la corrida PROPIA. Sin --corrida, purgar-demo
+    // arrasaría TODAS las corridas de demo_marcado (spec-412-v5, red-apoyo-676, …), no solo la
+    // base que sembrar-demo re-siembra — que es justo lo que el mensaje de arriba prometía y no hacía.
+    const resultado = spawnSync(process.execPath, ["--import", "tsx", purgarScript, "--corrida", CORRIDA], {
         stdio: "inherit",
         env: process.env,
     });
