@@ -20,8 +20,11 @@
  * Regla de Jelkin (31-08-2026): *"si otro padre se registra con un correo
  * diferente y quiere vincular los mismos hijos, no pasa absolutamente nada"*.
  * Ahora cada padre tiene SU ficha (`Hijo.usuarioId`), sus interruptores y sus
- * avisos. `HijoPadre` e `IdentificadorHijoDesvinculado` quedan sin uso (no se
- * borran: reversible si Jelkin revierte la regla).
+ * avisos. `HijoPadre` e `IdentificadorHijoDesvinculado` quedan SIN ESCRITOR (nada
+ * crea filas; 0 en prod). No se dropean: están publicadas a BI y su retiro exige
+ * coordinar con BI para beneficio nulo; se revisan el día que haya que tocar esa
+ * publicación por otro motivo (SPEC-669) — decisión con disparador de revisión, no
+ * «por si acaso».
  *
  * SPEC-589 (06-09-2026): el documento del menor se ELIMINÓ de la ficha (decisión
  * CEO — columnas Hijo.documentoTipo/documentoNumero fuera). Con él se fueron la
@@ -227,8 +230,10 @@ async function exigirDueno(
  * SPEC-339 (D-4): antes la fila era compartida con el otro padre, así que
  * "quitar" solo la ocultaba de la vista de quien la quitaba
  * (`IdentificadorHijoDesvinculado`). Con ficha propia eso ya no tiene sentido:
- * la fila es de este padre y quitarla es quitarla. El mecanismo de
- * desvinculación queda sin uso, no se borra (reversible si Jelkin revierte D-4).
+ * la fila es de este padre y quitarla es quitarla. El mecanismo de desvinculación
+ * (tabla `IdentificadorHijoDesvinculado`) queda sin escritor; no se dropea porque
+ * está publicada a BI y retirarla exige coordinar con BI para beneficio nulo
+ * (SPEC-669) — se revisa el día que se toque esa publicación.
  */
 export async function desvincularIdentificador(
     usuarioId: string,
@@ -369,10 +374,9 @@ export async function agregarIdentificador(
             select: { id: true },
         });
         if (existente) {
-            // Si estaba desvinculado por ESTE padre, re-vincularlo a su vista.
-            await tx.identificadorHijoDesvinculado.deleteMany({
-                where: { identificadorId: existente.id, usuarioId },
-            });
+            // SPEC-669: acá vivía un `deleteMany` sobre IdentificadorHijoDesvinculado
+            // («re-vincular» limpiando una marca de desvinculación). Bajo D-4 —ficha
+            // propia por padre— nada crea esas filas: era un no-op sobre tabla vacía.
             return { ok: true, identificadorId: existente.id, yaExistia: true };
         }
 
