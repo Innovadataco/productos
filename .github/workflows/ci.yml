@@ -508,6 +508,8 @@ jobs:
       - run: npm run render:check
       # SPEC-662 · foco accesible (outline neutro, no box-shadow recortable). Vara propia (≥3:1).
       - run: npm run render:foco:check
+      # SPEC-677 (I-404) · el rótulo del botón «Deshacer» contrasta ≥4.5 sobre el relleno cielo, medido por render en los dos temas.
+      - run: npm run render:deshacer:check
 
   # SPEC-280 (002-PI-180): resumen legible al final de cada corrida. Corre siempre
   # que el CI haya arrancado (verde, rojo o cancelado) — la pestaña "Summary" debe
