@@ -134,7 +134,7 @@ export function PresentacionUrgenciaForm({
                         maxLength={PRESENTACION_MAX}
                         required
                         placeholder="Ej.: Soy mamá de un niño de 12 años. Hemos recibido mensajes que nos preocupan..."
-                        className="mt-1 w-full rounded-xl border border-cielo/40 bg-white px-3 py-2 text-sm text-body focus:border-cielo focus:outline-none dark:border-cielo/30 dark:bg-cielo/10"
+                        className="mt-1 w-full rounded-xl border border-cielo/40 bg-white px-3 py-2 text-sm text-body ring-accent-input dark:border-cielo/30 dark:bg-cielo/10"
                     />
                     <span className="text-xs text-subtle">
                         {largo}/{PRESENTACION_MAX} caracteres · mínimo {PRESENTACION_MIN}

@@ -86,7 +86,7 @@ export function ReporteStepConfirmar({
             <label className="flex items-start gap-3 cursor-pointer">
                 <input
                     type="checkbox"
-                    className="mt-0.5 h-4 w-4 rounded border-tinta/10 text-primary-600 focus:ring-primary-500"
+                    className="mt-0.5 h-4 w-4 rounded border-tinta/10 text-primary-600 ring-accent-input"
                     checked={checked}
                     onChange={(e) => setChecked(e.target.checked)}
                 />

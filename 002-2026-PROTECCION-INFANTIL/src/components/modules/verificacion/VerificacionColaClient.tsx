@@ -92,7 +92,7 @@ export function VerificacionColaClient() {
                 >
                     <Link
                         href={`/dashboard/admin/verificacion/${f.solicitudId}`}
-                        className="glass block rounded-2xl p-5 transition hover:scale-[1.005] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cielo"
+                        className="glass block rounded-2xl p-5 transition hover:scale-[1.005] hover:shadow-lg"
                     >
                         <div className="flex flex-wrap items-baseline justify-between gap-3">
                             <div>

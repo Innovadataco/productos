@@ -196,7 +196,7 @@ export function IaPlayground({ initialOverrides }: IaPlaygroundProps) {
                         placeholder="Escriba aquí el texto a analizar..."
                         rows={6}
                         maxLength={4000}
-                        className="w-full resize-y rounded-xl border border-tinta/10 bg-papel/80 p-3 text-sm text-body placeholder:text-subtle focus:border-cielo focus:outline-none focus:ring-2 focus:ring-cielo/20"
+                        className="w-full resize-y rounded-xl border border-tinta/10 bg-papel/80 p-3 text-sm text-body placeholder:text-subtle ring-accent-input"
                     />
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                         <button
