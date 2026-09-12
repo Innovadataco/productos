@@ -1,37 +1,28 @@
 /**
  * PI · Spec 678 (follow-up) · corregir el `sexo` de los hijos demo5 ya sembrados.
  *
- * El sembrador hasheó el `sexo` INDEPENDIENTE del nombre → «Valentina (M)», «Daniel (F)»,
- * visible al abrir la ficha del hijo. Arreglo BARATO (no el correcto — el CEO lo pidió así):
- * un UPDATE in-place sobre los `Hijo` ya marcados `demo_marcado` v5, derivando el sexo del
- * NOMBRE. NO se re-siembra: el sembrador es idempotente por «ya tiene hijo activo» y saltaría
- * los 92. Y NO se toca el sembrador (queda su bug de raíz: un reset + re-siembra lo reproduce
- * — decisión del CEO, ver el reporte de carril; si se planea un reset, arreglar `sexoDemo` ahí).
+ * El sembrador viejo hasheó el `sexo` INDEPENDIENTE del nombre → «Valentina (M)», visible al
+ * abrir la ficha del hijo. Este UPDATE in-place recalcula el sexo con la MISMA fuente que el
+ * sembrador arreglado (`sexoDemoDeNombre`): M/F derivado del nombre, PERO conservando ~10% en
+ * `OTRO` deliberado (valor legítimo del enum; el demo no debe uniformarse — mismo criterio que
+ * el 70/30). No re-siembra: el sembrador es idempotente por «ya tiene hijo activo» y saltaría
+ * los 92. El ~10% OTRO se ancla al `hijo.id` → estable e idempotente.
  *
- * El mapa nombre→sexo es INLINE y cubre exactamente los nombres que el sembrador usó (NOMBRES_NINO,
- * de facto partido por género). Es un script de UNA sola corrida: no necesita fuente compartida.
- * Un nombre fuera del mapa NO se toca (no se adivina el sexo de algo que este script no sembró).
- *
- * No dispara nada: actualizar un `Hijo` no encola workers (mismo análisis que la siembra —
- * el motor de señal comunitaria matchea del lado del REPORTE, no del Hijo).
+ * No dispara nada: actualizar un `Hijo` no encola workers (el motor de señal matchea del lado
+ * del REPORTE, no del Hijo). Un nombre fuera de la lista demo NO se toca (no se adivina).
  *
  * Uso (lo corre el CEO; Datos no escribe prod a mano):
  *   node --import tsx scripts/demo/corregir-sexo-hijos-demo5.ts --dry-run
  *   node --import tsx scripts/demo/corregir-sexo-hijos-demo5.ts
  *
- * Idempotente: salta al hijo cuyo `sexo` ya calza con su nombre.
+ * Idempotente: salta al hijo cuyo `sexo` ya calza con el recalculado.
  */
 import { PrismaClient } from "@prisma/client";
 import { CORRIDA_V5, enLotes } from "./_marcado";
+import { generoDeNombre, sexoDemoDeNombre } from "./_sexo-hijo-demo";
 
 const prisma = new PrismaClient();
 const DRY_RUN = process.argv.includes("--dry-run");
-
-// Los nombres que sembró sembrar-hijos-demo5 (NOMBRES_NINO), mapeados a su género.
-const SEXO_POR_NOMBRE: Record<string, "M" | "F"> = {
-    Mateo: "M", Samuel: "M", Martín: "M", Tomás: "M", Emiliano: "M", Benjamín: "M", Gabriel: "M", Daniel: "M",
-    Emma: "F", Sofía: "F", Valentina: "F", Isabella: "F", Luciana: "F", Antonella: "F", Salomé: "F", Mariana: "F",
-};
 
 async function main() {
     // Hijos marcados demo_marcado corrida v5 (los que sembró el poblador; un real no está).
@@ -45,22 +36,22 @@ async function main() {
 
     const hijos = (
         await enLotes(idsV5, (trozo) =>
-            prisma.hijo.findMany({
-                where: { id: { in: trozo } },
-                select: { id: true, nombre: true, sexo: true },
-            }),
+            prisma.hijo.findMany({ where: { id: { in: trozo } }, select: { id: true, nombre: true, sexo: true } }),
         )
     ).flat();
 
     let corregidos = 0;
     let yaOk = 0;
     let fueraDeMapa = 0;
+    const distribucion: Record<"M" | "F" | "OTRO", number> = { M: 0, F: 0, OTRO: 0 };
     for (const h of hijos) {
-        const correcto = SEXO_POR_NOMBRE[h.nombre] ?? null;
-        if (correcto === null) {
-            fueraDeMapa++; // nombre que este script no sembró → no se adivina
+        // Solo los que sembró este script (nombre de la lista demo); no adivinar otros.
+        if (generoDeNombre(h.nombre) === null) {
+            fueraDeMapa++;
             continue;
         }
+        const correcto = sexoDemoDeNombre(h.nombre, h.id);
+        distribucion[correcto]++;
         if (h.sexo === correcto) {
             yaOk++;
             continue;
@@ -73,7 +64,8 @@ async function main() {
         corregidos++;
     }
 
-    console.log(`[corregir-sexo-hijos] hijos v5: ${hijos.length} · ${DRY_RUN ? "corregiría" : "corregidos"}: ${corregidos} · ya OK: ${yaOk} · nombre fuera del mapa (no tocados): ${fueraDeMapa}`);
+    console.log(`[corregir-sexo-hijos] hijos v5: ${hijos.length} · ${DRY_RUN ? "corregiría" : "corregidos"}: ${corregidos} · ya OK: ${yaOk} · fuera del mapa (no tocados): ${fueraDeMapa}`);
+    console.log(`[corregir-sexo-hijos] distribución final: M=${distribucion.M} · F=${distribucion.F} · OTRO=${distribucion.OTRO}`);
     await prisma.$disconnect();
 }
 
