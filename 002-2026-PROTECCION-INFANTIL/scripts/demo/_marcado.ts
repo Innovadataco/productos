@@ -187,6 +187,10 @@ export const ENTIDADES_ORDEN_BORRADO: readonly string[] = [
     // borrar el Usuario, PERO su marca en `demo_marcado` es polimórfica (sin FK) y no
     // caería. Se lista para que el borrador la limpie. Lo siembra sembrar-consentimiento-demo5.
     "AuditConsentimiento",
+    // Hijo cuelga de Usuario (onDelete: Cascade): la fila cae por FK al borrar el
+    // Usuario, pero su marca en `demo_marcado` es polimórfica (sin FK) y no caería.
+    // Se lista para que el borrador la limpie. Lo siembra sembrar-hijos-demo5 (Spec 678).
+    "Hijo",
     "Usuario",
     "Colegio",
     "Tenant",
