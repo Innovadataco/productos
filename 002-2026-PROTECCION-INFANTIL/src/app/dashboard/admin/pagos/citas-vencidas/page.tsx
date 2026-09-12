@@ -47,10 +47,10 @@ export default async function CitasPagadasSinRespuestaPage() {
                     <table className="min-w-full text-sm">
                         <thead className="bg-tinta/5 dark:bg-tinta/10">
                             <tr>
-                                <th className="px-4 py-3 text-left font-medium text-muted">Padre</th>
-                                <th className="px-4 py-3 text-left font-medium text-muted">Profesional</th>
                                 <th className="px-4 py-3 text-left font-medium text-muted">Pagó</th>
                                 <th className="px-4 py-3 text-left font-medium text-muted">Situación</th>
+                                <th className="px-4 py-3 text-left font-medium text-muted">Padre</th>
+                                <th className="px-4 py-3 text-left font-medium text-muted">Profesional</th>
                                 <th className="px-4 py-3 text-left font-medium text-muted">Cita</th>
                             </tr>
                         </thead>
@@ -61,12 +61,7 @@ export default async function CitasPagadasSinRespuestaPage() {
                                     : null;
                                 return (
                                     <tr key={c.id} className="align-top hover:bg-tinta/5 dark:hover:bg-tinta/10">
-                                        <td className="px-4 py-3">
-                                            <div className="font-medium text-body">{c.padreUsuario?.nombre ?? "—"}</div>
-                                            <div className="text-xs text-muted">{c.padreUsuario?.email ?? ""}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-body">{c.profesional?.nombreVisible ?? "—"}</td>
-                                        {/* HECHO 1 · hubo PAGO: monto prominente + cuándo se aprobó + desglose (dato). */}
+                                        {/* HECHO 1 · hubo PAGO (primero: es la mitad de la decisión) — monto prominente + cuándo + desglose (dato). */}
                                         <td className="px-4 py-3">
                                             <div className="font-semibold text-body">{COP.format(c.montoTotal)}</div>
                                             <div className="text-xs text-muted">
@@ -76,7 +71,7 @@ export default async function CitasPagadasSinRespuestaPage() {
                                                 consulta {COP.format(c.montoConsulta)} · servicio {COP.format(c.montoServicio)}
                                             </div>
                                         </td>
-                                        {/* HECHO 2 · SILENCIO del profesional: badge ámbar con texto (nunca color solo). */}
+                                        {/* HECHO 2 · SILENCIO del profesional (la otra mitad) — badge ámbar con texto (nunca color solo). */}
                                         <td className="px-4 py-3">
                                             <span className="inline-flex items-center gap-1.5 rounded-full bg-ambar/10 px-2.5 py-0.5 text-xs font-medium text-estado-ambar">
                                                 El profesional no respondió (48 h)
@@ -85,6 +80,12 @@ export default async function CitasPagadasSinRespuestaPage() {
                                                 <div className="mt-1 text-xs text-muted">Sin respuesta desde {fecha(silencioDesde)}</div>
                                             )}
                                         </td>
+                                        {/* Con QUIÉN se ejecuta la decisión — después de qué pasó (orden de lectura = orden del juicio, FORMA-SPEC658). */}
+                                        <td className="px-4 py-3">
+                                            <div className="font-medium text-body">{c.padreUsuario?.nombre ?? "—"}</div>
+                                            <div className="text-xs text-muted">{c.padreUsuario?.email ?? ""}</div>
+                                        </td>
+                                        <td className="px-4 py-3 text-body">{c.profesional?.nombreVisible ?? "—"}</td>
                                         <td className="px-4 py-3 text-xs text-muted">
                                             {c.franja ? `${fecha(c.franja.inicio)} · ${c.franja.modalidad}` : "—"}
                                         </td>
