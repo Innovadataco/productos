@@ -374,6 +374,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/notificaciones/renderer.test.ts",
     // SPEC-302 (002-PI-208): logger estructurado del motor — todo mockeado, sin BD.
     "src/lib/notificaciones/motor-logger.test.ts",
+    // SPEC-683 (I-401): el aviso del hijo no tiene menos canales que el del círculo
+    // (campanita IN_APP). Escanea prisma/seed.ts — fs puro, sin BD.
+    "src/lib/notificaciones/aviso-hijo-no-peor-servido.candado.test.ts",
     "src/lib/param-encryption.test.ts",
     // S-C/SPEC-581: primitivas cripto puras de la KEK del texto de reportes (sin BD).
     "src/lib/reporte-texto-llaves.test.ts",
