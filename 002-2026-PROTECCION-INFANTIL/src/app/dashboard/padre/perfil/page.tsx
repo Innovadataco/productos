@@ -16,6 +16,8 @@ import { EsperandoAutorizacion } from "@/components/modules/pagos/EsperandoAutor
 import { PerfilPadreForm } from "@/components/modules/padre/PerfilPadreForm";
 import { HistorialCambiosPerfil } from "@/components/modules/padre/HistorialCambiosPerfil";
 import { PreferenciasNotificaciones } from "@/components/modules/perfil/PreferenciasNotificaciones";
+import { MisHijos } from "@/components/modules/padre/MisHijos";
+import { getParametroSistemaValor } from "@/lib/parametros";
 import type { PlanSelectorDTO } from "@/lib/pagos/planes-selector.types";
 
 export const metadata: Metadata = {
@@ -155,6 +157,10 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
     const params = await searchParams;
     const mostrarBienvenida = params.bienvenida === "1";
     const usuario = await verifyAuth("PARENT");
+    // SPEC-660 (Fase C): «Configurar» (registrar/editar menores) se muda a Mi
+    // perfil como sección desplegable. El cupo sale del parámetro, igual que en
+    // /dashboard/padre/hijos (que sigue vivo — expandir, después Dev 1 contrae).
+    const maximoHijos = parseInt((await getParametroSistemaValor("padre.hijos.maximo")) ?? "5", 10);
     const suscripcion = await obtenerSuscripcionTitular({
         id: usuario.id,
         rol: usuario.rol,
@@ -252,6 +258,10 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
                         {/* SPEC-590 (decisión CEO 06-09): historial de cambios del perfil. */}
                         <HistorialCambiosPerfil />
                     </div>
+                </Acordeon>
+
+                <Acordeon id="menores" abierto={false} titulo="Menores de edad" subtitulo="Los menores que proteges y sus cuentas">
+                    <MisHijos maximoActivos={maximoHijos} />
                 </Acordeon>
 
                 <Acordeon id="notificaciones" abierto={false} titulo="Notificaciones" subtitulo="Qué avisos quieres recibir">

@@ -1,5 +1,6 @@
 /**
- * SPEC-607 · «Mi perfil» unificado: UNA página con tres acordeones nativos
+ * SPEC-607 · «Mi perfil» unificado: UNA página con acordeones nativos (SPEC-660
+ * sumó «Menores de edad», ahora son cuatro)
  * (Información general · Notificaciones · Suscripción) y el acordeón de Suscripción
  * abierto por defecto cuando el padre no tiene cobertura (destino del guardián de vigencia).
  *
@@ -23,6 +24,10 @@ const tasaIvaMock = vi.fn();
 const aplicaIvaMock = vi.fn();
 
 vi.mock("@/lib/auth", () => ({ verifyAuth: (...a: unknown[]) => verifyAuthMock(...a) }));
+// SPEC-660 (Fase C): la sección «Menores de edad» monta MisHijos (cliente que se
+// auto-carga). El test de la PÁGINA no prueba ese CRUD (lo cubre MisHijos.test);
+// se aísla con un stub para no disparar sus fetch ni un warning de act().
+vi.mock("@/components/modules/padre/MisHijos", () => ({ MisHijos: () => null }));
 vi.mock("@/lib/pagos/suscripcion-vista.service", () => ({
     obtenerSuscripcionTitular: (...a: unknown[]) => suscripcionTitularMock(...a),
     obtenerVistaSuscripcion: (...a: unknown[]) => vistaSuscripcionMock(...a),
@@ -95,7 +100,7 @@ const SUSCRIPCION_ACTIVA = {
     planActual: { nombre: "Familiar" },
 };
 
-describe("SPEC-607 · /dashboard/padre/perfil — una ventana, tres acordeones", () => {
+describe("SPEC-607/660 · /dashboard/padre/perfil — una ventana, cuatro acordeones", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         verifyAuthMock.mockResolvedValue(usuario());
