@@ -25,6 +25,7 @@ import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { anioBogota } from "@/lib/pagos/renovacion-calculos";
 import { obtenerTasaIva, ivaAplicaA } from "@/lib/pagos/parametros-pagos";
 import { PlanesSelector } from "@/components/modules/pagos/PlanesSelector";
+import { planesVisiblesEnAlta } from "@/lib/pagos/suscripcion-pausa";
 import {
     DESTINO_CIERRE_COLEGIO,
     destinoDePasoColegio,
@@ -126,8 +127,11 @@ export default async function CaminoColegioPlanPage() {
             <p className="mb-5 mt-1 text-sm text-muted">
                 Puede empezar sin costo y cambiar cuando quiera.
             </p>
+            {/* SPEC-652: misma pausa que el padre y que `Mi perfil`. El colegio
+                tiene su «Prueba gratis 30 días» sembrada y no negociable, así que
+                ocultar los pagos NO lo deja sin salida en el camino obligatorio. */}
             <PlanesSelector
-                planes={dtos}
+                planes={planesVisiblesEnAlta(dtos)}
                 usuario={{ id: usuario.id, rol: "SCHOOL_ADMIN", nombre: usuario.nombre, email: usuario.email }}
                 color="pino"
                 onSeleccionar={actionSolicitarPlanColegio}

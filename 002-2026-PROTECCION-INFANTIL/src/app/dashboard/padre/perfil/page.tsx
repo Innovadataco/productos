@@ -10,6 +10,7 @@ import { sellarCookieSesionEstadoEnAccion } from "@/lib/routing/sellar-sesion-es
 import { anioBogota } from "@/lib/pagos/renovacion-calculos";
 import { obtenerTasaIva, ivaAplicaA } from "@/lib/pagos/parametros-pagos";
 import { obtenerCuponesRecompensaDelUsuario } from "@/lib/pagos/entregar-cupones-recompensa.service";
+import { SUSCRIPCION_PAGA_EN_PAUSA } from "@/lib/pagos/suscripcion-pausa";
 import { SuscripcionVista } from "@/components/modules/cliente/suscripcion/SuscripcionVista";
 import { PlanesSelector } from "@/components/modules/pagos/PlanesSelector";
 import { EsperandoAutorizacion } from "@/components/modules/pagos/EsperandoAutorizacion";
@@ -171,10 +172,11 @@ export default async function PadrePerfilPage({ searchParams }: PageProps) {
         suscripcion !== null && (suscripcion.estado === "ACTIVA" || suscripcion.estado === "EN_GRACIA");
 
     // SPEC-628 #4 · «quieto, NO borrado» (Jelkin): la suscripción y el referido
-    // quedan FUNCIONALMENTE APAGADOS por ahora. El flag deja el código intacto y
-    // reversible: en `true` NO se computa (cero fetches) ni se renderiza ningún
-    // control vivo — solo la nota. Reactivar = ponerlo en `false`.
-    const SUSCRIPCION_EN_PAUSA = true;
+    // quedan FUNCIONALMENTE APAGADOS por ahora. En pausa NO se computa (cero
+    // fetches) ni se renderiza ningún control vivo — solo la nota.
+    // SPEC-652: la decisión ya no vive en un flag local de esta pantalla —eso dejó
+    // que el alta divergiera— sino en la ÚNICA fuente de verdad compartida.
+    const SUSCRIPCION_EN_PAUSA = SUSCRIPCION_PAGA_EN_PAUSA;
 
     let contenidoSuscripcion: React.ReactNode = null;
     if (!SUSCRIPCION_EN_PAUSA && conCobertura) {

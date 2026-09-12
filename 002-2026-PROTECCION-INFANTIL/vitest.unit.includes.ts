@@ -297,6 +297,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/pagos/ScoreClienteCard.test.tsx",
     // SPEC-355: la tarjeta freemium del colegio en el selector de planes.
     "src/components/modules/pagos/PlanesSelector.test.tsx",
+    // SPEC-652: el paso 4 del alta, en pausa, muestra solo la prueba gratis y
+    // ningún precio pago placeholder (fs + render, sin BD).
+    "src/app/camino/alta-planes-en-pausa.candado.test.tsx",
     // SPEC-245 (002-PI-148): modal de activación / autorización manual (sin BD).
     "src/components/modules/pagos/ActivarSuscripcionManual.test.tsx",
     // 002-PI-068: fuente-reporte-salt.test.ts importa fuente-reporte.ts que carga

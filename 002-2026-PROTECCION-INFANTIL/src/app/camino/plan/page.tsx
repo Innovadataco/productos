@@ -23,6 +23,7 @@ import { anioBogota } from "@/lib/pagos/renovacion-calculos";
 import { obtenerTasaIva, ivaAplicaA } from "@/lib/pagos/parametros-pagos";
 import { PlanesSelector } from "@/components/modules/pagos/PlanesSelector";
 import { DESTINO_CIERRE, destinoDePaso } from "@/lib/camino/pasos";
+import { planesVisiblesEnAlta } from "@/lib/pagos/suscripcion-pausa";
 import type { PlanSelectorDTO } from "@/lib/pagos/planes-selector.types";
 
 async function actionSolicitarPlan(planId: string, codigoBono?: string) {
@@ -96,8 +97,11 @@ export default async function CaminoPlanPage() {
             <p className="mb-5 mt-1 text-sm text-muted">
                 Arranca gratis 30 días. Sin tarjeta, sin compromiso.
             </p>
+            {/* SPEC-652: mientras la suscripción paga esté en pausa, el paso 4 muestra
+                SOLO la prueba gratis —nunca los precios placeholder—. La fuente de
+                verdad es única y compartida con `Mi perfil → Suscripción`. */}
             <PlanesSelector
-                planes={dtos}
+                planes={planesVisiblesEnAlta(dtos)}
                 usuario={{ id: usuario.id, rol: "PARENT", nombre: usuario.nombre, email: usuario.email }}
                 color="cielo"
                 onSeleccionar={actionSolicitarPlan}
