@@ -132,8 +132,8 @@ export function PanelAgregar({
                                         }}
                                         className={`rounded-full border px-3.5 py-2 text-sm transition ${
                                             activo
-                                                ? "border-pino bg-pino font-semibold text-white"
-                                                : "border-tinta/15 bg-superficie-1 text-muted hover:border-pino/40"
+                                                ? "border-cielo bg-cielo/10 font-semibold text-estado-cielo"
+                                                : "border-tinta/15 bg-superficie-1 text-muted hover:border-cielo/40"
                                         }`}
                                     >
                                         {p}
@@ -149,8 +149,8 @@ export function PanelAgregar({
                                 }}
                                 className={`rounded-full border px-3.5 py-2 text-sm transition ${
                                     eligióOtro
-                                        ? "border-pino bg-pino font-semibold text-white"
-                                        : "border-tinta/15 bg-superficie-1 text-muted hover:border-pino/40"
+                                        ? "border-cielo bg-cielo/10 font-semibold text-estado-cielo"
+                                        : "border-tinta/15 bg-superficie-1 text-muted hover:border-cielo/40"
                                 }`}
                             >
                                 Otro

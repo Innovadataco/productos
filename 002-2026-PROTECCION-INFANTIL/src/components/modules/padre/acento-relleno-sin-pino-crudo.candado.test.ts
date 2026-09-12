@@ -12,27 +12,34 @@ import * as path from "node:path";
  * equivocado. El defecto reapareció CINCO veces persiguiendo ocurrencias una por
  * una (dos originales + dos en paralelo + AQuienProtejoView); un candado que
  * ENUMERA pantallas enumera mal mañana. Este cierra por conducta: cualquier
- * elemento interactivo del padre con `bg-pino` SÓLIDO cae, sin base ni lista.
+ * elemento interactivo del padre con `bg-pino`/`border-pino` SÓLIDO de acento cae,
+ * sin base ni lista — tanto el relleno ESTÁTICO (`className="…bg-pino…"`) como el
+ * acento CONDICIONAL por estado (`className={activo ? "border-pino bg-pino…" : …}`:
+ * el seleccionado de un toggle; Diseño decidió que el seleccionado del padre sigue
+ * el acento en cielo, I-403). Escanea el atributo de apertura entero del elemento.
  *
- * Mira SOLO el relleno ESTÁTICO/incondicional: `className="…"` (string literal)
- * de un elemento interactivo. Eso es el relleno del primario. Deja fuera, a
- * propósito, dos cosas que NO son este defecto:
+ * La distinción es ESTRUCTURAL, no de palabras — deja fuera, a propósito, tres cosas
+ * que comparten el lexema «pino» pero no son el acento de acción:
  *  · El pino SEMÁNTICO (estado): badges «Activo»/«Sin novedades»/riesgo bajo y los
- *    puntos usan `bg-pino/10` (opacidad) o aplican `bg-pino` por VARIABLE de un
- *    mapa de config sobre un `<span>`/`<div>` — SemaforoItem VERDE queda intacto.
- *  · El `className={…}` CONDICIONAL por estado (toggles/chips de control segmentado,
- *    p. ej. `activo ? "bg-pino…" : …`) — es OTRO carril (SPEC-633), no el relleno
- *    del primario. Un `={…}` no es un `="…"`, así que no lo caza.
+ *    puntos usan `bg-pino/10` (OPACIDAD) o aplican `bg-pino` por VARIABLE de un mapa
+ *    de config sobre un `<span>`/`<div>` — el literal no vive en la etiqueta, así que
+ *    no cae (SemaforoItem VERDE queda intacto).
+ *  · Las pseudo-clases de interacción `focus:`/`hover:` (p. ej. `focus:border-pino`
+ *    de un `<input>`): es el carril del FOCO (SPEC-662), no el relleno/seleccionado.
+ *    Excluidas por el prefijo `:`.
+ *  · `text-pino` (acento como TEXTO): adyacente a I-406, su propia ficha.
  *
- * Muere por MUTACIÓN: un `<Link className="… bg-pino …">` (o `<a>`/`<button>`) en
- * el árbol del padre lo pone ROJO. fs + parseo de texto → unit, sin base de datos.
+ * Muere por MUTACIÓN: un `<Link className="… bg-pino …">` o un toggle que vuelva a
+ * `activo ? "border-pino bg-pino…"` lo pone ROJO. fs + parseo de texto → unit, sin BD.
  */
 
 const SRC = path.resolve(__dirname, "..", "..", ".."); // .../src
 const DIRS = ["components/modules/padre", "app/dashboard/padre"].map((d) => path.join(SRC, d));
 const TAGS = ["<Link", "<Button", "<button", "<a"];
-// Sólido = el acento de relleno; `bg-pino/10` (opacidad) es el velo SEMÁNTICO y se permite.
-const BG_PINO_SOLIDO = /\bbg-pino\b(?!\/)/;
+// `bg-pino`/`border-pino` como utilidad BASE (el acento de relleno/seleccionado).
+// Excluye: la opacidad `…-pino/10` (velo semántico) por `(?![\w/-])`, y las pseudo-clases
+// `focus:`/`hover:`/responsive `sm:` (foco, SPEC-662) por el lookbehind `(?<![\w:-])`.
+const ACENTO_PINO_SOLIDO = /(?<![\w:-])(?:bg|border)-pino(?![\w/-])/;
 
 function fuentes(): { rel: string; src: string }[] {
     const out: { rel: string; src: string }[] = [];
@@ -84,12 +91,12 @@ function rellenosPinoCrudo(rel: string, src: string): string[] {
             }
             const fin = finEtiqueta(src, i + tag.length);
             const attrs = src.slice(i + tag.length, fin);
-            // Solo el relleno ESTÁTICO: `className="…"` (string literal). Un
-            // `className={…}` (ternario por estado: toggles/control segmentado) es
-            // otro carril (SPEC-633), no el relleno del primario de I-403.
-            const m = attrs.match(/className\s*=\s*"([^"]*)"/);
-            if (m && BG_PINO_SOLIDO.test(m[1])) {
-                out.push(`${rel} :: ${tag} className="…${m[1].replace(/\s+/g, " ").trim().slice(0, 60)}…"`);
+            // Todo el atributo de apertura: estático (`className="…bg-pino…"`) Y
+            // condicional (`className={activo ? "border-pino bg-pino…" : …}`). El
+            // literal DEBE estar en la etiqueta — la indirección por variable (mapa
+            // de config) no trae el lexema acá, así que no cae.
+            if (ACENTO_PINO_SOLIDO.test(attrs)) {
+                out.push(`${rel} :: ${tag} ${attrs.replace(/\s+/g, " ").trim().slice(0, 80)}…`);
             }
             i = fin + 1;
         }

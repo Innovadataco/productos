@@ -7,10 +7,11 @@
 
 ## Relleno → cielo + tinta oscura
 - [x] T4 · `ExpedientesListClient:91,191` y `AQuienProtejoView:41` («Agregar un menor», folddeado por VEREDICTO CEO — estado vacío de día-uno) → `bg-cielo text-acento-ink` (antes `bg-pino` a mano). Mismo patrón firmado que `MisCitasList`/`IdentificadorBusquedaClient` (ya en cielo en main).
-- [x] T4-bis · CANDADO del relleno de CONDUCTA (no lista): `acento-relleno-sin-pino-crudo.candado.test.ts` — ningún elemento interactivo del padre con `bg-pino` sólido en `className="…"` estático. Verificado por mutación. Excluye el pino semántico y el condicional (control segmentado, SPEC-633).
+- [x] T4-bis · `PanelAgregar:135,152` (seleccionado de toggles, decisión de Diseño) → `border-cielo bg-cielo/10 text-estado-cielo` + hover `border-cielo/40` (tinte, no sólido).
+- [x] T4-ter · CANDADO del relleno/acento de CONDUCTA (no lista): `acento-relleno-sin-pino-crudo.candado.test.ts` — ningún interactivo del padre con `bg-pino`/`border-pino` sólido, ESTÁTICO o CONDICIONAL. Verificado por mutación (ambos). Excluye semántico (opacidad/variable), `focus:`/`hover:` (SPEC-662) y `text-pino` (I-406).
 
 ## Nombrado, no tocado
-- [ ] T5 · `PanelAgregar:135,152` — estado seleccionado de toggles en pino CONDICIONAL (control segmentado, otro carril) → el CEO/Diseño deciden si el seleccionado sigue el acento.
+- [ ] T5 · `PanelAgregar` focos de input (`:115,166,185,200`) en `focus:border-pino` → carril del foco (SPEC-662); `PanelAgregar:217` botón `text-pino` → I-406. Nombrados para Diseño.
 - [ ] T6 · `text-accent` en el padre → I-406 (no tocado; ficha propia).
 
 ## Cierre
