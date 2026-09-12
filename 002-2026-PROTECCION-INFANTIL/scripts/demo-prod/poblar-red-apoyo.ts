@@ -50,7 +50,11 @@ import {
     ENCUESTA_PUNTAJES,
     construirPlanEstados,
     franjaTomadaPara,
-    esCitaFutura,
+    esEstadoVivo,
+    HORAS_CITA_VIVA_MIN,
+    HORAS_CITA_VIVA_MAX,
+    HORAS_PAGO_APROBADO,
+    HORAS_PLAZO_PADRE,
     modalidadesDeProfesional,
     bucketActividad,
 } from "./lib/red-apoyo-plan";
@@ -102,6 +106,10 @@ function fechaFutura(diasAdelante: number, hora: number): { inicio: Date; fin: D
     inicio.setHours(hora, 0, 0, 0);
     return { inicio, fin: new Date(inicio.getTime() + 50 * 60 * 1000) };
 }
+/** Cita VIVA: creada hace pocas horas (reloj corriendo), FUERA de la ventana del barrido. */
+function fechaVivaReciente(): Date {
+    return new Date(Date.now() - entero(HORAS_CITA_VIVA_MIN, HORAS_CITA_VIVA_MAX) * 60 * 60 * 1000);
+}
 
 // ── Marcado en la MISMA transacción (SPEC-412) ──────────────────────────────
 async function marcar(tx: Tx, entidad: string, entidadId: string, notas?: string): Promise<void> {
@@ -150,7 +158,7 @@ function montos(esPrimera: boolean, tarifa: number, precioEstandar: number, pct:
 function pagoAprobadoPara(estado: EstadoSolicitudCita, creadoEn: Date): Date | null {
     // SIN_CONFIRMAR = el padre aún no pagó (o el profesional no respondió); el resto pagó.
     if (estado === "SIN_CONFIRMAR") return null;
-    return new Date(creadoEn.getTime() + 6 * 60 * 60 * 1000);
+    return new Date(creadoEn.getTime() + HORAS_PAGO_APROBADO * 60 * 60 * 1000);
 }
 
 async function sembrarProfesional(
@@ -240,9 +248,14 @@ async function sembrarCita(opts: {
 }): Promise<string> {
     const { prof, padreUsuarioId, estado, esPrimeraDelPadre, precioEstandar, pct, conEncuesta } = opts;
     const modalidad = prof.modalidades[entero(0, prof.modalidades.length - 1)]!;
-    const futura = esCitaFutura(estado);
-    const creadoEn = futura ? new Date() : fechaEnVentana();
-    const inicio = futura ? fechaFutura(entero(1, 20), 9 + entero(0, 8)).inicio : new Date(creadoEn.getTime() + 2 * MS_DIA);
+    // Los estados VIVOS (CONFIRMADA, PAGADA_PENDIENTE, SIN_CONFIRMAR) se siembran
+    // con reloj RECIENTE y cita a futuro para NO caer en la ventana de los barridos
+    // de vencimiento/plazo (esEstadoVivo · candado #4): PAGADA_PENDIENTE queda con
+    // el pago < 48 h y SIN_CONFIRMAR con `venceEn` futuro. El resto es histórico
+    // (desenlace terminal, inerte al worker).
+    const viva = esEstadoVivo(estado);
+    const creadoEn = viva ? fechaVivaReciente() : fechaEnVentana();
+    const inicio = viva ? fechaFutura(entero(1, 20), 9 + entero(0, 8)).inicio : new Date(creadoEn.getTime() + 2 * MS_DIA);
     const fin = new Date(inicio.getTime() + 50 * 60 * 1000);
     const m = montos(esPrimeraDelPadre, prof.tarifa, precioEstandar, pct);
 
@@ -260,7 +273,7 @@ async function sembrarCita(opts: {
                 presentacion: "Solicitud DEMO de la Red de Apoyo (poblador SPEC-676).",
                 urgencia: rnd() < 0.5 ? "ESTA_SEMANA" : "SIN_APURO",
                 estado,
-                venceEn: new Date(creadoEn.getTime() + 72 * 60 * 60 * 1000),
+                venceEn: new Date(creadoEn.getTime() + HORAS_PLAZO_PADRE * 60 * 60 * 1000),
                 pagoAprobadoEn: pagoAprobadoPara(estado, creadoEn),
                 ...m,
                 creadoEn,

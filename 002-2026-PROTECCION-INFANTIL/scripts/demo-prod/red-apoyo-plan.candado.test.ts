@@ -10,9 +10,16 @@
  *     D-137 (padre-no-asistió ≫ profesional-no-asistió; REEMBOLSADA > 0).
  *  3. INVARIANTE franja↔estado: sólo REPROGRAMADA y VENCIDA_SIN_RESPUESTA liberan
  *     la franja (los únicos que llaman liberar() en el producto); el resto la ocupa.
+ *  4. SEGURIDAD ANTE LOS BARRIDOS: los estados VIVOS (no terminales) se siembran
+ *     con reloj reciente y cita futura, FUERA de la ventana de los dos barridos de
+ *     `worker.ts` (vencimiento recoge PAGADA_PENDIENTE con pago >48h; plazo recoge
+ *     SIN_CONFIRMAR con venceEn pasado). Sembrarlos históricos los volcaría a
+ *     VENCIDA en la próxima corrida (15 min) y suspendería profesionales → rompe
+ *     el candado #1 en runtime. (El worker es el único que escanea citas y NO
+ *     notifica — I-385; el peligro es mutación de estado, no correo.)
  *
- * Muere por mutación: bajar el estado del perfil, dejar un estado en 0, o cambiar
- * qué estados liberan la franja → rojo.
+ * Muere por mutación: bajar el estado del perfil, dejar un estado en 0, cambiar
+ * qué estados liberan la franja, o ensanchar la ventana viva por encima de 48h → rojo.
  */
 import { describe, it, expect } from "vitest";
 import { EstadoSolicitudCita } from "@prisma/client";
@@ -34,6 +41,11 @@ import {
     modalidadesDeProfesional,
     perfilVisibleDemo,
     ESTADOS_FRANJA_LIBERADA,
+    ESTADOS_VIVOS,
+    esEstadoVivo,
+    HORAS_CITA_VIVA_MAX,
+    HORAS_PAGO_APROBADO,
+    HORAS_PLAZO_PADRE,
 } from "./lib/red-apoyo-plan";
 import { verificacionDemo } from "./lib/profesional-demo";
 
@@ -108,5 +120,52 @@ describe("SPEC-676 · candado 3 · invariante franja↔estado (solo 2 estados li
             expect(franjaTomadaPara(estado), `franjaTomadaPara(${estado})`).toBe(esperadoTomada);
             expect(esEstadoLiberado(estado)).toBe(liberados.has(estado));
         }
+    });
+});
+
+describe("SPEC-676 · candado 4 · los estados VIVOS se siembran fuera de la ventana de los barridos", () => {
+    const H = 60 * 60 * 1000;
+    const ahora = Date.now();
+    // El barrido de vencimiento recoge PAGADA_PENDIENTE con pagoAprobadoEn ≤ ahora−48h.
+    const BARRIDO_VENCIMIENTO_H = 48;
+
+    // Espejo EXACTO de los predicados del ÚNICO worker que escanea SolicitudCita
+    // (src/lib/dal/repositories/solicitud-cita.ts:114-137, ejercitados de verdad por
+    // src/lib/profesional/cita/worker.test.ts). El worker no notifica (I-385): el
+    // riesgo es que MUTE la fila sembrada.
+    const recogeVencimiento = (pagoAprobadoEn: Date | null) =>
+        pagoAprobadoEn !== null && pagoAprobadoEn.getTime() <= ahora - BARRIDO_VENCIMIENTO_H * H;
+    const recogePlazo = (pagoAprobadoEn: Date | null, venceEn: Date) =>
+        pagoAprobadoEn === null && venceEn.getTime() < ahora;
+
+    // Reloj que el seeder da a una cita viva en su antigüedad MÁXIMA (peor caso).
+    const creadoEnPeor = new Date(ahora - HORAS_CITA_VIVA_MAX * H);
+    const pagoVivo = new Date(creadoEnPeor.getTime() + HORAS_PAGO_APROBADO * H);
+    const venceVivo = new Date(creadoEnPeor.getTime() + HORAS_PLAZO_PADRE * H);
+
+    it("PAGADA_PENDIENTE viva: el pago queda < 48h → el barrido de vencimiento NO la recoge", () => {
+        expect(recogeVencimiento(pagoVivo)).toBe(false);
+        // La holgura es estructural: MAX + pago < 48.
+        expect(HORAS_CITA_VIVA_MAX + HORAS_PAGO_APROBADO).toBeLessThan(BARRIDO_VENCIMIENTO_H);
+    });
+
+    it("SIN_CONFIRMAR viva: venceEn queda a futuro → el barrido de plazo NO la recoge", () => {
+        expect(recogePlazo(null, venceVivo)).toBe(false);
+        expect(HORAS_PLAZO_PADRE).toBeGreaterThan(HORAS_CITA_VIVA_MAX);
+    });
+
+    it("control positivo: sembradas históricas (el defecto), los barridos SÍ las recogen", () => {
+        const historico = new Date(ahora - 200 * 24 * H);
+        expect(recogeVencimiento(new Date(historico.getTime() + HORAS_PAGO_APROBADO * H))).toBe(true);
+        expect(recogePlazo(null, new Date(historico.getTime() + HORAS_PLAZO_PADRE * H))).toBe(true);
+    });
+
+    it("los dos estados que el worker barre son VIVOS (el seeder les da reloj reciente)", () => {
+        expect(esEstadoVivo("PAGADA_PENDIENTE")).toBe(true);
+        expect(esEstadoVivo("SIN_CONFIRMAR")).toBe(true);
+        expect(new Set(ESTADOS_VIVOS)).toEqual(new Set(["CONFIRMADA", "PAGADA_PENDIENTE", "SIN_CONFIRMAR"]));
+        // Los terminales NO son vivos → se siembran históricos, inertes al worker.
+        expect(esEstadoVivo("CUMPLIDA")).toBe(false);
+        expect(esEstadoVivo("VENCIDA_SIN_RESPUESTA")).toBe(false);
     });
 });

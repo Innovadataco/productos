@@ -72,10 +72,32 @@ export function franjaTomadaPara(estado: EstadoSolicitudCita): boolean {
     return !esEstadoLiberado(estado);
 }
 
-/** CONFIRMADA es el único estado con cita a FUTURO (el pipeline de «agendar»). El resto es histórico. */
-export function esCitaFutura(estado: EstadoSolicitudCita): boolean {
-    return estado === "CONFIRMADA";
+/**
+ * Estados NO terminales: la cita sigue VIVA (reloj corriendo). Se siembran con
+ * `creadoEn` RECIENTE y cita a FUTURO para caer FUERA de la ventana de los
+ * barridos de `worker.ts`: el de vencimiento recoge PAGADA_PENDIENTE con el pago
+ * > 48 h; el del plazo recoge SIN_CONFIRMAR con `venceEn` pasado. Sembrarlas con
+ * fechas históricas las haría vencer solas en la próxima corrida del worker
+ * (cada 15 min): ~100 filas volcadas a VENCIDA, distribución destruida y
+ * profesionales suspendidos (3+ consecutivas) saliendo del directorio — el
+ * candado de visibilidad roto en runtime, no en CI. Candado #4 lo cierra.
+ */
+export const ESTADOS_VIVOS: readonly EstadoSolicitudCita[] = ["CONFIRMADA", "PAGADA_PENDIENTE", "SIN_CONFIRMAR"];
+
+export function esEstadoVivo(estado: EstadoSolicitudCita): boolean {
+    return ESTADOS_VIVOS.includes(estado);
 }
+
+/**
+ * Reloj de una cita viva sembrada. `HORAS_CITA_VIVA_MAX + HORAS_PAGO_APROBADO`
+ * debe quedar por DEBAJO de las 48 h del barrido de vencimiento (con holgura), y
+ * `HORAS_PLAZO_PADRE - HORAS_CITA_VIVA_MAX` positivo para que SIN_CONFIRMAR
+ * conserve `venceEn` futuro. Candado #4 verifica ambos.
+ */
+export const HORAS_CITA_VIVA_MIN = 2;
+export const HORAS_CITA_VIVA_MAX = 30;
+export const HORAS_PAGO_APROBADO = 6; // pagoAprobadoEn = creadoEn + 6 h (pagoAprobadoPara)
+export const HORAS_PLAZO_PADRE = 72; // venceEn = creadoEn + 72 h
 
 /**
  * Población de la que sale REEMBOLSADA: el silencio del profesional
