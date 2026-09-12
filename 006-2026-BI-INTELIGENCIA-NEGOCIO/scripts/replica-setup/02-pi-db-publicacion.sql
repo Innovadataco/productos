@@ -63,13 +63,15 @@
 --   `eventos_match`. Queda VETADA como tabla completa (guard §4).
 --
 -- REGLA DE GOBIERNO (AGENTS.md §7): agregar una tabla nueva a la publicación
---   exige pedirla por nombre y autorización de Jelkin. Las 44 tablas de abajo
+--   exige pedirla por nombre y autorización de Jelkin. Las 45 tablas de abajo
 --   son la lista canónica autorizada (23 originales D-20 del 005 + 17 nuevas
 --   autorizadas para BI v2 el 2026-09-01 − 3 legacy vacías retiradas el mismo
 --   día: Subscription, BillingCycle, AlertaSuscripcion + 7 autorizadas el
 --   2026-09-03 para los Lotes A·B·C: Pago, pasos_procesamiento,
 --   ReintentoReporte, HealthProbe, worker_logs, IncidenteInfra, y
---   PerfilOperador canonizada tras su publicación manual del 2026-09-02).
+--   PerfilOperador canonizada tras su publicación manual del 2026-09-02 +
+--   simulacion_reportes autorizada por el CEO el 12-09-2026 como 45ª tabla —
+--   predicado «no es trabajo real»; simulacion_runs PROHIBIDA por casosJson).
 --
 -- HALLAZGO CANDADO 15 del 005 (se conserva): modelos Prisma con @@map a
 --   nombre snake_case/legacy en BD — la publicación usa el nombre REAL:
@@ -106,7 +108,7 @@ DECLARE
   pub_tabla       text;
   n_filas         bigint;
 
-  -- ── LISTA CANÓNICA (44 tablas · LISTA BLANCA deny-by-default) ──────────
+  -- ── LISTA CANÓNICA (45 tablas · LISTA BLANCA deny-by-default) ──────────
   -- 2026-09-05: TODA tabla publica columnas EXPLÍCITAS. Si PI agrega una
   -- columna nueva, NO viaja hasta que el canon la nombre. Cortadas por
   -- minimización (Ley 1581): contenido narrativo, JSON libre, vectores y
@@ -185,6 +187,16 @@ DECLARE
     ARRAY['pasos_procesamiento', 'id,reporteId,etapa,veredicto,latenciaMs,creadoEn'],
     ARRAY['patrones_institucionales', 'id,colegioId,periodo,grado,conducta,plataformaId,conteo,creadoEn,actualizadoEn'],
     ARRAY['score_clientes', 'id,suscripcionId,periodo,componenteReportes,componenteCasos,componenteAlertas,componenteSesiones,pesoReportes,pesoCasos,pesoAlertas,pesoSesiones,scoreTotal,percentilEnCohorte,calculadoEn'],
+    -- simulacion_reportes (45ª tabla · autorizada por CEO 12-09-2026, columna
+    --   por columna): identificadores y categorías esperadas, cero contenido.
+    --   Complementa demo_marcado en el predicado «no es trabajo real»
+    --   (marcado O simulación). simulacion_runs queda PROHIBIDA: casosJson
+    --   guarda cuerpos de reporte en claro (extiende crearReporteSchema) —
+    --   publicarla rodearía el cifrado de ContenidoReporte. metricasJson sin
+    --   medir: tampoco. Si un día se necesitan metadatos de corrida, se piden
+    --   por columna (id,modelo,totalCasos,progreso,estado,fechas) — nunca la
+    --   tabla entera.
+    ARRAY['simulacion_reportes', 'id,simulacionRunId,reporteId,indice,categoriaEsperada,createdAt,secundariaEsperada'],
     --   ↑ cortadas (contenido/PII · whitelist 2026-09-05): mensaje
     ARRAY['worker_logs', 'id,servicio,nivel,creadoEn']
   ];
@@ -199,7 +211,13 @@ DECLARE
     'AclaracionExpediente', 'aclaracion_expediente', 'InformeConsolidado',
     'informes_consolidados', 'Apelacion', 'AnalisisExpediente', 'InformePadre',
     'TokenRegistro', 'notificaciones', 'RateLimit',
-    'simulacion_runs', 'simulacion_reportes',
+    'simulacion_runs',
+    -- NOTA (2026-09-12): simulacion_reportes SALIÓ de esta lista — autorizada
+    -- por el CEO como 45ª tabla con column list (identificadores + categorías
+    -- esperadas, cero contenido; predicado «no es trabajo real» junto a
+    -- demo_marcado). simulacion_runs SE QUEDA: casosJson guarda cuerpos de
+    -- reporte en claro (extiende crearReporteSchema) — publicarla rodearía el
+    -- cifrado de ContenidoReporte. metricasJson sin medir: misma cautela.
     'simulacion_abuso_runs', 'sesiones_log', 'audit_consentimientos',
     -- PK = nick en claro del reportado: impublicable sin PII (ver cabecera).
     'senal_comunitaria_cache'
@@ -439,12 +457,12 @@ JOIN pg_class c ON c.oid = pr.prrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE p.pubname = 'bi_replica' AND n.nspname = 'public'
 ORDER BY 2;
--- Esperado: 44 filas · tiene_column_list = t en las 22 tablas con recorte
+-- Esperado: 45 filas · tiene_column_list = t en las 23 tablas con recorte
 -- (Reporte, Colegio, Alumno, IdentificadorAlumno, AuditLog, Profesor,
 --  AcudienteEstudiante, IdentificadorAcudiente, IdentificadorProfesor, Hijo,
 --  IdentificadorHijo, ContactoConfianza, IdentificadorContacto,
 --  IdentificadorReportado, Suscripcion, Pago, pasos_procesamiento,
---  ReintentoReporte, HealthProbe, worker_logs, IncidenteInfra, PerfilOperador) · f en las 22
--- completas.
+--  ReintentoReporte, HealthProbe, worker_logs, IncidenteInfra, PerfilOperador,
+--  simulacion_reportes) · f en las 22 completas.
 -- NUNCA deben aparecer las tablas prohibidas (ver cabecera §GUARDS) ni las
 -- legacy retiradas (Subscription, BillingCycle, AlertaSuscripcion).

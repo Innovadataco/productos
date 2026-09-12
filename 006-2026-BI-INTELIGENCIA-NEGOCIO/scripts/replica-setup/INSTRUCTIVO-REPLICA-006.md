@@ -325,8 +325,15 @@ profundidad sobre el REVOKE del script 01).
 
 > **Fuente de verdad: el array `canon` del script 02.** La lista de abajo
 > corresponde a la reescritura 2026-09-01; el **2026-09-05** el canon pasó a
-> **44 tablas con columnas EXPLÍCITAS (deny-by-default total)**, cortando
-> además contenido narrativo y PII destilado ya publicados:
+> **tablas con columnas EXPLÍCITAS (deny-by-default total)** y el **2026-09-12**
+> suma `simulacion_reportes` como 45ª tabla (autorizada por el CEO columna por
+> columna: identificadores y categorías esperadas, cero contenido — complementa
+> a `demo_marcado` en el predicado «no es trabajo real». **`simulacion_runs`
+> queda PROHIBIDA**: `casosJson` guarda cuerpos de reporte en claro y
+> publicarla rodearía el cifrado de `ContenidoReporte`. `metricasJson` sin
+> medir: tampoco. Metadatos de corrida, si un día se necesitan, se piden por
+> columna — nunca la tabla entera). Cortes 2026-09-05 además de contenido
+> narrativo y PII destilado ya publicados:
 > `SolicitudComite.motivo/resolucion/analisis`, `ClasificacionIA.rawResponse/
 > piiDetectada` (se conserva `contienePii`), `Reporte.keywordsDetectadas`,
 > `CorreccionAdmin.motivo`, `TransicionReporte.motivo/metadatos`,
@@ -382,9 +389,14 @@ en el canon.
 `AclaracionExpediente` / `aclaracion_expediente`, `InformeConsolidado` /
 `informes_consolidados`, `Apelacion`, `AnalisisExpediente`, `InformePadre`,
 `TokenRegistro`, `notificaciones`, `HealthProbe`, `worker_logs`, `RateLimit`,
-`demo_marcado`, `simulacion_runs`, `simulacion_reportes`,
+`demo_marcado`, `simulacion_runs`,
 `simulacion_abuso_runs`, `sesiones_log`, `audit_consentimientos` — datos de
-menores, credenciales, configuración sensible o texto libre. Tampoco
+menores, credenciales, configuración sensible o texto libre.
+> **Esta lista histórica quedó parcialmente desactualizada**: `HealthProbe`,
+> `worker_logs`, `demo_marcado` y `simulacion_reportes` fueron autorizadas
+> después con column list (fuentes de verdad: el canon del 02 y la nota de
+> arriba). `simulacion_runs` sigue vetada por `casosJson` (cuerpos de reporte
+> en claro — rodearía el cifrado de `ContenidoReporte`). Tampoco
 **`senal_comunitaria_cache`**: su PK (`identificadorReportado`) ES el nick en
 claro y PostgreSQL exige incluir la replica identity en la column list, así
 que es imposible publicarla sin PII; la señal comunitaria se deriva en BI de
