@@ -111,6 +111,30 @@ export class SolicitudCitaRepository {
         });
     }
 
+    /**
+     * SPEC-658 (I-393) · vista de ADMIN: citas donde el padre PAGÓ y el profesional
+     * dejó pasar las 48 h → `estado = VENCIDA_SIN_RESPUESTA ∧ pagoAprobadoEn presente`.
+     * Hay dinero que alguien tiene que MIRAR (si se devuelve, cuánto y cuándo lo
+     * decide Jelkin, aparte — I-393). Solo VISIBILIDAD: no decide ni mueve plata.
+     *
+     * Asimetría D-137, y es lo que sostiene el candado: NO incluye el no-asistió del
+     * PADRE (`NO_ASISTIO_PADRE`) —solo el silencio del PROFESIONAL se reembolsa— ni
+     * las impagas (`pagoAprobadoEn: null`). Si esta consulta se afloja, el producto
+     * mostraría como «por devolver» lo que Jelkin decidió no devolver.
+     */
+    listarVencidasConPagoParaAdmin() {
+        return this.db.solicitudCita.findMany({
+            where: { estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: { not: null } },
+            include: {
+                padreUsuario: { select: { id: true, nombre: true, email: true } },
+                profesional: { select: { id: true, nombreVisible: true } },
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+            },
+            orderBy: { actualizadoEn: "desc" },
+            take: 200,
+        });
+    }
+
     listarVencidasSinAvisar48h(ahora: Date) {
         // Candidatas al aviso 48h: PAGADA_PENDIENTE con pagoAprobadoEn + 48h ya pasado.
         // El candado de repetición vive en el service (compara con audit).
