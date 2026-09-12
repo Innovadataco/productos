@@ -1,7 +1,10 @@
 # SPEC-660 · «A quién protejo» — dos procesos (configurar y enterarse)
 
-**Status:** RADICADA → en implementación (ola-1) · **Rama:** `work/pi-SPEC-660-a-quien-protejo-dos-procesos` · **Autor de la spec:** Dev 1
-**Radicado:** `RADICADO-SPEC-660-2026-09-11.md` · **Forma (autoridad Diseño):** `FORMA-SPEC660-REDISENO-HIJOS-DIRECCIONES`, `FORMA-SPEC660-CIRCULO-EN-EL-GRAFICO-PESO-Y-CONTEO`, `FORMA-SPEC666-CONTEO-VERIFICADO-VS-ANONIMO`. **Mockup vigente:** `dos-procesos-configurar-y-alertar-spec660.html` (los otros cuatro, superados).
+**Status**: DESARROLLO
+**Rama:** `work/pi-SPEC-660-a-quien-protejo-dos-procesos` · **Autor de la spec:** Dev 1 · **Radicado:** `RADICADO-SPEC-660-2026-09-11.md`
+**Forma (autoridad Diseño):** `FORMA-SPEC660-REDISENO-HIJOS-DIRECCIONES`, `FORMA-SPEC660-CIRCULO-EN-EL-GRAFICO-PESO-Y-CONTEO`, `FORMA-SPEC666-CONTEO-VERIFICADO-VS-ANONIMO`. **Mockup vigente:** `dos-procesos-configurar-y-alertar-spec660.html` (los otros cuatro, superados).
+
+**Impacto en arquitectura:** ola-1 es SOLO presentación del padre — cero esquema, cero migración, cero endpoint nuevo. Reusa datos que ya llegan (`listarHijos` + `obtenerHomePadre.estadoClasificador`/`.resumen`). Componentes nuevos, presentacionales y puros (`GraficoProteccion`, `LineaEstadoProteccion`, `BloqueHuecoCobertura`, `AQuienProtejoView`); la página server deriva y les pasa datos limpios. El CRUD **se mueve** (no se duplica) a Mi perfil › «Menores de edad» (Fase C, Dev 3), invirtiendo el acople para no dejar transitorio. La única lógica no-presentacional es la asimetría I-396 en `derivarEstadoHijo` (motor caído ⇒ ausencia no confiable), cerrada por candado de render — defensa en profundidad con SPEC-671, que cierra el mismo hueco en el dato.
 
 ## Qué es / qué NO es
 `/dashboard/padre/hijos` («A quién protejo») debe **sentirse como el Círculo de Confianza** (pedido de Jelkin). **NO** revive el asistente de 4 pasos (D-133 · no resucitar `RegistroHijoWizard`); el alta es **una sola acción mejor presentada**. Esto **refina D-133, no lo revierte**.

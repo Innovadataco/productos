@@ -22,8 +22,11 @@ import { relativoHumano } from "@/lib/colegio/fechas-humano";
  */
 export interface EstadoClasificador {
     motorVivo: boolean;
-    /** Último éxito real del clasificador, o null si nunca. Honesto (no recortado). */
-    ultimaVerificacionEn: string | null;
+    /**
+     * Último éxito real del clasificador, o null si nunca. Honesto (no recortado).
+     * `Date` cuando llega server-side (LatidoMotor), `string` cuando pasó por JSON.
+     */
+    ultimaVerificacionEn: string | Date | null;
 }
 
 export function LineaEstadoProteccion({ estado }: { estado: EstadoClasificador }) {

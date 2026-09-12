@@ -652,4 +652,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/GraficoProteccion.candado.test.tsx",
     // SPEC-660: línea de estado — el reloj «Revisado hace X» NO se pinta en degradado aunque el dato traiga valor (I-396).
     "src/components/modules/padre/LineaEstadoProteccion.candado.test.tsx",
+    // SPEC-660: bloque de hueco de cobertura — cielo nunca ámbar, nombra al hijo, sin «te avisamos».
+    "src/components/modules/padre/BloqueHuecoCobertura.candado.test.tsx",
 ];
