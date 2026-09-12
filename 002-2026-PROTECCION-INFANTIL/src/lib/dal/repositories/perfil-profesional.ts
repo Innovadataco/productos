@@ -299,6 +299,20 @@ export class PerfilProfesionalRepository {
      * el repositorio, en el MISMO carril que el filtro legal, para que CUALQUIER
      * superficie que consulte el repo herede ambos sin enterarse. Los campos
      * obligatorios van al final: un `extra` del llamador no puede sobreescribirlos.
+     *
+     * DECISIÓN (D-121 · divergencia conteo↔lista bajo concurrencia — se deja A PROPÓSITO):
+     * `listarActivos` y `contarActivos` resuelven la exclusión cada uno por su cuenta (ambos
+     * llaman `exclusionSembradosPara`, que lee `esUsuarioSembrado` y —para un visor real—
+     * `idsSembrados`), en instantes distintos. Si `demo_marcado` cambia ENTRE los dos, excluyen
+     * conjuntos distintos; hoy son DOS lecturas por request, así que la ventana es un pelo más
+     * ancha que con la exclusión vieja. NO se corrige, y en concreto NO threadear esos ids/flags
+     * por el route: eso filtra un detalle del repositorio hacia arriba y rompe la propiedad que
+     * hace ESTRUCTURAL la garantía — que un callsite nuevo herede la exclusión sin enterarse. El
+     * costo de dejarlo es una ventana de sub-segundo que SOLO se abre durante una siembra/purga
+     * MANUAL (en tráfico real `demo_marcado` está estático), sobre el booleano de fallback
+     * `hayVerificados` (route del padre, solo si la lista filtrada quedó vacía), y se auto-cura al
+     * recargar. Ya está DECIDIDO: no es un TODO ni un «por ahora» — si lees «puede divergir bajo
+     * concurrencia», es esto.
      */
     private async whereDirectorioPublico(
         ahora: Date,
