@@ -11,6 +11,7 @@ const TABS = [
     { href: "/dashboard/admin/pagos/bonos", label: "Bonos" },
     { href: "/dashboard/admin/pagos/planes", label: "Planes" },
     { href: "/dashboard/admin/pagos/reembolsos", label: "Reembolsos" },
+    { href: "/dashboard/admin/pagos/citas-vencidas", label: "Citas sin respuesta" },
     { href: "/dashboard/admin/pagos/analitica", label: "Analítica" },
 ];
 

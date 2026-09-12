@@ -9,6 +9,7 @@ import type {
 } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
+import { logger } from "@/lib/logger";
 
 const INCLUDE_PADRE_PARA_PROFESIONAL = {
     padreUsuario: { select: { id: true, nombre: true, email: true } },
@@ -109,6 +110,47 @@ export class SolicitudCitaRepository {
             orderBy: { creadoEn: "asc" },
             take: 200,
         });
+    }
+
+    /**
+     * SPEC-658 (I-393) · vista de ADMIN: citas donde el padre PAGÓ y el profesional
+     * dejó pasar las 48 h → `estado = VENCIDA_SIN_RESPUESTA ∧ pagoAprobadoEn presente`.
+     * Hay dinero que alguien tiene que MIRAR (si se devuelve, cuánto y cuándo lo
+     * decide Jelkin, aparte — I-393). Solo VISIBILIDAD: no decide ni mueve plata.
+     *
+     * Asimetría D-137, y es lo que sostiene el candado: NO incluye el no-asistió del
+     * PADRE (`NO_ASISTIO_PADRE`) —solo el silencio del PROFESIONAL se reembolsa— ni
+     * las impagas (`pagoAprobadoEn: null`). Si esta consulta se afloja, el producto
+     * mostraría como «por devolver» lo que Jelkin decidió no devolver.
+     */
+    async listarVencidasConPagoParaAdmin() {
+        // El tope NO pagina (la paginación va aparte: cursor por `actualizadoEn` +
+        // índice parcial). Pero un tope CALLADO sobre dinero por devolver es una
+        // trampa: al superar 200, las citas más VIEJAS dejan de verse —dinero que
+        // nadie mira sobre una pantalla que se ve sana con 200 filas llenas—. Por eso
+        // se compara el total real contra el tope y se DEJA UN AVISO: no arregla el
+        // corte, lo vuelve visible (SPEC-658).
+        const TOPE = 200;
+        const where: Prisma.SolicitudCitaWhereInput = { estado: "VENCIDA_SIN_RESPUESTA", pagoAprobadoEn: { not: null } };
+        const [total, items] = await Promise.all([
+            this.db.solicitudCita.count({ where }),
+            this.db.solicitudCita.findMany({
+                where,
+                include: {
+                    padreUsuario: { select: { id: true, nombre: true, email: true } },
+                    profesional: { select: { id: true, nombreVisible: true } },
+                    franja: { select: { inicio: true, fin: true, modalidad: true } },
+                },
+                orderBy: { actualizadoEn: "desc" },
+                take: TOPE,
+            }),
+        ]);
+        if (total > TOPE) {
+            logger.warn(
+                `[citas-vencidas-admin] ${total} citas pagadas sin respuesta superan el tope ${TOPE}; ${total - TOPE} no se listan (paginación radicada aparte).`,
+            );
+        }
+        return items;
     }
 
     listarVencidasSinAvisar48h(ahora: Date) {
