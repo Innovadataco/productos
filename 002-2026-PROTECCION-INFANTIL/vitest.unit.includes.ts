@@ -488,6 +488,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-499: el profesional demo aparece/es reservable (ACTIVO + verificación
     // vigente) y es purgable (orden FK-seguro en ORDEN_BORRADO).
     "scripts/demo-prod/profesional-demo.candado.test.ts",
+    // SPEC-676: plan del poblador de la Red de Apoyo (visibilidad, 9 estados, invariante franja↔estado).
+    "scripts/demo-prod/red-apoyo-plan.candado.test.ts",
+    // SPEC-676 / I-405: el poblador NUNCA invoca a purgar-demo.ts (conducta del llamador).
+    "scripts/demo-prod/poblar-red-apoyo.candado.test.ts",
     // SPEC-516: la siembra de desbloqueo de Calidad es purgable (IdentificadorReportado
     // en ORDEN_BORRADO + cadena de expediente en purgar-demo).
     "scripts/demo-prod/desbloqueo-purgable.candado.test.ts",

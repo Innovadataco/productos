@@ -22,6 +22,10 @@ export const ORDEN_BORRADO: string[] = [
     "PerfilOperador",
     "IntegranteComite",
     // SPEC-499 · profesional demo (hijas del perfil primero, luego el perfil).
+    // SPEC-676 · Red de Apoyo: la encuesta cuelga de la solicitud; la solicitud de
+    // la franja y del perfil → se borran antes que ellos (y que el usuario padre).
+    "EncuestaPrimeraCita",
+    "SolicitudCita",
     "VerificacionProfesional",
     "FranjaDisponible",
     "PerfilProfesional",
