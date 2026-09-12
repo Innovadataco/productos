@@ -56,6 +56,8 @@ async function sembrarProfesionalConPerfil() {
             presentacion: "Presentación.",
             tarifaConsultaCOP: 180000,
             duracionMinutos: 45,
+            // SPEC-673 (I-398): un perfil ≠ BORRADOR exige ≥1 modalidad (CHECK en BD).
+            atiendeVirtual: true,
             estado: "ACTIVO",
         },
     });

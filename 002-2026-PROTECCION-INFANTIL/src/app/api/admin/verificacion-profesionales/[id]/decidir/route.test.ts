@@ -88,6 +88,8 @@ async function sembrarPerfilEnRevision() {
             presentacion: "Presentación de prueba.",
             tarifaConsultaCOP: 100000,
             duracionMinutos: 45,
+            // SPEC-673 (I-398): un perfil ≠ BORRADOR exige ≥1 modalidad (CHECK en BD).
+            atiendeVirtual: true,
             estado: "EN_REVISION",
             autorizacionArchivoId: "/archivos/autorizacion-prueba.pdf",
             autorizacionSubidaEn: new Date(),
