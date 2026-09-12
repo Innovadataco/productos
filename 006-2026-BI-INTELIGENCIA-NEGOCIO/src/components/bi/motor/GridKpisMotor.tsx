@@ -17,9 +17,16 @@ export default function GridKpisMotor({ data }: { data: MotorData }) {
                 valor={data.kpis.clasificaciones24h}
                 delta={{
                     texto:
-                        data.kpis.confianzaMedia24h !== null
-                            ? `confianza media ${data.kpis.confianzaMedia24h.toFixed(2).replace(".", ",")}`
-                            : "sin clasificaciones en 24 h",
+                        data.kpis.clasificaciones24hDemo !== null &&
+                        data.kpis.clasificaciones24hDemo > 0
+                            ? // Desglose semilla/real (CEO 12-09): en la mezcla el
+                              // número «casi legítimo» es donde el falso más se disfraza.
+                              `${fmtMiles(data.kpis.clasificaciones24hDemo)} semilla · ${fmtMiles(
+                                  data.kpis.clasificaciones24h - data.kpis.clasificaciones24hDemo,
+                              )} reales`
+                            : data.kpis.confianzaMedia24h !== null
+                              ? `confianza media ${data.kpis.confianzaMedia24h.toFixed(2).replace(".", ",")}`
+                              : "sin clasificaciones en 24 h",
                     tipo: "flat",
                 }}
                 retardo={140}
