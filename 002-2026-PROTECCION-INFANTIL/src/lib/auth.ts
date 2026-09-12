@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import { AppError, ERROR_CODES } from "./errors";
 import { requireEnv } from "./env";
-import type { RolUsuario } from "@prisma/client";
+import type { Prisma, RolUsuario } from "@prisma/client";
 import { getParametroSistema } from "./parametros";
 import { SessionLogService } from "./dal/services/session-log";
 import { sessionCookieAttributes } from "./auth/session-cookie-attrs";
@@ -23,6 +23,34 @@ function getSecret(): Uint8Array {
 // Spec 095-US2 (D-21): el TTL del JWT es un parámetro (security.jwt_ttl_hours), no un literal.
 // Fallback seguro: 24h si el parámetro no existe o es inválido.
 const JWT_TTL_FALLBACK_HOURS = 24;
+
+// SPEC-672 (I-399): el camino de autenticación NO lee el Usuario entero. Sin `select`,
+// Prisma nombra TODOS los escalares; un DROP de columna tumba `verifyAuth` (que gatea
+// /api/reportes) y, peor, el P2022 lo traga el catch → 403 «sesión no válida» (un
+// error de esquema disfrazado de expiración). El conjunto de campos sale de los
+// CONSUMIDORES del objeto devuelto —verificado por el type-checker—, no de lo que
+// estas funciones usan directamente. El candado vigila la FORMA (nunca sin select).
+const USUARIO_AUTH_SELECT = {
+    id: true,
+    estado: true,
+    rol: true,
+    email: true,
+    nombre: true,
+    colegioId: true,
+    comiteColegioId: true,
+    tenantId: true,
+    // cambiar-password verifica el hash actual del propio usuario autenticado.
+    passwordHash: true,
+    // /api/me informa si el usuario debe cambiar la contraseña.
+    debeCambiarPassword: true,
+    // anti-abuso: la antigüedad de la cuenta del reportante autenticado pondera la
+    // señal de fuente (crearFuenteReporte → calcularDiasAntiguedad). Sin esto, esa
+    // ponderación se degrada en silencio para usuarios logueados.
+    creadoEn: true,
+} satisfies Prisma.UsuarioSelect;
+
+/** Forma del usuario que devuelve el camino de autenticación (solo lo que se consume). */
+export type UsuarioAutenticado = Prisma.UsuarioGetPayload<{ select: typeof USUARIO_AUTH_SELECT }>;
 
 async function obtenerJwtTtlSegundos(): Promise<number> {
     const param = await getParametroSistema("security.jwt_ttl_hours");
@@ -96,6 +124,7 @@ export async function getUserFromToken(request: Request) {
         if (!payload || !payload.sub) return null;
         const user = await prisma.usuario.findUnique({
             where: { id: payload.sub as string },
+            select: USUARIO_AUTH_SELECT,
         });
         if (!user || user.estado !== "activo") return null;
         return user;
@@ -126,6 +155,7 @@ export async function getSessionUser() {
         if (!payload || !payload.sub) return null;
         const user = await prisma.usuario.findUnique({
             where: { id: payload.sub as string },
+            select: USUARIO_AUTH_SELECT,
         });
         if (!user || user.estado !== "activo") return null;
         return user;
@@ -153,6 +183,7 @@ export async function verifyAuth(requiredRol?: RolUsuario | RolUsuario[]) {
 
     const user = await prisma.usuario.findUnique({
         where: { id: payload.sub as string },
+        select: USUARIO_AUTH_SELECT,
     });
 
     if (!user || user.estado !== "activo") {
