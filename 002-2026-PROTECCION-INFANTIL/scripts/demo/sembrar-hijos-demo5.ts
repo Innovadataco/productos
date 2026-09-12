@@ -105,6 +105,10 @@ function identificadoresDe(
     nombre: string,
     plataformas: { id: string }[],
 ): IdentData[] {
+    // ~30% de los hijos quedan SIN cuenta: es el estado de hueco de cobertura
+    // (BloqueHuecoCobertura, Fase D). Los dos estados tienen que convivir en la lista,
+    // o el demo enseña un solo estado. Determinista por (padreId, hijoIdx) = el dry-run predice el real.
+    if (hashInt(padreId, `sin-cuentas-${hijoIdx}`) % 10 < 3) return [];
     const base = nombre.toLowerCase();
     const cuantos = 1 + (hashInt(padreId, `n-ident-${hijoIdx}`) % 2); // 1 o 2
     const out: IdentData[] = [];
@@ -166,6 +170,7 @@ async function main() {
 
     let hijosCreados = 0;
     let identsCreados = 0;
+    let hijosSinCuenta = 0;
     for (const padre of pendientes) {
         const fichas = fichasDe(padre.id, padre.apellidos);
 
@@ -173,7 +178,9 @@ async function main() {
             for (let hi = 0; hi < fichas.length; hi++) {
                 const f = fichas[hi];
                 const idents = identificadoresDe(padre.id, hi, f.nombre, plataformas);
-                console.log(`  [dry] ${padre.email} → ${f.nombre} ${f.apellidos} (${f.sexo}, ${f.anioNacimiento}) · cuentas: ${idents.map((d) => d.valor).join(", ")}`);
+                if (idents.length === 0) hijosSinCuenta++;
+                const cuentas = idents.length > 0 ? idents.map((d) => d.valor).join(", ") : "SIN CUENTA (hueco de cobertura)";
+                console.log(`  [dry] ${padre.email} → ${f.nombre} ${f.apellidos} (${f.sexo}, ${f.anioNacimiento}) · cuentas: ${cuentas}`);
                 identsCreados += idents.length;
             }
             hijosCreados += fichas.length;
@@ -185,7 +192,9 @@ async function main() {
                 const hijo = await tx.hijo.create({ data: { usuarioId: padre.id, ...fichas[hi] }, select: { id: true } });
                 await marcar(tx, "Hijo", [hijo.id], { script: SCRIPT, notas: "hijo demo5 (camino del padre)" });
 
-                for (const identData of identificadoresDe(padre.id, hi, fichas[hi].nombre, plataformas)) {
+                const idents = identificadoresDe(padre.id, hi, fichas[hi].nombre, plataformas);
+                if (idents.length === 0) hijosSinCuenta++;
+                for (const identData of idents) {
                     const ident = await tx.identificadorHijo.create({ data: { hijoId: hijo.id, ...identData }, select: { id: true } });
                     await marcar(tx, "IdentificadorHijo", [ident.id], { script: SCRIPT, notas: "cuenta vigilada demo5" });
                     identsCreados++;
@@ -195,7 +204,7 @@ async function main() {
         hijosCreados += fichas.length;
     }
 
-    console.log(`[hijos-demo5] ${DRY_RUN ? "crearía" : "creados"}: ${hijosCreados} hijo(s) + ${identsCreados} identificador(es) para ${pendientes.length} padre(s).`);
+    console.log(`[hijos-demo5] ${DRY_RUN ? "crearía" : "creados"}: ${hijosCreados} hijo(s) + ${identsCreados} identificador(es) para ${pendientes.length} padre(s). Hijos SIN cuenta (hueco de cobertura): ${hijosSinCuenta}.`);
     await prisma.$disconnect();
 }
 
