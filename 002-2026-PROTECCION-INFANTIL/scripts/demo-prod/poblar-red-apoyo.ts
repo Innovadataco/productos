@@ -28,10 +28,11 @@
  *  · Cero correos: se siembra el estado final directo; no se dispara ningún flujo de aviso.
  *
  * Uso (dry-run por defecto):
- *   DEMO_PASSWORD=... node --env-file=.env --import tsx scripts/demo-prod/poblar-red-apoyo.ts [--confirm] [--force]
- *   --confirm escribe; --force purga la corrida previa y reescribe.
+ *   DEMO_PASSWORD=... node --env-file=.env --import tsx scripts/demo-prod/poblar-red-apoyo.ts [--confirm]
+ *   --confirm escribe. NO hay --force (I-405): si la corrida ya existe, aborta. Purgar
+ *   es un acto DELIBERADO y GLOBAL, aparte, con purgar-demo.ts — este poblador nunca
+ *   lo invoca (candado de conducta del llamador).
  */
-import { spawnSync } from "node:child_process";
 import type { Prisma, EstadoSolicitudCita, ModalidadCita } from "@prisma/client";
 import { prisma } from "./lib/prisma";
 import { hashDemoPassword } from "./lib/password";
@@ -60,7 +61,6 @@ import {
 } from "./lib/red-apoyo-plan";
 
 const CONFIRM = process.argv.includes("--confirm");
-const FORCE = process.argv.includes("--force");
 
 type Tx = Prisma.TransactionClient;
 
@@ -123,13 +123,17 @@ async function verificarIdempotencia(): Promise<void> {
         where: { entidad: "PerfilProfesional", metadata: { path: ["corrida"], equals: CORRIDA_RED } },
     });
     if (!existente) return;
-    if (!FORCE) {
-        throw new Error(`[poblar-red-apoyo] Ya existe la corrida ${CORRIDA_RED}. Use --force para purgar primero.`);
-    }
-    console.log(`[poblar-red-apoyo] --force: purgando corrida previa ${CORRIDA_RED}...`);
-    const purgar = new URL("purgar-demo.ts", import.meta.url).pathname;
-    const r = spawnSync(process.execPath, ["--import", "tsx", purgar], { stdio: "inherit", env: process.env });
-    if (r.status !== 0) throw new Error(`[poblar-red-apoyo] La purga previa falló (código ${r.status ?? "?"})`);
+    // I-405: NO hay re-siembra parcial ni purga desde acá, y NO hay --force. Este
+    // poblador NUNCA invoca a purgar-demo.ts (candado de conducta del llamador):
+    // ese purgador NO filtra por corrida — borra TODO lo sembrado de TODAS las
+    // corridas (colegios, alumnos, reportes, alertas, cuentas demo…), no solo la
+    // Red de Apoyo. Volver a sembrar es un acto deliberado en dos pasos: purgar a
+    // mano (global) y re-correr. El mensaje dice la verdad sobre el alcance.
+    throw new Error(
+        `[poblar-red-apoyo] Ya existe la corrida ${CORRIDA_RED}: no hay re-siembra parcial ni --force. ` +
+            "Para re-sembrar hay que purgar deliberadamente con purgar-demo.ts, que borra TODO lo demo " +
+            "de TODAS las corridas (no solo esta).",
+    );
 }
 
 async function cargarBase() {
