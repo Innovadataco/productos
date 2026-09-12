@@ -1,11 +1,13 @@
 import Link from "next/link";
 import BotonSalir from "./BotonSalir";
+import BannerSegmentacion from "./BannerSegmentacion";
 
 /**
  * Cabecera del producto (mockup-bi-v2). SE4: "Salir" siempre alcanzable
- * desde cualquier pantalla autenticada.
+ * desde cualquier pantalla autenticada. Server Component (async): trae el
+ * BannerSegmentacion, que se degrada a no-render si la réplica no responde.
  */
-export default function Topbar({
+export default async function Topbar({
     titulo,
     acento,
     activo,
@@ -48,6 +50,7 @@ export default function Topbar({
             >
                 BI
             </div>
+            <BannerSegmentacion />
             <div>
                 <h1 className="text-xl font-semibold tracking-tight">
                     {titulo} <span className="font-serif italic text-gradient">{acento}</span>

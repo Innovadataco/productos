@@ -74,6 +74,12 @@ SELECT
   r."esRafaga"                                         AS es_rafaga,
   r."esAnonimo"                                        AS es_anonimo,
   count(*)                                             AS total_reportes,
+  count(*) FILTER (WHERE EXISTS (
+      SELECT 1 FROM demo_marcado dm
+      WHERE dm.entidad = 'Reporte' AND dm."entidadId" = r.id)
+    OR EXISTS (
+      SELECT 1 FROM simulacion_reportes sr
+      WHERE sr."reporteId" = r.id))                    AS total_demo,
   count(c.id)                                          AS total_clasificados,
   count(ca.id)                                         AS total_corregidos,
   avg(c."confianza")                                   AS confianza_promedio,
@@ -94,6 +100,12 @@ SELECT
   COALESCE(c.categoria::text, 'SIN_CLASIFICAR')        AS categoria,
   COALESCE(c."modeloUsado", 'desconocido')             AS modelo,
   count(*)                                             AS total,
+  count(*) FILTER (WHERE EXISTS (
+      SELECT 1 FROM demo_marcado dm
+      WHERE dm.entidad = 'Reporte' AND dm."entidadId" = c."reporteId")
+    OR EXISTS (
+      SELECT 1 FROM simulacion_reportes sr
+      WHERE sr."reporteId" = c."reporteId"))           AS total_demo,
   count(ca.id)                                         AS total_corregidos,
   avg(c."confianza")                                   AS confianza_promedio,
   avg(c."latenciaMs")                                  AS latencia_ms_promedio
@@ -118,7 +130,13 @@ SELECT
   t."estadoAnterior"::text                             AS estado_anterior,
   t."estadoNuevo"::text                                AS estado_nuevo,
   t."responsableTipo"::text                            AS responsable_tipo,
-  count(*)                                             AS total_transiciones
+  count(*)                                             AS total_transiciones,
+  count(*) FILTER (WHERE EXISTS (
+      SELECT 1 FROM demo_marcado dm
+      WHERE dm.entidad = 'Reporte' AND dm."entidadId" = t."reporteId")
+    OR EXISTS (
+      SELECT 1 FROM simulacion_reportes sr
+      WHERE sr."reporteId" = t."reporteId"))           AS total_demo
 FROM "TransicionReporte" t
 GROUP BY 1, 2, 3, 4;
 
@@ -161,6 +179,11 @@ ORDER BY matviewname;
 -- REFRESH inicial ya corrió; la rutina es scripts/refresh-mv.sh CONCURRENTLY).
 -- Por eso este bloque trae su propio pre-flight, sus propios REFRESH inicial
 -- y su propia verificación, y NO toca nada de lo anterior.
+-- NOTA (2026-09-12): la excepción documentada es la migración
+-- prisma/migrations/20260912103000_mv_fact_segmentacion_demo — recrea las 5
+-- MVs con la columna total_demo (predicado demo/simulación, CEO 12-09) vía
+-- prisma migrate deploy. Idempotente; después de ella este archivo y prod
+-- vuelven a estar en espejo.
 --
 --   ⚠️ OPERACION: scripts/refresh-mv.sh tiene la lista de MVs quemada.
 --      Actualizada el 2026-09-01 (Lote 3): 5 MVs (3 originales + las 2 de
@@ -207,7 +230,13 @@ SELECT
   date_trunc('day', a."creadoEn")         AS dia,
   COALESCE(a."tipoSujeto", 'desconocido') AS tipo_sujeto,
   COALESCE(a."estado", 'desconocido')     AS estado,
-  count(*)                                AS total_alertas
+  count(*)                                AS total_alertas,
+  count(*) FILTER (WHERE EXISTS (
+      SELECT 1 FROM demo_marcado dm
+      WHERE dm.entidad = 'Reporte' AND dm."entidadId" = a."reporteId")
+    OR EXISTS (
+      SELECT 1 FROM simulacion_reportes sr
+      WHERE sr."reporteId" = a."reporteId")) AS total_demo
 FROM "AlertaColegio" a
 GROUP BY 1, 2, 3;
 
@@ -228,7 +257,13 @@ SELECT
   p.nombre    AS pais,
   c.lat       AS lat,
   c.lng       AS lng,
-  count(r.id) AS total_reportes_12m
+  count(r.id) AS total_reportes_12m,
+  count(r.id) FILTER (WHERE r.id IS NOT NULL AND (EXISTS (
+      SELECT 1 FROM demo_marcado dm
+      WHERE dm.entidad = 'Reporte' AND dm."entidadId" = r.id)
+    OR EXISTS (
+      SELECT 1 FROM simulacion_reportes sr
+      WHERE sr."reporteId" = r.id)))      AS total_demo_12m
 FROM "Ciudad" c
 JOIN "Pais" p ON p.id = c."paisId"
 LEFT JOIN "Reporte" r
