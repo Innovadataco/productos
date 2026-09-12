@@ -248,6 +248,12 @@ export class PerfilProfesionalRepository {
      * ES el completo. `demo_marcado` es polimórfica y sin relación Prisma → se traen
      * los ids y se excluyen con `NOT id in`, que conserva el allowlist H-2 del
      * `select` (raw SQL lo saltaría).
+     *
+     * LÍMITE (SPEC-420): `NOT id in <ids>` gasta un parámetro de bind por id y
+     * Postgres corta en 32.767 (reventó de verdad con 37.176 marcas). Con ~50
+     * profesionales sembrados sobra de lejos; si este patrón se lleva a una entidad
+     * de VOLUMEN, cambiar a un anti-join (`LEFT JOIN … IS NULL`) ANTES de acercarse
+     * a ese piso.
      */
     private async idsSembrados(): Promise<string[]> {
         const marcas = await this.db.demoMarcado.findMany({
