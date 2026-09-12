@@ -253,6 +253,9 @@ FASE 2 · pi-db:  1. ALTER PUBLICATION bi_replica DROP TABLE public."EmbeddingRe
 FASE 3 · bi-db:  3. ALTER SUBSCRIPTION bi006_replica_sub REFRESH PUBLICATION;
                   4. psql -f 09b-bi-db-limpieza-contenido.sql
                   (recién aquí DROP COLUMN + TRUNCATE EmbeddingReporte)
+                  5. scripts/drift-scan-replica.sh — ANTES del primer INSERT:
+                     todo cambio de canon que sume columnas exige que existan
+                     en bi-db, o el apply worker entra en bucle (I-390).
 ```
 
 Notas operativas:
