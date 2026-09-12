@@ -158,12 +158,21 @@ export default function OperacionBI({
     return (
         <>
             {/* Resumen: 4 minicards con count-up (mockup v3) */}
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3.5 mb-5">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3.5 mb-2">
                 <MiniCard punto="punto-ok" valor={resumen.activos} etiqueta="Colegios activos" retardo={60} />
                 <MiniCard punto="punto-warn" valor={resumen.conAlertasPorGestionar} etiqueta="Con alertas por gestionar" retardo={120} />
                 <MiniCard punto="punto-bad" valor={resumen.conEscaladasSinGestion} etiqueta="Con escaladas sin gestión" retardo={180} />
                 <MiniCard punto="punto-ok" valor={resumen.reportesHoy} etiqueta="Reportes hoy" retardo={240} />
             </div>
+            {/* Desglose semilla/real del catálogo (CEO 12-09): con 100% sembrado
+                los conteos explícitos («· 0 reales») evitan que se lea como bug. */}
+            {resumen.colegiosDemo > 0 && (
+                <p className="mb-5 text-[12.5px] text-muted anim-entrada" style={{ "--anim-retardo": "280ms" } as React.CSSProperties}>
+                    {resumen.colegios.toLocaleString("es-CO")} colegios en catálogo ·{" "}
+                    {resumen.colegiosDemo.toLocaleString("es-CO")} de semilla ·{" "}
+                    {(resumen.colegios - resumen.colegiosDemo).toLocaleString("es-CO")} reales
+                </p>
+            )}
 
             {/* Filtros funcionales (filtran en cliente) */}
             <div

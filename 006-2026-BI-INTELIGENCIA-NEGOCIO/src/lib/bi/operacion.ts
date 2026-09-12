@@ -66,6 +66,10 @@ export interface ResumenOperacion {
     conAlertasPorGestionar: number;
     /** Colegios con ≥1 alerta escalada sin gestionar */
     conEscaladasSinGestion: number;
+    /** Colegios en catálogo y cuántos de semilla (demo_marcado) — con 100%
+     *  sembrado el desglose explícito («· 0 reales») evita que se lea como bug */
+    colegios: number;
+    colegiosDemo: number;
 }
 
 export interface DatosOperacion {
@@ -328,6 +332,21 @@ export async function getOperacion(): Promise<DatosOperacion> {
         };
     });
 
+    // Colegios del catálogo y cuántos son semilla (CEO 12-09): con el 100%
+    // sembrado, el desglose explícito («· 0 reales») evita que se lea como bug.
+    let filasColegios: { total: number; demo: number }[] | undefined;
+    try {
+        filasColegios = await prisma.$queryRaw<{ total: number; demo: number }[]>`
+            SELECT count(*)::int AS total,
+                   count(*) FILTER (WHERE EXISTS (
+                       SELECT 1 FROM demo_marcado dm
+                       WHERE dm.entidad = 'Colegio' AND dm."entidadId" = c."id"))::int AS demo
+            FROM "Colegio" c`;
+    } catch {
+        filasColegios = [];
+    }
+    const colegios = filasColegios?.[0] ?? { total: 0, demo: 0 };
+
     const resumen: ResumenOperacion = {
         activos: filas.length,
         enAtencion: filas.filter((f) => f.estado === "warn").length,
@@ -335,6 +354,8 @@ export async function getOperacion(): Promise<DatosOperacion> {
         reportesHoy: filas.reduce((acc, f) => acc + f.hoy, 0),
         conAlertasPorGestionar: filas.filter((f) => f.alertasActivas > 0).length,
         conEscaladasSinGestion: filas.filter((f) => f.escaladas > 0).length,
+        colegios: colegios.total,
+        colegiosDemo: colegios.demo,
     };
 
     return { filas, resumen };

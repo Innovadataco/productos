@@ -227,6 +227,9 @@ describe("getOperacion · resumen", () => {
             reportesHoy: 3,
             conAlertasPorGestionar: 0, // sin filas en AlertaColegio → 0 real
             conEscaladasSinGestion: 0,
+            // Sondeo demo no encolado en este test → degrada a 0 (candado 9).
+            colegios: 0,
+            colegiosDemo: 0,
         });
     });
 
@@ -241,6 +244,8 @@ describe("getOperacion · resumen", () => {
             reportesHoy: 0,
             conAlertasPorGestionar: 0,
             conEscaladasSinGestion: 0,
+            colegios: 0,
+            colegiosDemo: 0,
         });
     });
 });

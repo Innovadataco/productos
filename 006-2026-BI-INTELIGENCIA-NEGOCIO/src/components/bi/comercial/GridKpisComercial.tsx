@@ -47,7 +47,10 @@ export default function GridKpisComercial({ data }: { data: ComercialData }) {
                 etiqueta="Suscripciones activas"
                 valor={data.kpis.activas}
                 delta={{
-                    texto: `${fmtMiles(data.kpis.enGracia)} en gracia · ${fmtMiles(data.kpis.suspendidas)} suspendidas`,
+                    texto:
+                        data.kpis.activasDemo > 0
+                            ? `${fmtMiles(data.kpis.activasDemo)} de semilla · ${fmtMiles(data.kpis.activas - data.kpis.activasDemo)} reales`
+                            : `${fmtMiles(data.kpis.enGracia)} en gracia · ${fmtMiles(data.kpis.suspendidas)} suspendidas`,
                     tipo: data.kpis.enGracia > 0 ? "warn" : "flat",
                 }}
                 retardo={200}
