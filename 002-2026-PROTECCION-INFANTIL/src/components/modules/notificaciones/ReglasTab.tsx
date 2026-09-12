@@ -213,7 +213,7 @@ export function ReglasTab() {
                                     type="checkbox"
                                     checked={form.obligatoria}
                                     onChange={(e) => setForm((f) => ({ ...f, obligatoria: e.target.checked }))}
-                                    className="h-4 w-4 rounded border-tinta/30 text-ambar focus:ring-ambar"
+                                    className="h-4 w-4 rounded border-tinta/30 text-ambar ring-accent-input"
                                 />
                                 Obligatoria
                             </label>
@@ -222,7 +222,7 @@ export function ReglasTab() {
                                     type="checkbox"
                                     checked={form.activa}
                                     onChange={(e) => setForm((f) => ({ ...f, activa: e.target.checked }))}
-                                    className="h-4 w-4 rounded border-tinta/30 text-ambar focus:ring-ambar"
+                                    className="h-4 w-4 rounded border-tinta/30 text-ambar ring-accent-input"
                                 />
                                 Activa
                             </label>

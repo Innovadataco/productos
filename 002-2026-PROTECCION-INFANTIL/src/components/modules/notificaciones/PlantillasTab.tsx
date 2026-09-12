@@ -212,7 +212,7 @@ export function PlantillasTab() {
                             type="checkbox"
                             checked={form.activa}
                             onChange={(e) => setForm((f) => ({ ...f, activa: e.target.checked }))}
-                            className="h-4 w-4 rounded border-tinta/30 text-ambar focus:ring-ambar"
+                            className="h-4 w-4 rounded border-tinta/30 text-ambar ring-accent-input"
                         />
                         Plantilla activa
                     </label>

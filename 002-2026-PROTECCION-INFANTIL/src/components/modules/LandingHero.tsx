@@ -165,7 +165,7 @@ export function LandingHero({
                                         value={rpt}
                                         onChange={(e) => setRpt(e.target.value)}
                                         placeholder="RPT-XXXXXX"
-                                        className="min-h-12 w-full rounded-xl border border-cielo/30 bg-white/80 px-3 py-2 text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-cielo"
+                                        className="min-h-12 w-full rounded-xl border border-cielo/30 bg-white/80 px-3 py-2 text-sm text-body placeholder:text-muted ring-accent-input"
                                     />
                                     <button
                                         type="submit"

@@ -21,7 +21,7 @@ export interface VistaFiltros {
 }
 
 const SELECT_CLASE =
-    "rounded-lg border border-tinta/15 bg-papel px-3 py-2 text-sm text-body focus:border-cielo focus:outline-none";
+    "rounded-lg border border-tinta/15 bg-papel px-3 py-2 text-sm text-body ring-accent-input";
 
 export function FiltrosGlobales({
     vista,

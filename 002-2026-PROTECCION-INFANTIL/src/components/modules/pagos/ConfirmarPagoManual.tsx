@@ -111,7 +111,7 @@ export function ConfirmarPagoManual({
                         type="checkbox"
                         checked={aceptaPagar}
                         onChange={(e) => setAceptaPagar(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 rounded border-tinta/30 text-cielo focus:ring-cielo"
+                        className="mt-0.5 h-4 w-4 rounded border-tinta/30 text-cielo ring-accent-input"
                     />
                     <span className="text-body">
                         Acepto pagar el valor indicado y autorizo la activación una vez sea confirmado el pago.
