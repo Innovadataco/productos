@@ -60,7 +60,12 @@ export async function GET(request: Request) {
             modalidad: parsed.data.modalidad,
         });
         const barajados = barajarConSemilla(items, parsed.data.seed);
-        return NextResponse.json({ items: barajados });
+        // SPEC-656 (I-387): cuando la lista (ya filtrada) sale vacía, el cliente
+        // necesita distinguir el vacío ESTRUCTURAL (0 verificados en total) del
+        // vacío POR FILTRO. La consulta base sin filtros solo corre cuando hace
+        // falta —lista vacía—; con resultados en mano, no se cuenta de nuevo.
+        const hayVerificados = barajados.length > 0 ? true : (await repo.contarActivos()) > 0;
+        return NextResponse.json({ items: barajados, hayVerificados });
     } catch (error) {
         return errorToResponse(error, "[PADRE/PROFESIONALES/LISTAR]");
     }

@@ -659,4 +659,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/BloqueHuecoCobertura.candado.test.tsx",
     // SPEC-660: estado vacío de «A quién protejo» (superficie de día-uno en prod) — nunca rojo, CTA a /perfil#menores, rama vacía.
     "src/components/modules/padre/AQuienProtejoView.candado.test.tsx",
+    // SPEC-656: clasificar el vacío del directorio — sin inventario es ESTRUCTURAL, jamás «por-filtro» (no culpar la búsqueda).
+    "src/lib/padre/directorio-vacio.candado.test.ts",
+    // SPEC-656: render del directorio vacío — la señal del total (hayVerificados) voltea la copy; estructural=canales, por-filtro=reset.
+    "src/components/modules/padre/profesionales/DirectorioProfesionales.candado.test.tsx",
 ];

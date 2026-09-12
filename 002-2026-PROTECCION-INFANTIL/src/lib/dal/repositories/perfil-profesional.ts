@@ -257,6 +257,24 @@ export class PerfilProfesionalRepository {
     }
 
     /**
+     * SPEC-656 (I-387) · ¿HAY inventario? Cuenta los verificados SIN filtros, con
+     * el MISMO predicado que `listarActivos` (estado ACTIVO ∧ vigencia vigente) —
+     * por eso el conteo y la lista no pueden discrepar. Lo consume el directorio
+     * del padre para separar el vacío ESTRUCTURAL (0 en total) del vacío POR FILTRO
+     * (hay, ninguno con esos filtros): sin este conteo la pantalla culpa la
+     * búsqueda del padre cuando el problema es que no hay gente. Un `count` no
+     * proyecta ningún campo ⇒ nada que ver con el allowlist H-2.
+     */
+    async contarActivos(ahora: Date = new Date()): Promise<number> {
+        return this.db.perfilProfesional.count({
+            where: {
+                estado: "ACTIVO",
+                ...PerfilProfesionalRepository.vigenciaVigente(ahora),
+            },
+        });
+    }
+
+    /**
      * Perfil individual público. Mismo allowlist que la lista — la vista de
      * detalle no destapa campos internos. El contacto se entrega en L4, al
      * confirmar la cita, no acá.

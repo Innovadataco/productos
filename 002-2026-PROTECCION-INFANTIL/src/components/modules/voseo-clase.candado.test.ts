@@ -107,6 +107,7 @@ describe("SPEC-527 · voseo por clase — cero en dashboard + módulos", () => {
             path.join(SRC, "components/modules/padre/profesionales/DirectorioProfesionales.tsx"),
             "utf-8",
         );
-        expect(dir).toContain("Prueba cambiar la ciudad");
+        // SPEC-656: el copy del vacío por-filtro cambió, pero sigue en tú («Prueba con…»).
+        expect(dir).toContain("Prueba con");
     });
 });
