@@ -99,6 +99,8 @@ export interface GeoData {
     totales: {
         /** count(*) de Reporte no eliminados · null si el sondeo degrado */
         reportes: number | null;
+        /** Semilla/simulación de ese count (predicado demo) · null si el sondeo degrado */
+        reportesDemo: number | null;
         /** count(*) de IdentificadorReportado visible públicamente */
         identificadoresVisibles: number | null;
         /** 100 · no anónimos / total · null con total 0 o sondeo roto */
@@ -169,6 +171,7 @@ interface FilaComportamientoCiudad {
 }
 interface FilaTotales {
     reportes: number;
+    reportes_demo: number;
     identificadores_visibles: number;
     pct_autenticados: number | null;
 }
@@ -370,6 +373,14 @@ export async function getGeo(): Promise<GeoData> {
                 prisma.$queryRaw<FilaTotales[]>`
                     SELECT (SELECT count(*) FROM "Reporte"
                              WHERE "eliminado" = false)::int AS reportes,
+                           (SELECT count(*) FROM "Reporte" r
+                             WHERE r."eliminado" = false
+                               AND (EXISTS (
+                                      SELECT 1 FROM demo_marcado dm
+                                      WHERE dm.entidad = 'Reporte' AND dm."entidadId" = r.id)
+                                    OR EXISTS (
+                                      SELECT 1 FROM simulacion_reportes sr
+                                      WHERE sr."reporteId" = r.id)))::int AS reportes_demo,
                            (SELECT count(*) FROM "IdentificadorReportado"
                              WHERE "esVisiblePublicamente" = true)::int AS identificadores_visibles,
                            (SELECT 100.0 * count(*) FILTER (WHERE "esAnonimo" = false)
@@ -453,6 +464,7 @@ export async function getGeo(): Promise<GeoData> {
         },
         totales: {
             reportes: totales?.reportes ?? null,
+            reportesDemo: totales?.reportes_demo ?? null,
             identificadoresVisibles: totales?.identificadores_visibles ?? null,
             pctAutenticados: totales?.pct_autenticados ?? null,
         },

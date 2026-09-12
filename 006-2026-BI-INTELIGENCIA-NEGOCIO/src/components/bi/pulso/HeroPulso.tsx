@@ -14,6 +14,7 @@ export default function HeroPulso({
     hayDatos,
     enAtencion,
     reportesHoy,
+    reportesHistoricoDemo,
     ultimoReporteHaceMin,
     saludOperativa,
     alertasEscaladas,
@@ -21,6 +22,8 @@ export default function HeroPulso({
     hayDatos: boolean;
     enAtencion: boolean;
     reportesHoy: number;
+    /** Semilla/simulación del histórico (predicado demo) · se anota junto a la cifra */
+    reportesHistoricoDemo?: number;
     ultimoReporteHaceMin: number | null;
     saludOperativa: number | null;
     /** Alertas escaladas del histórico (mockup v3); 0/undefined no se muestra. */
@@ -65,6 +68,15 @@ export default function HeroPulso({
                     <span>
                         <b className="cifra font-semibold text-body">{reportesHoy}</b>{" "}
                         {reportesHoy === 1 ? "reporte hoy" : "reportes hoy"}
+                        {reportesHistoricoDemo !== undefined && reportesHistoricoDemo > 0 && (
+                            <>
+                                {" "}·{" "}
+                                <b className="cifra font-semibold text-body">
+                                    {reportesHistoricoDemo.toLocaleString("es-CO")}
+                                </b>{" "}
+                                de semilla en el histórico
+                            </>
+                        )}
                         {alertasEscaladas !== undefined && alertasEscaladas > 0 && (
                             <>
                                 {" "}·{" "}

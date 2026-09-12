@@ -184,6 +184,7 @@ interface FilaCronologia {
 interface FilaDetalleTotales {
     total: number;
     anonimos: number;
+    demo: number;
 }
 interface FilaDetalleAlertas {
     total: number;
@@ -475,6 +476,8 @@ export interface DetalleMes {
     mes: string;
     /** Reportes del mes (eliminados excluidos). */
     total: number;
+    /** Semilla/simulación de ese total (predicado demo: demo_marcado O simulacion_reportes). */
+    demo: number;
     /** Categoría más frecuente del mes (join ClasificacionIA); NULL si ningún
      * reporte del mes quedó clasificado (candado 9: no se presume categoría). */
     categoriaTop: { categoria: string; total: number } | null;
@@ -516,11 +519,17 @@ export async function getDetalleMes(mes: string): Promise<DetalleMes | null> {
                 "detalle-mes-totales",
                 prisma.$queryRaw<FilaDetalleTotales[]>`
                     SELECT count(*)::int AS total,
-                           count(*) FILTER (WHERE "esAnonimo" = true)::int AS anonimos
-                    FROM "Reporte"
-                    WHERE "eliminado" = false
-                      AND "creadoEn" >= (${mes} || '-01')::date
-                      AND "creadoEn" <  (${mes} || '-01')::date + interval '1 month'`,
+                           count(*) FILTER (WHERE r."esAnonimo" = true)::int AS anonimos,
+                           count(*) FILTER (WHERE EXISTS (
+                               SELECT 1 FROM demo_marcado dm
+                               WHERE dm.entidad = 'Reporte' AND dm."entidadId" = r."id")
+                             OR EXISTS (
+                               SELECT 1 FROM simulacion_reportes sr
+                               WHERE sr."reporteId" = r."id"))::int AS demo
+                    FROM "Reporte" r
+                    WHERE r."eliminado" = false
+                      AND r."creadoEn" >= (${mes} || '-01')::date
+                      AND r."creadoEn" <  (${mes} || '-01')::date + interval '1 month'`,
             ),
             // Categoría top del mes: solo reportes CLASIFICADOS (sin
             // clasificación no hay categoría honesta que asignar).
@@ -581,7 +590,7 @@ export async function getDetalleMes(mes: string): Promise<DetalleMes | null> {
             ),
         ]);
 
-    const totales = filasTotales[0] ?? { total: 0, anonimos: 0 };
+    const totales = filasTotales[0] ?? { total: 0, anonimos: 0, demo: 0 };
     // Mes sin reportes: nada que detallar (la ruta responde 404 sin_datos).
     if (totales.total === 0) return null;
 
@@ -619,6 +628,7 @@ export async function getDetalleMes(mes: string): Promise<DetalleMes | null> {
     return {
         mes,
         total: totales.total,
+        demo: totales.demo,
         categoriaTop: filasCategoria[0]
             ? { categoria: filasCategoria[0].categoria, total: filasCategoria[0].total }
             : null,

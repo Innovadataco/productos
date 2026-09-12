@@ -75,6 +75,7 @@ export default async function DashboardPage() {
                 hayDatos={pulso.hayDatos}
                 enAtencion={enAtencion}
                 reportesHoy={pulso.kpis.reportesHoy}
+                reportesHistoricoDemo={pulso.kpis.reportesHistoricoDemo ?? undefined}
                 ultimoReporteHaceMin={pulso.ultimoReporteHaceMin}
                 saludOperativa={pulso.saludOperativa}
                 alertasEscaladas={pulso.alertas.escaladas}

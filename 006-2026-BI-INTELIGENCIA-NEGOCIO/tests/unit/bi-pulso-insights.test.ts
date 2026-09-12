@@ -115,6 +115,8 @@ describe("getPulso · datos reales mockeados", () => {
         mockConsultas([
             [F.agregados, [{
                 total_historico: 42,
+                demo_historico: 40,
+                demo_mes_actual: 11,
                 hoy: 3,
                 mes_actual: 12,
                 mes_anterior_mismo_tramo: 10,
@@ -147,7 +149,7 @@ describe("getPulso · datos reales mockeados", () => {
             [F.replica, [{ total: 1 }]],
             [F.ultimo, [{ ultimo: new Date("2026-09-01T11:48:00.000Z") }]],
             // Ampliación v3
-            [F.alertas, [{ total: 1425, escaladas: 12, nuevas: 34 }]],
+            [F.alertas, [{ total: 1425, demo: 1400, escaladas: 12, nuevas: 34 }]],
             [F.anonimato, [{ anonimos: 1205, identificados: 809 }]],
             [F.estadosReporte, [
                 { estado: "CLASIFICADO", total: 1800 },
@@ -166,6 +168,8 @@ describe("getPulso · datos reales mockeados", () => {
             deltaMesPct: 20,
             reportesHoy: 3,
             colegiosActivos: 1,
+            reportesHistoricoDemo: 40,
+            reportesMesDemo: 11,
             horasClasificacionMedia: 3,
             deltaClasificacionH: -0.9,
         });
@@ -188,7 +192,7 @@ describe("getPulso · datos reales mockeados", () => {
         expect(pulso.ultimoReporteHaceMin).toBe(12);
         expect(pulso.hayDatos).toBe(true);
         // Ampliación v3: mapeo directo del ResultSet (candado 10)
-        expect(pulso.alertas).toEqual({ total: 1425, escaladas: 12, nuevas: 34 });
+        expect(pulso.alertas).toEqual({ total: 1425, demo: 1400, escaladas: 12, nuevas: 34 });
         expect(pulso.anonimato).toEqual({ anonimos: 1205, identificados: 809 });
         expect(pulso.estadosReporte).toEqual([
             { estado: "CLASIFICADO", total: 1800 },
@@ -219,6 +223,8 @@ describe("getPulso · datos reales mockeados", () => {
             deltaMesPct: null, // sin base → NULL, jamás % inventado
             reportesHoy: 0,
             colegiosActivos: 0,
+            reportesHistoricoDemo: null,
+            reportesMesDemo: null,
             horasClasificacionMedia: null,
             deltaClasificacionH: null,
         });
@@ -228,7 +234,7 @@ describe("getPulso · datos reales mockeados", () => {
         expect(pulso.saludOperativa).toBe(0);
         expect(pulso.ultimoReporteHaceMin).toBeNull();
         // Ampliación v3 en el vacío: ceros reales y cobertura NULL
-        expect(pulso.alertas).toEqual({ total: 0, escaladas: 0, nuevas: 0 });
+        expect(pulso.alertas).toEqual({ total: 0, demo: 0, escaladas: 0, nuevas: 0 });
         expect(pulso.anonimato).toEqual({ anonimos: 0, identificados: 0 });
         expect(pulso.estadosReporte).toEqual([]);
         expect(pulso.comercial).toEqual({
@@ -244,6 +250,8 @@ describe("getPulso · datos reales mockeados", () => {
         mockConsultas([
             [F.agregados, [{
                 total_historico: 10,
+                demo_historico: 9,
+                demo_mes_actual: 2,
                 hoy: 1,
                 mes_actual: 4,
                 mes_anterior_mismo_tramo: 2,
@@ -260,7 +268,7 @@ describe("getPulso · datos reales mockeados", () => {
         const pulso = await getPulso();
 
         // Secciones rotas → ceros honestos con warn (silenciado en beforeEach)
-        expect(pulso.alertas).toEqual({ total: 0, escaladas: 0, nuevas: 0 });
+        expect(pulso.alertas).toEqual({ total: 0, demo: 0, escaladas: 0, nuevas: 0 });
         expect(pulso.comercial).toEqual({
             colegiosActivos: 0,
             padresPremium: 0,
@@ -277,6 +285,8 @@ describe("getPulso · datos reales mockeados", () => {
         mockConsultas([
             [F.agregados, [{
                 total_historico: 5,
+                demo_historico: 5,
+                demo_mes_actual: 1,
                 hoy: 2,
                 mes_actual: 5,
                 mes_anterior_mismo_tramo: 0,
@@ -302,6 +312,8 @@ describe("getPulso · datos reales mockeados", () => {
         mockConsultas([
             [F.agregados, [{
                 total_historico: 42,
+                demo_historico: 40,
+                demo_mes_actual: 11,
                 hoy: 3,
                 mes_actual: 12,
                 mes_anterior_mismo_tramo: 10,
@@ -404,6 +416,8 @@ describe("getPulso · semana contra semana (SPEC-006)", () => {
             [F.semanaMedias, new Error("timeout de la réplica")],
             [F.agregados, [{
                 total_historico: 10,
+                demo_historico: 9,
+                demo_mes_actual: 2,
                 hoy: 1,
                 mes_actual: 4,
                 mes_anterior_mismo_tramo: 2,

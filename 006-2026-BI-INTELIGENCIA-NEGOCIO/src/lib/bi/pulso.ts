@@ -41,6 +41,10 @@ export interface PulsoData {
         deltaMesPct: number | null;
         reportesHoy: number;
         colegiosActivos: number;
+        /** Reportes semilla/simulación del histórico (predicado demo) */
+        reportesHistoricoDemo: number | null;
+        /** Reportes semilla/simulación del mes actual · NULL si el sondeo falló */
+        reportesMesDemo: number | null;
         /** Horas creación → clasificación (30 d) · NULL sin clasificaciones */
         horasClasificacionMedia: number | null;
         /** actual − anterior en horas (negativo = mejora) · NULL sin historia */
@@ -57,8 +61,8 @@ export interface PulsoData {
     /** false cuando no hay ni un solo reporte histórico */
     hayDatos: boolean;
     // ── Ampliación mockup v3 (todo histórico salvo indicación) ───────────
-    /** Alertas a colegios: total histórico, escaladas y nuevas (sin ver) */
-    alertas: { total: number; escaladas: number; nuevas: number };
+    /** Alertas a colegios: total histórico, semilla/simulación, escaladas y nuevas (sin ver) */
+    alertas: { total: number; demo: number; escaladas: number; nuevas: number };
     /** Reportes no eliminados por anonimato declarado (esAnonimo) */
     anonimato: { anonimos: number; identificados: number };
     /** Reportes no eliminados por estado del pipeline (mayor → menor) */
@@ -103,8 +107,10 @@ export interface PulsoData {
 // ─── Filas crudas de las consultas ───────────────────────────────────────────
 interface FilaAgregados {
     total_historico: number;
+    demo_historico: number;
     hoy: number;
     mes_actual: number;
+    demo_mes_actual: number;
     mes_anterior_mismo_tramo: number;
     reportes_7d: number;
     reportes_30d: number;
@@ -137,6 +143,7 @@ interface FilaMedias {
 // ── Ampliación v3: filas crudas de los nuevos sondeos ─────────────────────
 interface FilaAlertas {
     total: number;
+    demo: number;
     escaladas: number;
     nuevas: number;
 }
@@ -205,8 +212,10 @@ const MS_MINUTO = 60_000;
 
 const AGREGADOS_VACIOS: FilaAgregados = {
     total_historico: 0,
+    demo_historico: 0,
     hoy: 0,
     mes_actual: 0,
+    demo_mes_actual: 0,
     mes_anterior_mismo_tramo: 0,
     reportes_7d: 0,
     reportes_30d: 0,
@@ -215,7 +224,7 @@ const AGREGADOS_VACIOS: FilaAgregados = {
 
 // Fallbacks de degradación de la ampliación v3 (consulta rota → ceros con
 // warn, jamás un dato inventado: candado 9). Un solo agregado por sondeo.
-const ALERTAS_VACIAS: FilaAlertas = { total: 0, escaladas: 0, nuevas: 0 };
+const ALERTAS_VACIAS: FilaAlertas = { total: 0, demo: 0, escaladas: 0, nuevas: 0 };
 const ANONIMATO_VACIO: FilaAnonimato = { anonimos: 0, identificados: 0 };
 const COMERCIAL_VACIO: FilaComercial = {
     colegios_activos: 0,
@@ -382,10 +391,13 @@ export async function getPulso(): Promise<PulsoData> {
             prisma.$queryRaw<FilaAgregados[]>`
                 SELECT
                   COALESCE(sum("total_reportes"), 0)::int AS total_historico,
+                  COALESCE(sum("total_demo"), 0)::int AS demo_historico,
                   COALESCE(sum("total_reportes")
                     FILTER (WHERE "dia" = date_trunc('day', now())), 0)::int AS hoy,
                   COALESCE(sum("total_reportes")
                     FILTER (WHERE "dia" >= date_trunc('month', now())), 0)::int AS mes_actual,
+                  COALESCE(sum("total_demo")
+                    FILTER (WHERE "dia" >= date_trunc('month', now())), 0)::int AS demo_mes_actual,
                   COALESCE(sum("total_reportes")
                     FILTER (WHERE "dia" >= date_trunc('month', now()) - interval '1 month'
                               AND "dia" <  date_trunc('month', now()) - interval '1 month'
@@ -461,6 +473,12 @@ export async function getPulso(): Promise<PulsoData> {
             "alertas",
             prisma.$queryRaw<FilaAlertas[]>`
                 SELECT count(*)::int AS total,
+                       count(*) FILTER (WHERE EXISTS (
+                           SELECT 1 FROM demo_marcado dm
+                           WHERE dm.entidad = 'AlertaColegio' AND dm."entidadId" = "AlertaColegio"."id")
+                         OR EXISTS (
+                           SELECT 1 FROM simulacion_reportes sr
+                           WHERE sr."reporteId" = "AlertaColegio"."reporteId"))::int AS demo,
                        count(*) FILTER (WHERE "estado" = 'escalada')::int AS escaladas,
                        count(*) FILTER (WHERE "estado" = 'nueva')::int AS nuevas
                 FROM "AlertaColegio"`,
@@ -643,6 +661,9 @@ export async function getPulso(): Promise<PulsoData> {
             deltaMesPct,
             reportesHoy: agregados.hoy,
             colegiosActivos: filasColegios[0]?.total ?? 0,
+            reportesHistoricoDemo:
+                filasAgregados.length > 0 ? agregados.demo_historico : null,
+            reportesMesDemo: filasAgregados.length > 0 ? agregados.demo_mes_actual : null,
             horasClasificacionMedia: medias.actual,
             deltaClasificacionH,
         },
@@ -654,6 +675,7 @@ export async function getPulso(): Promise<PulsoData> {
         hayDatos: agregados.total_historico > 0,
         alertas: {
             total: alertas.total,
+            demo: alertas.demo,
             escaladas: alertas.escaladas,
             nuevas: alertas.nuevas,
         },
