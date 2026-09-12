@@ -201,7 +201,7 @@ export function RubricaTab({ rol }: RubricaTabProps) {
                                             )
                                         }
                                         aria-label={`Texto de la pregunta ${i + 1}`}
-                                        className="w-full rounded-xl border border-tinta/10 bg-papel/80 px-3 py-2 text-sm text-body placeholder:text-subtle focus:border-cielo focus:outline-none focus:ring-2 focus:ring-cielo/20"
+                                        className="w-full rounded-xl border border-tinta/10 bg-papel/80 px-3 py-2 text-sm text-body placeholder:text-subtle ring-accent-input"
                                     />
                                 </div>
                             ))}

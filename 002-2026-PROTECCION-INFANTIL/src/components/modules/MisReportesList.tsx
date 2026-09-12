@@ -104,7 +104,7 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                             void verIdentificador(r);
                         }
                     }}
-                    className="glass rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
+                    className="glass rounded-2xl p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer"
                 >
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -145,7 +145,7 @@ export function MisReportesList({ items }: { items: ReporteItem[] }) {
                                 e.stopPropagation();
                                 router.push(`/dashboard/mis-reportes/${r.id}`);
                             }}
-                            className="text-xs font-medium text-accent hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded"
+                            className="text-xs font-medium text-accent hover:underline rounded"
                             aria-label={`Ver detalle del reporte ${r.numeroSeguimiento || r.identificador}`}
                         >
                             Ver detalle

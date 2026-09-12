@@ -417,7 +417,14 @@
        SPEC-667: era `currentColor` → la visibilidad del foco dependía del color del
        PROPIO elemento (un enlace en `cielo` daba 2.37:1, bajo el mínimo de 3:1). Pasa a
        la MISMA tinta neutra que `.ring-accent` (~15.89:1 claro / ~18.29:1 oscuro): el foco
-       no depende de un color variable. Cierra la clase que abrió SPEC-662 — el último rincón. */
+       no depende de un color variable.
+       I-409: la clase está CERRADA y lo SOSTIENE un candado, no este comentario. El foco es
+       tinta neutra en toda la app: inputs/selects por `.ring-accent-input`, botones/enlaces
+       por este fallback (o `.ring-accent`). Ningún elemento declara su foco con el acento
+       crudo — lo vigila `foco-neutro-sin-acento-crudo.candado` (conducta, genérico sobre el
+       color): un `focus:ring-<acento>`/`focus:border-<acento>` nuevo lo pone rojo. Por eso
+       acá SÍ se puede decir «cerrado»: el nº+1 no pasa. (El «último rincón» falso anterior
+       —que no lo era— es justo lo que apagó el barrido; no repetirlo sin el candado detrás.) */
     button:focus-visible,
     a:focus-visible,
     [role="button"]:focus-visible {

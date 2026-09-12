@@ -259,7 +259,7 @@ function NuevoVerificadorForm({
                         maxLength={100}
                         value={nombre}
                         onChange={(e) => setNombre(e.target.value)}
-                        className="mt-1 w-full rounded-full border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                        className="mt-1 w-full rounded-full border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body ring-accent-input"
                     />
                 </label>
                 <label className="block">
@@ -269,7 +269,7 @@ function NuevoVerificadorForm({
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="mt-1 w-full rounded-full border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                        className="mt-1 w-full rounded-full border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body ring-accent-input"
                     />
                 </label>
             </div>

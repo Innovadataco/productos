@@ -669,4 +669,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/padre/profesionales/DirectorioProfesionales.candado.test.tsx",
     // SPEC-659/I-403: el relleno del padre sale de la tubería del acento — ningún bg-pino sólido literal en una acción.
     "src/components/modules/padre/acento-relleno-sin-pino-crudo.candado.test.ts",
+    // I-409 (SPEC-662): foco neutro en toda la app — ningún focusable declara su foco con acento crudo (focus:ring/border-<color>).
+    "src/app/foco-neutro-sin-acento-crudo.candado.test.ts",
 ];

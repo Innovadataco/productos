@@ -89,7 +89,7 @@ export function ResolverAlertaModal({ isOpen, alertaId, onClose, onResuelta }: R
                     </label>
                     <textarea
                         id="nota-resolucion"
-                        className="min-h-28 w-full rounded-xl border border-tinta/20 bg-transparent p-3 text-sm text-body focus:border-pino focus:outline-none"
+                        className="min-h-28 w-full rounded-xl border border-tinta/20 bg-transparent p-3 text-sm text-body ring-accent-input"
                         maxLength={1000}
                         placeholder="Ej.: hablé con el estudiante y su acudiente; quedaron citados a seguimiento la próxima semana"
                         value={nota}
