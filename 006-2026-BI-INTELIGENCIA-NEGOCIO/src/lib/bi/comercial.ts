@@ -26,6 +26,9 @@ export interface ComercialData {
         /** Suma de montoRealPagado en el año en curso (COP) */
         recaudoAnio: number | null;
         activas: number;
+        /** Suscripciones ACTIVAS sembradas (demo_marcado) — el desglose con
+         *  sus reales explícitos evita que un «100%» se lea como bug */
+        activasDemo: number;
         enGracia: number;
         suspendidas: number;
         freemiumActivos: number;
@@ -76,6 +79,7 @@ interface FilaKpis {
     recaudo_mes_anterior: number | null;
     recaudo_anio: number | null;
     activas: number;
+    activas_demo: number;
     en_gracia: number;
     suspendidas: number;
     freemium_activos: number;
@@ -124,6 +128,7 @@ const KPIS_VACIOS: FilaKpis = {
     recaudo_mes_anterior: null,
     recaudo_anio: null,
     activas: 0,
+    activas_demo: 0,
     en_gracia: 0,
     suspendidas: 0,
     freemium_activos: 0,
@@ -185,6 +190,12 @@ export async function getComercial(): Promise<ComercialData> {
                         AS recaudo_anio,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE lower("estado"::text) = 'activa')::int AS activas,
+                      (SELECT count(*) FROM "Suscripcion" s
+                        WHERE lower(s."estado"::text) = 'activa'
+                          AND EXISTS (
+                            SELECT 1 FROM demo_marcado dm
+                            WHERE dm.entidad = 'Suscripcion' AND dm."entidadId" = s."id"))::int
+                        AS activas_demo,
                       (SELECT count(*) FROM "Suscripcion"
                         WHERE lower("estado"::text) = 'en_gracia')::int AS en_gracia,
                       (SELECT count(*) FROM "Suscripcion"
@@ -315,6 +326,7 @@ export async function getComercial(): Promise<ComercialData> {
             recaudoMesAnterior: k.recaudo_mes_anterior,
             recaudoAnio: k.recaudo_anio,
             activas: k.activas,
+            activasDemo: k.activas_demo,
             enGracia: k.en_gracia,
             suspendidas: k.suspendidas,
             freemiumActivos: k.freemium_activos,

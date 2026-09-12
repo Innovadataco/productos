@@ -9,6 +9,14 @@ import { fmtMiles } from "../pulso/formatos";
  * no trae base (candado 9).
  */
 export default function GridKpisComite({ data }: { data: ComiteData }) {
+    // Desglose semilla/real del universo (CEO 12-09): con 100% sembrado, un
+    // porcentaje se lee como bug; los conteos explícitos («· 0 reales») son
+    // lo que distingue el vacío del fallo. reales = total − demo (ResultSet).
+    const reales = data.kpis.total - data.kpis.totalDemo;
+    const universo: string =
+        data.kpis.totalDemo > 0
+            ? `${fmtMiles(data.kpis.total)} solicitudes · ${fmtMiles(data.kpis.totalDemo)} semilla · ${fmtMiles(reales)} reales`
+            : `${fmtMiles(data.kpis.total)} solicitudes`;
     return (
         <div className="mb-6 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
             <TarjetaKpi
@@ -29,6 +37,12 @@ export default function GridKpisComite({ data }: { data: ComiteData }) {
                 valor={data.kpis.resueltasMes}
                 delta={{ texto: "solicitudes cerradas por el comité", tipo: "flat" }}
                 retardo={140}
+            />
+            <TarjetaKpi
+                etiqueta="Universo"
+                valor={null}
+                delta={{ texto: universo, tipo: "flat" }}
+                retardo={170}
             />
             <TarjetaKpi
                 etiqueta="Mediana de resolución"

@@ -18,6 +18,11 @@ import { prisma } from "@/lib/db";
 // ─── Contrato expuesto a la UI de Comité ─────────────────────────────────────
 export interface ComiteData {
     kpis: {
+        /** Total histórico de solicitudes */
+        total: number;
+        /** Semilla (demo_marcado, entidad='SolicitudComite') — se muestra con
+         *  sus reales explícitos: un «100%» sin desglose se lee como bug */
+        totalDemo: number;
         pendientes: number;
         /** Pendientes con más de 48 h desde su creación — requieren atención */
         pendientesMas48h: number;
@@ -47,6 +52,8 @@ export interface ComiteData {
 
 // ─── Filas crudas ────────────────────────────────────────────────────────────
 interface FilaKpis {
+    total: number;
+    total_demo: number;
     pendientes: number;
     pendientes_mas48h: number;
     resueltas_mes: number;
@@ -77,6 +84,8 @@ interface FilaCarga {
 }
 
 const KPIS_VACIOS: FilaKpis = {
+    total: 0,
+    total_demo: 0,
     pendientes: 0,
     pendientes_mas48h: 0,
     resueltas_mes: 0,
@@ -110,6 +119,12 @@ export async function getComite(): Promise<ComiteData> {
                 "kpis",
                 prisma.$queryRaw<FilaKpis[]>`
                     SELECT
+                      (SELECT count(*) FROM "SolicitudComite")::int AS total,
+                      (SELECT count(*) FROM "SolicitudComite" s
+                        WHERE EXISTS (
+                          SELECT 1 FROM demo_marcado dm
+                          WHERE dm.entidad = 'SolicitudComite' AND dm."entidadId" = s."id"))::int
+                        AS total_demo,
                       (SELECT count(*) FROM "SolicitudComite"
                         WHERE lower("estado") = 'pendiente')::int AS pendientes,
                       (SELECT count(*) FROM "SolicitudComite"
@@ -221,6 +236,8 @@ export async function getComite(): Promise<ComiteData> {
 
     return {
         kpis: {
+            total: k.total,
+            totalDemo: k.total_demo,
             pendientes: k.pendientes,
             pendientesMas48h: k.pendientes_mas48h,
             resueltasMes: k.resueltas_mes,
