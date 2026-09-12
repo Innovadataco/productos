@@ -1150,6 +1150,29 @@ async function seedEventosEmailMigrados() {
         },
     });
 
+    // SPEC-683 (I-401 · FORMA Diseño): plantilla IN_APP del aviso del hijo — la
+    // campanita que hoy solo tiene el círculo. Espeja la ESTRUCTURA del círculo,
+    // NO sus palabras: NO abre con «Alerta» (el hijo va en calma, «sin afán») y
+    // usa SOLO {{nombreHijo}} — ni conteo, ni tipo de reporte, ni quién reportó;
+    // el «qué cuenta / de qué se trata» vive en el panel al tocar (igual que el
+    // correo dice «todo está en tu panel»). Mismo contrato de privacidad.
+    await prisma.notificacionPlantilla.upsert({
+        where: { clave: "padre.hijo.reporte.in_app" },
+        update: {},
+        create: {
+            clave: "padre.hijo.reporte.in_app",
+            canal: "IN_APP",
+            asunto: null,
+            cuerpoMarkdown:
+                "Reportaron una cuenta de {{nombreHijo}}. Míralo con calma: te contamos de qué se trata.",
+            variablesSchema: {
+                type: "object",
+                properties: { nombreHijo: { type: "string" } },
+            } as Prisma.InputJsonValue,
+            activa: true,
+        },
+    });
+
     // SPEC-380 (PR A · C4): plantilla IN_APP para la recomendación del comité.
     // Aviso corto que aparece en la bandeja in-app del rector cuando el comité
     // recomienda emitir el informe. Va junto con el correo (con reglas hermanas).
@@ -1203,9 +1226,14 @@ async function seedEventosEmailMigrados() {
         { evento: "reporte.revision.requerida", plantillaClave: "reporte.revision.requerida.email", rol: "ADMIN", obligatoria: false },
         { evento: "reporte.score_critico", plantillaClave: "reporte.score_critico.email", rol: "ADMIN", obligatoria: false },
         { evento: "padre.circulo_confianza.pendientes", plantillaClave: "padre.circulo_confianza.pendientes.email", rol: "PARENT", obligatoria: false },
-        // SPEC-339: aviso sobre un hijo. NO obligatoria — el padre tiene SU
-        // interruptor (notificacionesHijos), independiente del círculo.
-        { evento: "padre.hijo.reporte", plantillaClave: "padre.hijo.reporte.email", rol: "PARENT", obligatoria: false },
+        // SPEC-683 (I-401 · decisión de Jelkin): el aviso sobre un hijo va OBLIGATORIO — el
+        // aviso más grave del producto no se puede silenciar. `obligatoria: true`
+        // le quita al padre el opt-out (motor: transaccionales no se apagan). Va
+        // en AMBOS canales (acá el correo, abajo la campanita IN_APP): media
+        // obligatoriedad no es obligatoriedad. Deroga el «NO obligatoria» de
+        // SPEC-339; el interruptor `notificacionesHijos` deja de tener efecto
+        // (su retiro de la pantalla es de I-395, no de acá).
+        { evento: "padre.hijo.reporte", plantillaClave: "padre.hijo.reporte.email", rol: "PARENT", obligatoria: true },
         { evento: "padre.circulo_confianza.reporte_enriquecido", plantillaClave: "padre.circulo_confianza.reporte_enriquecido.email", rol: "PARENT", obligatoria: false },
         // SPEC-590: correo de seguridad al cambiar el email del perfil. Obligatoria.
         { evento: "padre.perfil.email_cambiado", plantillaClave: "padre.perfil.email_cambiado.email", rol: "PARENT", obligatoria: true },
@@ -1241,6 +1269,21 @@ async function seedEventosEmailMigrados() {
         plantillaClave: "padre.circulo_confianza.reporte_enriquecido.in_app",
         offset: "+0m",
         obligatoria: false,
+    });
+
+    // SPEC-683 (I-401 · decisión de Jelkin): regla IN_APP del aviso del hijo — la campanita
+    // que el círculo ya tenía y este, el aviso más grave, no. `obligatoria: true`
+    // en AMBOS canales (correo arriba, campanita acá): el aviso más importante no
+    // se silencia, y media obligatoriedad no es obligatoriedad. Más peso aún: el
+    // cupo de correo no se renueva por ahora (Jelkin), así que la campanita es
+    // el único canal que de verdad llega.
+    await upsertNotificacionRegla({
+        evento: "padre.hijo.reporte",
+        rol: "PARENT",
+        canal: "IN_APP",
+        plantillaClave: "padre.hijo.reporte.in_app",
+        offset: "+0m",
+        obligatoria: true,
     });
 
     // SPEC-380 (PR A · C4): regla IN_APP hermana de la recomendación del comité.
