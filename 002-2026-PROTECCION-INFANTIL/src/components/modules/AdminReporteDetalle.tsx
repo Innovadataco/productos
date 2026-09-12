@@ -9,6 +9,7 @@ import { ReporteDetalleInfo } from "./reporte-detalle/ReporteDetalleInfo";
 import { TextoOriginalPanel } from "./reporte-detalle/TextoOriginalPanel";
 import { AccionesReporte } from "./reporte-detalle/AccionesReporte";
 import { AvisoDeshacerConfirmacion } from "./reporte-detalle/AvisoDeshacerConfirmacion";
+import { formatCategoria } from "./reporte-detalle/types";
 import { HistorialAccesosTexto } from "./reporte-detalle/HistorialAccesosTexto";
 
 interface AdminReporteDetalleProps {
@@ -160,8 +161,13 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
             {/* SPEC-557: toast de deshacer tras confirmar (8 s, no tapa el expediente). */}
             {deshacer && (
                 <AvisoDeshacerConfirmacion
-                    categoria={deshacer.categoria}
-                    nivelRiesgo={deshacer.nivelRiesgo}
+                    mensaje={
+                        <>
+                            Clasificación aceptada:{" "}
+                            <span className="font-semibold">{formatCategoria(deshacer.categoria)}</span>
+                            {deshacer.nivelRiesgo ? <> · riesgo {deshacer.nivelRiesgo.toLowerCase()}</> : null}
+                        </>
+                    }
                     onDeshacer={handleDeshacerConfirmar}
                     onExpirar={descartarDeshacer}
                 />

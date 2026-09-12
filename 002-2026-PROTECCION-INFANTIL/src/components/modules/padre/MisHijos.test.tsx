@@ -183,11 +183,47 @@ describe("MisHijos", () => {
         mockRutas([hijoBase({ nombre: "Leo", apellidos: "", identificadores: [{ id: "ix", valor: "leogamer", tipo: null, activo: true, plataforma: null }] })]);
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
-        fireEvent.click(screen.getByLabelText("Quitar leogamer"));
+        // SPEC-660 (Fase D): el re-corte renombró el aria a «Quitar … de mi lista».
+        fireEvent.click(screen.getByLabelText("Quitar leogamer de mi lista"));
         await waitFor(() => {
             const del = llamada("DELETE");
             expect(del).toBeDefined();
             expect(del![0]).toBe("/api/padre/hijos/identificadores/ix");
+        });
+    });
+
+    // SPEC-660 (Fase D): «Quitar» ya no confirma por modal; la red es DESHACER.
+    // Tras el DELETE aparece un toast «Quitaste … de tu lista.» (voz de padre, tú)
+    // y «Deshacer» RE-AGREGA la cuenta con hijo + valor + plataforma capturados
+    // antes de borrar. Es la mitad que faltaba: sin el deshacer, quitar el modal
+    // dejaría el «Quitar» MÁS peligroso que hoy.
+    it("«Quitar» ofrece Deshacer, que re-agrega la cuenta (hijo+valor+plataforma)", async () => {
+        mockRutas([
+            hijoBase({
+                identificadores: [
+                    { id: "i1", valor: "robloxjuan", tipo: null, activo: true, plataforma: { id: "p1", nombre: "Roblox", clave: "roblox" } },
+                ],
+            }),
+        ]);
+        render(<MisHijos />);
+        await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
+
+        fireEvent.click(screen.getByLabelText("Quitar robloxjuan de mi lista"));
+        await waitFor(() => {
+            const del = llamada("DELETE");
+            expect(del).toBeDefined();
+            expect(del![0]).toBe("/api/padre/hijos/identificadores/i1");
+        });
+
+        // Aparece el toast de deshacer, en voz de padre (tú).
+        expect(await screen.findByText("Quitaste robloxjuan de tu lista.")).toBeDefined();
+
+        // Deshacer → re-agrega por POST con lo capturado (incluida la plataforma).
+        fireEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+        await waitFor(() => {
+            const post = llamada("POST", "/api/padre/hijos/identificadores");
+            expect(post).toBeDefined();
+            expect(JSON.parse(String(post![1].body))).toEqual({ hijoId: "h1", valor: "robloxjuan", plataformaId: "p1" });
         });
     });
 
@@ -223,7 +259,8 @@ describe("MisHijos", () => {
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
 
-        fireEvent.click(screen.getByLabelText("Inactivar robloxjuan"));
+        // SPEC-660 (Fase D): el re-corte renombró el aria a «Pausar la vigilancia de …».
+        fireEvent.click(screen.getByLabelText("Pausar la vigilancia de robloxjuan"));
         await waitFor(() => {
             const patch = llamada("PATCH", "/api/padre/hijos/identificadores/i1");
             expect(patch).toBeDefined();
@@ -238,7 +275,8 @@ describe("MisHijos", () => {
         ]);
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
-        fireEvent.click(screen.getByLabelText("Activar robloxjuan"));
+        // SPEC-660 (Fase D): el re-corte renombró el aria a «Reanudar la vigilancia de …».
+        fireEvent.click(screen.getByLabelText("Reanudar la vigilancia de robloxjuan"));
         await waitFor(() => {
             const patch = llamada("PATCH", "/api/padre/hijos/identificadores/i1");
             expect(JSON.parse(String(patch![1].body))).toEqual({ activo: true });

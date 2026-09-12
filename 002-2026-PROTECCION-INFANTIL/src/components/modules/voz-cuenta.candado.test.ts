@@ -159,7 +159,13 @@ const BARRIDO: Barrido[] = [
             '"No se pudo agregar la cuenta"',
             ">Sus cuentas<",
             'label="Cuenta"',
-            'title="Activa o inactiva la vigilancia de esta cuenta',
+            // SPEC-660 (Fase D): re-anclado. Antes la voz de padre de este toggle
+            // se anclaba en el `title` (tooltip, secundario y duplicado del label).
+            // El re-corte la lleva a la copia VISIBLE —la descripción del toggle
+            // Pausar/Reanudar, que el padre realmente lee—: ese es el carrier
+            // durable (misma lección que #569: no anclar en copia que se mueve).
+            "Dejamos de avisarte por esta cuenta",
+            "Esta cuenta está en pausa",
             'label="Agregar cuenta"',
             "una de sus",
             "cuentas (su Roblox, un teléfono, un correo)",
@@ -169,7 +175,8 @@ const BARRIDO: Barrido[] = [
             '"No se pudo agregar el identificador"',
             ">Sus identificadores<",
             'label="Identificador"',
-            'title="Activa o inactiva la vigilancia de este identificador',
+            "Dejamos de avisarte por este identificador",
+            "Este identificador está en pausa",
             'label="Agregar identificador"',
             "identificadores (su Roblox, un teléfono, un correo)",
         ],

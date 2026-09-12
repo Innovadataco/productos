@@ -33,6 +33,7 @@ import { useEffect, useState } from "react";
 // (MisHijos.tsx superaba el máximo de líneas al sumar la edición inline).
 import { HijoCard, type Hijo, type Plataforma } from "./HijoCard";
 import { FormularioAltaHijo } from "./FormularioAltaHijo";
+import { AvisoDeshacerConfirmacion } from "@/components/modules/reporte-detalle/AvisoDeshacerConfirmacion";
 
 /**
  * SPEC-339: `onListaCambio` avisa al Paso 3 del camino cuántos menores activos
@@ -56,6 +57,11 @@ export function MisHijos({
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // SPEC-660 (Fase D): «Quitar» ya no pide confirmación por modal (clic
+    // automático, I-345); la red es DESHACER. Guardamos lo suficiente para
+    // reconstruir el identificador borrado (hijo, valor, plataforma) y ofrecer
+    // un toast «Deshacer» durante 8 s. Es la contraparte de haber quitado el modal.
+    const [quitado, setQuitado] = useState<{ hijoId: string; valor: string; plataformaId: string } | null>(null);
 
     // SPEC-361 (F5/F6): el cupo se mide SOLO con los activos. Inactivar es
     // decisión del padre y libera lugar solo; el producto nunca inactiva.
@@ -98,8 +104,13 @@ export function MisHijos({
         ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
     ];
 
-    /** Envuelve una acción del backend: limpia el error y recarga la lista. */
-    async function accion(fn: () => Promise<Response>, mensajeError: string) {
+    /**
+     * Envuelve una acción del backend: limpia el error y recarga la lista.
+     * Devuelve si la operación tuvo éxito, para que el llamador decida si
+     * mostrar el toast de deshacer (SPEC-660 Fase D): solo se ofrece «Deshacer»
+     * cuando el borrado REALMENTE ocurrió, no cuando falló.
+     */
+    async function accion(fn: () => Promise<Response>, mensajeError: string): Promise<boolean> {
         setError(null);
         try {
             const res = await fn();
@@ -109,13 +120,17 @@ export function MisHijos({
                 throw new Error(data?.error?.message ?? mensajeError);
             }
             await cargar();
+            return true;
         } catch (e) {
             setError(e instanceof Error ? e.message : "Error");
+            return false;
         }
     }
 
-    const cambiarEstadoHijo = (hijoId: string, estado: "activo" | "inactivo") =>
-        accion(
+    // Los handlers que consume HijoCard son fire-and-forget (Promise<void>); el
+    // booleano de `accion` solo lo miran `desvincular`/`deshacerQuitar`.
+    const cambiarEstadoHijo = async (hijoId: string, estado: "activo" | "inactivo") => {
+        await accion(
             () =>
                 fetch(`/api/padre/hijos/${hijoId}`, {
                     method: "PATCH",
@@ -124,11 +139,12 @@ export function MisHijos({
                 }),
             "No se pudo cambiar el estado"
         );
+    };
 
     // SPEC-539: editar los datos de un menor (nombre, apellidos, año, sexo).
     // El endpoint PATCH /api/padre/hijos/[id] ya lo soporta (patchSchema · actualizarHijo);
     // lo que faltaba era la UI. `estado` va por su propio botón, no acá.
-    const editarHijo = (
+    const editarHijo = async (
         hijoId: string,
         datos: {
             nombre: string;
@@ -136,8 +152,8 @@ export function MisHijos({
             anioNacimiento: number | null;
             sexo: string | null;
         }
-    ) =>
-        accion(
+    ) => {
+        await accion(
             () =>
                 fetch(`/api/padre/hijos/${hijoId}`, {
                     method: "PATCH",
@@ -146,11 +162,12 @@ export function MisHijos({
                 }),
             "No se pudieron guardar los cambios"
         );
+    };
 
     // Local a ESTE padre (SPEC-339 · D-4): pausa/reactiva el aviso de esa cuenta
     // en SU ficha; no toca al otro padre.
-    const cambiarEstadoIdentificador = (identificadorId: string, activo: boolean) =>
-        accion(
+    const cambiarEstadoIdentificador = async (identificadorId: string, activo: boolean) => {
+        await accion(
             () =>
                 fetch(`/api/padre/hijos/identificadores/${identificadorId}`, {
                     method: "PATCH",
@@ -159,16 +176,10 @@ export function MisHijos({
                 }),
             "No se pudo cambiar la cuenta"
         );
+    };
 
-    // Solo saca el identificador de la vista de ESTE padre.
-    const desvincular = (identificadorId: string) =>
-        accion(
-            () => fetch(`/api/padre/hijos/identificadores/${identificadorId}`, { method: "DELETE" }),
-            "No se pudo quitar"
-        );
-
-    const agregarIdentificador = (hijoId: string, valor: string, plataformaId: string) =>
-        accion(
+    const agregarIdentificador = async (hijoId: string, valor: string, plataformaId: string) => {
+        await accion(
             () =>
                 fetch("/api/padre/hijos/identificadores", {
                     method: "POST",
@@ -181,6 +192,38 @@ export function MisHijos({
                 }),
             "No se pudo agregar la cuenta"
         );
+    };
+
+    // Solo saca el identificador de la vista de ESTE padre.
+    // SPEC-660 (Fase D): antes de borrar, capturamos con qué reconstruirlo
+    // (hijo + valor + plataforma) leyendo la lista ACTUAL; si el DELETE tuvo
+    // éxito, mostramos el toast de deshacer. La fila ya no está, pero el toast
+    // es `fixed` y sobrevive a que desaparezca.
+    const desvincular = async (identificadorId: string) => {
+        let capturado: { hijoId: string; valor: string; plataformaId: string } | null = null;
+        for (const h of hijos) {
+            const ident = h.identificadores.find((i) => i.id === identificadorId);
+            if (ident) {
+                capturado = { hijoId: h.id, valor: ident.valor, plataformaId: ident.plataforma?.id ?? "" };
+                break;
+            }
+        }
+        const ok = await accion(
+            () => fetch(`/api/padre/hijos/identificadores/${identificadorId}`, { method: "DELETE" }),
+            "No se pudo quitar"
+        );
+        if (ok && capturado) setQuitado(capturado);
+    };
+
+    // «Deshacer» del quitar: vuelve a agregar la cuenta con los datos capturados.
+    // No es un rollback del backend (no existe un endpoint de «restaurar»): es
+    // una alta idéntica, que es exactamente lo que el padre quería recuperar.
+    const deshacerQuitar = async () => {
+        if (!quitado) return;
+        const { hijoId, valor, plataformaId } = quitado;
+        setQuitado(null);
+        await agregarIdentificador(hijoId, valor, plataformaId);
+    };
 
     return (
         <section aria-label="A quién protejo" data-testid="mis-hijos" className="space-y-4">
@@ -236,6 +279,15 @@ export function MisHijos({
                 </ul>
             )}
             {error && <p className="text-sm text-rubi" data-testid="mis-hijos-error">{error}</p>}
+
+            {/* SPEC-660 (Fase D): la red del «Quitar» sin modal — «Deshacer» por 8 s. */}
+            {quitado && (
+                <AvisoDeshacerConfirmacion
+                    mensaje={`Quitaste ${quitado.valor} de tu lista.`}
+                    onDeshacer={deshacerQuitar}
+                    onExpirar={() => setQuitado(null)}
+                />
+            )}
         </section>
     );
 }

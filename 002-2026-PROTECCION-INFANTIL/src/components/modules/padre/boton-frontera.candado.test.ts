@@ -136,8 +136,10 @@ const BASE: string[] = [
     "components/modules/padre/AgregarEventoForm.tsx :: Cancelar",
     "components/modules/padre/AutoSuggestExpediente.tsx :: Ya se resolvió",
     "components/modules/padre/FormularioAltaHijo.tsx :: ✕",
-    "components/modules/padre/HijoCard.tsx :: Inactivar Activar",
-    "components/modules/padre/HijoCard.tsx :: Quitar de mi lista",
+    // SPEC-660 (Fase D): mismos dos `<button>` crudos (siguen siendo deuda de la
+    // SPEC-633 de seguimiento), re-anclados al rótulo del re-corte Pausar/Quitar.
+    "components/modules/padre/HijoCard.tsx :: Pausar la vigilancia Reanudar la vigilancia Dejamos de avisarte por esta cuenta. Queda acá y la reanudas cuando quieras. Esta cuenta está en pausa: no te avisamos por ella. Reanuda cuando quieras y volvemos a avisarte.",
+    "components/modules/padre/HijoCard.tsx :: Quitarla de mi lista La sacamos de tu lista. Si la vuelves a necesitar, hay que agregarla de nuevo.",
     "components/modules/padre/HijoCard.tsx :: Ocultar la bitácora Ver la bitácora",
     "components/modules/padre/MisReportesCadenas.tsx :: Ocultar los eventos Ver los eventos",
     "components/modules/padre/PadreSideNav.tsx :: ",

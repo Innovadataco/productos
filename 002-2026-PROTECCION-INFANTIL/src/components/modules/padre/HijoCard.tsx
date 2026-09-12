@@ -167,37 +167,66 @@ export function HijoCard({
             )}
 
             {hijo.identificadores.length > 0 && (
-                <ul className="mt-3 space-y-2">
-                    {hijo.identificadores.map((i) => (
-                        <li key={i.id} className="flex flex-wrap items-center gap-2">
-                            <Badge variant={i.activo ? "default" : "neutral"}>
-                                {i.valor}
-                                {i.plataforma ? ` · ${i.plataforma.nombre}` : ""}
-                            </Badge>
-                            {!i.activo && <span className="text-xs text-muted">inactivo</span>}
-                            {/* Local a ESTE padre (SPEC-339/D-4): pausa/reactiva el aviso de esta cuenta en SU ficha; no toca al otro padre. */}
-                            <button
-                                type="button"
-                                aria-label={`${i.activo ? "Inactivar" : "Activar"} ${i.valor}`}
-                                title="Activa o inactiva la vigilancia de esta cuenta."
-                                className="text-xs text-muted underline hover:text-body"
-                                onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
+                <>
+                    <ul className="mt-3 space-y-2">
+                        {hijo.identificadores.map((i) => (
+                            <li
+                                key={i.id}
+                                className="flex flex-col gap-2 rounded-lg border border-tinta/10 p-3 sm:flex-row sm:items-start sm:justify-between"
                             >
-                                {i.activo ? "Inactivar" : "Activar"}
-                            </button>
-                            {/* Local a ESTE padre: BORRA la fila de esta cuenta en SU ficha; el otro padre tiene la suya y la conserva. */}
-                            <button
-                                type="button"
-                                aria-label={`Quitar ${i.valor}`}
-                                title="La quita de tu lista. El otro padre la sigue viendo en la suya."
-                                className="text-xs text-muted underline hover:text-rubi"
-                                onClick={() => onDesvincular(i.id)}
-                            >
-                                Quitar de mi lista
-                            </button>
-                        </li>
-                    ))}
-                </ul>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant={i.activo ? "default" : "neutral"}>
+                                        {i.valor}
+                                        {i.plataforma ? ` · ${i.plataforma.nombre}` : ""}
+                                    </Badge>
+                                    {!i.activo && <span className="text-xs text-muted">en pausa</span>}
+                                </div>
+                                <div className="flex flex-col gap-2 sm:flex-row">
+                                    {/* SPEC-660 (Fase D) · Pausar/Reanudar: toggle reversible, sin
+                                        confirmación (se deshace con un tap). Borde SUAVE. El title
+                                        (voz de #569) no cambia. Local a ESTE padre (I-394). */}
+                                    <button
+                                        type="button"
+                                        aria-label={`${i.activo ? "Pausar" : "Reanudar"} la vigilancia de ${i.valor}`}
+                                        title="Activa o inactiva la vigilancia de esta cuenta."
+                                        className="rounded-lg border border-tinta/15 px-3 py-2 text-left transition-colors hover:bg-tinta/5"
+                                        onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
+                                    >
+                                        <span className="block text-sm font-medium text-body">
+                                            {i.activo ? "Pausar la vigilancia" : "Reanudar la vigilancia"}
+                                        </span>
+                                        <span className="block text-xs text-muted">
+                                            {i.activo
+                                                ? "Dejamos de avisarte por esta cuenta. Queda acá y la reanudas cuando quieras."
+                                                : "Esta cuenta está en pausa: no te avisamos por ella. Reanuda cuando quieras y volvemos a avisarte."}
+                                        </span>
+                                    </button>
+                                    {/* SPEC-660 (Fase D) · Quitar: BORRA la fila. El peso lo carga el
+                                        borde más firme (claridad), NUNCA el rojo (D-120): la red es el
+                                        deshacer (toast en MisHijos), no un color de alarma. */}
+                                    <button
+                                        type="button"
+                                        aria-label={`Quitar ${i.valor} de mi lista`}
+                                        title="La quita de tu lista. El otro padre la sigue viendo en la suya."
+                                        className="rounded-lg border border-tinta/40 px-3 py-2 text-left transition-colors hover:bg-tinta/5"
+                                        onClick={() => onDesvincular(i.id)}
+                                    >
+                                        <span className="block text-sm font-medium text-body">Quitarla de mi lista</span>
+                                        <span className="block text-xs text-muted">
+                                            La sacamos de tu lista. Si la vuelves a necesitar, hay que agregarla de nuevo.
+                                        </span>
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                    {/* SPEC-660 (Fase D · I-394): el alcance «otro padre» se dice UNA vez, a nivel
+                        del bloque — ambas acciones son locales; ninguna toca al otro padre. */}
+                    <p className="mt-2 text-xs text-muted">
+                        Todo esto es tu lista. Si el otro padre también registró esta cuenta, él la maneja aparte — lo
+                        que hagas acá no cambia lo suyo.
+                    </p>
+                </>
             )}
 
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">

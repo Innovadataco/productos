@@ -1,31 +1,36 @@
 "use client";
 
 /**
- * SPEC-557 (I-345) · Toast de «Deshacer» tras confirmar una clasificación.
+ * SPEC-557 (I-345) · Toast flotante de «Deshacer» tras una acción reversible.
+ * SPEC-660 (Fase D): GENERALIZADO — antes traía la clasificación del reporte
+ * acoplada (`categoria`/`nivelRiesgo`); ahora recibe un `mensaje` y lo usan dos
+ * consumidores: la confirmación de clasificación del admin y el «Quitar cuenta»
+ * del padre. Un segundo consumidor es justo lo que justifica generalizarlo.
  *
- * Regla de Diseño (frecuencia × reversibilidad): clasificar es FRECUENTE y
- * REVERSIBLE → no modal (el modal repetido se vuelve clic automático, que es lo
- * que falló), sino DESHACER. La acción ya se ejecutó; este toast anclado abajo
- * (no tapa el expediente) dice QUÉ se hizo —así el operador nota el error aunque
- * no deshaga— y ofrece [Deshacer] durante 8 s. El rollback real (sacar de público,
- * revertir estado, liberar la corrección) vive en el endpoint; acá solo se dispara.
+ * Regla de Diseño (frecuencia × reversibilidad): para una acción frecuente y/o
+ * reversible, no modal (el modal repetido se vuelve clic automático, que es lo
+ * que falló en I-345), sino DESHACER. La acción YA se ejecutó; este toast anclado
+ * abajo dice QUÉ se hizo —así el usuario nota el error aunque no deshaga— y ofrece
+ * [Deshacer] durante 8 s. Es `fixed`, NO anclado a la fila: **sobrevive a que la
+ * fila desaparezca** (p. ej. un delete). El rollback real vive en el llamador
+ * (`onDeshacer`); acá solo se dispara.
  *
  * La ventana de 8 s es del cliente (un setTimeout), no del servidor: no agrega
- * dependencia del reloj de pared a ninguna prueba. La barra de tiempo es sutil.
+ * dependencia del reloj de pared a ninguna prueba.
  */
 import { useEffect, useState } from "react";
-import { formatCategoria } from "./types";
 
 const VENTANA_MS = 8000;
 
 type Props = {
-    categoria: string;
-    nivelRiesgo: string;
+    /** Qué se hizo — el llamador lo arma (así el toast no conoce el dominio). */
+    mensaje: React.ReactNode;
     onDeshacer: () => void;
     onExpirar: () => void;
+    deshacerLabel?: string;
 };
 
-export function AvisoDeshacerConfirmacion({ categoria, nivelRiesgo, onDeshacer, onExpirar }: Props) {
+export function AvisoDeshacerConfirmacion({ mensaje, onDeshacer, onExpirar, deshacerLabel = "Deshacer" }: Props) {
     const [ancho, setAncho] = useState("100%");
 
     useEffect(() => {
@@ -43,18 +48,15 @@ export function AvisoDeshacerConfirmacion({ categoria, nivelRiesgo, onDeshacer, 
             role="status"
             aria-live="polite"
         >
-            <div className="pointer-events-auto w-full max-w-md overflow-hidden rounded-2xl border border-cielo/40 bg-papel/95 shadow-lg backdrop-blur-xl dark:border-cielo/30 dark:bg-tinta/95">
+            <div className="pointer-events-auto w-full max-w-md overflow-hidden rounded-2xl border border-cielo/40 bg-superficie-2 shadow-lg dark:border-cielo/30">
                 <div className="flex items-center gap-3 px-4 py-3">
-                    <p className="min-w-0 flex-1 text-sm text-body">
-                        Clasificación aceptada: <span className="font-semibold">{formatCategoria(categoria)}</span>
-                        {nivelRiesgo ? <> · riesgo {nivelRiesgo.toLowerCase()}</> : null}
-                    </p>
+                    <p className="min-w-0 flex-1 text-sm text-body">{mensaje}</p>
                     <button
                         type="button"
                         onClick={onDeshacer}
                         className="shrink-0 rounded-xl bg-cielo px-3 py-2 text-sm font-semibold text-white transition hover:bg-cielo/90"
                     >
-                        Deshacer
+                        {deshacerLabel}
                     </button>
                 </div>
                 {/* Barra de tiempo sutil: se agota en la ventana de 8 s. */}
