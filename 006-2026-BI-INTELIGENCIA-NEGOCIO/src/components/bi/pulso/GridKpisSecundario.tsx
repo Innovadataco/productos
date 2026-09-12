@@ -2,11 +2,11 @@ import type { PulsoData } from "@/lib/bi/pulso";
 import TarjetaKpi, { type DeltaKpi } from "./TarjetaKpi";
 import { fmtMiles } from "./formatos";
 
-/** Delta del KPI de alertas: "N escaladas · M nuevas"; sin alertas → vacío honesto. */
+/** Delta del KPI de alertas: "N escaladas · M nuevas · D semilla"; sin alertas → vacío honesto. */
 function deltaAlertas(alertas: PulsoData["alertas"]): DeltaKpi {
     if (alertas.total === 0) return { texto: "aún sin alertas en la réplica", tipo: "flat" };
     return {
-        texto: `${fmtMiles(alertas.escaladas)} escaladas · ${fmtMiles(alertas.nuevas)} nuevas`,
+        texto: `${fmtMiles(alertas.escaladas)} escaladas · ${fmtMiles(alertas.nuevas)} nuevas · ${fmtMiles(alertas.demo)} semilla`,
         tipo: alertas.escaladas > 0 ? "warn" : "flat",
     };
 }

@@ -16,12 +16,20 @@ import TarjetaKpi, { type DeltaKpi } from "@/components/bi/pulso/TarjetaKpi";
 export default function KpisGeografia({ totales }: { totales: GeoData["totales"] }) {
     const sinDatos: DeltaKpi = { texto: "sin datos", tipo: "flat" };
     const sinComparacion: DeltaKpi = { texto: "sin comparación", tipo: "flat" };
+    // Desglose semilla/simulación (CEO 12-09): "N semilla" al lado del total;
+    // null (sondeo roto) → se queda el pie neutro, jamás un cero disfrazado.
+    const deltaReportes: DeltaKpi =
+        totales.reportes !== null && totales.reportesDemo !== null && totales.reportesDemo > 0
+            ? { texto: `${totales.reportesDemo.toLocaleString("es-CO")} semilla`, tipo: "flat" }
+            : totales.reportes === null
+              ? sinDatos
+              : sinComparacion;
     return (
         <div className="mb-4 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
             <TarjetaKpi
                 etiqueta="Reportes registrados"
                 valor={totales.reportes}
-                delta={totales.reportes === null ? sinDatos : sinComparacion}
+                delta={deltaReportes}
                 retardo={240}
             />
             <TarjetaKpi

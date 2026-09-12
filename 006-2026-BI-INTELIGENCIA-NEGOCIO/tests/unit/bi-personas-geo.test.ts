@@ -226,7 +226,7 @@ describe("getGeo · datos reales mockeados", () => {
                 { mes: "2025-11", total: 120 },
                 { mes: "2025-12", total: 140 },
             ]],
-            [F.totales, [{ reportes: 8296, identificadores_visibles: 43, pct_autenticados: 40.2 }]],
+            [F.totales, [{ reportes: 8296, reportes_demo: 8200, identificadores_visibles: 43, pct_autenticados: 40.2 }]],
             [F.porPais, [
                 { pais: "Colombia", total: 8100 },
                 { pais: "México", total: 120 },
@@ -268,6 +268,7 @@ describe("getGeo · datos reales mockeados", () => {
         // KPIs generales: un solo ResultSet con las 3 subconsultas
         expect(geo.totales).toEqual({
             reportes: 8296,
+            reportesDemo: 8200,
             identificadoresVisibles: 43,
             pctAutenticados: 40.2,
         });
@@ -443,13 +444,14 @@ describe("getGeo · comportamiento por país/ciudad", () => {
 describe("getGeo · totales generales (KPIs)", () => {
     it("reportes, identificadores visibles y % autenticados desde un solo ResultSet", async () => {
         mockConsultas([
-            [F.totales, [{ reportes: 8296, identificadores_visibles: 43, pct_autenticados: 40.2 }]],
+            [F.totales, [{ reportes: 8296, reportes_demo: 8200, identificadores_visibles: 43, pct_autenticados: 40.2 }]],
         ]);
 
         const geo = await getGeo();
 
         expect(geo.totales).toEqual({
             reportes: 8296,
+            reportesDemo: 8200,
             identificadoresVisibles: 43,
             pctAutenticados: 40.2,
         });
@@ -458,13 +460,14 @@ describe("getGeo · totales generales (KPIs)", () => {
     it("0 reportes → pctAutenticados null del ResultSet (NULLIF en SQL, jamás NaN)", async () => {
         // Réplica viva sin reportes: el % no existe, no es 0 ni división por cero.
         mockConsultas([
-            [F.totales, [{ reportes: 0, identificadores_visibles: 0, pct_autenticados: null }]],
+            [F.totales, [{ reportes: 0, reportes_demo: 0, identificadores_visibles: 0, pct_autenticados: null }]],
         ]);
 
         const geo = await getGeo();
 
         expect(geo.totales).toEqual({
             reportes: 0,
+            reportesDemo: 0,
             identificadoresVisibles: 0,
             pctAutenticados: null,
         });
@@ -480,6 +483,7 @@ describe("getGeo · totales generales (KPIs)", () => {
 
         expect(geo.totales).toEqual({
             reportes: null,
+            reportesDemo: null,
             identificadoresVisibles: null,
             pctAutenticados: null,
         });

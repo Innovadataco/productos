@@ -1,5 +1,6 @@
 import type { PulsoData } from "@/lib/bi/pulso";
 import TarjetaKpi, { type DeltaKpi } from "./TarjetaKpi";
+import { fmtMiles } from "./formatos";
 
 /** Delta del mes en %: null → "sin comparación" (candado 9), nunca un vs. inventado. */
 function deltaPorcentaje(deltaMesPct: number | null): DeltaKpi {
@@ -39,12 +40,20 @@ export default function GridKpis({
     serieDiaria: PulsoData["serieDiaria"];
 }) {
     const serie = serieDiaria.map((d) => d.total);
+    const deltaMes = deltaPorcentaje(kpis.deltaMesPct);
+    // Desglose semilla/simulación del mes (CEO 12-09): sin él el KPI muestra
+    // un negocio que no existe. NULL = sondeo caído → no se anota nada
+    // (candado 9: mejor nada que un cero disfrazado).
+    const deltaMesConDemo: DeltaKpi =
+        kpis.reportesMesDemo !== null && kpis.reportesMesDemo > 0
+            ? { ...deltaMes, texto: `${deltaMes.texto} · ${fmtMiles(kpis.reportesMesDemo)} semilla` }
+            : deltaMes;
     return (
         <div className="mb-4 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
             <TarjetaKpi
                 etiqueta="Reportes · este mes"
                 valor={kpis.reportesMes}
-                delta={deltaPorcentaje(kpis.deltaMesPct)}
+                delta={deltaMesConDemo}
                 spark={serie}
                 retardo={420}
             />

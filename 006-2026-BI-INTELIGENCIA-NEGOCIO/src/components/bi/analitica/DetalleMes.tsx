@@ -11,6 +11,7 @@ import { PuntosCarga } from "./ProyeccionSemana";
 interface DetalleMesData {
     mes: string;
     total: number;
+    demo: number;
     categoriaTop: { categoria: string; total: number } | null;
     alertasDelMes: number;
     escaladasDelMes: number;
@@ -109,7 +110,8 @@ export default function DetalleMes({ mes }: { mes: string }) {
                     </h4>
                     <p className="cifra text-[13px] text-body">
                         {fmtMiles(datos.total)}{" "}
-                        {datos.total === 1 ? "reporte" : "reportes"} · top:{" "}
+                        {datos.total === 1 ? "reporte" : "reportes"} ({fmtMiles(datos.demo)} de
+                        semilla) · top:{" "}
                         {datos.categoriaTop
                             ? `${categoriaLegible(datos.categoriaTop.categoria)} (${fmtMiles(datos.categoriaTop.total)})`
                             : "sin clasificar"}{" "}
