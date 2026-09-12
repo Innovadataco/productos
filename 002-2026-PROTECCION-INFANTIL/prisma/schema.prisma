@@ -3703,6 +3703,10 @@ model PerfilProfesional {
   // con `has` de Prisma sin necesitar una tabla puente.
   especialidades           String[]
   ciudadId                 String
+  // SPEC-673 (I-398) · Invariante ESTADO↔modalidad como CHECK en la BD (Prisma no modela
+  // CHECK): estado≠BORRADOR ⟹ atiendeVirtual OR atiendePresencial. Respaldo de fondo del
+  // guard `exigirModalidadParaEstado`. Migración 20260912090000, NOT VALID (conserva la
+  // fila-evidencia E2E de I-398; el VALIDATE es paso aparte cuando esa fila se resuelva).
   atiendeVirtual           Boolean                  @default(false)
   atiendePresencial        Boolean                  @default(false)
   aniosExperiencia         Int
