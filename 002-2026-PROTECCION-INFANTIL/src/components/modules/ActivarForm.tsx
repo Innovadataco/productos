@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 
 export function ActivarForm({ token }: { token: string }) {
-    const router = useRouter();
     const [password, setPassword] = useState("");
     const [confirmacion, setConfirmacion] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +38,13 @@ export function ActivarForm({ token }: { token: string }) {
             if (!res.ok) {
                 throw new Error(json?.error?.message || "Error al activar la cuenta");
             }
-            router.push("/consentimiento");
+            // Cuenta activada y cookie de sesión sellada por el servidor. I-411:
+            // navegación DURA (window.location), NO router.push. Un push blando
+            // conserva el runtime cliente montado ANTES de la cookie → AuthContext
+            // en null → el menú diría «Iniciar sesión» sobre el panel. La navegación
+            // dura remonta AuthProvider, que lee /api/me con la cookie puesta.
+            // (Candado: sesion-cookie-refresca-contexto.candado.test.ts.)
+            window.location.assign("/consentimiento");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error al activar la cuenta");
         } finally {
