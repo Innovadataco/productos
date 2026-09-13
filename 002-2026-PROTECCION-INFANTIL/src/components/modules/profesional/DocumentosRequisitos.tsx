@@ -45,7 +45,13 @@ export function DocumentosRequisitos() {
     const cargar = useCallback(async () => {
         try {
             const res = await fetch("/api/profesional/documentos", { credentials: "include" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            if (!res.ok) {
+                // I-410: mostrar el MENSAJE del servidor (p. ej. «Complete su perfil
+                // antes de cargar documentos.»), no «HTTP 400». El respaldo solo si el
+                // servidor no manda mensaje. Candado: pantalla-muestra-mensaje-servidor.
+                const cuerpo = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+                throw new Error(cuerpo?.error?.message ?? `El servidor respondió con un error (HTTP ${res.status}).`);
+            }
             const json = (await res.json()) as { data: EstadoDocumento[] };
             setDocs(json.data);
         } catch (e) {

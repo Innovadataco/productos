@@ -47,7 +47,11 @@ export function VerificadoresGestionClient() {
         setError(null);
         try {
             const res = await fetch("/api/admin/verificadores", { credentials: "include" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            if (!res.ok) {
+                // I-410: mostrar el mensaje del servidor, no «HTTP NNN».
+                const cuerpo = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+                throw new Error(cuerpo?.error?.message ?? `El servidor respondió con un error (HTTP ${res.status}).`);
+            }
             const json = (await res.json()) as { verificadores: Verificador[] };
             setItems(json.verificadores);
         } catch (e) {

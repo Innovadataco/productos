@@ -87,7 +87,11 @@ export function SolicitarCitaPanel({
         setCargaError(null);
         try {
             const res = await fetch(`/api/publico/profesionales/${profesionalId}/franjas`);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            if (!res.ok) {
+                // I-410: mostrar el mensaje del servidor, no «HTTP NNN».
+                const cuerpo = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+                throw new Error(cuerpo?.error?.message ?? `El servidor respondió con un error (HTTP ${res.status}).`);
+            }
             const json = (await res.json()) as { data: Franja[] };
             setFranjas(json.data);
         } catch (e) {
