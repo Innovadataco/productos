@@ -8,7 +8,6 @@
  */
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -16,7 +15,6 @@ import { Alerta } from "@/components/ui/Alerta";
 
 export default function CrearClaveProfesionalPage({ params }: { params: Promise<{ token: string }> }) {
     const { token } = use(params);
-    const router = useRouter();
     const [password, setPassword] = useState("");
     const [confirmacion, setConfirmacion] = useState("");
     const [error, setError] = useState("");
@@ -50,7 +48,14 @@ export default function CrearClaveProfesionalPage({ params }: { params: Promise<
                 const json = await res.json().catch(() => null);
                 throw new Error(json?.error?.message || "No pudimos crear su cuenta. Intente de nuevo.");
             }
-            router.push("/perfil-profesional/completar");
+            // Cuenta creada y cookie de sesión sellada por el servidor. I-411 (el
+            // que caminó Jelkin): navegación DURA (window.location), NO router.push.
+            // Un push blando conserva el runtime cliente montado ANTES de la cookie
+            // → AuthContext en null → el menú diría «Iniciar sesión» sobre su panel.
+            // La navegación dura remonta AuthProvider, que lee /api/me con la cookie
+            // puesta y pinta el menú autenticado al primer intento.
+            // (Candado: sesion-cookie-refresca-contexto.candado.test.ts.)
+            window.location.assign("/perfil-profesional/completar");
         } catch (err) {
             setError(err instanceof Error ? err.message : "No pudimos crear su cuenta. Intente de nuevo.");
         } finally {
