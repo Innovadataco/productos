@@ -70,20 +70,38 @@ function urlDeRoute(rutaRel: string): string | null {
 
 const LLAMA_SET_COOKIE = /\bsetSessionCookie\s*\(/;
 
+/** Índice del primer literal de la URL en la fuente (arranque del camino que instala la cookie); -1 si no está. */
+function indiceDeLlamada(texto: string, url: string): number {
+    const cands = [texto.indexOf(`"${url}"`), texto.indexOf(`'${url}'`), texto.indexOf("`" + url)].filter((i) => i >= 0);
+    return cands.length ? Math.min(...cands) : -1;
+}
+
 /** ¿Un literal de esta URL aparece en la fuente (la invoca por fetch)? */
 function invoca(texto: string, url: string): boolean {
-    return texto.includes(`"${url}"`) || texto.includes(`'${url}'`) || texto.includes("`" + url);
+    return indiceDeLlamada(texto, url) >= 0;
 }
 
 /**
- * LA INVARIANTE. Un llamador cliente cumple si refresca el AuthContext
- * (`useAuth`/`checkSession`/`setUser`) O navega DURO (`window.location`) sin dejar
- * también una navegación blanda. `router.push`/`router.replace` sin refresco = falla.
+ * LA INVARIANTE — apretada (SPEC-689, hallazgo del CEO revisando 688). Un llamador
+ * cliente cumple si refresca el AuthContext (`useAuth`/`checkSession`/`setUser`) O
+ * navega DURO (`window.location`) sin navegación blanda.
+ *
+ * La versión de 688 miraba `window.location` en CUALQUIER parte del archivo: un
+ * componente que use `window.location.search` para leer un parámetro Y navegue
+ * blando tras instalar la cookie pasaba VERDE sobre el defecto que vigila. Apretado:
+ * la navegación (dura y blanda) se mide SOLO en el camino que sigue a la llamada a
+ * la ruta que instala la cookie (el texto DESPUÉS del literal de la URL). Así, un
+ * `window.location.search` arriba ya no salva a un `router.push` de abajo, y una
+ * navegación blanda DESPUÉS de la llamada es roja aunque haya `window.location` en
+ * otro lado. El refresco de contexto sí vale en cualquier parte: refresca el
+ * AuthContext montado, no depende del orden.
  */
-function cumpleInvariante(texto: string): boolean {
+function cumpleInvariante(texto: string, url: string): boolean {
     const refrescaContexto = /\buseAuth\b|\bcheckSession\s*\(|\bsetUser\s*\(/.test(texto);
-    const navBlanda = /\brouter\.(?:push|replace)\s*\(/.test(texto);
-    const navDura = /\bwindow\.location\b/.test(texto);
+    const i = indiceDeLlamada(texto, url);
+    const despues = i >= 0 ? texto.slice(i) : texto; // el camino tras instalar la cookie
+    const navBlanda = /\brouter\.(?:push|replace)\s*\(/.test(despues);
+    const navDura = /\bwindow\.location\b/.test(despues);
     return refrescaContexto || (navDura && !navBlanda);
 }
 
@@ -127,21 +145,30 @@ describe("I-411 · toda ruta que instala cookie de sesión refresca el AuthConte
     it("CONTROL POSITIVO · el detector distingue conducta buena de mala (no está pegado en verde)", () => {
         // El detector mira conducta (router.push( / window.location / useAuth), no
         // el estilo de comillas: los ejemplos usan comillas simples adentro.
+        const RUTA = "/api/x/completar";
         const MALO = "await fetch('/api/x/completar'); router.push('/panel');";
         const BUENO_DURO = "await fetch('/api/x/completar'); window.location.assign('/panel');";
         const BUENO_CTX = "const { login } = useAuth(); await fetch('/api/auth/login');";
-        expect(cumpleInvariante(MALO)).toBe(false);
-        expect(cumpleInvariante(BUENO_DURO)).toBe(true);
-        expect(cumpleInvariante(BUENO_CTX)).toBe(true);
-        // Dura Y blanda mezcladas = ambiguo: podría tomar el camino blando → falla.
-        expect(cumpleInvariante(`${BUENO_DURO} router.replace("/otra");`)).toBe(false);
+        // GAP que apretó SPEC-689 (hallazgo del CEO): un `window.location.search`
+        // ANTES de la llamada NO es la navegación del alta. El discriminador puro
+        // —search arriba y NINGUNA nav dura después— daba VERDE en 688 (veía
+        // `window.location` en cualquier parte) y ahora debe dar ROJO.
+        const GAP_SEARCH_SIN_DURA = "const q = window.location.search; await fetch('/api/x/completar'); router.push('/panel');";
+        const GAP_SEARCH_SOLA = "const q = window.location.search; await fetch('/api/x/completar');";
+        expect(cumpleInvariante(MALO, RUTA)).toBe(false);
+        expect(cumpleInvariante(BUENO_DURO, RUTA)).toBe(true);
+        expect(cumpleInvariante(BUENO_CTX, "/api/auth/login")).toBe(true);
+        expect(cumpleInvariante(GAP_SEARCH_SIN_DURA, RUTA), "search arriba no salva la nav blanda de después").toBe(false);
+        expect(cumpleInvariante(GAP_SEARCH_SOLA, RUTA), "search arriba no cuenta como nav dura del alta (era el falso-verde de 688)").toBe(false);
+        // Dura Y blanda mezcladas DESPUÉS de la llamada = ambiguo → falla.
+        expect(cumpleInvariante(`${BUENO_DURO} router.replace('/otra');`, RUTA)).toBe(false);
     });
 
     // (3) LA INVARIANTE, una aserción por llamador real descubierto.
     for (const c of callers) {
         it(`«${c.archivo}» refresca AuthContext tras invocar ${c.ruta}`, () => {
             expect(
-                cumpleInvariante(c.texto),
+                cumpleInvariante(c.texto, c.ruta),
                 `«${c.archivo}» invoca ${c.ruta} (instala cookie de sesión) pero navega BLANDO ` +
                     "sin refrescar el AuthContext. El menú quedará en «Iniciar sesión» sobre el " +
                     "panel (I-411). Use navegación DURA: window.location.assign(destino) — remonta " +
