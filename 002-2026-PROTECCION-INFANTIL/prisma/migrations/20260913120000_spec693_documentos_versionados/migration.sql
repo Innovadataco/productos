@@ -49,10 +49,14 @@ UPDATE "DocumentoProfesional" d
    AND d."subidoEn" <= v."ultimaAprobacion";
 
 -- 3) Derogar el único viejo (una fila por requisito) — ya no aplica, conviven versiones.
---    Índice de lectura compuesto en su lugar (mismo nombre que generaría Prisma).
+--    Índice de lectura compuesto en su lugar (mismo nombre que generaría Prisma). Y se
+--    dropea el standalone `_perfilProfesionalId_idx` de SPEC-436: el compuesto sirve
+--    también las consultas por `perfilProfesionalId` solo (columna líder del btree), así
+--    que tener los dos es escritura + storage de más sin beneficio (nit de Datos, D-121).
 DROP INDEX "DocumentoProfesional_perfilProfesionalId_requisitoClave_key";
 CREATE INDEX "DocumentoProfesional_perfilProfesionalId_requisitoClave_idx"
     ON "DocumentoProfesional"("perfilProfesionalId", "requisitoClave");
+DROP INDEX "DocumentoProfesional_perfilProfesionalId_idx";
 
 -- 4) Unicidad real por índices ÚNICOS PARCIALES: ≤1 VIGENTE y ≤1 EN_REVISION por
 --    (perfil,requisito). SUPERSEDIDA/DEVUELTA son historial: múltiples permitidas.

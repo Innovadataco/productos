@@ -3804,8 +3804,10 @@ model DocumentoProfesional {
 
   // SPEC-693: se derogó `@@unique([perfilProfesionalId, requisitoClave])` (una sola
   // fila por requisito) — ahora conviven versiones. La unicidad la dan los índices
-  // únicos PARCIALES de la migración (por estado). Índice compuesto para las lecturas.
-  @@index([perfilProfesionalId])
+  // únicos PARCIALES de la migración (por estado). Un solo índice de lectura: el
+  // compuesto sirve TAMBIÉN las consultas por `perfilProfesionalId` solo (columna
+  // líder del btree), así que el standalone `@@index([perfilProfesionalId])` era
+  // redundante (nit de Datos, D-121) — la migración lo dropea.
   @@index([perfilProfesionalId, requisitoClave])
 }
 
