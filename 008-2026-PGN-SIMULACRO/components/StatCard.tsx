@@ -11,16 +11,18 @@ interface StatCardProps {
 function StatCard({ label, value, sub, trend = 'neutral', icon }: StatCardProps) {
   const TrendIcon = icon ?? (trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus);
   const trendColor =
-    trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-slate-400';
+    trend === 'up' ? 'text-ios-green' : trend === 'down' ? 'text-ios-red' : 'text-ios-gray-3';
 
   return (
-    <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-medium text-slate-500">{label}</span>
-        <TrendIcon size={14} className={trendColor} />
+    <div className="ios-card flex flex-col p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-ios-footnote font-medium uppercase tracking-wide text-ios-label-secondary">
+          {label}
+        </span>
+        <TrendIcon size={16} className={trendColor} />
       </div>
-      <span className="text-2xl font-bold text-slate-900">{value}</span>
-      {sub ? <span className="mt-1 text-[10px] text-slate-400">{sub}</span> : null}
+      <span className="text-ios-title-1 text-ios-label">{value}</span>
+      {sub ? <span className="mt-1 text-ios-caption-2 text-ios-label-tertiary">{sub}</span> : null}
     </div>
   );
 }

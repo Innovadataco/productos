@@ -97,28 +97,50 @@ export default function SimulacroPage() {
 
   if (loading || !perfil) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Cargando simulacro...</p>
+      <main className="ios-page">
+        <div className="ios-nav-blur px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-24 animate-pulse rounded bg-ios-gray-5" />
+            <div className="h-7 w-20 animate-pulse rounded-lg bg-ios-gray-5" />
+          </div>
+        </div>
+        <section className="ios-content py-6">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="h-7 w-36 animate-pulse rounded bg-ios-gray-5" />
+            <div className="h-4 w-20 animate-pulse rounded bg-ios-gray-5" />
+          </div>
+          <div className="h-2 w-full animate-pulse rounded-full bg-ios-gray-5" />
+          <div className="mt-8 space-y-6">
+            <div className="ios-card h-40 animate-pulse" />
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-[72px] w-full animate-pulse rounded-ios-xl bg-ios-gray-5" />
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen pb-8">
+    <main className="ios-page">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref="/home" />
-      <section className="px-4 py-6">
+      <section className="ios-content py-6">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-slate-900">Simulacro mixto</h1>
-          <span className="text-xs text-slate-500">Pregunta {index + 1} de {preguntas.length}</span>
+          <h1 className="text-ios-title-2 text-ios-label">Simulacro mixto</h1>
+          <span className="text-ios-caption-1 text-ios-label-secondary">
+            Pregunta {index + 1} de {preguntas.length}
+          </span>
         </div>
         <ProgressBar actual={index + (respondida ? 1 : 0)} total={preguntas.length} />
 
         {pregunta ? (
           <>
-            <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-sm font-medium leading-relaxed text-slate-900">{pregunta.enunciado}</p>
+            <div className="ios-card mt-6 p-5">
+              <p className="text-ios-body leading-relaxed text-ios-label">{pregunta.enunciado}</p>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="mt-5 space-y-3">
               {pregunta.opciones.map((opcion, i) => {
                 const estado = !respondida
                   ? 'default'
@@ -131,23 +153,25 @@ export default function SimulacroPage() {
               })}
             </div>
             {respondida && (
-              <div className="mt-4">
+              <div className="mt-6 transition-all duration-300 ease-ios">
                 <FeedbackBox
                   correcta={seleccion === pregunta.respuesta}
                   explicacion={pregunta.explicacion || 'Sin explicación disponible.'}
                   norma={pregunta.norma}
                   articulo={pregunta.articulo}
                 />
-                <button onClick={siguiente} className="mt-4 w-full rounded-xl bg-pgn-600 py-3 text-sm font-bold text-white hover:bg-pgn-700">
+                <button onClick={siguiente} className="ios-button mt-6 w-full text-ios-body">
                   {index + 1 >= preguntas.length ? 'Ver resultado' : 'Siguiente'}
                 </button>
               </div>
             )}
           </>
         ) : (
-          <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-            <p className="text-sm text-slate-500">No hay preguntas cargadas para el simulacro aún.</p>
-            <Link href="/home" className="mt-3 inline-block text-sm font-bold text-pgn-600 hover:underline">Volver al inicio</Link>
+          <div className="ios-card mt-6 border border-dashed border-ios-gray-4 p-6 text-center">
+            <p className="text-ios-body text-ios-label-secondary">No hay preguntas cargadas para el simulacro aún.</p>
+            <Link href="/home" className="ios-button-secondary mt-4 w-full">
+              Volver al inicio
+            </Link>
           </div>
         )}
       </section>

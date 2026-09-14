@@ -8,26 +8,33 @@ interface OptionButtonProps {
   disabled?: boolean;
 }
 
-export default function OptionButton({ label, text, state = 'default', onClick, disabled }: OptionButtonProps) {
+export default function OptionButton({
+  label,
+  text,
+  state = 'default',
+  onClick,
+  disabled,
+}: OptionButtonProps) {
   const styles = {
-    default: 'border-slate-200 bg-white text-slate-700 hover:border-pgn-400 hover:bg-pgn-50',
-    correct: 'border-emerald-500 bg-emerald-50 text-emerald-800',
-    incorrect: 'border-red-500 bg-red-50 text-red-800',
-    faded: 'border-slate-100 bg-slate-50 text-slate-400',
+    default:
+      'border-ios-separator bg-ios-surface text-ios-label hover:border-ios-primary hover:bg-ios-primary-light',
+    correct: 'border-ios-green bg-ios-green-light text-ios-green',
+    incorrect: 'border-ios-red bg-ios-red-light text-ios-red',
+    faded: 'border-ios-separator-light bg-ios-gray-6 text-ios-label-tertiary',
   };
 
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${styles[state]} ${
-        disabled ? 'cursor-default' : 'active:scale-[0.99]'
+      className={`ios-card flex min-h-[52px] w-full items-start gap-4 border-2 p-4 text-left transition-all ${styles[state]} ${
+        disabled ? 'cursor-default' : 'active:scale-[0.98]'
       }`}
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-current text-sm font-bold">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current text-ios-subhead font-bold">
         {label}
       </span>
-      <span className="text-sm leading-relaxed">{text}</span>
+      <span className="text-ios-body leading-relaxed">{text}</span>
     </button>
   );
 }

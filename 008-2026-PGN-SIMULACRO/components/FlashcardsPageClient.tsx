@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import Flashcard from '@/components/Flashcard';
 import { Perfil, Tema, Flashcard as FlashcardType } from '@/lib/types';
 import { getPerfilActivo, getPerfiles, getTemas, getFlashcards } from '@/lib/client-data';
+import { Loader2 } from 'lucide-react';
 
 export default function FlashcardsPageClient() {
   const router = useRouter();
@@ -41,24 +42,36 @@ export default function FlashcardsPageClient() {
 
   if (loading || !perfil || !tema) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Cargando flashcards...</p>
+      <main className="ios-page flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-ios-primary" aria-label="Cargando flashcards" />
       </main>
     );
   }
 
   const actual = flashcards[index];
+  const progress = flashcards.length ? ((index + 1) / flashcards.length) * 100 : 0;
 
   return (
-    <main className="min-h-screen pb-8">
+    <main className="ios-page">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref={`/tema/${tema.clave}`} />
-      <section className="px-4 py-6">
-        <h1 className="text-xl font-bold text-slate-900">{tema.nombre}</h1>
-        <p className="mt-1 text-sm text-slate-500">Flashcards · {index + 1} de {flashcards.length || 0}</p>
+      <section className="ios-content py-6">
+        <h1 className="text-ios-title-2 text-ios-label">{tema.nombre}</h1>
+        <p className="mt-1 text-ios-subhead text-ios-label-secondary">
+          Flashcards · {index + 1} de {flashcards.length || 0}
+        </p>
+
+        <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-ios-gray-5">
+          <div
+            className="h-full rounded-full bg-ios-primary transition-all duration-300 ease-ios"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
 
         {flashcards.length === 0 && (
-          <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-            <p className="text-sm text-slate-500">No hay flashcards cargadas para este tema aún.</p>
+          <div className="mt-6 rounded-ios-xl border border-dashed border-ios-gray-4 bg-ios-surface p-8 text-center shadow-ios">
+            <p className="text-ios-body text-ios-label-secondary">
+              No hay flashcards cargadas para este tema aún.
+            </p>
           </div>
         )}
 

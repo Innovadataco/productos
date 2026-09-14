@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import ProfileCard from '../components/ProfileCard';
 import { Perfil } from '../lib/types';
 import { getPerfiles, setPerfilActivo } from '../lib/client-data';
@@ -26,28 +27,30 @@ export default function SeleccionPerfilPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <p className="text-sm text-slate-500">Cargando perfiles...</p>
+      <main className="ios-page flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-ios-primary" />
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <p className="text-sm text-red-600">{error}</p>
+      <main className="ios-page flex items-center justify-center px-4">
+        <div className="ios-card w-full max-w-sm p-6 text-center">
+          <p className="text-ios-body text-ios-red">{error}</p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen px-4 py-8">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-pgn-800">PGN Estudio</h1>
-        <p className="mt-2 text-sm text-slate-500">Selecciona tu perfil para comenzar</p>
+    <main className="ios-page py-6">
+      <div className="ios-content mb-8 text-center">
+        <h1 className="text-ios-title-1 text-ios-label">PGN Estudio</h1>
+        <p className="mt-2 text-ios-body text-ios-label-secondary">Selecciona tu perfil para comenzar</p>
       </div>
 
-      <div className="space-y-4">
+      <div className="ios-content space-y-4">
         {perfiles.map((perfil) => (
           <ProfileCard key={perfil.codigo} perfil={perfil} onSelect={handleSelect} />
         ))}

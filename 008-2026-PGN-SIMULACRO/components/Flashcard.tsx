@@ -19,29 +19,66 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
   return (
     <div className="w-full">
       <button
+        type="button"
         onClick={() => setFlipped((f) => !f)}
-        className="relative min-h-[200px] w-full rounded-2xl border-2 border-pgn-200 bg-white p-6 text-center shadow-sm transition-all hover:border-pgn-400 hover:shadow-md"
+        className="group relative w-full perspective-[1000px]"
+        aria-label="Voltear flashcard"
       >
-        <div className="text-xs font-bold uppercase tracking-wide text-pgn-500">{flipped ? 'Reverso' : 'Frente'}</div>
-        <div className="mt-4 text-lg font-medium text-slate-900">{flipped ? reverso : frente}</div>
-        {norma && flipped && (
-          <div className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-pgn-50 px-3 py-1.5 text-xs text-pgn-700">
-            <BookOpen size={12} />
-            {norma}
+        <div
+          className={`relative min-h-[260px] w-full transition-transform duration-700 ease-ios [transform-style:preserve-3d] ${
+            flipped ? '[transform:rotateY(180deg)]' : ''
+          }`}
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-surface p-6 shadow-ios backface-hidden">
+            <span className="text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-primary">
+              Frente
+            </span>
+            <p className="mt-4 text-ios-title-3 text-ios-label text-balance">{frente}</p>
+            <span className="mt-6 text-ios-caption-1 text-ios-label-tertiary">Toca para voltear</span>
           </div>
-        )}
-        <div className="mt-4 text-xs text-slate-400">Toca para voltear</div>
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-primary-light p-6 shadow-ios backface-hidden [transform:rotateY(180deg)]">
+            <span className="text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-primary">
+              Reverso
+            </span>
+            <p className="mt-4 text-ios-title-3 text-ios-label text-balance">{reverso}</p>
+            {norma && (
+              <div className="mt-4 inline-flex items-center gap-1.5 rounded-ios bg-ios-surface/70 px-3 py-1.5 text-ios-caption-1 font-medium text-ios-primary">
+                <BookOpen size={12} />
+                {norma}
+              </div>
+            )}
+          </div>
+        </div>
       </button>
 
-      <div className="mt-4 flex items-center justify-between">
-        <button onClick={onPrev} disabled={!hasPrev} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-40">
-          <ChevronLeft size={16} /> Anterior
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onPrev}
+          disabled={!hasPrev}
+          aria-label="Anterior"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ios-gray-6 text-ios-primary transition-all active:scale-[0.97] active:bg-ios-gray-5 disabled:opacity-40"
+        >
+          <ChevronLeft size={24} />
         </button>
-        <button onClick={() => setFlipped((f) => !f)} className="rounded-lg bg-pgn-100 px-4 py-2 text-sm font-bold text-pgn-700">
+
+        <button
+          type="button"
+          onClick={() => setFlipped((f) => !f)}
+          className="ios-button-secondary flex-1"
+        >
           {flipped ? 'Ver frente' : 'Ver reverso'}
         </button>
-        <button onClick={onNext} disabled={!hasNext} className="flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-40">
-          Siguiente <ChevronRight size={16} />
+
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!hasNext}
+          aria-label="Siguiente"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ios-gray-6 text-ios-primary transition-all active:scale-[0.97] active:bg-ios-gray-5 disabled:opacity-40"
+        >
+          <ChevronRight size={24} />
         </button>
       </div>
     </div>

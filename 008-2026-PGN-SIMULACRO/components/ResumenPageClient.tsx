@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import { Perfil, Tema, Resumen } from '@/lib/types';
 import { getPerfilActivo, getPerfiles, getTemas, getResumenes } from '@/lib/client-data';
+import { Loader2 } from 'lucide-react';
 
 export default function ResumenPageClient() {
   const router = useRouter();
@@ -39,31 +40,33 @@ export default function ResumenPageClient() {
 
   if (loading || !perfil || !tema) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Cargando resumen...</p>
+      <main className="ios-page flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-ios-primary" aria-label="Cargando resumen" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen pb-8">
+    <main className="ios-page">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref={`/tema/${tema.clave}`} />
-      <section className="px-4 py-6">
-        <h1 className="text-xl font-bold text-slate-900">{tema.nombre}</h1>
-        <h2 className="mt-1 text-sm font-medium text-slate-500">Resumen</h2>
+      <section className="ios-content py-6">
+        <h1 className="text-ios-title-2 text-ios-label">{tema.nombre}</h1>
+        <h2 className="mt-1 text-ios-subhead text-ios-label-secondary">Resumen</h2>
 
         {resumenes.length === 0 && (
-          <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-            <p className="text-sm text-slate-500">No hay resúmenes cargados para este tema aún.</p>
+          <div className="mt-6 rounded-ios-xl border border-dashed border-ios-gray-4 bg-ios-surface p-8 text-center shadow-ios">
+            <p className="text-ios-body text-ios-label-secondary">
+              No hay resúmenes cargados para este tema aún.
+            </p>
           </div>
         )}
 
         <div className="mt-4 space-y-4">
           {resumenes.map((resumen) => (
-            <article key={resumen.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="text-base font-bold text-slate-900">{resumen.titulo}</h3>
+            <article key={resumen.id} className="ios-card p-5">
+              <h3 className="text-ios-title-3 text-ios-label">{resumen.titulo}</h3>
               <div
-                className="prose prose-sm mt-2 max-w-none text-slate-700"
+                className="prose prose-sm mt-3 max-w-none text-ios-body text-ios-label-secondary"
                 dangerouslySetInnerHTML={{ __html: resumen.contenido_html }}
               />
               {resumen.fuente_url && (
@@ -71,7 +74,7 @@ export default function ResumenPageClient() {
                   href={resumen.fuente_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-block text-xs text-pgn-600 hover:underline"
+                  className="mt-4 inline-block text-ios-subhead font-medium text-ios-primary hover:underline"
                 >
                   Fuente
                 </a>

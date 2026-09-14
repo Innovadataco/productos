@@ -3,11 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '@/components/Header';
-import StatCard from '@/components/StatCard';
 import { getIcon } from '@/components/icons';
 import { Perfil, Tema } from '@/lib/types';
 import { getPerfilActivo, getPerfiles, getTemas } from '@/lib/client-data';
-import { BookOpen, Layers, Dumbbell, Shuffle, Target, FileText, RotateCcw } from 'lucide-react';
+import {
+  BookOpen,
+  Layers,
+  Dumbbell,
+  Shuffle,
+  Target,
+  FileText,
+  RotateCcw,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react';
 
 const menu = [
   { key: 'resumen', label: 'Resumen', icon: BookOpen, href: 'resumen' },
@@ -66,46 +75,75 @@ export default function TemaLandingClient() {
 
   if (loading || !perfil || !tema) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-slate-500">Cargando tema...</p>
+      <main className="ios-page flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-ios-primary" aria-label="Cargando tema" />
       </main>
     );
   }
 
   const Icon = getIcon(tema.icono);
+  const stats = [
+    { label: 'Preguntas', value: counts.preguntas, icon: Target },
+    { label: 'Resúmenes', value: counts.resumenes, icon: FileText },
+    { label: 'Flashcards', value: counts.flashcards, icon: Layers },
+  ];
 
   return (
-    <main className="min-h-screen pb-8">
+    <main className="ios-page">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref="/home" />
-      <section className="px-4 py-6">
-        <div className={`mb-6 flex h-16 w-16 items-center justify-center rounded-2xl text-white ${tema.color}`}>
-          <Icon size={32} />
+      <section className="ios-content py-6">
+        <div className="ios-card-elevated p-5">
+          <div className="flex items-center gap-5">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-ios-xl bg-ios-primary-light text-ios-primary">
+              <Icon size={32} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-ios-title-1 text-ios-label">{tema.nombre}</h1>
+              <p className="mt-0.5 text-ios-subhead text-ios-label-secondary">{tema.eje}</p>
+            </div>
+          </div>
+          <p className="mt-4 text-ios-body text-ios-label-secondary leading-relaxed">{tema.descripcion}</p>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">{tema.nombre}</h1>
-        <p className="mt-1 text-sm text-slate-500">{tema.eje}</p>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600">{tema.descripcion}</p>
 
-        <div className="mt-6 grid grid-cols-3 gap-3">
-          <StatCard label="Preguntas" value={counts.preguntas} icon={Target} />
-          <StatCard label="Resúmenes" value={counts.resumenes} icon={FileText} />
-          <StatCard label="Flashcards" value={counts.flashcards} icon={Layers} />
+        <div className="mt-6 grid grid-cols-3 gap-4">
+          {stats.map((stat) => {
+            const StatIcon = stat.icon;
+            return (
+              <div
+                key={stat.label}
+                className="flex flex-col rounded-ios-xl bg-ios-surface p-4 shadow-ios"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-ios-caption-1 font-medium uppercase text-ios-label-secondary">
+                    {stat.label}
+                  </span>
+                  <StatIcon size={16} className="text-ios-primary" />
+                </div>
+                <span className="text-ios-title-1 text-ios-label">{stat.value}</span>
+              </div>
+            );
+          })}
         </div>
 
-        <h2 className="mb-3 mt-8 text-sm font-bold uppercase tracking-wide text-slate-500">Módulos de estudio</h2>
-        <div className="grid grid-cols-1 gap-3">
+        <h2 className="ios-section-title">Módulos de estudio</h2>
+        <div className="ios-list">
           {menu.map((item) => {
             const IconItem = item.icon;
             const href = item.href.startsWith('/') ? item.href : `/tema/${tema.clave}/${item.href}`;
             return (
               <button
                 key={item.key}
+                type="button"
                 onClick={() => router.push(href)}
-                className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-pgn-300 hover:shadow-md"
+                className="ios-list-item w-full text-left"
               >
-                <div className="rounded-lg bg-pgn-50 p-2 text-pgn-600">
-                  <IconItem size={22} />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-ios bg-ios-primary-light text-ios-primary">
+                    <IconItem size={20} />
+                  </div>
+                  <span className="text-ios-body font-medium text-ios-label">{item.label}</span>
                 </div>
-                <p className="font-bold text-slate-900">{item.label}</p>
+                <ChevronRight size={18} className="text-ios-gray-3" />
               </button>
             );
           })}
