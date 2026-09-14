@@ -57,6 +57,13 @@ export interface EstadoDocumento {
     nombre: string;
     descripcion: string;
     cargado: boolean;
+    /**
+     * SPEC-693 (I-416): el profesional subió una versión NUEVA de este requisito que
+     * está esperando revisión (hay un documento EN_REVISION). La pantalla lo pinta como
+     * «En revisión — enviaste un documento nuevo». Si además hay una versión vigente,
+     * el profesional sigue atendiendo con ella mientras tanto.
+     */
+    enRevision: boolean;
     extension: string | null;
     subidoEn: string | null;
 }
@@ -64,22 +71,35 @@ export interface EstadoDocumento {
 /**
  * El estado de los documentos de un perfil, **derivado del parámetro**: si
  * mañana se agrega un quinto requisito, aparece acá sin tocar código.
+ *
+ * SPEC-693: un requisito puede tener a la vez una versión VIGENTE (la que respalda) y
+ * una EN_REVISION (la nueva que espera revisión). Se muestra la más nueva que el
+ * profesional ve (la pendiente si la hay; si no, la vigente) y se marca `enRevision`.
  */
 export async function estadoDeDocumentos(perfilProfesionalId: string): Promise<EstadoDocumento[]> {
-    const [requisitos, cargados] = await Promise.all([
+    const [requisitos, actuales] = await Promise.all([
         leerRequisitosVerificacion(),
         new DocumentoProfesionalRepository().listarPorPerfil(perfilProfesionalId),
     ]);
-    const porClave = new Map(cargados.map((d) => [d.requisitoClave, d]));
+    type DocActual = (typeof actuales)[number];
+    const porClave = new Map<string, { vigente?: DocActual; pendiente?: DocActual }>();
+    for (const d of actuales) {
+        const slot = porClave.get(d.requisitoClave) ?? {};
+        if (d.estado === "VIGENTE") slot.vigente = d;
+        else if (d.estado === "EN_REVISION") slot.pendiente = d;
+        porClave.set(d.requisitoClave, slot);
+    }
     return requisitos.map((r) => {
-        const doc = porClave.get(r.clave);
+        const slot = porClave.get(r.clave);
+        const mostrar = slot?.pendiente ?? slot?.vigente ?? null;
         return {
             clave: r.clave,
             nombre: r.nombre,
             descripcion: r.descripcion,
-            cargado: doc !== undefined,
-            extension: doc?.extension ?? null,
-            subidoEn: doc ? doc.subidoEn.toISOString() : null,
+            cargado: mostrar !== null,
+            enRevision: slot?.pendiente !== undefined,
+            extension: mostrar?.extension ?? null,
+            subidoEn: mostrar ? mostrar.subidoEn.toISOString() : null,
         };
     });
 }

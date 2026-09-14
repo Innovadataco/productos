@@ -2,7 +2,7 @@
  * SPEC-436 (I-304) · Repositorio de los documentos que carga el profesional.
  * Q-3: el acceso a Prisma vive acá; los services y los routes componen.
  */
-import type { DocumentoProfesional, Prisma } from "@prisma/client";
+import type { DocumentoProfesional, Prisma, RevisionRenovacion } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 
@@ -119,5 +119,23 @@ export class DocumentoProfesionalRepository {
             where: { id: pendiente.id },
             data: { estado: "DEVUELTA" },
         });
+    }
+
+    /**
+     * SPEC-693 (I-416): deja constancia de una re-revisión de RENOVACIÓN sobre una
+     * versión concreta de documento — quién revisó, qué bytes (vía la versión) y el
+     * resultado. La tabla NO tiene `venceEn` ni FK a perfil: por FORMA no puede
+     * extender la vigencia ni mover el estado del perfil (los dos invariantes del CEO).
+     * Correr dentro de la misma transacción que la promoción/devolución.
+     */
+    registrarRevisionRenovacion(
+        datos: {
+            documentoProfesionalId: string;
+            revisadoPorId: string;
+            resultado: "APROBADO" | "DEVUELTA";
+            observacion: string | null;
+        },
+    ): Promise<RevisionRenovacion> {
+        return this.db.revisionRenovacion.create({ data: datos });
     }
 }
