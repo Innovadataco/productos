@@ -1,0 +1,420 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1437 de 2011, ¿cuál es la finalidad de la Parte Primera del Código de Procedimiento Administrativo y de lo Contencioso Administrativo?",
+      "opciones": [
+        "Organizar la estructura interna de la Rama Ejecutiva del Poder Público",
+        "Establecer las sanciones penales aplicables a los servidores públicos",
+        "Proteger y garantizar los derechos y libertades de las personas, la primacía de los intereses generales y la sujeción de las autoridades al ordenamiento jurídico",
+        "Regular exclusivamente los contratos que celebren las entidades públicas con particulares"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 1 de la Ley 1437 de 2011 señala que la Parte Primera del Código tiene como finalidad proteger y garantizar los derechos y libertades de las personas, la primacía de los intereses generales, la sujeción de las autoridades a la Constitución y demás preceptos del ordenamiento jurídico, el cumplimiento de los fines estatales, el funcionamiento eficiente y democrático de la administración, y la observancia de los deberes del Estado y de los particulares.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "De conformidad con el artículo 2 de la Ley 1437 de 2011, ¿a quiénes se aplican las normas de la Parte Primera del Código?",
+      "opciones": [
+        "A todos los organismos y entidades del poder público, órganos autónomos e independientes, y a los particulares cuando cumplan funciones administrativas",
+        "Solo a las entidades territoriales y a sus funcionarios",
+        "Exclusivamente a los jueces administrativos y al Consejo de Estado",
+        "Únicamente a los ministerios y departamentos administrativos de la Rama Ejecutiva"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 2 de la Ley 1437 de 2011 establece que las normas de la Parte Primera se aplican a todos los organismos y entidades que conforman las ramas del poder público, a los órganos autónomos e independientes del Estado y a los particulares cuando cumplan funciones administrativas, a quienes se denomina autoridades.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 489 de 1998 regula el ejercicio de la función administrativa. Según su artículo 1, ¿qué aspectos define esta ley?",
+      "opciones": [
+        "Los procedimientos para contratar con el Estado y ejecutar recursos públicos",
+        "La estructura, los principios y las reglas básicas de la organización y funcionamiento de la Administración Pública",
+        "El régimen disciplinario único aplicable a todos los servidores públicos",
+        "Las normas sobre elección y remoción de altos funcionarios del Estado"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 1 de la Ley 489 de 1998 dispone que dicha ley regula el ejercicio de la función administrativa, determina la estructura y define los principios y reglas básicas de la organización y funcionamiento de la Administración Pública.",
+      "norma": "Ley 489/1998",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 3 de la Ley 489 de 1998, la función administrativa se desarrolla conforme a principios constitucionales. ¿Cuál de los siguientes NO es uno de los principios allí enumerados?",
+      "opciones": [
+        "Principio de transparencia",
+        "Principio de eficiencia",
+        "Principio de moralidad",
+        "Principio de gratuidad absoluta en la prestación de todos los servicios públicos"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 3 de la Ley 489 de 1998 señala que la función administrativa se desarrollará conforme a los principios constitucionales, en particular los de buena fe, igualdad, moralidad, celeridad, economía, imparcialidad, eficacia, eficiencia, participación, publicidad, responsabilidad y transparencia. La gratuidad absoluta no figura en dicha enumeración.",
+      "norma": "Ley 489/1998",
+      "articulo": "Art. 3",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 13 de la Ley 1755 de 2015, ¿qué se entiende por el ejercicio del derecho de petición ante las autoridades?",
+      "opciones": [
+        "Solo los abogados pueden presentar peticiones ante las autoridades administrativas",
+        "El derecho de petición solo procede cuando se invoca expresamente el artículo 23 de la Constitución",
+        "Las peticiones deben limitarse a solicitar información sobre presupuesto público",
+        "Toda persona tiene derecho a presentar peticiones respetuosas por motivos de interés general o particular y a obtener pronta resolución completa y de fondo"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 13 de la Ley 1755 de 2015 establece que toda persona tiene derecho a presentar peticiones respetuosas a las autoridades por motivos de interés general o particular y a obtener pronta resolución completa y de fondo sobre la misma. Además, toda actuación ante las autoridades implica el ejercicio del derecho de petición sin necesidad de invocarlo.",
+      "norma": "Ley 1755/2015",
+      "articulo": "Art. 13",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme al artículo 14 de la Ley 1755 de 2015, ¿cuál es el término general para que la autoridad resuelva una petición?",
+      "opciones": [
+        "Treinta (30) días siguientes a su recepción",
+        "Quince (15) días siguientes a su recepción",
+        "Diez (10) días siguientes a su recepción",
+        "Cinco (5) días siguientes a su recepción"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 14 de la Ley 1755 de 2015 dispone que, salvo norma legal especial, toda petición deberá resolverse dentro de los quince (15) días siguientes a su recepción. Establece además términos especiales para documentos e información (10 días) y para consultas (30 días).",
+      "norma": "Ley 1755/2015",
+      "articulo": "Art. 14",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 4 de la Ley 1437 de 2011, las actuaciones administrativas podrán iniciarse de varias formas. ¿Cuál de las siguientes corresponde a una forma válida?",
+      "opciones": [
+        "Exclusivamente por iniciativa del Ministerio Público",
+        "De oficio por la autoridad competente, o a solicitud del interesado",
+        "Únicamente mediante solicitud escrita del interesado",
+        "Solo por mandato judicial previo"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 4 de la Ley 1437 de 2011 establece que las actuaciones administrativas podrán iniciarse de oficio por la autoridad competente, a solicitud del interesado o por mandato legal, entre otras formas previstas. Esto refleja el carácter activo de la administración pública.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 5 de la Ley 1437 de 2011 enumera derechos de las personas ante las autoridades. ¿Cuál de los siguientes es uno de esos derechos?",
+      "opciones": [
+        "A ser informado oportuna y verazmente sobre el trámite de las actuaciones",
+        "A que la administración resuelva siempre a favor del peticionario",
+        "A exigir que toda decisión administrativa sea tomada por el Presidente de la República",
+        "A obtener indemnización automática por cualquier demora administrativa"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 5 de la Ley 1437 de 2011 establece derechos de las personas ante las autoridades, entre ellos el de ser informado oportuna y verazmente sobre el trámite de las actuaciones, el de presentar pruebas, el de obtener decisiones motivadas y el de usar medios electrónicos. No implica resultados favorables automáticos ni intervención presidencial.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 42 de la Ley 1437 de 2011, ¿qué requisito esencial debe cumplir la decisión final de una actuación administrativa?",
+      "opciones": [
+        "Debe ser motivada",
+        "Debe contener al menos cien páginas",
+        "Debe ser aprobada por el Consejo de Estado",
+        "Debe publicarse obligatoriamente en el Diario Oficial"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 42 de la Ley 1437 de 2011 dispone que, habiéndose dado oportunidad a los interesados para expresar sus opiniones y con base en las pruebas e informes disponibles, se tomará la decisión, que será motivada. La motivación constituye un requisito esencial de todo acto administrativo definitivo.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 42",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Respecto a la publicidad y notificación de los actos administrativos, la Ley 1437 de 2011 establece en sus artículos 65 y 66 que:",
+      "opciones": [
+        "La publicación de actos administrativos es un requisito opcional recomendado",
+        "Todos los actos administrativos deben publicarse en el Diario Oficial sin excepción",
+        "Solo los actos particulares requieren publicación; los generales se notifican personalmente",
+        "Los actos de carácter general deben publicarse para ser obligatorios, y los actos particulares deben ser notificados"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 65 de la Ley 1437 de 2011 dispone que los actos administrativos de carácter general no serán obligatorios mientras no hayan sido publicados en el Diario Oficial o en las gacetas territoriales, según el caso. El artículo 66 establece que los actos de carácter particular deben ser notificados en los términos previstos por la ley.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Arts. 65 y 66",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 74 de la Ley 1437 de 2011, ¿cuáles son los recursos que por regla general proceden contra los actos administrativos definitivos?",
+      "opciones": [
+        "Reposición ante el mismo funcionario que expidió el acto, y apelación ante su superior jerárquico",
+        "Solo recurso de casación ante el Consejo de Estado",
+        "Queja y reconsideración, pero nunca reposición",
+        "Únicamente recurso de apelación ante el juez administrativo"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 74 de la Ley 1437 de 2011 establece que, por regla general, contra los actos definitivos proceden los recursos de reposición, que se interpone ante el funcionario que expidió el acto, y de apelación, que se interpone ante el superior jerárquico. Estos recursos constituyen la vía ordinaria de impugnación administrativa.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 74",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 88 de la Ley 1437 de 2011 establece una presunción respecto de los actos administrativos. ¿Cuál es?",
+      "opciones": [
+        "Se presumen legales mientras no hayan sido anulados por la Jurisdicción de lo Contencioso Administrativo",
+        "Se presumen ineficaces hasta su publicación en medios internacionales",
+        "Se presumen inconstitucionales hasta demostrarse lo contrario",
+        "Se presumen nulos desde su expedición hasta que sean confirmados"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 88 de la Ley 1437 de 2011 señala que los actos administrativos se presumen legales mientras no hayan sido anulados por la Jurisdicción de lo Contencioso Administrativo. Esta presunción de legalidad es un pilar del régimen de los actos administrativos.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 88",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según los artículos 137 y 138 de la Ley 1437 de 2011, la nulidad de los actos administrativos procede por determinadas causales. ¿Cuál de las siguientes corresponde a una causal de nulidad?",
+      "opciones": [
+        "Solo cuando haya sido expedido en día festivo",
+        "Únicamente cuando el acto sea de carácter general y afecte a más de cien personas",
+        "Solo cuando el acto cause perjuicio económico superior a cien salarios mínimos",
+        "Expedición con infracción de las normas en que deberían fundarse, sin competencia o con falsa motivación"
+      ],
+      "respuesta": 3,
+      "explicacion": "Los artículos 137 y 138 de la Ley 1437 de 2011 establecen que la nulidad procede cuando los actos administrativos han sido expedidos con infracción de las normas en que deberían fundarse, sin competencia, en forma irregular, con desconocimiento del derecho de audiencia y defensa, mediante falsa motivación o con desviación de las atribuciones propias de quien los profirió.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Arts. 137 y 138",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 489 de 1998 distingue entre desconcentración y delegación. Según sus artículos 8 y 9, ¿cuál es la diferencia principal?",
+      "opciones": [
+        "Ambas figuras son sinónimas y producen idénticos efectos jurídicos",
+        "La desconcentración requiere convenio; la delegación no requiere acto escrito",
+        "La desconcentración solo aplica a entidades territoriales; la delegación solo aplica a entidades nacionales",
+        "La desconcentración radica competencias en dependencias del mismo organismo sin transferir titularidad; la delegación transfiere el ejercicio de funciones a otra autoridad"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 8 de la Ley 489 de 1998 define la desconcentración como la radicación de competencias y funciones en dependencias ubicadas fuera de la sede principal del organismo o entidad, sin perjuicio de las potestades de orientación e instrucción de los jefes superiores, y sin que implique delegación. El artículo 9 define la delegación como la transferencia del ejercicio de funciones a colaboradores u otras autoridades.",
+      "norma": "Ley 489/1998",
+      "articulo": "Arts. 8 y 9",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 11 de la Ley 489 de 1998, ¿cuál función NO puede transferirse mediante delegación?",
+      "opciones": [
+        "La atención de derechos de petición ordinarios",
+        "La notificación de decisiones a los interesados",
+        "La expedición de actos administrativos de carácter general en materias de su competencia",
+        "La aprobación de la estructura orgánica de la entidad, cuando la ley la asigne exclusivamente al superior jerárquico"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 11 de la Ley 489 de 1998 señala que no podrán transferirse mediante delegación, sin perjuicio de otras disposiciones, las funciones de dirigir, orientar, coordinar y evaluar la gestión de las entidades; aprobar la estructura orgánica de la entidad; nombrar y remover funcionarios; y ejercer la potestad reglamentaria, entre otras asignadas por la ley al superior jerárquico.",
+      "norma": "Ley 489/1998",
+      "articulo": "Art. 11",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con los artículos 27 y 28 de la Ley 489 de 1998, el Sistema Nacional de Control Interno tiene como objeto:",
+      "opciones": [
+        "Integrar el funcionamiento del control interno de las instituciones públicas para fortalecer el cumplimiento de las funciones del Estado",
+        "Sustituir la función de la Contraloría General de la República",
+        "Administrar el presupuesto nacional de control fiscal",
+        "Investigar y sancionar penalmente a los servidores públicos corruptos"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 27 de la Ley 489 de 1998 crea el Sistema Nacional de Control Interno, y el artículo 28 dispone que su objeto es integrar en forma armónica, dinámica, efectiva, flexible y suficiente el funcionamiento del control interno de las instituciones públicas, para que mediante la aplicación de instrumentos idóneos de gerencia fortalezcan el cumplimiento cabal y oportuno de las funciones del Estado.",
+      "norma": "Ley 489/1998",
+      "articulo": "Arts. 27 y 28",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 16 de la Ley 1755 de 2015, ¿cuál de los siguientes es un requisito mínimo que debe contener toda petición?",
+      "opciones": [
+        "La firma de dos testigos que acrediten la identidad del peticionario",
+        "La presentación obligatoria por medio de abogado patrocinante",
+        "La designación de la autoridad a la que se dirige, los datos del solicitante, el objeto de la petición y las razones que la fundamentan",
+        "El pago de una tarifa administrativa previa"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 16 de la Ley 1755 de 2015 señala que toda petición deberá contener, como mínimo, la designación de la autoridad a la que se dirige, los nombres y apellidos completos del solicitante con indicación de su documento de identidad y dirección, el objeto de la petición, las razones en que se fundamenta, la relación de documentos presentados y la firma del peticionario cuando fuere el caso.",
+      "norma": "Ley 1755/2015",
+      "articulo": "Art. 16",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Respecto a la información reservada, el artículo 24 de la Ley 1755 de 2015 señala que solo tendrá carácter reservado la información expresamente sometida a reserva por la Constitución o la ley. ¿Cuál de los siguientes documentos es ejemplo de información reservada allí mencionado?",
+      "opciones": [
+        "Los horarios de atención al público de la entidad",
+        "La historia clínica del peticionario, salvo que sea solicitada por el titular o personas autorizadas",
+        "Las actas de las audiencias públicas ordinarias",
+        "El presupuesto general de la entidad pública"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 24 de la Ley 1755 de 2015 enumera como información reservada, entre otros, los documentos que involucren derechos a la privacidad e intimidad de las personas, incluida la historia clínica, así como información relacionada con la defensa o seguridad nacionales, instrucciones diplomáticas, historia laboral, expedientes pensionales y datos genéticos humanos.",
+      "norma": "Ley 1755/2015",
+      "articulo": "Art. 24",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Los artículos 83 y 84 de la Ley 1437 de 2011 regulan el silencio administrativo. ¿cuál de las siguientes afirmaciones es correcta?",
+      "opciones": [
+        "El silencio de la administración nunca produce efectos jurídicos",
+        "El silencio positivo opera en todos los trámites administrativos sin excepción",
+        "El silencio negativo opera transcurridos tres meses desde la presentación de una petición sin decisión; el silencio positivo solo procede en casos expresamente previstos por la ley",
+        "El silencio administrativo siempre equivale a una decisión favorable para el peticionario"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 83 de la Ley 1437 de 2011 establece el silencio negativo: transcurridos tres meses desde la presentación de una petición sin decisión, se entenderá que esta es negativa. El artículo 84 señala que el silencio positivo solo opera en los casos expresamente previstos en disposiciones legales especiales.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Arts. 83 y 84",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 91 de la Ley 1437 de 2011, los actos administrativos en firme serán obligatorios mientras no hayan sido anulados. ¿En cuál de los siguientes casos perderán obligatoriedad y no podrán ser ejecutados?",
+      "opciones": [
+        "Cuando el funcionario que los expidió se retire de la entidad",
+        "Solo si no fueron publicados en un periódico de circulación nacional",
+        "Únicamente cuando el interesado manifieste su desacuerdo verbal",
+        "Cuando hayan sido revocados, anulados por la jurisdicción, sustituidos por otro acto, caducado su objeto o vencido el plazo de su vigencia"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 91 de la Ley 1437 de 2011 dispone que los actos administrativos en firme serán obligatorios mientras no hayan sido anulados por la Jurisdicción de lo Contencioso Administrativo, y perderán obligatoriedad y no podrán ser ejecutados cuando hayan sido revocados, anulados por la jurisdicción, sustituidos por otro acto, caducado su objeto o vencido el plazo de su vigencia.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 91",
+      "dificultad": "dificil"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "titulo": "Derecho administrativo: procedimiento, función pública y derecho de petición",
+      "contenido_html": "<h3>1. Naturaleza y alcance del derecho administrativo</h3>\n<p>El derecho administrativo es la rama del derecho público que regula la organización, funcionamiento y actuación de la Administración Pública, así como las relaciones entre esta y los particulares. Su objetivo es conciliar el ejercicio de la función administrativa con la protección de los derechos fundamentales, garantizando que la actuación estatal se desarrolle bajo los principios de legalidad, eficiencia, transparencia, participación y responsabilidad.</p>\n<h3>2. El Código de Procedimiento Administrativo y de lo Contencioso Administrativo (Ley 1437 de 2011)</h3>\n<p>La Ley 1437 de 2011, conocida como CPACA, constituye la norma procesal fundamental del derecho administrativo colombiano. Su Parte Primera regula el procedimiento administrativo, es decir, el conjunto de actuaciones que deben seguir las autoridades para expedir actos administrativos válidos. El artículo 1 establece que su finalidad es proteger y garantizar los derechos y libertades de las personas, la primacía de los intereses generales, la sujeción de las autoridades al ordenamiento jurídico y el funcionamiento eficiente y democrático de la administración.</p>\n<p>El Código reconoce derechos a los administrados, como el de ser informados, el de presentar pruebas y el de obtener decisiones motivadas. Asimismo, impone deberes a las autoridades, entre ellos el de decidir con fundamento en hechos y normas aplicables, de notificar los actos y de resolver dentro de los términos legales. Los actos administrativos gozan de presunción de legalidad y, en principio, son de cumplimiento obligatorio, pero pueden ser impugnados mediante recursos de reposición y apelación, y posteriormente controvertidos ante la Jurisdicción de lo Contencioso Administrativo.</p>\n<h3>3. Organización y función administrativa (Ley 489 de 1998)</h3>\n<p>La Ley 489 de 1998 regula el ejercicio de la función administrativa y la organización de la Administración Pública. Define los principios que deben orientar la actuación estatal, como la moralidad, celeridad, economía, imparcialidad, eficacia, eficiencia, participación, publicidad, responsabilidad y transparencia. También distingue figuras clave como la desconcentración, que radica competencias en dependencias del mismo organismo sin transferir titularidad, y la delegación, que transfiere el ejercicio de funciones a otras autoridades mediante acto escrito.</p>\n<p>La ley crea el Sistema Nacional de Control Interno, cuyo objeto es integrar el funcionamiento del control interno de las instituciones públicas para fortalecer el cumplimiento cabal y oportuno de las funciones del Estado. Además, promueve mecanismos de participación ciudadana, como las veedurías ciudadanas y las audiencias públicas, como instrumentos de control social sobre la gestión administrativa.</p>\n<h3>4. El derecho de petición (Ley 1755 de 2015)</h3>\n<p>La Ley 1755 de 2015 regula el derecho fundamental de petición, reconocido en el artículo 23 de la Constitución Política. Esta norma sustituyó los artículos 13 a 33 de la Parte Primera de la Ley 1437 de 2011 y estableció reglas generales y especiales para el ejercicio del derecho ante autoridades, organizaciones privadas e instituciones que prestan servicios públicos.</p>\n<p>El artículo 13 señala que toda persona tiene derecho a presentar peticiones respetuosas por motivos de interés general o particular y a obtener pronta resolución completa y de fondo. El artículo 14 establece un término general de quince días para resolver, con términos especiales para documentos e información (diez días) y consultas (treinta días). El artículo 16 regula el contenido mínimo de la petición, que debe incluir la designación de la autoridad, los datos del solicitante, el objeto, la fundamentación y los documentos anexos. Finalmente, la ley regula las causales de reserva de la información, el desistimiento, las peticiones reiterativas y la asistencia de personeros, Procuraduría y Defensoría del Pueblo.</p>\n<h3>5. Importancia para el perfil 273</h3>\n<p>Para el cargo de Asesor 1AS-21 en Ingeniería de Sistemas, el conocimiento del derecho administrativo resulta esencial porque quien ocupe el empleo interactuará con actos administrativos, procedimientos internos, derechos de petición de usuarios y mecanismos de control. Comprender las normas que rigen la función pública permite tomar decisiones ajustadas a derecho, garantizar la debida motivación de los actos, atender adecuadamente las solicitudes ciudadanas y contribuir a la transparencia institucional.</p>",
+      "fuente_url": "https://relatoria.colombiacompra.gov.co/normativa/codigo-de-procedimiento-administrativo-y-de-lo-contencioso-administrativo-ley-1437-de-2011/",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "CPACA",
+      "reverso": "Código de Procedimiento Administrativo y de lo Contencioso Administrativo, Ley 1437 de 2011.",
+      "norma": "Ley 1437/2011"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Autoridad",
+      "reverso": "Organismos y entidades del poder público, órganos autónomos e independientes, y particulares que cumplen funciones administrativas.",
+      "norma": "Ley 1437/2011, Art. 2"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Motivación",
+      "reverso": "Requisito esencial de la decisión administrativa: debe fundamentarse en hechos y normas aplicables.",
+      "norma": "Ley 1437/2011, Art. 42"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Recurso de reposición",
+      "reverso": "Recurso que se interpone ante el funcionario que expidió el acto administrativo definitivo.",
+      "norma": "Ley 1437/2011, Art. 74"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Silencio administrativo negativo",
+      "reverso": "Se entiende que la petición es negativa transcurridos tres meses sin decisión notificada.",
+      "norma": "Ley 1437/2011, Art. 83"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Desconcentración",
+      "reverso": "Radicación de competencias en dependencias fuera de la sede principal sin transferir titularidad.",
+      "norma": "Ley 489/1998, Art. 8"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Delegación",
+      "reverso": "Transferencia del ejercicio de funciones a colaboradores u otras autoridades mediante acto escrito.",
+      "norma": "Ley 489/1998, Art. 9"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Sistema Nacional de Control Interno",
+      "reverso": "Conjunto de instituciones, normas y procedimientos para fortalecer el cumplimiento de funciones estatales.",
+      "norma": "Ley 489/1998, Arts. 27 y 28"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Derecho de petición",
+      "reverso": "Derecho de toda persona a presentar peticiones respetuosas a las autoridades y obtener pronta resolución.",
+      "norma": "Ley 1755/2015, Art. 13"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Término para resolver peticiones",
+      "reverso": "Quince días siguientes a su recepción, salvo norma legal especial.",
+      "norma": "Ley 1755/2015, Art. 14"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Información reservada",
+      "reverso": "Informaciones expresamente sometidas a reserva por la Constitución o la ley, como historia clínica o seguridad nacional.",
+      "norma": "Ley 1755/2015, Art. 24"
+    },
+    {
+      "tema_clave": "administrativo-273",
+      "perfil_codigo": "273",
+      "frente": "Presunción de legalidad",
+      "reverso": "Los actos administrativos se presumen legales mientras no sean anulados por la jurisdicción contencioso administrativa.",
+      "norma": "Ley 1437/2011, Art. 88"
+    }
+  ]
+}

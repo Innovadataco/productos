@@ -1,0 +1,406 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 594 de 2000, ¿cuál es la definición de gestión documental?",
+      "opciones": [
+        "Actividad exclusiva del archivero para clasificar expedientes ya cerrados.",
+        "Conjunto de actividades administrativas y técnicas para planificar, manejar y organizar la documentación producida y recibida por las entidades, desde su origen hasta su destino final.",
+        "Conjunto de normas que regulan exclusivamente la conservación de documentos históricos en el Archivo General de la Nación.",
+        "Proceso de digitalización de todos los documentos físicos de una entidad pública."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 3° de la Ley 594 de 2000 define la gestión documental como el conjunto de actividades administrativas y técnicas tendientes a la planificación, manejo y organización de la documentación producida y recibida por las entidades, desde su origen hasta su destino final, con el objeto de facilitar su utilización y conservación.",
+      "norma": "Ley 594 de 2000",
+      "articulo": "Art. 3°",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué programa están obligadas a elaborar las entidades públicas conforme al artículo 21 de la Ley 594 de 2000?",
+      "opciones": [
+        "Planes de contratación de servicios de custodia documental.",
+        "Proyectos de digitalización masiva sin valoración archivística.",
+        "Programas de eliminación inmediata de documentos físicos.",
+        "Programas de gestión de documentos."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 21° de la Ley 594 de 2000 establece que las entidades públicas deberán elaborar programas de gestión de documentos, pudiendo contemplar el uso de nuevas tecnologías y soportes, en cuya aplicación deberán observarse los principios y procesos archivísticos.",
+      "norma": "Ley 594 de 2000",
+      "articulo": "Art. 21°",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 23 de la Ley 594 de 2000, ¿cuáles son las etapas del ciclo vital de los documentos?",
+      "opciones": [
+        "Archivo de entrada, archivo de trámite y archivo de salida.",
+        "Archivo de gestión, archivo central y archivo histórico.",
+        "Archivo activo, archivo semiactivo y archivo inactivo.",
+        "Archivo digital, archivo físico y archivo híbrido."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 23° de la Ley 594 de 2000 clasifica los archivos, teniendo en cuenta el ciclo vital de los documentos, en archivo de gestión, archivo central y archivo histórico, según su uso administrativo y valor para la entidad.",
+      "norma": "Ley 594 de 2000",
+      "articulo": "Art. 23°",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué establece el artículo 24 de la Ley 594 de 2000 respecto a las tablas de retención documental?",
+      "opciones": [
+        "Deben elaborarse únicamente para documentos históricos.",
+        "Solo aplican a documentos electrónicos de archivo.",
+        "Son voluntarias para las entidades del orden municipal.",
+        "Es obligatorio para las entidades del Estado elaborarlas y adoptarlas."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 24° de la Ley 594 de 2000 señala que será obligatorio para las entidades del Estado elaborar y adoptar las respectivas tablas de retención documental, pues definen los tiempos de permanencia de las series documentales en cada etapa del ciclo vital.",
+      "norma": "Ley 594 de 2000",
+      "articulo": "Art. 24°",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 26 de la Ley 594 de 2000 impone a las entidades de la Administración Pública la obligación de elaborar:",
+      "opciones": [
+        "Listados de funcionarios que consultan documentos de archivo.",
+        "Copias de seguridad de todos los documentos electrónicos.",
+        "Actas de eliminación anuales de documentos de gestión.",
+        "Inventarios de los documentos que producen en ejercicio de sus funciones."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 26° de la Ley 594 de 2000 dispone que es obligación de las entidades de la Administración Pública elaborar inventarios de los documentos que producen en ejercicio de sus funciones, de manera que se asegure el control de los documentos en sus diferentes fases.",
+      "norma": "Ley 594 de 2000",
+      "articulo": "Art. 26°",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 27 de la Ley 594 de 2000, ¿quiénes tienen derecho a consultar los documentos de archivos públicos?",
+      "opciones": [
+        "Todas las personas, salvo que los documentos tengan carácter reservado conforme a la Constitución o a la ley.",
+        "Cualquier persona, pero únicamente después de cincuenta años de su producción.",
+        "Únicamente los servidores públicos de la entidad productora.",
+        "Solo los investigadores acreditados ante el Archivo General de la Nación."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 27° de la Ley 594 de 2000 consagra el derecho de todas las personas a consultar los documentos de archivos públicos y a que se les expida copia de los mismos, siempre que dichos documentos no tengan carácter reservado conforme a la Constitución o a la ley.",
+      "norma": "Ley 594 de 2000",
+      "articulo": "Art. 27°",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál de los siguientes es un instrumento archivístico para la gestión documental según el artículo 2.8.2.5.8 del Decreto 1080 de 2015?",
+      "opciones": [
+        "El Manual de Funciones del talento humano.",
+        "El Plan Anual de Contratación de la entidad.",
+        "El Cuadro de Clasificación Documental (CCD).",
+        "El Registro Único de Proponentes."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 2.8.2.5.8 del Decreto 1080 de 2015 enumera como instrumentos archivísticos, entre otros, el Cuadro de Clasificación Documental (CCD), la Tabla de Retención Documental (TRD), el Programa de Gestión Documental (PGD) y el Inventario Documental.",
+      "norma": "Decreto 1080 de 2015",
+      "articulo": "Art. 2.8.2.5.8",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1080 de 2015, ¿qué deben formular todas las entidades del Estado en materia de gestión documental?",
+      "opciones": [
+        "Un Programa de Gestión Documental (PGD) a corto, mediano y largo plazo.",
+        "Un Plan de Eliminación Anual de Documentos Físicos.",
+        "Un Plan de Modernización de la Infraestructura Tecnológica.",
+        "Una Política de Adquisición de Software Únicamente."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 2.8.2.5.10 del Decreto 1080 de 2015 establece que todas las entidades del Estado deben formular un Programa de Gestión Documental (PGD), a corto, mediano y largo plazo, como parte del Plan Estratégico Institucional y del Plan de Acción Anual.",
+      "norma": "Decreto 1080 de 2015",
+      "articulo": "Art. 2.8.2.5.10",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 2.8.2.5.11 del Decreto 1080 de 2015, ¿quién aprueba el Programa de Gestión Documental en las entidades del orden territorial?",
+      "opciones": [
+        "La Contraloría General de la República.",
+        "El Consejo Directivo del Archivo General de la Nación.",
+        "El Comité Interno de Archivo.",
+        "El Ministerio de Tecnologías de la Información y las Comunicaciones."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 2.8.2.5.11 del Decreto 1080 de 2015 señala que el Programa de Gestión Documental debe ser aprobado por el Comité de Desarrollo Administrativo en entidades del orden nacional o por el Comité Interno de Archivo en entidades del orden territorial.",
+      "norma": "Decreto 1080 de 2015",
+      "articulo": "Art. 2.8.2.5.11",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿En qué plazo debe publicarse el Programa de Gestión Documental en la página web de la entidad, según el Decreto 1080 de 2015?",
+      "opciones": [
+        "Dentro de los quince (15) días hábiles posteriores a su elaboración.",
+        "Dentro de los sesenta (60) días calendario contados desde el 1° de enero.",
+        "Dentro de los noventa (90) días posteriores a la rendición de cuentas.",
+        "Dentro de los treinta (30) días siguientes a su aprobación."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 2.8.2.5.12 del Decreto 1080 de 2015 dispone que el Programa de Gestión Documental debe ser publicado en la página web de la respectiva entidad, dentro de los treinta (30) días posteriores a su aprobación.",
+      "norma": "Decreto 1080 de 2015",
+      "articulo": "Art. 2.8.2.5.12",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Acuerdo 004 de 2013 del Archivo General de la Nación, las entidades del Estado deben elaborar, evaluar, aprobar, implementar y actualizar:",
+      "opciones": [
+        "Sus tablas de retención documental y sus tablas de valoración documental.",
+        "Únicamente sus cuadros de clasificación documental.",
+        "Solo los inventarios documentales de archivo central.",
+        "Los planes de contingencia de sus sistemas de información."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 1° del Acuerdo 004 de 2013 establece que las entidades del Estado, en sus distintos niveles, y las entidades privadas que cumplen funciones públicas, deberán elaborar, evaluar, aprobar, implementar y actualizar sus tablas de retención documental y sus tablas de valoración documental.",
+      "norma": "Acuerdo 004 de 2013 del AGN",
+      "articulo": "Art. 1°",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 2° del Acuerdo 004 de 2013, ¿para qué se elaboran las Tablas de Valoración Documental?",
+      "opciones": [
+        "Para aprobar la eliminación de documentos de archivo de gestión.",
+        "Para clasificar la información reservada de la entidad.",
+        "Para la organización de Fondos Documentales Acumulados.",
+        "Para definir los plazos de retención de documentos electrónicos."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 2° del Acuerdo 004 de 2013 precisa que las tablas de retención documental se elaboran y aplican para la organización y disposición de documentos físicos y electrónicos, mientras que las tablas de valoración documental se elaboran y aplican para la organización de Fondos Documentales Acumulados.",
+      "norma": "Acuerdo 004 de 2013 del AGN",
+      "articulo": "Art. 2°",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Acuerdo 004 de 2013, ¿quiénes deben integrar el equipo interdisciplinario para elaborar las tablas de retención y valoración documental?",
+      "opciones": [
+        "Solo los integrantes del Comité Interno de Archivo.",
+        "Únicamente archiveros y funcionarios del área de tecnología.",
+        "Exclusivamente abogados de la Oficina Asesora Jurídica.",
+        "Profesionales de archivística, historia, derecho, administración pública, ingeniería industrial, entre otras."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 3° del Acuerdo 004 de 2013 indica que las tablas de retención documental y las tablas de valoración documental deben ser elaboradas por un equipo interdisciplinario conformado por profesionales en disciplinas como la archivística, historia, derecho, administración pública, ingeniería industrial, entre otras.",
+      "norma": "Acuerdo 004 de 2013 del AGN",
+      "articulo": "Art. 3°",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme al artículo 8° del Acuerdo 004 de 2013, ¿cómo deben aprobarse las tablas de retención documental y de valoración documental?",
+      "opciones": [
+        "Mediante resolución del Archivo General de la Nación de oficio.",
+        "Mediante acto administrativo expedido por el Representante Legal, previo concepto del comité correspondiente.",
+        "Por vía de circular interna del Secretario General sin concepto previo.",
+        "Por acuerdo del Concejo Municipal o Departamental."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 8° del Acuerdo 004 de 2013 establece que las tablas de retención documental y las tablas de valoración documental deberán ser aprobadas mediante acto administrativo expedido por el Representante Legal de la entidad, previo concepto emitido por el Comité Institucional de Desarrollo Administrativo o el Comité Interno de Archivo, según el caso.",
+      "norma": "Acuerdo 004 de 2013 del AGN",
+      "articulo": "Art. 8°",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Acuerdo 003 de 2015 define el expediente electrónico como:",
+      "opciones": [
+        "Una copia escaneada de un expediente físico ya cerrado.",
+        "Conjunto de documentos electrónicos correspondientes a un procedimiento administrativo, cualquiera que sea el tipo de información que contengan.",
+        "Cualquier archivo digital almacenado en un servidor institucional.",
+        "El índice de carpetas compartidas de una dependencia."
+      ],
+      "respuesta": 1,
+      "explicacion": "El numeral 02 del artículo 3° del Acuerdo 003 de 2015 define el expediente electrónico como el conjunto de documentos electrónicos correspondientes a un procedimiento administrativo, cualquiera que sea el tipo de información que contengan.",
+      "norma": "Acuerdo 003 de 2015 del AGN",
+      "articulo": "Art. 3° numeral 02",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Acuerdo 003 de 2015, los documentos electrónicos serán de archivo cuando, por su valor, adquieran naturaleza de archivo. ¿En qué artículo se encuentra esta definición?",
+      "opciones": [
+        "Artículo 1°.",
+        "Artículo 12°.",
+        "Artículo 5°.",
+        "Artículo 7°."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 5° del Acuerdo 003 de 2015 señala que los documentos electrónicos serán de archivo cuando, por su valor administrativo, fiscal, legal, científico, histórico, técnico o cultural, adquieran esa naturaleza, debiendo ser tratados conforme a los principios y procesos archivísticos.",
+      "norma": "Acuerdo 003 de 2015 del AGN",
+      "articulo": "Art. 5°",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuáles son los elementos mínimos del expediente electrónico de archivo según el artículo 9° del Acuerdo 003 de 2015?",
+      "opciones": [
+        "Carpeta digital, contraseña de acceso y registro de auditoría.",
+        "Documentos electrónicos de archivo, foliado electrónico, índice electrónico, firma del índice electrónico y metadatos.",
+        "Solo el documento principal y su anexo escaneado.",
+        "Memorando de creación, acta de aprobación y resolución de cierre."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 9° del Acuerdo 003 de 2015 establece que el expediente electrónico tendrá como mínimo los siguientes elementos: documentos electrónicos de archivo, foliado electrónico, índice electrónico, firma del índice electrónico y metadatos o información virtual contenida en ellos.",
+      "norma": "Acuerdo 003 de 2015 del AGN",
+      "articulo": "Art. 9°",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Acuerdo 042 de 2002, ¿quién es el responsable de velar por la organización, consulta, conservación y custodia del archivo de gestión de su dependencia?",
+      "opciones": [
+        "El respectivo jefe de la oficina o dependencia.",
+        "La Contraloría General de la República.",
+        "El Archivo General de la Nación exclusivamente.",
+        "El Comité Evaluador de Documentos de la entidad."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 3° del Acuerdo 042 de 2002 dispone que las unidades administrativas deben velar por la conformación, organización, preservación y control de los archivos de gestión, y que el respectivo jefe de la oficina será el responsable de velar por la organización, consulta, conservación y custodia del archivo de gestión de su dependencia.",
+      "norma": "Acuerdo 042 de 2002 del AGN",
+      "articulo": "Art. 3°",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 4° del Acuerdo 042 de 2002, la organización de los archivos de gestión debe basarse en:",
+      "opciones": [
+        "La Tabla de Retención Documental debidamente aprobada.",
+        "El registro de préstamos internos de la dependencia.",
+        "La estructura orgánica anterior a la última reorganización.",
+        "El cuadro de clasificación documental en trámite."
+      ],
+      "respuesta": 0,
+      "explicacion": "El numeral 1 del artículo 4° del Acuerdo 042 de 2002 establece que la organización de los archivos de gestión debe basarse en la Tabla de Retención Documental debidamente aprobada, pues es el instrumento que define la permanencia y disposición de las series documentales.",
+      "norma": "Acuerdo 042 de 2002 del AGN",
+      "articulo": "Art. 4° numeral 1",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 7° del Acuerdo 042 de 2002 dispone que las entidades de la Administración Pública adoptarán el Formato Único de Inventario Documental, el cual está regulado por:",
+      "opciones": [
+        "El Departamento Administrativo de la Función Pública.",
+        "El Ministerio de Hacienda y Crédito Público.",
+        "El Archivo General de la Nación.",
+        "La Procuraduría General de la Nación."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 7° del Acuerdo 042 de 2002 señala que las entidades de la Administración Pública adoptarán el Formato Único de Inventario Documental, junto con su instructivo, regulado por el Archivo General de la Nación, como instrumento de control de las transferencias y demás procesos archivísticos.",
+      "norma": "Acuerdo 042 de 2002 del AGN",
+      "articulo": "Art. 7°",
+      "dificultad": "dificil"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "titulo": "Fundamentos normativos de la gestión documental",
+      "contenido_html": "<h3>Gestión documental en el marco normativo colombiano</h3>\n<p>La gestión documental es el conjunto de actividades administrativas y técnicas orientadas a planificar, manejar y organizar la documentación producida y recibida por una entidad, desde su origen hasta su destino final. En Colombia, su marco normativo principal es la <strong>Ley 594 de 2000</strong>, conocida como la Ley General de Archivos, que establece las reglas y principios generales de la función archivística del Estado, define conceptos fundamentales como archivo, documento de archivo, soporte documental, tabla de retención documental y gestión documental, y regula la creación, organización, conservación, acceso y disposición final de los documentos.</p>\n<p>La Ley 594 de 2000 impone a las entidades públicas la elaboración de <strong>programas de gestión documental</strong> (art. 21), la obligatoriedad de las <strong>tablas de retención documental</strong> (art. 24) y de los <strong>inventarios documentales</strong> (art. 26). Asimismo, consagra el derecho de todos los ciudadanos a consultar los documentos de archivos públicos, salvo reserva legal (art. 27). Para fortalecer la operatividad de estos mandatos, el <strong>Decreto 1080 de 2015</strong> desarrolla el componente de gestión de documentos del sector Cultura, definiendo principios, etapas, instrumentos archivísticos y procesos, y estableciendo la obligatoriedad de formular, aprobar y publicar el <strong>Programa de Gestión Documental (PGD)</strong>.</p>\n<p>El <strong>Acuerdo 004 de 2013</strong> del Archivo General de la Nación reglamenta la elaboración, evaluación, aprobación, implementación y actualización de las tablas de retención y valoración documental, exigiendo un equipo interdisciplinario y la aprobación mediante acto administrativo del Representante Legal. Por su parte, el <strong>Acuerdo 003 de 2015</strong> regula la gestión de documentos electrónicos, definiendo el expediente electrónico, el documento electrónico de archivo, el foliado electrónico, el índice electrónico y los elementos mínimos que debe contener un expediente electrónico de archivo.</p>\n<p>Finalmente, el <strong>Acuerdo 042 de 2002</strong> establece los criterios para la organización de los archivos de gestión, la responsabilidad de los jefes de oficina, la adopción del Formato Único de Inventario Documental y las reglas para la consulta y préstamo de documentos. En conjunto, estas normas conforman un sistema integral que garantiza la eficiencia administrativa, la transparencia, el acceso a la información y la preservación del patrimonio documental de la Nación.</p>\n<ul>\n<li><strong>Ley 594 de 2000:</strong> marco general de archivos, principios, etapas del ciclo vital y obligaciones de las entidades.</li>\n<li><strong>Decreto 1080 de 2015:</strong> instrumentos archivísticos, PGD, procesos y características de los sistemas de gestión documental.</li>\n<li><strong>Acuerdo 004 de 2013:</strong> tablas de retención y valoración documental, equipo interdisciplinario y aprobación.</li>\n<li><strong>Acuerdo 003 de 2015:</strong> documentos y expedientes electrónicos, foliado e índice electrónico, preservación digital.</li>\n<li><strong>Acuerdo 042 de 2002:</strong> organización de archivos de gestión, inventario único documental y responsabilidades.</li>\n</ul>",
+      "fuente_url": "https://normativa.archivogeneral.gov.co/acuerdo-003-de-2015/",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Gestión documental",
+      "reverso": "Actividades administrativas y técnicas para planificar, manejar y organizar la documentación de una entidad desde su origen hasta su destino final.",
+      "norma": "Ley 594 de 2000, Art. 3°"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Archivo",
+      "reverso": "Conjunto de documentos acumulados en un proceso natural por una persona o entidad, conservados respetando aquel orden como testimonio e información.",
+      "norma": "Ley 594 de 2000, Art. 3°"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Programa de Gestión Documental (PGD)",
+      "reverso": "Instrumento de planeación que deben formular todas las entidades del Estado para gestionar sus documentos a corto, mediano y largo plazo.",
+      "norma": "Decreto 1080 de 2015, Art. 2.8.2.5.10"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Tabla de Retención Documental (TRD)",
+      "reverso": "Listado de series con sus tipos documentales al que se asigna el tiempo de permanencia en cada etapa del ciclo vital de los documentos.",
+      "norma": "Ley 594 de 2000, Art. 3°; Acuerdo 004 de 2013"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Cuadro de Clasificación Documental (CCD)",
+      "reverso": "Instrumento archivístico que organiza la documentación según la estructura orgánico-funcional de la entidad.",
+      "norma": "Decreto 1080 de 2015, Art. 2.8.2.5.8"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Expediente electrónico",
+      "reverso": "Conjunto de documentos electrónicos correspondientes a un procedimiento administrativo, cualquiera que sea el tipo de información que contengan.",
+      "norma": "Acuerdo 003 de 2015 del AGN, Art. 3° numeral 02"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Foliado electrónico",
+      "reverso": "Asociación de un documento electrónico a un índice electrónico en un mismo expediente electrónico para garantizar integridad, orden y autenticidad.",
+      "norma": "Acuerdo 003 de 2015 del AGN, Art. 3° numeral 09"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Índice electrónico",
+      "reverso": "Relación de los documentos electrónicos que conforman un expediente electrónico o serie documental, ordenada conforme la metodología reglamentada.",
+      "norma": "Acuerdo 003 de 2015 del AGN, Art. 3° numeral 10"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Archivo de gestión",
+      "reverso": "Etapa del ciclo vital que comprende la documentación sometida a continua utilización y consulta administrativa por las oficinas productoras.",
+      "norma": "Ley 594 de 2000, Art. 23°"
+    },
+    {
+      "tema_clave": "gestion-documental-273",
+      "perfil_codigo": "273",
+      "frente": "Sistema Nacional de Archivos",
+      "reverso": "Conjunto de instituciones archivísticas articuladas que promueven la homogenización, normalización y salvaguarda del patrimonio documental.",
+      "norma": "Ley 594 de 2000, Art. 5°"
+    }
+  ]
+}

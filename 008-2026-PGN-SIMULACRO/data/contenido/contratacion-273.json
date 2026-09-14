@@ -1,0 +1,420 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué norma es conocida como la Ley de Contratación Estatal en Colombia?",
+      "opciones": [
+        "Decreto 1082 de 2015",
+        "Ley 1474 de 2011",
+        "Ley 1150 de 2007",
+        "Ley 80 de 1993"
+      ],
+      "respuesta": 3,
+      "explicacion": "La Ley 80 de 1993 es la norma fundamental que regula la contratación estatal en Colombia, estableciendo principios, modalidades de selección y régimen de los contratos celebrados por las entidades públicas.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál de los siguientes es un principio rector de la contratación estatal según la Ley 80 de 1993?",
+      "opciones": [
+        "Rentabilidad privada",
+        "Moralidad",
+        "Secreto comercial absoluto",
+        "Libertad sin control"
+      ],
+      "respuesta": 1,
+      "explicacion": "La Ley 80 de 1993 consagra principios como la moralidad, transparencia, economía, igualdad y responsabilidad, que deben regir todos los actos contractuales de las entidades estatales.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué modalidad de selección se utiliza cuando el objeto del contrato se encuentra perfectamente definido en cuanto a especificaciones y cantidades?",
+      "opciones": [
+        "Licitación pública",
+        "Mínimas cuantías",
+        "Concurso de méritos",
+        "Contratación directa"
+      ],
+      "respuesta": 0,
+      "explicacion": "La licitación pública es la modalidad ordinaria de selección para contratos cuyo objeto está claramente definido en especificaciones técnicas y cantidades, permitiendo la comparación objetiva de ofertas.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1150 de 2007, ¿cuál es una de las modalidades de selección agregadas para la compra de bienes y servicios de bajo valor?",
+      "opciones": [
+        "Mínimas cuantías",
+        "Concurso de diseño",
+        "Licitación pública internacional",
+        "Alianza pública-privada"
+      ],
+      "respuesta": 0,
+      "explicacion": "La Ley 1150 de 2007 incorporó las mínimas cuantías como modalidad simplificada para contratar bienes y servicios cuyo valor no supere los umbrales establecidos por Colombia Compra Eficiente.",
+      "norma": "Ley 1150/2007",
+      "articulo": "Art. 5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué entidad tiene a su cargo la regulación y promoción de la compra pública eficiente en Colombia?",
+      "opciones": [
+        "Ministerio de Hacienda",
+        "Colombia Compra Eficiente",
+        "Contraloría General",
+        "Procuraduría General"
+      ],
+      "respuesta": 1,
+      "explicacion": "Colombia Compra Eficiente es la agencia estatal adscrita al Ministerio de Hacienda y Crédito Público que regula, orienta y promueve la gestión de compras públicas, incluyendo el SECOP y el catálogo electrónico.",
+      "norma": "Ley 1150/2007",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué artículo de la Ley 80 de 1993 establece los requisitos de participación en procesos de selección?",
+      "opciones": [
+        "Art. 41",
+        "Art. 35",
+        "Art. 2",
+        "Art. 25"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 25 de la Ley 80 de 1993 regula los requisitos de participación que deben cumplir los proponentes, garantizando que cuenten con capacidad técnica, financiera y jurídica para ejecutar el contrato.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 25",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué decreto contiene el Decreto Único Reglamentario del Sector Administrativo de la Función Pública?",
+      "opciones": [
+        "Decreto 2474 de 2008",
+        "Decreto 1082 de 2015",
+        "Decreto 1377 de 2013",
+        "Decreto 1510 de 2013"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Decreto 1082 de 2015 es el Decreto Único Reglamentario del Sector Administrativo de la Función Pública, compilatorio de normas sobre organización y funcionamiento de la administración pública.",
+      "norma": "D. 1082/2015",
+      "articulo": "Art. 2.2.1.1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué ley modificó la Ley 80 de 1993 para incorporar figuras como la subasta inversa y la contratación directa regulada?",
+      "opciones": [
+        "Ley 1475 de 2011",
+        "Ley 1474 de 2011",
+        "Ley 1150 de 2007",
+        "Ley 80 de 1993"
+      ],
+      "respuesta": 2,
+      "explicacion": "La Ley 1150 de 2007 reformó la Ley 80 de 1993, introduciendo mecanismos de compra eficiente como la subasta inversa, mínimas cuantías y el fortalecimiento de la contratación directa.",
+      "norma": "Ley 1150/2007",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 80 de 1993, ¿qué artículo regula las inhabilidades e incompatibilidades para contratar con el Estado?",
+      "opciones": [
+        "Art. 35",
+        "Art. 25",
+        "Art. 26",
+        "Art. 2"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 35 de la Ley 80 de 1993 establece las causales de inhabilidad e incompatibilidad, como parentesco con funcionarios contratantes, sanciones disciplinarias y conflictos de intereses.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 35",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué artículo de la Ley 1474 de 2011 crea el Registro Único de Proponentes (RUP)?",
+      "opciones": [
+        "Art. 25",
+        "Art. 2",
+        "Art. 45",
+        "Art. 35"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 35 de la Ley 1474 de 2011 creó el Registro Único de Proponentes, herramienta que permite a los interesados acreditar su idoneidad ante el Estado una sola vez y participar en procesos de contratación.",
+      "norma": "Ley 1474/2011",
+      "articulo": "Art. 35",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es la modalidad de selección en la cual la entidad invita a varios proponentes previamente calificados?",
+      "opciones": [
+        "Selección abreviada",
+        "Concurso de méritos",
+        "Licitación pública",
+        "Subasta inversa"
+      ],
+      "respuesta": 0,
+      "explicacion": "La selección abreviada es la modalidad en que la entidad invita a varios proponentes para presentar ofertas, previa publicación de las bases y calificación de requisitos mínimos.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 7",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es el tipo de contrato que se utiliza comúnmente para la adquisición de bienes muebles?",
+      "opciones": [
+        "Contrato de comodato",
+        "Contrato de consultoría",
+        "Contrato de compraventa",
+        "Contrato de obra"
+      ],
+      "respuesta": 2,
+      "explicacion": "El contrato de compraventa es la figura contractual utilizada para la adquisición de bienes muebles, mediante la cual la entidad pública adquiere la propiedad a cambio de un precio.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 131",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué principio exige que los actos de contratación estatal sean públicos y susceptibles de control ciudadano?",
+      "opciones": [
+        "Economía",
+        "Proporcionalidad",
+        "Celeridad",
+        "Transparencia"
+      ],
+      "respuesta": 3,
+      "explicacion": "El principio de transparencia impone que los procesos de contratación estatal se realicen con publicidad, acceso a la información y posibilidad de control social, evitando decisiones arbitrarias.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1474 de 2011, ¿qué práctica se prohíbe para evitar el fraccionamiento de contratos y eludir topes legales?",
+      "opciones": [
+        "Solicitar garantías de seriedad",
+        "Usar licitación pública",
+        "Dividir un contrato en varios de menor cuantía",
+        "Publicar el plan anual de adquisiciones"
+      ],
+      "respuesta": 2,
+      "explicacion": "La Ley 1474 de 2011 prohíbe dividir un mismo objeto contractual en varios contratos de menor cuantía para eludir topes, requisitos o modalidades de selección establecidas por la ley.",
+      "norma": "Ley 1474/2011",
+      "articulo": "Art. 45",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es la consecuencia jurídica principal del incumplimiento grave de un contrato estatal?",
+      "opciones": [
+        "Reducción de garantías",
+        "Cambio de objeto",
+        "Prórroga automática",
+        "Resolución del contrato"
+      ],
+      "respuesta": 3,
+      "explicacion": "Ante el incumplimiento grave por parte del contratista, la entidad pública puede declarar la resolución del contrato, lo que produce la extinción de la relación contractual y acarrea sanciones.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 131",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué figura permite a las entidades estatales adquirir bienes y servicios a través de convenios previamente negociados por Colombia Compra Eficiente?",
+      "opciones": [
+        "Acuerdo marco de precios y cantidades",
+        "Contratación directa",
+        "Concurso de méritos",
+        "Licitación pública"
+      ],
+      "respuesta": 0,
+      "explicacion": "Los acuerdos marco de precios y cantidades permiten que múltiples entidades estatales adquieran bienes y servicios bajo condiciones previamente pactadas por Colombia Compra Eficiente, generando economías de escala.",
+      "norma": "Ley 1150/2007",
+      "articulo": "Art. 4",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1150 de 2007, ¿en qué plazo máximo debe devolverse la garantía de seriedad a los proponentes no adjudicatarios?",
+      "opciones": [
+        "1 mes",
+        "3 meses",
+        "15 días hábiles",
+        "6 meses"
+      ],
+      "respuesta": 1,
+      "explicacion": "La Ley 1150 de 2007 establece que la garantía de seriedad de los proponentes no adjudicatarios debe devolverse en un plazo máximo de tres meses contado a partir de la adjudicación del contrato.",
+      "norma": "Ley 1150/2007",
+      "articulo": "Art. 13",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué causal de nulidad de un contrato estatal se presenta cuando existe un vínculo familiar entre el contratista y el funcionario contratante?",
+      "opciones": [
+        "Vicio del consentimiento",
+        "Falta de objeto lícito",
+        "Incapacidad técnica",
+        "Conflicto de intereses"
+      ],
+      "respuesta": 3,
+      "explicacion": "El conflicto de intereses, derivado de vínculos familiares o económicos entre contratista y funcionario, constituye causal de nulidad e inhabilidad conforme al régimen de contratación estatal.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 35",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué modalidad de selección se caracteriza por ser una subasta electrónica en la que los oferentes van reduciendo el precio?",
+      "opciones": [
+        "Licitación pública",
+        "Selección abreviada",
+        "Mínimas cuantías",
+        "Subasta inversa"
+      ],
+      "respuesta": 3,
+      "explicacion": "La subasta inversa es un mecanismo electrónico en el que los oferentes compiten reduciendo progresivamente el precio de sus ofertas para bienes y servicios estandarizados de bajo valor.",
+      "norma": "Ley 1150/2007",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué herramienta tecnológica administra Colombia Compra Eficiente para la publicidad y trazabilidad de los procesos de contratación?",
+      "opciones": [
+        "PILA",
+        "RUNT",
+        "SECOP",
+        "RUP"
+      ],
+      "respuesta": 2,
+      "explicacion": "El SECOP es el Sistema Electrónico de Contratación Pública, plataforma mediante la cual las entidades estatales publican procesos, reciben ofertas y garantizan transparencia en la contratación.",
+      "norma": "Ley 1150/2007",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "titulo": "Contratación estatal en Colombia: principios, modalidades y control",
+      "contenido_html": "<h3>Marco normativo de la contratación estatal</h3>\n<p>La contratación estatal colombiana se sustenta principalmente en la <strong>Ley 80 de 1993</strong>, conocida como la Ley de Contratación Estatal, que establece los principios, modalidades de selección, requisitos de participación, inhabilidades, tipos de contratos y régimen de responsabilidad. Su objetivo es garantizar que los recursos públicos se destinen de manera eficiente, transparente y equitativa, previniendo el clientelismo y la corrupción.</p>\n<p>La <strong>Ley 1150 de 2007</strong> reformó parcialmente la Ley 80 de 1993 e introdujo mecanismos de compra eficiente como la subasta inversa, las mínimas cuantías, los acuerdos marco de precios y cantidades, y el fortalecimiento del Sistema Electrónico de Contratación Pública (SECOP). Esta norma busca simplificar trámites, reducir costos de transacción y aprovechar las economías de escala en las compras del Estado.</p>\n<p>La <strong>Ley 1474 de 2011</strong>, Estatuto Anticorrupción, complementa el régimen con disposiciones de prevención, investigación y sanción de actos de corrupción. Entre sus aportes destaca la creación del Registro Único de Proponentes (RUP), la prohibición de fraccionamiento de contratos y el fortalecimiento del control social y la rendición de cuentas.</p>\n<p>El <strong>Decreto 1082 de 2015</strong> es el Decreto Único Reglamentario del Sector Administrativo de la Función Pública, que compila y sistematiza las normas reglamentarias relacionadas con la organización y funcionamiento de la administración pública, incluyendo aspectos de contratación.</p>\n<h3>Principios rectores</h3>\n<p>La contratación estatal debe regirse por principios como la moralidad, transparencia, economía, igualdad, responsabilidad, celeridad y publicidad. Estos principios orientan la actuación de los funcionarios contratantes y son el parámetro para evaluar la validez y legalidad de los actos contractuales.</p>\n<h3>Modalidades de selección</h3>\n<ul>\n<li><strong>Licitación pública:</strong> modalidad ordinaria para objetos definidos en cantidades y especificaciones.</li>\n<li><strong>Selección abreviada:</strong> invitación a varios proponentes previamente calificados.</li>\n<li><strong>Concurso de méritos:</strong> para seleccionar propuestas basadas en calificaciones técnicas o profesionales.</li>\n<li><strong>Contratación directa:</strong> excepcional, solo cuando la ley autoriza una causal específica.</li>\n<li><strong>Mínimas cuantías:</strong> para contratos de bajo valor, reguladas por Colombia Compra Eficiente.</li>\n<li><strong>Subasta inversa:</strong> mecanismo electrónico de reducción de precios para bienes y servicios estandarizados.</li>\n</ul>\n<h3>Requisitos e inhabilidades</h3>\n<p>Los proponentes deben acreditar capacidad jurídica, técnica y financiera. El artículo 35 de la Ley 80 de 1993 enumera causales de inhabilidad e incompatibilidad, como parentesco con funcionarios, sanciones disciplinarias, conflicto de intereses y participación en la preparación del proceso.</p>\n<h3>Control y transparencia</h3>\n<p>El SECOP garantiza publicidad y trazabilidad, mientras que el RUP permite acreditar idoneidad una sola vez. La ciudadanía, la Contraloría y la Procuraduría ejercen control sobre la legalidad y oportunidad de los recursos públicos contratados.</p>",
+      "fuente_url": "https://www.colombiacompra.gov.co/",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Ley 80/1993",
+      "reverso": "Ley de Contratación Estatal que regula los contratos celebrados por entidades públicas en Colombia.",
+      "norma": "Ley 80/1993"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Ley 1150/2007",
+      "reverso": "Reforma la Ley 80 e introduce subasta inversa, mínimas cuantías y compra eficiente.",
+      "norma": "Ley 1150/2007"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Ley 1474/2011",
+      "reverso": "Estatuto Anticorrupción que crea el RUP y prohíbe fraccionar contratos.",
+      "norma": "Ley 1474/2011"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Decreto 1082/2015",
+      "reverso": "Decreto Único Reglamentario del Sector Administrativo de la Función Pública.",
+      "norma": "D. 1082/2015"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "SECOP",
+      "reverso": "Sistema Electrónico de Contratación Pública para publicidad y trazabilidad.",
+      "norma": "Ley 1150/2007"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "RUP",
+      "reverso": "Registro Único de Proponentes que acredita idoneidad ante entidades estatales.",
+      "norma": "Ley 1474/2011, Art. 35"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Licitación pública",
+      "reverso": "Modalidad ordinaria para contratos con objeto definido en especificaciones y cantidades.",
+      "norma": "Ley 80/1993, Art. 5"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Subasta inversa",
+      "reverso": "Mecanismo electrónico donde los oferentes reducen el precio de bienes estandarizados.",
+      "norma": "Ley 1150/2007, Art. 4"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Mínimas cuantías",
+      "reverso": "Modalidad simplificada para contratar bienes y servicios de bajo valor.",
+      "norma": "Ley 1150/2007, Art. 5"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Inhabilidad",
+      "reverso": "Causal que impide a una persona contratar con el Estado, como conflicto de intereses.",
+      "norma": "Ley 80/1993, Art. 35"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Garantía de seriedad",
+      "reverso": "Garantía que acredita compromiso del proponente y se devuelve en plazo máximo de tres meses.",
+      "norma": "Ley 1150/2007, Art. 13"
+    },
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "frente": "Colombia Compra Eficiente",
+      "reverso": "Entidad que regula, promueve y facilita la gestión de compras públicas en Colombia.",
+      "norma": "Ley 1150/2007"
+    }
+  ]
+}

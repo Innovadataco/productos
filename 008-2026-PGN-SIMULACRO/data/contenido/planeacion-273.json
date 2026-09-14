@@ -1,0 +1,413 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 152 de 1994, ¿cuál es el instrumento básico de planeación del desarrollo económico y social de la Nación?",
+      "opciones": [
+        "Presupuesto General de la Nación",
+        "Plan Nacional de Desarrollo",
+        "Plan Operativo Anual",
+        "Plan de Acción"
+      ],
+      "respuesta": 1,
+      "explicacion": "La Ley 152 de 1994 establece en su artículo 4 que el Plan Nacional de Desarrollo es el instrumento básico de planeación del desarrollo económico y social de la Nación, al cual se armonizan los planes de las entidades territoriales y de las entidades del orden nacional.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 4",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con la Ley 152 de 1994, el Plan Nacional de Desarrollo debe contener, entre otros elementos, los objetivos, metas y prioridades de la política social y económica, así como:",
+      "opciones": [
+        "El listado de contratos a celebrar",
+        "La estrategia y los programas para alcanzar los objetivos",
+        "La nómina de servidores públicos",
+        "Solo la asignación presupuestal anual"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 5 de la Ley 152 de 1994 señala que el Plan Nacional de Desarrollo contiene los objetivos, metas y prioridades de la política social y económica, la estrategia y los programas para alcanzar los objetivos, y las normas necesarias para su realización.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1499 de 2017, el Marco Integral de Planeación del Gasto (MIPG) busca articular la planeación del gasto público con:",
+      "opciones": [
+        "La recaudación tributaria",
+        "La contratación estatal exclusivamente",
+        "Solo el control fiscal posterior",
+        "Los resultados del desarrollo y la inversión pública"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Decreto 1499 de 2017 crea la Metodología General de la Inversión Pública del Marco Integral de Planeación del Gasto, que busca orientar la inversión pública hacia resultados de desarrollo mediante la articulación de la planeación del gasto con los objetivos del Plan Nacional de Desarrollo.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme al Decreto 1499 de 2017, la estructura del MIPG se compone de tres dimensiones: estratégica, programas y:",
+      "opciones": [
+        "Recaudación",
+        "Contratación",
+        "Proyectos de inversión pública",
+        "Control interno"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1499 de 2017 establece que el MIPG se compone de tres dimensiones articuladas: la dimensión estratégica, la dimensión de programas y la dimensión de proyectos de inversión pública, que permiten vincular la planeación con la ejecución del gasto.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 4",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 1474 de 2011, en su artículo 73, exige a las entidades públicas diseñar e implementar un:",
+      "opciones": [
+        "Plan de Contratación",
+        "Plan de Bienestar Social",
+        "Plan Anticorrupción y de Atención al Ciudadano",
+        "Plan de Desarrollo Institucional"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 73 de la Ley 1474 de 2011 establece que las entidades públicas deberán diseñar e implementar un Plan Anticorrupción y de Atención al Ciudadano, como instrumento de gestión para prevenir, detectar y corregir comportamientos que puedan afectar la gestión pública.",
+      "norma": "Ley 1474/2011",
+      "articulo": "Art. 73",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 74 de la Ley 1474 de 2011, el Plan Anticorrupción debe contener, entre otros aspectos, estrategias de:",
+      "opciones": [
+        "Recaudación de impuestos",
+        "Nombramiento de personal",
+        "Contratación acelerada",
+        "Difusión, capacitación y seguimiento"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 74 de la Ley 1474 de 2011 señala que el Plan Anticorrupción debe incluir estrategias de difusión, capacitación, implementación, seguimiento y evaluación, además de la definición de responsables para cada actividad.",
+      "norma": "Ley 1474/2011",
+      "articulo": "Art. 74",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con la Ley 152 de 1994, los Planes de Desarrollo Territorial deben armonizarse con:",
+      "opciones": [
+        "El Plan Nacional de Desarrollo",
+        "El presupuesto municipal únicamente",
+        "Solo los intereses del gobernador o alcalde",
+        "Las decisiones del Concejo o Asamblea"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 6 de la Ley 152 de 1994 dispone que los departamentos, distritos y municipios formularán sus planes de desarrollo territorial, los cuales se armonizarán con el Plan Nacional de Desarrollo y con los planes de desarrollo de los municipios y distritos que conforman el departamento.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 6",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "En el marco del Decreto 1499 de 2017, la etapa de identificación de un proyecto de inversión pública busca fundamentalmente:",
+      "opciones": [
+        "Evaluar el desempeño del contratista",
+        "Reconocer una necesidad o problema que requiere solución",
+        "Adjudicar el contrato de obra",
+        "Liquidar el proyecto"
+      ],
+      "respuesta": 1,
+      "explicacion": "La etapa de identificación, contemplada en la Metodología General de la Inversión Pública del Decreto 1499 de 2017, busca reconocer una necesidad o problema que requiere ser atendido mediante una intervención del Estado, antes de formular alternativas de solución.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 6",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 152 de 1994 establece que el Banco de Programas y Proyectos de Inversión Pública es administrado por:",
+      "opciones": [
+        "El Departamento Nacional de Planeación",
+        "La Procuraduría General",
+        "La Contraloría General",
+        "El Ministerio de Hacienda"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 40 de la Ley 152 de 1994 establece que el Departamento Nacional de Planeación administrará el Banco de Programas y Proyectos de Inversión Pública, como instrumento para la programación de la inversión pública nacional y territorial.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 40",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 152 de 1994, la participación ciudadana en la planeación del desarrollo se contempla en el artículo:",
+      "opciones": [
+        "Art. 10",
+        "Art. 41",
+        "Art. 25",
+        "Art. 4"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 25 de la Ley 152 de 1994 establece los mecanismos de participación ciudadana en la planeación del desarrollo, reconociendo el derecho de los ciudadanos a intervenir en la formulación, seguimiento y evaluación de planes y programas.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 25",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme al Decreto 1499 de 2017, la preinversión de un proyecto de inversión pública incluye la realización de:",
+      "opciones": [
+        "La auditoría financiera final",
+        "La liquidación del contrato",
+        "Estudios de factibilidad y de impacto",
+        "La evaluación de desempeño laboral"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 9 del Decreto 1499 de 2017 señala que la etapa de preinversión comprende los estudios necesarios para determinar la factibilidad técnica, jurídica, ambiental, social y financiera de las alternativas de solución a un problema identificado.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 9",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con la Ley 1474 de 2011, el Plan Anticorrupción debe ser actualizado:",
+      "opciones": [
+        "Solo una vez cada diez años",
+        "Solo al inicio de cada vigencia fiscal",
+        "Periódicamente según lo establezca cada entidad",
+        "Únicamente cuando lo ordene la Contraloría"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 73 de la Ley 1474 de 2011 indica que el Plan Anticorrupción y de Atención al Ciudadano debe ser actualizado periódicamente, conforme a los lineamientos que para el efecto defina cada entidad pública, garantizando su vigencia y pertinencia.",
+      "norma": "Ley 1474/2011",
+      "articulo": "Art. 73",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 152 de 1994 señala que el Plan Nacional de Desarrollo tendrá una duración igual al período presidencial, es decir:",
+      "opciones": [
+        "Cuatro años",
+        "Seis años",
+        "Dos años",
+        "Ocho años"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 4 de la Ley 152 de 1994 establece que el Plan Nacional de Desarrollo tendrá una duración igual al período del Presidente de la República, el cual en Colombia es de cuatro años, conforme a la Constitución Política.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 4",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1499 de 2017, en la etapa de inversión de un proyecto se desarrollan actividades como:",
+      "opciones": [
+        "Solo estudios de prefactibilidad",
+        "Recolección de datos estadísticos",
+        "Diseño final, contratación y ejecución física",
+        "Evaluación ex post únicamente"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 10 del Decreto 1499 de 2017 señala que la etapa de inversión comprende el diseño final, la contratación, la ejecución física, financiera y administrativa de las obras o adquisiciones necesarias para materializar el proyecto.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 10",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "En el marco del MIPG, según el Decreto 1499 de 2017, los indicadores de desempeño permiten:",
+      "opciones": [
+        "Medir el avance y cumplimiento de objetivos",
+        "Eliminar la evaluación de proyectos",
+        "Evitar la rendición de cuentas",
+        "Asignar contratos sin criterios"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 14 del Decreto 1499 de 2017 establece que los indicadores son instrumentos que permiten medir el avance y el cumplimiento de los objetivos, metas y resultados de los programas y proyectos de inversión pública.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 14",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme a la Ley 152 de 1994, el Plan Operativo Anual de Inversión Pública es elaborado por:",
+      "opciones": [
+        "Las entidades territoriales y nacionales",
+        "Exclusivamente por el DNP",
+        "Solo por la Contraloría",
+        "Únicamente por el Congreso"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 8 de la Ley 152 de 1994 establece que las entidades territoriales y nacionales formularán anualmente el Plan Operativo de Inversión Pública, el cual señala los programas y proyectos a ejecutar durante la vigencia fiscal correspondiente.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 8",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1499 de 2017, la evaluación ex ante de un proyecto de inversión pública corresponde a la fase de:",
+      "opciones": [
+        "Preinversión",
+        "Operación",
+        "Seguimiento",
+        "Ejecución"
+      ],
+      "respuesta": 0,
+      "explicacion": "La evaluación ex ante se realiza durante la etapa de preinversión, conforme al artículo 9 del Decreto 1499 de 2017, con el fin de comparar las alternativas de solución y seleccionar la más viable antes de iniciar la inversión.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 9",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 1474 de 2011, artículo 73, señala que el Plan Anticorrupción debe ser divulgado a través de:",
+      "opciones": [
+        "Solo en reuniones de directivos",
+        "Solo en boletines internos",
+        "Mediante comunicaciones privadas",
+        "La página web institucional"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 73 de la Ley 1474 de 2011 establece que el Plan Anticorrupción y de Atención al Ciudadano debe ser publicado en la página web institucional de la entidad, garantizando el acceso de la ciudadanía a su contenido.",
+      "norma": "Ley 1474/2011",
+      "articulo": "Art. 73",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con la Ley 152 de 1994, los planes indicativos sectoriales son formulados por:",
+      "opciones": [
+        "Cada municipio independientemente",
+        "Solo la Presidencia de la República",
+        "La Rama Judicial exclusivamente",
+        "Los sectores administrativos con funciones similares"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 9 de la Ley 152 de 1994 establece que los sectores administrativos que agrupan entidades con funciones similares formularán planes indicativos sectoriales, como instrumentos de coordinación con el Plan Nacional de Desarrollo.",
+      "norma": "Ley 152/1994",
+      "articulo": "Art. 9",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1499 de 2017, el seguimiento a proyectos de inversión pública tiene como propósito principal:",
+      "opciones": [
+        "Verificar el avance físico, financiero y de resultados",
+        "Eliminar la planeación operativa",
+        "Evitar la participación ciudadana",
+        "Reducir el número de contratos"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 13 del Decreto 1499 de 2017 establece que el seguimiento permite verificar el avance físico, financiero y de resultados de los proyectos de inversión pública, con el fin de tomar decisiones oportunas para garantizar su éxito.",
+      "norma": "Decreto 1499/2017",
+      "articulo": "Art. 13",
+      "dificultad": "medio"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "titulo": "Planeación estratégica en el Estado colombiano",
+      "contenido_html": "<h3>Fundamentos normativos de la planeación pública</h3><p>La planeación estratégica en Colombia tiene su marco normativo principal en la Ley 152 de 1994, conocida como la Ley de Planificación. Esta norma establece el Sistema de Planificación, cuyo objetivo es orientar el desarrollo económico y social del país mediante la coordinación de esfuerzos del Estado y la sociedad. El instrumento central del sistema es el Plan Nacional de Desarrollo, el cual se define en el artículo 4 como el documento rector que contiene los objetivos, metas, prioridades, estrategias y programas que el Gobierno Nacional se propone alcanzar durante su período constitucional de cuatro años.</p><h3>Plan Nacional de Desarrollo</h3><p>El Plan Nacional de Desarrollo se formula por el Presidente de la República y debe ser aprobado por el Congreso. Su contenido mínimo está regulado en el artículo 5 de la Ley 152 de 1994 e incluye la política económica y social, los objetivos y metas sectoriales, las estrategias y programas para alcanzarlos, y las normas necesarias para su implementación. Además, el Plan debe armonizarse con los planes de desarrollo territorial y los planes indicativos sectoriales, garantizando así una articulación vertical y horizontal del gasto público.</p><h3>Planeación territorial</h3><p>La Ley 152 de 1994 también regula los planes de desarrollo territorial en su artículo 6. Los departamentos, distritos y municipios deben formular sus propios planes, los cuales se armonizan con el Plan Nacional y entre sí. Esta armonización busca evitar duplicidades, promover la complementariedad de intervenciones y asegurar que las inversiones territoriales respondan a los objetivos nacionales de desarrollo.</p><h3>Marco Integral de Planeación del Gasto</h3><p>El Decreto 1499 de 2017 adopta la Metodología General de la Inversión Pública del Marco Integral de Planeación del Gasto (MIPG). Esta metodología estructura la planeación del gasto en tres dimensiones: estratégica, de programas y de proyectos de inversión pública. Su propósito es orientar la inversión pública hacia resultados de desarrollo, vinculando la identificación, preinversión, inversión, ejecución, operación y evaluación de proyectos con los objetivos del Plan Nacional de Desarrollo.</p><h3>Ciclo de la inversión pública</h3><p>El Decreto 1499 de 2017 define un ciclo para los proyectos de inversión pública. La etapa de identificación reconoce una necesidad o problema. La preinversión desarrolla estudios de factibilidad y evalúa alternativas de solución. La inversión comprende el diseño final, la contratación y la ejecución física. Posteriormente, la operación pone en funcionamiento la solución adoptada. Finalmente, el seguimiento y la evaluación permiten medir el avance, los resultados y el impacto de la intervención.</p><h3>Transparencia y lucha contra la corrupción</h3><p>La Ley 1474 de 2011, o Estatuto Anticorrupción, complementa la planeación estratégica con el artículo 73, que obliga a las entidades públicas a diseñar e implementar un Plan Anticorrupción y de Atención al Ciudadano. El artículo 74 establece que dicho plan debe incluir estrategias de difusión, capacitación, implementación, seguimiento y evaluación, así como la definición de responsables. Estos planes deben publicarse en las páginas web institucionales y actualizarse periódicamente.</p><h3>Rol del Departamento Nacional de Planeación</h3><p>El Departamento Nacional de Planeación (DNP) es la entidad encargada de coordinar y orientar el Sistema de Planificación. Entre sus funciones destaca la administración del Banco de Programas y Proyectos de Inversión Pública, regulado en el artículo 40 de la Ley 152 de 1994. Este banco permite programar las inversiones públicas nacionales y territoriales, facilitando la priorización de recursos y el seguimiento a su ejecución.</p><h3>Participación ciudadana</h3><p>El artículo 25 de la Ley 152 de 1994 consagra la participación ciudadana en la planeación del desarrollo. Los ciudadanos tienen derecho a intervenir en la formulación, seguimiento y evaluación de planes y programas, lo cual fortalece la legitimidad, la transparencia y la efectividad de las políticas públicas.</p>",
+      "fuente_url": "https://www.dnp.gov.co/programas/development/plan-nacional-de-desarrollo",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Plan Nacional de Desarrollo",
+      "reverso": "Instrumento básico de planeación del desarrollo económico y social de Colombia, de duración presidencial.",
+      "norma": "Ley 152/1994, Art. 4"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "MIPG",
+      "reverso": "Marco Integral de Planeación del Gasto que articula la inversión pública con los resultados del desarrollo.",
+      "norma": "Decreto 1499/2017"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Banco de Proyectos",
+      "reverso": "Instrumento administrado por el DNP para programar la inversión pública nacional y territorial.",
+      "norma": "Ley 152/1994, Art. 40"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Plan Anticorrupción",
+      "reverso": "Instrumento de gestión pública para prevenir, detectar y corregir comportamientos contrarios a la ética.",
+      "norma": "Ley 1474/2011, Art. 73"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Preinversión",
+      "reverso": "Etapa del ciclo de inversión pública que desarrolla estudios de factibilidad y evalúa alternativas.",
+      "norma": "Decreto 1499/2017, Art. 9"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Participación ciudadana",
+      "reverso": "Derecho de los ciudadanos a intervenir en la formulación, seguimiento y evaluación de planes.",
+      "norma": "Ley 152/1994, Art. 25"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Plan Operativo Anual de Inversión Pública",
+      "reverso": "Documento anual que señala los programas y proyectos a ejecutar en una vigencia fiscal.",
+      "norma": "Ley 152/1994, Art. 8"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Indicadores de desempeño",
+      "reverso": "Instrumentos que miden el avance y cumplimiento de objetivos, metas y resultados de proyectos.",
+      "norma": "Decreto 1499/2017, Art. 14"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Planes indicativos sectoriales",
+      "reverso": "Instrumentos de coordinación formulados por sectores administrativos con funciones similares.",
+      "norma": "Ley 152/1994, Art. 9"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Seguimiento a proyectos",
+      "reverso": "Verificación del avance físico, financiero y de resultados para tomar decisiones oportunas.",
+      "norma": "Decreto 1499/2017, Art. 13"
+    },
+    {
+      "tema_clave": "planeacion-273",
+      "perfil_codigo": "273",
+      "frente": "Evaluación ex ante",
+      "reverso": "Análisis realizado en preinversión para comparar alternativas y seleccionar la más viable.",
+      "norma": "Decreto 1499/2017, Art. 9"
+    }
+  ]
+}

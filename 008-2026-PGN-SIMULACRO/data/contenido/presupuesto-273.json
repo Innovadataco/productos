@@ -1,0 +1,420 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué norma establece el Estatuto Orgánico del Sistema General de Participaciones?",
+      "opciones": [
+        "Ley 152/1994",
+        "Decreto 111/1996",
+        "Ley 819/2003",
+        "Decreto 1068/2015"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Decreto 111 de 1996 fue expedido con el objeto de reglamentar el Sistema General de Participaciones y establecer su estatuto orgánico, definiendo su ámbito de aplicación, principios rectores y destino de los recursos.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 819/2003, ¿cuál es el instrumento técnico que define los objetivos, metas y recursos de las entidades públicas para una vigencia fiscal?",
+      "opciones": [
+        "Presupuesto General de la Nación",
+        "Plan Anual de Adquisiciones",
+        "Plan de Acción Institucional",
+        "Plan Nacional de Desarrollo"
+      ],
+      "respuesta": 0,
+      "explicacion": "La Ley 819 de 2003 regula la estructura, aprobación, ejecución y control del Presupuesto General de la Nación, que constituye el instrumento técnico de programación fiscal y asignación de recursos públicos.",
+      "norma": "Ley 819/2003",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es el propósito principal del Presupuesto General de la Nación según la Ley 819/2003?",
+      "opciones": [
+        "Regular el mercado cambiario y crediticio",
+        "Fijar las tasas de impuestos nacionales",
+        "Financiar proyectos privados de infraestructura",
+        "Distribuir los recursos del Estado para el cumplimiento de sus fines constitucionales"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Presupuesto General de la Nación tiene por objeto distribuir los recursos públicos de manera ordenada, eficiente y transparente, orientándolos al cumplimiento de los fines del Estado y las metas del Plan Nacional de Desarrollo.",
+      "norma": "Ley 819/2003",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Decreto 1068/2015 es conocido como el:",
+      "opciones": [
+        "Código Único de Hacienda",
+        "Estatuto Orgánico del Sistema General de Participaciones",
+        "Decreto Único Reglamentario del Sector Hacienda y Crédito Público",
+        "Estatuto Orgánico del Sistema de Regalías"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1068 de 2015 compila y unifica las normas reglamentarias del sector Hacienda y Crédito Público, por lo que se denomina Decreto Único Reglamentario de dicho sector.",
+      "norma": "Decreto 1068/2015",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 111/1996 y el Decreto 1068/2015, los recursos del Sistema General de Regalías están destinados prioritariamente a:",
+      "opciones": [
+        "Inversión en las regiones productoras y en el cierre de brechas sociales",
+        "Gastos de funcionamiento de la Presidencia de la República",
+        "Pago de la deuda externa pública",
+        "Subsidio directo a empresas privadas"
+      ],
+      "respuesta": 0,
+      "explicacion": "El Sistema General de Regalías orienta sus recursos hacia la inversión en las regiones y municipios productores, así como al financiamiento de programas y proyectos que contribuyan al cierre de brechas sociales y al desarrollo territorial.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 2",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué entidad del orden nacional coordina la formulación del proyecto de Presupuesto General de la Nación?",
+      "opciones": [
+        "Procuraduría General de la Nación",
+        "Departamento Nacional de Planeación",
+        "Ministerio de Hacienda y Crédito Público",
+        "Contraloría General de la República"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Ministerio de Hacienda y Crédito Público lidera y coordina la formulación del proyecto de Presupuesto General de la Nación, articulando las propuestas de las entidades con la política fiscal y las prioridades del Gobierno nacional.",
+      "norma": "Ley 819/2003",
+      "articulo": "Art. 7",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 819/2003 tiene por objeto regular:",
+      "opciones": [
+        "La contratación pública estatal",
+        "El régimen aduanero y tributario",
+        "El Sistema General de Regalías",
+        "El Presupuesto General de la Nación"
+      ],
+      "respuesta": 3,
+      "explicacion": "La Ley 819 de 2003 es la norma estatutaria que regula la estructura, aprobación, modificación, ejecución, control y cierre del Presupuesto General de la Nación en Colombia.",
+      "norma": "Ley 819/2003",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál de los siguientes es un principio del manejo de los recursos del Sistema General de Participaciones según el Decreto 111/1996?",
+      "opciones": [
+        "Concentración de recursos en las capitales departamentales",
+        "Exclusividad para proyectos mineros e hidrocarburíferos",
+        "Solidaridad regional y equidad",
+        "Libre disponibilidad para el gobernador del departamento"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 111 de 1996 consagra principios como la solidaridad regional, la equidad, la sostenibilidad y la corresponsabilidad, orientando los recursos del Sistema General de Participaciones al desarrollo integral de las regiones.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Decreto 1068/2015 deroga y compila las normas reglamentarias del sector:",
+      "opciones": [
+        "Educación Nacional",
+        "Protección Social",
+        "Hacienda y Crédito Público",
+        "Defensa Nacional"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1068 de 2015 tiene como finalidad simplificar, actualizar y compilar la reglamentación del sector Hacienda y Crédito Público, derogando disposiciones anteriores que le sean contrarias.",
+      "norma": "Decreto 1068/2015",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 819/2003, el proyecto de Presupuesto General de la Nación debe ser presentado ante el Congreso de la República a más tardar el:",
+      "opciones": [
+        "15 de enero de cada año",
+        "1 de abril de cada año",
+        "1 de febrero de cada año",
+        "15 de marzo de cada año"
+      ],
+      "respuesta": 0,
+      "explicacion": "La Ley 819 de 2003 establece el calendario de formulación y presentación del proyecto de Presupuesto General de la Nación, el cual debe remitirse al Congreso a más tardar el 15 de enero, salvo las excepciones previstas constitucionalmente.",
+      "norma": "Ley 819/2003",
+      "articulo": "Art. 12",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Sistema General de Participaciones está regulado principalmente por el:",
+      "opciones": [
+        "Ley 819/2003",
+        "Ley 715/2001",
+        "Decreto 111/1996",
+        "Decreto 1068/2015"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 111 de 1996 es la norma reglamentaria que establece el Estatuto Orgánico del Sistema General de Participaciones, desarrollando lo dispuesto en la Constitución Política y en la Ley 715 de 2001.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "En el contexto del presupuesto colombiano, la sigla SGP significa:",
+      "opciones": [
+        "Sistema General de Protección Social",
+        "Sistema General de Participaciones",
+        "Sistema General de Pensiones",
+        "Sistema General de Presupuesto"
+      ],
+      "respuesta": 1,
+      "explicacion": "SGP corresponde al Sistema General de Participaciones, mecanismo de distribución de recursos del Estado a entidades territoriales para la financiación de servicios a cargo de estas.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1068/2015, el Presupuesto General de la Nación se estructura por:",
+      "opciones": [
+        "Solo inversión pública",
+        "Solo gastos de funcionamiento",
+        "Ingresos, gastos e inversión pública",
+        "Solo deuda pública interna y externa"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Presupuesto General de la Nación comprende la totalidad de los ingresos corrientes y de capital, los gastos de funcionamiento, la inversión pública y el servicio de la deuda, conforme a la estructura programática del sector público.",
+      "norma": "Decreto 1068/2015",
+      "articulo": "Art. 2.1.1.1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Los recursos del Sistema General de Regalías se originan principalmente en:",
+      "opciones": [
+        "Las tasas por prestación de servicios públicos",
+        "El impuesto sobre la renta y complementarios",
+        "El impuesto al valor agregado",
+        "La explotación de recursos naturales no renovables"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Sistema General de Regalías se financía con los recursos provenientes de la explotación de recursos naturales no renovables, como regalías mineras e hidrocarburíferas, que el Estado percibe y distribuye a las entidades territoriales.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 819/2003 establece que el Presupuesto General de la Nación debe aprobarse mediante:",
+      "opciones": [
+        "Resolución del Ministro de Hacienda",
+        "Ley anual de la República",
+        "Acuerdo municipal o departamental",
+        "Decreto del Presidente de la República"
+      ],
+      "respuesta": 1,
+      "explicacion": "De conformidad con la Constitución Política y la Ley 819 de 2003, el Presupuesto General de la Nación se aprueba anualmente mediante ley, la cual determina los ingresos y autoriza los gastos e inversiones del Estado.",
+      "norma": "Ley 819/2003",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1068/2015, las vigencias futuras en el presupuesto se autorizan únicamente para:",
+      "opciones": [
+        "Cualquier gasto de funcionamiento sin límite",
+        "Gastos de personal de planta",
+        "Funcionamiento corriente de todas las entidades",
+        "Inversiones con financiación multianual debidamente identificada"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Decreto 1068 de 2015 limita las autorizaciones de vigencias futuras a aquellas inversiones que cuenten con financiación multianual previamente identificada, garantizando así la sostenibilidad fiscal y el compromiso real de recursos.",
+      "norma": "Decreto 1068/2015",
+      "articulo": "Art. 2.1.1.9",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Decreto 111/1996 fue expedido por:",
+      "opciones": [
+        "La Corte Constitucional",
+        "Las asambleas departamentales",
+        "El Congreso de la República",
+        "El Presidente de la República"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Decreto 111 de 1996 es un acto administrativo reglamentario expedido por el Presidente de la República en ejercicio de sus facultades constitucionales y legales, no una ley emanada del Congreso.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 819/2003 busca garantizar la:",
+      "opciones": [
+        "Regulación del sistema bancario nacional",
+        "Sostenibilidad fiscal y el cumplimiento de metas del Plan Nacional de Desarrollo",
+        "Libre competencia comercial en el sector financiero",
+        "Protección absoluta de la propiedad privada"
+      ],
+      "respuesta": 1,
+      "explicacion": "La Ley 819 de 2003 vincula la gestión del Presupuesto General de la Nación con la sostenibilidad de las finanzas públicas y con el logro de los objetivos y metas consagrados en el Plan Nacional de Desarrollo.",
+      "norma": "Ley 819/2003",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es una fuente de financiación del Sistema General de Regalías según el Decreto 111/1996?",
+      "opciones": [
+        "Impuesto de industria y comercio",
+        "Regalías mineras e hidrocarburíferas",
+        "Impuesto predial unificado",
+        "Contribuciones parafiscales al Sena"
+      ],
+      "respuesta": 1,
+      "explicacion": "Las regalías derivadas de la explotación minera e hidrocarburífera constituyen la principal fuente de financiación del Sistema General de Regalías, las cuales se distribuyen conforme a criterios de producción, población y necesidades territoriales.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 3",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1068/2015, las disponibilidades presupuestales certificadas constituyen requisito previo para:",
+      "opciones": [
+        "Nombrar funcionarios públicos",
+        "Crear empresas industriales y comerciales del Estado",
+        "Aprobar proyectos de ley en el Congreso",
+        "Celebrar contratos y asumir compromisos que afecten recursos del presupuesto"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Decreto 1068 de 2015 establece que ninguna entidad puede celebrar contratos o asumir obligaciones que comprometan recursos presupuestales sin contar previamente con la certificación de disponibilidad presupuestal correspondiente.",
+      "norma": "Decreto 1068/2015",
+      "articulo": "Art. 2.1.1.9",
+      "dificultad": "dificil"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "titulo": "Marco normativo del presupuesto público colombiano",
+      "contenido_html": "<h3>Presupuesto público en Colombia: marco normativo y estructura</h3>\n<p>El presupuesto público es el instrumento técnico mediante el cual el Estado programa sus ingresos, autoriza sus gastos e inversiones, y establece los límites del endeudamiento para una vigencia fiscal. En Colombia, su regulación central proviene de la Constitución Política, de la Ley 819 de 2003, del Decreto 1068 de 2015 y, en lo que respecta a la distribución de recursos a las entidades territoriales, del Decreto 111 de 1996.</p>\n<p>La Ley 819 de 2003 define el Presupuesto General de la Nación como el documento rector de la política fiscal anual. A través de él se asignan los recursos del Gobierno nacional a los diferentes sectores, se fijan las metas de ingresos corrientes y de capital, y se autoriza el gasto de funcionamiento, la inversión pública y el servicio de la deuda. Su aprobación corresponde al Congreso de la República mediante ley anual, lo que refleja el principio constitucional de separación de poderes y control político sobre las finanzas públicas.</p>\n<p>El Decreto 1068 de 2015, conocido como el Decreto Único Reglamentario del Sector Hacienda y Crédito Público, compila y actualiza las disposiciones reglamentarias que desarrollan la Ley de Presupuesto. En él se detallan aspectos como la estructura programática, la clasificación del gasto, el procedimiento de modificación del presupuesto, las vigencias futuras, las disponibilidades presupuestales y los requisitos para comprometer recursos. Una de sus normas más relevantes es la que exige la certificación de disponibilidad presupuestal antes de celebrar contratos u obligaciones que afecten el presupuesto, garantizando que los compromisos financieros cuenten con cobertura real.</p>\n<p>Por su parte, el Decreto 111 de 1996 establece el Estatuto Orgánico del Sistema General de Participaciones, mecanismo mediante el cual el Estado transfiere recursos a departamentos, distritos y municipios para la financiación de los servicios a su cargo. Este sistema se rige por principios de solidaridad, equidad, sostenibilidad y corresponsabilidad, y busca reducir las desigualdades regionales. Complementariamente, el Sistema General de Regalías, regulado por el mismo decreto y desarrollado en el Decreto 1068 de 2015, distribuye los recursos provenientes de la explotación de recursos naturales no renovables, priorizando la inversión en las regiones productoras y el cierre de brechas sociales.</p>\n<p>La formulación del presupuesto es coordinada por el Ministerio de Hacienda y Crédito Público, con el acompañamiento del Departamento Nacional de Planeación. El proyecto debe presentarse ante el Congreso a más tardar el 15 de enero de cada año, salvo las excepciones previstas en la Constitución. Durante su tramitación, el Congreso puede reducir o suprimir partidas, pero no crear nuevos gastos ni aumentar las asignaciones propuestas, salvo que ello derive de la revisión de los ingresos estimados.</p>\n<p>En síntesis, el presupuesto público colombiano es mucho más que una simple cuenta de ingresos y gastos: es la expresión cuantificada de la política pública del Gobierno nacional, sujeta a un riguroso marco normativo que busca asegurar la sostenibilidad fiscal, la transparencia, la eficiencia en el uso de los recursos y el cumplimiento de los objetivos del Plan Nacional de Desarrollo.</p>",
+      "fuente_url": "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=52558",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Ley 819/2003",
+      "reverso": "Norma que regula la estructura, aprobación, ejecución y control del Presupuesto General de la Nación.",
+      "norma": "Ley 819/2003"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Decreto 1068/2015",
+      "reverso": "Decreto Único Reglamentario del Sector Hacienda y Crédito Público.",
+      "norma": "Decreto 1068/2015"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Decreto 111/1996",
+      "reverso": "Estatuto Orgánico del Sistema General de Participaciones.",
+      "norma": "Decreto 111/1996"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Presupuesto General de la Nación",
+      "reverso": "Instrumento técnico anual de asignación de recursos públicos del Estado colombiano.",
+      "norma": "Ley 819/2003"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Sistema General de Participaciones",
+      "reverso": "Mecanismo de transferencia de recursos del Estado a entidades territoriales.",
+      "norma": "Decreto 111/1996"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Sistema General de Regalías",
+      "reverso": "Distribución de regalías mineras e hidrocarburíferas para inversión regional y cierre de brechas.",
+      "norma": "Decreto 111/1996"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Certificación de disponibilidad presupuestal",
+      "reverso": "Requisito previo para comprometer recursos del presupuesto en contratos.",
+      "norma": "Decreto 1068/2015"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Vigencias futuras",
+      "reverso": "Autorización para comprometer recursos de presupuestos posteriores en inversiones multianuales.",
+      "norma": "Decreto 1068/2015"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Solidaridad regional",
+      "reverso": "Principio del SGP que orienta recursos hacia la reducción de desigualdades territoriales.",
+      "norma": "Decreto 111/1996"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Ministerio de Hacienda y Crédito Público",
+      "reverso": "Entidad que coordina la formulación del proyecto de Presupuesto General de la Nación.",
+      "norma": "Ley 819/2003"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Regalías",
+      "reverso": "Contraprestación económica que percibe el Estado por la explotación de recursos naturales no renovables.",
+      "norma": "Decreto 111/1996"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "frente": "Ley anual de la República",
+      "reverso": "Tipo de norma mediante la cual se aprueba el Presupuesto General de la Nación.",
+      "norma": "Ley 819/2003"
+    }
+  ]
+}
