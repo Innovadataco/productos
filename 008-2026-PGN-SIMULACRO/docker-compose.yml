@@ -1,9 +1,14 @@
 services:
-  nginx:
-    image: nginx:alpine
+  app:
+    image: node:22
     container_name: pgn-simulacro
-    ports:
-      - "127.0.0.1:5018:80"
+    working_dir: /app
     volumes:
-      - ./dist:/usr/share/nginx/html:ro
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:5018:3000"
+    command: sh -c "npm install && npm run db:seed && npm start"
     restart: unless-stopped
+    environment:
+      - NODE_ENV=production
