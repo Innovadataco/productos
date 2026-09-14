@@ -23,6 +23,7 @@ export default function QuizClient({ temaKey }: { temaKey: string }) {
   const [selected, setSelected] = useState<number | null>(null)
   const [correctCount, setCorrectCount] = useState(0)
   const [answers, setAnswers] = useState<number[]>([])
+  const [startTime] = useState(() => Date.now())
 
   useEffect(() => {
     if (ready && !perfil) router.replace('/')
@@ -99,6 +100,36 @@ export default function QuizClient({ temaKey }: { temaKey: string }) {
     if (i === question.respuesta) setCorrectCount((n) => n + 1)
   }
 
+  const postResults = () => {
+    const url = process.env.NEXT_PUBLIC_RESULTS_WEBHOOK
+    if (!url || !perfil || !questions) return
+
+    const finalAnswers = [...answers, selected ?? -1]
+    const falladas = questions
+      .filter((q, i) => finalAnswers[i] !== q.respuesta)
+      .map((q) => q.id)
+
+    const payload = {
+      perfil,
+      tema: temaKey,
+      correctas: correctCount,
+      total: questions.length,
+      falladas,
+      duracion_seg: Math.round((Date.now() - startTime) / 1000),
+    }
+
+    try {
+      fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {})
+    } catch {
+      // fail silently; localStorage already keeps the result
+    }
+  }
+
   const next = () => {
     if (isLast) {
       addResult(temaKey, correctCount, questions.length)
@@ -110,6 +141,7 @@ export default function QuizClient({ temaKey }: { temaKey: string }) {
         total: questions.length,
         at: Date.now(),
       })
+      postResults()
       router.push(`/modulo/${encodeURIComponent(temaKey)}/resultado?correct=${correctCount}&total=${questions.length}`)
     } else {
       setIndex((n) => n + 1)

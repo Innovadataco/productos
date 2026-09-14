@@ -96,3 +96,37 @@ docker compose up -d   # levanta en http://127.0.0.1:5018
 4. En el túnel Cloudflare del VPS, rutea `pr.innovadataco.com` a `http://127.0.0.1:5018`.
 
 **No olvidar:** cualquier cambio requiere `npm run build` + `docker compose up -d` (o `docker compose restart`) para regenerar `./dist`.
+
+## Webhook de resultados (Google Apps Script)
+
+La app puede enviar cada resultado de quiz a un webhook para análisis centralizado.
+
+### 1. Deploy del webhook
+
+1. Abre el Sheet (`SHEET_ID`) → **Extensiones → Apps Script**.
+2. Crea un archivo nuevo y pega el contenido de `scripts/webhook_resultados.gs`.
+3. **Implementar → Nueva implementación → Aplicación web**.
+4. Configura:
+   - Ejecutar como: **Yo**
+   - Acceso: **Cualquier persona**
+5. Copia la URL de la aplicación web.
+
+El webhook creará/escribirá en la pestaña `resultados` con estas columnas:
+`timestamp | perfil | tema | correctas | total | porcentaje | falladas | duracion_seg`.
+
+### 2. Configurar la app
+
+Crea o edita `.env.local` en la raíz del proyecto:
+
+```bash
+NEXT_PUBLIC_RESULTS_WEBHOOK=https://script.google.com/macros/s/XXXXXXXX/exec
+```
+
+Luego reconstruye:
+
+```bash
+npm run build
+docker compose up -d
+```
+
+El POST es fire-and-forget (`mode: 'no-cors'`); si falla, el resultado igual queda en `localStorage`.
