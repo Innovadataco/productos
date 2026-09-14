@@ -54,8 +54,9 @@
  * NO CUBIERTO (medido, para radicar aparte): la exclusión SPEC-655 cubre el DIRECTORIO del padre,
  * NO la cola del verificador (`verificador-repository.ts:48-49` lista `estado=EN_REVISION` sin
  * exclusión de sembrados). El fixture EN_REVISION APARECE en la cola: un verificador podría
- * aprobarlo y consumirlo. Este sembrador lo RESTAURA en cada despliegue (idempotencia converge el
- * estado), pero el arreglo de fondo (excluir sembrados de la cola) es otra SPEC.
+ * aprobarlo y consumirlo. Este sembrador lo RESTAURA cada vez que SE CORRE —lo corre el CEO a
+ * mano, NO está cableado al despliegue; si un verificador lo consume un martes, sigue consumido
+ * hasta que alguien lo vuelva a correr—; el arreglo de fondo (excluir sembrados de la cola) es otra SPEC.
  *
  * Datos gatea la semilla (su carril). La corre en PRODUCCIÓN el CEO — NO contra prod a mano.
  *
@@ -181,7 +182,7 @@ async function upsertUsuarioDemo(
     // Idempotencia del hash según el acceso:
     //  - login: re-hashea SOLO si la clave del entorno cambió.
     //  - sin-acceso: si el hash actual FUERA usable con la clave del entorno (estado de un
-    //    despliegue previo, buggy), lo re-hashea a algo inutilizable (auto-sanación); si ya es
+    //    corrida previa, buggy), lo re-hashea a algo inutilizable (auto-sanación); si ya es
     //    inutilizable, lo deja (idempotente, no re-hashea en cada corrida).
     const usableConEntorno = await verifyPassword(
         acceso.tipo === "login" ? acceso.secreto : acceso.secretoAEvitar,
