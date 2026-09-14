@@ -19,3 +19,5 @@ services:
       # ⚠️ Mount NUEVO: NO basta `docker restart piweb`; requiere `docker compose up -d`
       # para que nginx tome el bind del archivo nuevo.
       - ./modelo/index.html:/usr/share/nginx/html/modelo/index.html:ro
+      # Mapa de arquitectura PI (Archify, HTML autocontenido). Archivo por archivo, igual que modelo.
+      - ./arquitectura/index.html:/usr/share/nginx/html/arquitectura/index.html:ro
