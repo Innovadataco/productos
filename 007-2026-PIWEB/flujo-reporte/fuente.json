@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Flujo de un reporte de punta a punta",
+    "subtitle": "Protección Infantil · reporte comunitario de riesgo",
+    "output": "/tmp/pi-mapas/flujo-reporte.html",
+    "viewBox": [1050, 1000],
+    "column_fit": "spread",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "recepcion", "label": "Recepción y cifrado", "focus": ["padre", "app", "cifrado", "db"], "note": "Validación Zod, cifrado AES-256-GCM y encolado del job." },
+      { "id": "procesamiento-ia", "label": "Procesamiento con IA local", "focus": ["db", "worker", "app", "ollama"], "note": "Advisory lock, embedding, RAG, dedup HNSW y clasificación por votos." },
+      { "id": "revision-agregacion", "label": "Revisión y agregación", "focus": ["app", "resend", "revisor", "db"], "note": "Correo único al padre, revisión humana y agregación por umbrales." },
+      { "id": "consulta-publica", "label": "Consulta pública", "focus": ["padre", "app", "db"], "note": "Solo estadísticas agregadas: «N reportes registrados»." }
+    ]
+  },
+  "participants": [
+    { "id": "padre", "type": "external", "label": "Padre/Anónimo", "sublabel": "navegador" },
+    { "id": "app", "type": "backend", "label": "pi-app", "sublabel": "Next API" },
+    { "id": "cifrado", "type": "security", "label": "Cifrado", "sublabel": "DEK/KEK" },
+    { "id": "db", "type": "database", "label": "pi-db", "sublabel": "Postgres+pg-boss" },
+    { "id": "worker", "type": "backend", "label": "pi-worker", "sublabel": "advisory lock" },
+    { "id": "ollama", "type": "cloud", "label": "Ollama", "sublabel": "IA local" },
+    { "id": "resend", "type": "messagebus", "label": "Resend", "sublabel": "correo" },
+    { "id": "revisor", "type": "external", "label": "Revisor", "sublabel": "OPERADOR/ADMIN" }
+  ],
+  "segments": [
+    { "from": 150, "to": 248, "label": "Recepción y cifrado" },
+    { "from": 256, "to": 468, "label": "Procesamiento con IA local" },
+    { "from": 476, "to": 568, "label": "Revisión humana" },
+    { "from": 576, "to": 672, "label": "Agregación y consulta pública" }
+  ],
+  "messages": [
+    { "from": "padre", "to": "app", "y": 170, "label": "POST /api/reportes", "variant": "emphasis", "note": "Zod + rate-limit; padre autenticado: hijoId y nuevo expedienteId" },
+    { "from": "app", "to": "padre", "y": 202, "label": "201 RPT-XXXX", "variant": "return" },
+    { "from": "app", "to": "cifrado", "y": 234, "label": "cifra AES-256-GCM", "variant": "security", "note": "DEK por denuncia envuelta por KEK" },
+    { "from": "app", "to": "db", "y": 266, "label": "INSERT Reporte", "variant": "emphasis", "note": "Encola job pg-boss «reporte-procesamiento»" },
+    { "from": "db", "to": "worker", "y": 298, "label": "job reporte-procesamiento", "note": "Advisory lock: un solo worker activo" },
+    { "from": "worker", "to": "app", "y": 330, "label": "POST /api/reportes/procesar", "variant": "security", "note": "Header X-Worker-Secret; verifica salud de Ollama" },
+    { "from": "app", "to": "ollama", "y": 362, "label": "embedding nomic-embed-text" },
+    { "from": "app", "to": "db", "y": 394, "label": "RAG + dedup HNSW", "note": "Ejemplos corregidos; deduplicación por similitud (pgvector)" },
+    { "from": "app", "to": "ollama", "y": 426, "label": "clasificación por votos", "variant": "emphasis", "note": "Rúbrica: gemma2:27b + qwen2.5:14b + aya-expanse:32b" },
+    { "from": "app", "to": "db", "y": 458, "label": "detecta PII y anonimiza", "variant": "security", "note": "Doxing detectado → REQUIERE_ANONIMIZACION" },
+    { "from": "app", "to": "db", "y": 490, "label": "guarda estado final", "variant": "emphasis", "note": "Uno de los seis estados finales posibles" },
+    { "from": "app", "to": "resend", "y": 522, "label": "correo único al padre", "variant": "dashed", "note": "Sin correos por lecturas internas" },
+    { "from": "revisor", "to": "app", "y": 554, "label": "revisa / corrige", "note": "Bandeja OPERADOR/ADMIN/COMITE; procesados solo lectura" },
+    { "from": "app", "to": "db", "y": 586, "label": "agrega identificador", "variant": "emphasis", "note": "IdentificadorReportado según umbrales ParametroSistema" },
+    { "from": "padre", "to": "app", "y": 618, "label": "GET /api/consulta", "note": "Consulta pública de un identificador" },
+    { "from": "app", "to": "padre", "y": 650, "label": "«N reportes registrados»", "variant": "return", "note": "Solo estadísticas agregadas; presunción de inocencia" }
+  ],
+  "activations": [
+    { "participant": "app", "from": 168, "to": 272, "type": "backend" },
+    { "participant": "cifrado", "from": 230, "to": 250, "type": "security" },
+    { "participant": "db", "from": 262, "to": 310, "type": "database" },
+    { "participant": "worker", "from": 290, "to": 348, "type": "backend" },
+    { "participant": "app", "from": 328, "to": 530, "type": "backend" },
+    { "participant": "ollama", "from": 355, "to": 375, "type": "cloud" },
+    { "participant": "db", "from": 385, "to": 405, "type": "database" },
+    { "participant": "ollama", "from": 418, "to": 440, "type": "cloud" },
+    { "participant": "db", "from": 455, "to": 510, "type": "database" },
+    { "participant": "resend", "from": 516, "to": 536, "type": "messagebus" },
+    { "participant": "revisor", "from": 546, "to": 566, "type": "external" },
+    { "participant": "app", "from": 584, "to": 662, "type": "backend" },
+    { "participant": "db", "from": 582, "to": 606, "type": "database" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Cifrado del contenido", "items": ["AES-256-GCM con DEK por denuncia", "La DEK se envuelve con la KEK", "El texto original nunca se expone"] },
+    { "dot": "cyan", "title": "IA 100 % local", "items": ["Embeddings y clasificación en Ollama local", "Votos: gemma2:27b · qwen2.5:14b · aya-expanse:32b", "Ningún texto sale a APIs de terceros"] },
+    { "dot": "emerald", "title": "Presunción de inocencia", "items": ["La consulta devuelve solo estadísticas agregadas", "Lenguaje descriptivo: «N reportes registrados»", "Sin datos personales ni textos de reportes"] },
+    { "dot": "violet", "title": "Estados finales", "items": ["CLASIFICADO · CORREGIDO", "REVISION_MANUAL · POSIBLE_SPAM", "DUPLICADO · REQUIERE_ANONIMIZACION"] }
+  ]
+}

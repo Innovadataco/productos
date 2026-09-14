@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Mapa de navegación de pantallas",
+    "subtitle": "Protección Infantil — rutas por rol y guardas de acceso (proxy.ts)",
+    "output": "navegacion-pantallas.html",
+    "quality_profile": "showcase",
+    "viewBox": [1180, 760],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": { "label": "Pantalla" },
+        "security": { "label": "Guarda de acceso" }
+      }
+    },
+    "views": [
+      {
+        "id": "vista-padre",
+        "label": "Vista padre",
+        "focus": ["portada", "consulta", "reportar", "acceso", "consentimiento", "motor", "padre-inicio", "padre-gestion", "padre-exp", "padre-perfil"],
+        "note": "De la zona pública al tablero del padre, pasando por el motor de guardas."
+      },
+      {
+        "id": "vista-operador",
+        "label": "Vista operador",
+        "focus": ["acceso", "motor", "operador"],
+        "note": "Entrada con sesión de operador: bandeja accionable y caso asignado."
+      },
+      {
+        "id": "vista-admin",
+        "label": "Vista admin",
+        "focus": ["acceso", "motor", "admin"],
+        "note": "Entrada con sesión de admin o comité: bandeja global y módulos."
+      }
+    ]
+  },
+  "components": [
+    { "id": "portada", "type": "frontend", "label": "Portada", "sublabel": "/", "pos": [60, 90], "size": [160, 64] },
+    { "id": "consulta", "type": "frontend", "label": "Consulta pública", "sublabel": "estadísticas agregadas", "pos": [60, 210], "size": [160, 64] },
+    { "id": "reportar", "type": "frontend", "label": "Reportar", "sublabel": "anónimo o con cuenta", "pos": [60, 330], "size": [160, 64] },
+    { "id": "acceso", "type": "security", "label": "Acceso", "sublabel": "/login · /registro", "pos": [60, 480], "size": [160, 64], "tag": "JWT 24 h" },
+    { "id": "consentimiento", "type": "frontend", "label": "Consentimiento", "sublabel": "/consentimiento", "pos": [60, 620], "size": [160, 64] },
+    { "id": "motor", "type": "security", "label": "Motor de guardas", "sublabel": "proxy.ts", "pos": [330, 430], "size": [180, 84], "tag": "4 reglas" },
+    { "id": "padre-inicio", "type": "frontend", "label": "Padre · inicio", "sublabel": "/dashboard/padre", "pos": [660, 80], "size": [180, 64] },
+    { "id": "padre-gestion", "type": "frontend", "label": "Padre · gestión", "sublabel": "hijos · citas · apoyo", "pos": [660, 216], "size": [180, 64] },
+    { "id": "padre-exp", "type": "frontend", "label": "Padre · expedientes", "sublabel": "detalle · 5 bloques", "pos": [660, 352], "size": [180, 64] },
+    { "id": "padre-perfil", "type": "frontend", "label": "Padre · mi perfil", "sublabel": "info · notif · plan", "pos": [660, 488], "size": [180, 64] },
+    { "id": "operador", "type": "frontend", "label": "Operador", "sublabel": "bandeja · caso", "pos": [930, 150], "size": [180, 64] },
+    { "id": "admin", "type": "frontend", "label": "Admin · comité", "sublabel": "5 módulos", "pos": [930, 330], "size": [180, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Zona pública", "wraps": ["portada", "consulta", "reportar", "acceso", "consentimiento"], "pad": 16 },
+    { "kind": "region", "label": "Área padre", "wraps": ["padre-inicio", "padre-gestion", "padre-exp", "padre-perfil"], "pad": 16 },
+    { "kind": "region", "label": "Área operador", "wraps": ["operador"], "pad": 16 },
+    { "kind": "region", "label": "Área admin · comité", "wraps": ["admin"], "pad": 16 },
+    { "kind": "security-group", "label": "Guardas de acceso · proxy.ts", "wraps": ["motor"], "pad": 16 }
+  ],
+  "connections": [
+    { "id": "nav-portada-consulta", "from": "portada", "to": "consulta", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "id": "nav-consulta-reportar", "from": "consulta", "to": "reportar", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "id": "nav-reportar-acceso", "from": "reportar", "to": "acceso", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "id": "oauth-consentimiento", "from": "acceso", "to": "consentimiento", "fromSide": "bottom", "toSide": "top", "route": "straight", "label": "OAuth nuevo", "variant": "emphasis", "labelAt": [176, 570] },
+    { "id": "guard-anon-login", "from": "motor", "to": "acceso", "fromSide": "left", "toSide": "right", "via": [[280, 472], [280, 512]], "label": "anónimo/huérfana", "variant": "security", "labelAt": [250, 455] },
+    { "id": "guard-home-padre", "from": "motor", "to": "padre-inicio", "fromSide": "top", "toSide": "left", "via": [[420, 112]], "label": "SPEC-602 → home padre", "variant": "security", "labelAt": [540, 124] },
+    { "id": "guard-home-operador", "from": "motor", "to": "operador", "fromSide": "right", "toSide": "left", "via": [[560, 472], [560, 182]], "label": "SPEC-602 → home operador", "variant": "security", "labelAt": [745, 196] },
+    { "id": "guard-home-admin", "from": "motor", "to": "admin", "fromSide": "bottom", "toSide": "bottom", "via": [[420, 600], [1020, 600]], "label": "SPEC-602 → home admin", "variant": "security", "labelAt": [948, 497] }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Reglas del motor (proxy.ts)",
+      "items": [
+        "Sesión huérfana → trata como anónima y limpia cookies (SPEC-603)",
+        "Autenticado en /login o /registro → redirect al home de su rol (SPEC-602)",
+        "OAuth Google nuevo → aterriza en /consentimiento (SPEC-588)",
+        "Anónimo que pide /dashboard/* → /login"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Zona pública (sin sesión)",
+      "items": [
+        "Portada, consulta de estadísticas agregadas y reporte de riesgo",
+        "El reporte admite anónimo o cuenta; el acceso usa JWT de 24 h",
+        "Toda pantalla muestra Línea 141 ICBF, CAI Virtual y Te Protejo"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Área padre · /dashboard/padre",
+      "items": [
+        "Inicio, reportar y expedientes; expediente/[id] con 5 bloques",
+        "Hijos (círculo de confianza), citas y encontrar psicólogo",
+        "Mi perfil en 3 acordeones: información, notificaciones y suscripción",
+        "A quién protejo · a quién vigilo"
+      ]
+    }
+  ]
+}

@@ -21,3 +21,9 @@ services:
       - ./modelo/index.html:/usr/share/nginx/html/modelo/index.html:ro
       # Mapa de arquitectura PI (Archify, HTML autocontenido). Archivo por archivo, igual que modelo.
       - ./arquitectura/index.html:/usr/share/nginx/html/arquitectura/index.html:ro
+      # Mapas detallados PI (Archify, autocontenidos). Archivo por archivo, igual que modelo.
+      - ./flujo-reporte/index.html:/usr/share/nginx/html/flujo-reporte/index.html:ro
+      - ./ciclo-vida/index.html:/usr/share/nginx/html/ciclo-vida/index.html:ro
+      - ./navegacion/index.html:/usr/share/nginx/html/navegacion/index.html:ro
+      - ./cifrado/index.html:/usr/share/nginx/html/cifrado/index.html:ro
+      - ./datos/index.html:/usr/share/nginx/html/datos/index.html:ro

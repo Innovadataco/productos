@@ -1,0 +1,372 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Ciclo de vida del reporte",
+    "output": "/tmp/pi-mapas/ciclo-vida-reporte.html",
+    "viewBox": [
+      940,
+      700
+    ],
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "ruta-feliz",
+        "label": "Ruta feliz",
+        "focus": [
+          "pendiente",
+          "procesando",
+          "clasificado"
+        ],
+        "note": "El reporte se recibe, la IA local lo clasifica y queda en estado final."
+      },
+      {
+        "id": "revision-humana",
+        "label": "Revisión humana",
+        "focus": [
+          "revision_manual",
+          "corregido",
+          "agregado",
+          "visible"
+        ],
+        "note": "Confianza baja o corrección: un humano revisa y habilita la agregación pública."
+      },
+      {
+        "id": "descartes-ia",
+        "label": "Descartes de la IA",
+        "focus": [
+          "procesando",
+          "posible_spam",
+          "duplicado",
+          "anonimizacion"
+        ],
+        "note": "Spam, duplicado o PII/doxing: cierres sin agregación pública."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Ciclo del reporte"
+    },
+    {
+      "id": "revision",
+      "label": "Revisión humana"
+    },
+    {
+      "id": "salida",
+      "label": "Agregación y consulta"
+    },
+    {
+      "id": "descartes",
+      "label": "Descartes de la IA"
+    }
+  ],
+  "states": [
+    {
+      "id": "pendiente",
+      "type": "start",
+      "label": "Pendiente",
+      "sublabel": "a la espera",
+      "lane": "main",
+      "col": 0,
+      "width": 100,
+      "step": "01",
+      "tag": "entrada"
+    },
+    {
+      "id": "procesando",
+      "type": "active",
+      "label": "Procesando",
+      "sublabel": "IA local (Ollama)",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "worker"
+    },
+    {
+      "id": "clasificado",
+      "type": "success",
+      "label": "Clasificado",
+      "sublabel": "categoría asignada",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "final"
+    },
+    {
+      "id": "revision_manual",
+      "type": "decision",
+      "label": "Revisión manual",
+      "sublabel": "OPERADOR/COMITÉ",
+      "lane": "revision",
+      "col": 1,
+      "width": 116,
+      "tag": "umbral"
+    },
+    {
+      "id": "corregido",
+      "type": "active",
+      "label": "Corregido",
+      "sublabel": "corrección humana",
+      "lane": "revision",
+      "col": 2,
+      "yOffset": 100,
+      "tag": "humano"
+    },
+    {
+      "id": "agregado",
+      "type": "decision",
+      "label": "Agregación",
+      "sublabel": "Identificador",
+      "lane": "salida",
+      "col": 1,
+      "yOffset": 100,
+      "width": 116,
+      "tag": "umbral"
+    },
+    {
+      "id": "visible",
+      "type": "success",
+      "label": "Consulta pública",
+      "sublabel": "estadísticas agregadas",
+      "lane": "salida",
+      "col": 1,
+      "yOffset": 200,
+      "width": 150,
+      "tag": "público"
+    },
+    {
+      "id": "posible_spam",
+      "type": "failure",
+      "label": "Posible spam",
+      "sublabel": "marcado por la IA",
+      "lane": "descartes",
+      "col": 0,
+      "tag": "cierre"
+    },
+    {
+      "id": "duplicado",
+      "type": "failure",
+      "label": "Duplicado",
+      "sublabel": "similitud semántica",
+      "lane": "descartes",
+      "col": 2,
+      "tag": "cierre"
+    },
+    {
+      "id": "anonimizacion",
+      "type": "waiting",
+      "label": "Requiere anonimización",
+      "sublabel": "detecta PII / doxing",
+      "lane": "descartes",
+      "col": 0,
+      "yOffset": 100,
+      "width": 150,
+      "tag": "cierre"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "ia-revision",
+      "from": "procesando",
+      "to": "revision_manual",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          248,
+          258
+        ],
+        [
+          556,
+          258
+        ]
+      ],
+      "label": "confianza baja",
+      "labelAt": [
+        470,
+        264
+      ],
+      "cornerRadius": 0
+    },
+    {
+      "id": "ia-spam",
+      "from": "procesando",
+      "to": "posible_spam",
+      "fromSide": "left",
+      "toSide": "left",
+      "via": [
+        [
+          163,
+          157
+        ],
+        [
+          163,
+          307
+        ]
+      ],
+      "cornerRadius": 0
+    },
+    {
+      "id": "ia-duplicado",
+      "from": "procesando",
+      "to": "duplicado",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          330,
+          157
+        ],
+        [
+          330,
+          240
+        ],
+        [
+          710,
+          240
+        ]
+      ],
+      "label": "similitud semántica alta",
+      "labelAt": [
+        546,
+        232
+      ],
+      "cornerRadius": 0
+    },
+    {
+      "id": "ia-anonimizacion",
+      "from": "procesando",
+      "to": "anonimizacion",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "via": [
+        [
+          248,
+          90
+        ],
+        [
+          820,
+          90
+        ],
+        [
+          820,
+          560
+        ],
+        [
+          402,
+          560
+        ]
+      ],
+      "variant": "security",
+      "cornerRadius": 0
+    },
+    {
+      "id": "revision-agregacion",
+      "from": "revision_manual",
+      "to": "agregado",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "label": "revisión humana",
+      "labelAt": [
+        556,
+        350
+      ]
+    },
+    {
+      "id": "corrige-categoria",
+      "from": "revision_manual",
+      "to": "corregido",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          636,
+          307
+        ],
+        [
+          636,
+          342
+        ],
+        [
+          710,
+          342
+        ]
+      ],
+      "label": "corrige categoría",
+      "labelAt": [
+        674,
+        350
+      ],
+      "cornerRadius": 0
+    },
+    {
+      "id": "corregido-agregacion",
+      "from": "corregido",
+      "to": "agregado",
+      "fromSide": "bottom",
+      "toSide": "right",
+      "via": [
+        [
+          710,
+          520
+        ],
+        [
+          636,
+          520
+        ],
+        [
+          636,
+          407
+        ]
+      ],
+      "label": "revisión humana",
+      "labelAt": [
+        680,
+        512
+      ],
+      "cornerRadius": 0
+    },
+    {
+      "id": "umbral-visible",
+      "from": "agregado",
+      "to": "visible",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "label": "supera umbral",
+      "labelAt": [
+        556,
+        450
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Evidencia protegida",
+      "items": [
+        "El texto original del reporte NUNCA se modifica: es evidencia"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Trazabilidad total",
+      "items": [
+        "Toda transición queda registrada en TransicionReporte",
+        "Las acciones críticas quedan registradas en AuditLog"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Agregación y consulta",
+      "items": [
+        "La agregación se guarda en IdentificadorReportado",
+        "El umbral es configurable en ParametroSistema",
+        "Lo revisan OPERADOR, ADMIN y COMITÉ de validación"
+      ]
+    }
+  ]
+}
