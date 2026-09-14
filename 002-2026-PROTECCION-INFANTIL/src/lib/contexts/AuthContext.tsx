@@ -14,9 +14,10 @@ type User = {
      * condicionan a ESTO — nunca se recalcula el estado en el cliente: dos lugares
      * que deciden si alguien está habilitado terminan en desacuerdo. `habilitado`
      * es el portón operativo (ACTIVO ∧ vigente); `estado` es el enum del perfil.
-     * Ausente para roles no profesionales, o antes de que 690 lo publique.
+     * Ausente para roles no profesionales; `estado: null` cuando aún no hay perfil
+     * (contrato de SPEC-690-A: `/api/me` → `{ estado, habilitado }` solo para PROFESIONAL).
      */
-    profesional?: { estado: string; habilitado: boolean } | null;
+    profesional?: { estado: string | null; habilitado: boolean } | null;
 };
 
 type AuthCtx = {

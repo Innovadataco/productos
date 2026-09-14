@@ -15,10 +15,10 @@
  *  · RECHAZADO no se produce nunca (el ciclo devuelve MAS_INFORMACION, no rechaza —
  *    verificador/service.ts). Se maneja a la DEFENSIVA: sin nada operativo, sin
  *    recorrido propio.
- *  · SUSPENDIDO: la pantalla se construye, pero el CUERPO explicativo queda PENDIENTE
- *    de Diseño (no hay equipo avisado ni acción para levantarlo; la regla que la pone
- *    la apaga SPEC-692 · I-417). No se inventa ni se usa el texto del documento. Solo
- *    lo decidido: insignia neutra, título, solo lectura, y el canal de contacto real.
+ *  · SUSPENDIDO: copy aprobada por Diseño (Gestión 17c375e/8d9ecf2), verbatim — la
+ *    causa como hecho (tres citas vencidas sin respuesta), sin culpar al profesional
+ *    (no le avisamos), y la salida real (el equipo lo levanta vía contacto). Insignia
+ *    neutra, solo lectura, sin reenviar. La acción del administrador va en SPEC-692.
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -51,7 +51,7 @@ const TITULO: Record<Vista["estadoPerfil"], string> = {
     ACTIVO: "Su perfil está activo",
     VENCIDO: "Su verificación venció.",
     RECHAZADO: "Su solicitud no fue aprobada.",
-    SUSPENDIDO: "Su cuenta está suspendida.",
+    SUSPENDIDO: "Su perfil profesional está suspendido",
 };
 
 export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista }) {
@@ -125,19 +125,20 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
 
             {vista.estadoPerfil === "SUSPENDIDO" && (
                 <div className="glass rounded-2xl p-6 space-y-3">
-                    {/* SPEC-691 · el CUERPO explicativo lo escribe Diseño (SPEC-692 · I-417):
-                        no hay equipo avisado ni acción de reenvío. NO se inventa ni se usa el
-                        texto del documento («el equipo lo revisa y se comunicará»). Aquí solo
-                        lo decidido: solo lectura + el canal de contacto real. */}
+                    {/* SPEC-691 · copy aprobada por Diseño (Gestión 17c375e/8d9ecf2), verbatim:
+                        la causa como HECHO, sin culpar al profesional (no le avisamos), y la
+                        salida real (el equipo lo levanta). Solo lectura, sin reenviar. */}
                     <p className="cuerpo text-body">
-                        Su actividad está pausada. Esto no se resuelve desde aquí.
+                        Tres solicitudes de cita seguidas vencieron sin respuesta. Cuando llegaron esas solicitudes
+                        no le enviamos ningún aviso, así que es muy probable que no las haya visto — no fue un
+                        descuido suyo.
                     </p>
                     <p className="cuerpo text-subtle">
-                        Si necesita más información, escríbanos a{" "}
+                        Para reactivar su perfil, escríbanos a{" "}
                         <a href={`mailto:${CONTACTO_SUSPENSION}`} className="font-medium text-accent hover:underline">
                             {CONTACTO_SUSPENSION}
-                        </a>
-                        .
+                        </a>{" "}
+                        y el equipo lo levanta.
                     </p>
                 </div>
             )}

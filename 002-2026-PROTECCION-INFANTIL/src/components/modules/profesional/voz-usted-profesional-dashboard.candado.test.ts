@@ -134,7 +134,7 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         // SPEC-691 · las pantallas nuevas por estado, en usted (mueren si se revierten).
         expect(verif).toContain("Su verificación venció.");
         expect(verif).toContain("actualice el documento que");
-        expect(verif).toContain("Su cuenta está suspendida.");
+        expect(verif).toContain("Su perfil profesional está suspendido");
 
         // vetados (tú) — mueren si reaparecen
         for (const veto of ["Tu tarifa", "te entrega en la sesión", "ves quién te lo", "Revisa tu conexión", "según tu ficha", "agendar contigo", "Le compartió".replace("Le", "Te"), "Te avisamos"]) {

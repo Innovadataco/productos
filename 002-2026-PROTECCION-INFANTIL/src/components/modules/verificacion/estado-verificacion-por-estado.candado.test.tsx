@@ -39,7 +39,7 @@ describe("SPEC-691 · «Mi estado»: la pantalla por estado (nunca rubí en esta
 
     it("SUSPENDIDO: título propio, insignia NEUTRA (ni rubí ni ámbar), SOLO LECTURA y contacto real", () => {
         montar("SUSPENDIDO", false);
-        expect(screen.getByText("Su cuenta está suspendida.")).toBeTruthy();
+        expect(screen.getByText("Su perfil profesional está suspendido")).toBeTruthy();
         const insignia = screen.getByText("Suspendida");
         expect(insignia.className).not.toContain("text-estado-rubi");
         expect(insignia.className, "SUSPENDIDO no ofrece acción → no ámbar de «acción»").not.toContain("text-estado-ambar");
@@ -69,6 +69,6 @@ describe("SPEC-691 · «Mi estado»: la pantalla por estado (nunca rubí en esta
         cleanup();
         montar("SUSPENDIDO", false);
         expect(screen.queryByText("Su verificación venció.")).toBeNull();
-        expect(screen.getByText("Su cuenta está suspendida.")).toBeTruthy();
+        expect(screen.getByText("Su perfil profesional está suspendido")).toBeTruthy();
     });
 });
