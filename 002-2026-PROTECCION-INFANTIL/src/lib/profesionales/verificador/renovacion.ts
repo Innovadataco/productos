@@ -23,6 +23,90 @@ import { VerificadorRepository } from "@/lib/dal/repositories/verificador-reposi
 import { DocumentoProfesionalRepository } from "@/lib/dal/repositories/documento-profesional";
 import { leerRequisitosVerificacion } from "./requisitos";
 
+// ────────────────────────────────────────────────────────────────────────────
+// Pantalla de comparar — el documento vigente y el nuevo, lado a lado
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface DocumentoNuevoComparacion {
+    perfilProfesionalId: string;
+    profesional: { nombreVisible: string; tituloProfesional: string; ciudadNombre: string };
+    requisitoClave: string;
+    requisitoNombre: string;
+    /** Vigencia actual (la pantalla la DICE: «la fecha sigue igual: {venceEn}»). */
+    venceEn: string | null;
+    vigente: { subidoEn: string; aprobadoEn: string | null; aprobadoPor: string | null };
+    nuevo: { subidoEn: string };
+}
+
+/**
+ * SPEC-693 · datos de la pantalla «documento nuevo» de un requisito: el vigente y el
+ * pendiente lado a lado. Solo para profesionales ACTIVOS con una versión pendiente y una
+ * vigente (FORMA §5: sin vigente NO es un documento nuevo, es una solicitud incompleta;
+ * sin pendiente, ya lo decidió otro). Lanza el error que la pantalla traduce a «volver».
+ */
+export async function abrirDocumentoNuevo(
+    perfilProfesionalId: string,
+    requisitoClave: string,
+): Promise<DocumentoNuevoComparacion> {
+    const perfil = await new VerificadorRepository().obtenerFicha(perfilProfesionalId);
+    if (!perfil) throw new AppError("Profesional no encontrado", ERROR_CODES.NOT_FOUND, 404);
+    if (perfil.estado !== "ACTIVO") {
+        throw new AppError(
+            `La revisión de un documento nuevo es solo para profesionales activos (este está ${perfil.estado}).`,
+            ERROR_CODES.VALIDATION_ERROR,
+            409,
+        );
+    }
+
+    const requisitos = await leerRequisitosVerificacion();
+    const requisito = requisitos.find((r) => r.clave === requisitoClave);
+    if (!requisito) {
+        throw new AppError("Ese requisito no existe en la lista configurada.", ERROR_CODES.VALIDATION_ERROR, 400);
+    }
+
+    const docRepo = new DocumentoProfesionalRepository();
+    const [nuevo, vigente] = await Promise.all([
+        docRepo.buscarPendiente(perfilProfesionalId, requisitoClave),
+        docRepo.buscarVigente(perfilProfesionalId, requisitoClave),
+    ]);
+    if (!nuevo) {
+        throw new AppError(
+            "Ya no hay un documento nuevo en revisión para ese requisito — puede que otro lo haya decidido.",
+            ERROR_CODES.VALIDATION_ERROR,
+            409,
+        );
+    }
+    if (!vigente) {
+        throw new AppError(
+            "Este requisito no tiene un documento vigente: es una solicitud incompleta, no un documento nuevo.",
+            ERROR_CODES.VALIDATION_ERROR,
+            409,
+        );
+    }
+
+    // La aprobación vigente: la última verificación APROBADA del perfil (fecha + quién).
+    // Es la vigencia bajo la que atiende hoy; también da `venceEn`.
+    const ultimaAprob = perfil.verificaciones.find((v) => v.resultado === "APROBADO");
+
+    return {
+        perfilProfesionalId: perfil.id,
+        profesional: {
+            nombreVisible: perfil.nombreVisible,
+            tituloProfesional: perfil.tituloProfesional,
+            ciudadNombre: perfil.ciudad.nombre,
+        },
+        requisitoClave,
+        requisitoNombre: requisito.nombre,
+        venceEn: ultimaAprob?.venceEn.toISOString() ?? null,
+        vigente: {
+            subidoEn: vigente.subidoEn.toISOString(),
+            aprobadoEn: ultimaAprob?.revisadoEn.toISOString() ?? null,
+            aprobadoPor: ultimaAprob?.revisadoPor.email ?? null,
+        },
+        nuevo: { subidoEn: nuevo.subidoEn.toISOString() },
+    };
+}
+
 export const revisarRenovacionSchema = z.object({
     requisitoClave: z.string().min(1),
     decision: z.enum(["APROBAR", "DEVOLVER"]),

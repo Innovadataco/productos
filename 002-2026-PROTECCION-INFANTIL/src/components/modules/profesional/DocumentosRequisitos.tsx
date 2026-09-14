@@ -19,6 +19,8 @@ interface EstadoDocumento {
     nombre: string;
     descripcion: string;
     cargado: boolean;
+    /** SPEC-693: subiste una versión nueva que está esperando revisión. */
+    enRevision: boolean;
     extension: string | null;
     subidoEn: string | null;
 }
@@ -113,7 +115,12 @@ export function DocumentosRequisitos() {
                 >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <p className="text-sm font-semibold text-body">{d.nombre}</p>
-                        {d.cargado ? (
+                        {d.enRevision ? (
+                            // SPEC-693 (FORMA §3): subió una versión nueva; sigue activo mientras se revisa.
+                            <span className="text-xs font-medium text-estado-ambar">
+                                En revisión — enviaste un documento nuevo
+                            </span>
+                        ) : d.cargado ? (
                             <span className="flex items-center gap-1 text-xs text-body">
                                 <IconCheck />
                                 Cargado

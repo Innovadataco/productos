@@ -51,6 +51,9 @@ export const SUPERFICIE_GET_MUTA: readonly EntradaGetMuta[] = [
     // Páginas (Server Components) que escriben al RENDERIZAR — solo auditan (no crean registro).
     { archivo: "src/app/reportar/layout.tsx", tipo: "page-render", tier: "C-audit-log", razon: "logAudit REPORTE_SIN_SUSCRIPCION al render" },
     { archivo: "src/app/dashboard/admin/verificacion/[id]/page.tsx", tipo: "page-render", tier: "C-audit-log", razon: "logAudit PROFESIONAL_VERIFICACION_CONSULTADO al render" },
+    // SPEC-693: la pantalla «documento nuevo» audita la apertura al render, igual que la ficha
+    // (documento reservado, Ley 1918/2018 · 2375/2024 §5: cada apertura queda auditada).
+    { archivo: "src/app/dashboard/admin/verificacion/documento-nuevo/[id]/[clave]/page.tsx", tipo: "page-render", tier: "C-audit-log", razon: "logAudit PROFESIONAL_VERIFICACION_CONSULTADO al render (apertura de documento nuevo)" },
 ] as const;
 
 /** Índice por archivo, para el candado. */

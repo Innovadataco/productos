@@ -113,6 +113,7 @@ export interface FilaRenovacion {
     profesionalId: string; // = perfil.id, el [id] de la ruta de renovación
     nombreVisible: string;
     email: string;
+    tituloProfesional: string;
     ciudadNombre: string;
     /**
      * Vigencia actual del profesional. La vista pinta la franja ÁMBAR si vence en ≤30
@@ -159,6 +160,7 @@ export async function listarRenovaciones(): Promise<FilaRenovacion[]> {
             profesionalId: p.id,
             nombreVisible: p.nombreVisible,
             email: p.usuario.email,
+            tituloProfesional: p.tituloProfesional,
             ciudadNombre: p.ciudad.nombre,
             venceEn: p.verificaciones[0]?.venceEn.toISOString() ?? null,
             requisitos: requisitosPendientes,

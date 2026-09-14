@@ -31,7 +31,7 @@ function tiempoRelativo(iso: string): string {
     return `hace ${d} días`;
 }
 
-export function VerificacionColaClient() {
+export function VerificacionColaClient({ onLoaded }: { onLoaded?: (n: number) => void } = {}) {
     const [filas, setFilas] = useState<FilaCola[] | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +46,12 @@ export function VerificacionColaClient() {
                     throw new Error(cuerpo?.error?.message ?? `El servidor respondió con un error (HTTP ${res.status}).`);
                 }
                 const json = (await res.json()) as { data: FilaCola[] };
-                if (vivo) setFilas(json.data);
+                if (vivo) {
+                    setFilas(json.data);
+                    // SPEC-693: la pestaña muestra el contador (la cola vive dentro de un
+                    // wrapper de dos colas). Sin prop, no-op — el candado la monta así.
+                    onLoaded?.(json.data.length);
+                }
             } catch (e) {
                 if (vivo) setError(e instanceof Error ? e.message : String(e));
             }
@@ -54,7 +59,7 @@ export function VerificacionColaClient() {
         return () => {
             vivo = false;
         };
-    }, []);
+    }, [onLoaded]);
 
     if (error) {
         return (

@@ -28,11 +28,12 @@ describe("SPEC-619 · candado GET-que-muta (ratchet de la superficie)", () => {
         ).toEqual([]);
     });
 
-    it("forma de la lista: 17 entradas, 2 de ellas páginas al render", () => {
+    it("forma de la lista: 18 entradas, 3 de ellas páginas al render", () => {
         // 18 → 17: SPEC-647/D-136 retiró el login de Google, y con él su callback OAuth (tier oauth-exento),
         // única superficie exenta. `entradasObsoletas()` lo cazó al rebasar #537 sobre el main sin Google.
-        expect(SUPERFICIE_GET_MUTA.length).toBe(17);
-        expect(SUPERFICIE_GET_MUTA.filter((e) => e.tipo === "page-render").length).toBe(2);
+        // 17 → 18 (SPEC-693): la pantalla «documento nuevo» del Verificador audita la apertura al render.
+        expect(SUPERFICIE_GET_MUTA.length).toBe(18);
+        expect(SUPERFICIE_GET_MUTA.filter((e) => e.tipo === "page-render").length).toBe(3);
     });
 
     // Control positivo del propio scanner: los regex de detección se DERIVAN de las listas de nombres, y

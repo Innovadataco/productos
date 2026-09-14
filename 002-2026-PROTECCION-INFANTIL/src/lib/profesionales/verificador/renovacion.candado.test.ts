@@ -20,7 +20,8 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
-import { revisarRenovacion } from "./renovacion";
+import { revisarRenovacion, abrirDocumentoNuevo } from "./renovacion";
+import { listarRenovaciones } from "./service";
 import { estaHabilitado } from "@/lib/profesionales/vigencia";
 import { DocumentoProfesionalRepository } from "@/lib/dal/repositories/documento-profesional";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
@@ -287,5 +288,56 @@ describe("SPEC-693 · renovar devolviendo: exige observación, deja respaldando 
         expect(revisiones[0].resultado).toBe("DEVUELTA");
         expect(revisiones[0].observacion).toContain("borrosa");
         expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).estado).toBe("ACTIVO");
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feeds de las pantallas contra la BD real: la cola «Documentos nuevos» y la
+// comparación. Si el dato no fluye, la pantalla queda con un cajón sin lector.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("SPEC-693 · la cola «Documentos nuevos» solo lista ACTIVOS con versión pendiente", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await sembrarRequisitos();
+    });
+    afterAll(async () => prisma.$disconnect());
+
+    it("un ACTIVO con documento nuevo aparece, con el requisito y venceEn; sin pendiente no aparece", async () => {
+        const conNuevo = await sembrarPerfilActivo(60);
+        await subirVersionNueva(conNuevo.perfil.id, "sha-nueva");
+        const sinNuevo = await sembrarPerfilActivo(60); // solo vigente, sin pendiente
+
+        const filas = await listarRenovaciones();
+        const fila = filas.find((f) => f.profesionalId === conNuevo.perfil.id);
+        expect(fila, "el ACTIVO con documento nuevo debe aparecer").toBeTruthy();
+        expect(fila!.tituloProfesional).toBe("Psicología");
+        expect(fila!.venceEn).not.toBeNull();
+        expect(fila!.requisitos.map((r) => r.clave)).toContain("tarjeta");
+        expect(fila!.requisitos[0].nombre).toBe("Tarjeta profesional"); // del parámetro
+        expect(fila!.requisitos[0].vigente, "trae el vigente para comparar").not.toBeNull();
+
+        expect(filas.find((f) => f.profesionalId === sinNuevo.perfil.id), "sin pendiente NO se lista").toBeUndefined();
+    });
+});
+
+describe("SPEC-693 · abrirDocumentoNuevo alimenta la pantalla de comparar", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await sembrarRequisitos();
+    });
+    afterAll(async () => prisma.$disconnect());
+
+    it("devuelve vigente + nuevo + venceEn; y lanza si ya no hay pendiente", async () => {
+        const { perfil } = await sembrarPerfilActivo(60);
+        await subirVersionNueva(perfil.id, "sha-nueva");
+
+        const comp = await abrirDocumentoNuevo(perfil.id, "tarjeta");
+        expect(comp.requisitoNombre).toBe("Tarjeta profesional");
+        expect(comp.venceEn).not.toBeNull();
+        expect(comp.vigente.subidoEn).toBeTruthy();
+        expect(comp.nuevo.subidoEn).toBeTruthy();
+
+        // Sin versión pendiente (otro requisito), la pantalla no abre: lanza para que diga «volver».
+        await expect(abrirDocumentoNuevo(perfil.id, "tarjeta_inexistente")).rejects.toBeTruthy();
     });
 });

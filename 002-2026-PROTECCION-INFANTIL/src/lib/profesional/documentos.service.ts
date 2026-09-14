@@ -134,8 +134,20 @@ export async function guardarDocumentoDeRequisito(
     });
 }
 
+/**
+ * SPEC-693 (I-416): qué VERSIÓN de un requisito servir. Sin especificar → la de por
+ * defecto (`buscar`: vigente si hay, si no la pendiente) — el comportamiento de siempre.
+ * La pantalla de comparar pide una versión concreta (vigente vs. nuevo) para poder
+ * mostrarlas lado a lado.
+ */
+type VersionDocumento = "vigente" | "nuevo";
+
 /** El `archivoId` de una clave: o la autorización del perfil, o un requisito. */
-async function archivoIdDe(perfilProfesionalId: string, clave: string): Promise<string> {
+async function archivoIdDe(
+    perfilProfesionalId: string,
+    clave: string,
+    version?: VersionDocumento,
+): Promise<string> {
     if (clave === CLAVE_AUTORIZACION) {
         const perfil = await new PerfilProfesionalRepository().findPorId(perfilProfesionalId);
         if (!perfil?.autorizacionArchivoId) {
@@ -143,7 +155,13 @@ async function archivoIdDe(perfilProfesionalId: string, clave: string): Promise<
         }
         return perfil.autorizacionArchivoId;
     }
-    const doc = await new DocumentoProfesionalRepository().buscar(perfilProfesionalId, clave);
+    const repo = new DocumentoProfesionalRepository();
+    const doc =
+        version === "vigente"
+            ? await repo.buscarVigente(perfilProfesionalId, clave)
+            : version === "nuevo"
+                ? await repo.buscarPendiente(perfilProfesionalId, clave)
+                : await repo.buscar(perfilProfesionalId, clave);
     if (!doc) throw new AppError("Sin documento cargado para ese requisito.", ERROR_CODES.NOT_FOUND, 404);
     return doc.archivoId;
 }
@@ -160,8 +178,10 @@ export async function servirDocumento(params: {
     clave: string;
     quienUsuarioId: string;
     comoRol: string;
+    /** SPEC-693: versión concreta (vigente/nuevo); sin ella, la de por defecto. */
+    version?: VersionDocumento;
 }): Promise<DocumentoServido> {
-    const archivoId = await archivoIdDe(params.perfilProfesionalId, params.clave);
+    const archivoId = await archivoIdDe(params.perfilProfesionalId, params.clave, params.version);
     const buffer = await leerAutorizacion(archivoId);
 
     // H-2 · la fila va ANTES de devolver el contenido. Si esto falla, no se
