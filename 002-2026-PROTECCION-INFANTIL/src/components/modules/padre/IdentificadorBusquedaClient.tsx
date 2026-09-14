@@ -49,7 +49,7 @@ export function IdentificadorBusquedaClient({ identificador, expedientes }: Iden
                     maxLength={MAX_IDENTIFICADOR_LENGTH}
                     placeholder="Buscar por cuenta (número, usuario o perfil)"
                     aria-label="Buscar por cuenta"
-                    className="w-full flex-1 rounded-xl border border-cielo/30 bg-white/70 px-4 py-2.5 text-sm text-body placeholder:text-muted focus:border-primary-500 focus:outline-none"
+                    className="w-full flex-1 rounded-xl border border-cielo/30 bg-white/70 px-4 py-2.5 text-sm text-body placeholder:text-muted ring-accent-input"
                 />
                 <Button type="submit">Buscar</Button>
             </form>

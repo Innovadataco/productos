@@ -266,7 +266,7 @@ export function FichaVerificacionClient({ ficha }: { ficha: Ficha }) {
                                         </label>
                                         <textarea
                                             id={`obs-${r.clave}`}
-                                            className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                                            className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body ring-accent-input"
                                             rows={2}
                                             value={item.observacion}
                                             onChange={(e) => setObservacion(r.clave, e.target.value)}
