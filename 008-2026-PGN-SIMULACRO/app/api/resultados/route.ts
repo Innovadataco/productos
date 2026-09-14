@@ -30,13 +30,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const resultadoId = Number(info.lastInsertRowid);
 
-    const insertRespuesta = db.prepare(`
-      INSERT INTO respuestas (resultado_id, pregunta_id, marcada, correcta)
-      VALUES (?, ?, ?, ?)
-    `);
+    const respuestas = body.respuestas ?? [];
+    if (respuestas.length > 0) {
+      const insertRespuesta = db.prepare(`
+        INSERT INTO respuestas (resultado_id, pregunta_id, marcada, correcta)
+        VALUES (?, ?, ?, ?)
+      `);
 
-    for (const r of body.respuestas) {
-      insertRespuesta.run(resultadoId, r.preguntaId, r.marcada, r.correcta);
+      for (const r of respuestas) {
+        insertRespuesta.run(resultadoId, r.preguntaId, r.marcada, r.correcta);
+      }
     }
 
     return NextResponse.json({ id: resultadoId });
