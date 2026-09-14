@@ -40,6 +40,16 @@ vi.mock("@/components/modules/profesional/PanelProfesional", () => ({
         <div data-testid="panel">{JSON.stringify(data)}</div>
     ),
 }));
+// SPEC-691: la Inicio pasa primero por la compuerta `exigirProfesionalHabilitado`
+// (redirige al portero a los NO habilitados, incluido sin-perfil, ANTES del panel).
+// Acá se mockea en modo «pasa» (habilitado) para AISLAR la conducta de SPEC-481: el
+// catch del NOT_FOUND de `panelDelProfesional` queda como defensa en profundidad.
+vi.mock("@/lib/profesionales/guardia-habilitado", () => ({
+    exigirProfesionalHabilitado: async () => ({
+        user: { id: "prof-1", rol: "PROFESIONAL" },
+        hab: { estado: "ACTIVO", habilitado: true },
+    }),
+}));
 
 import ProfesionalInicioPage from "./page";
 
