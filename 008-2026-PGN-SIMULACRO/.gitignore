@@ -12,6 +12,8 @@ out/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 *.db-journal
 
 # Large documents (do not push PDFs to GitHub)

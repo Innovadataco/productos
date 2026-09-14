@@ -1,0 +1,420 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué entidad del orden nacional lidera la formulación de la política de Gobierno Digital en Colombia?",
+      "opciones": [
+        "Ministerio de Tecnologías de la Información y las Comunicaciones (MinTIC)",
+        "Departamento Nacional de Planeación (DNP)",
+        "Agencia Nacional de Defensa Jurídica del Estado",
+        "Superintendencia de Industria y Comercio"
+      ],
+      "respuesta": 0,
+      "explicacion": "El MinTIC es la entidad encargada de formular, adoptar y orientar la política de Gobierno Digital en Colombia, según el Decreto 089 de 2018, con el fin de impulsar la transformación digital del Estado.",
+      "norma": "Decreto 089/2018",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es el propósito principal del Marco de Arquitectura Empresarial (MAE) del MinTIC para las entidades públicas?",
+      "opciones": [
+        "Regular la contratación de servicios de tecnología",
+        "Estandarizar y alinear procesos, datos, aplicaciones e infraestructura con los objetivos institucionales",
+        "Definir los salarios de los funcionarios de sistemas",
+        "Controlar exclusivamente a los proveedores de software privativo"
+      ],
+      "respuesta": 1,
+      "explicacion": "El MAE del MinTIC busca que las entidades públicas diseñen sus soluciones de TI de manera integral, alineando procesos, datos, aplicaciones e infraestructura con los fines institucionales y las políticas nacionales.",
+      "norma": "Marco AE MinTIC",
+      "articulo": "",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué decreto reglamenta el Marco de Interoperabilidad para el Estado Colombiano?",
+      "opciones": [
+        "Decreto 1377 de 2013",
+        "Decreto 089 de 2018",
+        "Decreto 1519 de 2013",
+        "Decreto 1232 de 2020"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1519 de 2013 reglamenta el Marco de Interoperabilidad para el Estado Colombiano, estableciendo los lineamientos técnicos y semánticos para el intercambio de información entre entidades públicas.",
+      "norma": "Decreto 1519/2013",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué significa la sigla MSPI en el ámbito de la seguridad digital del Estado colombiano?",
+      "opciones": [
+        "Manual de Seguridad para Procesos Internos",
+        "Ministerio de Seguridad Pública de la Información",
+        "Marco de Servicios de Protección Informática",
+        "Modelo de Seguridad y Privacidad de la Información"
+      ],
+      "respuesta": 3,
+      "explicacion": "MSPI significa Modelo de Seguridad y Privacidad de la Información, el cual orienta a las entidades públicas en la gestión de riesgos de seguridad y privacidad de sus activos de información.",
+      "norma": "Política de Seguridad Digital MSPI",
+      "articulo": "",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Marco de Interoperabilidad, ¿qué tipo de interoperabilidad se refiere a que los sistemas interpreten el significado de la información de manera compartida?",
+      "opciones": [
+        "Semántica",
+        "Técnica",
+        "Organizativa",
+        "Legal"
+      ],
+      "respuesta": 0,
+      "explicacion": "La interoperabilidad semántica garantiza que el significado de la información intercambiada sea comprensible y utilizable por los sistemas y actores involucrados, mediante vocabularios y modelos de datos comunes.",
+      "norma": "Decreto 1519/2013",
+      "articulo": "Art. 3",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué entidad fue creada por la Ley 1955 de 2019 como reemplazo de la Agencia Presidencial de TIC?",
+      "opciones": [
+        "Agencia Nacional de Defensa Jurídica del Estado",
+        "Ministerio de Tecnologías de la Información y las Comunicaciones (MinTIC)",
+        "Departamento Administrativo de la Función Pública",
+        "Superintendencia de Servicios Públicos Domiciliarios"
+      ],
+      "respuesta": 1,
+      "explicacion": "La Ley 1955 de 2019 creó el Ministerio de Tecnologías de la Información y las Comunicaciones, asumiendo las funciones de la extinta Agencia Presidencial de TIC y liderando la política sectorial.",
+      "norma": "Ley 1955/2019",
+      "articulo": "Art. 80",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál de los siguientes es un principio del Gobierno Digital establecido en el Decreto 089 de 2018?",
+      "opciones": [
+        "Centralización absoluta de los sistemas",
+        "Uso obligatorio de software privativo",
+        "Transparencia",
+        "Reserva de la información pública"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 089 de 2018 establece principios como transparencia, eficiencia, accesibilidad, inclusión, seguridad y participación ciudadana para orientar la gestión digital del Estado colombiano.",
+      "norma": "Decreto 089/2018",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué es OWASP Top 10?",
+      "opciones": [
+        "Un marco de interoperabilidad gubernamental",
+        "Un protocolo de comunicación en redes",
+        "Una norma de contratación estatal internacional",
+        "Una lista de los riesgos de seguridad más críticos en aplicaciones web"
+      ],
+      "respuesta": 3,
+      "explicacion": "OWASP Top 10 es un estándar de facto elaborado por la Open Web Application Security Project que identifica los diez riesgos de seguridad más críticos en aplicaciones web y es ampliamente usado en auditorías de TI.",
+      "norma": "OWASP Top 10",
+      "articulo": "",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es la ley principal que regula la protección de datos personales en Colombia?",
+      "opciones": [
+        "Ley 1581 de 2012",
+        "Ley 527 de 1999",
+        "Ley 1341 de 2009",
+        "Ley 1712 de 2014"
+      ],
+      "respuesta": 0,
+      "explicacion": "La Ley 1581 de 2012 es la norma principal de protección de datos personales en Colombia, desarrollando el derecho constitucional al hábeas data y estableciendo deberes para responsables del tratamiento.",
+      "norma": "Ley 1581/2012",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1581 de 2012, ¿qué principio exige que los datos personales sean utilizados únicamente para los fines autorizados por el titular?",
+      "opciones": [
+        "Calidad",
+        "Finalidad",
+        "Seguridad",
+        "Libertad"
+      ],
+      "respuesta": 1,
+      "explicacion": "El principio de finalidad establece que el tratamiento de datos personales debe realizarse para una finalidad legítima, informada y previamente autorizada por el titular, sin desviarse de dicho propósito.",
+      "norma": "Ley 1581/2012",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme al Decreto 1377 de 2013, ¿quién debe autorizar el tratamiento de datos personales sensibles?",
+      "opciones": [
+        "El responsable del tratamiento por delegación",
+        "La Superintendencia de Industria y Comercio de oficio",
+        "El titular de forma previa, expresa e informada",
+        "El MinTIC en todos los casos"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1377 de 2013 exige autorización previa, expresa e informada del titular para el tratamiento de datos sensibles, salvo las excepciones legales expresamente previstas.",
+      "norma": "Decreto 1377/2013",
+      "articulo": "Art. 6",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué ley regula el comercio electrónico, la firma digital y los mensajes de datos en Colombia?",
+      "opciones": [
+        "Ley 1341 de 2009",
+        "Ley 1581 de 2012",
+        "Ley 1437 de 2011",
+        "Ley 527 de 1999"
+      ],
+      "respuesta": 3,
+      "explicacion": "La Ley 527 de 1999 regula el comercio electrónico, la firma digital y los mensajes de datos, reconociendo su validez legal y los requisitos para su uso en el ámbito colombiano.",
+      "norma": "Ley 527/1999",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué decreto compila y actualiza las normas reglamentarias del sector de Tecnologías de la Información y las Comunicaciones, incluyendo disposiciones de la Ley 1341 de 2009?",
+      "opciones": [
+        "Decreto 1078 de 2015",
+        "Decreto 1519 de 2013",
+        "Decreto 089 de 2018",
+        "Decreto 1377 de 2013"
+      ],
+      "respuesta": 0,
+      "explicacion": "El Decreto 1078 de 2015 es el decreto único reglamentario del sector de TIC y compila normas relacionadas con la Ley 1341 de 2009, facilitando su aplicación por las entidades públicas y privadas.",
+      "norma": "Decreto 1078/2015",
+      "articulo": "Art. 2.2.1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es el objetivo central del Modelo de Seguridad y Privacidad de la Información (MSPI) en el sector público?",
+      "opciones": [
+        "Desarrollar software propio para cada entidad",
+        "Gestionar los riesgos de seguridad y privacidad de la información",
+        "Regular tarifas de servicios de internet",
+        "Capacitar a ciudadanos en competencias digitales"
+      ],
+      "respuesta": 1,
+      "explicacion": "El MSPI proporciona lineamientos para que las entidades públicas identifiquen, evalúen y traten los riesgos de seguridad y privacidad de la información, protegiendo los activos de datos del Estado.",
+      "norma": "Política de Seguridad Digital MSPI",
+      "articulo": "",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según OWASP Top 10, ¿cuál vulnerabilidad ocurre cuando datos no confiables se envían a un intérprete como parte de un comando o consulta?",
+      "opciones": [
+        "Cross-Site Scripting (XSS)",
+        "Pérdida de autenticación",
+        "Inyección",
+        "Exposición de datos sensibles"
+      ],
+      "respuesta": 2,
+      "explicacion": "La inyección ocurre cuando datos hostiles son enviados a un intérprete como parte de comandos o consultas, engañando al intérprete para que ejecute operaciones no previstas y comprometa la aplicación.",
+      "norma": "OWASP Top 10",
+      "articulo": "",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué ley consagra el derecho de acceso a la información pública y establece obligaciones de publicación activa, incluyendo datos abiertos?",
+      "opciones": [
+        "Ley 1581 de 2012",
+        "Ley 527 de 1999",
+        "Ley 1341 de 2009",
+        "Ley 1712 de 2014"
+      ],
+      "respuesta": 3,
+      "explicacion": "La Ley 1712 de 2014 regula el derecho fundamental de acceso a la información pública en Colombia y establece obligaciones de publicación activa, incluyendo la apertura de datos en formatos abiertos.",
+      "norma": "Ley 1712/2014",
+      "articulo": "Art. 13",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Marco de Interoperabilidad, ¿qué tipo de interoperabilidad se refiere a la capacidad de los sistemas para conectarse y comunicarse mediante estándares comunes?",
+      "opciones": [
+        "Técnica",
+        "Semántica",
+        "Organizativa",
+        "Legal"
+      ],
+      "respuesta": 0,
+      "explicacion": "La interoperabilidad técnica se refiere a la capacidad de los sistemas informáticos para conectarse, comunicarse e intercambiar datos mediante estándares y protocolos comunes definidos por el Marco de Interoperabilidad.",
+      "norma": "Decreto 1519/2013",
+      "articulo": "Art. 3",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es uno de los objetivos del Plan Nacional de Desarrollo en materia de transformación digital del Estado?",
+      "opciones": [
+        "Eliminar el uso de tecnologías de la información en el sector público",
+        "Cerrar brechas digitales y mejorar la prestación de servicios a los ciudadanos",
+        "Centralizar todas las tecnologías en una sola entidad nacional",
+        "Prohibir el uso de software libre en entidades públicas"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Plan Nacional de Desarrollo, a través de la Ley 1955 de 2019, planteó la transformación digital para mejorar la eficiencia del Estado, cerrar brechas digitales y facilitar el acceso de los ciudadanos a servicios públicos.",
+      "norma": "Ley 1955/2019",
+      "articulo": "Art. 180",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1232 de 2020, ¿qué se entiende por incidente de seguridad digital?",
+      "opciones": [
+        "Un error común cometido por un usuario final",
+        "Una falla de hardware que no afecta la información",
+        "Un evento adverso que afecta la confidencialidad, integridad, disponibilidad o trazabilidad de la información",
+        "El cambio de proveedor de servicios de internet"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1232 de 2020 define incidente de seguridad digital como un evento adverso que afecta la confidencialidad, integridad, disponibilidad o trazabilidad de la información, y requiere respuesta coordinada por las entidades.",
+      "norma": "Decreto 1232/2020",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué articulación normativa entre la Ley 1341 de 2009 y el Decreto 1078 de 2015 busca garantizar el acceso a las TIC como servicio esencial?",
+      "opciones": [
+        "La creación de impuestos al acceso a internet",
+        "La prohibición de la telefonía móvil en zonas rurales",
+        "La regulación de salarios del sector tecnológico",
+        "La declaratoria de las TIC como servicio público esencial"
+      ],
+      "respuesta": 3,
+      "explicacion": "La Ley 1341 de 2009 declara las tecnologías de la información y las comunicaciones como servicio público esencial, desarrollado reglamentariamente por el Decreto 1078 de 2015 para garantizar su acceso y uso en todo el territorio nacional.",
+      "norma": "Ley 1341/2009",
+      "articulo": "Art. 2",
+      "dificultad": "dificil"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "titulo": "TI en el Estado colombiano: marcos normativos y gobierno digital",
+      "contenido_html": "<h3>Marco normativo de las TIC en el Estado</h3><p>La transformación digital del Estado colombiano se sustenta en un conjunto de normas que buscan garantizar el uso eficiente, seguro e interoperable de las tecnologías de la información y las comunicaciones en el sector público. La <strong>Ley 1341 de 2009</strong> constituye la norma madre del sector TIC, al declarar estas tecnologías como servicio público esencial y definir lineamientos para su desarrollo. Esta ley fue reglamentada en gran parte por el <strong>Decreto 1078 de 2015</strong>, decreto único reglamentario del sector, que compila las disposiciones aplicables a la prestación de servicios TIC y al uso de la infraestructura tecnológica por parte de las entidades públicas.</p><h3>Gobierno Digital</h3><p>El <strong>Decreto 089 de 2018</strong> reglamenta la política de Gobierno Digital, estableciendo que el Ministerio de Tecnologías de la Información y las Comunicaciones (MinTIC) lidera su formulación. Entre sus principios se encuentran la transparencia, la eficiencia, la accesibilidad, la inclusión, la seguridad y la participación ciudadana. El objetivo es modernizar la gestión pública mediante el uso de canales digitales que acerquen los servicios a los ciudadanos y mejoren la productividad institucional. La <strong>Ley 1955 de 2019</strong>, que creó el MinTIC, reforzó esta política al plantear la transformación digital como eje del Plan Nacional de Desarrollo.</p><h3>Marco de Arquitectura Empresarial y Marco de Interoperabilidad</h3><p>El <strong>Marco de Arquitectura Empresarial del MinTIC</strong> orienta a las entidades para diseñar soluciones de TI alineadas con sus misiones, estandarizando procesos, datos, aplicaciones e infraestructura. Por su parte, el <strong>Decreto 1519 de 2013</strong> adopta el Marco de Interoperabilidad para el Estado Colombiano, el cual define tres tipos de interoperabilidad: técnica, semántica y organizativa. La técnica permite la conexión entre sistemas; la semántica asegura el significado compartido de la información; y la organizativa alinea procesos y procedimientos entre entidades.</p><h3>Seguridad y privacidad de la información</h3><p>La seguridad digital en el Estado se rige por el <strong>Modelo de Seguridad y Privacidad de la Información (MSPI)</strong>, que guía la gestión de riesgos de seguridad en las entidades públicas. Complementariamente, el <strong>Decreto 1232 de 2020</strong> define los incidentes de seguridad digital como eventos adversos que afectan la confidencialidad, integridad, disponibilidad o trazabilidad de la información. En materia de protección de datos personales, la <strong>Ley 1581 de 2012</strong> y el <strong>Decreto 1377 de 2013</strong> establecen los principios, deberes y autorizaciones necesarias para el tratamiento de datos, exigiendo consentimiento expreso para datos sensibles.</p><h3>Referentes técnicos internacionales</h3><p>En la práctica de desarrollo y auditoría de aplicaciones, el <strong>OWASP Top 10</strong> es una referencia internacional que identifica los riesgos de seguridad más críticos en aplicaciones web, como la inyección de código, la pérdida de autenticación y la exposición de datos sensibles. Su uso permite fortalecer la seguridad de los sistemas de información del Estado.</p><h3>Transparencia y datos abiertos</h3><p>La <strong>Ley 1712 de 2014</strong> regula el derecho de acceso a la información pública y obliga a las entidades a publicar datos en formatos abiertos, facilitando el control social y la reutilización de la información por parte de la ciudadanía.</p>",
+      "fuente_url": "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=86867",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "MinTIC",
+      "reverso": "Ministerio de Tecnologías de la Información y las Comunicaciones, entidad que lidera la política de TIC y Gobierno Digital en Colombia.",
+      "norma": "Ley 1955/2019"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Gobierno Digital",
+      "reverso": "Estrategia para transformar la gestión pública mediante tecnologías, mejorando servicios, transparencia y eficiencia institucional.",
+      "norma": "Decreto 089/2018"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "MAE",
+      "reverso": "Marco de Arquitectura Empresarial del MinTIC que alinea procesos, datos, aplicaciones e infraestructura del Estado.",
+      "norma": "Marco AE MinTIC"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "MSPI",
+      "reverso": "Modelo de Seguridad y Privacidad de la Información que guía la gestión de riesgos de seguridad en entidades públicas.",
+      "norma": "Política de Seguridad Digital MSPI"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Marco de Interoperabilidad",
+      "reverso": "Conjunto de estándares que permite el intercambio de información entre entidades del Estado Colombiano.",
+      "norma": "Decreto 1519/2013"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "OWASP Top 10",
+      "reverso": "Lista de los diez riesgos de seguridad más críticos en aplicaciones web, usada como referencia internacional.",
+      "norma": "OWASP Top 10"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Ley 1581 de 2012",
+      "reverso": "Norma general de protección de datos personales en Colombia, desarrolla el derecho constitucional al hábeas data.",
+      "norma": "Ley 1581/2012"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Ley 527 de 1999",
+      "reverso": "Regula el comercio electrónico, los mensajes de datos y la firma digital en Colombia.",
+      "norma": "Ley 527/1999"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Ley 1712 de 2014",
+      "reverso": "Regula el derecho de acceso a la información pública y la publicación de datos abiertos.",
+      "norma": "Ley 1712/2014"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Interoperabilidad semántica",
+      "reverso": "Capacidad de los sistemas para interpretar el significado de la información de manera compartida.",
+      "norma": "Decreto 1519/2013"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Incidente de seguridad digital",
+      "reverso": "Evento adverso que afecta la confidencialidad, integridad, disponibilidad o trazabilidad de la información.",
+      "norma": "Decreto 1232/2020"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "frente": "Principio de finalidad",
+      "reverso": "Principio de protección de datos que exige usarlos solo para los fines autorizados por el titular.",
+      "norma": "Ley 1581/2012"
+    }
+  ]
+}

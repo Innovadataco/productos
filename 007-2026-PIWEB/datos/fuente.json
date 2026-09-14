@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Datos: entidades y flujos",
+    "subtitle": "Protección Infantil · entidades del dominio y flujos entre ellas",
+    "output": "datos-entidades.html",
+    "viewBox": [1080, 880],
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "ruta-reporte", "label": "Ruta de un reporte", "focus": ["reporte", "contenido", "embedding", "clasificacion", "identificador"], "note": "Del texto cifrado a la agregación por identificador." },
+      { "id": "derechos-1581", "label": "Derechos del titular", "focus": ["usuario", "apelacion", "auditlog"], "note": "Revisión, anonimización o eliminación (Ley 1581)." },
+      { "id": "auditoria", "label": "Trazabilidad", "focus": ["reporte", "notificacion", "auditlog", "apelacion"], "note": "Cada mutación crítica escribe en AuditLog." }
+    ],
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "default": { "label": "Flujo de datos" },
+        "emphasis": { "label": "Ruta principal" },
+        "security": { "label": "Cifrado y derechos" },
+        "dashed": { "label": "Trazabilidad" }
+      }
+    }
+  },
+  "stages": [
+    { "label": "Actores" },
+    { "label": "Registro" },
+    { "label": "IA y custodia" },
+    { "label": "Agregación y derechos" },
+    { "label": "Salidas y auditoría" }
+  ],
+  "nodes": [
+    { "id": "usuario", "type": "frontend", "label": "Usuario", "sublabel": "5 roles de acceso", "tag": "sesión JWT 24 h", "stage": 0, "row": 0, "width": 128, "height": 80 },
+    { "id": "reporte", "type": "backend", "label": "Reporte", "sublabel": "texto + identificador", "tag": "solo texto", "stage": 1, "row": 0, "width": 160, "height": 80 },
+    { "id": "hijo", "type": "database", "label": "Hijo", "sublabel": "sin documento", "tag": "perfil del menor", "stage": 1, "row": 2, "width": 160, "height": 80 },
+    { "id": "expediente", "type": "database", "label": "Expediente", "sublabel": "se crea solo", "tag": "al primer reporte", "stage": 1, "row": 4, "width": 160, "height": 80 },
+    { "id": "embedding", "type": "database", "label": "EmbeddingReporte", "sublabel": "HNSW · vector_cosine", "tag": "pgvector", "stage": 2, "row": 0, "width": 160, "height": 80 },
+    { "id": "clasificacion", "type": "backend", "label": "ClasificacionIA", "sublabel": "votos de rúbrica", "tag": "Ollama local", "stage": 2, "row": 1, "width": 160, "height": 80 },
+    { "id": "contenido", "type": "security", "label": "Contenido + Llave", "sublabel": "AES-256-GCM", "tag": "cifrado en reposo", "stage": 2, "row": 2, "width": 160, "height": 80 },
+    { "id": "identificador", "type": "database", "label": "IdentificadorReportado", "sublabel": "agregación + umbral", "tag": "solo agregados", "stage": 3, "row": 0, "width": 160, "height": 80 },
+    { "id": "parametros", "type": "backend", "label": "ParametroSistema", "sublabel": "config y umbrales", "tag": "configurable", "stage": 3, "row": 2, "width": 160, "height": 80 },
+    { "id": "apelacion", "type": "security", "label": "ApelacionIdentificador", "sublabel": "Ley 1581 de 2012", "tag": "derechos ARCO", "stage": 3, "row": 4, "width": 160, "height": 80 },
+    { "id": "notificacion", "type": "external", "label": "Notificacion", "sublabel": "reglas Resend", "tag": "email transaccional", "stage": 4, "row": 0, "width": 160, "height": 80 },
+    { "id": "auditlog", "type": "database", "label": "AuditLog", "sublabel": "append-only", "tag": "purga con constancia", "stage": 4, "row": 2, "width": 160, "height": 80 }
+  ],
+  "flows": [
+    { "id": "usu-reporte", "from": "usuario", "to": "reporte", "label": "reporta", "fromSide": "top", "toSide": "left", "via": [[100, 96], [210, 96], [210, 168]], "labelAt": [155, 96] },
+    { "id": "usu-hijo", "from": "usuario", "to": "hijo", "label": "registra menores", "fromSide": "right", "toSide": "left", "via": [[200, 168], [200, 396]], "labelAt": [200, 290] },
+    { "id": "hijo-exp", "from": "hijo", "to": "expediente", "label": "auto al 1er reporte", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [315, 510] },
+    { "id": "rep-cont", "from": "reporte", "to": "contenido", "label": "texto cifrado", "classification": "AES-256-GCM", "variant": "security", "fromSide": "bottom", "toSide": "left", "via": [[315, 300], [422, 300], [422, 396]], "labelAt": [422, 336], "labelDx": -17 },
+    { "id": "rep-emb", "from": "reporte", "to": "embedding", "label": "vector", "fromSide": "top", "toSide": "top", "via": [[315, 72], [530, 72]], "labelAt": [422, 72] },
+    { "id": "rep-clas", "from": "reporte", "to": "clasificacion", "label": "con contexto", "classification": "cola pg-boss", "variant": "emphasis", "fromSide": "right", "toSide": "left", "via": [[422, 168], [422, 282]], "labelAt": [422, 224], "labelDx": -17 },
+    { "id": "emb-clas", "from": "embedding", "to": "clasificacion", "label": "dedup y RAG", "classification": "similitud coseno", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [530, 225] },
+    { "id": "clas-id", "from": "clasificacion", "to": "identificador", "label": "score", "variant": "emphasis", "fromSide": "right", "toSide": "left", "via": [[637, 282], [637, 168]], "labelAt": [633, 225] },
+    { "id": "par-id", "from": "parametros", "to": "identificador", "label": "umbrales", "classification": "de visibilidad", "fromSide": "top", "toSide": "bottom", "route": "straight", "labelAt": [745, 282] },
+    { "id": "usu-apel", "from": "usuario", "to": "apelacion", "label": "solicita revisión", "classification": "Ley 1581", "variant": "security", "fromSide": "bottom", "toSide": "bottom", "via": [[100, 780], [745, 780]], "labelAt": [422, 780] },
+    { "id": "id-not", "from": "identificador", "to": "notificacion", "label": "alertas", "classification": "Resend", "fromSide": "right", "toSide": "left", "route": "straight", "labelAt": [852, 168] },
+    { "id": "not-aud", "from": "notificacion", "to": "auditlog", "label": "envíos auditados", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [960, 282] },
+    { "id": "apel-aud", "from": "apelacion", "to": "auditlog", "label": "constancia", "classification": "revisión ARCO", "variant": "dashed", "fromSide": "right", "toSide": "bottom", "via": [[852, 624], [852, 824], [960, 824]], "labelAt": [852, 757] }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Ruta de un reporte", "items": ["El texto se cifra con AES-256-GCM antes de persistirse", "La IA local (Ollama) clasifica la conducta por votos de rúbrica", "El identificador se agrega solo al superar el umbral"] },
+    { "dot": "rose", "title": "Datos sensibles y derechos", "items": ["Solo texto: jamás fotos, video ni audio", "El titular puede pedir revisión, anonimización o eliminación (Ley 1581)", "La consulta pública muestra solo agregados: nunca textos ni identidad de quien reporta"] },
+    { "dot": "amber", "title": "Trazabilidad y notificaciones", "items": ["AuditLog es append-only; la purga deja constancia", "Embeddings HNSW (vector_cosine) para dedup y RAG", "Correos por Resend según reglas configurables"] }
+  ]
+}

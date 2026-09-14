@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-ios-bg text-ios-label antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply font-sans;
+    overscroll-behavior-y: none;
+  }
+
+  /* iOS: evitar zoom en inputs al enfocar */
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  /* Scroll suave tipo iOS */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer components {
+  .ios-card {
+    @apply rounded-ios-xl bg-ios-surface shadow-ios;
+  }
+
+  .ios-card-elevated {
+    @apply rounded-ios-xl bg-ios-surface shadow-ios-lg;
+  }
+
+  .ios-button {
+    @apply inline-flex h-12 items-center justify-center rounded-ios-lg bg-ios-primary px-5 text-ios-subhead font-semibold text-white shadow-ios transition-all active:scale-[0.97] active:opacity-90 disabled:opacity-50;
+  }
+
+  .ios-button-secondary {
+    @apply inline-flex h-12 items-center justify-center rounded-ios-lg bg-ios-gray-6 px-5 text-ios-subhead font-semibold text-ios-primary transition-all active:scale-[0.97] active:bg-ios-gray-5;
+  }
+
+  .ios-button-ghost {
+    @apply inline-flex h-12 items-center justify-center rounded-ios-lg px-5 text-ios-subhead font-semibold text-ios-primary transition-all active:bg-ios-primary-light active:scale-[0.97];
+  }
+
+  .ios-list {
+    @apply overflow-hidden rounded-ios-xl bg-ios-surface shadow-ios;
+  }
+
+  .ios-list-item {
+    @apply flex items-center justify-between border-b border-ios-separator px-4 py-3.5 text-ios-body last:border-b-0 active:bg-ios-gray-6;
+  }
+
+  .ios-section-title {
+    @apply px-4 pb-2 pt-6 text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-label-secondary;
+  }
+
+  .ios-nav-blur {
+    @apply sticky top-0 z-50 border-b border-ios-separator/60 bg-ios-surface/80 backdrop-blur-xl;
+  }
+
+  .ios-page {
+    @apply mx-auto min-h-screen max-w-mobile bg-ios-bg pb-24;
+  }
+
+  .ios-content {
+    @apply px-4;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .safe-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-pt {
+    padding-top: env(safe-area-inset-top);
+  }
+}

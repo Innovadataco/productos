@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Cifrado y acceso al texto del reporte",
+    "output": "/tmp/pi-mapas/cifrado-texto.html",
+    "viewBox": [1080, 640],
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "ruta-escritura", "label": "Escritura y cifrado", "focus": ["texto", "sello", "dek", "cont", "llave"], "note": "La única vía de escritura sella contenido y llave en una transacción." },
+      { "id": "ruta-acceso", "label": "Acceso del padre", "focus": ["padre", "resend", "stepUp", "descifrar", "cont", "llave", "lectura"], "note": "Revelado con código, step-up y auditoría sin texto." },
+      { "id": "ruta-ciclo", "label": "Ciclo de vida", "focus": ["ops", "cont", "llave"], "note": "Resellado limitado, borrado por caso y cripto-shred en cascada." }
+    ]
+  },
+  "stages": [
+    { "label": "Origen" },
+    { "label": "Servicios" },
+    { "label": "Claves y control" },
+    { "label": "Resguardo" },
+    { "label": "Consumo y ciclo de vida" }
+  ],
+  "nodes": [
+    { "id": "texto", "type": "frontend", "label": "Texto del reporte", "sublabel": "padre o anónimo", "stage": 0, "row": 0 },
+    { "id": "padre", "type": "frontend", "label": "Padre", "sublabel": "pide revelar texto", "stage": 0, "row": 2 },
+    { "id": "sello", "type": "backend", "label": "selloTextoNuevo", "sublabel": "única vía de escritura", "stage": 1, "row": 0 },
+    { "id": "resend", "type": "external", "label": "Resend", "sublabel": "código 6 dígitos", "stage": 1, "row": 2 },
+    { "id": "dek", "type": "security", "label": "DEK por denuncia", "sublabel": "KEK en env var", "stage": 2, "row": 0 },
+    { "id": "stepUp", "type": "security", "label": "CodigoStepUp", "sublabel": "sha-256 · 5 intentos", "stage": 2, "row": 2 },
+    { "id": "cont", "type": "database", "label": "ContenidoReporte", "sublabel": "AES-256-GCM", "stage": 3, "row": 0 },
+    { "id": "llave", "type": "database", "label": "LlaveReporte", "sublabel": "dekCifrada", "stage": 3, "row": 1 },
+    { "id": "descifrar", "type": "backend", "label": "descifrarTextoReporte", "sublabel": "solo con step-up", "stage": 3, "row": 2, "width": 150 },
+    { "id": "ops", "type": "backend", "label": "Ciclo de vida", "sublabel": "resellar · borrado", "stage": 4, "row": 1 },
+    { "id": "lectura", "type": "database", "label": "LecturaReporte", "sublabel": "auditoría con hash", "stage": 4, "row": 3 }
+  ],
+  "flows": [
+    { "id": "f-texto-sello", "from": "texto", "to": "sello", "label": "original", "classification": "escritura", "variant": "emphasis", "route": "straight" },
+    { "id": "f-sello-dek", "from": "sello", "to": "dek", "label": "contenido + llave", "classification": "escritura", "variant": "emphasis", "route": "straight", "labelAt": [455, 203] },
+    { "id": "f-dek-cont", "from": "dek", "to": "cont", "label": "textoCifrado", "classification": "cifrado", "variant": "security", "route": "straight" },
+    { "id": "f-dek-llave", "from": "dek", "to": "llave", "label": "dekCifrada", "classification": "cifrado", "variant": "security", "fromSide": "bottom", "toSide": "left", "via": [[530, 271]], "labelAt": [615, 290] },
+    { "id": "f-padre-resend", "from": "padre", "to": "resend", "label": "solicita", "classification": "acceso", "route": "straight" },
+    { "id": "f-resend-stepup", "from": "resend", "to": "stepUp", "label": "6 dígitos", "classification": "acceso", "route": "straight" },
+    { "id": "f-stepup-descifrar", "from": "stepUp", "to": "descifrar", "label": "sello step-up", "classification": "acceso", "route": "straight", "labelAt": [640, 432] },
+    { "id": "f-cont-descifrar", "from": "cont", "to": "descifrar", "label": "lectura cifrada", "classification": "lectura cifrada", "fromSide": "right", "toSide": "right", "via": [[1050, 157], [1050, 385]], "labelAt": [945, 371] },
+    { "id": "f-llave-descifrar", "from": "llave", "to": "descifrar", "label": "lee dekCifrada", "classification": "lectura cifrada", "route": "straight", "labelAt": [680, 328] },
+    { "id": "f-cont-llave", "from": "cont", "to": "llave", "label": "ON DELETE CASCADE", "classification": "cripto-shred", "variant": "security", "route": "straight", "labelAt": [668, 214] },
+    { "id": "f-descifrar-lectura", "from": "descifrar", "to": "lectura", "label": "hash de auditoría", "classification": "auditoría", "fromSide": "bottom", "toSide": "left", "via": [[745, 499]], "labelAt": [823, 485] },
+    { "id": "f-ops-cont", "from": "ops", "to": "cont", "label": "resellar / borrar", "classification": "ciclo de vida", "variant": "dashed", "fromSide": "top", "toSide": "top", "via": [[960, 100], [745, 100]], "labelAt": [853, 100] }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Escritura sellada",
+      "items": [
+        "selloTextoNuevo es la única vía de escritura del texto",
+        "Contenido y llave se persisten en una misma transacción",
+        "Cada reporte usa una DEK aleatoria, envuelta por la KEK"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Acceso con step-up",
+      "items": [
+        "El padre titular pide revelar y recibe un código de 6 dígitos por Resend",
+        "CodigoStepUp valida sha-256 con un máximo de 5 intentos",
+        "La lectura descifrada exige sello step-up en la sesión"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites de seguridad",
+      "items": [
+        "KEK: variable de entorno REPORTE_TEXTO_KEY_V1 en el VPS; se documenta el nombre, jamás el valor",
+        "AAD de AES-256-GCM: contenidoId|campo",
+        "LecturaReporte registra hash de auditoría, sin texto; la réplica BI no recibe acceso REVOKE"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Pendiente honesto",
+      "items": [
+        "5 reportes legacy conservan copia cifrada con la llave global vieja PARAM_ENCRYPTION_KEY",
+        "Copias en columnas congeladas: shred parcial, limpieza pendiente",
+        "El texto original es inmutable: resellarCampo solo actúa sobre texto de trabajo"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,420 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 1 de la Constitución Política, Colombia es:",
+      "opciones": [
+        "Estado social de derecho, República unitaria, descentralizada, democrática, participativa y pluralista",
+        "Estado federal centralizado de derecho penal",
+        "Confederación de repúblicas autónomas",
+        "República monárquica parlamentaria"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 1 define a Colombia como un Estado social de derecho organizado en forma de República unitaria, descentralizada, con autonomía de sus entidades territoriales, democrática, participativa y pluralista.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál NO es uno de los fines esenciales del Estado consagrados en el artículo 2 de la Constitución?",
+      "opciones": [
+        "Asegurar la convivencia pacífica y la vigencia de un orden justo",
+        "Imponer una religión oficial como instrumento de gobierno",
+        "Promover la prosperidad general",
+        "Servir a la comunidad"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2 enumera fines como servir a la comunidad, promover la prosperidad general, garantizar los derechos, facilitar la participación, defender la independencia, mantener la integridad territorial y asegurar la convivencia pacífica; no contempla una religión oficial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 3 de la Constitución, ¿dónde reside la soberanía?",
+      "opciones": [
+        "En la Corte Constitucional como guardián de la Carta",
+        "Exclusivamente en el Congreso de la República",
+        "En el pueblo, del cual emana el poder público",
+        "En el Presidente de la República como jefe del Estado"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 3 establece que la soberanía reside exclusivamente en el pueblo, del cual emana el poder público, el cual la ejerce directamente o por medio de sus representantes.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 3",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 13 de la Constitución prohíbe la discriminación, entre otros motivos, por razones de:",
+      "opciones": [
+        "Nacionalidad, peso, altura y afiliación deportiva",
+        "Sexo, raza, origen nacional o familiar, lengua, religión y opinión política o filosófica",
+        "Edad, estado civil, residencia y género musical",
+        "Riqueza, profesión, cargo público y nivel educativo"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 13 consagra la igualdad ante la ley y prohíbe la discriminación por sexo, raza, origen nacional o familiar, lengua, religión u opinión política o filosófica; el Estado debe promover la igualdad real y efectiva.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 13",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 25 de la Constitución, el trabajo es:",
+      "opciones": [
+        "Un derecho y una obligación social que goza de especial protección del Estado",
+        "Una facultad discrecional del empleador",
+        "Una prestación que el Estado concede por gracia",
+        "Una mercancía regulada exclusivamente por el mercado"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 25 establece que el trabajo es un derecho y una obligación social y que, en todas sus modalidades, goza de la especial protección del Estado; toda persona tiene derecho a un trabajo digno y justo.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 25",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "El debido proceso, consagrado en el artículo 29 de la Constitución, se aplica a:",
+      "opciones": [
+        "Solamente a las actuaciones civiles y de familia",
+        "Únicamente a las actuaciones de la Corte Constitucional",
+        "Solo a los procesos penales y de extradición",
+        "Toda clase de actuaciones judiciales y administrativas"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 29 dispone que el debido proceso se aplica a toda clase de actuaciones judiciales y administrativas, garantizando que nadie sea juzgado sino conforme a leyes preexistentes y con observancia de la Constitución.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 29",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 40 de la Constitución reconoce el derecho de participación política, EXCEPTO:",
+      "opciones": [
+        "Tomar parte en elecciones, plebiscitos, referendos y consultas populares",
+        "Revocar el mandato de los elegidos en los casos que establece la Constitución",
+        "La obligación de votar siempre por el candidato del Gobierno",
+        "Elegir y ser elegido"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 40 reconoce la participación en elecciones, plebiscitos, referendos, consultas, la revocatoria del mandato y el acceso a cargos públicos, pero no impone lealtad a un candidato oficial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 40",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con el artículo 58 de la Constitución, la propiedad privada:",
+      "opciones": [
+        "Carece de función social y solo protege el lucro particular",
+        "Es una función social con obligaciones ecológicas, susceptible de expropiación con indemnización previa",
+        "Es un derecho absoluto e inviolable bajo cualquier circunstancia",
+        "Puede ser expropiada sin indemnización si lo ordena el alcalde"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 58 garantiza la propiedad privada pero la califica como función social con función ecológica; admite expropiación por utilidad pública o interés social con indemnización previa, salvo en caso de guerra.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 58",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 74 de la Constitución reconoce el derecho de toda persona a:",
+      "opciones": [
+        "Acceder a los documentos públicos, salvo los casos que establezca la ley",
+        "Acceder a la información clasificada de la fuerza pública sin restricciones",
+        "Obtener copias gratuitas ilimitadas de cualquier documento privado",
+        "Revisar la correspondencia personal de los funcionarios"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 74 establece el derecho de acceso a documentos públicos, permitiendo a la ley señalar excepciones; fortalece la transparencia como pilar del Estado social de derecho.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 74",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 83 de la Constitución, las actuaciones de particulares y autoridades públicas deben ceñirse al principio de:",
+      "opciones": [
+        "Competencia absoluta del funcionario de mayor rango",
+        "Buena fe, que se presume en todas las gestiones que se adelanten ante la Administración",
+        "Libertad absoluta para exigir requisitos adicionales",
+        "Presunción de culpabilidad del administrado"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 83 impone a las autoridades y a los particulares actuar conforme a la buena fe, que se presume en las gestiones ante la Administración, como límite al abuso de derecho.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 83",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "La acción de tutela, prevista en el artículo 86 de la Constitución, tiene como finalidad:",
+      "opciones": [
+        "Ejercer control político sobre el Congreso",
+        "Proteger de manera inmediata los derechos constitucionales fundamentales vulnerados o amenazados",
+        "Reemplazar todos los procesos judiciales ordinarios",
+        "Obtener indemnizaciones millonarias contra el Estado"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 86 consagra la acción de tutela para reclamar, de manera preferente y sumaria, la protección inmediata de los derechos fundamentales cuando estén vulnerados o amenazados por la acción u omisión de una autoridad pública.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 86",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "De conformidad con el artículo 90 de la Constitución, el Estado:",
+      "opciones": [
+        "Responde únicamente si el afectado prueba dolo del servidor",
+        "Solo responde por daños causados por jueces y magistrados",
+        "No responde por actos de sus agentes cuando obedezcan órdenes superiores",
+        "Responde patrimonialmente por los daños antijurídicos imputables causados por autoridades públicas"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 90 establece la responsabilidad patrimonial del Estado por daños antijurídicos causados por acción u omisión de autoridades públicas; si el daño resulta de dolo o culpa grave, el Estado puede repetir contra el agente.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 90",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 113 de la Constitución establece que las ramas del poder público son:",
+      "opciones": [
+        "La legislativa, la ejecutiva y la judicial",
+        "La legislativa, la ejecutiva, la judicial y la electoral",
+        "La legislativa, la ejecutiva, la judicial y la militar",
+        "La ejecutiva, la judicial, la fiscal y la contralora"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 113 señala que son ramas del poder público la legislativa, la ejecutiva y la judicial; aunque existen otros órganos autónomos e independientes, estas son las tres ramas clásicas.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 113",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 115 de la Constitución, el Presidente de la República es:",
+      "opciones": [
+        "Jefe del Estado, Jefe del Gobierno y suprema autoridad administrativa",
+        "Máximo dirigente del partido de gobierno",
+        "Contralor General de la Nación",
+        "Presidente del Congreso y jefe de la Rama Judicial"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 115 define al Presidente como Jefe del Estado, Jefe del Gobierno y suprema autoridad administrativa; el Gobierno Nacional está integrado por el Presidente, los ministros y los directores de departamentos administrativos.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 115",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 118 de la Constitución señala que al Ministerio Público corresponde:",
+      "opciones": [
+        "El nombramiento de los magistrados de la Corte Suprema",
+        "La administración del presupuesto nacional",
+        "La dirección de la política monetaria y cambiaria",
+        "La guarda y promoción de los derechos humanos, la protección del interés público y la vigilancia de la conducta oficial"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 118 dispone que el Ministerio Público será ejercido por el Procurador, el Defensor, los procuradores delegados, los personeros y demás funcionarios; le corresponde la guarda y promoción de los derechos humanos, la protección del interés público y la vigilancia de la conducta oficial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 118",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "El artículo 209 de la Constitución señala que la función administrativa se desarrolla mediante:",
+      "opciones": [
+        "La privatización total, la tercerización absoluta y la desregulación completa",
+        "La concentración centralizada, la prohibición de delegar y la supresión territorial",
+        "La autonomía empresarial, la libre competencia y la rentabilidad privada",
+        "La descentralización, la delegación y la desconcentración de funciones"
+      ],
+      "respuesta": 3,
+      "explicacion": "Además de los principios, el artículo 209 establece que la función administrativa se desarrolla mediante la descentralización, la delegación y la desconcentración de funciones, y que las autoridades administrativas deben coordinarse.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 209",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 1 de la Ley 489 de 1998, ¿cuál es el objeto de esta ley?",
+      "opciones": [
+        "Regular el ejercicio de la función administrativa, determinar la estructura y definir principios y reglas básicas de la Administración Pública",
+        "Definir las competencias militares en situaciones de conmoción interior",
+        "Regular exclusivamente la contratación pública y la vigencia de los contratos estatales",
+        "Establecer el procedimiento para la elección popular del Presidente"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 1 de la Ley 489 de 1998 dispone que la ley regula el ejercicio de la función administrativa, determina la estructura y define los principios y reglas básicas de organización y funcionamiento de la Administración Pública.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el parágrafo del artículo 3 de la Ley 489 de 1998, los principios de la función administrativa deben ser tenidos en cuenta por los órganos de control y el DNP al:",
+      "opciones": [
+        "Evaluar el desempeño de entidades y organismos administrativos y juzgar la legalidad de la conducta de los servidores públicos",
+        "Designar a los contratistas de cada entidad pública",
+        "Fijar los salarios de todos los empleados del orden nacional",
+        "Aprobar la creación de nuevos partidos políticos"
+      ],
+      "respuesta": 0,
+      "explicacion": "El parágrafo del artículo 3 señala que los principios de la función administrativa deben ser tenidos en cuenta por los órganos de control y el Departamento Nacional de Planeación al evaluar el desempeño de entidades y organismos administrativos y al juzgar la legalidad de la conducta de los servidores públicos.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 3",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme al artículo 8 de la Ley 489 de 1998, la desconcentración administrativa consiste en:",
+      "opciones": [
+        "Delegar funciones exclusivamente en particulares mediante contratos de concesión",
+        "Suprimir la sede principal del organismo y distribuir todo el presupuesto",
+        "Radicar competencias y funciones en dependencias fuera de la sede principal, sin que ello implique delegación",
+        "Transferir la titularidad de funciones a entidades territoriales de manera definitiva"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 8 define la desconcentración como la radicación de competencias y funciones en dependencias ubicadas fuera de la sede principal del organismo o entidad administrativa, sin perjuicio de la orientación e instrucción de los jefes superiores, y precisa que no implica delegación.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 8",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 38 de la Ley 489 de 1998, el Sector Central de la Rama Ejecutiva nacional NO incluye:",
+      "opciones": [
+        "Los ministerios y departamentos administrativos",
+        "Las superintendencias sin personería jurídica",
+        "La Presidencia de la República",
+        "Las empresas industriales y comerciales del Estado"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 38 ubica en el Sector Central la Presidencia, Vicepresidencia, consejos superiores, ministerios, departamentos administrativos y superintendencias sin personería jurídica; las empresas industriales y comerciales del Estado pertenecen al sector descentralizado por servicios.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 38",
+      "dificultad": "dificil"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273",
+      "titulo": "Gestión pública y funcionamiento del Estado: conceptos esenciales",
+      "contenido_html": "<h3>Gestión pública y funcionamiento del Estado</h3>\n<p>El tema aborda los fundamentos del Estado colombiano y el funcionamiento de la Administración Pública, con énfasis en la Constitución Política y en la Ley 489 de 1998, conocida como el Estatuto de la Administración Pública.</p>\n<h3>1. Forma y fines del Estado</h3>\n<p>El artículo 1 de la Constitución establece que Colombia es un <strong>Estado social de derecho</strong>, organizado en forma de República unitaria, descentralizada, con autonomía de sus entidades territoriales, democrática, participativa y pluralista. Esto implica que el Estado no es solo un conjunto de instituciones, sino una comunidad política fundada en la dignidad humana, el trabajo, la solidaridad y la prevalencia del interés general. El artículo 2 complementa esta idea al señalar los fines esenciales del Estado: servir a la comunidad, promover la prosperidad general, garantizar la efectividad de los derechos, facilitar la participación ciudadana, defender la independencia nacional, mantener la integridad territorial y asegurar la convivencia pacífica y un orden justo.</p>\n<h3>2. Soberanía, igualdad y derechos fundamentales</h3>\n<p>La soberanía reside en el pueblo, del cual emana el poder público (art. 3). El artículo 13 consagra la igualdad ante la ley y prohíbe la discriminación por razones de sexo, raza, origen nacional o familiar, lengua, religión u opinión política o filosófica. Derechos como el trabajo (art. 25), el debido proceso (art. 29), la participación política (art. 40), el acceso a documentos públicos (art. 74), la buena fe (art. 83), la tutela (art. 86) y la responsabilidad patrimonial del Estado (art. 90) son pilares que orientan la actuación de la Administración y limitan el ejercicio arbitrario del poder.</p>\n<h3>3. Estructura del Estado y Administración Pública</h3>\n<p>El artículo 113 reconoce tres ramas del poder público: legislativa, ejecutiva y judicial. El Presidente de la República es, según el artículo 115, Jefe del Estado, Jefe del Gobierno y suprema autoridad administrativa. El Ministerio Público, por su parte, cumple funciones de guarda y promoción de los derechos humanos, protección del interés público y vigilancia de la conducta oficial (art. 118).</p>\n<p>La función administrativa está al servicio de los intereses generales y se desarrolla con fundamento en los principios de igualdad, moralidad, eficacia, economía, celeridad, imparcialidad y publicidad, mediante la descentralización, la delegación y la desconcentración (art. 209).</p>\n<h3>4. Ley 489 de 1998</h3>\n<p>La Ley 489 de 1998 regula el ejercicio de la función administrativa y define la estructura de la Administración Pública. Sus artículos 1, 3 y 4 establecen el objeto, los principios y las finalidades de la gestión pública. La ley distingue la competencia administrativa, la coordinación entre entidades, la desconcentración (art. 8) y la delegación (art. 9). Asimismo, define la integración de la Rama Ejecutiva y de la Administración Pública (arts. 38 y 39), señalando que el Sector Central está integrado por la Presidencia, Vicepresidencia, ministerios, departamentos administrativos y superintendencias sin personería jurídica, mientras que las empresas industriales y comerciales del Estado forman parte del sector descentralizado por servicios.</p>\n<h3>5. Planeación, presupuesto y control</h3>\n<p>La Constitución prevé un <strong>Plan Nacional de Desarrollo</strong> conformado por una parte general y un plan de inversiones (art. 339), elaborado por el Gobierno y aprobado por el Congreso con prelación sobre las demás leyes en materia de inversiones (art. 341). El artículo 345 dispone que en tiempo de paz no se puede percibir contribución ni hacer erogación no prevista en el presupuesto, mientras que el artículo 350 prioriza el gasto público social. La Contraloría General de la República ejerce la vigilancia de la gestión fiscal y el control de resultados de la administración (art. 267).</p>\n<ul>\n<li><strong>Fuentes principales:</strong> Constitución Política de Colombia (arts. 1-95, 113-131, 209, 267-284, 339-355) y Ley 489 de 1998.</li>\n<li><strong>Enlaces oficiales:</strong> <a href=\"https://www.secretariasenado.gov.co/senado/basedoc/constitucion_politica_1991.html\" target=\"_blank\">Constitución Política en Secretaría del Senado</a>; <a href=\"https://gestornormativo.creg.gov.co/gestor/entorno/docs/ley_0489_1998.htm\" target=\"_blank\">Ley 489 de 1998</a>.</li>\n</ul>",
+      "fuente_url": "https://www.secretariasenado.gov.co/senado/basedoc/constitucion_politica_1991.html",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "frente": "Estado social de derecho",
+      "reverso": "Forma de Estado de Colombia: República unitaria, descentralizada, democrática, participativa y pluralista, fundada en la dignidad humana.",
+      "norma": "C.P., Art. 1",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Soberanía",
+      "reverso": "Reside exclusivamente en el pueblo, del cual emana el poder público; se ejerce directamente o por representantes.",
+      "norma": "C.P., Art. 3",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Igualdad (Art. 13)",
+      "reverso": "Todas las personas nacen libres e iguales ante la ley; el Estado prohíbe la discriminación y promueve la igualdad real.",
+      "norma": "C.P., Art. 13",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Debido proceso",
+      "reverso": "Garantía que se aplica a toda clase de actuaciones judiciales y administrativas, con leyes preexistentes.",
+      "norma": "C.P., Art. 29",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Acción de tutela",
+      "reverso": "Mecanismo preferente y sumario para reclamar protección inmediata de derechos fundamentales vulnerados.",
+      "norma": "C.P., Art. 86",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Responsabilidad patrimonial del Estado",
+      "reverso": "El Estado responde por daños antijurídicos causados por acción u omisión de autoridades públicas.",
+      "norma": "C.P., Art. 90",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Ramas del poder público",
+      "reverso": "Legislativa, ejecutiva y judicial; existen además órganos autónomos e independientes.",
+      "norma": "C.P., Art. 113",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Función administrativa",
+      "reverso": "Está al servicio de los intereses generales y se desarrolla con principios de igualdad, moralidad, eficacia y publicidad.",
+      "norma": "C.P., Art. 209",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Contraloría General de la República",
+      "reverso": "Ejerce vigilancia de la gestión fiscal y control de resultados de la administración; es entidad técnica autónoma.",
+      "norma": "C.P., Art. 267",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Ley 489 de 1998",
+      "reverso": "Regula el ejercicio de la función administrativa y define la estructura, principios y reglas de la Administración Pública.",
+      "norma": "Ley 489/1998, Art. 1",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Desconcentración administrativa",
+      "reverso": "Radicación de competencias en dependencias fuera de la sede principal sin implicar delegación.",
+      "norma": "Ley 489/1998, Art. 8",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    },
+    {
+      "frente": "Delegación",
+      "reverso": "Transferencia del ejercicio de funciones a colaboradores u otras autoridades mediante acto escrito.",
+      "norma": "Ley 489/1998, Art. 9",
+      "tema_clave": "gestion-publica-273",
+      "perfil_codigo": "273"
+    }
+  ]
+}

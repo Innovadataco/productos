@@ -1,0 +1,420 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1437 de 2011, ¿qué elemento distingue a un acto administrativo de una mera recomendación o opinión?",
+      "opciones": [
+        "La manifestación de voluntad destinada a crear, modificar o extinguir derechos",
+        "La cantidad de páginas del documento",
+        "La firma del director de recursos humanos",
+        "El uso de membrete institucional"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 2 de la Ley 1437 de 2011 define el acto administrativo como la manifestación de voluntad de una autoridad administrativa, destinada a producir efectos jurídicos individuales o particulares, es decir, a crear, modificar, extinguir o declarar derechos u obligaciones. Sin esta finalidad, un documento no es acto administrativo.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es la forma general exigida para los actos administrativos según la Ley 1437 de 2011?",
+      "opciones": [
+        "Escrita, salvo excepciones legales expresas",
+        "Pública únicamente mediante publicación en prensa",
+        "Solo digital con firma electrónica",
+        "Verbal siempre, para agilizar la gestión"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 10 de la Ley 1437 de 2011 establece que los actos administrativos serán expedidos por escrito, salvo las excepciones previas en la ley. Esta regla garantiza seguridad jurídica, trazabilidad y posibilidad de control de la actuación administrativa.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 10",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Conforme al Decreto 1080 de 2015, el Ministerio de Justicia y del Derecho es la cabeza del sector justicia y ejerce funciones de:",
+      "opciones": [
+        "Dirección, coordinación, formulación de política y control del sector",
+        "Solo administración de recursos físicos de los juzgados",
+        "Vigilancia exclusiva de las notarías privadas",
+        "Nombramiento de todos los jueces del país"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 2.1.1.1 del Decreto 1080 de 2015 señala que el Ministerio de Justicia y del Derecho es la cabeza del Sector Justicia, encargado de la dirección, coordinación, formulación de políticas, planeación, gestión del conocimiento y control del sector.",
+      "norma": "D. 1080/2015",
+      "articulo": "Art. 2.1.1.1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Acuerdo 011 de 2011 del Archivo General de la Nación, la política de gestión documental busca principalmente:",
+      "opciones": [
+        "Eliminar todos los documentos físicos antes de cinco años",
+        "Delegar la custodia de documentos en particulares",
+        "Garantizar la producción, tramite, conservación y disposición final de los documentos",
+        "Imprimir obligatoriamente toda comunicación oficial"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Acuerdo 011 de 2011 del Archivo General de la Nación establece la Política de Gestión Documental de las entidades públicas, orientada a garantizar el ciclo vital de los documentos: producción, tramite, conservación, organización y disposición final.",
+      "norma": "Acuerdo AGN 011/2011",
+      "articulo": "General",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 1437 de 2011 señala que la notificación personal debe practicarse:",
+      "opciones": [
+        "Mediante publicación en un periódico de circulación nacional",
+        "Únicamente en la sede de la entidad",
+        "En el domicilio señalado por el interesado o en el lugar donde se encuentre",
+        "Solo los días hábiles entre 6:00 a.m. y 8:00 a.m."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 38 de la Ley 1437 de 2011 dispone que la notificación personal se hará en el domicilio señalado por el interesado en la solicitud o en el lugar donde se encuentre. De no hallarse al destinatario, se dejará aviso para que la reclame dentro de los cinco días siguientes.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 38",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Cuando un interesado no reclama una notificación en el término legal, la Ley 1437 de 2011 establece que se entiende surtida mediante:",
+      "opciones": [
+        "Comunicación verbal al funcionario",
+        "Publicación en gaceta",
+        "Aviso",
+        "Edicto"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 37 de la Ley 1437 de 2011 regula la notificación por aviso, la cual se entiende surtida al vencer el término de cinco días para reclamarla, siempre que se haya dejado el aviso correspondiente en el domicilio señalado.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 37",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Decreto 1080 de 2015, en su Libro 2, define la estructura orgánica del Ministerio de Justicia. ¿Qué viceministerio se encarga de la promoción de la justicia y del derecho?",
+      "opciones": [
+        "Viceministerio de Seguridad Ciudadana",
+        "Viceministerio de Relaciones Internacionales",
+        "Viceministerio de Infraestructura Judicial",
+        "Viceministerio de Promoción de la Justicia"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Decreto 1080 de 2015 organiza el Ministerio de Justicia en oficinas asesoras y viceministerios, entre ellos el Viceministerio de Promoción de la Justicia, responsable de promover el acceso a la justicia, el derecho y la cultura de la legalidad.",
+      "norma": "D. 1080/2015",
+      "articulo": "Libro 2, Parte 1, Título 2",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "En el ciclo vital de un documento de oficina, según los lineamientos del AGN, la etapa de 'valoración documental' sirve para:",
+      "opciones": [
+        "Asignar números de teléfono a los funcionarios",
+        "Elegir el color del papel de impresión",
+        "Definir el horario de atención al público",
+        "Determinar el valor administrativo, legal, fiscal e histórico de los documentos"
+      ],
+      "respuesta": 3,
+      "explicacion": "La valoración documental, regulada en los lineamientos del Archivo General de la Nación, consiste en determinar los valores administrativo, legal, fiscal, técnico, testimonial e histórico de los documentos para decidir si se conservan, seleccionan o eliminan.",
+      "norma": "Acuerdo AGN 008/2014",
+      "articulo": "Cap. III",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1437 de 2011, el silencio administrativo como respuesta negativa opera cuando la ley así lo establezca y se entiende producido transcurridos:",
+      "opciones": [
+        "Quince días hábiles",
+        "Un mes solo para trámites de nacimiento",
+        "Dos años contados a partir del día siguiente a la solicitud",
+        "Seis meses desde la presentación de la solicitud"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 25 de la Ley 1437 de 2011 establece que el silencio administrativo como respuesta negativa se entiende producido transcurridos seis meses contados desde la fecha de presentación de la solicitud, salvo norma legal que fije un término distinto.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 25",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál de los siguientes requisitos NO es exigible para la validez formal de un acto administrativo según la Ley 1437 de 2011?",
+      "opciones": [
+        "Consignar la fecha de expedición",
+        "Mencionar la competencia del funcionario",
+        "Indicar el número de actuación o radicado",
+        "Incluir fotografía del funcionario que firma"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 67 de la Ley 1437 de 2011 lista los requisitos de los actos administrativos: número, fecha, identificación del funcionario, competencia, motivación, decisión, firma y notificación. No exige fotografía del firmante, pues ello sería irrelevante para su validez.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 67",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Decreto 1080 de 2015 consolida la normativa del sector justicia. ¿Qué tipo de decreto es?",
+      "opciones": [
+        "Decreto de creación de un municipio",
+        "Decreto estatutario de régimen electoral",
+        "Decreto Único Reglamentario del Sector Justicia",
+        "Decreto de urgencia social"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1080 de 2015 es el Decreto Único Reglamentario del Sector Justicia, mediante el cual se consolidan, actualizan y armonizan las normas reglamentarias que regulan la organización y funciones del Ministerio de Justicia y del Derecho.",
+      "norma": "D. 1080/2015",
+      "articulo": "General",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Acuerdo 008 de 2014 del AGN, los documentos de archivo son aquellos producidos o recibidos por una entidad en ejercicio de:",
+      "opciones": [
+        "Solo actividades de recreación y deporte",
+        "Campañas políticas partidistas",
+        "Labores domésticas del servidor público",
+        "Sus funciones y actividades administrativas, legales, financieras o históricas"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Acuerdo 008 de 2014 del Archivo General de la Nación define los documentos de archivo como los producidos o recibidos por una entidad en el ejercicio de sus funciones y actividades, con independencia de su soporte, fecha de producción o lugar de almacenamiento.",
+      "norma": "Acuerdo AGN 008/2014",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "La Ley 1437 de 2011 establece que la notificación por edicto se utiliza cuando:",
+      "opciones": [
+        "El destinatario acepta personalmente el documento",
+        "La entidad no tiene presupuesto para correo certificado",
+        "Se desconoce el domicilio del destinatario o este se encuentra fuera del territorio nacional sin apoderado",
+        "El documento es de carácter interno y secreto"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 40 de la Ley 1437 de 2011 prevé la notificación por edicto cuando se desconociera el domicilio del destinatario o cuando, teniéndolo fuera del territorio nacional, no hubiere señalado apoderado para recibir notificaciones.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 40",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "En la elaboración de documentos de oficina, el uso del membrete institucional cumple la función de:",
+      "opciones": [
+        "Hacer obligatoria la contratación de diseñadores gráficos",
+        "Identificar a la entidad, sus datos de contacto y la autoridad que emite el documento",
+        "Reemplazar la firma del funcionario competente",
+        "Evitar la aplicación de normas de archivo"
+      ],
+      "respuesta": 1,
+      "explicacion": "El membrete es un elemento formal de los documentos de oficina que permite identificar a la entidad emisora, su dirección, teléfono, NIT, logotipo y, frecuentemente, la dependencia o autoridad que emite el documento, facilitando la trazabilidad y validez formal.",
+      "norma": "Protocolos oficiales",
+      "articulo": "General",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Ley 1437 de 2011, el recurso de reposición debe interponerse ante la autoridad que expidió el acto dentro de:",
+      "opciones": [
+        "Veinte días si el acto es verbal",
+        "Diez días siguientes a la notificación",
+        "Cinco días hábiles previos a la expedición",
+        "Un año contado a partir de la publicación"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 268 de la Ley 1437 de 2011 establece que el recurso de reposición debe interponerse ante la autoridad que expidió el acto dentro de los diez días siguientes a la notificación del mismo, salvo que la ley señale un término especial.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 268",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Acuerdo 009 de 2015 del Archivo General de la Nación regula las tablas de retención documental. Estas tablas determinan:",
+      "opciones": [
+        "El salario de los archivistas de la entidad",
+        "El horario de apertura de las oficinas",
+        "La cantidad de impresoras por dependencia",
+        "El tiempo de permanencia de los documentos en archivo de gestión y su disposición final"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Acuerdo 009 de 2015 del AGN regula las tablas de retención documental, instrumentos archivísticos que determinan los tiempos de permanencia de los documentos en archivo de gestión, su selección para archivo histórico o su eliminación, conforme a su valor.",
+      "norma": "Acuerdo AGN 009/2015",
+      "articulo": "General",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "De acuerdo con la Ley 1437 de 2011, los actos administrativos son susceptibles de:",
+      "opciones": [
+        "Exclusión de toda revisión judicial",
+        "Caducidad automática a los treinta días",
+        "Control de legalidad y nulidad por vicios de incompetencia, procedimiento, motivación u objeto",
+        "Modificación exclusiva por el presidente sin control"
+      ],
+      "respuesta": 2,
+      "explicacion": "La Ley 1437 de 2011 regula el control de legalidad de los actos administrativos, señalando causales de nulidad como incompetencia, vicios del procedimiento, error de derecho, motivación insuficiente, falta de competencia y objeto ilícito, entre otras.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Arts. 3 y 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "En documentos de oficina, la fecha de expedición es relevante porque:",
+      "opciones": [
+        "Determina el inicio de términos, vigencia y posibilidad de impugnación",
+        "Es opcional en actos administrativos menores",
+        "Solo sirve para ordenar cronológicamente los archivos",
+        "Se puede omitir si el documento es confidencial"
+      ],
+      "respuesta": 0,
+      "explicacion": "La fecha de expedición de un documento de oficina, especialmente de un acto administrativo, es esencial porque determina el momento a partir del cual se computan términos para su cumplimiento, notificación, recursos y posible impugnación, además de su vigencia.",
+      "norma": "Ley 1437/2011",
+      "articulo": "Art. 67",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1080 de 2015, el Ministerio de Justicia y del Derecho tiene entre sus funciones la de formular, orientar, coordinar y evaluar:",
+      "opciones": [
+        "La política de turismo internacional",
+        "La política pública de acceso a la justicia, derechos humanos y cultura de la legalidad",
+        "La política agrícola del sector rural",
+        "La política de transporte público urbano"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2.1.1.2 del Decreto 1080 de 2015 desarrolla las funciones del Ministerio de Justicia, entre las cuales se encuentran formular, orientar, coordinar y evaluar la política pública en materia de acceso a la justicia, derechos humanos, cultura de la legalidad y convivencia.",
+      "norma": "D. 1080/2015",
+      "articulo": "Art. 2.1.1.2",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "enunciado": "La numeración de los documentos de oficina es importante porque permite:",
+      "opciones": [
+        "Identificar de forma única cada actuación y facilitar su consulta y archivo",
+        "Evitar la firma del documento",
+        "Asignar prioridad visual según el color de la hoja",
+        "Determinar el grado académico del destinatario"
+      ],
+      "respuesta": 0,
+      "explicacion": "La numeración única de los documentos, ya sea mediante radicado, consecutivo o número de actuación, permite identificar cada trámite de manera individual, facilita su seguimiento, archivo, consulta y evita duplicidades o confusiones en la gestión administrativa.",
+      "norma": "Protocolos oficiales",
+      "articulo": "General",
+      "dificultad": "facil"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "titulo": "Elaboración de documentos de oficina en el ámbito administrativo",
+      "contenido_html": "<h3>1. Naturaleza y función de los documentos de oficina</h3><p>Los documentos de oficina constituyen el soporte material de la actividad administrativa. A través de ellos las entidades públicas producen, reciben y tramitan información, toman decisiones y comunican actuaciones a los ciudadanos. Su elaboración correcta garantiza la seguridad jurídica, la transparencia, la trazabilidad y el debido control institucional.</p><h3>2. Marco normativo principal</h3><p>La <strong>Ley 1437 de 2011</strong>, conocida como Código de Procedimiento Administrativo y de lo Contencioso Administrativo, regula los actos administrativos, sus requisitos, notificaciones, recursos y nulidades. El <strong>Decreto 1080 de 2015</strong> consolida la normativa del Sector Justicia y define la estructura y funciones del Ministerio de Justicia y del Derecho. Los <strong>acuerdos del Archivo General de la Nación</strong>, en especial los Acuerdos 008 de 2014, 009 de 2015 y 011 de 2011, establecen las reglas de gestión documental, tablas de retención y política archivística de las entidades públicas.</p><h3>3. Requisitos formales de los actos administrativos</h3><p>Según el artículo 67 de la Ley 1437 de 2011, todo acto administrativo debe contener: número de actuación, fecha de expedición, identificación del funcionario que lo expide, mención de su competencia, motivación adecuada, decisión clara, firma y notificación. Además, salvo excepciones legales, los actos administrativos deben ser expedidos por escrito, conforme al artículo 10 de la misma ley.</p><h3>4. Notificación de los actos administrativos</h3><p>La notificación es el acto por el cual se pone en conocimiento del destinatario la decisión administrativa. La Ley 1437 de 2011 establece diversas modalidades: notificación personal en el domicilio señalado (artículo 38), notificación por aviso cuando el destinatario no reclama el documento (artículo 37), y notificación por edicto cuando se desconoce el domicilio o el destinatario se encuentra en el exterior sin apoderado (artículo 40).</p><h3>5. Gestión documental y archivo</h3><p>La gestión documental comprende el conjunto de actividades administrativas y técnicas orientadas a la producción, registro, tramite, organización, conservación y disposición final de los documentos producidos o recibidos por una entidad. El Acuerdo 011 de 2011 del AGN adopta la Política de Gestión Documental, mientras que el Acuerdo 008 de 2014 desarrolla los lineamientos para su implementación. Las tablas de retención documental, reguladas por el Acuerdo 009 de 2015, determinan el tiempo de permanencia de cada serie documental y su destino final: conservación permanente o eliminación.</p><h3>6. Organización del Sector Justicia</h3><p>El Decreto 1080 de 2015 señala que el Ministerio de Justicia y del Derecho es la cabeza del Sector Justicia y ejerce funciones de dirección, coordinación, formulación de política, planeación, gestión del conocimiento y control. Su estructura incluye oficinas asesoras y viceministerios, entre ellos el Viceministerio de Promoción de la Justicia, encargado de impulsar el acceso a la justicia, los derechos humanos y la cultura de la legalidad.</p><h3>7. Buenas prácticas en la elaboración de documentos</h3><p>Para elaborar documentos de oficina adecuados se recomienda: usar el membrete institucional, asignar consecutivos únicos, consignar fecha y datos completos del destinatario, motivar las decisiones, citar la norma aplicable, firmar por quien tenga competencia, registrar y archivar el documento, y notificarlo conforme a la ley. Asimismo, debe respetarse la clasificación de la información y las reglas de gestión documental para garantizar la conservación y disponibilidad de los documentos.</p>",
+      "fuente_url": "https://www.secretariasenado.gov.co/senado/basedoc/ley_1437_2011.html",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Acto administrativo",
+      "reverso": "Manifestación de voluntad de una autoridad administrativa destinada a producir efectos jurídicos individuales o particulares.",
+      "norma": "Ley 1437/2011, Art. 2"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Notificación por aviso",
+      "reverso": "Se entiende surtida al vencer el término de cinco días para reclamar el documento dejado en el domicilio.",
+      "norma": "Ley 1437/2011, Art. 37"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Notificación por edicto",
+      "reverso": "Modalidad usada cuando se desconoce el domicilio del destinatario o reside en el exterior sin apoderado.",
+      "norma": "Ley 1437/2011, Art. 40"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Silencio administrativo negativo",
+      "reverso": "Se entiende producido transcurridos seis meses desde la presentación de la solicitud, salvo norma especial.",
+      "norma": "Ley 1437/2011, Art. 25"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Recurso de reposición",
+      "reverso": "Recurso de reposición debe interponerse ante la autoridad que expidió el acto dentro de diez días siguientes a la notificación.",
+      "norma": "Ley 1437/2011, Art. 268"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Decreto 1080 de 2015",
+      "reverso": "Decreto Único Reglamentario del Sector Justicia que organiza el Ministerio de Justicia y del Derecho.",
+      "norma": "D. 1080/2015, Art. 2.1.1.1"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Política de Gestión Documental",
+      "reverso": "Conjunto de principios, objetivos y lineamientos para garantizar el ciclo vital de los documentos en entidades públicas.",
+      "norma": "Acuerdo AGN 011/2011"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Tabla de retención documental",
+      "reverso": "Instrumento archivístico que fija los tiempos de permanencia y disposición final de las series documentales.",
+      "norma": "Acuerdo AGN 009/2015"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Documentos de archivo",
+      "reverso": "Documentos producidos o recibidos por una entidad en ejercicio de sus funciones y actividades institucionales.",
+      "norma": "Acuerdo AGN 008/2014, Art. 1"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Membrete institucional",
+      "reverso": "Encabezado de un documento oficial que identifica a la entidad, sus datos de contacto y la dependencia emisora.",
+      "norma": "Protocolos oficiales"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Valoración documental",
+      "reverso": "Proceso para determinar el valor administrativo, legal, fiscal, técnico, testimonial e histórico de los documentos.",
+      "norma": "Acuerdo AGN 008/2014"
+    },
+    {
+      "tema_clave": "documentos-oficina-273",
+      "perfil_codigo": "273",
+      "frente": "Viceministerio de Promoción de la Justicia",
+      "reverso": "Dependencia del Ministerio de Justicia encargada de promover el acceso a la justicia, derechos y cultura de la legalidad.",
+      "norma": "D. 1080/2015, Libro 2"
+    }
+  ]
+}
