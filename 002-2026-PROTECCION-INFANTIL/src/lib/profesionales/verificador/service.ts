@@ -91,6 +91,83 @@ export async function listarSolicitudesEnRevision(): Promise<FilaColaVerificacio
     }));
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// SPEC-693 (I-416) · Cola 3 — «Documentos nuevos» (renovaciones por requisito)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface VersionDocumentoFila {
+    extension: string;
+    subidoEn: string; // ISO
+}
+
+export interface RequisitoRenovacion {
+    clave: string;
+    nombre: string;
+    /** La versión aprobada que sigue respaldando mientras se revisa la nueva. */
+    vigente: VersionDocumentoFila | null;
+    /** La versión nueva EN_REVISION que el verificador tiene que aprobar o devolver. */
+    nuevo: VersionDocumentoFila;
+}
+
+export interface FilaRenovacion {
+    profesionalId: string; // = perfil.id, el [id] de la ruta de renovación
+    nombreVisible: string;
+    email: string;
+    tituloProfesional: string;
+    ciudadNombre: string;
+    /**
+     * Vigencia actual del profesional. La vista pinta la franja ÁMBAR si vence en ≤30
+     * días (Diseño): es la única urgencia real — si vence mientras el documento espera,
+     * la compuerta frena al profesional. Renovar un requisito NO mueve esta fecha.
+     */
+    venceEn: string | null;
+    requisitos: RequisitoRenovacion[];
+}
+
+/**
+ * SPEC-693 · cola de profesionales ACTIVOS que subieron una versión nueva de algún
+ * requisito. Un renglón por profesional; dentro, los requisitos con versión nueva, con
+ * la vigente y la nueva lado a lado. «documento nuevo», nunca «renovación» (Diseño: la
+ * palabra reabre la confusión tarjeta/verificación que SPEC-691 cerró).
+ */
+export async function listarRenovaciones(): Promise<FilaRenovacion[]> {
+    const [perfiles, requisitos] = await Promise.all([
+        new VerificadorRepository().listarRenovacionesPendientes(),
+        leerRequisitosVerificacion(),
+    ]);
+    const nombrePorClave = new Map(requisitos.map((r) => [r.clave, r.nombre]));
+
+    return perfiles.map((p) => {
+        type Doc = (typeof p.documentos)[number];
+        const porClave = new Map<string, { vigente?: Doc; pendiente?: Doc }>();
+        for (const d of p.documentos) {
+            const slot = porClave.get(d.requisitoClave) ?? {};
+            if (d.estado === "VIGENTE") slot.vigente = d;
+            else if (d.estado === "EN_REVISION") slot.pendiente = d;
+            porClave.set(d.requisitoClave, slot);
+        }
+        const requisitosPendientes: RequisitoRenovacion[] = [...porClave.entries()]
+            .filter(([, s]) => s.pendiente !== undefined)
+            .map(([clave, s]) => ({
+                clave,
+                nombre: nombrePorClave.get(clave) ?? clave,
+                vigente: s.vigente
+                    ? { extension: s.vigente.extension, subidoEn: s.vigente.subidoEn.toISOString() }
+                    : null,
+                nuevo: { extension: s.pendiente!.extension, subidoEn: s.pendiente!.subidoEn.toISOString() },
+            }));
+        return {
+            profesionalId: p.id,
+            nombreVisible: p.nombreVisible,
+            email: p.usuario.email,
+            tituloProfesional: p.tituloProfesional,
+            ciudadNombre: p.ciudad.nombre,
+            venceEn: p.verificaciones[0]?.venceEn.toISOString() ?? null,
+            requisitos: requisitosPendientes,
+        };
+    });
+}
+
 export interface FichaVerificacion {
     solicitudId: string;
     profesional: {
@@ -305,6 +382,23 @@ export async function decidir(
             notaInterna,
         });
         const perfilActualizado = await repoTx.cambiarEstadoPerfil(perfil.id, nuevoEstadoPerfil);
+
+        // SPEC-693 (I-416): al APROBAR, cada requisito queda respaldado por su versión
+        // VIGENTE y la verificación fija en la tabla de unión QUÉ bytes revisó. Se
+        // promueve la versión pendiente si el profesional subió una nueva (la anterior
+        // pasa a SUPERSEDIDA, no se pierde); si no re-subió ese requisito, se re-aprueba
+        // la vigente. Reemplazar un documento más tarde ya no puede alterar los bytes que
+        // respaldan ESTA verificación — el candado de integridad lo custodia.
+        if (resultado === "APROBADO") {
+            const docRepo = new DocumentoProfesionalRepository(tx);
+            const idsRevisados: string[] = [];
+            for (const r of requisitos) {
+                const promovida = await docRepo.promoverPendienteAVigente(perfil.id, r.clave);
+                const vigente = promovida ?? (await docRepo.buscarVigente(perfil.id, r.clave));
+                if (vigente) idsRevisados.push(vigente.id);
+            }
+            await repoTx.registrarDocumentosRevisados(verificacion.id, idsRevisados);
+        }
 
         const aviso = await programar(
             {

@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **116** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **118** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (68)
+### Otros (sin regla de dominio) (70)
 
 #### `AclaracionExpediente`
 
@@ -784,8 +784,11 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | archivoId | String | — |
 | extension | String | — |
 | sha256 | String | — |
+| estado | EstadoDocumento | — |
 | subidoEn | DateTime | — |
 | perfil | PerfilProfesional | relación (FK) |
+| verificaciones | VerificacionDocumento | lista, relación |
+| revisionesRenovacion | RevisionRenovacion | lista, relación |
 
 #### `EjecucionAccion`
 
@@ -1471,6 +1474,20 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | regla | ReglaRecomendacion | relación (FK) |
 | cambiadoPor | Usuario | relación (FK) |
 
+#### `RevisionRenovacion`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| documentoProfesionalId | String | — |
+| revisadoPorId | String | — |
+| revisadoEn | DateTime | — |
+| resultado | ResultadoRevisionRenovacion | — |
+| observacion | String | opcional |
+| creadoEn | DateTime | — |
+| documento | DocumentoProfesional | relación (FK) |
+| revisadoPor | Usuario | relación |
+
 #### `ScoreCliente`
 
 | Campo | Tipo | Atributos |
@@ -1677,6 +1694,16 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
 
+#### `VerificacionDocumento`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| verificacionId | String | — |
+| documentoProfesionalId | String | — |
+| verificacion | VerificacionProfesional | relación (FK) |
+| documento | DocumentoProfesional | relación (FK) |
+
 #### `VerificacionProfesional`
 
 | Campo | Tipo | Atributos |
@@ -1694,6 +1721,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | notaInterna | String | opcional |
 | perfilProfesional | PerfilProfesional | relación (FK) |
 | revisadoPor | Usuario | relación |
+| documentosRevisados | VerificacionDocumento | lista, relación |
 
 #### `WorkerLog`
 
@@ -2261,6 +2289,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | ciudadPerfil | Ciudad | opcional, relación |
 | perfilProfesional | PerfilProfesional | opcional, relación |
 | verificacionesProfesionalRevisadas | VerificacionProfesional | lista, relación |
+| revisionesRenovacionHechas | RevisionRenovacion | lista, relación |
 | solicitudesCitaComoPadre | SolicitudCita | lista, relación |
 
 ## Diagrama ER (Mermaid)
@@ -2312,6 +2341,8 @@ erDiagram
     Departamento ||--o{ Ciudad : "departamento (opcional)"
     Departamento ||--o{ Colegio : "departamento (opcional)"
     DocumentoApelacion ||--o{ AccesoDocumentoApelacion : "documento"
+    DocumentoProfesional ||--o{ RevisionRenovacion : "documento"
+    DocumentoProfesional ||--o{ VerificacionDocumento : "documento"
     Estudiante ||--o{ AcudienteEstudiante : "estudiante"
     Estudiante ||--o{ EstudianteObservacion : "estudiante"
     Estudiante ||--o{ IdentificadorEstudiante : "estudiante"
@@ -2450,6 +2481,7 @@ erDiagram
     Usuario ||--o{ TasaCambio : "ingresadoPor (opcional)"
     Usuario ||--o{ TokenRecuperacion : "usuario (opcional)"
     Usuario ||--o{ TransicionReporte : "responsableUsuario (opcional)"
+    VerificacionProfesional ||--o{ VerificacionDocumento : "verificacion"
 ```
 
 ## Huérfanos (sin relaciones entrantes ni salientes)

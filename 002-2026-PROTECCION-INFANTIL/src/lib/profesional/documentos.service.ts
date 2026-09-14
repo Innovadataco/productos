@@ -57,6 +57,13 @@ export interface EstadoDocumento {
     nombre: string;
     descripcion: string;
     cargado: boolean;
+    /**
+     * SPEC-693 (I-416): el profesional subió una versión NUEVA de este requisito que
+     * está esperando revisión (hay un documento EN_REVISION). La pantalla lo pinta como
+     * «En revisión — enviaste un documento nuevo». Si además hay una versión vigente,
+     * el profesional sigue atendiendo con ella mientras tanto.
+     */
+    enRevision: boolean;
     extension: string | null;
     subidoEn: string | null;
 }
@@ -64,22 +71,35 @@ export interface EstadoDocumento {
 /**
  * El estado de los documentos de un perfil, **derivado del parámetro**: si
  * mañana se agrega un quinto requisito, aparece acá sin tocar código.
+ *
+ * SPEC-693: un requisito puede tener a la vez una versión VIGENTE (la que respalda) y
+ * una EN_REVISION (la nueva que espera revisión). Se muestra la más nueva que el
+ * profesional ve (la pendiente si la hay; si no, la vigente) y se marca `enRevision`.
  */
 export async function estadoDeDocumentos(perfilProfesionalId: string): Promise<EstadoDocumento[]> {
-    const [requisitos, cargados] = await Promise.all([
+    const [requisitos, actuales] = await Promise.all([
         leerRequisitosVerificacion(),
         new DocumentoProfesionalRepository().listarPorPerfil(perfilProfesionalId),
     ]);
-    const porClave = new Map(cargados.map((d) => [d.requisitoClave, d]));
+    type DocActual = (typeof actuales)[number];
+    const porClave = new Map<string, { vigente?: DocActual; pendiente?: DocActual }>();
+    for (const d of actuales) {
+        const slot = porClave.get(d.requisitoClave) ?? {};
+        if (d.estado === "VIGENTE") slot.vigente = d;
+        else if (d.estado === "EN_REVISION") slot.pendiente = d;
+        porClave.set(d.requisitoClave, slot);
+    }
     return requisitos.map((r) => {
-        const doc = porClave.get(r.clave);
+        const slot = porClave.get(r.clave);
+        const mostrar = slot?.pendiente ?? slot?.vigente ?? null;
         return {
             clave: r.clave,
             nombre: r.nombre,
             descripcion: r.descripcion,
-            cargado: doc !== undefined,
-            extension: doc?.extension ?? null,
-            subidoEn: doc ? doc.subidoEn.toISOString() : null,
+            cargado: mostrar !== null,
+            enRevision: slot?.pendiente !== undefined,
+            extension: mostrar?.extension ?? null,
+            subidoEn: mostrar ? mostrar.subidoEn.toISOString() : null,
         };
     });
 }
@@ -114,8 +134,20 @@ export async function guardarDocumentoDeRequisito(
     });
 }
 
+/**
+ * SPEC-693 (I-416): qué VERSIÓN de un requisito servir. Sin especificar → la de por
+ * defecto (`buscar`: vigente si hay, si no la pendiente) — el comportamiento de siempre.
+ * La pantalla de comparar pide una versión concreta (vigente vs. nuevo) para poder
+ * mostrarlas lado a lado.
+ */
+type VersionDocumento = "vigente" | "nuevo";
+
 /** El `archivoId` de una clave: o la autorización del perfil, o un requisito. */
-async function archivoIdDe(perfilProfesionalId: string, clave: string): Promise<string> {
+async function archivoIdDe(
+    perfilProfesionalId: string,
+    clave: string,
+    version?: VersionDocumento,
+): Promise<string> {
     if (clave === CLAVE_AUTORIZACION) {
         const perfil = await new PerfilProfesionalRepository().findPorId(perfilProfesionalId);
         if (!perfil?.autorizacionArchivoId) {
@@ -123,7 +155,13 @@ async function archivoIdDe(perfilProfesionalId: string, clave: string): Promise<
         }
         return perfil.autorizacionArchivoId;
     }
-    const doc = await new DocumentoProfesionalRepository().buscar(perfilProfesionalId, clave);
+    const repo = new DocumentoProfesionalRepository();
+    const doc =
+        version === "vigente"
+            ? await repo.buscarVigente(perfilProfesionalId, clave)
+            : version === "nuevo"
+                ? await repo.buscarPendiente(perfilProfesionalId, clave)
+                : await repo.buscar(perfilProfesionalId, clave);
     if (!doc) throw new AppError("Sin documento cargado para ese requisito.", ERROR_CODES.NOT_FOUND, 404);
     return doc.archivoId;
 }
@@ -140,8 +178,10 @@ export async function servirDocumento(params: {
     clave: string;
     quienUsuarioId: string;
     comoRol: string;
+    /** SPEC-693: versión concreta (vigente/nuevo); sin ella, la de por defecto. */
+    version?: VersionDocumento;
 }): Promise<DocumentoServido> {
-    const archivoId = await archivoIdDe(params.perfilProfesionalId, params.clave);
+    const archivoId = await archivoIdDe(params.perfilProfesionalId, params.clave, params.version);
     const buffer = await leerAutorizacion(archivoId);
 
     // H-2 · la fila va ANTES de devolver el contenido. Si esto falla, no se

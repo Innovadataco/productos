@@ -30,7 +30,7 @@ import { servirDocumento } from "@/lib/profesional/documentos.service";
  */
 const ROLES_QUE_REVISAN = new Set(["VERIFICADOR", "ADMIN"]);
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string; clave: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ id: string; clave: string }> }) {
     try {
         const user = await verifyAuth();
         if (!ROLES_QUE_REVISAN.has(user.rol)) {
@@ -38,6 +38,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string; cl
         }
         await assertModulo(user, "admin_verificacion_profesionales");
         const { id, clave } = await ctx.params;
+        // SPEC-693: la pantalla de comparar pide una versión concreta (?version=vigente|nuevo)
+        // para mostrar el documento vigente y el nuevo lado a lado. Sin el parámetro, la de siempre.
+        const versionParam = new URL(req.url).searchParams.get("version");
+        const version = versionParam === "vigente" || versionParam === "nuevo" ? versionParam : undefined;
 
         const perfil = await new PerfilProfesionalRepository().findPorId(id);
         if (!perfil) throw new AppError("Ficha no encontrada", ERROR_CODES.NOT_FOUND, 404);
@@ -47,6 +51,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string; cl
             clave,
             quienUsuarioId: user.id,
             comoRol: user.rol,
+            ...(version ? { version } : {}),
         });
         return new NextResponse(new Uint8Array(doc.buffer), {
             status: 200,

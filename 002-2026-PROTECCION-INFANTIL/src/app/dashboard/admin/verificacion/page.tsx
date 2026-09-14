@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { verificarAccesoPagina } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
-import { VerificacionColaClient } from "@/components/modules/verificacion/VerificacionColaClient";
+import { VerificacionColasClient } from "@/components/modules/verificacion/VerificacionColasClient";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +18,8 @@ export default async function VerificacionPage() {
                 <p className="microetiqueta">Red de Apoyo</p>
                 <h1 className="titular-h1 mt-1">Verificación de profesionales</h1>
                 <p className="cuerpo text-subtle mt-2">
-                    Solicitudes de psicólogos esperando revisión. Abrí una para ver los documentos,
-                    marcar cada requisito y aprobar o devolver con observaciones.
+                    Dos colas: <strong>solicitudes nuevas</strong> de psicólogos esperando entrar, y
+                    {" "}<strong>documentos nuevos</strong> de quienes ya atienden. Abrí una para revisar.
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
                     <Link
@@ -30,7 +30,7 @@ export default async function VerificacionPage() {
                     </Link>
                 </div>
             </header>
-            <VerificacionColaClient />
+            <VerificacionColasClient />
         </div>
     );
 }

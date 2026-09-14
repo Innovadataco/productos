@@ -786,6 +786,8 @@ model Usuario {
   // SPEC-388 (A-75 · L1a): back-refs de la Red de Profesionales.
   perfilProfesional                PerfilProfesional?
   verificacionesProfesionalRevisadas VerificacionProfesional[]     @relation("VerificacionesRevisadasPor")
+  // SPEC-693 (I-416): re-revisiones de renovación de documentos que hizo este verificador.
+  revisionesRenovacionHechas       RevisionRenovacion[]            @relation("RevisionesRenovacionHechas")
   solicitudesCitaComoPadre         SolicitudCita[]                 @relation("SolicitudesCitaPadre")
 
   @@index([email])
@@ -3662,6 +3664,25 @@ enum EstadoPerfilProfesional {
   SUSPENDIDO
 }
 
+// SPEC-693 (I-416): versión de un documento de un requisito. EN_REVISION y VIGENTE
+// conviven — subir uno nuevo NUNCA pisa el aprobado. SUPERSEDIDA (fue vigente,
+// reemplazado por uno nuevo aprobado) y DEVUELTA (pendiente que el verificador no
+// aprobó) son historia: nada se pierde.
+enum EstadoDocumento {
+  EN_REVISION
+  VIGENTE
+  SUPERSEDIDA
+  DEVUELTA
+}
+
+// SPEC-693 (I-416): desenlace de una RE-revisión de renovación (un requisito
+// suelto de un profesional ya ACTIVO). Solo dos: aprobar la versión nueva o
+// devolverla. Menos desenlaces que una verificación completa a propósito.
+enum ResultadoRevisionRenovacion {
+  APROBADO
+  DEVUELTA
+}
+
 enum ResultadoVerificacion {
   APROBADO
   RECHAZADO
@@ -3765,13 +3786,84 @@ model DocumentoProfesional {
   // dato guardado puede mentir, el número mágico del archivo no.
   extension           String
   sha256              String
+  // SPEC-693 (I-416): versión del documento. Subir uno nuevo crea/reemplaza la
+  // fila EN_REVISION SIN tocar la VIGENTE (el profesional sigue atendiendo con la
+  // aprobada). La unicidad «≤1 VIGENTE y ≤1 EN_REVISION por (perfil,requisito)» NO
+  // se expresa en el DSL de Prisma → va como DOS índices únicos PARCIALES en la
+  // migración (revisado con Datos, D-121); el candado de inserción real (23505) los
+  // custodia contra el drift de `migrate dev`.
+  estado              EstadoDocumento @default(EN_REVISION)
   subidoEn            DateTime @default(now()) @db.Timestamptz(6)
 
-  perfil PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id], onDelete: Cascade)
+  perfil         PerfilProfesional       @relation(fields: [perfilProfesionalId], references: [id], onDelete: Cascade)
+  // SPEC-693: qué verificaciones revisaron ESTA versión (tabla de unión, FK real).
+  verificaciones VerificacionDocumento[]
+  // SPEC-693: re-revisiones de RENOVACIÓN de esta versión (aprobar/devolver un
+  // documento nuevo de un profesional ya activo, sin tocar vigencia ni perfil).
+  revisionesRenovacion RevisionRenovacion[]
 
-  // Uno por requisito: reemplazar es actualizar la fila, no acumular basura.
-  @@unique([perfilProfesionalId, requisitoClave])
-  @@index([perfilProfesionalId])
+  // SPEC-693: se derogó `@@unique([perfilProfesionalId, requisitoClave])` (una sola
+  // fila por requisito) — ahora conviven versiones. La unicidad la dan los índices
+  // únicos PARCIALES de la migración (por estado). Un solo índice de lectura: el
+  // compuesto sirve TAMBIÉN las consultas por `perfilProfesionalId` solo (columna
+  // líder del btree), así que el standalone `@@index([perfilProfesionalId])` era
+  // redundante (nit de Datos, D-121) — la migración lo dropea.
+  @@index([perfilProfesionalId, requisitoClave])
+}
+
+// SPEC-693 (I-416): qué VERSIÓN de documento revisó cada verificación. Tabla de
+// unión con FK REAL (un JSON de ids no es FK-enforceable): la base garantiza que
+// el documento referido existe. Como las versiones nunca se borran (pasan a
+// SUPERSEDIDA/DEVUELTA), el FK nunca queda colgando; fija los bytes exactos
+// revisados vía `DocumentoProfesional.sha256`, inmutable por versión. (D-121, Datos.)
+model VerificacionDocumento {
+  id                     String @id @default(cuid())
+  verificacionId         String
+  documentoProfesionalId String
+
+  // Datos (D-121, checkpoint 2): AMBOS FK con onDelete: Cascade EXPLÍCITO. El
+  // default de Prisma para relación requerida es Restrict, y acá trabaría dos
+  // caminos: (a) `DocumentoProfesional.perfil` ya es Cascade → borrar un perfil
+  // (que cascadea a sus docs) quedaría bloqueado por la fila de unión; (b) el
+  // purgador demo borra `VerificacionProfesional` explícito por ORDEN_BORRADO →
+  // un Restrict trabaría la purga. Con Cascade la unión se limpia sola: es tabla
+  // puente sin identidad propia → NO va en ORDEN_BORRADO ni lleva marca demo.
+  verificacion VerificacionProfesional @relation(fields: [verificacionId], references: [id], onDelete: Cascade)
+  documento    DocumentoProfesional    @relation(fields: [documentoProfesionalId], references: [id], onDelete: Cascade)
+
+  @@unique([verificacionId, documentoProfesionalId])
+  @@index([documentoProfesionalId])
+}
+
+// SPEC-693 (I-416): registro de una RE-revisión de RENOVACIÓN — un profesional YA
+// ACTIVO subió una versión nueva de un requisito y el verificador la aprobó o la
+// devolvió. Los DOS invariantes del CEO son ESTRUCTURALES acá (Datos, D-121): esta
+// tabla NO tiene `venceEn` y NO tiene FK a `PerfilProfesional` → no puede extender
+// la vigencia ni cambiar el estado del perfil, por FORMA, no por una regla que
+// alguien deba recordar. Distinta de `VerificacionProfesional` (la re-verificación
+// COMPLETA que sí renueva la vigencia) y de `VerificacionDocumento` (unión del
+// flujo inicial). El requisito sale TRANSITIVO del documento — no se denormaliza.
+model RevisionRenovacion {
+  id                     String                      @id @default(cuid())
+  documentoProfesionalId String
+  revisadoPorId          String
+  revisadoEn             DateTime                    @default(now()) @db.Timestamptz(6)
+  resultado              ResultadoRevisionRenovacion
+  // Obligatoria al DEVOLVER (mismo candado que «NO CUMPLE exige observación»);
+  // opcional al aprobar.
+  observacion            String?                     @db.Text
+  creadoEn               DateTime                    @default(now()) @db.Timestamptz(6)
+
+  // documento: onDelete Cascade — se limpia por cascada desde el perfil
+  // (perfil→doc, schema.prisma) → NO va en ORDEN_BORRADO ni lleva marca demo.
+  // revisadoPor: Restrict (el default de Prisma), igual que
+  // `VerificacionProfesional.revisadoPor` — preserva quién revisó; seguro porque
+  // el perfil se borra antes que Usuario en la purga (las filas ya cayeron por cascada).
+  documento   DocumentoProfesional @relation(fields: [documentoProfesionalId], references: [id], onDelete: Cascade)
+  revisadoPor Usuario              @relation("RevisionesRenovacionHechas", fields: [revisadoPorId], references: [id])
+
+  @@index([documentoProfesionalId])
+  @@index([revisadoPorId])
 }
 
 // N por profesional — el HISTORIAL importa: si venció y hay una nueva
@@ -3803,6 +3895,8 @@ model VerificacionProfesional {
 
   perfilProfesional PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id])
   revisadoPor       Usuario           @relation("VerificacionesRevisadasPor", fields: [revisadoPorId], references: [id])
+  // SPEC-693 (I-416): las versiones de documento que ESTA verificación revisó.
+  documentosRevisados VerificacionDocumento[]
 
   // L2 lista las verificaciones vigentes por profesional en orden descendente
   // y consulta la próxima que vence para el aviso de 30 días.

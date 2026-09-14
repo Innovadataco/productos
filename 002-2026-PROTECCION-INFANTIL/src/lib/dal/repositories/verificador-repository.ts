@@ -173,6 +173,57 @@ export class VerificadorRepository {
         });
     }
 
+    /**
+     * SPEC-693 (I-416): fija en la tabla de unión QUÉ versiones de documento revisó
+     * una verificación (los bytes exactos, vía `DocumentoProfesional.sha256`). El
+     * `@@unique(verificacionId, documentoProfesionalId)` hace idempotente el registro.
+     * Correr dentro de la transacción de la decisión.
+     */
+    async registrarDocumentosRevisados(verificacionId: string, documentoProfesionalIds: string[]) {
+        if (documentoProfesionalIds.length === 0) return;
+        await this.db.verificacionDocumento.createMany({
+            data: documentoProfesionalIds.map((documentoProfesionalId) => ({
+                verificacionId,
+                documentoProfesionalId,
+            })),
+            skipDuplicates: true,
+        });
+    }
+
+    /**
+     * SPEC-693 (I-416) · cola 3 «Documentos nuevos»: profesionales ACTIVOS (aprobados,
+     * ATENDIENDO) que subieron una versión nueva de algún requisito — un documento
+     * EN_REVISION que CONVIVE con el vigente. Es la renovación por requisito: el
+     * profesional sigue atendiendo con el anterior. Solo ACTIVO: un perfil en revisión
+     * inicial es carril de `decidir`, y uno vencido recupera vigencia por re-verificación
+     * completa, no por renovar un requisito (renovar NUNCA mueve la vigencia). Trae los
+     * documentos ACTUALES (vigente + pendiente) para pintarlos lado a lado, y la última
+     * verificación APROBADA para `venceEn` (la franja ámbar de ≤30 días la calcula la vista).
+     */
+    listarRenovacionesPendientes() {
+        return this.db.perfilProfesional.findMany({
+            where: {
+                estado: "ACTIVO",
+                documentos: { some: { estado: "EN_REVISION" } },
+            },
+            orderBy: { actualizadoEn: "asc" },
+            include: {
+                usuario: { select: { email: true } },
+                ciudad: { select: { nombre: true } },
+                documentos: {
+                    where: { estado: { in: ["VIGENTE", "EN_REVISION"] } },
+                    orderBy: [{ requisitoClave: "asc" }, { estado: "asc" }],
+                },
+                verificaciones: {
+                    where: { resultado: "APROBADO" },
+                    orderBy: { revisadoEn: "desc" },
+                    take: 1,
+                    select: { venceEn: true },
+                },
+            },
+        });
+    }
+
     /** Cola 2 — citas en SIN_CONFIRMAR con las dos puntas (padre + profesional). */
     listarIncidentesSinConfirmar() {
         return this.db.solicitudCita.findMany({
