@@ -16,6 +16,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
+import { createToken, getUserFromToken, verifyPassword } from "@/lib/auth";
+import { AutenticacionService } from "@/lib/dal/services/autenticacion";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import {
     sembrarProfesionalesPorEstado,
@@ -78,6 +80,12 @@ async function contarVerificacionesFixture(): Promise<number> {
     });
 }
 
+/** Petición autenticada como `usuarioId` (cookie con JWT), para ejercitar `getUserFromToken`. */
+async function requestComo(usuarioId: string): Promise<Request> {
+    const token = await createToken({ sub: usuarioId });
+    return new Request("http://localhost/api/x", { headers: { cookie: `token=${token}` } });
+}
+
 describe("SPEC-690 · siembra de un profesional por estado", () => {
     beforeEach(async () => {
         await resetDatabase();
@@ -136,6 +144,28 @@ describe("SPEC-690 · siembra de un profesional por estado", () => {
         });
         expect(verifs).toHaveLength(3);
         expect(verifs.every((v) => v.revisadoPorId === r.revisor.id)).toBe(true);
+    });
+
+    it("acceso — el VERIFICADOR demo NO puede autenticarse (clave inutilizable + inactivo); el ACTIVO sí", async () => {
+        const ciudadId = await ciudadDePrueba();
+        const r = await sembrar(ciudadId);
+        const activo = r.fixtures.find((f) => f.estado === "ACTIVO")!;
+
+        // El firmante está inactivo y su clave NO es la del entorno (sin credencial reutilizable).
+        const rev = await prisma.usuario.findUnique({ where: { id: r.revisor.id }, select: { estado: true, passwordHash: true } });
+        expect(rev?.estado).toBe("inactivo");
+        expect(await verifyPassword(PROF.secreto, rev!.passwordHash)).toBe(false);
+
+        const auth = new AutenticacionService();
+        // 1) el login del firmante FALLA (ni con la clave del entorno).
+        expect((await auth.login(EMAIL_REVISOR, PROF.secreto)).ok).toBe(false);
+        // 2) una llamada autenticada COMO el firmante se rechaza (estado inactivo → null).
+        expect(await getUserFromToken(await requestComo(r.revisor.id))).toBeNull();
+
+        // CONTROL POSITIVO: el profesional ACTIVO, con la clave del entorno, SÍ entra y SÍ resuelve
+        // su sesión — así un login/authn roto por otra causa no dejaría pasar el candado en verde.
+        expect((await auth.login(activo.email, PROF.secreto)).ok).toBe(true);
+        expect(await getUserFromToken(await requestComo(activo.usuarioId))).not.toBeNull();
     });
 
     it("cond.3 — no dispara notificaciones (guardia transaccional: delta = 0)", async () => {

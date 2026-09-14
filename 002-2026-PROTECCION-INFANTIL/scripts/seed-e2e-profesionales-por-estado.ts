@@ -37,11 +37,19 @@
  *     de las dos direcciones vive en el candado de integración.
  *
  * FIRMANTE DE LAS VERIFICACIONES (autoría): las verificaciones sembradas las firma un
- * VERIFICADOR **DEMO** que este script crea y marca (no un revisor real). El poblador de la Red
- * de Apoyo firma sus ~50 aprobaciones con un ADMIN REAL (`poblar-red-apoyo.ts:140/220`): eso deja
- * verificaciones demo con AUTORÍA de una persona que no las revisó. Acá se evita a propósito —
- * la autoría también es demo, marcada y purgable. (Que la Red de Apoyo tenga esa autoría real es
- * un hallazgo aparte, para radicar; no se toca en este PR.)
+ * VERIFICADOR **DEMO SIN ACCESO** que este script crea y marca (no un revisor real). El poblador
+ * de la Red de Apoyo firma sus ~50 aprobaciones con un ADMIN REAL (`poblar-red-apoyo.ts:140/220`):
+ * eso deja verificaciones demo con AUTORÍA de una persona que no las revisó. Acá se evita — la
+ * autoría también es demo, marcada y purgable. (Que la Red de Apoyo tenga esa autoría real es un
+ * hallazgo aparte, para radicar; no se toca en este PR.)
+ *
+ * PERO un VERIFICADOR es la LLAVE del mecanismo de confianza: aprueba profesionales. Una marca en
+ * `demo_marcado` cambia lo que se VE, no lo que se puede HACER, y la capacidad viene del ROL
+ * (`permisos-modulos.ts` resuelve por rol; el rol VERIFICADOR ya trae `admin_verificacion_profesionales`).
+ * Así que este firmante NO puede iniciar sesión: (1) clave ALEATORIA irrecuperable —jamás la del
+ * entorno—, y (2) `estado="inactivo"`, que el login rechaza (`tipo:"inactiva"`) y `verifyAuth`/
+ * `getUserFromToken` rechazan en cada petición (auth.ts:129/160/189). Defensa en profundidad: dos
+ * cerrojos independientes para una cuenta que solo necesita existir como autor.
  *
  * NO CUBIERTO (medido, para radicar aparte): la exclusión SPEC-655 cubre el DIRECTORIO del padre,
  * NO la cola del verificador (`verificador-repository.ts:48-49` lista `estado=EN_REVISION` sin
@@ -54,6 +62,7 @@
  * Uso (dev):
  *   node --env-file=.env --import tsx scripts/seed-e2e-profesionales-por-estado.ts
  */
+import { randomBytes } from "node:crypto";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword, verifyPassword } from "../src/lib/auth";
@@ -129,47 +138,62 @@ export function emailRevisorDemo(emailBase: string): string {
     return emailConEtiqueta(emailBase, "verificador");
 }
 
-/** Usuario demo idempotente (re-hashea solo si la clave del entorno cambió). Devuelve id + si se creó. */
+/**
+ * Acceso de una cuenta demo:
+ *  - `login`: entra con la clave del entorno (los 5 profesionales, que Calidad camina).
+ *  - `sin-acceso`: existe SOLO como autor (el firmante VERIFICADOR). Clave aleatoria
+ *    irrecuperable (nunca del entorno) + `estado="inactivo"`: no puede iniciar sesión.
+ */
+type AccesoDemo =
+    | { tipo: "login"; secreto: string }
+    | { tipo: "sin-acceso"; secretoAEvitar: string };
+
+/** Clave aleatoria que nadie conoce (se descarta): hash bcrypt VÁLIDO pero no usable con ninguna clave. */
+function hashInutilizable(): Promise<string> {
+    return hashPassword(randomBytes(32).toString("hex"));
+}
+
+/** Usuario demo idempotente. Devuelve id + si se creó. */
 async function upsertUsuarioDemo(
     tx: Prisma.TransactionClient,
     email: string,
     nombre: string,
     rol: "PROFESIONAL" | "VERIFICADOR",
-    secreto: string,
     ahora: Date,
+    opciones: { estado: "activo" | "inactivo"; estadoActivacion: "ACTIVO" | "REGISTRADO"; acceso: AccesoDemo },
 ): Promise<{ id: string; creado: boolean }> {
     if (email === EMAIL_INTOCABLE) {
         throw new Error(`[seed-e2e-prof-estados] correo derivado colisiona con la cuenta intocable ${EMAIL_INTOCABLE}.`);
     }
+    const { estado, estadoActivacion, acceso } = opciones;
+    const base = { nombre, rol, estado, estadoActivacion, debeCambiarPassword: false };
+
     const existente = await tx.usuario.findUnique({ where: { email }, select: { id: true, passwordHash: true } });
     if (!existente) {
+        const passwordHash = acceso.tipo === "login" ? await hashPassword(acceso.secreto) : await hashInutilizable();
         const creada = await tx.usuario.create({
-            data: {
-                email,
-                nombre,
-                passwordHash: await hashPassword(secreto),
-                passwordCreadaEn: ahora,
-                rol,
-                estado: "activo",
-                estadoActivacion: "ACTIVO",
-                debeCambiarPassword: false,
-            },
+            data: { email, ...base, passwordHash, passwordCreadaEn: ahora },
             select: { id: true },
         });
         return { id: creada.id, creado: true };
     }
-    const mismaClave = await verifyPassword(secreto, existente.passwordHash);
-    await tx.usuario.update({
-        where: { id: existente.id },
-        data: {
-            nombre,
-            rol,
-            estado: "activo",
-            estadoActivacion: "ACTIVO",
-            debeCambiarPassword: false,
-            ...(mismaClave ? {} : { passwordHash: await hashPassword(secreto), passwordCreadaEn: ahora }),
-        },
-    });
+
+    // Idempotencia del hash según el acceso:
+    //  - login: re-hashea SOLO si la clave del entorno cambió.
+    //  - sin-acceso: si el hash actual FUERA usable con la clave del entorno (estado de un
+    //    despliegue previo, buggy), lo re-hashea a algo inutilizable (auto-sanación); si ya es
+    //    inutilizable, lo deja (idempotente, no re-hashea en cada corrida).
+    const usableConEntorno = await verifyPassword(
+        acceso.tipo === "login" ? acceso.secreto : acceso.secretoAEvitar,
+        existente.passwordHash,
+    );
+    let cambioClave: { passwordHash: string; passwordCreadaEn: Date } | Record<string, never> = {};
+    if (acceso.tipo === "login" && !usableConEntorno) {
+        cambioClave = { passwordHash: await hashPassword(acceso.secreto), passwordCreadaEn: ahora };
+    } else if (acceso.tipo === "sin-acceso" && usableConEntorno) {
+        cambioClave = { passwordHash: await hashInutilizable(), passwordCreadaEn: ahora };
+    }
+    await tx.usuario.update({ where: { id: existente.id }, data: { ...base, ...cambioClave } });
     return { id: existente.id, creado: false };
 }
 
@@ -191,8 +215,12 @@ export async function sembrarProfesionalesPorEstado(
 
     // Firmante DEMO de las verificaciones: autoría también demo (no un revisor real).
     const revisorEmail = emailRevisorDemo(profesional.email);
-    const revisor = await upsertUsuarioDemo(tx, revisorEmail, "Verificador Calidad (E2E · demo)", "VERIFICADOR", profesional.secreto, ahora);
-    await marcar(tx, "Usuario", [revisor.id], { corrida: CORRIDA_SPEC690, script: SCRIPT, notas: "verificador demo (firmante)" });
+    const revisor = await upsertUsuarioDemo(tx, revisorEmail, "Verificador Calidad (E2E · demo, sin acceso)", "VERIFICADOR", ahora, {
+        estado: "inactivo",
+        estadoActivacion: "REGISTRADO",
+        acceso: { tipo: "sin-acceso", secretoAEvitar: profesional.secreto },
+    });
+    await marcar(tx, "Usuario", [revisor.id], { corrida: CORRIDA_SPEC690, script: SCRIPT, notas: "verificador demo (firmante, sin acceso)" });
 
     const fixtures: ResultadoProfesionalEstado[] = [];
 
@@ -203,7 +231,11 @@ export async function sembrarProfesionalesPorEstado(
         }
         const nombre = `Profesional Calidad (E2E · ${plan.estado})`;
 
-        const usuario = await upsertUsuarioDemo(tx, email, nombre, "PROFESIONAL", profesional.secreto, ahora);
+        const usuario = await upsertUsuarioDemo(tx, email, nombre, "PROFESIONAL", ahora, {
+            estado: "activo",
+            estadoActivacion: "ACTIVO",
+            acceso: { tipo: "login", secreto: profesional.secreto },
+        });
 
         // ── PerfilProfesional: converge los campos que DEFINEN el fixture (estado, modalidad,
         // autorización); los descriptivos son create-only para no churnnear en cada deploy.
