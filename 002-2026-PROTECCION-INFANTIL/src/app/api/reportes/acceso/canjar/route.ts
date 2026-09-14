@@ -4,6 +4,7 @@ import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { canjearCodigoAcceso } from "@/lib/dal/services/codigo-acceso";
+import { exigirProfesionalHabilitadoApi } from "@/lib/profesionales/habilitacion";
 
 /**
  * POST /api/reportes/acceso/canjar — SPEC-584 (Fase 3) + SPEC-610 (D-123).
@@ -24,6 +25,13 @@ const canjarSchema = z.object({
 export async function POST(request: Request) {
     try {
         const user = await verifyAuth(["PARENT", "PROFESIONAL"]);
+
+        // SPEC-690 (I-414): la ruta MÁS grave. Un profesional SUSPENDIDO/VENCIDO/
+        // RECHAZADO NO abre el expediente de un menor — la compuerta lo cierra en el
+        // servidor. El padre canjea SU pase sin gate de estado (es su propio dato).
+        if (user.rol === "PROFESIONAL") {
+            await exigirProfesionalHabilitadoApi(user.id);
+        }
 
         const rate = await checkRateLimit(request, "acceso_canje", { identifier: user.id });
         if (!rate.allowed) {

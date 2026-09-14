@@ -4,6 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth";
+import { exigirProfesionalHabilitadoApi } from "@/lib/profesionales/habilitacion";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
@@ -13,6 +14,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
     try {
         const user = await verifyAuth("PROFESIONAL");
+        await exigirProfesionalHabilitadoApi(user.id); // SPEC-690: ruta operativa — solo habilitado
         await assertModulo(user, "profesional_calendario");
         const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
         if (!perfil) throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);

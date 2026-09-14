@@ -164,13 +164,20 @@ export class PerfilProfesionalRepository {
      * Lo usa el tope de horizonte al publicar una franja: la Ley 2375/2024 mide
      * la obligación en el momento de la ATENCIÓN, así que una franja que termina
      * después de esta fecha sería una cita agendada para cuando los antecedentes
-     * ya no valen. Mismo criterio que `ultimaAprobacion` de `vigencia.ts`,
+     * ya no valen. Mismo criterio que `ultimaAprobacion` de `vigencia.ts` —
      * resuelto en la base para no traerse el historial entero.
+     *
+     * SPEC-690-B: ordena por `revisadoEn` (la aprobación MÁS RECIENTE, que es la que
+     * rige — una re-verificación SUPERSEDE a la anterior), NO por `venceEn`. Antes
+     * ordenaba por `venceEn desc`: coincidía con `ultimaAprobacion` solo mientras
+     * `venceEn = revisadoEn + plazo fijo`; el día que el plazo de la ley cambie, una
+     * aprobación nueva puede vencer antes que una vieja y las dos formas divergían
+     * (el docstring afirmaba «mismo criterio» sin que lo fuera). Ahora es literal.
      */
     async venceEnVigente(perfilProfesionalId: string): Promise<Date | null> {
         const ultima = await this.db.verificacionProfesional.findFirst({
             where: { perfilProfesionalId, resultado: "APROBADO" },
-            orderBy: { venceEn: "desc" },
+            orderBy: { revisadoEn: "desc" },
             select: { venceEn: true },
         });
         return ultima?.venceEn ?? null;
