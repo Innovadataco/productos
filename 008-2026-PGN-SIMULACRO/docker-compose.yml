@@ -7,5 +7,5 @@ services:
       - .:/app
     ports:
       - "127.0.0.1:5018:3000"
-    command: sh -c "npm install && npm run db:seed && npm run db:load-content && npm run build && npm start"
+    command: sh -c "npm install && npm run db:seed && npm run db:sync && npm run db:load-content && npm run build && npm start"
     restart: unless-stopped

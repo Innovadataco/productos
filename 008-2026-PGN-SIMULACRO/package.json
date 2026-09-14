@@ -7,6 +7,7 @@
     "build": "tsx scripts/generate-static-data.ts && next build",
     "start": "next start",
     "db:seed": "tsx scripts/seed-db.ts",
+    "db:sync": "tsx scripts/actualizar-descripciones.ts",
     "db:migrate": "tsx scripts/seed-db.ts",
     "db:load-content": "tsx scripts/load-content.ts",
     "lint": "next lint"
