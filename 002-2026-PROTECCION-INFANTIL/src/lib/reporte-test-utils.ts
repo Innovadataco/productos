@@ -428,6 +428,15 @@ export async function crearParametrosExpediente() {
             create: { clave: p.clave, valor: p.valor, tipo: "JSON", categoria: "SYSTEM", esPublico: false },
         });
     }
+    // SPEC-691: sin esto la Inicio del profesional (panelDelProfesional →
+    // obtenerPorcentajeServicio) tira 500 en la BD de test — «comision.porcentaje
+    // ausente». Se siembra con el mismo valor que el seed real (SPEC-403) para que
+    // quien camine esa pantalla no pierda el rato que costó medirlo la primera vez.
+    await prisma.parametroSistema.upsert({
+        where: { clave: "comision.porcentaje" },
+        update: { valor: "10" },
+        create: { clave: "comision.porcentaje", valor: "10", tipo: "INTEGER", categoria: "SYSTEM", esPublico: false },
+    });
 }
 
 /**

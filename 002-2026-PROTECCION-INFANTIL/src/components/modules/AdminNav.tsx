@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ADMIN_NAV_ITEMS, PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
+import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { entradasProfesional } from "@/lib/profesional/menu-por-estado";
 
 // SPEC-437 (A-75): el PROFESIONAL entra a esta misma barra. Orden de Jelkin:
 // «debemos utilizar la misma lógica de operador» — mismo componente, mismo
@@ -37,16 +39,18 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
 
 export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermitidos: string[] }) {
     const pathname = usePathname();
+    const { user } = useAuth();
     const permitidos = new Set(modulosPermitidos);
-    // D-41 (SPEC-126): módulo de BD ∧ predicado del proxy — la puerta tiene la
-    // última palabra sobre si se pinta (misma regla que NavHeader.tsx).
-    const items = rol === "PROFESIONAL" ? PROFESIONAL_NAV_ITEMS : ADMIN_NAV_ITEMS;
-    // D-41 (SPEC-126): módulo de BD ∧ predicado del proxy — la puerta tiene la
-    // última palabra sobre si se pinta.
-    const links = items.filter((l) => permitidos.has(l.modulo) && esDestinoPermitidoPorRol(rol, l.href)).map((l) => ({
-        ...l,
-        icon: ICONS[l.href] ?? InboxIcon,
-    }));
+    // SPEC-691 · la compuerta: el menú del PROFESIONAL se condiciona a su estado de
+    // verificación (`habilitado` de /api/me), NO al catálogo de módulos — antes de
+    // verificar no puede haber entradas operativas (MAPA §0, seguridad). Fail-closed:
+    // sin dato (cargando o antes de que 690 publique el campo) → portero.
+    // El resto de los roles sigue por módulo de BD ∧ predicado del proxy (D-41 · SPEC-126).
+    const base =
+        rol === "PROFESIONAL"
+            ? entradasProfesional(user?.profesional).filter((l) => esDestinoPermitidoPorRol(rol, l.href))
+            : ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo) && esDestinoPermitidoPorRol(rol, l.href));
+    const links = base.map((l) => ({ ...l, icon: ICONS[l.href] ?? InboxIcon }));
     const titulo = rol === "OPERADOR" ? "Operador" : rol === "PROFESIONAL" ? "Profesional" : "Administración";
 
     return (

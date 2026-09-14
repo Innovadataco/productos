@@ -8,6 +8,16 @@ type User = {
     nombre: string;
     rol: string;
     debeCambiarPassword?: boolean;
+    /**
+     * SPEC-691 · estado de verificación del profesional, servido por `GET /api/me`
+     * (lo implementa SPEC-690). El menú y las pantallas del profesional se
+     * condicionan a ESTO — nunca se recalcula el estado en el cliente: dos lugares
+     * que deciden si alguien está habilitado terminan en desacuerdo. `habilitado`
+     * es el portón operativo (ACTIVO ∧ vigente); `estado` es el enum del perfil.
+     * Ausente para roles no profesionales; `estado: null` cuando aún no hay perfil
+     * (contrato de SPEC-690-A: `/api/me` → `{ estado, habilitado }` solo para PROFESIONAL).
+     */
+    profesional?: { estado: string | null; habilitado: boolean } | null;
 };
 
 type AuthCtx = {
