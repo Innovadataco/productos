@@ -8,7 +8,7 @@
     "color": "bg-blue-500",
     "icono": "BookOpen",
     "orden": 1,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Derechos fundamentales, tutela, acciones populares, bloque de constitucionalidad y control constitucional."
   },
   {
     "id": 50,
@@ -19,7 +19,7 @@
     "color": "bg-blue-500",
     "icono": "BookOpen",
     "orden": 1,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Plan Nacional de Desarrollo, planes institucionales, indicadores, seguimiento y evaluación de políticas públicas."
   },
   {
     "id": 34,
@@ -30,7 +30,7 @@
     "color": "bg-red-500",
     "icono": "Gavel",
     "orden": 2,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Ley 1952 de 2019, Código General Disciplinario, proceso disciplinario, faltas, sanciones e investigación."
   },
   {
     "id": 51,
@@ -41,7 +41,7 @@
     "color": "bg-emerald-500",
     "icono": "Landmark",
     "orden": 2,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Clasificación del gasto, disponibilidad presupuestal, certificados de disponibilidad, PAC y ejecución fiscal."
   },
   {
     "id": 35,
@@ -52,7 +52,7 @@
     "color": "bg-indigo-500",
     "icono": "Scale",
     "orden": 3,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Acto administrativo, procedimiento administrativo, CPACA, recursos, contratación y responsabilidad."
   },
   {
     "id": 52,
@@ -63,7 +63,7 @@
     "color": "bg-amber-500",
     "icono": "FileText",
     "orden": 3,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Licitación, selección abreviada, mínima cuantía, decreto 1082 de 2015, SECOP II, garantías y supervisión."
   },
   {
     "id": 36,
@@ -74,7 +74,7 @@
     "color": "bg-amber-500",
     "icono": "FileText",
     "orden": 4,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Competencia, actuaciones procesales, recursos, pruebas y garantías del debido proceso."
   },
   {
     "id": 53,
@@ -85,7 +85,7 @@
     "color": "bg-indigo-500",
     "icono": "Scale",
     "orden": 4,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Acto administrativo, procedimiento administrativo, CPACA, recursos, nulidad y restablecimiento del derecho."
   },
   {
     "id": 37,
@@ -96,7 +96,7 @@
     "color": "bg-emerald-500",
     "icono": "Search",
     "orden": 5,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Medios de prueba, valoración, carga de la prueba, informe pericial y prueba en el proceso disciplinario."
   },
   {
     "id": 54,
@@ -107,7 +107,7 @@
     "color": "bg-rose-500",
     "icono": "ClipboardList",
     "orden": 5,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Metodología MGA del DNP, marco lógico, indicadores, BPIN, evaluación de costos y beneficios."
   },
   {
     "id": 38,
@@ -118,7 +118,7 @@
     "color": "bg-rose-500",
     "icono": "Landmark",
     "orden": 6,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Régimen de contratación pública, modalidades, SECOP II, garantías y responsabilidad contractual."
   },
   {
     "id": 55,
@@ -129,7 +129,7 @@
     "color": "bg-red-500",
     "icono": "ShieldAlert",
     "orden": 6,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Ley 1474 de 2011, planes anticorrupción, denuncias, ética pública, prevención y control de la corrupción."
   },
   {
     "id": 39,
@@ -140,7 +140,7 @@
     "color": "bg-orange-500",
     "icono": "ShieldAlert",
     "orden": 7,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Ley 1474 de 2011, prevención de la corrupción, denuncias y régimen disciplinario anticorrupción."
   },
   {
     "id": 56,
@@ -151,7 +151,7 @@
     "color": "bg-cyan-500",
     "icono": "Monitor",
     "orden": 7,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Gobierno digital, arquitectura empresarial, interoperabilidad, seguridad de la información y MSPI."
   },
   {
     "id": 40,
@@ -162,7 +162,7 @@
     "color": "bg-cyan-500",
     "icono": "MessageSquare",
     "orden": 8,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Métodos de interpretación, argumentación, precedente, analogía y sistematización del ordenamiento."
   },
   {
     "id": 57,
@@ -173,7 +173,7 @@
     "color": "bg-slate-600",
     "icono": "Building2",
     "orden": 8,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Ministerio Público, control disciplinario, estructura de la Procuraduría General de la Nación y competencias."
   },
   {
     "id": 41,
@@ -184,7 +184,7 @@
     "color": "bg-teal-500",
     "icono": "Map",
     "orden": 9,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "División político-administrativa, competencias de municipios y departamentos, planificación territorial."
   },
   {
     "id": 58,
@@ -195,7 +195,7 @@
     "color": "bg-teal-500",
     "icono": "Globe",
     "orden": 9,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Constitución Política, organización del Estado, descentralización, función pública y control."
   },
   {
     "id": 42,
@@ -206,7 +206,7 @@
     "color": "bg-slate-600",
     "icono": "Building2",
     "orden": 10,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Ministerio Público, control disciplinario y estructura de la Procuraduría General de la Nación."
   },
   {
     "id": 59,
@@ -217,7 +217,7 @@
     "color": "bg-violet-500",
     "icono": "Settings",
     "orden": 10,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Modelo Integrado de Planeación y Gestión, MECI, FURAG, gestión de calidad y gestión del riesgo."
   },
   {
     "id": 43,
@@ -228,7 +228,7 @@
     "color": "bg-violet-500",
     "icono": "Settings",
     "orden": 11,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Modelo Integrado de Planeación y Gestión, MECI, FURAG y gestión de calidad."
   },
   {
     "id": 60,
@@ -239,7 +239,7 @@
     "color": "bg-orange-500",
     "icono": "FolderOpen",
     "orden": 11,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Ciclo vital del documento, archivo, tablas de retención, AGN y normativa de gestión documental."
   },
   {
     "id": 44,
@@ -250,7 +250,7 @@
     "color": "bg-pink-500",
     "icono": "FolderOpen",
     "orden": 12,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Ciclo vital del documento, archivo y tablas de retención documental."
   },
   {
     "id": 61,
@@ -261,7 +261,7 @@
     "color": "bg-pink-500",
     "icono": "FileEdit",
     "orden": 12,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Conceptos técnicos, informes, comunicaciones, memorandos y redacción de documentos administrativos."
   },
   {
     "id": 45,
@@ -272,7 +272,7 @@
     "color": "bg-lime-500",
     "icono": "Globe",
     "orden": 13,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Constitución Política, organización del Estado, función pública y control."
   },
   {
     "id": 62,
@@ -283,7 +283,7 @@
     "color": "bg-sky-500",
     "icono": "Headphones",
     "orden": 13,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Servicio al ciudadano, PQRD, derecho de petición, trámites y canales de atención."
   },
   {
     "id": 46,
@@ -294,7 +294,7 @@
     "color": "bg-sky-500",
     "icono": "FileEdit",
     "orden": 14,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Conceptos técnicos, informes, comunicaciones y redacción de documentos administrativos."
   },
   {
     "id": 63,
@@ -305,7 +305,7 @@
     "color": "bg-lime-500",
     "icono": "Calculator",
     "orden": 14,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Hojas de cálculo, procesadores de texto, presentaciones y herramientas de productividad ofimática."
   },
   {
     "id": 47,
@@ -316,7 +316,7 @@
     "color": "bg-yellow-500",
     "icono": "Headphones",
     "orden": 15,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Servicio al ciudadano, PQRD, derecho de petición y canales de atención."
   },
   {
     "id": 64,
@@ -327,7 +327,7 @@
     "color": "bg-fuchsia-600",
     "icono": "Shuffle",
     "orden": 15,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Preguntas aleatorias de todos los ejes del perfil para medir tu nivel general antes del concurso."
   },
   {
     "id": 48,
@@ -338,7 +338,7 @@
     "color": "bg-fuchsia-500",
     "icono": "Calculator",
     "orden": 16,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Hojas de cálculo, procesadores de texto y herramientas de productividad ofimática."
   },
   {
     "id": 49,
@@ -349,6 +349,6 @@
     "color": "bg-fuchsia-600",
     "icono": "Shuffle",
     "orden": 17,
-    "descripcion": "Contenido temporal — se cargará con material oficial."
+    "descripcion": "Preguntas aleatorias de todos los ejes del perfil para medir tu nivel general antes del concurso."
   }
 ]
