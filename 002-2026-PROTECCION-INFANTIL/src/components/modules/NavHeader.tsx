@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
-import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
+import { entradasProfesional } from "@/lib/profesional/menu-por-estado";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Guardian } from "@/components/ui/Guardian";
@@ -261,14 +261,14 @@ export function NavHeader() {
                                                 Gestión de casos
                                             </NavDropdownLink>
                                         )}
-                                        {/* SPEC-437 (A-75): el desplegable sale de la MISMA lista que
-                                            la barra lateral (`PROFESIONAL_NAV_ITEMS`). Antes tenía dos
-                                            enlaces quemados acá que ni siquiera coincidían con esa
-                                            constante —que no la usaba nadie—: dos menús del mismo actor
-                                            que podían decir cosas distintas. Ahora no pueden. */}
+                                        {/* SPEC-437 (A-75): el desplegable sale de la MISMA fuente que la
+                                            barra lateral — antes `PROFESIONAL_NAV_ITEMS`, ahora
+                                            `entradasProfesional(user.profesional)` (SPEC-691): un solo actor,
+                                            un solo menú, condicionado a su estado. La compuerta debe cerrar
+                                            también acá (móvil/desplegable), no solo en la barra lateral. */}
                                         {user.rol === "PROFESIONAL" && (
                                             <>
-                                                {PROFESIONAL_NAV_ITEMS.filter((item) => esEnlaceNavegable(item.href)).map((item) => (
+                                                {entradasProfesional(user.profesional).filter((item) => esEnlaceNavegable(item.href)).map((item) => (
                                                     <NavDropdownLink key={item.href} href={item.href} onClick={() => setOpen(false)}>
                                                         {item.label}
                                                     </NavDropdownLink>
@@ -391,7 +391,7 @@ export function NavHeader() {
                                     a su panel. Tres renderizadores, una sola fuente. */}
                                 {user.rol === "PROFESIONAL" && (
                                     <>
-                                        {PROFESIONAL_NAV_ITEMS.filter((item) => esEnlaceNavegable(item.href)).map((item) => (
+                                        {entradasProfesional(user.profesional).filter((item) => esEnlaceNavegable(item.href)).map((item) => (
                                             <MobileLink key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>{item.label}</MobileLink>
                                         ))}
                                     </>

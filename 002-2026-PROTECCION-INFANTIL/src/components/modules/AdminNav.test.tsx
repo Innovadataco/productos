@@ -18,6 +18,13 @@ vi.mock("next/link", () => ({
     ),
 }));
 
+// SPEC-691: AdminNav ahora consume useAuth (el menú del profesional se condiciona a
+// su estado). Estos casos son de ADMIN, que sigue por módulo; basta con satisfacer
+// el hook con un usuario nulo.
+vi.mock("@/lib/contexts/AuthContext", () => ({
+    useAuth: () => ({ user: null }),
+}));
+
 const TODOS_MODULOS = ADMIN_NAV_ITEMS.map((i) => i.modulo);
 
 function linksActivos() {

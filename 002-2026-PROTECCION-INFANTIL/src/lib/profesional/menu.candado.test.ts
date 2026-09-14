@@ -121,12 +121,18 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
             .filter((l) => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l))
             .join("\n");
 
-    it("`AdminNav` pinta la barra del profesional con `PROFESIONAL_NAV_ITEMS`", () => {
+    it("`AdminNav` pinta la barra del profesional con `entradasProfesional` (SPEC-691: por estado, no por módulo)", () => {
         const nav = leerCodigo("src/components/modules/AdminNav.tsx");
-        expect(/PROFESIONAL_NAV_ITEMS/.test(nav)).toBe(true);
+        // SPEC-691 movió la fuente única del menú del profesional de la constante
+        // estática (filtrada por módulo) a `entradasProfesional(user.profesional)`,
+        // que la DERIVA de PROFESIONAL_NAV_ITEMS pero la condiciona a `habilitado` —
+        // la compuerta (MAPA §0). El filtro por módulo era el hueco: un profesional
+        // con el grant veía lo operativo sin estar verificado.
+        expect(/entradasProfesional/.test(nav)).toBe(true);
+        // El resto de los roles (admin/operador) SÍ sigue por módulo.
         expect(
             /permitidos\.has\(l\.modulo\)/.test(nav),
-            "El filtrado por módulo es la mecánica del operador que Jelkin pidió reusar.",
+            "El filtrado por módulo sigue siendo la mecánica de admin/operador.",
         ).toBe(true);
     });
 
@@ -146,19 +152,20 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
     it("`NavHeader` no lleva NINGÚN destino del profesional quemado, en ninguno de sus menús", () => {
         const header = leerCodigo("src/components/modules/NavHeader.tsx");
         expect(
-            /PROFESIONAL_NAV_ITEMS/.test(header),
-            "Los menús del profesional salen de la constante, no de enlaces sueltos.",
+            /entradasProfesional/.test(header),
+            "Los menús del profesional salen de la fuente única `entradasProfesional`, no de enlaces sueltos.",
         ).toBe(true);
 
-        // Los dos renderizadores tienen que consumir la constante. Que uno la
-        // use y el otro no es exactamente la divergencia que la spec cierra.
+        // SPEC-691: los dos renderizadores consumen la MISMA fuente
+        // (`entradasProfesional`, condicionada por estado). Que uno la use y el otro
+        // no es exactamente la divergencia que la spec cierra.
         for (const componente of ["NavDropdownLink", "MobileLink"]) {
-            const usaLaConstante = new RegExp(
-                `PROFESIONAL_NAV_ITEMS[\\s\\S]{0,400}?<${componente}\\b`,
+            const usaLaFuente = new RegExp(
+                `entradasProfesional[\\s\\S]{0,400}?<${componente}\\b`,
             ).test(header);
             expect(
-                usaLaConstante,
-                `<${componente}> no pinta PROFESIONAL_NAV_ITEMS: ese menú puede decir algo distinto del otro.`,
+                usaLaFuente,
+                `<${componente}> no pinta entradasProfesional: ese menú puede decir algo distinto del otro.`,
             ).toBe(true);
         }
 
