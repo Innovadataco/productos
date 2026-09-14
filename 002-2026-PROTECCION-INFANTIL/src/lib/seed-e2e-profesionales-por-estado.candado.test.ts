@@ -43,6 +43,10 @@ const EMAILS_FIXTURE = PLAN.map((p) => emailPorEstado(PROF.email, p.estado));
 const EMAIL_REVISOR = emailRevisorDemo(PROF.email);
 
 async function ciudadDePrueba(): Promise<string> {
+    // `resetDatabase` preserva los datos de referencia (Pais/Ciudad): reusar la ciudad existente,
+    // no crear una — un `pais.create({codigo:"ZZ"})` choca con el UNIQUE tras el primer test.
+    const existente = await prisma.ciudad.findFirst({ select: { id: true } });
+    if (existente) return existente.id;
     const pais = await prisma.pais.create({ data: { codigo: "ZZ", nombre: "País E2E" } });
     const ciudad = await prisma.ciudad.create({ data: { nombre: "Ciudad E2E", paisId: pais.id } });
     return ciudad.id;
