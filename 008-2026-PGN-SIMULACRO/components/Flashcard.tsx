@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BookOpen, RotateCw } from 'lucide-react';
 
 interface FlashcardProps {
   frente: string;
@@ -21,31 +21,53 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
       <button
         type="button"
         onClick={() => setFlipped((f) => !f)}
-        className="group relative w-full perspective-[1000px]"
+        className="group relative block h-[300px] w-full"
+        style={{ perspective: '1000px' }}
         aria-label="Voltear flashcard"
       >
         <div
-          className={`relative min-h-[260px] w-full transition-transform duration-700 ease-ios [transform-style:preserve-3d] ${
-            flipped ? '[transform:rotateY(180deg)]' : ''
-          }`}
+          className="relative h-full w-full transition-transform duration-500 ease-ios"
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          }}
         >
-          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-surface p-6 shadow-ios backface-hidden">
+          {/* Frente */}
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-surface p-6 shadow-ios"
+            style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+          >
             <span className="text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-primary">
               Frente
             </span>
-            <p className="mt-4 text-ios-title-3 text-ios-label text-balance">{frente}</p>
-            <span className="mt-6 text-ios-caption-1 text-ios-label-tertiary">Toca para voltear</span>
+            <p className="mt-4 text-center text-ios-title-3 font-semibold text-ios-label text-balance">
+              {frente}
+            </p>
+            <div className="mt-6 flex items-center gap-1.5 text-ios-caption-1 text-ios-label-tertiary">
+              <RotateCw size={14} />
+              Toca para voltear
+            </div>
           </div>
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-primary-light p-6 shadow-ios backface-hidden [transform:rotateY(180deg)]">
+          {/* Reverso */}
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-primary-light p-6 shadow-ios"
+            style={{
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+            }}
+          >
             <span className="text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-primary">
               Reverso
             </span>
-            <p className="mt-4 text-ios-title-3 text-ios-label text-balance">{reverso}</p>
+            <p className="mt-4 text-center text-ios-title-3 font-semibold text-ios-label text-balance">
+              {reverso}
+            </p>
             {norma && (
-              <div className="mt-4 inline-flex items-center gap-1.5 rounded-ios bg-ios-surface/70 px-3 py-1.5 text-ios-caption-1 font-medium text-ios-primary">
+              <div className="mt-4 inline-flex max-w-full items-center gap-1.5 rounded-ios bg-ios-surface/80 px-3 py-1.5 text-ios-caption-1 font-medium text-ios-primary">
                 <BookOpen size={12} />
-                {norma}
+                <span className="truncate">{norma}</span>
               </div>
             )}
           </div>
