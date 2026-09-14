@@ -19,10 +19,11 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: 
 afterEach(() => cleanup());
 
 type Estado = "BORRADOR" | "EN_REVISION" | "ACTIVO" | "RECHAZADO" | "VENCIDO" | "SUSPENDIDO";
-function montar(estadoPerfil: Estado, puedeReenviar = false) {
+function montar(estadoPerfil: Estado, puedeReenviar = false, habilitado = false) {
     render(
         <EstadoVerificacionProfesionalClient
             vista={{ estadoPerfil, puedeReenviar, observaciones: [] }}
+            habilitado={habilitado}
         />,
     );
 }
@@ -60,6 +61,20 @@ describe("SPEC-691 · «Mi estado»: la pantalla por estado (nunca rubí en esta
         montar("EN_REVISION", false);
         expect(screen.getByText("En revisión")).toBeTruthy();
         expect(screen.queryByRole("button", { name: /Enviar a revisión|Reenviar/ })).toBeNull();
+    });
+
+    it("WORKER-LAG (ajuste del CEO): ACTIVO con habilitado=false se MUESTRA como VENCIDO", () => {
+        montar("ACTIVO", false, /* habilitado */ false);
+        // No dice «activo» a quien no puede operar: muestra la pantalla de VENCIDO.
+        expect(screen.getByText("Su verificación venció.")).toBeTruthy();
+        expect(screen.queryByText("Su perfil está activo")).toBeNull();
+        expect(screen.getByText("Vencida").className).toContain("text-estado-ambar");
+    });
+
+    it("ACTIVO habilitado → sí muestra «activo» (no se fuerza VENCIDO)", () => {
+        montar("ACTIVO", false, /* habilitado */ true);
+        expect(screen.getByText("Su perfil está activo")).toBeTruthy();
+        expect(screen.queryByText("Su verificación venció.")).toBeNull();
     });
 
     it("CONTROL POSITIVO: cambiar solo el estado cambia el título de la pantalla", () => {

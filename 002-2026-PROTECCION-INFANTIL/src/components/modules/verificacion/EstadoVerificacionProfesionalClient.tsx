@@ -54,11 +54,17 @@ const TITULO: Record<Vista["estadoPerfil"], string> = {
     SUSPENDIDO: "Su perfil profesional está suspendido",
 };
 
-export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista }) {
+export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vista: Vista; habilitado: boolean }) {
     const router = useRouter();
     const [enviando, setEnviando] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const insignia = INSIGNIA[vista.estadoPerfil];
+    // SPEC-691 (ajuste del CEO): la pantalla se decide por `habilitado`, no solo por
+    // `estado`. ACTIVO con la vigencia vencida pero el worker sin correr
+    // (habilitado=false) se MUESTRA como VENCIDO — si no, diría «activo» a quien no
+    // puede operar. El resto de los estados se muestran tal cual.
+    const estadoMostrado: Vista["estadoPerfil"] =
+        vista.estadoPerfil === "ACTIVO" && !habilitado ? "VENCIDO" : vista.estadoPerfil;
+    const insignia = INSIGNIA[estadoMostrado];
 
     async function reenviar() {
         setEnviando(true);
@@ -86,14 +92,14 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
             <header className="space-y-2">
                 <p className="microetiqueta">Verificación de su perfil</p>
                 <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="titular-h1">{TITULO[vista.estadoPerfil]}</h1>
+                    <h1 className="titular-h1">{TITULO[estadoMostrado]}</h1>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${insignia.clase}`}>
                         {insignia.texto}
                     </span>
                 </div>
             </header>
 
-            {vista.estadoPerfil === "EN_REVISION" && (
+            {estadoMostrado === "EN_REVISION" && (
                 <div className="glass rounded-2xl p-6">
                     <p className="cuerpo text-body">
                         Ya estamos revisando sus documentos. Le avisamos apenas haya novedad — no hace falta que
@@ -102,7 +108,7 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
                 </div>
             )}
 
-            {vista.estadoPerfil === "ACTIVO" && (
+            {estadoMostrado === "ACTIVO" && (
                 <div className="glass rounded-2xl p-6">
                     <p className="cuerpo text-body">
                         Su perfil quedó activo. Ahora puede cargar su carta de presentación, su disponibilidad y
@@ -111,7 +117,7 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
                 </div>
             )}
 
-            {vista.estadoPerfil === "VENCIDO" && (
+            {estadoMostrado === "VENCIDO" && (
                 <div className="glass rounded-2xl p-6 space-y-2">
                     <p className="cuerpo text-body">
                         La vigencia de su verificación se cumplió. Para volver a atender, actualice el documento que
@@ -123,7 +129,7 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
                 </div>
             )}
 
-            {vista.estadoPerfil === "SUSPENDIDO" && (
+            {estadoMostrado === "SUSPENDIDO" && (
                 <div className="glass rounded-2xl p-6 space-y-3">
                     {/* SPEC-691 · copy aprobada por Diseño (Gestión 17c375e/8d9ecf2), verbatim:
                         la causa como HECHO, sin culpar al profesional (no le avisamos), y la
@@ -143,7 +149,7 @@ export function EstadoVerificacionProfesionalClient({ vista }: { vista: Vista })
                 </div>
             )}
 
-            {vista.estadoPerfil === "RECHAZADO" && (
+            {estadoMostrado === "RECHAZADO" && (
                 // Defensivo: este estado no se produce (el ciclo devuelve, no rechaza).
                 // Sin recorrido propio ni nada operativo; si Diseño manda forma, entra acá.
                 <div className="glass rounded-2xl p-6">

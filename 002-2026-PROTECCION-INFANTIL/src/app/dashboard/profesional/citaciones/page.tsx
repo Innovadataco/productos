@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { verifyAuth } from "@/lib/auth";
+import { exigirProfesionalHabilitado } from "@/lib/profesionales/guardia-habilitado";
 import { puedeAccederAModulo } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { panelDelProfesional } from "@/lib/profesional/panel/panel.service";
@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 };
 
 export default async function CitacionesPage() {
-    const usuario = await verifyAuth("PROFESIONAL");
+    // SPEC-691: compuerta primero — no habilitado → portero (contra la base).
+    const { user: usuario } = await exigirProfesionalHabilitado();
     // SPEC-496: el módulo manda — revocar `profesional_citaciones` corta el acceso.
     if (!(await puedeAccederAModulo(usuario.rol, "profesional_citaciones"))) {
         return <SinAccesoModulo />;

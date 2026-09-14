@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { verifyAuth } from "@/lib/auth";
+import { exigirProfesionalHabilitado } from "@/lib/profesionales/guardia-habilitado";
 import { puedeAccederAModulo } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
 import { AppError, ERROR_CODES } from "@/lib/errors";
@@ -26,7 +26,9 @@ export const metadata: Metadata = {
 };
 
 export default async function ProfesionalInicioPage() {
-    const usuario = await verifyAuth("PROFESIONAL");
+    // SPEC-691: la compuerta primero — sin verificación habilitada, esta página NO se
+    // pinta; el guardia redirige al portero (contra la base, no la cookie).
+    const { user: usuario } = await exigirProfesionalHabilitado();
     // SPEC-496: el módulo es la segunda puerta. Si un admin revocó
     // `profesional_inicio`, se corta el acceso (no solo se esconde el menú).
     if (!(await puedeAccederAModulo(usuario.rol, "profesional_inicio"))) {
