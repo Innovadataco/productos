@@ -114,17 +114,18 @@ export function sellos(
 }
 
 /**
- * Filtro del directorio abierto (L3). El profesional aparece solo si su
- * perfil está `ACTIVO` (no borrador, no rechazado, no suspendido) Y su
- * sello está vigente (APROBADO). Un perfil `VENCIDO` no aparece: el brief
- * dice "al vencer, el perfil deja de mostrarse hasta nueva revisión".
+ * SPEC-690 (I-414) · FUENTE ÚNICA de «habilitado AHORA». La capacidad OPERATIVA
+ * del profesional se deriva de `estado === ACTIVO` Y una verificación aprobada
+ * vigente (Ley 2375/2024). Es la pregunta correcta —«¿está habilitado ahora?»—,
+ * no «¿se verificó alguna vez?»: un `SUSPENDIDO`/`VENCIDO`/`RECHAZADO` NO está
+ * habilitado aunque tuviera un sello aprobado.
  *
- * El estado `VENCIDO` en el perfil lo pone el worker cuando pasa la fecha;
- * este helper permite además que L3 se defienda por sí mismo antes de que
- * el worker corra (defensa en profundidad — vive hasta un ciclo del cron sin
- * mostrar un vencido).
+ * Este es el predicado que consumen, sin repetir la condición: el directorio
+ * (`puedeAparecerEnDirectorio`, abajo), `/api/me` (`obtenerHabilitacionProfesional`)
+ * y la compuerta de las rutas del profesional (SPEC-690-B). Si se copia en cada
+ * ruta, la ruta trece nace sin ella.
  */
-export function puedeAparecerEnDirectorio(
+export function estaHabilitado(
     perfil: PerfilPublicoInput,
     verificaciones: readonly VerificacionResumenInput[],
     ahora: Date,
@@ -132,4 +133,26 @@ export function puedeAparecerEnDirectorio(
     if (perfil.estado !== "ACTIVO") return false;
     const ultima = ultimaAprobacion(verificaciones);
     return ultima !== null && ultima.venceEn.getTime() > ahora.getTime();
+}
+
+/**
+ * Filtro del directorio abierto (L3). El profesional aparece solo si su perfil
+ * está `ACTIVO` Y su sello está vigente (APROBADO). Un `VENCIDO` no aparece: el
+ * brief dice "al vencer, el perfil deja de mostrarse hasta nueva revisión".
+ *
+ * El estado `VENCIDO` lo pone el worker cuando pasa la fecha; este helper permite
+ * que L3 se defienda antes de que el worker corra (defensa en profundidad — vive
+ * hasta un ciclo del cron sin mostrar un vencido).
+ *
+ * SPEC-690: es EXACTAMENTE `estaHabilitado` — «aparecer en el directorio» y «poder
+ * operar» son la misma habilitación. Delega en la fuente única para que no puedan
+ * divergir (el `vigenciaVigente` en SQL de `perfil-profesional.ts` es su expresión
+ * a nivel de consulta; las dos defensas suman).
+ */
+export function puedeAparecerEnDirectorio(
+    perfil: PerfilPublicoInput,
+    verificaciones: readonly VerificacionResumenInput[],
+    ahora: Date,
+): boolean {
+    return estaHabilitado(perfil, verificaciones, ahora);
 }

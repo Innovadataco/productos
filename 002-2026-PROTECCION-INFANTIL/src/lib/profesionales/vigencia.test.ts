@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
     calcularVenceEn,
+    estaHabilitado,
     puedeAparecerEnDirectorio,
     sellos,
     ultimaAprobacion,
@@ -149,6 +150,56 @@ describe("puedeAparecerEnDirectorio — L3 (SPEC-389)", () => {
         };
         for (const estado of ["BORRADOR", "EN_REVISION", "RECHAZADO", "VENCIDO", "SUSPENDIDO"] as const) {
             expect(puedeAparecerEnDirectorio({ estado }, [verif], new Date("2026-08-15T00:00:00.000Z"))).toBe(false);
+        }
+    });
+});
+
+// ── SPEC-690 (I-414): «habilitado ahora» — la fuente única de la capacidad ──
+describe("estaHabilitado — fuente única de la habilitación (SPEC-690)", () => {
+    const AHORA = new Date("2026-08-15T00:00:00.000Z");
+    const selloVigente: VerificacionResumenInput = {
+        resultado: "APROBADO",
+        revisadoEn: new Date("2026-06-01T00:00:00.000Z"),
+        venceEn: new Date("2026-10-01T00:00:00.000Z"),
+    };
+    const selloVencido: VerificacionResumenInput = {
+        resultado: "APROBADO",
+        revisadoEn: new Date("2026-01-01T00:00:00.000Z"),
+        venceEn: new Date("2026-05-01T00:00:00.000Z"),
+    };
+
+    it("ACTIVO + sello vigente → habilitado", () => {
+        expect(estaHabilitado({ estado: "ACTIVO" }, [selloVigente], AHORA)).toBe(true);
+    });
+
+    it("SUSPENDIDO con sello vigente → NO habilitado (el caso que define la spec)", () => {
+        // Aunque tenga un sello aprobado y vigente: suspendido = no opera.
+        expect(estaHabilitado({ estado: "SUSPENDIDO" }, [selloVigente], AHORA)).toBe(false);
+    });
+
+    it("ningún estado distinto de ACTIVO habilita, con o sin sello", () => {
+        for (const estado of ["BORRADOR", "EN_REVISION", "RECHAZADO", "VENCIDO", "SUSPENDIDO"] as const) {
+            expect(estaHabilitado({ estado }, [selloVigente], AHORA)).toBe(false);
+        }
+    });
+
+    it("ACTIVO con sello vencido o sin sello → NO habilitado", () => {
+        expect(estaHabilitado({ estado: "ACTIVO" }, [selloVencido], AHORA)).toBe(false);
+        expect(estaHabilitado({ estado: "ACTIVO" }, [], AHORA)).toBe(false);
+    });
+
+    // Candado de FUENTE ÚNICA: el directorio no puede divergir de la habilitación.
+    // Si alguien reimplementa `puedeAparecerEnDirectorio` con otra condición, esta
+    // igualdad cae en algún estado/vigencia.
+    it("el directorio DELEGA en estaHabilitado (no una condición paralela)", () => {
+        const casos: Array<[Parameters<typeof estaHabilitado>[0]["estado"], VerificacionResumenInput[], Date]> = [];
+        for (const estado of ["BORRADOR", "EN_REVISION", "ACTIVO", "RECHAZADO", "VENCIDO", "SUSPENDIDO"] as const) {
+            for (const verif of [[selloVigente], [selloVencido], []] as VerificacionResumenInput[][]) {
+                casos.push([estado, verif, AHORA]);
+            }
+        }
+        for (const [estado, verif, ahora] of casos) {
+            expect(puedeAparecerEnDirectorio({ estado }, verif, ahora)).toBe(estaHabilitado({ estado }, verif, ahora));
         }
     });
 });

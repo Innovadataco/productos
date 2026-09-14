@@ -180,6 +180,24 @@ export class PerfilProfesionalRepository {
         return this.db.perfilProfesional.findUnique({ where: { usuarioId } });
     }
 
+    /**
+     * SPEC-690 (I-414) · lo que la habilitación necesita y nada más: el `estado` +
+     * las verificaciones APROBADAS (para hallar la última vigente). `select` acotado
+     * — no trae el perfil entero ni los campos reservados del historial.
+     */
+    habilitacionPorUsuarioId(usuarioId: string) {
+        return this.db.perfilProfesional.findUnique({
+            where: { usuarioId },
+            select: {
+                estado: true,
+                verificaciones: {
+                    where: { resultado: "APROBADO" },
+                    select: { resultado: true, revisadoEn: true, venceEn: true },
+                },
+            },
+        });
+    }
+
     crearBorrador(data: Prisma.PerfilProfesionalCreateInput): Promise<PerfilConCiudad> {
         return this.db.perfilProfesional.create({
             data,
