@@ -29,6 +29,7 @@ import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { UsuarioRepository } from "../repositories/usuario";
 import { TokenRegistroRepository } from "../repositories/token-registro";
+import { PerfilProfesionalRepository } from "../repositories/perfil-profesional";
 
 function tempPassword() {
     return randomBytes(6).toString("hex");
@@ -59,10 +60,12 @@ export interface SolicitudPendienteItem {
 export class ProfesionalesAdminService {
     private readonly usuarios: UsuarioRepository;
     private readonly tokens: TokenRegistroRepository;
+    private readonly perfiles: PerfilProfesionalRepository;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.usuarios = new UsuarioRepository(tx);
         this.tokens = new TokenRegistroRepository(tx);
+        this.perfiles = new PerfilProfesionalRepository(tx);
     }
 
     /** Lista paginada de cuentas PROFESIONAL con filtro q (email/nombre). */
@@ -152,6 +155,61 @@ export class ProfesionalesAdminService {
             ipAddress: admin.ipAddress,
             userAgent: admin.userAgent,
         });
+    }
+
+    /**
+     * SPEC-692 (I-417) · LA SALIDA del estado SUSPENDIDO del perfil profesional.
+     * Ese estado lo pone el worker de forma automática (vencimientos seguidos) y
+     * hoy no hay nada que lo saque — con SPEC-690 eso bloquea al profesional para
+     * siempre. Esta acción de administrador lo levanta CON criterio humano:
+     *   · SUSPENDIDO → ACTIVO si la verificación (Ley 2375) sigue vigente;
+     *   · SUSPENDIDO → VENCIDO si ya venció (no se puede reactivar a quien perdió
+     *     la vigencia — pasa por su carril de re-verificación, no por acá).
+     * Exige `motivo` escrito y deja auditoría (quién/cuándo/por qué). Mismo módulo
+     * y permiso que la desactivación de cuenta (`profesionales_admin`).
+     */
+    async levantarSuspension(
+        usuarioId: string,
+        admin: { id: string } & InfoClienteDto,
+        motivo: string,
+    ): Promise<{ estado: "ACTIVO" | "VENCIDO" }> {
+        const motivoLimpio = motivo.trim();
+        if (!motivoLimpio) {
+            throw new AppError("El motivo para levantar la suspensión es obligatorio.", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        const perfil = await this.perfiles.findPorUsuarioId(usuarioId);
+        if (!perfil) {
+            throw new AppError("Perfil profesional no encontrado.", ERROR_CODES.NOT_FOUND, 404);
+        }
+        if (perfil.estado !== "SUSPENDIDO") {
+            throw new AppError(
+                `Solo se puede levantar una suspensión: el perfil está en ${perfil.estado}.`,
+                ERROR_CODES.CONFLICT,
+                409,
+            );
+        }
+        // La vigencia manda: si la verificación (Ley 2375) sigue en pie, vuelve a
+        // ACTIVO; si venció, va a VENCIDO (no se «reactiva» a quien perdió la vigencia).
+        const venceEn = await this.perfiles.venceEnVigente(perfil.id);
+        const estado: "ACTIVO" | "VENCIDO" =
+            venceEn !== null && venceEn.getTime() > Date.now() ? "ACTIVO" : "VENCIDO";
+        await this.perfiles.cambiarEstado(perfil.id, estado);
+        // Mismo patrón que la desactivación de cuenta: acción genérica `USER_UPDATE`
+        // (no se inventa un valor de enum — `AccionAudit` está PUBLICADO a BI y un
+        // valor nuevo exige migración + coordinación, fuera del alcance de esta
+        // SPEC). El detalle queryable vive en valorAnterior/valorNuevo, con el
+        // motivo escrito y el estado resultante.
+        await logAudit({
+            accion: "USER_UPDATE",
+            tipoRecurso: "PerfilProfesional",
+            recursoId: perfil.id,
+            usuarioId: admin.id,
+            valorAnterior: "SUSPENDIDO",
+            valorNuevo: JSON.stringify({ estado, motivo: motivoLimpio }),
+            ipAddress: admin.ipAddress,
+            userAgent: admin.userAgent,
+        });
+        return { estado };
     }
 
     /** Solicitudes de registro pendientes (TokenRegistro rol=PROFESIONAL activo). */

@@ -144,11 +144,12 @@ describe("toCitaParaPadre · el contacto viaja SÓLO en la excepción", () => {
      * Nació como un hueco: escribí el assert de `SUSPENDIDO` y descubrí que
      * estaba afirmando algo que no había implementado. Se reportó la conducta
      * REAL en vez de dejar el test verde afirmando lo deseable, y el CEO
-     * aprobó cerrarlo: la suspensión es una decisión HUMANA de IDC sobre esa
-     * persona, así que seguir sirviendo su teléfono contradice esa decisión
-     * con más gravedad que el vencimiento.
+     * aprobó cerrarlo: PI decidió que esa persona no debe estar atendiendo, así
+     * que seguir sirviendo su teléfono contradice esa decisión con más gravedad
+     * que el vencimiento. (SPEC-692: la suspensión la pone el worker de forma
+     * AUTOMÁTICA, no es una decisión humana — lo que no cambia esta reserva.)
      */
-    it("I-315 · SUSPENDIDO tampoco expone contacto — es una decisión humana de IDC", () => {
+    it("I-315 · SUSPENDIDO tampoco expone contacto — PI decidió que no atienda", () => {
         expect(
             debeExponerContacto({ estado: "CONFIRMADA", pagoAprobadoEn: AHORA }, AHORA, "SUSPENDIDO"),
         ).toBe(false);

@@ -20,14 +20,22 @@ import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
+import { getParametroSistemaValor } from "@/lib/parametros";
 
 const HORAS_48_MS = 48 * 60 * 60 * 1000;
 /** Plazo por default para que el padre complete el pago manual. */
 const PLAZO_PAGO_HORAS_DEFAULT = 72;
 /** Umbral de la alarma de tasa (§3): «más de un tercio» de vencimientos. */
 const UMBRAL_TASA_VENCIMIENTOS = 1 / 3;
-/** Umbral de suspensión por consecutivas (§3). */
-const MAX_CONSECUTIVAS_ANTES_SUSPENDER = 3;
+/**
+ * SPEC-692 (I-417): el umbral de suspensión por consecutivas vive en un
+ * PARÁMETRO SEMBRADO, no en código (lo que Jelkin puede querer cambiar no vive
+ * en el código). `0` —o menos, o ausente— APAGA la suspensión automática. Se
+ * siembra APAGADO: al profesional todavía no se le avisa que tiene una solicitud
+ * (no hay evento de nueva solicitud y el correo está caído), así que suspenderlo
+ * «por su culpa» a las 3 vencidas lo bloquearía sin aviso ni salida.
+ */
+const PARAM_MAX_CONSECUTIVAS = "profesional.cita.max_consecutivas_suspender";
 
 export interface CrearCitaInput {
     padreUsuarioId: string;
@@ -322,14 +330,19 @@ export async function reasignarPorPadre(input: ReasignarInput) {
 
 /**
  * Después de vencer una solicitud del profesional, evaluamos suspensión y alarma.
- * `MAX_CONSECUTIVAS_ANTES_SUSPENDER` (3) consecutivas → estado SUSPENDIDO del perfil.
- * Tasa >1/3 → alarma para IDC (audit + notificación), decisión humana.
+ * SPEC-692: el umbral de suspensión vive en el parámetro sembrado
+ * `profesional.cita.max_consecutivas_suspender`; `0`/ausente lo APAGA. La alarma
+ * por tasa (>1/3) NO se apaga: informa a IDC (audit), no castiga.
  */
 export async function evaluarSuspensionYAlarma(profesionalId: string): Promise<void> {
     const repo = new SolicitudCitaRepository();
     const perfilRepo = new PerfilProfesionalRepository();
     const consecutivas = await repo.contarConsecutivasVencidasPorProfesional(profesionalId);
-    if (consecutivas >= MAX_CONSECUTIVAS_ANTES_SUSPENDER) {
+    // SPEC-692: umbral apagable. `> 0` es el interruptor — con `0`/ausente, ni
+    // tres ni treinta vencidas seguidas cambian el estado. El default de lectura
+    // es "0" (apagado), fail-safe: si el parámetro no está, nadie se suspende.
+    const maxConsecutivas = parseInt((await getParametroSistemaValor(PARAM_MAX_CONSECUTIVAS)) ?? "0", 10);
+    if (maxConsecutivas > 0 && consecutivas >= maxConsecutivas) {
         await perfilRepo.cambiarEstado(profesionalId, "SUSPENDIDO");
         await logAudit({
             accion: "CITA_PROFESIONAL_SUSPENDIDO_POR_VENCIMIENTOS",
@@ -358,5 +371,6 @@ export const CITA_PROFESIONAL_CONSTANTS = {
     HORAS_48_MS,
     PLAZO_PAGO_HORAS_DEFAULT,
     UMBRAL_TASA_VENCIMIENTOS,
-    MAX_CONSECUTIVAS_ANTES_SUSPENDER,
+    // SPEC-692: ya no es una constante — el umbral vive en este parámetro sembrado.
+    PARAM_MAX_CONSECUTIVAS,
 };
