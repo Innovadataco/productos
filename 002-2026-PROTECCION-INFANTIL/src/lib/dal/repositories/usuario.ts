@@ -345,6 +345,20 @@ export class UsuarioRepository {
             debeCambiarPassword: true,
             creadoEn: true,
             ultimaSesion: true,
+            // SPEC-692: el estado del PERFIL (SUSPENDIDO/ACTIVO/VENCIDO…) y la
+            // última verificación APROBADA para la vista previa de «Levantar
+            // suspensión». Misma fuente que `venceEnVigente` (última APROBADO).
+            perfilProfesional: {
+                select: {
+                    estado: true,
+                    verificaciones: {
+                        where: { resultado: "APROBADO" as const },
+                        orderBy: { venceEn: "desc" as const },
+                        take: 1,
+                        select: { venceEn: true },
+                    },
+                },
+            },
         } satisfies Prisma.UsuarioSelect;
         return Promise.all([
             this.db.usuario.findMany({

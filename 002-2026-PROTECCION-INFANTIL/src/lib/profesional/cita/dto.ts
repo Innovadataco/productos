@@ -53,9 +53,11 @@ export function debeExponerContacto(
     //  · `VENCIDO` — se le cumplió el plazo de la Ley 2375/2024 y quedó escrito
     //    en la auditoría. Seguir entregando su contacto es contradecir lo que
     //    el propio sistema registró que sabía.
-    //  · `SUSPENDIDO` — **más grave todavía**: es una decisión HUMANA de IDC
-    //    sobre esa persona. Si PI sigue dándole su teléfono a una familia,
-    //    contradice su propia decisión (I-315).
+    //  · `SUSPENDIDO` — **más grave todavía**: PI decidió que no debe estar
+    //    atendiendo. Hoy lo pone el worker de forma AUTOMÁTICA (solicitudes
+    //    vencidas seguidas — `cita.service.ts`; SPEC-692 lo dejó apagable y con
+    //    salida de administrador). NO es una decisión humana. Igual que
+    //    VENCIDO, seguir dándole el teléfono contradice esa decisión (I-315).
     //
     // La lista es explícita a propósito: un `!== "ACTIVO"` cerraría también
     // estados de tránsito como `EN_REVISION`, y eso es otra decisión que nadie

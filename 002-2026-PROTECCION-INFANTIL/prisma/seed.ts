@@ -4361,6 +4361,23 @@ async function seedParametrosPrimeraCita() {
         },
     });
     console.log("[SEED] parámetro profesional.cita.precio_estandar_primera_cita_cop listo");
+    // SPEC-692 (I-417): umbral de suspensión por vencimientos seguidos, APAGADO.
+    // `update: {}` — idempotente: el día que Jelkin lo encienda (p. ej. "3"), un
+    // re-seed NO lo vuelve a apagar. 0 = sin suspensión automática.
+    await prisma.parametroSistema.upsert({
+        where: { clave: "profesional.cita.max_consecutivas_suspender" },
+        update: {},
+        create: {
+            clave: "profesional.cita.max_consecutivas_suspender",
+            valor: "0",
+            tipo: TipoParametro.INTEGER,
+            categoria: CategoriaParametro.SYSTEM,
+            esPublico: false,
+            esSecreto: false,
+            descripcion: "SPEC-692 (I-417): solicitudes de cita vencidas SEGUIDAS antes de suspender el perfil del profesional. 0 = APAGADO (sin suspensión automática) — sembrado apagado porque aún no se le avisa al profesional que tiene una solicitud pendiente. Jelkin lo enciende (p. ej. 3) el día que exista el aviso (paso 4).",
+        },
+    });
+    console.log("[SEED] parámetro profesional.cita.max_consecutivas_suspender listo (apagado: 0)");
 }
 
 // ── SPEC-657 (I-389): cadencia del barrido de citas (worker-citas) ──

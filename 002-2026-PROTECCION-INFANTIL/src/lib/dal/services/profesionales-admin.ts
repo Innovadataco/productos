@@ -22,13 +22,14 @@
  *
  * Sin modelo de asignación: al psicólogo lo elige el padre.
  */
-import type { Prisma } from "@prisma/client";
+import type { Prisma, EstadoPerfilProfesional } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { hashPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { UsuarioRepository } from "../repositories/usuario";
 import { TokenRegistroRepository } from "../repositories/token-registro";
+import { PerfilProfesionalRepository } from "../repositories/perfil-profesional";
 
 function tempPassword() {
     return randomBytes(6).toString("hex");
@@ -39,6 +40,22 @@ export interface InfoClienteDto {
     userAgent: string;
 }
 
+/**
+ * SPEC-692 (I-417) · La ÚNICA función que decide en qué estado queda un perfil
+ * al LEVANTAR su suspensión: ACTIVO si la verificación sigue VIGENTE, VENCIDO si
+ * no. La usan la ACCIÓN (`levantarSuspension`) y la VISTA PREVIA de la ficha del
+ * admin — no puede haber dos cuentas: lo que el modal anuncia ES lo que la acción
+ * produce. La vigencia se lee de `venceEnVigente` (la única fuente viva del
+ * término «verificación vigente»); cuando 690-B exponga `verificacionVigente` de
+ * Dev 1, se cambia el cálculo ACÁ, en un solo lugar.
+ */
+export function estadoTrasLevantarSuspension(
+    venceEn: Date | null,
+    ahora: Date = new Date(),
+): "ACTIVO" | "VENCIDO" {
+    return venceEn !== null && venceEn.getTime() > ahora.getTime() ? "ACTIVO" : "VENCIDO";
+}
+
 export interface ProfesionalListItem {
     id: string;
     email: string;
@@ -47,6 +64,14 @@ export interface ProfesionalListItem {
     debeCambiarPassword: boolean;
     creadoEn: string;
     ultimaSesion: string | null;
+    // SPEC-692: estado del PERFIL (BORRADOR/EN_REVISION/ACTIVO/SUSPENDIDO/VENCIDO)
+    // o null si el profesional aún no creó su perfil.
+    perfilEstado: EstadoPerfilProfesional | null;
+    // SPEC-692: presente SOLO si el perfil está SUSPENDIDO — la vista previa de
+    // «Levantar suspensión»: qué estado quedaría (misma función que la acción) y
+    // la fecha de vencimiento de la verificación. El modal la muestra ANTES de
+    // confirmar; lo que anuncia acá es lo que produce la acción.
+    levantarSuspension: { resultado: "ACTIVO" | "VENCIDO"; venceEn: string | null } | null;
 }
 
 export interface SolicitudPendienteItem {
@@ -59,10 +84,12 @@ export interface SolicitudPendienteItem {
 export class ProfesionalesAdminService {
     private readonly usuarios: UsuarioRepository;
     private readonly tokens: TokenRegistroRepository;
+    private readonly perfiles: PerfilProfesionalRepository;
 
     constructor(tx?: Prisma.TransactionClient) {
         this.usuarios = new UsuarioRepository(tx);
         this.tokens = new TokenRegistroRepository(tx);
+        this.perfiles = new PerfilProfesionalRepository(tx);
     }
 
     /** Lista paginada de cuentas PROFESIONAL con filtro q (email/nombre). */
@@ -81,15 +108,29 @@ export class ProfesionalesAdminService {
             take: query.pageSize,
         });
         return {
-            items: rows.map((u) => ({
-                id: u.id,
-                email: u.email,
-                nombre: u.nombre,
-                estado: u.estado as "activo" | "inactivo",
-                debeCambiarPassword: u.debeCambiarPassword,
-                creadoEn: u.creadoEn.toISOString(),
-                ultimaSesion: u.ultimaSesion ? u.ultimaSesion.toISOString() : null,
-            })),
+            items: rows.map((u) => {
+                const perfil = u.perfilProfesional;
+                const venceEn = perfil?.verificaciones[0]?.venceEn ?? null;
+                return {
+                    id: u.id,
+                    email: u.email,
+                    nombre: u.nombre,
+                    estado: u.estado as "activo" | "inactivo",
+                    debeCambiarPassword: u.debeCambiarPassword,
+                    creadoEn: u.creadoEn.toISOString(),
+                    ultimaSesion: u.ultimaSesion ? u.ultimaSesion.toISOString() : null,
+                    perfilEstado: perfil?.estado ?? null,
+                    // MISMA función que la acción (`estadoTrasLevantarSuspension`):
+                    // el modal no puede anunciar algo distinto de lo que se produce.
+                    levantarSuspension:
+                        perfil?.estado === "SUSPENDIDO"
+                            ? {
+                                resultado: estadoTrasLevantarSuspension(venceEn),
+                                venceEn: venceEn ? venceEn.toISOString() : null,
+                            }
+                            : null,
+                };
+            }),
             total,
         };
     }
@@ -152,6 +193,60 @@ export class ProfesionalesAdminService {
             ipAddress: admin.ipAddress,
             userAgent: admin.userAgent,
         });
+    }
+
+    /**
+     * SPEC-692 (I-417) · LA SALIDA del estado SUSPENDIDO del perfil profesional.
+     * Ese estado lo pone el worker de forma automática (vencimientos seguidos) y
+     * hoy no hay nada que lo saque — con SPEC-690 eso bloquea al profesional para
+     * siempre. Esta acción de administrador lo levanta CON criterio humano:
+     *   · SUSPENDIDO → ACTIVO si la verificación (Ley 2375) sigue vigente;
+     *   · SUSPENDIDO → VENCIDO si ya venció (no se puede reactivar a quien perdió
+     *     la vigencia — pasa por su carril de re-verificación, no por acá).
+     * Exige `motivo` escrito y deja auditoría (quién/cuándo/por qué). Mismo módulo
+     * y permiso que la desactivación de cuenta (`profesionales_admin`).
+     */
+    async levantarSuspension(
+        usuarioId: string,
+        admin: { id: string } & InfoClienteDto,
+        motivo: string,
+    ): Promise<{ estado: "ACTIVO" | "VENCIDO" }> {
+        const motivoLimpio = motivo.trim();
+        if (!motivoLimpio) {
+            throw new AppError("El motivo para levantar la suspensión es obligatorio.", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        const perfil = await this.perfiles.findPorUsuarioId(usuarioId);
+        if (!perfil) {
+            throw new AppError("Perfil profesional no encontrado.", ERROR_CODES.NOT_FOUND, 404);
+        }
+        if (perfil.estado !== "SUSPENDIDO") {
+            throw new AppError(
+                `Solo se puede levantar una suspensión: el perfil está en ${perfil.estado}.`,
+                ERROR_CODES.CONFLICT,
+                409,
+            );
+        }
+        // La vigencia manda: MISMA función que la vista previa de la ficha, para
+        // que lo que el modal anunció sea lo que esta acción produce.
+        const venceEn = await this.perfiles.venceEnVigente(perfil.id);
+        const estado = estadoTrasLevantarSuspension(venceEn);
+        await this.perfiles.cambiarEstado(perfil.id, estado);
+        // Mismo patrón que la desactivación de cuenta: acción genérica `USER_UPDATE`
+        // (no se inventa un valor de enum — `AccionAudit` está PUBLICADO a BI y un
+        // valor nuevo exige migración + coordinación, fuera del alcance de esta
+        // SPEC). El detalle queryable vive en valorAnterior/valorNuevo, con el
+        // motivo escrito y el estado resultante.
+        await logAudit({
+            accion: "USER_UPDATE",
+            tipoRecurso: "PerfilProfesional",
+            recursoId: perfil.id,
+            usuarioId: admin.id,
+            valorAnterior: "SUSPENDIDO",
+            valorNuevo: JSON.stringify({ estado, motivo: motivoLimpio }),
+            ipAddress: admin.ipAddress,
+            userAgent: admin.userAgent,
+        });
+        return { estado };
     }
 
     /** Solicitudes de registro pendientes (TokenRegistro rol=PROFESIONAL activo). */
