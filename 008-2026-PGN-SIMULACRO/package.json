@@ -1,0 +1,32 @@
+{
+  "name": "pgn-estudio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "tsx scripts/generate-static-data.ts && next build",
+    "start": "next start",
+    "db:seed": "tsx scripts/seed-db.ts",
+    "db:migrate": "tsx scripts/seed-db.ts",
+    "db:load-content": "tsx scripts/load-content.ts",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "lucide-react": "^0.441.0",
+    "next": "14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.16.11",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

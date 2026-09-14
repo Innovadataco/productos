@@ -1,0 +1,18 @@
+{
+  "name": "PGN Estudio",
+  "short_name": "PGN Estudio",
+  "description": "Preparación para convocatorias de la Procuraduría General de la Nación",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#0B6E5A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

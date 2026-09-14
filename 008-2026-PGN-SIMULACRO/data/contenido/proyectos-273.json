@@ -1,0 +1,413 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué es el Banco Nacional de Programas y Proyectos (BPIN) según el Decreto 1082 de 2015?",
+      "opciones": [
+        "Instrumento de planeación que registra programas y proyectos de inversión pública viables y previamente evaluados",
+        "Sistema electrónico de contratación pública de obras e inversiones",
+        "Registro de funcionarios de entidades territoriales encargados de proyectos",
+        "Cuenta bancaria para recibir recursos del Presupuesto General de la Nación"
+      ],
+      "respuesta": 0,
+      "explicacion": "El BPIN es el Banco Nacional de Programas y Proyectos, un instrumento de planeación que registra proyectos de inversión pública previamente evaluados social, técnica, ambiental y económicamente, susceptibles de financiación con recursos del Presupuesto General de la Nación.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es la entidad encargada de administrar el Sistema Unificado de Inversión Pública?",
+      "opciones": [
+        "Contraloría General de la República",
+        "Departamento Nacional de Planeación",
+        "Ministerio de Hacienda y Crédito Público",
+        "Banco de la República"
+      ],
+      "respuesta": 1,
+      "explicacion": "La administración del Sistema Unificado de Inversión Pública le corresponde al Departamento Nacional de Planeación, quien define los requisitos, metodologías y procedimientos del sistema.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.1.4",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1082 de 2015, ¿qué fase del ciclo de proyectos de inversión pública sigue a la formulación?",
+      "opciones": [
+        "Ejecución contractual del proyecto",
+        "Evaluación posterior de impacto",
+        "Evaluación previa",
+        "Liquidación final del contrato"
+      ],
+      "respuesta": 2,
+      "explicacion": "Una vez formulado el proyecto, el Decreto 1082 de 2015 dispone que continuará la fase de evaluación previa, que incluye verificación de requisitos, viabilización y control posterior.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué actividad NO forma parte de la fase de formulación de un proyecto de inversión pública según el Decreto 1082 de 2015?",
+      "opciones": [
+        "Articulación con el Plan Nacional de Desarrollo",
+        "Identificación del título de gasto",
+        "Definición de indicadores",
+        "Adjudicación del contrato de ejecución"
+      ],
+      "respuesta": 3,
+      "explicacion": "La formulación se centra en identificar el título de gasto, definir actividades, indicadores, población beneficiaria y articulación con el Plan Nacional de Desarrollo; la adjudicación contractual corresponde a etapas posteriores.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.3",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Quién es responsable de verificar el cumplimiento de los requisitos para la formulación de proyectos de inversión pública?",
+      "opciones": [
+        "La oficina de planeación de la entidad ejecutora o quien haga sus veces",
+        "La Procuraduría General de la Nación",
+        "El Ministerio de Hacienda y Crédito Público",
+        "La Contraloría General de la República"
+      ],
+      "respuesta": 0,
+      "explicacion": "La oficina de planeación de la entidad ejecutora debe verificar que el proyecto cumpla los requisitos de formulación y emitir el aval técnico para continuar con la viabilización.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "El concepto de viabilidad de un proyecto de inversión pública comprende, según el Decreto 1082 de 2015:",
+      "opciones": [
+        "Únicamente la disponibilidad presupuestal inmediata",
+        "Verificación de requisitos y análisis de coherencia, pertinencia y sostenibilidad",
+        "La aprobación del proyecto por el Congreso de la República",
+        "La firma del contratista seleccionado"
+      ],
+      "respuesta": 1,
+      "explicacion": "El concepto de viabilidad se emite de forma exclusiva por la oficina de planeación y comprende verificar requisitos y analizar la coherencia, pertinencia y sostenibilidad del proyecto en el marco sectorial.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.6",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es el propósito del control posterior a la viabilidad realizado por el Departamento Nacional de Planeación?",
+      "opciones": [
+        "Firmar el contrato de obra o consultoría",
+        "Elegir al contratista que ejecutará el proyecto",
+        "Verificar consistencia del proceso, requerimientos técnicos, alineación con política pública y calidad de la información",
+        "Asignar directamente los recursos del presupuesto"
+      ],
+      "respuesta": 2,
+      "explicacion": "El control posterior a la viabilidad permite al DNP verificar la consistencia del proceso, el cumplimiento de requerimientos técnicos, la alineación con políticas públicas y la calidad de la información para el registro.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.7",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Con qué instrumento se registra un proyecto de inversión pública en el BPIN?",
+      "opciones": [
+        "Acta de adjudicación del contrato",
+        "Formato único de licitación pública",
+        "Certificado de disponibilidad presupuestal",
+        "Ficha de Estadísticas Básicas de Inversión (EBI)"
+      ],
+      "respuesta": 3,
+      "explicacion": "El registro en el BPIN se realiza mediante el diligenciamiento de las fichas de Estadísticas Básicas de Inversión, que contienen la información básica para identificar los proyectos.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.8",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es la fecha límite para que un proyecto de inversión esté registrado en el BPIN y sea tenido en cuenta en el Plan Operativo Anual de Inversiones?",
+      "opciones": [
+        "1° de junio del año anterior al que se está programando",
+        "30 de abril del año en curso",
+        "31 de diciembre del año en curso",
+        "15 de enero del año siguiente"
+      ],
+      "respuesta": 0,
+      "explicacion": "Para la elaboración del Plan Operativo Anual de Inversiones solo se tendrán en cuenta los proyectos registrados a más tardar el 1° de junio del año anterior al que se programa.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.9",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1082 de 2015, ¿cuándo se cancela el registro de un proyecto en el BPIN por inactividad?",
+      "opciones": [
+        "Solo si el proyecto fue declarado desierto en licitación",
+        "Cuando tiene más de cuatro años de antigüedad sin apropiaciones ni autorización de compromiso",
+        "Al cumplir dos años desde su registro inicial",
+        "Cuando cambia de entidad ejecutora"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Decreto 1082 de 2015 prevé la cancelación del registro de proyectos con más de cuatro años de antigüedad sin apropiaciones ni autorización para comprometer presupuesto de vigencias futuras.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.10",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué norma constitucional define los títulos de gasto para la inversión pública?",
+      "opciones": [
+        "Artículo 150 de la Constitución Política",
+        "Artículo 95 de la Constitución Política",
+        "Artículo 346 de la Constitución Política",
+        "Artículo 288 de la Constitución Política"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 346 de la Constitución Política regula el plan de inversiones públicas y los títulos de gasto correspondientes a la inversión pública nacional.",
+      "norma": "Constitución Política/1991",
+      "articulo": "Art. 346",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué artículo del Estatuto Orgánico del Presupuesto complementa al artículo 346 de la Constitución en la identificación del título de gasto?",
+      "opciones": [
+        "Artículo 25",
+        "Artículo 115",
+        "Artículo 72",
+        "Artículo 38"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 38 del Estatuto Orgánico del Presupuesto complementa el artículo 346 de la Constitución en la identificación de los títulos de gasto para la inversión pública.",
+      "norma": "Estatuto Orgánico del Presupuesto",
+      "articulo": "Art. 38",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál de los siguientes es un requisito que debe avalar la oficina de planeación durante la verificación de la formulación?",
+      "opciones": [
+        "Que la propuesta se relacione con la misión, objetivo y funciones de la entidad",
+        "Que el proyecto sea de iniciativa privada exclusiva",
+        "Que el contrato de ejecución ya esté firmado",
+        "Que exista una reserva presupuestal ilimitada"
+      ],
+      "respuesta": 0,
+      "explicacion": "Entre los requisitos a verificar figura que el proyecto se relacione con la misión, objetivo y funciones de la entidad formuladora, garantizando su pertinencia institucional.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "En la metodología del marco lógico, la lógica vertical se representa mediante:",
+      "opciones": [
+        "El cronograma de actividades y pagos",
+        "La secuencia de medios-fines: insumos → productos → propósito → fin",
+        "La comparación de costos y beneficios del proyecto",
+        "La matriz de riesgos y probabilidades"
+      ],
+      "respuesta": 1,
+      "explicacion": "El marco lógico utiliza una lógica vertical que vincula insumos, productos, propósito y fin mediante relaciones de medios-fines, mostrando cómo las actividades generan resultados.",
+      "norma": "Metodología General Ajustada del DNP",
+      "articulo": "Marco Lógico",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "El Documento CONPES 3714 de 2011 establece lineamientos para el tratamiento del:",
+      "opciones": [
+        "Riesgo político en procesos electorales",
+        "Riesgo cambiario en proyectos de inversión pública",
+        "Riesgo previsible en la contratación pública",
+        "Riesgo de desastres naturales en territorios"
+      ],
+      "respuesta": 2,
+      "explicacion": "El CONPES 3714 de 2011 establece lineamientos para entender y tratar el riesgo previsible en los procesos de contratación pública, complementando la gestión de proyectos de inversión.",
+      "norma": "CONPES 3714/2011",
+      "articulo": "Lineamientos generales",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1082 de 2015, los proyectos de inversión pública deben ser presentados por:",
+      "opciones": [
+        "Únicamente por la Contraloría General",
+        "Solo por entidades privadas con recursos propios",
+        "Únicamente por el Presidente de la República",
+        "Iniciativa de cualquier entidad pública, a través de las entidades del Presupuesto General de la Nación"
+      ],
+      "respuesta": 3,
+      "explicacion": "Los proyectos de inversión pública pueden ser presentados por iniciativa de cualquier entidad pública, pero deben tramitarse a través de las entidades que hacen parte del Presupuesto General de la Nación.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué sistema integra la información del BPIN, el Sistema de Información de Seguimiento y otros sistemas relacionados con la inversión pública?",
+      "opciones": [
+        "Sistema Unificado de Inversión Pública",
+        "SIAF",
+        "RUNT",
+        "SECOP"
+      ],
+      "respuesta": 0,
+      "explicacion": "El Sistema Unificado de Inversión Pública integra la información del BPIN, del Sistema de Información de Seguimiento y de otros sistemas para la inversión pública.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.1.3",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el artículo 2.2.6.3.1.1 del Decreto 1082 de 2015, la estructuración integral de un proyecto comprende:",
+      "opciones": [
+        "La firma de contratos y ordenes de pago",
+        "Las actividades y estudios técnico, financiero, ambiental, social y legal de la preinversión",
+        "La auditoría de ejecución posterior",
+        "Únicamente los estudios de mercado"
+      ],
+      "respuesta": 1,
+      "explicacion": "La estructuración integral comprende el conjunto de actividades y estudios de orden técnico, financiero, ambiental, social y legal que se realizan en la etapa de preinversión.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.1.1",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "La formulación y evaluación previa de los proyectos de inversión pública culmina con su registro en:",
+      "opciones": [
+        "El Registro Único de Proponentes (RUP)",
+        "El Sistema Electrónico de Contratación Pública (SECOP)",
+        "El Banco Nacional de Programas y Proyectos (BPIN)",
+        "El Sistema General de Participaciones"
+      ],
+      "respuesta": 2,
+      "explicacion": "La formulación y evaluación previa de los proyectos de inversión pública concluye con el registro y sistematización en el Banco Nacional de Programas y Proyectos.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál es la relación entre el artículo 346 de la Constitución y el artículo 38 del Estatuto Orgánico del Presupuesto en la formulación de proyectos?",
+      "opciones": [
+        "Regulan la contratación de consultores para proyectos",
+        "Establecen las sanciones por mal manejo de recursos",
+        "Crean el BPIN y el Sistema Unificado de Inversión Pública",
+        "Ambos definen el título de gasto que debe identificarse durante la formulación"
+      ],
+      "respuesta": 3,
+      "explicacion": "Durante la formulación se debe identificar el título de gasto conforme a lo establecido en el artículo 346 de la Constitución Política y el artículo 38 del Estatuto Orgánico del Presupuesto.",
+      "norma": "Decreto 1082/2015",
+      "articulo": "Art. 2.2.6.3.3 (ref. C.P. Art. 346 y E.O.P. Art. 38)",
+      "dificultad": "dificil"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "titulo": "Formulación y evaluación de proyectos de inversión pública en Colombia",
+      "contenido_html": "<h3>Marco normativo y ciclo de los proyectos de inversión pública</h3>\n<p>La inversión pública en Colombia se rige principalmente por el <strong>Decreto 1082 de 2015</strong>, Decreto Único Reglamentario del Sector Administrativo de Planeación Nacional, que desarrolla el ciclo de formulación, evaluación previa, viabilización, registro, ejecución, seguimiento y evaluación posterior de los proyectos de inversión pública. Esta normativa se complementa con la <strong>Constitución Política (artículo 346)</strong>, el <strong>Estatuto Orgánico del Presupuesto (artículo 38)</strong>, la <strong>Ley 152 de 1994</strong>, la <strong>Metodología General Ajustada (MGA) del Departamento Nacional de Planeación</strong> y el <strong>Documento CONPES 3714 de 2011</strong> sobre riesgo previsible.</p>\n<h3>Formulación del proyecto</h3>\n<p>La formulación es la fase en la que la entidad ejecutora identifica una necesidad, articula el proyecto con el Plan Nacional de Desarrollo, los planes sectoriales e institucionales, define las actividades, los indicadores, la población beneficiaria, las fuentes de financiación y la regionalización de la inversión. De acuerdo con el <strong>artículo 2.2.6.3.3 del Decreto 1082 de 2015</strong>, durante esta etapa también se identifica el título de gasto conforme al artículo 346 de la Constitución y al artículo 38 del Estatuto Orgánico del Presupuesto. La formulación debe realizarse por la dependencia responsable de la ejecución del proyecto y culmina con el registro en el Banco Nacional de Programas y Proyectos.</p>\n<h3>Evaluación previa y viabilización</h3>\n<p>Una vez formulado el proyecto continúa la <strong>evaluación previa</strong>, regulada en el artículo 2.2.6.3.4. Esta etapa comprende la verificación del cumplimiento de requisitos, la viabilización y el control posterior. La oficina de planeación verifica que la propuesta cuente con título de gasto, se relacione con la misión de la entidad, cuente con estudios técnicos, sociales, ambientales y económicos confiables, y contenga toda la información requerida. Posteriormente, se emite el concepto de viabilidad, que analiza la coherencia, pertinencia y sostenibilidad del proyecto en el marco de la política sectorial.</p>\n<h3>El Banco Nacional de Programas y Proyectos (BPIN)</h3>\n<p>El BPIN es un instrumento de planeación administrado por el Departamento Nacional de Planeación que registra los programas y proyectos de inversión pública viables y previamente evaluados. El registro se realiza mediante las fichas de <strong>Estadísticas Básicas de Inversión (EBI)</strong> y habilita a los proyectos para ser financiados con recursos del Presupuesto General de la Nación. Solo los proyectos registrados previamente en el BPIN pueden incorporarse al proyecto de ley anual de presupuesto, y para el Plan Operativo Anual de Inversiones el registro debe realizarse a más tardar el 1° de junio del año anterior.</p>\n<h3>Marco lógico y metodología MGA</h3>\n<p>La MGA del DNP utiliza el <strong>marco lógico</strong> como herramienta de planificación. Este instrumento organiza la información del proyecto en una matriz que relaciona objetivos, indicadores, medios de verificación y supuestos. La lógica vertical conecta insumos, productos, propósito y fin mediante relaciones de medios-fines, mientras que la lógica horizontal vincula cada nivel objetivo con indicadores, medios de verificación y supuestos externos. El marco lógico facilita la identificación de riesgos, la definición de indicadores de seguimiento y la presentación de la información ante el DNP.</p>\n<h3>Riesgo previsible y CONPES 3714 de 2011</h3>\n<p>El Documento CONPES 3714 de 2011 establece lineamientos para entender el riesgo previsible en la contratación pública. Aunque su enfoque principal es la contratación, su gestión impacta la formulación y evaluación de proyectos de inversión, pues permite identificar eventos futuros inciertos que pueden afectar el costo, plazo o calidad del proyecto. La correcta estimación del riesgo previsible fortalece la sostenibilidad financiera y la confiabilidad de los estudios presentados al BPIN.</p>\n<h3>Seguimiento y evaluación</h3>\n<p>El ciclo de inversión pública no termina con el registro. El <strong>Sistema Unificado de Inversión Pública</strong>, administrado por el DNP, permite realizar seguimiento a la ejecución física y financiera y, cuando sea pertinente, evaluaciones posteriores que midan el impacto de los proyectos. Estas actividades garantizan la rendición de cuentas, la transparencia y el uso eficiente de los recursos públicos.</p>",
+      "fuente_url": "https://www.cancilleria.gov.co/normograma/compilacion/docs/decreto_1082015-titulo_192-2-6.htm",
+      "orden": 0
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "BPIN",
+      "reverso": "Banco Nacional de Programas y Proyectos, instrumento de planeación que registra proyectos de inversión pública viables.",
+      "norma": "D. 1082/2015, Art. 2.2.6.3.1"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "MGA",
+      "reverso": "Metodología General Ajustada del DNP para la formulación y evaluación de proyectos de inversión pública.",
+      "norma": "DNP - Metodología General Ajustada"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "EBI",
+      "reverso": "Ficha de Estadísticas Básicas de Inversión, instrumento de registro de proyectos en el BPIN.",
+      "norma": "D. 1082/2015, Art. 2.2.6.3.8"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "Marco lógico",
+      "reverso": "Herramienta de planificación que vincula objetivos, indicadores, medios de verificación y supuestos.",
+      "norma": "MGA DNP - Marco Lógico"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "Evaluación previa",
+      "reverso": "Fase posterior a la formulación que incluye verificación de requisitos, viabilización y control posterior.",
+      "norma": "D. 1082/2015, Art. 2.2.6.3.4"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "Viabilidad",
+      "reverso": "Concepto que verifica requisitos y analiza coherencia, pertinencia y sostenibilidad del proyecto.",
+      "norma": "D. 1082/2015, Art. 2.2.6.3.6"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "Control posterior",
+      "reverso": "Revisión del DNP a proyectos viables para verificar consistencia y calidad antes del registro.",
+      "norma": "D. 1082/2015, Art. 2.2.6.3.7"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "Título de gasto",
+      "reverso": "Clasificación presupuestal que identifica la inversión pública según la Constitución y el Estatuto Orgánico del Presupuesto.",
+      "norma": "D. 1082/2015, Art. 2.2.6.3.3"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "CONPES 3714 de 2011",
+      "reverso": "Documento de política que establece lineamientos para el manejo del riesgo previsible en contratación pública.",
+      "norma": "CONPES 3714/2011"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "POAI",
+      "reverso": "Plan Operativo Anual de Inversiones, programa anual que selecciona proyectos registrados en el BPIN.",
+      "norma": "D. 1082/2015, Art. 2.2.6.3.9"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "frente": "Sistema Unificado de Inversión Pública",
+      "reverso": "Sistema que integra información del BPIN y otros sistemas para la inversión pública.",
+      "norma": "D. 1082/2015, Art. 2.2.6.1.3"
+    }
+  ]
+}
