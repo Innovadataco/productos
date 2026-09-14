@@ -58,7 +58,7 @@ export function loadContent() {
 
     if (data.preguntas) {
       const stmt = db.prepare(`
-        INSERT INTO preguntas (tema_id, perfil_codigo, enunciado, opciones, respuesta, explicacion, norma, articulo, dificultad)
+        INSERT OR IGNORE INTO preguntas (tema_id, perfil_codigo, enunciado, opciones, respuesta, explicacion, norma, articulo, dificultad)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       for (const q of data.preguntas) {
@@ -83,7 +83,7 @@ export function loadContent() {
 
     if (data.resumenes) {
       const stmt = db.prepare(`
-        INSERT INTO resumenes (tema_id, perfil_codigo, titulo, contenido_html, fuente_url, orden)
+        INSERT OR IGNORE INTO resumenes (tema_id, perfil_codigo, titulo, contenido_html, fuente_url, orden)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
       for (const r of data.resumenes) {
@@ -95,7 +95,7 @@ export function loadContent() {
 
     if (data.flashcards) {
       const stmt = db.prepare(`
-        INSERT INTO flashcards (tema_id, perfil_codigo, frente, reverso, norma)
+        INSERT OR IGNORE INTO flashcards (tema_id, perfil_codigo, frente, reverso, norma)
         VALUES (?, ?, ?, ?, ?)
       `);
       for (const f of data.flashcards) {
