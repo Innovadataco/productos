@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { BookOpen, CheckCircle2, XCircle } from 'lucide-react';
 import Header from '../../components/Header';
 import ProgressBar from '../../components/ProgressBar';
-import OptionButton from '../../components/OptionButton';
-import FeedbackBox from '../../components/FeedbackBox';
 import { Perfil, Pregunta } from '../../lib/types';
 import { getPerfilActivo, getPerfiles, getPreguntas } from '../../lib/client-data';
 
@@ -87,24 +86,24 @@ export default function DiagnosticoPage() {
 
   if (loading || !perfil) {
     return (
-      <main className="ios-page">
-        <div className="ios-nav-blur px-4 py-3">
+      <main className="page-shell">
+        <div className="nav-blur px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="h-4 w-24 animate-pulse rounded bg-ios-gray-5" />
-            <div className="h-7 w-20 animate-pulse rounded-lg bg-ios-gray-5" />
+            <div className="skeleton h-4 w-24" />
+            <div className="skeleton h-7 w-20" />
           </div>
         </div>
-        <section className="ios-content py-6">
+        <section className="px-4 py-6">
           <div className="mb-6 flex items-center justify-between">
-            <div className="h-7 w-32 animate-pulse rounded bg-ios-gray-5" />
-            <div className="h-4 w-20 animate-pulse rounded bg-ios-gray-5" />
+            <div className="skeleton h-7 w-32" />
+            <div className="skeleton h-4 w-20" />
           </div>
-          <div className="h-2 w-full animate-pulse rounded-full bg-ios-gray-5" />
+          <div className="skeleton h-2 w-full rounded-full" />
           <div className="mt-8 space-y-6">
-            <div className="ios-card h-40 animate-pulse" />
+            <div className="card h-40 skeleton" />
             <div className="space-y-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-[72px] w-full animate-pulse rounded-ios-xl bg-ios-gray-5" />
+                <div key={i} className="h-[72px] w-full rounded-2xl skeleton" />
               ))}
             </div>
           </div>
@@ -114,23 +113,25 @@ export default function DiagnosticoPage() {
   }
 
   return (
-    <main className="ios-page">
+    <main className="page-shell">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref="/home" />
-      <section className="ios-content py-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-ios-title-2 text-ios-label">Diagnóstico</h1>
-          <span className="text-ios-caption-1 text-ios-label-secondary">
-            Pregunta {index + 1} de {preguntas.length}
-          </span>
+      <section className="px-4 py-6">
+        <div className="animate-fade-up">
+          <div className="mb-4 flex items-center justify-between">
+            <h1 className="text-headline text-ink">Diagnóstico</h1>
+            <span className="text-caption text-ink-muted">
+              Pregunta {index + 1} de {preguntas.length}
+            </span>
+          </div>
+          <ProgressBar actual={index + (respondida ? 1 : 0)} total={preguntas.length} />
         </div>
-        <ProgressBar actual={index + (respondida ? 1 : 0)} total={preguntas.length} />
 
         {pregunta ? (
           <>
-            <div className="ios-card mt-6 p-5">
-              <p className="text-ios-body leading-relaxed text-ios-label">{pregunta.enunciado}</p>
+            <div className="card mt-6 p-5 animate-fade-up" style={{ animationDelay: '80ms' }}>
+              <p className="text-body leading-relaxed text-ink">{pregunta.enunciado}</p>
             </div>
-            <div className="mt-5 space-y-3">
+            <div className="mt-5 space-y-3 animate-fade-up" style={{ animationDelay: '120ms' }}>
               {pregunta.opciones.map((opcion, i) => {
                 const estado = !respondida
                   ? 'default'
@@ -139,26 +140,83 @@ export default function DiagnosticoPage() {
                   : i === seleccion
                   ? 'incorrect'
                   : 'faded';
-                return <OptionButton key={i} label={labels[i]} text={opcion} state={estado} onClick={() => handleSeleccion(i)} disabled={respondida} />;
+                const labelColor =
+                  estado === 'correct'
+                    ? 'text-success'
+                    : estado === 'incorrect'
+                    ? 'text-danger'
+                    : estado === 'faded'
+                    ? 'text-ink-subtle'
+                    : 'text-ink';
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleSeleccion(i)}
+                    disabled={respondida}
+                    className={`option-card min-h-[52px] ${estado === 'default' ? '' : estado} ${
+                      respondida ? 'cursor-default' : 'active:scale-[0.98]'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current text-callout font-bold ${labelColor}`}
+                    >
+                      {labels[i]}
+                    </span>
+                    <span className={`text-body leading-relaxed ${estado === 'faded' ? 'text-ink-subtle' : 'text-ink'}`}>
+                      {opcion}
+                    </span>
+                  </button>
+                );
               })}
             </div>
             {respondida && (
-              <div className="mt-6 transition-all duration-300 ease-ios">
-                <FeedbackBox
-                  correcta={seleccion === pregunta.respuesta}
-                  explicacion={pregunta.explicacion || 'Sin explicación disponible.'}
-                  norma={pregunta.norma}
-                  articulo={pregunta.articulo}
-                />
-                <button onClick={siguiente} className="ios-button mt-6 w-full text-ios-body">
+              <div className="mt-6 animate-fade-up" style={{ animationDelay: '160ms' }}>
+                <div
+                  className={`card overflow-hidden border p-4 transition-all duration-300 ${
+                    seleccion === pregunta.respuesta
+                      ? 'border-success/30 bg-success/10'
+                      : 'border-danger/30 bg-danger/10'
+                  }`}
+                >
+                  <div
+                    className={`mb-3 flex items-center gap-2 ${
+                      seleccion === pregunta.respuesta ? 'text-success' : 'text-danger'
+                    }`}
+                  >
+                    {seleccion === pregunta.respuesta ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
+                    <span className="text-body font-semibold">
+                      {seleccion === pregunta.respuesta ? 'Correcto' : 'Incorrecto'}
+                    </span>
+                  </div>
+                  <p className="mb-4 text-body text-ink-muted">
+                    {pregunta.explicacion || 'Sin explicación disponible.'}
+                  </p>
+                  <div className="rounded-2xl bg-surface p-3 text-footnote text-ink-muted shadow-glass">
+                    <div
+                      className={`mb-1 flex items-center gap-2 ${
+                        seleccion === pregunta.respuesta ? 'text-success' : 'text-danger'
+                      }`}
+                    >
+                      <BookOpen size={14} />
+                      <span className="font-semibold">Norma:</span>
+                    </div>
+                    <p>{pregunta.norma || 'No especificada'}</p>
+                    {pregunta.articulo ? (
+                      <p className="mt-1">
+                        <span className="font-semibold text-ink">Artículo:</span> {pregunta.articulo}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <button onClick={siguiente} className="btn-primary mt-6 w-full">
                   {index + 1 >= preguntas.length ? 'Ver resultado' : 'Siguiente'}
                 </button>
               </div>
             )}
           </>
         ) : (
-          <div className="ios-card mt-6 border border-dashed border-ios-gray-4 p-6 text-center">
-            <p className="text-ios-body text-ios-label-secondary">No hay preguntas cargadas para el diagnóstico aún.</p>
+          <div className="card mt-6 border border-dashed border-ink-subtle/30 p-6 text-center">
+            <p className="text-body text-ink-muted">No hay preguntas cargadas para el diagnóstico aún.</p>
           </div>
         )}
       </section>

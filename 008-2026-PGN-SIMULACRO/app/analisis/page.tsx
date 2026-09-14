@@ -38,8 +38,8 @@ export default function AnalisisPage() {
 
   if (loading || !perfil) {
     return (
-      <main className="ios-page flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-ios-primary" />
+      <main className="page-shell flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-pgn-600" />
       </main>
     );
   }
@@ -66,57 +66,79 @@ export default function AnalisisPage() {
   }));
 
   return (
-    <main className="ios-page">
+    <main className="page-shell">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref="/home" />
 
-      <section className="py-6">
-        <div className="ios-content mb-6">
-          <h1 className="text-ios-title-2 text-ios-label">Análisis de desempeño</h1>
-          <p className="text-ios-subhead text-ios-label-secondary">Revisa tu progreso y áreas de mejora</p>
+      <section className="px-4 py-6">
+        <div className="mb-6 animate-fade-up opacity-0">
+          <h1 className="text-headline text-ink">Análisis de desempeño</h1>
+          <p className="text-callout text-ink-muted">Revisa tu progreso y áreas de mejora</p>
         </div>
 
-        <div className="ios-content mb-6 grid grid-cols-2 gap-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 animate-fade-up opacity-0" style={{ animationDelay: '80ms' }}>
           <StatCard label="Promedio general" value={`${Math.round(promedioGeneral)}%`} icon={BookOpen} trend={promedioGeneral >= 65 ? 'up' : 'down'} />
           <StatCard label="Temas débiles" value={temasDebiles.length} icon={AlertTriangle} trend={temasDebiles.length ? 'down' : 'up'} />
         </div>
 
-        <h2 className="ios-section-title">Promedio por tema</h2>
-        <div className="ios-content space-y-3">
-          {statsPorTema.map((s) => (
-            <div key={s.tema.id} className="ios-card p-4">
+        <h2 className="section-title mb-4 mt-8 animate-fade-up opacity-0" style={{ animationDelay: '160ms' }}>
+          Promedio por tema
+        </h2>
+        <div className="space-y-3">
+          {statsPorTema.map((s, i) => (
+            <div
+              key={s.tema.id}
+              className="card p-4 animate-fade-up opacity-0"
+              style={{ animationDelay: `${200 + i * 60}ms` }}
+            >
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-ios-subhead font-semibold text-ios-label">{s.tema.nombre}</span>
-                <span className="text-ios-footnote text-ios-label-secondary">{s.intentos} intentos · {Math.round(s.promedio)}%</span>
+                <span className="text-title-2 font-semibold text-ink">{s.tema.nombre}</span>
+                <span className="text-footnote text-ink-muted">{s.intentos} intentos · {Math.round(s.promedio)}%</span>
               </div>
               <ProgressBar actual={s.intentos > 0 ? Math.round(s.promedio) : 0} total={100} />
             </div>
           ))}
         </div>
 
-        <h2 className="ios-section-title">Temas debajo de 65%</h2>
-        <div className="ios-content space-y-3">
-          {temasDebiles.length === 0 && <p className="text-ios-body text-ios-label-secondary">No tienes temas debajo del umbral.</p>}
+        <h2 className="section-title mb-4 mt-8 animate-fade-up opacity-0" style={{ animationDelay: '240ms' }}>
+          Temas debajo de 65%
+        </h2>
+        <div className="space-y-3 animate-fade-up opacity-0" style={{ animationDelay: '280ms' }}>
+          {temasDebiles.length === 0 && (
+            <div className="card border-dashed border-ink-subtle/30 p-6 text-center">
+              <p className="text-body text-ink-muted">No tienes temas debajo del umbral.</p>
+            </div>
+          )}
           {temasDebiles.map((s) => (
-            <div key={s.tema.id} className="flex items-center gap-3 rounded-ios-xl bg-ios-red-light p-4">
-              <TrendingDown size={20} className="text-ios-red" />
+            <div key={s.tema.id} className="glass flex items-center gap-3 bg-danger/10 p-4">
+              <TrendingDown size={20} className="text-danger" />
               <div>
-                <p className="text-ios-subhead font-semibold text-ios-label">{s.tema.nombre}</p>
-                <p className="text-ios-footnote text-ios-label-secondary">Promedio {Math.round(s.promedio)}%</p>
+                <p className="text-title-2 font-semibold text-ink">{s.tema.nombre}</p>
+                <p className="text-footnote text-ink-muted">Promedio {Math.round(s.promedio)}%</p>
               </div>
             </div>
           ))}
         </div>
 
-        <h2 className="ios-section-title">Evolución temporal</h2>
-        <div className="ios-content space-y-3">
-          {evolucion.length === 0 && <p className="text-ios-body text-ios-label-secondary">Sin intentos registrados aún.</p>}
+        <h2 className="section-title mb-4 mt-8 animate-fade-up opacity-0" style={{ animationDelay: '320ms' }}>
+          Evolución temporal
+        </h2>
+        <div className="space-y-3">
+          {evolucion.length === 0 && (
+            <div className="card border-dashed border-ink-subtle/30 p-6 text-center animate-fade-up opacity-0" style={{ animationDelay: '360ms' }}>
+              <p className="text-body text-ink-muted">Sin intentos registrados aún.</p>
+            </div>
+          )}
           {evolucion.map((e, i) => (
-            <div key={i} className="ios-card flex items-center justify-between p-4">
-              <div className="flex items-center gap-3 text-ios-body text-ios-label-secondary">
-                <Calendar size={18} className="text-ios-primary" />
+            <div
+              key={i}
+              className="card flex items-center justify-between p-4 animate-fade-up opacity-0"
+              style={{ animationDelay: `${360 + i * 60}ms` }}
+            >
+              <div className="flex items-center gap-3 text-body text-ink-muted">
+                <Calendar size={18} className="text-pgn-600" />
                 {e.fecha}
               </div>
-              <span className="text-ios-title-3 text-ios-label">{e.puntaje}%</span>
+              <span className="text-title-1 text-ink">{e.puntaje}%</span>
             </div>
           ))}
         </div>

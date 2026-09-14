@@ -10,18 +10,18 @@ interface FeedbackBoxProps {
 function FeedbackBox({ explicacion, norma, articulo, correcta }: FeedbackBoxProps) {
   const Icon = correcta ? CheckCircle2 : XCircle;
   const wrapper = correcta
-    ? 'border-ios-green/30 bg-ios-green-light'
-    : 'border-ios-red/30 bg-ios-red-light';
-  const accent = correcta ? 'text-ios-green' : 'text-ios-red';
+    ? 'border-success/30 bg-success/10'
+    : 'border-danger/30 bg-danger/10';
+  const accent = correcta ? 'text-success' : 'text-danger';
 
   return (
-    <div className={`ios-card overflow-hidden border p-4 transition-all duration-300 ${wrapper}`}>
+    <div className={`glass overflow-hidden border p-4 transition-all duration-300 animate-fade-up ${wrapper}`}>
       <div className={`mb-3 flex items-center gap-2 ${accent}`}>
         <Icon size={20} />
-        <span className="text-ios-body font-semibold">{correcta ? 'Correcto' : 'Incorrecto'}</span>
+        <span className="text-body font-bold">{correcta ? 'Correcto' : 'Incorrecto'}</span>
       </div>
-      <p className="mb-4 text-ios-body text-ios-label-secondary">{explicacion}</p>
-      <div className="rounded-ios-lg bg-ios-surface p-3 text-ios-footnote text-ios-label-secondary shadow-ios">
+      <p className="mb-4 text-body text-ink-muted">{explicacion}</p>
+      <div className="rounded-2xl bg-surface p-3 text-footnote text-ink-muted shadow-glass">
         <div className={`mb-1 flex items-center gap-2 ${accent}`}>
           <BookOpen size={14} />
           <span className="font-semibold">Norma:</span>
@@ -29,7 +29,7 @@ function FeedbackBox({ explicacion, norma, articulo, correcta }: FeedbackBoxProp
         <p>{norma || 'No especificada'}</p>
         {articulo ? (
           <p className="mt-1">
-            <span className="font-semibold text-ios-label">Artículo:</span> {articulo}
+            <span className="font-semibold text-ink">Artículo:</span> {articulo}
           </p>
         ) : null}
       </div>

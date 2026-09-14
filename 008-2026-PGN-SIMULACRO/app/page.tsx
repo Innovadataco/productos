@@ -27,32 +27,38 @@ export default function SeleccionPerfilPage() {
 
   if (loading) {
     return (
-      <main className="ios-page flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-ios-primary" />
+      <main className="page-shell flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-pgn-600" />
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="ios-page flex items-center justify-center px-4">
-        <div className="ios-card w-full max-w-sm p-6 text-center">
-          <p className="text-ios-body text-ios-red">{error}</p>
+      <main className="page-shell flex items-center justify-center px-4">
+        <div className="card w-full max-w-sm p-6 text-center animate-fade-up opacity-0">
+          <p className="text-body text-danger">{error}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="ios-page py-6">
-      <div className="ios-content mb-8 text-center">
-        <h1 className="text-ios-title-1 text-ios-label">PGN Estudio</h1>
-        <p className="mt-2 text-ios-body text-ios-label-secondary">Selecciona tu perfil para comenzar</p>
+    <main className="page-shell py-6">
+      <div className="mb-8 px-4 text-center animate-fade-up opacity-0">
+        <h1 className="text-display text-ink">PGN Estudio</h1>
+        <p className="mt-2 text-body text-ink-muted">Selecciona tu perfil para comenzar</p>
       </div>
 
-      <div className="ios-content space-y-4">
-        {perfiles.map((perfil) => (
-          <ProfileCard key={perfil.codigo} perfil={perfil} onSelect={handleSelect} />
+      <div className="space-y-4 px-4">
+        {perfiles.map((perfil, i) => (
+          <div
+            key={perfil.codigo}
+            className="animate-fade-up opacity-0"
+            style={{ animationDelay: `${(i + 1) * 80}ms` }}
+          >
+            <ProfileCard perfil={perfil} onSelect={handleSelect} />
+          </div>
         ))}
       </div>
     </main>

@@ -17,7 +17,7 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
   const [flipped, setFlipped] = useState(false);
 
   return (
-    <div className="w-full">
+    <div className="w-full animate-fade-up opacity-0">
       <button
         type="button"
         onClick={() => setFlipped((f) => !f)}
@@ -26,7 +26,7 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
         aria-label="Voltear flashcard"
       >
         <div
-          className="relative h-full w-full transition-transform duration-500 ease-ios"
+          className="relative h-full w-full transition-transform duration-500 ease-spring"
           style={{
             transformStyle: 'preserve-3d',
             transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
@@ -34,16 +34,16 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
         >
           {/* Frente */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-surface p-6 shadow-ios"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl glass p-6"
             style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
           >
-            <span className="text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-primary">
+            <span className="text-caption font-semibold uppercase tracking-wide text-pgn-600">
               Frente
             </span>
-            <p className="mt-4 text-center text-ios-title-3 font-semibold text-ios-label text-balance">
+            <p className="mt-4 text-center text-title-1 font-semibold text-ink text-balance">
               {frente}
             </p>
-            <div className="mt-6 flex items-center gap-1.5 text-ios-caption-1 text-ios-label-tertiary">
+            <div className="mt-6 flex items-center gap-1.5 text-callout text-ink-subtle">
               <RotateCw size={14} />
               Toca para voltear
             </div>
@@ -51,21 +51,21 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
 
           {/* Reverso */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-ios-2xl bg-ios-primary-light p-6 shadow-ios"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl glass bg-pgn-50/60 p-6"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
             }}
           >
-            <span className="text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-primary">
+            <span className="text-caption font-semibold uppercase tracking-wide text-pgn-600">
               Reverso
             </span>
-            <p className="mt-4 text-center text-ios-title-3 font-semibold text-ios-label text-balance">
+            <p className="mt-4 text-center text-title-1 font-semibold text-ink text-balance">
               {reverso}
             </p>
             {norma && (
-              <div className="mt-4 inline-flex max-w-full items-center gap-1.5 rounded-ios bg-ios-surface/80 px-3 py-1.5 text-ios-caption-1 font-medium text-ios-primary">
+              <div className="mt-4 inline-flex max-w-full items-center gap-1.5 rounded-xl glass px-3 py-1.5 text-caption font-medium text-pgn-600">
                 <BookOpen size={12} />
                 <span className="truncate">{norma}</span>
               </div>
@@ -80,7 +80,7 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
           onClick={onPrev}
           disabled={!hasPrev}
           aria-label="Anterior"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ios-gray-6 text-ios-primary transition-all active:scale-[0.97] active:bg-ios-gray-5 disabled:opacity-40"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-soft text-pgn-600 transition-all active:scale-[0.97] active:bg-surface disabled:opacity-40"
         >
           <ChevronLeft size={24} />
         </button>
@@ -88,7 +88,7 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
         <button
           type="button"
           onClick={() => setFlipped((f) => !f)}
-          className="ios-button-secondary flex-1"
+          className="btn-secondary flex-1"
         >
           {flipped ? 'Ver frente' : 'Ver reverso'}
         </button>
@@ -98,7 +98,7 @@ function Flashcard({ frente, reverso, norma, onNext, onPrev, hasNext = true, has
           onClick={onNext}
           disabled={!hasNext}
           aria-label="Siguiente"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ios-gray-6 text-ios-primary transition-all active:scale-[0.97] active:bg-ios-gray-5 disabled:opacity-40"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-soft text-pgn-600 transition-all active:scale-[0.97] active:bg-surface disabled:opacity-40"
         >
           <ChevronRight size={24} />
         </button>

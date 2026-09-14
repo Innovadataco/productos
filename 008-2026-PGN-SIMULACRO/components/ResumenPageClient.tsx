@@ -40,33 +40,39 @@ export default function ResumenPageClient() {
 
   if (loading || !perfil || !tema) {
     return (
-      <main className="ios-page flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-ios-primary" aria-label="Cargando resumen" />
+      <main className="page-shell flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-pgn-600" aria-label="Cargando resumen" />
       </main>
     );
   }
 
   return (
-    <main className="ios-page">
+    <main className="page-shell">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref={`/tema/${tema.clave}`} />
-      <section className="ios-content py-6">
-        <h1 className="text-ios-title-2 text-ios-label">{tema.nombre}</h1>
-        <h2 className="mt-1 text-ios-subhead text-ios-label-secondary">Resumen</h2>
+      <section className="px-4 py-6">
+        <div className="animate-fade-up opacity-0">
+          <h1 className="text-headline text-ink">{tema.nombre}</h1>
+          <h2 className="mt-1 text-callout text-ink-muted">Resumen</h2>
+        </div>
 
         {resumenes.length === 0 && (
-          <div className="mt-6 rounded-ios-xl border border-dashed border-ios-gray-4 bg-ios-surface p-8 text-center shadow-ios">
-            <p className="text-ios-body text-ios-label-secondary">
+          <div className="mt-6 card border-dashed border-ink-subtle/30 p-8 text-center animate-fade-up opacity-0" style={{ animationDelay: '80ms' }}>
+            <p className="text-body text-ink-muted">
               No hay resúmenes cargados para este tema aún.
             </p>
           </div>
         )}
 
         <div className="mt-4 space-y-4">
-          {resumenes.map((resumen) => (
-            <article key={resumen.id} className="ios-card p-5">
-              <h3 className="text-ios-title-3 text-ios-label">{resumen.titulo}</h3>
+          {resumenes.map((resumen, i) => (
+            <article
+              key={resumen.id}
+              className="card p-5 animate-fade-up opacity-0"
+              style={{ animationDelay: `${120 + i * 80}ms` }}
+            >
+              <h3 className="text-title-1 text-ink">{resumen.titulo}</h3>
               <div
-                className="prose prose-sm mt-3 max-w-none text-ios-body text-ios-label-secondary"
+                className="prose prose-sm mt-3 max-w-none text-body text-ink-muted"
                 dangerouslySetInnerHTML={{ __html: resumen.contenido_html }}
               />
               {resumen.fuente_url && (
@@ -74,7 +80,7 @@ export default function ResumenPageClient() {
                   href={resumen.fuente_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 inline-block text-ios-subhead font-medium text-ios-primary hover:underline"
+                  className="mt-4 inline-block text-callout font-medium text-pgn-600 hover:underline"
                 >
                   Fuente
                 </a>

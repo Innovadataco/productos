@@ -75,8 +75,8 @@ export default function TemaLandingClient() {
 
   if (loading || !perfil || !tema) {
     return (
-      <main className="ios-page flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-ios-primary" aria-label="Cargando tema" />
+      <main className="page-shell flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-pgn-600" aria-label="Cargando tema" />
       </main>
     );
   }
@@ -89,45 +89,47 @@ export default function TemaLandingClient() {
   ];
 
   return (
-    <main className="ios-page">
+    <main className="page-shell">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref="/home" />
-      <section className="ios-content py-6">
-        <div className="ios-card-elevated p-5">
+      <section className="px-4 py-6">
+        <div className="glass-strong p-5 animate-fade-up opacity-0">
           <div className="flex items-center gap-5">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-ios-xl bg-ios-primary-light text-ios-primary">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-pgn-100 text-pgn-600 shadow-glow">
               <Icon size={32} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-ios-title-1 text-ios-label">{tema.nombre}</h1>
-              <p className="mt-0.5 text-ios-subhead text-ios-label-secondary">{tema.eje}</p>
+              <h1 className="text-headline text-ink">{tema.nombre}</h1>
+              <p className="mt-0.5 text-callout text-ink-muted">{tema.eje}</p>
             </div>
           </div>
-          <p className="mt-4 text-ios-body text-ios-label-secondary leading-relaxed">{tema.descripcion}</p>
+          <p className="mt-4 text-body text-ink-muted leading-relaxed">{tema.descripcion}</p>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-4">
+        <div className="mt-6 grid grid-cols-3 gap-3 animate-fade-up opacity-0" style={{ animationDelay: '100ms' }}>
           {stats.map((stat) => {
             const StatIcon = stat.icon;
             return (
               <div
                 key={stat.label}
-                className="flex flex-col rounded-ios-xl bg-ios-surface p-4 shadow-ios"
+                className="glass flex flex-col p-4"
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-ios-caption-1 font-medium uppercase text-ios-label-secondary">
+                  <span className="text-caption font-medium uppercase text-ink-subtle">
                     {stat.label}
                   </span>
-                  <StatIcon size={16} className="text-ios-primary" />
+                  <StatIcon size={16} className="text-pgn-600" />
                 </div>
-                <span className="text-ios-title-1 text-ios-label">{stat.value}</span>
+                <span className="text-headline text-ink">{stat.value}</span>
               </div>
             );
           })}
         </div>
 
-        <h2 className="ios-section-title">Módulos de estudio</h2>
-        <div className="ios-list">
-          {menu.map((item) => {
+        <h2 className="section-title mb-4 mt-8 animate-fade-up opacity-0" style={{ animationDelay: '180ms' }}>
+          Módulos de estudio
+        </h2>
+        <div className="space-y-3">
+          {menu.map((item, i) => {
             const IconItem = item.icon;
             const href = item.href.startsWith('/') ? item.href : `/tema/${tema.clave}/${item.href}`;
             return (
@@ -135,15 +137,16 @@ export default function TemaLandingClient() {
                 key={item.key}
                 type="button"
                 onClick={() => router.push(href)}
-                className="ios-list-item w-full text-left"
+                className="glass flex w-full items-center justify-between p-4 text-left transition-all hover:shadow-glow active:scale-[0.98] animate-fade-up opacity-0"
+                style={{ animationDelay: `${240 + i * 80}ms` }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-ios bg-ios-primary-light text-ios-primary">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pgn-100 text-pgn-600">
                     <IconItem size={20} />
                   </div>
-                  <span className="text-ios-body font-medium text-ios-label">{item.label}</span>
+                  <span className="text-body font-medium text-ink">{item.label}</span>
                 </div>
-                <ChevronRight size={18} className="text-ios-gray-3" />
+                <ChevronRight size={18} className="text-ink-subtle" />
               </button>
             );
           })}

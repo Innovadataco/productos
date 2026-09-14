@@ -17,7 +17,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#F2F2F7',
+  themeColor: '#f8fafc',
 };
 
 export default function RootLayout({
@@ -37,7 +37,7 @@ export default function RootLayout({
         <meta name="application-name" content="PGN Estudio" />
         <meta name="msapplication-TileColor" content="#0B6E5A" />
       </head>
-      <body className="ios-page">
+      <body className="page-shell">
         {children}
       </body>
     </html>

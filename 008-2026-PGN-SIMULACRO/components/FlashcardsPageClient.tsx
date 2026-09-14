@@ -42,8 +42,8 @@ export default function FlashcardsPageClient() {
 
   if (loading || !perfil || !tema) {
     return (
-      <main className="ios-page flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-ios-primary" aria-label="Cargando flashcards" />
+      <main className="page-shell flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-pgn-600" aria-label="Cargando flashcards" />
       </main>
     );
   }
@@ -52,31 +52,33 @@ export default function FlashcardsPageClient() {
   const progress = flashcards.length ? ((index + 1) / flashcards.length) * 100 : 0;
 
   return (
-    <main className="ios-page">
+    <main className="page-shell">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref={`/tema/${tema.clave}`} />
-      <section className="ios-content py-6">
-        <h1 className="text-ios-title-2 text-ios-label">{tema.nombre}</h1>
-        <p className="mt-1 text-ios-subhead text-ios-label-secondary">
-          Flashcards · {index + 1} de {flashcards.length || 0}
-        </p>
+      <section className="px-4 py-6">
+        <div className="animate-fade-up opacity-0">
+          <h1 className="text-headline text-ink">{tema.nombre}</h1>
+          <p className="mt-1 text-callout text-ink-muted">
+            Flashcards · {index + 1} de {flashcards.length || 0}
+          </p>
+        </div>
 
-        <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-ios-gray-5">
+        <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-surface-soft animate-fade-up opacity-0" style={{ animationDelay: '80ms' }}>
           <div
-            className="h-full rounded-full bg-ios-primary transition-all duration-300 ease-ios"
+            className="h-full rounded-full bg-pgn-600 transition-all duration-300 ease-spring"
             style={{ width: `${progress}%` }}
           />
         </div>
 
         {flashcards.length === 0 && (
-          <div className="mt-6 rounded-ios-xl border border-dashed border-ios-gray-4 bg-ios-surface p-8 text-center shadow-ios">
-            <p className="text-ios-body text-ios-label-secondary">
+          <div className="mt-6 card border-dashed border-ink-subtle/30 p-8 text-center animate-fade-up opacity-0" style={{ animationDelay: '120ms' }}>
+            <p className="text-body text-ink-muted">
               No hay flashcards cargadas para este tema aún.
             </p>
           </div>
         )}
 
         {actual && (
-          <div className="mt-6">
+          <div className="mt-6 animate-fade-up opacity-0" style={{ animationDelay: '160ms' }}>
             <Flashcard
               frente={actual.frente}
               reverso={actual.reverso}

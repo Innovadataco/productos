@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 interface ScoreRingProps {
   score: number;
   total: number;
@@ -10,18 +12,28 @@ export default function ScoreRing({ score, total, size = 120 }: ScoreRingProps) 
   const radius = (size - stroke) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - porcentaje * circumference;
+  const gradientId = useId();
 
-  const color = porcentaje >= 0.7 ? '#34C759' : porcentaje >= 0.65 ? '#FF9500' : '#FF3B30';
-  const trackColor = '#E5E5EA';
+  const textColor =
+    porcentaje >= 0.7 ? 'text-success' : porcentaje >= 0.65 ? 'text-warning' : 'text-danger';
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+    <div
+      className="relative flex items-center justify-center animate-scale-in"
+      style={{ width: size, height: size }}
+    >
       <svg width={size} height={size} className="-rotate-90 transform">
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#0d9488" />
+            <stop offset="100%" stopColor="#5eead7" />
+          </linearGradient>
+        </defs>
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={trackColor}
+          stroke="#e2e8f0"
           strokeWidth={stroke}
           fill="transparent"
         />
@@ -29,18 +41,20 @@ export default function ScoreRing({ score, total, size = 120 }: ScoreRingProps) 
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={color}
+          stroke={`url(#${gradientId})`}
           strokeWidth={stroke}
           fill="transparent"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="transition-all duration-700 ease-ios"
+          className="transition-all duration-700 ease-spring"
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-ios-title-1 text-ios-label">{Math.round(porcentaje * 100)}</span>
-        <span className="text-ios-footnote text-ios-label-secondary">de {total}</span>
+        <span className={`text-headline font-bold ${textColor}`}>
+          {Math.round(porcentaje * 100)}
+        </span>
+        <span className="text-footnote text-ink-subtle">de {total}</span>
       </div>
     </div>
   );

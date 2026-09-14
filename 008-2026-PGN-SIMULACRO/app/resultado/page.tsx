@@ -10,12 +10,12 @@ import { getPerfilActivo, getPerfiles, getResultados } from '../../lib/client-da
 import { Trophy, Clock, RotateCcw, TrendingUp, PartyPopper } from 'lucide-react';
 
 const confetti = [
-  { top: '12%', left: '18%', size: 8, color: 'bg-ios-primary', delay: '0ms' },
-  { top: '22%', left: '78%', size: 6, color: 'bg-ios-green', delay: '120ms' },
-  { top: '8%', left: '62%', size: 10, color: 'bg-ios-blue', delay: '240ms' },
-  { top: '34%', left: '10%', size: 7, color: 'bg-ios-orange', delay: '80ms' },
-  { top: '38%', left: '86%', size: 9, color: 'bg-ios-red', delay: '200ms' },
-  { top: '18%', left: '42%', size: 5, color: 'bg-ios-primary', delay: '160ms' },
+  { top: '12%', left: '18%', size: 8, color: 'bg-pgn-500', delay: '0ms' },
+  { top: '22%', left: '78%', size: 6, color: 'bg-success', delay: '120ms' },
+  { top: '8%', left: '62%', size: 10, color: 'bg-pgn-400', delay: '240ms' },
+  { top: '34%', left: '10%', size: 7, color: 'bg-warning', delay: '80ms' },
+  { top: '38%', left: '86%', size: 9, color: 'bg-danger', delay: '200ms' },
+  { top: '18%', left: '42%', size: 5, color: 'bg-pgn-500', delay: '160ms' },
 ];
 
 function ResultadoContent() {
@@ -51,25 +51,25 @@ function ResultadoContent() {
 
   if (loading || !perfil) {
     return (
-      <main className="ios-page">
-        <div className="ios-nav-blur px-4 py-3">
+      <main className="page-shell">
+        <div className="nav-blur px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="h-4 w-24 animate-pulse rounded bg-ios-gray-5" />
-            <div className="h-7 w-20 animate-pulse rounded-lg bg-ios-gray-5" />
+            <div className="skeleton h-4 w-24" />
+            <div className="skeleton h-7 w-20" />
           </div>
         </div>
-        <section className="ios-content py-6">
-          <div className="mx-auto h-7 w-56 animate-pulse rounded bg-ios-gray-5" />
+        <section className="px-4 py-6 text-center">
+          <div className="mx-auto h-7 w-56 skeleton" />
           <div className="mt-8 flex justify-center">
-            <div className="h-40 w-40 animate-pulse rounded-full bg-ios-gray-5" />
+            <div className="skeleton h-40 w-40 rounded-full" />
           </div>
           <div className="mt-6 grid grid-cols-2 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="ios-card h-24 animate-pulse" />
+              <div key={i} className="card h-24 skeleton" />
             ))}
           </div>
-          <div className="ios-card mt-6 h-32 animate-pulse" />
-          <div className="mt-6 h-12 w-full animate-pulse rounded-ios-lg bg-ios-primary/30" />
+          <div className="card mt-6 h-32 skeleton" />
+          <div className="mt-6 h-13 w-full rounded-2xl skeleton" />
         </section>
       </main>
     );
@@ -82,14 +82,14 @@ function ResultadoContent() {
     : 0;
 
   return (
-    <main className="ios-page">
+    <main className="page-shell">
       <Header perfilCodigo={perfil.codigo} perfilNombre={perfil.nombre} backHref="/home" />
-      <section className="ios-content py-6 text-center">
-        <h1 className="text-ios-title-2 text-ios-label">
+      <section className="px-4 py-6 text-center">
+        <h1 className="text-headline text-ink animate-fade-up">
           {tipo === 'diagnostico' ? 'Resultado del diagnóstico' : tipo === 'simulacro' ? 'Resultado del simulacro' : 'Resultado'}
         </h1>
 
-        <div className="relative mt-8 flex justify-center">
+        <div className="relative mt-8 flex justify-center animate-fade-up" style={{ animationDelay: '80ms' }}>
           {aprobado && (
             <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
               {confetti.map((dot, i) => (
@@ -107,42 +107,56 @@ function ResultadoContent() {
               ))}
             </div>
           )}
-          <div className="relative flex flex-col items-center">
+          <div className="relative flex flex-col items-center animate-scale-in">
             {aprobado ? (
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-ios-green-light">
-                <PartyPopper className="h-6 w-6 text-ios-green" />
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+                <PartyPopper className="h-6 w-6 text-success" />
               </div>
             ) : (
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-ios-red-light">
-                <Trophy className="h-6 w-6 text-ios-red" />
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-danger/10">
+                <Trophy className="h-6 w-6 text-danger" />
               </div>
             )}
             <ScoreRing score={correctas} total={total} size={160} />
           </div>
         </div>
 
-        <p className={`mt-5 text-ios-title-3 font-bold ${aprobado ? 'text-ios-green' : 'text-ios-red'}`}>
+        <p
+          className={`mt-5 text-title-2 font-bold animate-fade-up ${
+            aprobado ? 'text-success' : 'text-danger'
+          }`}
+          style={{ animationDelay: '120ms' }}
+        >
           {aprobado ? '¡Aprobado!' : 'Necesitas practicar más'}
         </p>
-        <p className="mt-1 text-ios-footnote text-ios-label-secondary">Mínimo requerido: 65%</p>
+        <p className="mt-1 text-footnote text-ink-muted animate-fade-up" style={{ animationDelay: '140ms' }}>
+          Mínimo requerido: 65%
+        </p>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 text-left">
+        <div
+          className="mt-6 grid grid-cols-2 gap-4 text-left animate-fade-up"
+          style={{ animationDelay: '160ms' }}
+        >
           <StatCard label="Correctas" value={correctas} icon={Trophy} trend="up" />
           <StatCard label="Duración" value={`${duracion}s`} icon={Clock} trend="neutral" />
           <StatCard label="Promedio histórico" value={`${promedioHist}%`} icon={TrendingUp} trend="neutral" />
           <StatCard label="Intentos previos" value={historial.length} icon={RotateCcw} trend="neutral" />
         </div>
 
-        <div className="ios-card mt-6 p-5 text-left">
-          <h3 className="text-ios-subhead font-semibold text-ios-label">Recomendación</h3>
-          <p className="mt-2 text-ios-body text-ios-label-secondary">
+        <div className="card mt-6 p-5 text-left animate-fade-up" style={{ animationDelay: '180ms' }}>
+          <h3 className="text-callout font-semibold text-ink">Recomendación</h3>
+          <p className="mt-2 text-body text-ink-muted">
             {aprobado
               ? 'Buen desempeño. Refuerza los temas donde fallaste para asegurar el puntaje en la prueba oficial.'
               : 'Prioriza los temas con menor puntaje. Repasa resúmenes y flashcards antes de intentar de nuevo.'}
           </p>
         </div>
 
-        <button onClick={() => router.push('/home')} className="ios-button mt-6 w-full text-ios-body">
+        <button
+          onClick={() => router.push('/home')}
+          className="btn-primary mt-6 w-full animate-fade-up"
+          style={{ animationDelay: '200ms' }}
+        >
           Volver al inicio
         </button>
       </section>
@@ -154,8 +168,8 @@ export default function ResultadoPage() {
   return (
     <Suspense
       fallback={
-        <main className="ios-page flex items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-ios-gray-5 border-t-ios-primary" />
+        <main className="page-shell flex items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-ink-subtle/20 border-t-pgn-500" />
         </main>
       }
     >

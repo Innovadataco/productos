@@ -13,17 +13,17 @@ interface TopicCardProps {
 }
 
 const colorMap: Record<string, string> = {
-  'bg-blue-500': 'bg-ios-blue',
-  'bg-red-500': 'bg-ios-red',
-  'bg-emerald-500': 'bg-ios-green',
-  'bg-green-500': 'bg-ios-green',
-  'bg-indigo-500': 'bg-ios-primary',
-  'bg-amber-500': 'bg-ios-orange',
-  'bg-orange-500': 'bg-ios-orange',
-  'bg-rose-500': 'bg-ios-red',
-  'bg-cyan-500': 'bg-ios-blue',
-  'bg-slate-600': 'bg-ios-gray',
-  'bg-teal-500': 'bg-ios-green',
+  'bg-blue-500': 'from-pgn-500 to-pgn-600',
+  'bg-red-500': 'from-warning to-danger',
+  'bg-emerald-500': 'from-success to-pgn-500',
+  'bg-green-500': 'from-success to-pgn-500',
+  'bg-indigo-500': 'from-pgn-600 to-pgn-800',
+  'bg-amber-500': 'from-yellow-400 to-warning',
+  'bg-orange-500': 'from-warning to-danger',
+  'bg-rose-500': 'from-rose-500 to-danger',
+  'bg-cyan-500': 'from-pgn-300 to-pgn-500',
+  'bg-slate-600': 'from-slate-500 to-slate-700',
+  'bg-teal-500': 'from-pgn-400 to-pgn-600',
 };
 
 export default function TopicCard({
@@ -35,23 +35,23 @@ export default function TopicCard({
 }: TopicCardProps) {
   const Icon = getIcon(tema.icono);
   const promedioTexto = promedio > 0 ? `${Math.round(promedio)}%` : '—';
-  const iconColor = colorMap[tema.color] || 'bg-ios-primary';
+  const iconColor = colorMap[tema.color] || 'from-pgn-500 to-pgn-600';
 
   return (
     <button
       onClick={onClick}
-      className="ios-card flex w-full items-center gap-4 p-4 text-left transition-all hover:shadow-ios-lg active:scale-[0.98]"
+      className="card flex w-full items-center gap-4 p-4 text-left transition-all hover:shadow-glow active:scale-[0.98] animate-fade-up"
     >
       <div
-        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-ios-lg text-white ${iconColor}`}
+        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-button ${iconColor}`}
       >
-        <Icon size={24} />
+        <Icon size={28} />
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="truncate text-ios-body font-semibold text-ios-label">{tema.nombre}</h4>
-          <span className="shrink-0 text-ios-callout font-semibold text-ios-label-secondary">
+          <h4 className="truncate text-title-2 font-semibold text-ink">{tema.nombre}</h4>
+          <span className="shrink-0 text-callout font-bold text-ink-muted">
             {promedioTexto}
           </span>
         </div>
@@ -59,10 +59,10 @@ export default function TopicCard({
           <ProgressBar actual={progreso} total={totalPreguntas || 1} />
         </div>
         <div className="mt-2 flex items-center justify-between">
-          <span className="rounded-ios bg-ios-gray-6 px-2 py-1 text-ios-caption-1 font-medium text-ios-label-secondary">
+          <span className="rounded-lg bg-surface-soft px-2 py-1 text-caption font-medium text-ink-muted">
             {tema.eje}
           </span>
-          <span className="text-ios-footnote text-ios-label-tertiary">
+          <span className="text-footnote text-ink-subtle">
             {totalPreguntas} preguntas
           </span>
         </div>
