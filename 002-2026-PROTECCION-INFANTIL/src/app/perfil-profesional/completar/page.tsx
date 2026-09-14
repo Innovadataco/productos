@@ -26,6 +26,7 @@ import { Alerta } from "@/components/ui/Alerta";
 import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { MENSAJE_MODALIDAD_REQUERIDA, MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
+import { conPuntosDeMiles, tarifaDesdeTexto } from "@/lib/profesional/formato-tarifa";
 
 type Perfil = {
     id: string;
@@ -301,12 +302,15 @@ export default function CompletarPerfilProfesionalPage() {
                             onChange={(e) => setAniosExperiencia(e.target.value)}
                             options={ANIOS_EXPERIENCIA_OPCIONES}
                         />
+                        {/* SPEC-694: se ve con puntos de miles («200.000») mientras escribe;
+                            el estado guarda el ENTERO (200000) y eso es lo que se envía. Por eso
+                            es type=text (un number no muestra separadores) + inputMode numérico. */}
                         <Input
                             label="Tarifa por consulta (COP)"
-                            type="number"
-                            min={0}
-                            value={tarifaConsultaCOP}
-                            onChange={(e) => setTarifaConsultaCOP(Number(e.target.value))}
+                            type="text"
+                            inputMode="numeric"
+                            value={conPuntosDeMiles(tarifaConsultaCOP)}
+                            onChange={(e) => setTarifaConsultaCOP(tarifaDesdeTexto(e.target.value))}
                         />
                         <Input
                             label="Duración (min)"
