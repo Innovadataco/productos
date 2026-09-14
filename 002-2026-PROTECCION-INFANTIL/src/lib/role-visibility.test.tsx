@@ -13,6 +13,13 @@ vi.mock("next/navigation", () => ({
     usePathname: () => "/dashboard/admin/comite",
 }));
 
+// SPEC-691: AdminNav ahora consume useAuth (el menú del profesional se condiciona a
+// su estado). Estos casos son de ADMIN/OPERADOR/COMITE/SCHOOL_ADMIN, que siguen por
+// módulo; basta con satisfacer el hook con un usuario nulo.
+vi.mock("@/lib/contexts/AuthContext", () => ({
+    useAuth: () => ({ user: null }),
+}));
+
 vi.mock("next/server", () => {
     class MockNextRequest {
         public nextUrl: URL;
