@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Simulacro PGN 2026 · INNOVADATACO",
   description:
-    "Simulacros de examen PGN 2026 — Asesor TIC (Conv. 52) y Procuradora Judicial (Conv. 89)",
+    "Simulacros de examen PGN 2026 — Asesor (Conv. 273) y Procuradora Judicial (Conv. 89)",
 };
 
 export default function RootLayout({

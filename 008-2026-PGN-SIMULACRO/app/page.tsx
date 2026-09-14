@@ -29,7 +29,7 @@ export default function ProfileSelect() {
       <div className="space-y-4">
         <ProfileCard
           name="JELKIN ZAIR CARRILLO FRANCO"
-          subtitle="Asesor TIC · Conv. 52"
+          subtitle="Asesor · Conv. 273"
           icon="⚙️"
           borderColor="#0b6e5a"
           onSelect={() => {
