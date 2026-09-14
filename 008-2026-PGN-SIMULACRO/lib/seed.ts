@@ -157,7 +157,7 @@ export function insertarPerfiles() {
 
 export function insertarTemasEstructura() {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO temas (perfil_codigo, clave, nombre, eje, color, icono, orden, descripcion)
+    INSERT OR IGNORE INTO temas (perfil_codigo, clave, nombre, eje, color, icono, orden, descripcion)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   for (const [perfilCodigo, temas] of Object.entries(temasPorPerfil)) {
