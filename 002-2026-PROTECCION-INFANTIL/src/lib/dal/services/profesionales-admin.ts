@@ -22,7 +22,7 @@
  *
  * Sin modelo de asignación: al psicólogo lo elige el padre.
  */
-import type { Prisma } from "@prisma/client";
+import type { Prisma, EstadoPerfilProfesional } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { hashPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
@@ -40,6 +40,22 @@ export interface InfoClienteDto {
     userAgent: string;
 }
 
+/**
+ * SPEC-692 (I-417) · La ÚNICA función que decide en qué estado queda un perfil
+ * al LEVANTAR su suspensión: ACTIVO si la verificación sigue VIGENTE, VENCIDO si
+ * no. La usan la ACCIÓN (`levantarSuspension`) y la VISTA PREVIA de la ficha del
+ * admin — no puede haber dos cuentas: lo que el modal anuncia ES lo que la acción
+ * produce. La vigencia se lee de `venceEnVigente` (la única fuente viva del
+ * término «verificación vigente»); cuando 690-B exponga `verificacionVigente` de
+ * Dev 1, se cambia el cálculo ACÁ, en un solo lugar.
+ */
+export function estadoTrasLevantarSuspension(
+    venceEn: Date | null,
+    ahora: Date = new Date(),
+): "ACTIVO" | "VENCIDO" {
+    return venceEn !== null && venceEn.getTime() > ahora.getTime() ? "ACTIVO" : "VENCIDO";
+}
+
 export interface ProfesionalListItem {
     id: string;
     email: string;
@@ -48,6 +64,14 @@ export interface ProfesionalListItem {
     debeCambiarPassword: boolean;
     creadoEn: string;
     ultimaSesion: string | null;
+    // SPEC-692: estado del PERFIL (BORRADOR/EN_REVISION/ACTIVO/SUSPENDIDO/VENCIDO)
+    // o null si el profesional aún no creó su perfil.
+    perfilEstado: EstadoPerfilProfesional | null;
+    // SPEC-692: presente SOLO si el perfil está SUSPENDIDO — la vista previa de
+    // «Levantar suspensión»: qué estado quedaría (misma función que la acción) y
+    // la fecha de vencimiento de la verificación. El modal la muestra ANTES de
+    // confirmar; lo que anuncia acá es lo que produce la acción.
+    levantarSuspension: { resultado: "ACTIVO" | "VENCIDO"; venceEn: string | null } | null;
 }
 
 export interface SolicitudPendienteItem {
@@ -84,15 +108,29 @@ export class ProfesionalesAdminService {
             take: query.pageSize,
         });
         return {
-            items: rows.map((u) => ({
-                id: u.id,
-                email: u.email,
-                nombre: u.nombre,
-                estado: u.estado as "activo" | "inactivo",
-                debeCambiarPassword: u.debeCambiarPassword,
-                creadoEn: u.creadoEn.toISOString(),
-                ultimaSesion: u.ultimaSesion ? u.ultimaSesion.toISOString() : null,
-            })),
+            items: rows.map((u) => {
+                const perfil = u.perfilProfesional;
+                const venceEn = perfil?.verificaciones[0]?.venceEn ?? null;
+                return {
+                    id: u.id,
+                    email: u.email,
+                    nombre: u.nombre,
+                    estado: u.estado as "activo" | "inactivo",
+                    debeCambiarPassword: u.debeCambiarPassword,
+                    creadoEn: u.creadoEn.toISOString(),
+                    ultimaSesion: u.ultimaSesion ? u.ultimaSesion.toISOString() : null,
+                    perfilEstado: perfil?.estado ?? null,
+                    // MISMA función que la acción (`estadoTrasLevantarSuspension`):
+                    // el modal no puede anunciar algo distinto de lo que se produce.
+                    levantarSuspension:
+                        perfil?.estado === "SUSPENDIDO"
+                            ? {
+                                resultado: estadoTrasLevantarSuspension(venceEn),
+                                venceEn: venceEn ? venceEn.toISOString() : null,
+                            }
+                            : null,
+                };
+            }),
             total,
         };
     }
@@ -188,11 +226,10 @@ export class ProfesionalesAdminService {
                 409,
             );
         }
-        // La vigencia manda: si la verificación (Ley 2375) sigue en pie, vuelve a
-        // ACTIVO; si venció, va a VENCIDO (no se «reactiva» a quien perdió la vigencia).
+        // La vigencia manda: MISMA función que la vista previa de la ficha, para
+        // que lo que el modal anunció sea lo que esta acción produce.
         const venceEn = await this.perfiles.venceEnVigente(perfil.id);
-        const estado: "ACTIVO" | "VENCIDO" =
-            venceEn !== null && venceEn.getTime() > Date.now() ? "ACTIVO" : "VENCIDO";
+        const estado = estadoTrasLevantarSuspension(venceEn);
         await this.perfiles.cambiarEstado(perfil.id, estado);
         // Mismo patrón que la desactivación de cuenta: acción genérica `USER_UPDATE`
         // (no se inventa un valor de enum — `AccionAudit` está PUBLICADO a BI y un

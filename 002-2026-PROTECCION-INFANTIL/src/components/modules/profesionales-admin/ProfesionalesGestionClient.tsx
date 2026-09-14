@@ -21,6 +21,11 @@ interface Profesional {
     debeCambiarPassword: boolean;
     creadoEn: string;
     ultimaSesion: string | null;
+    // SPEC-692: estado del PERFIL (SUSPENDIDO/ACTIVO/VENCIDO…) y, si está
+    // SUSPENDIDO, la vista previa de «Levantar suspensión» (misma función del
+    // servidor que la acción: lo que se anuncia es lo que se produce).
+    perfilEstado: string | null;
+    levantarSuspension: { resultado: "ACTIVO" | "VENCIDO"; venceEn: string | null } | null;
 }
 
 interface Solicitud {
@@ -82,6 +87,9 @@ function TabCuentas() {
     const [error, setError] = useState<string | null>(null);
     const [mensaje, setMensaje] = useState<Mensaje>(null);
     const [processing, setProcessing] = useState<Record<string, string>>({});
+    // SPEC-692: modal de confirmación de «Levantar suspensión» (motivo obligatorio).
+    const [modalLevantar, setModalLevantar] = useState<Profesional | null>(null);
+    const [motivoLevantar, setMotivoLevantar] = useState("");
 
     const cargar = useCallback(async (query: string) => {
         setError(null);
@@ -135,6 +143,39 @@ function TabCuentas() {
         }
     }
 
+    // SPEC-692: levantar la suspensión. El modal ya bloquea confirmar con motivo
+    // vacío (mismo gate que «NO CUMPLE exige observación»); el server lo revalida.
+    async function confirmarLevantar() {
+        const p = modalLevantar;
+        if (!p) return;
+        const motivo = motivoLevantar.trim();
+        if (!motivo) return;
+        setProcessing((prev) => ({ ...prev, [p.id]: "levantar" }));
+        setMensaje(null);
+        try {
+            const res = await fetch(`/api/admin/profesionales/${p.id}/levantar-suspension`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ motivo }),
+            });
+            const json = (await res.json().catch(() => ({}))) as { estado?: string; error?: { message?: string } };
+            if (!res.ok) throw new Error(json.error?.message ?? `HTTP ${res.status}`);
+            setMensaje({ tipo: "ok", texto: `Suspensión levantada: el perfil quedó ${json.estado ?? ""}.` });
+            setModalLevantar(null);
+            setMotivoLevantar("");
+            await cargar(q);
+        } catch (e) {
+            setMensaje({ tipo: "error", texto: e instanceof Error ? e.message : String(e) });
+        } finally {
+            setProcessing((prev) => {
+                const n = { ...prev };
+                delete n[p.id];
+                return n;
+            });
+        }
+    }
+
     return (
         <div className="space-y-4 anim-entrada">
             <div className="flex gap-2">
@@ -183,15 +224,23 @@ function TabCuentas() {
                                     <p className="font-semibold text-body">{p.nombre ?? "(sin nombre)"}</p>
                                     <p className="font-mono text-xs text-subtle">{p.email}</p>
                                 </div>
-                                <span
-                                    className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                        p.estado === "activo"
-                                            ? "bg-pino/10 text-estado-pino"
-                                            : "bg-tinta/10 text-subtle"
-                                    }`}
-                                >
-                                    {p.estado}
-                                </span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {/* SPEC-692: estado del PERFIL suspendido, tinta sobria (no rojo). */}
+                                    {p.perfilEstado === "SUSPENDIDO" && (
+                                        <span className="rounded-full bg-tinta/10 px-3 py-1 text-xs font-medium text-subtle">
+                                            Perfil suspendido
+                                        </span>
+                                    )}
+                                    <span
+                                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                            p.estado === "activo"
+                                                ? "bg-pino/10 text-estado-pino"
+                                                : "bg-tinta/10 text-subtle"
+                                        }`}
+                                    >
+                                        {p.estado}
+                                    </span>
+                                </div>
                             </div>
                             <p className="mt-2 text-xs text-subtle">
                                 Creada <span className="cifra">{fmt(p.creadoEn)}</span> · Último login <span className="cifra">{fmt(p.ultimaSesion)}</span>
@@ -227,10 +276,75 @@ function TabCuentas() {
                                         {processing[p.id] === "reactivar" ? "Reactivando…" : "Reactivar"}
                                     </BotonAccion>
                                 )}
+                                {/* SPEC-692: salida de SUSPENDIDO. Restaurativa (pino,
+                                    NO rojo — desactivar destruye, levantar restaura). */}
+                                {p.perfilEstado === "SUSPENDIDO" && p.levantarSuspension && (
+                                    <BotonAccion
+                                        variante="pino"
+                                        disabled={!!processing[p.id]}
+                                        onClick={() => { setModalLevantar(p); setMotivoLevantar(""); }}
+                                    >
+                                        {processing[p.id] === "levantar" ? "Levantando…" : "Levantar suspensión"}
+                                    </BotonAccion>
+                                )}
                             </div>
                         </li>
                     ))}
                 </ul>
+            )}
+
+            {/* SPEC-692: confirmación de «Levantar suspensión». Motivo obligatorio
+                (Confirmar deshabilitado con motivo vacío — mismo gate que «NO CUMPLE
+                exige observación»). La vista previa dice a qué estado va ANTES de
+                confirmar; sale de la MISMA función del servidor que la acción. */}
+            {modalLevantar && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/40 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Levantar suspensión"
+                >
+                    <div className="glass w-full max-w-md rounded-3xl p-6 anim-entrada">
+                        <h3 className="titular-seccion mb-1">Levantar suspensión</h3>
+                        <p className="cuerpo mb-3 text-body">{modalLevantar.nombre ?? modalLevantar.email}</p>
+                        <p className="cuerpo mb-4 rounded-2xl bg-tinta/5 p-3 text-subtle">
+                            {modalLevantar.levantarSuspension?.resultado === "ACTIVO"
+                                ? "Al levantar la suspensión, el perfil queda ACTIVO."
+                                : `Al levantar la suspensión, el perfil queda VENCIDO: su verificación venció${
+                                    modalLevantar.levantarSuspension?.venceEn
+                                        ? ` el ${fmt(modalLevantar.levantarSuspension.venceEn)}`
+                                        : ""
+                                }; deberá enviarla de nuevo a revisión.`}
+                        </p>
+                        <label className="mb-2 block text-sm font-medium text-body" htmlFor="motivo-levantar">
+                            Por qué se levanta la suspensión
+                        </label>
+                        <textarea
+                            id="motivo-levantar"
+                            className="mb-4 w-full rounded-2xl border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                            rows={3}
+                            value={motivoLevantar}
+                            onChange={(e) => setMotivoLevantar(e.target.value)}
+                            placeholder="Queda en la auditoría."
+                        />
+                        <div className="flex justify-end gap-2">
+                            <BotonAccion
+                                variante="neutral"
+                                disabled={!!processing[modalLevantar.id]}
+                                onClick={() => { setModalLevantar(null); setMotivoLevantar(""); }}
+                            >
+                                Cancelar
+                            </BotonAccion>
+                            <BotonAccion
+                                variante="pino"
+                                disabled={!motivoLevantar.trim() || !!processing[modalLevantar.id]}
+                                onClick={() => void confirmarLevantar()}
+                            >
+                                {processing[modalLevantar.id] === "levantar" ? "Levantando…" : "Confirmar"}
+                            </BotonAccion>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
