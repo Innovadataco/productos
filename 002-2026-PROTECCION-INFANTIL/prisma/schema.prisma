@@ -3662,6 +3662,17 @@ enum EstadoPerfilProfesional {
   SUSPENDIDO
 }
 
+// SPEC-693 (I-416): versión de un documento de un requisito. EN_REVISION y VIGENTE
+// conviven — subir uno nuevo NUNCA pisa el aprobado. SUPERSEDIDA (fue vigente,
+// reemplazado por uno nuevo aprobado) y DEVUELTA (pendiente que el verificador no
+// aprobó) son historia: nada se pierde.
+enum EstadoDocumento {
+  EN_REVISION
+  VIGENTE
+  SUPERSEDIDA
+  DEVUELTA
+}
+
 enum ResultadoVerificacion {
   APROBADO
   RECHAZADO
@@ -3765,13 +3776,48 @@ model DocumentoProfesional {
   // dato guardado puede mentir, el número mágico del archivo no.
   extension           String
   sha256              String
+  // SPEC-693 (I-416): versión del documento. Subir uno nuevo crea/reemplaza la
+  // fila EN_REVISION SIN tocar la VIGENTE (el profesional sigue atendiendo con la
+  // aprobada). La unicidad «≤1 VIGENTE y ≤1 EN_REVISION por (perfil,requisito)» NO
+  // se expresa en el DSL de Prisma → va como DOS índices únicos PARCIALES en la
+  // migración (revisado con Datos, D-121); el candado de inserción real (23505) los
+  // custodia contra el drift de `migrate dev`.
+  estado              EstadoDocumento @default(EN_REVISION)
   subidoEn            DateTime @default(now()) @db.Timestamptz(6)
 
-  perfil PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id], onDelete: Cascade)
+  perfil         PerfilProfesional       @relation(fields: [perfilProfesionalId], references: [id], onDelete: Cascade)
+  // SPEC-693: qué verificaciones revisaron ESTA versión (tabla de unión, FK real).
+  verificaciones VerificacionDocumento[]
 
-  // Uno por requisito: reemplazar es actualizar la fila, no acumular basura.
-  @@unique([perfilProfesionalId, requisitoClave])
+  // SPEC-693: se derogó `@@unique([perfilProfesionalId, requisitoClave])` (una sola
+  // fila por requisito) — ahora conviven versiones. La unicidad la dan los índices
+  // únicos PARCIALES de la migración (por estado). Índice compuesto para las lecturas.
   @@index([perfilProfesionalId])
+  @@index([perfilProfesionalId, requisitoClave])
+}
+
+// SPEC-693 (I-416): qué VERSIÓN de documento revisó cada verificación. Tabla de
+// unión con FK REAL (un JSON de ids no es FK-enforceable): la base garantiza que
+// el documento referido existe. Como las versiones nunca se borran (pasan a
+// SUPERSEDIDA/DEVUELTA), el FK nunca queda colgando; fija los bytes exactos
+// revisados vía `DocumentoProfesional.sha256`, inmutable por versión. (D-121, Datos.)
+model VerificacionDocumento {
+  id                     String @id @default(cuid())
+  verificacionId         String
+  documentoProfesionalId String
+
+  // Datos (D-121, checkpoint 2): AMBOS FK con onDelete: Cascade EXPLÍCITO. El
+  // default de Prisma para relación requerida es Restrict, y acá trabaría dos
+  // caminos: (a) `DocumentoProfesional.perfil` ya es Cascade → borrar un perfil
+  // (que cascadea a sus docs) quedaría bloqueado por la fila de unión; (b) el
+  // purgador demo borra `VerificacionProfesional` explícito por ORDEN_BORRADO →
+  // un Restrict trabaría la purga. Con Cascade la unión se limpia sola: es tabla
+  // puente sin identidad propia → NO va en ORDEN_BORRADO ni lleva marca demo.
+  verificacion VerificacionProfesional @relation(fields: [verificacionId], references: [id], onDelete: Cascade)
+  documento    DocumentoProfesional    @relation(fields: [documentoProfesionalId], references: [id], onDelete: Cascade)
+
+  @@unique([verificacionId, documentoProfesionalId])
+  @@index([documentoProfesionalId])
 }
 
 // N por profesional — el HISTORIAL importa: si venció y hay una nueva
@@ -3803,6 +3849,8 @@ model VerificacionProfesional {
 
   perfilProfesional PerfilProfesional @relation(fields: [perfilProfesionalId], references: [id])
   revisadoPor       Usuario           @relation("VerificacionesRevisadasPor", fields: [revisadoPorId], references: [id])
+  // SPEC-693 (I-416): las versiones de documento que ESTA verificación revisó.
+  documentosRevisados VerificacionDocumento[]
 
   // L2 lista las verificaciones vigentes por profesional en orden descendente
   // y consulta la próxima que vence para el aviso de 30 días.
