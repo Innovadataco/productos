@@ -128,7 +128,13 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         expect(cal).toContain("puede agendar una cita.");
         expect(calPage).toContain("Publique y retire las franjas en las que atiende.");
         expect(verif).toContain("Verificación de su perfil");
-        expect(verif).toContain("Ya estamos revisando sus documentos. Le avisamos por correo");
+        // SPEC-691: se quitó «por correo» (el correo no entrega — MAPA §Correo; el aviso
+        // real es in-app) y se corrigió «hagas»→«haga» (tuteo). Ancla a la copia nueva (usted).
+        expect(verif).toContain("Ya estamos revisando sus documentos. Le avisamos apenas haya novedad");
+        // SPEC-691 · las pantallas nuevas por estado, en usted (mueren si se revierten).
+        expect(verif).toContain("Su verificación venció.");
+        expect(verif).toContain("actualice el documento que");
+        expect(verif).toContain("Su cuenta está suspendida.");
 
         // vetados (tú) — mueren si reaparecen
         for (const veto of ["Tu tarifa", "te entrega en la sesión", "ves quién te lo", "Revisa tu conexión", "según tu ficha", "agendar contigo", "Le compartió".replace("Le", "Te"), "Te avisamos"]) {
