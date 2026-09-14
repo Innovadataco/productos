@@ -14,15 +14,17 @@
  * CONDICIONES DURAS (encargo del CEO, 13-09):
  *  1. Credenciales por el MISMO mecanismo de entorno que las cuentas E2E existentes: se
  *     REUSA `E2E_PROFESIONAL_EMAIL` / `E2E_PROFESIONAL_PASSWORD` (vía `leerCredencialesE2E`,
- *     que aborta ruidoso si falta). Los cinco correos se DERIVAN del correo base con sub-
- *     dirección `+<estado>` (RFC 5233): misma clave, cero variables nuevas, cero literal de
- *     credencial en código. La cuenta base `E2E_PROFESIONAL` NO se toca.
+ *     que aborta ruidoso si falta). Los correos se DERIVAN del correo base con sub-dirección
+ *     `+<etiqueta>` (RFC 5233): misma clave, cero variables nuevas, cero literal de credencial
+ *     en código. La cuenta base `E2E_PROFESIONAL` NO se toca.
  *  2. Marcados en `demo_marcado` como toda siembra — y ADEMÁS es lo que activa la exclusión
  *     SPEC-655: el directorio excluye por marca de `PerfilProfesional` (ver punto 5).
  *  3. CERO notificaciones. Se SIEMBRA EN EL ESTADO TERMINAL con `create/update` directo — NO
  *     se transita por el servicio del verificador (que sí encola avisos). No hay middleware
- *     Prisma ni trigger de BD que dispare notificaciones en estos INSERT/UPDATE (verificado).
- *     `main()` cuenta la tabla `notificaciones` antes/después y grita si el delta ≠ 0.
+ *     Prisma ni trigger de BD que dispare notificaciones en estos INSERT/UPDATE. El conteo de
+ *     `notificaciones` se toma DENTRO de la misma transacción (antes y después de escribir): si
+ *     el delta ≠ 0 se LANZA y la transacción se DESHACE — un correo encolado no se des-envía,
+ *     así que se aborta ANTES de confirmar, no después (mejora pedida por el CEO).
  *  4. Idempotente y NO destructivo: correrlo N veces deja el MISMO estado. Usuario por email
  *     (re-hashea solo si la clave del entorno cambió), perfil por `usuarioId`, verificación
  *     por perfil — nunca duplica. El ACTIVO se REFRESCA a `venceEn = ahora + 4m` en cada
@@ -33,6 +35,19 @@
  *     exclusión) para un visor sembrado. Por eso se marca `PerfilProfesional` (no solo
  *     `Usuario`): sin esa marca el ACTIVO se FILTRARÍA a un padre real. El control positivo
  *     de las dos direcciones vive en el candado de integración.
+ *
+ * FIRMANTE DE LAS VERIFICACIONES (autoría): las verificaciones sembradas las firma un
+ * VERIFICADOR **DEMO** que este script crea y marca (no un revisor real). El poblador de la Red
+ * de Apoyo firma sus ~50 aprobaciones con un ADMIN REAL (`poblar-red-apoyo.ts:140/220`): eso deja
+ * verificaciones demo con AUTORÍA de una persona que no las revisó. Acá se evita a propósito —
+ * la autoría también es demo, marcada y purgable. (Que la Red de Apoyo tenga esa autoría real es
+ * un hallazgo aparte, para radicar; no se toca en este PR.)
+ *
+ * NO CUBIERTO (medido, para radicar aparte): la exclusión SPEC-655 cubre el DIRECTORIO del padre,
+ * NO la cola del verificador (`verificador-repository.ts:48-49` lista `estado=EN_REVISION` sin
+ * exclusión de sembrados). El fixture EN_REVISION APARECE en la cola: un verificador podría
+ * aprobarlo y consumirlo. Este sembrador lo RESTAURA en cada despliegue (idempotencia converge el
+ * estado), pero el arreglo de fondo (excluir sembrados de la cola) es otra SPEC.
  *
  * Datos gatea la semilla (su carril). La corre en PRODUCCIÓN el CEO — NO contra prod a mano.
  *
@@ -89,75 +104,106 @@ export interface ResultadoProfesionalEstado {
     creado: boolean;
 }
 
-/** Correo por estado: sub-dirección `+<estado>` sobre el correo base del entorno. */
-export function emailPorEstado(emailBase: string, estado: EstadoGate): string {
+export interface ResultadoSiembra {
+    fixtures: ResultadoProfesionalEstado[];
+    revisor: { id: string; email: string; creado: boolean };
+    notifAntes: number;
+    notifDespues: number;
+}
+
+/** Correo derivado: sub-dirección `+<etiqueta>` sobre el correo base del entorno. */
+export function emailConEtiqueta(emailBase: string, etiqueta: string): string {
     const at = emailBase.lastIndexOf("@");
     if (at <= 0) throw new Error("[seed-e2e-prof-estados] E2E_PROFESIONAL_EMAIL inválido: sin '@'.");
     const local = emailBase.slice(0, at);
     const dominio = emailBase.slice(at + 1);
-    return `${local}+${estado.toLowerCase()}@${dominio}`.toLowerCase();
+    return `${local}+${etiqueta}@${dominio}`.toLowerCase();
+}
+
+export function emailPorEstado(emailBase: string, estado: EstadoGate): string {
+    return emailConEtiqueta(emailBase, estado.toLowerCase());
+}
+
+/** Correo del VERIFICADOR demo (firmante). */
+export function emailRevisorDemo(emailBase: string): string {
+    return emailConEtiqueta(emailBase, "verificador");
+}
+
+/** Usuario demo idempotente (re-hashea solo si la clave del entorno cambió). Devuelve id + si se creó. */
+async function upsertUsuarioDemo(
+    tx: Prisma.TransactionClient,
+    email: string,
+    nombre: string,
+    rol: "PROFESIONAL" | "VERIFICADOR",
+    secreto: string,
+    ahora: Date,
+): Promise<{ id: string; creado: boolean }> {
+    if (email === EMAIL_INTOCABLE) {
+        throw new Error(`[seed-e2e-prof-estados] correo derivado colisiona con la cuenta intocable ${EMAIL_INTOCABLE}.`);
+    }
+    const existente = await tx.usuario.findUnique({ where: { email }, select: { id: true, passwordHash: true } });
+    if (!existente) {
+        const creada = await tx.usuario.create({
+            data: {
+                email,
+                nombre,
+                passwordHash: await hashPassword(secreto),
+                passwordCreadaEn: ahora,
+                rol,
+                estado: "activo",
+                estadoActivacion: "ACTIVO",
+                debeCambiarPassword: false,
+            },
+            select: { id: true },
+        });
+        return { id: creada.id, creado: true };
+    }
+    const mismaClave = await verifyPassword(secreto, existente.passwordHash);
+    await tx.usuario.update({
+        where: { id: existente.id },
+        data: {
+            nombre,
+            rol,
+            estado: "activo",
+            estadoActivacion: "ACTIVO",
+            debeCambiarPassword: false,
+            ...(mismaClave ? {} : { passwordHash: await hashPassword(secreto), passwordCreadaEn: ahora }),
+        },
+    });
+    return { id: existente.id, creado: false };
 }
 
 /**
- * Repone los 5 profesionales por Prisma directo, idempotente y en UNA transacción (la marca
- * `demo_marcado` va DENTRO: nunca una fila sembrada sin su marca). No transita estados por el
- * servicio del verificador → no encola avisos. Jamás toca la cuenta intocable ni la base
- * `E2E_PROFESIONAL`.
+ * Repone los 5 profesionales + su VERIFICADOR demo por Prisma directo, idempotente y en UNA
+ * transacción (la marca `demo_marcado` va DENTRO: nunca una fila sembrada sin su marca). No
+ * transita estados por el servicio del verificador → no encola avisos. El conteo de
+ * `notificaciones` se toma dentro de la tx y si el delta ≠ 0 se LANZA (deshace todo, no confirma).
+ * Jamás toca la cuenta intocable ni la base `E2E_PROFESIONAL`.
  */
 export async function sembrarProfesionalesPorEstado(
     tx: Prisma.TransactionClient,
     profesional: CredencialCuenta,
     ciudadId: string,
-    revisadorId: string,
     ahora: Date = new Date(),
-): Promise<ResultadoProfesionalEstado[]> {
-    const resultados: ResultadoProfesionalEstado[] = [];
+): Promise<ResultadoSiembra> {
+    // Condición 3 (transaccional): la foto ANTES vive dentro de la tx; si al final creció, se lanza.
+    const notifAntes = await tx.notificacion.count();
+
+    // Firmante DEMO de las verificaciones: autoría también demo (no un revisor real).
+    const revisorEmail = emailRevisorDemo(profesional.email);
+    const revisor = await upsertUsuarioDemo(tx, revisorEmail, "Verificador Calidad (E2E · demo)", "VERIFICADOR", profesional.secreto, ahora);
+    await marcar(tx, "Usuario", [revisor.id], { corrida: CORRIDA_SPEC690, script: SCRIPT, notas: "verificador demo (firmante)" });
+
+    const fixtures: ResultadoProfesionalEstado[] = [];
 
     for (const plan of PLAN) {
         const email = emailPorEstado(profesional.email, plan.estado);
-        if (email === EMAIL_INTOCABLE) {
-            throw new Error(`[seed-e2e-prof-estados] correo derivado colisiona con la cuenta intocable ${EMAIL_INTOCABLE}.`);
-        }
         if (email === profesional.email) {
             throw new Error("[seed-e2e-prof-estados] correo derivado colisiona con la cuenta base E2E_PROFESIONAL; no se pisa.");
         }
         const nombre = `Profesional Calidad (E2E · ${plan.estado})`;
 
-        // ── Usuario (idempotente; re-hashea solo si la clave del entorno cambió) ──
-        const existente = await tx.usuario.findUnique({ where: { email }, select: { id: true, passwordHash: true } });
-        let usuarioId: string;
-        let creado = false;
-        if (!existente) {
-            const creada = await tx.usuario.create({
-                data: {
-                    email,
-                    nombre,
-                    passwordHash: await hashPassword(profesional.secreto),
-                    passwordCreadaEn: ahora,
-                    rol: "PROFESIONAL",
-                    estado: "activo",
-                    estadoActivacion: "ACTIVO",
-                    debeCambiarPassword: false,
-                },
-                select: { id: true },
-            });
-            usuarioId = creada.id;
-            creado = true;
-        } else {
-            const mismaClave = await verifyPassword(profesional.secreto, existente.passwordHash);
-            await tx.usuario.update({
-                where: { id: existente.id },
-                data: {
-                    nombre,
-                    rol: "PROFESIONAL",
-                    estado: "activo",
-                    estadoActivacion: "ACTIVO",
-                    debeCambiarPassword: false,
-                    ...(mismaClave ? {} : { passwordHash: await hashPassword(profesional.secreto), passwordCreadaEn: ahora }),
-                },
-            });
-            usuarioId = existente.id;
-        }
+        const usuario = await upsertUsuarioDemo(tx, email, nombre, "PROFESIONAL", profesional.secreto, ahora);
 
         // ── PerfilProfesional: converge los campos que DEFINEN el fixture (estado, modalidad,
         // autorización); los descriptivos son create-only para no churnnear en cada deploy.
@@ -171,9 +217,9 @@ export async function sembrarProfesionalesPorEstado(
             autorizacionSubidaEn: noBorrador ? ahora : null,
         };
         const perfil = await tx.perfilProfesional.upsert({
-            where: { usuarioId },
+            where: { usuarioId: usuario.id },
             create: {
-                usuarioId,
+                usuarioId: usuario.id,
                 nombreVisible: nombre,
                 tituloProfesional: "Psicólogo (E2E)",
                 especialidades: ["Psicología infantil"],
@@ -190,7 +236,7 @@ export async function sembrarProfesionalesPorEstado(
 
         // ── Marca (DENTRO de la tx). `Usuario` gobierna el lado del VISOR (un padre demo ve
         // sembrados); `PerfilProfesional` es lo que el directorio EXCLUYE para un visor real.
-        await marcar(tx, "Usuario", [usuarioId], { corrida: CORRIDA_SPEC690, script: SCRIPT, notas: `profesional ${plan.estado}` });
+        await marcar(tx, "Usuario", [usuario.id], { corrida: CORRIDA_SPEC690, script: SCRIPT, notas: `profesional ${plan.estado}` });
         await marcar(tx, "PerfilProfesional", [perfil.id], { corrida: CORRIDA_SPEC690, script: SCRIPT, notas: `compuerta ${plan.estado}` });
 
         // ── Verificación (solo estados que la llevan). Idempotente por perfil: si ya hay una,
@@ -211,14 +257,14 @@ export async function sembrarProfesionalesPorEstado(
             if (previa) {
                 await tx.verificacionProfesional.update({
                     where: { id: previa.id },
-                    data: { revisadoPorId: revisadorId, revisadoEn, resultado: "APROBADO", venceEn },
+                    data: { revisadoPorId: revisor.id, revisadoEn, resultado: "APROBADO", venceEn },
                 });
                 verificacionId = previa.id;
             } else {
                 const v = await tx.verificacionProfesional.create({
                     data: {
                         perfilProfesionalId: perfil.id,
-                        revisadoPorId: revisadorId,
+                        revisadoPorId: revisor.id,
                         revisadoEn,
                         resultado: "APROBADO",
                         autorizacionArchivoId: AUTORIZACION_FIXTURE,
@@ -232,10 +278,18 @@ export async function sembrarProfesionalesPorEstado(
             }
         }
 
-        resultados.push({ estado: plan.estado, email, usuarioId, perfilId: perfil.id, verificacionId, creado });
+        fixtures.push({ estado: plan.estado, email, usuarioId: usuario.id, perfilId: perfil.id, verificacionId, creado: usuario.creado });
     }
 
-    return resultados;
+    // Condición 3 (transaccional): si la siembra encoló notificaciones, DESHACER antes de confirmar.
+    const notifDespues = await tx.notificacion.count();
+    if (notifDespues !== notifAntes) {
+        throw new Error(
+            `[seed-e2e-prof-estados] la siembra disparó ${notifDespues - notifAntes} notificación(es) — se ABORTA la transacción (nada se confirma).`,
+        );
+    }
+
+    return { fixtures, revisor: { id: revisor.id, email: revisorEmail, creado: revisor.creado }, notifAntes, notifDespues };
 }
 
 function nowCOT(): string {
@@ -262,29 +316,17 @@ async function main(): Promise<void> {
     const ciudad = await (prisma as PrismaClient).ciudad.findFirst({ where: { nombre: "Bogotá" }, select: { id: true } });
     if (!ciudad) throw new Error("[seed-e2e-prof-estados] Ciudad 'Bogotá' faltante — corre la semilla base antes");
 
-    // Firmante de las verificaciones: un revisor real de IDC (nunca la cuenta intocable, nunca un sembrado).
-    const revisador = await (prisma as PrismaClient).usuario.findFirst({
-        where: { rol: { in: ["VERIFICADOR", "ADMIN"] }, email: { not: EMAIL_INTOCABLE }, estado: "activo" },
-        select: { id: true, email: true, rol: true },
-        orderBy: { creadoEn: "asc" },
-    });
-    if (!revisador) {
-        throw new Error("[seed-e2e-prof-estados] No hay revisor (VERIFICADOR/ADMIN) para firmar las verificaciones. Aborto sin escribir.");
-    }
-
-    // Condición 3: medir `notificaciones` antes/después, ventana mínima alrededor de la escritura.
-    const notifAntes = await prisma.notificacion.count();
-    const resultados = await prisma.$transaction((tx) => sembrarProfesionalesPorEstado(tx, profesional, ciudad.id, revisador.id));
-    const notifDespues = await prisma.notificacion.count();
-    const delta = notifDespues - notifAntes;
+    const { fixtures, revisor, notifAntes, notifDespues } = await prisma.$transaction((tx) =>
+        sembrarProfesionalesPorEstado(tx, profesional, ciudad.id),
+    );
 
     console.log("");
     console.log("✅ Semilla SPEC-690 (profesional por estado) COMPLETA (idempotente). Fixtures:");
-    for (const r of resultados) {
+    for (const r of fixtures) {
         console.log(`  ${r.estado.padEnd(12)} ${r.email} ${r.creado ? "[creada]" : "[actualizada]"}${r.verificacionId ? " · verif" : ""}`);
     }
-    console.log(`Firmante de verificaciones: ${revisador.rol} ${revisador.email}`);
-    console.log(`Notificaciones: antes=${notifAntes} · después=${notifDespues} · delta=${delta}${delta === 0 ? " ✅" : " ⚠️  ¡el sembrado disparó notificaciones — investigar!"}`);
+    console.log(`Firmante (VERIFICADOR demo): ${revisor.email} ${revisor.creado ? "[creado]" : "[actualizado]"}`);
+    console.log(`Notificaciones (dentro de la tx): antes=${notifAntes} · después=${notifDespues} · delta=${notifDespues - notifAntes} ✅ (si no fuera 0, la tx se habría deshecho)`);
     console.log(`Ejecutado: ${nowCOT()}`);
 }
 

@@ -1,11 +1,12 @@
 /**
  * SPEC-690 · CANDADO DE INTEGRACIÓN (con base) — la siembra de profesionales por estado:
  *   (cond. 4) es idempotente y no destructiva — correrla dos veces no duplica ni re-hashea;
- *   (cond. 3) NO dispara notificaciones — delta de `notificaciones` = 0;
+ *   (cond. 3) NO dispara notificaciones — el guardia transaccional deja el delta en 0;
  *   (cond. 5) la exclusión SPEC-655 del ACTIVO se cumple EN LAS DOS DIRECCIONES (un padre demo
  *             SÍ lo ve, un padre real y el anónimo NO), con CONTROL POSITIVO por remoción del
  *             discriminador: al quitar la marca de `PerfilProfesional`, el padre real SÍ lo ve
  *             → prueba que lo ocultaba la marca, no un filtro ajeno.
+ *   (autoría) las verificaciones las firma un VERIFICADOR DEMO marcado — nunca un usuario real.
  *
  * Vive en `src/**` a propósito: la suite de integración (que sí levanta base) corre
  * `src/**​/*.test.ts`. El sembrado vive en `scripts/seed-e2e-profesionales-por-estado.ts`; acá se
@@ -19,13 +20,14 @@ import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profe
 import {
     sembrarProfesionalesPorEstado,
     emailPorEstado,
+    emailRevisorDemo,
     CORRIDA_SPEC690,
     PLAN,
 } from "../../scripts/seed-e2e-profesionales-por-estado";
 import type { CredencialCuenta } from "../../scripts/lib/credenciales-e2e-calidad";
 
 // Credencial DUMMY del entorno (el candado no lee `process.env`): el correo base del que se
-// derivan los `+<estado>`; la clave es de prueba, no una credencial real (SPEC-107).
+// derivan los `+<etiqueta>`; la clave es de prueba, no una credencial real (SPEC-107).
 const PROF: CredencialCuenta = {
     clave: "PROFESIONAL",
     rol: "PROFESIONAL",
@@ -36,27 +38,12 @@ const PROF: CredencialCuenta = {
 };
 
 const EMAILS_FIXTURE = PLAN.map((p) => emailPorEstado(PROF.email, p.estado));
+const EMAIL_REVISOR = emailRevisorDemo(PROF.email);
 
 async function ciudadDePrueba(): Promise<string> {
     const pais = await prisma.pais.create({ data: { codigo: "ZZ", nombre: "País E2E" } });
     const ciudad = await prisma.ciudad.create({ data: { nombre: "Ciudad E2E", paisId: pais.id } });
     return ciudad.id;
-}
-
-async function crearRevisor(): Promise<string> {
-    const u = await prisma.usuario.create({
-        data: {
-            email: "verificador.e2e.calidad@example.com",
-            nombre: "Verificador E2E",
-            passwordHash: "fixture-no-login",
-            rol: "VERIFICADOR",
-            estado: "activo",
-            estadoActivacion: "ACTIVO",
-            debeCambiarPassword: false,
-        },
-        select: { id: true },
-    });
-    return u.id;
 }
 
 /** Padre de prueba. `demo=true` lo marca en `demo_marcado` (entidad "Usuario") = visor sembrado. */
@@ -81,8 +68,8 @@ async function crearPadre(demo: boolean): Promise<string> {
     return u.id;
 }
 
-function sembrar(ciudadId: string, revisorId: string, ahora?: Date) {
-    return prisma.$transaction((tx) => sembrarProfesionalesPorEstado(tx, PROF, ciudadId, revisorId, ahora));
+function sembrar(ciudadId: string, ahora?: Date) {
+    return prisma.$transaction((tx) => sembrarProfesionalesPorEstado(tx, PROF, ciudadId, ahora));
 }
 
 async function contarVerificacionesFixture(): Promise<number> {
@@ -98,29 +85,30 @@ describe("SPEC-690 · siembra de un profesional por estado", () => {
 
     it("cond.4 — idempotente y no destructiva: dos corridas no duplican ni re-hashean", async () => {
         const ciudadId = await ciudadDePrueba();
-        const revisorId = await crearRevisor();
 
-        const r1 = await sembrar(ciudadId, revisorId);
+        const r1 = await sembrar(ciudadId);
         const snap1 = await prisma.usuario.findMany({
-            where: { email: { in: EMAILS_FIXTURE } },
+            where: { email: { in: [...EMAILS_FIXTURE, EMAIL_REVISOR] } },
             select: { email: true, passwordHash: true },
             orderBy: { email: "asc" },
         });
 
-        const r2 = await sembrar(ciudadId, revisorId);
+        const r2 = await sembrar(ciudadId);
         const snap2 = await prisma.usuario.findMany({
-            where: { email: { in: EMAILS_FIXTURE } },
+            where: { email: { in: [...EMAILS_FIXTURE, EMAIL_REVISOR] } },
             select: { email: true, passwordHash: true },
             orderBy: { email: "asc" },
         });
 
-        // Cinco fixtures; la primera corrida crea, la segunda actualiza.
-        expect(r1).toHaveLength(5);
-        expect(r1.every((x) => x.creado)).toBe(true);
-        expect(r2.every((x) => !x.creado)).toBe(true);
+        // Cinco fixtures; la primera corrida crea, la segunda actualiza. El revisor, igual.
+        expect(r1.fixtures).toHaveLength(5);
+        expect(r1.fixtures.every((x) => x.creado)).toBe(true);
+        expect(r2.fixtures.every((x) => !x.creado)).toBe(true);
+        expect(r1.revisor.creado).toBe(true);
+        expect(r2.revisor.creado).toBe(false);
 
-        // Sin duplicados: 5 usuarios, 5 perfiles, 3 verificaciones (ACTIVO/VENCIDO/SUSPENDIDO).
-        expect(await prisma.usuario.count({ where: { email: { in: EMAILS_FIXTURE } } })).toBe(5);
+        // Sin duplicados: 5 profesionales + 1 revisor = 6 usuarios, 5 perfiles, 3 verificaciones.
+        expect(await prisma.usuario.count({ where: { email: { in: [...EMAILS_FIXTURE, EMAIL_REVISOR] } } })).toBe(6);
         expect(await prisma.perfilProfesional.count({ where: { usuario: { email: { in: EMAILS_FIXTURE } } } })).toBe(5);
         expect(await contarVerificacionesFixture()).toBe(3);
 
@@ -131,22 +119,40 @@ describe("SPEC-690 · siembra de un profesional por estado", () => {
         expect(await prisma.usuario.findUnique({ where: { email: PROF.email } })).toBeNull();
     });
 
-    it("cond.3 — no dispara notificaciones (delta de `notificaciones` = 0)", async () => {
+    it("autoría — las verificaciones las firma un VERIFICADOR DEMO marcado, no un usuario real", async () => {
         const ciudadId = await ciudadDePrueba();
-        const revisorId = await crearRevisor();
+        const r = await sembrar(ciudadId);
+
+        // El firmante es VERIFICADOR y está marcado demo (entidad "Usuario").
+        const rev = await prisma.usuario.findUnique({ where: { id: r.revisor.id }, select: { rol: true } });
+        expect(rev?.rol).toBe("VERIFICADOR");
+        const marca = await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: r.revisor.id } });
+        expect(marca).not.toBeNull();
+
+        // TODAS las verificaciones sembradas apuntan a ese firmante demo (nunca a un real).
+        const verifs = await prisma.verificacionProfesional.findMany({
+            where: { perfilProfesional: { usuario: { email: { in: EMAILS_FIXTURE } } } },
+            select: { revisadoPorId: true },
+        });
+        expect(verifs).toHaveLength(3);
+        expect(verifs.every((v) => v.revisadoPorId === r.revisor.id)).toBe(true);
+    });
+
+    it("cond.3 — no dispara notificaciones (guardia transaccional: delta = 0)", async () => {
+        const ciudadId = await ciudadDePrueba();
 
         const antes = await prisma.notificacion.count();
-        await sembrar(ciudadId, revisorId);
+        const r = await sembrar(ciudadId); // si hubiera encolado algo, el guardia habría lanzado y deshecho la tx
         const despues = await prisma.notificacion.count();
 
+        expect(r.notifDespues - r.notifAntes).toBe(0);
         expect(despues - antes).toBe(0);
     });
 
     it("cond.5 — exclusión SPEC-655 del ACTIVO en las dos direcciones + control positivo", async () => {
         const ciudadId = await ciudadDePrueba();
-        const revisorId = await crearRevisor();
-        const resultados = await sembrar(ciudadId, revisorId);
-        const activo = resultados.find((r) => r.estado === "ACTIVO");
+        const r = await sembrar(ciudadId);
+        const activo = r.fixtures.find((f) => f.estado === "ACTIVO");
         expect(activo).toBeDefined();
         const activoPerfilId = activo!.perfilId;
 
