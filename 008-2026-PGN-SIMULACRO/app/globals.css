@@ -4,17 +4,22 @@
 
 @layer base {
   html {
-    @apply bg-ios-bg text-ios-label antialiased;
+    @apply text-ink antialiased;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply font-sans;
+    background:
+      radial-gradient(1200px 800px at 8% -10%, rgba(13, 148, 136, 0.08) 0%, transparent 50%),
+      radial-gradient(1000px 700px at 92% 8%, rgba(94, 234, 215, 0.08) 0%, transparent 45%),
+      radial-gradient(900px 600px at 50% 112%, rgba(13, 148, 136, 0.05) 0%, transparent 50%),
+      #f8fafc;
+    min-height: 100vh;
     overscroll-behavior-y: none;
   }
 
-  /* iOS: evitar zoom en inputs al enfocar */
   input,
   select,
   textarea,
@@ -22,55 +27,128 @@
     font-size: 16px;
   }
 
-  /* Scroll suave tipo iOS */
   * {
     -webkit-overflow-scrolling: touch;
   }
 }
 
 @layer components {
-  .ios-card {
-    @apply rounded-ios-xl bg-ios-surface shadow-ios;
+  .glass {
+    @apply bg-surface/80 backdrop-blur-glass;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.04);
   }
 
-  .ios-card-elevated {
-    @apply rounded-ios-xl bg-ios-surface shadow-ios-lg;
+  .glass-strong {
+    @apply bg-surface-strong/90 backdrop-blur-glass;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.1), 0 4px 12px rgba(15, 23, 42, 0.05);
   }
 
-  .ios-button {
-    @apply inline-flex h-12 items-center justify-center rounded-ios-lg bg-ios-primary px-5 text-ios-subhead font-semibold text-white shadow-ios transition-all active:scale-[0.97] active:opacity-90 disabled:opacity-50;
+  .card {
+    @apply rounded-3xl bg-white/80 p-5 backdrop-blur-glass;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.04);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  .ios-button-secondary {
-    @apply inline-flex h-12 items-center justify-center rounded-ios-lg bg-ios-gray-6 px-5 text-ios-subhead font-semibold text-ios-primary transition-all active:scale-[0.97] active:bg-ios-gray-5;
+  .card:active {
+    transform: scale(0.98);
   }
 
-  .ios-button-ghost {
-    @apply inline-flex h-12 items-center justify-center rounded-ios-lg px-5 text-ios-subhead font-semibold text-ios-primary transition-all active:bg-ios-primary-light active:scale-[0.97];
+  .btn-primary {
+    @apply relative inline-flex h-13 items-center justify-center overflow-hidden rounded-2xl px-6 text-callout font-semibold text-white;
+    background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.28), 0 1px 3px rgba(13, 148, 136, 0.16);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease,
+                filter 0.2s ease;
   }
 
-  .ios-list {
-    @apply overflow-hidden rounded-ios-xl bg-ios-surface shadow-ios;
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
   }
 
-  .ios-list-item {
-    @apply flex items-center justify-between border-b border-ios-separator px-4 py-3.5 text-ios-body last:border-b-0 active:bg-ios-gray-6;
+  .btn-primary:hover {
+    box-shadow: 0 8px 24px rgba(13, 148, 136, 0.35), 0 2px 6px rgba(13, 148, 136, 0.2);
+    filter: brightness(1.05);
   }
 
-  .ios-section-title {
-    @apply px-4 pb-2 pt-6 text-ios-caption-1 font-semibold uppercase tracking-wide text-ios-label-secondary;
+  .btn-primary:hover::before {
+    opacity: 1;
   }
 
-  .ios-nav-blur {
-    @apply sticky top-0 z-50 border-b border-ios-separator/60 bg-ios-surface/80 backdrop-blur-xl;
+  .btn-primary:active {
+    transform: scale(0.96);
   }
 
-  .ios-page {
-    @apply mx-auto min-h-screen max-w-mobile bg-ios-bg pb-24;
+  .btn-secondary {
+    @apply inline-flex h-13 items-center justify-center rounded-2xl bg-white/80 px-6 text-callout font-semibold text-pgn-700 backdrop-blur-glass;
+    border: 1px solid rgba(13, 148, 136, 0.15);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease,
+                background-color 0.2s ease;
   }
 
-  .ios-content {
-    @apply px-4;
+  .btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.96);
+  }
+
+  .option-card {
+    @apply flex w-full items-start gap-3 rounded-2xl border-2 bg-white/70 p-4 text-left backdrop-blur-sm;
+    border-color: rgba(226, 232, 240, 0.8);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .option-card:hover {
+    border-color: rgba(13, 148, 136, 0.35);
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 16px rgba(13, 148, 136, 0.1);
+  }
+
+  .option-card.correct {
+    background-color: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
+  }
+
+  .option-card.incorrect {
+    background-color: rgba(239, 68, 68, 0.08);
+    border-color: #ef4444;
+  }
+
+  .option-card.faded {
+    opacity: 0.55;
+  }
+
+  .nav-blur {
+    @apply sticky top-0 z-50 border-b border-white/40 bg-white/75 backdrop-blur-glass;
+  }
+
+  .section-title {
+    @apply text-caption font-semibold uppercase tracking-wider text-ink-subtle;
+  }
+
+  .page-shell {
+    @apply mx-auto min-h-screen max-w-mobile pb-24;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 0.75rem;
   }
 }
 
@@ -79,11 +157,11 @@
     text-wrap: balance;
   }
 
-  .safe-pb {
-    padding-bottom: env(safe-area-inset-bottom);
+  .h-13 {
+    height: 3.25rem;
   }
 
-  .safe-pt {
-    padding-top: env(safe-area-inset-top);
+  .safe-pb {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
