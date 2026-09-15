@@ -1,0 +1,348 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Protección Infantil — Arquitectura de producción",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "flujo-reporte",
+        "label": "Flujo de un reporte",
+        "focus": [
+          "comunidad",
+          "app",
+          "db",
+          "worker",
+          "ollama",
+          "resend"
+        ],
+        "note": "Sigue un reporte desde la comunidad hasta la clasificación IA y la notificación al padre."
+      },
+      {
+        "id": "identidad",
+        "label": "Identidad y acceso",
+        "focus": [
+          "comunidad",
+          "google",
+          "cloudflare",
+          "app"
+        ],
+        "note": "OAuth Google, JWT httpOnly y el túnel de Cloudflare como borde HTTPS."
+      },
+      {
+        "id": "datos",
+        "label": "Datos y BI",
+        "focus": [
+          "app",
+          "db",
+          "bi",
+          "worker"
+        ],
+        "note": "PostgreSQL 16 + pgvector como fuente única; réplica lógica hacia BI."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "comunidad",
+      "type": "external",
+      "label": "Comunidad",
+      "sublabel": "Padres · operadores",
+      "pos": [
+        40,
+        110
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "google",
+      "type": "security",
+      "label": "Google OAuth",
+      "sublabel": "OAuth 2.0",
+      "pos": [
+        40,
+        330
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "type": "cloud",
+      "label": "Cloudflare",
+      "sublabel": "Túnel HTTPS + WAF",
+      "pos": [
+        250,
+        110
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "resend",
+      "type": "external",
+      "label": "Resend",
+      "sublabel": "Correos",
+      "pos": [
+        250,
+        430
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "app",
+      "type": "backend",
+      "label": "Next.js 16 (pi-app)",
+      "sublabel": "App Router + API",
+      "pos": [
+        470,
+        110
+      ],
+      "size": [
+        160,
+        70
+      ]
+    },
+    {
+      "id": "ollama",
+      "type": "backend",
+      "label": "Ollama local",
+      "sublabel": "Clasificación + embeddings",
+      "pos": [
+        700,
+        430
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL 16 (pi-db)",
+      "sublabel": "pgvector + pg-boss",
+      "pos": [
+        700,
+        110
+      ],
+      "size": [
+        170,
+        70
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "pi-worker",
+      "sublabel": "pg-boss (único)",
+      "pos": [
+        500,
+        330
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "bi",
+      "type": "cloud",
+      "label": "BI (bi-db / bi-next)",
+      "sublabel": "Réplica lógica bi_replica",
+      "pos": [
+        950,
+        110
+      ],
+      "size": [
+        150,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "VPS de producción (pi-vps)",
+      "wraps": [
+        "app",
+        "ollama",
+        "db",
+        "worker",
+        "bi"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "usuarios-entrada",
+      "from": "comunidad",
+      "to": "cloudflare",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tunnel",
+      "from": "cloudflare",
+      "to": "app",
+      "label": "túnel"
+    },
+    {
+      "id": "oauth",
+      "from": "google",
+      "to": "app",
+      "label": "OAuth /api/auth/oauth/*",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          430,
+          362
+        ],
+        [
+          430,
+          145
+        ]
+      ],
+      "labelAt": [
+        300,
+        348
+      ]
+    },
+    {
+      "id": "correos",
+      "from": "app",
+      "to": "resend",
+      "label": "códigos y avisos",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "top",
+      "labelAt": [
+        380,
+        415
+      ]
+    },
+    {
+      "id": "prisma",
+      "from": "app",
+      "to": "db",
+      "label": "Prisma",
+      "variant": "emphasis",
+      "labelAt": [
+        665,
+        125
+      ]
+    },
+    {
+      "id": "ia",
+      "from": "app",
+      "to": "ollama",
+      "label": "clasificar / embed",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          550,
+          255
+        ],
+        [
+          785,
+          255
+        ],
+        [
+          785,
+          430
+        ]
+      ],
+      "labelDy": 40,
+      "labelAt": [
+        665,
+        241
+      ]
+    },
+    {
+      "id": "cola",
+      "from": "worker",
+      "to": "db",
+      "label": "pg-boss",
+      "fromSide": "bottom",
+      "toSide": "right",
+      "via": [
+        [
+          580,
+          510
+        ],
+        [
+          930,
+          510
+        ],
+        [
+          930,
+          145
+        ]
+      ],
+      "labelAt": [
+        755,
+        508
+      ]
+    },
+    {
+      "id": "dispara",
+      "from": "worker",
+      "to": "app",
+      "label": "POST /api/reportes/procesar",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelDy": 40
+    },
+    {
+      "id": "replica",
+      "from": "db",
+      "to": "bi",
+      "label": "publicación",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Capas de la app",
+      "items": [
+        "UI: src/app + src/components (Server Components)",
+        "API: un route.ts por endpoint, validación Zod",
+        "Servicios: src/lib (auth, proxy, queue, rate-limit, ai/)"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Seguridad",
+      "items": [
+        "JWT httpOnly SameSite (cookie __Host-token)",
+        "Texto del reporte: AES-256-GCM DEK por denuncia + KEK",
+        "Rate limit en PostgreSQL (fail-open), CSP + HSTS"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Datos",
+      "items": [
+        "pgvector: embeddings HNSW + dedup semántica",
+        "Cola pg-boss en la misma BD; worker único (advisory lock)",
+        "Texto cifrado: ContenidoReporte + LlaveReporte (bi_replica sin acceso)"
+      ]
+    }
+  ]
+}
