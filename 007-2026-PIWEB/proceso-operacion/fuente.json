@@ -1,0 +1,134 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Protección Infantil — Proceso de operación",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "operacion-reporte",
+        "label": "Operación del reporte",
+        "focus": [
+          "bandeja",
+          "detalle",
+          "procesados",
+          "spam",
+          "escalados",
+          "comite",
+          "expediente",
+          "auditlog"
+        ],
+        "note": "Del pendiente accionable a la resolución del comité y el expediente consolidado."
+      },
+      {
+        "id": "apelaciones",
+        "label": "Apelaciones y comité",
+        "focus": [
+          "apelacion",
+          "escalados",
+          "comite",
+          "expediente",
+          "auditlog"
+        ],
+        "note": "Descargo del titular (Ley 1581), casos escalados y consolidación del expediente."
+      },
+      {
+        "id": "gestion-verificacion",
+        "label": "Gestión y verificación",
+        "focus": [
+          "verificacion",
+          "admin",
+          "control-ia",
+          "auditlog"
+        ],
+        "note": "Verificación de profesionales y superficie de gestión del ADMIN, todo auditado."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "operador", "label": "Operador" },
+    { "id": "comite", "label": "Comité de validación" },
+    { "id": "externo", "label": "Titulares y padres" },
+    { "id": "verificador", "label": "Verificador" },
+    { "id": "gestion", "label": "Gestión ADMIN" },
+    { "id": "registro", "label": "Registro" }
+  ],
+  "phases": [
+    { "id": "entrada", "label": "Bandeja y detalle", "fromCol": 0, "toCol": 1 },
+    { "id": "decision", "label": "Decisión del operador", "fromCol": 2, "toCol": 2 },
+    { "id": "resolucion", "label": "Resolución y consolidación", "fromCol": 3, "toCol": 4 },
+    { "id": "registro-fase", "label": "Registro", "fromCol": 5, "toCol": 5 }
+  ],
+  "mainPath": [
+    "bandeja",
+    "detalle",
+    "escalados",
+    "comite",
+    "expediente"
+  ],
+  "nodes": [
+    { "id": "bandeja", "lane": "operador", "col": 0, "type": "frontend", "label": "Bandeja", "sublabel": "pendientes accionables", "width": 124 },
+    { "id": "detalle", "lane": "operador", "col": 1, "type": "frontend", "label": "Detalle en línea", "sublabel": "IA · confianza · hitos", "width": 124 },
+    { "id": "procesados", "lane": "operador", "col": 2, "type": "frontend", "label": "Procesados", "sublabel": "solo lectura", "width": 100 },
+    { "id": "spam", "lane": "operador", "col": 3, "type": "frontend", "label": "Módulo Spam", "sublabel": "revisión POSIBLE_SPAM", "width": 120 },
+    { "id": "escalados", "lane": "comite", "col": 2, "type": "frontend", "label": "Casos escalados", "sublabel": "bandeja del comité", "width": 114 },
+    { "id": "comite", "lane": "comite", "col": 3, "type": "frontend", "label": "Comité de validación", "sublabel": "resolución Ley 1581", "width": 148 },
+    { "id": "expediente", "lane": "comite", "col": 4, "type": "frontend", "label": "Expediente consolidado", "sublabel": "aclaraciones del padre", "width": 160 },
+    { "id": "verificacion", "lane": "verificador", "col": 1, "type": "frontend", "label": "Verificación", "sublabel": "profesionales y citas", "tag": "decide habilitación", "width": 124 },
+    { "id": "admin", "lane": "gestion", "col": 3, "type": "frontend", "label": "Gestión de plataforma", "sublabel": "módulos de gestión", "width": 152 },
+    { "id": "control-ia", "lane": "gestion", "col": 4, "type": "frontend", "label": "Centro de Control IA", "sublabel": "rúbrica · simulación", "width": 148 },
+    { "id": "apelacion", "lane": "externo", "col": 1, "type": "external", "label": "Apelación del titular", "sublabel": "/dashboard/apelaciones", "width": 152 },
+    { "id": "auditlog", "lane": "registro", "col": 5, "type": "database", "label": "AuditLog", "sublabel": "quién y cuándo", "width": 100 }
+  ],
+  "edges": [
+    { "id": "abre-detalle", "from": "bandeja", "to": "detalle", "label": "ordena y abre", "variant": "emphasis" },
+    { "id": "resuelve", "from": "detalle", "to": "procesados", "label": "clasificar · corregir" },
+    { "id": "marca-spam", "from": "detalle", "to": "spam", "label": "POSIBLE_SPAM" },
+    { "id": "escala", "from": "detalle", "to": "escalados", "label": "escalar", "variant": "security" },
+    { "id": "entra-comite", "from": "escalados", "to": "comite", "variant": "emphasis" },
+    { "id": "descargo", "from": "apelacion", "to": "comite", "label": "descargo · Ley 1581", "variant": "security" },
+    { "id": "consolida", "from": "comite", "to": "expediente", "label": "consolida" },
+    { "id": "audita-comite", "from": "comite", "to": "auditlog", "label": "acciones sensibles", "variant": "dashed" },
+    { "id": "configura-ia", "from": "admin", "to": "control-ia", "label": "configura la IA" },
+    { "id": "audita-verificacion", "from": "verificacion", "to": "auditlog", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Bandeja del operador",
+      "items": [
+        "Pendientes: clasificar, corregir o escalar",
+        "Procesados: solo lectura, sin re-acción",
+        "Orden: prioridad, recientes o antiguos"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Gestión ADMIN",
+      "items": [
+        "Operadores: asignar, modelo de trabajo, auditoría",
+        "Usuarios por rol, colegios, pagos (9 tabs), configuración",
+        "Anti-abuso y Centro de Control IA (rúbrica, simulación, dataset)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Comité (Ley 1581)",
+      "items": [
+        "Resuelve apelaciones: revisión, anonimización o eliminación",
+        "Tabs: gestión y auditoría del comité solo ADMIN",
+        "Consolida expedientes y ve aclaraciones del padre"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Principio rector y registro",
+      "items": [
+        "Clasifica conductas, no personas",
+        "Ante la duda, decide una persona; el reportado presenta descargo",
+        "Toda acción sensible queda en AuditLog (quién y cuándo)"
+      ]
+    }
+  ]
+}

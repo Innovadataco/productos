@@ -23,11 +23,11 @@
         "label": "Identidad y acceso",
         "focus": [
           "comunidad",
-          "google",
           "cloudflare",
-          "app"
+          "app",
+          "resend"
         ],
-        "note": "OAuth Google, JWT httpOnly y el túnel de Cloudflare como borde HTTPS."
+        "note": "Acceso con correo y contraseña (registro por enlace al correo), JWT httpOnly y túnel de Cloudflare como borde HTTPS."
       },
       {
         "id": "datos",
@@ -54,20 +54,6 @@
       ],
       "size": [
         160,
-        64
-      ]
-    },
-    {
-      "id": "google",
-      "type": "security",
-      "label": "Google OAuth",
-      "sublabel": "OAuth 2.0",
-      "pos": [
-        40,
-        330
-      ],
-      "size": [
-        140,
         64
       ]
     },
@@ -196,29 +182,6 @@
       "from": "cloudflare",
       "to": "app",
       "label": "túnel"
-    },
-    {
-      "id": "oauth",
-      "from": "google",
-      "to": "app",
-      "label": "OAuth /api/auth/oauth/*",
-      "variant": "security",
-      "fromSide": "right",
-      "toSide": "left",
-      "via": [
-        [
-          430,
-          362
-        ],
-        [
-          430,
-          145
-        ]
-      ],
-      "labelAt": [
-        300,
-        348
-      ]
     },
     {
       "id": "correos",
