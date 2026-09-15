@@ -8,9 +8,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       tema_id: number | null;
       correctas: number;
       total: number;
-      falladas: string;
+      falladas: number[] | string;
       duracion_seg: number;
-      respuestas: { preguntaId: number; marcada: number; correcta: number }[];
+      respuestas: { pregunta_id?: number; preguntaId?: number; marcada: number; correcta: number }[];
     };
 
     const insertResultado = db.prepare(`
@@ -18,12 +18,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
+    const falladasStr = Array.isArray(body.falladas)
+      ? JSON.stringify(body.falladas)
+      : body.falladas;
+
     const info = insertResultado.run(
       body.perfil_codigo,
       body.tema_id ?? null,
       body.correctas,
       body.total,
-      body.falladas,
+      falladasStr,
       body.duracion_seg,
       Date.now()
     );
@@ -38,7 +42,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       `);
 
       for (const r of respuestas) {
-        insertRespuesta.run(resultadoId, r.preguntaId, r.marcada, r.correcta);
+        const preguntaId = r.pregunta_id ?? r.preguntaId ?? 0;
+        insertRespuesta.run(resultadoId, preguntaId, r.marcada, r.correcta);
       }
     }
 

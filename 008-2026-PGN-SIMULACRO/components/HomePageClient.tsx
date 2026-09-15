@@ -28,7 +28,7 @@ export default function HomePageClient({ version, build }: HomePageClientProps) 
       return;
     }
 
-    Promise.all([getPerfiles(), getTemas(), getResultados()])
+    Promise.all([getPerfiles(), getTemas(), getResultados(codigo)])
       .then(([perfiles, allTemas, allResultados]) => {
         const p = perfiles.find((x) => x.codigo === codigo);
         if (!p) {

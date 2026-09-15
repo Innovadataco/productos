@@ -30,7 +30,13 @@ export async function getFlashcards(): Promise<Flashcard[]> {
   return fetchJson<Flashcard[]>('/flashcards');
 }
 
-export async function getResultados(): Promise<Resultado[]> {
+export async function getResultados(perfilCodigo?: string): Promise<Resultado[]> {
+  if (perfilCodigo) {
+    const res = await fetch(`/api/resultados?perfil_codigo=${encodeURIComponent(perfilCodigo)}`);
+    if (!res.ok) throw new Error(`Error cargando resultados: ${res.status}`);
+    const data = await res.json();
+    return (data.resultados ?? []) as Resultado[];
+  }
   return fetchJson<Resultado[]>('/resultados');
 }
 

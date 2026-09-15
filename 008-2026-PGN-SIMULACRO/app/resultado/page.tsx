@@ -36,7 +36,7 @@ function ResultadoContent() {
       router.replace('/');
       return;
     }
-    Promise.all([getPerfiles(), getResultados()])
+    Promise.all([getPerfiles(), getResultados(codigo)])
       .then(([perfiles, allResultados]) => {
         const p = perfiles.find((x) => x.codigo === codigo);
         if (!p) {
