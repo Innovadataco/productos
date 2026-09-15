@@ -102,6 +102,22 @@ const config: Config = {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-12px)' },
+        },
+        'cube-spin': {
+          '0%': { transform: 'rotateX(0deg) rotateY(0deg)' },
+          '100%': { transform: 'rotateX(360deg) rotateY(360deg)' },
+        },
+        'gradient-x': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.6', transform: 'scale(1)' },
+          '50%': { opacity: '1', transform: 'scale(1.08)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.5s ease-out forwards',
@@ -109,6 +125,10 @@ const config: Config = {
         'scale-in': 'scale-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
         'shimmer': 'shimmer 1.5s infinite linear',
+        'float': 'float 5s ease-in-out infinite',
+        'cube-spin': 'cube-spin 12s linear infinite',
+        'gradient-x': 'gradient-x 6s ease infinite',
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
       },
       maxWidth: {
         mobile: '480px',
