@@ -81,22 +81,46 @@
         <p>Componentes de producción y sus conexiones: app Next.js, worker de la cola, PostgreSQL con pgvector, Ollama, correos, OAuth de Google, túnel de Cloudflare y la réplica hacia BI.</p>
         <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
-    </div>
-  </section>
-
-  <section class="grupo" aria-labelledby="g-procesos">
-    <h2 id="g-procesos">Los procesos</h2>
-    <div class="rejilla">
       <a class="mapa" href="/flujo-reporte/">
         <div class="tipo">Secuencia</div>
         <h3>Flujo de un reporte</h3>
-        <p>De punta a punta: recepción y cifrado del texto, la cola pg-boss, el worker único, la clasificación por votos de la IA local, la revisión humana y la agregación para la consulta pública.</p>
+        <p>El recorrido interno de punta a punta: recepción y cifrado del texto, la cola pg-boss, el worker único, la clasificación por votos de la IA local, la revisión humana y la agregación para la consulta pública.</p>
         <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
       <a class="mapa" href="/ciclo-vida/">
         <div class="tipo">Ciclo de vida</div>
         <h3>Estados del reporte</h3>
         <p>Pendiente, procesando y los seis desenlaces posibles de la IA; la corrección humana, la agregación al identificador y la visibilidad en la consulta pública según umbrales.</p>
+        <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+    </div>
+  </section>
+
+  <section class="grupo" aria-labelledby="g-procesos">
+    <h2 id="g-procesos">Los procesos</h2>
+    <div class="rejilla">
+      <a class="mapa" href="/proceso-anonimo/">
+        <div class="tipo">Proceso · Sin cuenta</div>
+        <h3>Reporte anónimo</h3>
+        <p>Cualquier persona reporta sin registrarse: solo texto e identificador, recibe un número de seguimiento y su reporte alimenta la consulta pública agregada, sin revelar jamás quién reportó.</p>
+        <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="mapa" href="/proceso-padre/">
+        <div class="tipo">Proceso · PARENT</div>
+        <h3>El padre reporta</h3>
+        <p>Del registro al expediente: crea el círculo de confianza sin documentos, reporta por cada hijo con edad automática, sigue el expediente en vivo y revela su texto con un código de seis dígitos.</p>
+        <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="mapa" href="/proceso-colegio/">
+        <div class="tipo">Proceso · Colegio</div>
+        <h3>El colegio actúa</h3>
+        <p>Alta aislada como tenant, cursos e integrantes, comité de protección, alertas por patrones institucionales y un panel con estadísticas propias sin mezclarse con otros colegios.</p>
+        <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="mapa" href="/proceso-profesional/">
+        <div class="tipo">Proceso · Psicólogo</div>
+        <h3>El profesional acompaña</h3>
+        <p>Registro y verificación, perfil público en el directorio, solicitudes y agenda de citas con el padre, evolución del caso y acceso mínimo auditado al expediente.</p>
         <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
     </div>

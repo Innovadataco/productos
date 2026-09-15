@@ -1,0 +1,92 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Proceso anónimo — Protección Infantil",
+    "locale": "en",
+    "subtitle": "Reportar un riesgo sin cuenta, desde la portada hasta la consulta pública",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "viewBox": [1120, 960],
+    "views": [
+      {
+        "id": "reportar",
+        "label": "Reportar sin cuenta",
+        "focus": ["entra", "formulario", "validar", "cifrar", "seguimiento"],
+        "note": "De la portada al código de seguimiento, sin registro ni login."
+      },
+      {
+        "id": "publicar",
+        "label": "IA y consulta pública",
+        "focus": ["cifrar", "ia", "publicar", "derechos"],
+        "note": "Clasificación local y estadísticas agregadas, con derechos del titular."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "persona", "label": "Persona" },
+    { "id": "app", "label": "Aplicación" },
+    { "id": "servidor", "label": "Servidor" },
+    { "id": "ia", "label": "IA local" },
+    { "id": "publico", "label": "Consulta pública" },
+    { "id": "derechos", "label": "Titular (Ley 1581)", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "reportar", "label": "Reportar", "fromCol": 0, "toCol": 1 },
+    { "id": "proteger", "label": "Validar + cifrar", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "difundir", "label": "Procesar + publicar", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "anonimo", "label": "Sin cuenta · sin login", "lane": "app", "fromCol": 0, "toCol": 1, "variant": "emphasis" },
+    { "id": "arco", "label": "Derechos del titular", "lane": "derechos", "fromCol": 4, "toCol": 5, "variant": "security" }
+  ],
+  "mainPath": ["entra", "formulario", "validar", "cifrar", "ia", "publicar"],
+  "nodes": [
+    { "id": "entra", "lane": "persona", "col": 0, "type": "external", "label": "Entrar a portada", "sublabel": "elegir «Reportar»", "width": 130 },
+    { "id": "formulario", "lane": "app", "col": 1, "type": "frontend", "label": "Completar formulario", "sublabel": "solo texto · máx 2000", "width": 140 },
+    { "id": "validar", "lane": "servidor", "col": 2, "type": "backend", "label": "Validar", "sublabel": "Zod + rate limit", "width": 120 },
+    { "id": "cifrar", "lane": "servidor", "col": 3, "type": "security", "label": "Cifrar y guardar", "sublabel": "AES-256-GCM · DEK", "tag": "PENDIENTE", "width": 140 },
+    { "id": "seguimiento", "lane": "app", "col": 3, "type": "frontend", "label": "Recibir código", "sublabel": "RPT-XXXX · seguimiento", "width": 140 },
+    { "id": "ia", "lane": "ia", "col": 4, "type": "cloud", "label": "Procesar con IA local", "sublabel": "embedding · dedup · votos", "width": 150 },
+    { "id": "publicar", "lane": "publico", "col": 5, "type": "external", "label": "Publicar estadísticas", "sublabel": "«N reportes registrados»", "tag": "si supera umbral", "width": 150 },
+    { "id": "derechos", "lane": "derechos", "col": 5, "type": "security", "label": "Ejercer derechos", "sublabel": "revisar · anonimizar · borrar", "width": 150 }
+  ],
+  "edges": [
+    { "id": "e-entra-form", "from": "entra", "to": "formulario", "variant": "emphasis", "route": "drop", "fromSide": "bottom", "toSide": "top" },
+    { "id": "e-form-validar", "from": "formulario", "to": "validar", "variant": "emphasis", "route": "drop", "fromSide": "bottom", "toSide": "top" },
+    { "id": "e-validar-cifrar", "from": "validar", "to": "cifrar", "variant": "emphasis" },
+    { "id": "e-cifrar-seguimiento", "from": "cifrar", "to": "seguimiento", "label": "código de seguimiento", "variant": "dashed", "role": "async", "fromSide": "top", "toSide": "bottom" },
+    { "id": "e-cifrar-ia", "from": "cifrar", "to": "ia", "label": "en segundo plano", "variant": "emphasis" },
+    { "id": "e-ia-publicar", "from": "ia", "to": "publicar", "variant": "emphasis", "route": "drop", "fromSide": "bottom", "toSide": "top" },
+    { "id": "e-publicar-derechos", "from": "publicar", "to": "derechos", "label": "si el identificador es suyo", "variant": "dashed", "role": "branch", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Sin registro",
+      "items": [
+        "Reportar nunca pide cuenta ni login",
+        "Solo texto: se rechazan fotos, videos y enlaces de imagen",
+        "La fecha del incidente va de hoy hasta 2 años atrás"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Consulta honesta",
+      "items": [
+        "La consulta pública muestra solo estadísticas agregadas",
+        "Nunca se publica el texto del reporte ni quién reportó",
+        "La ausencia de reportes no garantiza que un identificador sea seguro"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Derechos del titular",
+      "items": [
+        "Ley 1581 de 2012: revisión, anonimización o eliminación",
+        "Trámite por los canales oficiales del servicio"
+      ]
+    }
+  ]
+}

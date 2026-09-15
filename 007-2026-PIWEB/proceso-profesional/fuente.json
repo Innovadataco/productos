@@ -1,0 +1,97 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Proceso del profesional",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "output": "/tmp/pi-mapas/proceso-profesional.html",
+    "views": [
+      {
+        "id": "alta-verificacion",
+        "label": "Alta y verificación",
+        "focus": ["registrar", "verificar", "completar"],
+        "note": "El psicólogo se registra, el equipo de operación activa su cuenta y completa su perfil público."
+      },
+      {
+        "id": "cita-agenda",
+        "label": "Solicitud y agenda",
+        "focus": ["directorio", "solicitar", "confirmar", "agenda"],
+        "note": "El padre lo encuentra en el directorio, solicita la cita y el profesional confirma o propone otra fecha."
+      },
+      {
+        "id": "evolucion-auditoria",
+        "label": "Evolución y auditoría",
+        "focus": ["agenda", "evolucion", "auditoria"],
+        "note": "Tras la sesión registra la evolución; toda interacción queda auditada con acceso mínimo al expediente."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "profesional", "label": "Psicólogo" },
+    { "id": "operacion", "label": "Equipo de operación" },
+    { "id": "plataforma", "label": "Plataforma" },
+    { "id": "padre", "label": "Padre" },
+    { "id": "seguridad", "label": "Seguridad y cumplimiento", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "alta", "label": "Alta", "fromCol": 0, "toCol": 1 },
+    { "id": "visibilidad", "label": "Perfil y visibilidad", "fromCol": 2, "toCol": 3 },
+    { "id": "seguimiento", "label": "Cita y seguimiento", "fromCol": 4, "toCol": 5, "variant": "emphasis" }
+  ],
+  "groups": [
+    { "id": "cita", "label": "Gestión de la cita", "lane": "profesional", "fromCol": 4, "toCol": 5, "variant": "emphasis" },
+    { "id": "control", "label": "Auditoría y acceso mínimo", "lane": "seguridad", "fromCol": 4, "toCol": 5, "variant": "security" }
+  ],
+  "mainPath": ["registrar", "verificar", "completar", "directorio", "solicitar", "confirmar", "agenda", "evolucion"],
+  "nodes": [
+    { "id": "registrar", "lane": "profesional", "col": 0, "type": "frontend", "label": "Registrarse", "sublabel": "correo + datos de perfil", "tag": "alta", "width": 150 },
+    { "id": "verificar", "lane": "operacion", "col": 1, "type": "security", "label": "Verificar cuenta", "sublabel": "activa rol PROFESIONAL", "width": 150 },
+    { "id": "completar", "lane": "profesional", "col": 2, "type": "frontend", "label": "Completar perfil", "sublabel": "modalidad + disponibilidad", "width": 150 },
+    { "id": "directorio", "lane": "plataforma", "col": 3, "type": "cloud", "label": "Directorio", "sublabel": "Encontrar psicólogo", "width": 150 },
+    { "id": "solicitar", "lane": "padre", "col": 4, "type": "external", "label": "Solicitar cita", "sublabel": "área del padre", "width": 150 },
+    { "id": "confirmar", "lane": "profesional", "col": 4, "type": "frontend", "label": "Confirmar cita", "sublabel": "acepta o propone fecha", "tag": "agenda", "width": 150 },
+    { "id": "agenda", "lane": "plataforma", "col": 5, "type": "messagebus", "label": "Agenda compartida", "sublabel": "recordatorios por correo", "width": 150 },
+    { "id": "evolucion", "lane": "profesional", "col": 5, "type": "database", "label": "Registrar evolución", "sublabel": "texto original inmutable", "tag": "evidencia", "width": 150 },
+    { "id": "auditoria", "lane": "seguridad", "col": 5, "type": "security", "label": "Auditoría continua", "sublabel": "acceso mínimo al expediente", "width": 150 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "registrar", "to": "verificar", "label": "solicitud de alta" },
+    { "id": "e2", "from": "verificar", "to": "completar", "label": "cuenta activa" },
+    { "id": "e3", "from": "completar", "to": "directorio", "label": "perfil publicado" },
+    { "id": "e4", "from": "directorio", "to": "solicitar", "label": "visible al padre" },
+    { "id": "e5", "from": "solicitar", "to": "confirmar", "label": "solicitud recibida" },
+    { "id": "e6", "from": "confirmar", "to": "agenda", "label": "cita confirmada", "variant": "emphasis" },
+    { "id": "e7", "from": "agenda", "to": "evolucion", "label": "tras la sesión" },
+    { "id": "e8", "from": "evolucion", "to": "auditoria", "label": "toda acción", "variant": "security", "role": "branch" }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Perfil profesional",
+      "items": [
+        "Registro con correo, especialidad, enfoque y ciudad",
+        "Presentación, modalidad virtual o presencial y disponibilidad",
+        "Visible en el directorio «Encontrar psicólogo» del área del padre"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Cita confirmada",
+      "items": [
+        "El padre solicita y el profesional confirma o propone otra fecha",
+        "La cita queda en la agenda de ambos con recordatorios por correo"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Evidencia y privacidad",
+      "items": [
+        "La evolución se registra sin modificar el texto original del reporte",
+        "Toda interacción queda auditada",
+        "Solo ve los datos estrictamente necesarios del expediente asociado a sus citas"
+      ]
+    }
+  ]
+}

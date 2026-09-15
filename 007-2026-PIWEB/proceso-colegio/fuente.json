@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Proceso del colegio",
+    "subtitle": "Del alta del tenant a la huella de auditoría",
+    "animation": "trace",
+    "visual_preset": "classic",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "puesta-en-marcha",
+        "label": "Puesta en marcha",
+        "focus": ["alta", "perfil", "comite"],
+        "note": "Del alta del tenant aislado al comité de protección configurado."
+      },
+      {
+        "id": "alertas-y-decision",
+        "label": "Alertas y decisión",
+        "focus": ["reportes", "alertas", "revision"],
+        "note": "Los reportes comunitarios se cruzan por patrón y el comité decide el acompañamiento."
+      },
+      {
+        "id": "visibilidad-y-auditoria",
+        "label": "Visibilidad y auditoría",
+        "focus": ["panel", "audit"],
+        "note": "Panel con estadísticas agregadas y registro de toda acción sensible."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "innovadataco", "label": "Innovadataco" },
+    { "id": "colegio", "label": "Colegio" },
+    { "id": "motor", "label": "Motor de análisis" },
+    { "id": "comunidad", "label": "Comunidad" },
+    { "id": "auditoria", "label": "Auditoría" }
+  ],
+  "phases": [
+    { "id": "configuracion", "label": "Alta y configuración", "fromCol": 0, "toCol": 2 },
+    { "id": "analisis", "label": "Análisis y decisión", "fromCol": 3, "toCol": 4, "variant": "emphasis" },
+    { "id": "evidencia", "label": "Visibilidad y evidencia", "fromCol": 5, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "config-institucional", "label": "Configuración institucional", "lane": "colegio", "fromCol": 1, "toCol": 2, "variant": "emphasis" }
+  ],
+  "mainPath": ["alta", "perfil", "comite", "alertas", "revision", "panel", "audit"],
+  "nodes": [
+    { "id": "alta", "lane": "innovadataco", "col": 0, "type": "cloud", "label": "Alta del colegio", "sublabel": "tenant aislado", "width": 132 },
+    { "id": "perfil", "lane": "colegio", "col": 1, "type": "frontend", "label": "Perfil y cursos", "sublabel": "cursos e integrantes", "tag": "SCHOOL_ADMIN", "width": 132 },
+    { "id": "comite", "lane": "colegio", "col": 2, "type": "security", "label": "Configurar comité", "sublabel": "roles de protección", "tag": "COMITÉ", "width": 132 },
+    { "id": "alertas", "lane": "motor", "col": 3, "type": "backend", "label": "Generar alertas", "sublabel": "periodo · grado · conducta", "width": 132 },
+    { "id": "reportes", "lane": "comunidad", "col": 3, "type": "external", "label": "Reportes", "sublabel": "de la comunidad", "width": 132 },
+    { "id": "revision", "lane": "colegio", "col": 4, "type": "security", "label": "Revisar casos", "sublabel": "acompañamiento", "tag": "COMITÉ", "width": 132 },
+    { "id": "panel", "lane": "colegio", "col": 5, "type": "frontend", "label": "Panel del colegio", "sublabel": "estadísticas agregadas", "width": 132 },
+    { "id": "audit", "lane": "auditoria", "col": 5, "type": "database", "label": "AuditLog", "sublabel": "huella de auditoría", "width": 132 }
+  ],
+  "edges": [
+    { "id": "alta-perfil", "from": "alta", "to": "perfil" },
+    { "id": "perfil-comite", "from": "perfil", "to": "comite" },
+    { "id": "comite-alertas", "from": "comite", "to": "alertas" },
+    { "id": "reportes-alertas", "from": "reportes", "to": "alertas", "role": "branch" },
+    { "id": "alertas-revision", "from": "alertas", "to": "revision" },
+    { "id": "revision-panel", "from": "revision", "to": "panel" },
+    { "id": "panel-audit", "from": "panel", "to": "audit", "variant": "dashed", "role": "async" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Tenant aislado",
+      "items": [
+        "Cada colegio es un Tenant independiente",
+        "Los datos de un colegio no se mezclan con otros",
+        "La consulta pública agrega todo sin revelar la fuente"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Patrones y alertas",
+      "items": [
+        "Los reportes se cruzan por periodo, grado y conducta",
+        "El comité revisa los casos escalados",
+        "Las decisiones definen el acompañamiento"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Evidencia permanente",
+      "items": [
+        "Toda acción sensible queda en el AuditLog",
+        "El panel muestra solo estadísticas agregadas",
+        "Nunca se exponen datos de otros colegios"
+      ]
+    }
+  ]
+}

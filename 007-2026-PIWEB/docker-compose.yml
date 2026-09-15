@@ -28,3 +28,8 @@ services:
       - ./navegacion/index.html:/usr/share/nginx/html/navegacion/index.html:ro
       - ./cifrado/index.html:/usr/share/nginx/html/cifrado/index.html:ro
       - ./datos/index.html:/usr/share/nginx/html/datos/index.html:ro
+      # Procesos por rol (Archify, autocontenidos). Archivo por archivo, igual que modelo.
+      - ./proceso-anonimo/index.html:/usr/share/nginx/html/proceso-anonimo/index.html:ro
+      - ./proceso-padre/index.html:/usr/share/nginx/html/proceso-padre/index.html:ro
+      - ./proceso-colegio/index.html:/usr/share/nginx/html/proceso-colegio/index.html:ro
+      - ./proceso-profesional/index.html:/usr/share/nginx/html/proceso-profesional/index.html:ro
