@@ -6,8 +6,8 @@ import { BarChart3, Target, Clock, BookOpen, Loader2 } from 'lucide-react';
 import Header from './Header';
 import TopicCard from './TopicCard';
 import StatCard from './StatCard';
-import { Perfil, Tema, Resultado } from '../lib/types';
-import { getPerfilActivo, setPerfilActivo, getPerfiles, getTemas, getResultados } from '../lib/client-data';
+import { Perfil, Tema, Pregunta, Resultado } from '../lib/types';
+import { getPerfilActivo, setPerfilActivo, getPerfiles, getTemas, getPreguntas, getResultados } from '../lib/client-data';
 
 interface HomePageClientProps {
   version: string;
@@ -19,6 +19,7 @@ export default function HomePageClient({ version, build }: HomePageClientProps) 
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [temas, setTemas] = useState<Tema[]>([]);
   const [resultados, setResultados] = useState<Resultado[]>([]);
+  const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,8 +29,8 @@ export default function HomePageClient({ version, build }: HomePageClientProps) 
       return;
     }
 
-    Promise.all([getPerfiles(), getTemas(), getResultados(codigo)])
-      .then(([perfiles, allTemas, allResultados]) => {
+    Promise.all([getPerfiles(), getTemas(), getPreguntas(), getResultados(codigo)])
+      .then(([perfiles, allTemas, allPreguntas, allResultados]) => {
         const p = perfiles.find((x) => x.codigo === codigo);
         if (!p) {
           router.replace('/');
@@ -37,6 +38,7 @@ export default function HomePageClient({ version, build }: HomePageClientProps) 
         }
         setPerfil(p);
         setTemas(allTemas.filter((t) => t.perfil_codigo === codigo));
+        setPreguntas(allPreguntas.filter((q) => q.perfil_codigo === codigo));
         setResultados(allResultados.filter((r) => r.perfil_codigo === codigo));
       })
       .finally(() => setLoading(false));
@@ -97,6 +99,7 @@ export default function HomePageClient({ version, build }: HomePageClientProps) 
             const totalTema = intentosTema.reduce((a, r) => a + r.total, 0);
             const correctasTema = intentosTema.reduce((a, r) => a + r.correctas, 0);
             const promedioTema = totalTema > 0 ? (correctasTema / totalTema) * 100 : 0;
+            const totalBanco = preguntas.filter((q) => q.tema_id === tema.id).length;
             return (
               <div
                 key={tema.id}
@@ -107,7 +110,7 @@ export default function HomePageClient({ version, build }: HomePageClientProps) 
                   tema={tema}
                   progreso={correctasTema}
                   promedio={promedioTema}
-                  totalPreguntas={0}
+                  totalPreguntas={totalBanco}
                   onClick={() => router.push(`/tema/${tema.clave}`)}
                 />
               </div>
