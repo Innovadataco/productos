@@ -132,6 +132,9 @@ export function crearTablas() {
       marcada INTEGER NOT NULL,
       correcta INTEGER NOT NULL
     );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_resumenes_unico ON resumenes(tema_id, lower(titulo));
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_flashcards_unico ON flashcards(tema_id, lower(frente));
   `);
 }
 
