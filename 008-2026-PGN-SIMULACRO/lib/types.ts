@@ -90,19 +90,35 @@ export interface TemaStats {
   tema_id: number;
   clave: string;
   nombre: string;
-  total_preguntas: number;
+  eje?: string;
+  color?: string;
+  total_preguntas?: number;
   intentos: number;
-  promedio: number;
-  ultimo_puntaje: number | null;
+  correctas?: number;
+  total?: number;
+  promedio?: number;
+  porcentaje?: number;
+  ultimo_intento?: number | null;
+  ultimo_puntaje?: number | null;
 }
 
 export interface AnalisisData {
   perfil_codigo: string;
   promedio_general: number;
+  intentos_totales: number;
+  total_correctas: number;
+  total_preguntas: number;
   temas: TemaStats[];
   temas_debiles: TemaStats[];
-  normas_falladas: { norma: string; total: number }[];
-  evolucion: { fecha: string; puntaje: number }[];
+  preguntas_falladas: {
+    pregunta_id: number;
+    enunciado: string;
+    norma: string;
+    tema_nombre: string;
+    veces: number;
+  }[];
+  normas_error: { norma: string; intentos: number; falladas: number; tasa_error: number }[];
+  evolucion: { dia: string; intentos: number; correctas: number; total: number; porcentaje: number }[];
 }
 
 export interface RespuestaLocal {

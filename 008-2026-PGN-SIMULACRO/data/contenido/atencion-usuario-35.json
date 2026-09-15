@@ -1,0 +1,398 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es la norma que expide el Código de Procedimiento Administrativo y de lo Contencioso Administrativo en Colombia? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Ley 80 de 1993",
+        "Decreto 1083 de 2015",
+        "Ley 1755 de 2015",
+        "Ley 1437 de 2011"
+      ],
+      "respuesta": 3,
+      "explicacion": "La Ley 1437 de 2011 es la norma que expide el Código de Procedimiento Administrativo y de lo Contencioso Administrativo (CPACA), el cual regula la atención de derechos de petición y el procedimiento administrativo en Colombia.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Título Preliminar",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es el plazo general para resolver un derecho de petición sobre asuntos de interés particular o colectivo según la Ley 1755 de 2015? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "30 días calendario",
+        "20 días hábiles",
+        "10 días hábiles",
+        "15 días hábiles"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 13 de la Ley 1755 de 2015 establece que la administración pública debe resolver los derechos de petición en un término de 15 días hábiles, prorrogables en casos especiales.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 13",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué artículo de la Constitución Política consagra el derecho de toda persona a presentar peticiones respetuosas ante autoridades? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Art. 23",
+        "Art. 25",
+        "Art. 74",
+        "Art. 53"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 23 de la Constitución Política de Colombia reconoce el derecho fundamental de petición, que obliga a las autoridades a dar respuesta oportuna y sustancial a las solicitudes ciudadanas.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 23",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 1755 de 2015, ¿cuál es el plazo que tiene el peticionario para subsanar los requerimientos hechos por la entidad? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "10 días hábiles",
+        "15 días hábiles",
+        "30 días calendario",
+        "5 días hábiles"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 14 de la Ley 1755 de 2015 señala que el peticionario cuenta con 10 días hábiles para subsanar o completar la información requerida, sin que ello altere el término principal de respuesta.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 14",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es el nombre oficial de la Ley 1755 de 2015? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Ley de Contratación Estatal",
+        "Estatuto de Defensa del Contribuyente",
+        "Estatuto de Ciudadanía Participativa",
+        "Código de Procedimiento Administrativo"
+      ],
+      "respuesta": 2,
+      "explicacion": "La Ley 1755 de 2015 se denomina Estatuto de Ciudadanía Participativa y regula el ejercicio del derecho de petición, quejas, reclamaciones y consultas ciudadanas ante entidades públicas.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Título Preliminar",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "En materia de atención al usuario, ¿qué principio exige que la administración actúe con corrección, celeridad e imparcialidad? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Principio de buena fe",
+        "Principio de eficiencia absoluta",
+        "Principio de legalidad",
+        "Principio de publicidad"
+      ],
+      "respuesta": 0,
+      "explicacion": "El principio de buena fe, consagrado en el CPACA, obliga a la administración a comportarse con lealtad, corrección, celeridad e imparcialidad en la atención de los ciudadanos.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 4",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué tipo de silencio administrativo se configura cuando la autoridad no resuelve un derecho de petición sobre intereses particulares dentro del término legal? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Silencio absoluto",
+        "Silencio reversible",
+        "Silencio administrativo negativo",
+        "Silencio administrativo positivo"
+      ],
+      "respuesta": 2,
+      "explicacion": "Según el artículo 16 de la Ley 1755 de 2015, en derechos de petición sobre intereses particulares el vencimiento del término sin respuesta produce silencio administrativo negativo, salvo excepciones legales.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 16",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál de los siguientes NO es un requisito mínimo de una petición escrita según el CPACA? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Descripción clara de los hechos",
+        "Petición concreta y determinada",
+        "Nombre e identificación del peticionario",
+        "Pago de una tasa administrativa"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 47 de la Ley 1437 de 2011 exige nombre e identificación, descripción de hechos, petición concreta y firma; no se requiere pago de tasa para ejercer el derecho de petición.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 47",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 1755 de 2015, ¿qué ocurre con el término de 15 días cuando la entidad formula requerimiento al peticionario? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Se reduce a 5 días",
+        "Se mantiene corriendo",
+        "Se suspende hasta que se subsane el requerimiento",
+        "Se duplica automáticamente"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 14 de la Ley 1755 de 2015 dispone que el término para resolver se suspende mientras el peticionario no subsane el requerimiento, y se reanuda una vez cumplido.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 14",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Quiénes pueden ejercer el derecho de petición ante las entidades públicas colombianas? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Toda persona natural o jurídica, nacional o extranjera",
+        "Únicamente organizaciones sociales",
+        "Solo ciudadanos colombianos mayores de edad",
+        "Solo quienes tengan residencia en Colombia"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 47 de la Ley 1437 de 2011 establece que el derecho de petición puede ser ejercido por toda persona, sin distinción de nacionalidad, edad o condición jurídica.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 47",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es la diferencia entre queja y reclamación según la Ley 1755 de 2015? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La queja tiene término de 30 días; la reclamación de 5 días",
+        "La queja expresa disconformidad con la conducta de un funcionario o servicio; la reclamación defiende el derecho del peticionario",
+        "No existe diferencia entre ambas figuras",
+        "La queja solo se presenta por escrito; la reclamación solo verbalmente"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 6 de la Ley 1755 de 2015 define la queja como manifestación de disconformidad y la reclamación como la defensa del derecho del peticionario frente a actuaciones que lo afectan.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 6",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Dónde debe presentarse una petición para que la entidad pública la tramite? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "En la dependencia competente o en cualquier oficina de recepción para su radicación",
+        "Solo ante el Ministerio de Justicia",
+        "Solo en la sede principal de la entidad",
+        "Únicamente por medio de abogado"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 47 del CPACA permite presentar la petición ante la dependencia competente o ante cualquier oficina de atención al público, la cual debe radicarla y remitirla al área correspondiente.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 47",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué artículo del CPACA regula las notificaciones personales de los actos administrativos? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Art. 47",
+        "Art. 13",
+        "Art. 67",
+        "Art. 136"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 67 de la Ley 1437 de 2011 regla la notificación personal, que busca garantizar que el administrado conozca oportunamente los actos que le afectan.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 67",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿En qué casos procede el recurso de reposición contra actos administrativos? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Solo contra actos de carácter disciplinario",
+        "Contra actos que no ponen fin a la vía administrativa",
+        "Contra cualquier acto de la autoridad",
+        "Contra actos firmes en segunda instancia"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 136 de la Ley 1437 de 2011 establece que el recurso de reposición procede contra actos administrativos que no pongan fin a la vía administrativa, salvo excepciones legales.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 136",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es el plazo para interponer recurso de reposición ante la misma autoridad que expidió el acto? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "10 días hábiles siguientes a la notificación",
+        "15 días calendario",
+        "30 días hábiles",
+        "5 días hábiles"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 137 de la Ley 1437 de 2011 fija en 10 días hábiles el término para interponer recurso de reposición, contados desde el día siguiente a la notificación del acto.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 137",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué figura permite acudir a la justicia constitucional cuando se vulnera el derecho de petición? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Acción de cumplimiento",
+        "Recurso de queja",
+        "Acción de tutela",
+        "Recurso de apelación"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 24 de la Ley 1755 de 2015 regula la tutela del derecho de petición, permitiendo acudir a la acción de tutela cuando se vulnera este derecho fundamental.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 24",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué sucede si una entidad no responde una consulta sobre interpretación de normas en el término legal? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Se configura silencio negativo",
+        "El consultante debe pagar una multa",
+        "Se configura silencio positivo",
+        "No se configura silencio administrativo; la consulta no genera obligación de actuar"
+      ],
+      "respuesta": 3,
+      "explicacion": "Las consultas sobre interpretación de normas no producen silencio administrativo, pues la administración no está obligada a pronunciarse sobre el sentido de las disposiciones legales.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 52",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 1755 de 2015, ¿cuántos días hábiles tiene la autoridad para resolver una queja o reclamación? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "30 días hábiles",
+        "5 días hábiles",
+        "10 días hábiles",
+        "15 días hábiles"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 13 de la Ley 1755 de 2015 aplica el término general de 15 días hábiles también para la resolución de quejas y reclamaciones presentadas por los ciudadanos.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 13",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué principio de atención ciudadana implica que los trámites sean ágiles y eviten cargas innecesarias? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Principio de contradicción",
+        "Principio de eficiencia",
+        "Principio de publicidad",
+        "Principio de igualdad"
+      ],
+      "respuesta": 1,
+      "explicacion": "El principio de eficiencia, reconocido en el CPACA y en las políticas de atención ciudadana, exige que los procedimientos sean ágiles, económicos y no impongan requisitos superfluos.",
+      "norma": "Ley 1437 de 2011",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es el efecto del silencio administrativo positivo en derechos de petición sobre intereses colectivos? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Se entiende denegada la solicitud",
+        "Se entiende concedida la solicitud cuando la ley así lo establece",
+        "El peticionario debe iniciar proceso penal",
+        "La petición queda sin efecto"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 16 de la Ley 1755 de 2015 prevé que, en los casos que la ley señale para intereses colectivos, el silencio de la administración se interpreta como positivo, es decir, a favor del peticionario.",
+      "norma": "Ley 1755 de 2015",
+      "articulo": "Art. 16",
+      "dificultad": "medio"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál es la norma que expide el Código de Procedimiento Administrativo y de lo Contencioso Administrativo en Colombia? (perfil 35 / 1AS-19)",
+      "reverso": "Ley 1437 de 2011",
+      "norma": "Ley 1437 de 2011"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál es el plazo general para resolver un derecho de petición sobre asuntos de interés particular o colectivo según la Ley 1755 de 2015? (perfil 35 / 1AS-19)",
+      "reverso": "15 días hábiles",
+      "norma": "Ley 1755 de 2015"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué artículo de la Constitución Política consagra el derecho de toda persona a presentar peticiones respetuosas ante autoridades? (perfil 35 / 1AS-19)",
+      "reverso": "Art. 23",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "Según la Ley 1755 de 2015, ¿cuál es el plazo que tiene el peticionario para subsanar los requerimientos hechos por la entidad? (perfil 35 / 1AS-19)",
+      "reverso": "10 días hábiles",
+      "norma": "Ley 1755 de 2015"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál es el nombre oficial de la Ley 1755 de 2015? (perfil 35 / 1AS-19)",
+      "reverso": "Estatuto de Ciudadanía Participativa",
+      "norma": "Ley 1755 de 2015"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "En materia de atención al usuario, ¿qué principio exige que la administración actúe con corrección, celeridad e imparcialidad? (perfil 35 / 1AS-19)",
+      "reverso": "Principio de buena fe",
+      "norma": "Ley 1437 de 2011"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué tipo de silencio administrativo se configura cuando la autoridad no resuelve un derecho de petición sobre intereses particulares dentro del término legal? (perfil 35 / 1AS-19)",
+      "reverso": "Silencio administrativo negativo",
+      "norma": "Ley 1755 de 2015"
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál de los siguientes NO es un requisito mínimo de una petición escrita según el CPACA? (perfil 35 / 1AS-19)",
+      "reverso": "Pago de una tasa administrativa",
+      "norma": "Ley 1437 de 2011"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "titulo": "Derecho de petición",
+      "contenido_html": "<h3>Derecho de petición</h3><ul><li>Derecho de petición según la Constitución y la Ley 1755 de 2015.</li><li>Términos y requisitos.</li><li>Pronta resolución completa y de fondo.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "atencion-usuario-35",
+      "perfil_codigo": "35",
+      "titulo": "PQRD y canales de atención",
+      "contenido_html": "<h3>PQRD y canales de atención</h3><ul><li>Peticiones, quejas, reclamos y denuncias.</li><li>Canales de atención al ciudadano.</li><li>Servicio al usuario y trámites en línea.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

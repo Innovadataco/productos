@@ -1,0 +1,398 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 2 del Código General Disciplinario (Ley 1952 de 2019), modificado por la Ley 2094 de 2021, ¿quién es titular de la potestad disciplinaria?",
+      "opciones": [
+        "La Procuraduría General de la Nación",
+        "El Estado",
+        "La Contraloría General de la República",
+        "Las personerías municipales y distritales"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2 del Código General Disciplinario establece que el Estado es el titular de la potestad disciplinaria.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 2"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "De conformidad con el artículo 2 de la Ley 1952 de 2019, ¿cuál es una de las atribuciones reconocidas a la Procuraduría General de la Nación?",
+      "opciones": [
+        "Ejercer la potestad disciplinaria preferente exclusivamente sobre los alcaldes",
+        "Adelantar investigaciones disciplinarias e imponer sanciones de destitución, suspensión e inhabilidad",
+        "Conocer en primera instancia de todas las faltas leves",
+        "Dirimir conflictos de competencia entre jueces"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2 señala que a la Procuraduría General de la Nación se le atribuyen funciones para adelantar investigaciones disciplinarias e imponer las sanciones de destitución, suspensión e inhabilidad y las demás establecidas en la ley.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 2"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "Según el artículo 2 del Código General Disciplinario, la competencia de la Procuraduría General de la Nación es privativa para conocer procesos disciplinarios contra:",
+      "opciones": [
+        "Todos los servidores públicos del orden nacional",
+        "Solo los funcionarios judiciales",
+        "Los servidores públicos de elección popular y los propios servidores de la Procuraduría, salvo fuero especial",
+        "Los particulares que ejercen función pública"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 2 dispone que la competencia de la Procuraduría General de la Nación es privativa para conocer procesos disciplinarios contra los servidores públicos de elección popular y contra sus propios servidores, salvo los que tengan fuero especial.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 2"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "El artículo 3 de la Ley 1952 de 2019 establece que la Procuraduría General de la Nación es titular del ejercicio preferente del poder disciplinario. ¿Qué facultad le confiere dicho poder?",
+      "opciones": [
+        "Iniciar, proseguir o remitir investigaciones o juzgamientos de competencia de otros órganos de control disciplinario interno",
+        "Imponer penas privativas de la libertad",
+        "Sustituir a las autoridades administrativas en sus funciones",
+        "Aplicar normas penales"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 3 indica que la Procuraduría General de la Nación podrá iniciar, proseguir o remitir cualquier investigación o juzgamiento de competencia de los órganos de control disciplinario interno, y asumir el proceso en segunda instancia.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 3"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "De acuerdo con el artículo 4 de la Ley 1952 de 2019, principio de legalidad, los destinatarios del código solo serán sancionados disciplinariamente cuando:",
+      "opciones": [
+        "La falta esté descrita en la ley vigente al momento de la realización de la conducta",
+        "Exista una queja formal del ciudadano",
+        "La conducta cause escándalo público",
+        "El superior jerárquico lo ordene"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 4 señala que los destinatarios solo serán investigados y sancionados disciplinariamente por comportamientos que estén descritos como falta en la ley vigente al momento de su realización.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 4"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Conforme al artículo 5 de la Ley 1952 de 2019, la sanción disciplinaria tiene finalidad:",
+      "opciones": [
+        "Punitiva y ejemplarizante",
+        "Preventiva y correctiva",
+        "Meramente económica",
+        "Restitutoria exclusivamente"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 5 establece que la sanción disciplinaria tiene finalidad preventiva y correctiva, para garantizar la efectividad de los principios y fines previstos en la Constitución, la ley y los tratados internacionales.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 5"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 6 del Código General Disciplinario, la imposición de la sanción debe responder a los principios de:",
+      "opciones": [
+        "Celeridad y economía",
+        "Proporcionalidad y razonabilidad",
+        "Publicidad y transparencia",
+        "Eficiencia y eficacia"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 6 dispone que la imposición de la sanción disciplinaria deberá responder a los principios de proporcionalidad y razonabilidad, correspondiendo a la clasificación de la falta y a su graduación.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 6"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "El artículo 9 de la Ley 1952 de 2019, modificado por la Ley 2094 de 2021, señala que la conducta del disciplinable será ilícita cuando:",
+      "opciones": [
+        "Afecte sustancialmente el deber funcional sin justificación alguna",
+        "Sea reprochada por la comunidad",
+        "Cause perjuicio patrimonial",
+        "Sea tipificada como delito"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 9 establece que la conducta del disciplinable será ilícita cuando afecte sustancialmente el deber funcional sin justificación alguna.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 9"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "De conformidad con el artículo 10 de la Ley 1952 de 2019, en materia disciplinaria solo se podrá imponer sanción por conductas realizadas:",
+      "opciones": [
+        "Con culpabilidad, a título de dolo o culpa",
+        "Con dolo exclusivamente",
+        "Con responsabilidad objetiva",
+        "Sin necesidad de determinar la culpabilidad"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 10 dispone que solo se podrá imponer sanción por conductas realizadas con culpabilidad, a título de dolo o culpa, quedando proscrita toda forma de responsabilidad objetiva.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 10"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "Según el artículo 12 del Código General Disciplinario, modificado por la Ley 2094 de 2021, en el debido proceso disciplinario:",
+      "opciones": [
+        "El instructor puede ser el mismo que juzga",
+        "El disciplinable debe ser investigado y juzgado por funcionarios diferentes, independientes e imparciales",
+        "No procede recurso alguno",
+        "Solo se garantiza el derecho de defensa en segunda instancia"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 12 establece que el disciplinable deberá ser investigado y luego juzgado por funcionario diferente, independiente, imparcial y autónomo que sea competente.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 12"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "El artículo 14 de la Ley 1952 de 2019 consagra la presunción de inocencia. Según esta norma, toda duda razonable durante la actuación disciplinaria se resolverá:",
+      "opciones": [
+        "A favor del sujeto disciplinable",
+        "En contra del sujeto disciplinable",
+        "A criterio del investigador",
+        "Mediante sorteo"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 14 señala que el sujeto disciplinable se presume inocente y que durante la actuación disciplinaria toda duda razonable se resolverá a favor del sujeto disciplinable.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 14"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Conforme al artículo 24 de la Ley 1952 de 2019, la ley disciplinaria se aplicará a sus destinatarios cuando incurran en falta disciplinaria:",
+      "opciones": [
+        "Solo dentro del territorio nacional",
+        "Solo en el lugar de trabajo",
+        "Dentro o fuera del territorio nacional",
+        "Únicamente durante la jornada laboral"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 24 dispone que la ley disciplinaria se aplicará a sus destinatarios cuando incurran en falta disciplinaria dentro o fuera del territorio nacional.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 24"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 25 del Código General Disciplinario, son destinatarios de la ley disciplinaria:",
+      "opciones": [
+        "Solo los servidores públicos en ejercicio",
+        "Los servidores públicos aunque se encuentren retirados y los particulares contemplados en la ley",
+        "Únicamente los funcionarios de elección popular",
+        "Solo los empleados de carrera administrativa"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 25 señala que son destinatarios de la ley disciplinaria los servidores públicos aunque se encuentren retirados del servicio y los particulares contemplados en la ley.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 25"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "De acuerdo con el artículo 46 de la Ley 1952 de 2019, las faltas disciplinarias se clasifican en:",
+      "opciones": [
+        "Leves, moderadas y graves",
+        "Gravísimas, graves y leves",
+        "Graves y leves únicamente",
+        "Menores, graves y gravísimas"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 46 establece que las faltas disciplinarias son gravísimas, graves y leves.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 46"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "Según el artículo 48 del Código General Disciplinario, modificado por la Ley 2094 de 2021, las sanciones disciplinarias son:",
+      "opciones": [
+        "Destitución e inhabilidad general, suspensión e inhabilidad especial, multa y amonestación",
+        "Prisión, arresto e inhabilidad",
+        "Multa, servicio comunitario y destitución",
+        "Apercibimiento, multa y destitución únicamente"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 48 enumera las sanciones disciplinarias: destitución e inhabilidad general, suspensión e inhabilidad especial, suspensión para faltas graves culposas, multa y amonestación.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 48"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "Conforme al artículo 33 de la Ley 1952 de 2019, modificado por la Ley 2094 de 2021, la acción disciplinaria prescribirá, en general, en:",
+      "opciones": [
+        "Cinco (5) años",
+        "Diez (10) años",
+        "Tres (3) años",
+        "Veinte (20) años"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 33 dispone que la acción disciplinaria prescribirá en cinco (5) años, contados según la naturaleza de la falta.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 33"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "De acuerdo con el artículo 32 del Código General Disciplinario, modificado por la Ley 2094 de 2021, ¿cuál NO es causal de extinción de la acción disciplinaria?",
+      "opciones": [
+        "La muerte del disciplinable",
+        "La caducidad",
+        "La prescripción",
+        "El desistimiento del quejoso"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 32 señala como causales de extinción la muerte, la caducidad y la prescripción; el desistimiento del quejoso no extingue la acción disciplinaria.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 32"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 17 de la Ley 1952 de 2019, la actuación disciplinaria es gratuita. ¿Qué excepción establece dicha norma?",
+      "opciones": [
+        "El pago de honorarios al defensor",
+        "El costo de las copias solicitadas por los sujetos procesales",
+        "La tarifa por presentar la denuncia",
+        "El pago de peritos de parte"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 17 dispone que ninguna actuación procesal causará erogación, salvo el costo de las copias solicitadas por los sujetos procesales.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 17"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "El artículo 27 de la Ley 1952 de 2019 establece que la falta disciplinaria puede realizarse por:",
+      "opciones": [
+        "Acción u omisión",
+        "Solo por acción",
+        "Solo por omisión",
+        "Solo dolosamente"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 27 indica que la falta disciplinaria puede ser realizada por acción u omisión en el cumplimiento de los deberes propios del cargo o función, o con ocasión de ellos, o por extralimitación de sus funciones.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Art. 27"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "Conforme al artículo 29 del Código General Disciplinario, modificado por la Ley 2094 de 2021, la culpa leve:",
+      "opciones": [
+        "Es sancionable",
+        "No es sancionable en materia disciplinaria",
+        "Se sanciona con amonestación",
+        "Se equipara a la culpa grave"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 29 establece que la culpa leve no será sancionable en materia disciplinaria, diferenciando la culpa gravísima y la culpa grave.",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)",
+      "articulo": "Art. 29"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 2 del Código General Disciplinario (Ley 1952 de 2019), modificado por la Ley 2094 de 2021, ¿quién es titular de la potestad disciplinaria?",
+      "reverso": "El Estado",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "De conformidad con el artículo 2 de la Ley 1952 de 2019, ¿cuál es una de las atribuciones reconocidas a la Procuraduría General de la Nación?",
+      "reverso": "Adelantar investigaciones disciplinarias e imponer sanciones de destitución, suspensión e inhabilidad",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 2 del Código General Disciplinario, la competencia de la Procuraduría General de la Nación es privativa para conocer procesos disciplinarios contra:",
+      "reverso": "Los servidores públicos de elección popular y los propios servidores de la Procuraduría, salvo fuero especial",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "El artículo 3 de la Ley 1952 de 2019 establece que la Procuraduría General de la Nación es titular del ejercicio preferente del poder disciplinario. ¿Qué facultad le confiere dicho poder?",
+      "reverso": "Iniciar, proseguir o remitir investigaciones o juzgamientos de competencia de otros órganos de control disciplinario interno",
+      "norma": "Ley 1952/2019"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "De acuerdo con el artículo 4 de la Ley 1952 de 2019, principio de legalidad, los destinatarios del código solo serán sancionados disciplinariamente cuando:",
+      "reverso": "La falta esté descrita en la ley vigente al momento de la realización de la conducta",
+      "norma": "Ley 1952/2019"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "Conforme al artículo 5 de la Ley 1952 de 2019, la sanción disciplinaria tiene finalidad:",
+      "reverso": "Preventiva y correctiva",
+      "norma": "Ley 1952/2019"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 6 del Código General Disciplinario, la imposición de la sanción debe responder a los principios de:",
+      "reverso": "Proporcionalidad y razonabilidad",
+      "norma": "Ley 1952/2019"
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "frente": "El artículo 9 de la Ley 1952 de 2019, modificado por la Ley 2094 de 2021, señala que la conducta del disciplinable será ilícita cuando:",
+      "reverso": "Afecte sustancialmente el deber funcional sin justificación alguna",
+      "norma": "Ley 1952/2019 (mod. Ley 2094/2021)"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "titulo": "Principios y sujetos del derecho disciplinario",
+      "contenido_html": "<h3>Principios y sujetos del derecho disciplinario</h3><ul><li>Titularidad de la potestad disciplinaria: el Estado.</li><li>Principios de legalidad, debido proceso, presunción de inocencia.</li><li>Ámbito de aplicación y destinatarios de la Ley 1952 de 2019.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "disciplinario-35",
+      "perfil_codigo": "35",
+      "titulo": "Faltas y sanciones disciplinarias",
+      "contenido_html": "<h3>Faltas y sanciones disciplinarias</h3><ul><li>Clasificación de faltas: gravísimas, graves y leves.</li><li>Sanciones: destitución e inhabilidad, suspensión, multa y amonestación.</li><li>Prescripción y extinción de la acción y la sanción.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

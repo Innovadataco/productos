@@ -1,0 +1,334 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 4 de la Constitución Política, en caso de incompatibilidad entre la Constitución y la ley u otra norma jurídica:",
+      "opciones": [
+        "Se aplicará la ley por ser específica",
+        "Prevalecerá la Constitución",
+        "Se consultará al Congreso",
+        "Decidirá el juez de primera instancia"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 4 de la Constitución Política establece que la Constitución es norma de normas y que, en caso de incompatibilidad, prevalecerá la Constitución.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 4"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "El artículo 118 de la Constitución Política señala que el Ministerio Público será ejercido por:",
+      "opciones": [
+        "Solo el Procurador General de la Nación",
+        "El Procurador General, el Defensor del Pueblo, procuradores delegados, agentes del Ministerio Público, personeros y demás funcionarios que determine la ley",
+        "La Fiscalía General de la Nación",
+        "La Contraloría General de la República"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 118 indica que el Ministerio Público será ejercido por el Procurador General de la Nación, el Defensor del Pueblo, los procuradores delegados, los agentes del Ministerio Público, los personeros municipales y los demás funcionarios que determine la ley.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 118"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 117 de la Constitución Política, el Ministerio Público y la Contraloría General de la República son:",
+      "opciones": [
+        "Órganos de control",
+        "Órganos de dirección",
+        "Ramas del poder público",
+        "Entidades descentralizadas"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 117 establece que el Ministerio Público y la Contraloría General de la República son órganos de control.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 117"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "De conformidad con el artículo 93 de la Constitución Política, los tratados y convenios internacionales ratificados por el Congreso que reconocen derechos humanos:",
+      "opciones": [
+        "Tienen jerarquía inferior a la ley ordinaria",
+        "Prevalecen en el orden interno",
+        "Solo se aplican ante la Corte Internacional",
+        "Requieren aprobación municipal"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 93 señala que los tratados y convenios internacionales ratificados por el Congreso, que reconocen derechos humanos, prevalecen en el orden interno.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 93"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "El artículo 2 de la Constitución Política establece que son fines esenciales del Estado. ¿Cuál de los siguientes corresponde a dicho artículo?",
+      "opciones": [
+        "Servir a la comunidad, promover la prosperidad general y garantizar la efectividad de los principios, derechos y deberes consagrados en la Constitución",
+        "Garantizar únicamente la seguridad nacional",
+        "Administrar la justicia penal",
+        "Regular exclusivamente la actividad económica"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 2 señala que son fines esenciales del Estado servir a la comunidad, promover la prosperidad general y garantizar la efectividad de los principios, derechos y deberes consagrados en la Constitución.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 2"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 23 de la Constitución Política, toda persona tiene derecho a presentar peticiones respetuosas a las autoridades por motivos de:",
+      "opciones": [
+        "Interés general o particular",
+        "Solo interés general",
+        "Solo interés particular",
+        "Interés colectivo exclusivamente"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 23 establece que toda persona tiene derecho a presentar peticiones respetuosas a las autoridades por motivos de interés general o particular.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 23"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "El artículo 29 de la Constitución Política dispone que el debido proceso se aplicará a:",
+      "opciones": [
+        "Toda clase de actuaciones judiciales y administrativas",
+        "Solo a procesos penales",
+        "Solo a procesos contencioso-administrativos",
+        "Solo a procesos disciplinarios"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 29 señala que el debido proceso se aplicará a toda clase de actuaciones judiciales y administrativas.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 29"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 13 de la Constitución Política, todas las personas nacen:",
+      "opciones": [
+        "Libres e iguales ante la ley",
+        "Sujetas a la autoridad estatal",
+        "Con derechos diferenciados según su origen",
+        "Con obligaciones previas a sus derechos"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 13 establece que todas las personas nacen libres e iguales ante la ley, recibirán la misma protección y trato de las autoridades y gozarán de los mismos derechos, libertades y oportunidades.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 13"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Conforme al artículo 1 de la Constitución Política, Colombia es un Estado social de derecho, organizado en forma de:",
+      "opciones": [
+        "República unitaria, descentralizada",
+        "Monarquía constitucional",
+        "Confederación de estados",
+        "República centralizada"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 1 señala que Colombia es un Estado social de derecho, organizado en forma de República unitaria, descentralizada.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 1"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "El artículo 5 de la Constitución Política reconoce, sin discriminación alguna, la primacía de:",
+      "opciones": [
+        "Los derechos inalienables de la persona",
+        "Los intereses del Estado",
+        "La propiedad privada",
+        "La seguridad pública"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 5 establece que el Estado reconoce, sin discriminación alguna, la primacía de los derechos inalienables de la persona y ampara a la familia como núcleo fundamental de la sociedad.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 5"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "Según el artículo 277 de la Constitución Política, el Procurador General de la Nación, por sí o por medio de sus delegados y agentes, ejerce, entre otras, la función de:",
+      "opciones": [
+        "Ejercer preferentemente el poder disciplinario, adelantar investigaciones e imponer sanciones conforme a la ley",
+        "Designar al Defensor del Pueblo",
+        "Administrar el presupuesto del Ministerio Público",
+        "Conocer en última instancia de los procesos penales"
+      ],
+      "respuesta": 0,
+      "explicacion": "El numeral 6 del artículo 277 dispone que el Procurador ejercerá vigilancia superior de la conducta oficial, ejercerá preferentemente el poder disciplinario, adelantará las investigaciones correspondientes e impondrá las respectivas sanciones conforme a la ley.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 277"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "El artículo 278 de la Constitución Política autoriza al Procurador General de la Nación a desvincular del cargo, previa audiencia y decisión motivada, al funcionario público que:",
+      "opciones": [
+        "Infrinja de manera manifiesta la Constitución o la ley",
+        "Tenga una queja anónima",
+        "Sea reprobado en evaluación de desempeño",
+        "Solicite traslado a otra dependencia"
+      ],
+      "respuesta": 0,
+      "explicacion": "El numeral 1 del artículo 278 faculta al Procurador para desvincular del cargo al funcionario público que infrinja de manera manifiesta la Constitución o la ley, derive indebido provecho patrimonial, obstaculice gravemente investigaciones u obra con manifiesta negligencia.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 278"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "media",
+      "enunciado": "Según el artículo 123 de la Constitución Política, son servidores públicos:",
+      "opciones": [
+        "Los miembros de las corporaciones públicas, los empleados y trabajadores del Estado y de sus entidades",
+        "Solo los funcionarios de elección popular",
+        "Solo los empleados de carrera administrativa",
+        "Solo los contratistas del Estado"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 123 señala que son servidores públicos los miembros de las corporaciones públicas, los empleados y trabajadores del Estado y de sus entidades.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 123"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "De acuerdo con el artículo 125 de la Constitución Política, los empleos en los órganos y entidades del Estado son de:",
+      "opciones": [
+        "Libre nombramiento y remoción",
+        "Carrera, salvo excepciones constitucionales",
+        "Elección popular",
+        "Herencia"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 125 establece que los empleos en los órganos y entidades del Estado son de carrera, salvo las excepciones contempladas en la Constitución.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 125"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "El artículo 3 de la Constitución Política establece que la soberanía reside exclusivamente en:",
+      "opciones": [
+        "El pueblo",
+        "El Congreso de la República",
+        "El Presidente de la República",
+        "La Corte Constitucional"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 3 señala que la soberanía reside exclusivamente en el pueblo, del cual emana el poder público.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 3"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "dificultad": "facil",
+      "enunciado": "Según el artículo 29 de la Constitución Política, el debido proceso comprende, entre otros, el derecho a:",
+      "opciones": [
+        "Ser juzgado con observancia de las garantías legales",
+        "Elegir al juez",
+        "Omitir la defensa",
+        "Ser sancionado sin pruebas"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 29 garantiza el debido proceso en toda clase de actuaciones judiciales y administrativas, lo cual implica ser juzgado con observancia de las garantías legales.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 29"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 4 de la Constitución Política, en caso de incompatibilidad entre la Constitución y la ley u otra norma jurídica:",
+      "reverso": "Prevalecerá la Constitución",
+      "norma": "Constitución Política"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "El artículo 118 de la Constitución Política señala que el Ministerio Público será ejercido por:",
+      "reverso": "El Procurador General, el Defensor del Pueblo, procuradores delegados, agentes del Ministerio Público, personeros y demás funcionarios que determine la ley",
+      "norma": "Constitución Política"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 117 de la Constitución Política, el Ministerio Público y la Contraloría General de la República son:",
+      "reverso": "Órganos de control",
+      "norma": "Constitución Política"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "De conformidad con el artículo 93 de la Constitución Política, los tratados y convenios internacionales ratificados por el Congreso que reconocen derechos humanos:",
+      "reverso": "Prevalecen en el orden interno",
+      "norma": "Constitución Política"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "El artículo 2 de la Constitución Política establece que son fines esenciales del Estado. ¿Cuál de los siguientes corresponde a dicho artículo?",
+      "reverso": "Servir a la comunidad, promover la prosperidad general y garantizar la efectividad de los principios, derechos y deberes consagrados en la Constitución",
+      "norma": "Constitución Política"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 23 de la Constitución Política, toda persona tiene derecho a presentar peticiones respetuosas a las autoridades por motivos de:",
+      "reverso": "Interés general o particular",
+      "norma": "Constitución Política"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "El artículo 29 de la Constitución Política dispone que el debido proceso se aplicará a:",
+      "reverso": "Toda clase de actuaciones judiciales y administrativas",
+      "norma": "Constitución Política"
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 13 de la Constitución Política, todas las personas nacen:",
+      "reverso": "Libres e iguales ante la ley",
+      "norma": "Constitución Política"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "titulo": "Fuentes e interpretación del derecho",
+      "contenido_html": "<h3>Fuentes e interpretación del derecho</h3><ul><li>Constitución como norma suprema.</li><li>Tratados internacionales de derechos humanos y bloque de constitucionalidad.</li><li>Interpretación conforme y prevalencia de la Carta.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "disciplinar-derecho-35",
+      "perfil_codigo": "35",
+      "titulo": "Derechos fundamentales y Ministerio Público",
+      "contenido_html": "<h3>Derechos fundamentales y Ministerio Público</h3><ul><li>Derechos fundamentales y debido proceso.</li><li>Estructura y funciones del Ministerio Público.</li><li>Rol de la Procuraduría General de la Nación.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

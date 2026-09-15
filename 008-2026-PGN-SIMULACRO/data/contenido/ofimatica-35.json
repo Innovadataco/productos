@@ -1,0 +1,398 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué aplicación del paquete Microsoft Office se utiliza principalmente para crear hojas de cálculo? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Microsoft Excel",
+        "Microsoft Access",
+        "Microsoft Word",
+        "Microsoft PowerPoint"
+      ],
+      "respuesta": 0,
+      "explicacion": "Microsoft Excel es la herramienta ofimática diseñada para crear, editar y analizar hojas de cálculo, con funciones matemáticas, gráficos y tablas dinámicas.",
+      "norma": "Ley 1341/2009",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál de las siguientes es una herramienta de procesamiento de textos? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Microsoft PowerPoint",
+        "Microsoft Excel",
+        "Microsoft Word",
+        "Microsoft Outlook"
+      ],
+      "respuesta": 2,
+      "explicacion": "Microsoft Word es el procesador de textos del paquete Office, destinado a redactar, editar y dar formato a documentos escritos.",
+      "norma": "Ley 1341/2009",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "En Excel, ¿qué símbolo se utiliza para iniciar una fórmula? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "=",
+        "+",
+        "@",
+        "#"
+      ],
+      "respuesta": 0,
+      "explicacion": "En Excel toda fórmula comienza con el signo igual (=), lo que indica al programa que el contenido de la celda debe interpretarse como una operación.",
+      "norma": "Decreto 806/2020",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál herramienta de Microsoft 365 permite editar documentos de forma colaborativa en línea? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Word Online",
+        "WordPad",
+        "Bloc de notas",
+        "Paint"
+      ],
+      "respuesta": 0,
+      "explicacion": "Word Online es la versión web de Microsoft Word que permite a varios usuarios editar el mismo documento simultáneamente desde internet.",
+      "norma": "Ley 527/1999",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué extensión tiene por defecto un documento de Word moderno? (perfil 35 / 1AS-19)",
+      "opciones": [
+        ".docx",
+        ".pdf",
+        ".doc",
+        ".txt"
+      ],
+      "respuesta": 0,
+      "explicacion": "La extensión .docx es el formato predeterminado de Microsoft Word desde su versión 2007, basado en estándares abiertos de formato Office XML.",
+      "norma": "Ley 527/1999",
+      "articulo": "Art. 5",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué herramienta se utiliza habitualmente para crear presentaciones con diapositivas? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Microsoft Access",
+        "Microsoft Word",
+        "Microsoft PowerPoint",
+        "Microsoft Excel"
+      ],
+      "respuesta": 2,
+      "explicacion": "Microsoft PowerPoint es la aplicación de presentaciones que permite diseñar diapositivas con texto, imágenes, animaciones y gráficos.",
+      "norma": "Ley 1341/2009",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 1581 de 2012, cuando una hoja de Excel contiene datos personales, el responsable debe garantizar: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La venta de datos a terceros autorizados",
+        "El principio de seguridad y confidencialidad",
+        "La eliminación inmediata de toda la información",
+        "La publicidad total de los datos sin autorización"
+      ],
+      "respuesta": 1,
+      "explicacion": "La Ley 1581 de 2012 establece en su Artículo 9 que el tratamiento de datos personales debe garantizar principios como seguridad, confidencialidad y finalidad.",
+      "norma": "Ley 1581/2012",
+      "articulo": "Art. 9",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 527 de 1999, un documento electrónico generado en Word o PDF: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Requiere obligatoriamente un sello físico",
+        "Tiene validez legal si cumple con los requisitos de la ley",
+        "Solo es válido si se imprime y firma en papel",
+        "No tiene validez legal frente a terceros"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Artículo 5 de la Ley 527 de 1999 reconoce la validez legal de los mensajes de datos, incluidos los documentos electrónicos, cuando cumplen los requisitos allí establecidos.",
+      "norma": "Ley 527/1999",
+      "articulo": "Art. 5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "En Excel, para garantizar la integridad de los datos según el Decreto 806 de 2020, es recomendable: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Ocultar fórmulas sin respaldo de seguridad",
+        "Eliminar el historial de cambios",
+        "Permitir ediciones libres sin control",
+        "Validar entradas y proteger hojas con contraseña"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Decreto 806 de 2020, en su Artículo 4, define objetivos de seguridad digital que incluyen la protección de la integridad de la información mediante controles de acceso y validación.",
+      "norma": "Decreto 806/2020",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué norma regula el tratamiento de datos personales que pueden contenerse en archivos ofimáticos? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Ley 962 de 2005",
+        "Decreto 1083 de 2015",
+        "Ley 80 de 1993",
+        "Ley 1581 de 2012"
+      ],
+      "respuesta": 3,
+      "explicacion": "La Ley 1581 de 2012 es la norma general de protección de datos personales en Colombia y regula el tratamiento de datos en cualquier formato, incluidos los archivos ofimáticos.",
+      "norma": "Ley 1581/2012",
+      "articulo": "Art. 1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto 1377 de 2013, antes de tratar datos personales en una base de datos Excel, el responsable debe obtener: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "El consentimiento verbal sin documentación",
+        "La autorización previa, expresa e informada del titular",
+        "El pago por el uso de la información",
+        "La aprobación de un juez de la República"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Artículo 2 del Decreto 1377 de 2013 establece que el tratamiento de datos personales requiere la autorización previa, expresa e informada del titular, salvo excepciones legales.",
+      "norma": "Decreto 1377/2013",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto 806 de 2020, al compartir archivos Excel con información institucional se debe preferir: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Copias en dispositivos USB sin inventario",
+        "Formatos estables con control de versiones y acceso restringido",
+        "Hojas impresas sin numerar ni controlar",
+        "Archivos adjuntos sin cifrar en correos personales"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Decreto 806 de 2020 promueve la seguridad digital en las entidades públicas, lo que implica usar formatos estables, controlar versiones y restringir el acceso a la información institucional.",
+      "norma": "Decreto 806/2020",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "En PowerPoint, la vista que permite organizar y reordenar diapositivas de forma global es: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Vista de lectura",
+        "Vista de presentación con diapositivas",
+        "Vista de clasificador de diapositivas",
+        "Vista normal"
+      ],
+      "respuesta": 2,
+      "explicacion": "La vista de clasificador de diapositivas muestra miniaturas de todas las diapositivas y facilita su reordenamiento, duplicación o eliminación.",
+      "norma": "Ley 1341/2009",
+      "articulo": "Art. 2",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 1712 de 2014, los documentos ofimáticos de una entidad pública que contienen información sobre el ejercicio de sus funciones: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Son información pública sujeta a publicación activa y acceso",
+        "Son de uso exclusivo interno sin posibilidad de consulta",
+        "No pueden compartirse con ciudadanos",
+        "Se destruyen al finalizar cada vigencia fiscal"
+      ],
+      "respuesta": 0,
+      "explicacion": "El Artículo 7 de la Ley 1712 de 2014 consagra el derecho de acceso a la información pública y obliga a las entidades a publicar activamente información sobre sus funciones.",
+      "norma": "Ley 1712/2014",
+      "articulo": "Art. 7",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál de las siguientes es una medida de seguridad recomendada para documentos ofimáticos según el Decreto 806 de 2020? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Compartir contraseñas entre funcionarios",
+        "Desactivar las copias de seguridad automáticas",
+        "Control de acceso basado en roles",
+        "Guardar información solo en equipos personales"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 806 de 2020 establece medidas de ciberseguridad, entre ellas el control de acceso basado en roles para limitar quién puede consultar o modificar información institucional.",
+      "norma": "Decreto 806/2020",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 527 de 1999, para que una firma electrónica tenga efectos jurídicos equivalentes a la firma autógrafa en documentos ofimáticos: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Debe imprimirse en papel bond de 75 gramos",
+        "Debe ser siempre una firma electrónica certificada",
+        "Debe incluir obligatoriamente una foto del firmante",
+        "Debe ser susceptible de identificar al firmante y mantener la integridad del documento"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Artículo 25 de la Ley 527 de 1999 establece que la firma electrónica tendrá los mismos efectos de la firma autógrafa cuando sea susceptible de identificar al firmante y detectar alteraciones.",
+      "norma": "Ley 527/1999",
+      "articulo": "Art. 25",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "En el manejo de bases de datos en Excel con datos personales, según el Decreto 1377 de 2013, el principio de finalidad implica que: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Los datos pueden usarse para cualquier propósito institucional",
+        "Los datos solo se usarán para los fines informados al titular",
+        "No es necesario informar el uso que se dará a los datos",
+        "El titular no tiene derecho a conocer la finalidad del tratamiento"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Artículo 3 del Decreto 1377 de 2013 señala que el tratamiento de datos personales debe ajustarse a la finalidad informada al titular y no extenderse a fines incompatibles.",
+      "norma": "Decreto 1377/2013",
+      "articulo": "Art. 3",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto 806 de 2020, la Política Nacional de Seguridad Digital aplica a: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Únicamente entidades privadas de tecnología",
+        "Solo proveedores de servicios de internet",
+        "Únicamente la Policía Nacional y el Ejército",
+        "Todos los organismos y entidades de la Rama Ejecutiva del orden nacional"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Artículo 3 del Decreto 806 de 2020 dispone que la Política Nacional de Seguridad Digital orienta a todos los organismos y entidades de la Rama Ejecutiva del orden nacional.",
+      "norma": "Decreto 806/2020",
+      "articulo": "Art. 3",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "En el contexto de herramientas colaborativas, ¿qué principio de la Ley 1581 de 2012 se vulnera al compartir una hoja de Excel con datos personales sin control de acceso? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Principio de libertad de mercado",
+        "Principio de concurrencia comercial",
+        "Principio de disponibilidad ilimitada",
+        "Principio de seguridad"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Artículo 9 de la Ley 1581 de 2012 consagra el principio de seguridad, que exige a los responsables del tratamiento de datos adoptar medidas para protegerlos contra acceso no autorizado.",
+      "norma": "Ley 1581/2012",
+      "articulo": "Art. 9",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 962 de 2005, la simplificación de trámites en entidades públicas favorece el uso de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Solo documentos físicos en original",
+        "Trámites presenciales obligatorios para todos",
+        "Medios electrónicos y tecnologías de la información",
+        "Correspondencia en papel certificada"
+      ],
+      "respuesta": 2,
+      "explicacion": "La Ley 962 de 2005, en su Artículo 8, impulsa la simplificación de trámites y el uso de medios electrónicos para agilizar los procedimientos ante el Estado.",
+      "norma": "Ley 962/2005",
+      "articulo": "Art. 8",
+      "dificultad": "medio"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué aplicación del paquete Microsoft Office se utiliza principalmente para crear hojas de cálculo? (perfil 35 / 1AS-19)",
+      "reverso": "Microsoft Excel",
+      "norma": "Ley 1341/2009"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál de las siguientes es una herramienta de procesamiento de textos? (perfil 35 / 1AS-19)",
+      "reverso": "Microsoft Word",
+      "norma": "Ley 1341/2009"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "En Excel, ¿qué símbolo se utiliza para iniciar una fórmula? (perfil 35 / 1AS-19)",
+      "reverso": "=",
+      "norma": "Decreto 806/2020"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál herramienta de Microsoft 365 permite editar documentos de forma colaborativa en línea? (perfil 35 / 1AS-19)",
+      "reverso": "Word Online",
+      "norma": "Ley 527/1999"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué extensión tiene por defecto un documento de Word moderno? (perfil 35 / 1AS-19)",
+      "reverso": ".docx",
+      "norma": "Ley 527/1999"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué herramienta se utiliza habitualmente para crear presentaciones con diapositivas? (perfil 35 / 1AS-19)",
+      "reverso": "Microsoft PowerPoint",
+      "norma": "Ley 1341/2009"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "Según la Ley 1581 de 2012, cuando una hoja de Excel contiene datos personales, el responsable debe garantizar: (perfil 35 / 1AS-19)",
+      "reverso": "El principio de seguridad y confidencialidad",
+      "norma": "Ley 1581/2012"
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "frente": "Según la Ley 527 de 1999, un documento electrónico generado en Word o PDF: (perfil 35 / 1AS-19)",
+      "reverso": "Tiene validez legal si cumple con los requisitos de la ley",
+      "norma": "Ley 527/1999"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "titulo": "Herramientas ofimáticas básicas",
+      "contenido_html": "<h3>Herramientas ofimáticas básicas</h3><ul><li>Procesadores de texto y hojas de cálculo.</li><li>Presentaciones y correo electrónico.</li><li>Gestión de archivos y carpetas.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "ofimatica-35",
+      "perfil_codigo": "35",
+      "titulo": "Productividad y colaboración",
+      "contenido_html": "<h3>Productividad y colaboración</h3><ul><li>Uso eficiente de fórmulas y funciones.</li><li>Formato y presentación de documentos.</li><li>Colaboración en línea y seguridad básica.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

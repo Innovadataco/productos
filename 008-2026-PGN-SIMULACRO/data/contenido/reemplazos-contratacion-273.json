@@ -1,0 +1,20 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "contratacion-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Qué tipo de contrato se utiliza para contratar servicios profesionales especializados de carácter intelectual?",
+      "opciones": [
+        "Contrato de obra",
+        "Contrato de consultoría",
+        "Contrato de compraventa",
+        "Contrato de arrendamiento"
+      ],
+      "respuesta": 1,
+      "explicacion": "El contrato de consultoría es la figura contractual destinada a contratar servicios profesionales especializados de carácter intelectual, conforme al artículo 131° de la Ley 80 de 1993.",
+      "norma": "Ley 80/1993",
+      "articulo": "Art. 131",
+      "dificultad": "medio"
+    }
+  ]
+}

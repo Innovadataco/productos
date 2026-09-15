@@ -1,0 +1,398 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué decreto adoptó la versión actualizada del Modelo Integrado de Planeación y Gestión (MIPG) en Colombia? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Decreto 943 de 2014",
+        "Ley 1753 de 2015",
+        "Decreto 1499 de 2017",
+        "Decreto 1083 de 2015"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto 1499 de 2017 modificó el Decreto 1083 de 2015 y adoptó la versión actualizada del MIPG, integrando los sistemas de Desarrollo Administrativo y de Gestión de la Calidad, y articulándolo con el Control Interno.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto 1499 de 2017, ¿cuál es el objeto del Sistema de Gestión? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Fiscalizar el uso de los recursos públicos a través de auditorías permanentes",
+        "Emitir normas jurídicas de carácter general para el sector público",
+        "Dirigir la gestión pública al mejor desempeño institucional y a la consecución de resultados para la satisfacción de las necesidades ciudadanas",
+        "Contratar y administrar el talento humano de todas las entidades estatales"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 2.2.22.1.1 del Decreto 1499 de 2017 define el Sistema de Gestión como el conjunto de entidades, políticas, normas, recursos e información orientado al mejor desempeño institucional y a resultados para los ciudadanos.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.1.1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuántas dimensiones tiene el Modelo Integrado de Planeación y Gestión (MIPG) según su marco normativo? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Cinco",
+        "Siete",
+        "Diecinueve",
+        "Tres"
+      ],
+      "respuesta": 1,
+      "explicacion": "El MIPG opera a través de siete dimensiones interconectadas: talento humano, direccionamiento estratégico y planeación, gestión con valores para resultados, evaluación de resultados, información y comunicación, gestión del conocimiento e innovación, y control interno.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.1 y Manual Operativo MIPG",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué artículo del Decreto 1499 de 2017 establece que el Control Interno es transversal a la gestión y se implementa a través del Modelo Estándar de Control Interno (MECI)? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Artículo 2.2.22.3.2",
+        "Artículo 2.2.22.1.1",
+        "Artículo 2.2.23.2",
+        "Artículo 2.2.23.1"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 2.2.23.1 del Decreto 1499 de 2017 señala que el Sistema de Control Interno se articula al Sistema de Gestión en el marco del MIPG, y que el Control Interno es transversal e implementado mediante el MECI.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.23.1",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué significa la sigla MECI en el contexto de los sistemas de gestión pública colombiana? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Modelo Estratégico de Control Institucional",
+        "Manual Estándar de Control Integral",
+        "Modelo Estándar de Control Interno",
+        "Método de Evaluación de Control Interno"
+      ],
+      "respuesta": 2,
+      "explicacion": "MECI corresponde al Modelo Estándar de Control Interno, mediante el cual el Estado estructura y estandariza el ejercicio del control interno en las entidades públicas, según lo dispuesto en el Decreto 1499 de 2017.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.23.1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 87 de 1993, ¿quién tiene la responsabilidad del establecimiento y desarrollo del Sistema de Control Interno en una entidad pública? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "El representante legal o máximo directivo correspondiente",
+        "El auditor interno exclusivamente",
+        "El jefe de la oficina de planeación",
+        "La Contraloría General de la República"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 6 de la Ley 87 de 1993 establece que el establecimiento y desarrollo del Sistema de Control Interno es responsabilidad del representante legal o máximo directivo, sin perjuicio de las responsabilidades de los jefes de dependencia.",
+      "norma": "Ley 87 de 1993",
+      "articulo": "Art. 6",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué es el FURAG según el Decreto 1499 de 2017? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Formulario de Unificación de Reportes de Auditoría de Gestión",
+        "Formulario Único de Reporte y Avance de Gestión",
+        "Fondo Único de Registro de Avances Gubernamentales",
+        "Formato Único de Rendición de Cuentas y Autoevaluación de la Gestión"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Decreto 1499 de 2017 define el FURAG como el Formulario Único de Reporte y Avance de Gestión, instrumento a través del cual se recolecta información para medir la gestión y desempeño institucional.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.10",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Quién dirige el Sistema de Gestión según lo establecido en el Decreto 1499 de 2017? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "El Congreso de la República",
+        "El Presidente de la República",
+        "El Ministro de Hacienda y Crédito Público",
+        "El Departamento Administrativo de la Función Pública"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2.2.22.1.2 del Decreto 1499 de 2017 dispone que el Presidente de la República dirigirá el Sistema de Gestión, con el apoyo del Consejo para la Gestión y el Desempeño Institucional.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.1.2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál de las siguientes es la séptima dimensión del Modelo Integrado de Planeación y Gestión (MIPG)? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Talento Humano",
+        "Evaluación de resultados",
+        "Gestión del conocimiento y la innovación",
+        "Control Interno"
+      ],
+      "respuesta": 3,
+      "explicacion": "El MIPG contempla siete dimensiones; la séptima corresponde al Control Interno, articulada con el MECI, lo que permite que el control sea transversal a toda la gestión institucional.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.1 y Manual Operativo MIPG",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 87 de 1993, ¿cuál de los siguientes NO constituye un objetivo fundamental del Sistema de Control Interno? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Asegurar la oportunidad y confiabilidad de la información y registros",
+        "Proteger los recursos de la organización ante posibles riesgos",
+        "Garantizar la eficacia, eficiencia y economía en las operaciones",
+        "Aprobar contratos de alto valor sin revisión previa"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 2 de la Ley 87 de 1993 enumera objetivos como proteger recursos, garantizar eficacia y asegurar información confiable, pero no autoriza la aprobación de contratos sin revisión, acción contraria a los principios de control.",
+      "norma": "Ley 87 de 1993",
+      "articulo": "Art. 2",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto 1499 de 2017, ¿cuál de las siguientes políticas forma parte de las Políticas de Gestión y Desempeño Institucional? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Contratación internacional exclusiva",
+        "Fijación de impuestos territoriales",
+        "Nombramiento de jueces administrativos",
+        "Gestión documental"
+      ],
+      "respuesta": 3,
+      "explicacion": "El numeral 10 del artículo 2.2.22.2.1 del Decreto 1499 de 2017 incluye expresamente la gestión documental dentro de las políticas de Gestión y Desempeño Institucional, junto con otras como planeación, talento humano y gobierno digital.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.2.1",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es el propósito principal del FURAG en el marco del MIPG? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Designar a los jefes de control interno de cada entidad",
+        "Contratar servidores públicos de carrera administrativa",
+        "Aprobar la distribución del presupuesto nacional",
+        "Medir la gestión y el desempeño institucional de las entidades públicas"
+      ],
+      "respuesta": 3,
+      "explicacion": "Conforme al artículo 2.2.22.3.10 del Decreto 1499 de 2017, el FURAG permite recolectar información para medir la gestión y desempeño institucional, generando el Índice de Desempeño Institucional y otras herramientas de seguimiento.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.10",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Quién preside el Consejo para la Gestión y el Desempeño Institucional según el Decreto 1499 de 2017? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "El Director del Departamento Nacional de Planeación",
+        "El Departamento Administrativo de la Función Pública",
+        "El Ministro de Hacienda y Crédito Público",
+        "El Presidente de la República"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2.2.22.1.3 del Decreto 1499 de 2017 señala que el Consejo para la Gestión y el Desempeño Institucional será presidido por la Función Pública y conformado por entidades con funciones transversales de gestión.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.1.3",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto 1499 de 2017, ¿qué entidad puede hacer seguimiento a la implementación y operación del Modelo Integrado de Planeación y Gestión? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La Procuraduría General de la Nación",
+        "El Ministerio de Hacienda y Crédito Público",
+        "La Contraloría General de la República",
+        "El Departamento Administrativo de la Función Pública"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 2.2.23.4 del Decreto 1499 de 2017 establece que la Procuraduría General de la Nación podrá realizar seguimiento a la implementación y operación del MIPG en entidades de orden nacional y territorial.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.23.4",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 87 de 1993, el Control Interno se expresará a través de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Las resoluciones de la Contraloría General de la República",
+        "Los acuerdos municipales de cada período",
+        "Las políticas aprobadas por los niveles de dirección y administración de las entidades",
+        "Los decretos del Presidente de la República únicamente"
+      ],
+      "respuesta": 2,
+      "explicacion": "El parágrafo del artículo 1 de la Ley 87 de 1993 indica que el control interno se expresará a través de políticas aprobadas por los niveles de dirección y administración, y se cumplirá en toda la escala de la estructura administrativa.",
+      "norma": "Ley 87 de 1993",
+      "articulo": "Art. 1, Parágrafo",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué significa la sigla MIPG? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Método de Investigación de Procesos de Gobierno",
+        "Modelo Integrado de Planeación y Gestión",
+        "Manual Integrado de Procesos Gubernamentales",
+        "Modelo de Información para la Gestión Pública"
+      ],
+      "respuesta": 1,
+      "explicacion": "MIPG significa Modelo Integrado de Planeación y Gestión, definido en el artículo 2.2.22.3.2 del Decreto 1499 de 2017 como marco de referencia para dirigir, planear, ejecutar, hacer seguimiento, evaluar y controlar la gestión pública.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es la función principal del Comité Institucional de Gestión y Desempeño según el Decreto 1499 de 2017? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Orientar la implementación y operación del MIPG en cada entidad",
+        "Designar contratistas para proyectos estatales",
+        "Aprobar el presupuesto nacional de cada vigencia",
+        "Realizar auditorías externas de las entidades públicas"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 2.2.22.3.8 del Decreto 1499 de 2017 crea el Comité Institucional de Gestión y Desempeño, encargado de orientar la implementación y operación del MIPG y de articular esfuerzos institucionales para su sostenibilidad.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.8",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto 1499 de 2017, la actualización del Modelo Estándar de Control Interno (MECI) se efectuará a través de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La Contraloría General de la República",
+        "Una ley ordinaria expedida por el Congreso",
+        "El Consejo de Ministros de manera exclusiva",
+        "El Manual Operativo del Modelo Integrado de Planeación y Gestión (MIPG)"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 2.2.23.2 del Decreto 1499 de 2017 dispone que la actualización del MECI se realizará a través del Manual Operativo del MIPG, de obligatorio cumplimiento para las entidades del artículo 5 de la Ley 87 de 1993.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.23.2",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 87 de 1993, ¿qué valor probatorio tienen los informes de los funcionarios del control interno? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "No tienen valor legal alguno",
+        "Solo valor administrativo interno para la entidad",
+        "Valor probatorio en procesos disciplinarios, administrativos, judiciales y fiscales cuando las autoridades lo soliciten",
+        "Valor meramente informativo sin trascendencia judicial"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 14 de la Ley 87 de 1993 señala que los informes de los funcionarios del control interno tendrán valor probatorio en procesos disciplinarios, administrativos, judiciales y fiscales, cuando las autoridades pertinentes así lo soliciten.",
+      "norma": "Ley 87 de 1993",
+      "articulo": "Art. 14",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es el instrumento de medición anual del Modelo Integrado de Planeación y Gestión (MIPG)? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "FURAG",
+        "MECI",
+        "COSO",
+        "IDI"
+      ],
+      "respuesta": 0,
+      "explicacion": "El FURAG es el Formulario Único de Reporte y Avance de Gestión, instrumento mediante el cual se recolecta anualmente la información para medir el avance en la implementación del MIPG y el desempeño institucional.",
+      "norma": "Decreto 1499 de 2017",
+      "articulo": "Art. 2.2.22.3.10",
+      "dificultad": "facil"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué decreto adoptó la versión actualizada del Modelo Integrado de Planeación y Gestión (MIPG) en Colombia? (perfil 35 / 1AS-19)",
+      "reverso": "Decreto 1499 de 2017",
+      "norma": "Decreto 1499 de 2017"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "Según el Decreto 1499 de 2017, ¿cuál es el objeto del Sistema de Gestión? (perfil 35 / 1AS-19)",
+      "reverso": "Dirigir la gestión pública al mejor desempeño institucional y a la consecución de resultados para la satisfacción de las necesidades ciudadanas",
+      "norma": "Decreto 1499 de 2017"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuántas dimensiones tiene el Modelo Integrado de Planeación y Gestión (MIPG) según su marco normativo? (perfil 35 / 1AS-19)",
+      "reverso": "Siete",
+      "norma": "Decreto 1499 de 2017"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué artículo del Decreto 1499 de 2017 establece que el Control Interno es transversal a la gestión y se implementa a través del Modelo Estándar de Control Interno (MECI)? (perfil 35 / 1AS-19)",
+      "reverso": "Artículo 2.2.23.1",
+      "norma": "Decreto 1499 de 2017"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué significa la sigla MECI en el contexto de los sistemas de gestión pública colombiana? (perfil 35 / 1AS-19)",
+      "reverso": "Modelo Estándar de Control Interno",
+      "norma": "Decreto 1499 de 2017"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "Según la Ley 87 de 1993, ¿quién tiene la responsabilidad del establecimiento y desarrollo del Sistema de Control Interno en una entidad pública? (perfil 35 / 1AS-19)",
+      "reverso": "El representante legal o máximo directivo correspondiente",
+      "norma": "Ley 87 de 1993"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué es el FURAG según el Decreto 1499 de 2017? (perfil 35 / 1AS-19)",
+      "reverso": "Formulario Único de Reporte y Avance de Gestión",
+      "norma": "Decreto 1499 de 2017"
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Quién dirige el Sistema de Gestión según lo establecido en el Decreto 1499 de 2017? (perfil 35 / 1AS-19)",
+      "reverso": "El Presidente de la República",
+      "norma": "Decreto 1499 de 2017"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "titulo": "Modelo Integrado de Planeación y Gestión",
+      "contenido_html": "<h3>Modelo Integrado de Planeación y Gestión</h3><ul><li>Articulación de planificación, presupuesto y seguimiento.</li><li>Indicadores de gestión y evaluación de resultados.</li><li>Ciclo de la política pública.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "sistemas-gestion-35",
+      "perfil_codigo": "35",
+      "titulo": "MECI, FURAG y gestión de calidad",
+      "contenido_html": "<h3>MECI, FURAG y gestión de calidad</h3><ul><li>Modelo Estándar de Control Interno (MECI).</li><li>FURAG y manual de funciones.</li><li>Gestión de calidad y riesgo en el Estado.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

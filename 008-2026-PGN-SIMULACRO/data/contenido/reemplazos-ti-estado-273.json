@@ -1,0 +1,36 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "En el ciclo de vida de un proyecto de software institucional, ¿qué fase corresponde a la construcción de la solución a partir de los requerimientos y diseños aprobados?",
+      "opciones": [
+        "Mantenimiento correctivo",
+        "Diseño de arquitectura",
+        "Implementación y pruebas",
+        "Retiro del servicio"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Manual de Funciones de la PGN señala como conocimiento esencial para el Asesor en tecnología el manejo de metodologías de diseño y desarrollo de software. Estas metodologías contemplan fases como análisis de requerimientos, diseño, implementación, pruebas y mantenimiento.",
+      "norma": "Manual Específico de Funciones PGN v.10",
+      "articulo": "",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "ti-estado-273",
+      "perfil_codigo": "273",
+      "enunciado": "¿Cuál de los siguientes modelos de infraestructura tecnológica utiliza recursos de cómputo propiedad y gestión de un proveedor externo, disponibles a través de internet?",
+      "opciones": [
+        "Infraestructura on-premise exclusiva",
+        "Computación edge local",
+        "Cloud privado administrado internamente",
+        "Cloud público"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Manual de Funciones de la PGN incluye entre los conocimientos esenciales del Asesor en TIC los modelos de infraestructura tecnológica on-premise, cloud e híbrido. El cloud público se caracteriza porque los recursos son gestionados por un proveedor externo y se acceden mediante internet.",
+      "norma": "Manual Específico de Funciones PGN v.10",
+      "articulo": "",
+      "dificultad": "medio"
+    }
+  ]
+}

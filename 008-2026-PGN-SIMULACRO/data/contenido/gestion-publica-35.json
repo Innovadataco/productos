@@ -1,0 +1,398 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 1 de la Constitución Política, Colombia es: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Estado social de derecho, República unitaria, descentralizada, democrática, participativa y pluralista",
+        "Estado federal centralizado de derecho penal",
+        "Confederación de repúblicas autónomas",
+        "República monárquica parlamentaria"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 1 define a Colombia como un Estado social de derecho organizado en forma de República unitaria, descentralizada, con autonomía de sus entidades territoriales, democrática, participativa y pluralista.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál NO es uno de los fines esenciales del Estado consagrados en el artículo 2 de la Constitución? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Asegurar la convivencia pacífica y la vigencia de un orden justo",
+        "Imponer una religión oficial como instrumento de gobierno",
+        "Promover la prosperidad general",
+        "Servir a la comunidad"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2 enumera fines como servir a la comunidad, promover la prosperidad general, garantizar los derechos, facilitar la participación, defender la independencia, mantener la integridad territorial y asegurar la convivencia pacífica; no contempla una religión oficial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 2",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "De acuerdo con el artículo 3 de la Constitución, ¿dónde reside la soberanía? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "En la Corte Constitucional como guardián de la Carta",
+        "Exclusivamente en el Congreso de la República",
+        "En el pueblo, del cual emana el poder público",
+        "En el Presidente de la República como jefe del Estado"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 3 establece que la soberanía reside exclusivamente en el pueblo, del cual emana el poder público, el cual la ejerce directamente o por medio de sus representantes.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 3",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "El artículo 13 de la Constitución prohíbe la discriminación, entre otros motivos, por razones de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Nacionalidad, peso, altura y afiliación deportiva",
+        "Sexo, raza, origen nacional o familiar, lengua, religión y opinión política o filosófica",
+        "Edad, estado civil, residencia y género musical",
+        "Riqueza, profesión, cargo público y nivel educativo"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 13 consagra la igualdad ante la ley y prohíbe la discriminación por sexo, raza, origen nacional o familiar, lengua, religión u opinión política o filosófica; el Estado debe promover la igualdad real y efectiva.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 13",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 25 de la Constitución, el trabajo es: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Un derecho y una obligación social que goza de especial protección del Estado",
+        "Una facultad discrecional del empleador",
+        "Una prestación que el Estado concede por gracia",
+        "Una mercancía regulada exclusivamente por el mercado"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 25 establece que el trabajo es un derecho y una obligación social y que, en todas sus modalidades, goza de la especial protección del Estado; toda persona tiene derecho a un trabajo digno y justo.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 25",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "El debido proceso, consagrado en el artículo 29 de la Constitución, se aplica a: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Solamente a las actuaciones civiles y de familia",
+        "Únicamente a las actuaciones de la Corte Constitucional",
+        "Solo a los procesos penales y de extradición",
+        "Toda clase de actuaciones judiciales y administrativas"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 29 dispone que el debido proceso se aplica a toda clase de actuaciones judiciales y administrativas, garantizando que nadie sea juzgado sino conforme a leyes preexistentes y con observancia de la Constitución.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 29",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "El artículo 40 de la Constitución reconoce el derecho de participación política, EXCEPTO: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Tomar parte en elecciones, plebiscitos, referendos y consultas populares",
+        "Revocar el mandato de los elegidos en los casos que establece la Constitución",
+        "La obligación de votar siempre por el candidato del Gobierno",
+        "Elegir y ser elegido"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 40 reconoce la participación en elecciones, plebiscitos, referendos, consultas, la revocatoria del mandato y el acceso a cargos públicos, pero no impone lealtad a un candidato oficial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 40",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "De acuerdo con el artículo 58 de la Constitución, la propiedad privada: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Carece de función social y solo protege el lucro particular",
+        "Es una función social con obligaciones ecológicas, susceptible de expropiación con indemnización previa",
+        "Es un derecho absoluto e inviolable bajo cualquier circunstancia",
+        "Puede ser expropiada sin indemnización si lo ordena el alcalde"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 58 garantiza la propiedad privada pero la califica como función social con función ecológica; admite expropiación por utilidad pública o interés social con indemnización previa, salvo en caso de guerra.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 58",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "El artículo 74 de la Constitución reconoce el derecho de toda persona a: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Acceder a los documentos públicos, salvo los casos que establezca la ley",
+        "Acceder a la información clasificada de la fuerza pública sin restricciones",
+        "Obtener copias gratuitas ilimitadas de cualquier documento privado",
+        "Revisar la correspondencia personal de los funcionarios"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 74 establece el derecho de acceso a documentos públicos, permitiendo a la ley señalar excepciones; fortalece la transparencia como pilar del Estado social de derecho.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 74",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 83 de la Constitución, las actuaciones de particulares y autoridades públicas deben ceñirse al principio de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Competencia absoluta del funcionario de mayor rango",
+        "Buena fe, que se presume en todas las gestiones que se adelanten ante la Administración",
+        "Libertad absoluta para exigir requisitos adicionales",
+        "Presunción de culpabilidad del administrado"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 83 impone a las autoridades y a los particulares actuar conforme a la buena fe, que se presume en las gestiones ante la Administración, como límite al abuso de derecho.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 83",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "La acción de tutela, prevista en el artículo 86 de la Constitución, tiene como finalidad: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Ejercer control político sobre el Congreso",
+        "Proteger de manera inmediata los derechos constitucionales fundamentales vulnerados o amenazados",
+        "Reemplazar todos los procesos judiciales ordinarios",
+        "Obtener indemnizaciones millonarias contra el Estado"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 86 consagra la acción de tutela para reclamar, de manera preferente y sumaria, la protección inmediata de los derechos fundamentales cuando estén vulnerados o amenazados por la acción u omisión de una autoridad pública.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 86",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "De conformidad con el artículo 90 de la Constitución, el Estado: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Responde únicamente si el afectado prueba dolo del servidor",
+        "Solo responde por daños causados por jueces y magistrados",
+        "No responde por actos de sus agentes cuando obedezcan órdenes superiores",
+        "Responde patrimonialmente por los daños antijurídicos imputables causados por autoridades públicas"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 90 establece la responsabilidad patrimonial del Estado por daños antijurídicos causados por acción u omisión de autoridades públicas; si el daño resulta de dolo o culpa grave, el Estado puede repetir contra el agente.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 90",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "El artículo 113 de la Constitución establece que las ramas del poder público son: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La legislativa, la ejecutiva y la judicial",
+        "La legislativa, la ejecutiva, la judicial y la electoral",
+        "La legislativa, la ejecutiva, la judicial y la militar",
+        "La ejecutiva, la judicial, la fiscal y la contralora"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 113 señala que son ramas del poder público la legislativa, la ejecutiva y la judicial; aunque existen otros órganos autónomos e independientes, estas son las tres ramas clásicas.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 113",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 115 de la Constitución, el Presidente de la República es: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Jefe del Estado, Jefe del Gobierno y suprema autoridad administrativa",
+        "Máximo dirigente del partido de gobierno",
+        "Contralor General de la Nación",
+        "Presidente del Congreso y jefe de la Rama Judicial"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 115 define al Presidente como Jefe del Estado, Jefe del Gobierno y suprema autoridad administrativa; el Gobierno Nacional está integrado por el Presidente, los ministros y los directores de departamentos administrativos.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 115",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "El artículo 118 de la Constitución señala que al Ministerio Público corresponde: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "El nombramiento de los magistrados de la Corte Suprema",
+        "La administración del presupuesto nacional",
+        "La dirección de la política monetaria y cambiaria",
+        "La guarda y promoción de los derechos humanos, la protección del interés público y la vigilancia de la conducta oficial"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 118 dispone que el Ministerio Público será ejercido por el Procurador, el Defensor, los procuradores delegados, los personeros y demás funcionarios; le corresponde la guarda y promoción de los derechos humanos, la protección del interés público y la vigilancia de la conducta oficial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 118",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "El artículo 209 de la Constitución señala que la función administrativa se desarrolla mediante: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La privatización total, la tercerización absoluta y la desregulación completa",
+        "La concentración centralizada, la prohibición de delegar y la supresión territorial",
+        "La autonomía empresarial, la libre competencia y la rentabilidad privada",
+        "La descentralización, la delegación y la desconcentración de funciones"
+      ],
+      "respuesta": 3,
+      "explicacion": "Además de los principios, el artículo 209 establece que la función administrativa se desarrolla mediante la descentralización, la delegación y la desconcentración de funciones, y que las autoridades administrativas deben coordinarse.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 209",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 1 de la Ley 489 de 1998, ¿cuál es el objeto de esta ley? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Regular el ejercicio de la función administrativa, determinar la estructura y definir principios y reglas básicas de la Administración Pública",
+        "Definir las competencias militares en situaciones de conmoción interior",
+        "Regular exclusivamente la contratación pública y la vigencia de los contratos estatales",
+        "Establecer el procedimiento para la elección popular del Presidente"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 1 de la Ley 489 de 1998 dispone que la ley regula el ejercicio de la función administrativa, determina la estructura y define los principios y reglas básicas de organización y funcionamiento de la Administración Pública.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el parágrafo del artículo 3 de la Ley 489 de 1998, los principios de la función administrativa deben ser tenidos en cuenta por los órganos de control y el DNP al: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Evaluar el desempeño de entidades y organismos administrativos y juzgar la legalidad de la conducta de los servidores públicos",
+        "Designar a los contratistas de cada entidad pública",
+        "Fijar los salarios de todos los empleados del orden nacional",
+        "Aprobar la creación de nuevos partidos políticos"
+      ],
+      "respuesta": 0,
+      "explicacion": "El parágrafo del artículo 3 señala que los principios de la función administrativa deben ser tenidos en cuenta por los órganos de control y el Departamento Nacional de Planeación al evaluar el desempeño de entidades y organismos administrativos y al juzgar la legalidad de la conducta de los servidores públicos.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 3",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Conforme al artículo 8 de la Ley 489 de 1998, la desconcentración administrativa consiste en: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Delegar funciones exclusivamente en particulares mediante contratos de concesión",
+        "Suprimir la sede principal del organismo y distribuir todo el presupuesto",
+        "Radicar competencias y funciones en dependencias fuera de la sede principal, sin que ello implique delegación",
+        "Transferir la titularidad de funciones a entidades territoriales de manera definitiva"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 8 define la desconcentración como la radicación de competencias y funciones en dependencias ubicadas fuera de la sede principal del organismo o entidad administrativa, sin perjuicio de la orientación e instrucción de los jefes superiores, y precisa que no implica delegación.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 8",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 38 de la Ley 489 de 1998, el Sector Central de la Rama Ejecutiva nacional NO incluye: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Los ministerios y departamentos administrativos",
+        "Las superintendencias sin personería jurídica",
+        "La Presidencia de la República",
+        "Las empresas industriales y comerciales del Estado"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 38 ubica en el Sector Central la Presidencia, Vicepresidencia, consejos superiores, ministerios, departamentos administrativos y superintendencias sin personería jurídica; las empresas industriales y comerciales del Estado pertenecen al sector descentralizado por servicios.",
+      "norma": "Ley 489 de 1998",
+      "articulo": "Art. 38",
+      "dificultad": "dificil"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 1 de la Constitución Política, Colombia es: (perfil 35 / 1AS-19)",
+      "reverso": "Estado social de derecho, República unitaria, descentralizada, democrática, participativa y pluralista",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál NO es uno de los fines esenciales del Estado consagrados en el artículo 2 de la Constitución? (perfil 35 / 1AS-19)",
+      "reverso": "Imponer una religión oficial como instrumento de gobierno",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "De acuerdo con el artículo 3 de la Constitución, ¿dónde reside la soberanía? (perfil 35 / 1AS-19)",
+      "reverso": "En el pueblo, del cual emana el poder público",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "El artículo 13 de la Constitución prohíbe la discriminación, entre otros motivos, por razones de: (perfil 35 / 1AS-19)",
+      "reverso": "Sexo, raza, origen nacional o familiar, lengua, religión y opinión política o filosófica",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 25 de la Constitución, el trabajo es: (perfil 35 / 1AS-19)",
+      "reverso": "Un derecho y una obligación social que goza de especial protección del Estado",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "El debido proceso, consagrado en el artículo 29 de la Constitución, se aplica a: (perfil 35 / 1AS-19)",
+      "reverso": "Toda clase de actuaciones judiciales y administrativas",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "El artículo 40 de la Constitución reconoce el derecho de participación política, EXCEPTO: (perfil 35 / 1AS-19)",
+      "reverso": "La obligación de votar siempre por el candidato del Gobierno",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "frente": "De acuerdo con el artículo 58 de la Constitución, la propiedad privada: (perfil 35 / 1AS-19)",
+      "reverso": "Es una función social con obligaciones ecológicas, susceptible de expropiación con indemnización previa",
+      "norma": "Constitución Política de Colombia"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "titulo": "Organización del Estado",
+      "contenido_html": "<h3>Organización del Estado</h3><ul><li>Ramas del poder público y órganos de control.</li><li>Descentralización y autonomía territorial.</li><li>Principios del régimen constitucional.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "gestion-publica-35",
+      "perfil_codigo": "35",
+      "titulo": "Función pública y control",
+      "contenido_html": "<h3>Función pública y control</h3><ul><li>Carrera administrativa y mérito.</li><li>Control fiscal y disciplinario.</li><li>Transparencia y participación ciudadana.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

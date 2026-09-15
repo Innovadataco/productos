@@ -1,0 +1,116 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 111 de 1996, ¿cuáles son los principios del sistema presupuestal?",
+      "opciones": [
+        "Planificación, anualidad, universalidad, unidad de caja, programación integral, especialización, inembargabilidad, coherencia macroeconómica y homeostasis",
+        "Eficiencia, eficacia, economía, transparencia y responsabilidad",
+        "Igualdad, libertad, solidaridad y subsidiariedad",
+        "Presupuesto, ejecución, control y evaluación"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 12 del Decreto 111 de 1996 enumera los principios del sistema presupuestal: planificación, anualidad, universalidad, unidad de caja, programación integral, especialización, inembargabilidad, coherencia macroeconómica y homeostasis.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 12",
+      "dificultad": "media"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Constitución Política, ¿quién formulará anualmente el presupuesto de rentas y ley de apropiaciones?",
+      "opciones": [
+        "El Gobierno Nacional",
+        "El Congreso de la República",
+        "La Contraloría General de la República",
+        "El Banco de la República"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 346 de la Constitución Política establece que el Gobierno formulará anualmente el presupuesto de rentas y ley de apropiaciones, que será presentado al Congreso dentro de los primeros diez días de cada legislatura.",
+      "norma": "Constitución Política",
+      "articulo": "Art. 346",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 111 de 1996, ¿quién preside el Consejo Superior de Política Fiscal (Confis)?",
+      "opciones": [
+        "El Director del Departamento Nacional de Planeación",
+        "El Ministerio de Hacienda y Crédito Público",
+        "El Consejero Económico de la Presidencia",
+        "La Dirección General del Presupuesto Público Nacional"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 25 del Decreto 111 de 1996 señala que el Confis estará integrado por el Ministerio de Hacienda y Crédito Público, quien lo presidirá, junto con otras entidades del nivel nacional.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 25",
+      "dificultad": "media"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1068 de 2015, el Plan Financiero es la base para elaborar:",
+      "opciones": [
+        "El Plan Nacional de Desarrollo",
+        "El Programa Anual de Caja (PAC)",
+        "El Plan de Acción Institucional",
+        "El Plan de Adquisiciones"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2.8.1.1.2 del Decreto 1068 de 2015 indica que el Plan Financiero define las metas máximas de pagos del año y servirá de base para elaborar el Programa Anual de Caja (PAC).",
+      "norma": "Decreto 1068/2015",
+      "articulo": "Art. 2.8.1.1.2",
+      "dificultad": "media"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 111 de 1996, el principio según el cual el año fiscal comienza el 1 de enero y termina el 31 de diciembre se denomina:",
+      "opciones": [
+        "Universalidad",
+        "Especialización",
+        "Anualidad",
+        "Unidad de caja"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 14 del Decreto 111 de 1996 regula el principio de anualidad: el año fiscal comienza el 1 de enero y termina el 31 de diciembre, y después del cierre no podrán asumirse compromisos con cargo a las apropiaciones de ese año.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 14",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 111 de 1996, las rentas incorporadas en el Presupuesto General de la Nación son:",
+      "opciones": [
+        "Embargables en cualquier proceso",
+        "Transferibles a particulares",
+        "Afectables a cualquier gasto",
+        "Inembargables"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 19 del Decreto 111 de 1996 consagra la inembargabilidad de las rentas incorporadas en el Presupuesto General de la Nación, así como de los bienes y derechos de los órganos que lo conforman.",
+      "norma": "Decreto 111/1996",
+      "articulo": "Art. 19",
+      "dificultad": "media"
+    },
+    {
+      "tema_clave": "presupuesto-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1068 de 2015, las entidades del Presupuesto General de la Nación ejecutarán sus presupuestos a través de:",
+      "opciones": [
+        "Sistema de Cuenta Única Nacional",
+        "Sistema General de Participaciones",
+        "Tesorería de la Nación",
+        "Sistema Integrado de Información Financiera (SIIF)"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 2.8.1.7.4 del Decreto 1068 de 2015 dispone que las entidades que conforman el Presupuesto General de la Nación ejecutarán sus presupuestos a través del Sistema Integrado de Información Financiera (SIIF), administrado por el Ministerio de Hacienda y Crédito Público.",
+      "norma": "Decreto 1068/2015",
+      "articulo": "Art. 2.8.1.7.4",
+      "dificultad": "media"
+    }
+  ]
+}

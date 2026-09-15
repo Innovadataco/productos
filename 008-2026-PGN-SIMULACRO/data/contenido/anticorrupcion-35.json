@@ -1,0 +1,398 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es el objeto de la Ley 2195 de 2022? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Establecer el procedimiento de responsabilidad fiscal ante las contralorías.",
+        "B. Regular la acción de repetición contra agentes del Estado.",
+        "C. Crear el Código General Disciplinario para servidores públicos.",
+        "D. Adoptar disposiciones para prevenir actos de corrupción, reforzar la articulación del Estado y recuperar los daños ocasionados."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 1 de la Ley 2195 de 2022 dispone que su objeto es prevenir la corrupción, articular entidades estatales y recuperar los daños causados, promoviendo la cultura de legalidad.",
+      "norma": "Ley 2195 de 2022",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Código Penal (Ley 599 de 2000), ¿quién es considerado servidor público para efectos penales? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Miembros de corporaciones públicas, empleados del Estado, particulares que ejerzan funciones públicas permanentes o transitorias, y quienes administren recursos públicos.",
+        "B. Solo las personas con contrato laboral indefinido con el Estado.",
+        "C. Únicamente los funcionarios de elección popular.",
+        "D. Solo los empleados de carrera administrativa del orden nacional."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 20 del Código Penal amplía la noción de servidor público a miembros de corporaciones, empleados, fuerza pública, particulares que ejercen funciones públicas y quienes administran recursos públicos, lo cual es esencial para tipificar delitos contra la administración.",
+      "norma": "Ley 599 de 2000",
+      "articulo": "Art. 20",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "La Ley 1474 de 2011 estableció que las personas declaradas responsables judicialmente por delitos contra la Administración Pública cuya pena sea privativa de la libertad quedarán inhabilitadas para contratar con el Estado por: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Cinco años.",
+        "B. Toda la vida.",
+        "C. Veinte años.",
+        "D. Diez años."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 1 de la Ley 1474 de 2011 modificó el literal j) del numeral 1 del artículo 8 de la Ley 80 de 1993, estableciendo una inhabilidad de veinte años para contratar con el Estado.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 1 (modifica Ley 80 de 1993, Art. 8)",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "La Ley 610 de 2000 define el proceso de responsabilidad fiscal como: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. El procedimiento disciplinario adelantado por la Procuraduría.",
+        "B. El conjunto de actuaciones administrativas de las Contralorías para determinar la responsabilidad de quienes causen daño al patrimonio del Estado.",
+        "C. El proceso penal seguido contra servidores públicos por delitos de corrupción.",
+        "D. La acción civil de repetición ejercida por el Ministerio de Justicia."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 1 de la Ley 610 de 2000 señala que el proceso de responsabilidad fiscal es el conjunto de actuaciones administrativas de las Contralorías para establecer la responsabilidad de servidores y particulares que causen daño patrimonial al Estado.",
+      "norma": "Ley 610 de 2000",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "La Ley 678 de 2001 tiene por objeto regular: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. El procedimiento de responsabilidad fiscal ante la Contraloría.",
+        "B. La sanción disciplinaria por faltas graves de servidores públicos.",
+        "C. La responsabilidad patrimonial de agentes del Estado mediante la acción de repetición o el llamamiento en garantía.",
+        "D. La contratación estatal y sus inhabilidades."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 1 de la Ley 678 de 2001 regula la responsabilidad patrimonial de servidores públicos y particulares que ejerzan funciones públicas, a través de la acción de repetición o el llamamiento en garantía con fines de repetición.",
+      "norma": "Ley 678 de 2001",
+      "articulo": "Art. 1",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál de los siguientes sectores NO integra la Comisión Nacional Ciudadana para la Lucha contra la Corrupción creada por la Ley 1474 de 2011? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Medios de Comunicación.",
+        "B. Universidades.",
+        "C. Gremios Económicos.",
+        "D. Partidos Políticos con representación en el Congreso."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 66 de la Ley 1474 de 2011 crea la Comisión Ciudadana integrada por representantes de gremios económicos, ONG anticorrupción, universidades, medios de comunicación, veedurías, Consejo Nacional de Planeación, organizaciones sindicales y Conferilec; no incluye partidos políticos.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 66",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 1474 de 2011, los ex empleados públicos que hayan ejercido cargos directivos en entidades del Estado se encuentran inhabilitados para contratar con el Estado por un período de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Cinco años.",
+        "B. Seis meses.",
+        "C. Dos años.",
+        "D. Diez años."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 4 de la Ley 1474 de 2011 adicionó un literal al numeral 2 del artículo 8 de la Ley 80 de 1993, estableciendo una inhabilidad de dos años para ex empleados directivos y sus familiares cercanos para contratar con el Estado en el sector relacionado.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 4",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "La Ley 1474 de 2011 prohíbe que quien haya celebrado un contrato estatal de obra pública, de concesión, suministro de medicamentos o de alimentos, junto con su cónyuge o socios, pueda celebrar contratos de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Consultoría ambiental.",
+        "B. Prestación de servicios profesionales.",
+        "C. Asesoría jurídica externa.",
+        "D. Interventoría con la misma entidad durante la ejecución y hasta la liquidación del contrato."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 5 de la Ley 1474 de 2011 establece la inhabilidad para que el contratista y determinados vinculados celebren contratos de interventoría con la misma entidad durante la ejecución y hasta la liquidación del contrato.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 5",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 1474 de 2011, el revisor fiscal que no denuncie ante la autoridad disciplinaria o fiscal los actos de corrupción encontrados en el ejercicio de su cargo, dentro de los seis meses siguientes a que los conoció, incurre en: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Falta leve.",
+        "B. Falta disciplinaria tipificada en el numeral 5 del artículo 26 de la Ley 43 de 1990.",
+        "C. Responsabilidad fiscal exclusiva.",
+        "D. Delito de omisión de control."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 7 de la Ley 1474 de 2011 adicionó el numeral 5 al artículo 26 de la Ley 43 de 1990, tipificando como falta del revisor fiscal no denunciar actos de corrupción dentro de los seis meses siguientes a su conocimiento.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 7 (modifica Ley 43 de 1990, Art. 26)",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "El jefe de la Oficina de Control Interno debe publicar en la página web de la entidad un informe del estado del control interno cada: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Un año.",
+        "B. Cuatro meses.",
+        "C. Seis meses.",
+        "D. Tres meses."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 9 de la Ley 1474 de 2011 modificó el artículo 14 de la Ley 87 de 1993, disponiendo que el jefe de control interno publique cada cuatro meses un informe pormenorizado del estado del control interno.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 9 (modifica Ley 87 de 1993, Art. 14)",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "La Ley 1474 de 2011, al modificar el artículo 68A del Código Penal, dispuso que no se concederán subrogados penales ni prisión domiciliaria sustitutiva a quienes hayan sido condenados por: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Infracciones de tránsito.",
+        "B. Delitos culposos contra el patrimonio económico.",
+        "C. Delitos contra la Administración Pública, estafa sobre bienes del Estado, utilización indebida de información privilegiada, lavado de activos y soborno transnacional.",
+        "D. Delitos dolosos cometidos por primera vez."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 13 de la Ley 1474 de 2011 modificó el artículo 68A del Código Penal para excluir beneficios y subrogados penales a quienes sean condenados por delitos contra la administración pública, estafa sobre bienes estatales, utilización indebida de información privilegiada, lavado de activos y soborno transnacional.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 13 (modifica Código Penal, Art. 68A)",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Para el servidor público que cometa un delito en ejercicio de sus funciones, la Ley 1474 de 2011 dispuso que el término de prescripción penal se: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Aumenta en la mitad.",
+        "B. Computa desde la sentencia condenatoria.",
+        "C. Reduce a la mitad.",
+        "D. Mantiene sin alteración."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 14 de la Ley 1474 de 2011 adicionó un inciso sexto al artículo 83 del Código Penal, señalando que el término de prescripción se aumentará en la mitad para el servidor público que cometa un delito en ejercicio de sus funciones.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 14 (modifica Código Penal, Art. 83)",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "El delito de enriquecimiento ilícito, según la Ley 1474 de 2011 (artículo 412 del Código Penal), puede configurarse si el incremento patrimonial injustificado se obtiene: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Solo durante la vinculación con la administración.",
+        "B. Durante la vinculación o dentro de los cinco años posteriores a la desvinculación.",
+        "C. Hasta diez años después de retirado del cargo.",
+        "D. Únicamente cuando se trate de bienes inmuebles."
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 29 de la Ley 1474 de 2011 reformuló el artículo 412 del Código Penal, tipificando el enriquecimiento ilícito cuando el servidor público obtiene incremento patrimonial injustificado durante su vinculación o dentro de los cinco años posteriores a su desvinculación.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 29 (modifica Código Penal, Art. 412)",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "La responsabilidad administrativa sancionatoria contra personas jurídicas por actos de corrupción, prevista en la Ley 1474 de 2011, exige, entre otros supuestos, que: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. La empresa sea de capital extranjero.",
+        "B. No exista sistema de compliance alguno.",
+        "C. El delito haya sido cometido únicamente por el representante legal.",
+        "D. Exista sentencia penal condenatoria ejecutoriada o principio de oportunidad en firme contra un administrador o funcionario por delitos relacionados."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 34 de la Ley 1474 de 2011, modificado por la Ley 2195 de 2022, establece que la responsabilidad administrativa sancionatoria de personas jurídicas procede, entre otros supuestos, cuando existe sentencia penal condenatoria ejecutoriada o principio de oportunidad en firme contra administradores o funcionarios por delitos relacionados con el patrimonio público, y la persona jurídica se benefició o toleró la conducta.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 34 (modificado por Ley 2195 de 2022)",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "El delito de peculado, tipificado en el artículo 397 del Código Penal, consiste en que el servidor público: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Celebre contratos sin cumplir requisitos legales.",
+        "B. Abuse de su influencia para obtener un beneficio indebido.",
+        "C. Se apropie en provecho suyo o de un tercero de bienes del Estado o fondos parafiscales que administre.",
+        "D. Reciba dinero para omitir un acto propio de su cargo."
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 397 del Código Penal sanciona al servidor público que se apropie en provecho propio o de tercero de bienes del Estado, empresas o instituciones en que éste tenga parte, fondos parafiscales o bienes de particulares cuya administración se le haya confiado.",
+      "norma": "Ley 599 de 2000",
+      "articulo": "Art. 397",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 405 del Código Penal, el cohecho propio se configura cuando el servidor público: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Reciba para sí o para otro dinero o utilidad para retardar u omitir un acto propio de su cargo, o ejecutar uno contrario a sus deberes.",
+        "B. Utilice información privilegiada para obtener provecho en una licitación.",
+        "C. Administre deslealmente recursos de una sociedad privada.",
+        "D. Constriña a alguien a dar dinero indebido."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 405 del Código Penal tipifica el cohecho propio como la conducta del servidor público que recibe para sí o para otro dinero o utilidad, directa o indirectamente, para retardar u omitir un acto propio de su cargo o ejecutar uno contrario a sus deberes oficiales.",
+      "norma": "Ley 599 de 2000",
+      "articulo": "Art. 405",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "De conformidad con el artículo 30 de la Ley 1474 de 2011, el soborno transnacional sancionado en el artículo 433 del Código Penal puede ser cometido por: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Cualquier persona que dé u ofrezca a un servidor público extranjero o agente de organización pública internacional dinero o utilidad para influir en una transacción económica o comercial.",
+        "B. Solo por servidores públicos colombianos.",
+        "C. Únicamente por empresas privadas domiciliadas en Colombia.",
+        "D. Solo por particulares que ejerzan funciones públicas en Colombia."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 30 de la Ley 1474 de 2011 reformuló el artículo 433 del Código Penal para sancionar a cualquier persona que dé u ofrezca a un servidor público extranjero, o agente de organización pública internacional, dinero o utilidad a cambio de que realice, omita o retarde actos relacionados con transacciones económicas o comerciales.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 30 (modifica Código Penal, Art. 433)",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "En las operaciones encubiertas contra la corrupción previstas en la Ley 1474 de 2011, el agente encubierto queda exonerado de responsabilidad cuando: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. En desarrollo de la operación cometa delitos contra la Administración Pública en coparticipación con la investigada, salvo que exista un verdadero acuerdo criminal ajeno a la operación.",
+        "B. Reciba dinero del investigado sin reportarlo.",
+        "C. Cometa cualquier delito durante la operación.",
+        "D. Oculte pruebas para proteger su identidad."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 36 de la Ley 1474 de 2011 adicionó el artículo 242-A al Código de Procedimiento Penal, disponiendo que en operaciones encubiertas contra la corrupción el agente encubierto queda exonerado si comete delitos contra la administración pública en coparticipación con el investigado, salvo que exista un verdadero acuerdo criminal ajeno a la operación.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 36 (adiciona Código de Procedimiento Penal, Art. 242-A)",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según la Ley 678 de 2001, ¿cuál de las siguientes circunstancias presume la existencia de dolo del agente del Estado para efectos de la acción de repetición? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Que el acto administrativo haya sido declarado nulo por desviación de poder, indebida motivación, falta de motivación o falsa motivación.",
+        "B. Que el daño patrimonial sea inferior a cien salarios mínimos.",
+        "C. Que el servidor haya actuado en horario de oficina.",
+        "D. Que la entidad no haya ejercitado previamente la acción de repetición."
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 5 de la Ley 678 de 2001, modificado por la Ley 2195 de 2022, establece que se presume el dolo del agente del Estado cuando el acto administrativo fue declarado nulo por desviación de poder, indebida motivación, falta de motivación o falsa motivación, entre otras causales.",
+      "norma": "Ley 678 de 2001",
+      "articulo": "Art. 5",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "enunciado": "Respecto de la supervisión e interventoría contractual, la Ley 1474 de 2011 impone a los supervisores e interventores el deber de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "A. Aprobar pagos sin verificar la ejecución del contrato.",
+        "B. Omitir el informe cuando el incumplimiento sea parcial.",
+        "C. Delegar la vigilancia exclusivamente al contratista.",
+        "D. Mantener informada a la entidad contratante de hechos o circunstancias que puedan constituir actos de corrupción tipificados como conductas punibles o que pongan en riesgo el cumplimiento del contrato."
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 84 de la Ley 1474 de 2011 dispone que interventores y supervisores están obligados a mantener informada a la entidad contratante de hechos o circunstancias que puedan constituir actos de corrupción tipificados como conductas punibles o que pongan en riesgo el cumplimiento del contrato, y omitir este deber es falta gravísima.",
+      "norma": "Ley 1474 de 2011",
+      "articulo": "Art. 84",
+      "dificultad": "dificil"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál es el objeto de la Ley 2195 de 2022? (perfil 35 / 1AS-19)",
+      "reverso": "D. Adoptar disposiciones para prevenir actos de corrupción, reforzar la articulación del Estado y recuperar los daños ocasionados.",
+      "norma": "Ley 2195 de 2022"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "Según el Código Penal (Ley 599 de 2000), ¿quién es considerado servidor público para efectos penales? (perfil 35 / 1AS-19)",
+      "reverso": "A. Miembros de corporaciones públicas, empleados del Estado, particulares que ejerzan funciones públicas permanentes o transitorias, y quienes administren recursos públicos.",
+      "norma": "Ley 599 de 2000"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "La Ley 1474 de 2011 estableció que las personas declaradas responsables judicialmente por delitos contra la Administración Pública cuya pena sea privativa de la libertad quedarán inhabilitadas para contratar con el Estado por: (perfil 35 / 1AS-19)",
+      "reverso": "C. Veinte años.",
+      "norma": "Ley 1474 de 2011"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "La Ley 610 de 2000 define el proceso de responsabilidad fiscal como: (perfil 35 / 1AS-19)",
+      "reverso": "B. El conjunto de actuaciones administrativas de las Contralorías para determinar la responsabilidad de quienes causen daño al patrimonio del Estado.",
+      "norma": "Ley 610 de 2000"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "La Ley 678 de 2001 tiene por objeto regular: (perfil 35 / 1AS-19)",
+      "reverso": "C. La responsabilidad patrimonial de agentes del Estado mediante la acción de repetición o el llamamiento en garantía.",
+      "norma": "Ley 678 de 2001"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál de los siguientes sectores NO integra la Comisión Nacional Ciudadana para la Lucha contra la Corrupción creada por la Ley 1474 de 2011? (perfil 35 / 1AS-19)",
+      "reverso": "D. Partidos Políticos con representación en el Congreso.",
+      "norma": "Ley 1474 de 2011"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "Según la Ley 1474 de 2011, los ex empleados públicos que hayan ejercido cargos directivos en entidades del Estado se encuentran inhabilitados para contratar con el Estado por un período de: (perfil 35 / 1AS-19)",
+      "reverso": "C. Dos años.",
+      "norma": "Ley 1474 de 2011"
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "frente": "La Ley 1474 de 2011 prohíbe que quien haya celebrado un contrato estatal de obra pública, de concesión, suministro de medicamentos o de alimentos, junto con su cónyuge o socios, pueda celebrar contratos de: (perfil 35 / 1AS-19)",
+      "reverso": "D. Interventoría con la misma entidad durante la ejecución y hasta la liquidación del contrato.",
+      "norma": "Ley 1474 de 2011"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "titulo": "Estatuto anticorrupción",
+      "contenido_html": "<h3>Estatuto anticorrupción</h3><ul><li>Ley 1474 de 2011 y su objeto.</li><li>Régimen de prevención, investigación y sanción de actos de corrupción.</li><li>Denuncias y protección al denunciante.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "anticorrupcion-35",
+      "perfil_codigo": "35",
+      "titulo": "Planes anticorrupción y ética pública",
+      "contenido_html": "<h3>Planes anticorrupción y ética pública</h3><ul><li>Planes anticorrupción y de atención al ciudadano.</li><li>Rendición de cuentas y publicación de información.</li><li>Integridad pública y lucha contra la corrupción.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

@@ -1,17 +1,6 @@
 [
   {
-    "id": 33,
-    "perfil_codigo": "35",
-    "clave": "constitucional-35",
-    "nombre": "Derecho constitucional",
-    "eje": "Específico",
-    "color": "bg-blue-500",
-    "icono": "BookOpen",
-    "orden": 1,
-    "descripcion": "Derechos fundamentales, tutela, acciones populares, bloque de constitucionalidad y control constitucional."
-  },
-  {
-    "id": 50,
+    "id": 18,
     "perfil_codigo": "273",
     "clave": "planeacion-273",
     "nombre": "Planeación estratégica",
@@ -22,7 +11,18 @@
     "descripcion": "Plan Nacional de Desarrollo, planes institucionales, indicadores, seguimiento y evaluación de políticas públicas."
   },
   {
-    "id": 34,
+    "id": 33,
+    "perfil_codigo": "35",
+    "clave": "planeacion-35",
+    "nombre": "Planeación estratégica",
+    "eje": "Específico",
+    "color": "bg-blue-500",
+    "icono": "BookOpen",
+    "orden": 1,
+    "descripcion": "Plan Nacional de Desarrollo, planes institucionales, indicadores, seguimiento y evaluación de políticas públicas."
+  },
+  {
+    "id": 2,
     "perfil_codigo": "35",
     "clave": "disciplinario-35",
     "nombre": "Derecho disciplinario",
@@ -33,7 +33,7 @@
     "descripcion": "Ley 1952 de 2019, Código General Disciplinario, proceso disciplinario, faltas, sanciones e investigación."
   },
   {
-    "id": 51,
+    "id": 19,
     "perfil_codigo": "273",
     "clave": "presupuesto-273",
     "nombre": "Presupuesto público",
@@ -44,7 +44,7 @@
     "descripcion": "Clasificación del gasto, disponibilidad presupuestal, certificados de disponibilidad, PAC y ejecución fiscal."
   },
   {
-    "id": 35,
+    "id": 3,
     "perfil_codigo": "35",
     "clave": "administrativo-35",
     "nombre": "Derecho administrativo",
@@ -55,7 +55,7 @@
     "descripcion": "Acto administrativo, procedimiento administrativo, CPACA, recursos, contratación y responsabilidad."
   },
   {
-    "id": 52,
+    "id": 20,
     "perfil_codigo": "273",
     "clave": "contratacion-273",
     "nombre": "Contratación estatal",
@@ -66,18 +66,7 @@
     "descripcion": "Licitación, selección abreviada, mínima cuantía, decreto 1082 de 2015, SECOP II, garantías y supervisión."
   },
   {
-    "id": 36,
-    "perfil_codigo": "35",
-    "clave": "procesal-35",
-    "nombre": "Derecho procesal",
-    "eje": "Específico",
-    "color": "bg-amber-500",
-    "icono": "FileText",
-    "orden": 4,
-    "descripcion": "Competencia, actuaciones procesales, recursos, pruebas y garantías del debido proceso."
-  },
-  {
-    "id": 53,
+    "id": 21,
     "perfil_codigo": "273",
     "clave": "administrativo-273",
     "nombre": "Derecho administrativo",
@@ -88,18 +77,7 @@
     "descripcion": "Acto administrativo, procedimiento administrativo, CPACA, recursos, nulidad y restablecimiento del derecho."
   },
   {
-    "id": 37,
-    "perfil_codigo": "35",
-    "clave": "probatorio-35",
-    "nombre": "Derecho probatorio",
-    "eje": "Específico",
-    "color": "bg-emerald-500",
-    "icono": "Search",
-    "orden": 5,
-    "descripcion": "Medios de prueba, valoración, carga de la prueba, informe pericial y prueba en el proceso disciplinario."
-  },
-  {
-    "id": 54,
+    "id": 22,
     "perfil_codigo": "273",
     "clave": "proyectos-273",
     "nombre": "Formulación y evaluación de proyectos",
@@ -110,7 +88,18 @@
     "descripcion": "Metodología MGA del DNP, marco lógico, indicadores, BPIN, evaluación de costos y beneficios."
   },
   {
-    "id": 38,
+    "id": 37,
+    "perfil_codigo": "35",
+    "clave": "proyectos-35",
+    "nombre": "Formulación y evaluación de proyectos",
+    "eje": "Específico",
+    "color": "bg-rose-500",
+    "icono": "ClipboardList",
+    "orden": 5,
+    "descripcion": "Metodología MGA del DNP, marco lógico, indicadores, BPIN, evaluación de costos y beneficios."
+  },
+  {
+    "id": 6,
     "perfil_codigo": "35",
     "clave": "contratacion-35",
     "nombre": "Contratación estatal",
@@ -121,7 +110,7 @@
     "descripcion": "Régimen de contratación pública, modalidades, SECOP II, garantías y responsabilidad contractual."
   },
   {
-    "id": 55,
+    "id": 23,
     "perfil_codigo": "273",
     "clave": "anticorrupcion-273",
     "nombre": "Estatuto anticorrupción",
@@ -132,7 +121,7 @@
     "descripcion": "Ley 1474 de 2011, planes anticorrupción, denuncias, ética pública, prevención y control de la corrupción."
   },
   {
-    "id": 39,
+    "id": 7,
     "perfil_codigo": "35",
     "clave": "anticorrupcion-35",
     "nombre": "Estatuto anticorrupción",
@@ -143,7 +132,7 @@
     "descripcion": "Ley 1474 de 2011, prevención de la corrupción, denuncias y régimen disciplinario anticorrupción."
   },
   {
-    "id": 56,
+    "id": 24,
     "perfil_codigo": "273",
     "clave": "ti-estado-273",
     "nombre": "TI en el Estado",
@@ -154,18 +143,18 @@
     "descripcion": "Gobierno digital, arquitectura empresarial, interoperabilidad, seguridad de la información y MSPI."
   },
   {
-    "id": 40,
+    "id": 39,
     "perfil_codigo": "35",
-    "clave": "interpretacion-35",
-    "nombre": "Interpretación y argumentación jurídica",
+    "clave": "disciplinar-derecho-35",
+    "nombre": "Conocimientos específicos del área disciplinar (Derecho)",
     "eje": "Específico",
     "color": "bg-cyan-500",
     "icono": "MessageSquare",
-    "orden": 8,
-    "descripcion": "Métodos de interpretación, argumentación, precedente, analogía y sistematización del ordenamiento."
+    "orden": 7,
+    "descripcion": "Fuentes del derecho, interpretación jurídica, Constitución Política, derechos fundamentales, bloque de constitucionalidad y Ministerio Público."
   },
   {
-    "id": 57,
+    "id": 25,
     "perfil_codigo": "273",
     "clave": "pgn-273",
     "nombre": "Estructura y funciones de la PGN",
@@ -176,18 +165,7 @@
     "descripcion": "Ministerio Público, control disciplinario, estructura de la Procuraduría General de la Nación y competencias."
   },
   {
-    "id": 41,
-    "perfil_codigo": "35",
-    "clave": "territorial-35",
-    "nombre": "Ordenamiento territorial",
-    "eje": "Específico",
-    "color": "bg-teal-500",
-    "icono": "Map",
-    "orden": 9,
-    "descripcion": "División político-administrativa, competencias de municipios y departamentos, planificación territorial."
-  },
-  {
-    "id": 58,
+    "id": 26,
     "perfil_codigo": "273",
     "clave": "gestion-publica-273",
     "nombre": "Gestión pública y funcionamiento del Estado",
@@ -198,7 +176,7 @@
     "descripcion": "Constitución Política, organización del Estado, descentralización, función pública y control."
   },
   {
-    "id": 42,
+    "id": 10,
     "perfil_codigo": "35",
     "clave": "pgn-35",
     "nombre": "Estructura y funciones de la PGN",
@@ -209,7 +187,7 @@
     "descripcion": "Ministerio Público, control disciplinario y estructura de la Procuraduría General de la Nación."
   },
   {
-    "id": 59,
+    "id": 27,
     "perfil_codigo": "273",
     "clave": "sistemas-gestion-273",
     "nombre": "Sistemas de gestión",
@@ -220,7 +198,7 @@
     "descripcion": "Modelo Integrado de Planeación y Gestión, MECI, FURAG, gestión de calidad y gestión del riesgo."
   },
   {
-    "id": 43,
+    "id": 11,
     "perfil_codigo": "35",
     "clave": "sistemas-gestion-35",
     "nombre": "Sistemas de gestión",
@@ -231,7 +209,7 @@
     "descripcion": "Modelo Integrado de Planeación y Gestión, MECI, FURAG y gestión de calidad."
   },
   {
-    "id": 60,
+    "id": 28,
     "perfil_codigo": "273",
     "clave": "gestion-documental-273",
     "nombre": "Gestión documental",
@@ -242,7 +220,7 @@
     "descripcion": "Ciclo vital del documento, archivo, tablas de retención, AGN y normativa de gestión documental."
   },
   {
-    "id": 44,
+    "id": 12,
     "perfil_codigo": "35",
     "clave": "gestion-documental-35",
     "nombre": "Gestión documental",
@@ -253,7 +231,7 @@
     "descripcion": "Ciclo vital del documento, archivo y tablas de retención documental."
   },
   {
-    "id": 61,
+    "id": 29,
     "perfil_codigo": "273",
     "clave": "documentos-oficina-273",
     "nombre": "Elaboración de documentos de oficina",
@@ -264,7 +242,7 @@
     "descripcion": "Conceptos técnicos, informes, comunicaciones, memorandos y redacción de documentos administrativos."
   },
   {
-    "id": 45,
+    "id": 13,
     "perfil_codigo": "35",
     "clave": "gestion-publica-35",
     "nombre": "Gestión pública y funcionamiento del Estado",
@@ -275,7 +253,7 @@
     "descripcion": "Constitución Política, organización del Estado, función pública y control."
   },
   {
-    "id": 62,
+    "id": 30,
     "perfil_codigo": "273",
     "clave": "atencion-usuario-273",
     "nombre": "Atención al usuario",
@@ -286,7 +264,7 @@
     "descripcion": "Servicio al ciudadano, PQRD, derecho de petición, trámites y canales de atención."
   },
   {
-    "id": 46,
+    "id": 14,
     "perfil_codigo": "35",
     "clave": "documentos-oficina-35",
     "nombre": "Elaboración de documentos de oficina",
@@ -297,7 +275,7 @@
     "descripcion": "Conceptos técnicos, informes, comunicaciones y redacción de documentos administrativos."
   },
   {
-    "id": 63,
+    "id": 31,
     "perfil_codigo": "273",
     "clave": "ofimatica-273",
     "nombre": "Herramientas ofimáticas",
@@ -308,7 +286,7 @@
     "descripcion": "Hojas de cálculo, procesadores de texto, presentaciones y herramientas de productividad ofimática."
   },
   {
-    "id": 47,
+    "id": 15,
     "perfil_codigo": "35",
     "clave": "atencion-usuario-35",
     "nombre": "Atención al usuario",
@@ -319,7 +297,7 @@
     "descripcion": "Servicio al ciudadano, PQRD, derecho de petición y canales de atención."
   },
   {
-    "id": 64,
+    "id": 32,
     "perfil_codigo": "273",
     "clave": "simulacro-273",
     "nombre": "Simulacro mixto",
@@ -330,7 +308,7 @@
     "descripcion": "Preguntas aleatorias de todos los ejes del perfil para medir tu nivel general antes del concurso."
   },
   {
-    "id": 48,
+    "id": 16,
     "perfil_codigo": "35",
     "clave": "ofimatica-35",
     "nombre": "Herramientas ofimáticas",
@@ -341,7 +319,7 @@
     "descripcion": "Hojas de cálculo, procesadores de texto y herramientas de productividad ofimática."
   },
   {
-    "id": 49,
+    "id": 17,
     "perfil_codigo": "35",
     "clave": "simulacro-35",
     "nombre": "Simulacro mixto",

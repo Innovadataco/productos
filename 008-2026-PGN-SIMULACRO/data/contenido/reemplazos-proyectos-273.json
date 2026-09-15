@@ -1,0 +1,36 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según la Constitución Política de Colombia, ¿de qué se conforma el Plan Nacional de Desarrollo?",
+      "opciones": [
+        "Únicamente de una parte general con los objetivos nacionales",
+        "De una parte general y un plan de inversiones de las entidades territoriales únicamente",
+        "De una parte general y un plan de inversiones de las entidades públicas del orden nacional",
+        "De un plan financiero y un presupuesto anual de la Nación"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 339 de la Constitución Política establece que el Plan Nacional de Desarrollo está conformado por una parte general y un plan de inversiones de las entidades públicas del orden nacional.",
+      "norma": "Constitución Política de Colombia de 1991",
+      "articulo": "Art. 339",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "proyectos-273",
+      "perfil_codigo": "273",
+      "enunciado": "Según el Decreto 1082 de 2015, los proyectos de inversión pública son actividades limitadas en el tiempo que:",
+      "opciones": [
+        "Generan ingresos corrientes permanentes para la Nación",
+        "Utilizan recursos públicos para crear, ampliar, mejorar o recuperar la capacidad de producción o provisión de bienes o servicios por parte del Estado",
+        "Se financian exclusivamente con recursos del crédito externo",
+        "No requieren registro en el Banco Nacional de Programas y Proyectos"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 2.2.6.2.1 del Decreto 1082 de 2015 define los proyectos de inversión pública como actividades limitadas en el tiempo que utilizan total o parcialmente recursos públicos, con el fin de crear, ampliar, mejorar o recuperar la capacidad de producción o provisión de bienes o servicios por parte del Estado.",
+      "norma": "Decreto 1082 de 2015",
+      "articulo": "Art. 2.2.6.2.1",
+      "dificultad": "medio"
+    }
+  ]
+}

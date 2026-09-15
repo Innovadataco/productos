@@ -1,0 +1,398 @@
+{
+  "preguntas": [
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Qué tipo de entidad es la Procuraduría General de la Nación según el artículo 275 de la Constitución Política? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Entidad autónoma del orden nacional, con personería jurídica, patrimonio propio e independencia administrativa",
+        "Órgano dependiente del Presidente de la República con funciones ejecutivas",
+        "Entidad adscrita al Congreso encargada de la revisión legislativa",
+        "Órgano auxiliar de la Corte Constitucional sin autonomía presupuestal"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 275 de la Constitución consagra a la Procuraduría General de la Nación como entidad autónoma del orden nacional, dotada de personería jurídica, patrimonio propio e independencia administrativa, lo cual garantiza su autonomía funcional frente a los demás poderes públicos.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 275",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 276 de la Constitución, ¿cuál es una función esencial de la Procuraduría General de la Nación? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Administrar el presupuesto general de la nación y asignar recursos a entidades públicas",
+        "Dirigir operativos de la Policía Nacional y de las Fuerzas Militares",
+        "Vigilar el cumplimiento de la Constitución, las leyes, las decisiones judiciales y los actos de las autoridades",
+        "Nombrar magistrados de las altas cortes en virtud de designación directa"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 276 establece que la Procuraduría tiene como función principal velar por el cumplimiento de la Constitución, las leyes, las decisiones judiciales, los actos de las autoridades y los deberes del Estado, actuando como guardiana del ordenamiento jurídico.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 276",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "De conformidad con el artículo 278 de la Constitución, ¿quién elige al Procurador General de la Nación? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La Corte Constitucional en sesión conjunta con el Consejo de Estado",
+        "La Corte Suprema de Justicia",
+        "La Cámara de Representantes por mayoría absoluta",
+        "El Presidente de la República con aprobación del Senado"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 278 dispone que la Corte Suprema de Justicia elige al Procurador General de la Nación de terna presentada por el Presidente de la República, garantizando una designación con participación del poder judicial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 278",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál es la duración del período para el cual es elegido el Procurador General de la Nación según la Constitución Política? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Cuatro años",
+        "Seis años simultáneos con el período presidencial",
+        "Dos años con posibilidad de reelección inmediata",
+        "Ocho años sin posibilidad de nuevo nombramiento"
+      ],
+      "respuesta": 0,
+      "explicacion": "La Constitución, en su artículo 278, establece que el Procurador General de la Nación es elegido para un período de cuatro años, diferente al período presidencial y al de otros altos funcionarios.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 278",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 280 de la Constitución, la Procuraduría General de la Nación se conforma, entre otros, por: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La Fiscalía General de la Nación",
+        "La Contraloría General de la República",
+        "El Consejo Nacional Electoral",
+        "La Procuraduría Delegada ante la Corte Constitucional y ante el Consejo de Estado"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 280 señala que la Procuraduría General de la Nación se compone de la Procuraduría Delegada ante la Corte Constitucional, la Procuraduría Delegada ante el Consejo de Estado, la Procuraduría Delegada para la Asistencia Judicial Penal y otras unidades orgánicas.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 280",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Conforme al Decreto Ley 262 de 2000, ¿quién dirige y representa la Procuraduría General de la Nación? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "El Procurador Delegado ante la Corte Constitucional",
+        "El Viceprocurador General como titular permanente",
+        "El Secretario General como máximo funcionario administrativo",
+        "El Procurador General de la Nación"
+      ],
+      "respuesta": 3,
+      "explicacion": "El Decreto Ley 262 de 2000, que desarrolla la estructura orgánica de la Procuraduría, establece que el Procurador General de la Nación es el jefe superior de la entidad y la representa legalmente ante toda clase de autoridades.",
+      "norma": "Decreto Ley 262/2000",
+      "articulo": "Estatuto Orgánico de la Procuraduría",
+      "dificultad": "facil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 277 de la Constitución, ¿cuál es una atribución del Procurador General de la Nación? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Designar directamente al Fiscal General de la Nación",
+        "Aprobar proyectos de ley del Gobierno Nacional",
+        "Ejercer la representación judicial y extrajudicial del Estado cuando no corresponda a otra autoridad",
+        "Controlar la emisión de moneda por parte del Banco de la República"
+      ],
+      "respuesta": 2,
+      "explicacion": "El numeral 1 del artículo 277 otorga al Procurador General la representación judicial y extrajudicial del Estado cuando la ley no asigne dicha función a otra autoridad, configurando una competencia residual en representación estatal.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 277",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "En materia de derechos humanos, ¿qué función cumple la Procuraduría General de la Nación de acuerdo con el artículo 276 de la Constitución? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Delegar su protección exclusivamente en ONG internacionales",
+        "Protegerlos y promoverlos como parte de su misión constitucional",
+        "Legislarlos mediante decretos con fuerza de ley",
+        "Suprimirlos transitoriamente en situaciones de emergencia económica"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 276 confiere a la Procuraduría la función de proteger y promover los derechos humanos, lo que implica vigilancia, intervención en procesos judiciales y seguimiento a violaciones de estos derechos fundamentales.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 276",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto Ley 262 de 2000, la estructura orgánica de la Procuraduría General de la Nación comprende: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Únicamente la Procuraduría Principal radicada en Bogotá",
+        "Ministerios Públicos internacionales con sede en el exterior",
+        "Procuradurías Delegadas, Seccionales, Locales y Unidades de Apoyo",
+        "Juntas administradoras locales de servicios públicos domiciliarios"
+      ],
+      "respuesta": 2,
+      "explicacion": "El Decreto Ley 262 de 2000 organiza la Procuraduría mediante una estructura descentralizada que incluye procuradurías delegadas ante altas cortes, seccionales, locales y unidades de apoyo, permitiendo una presencia territorial.",
+      "norma": "Decreto Ley 262/2000",
+      "articulo": "Estatuto Orgánico de la Procuraduría",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "La Ley 1952 de 2019 fortalece a la Procuraduría General de la Nación principalmente en materia de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Control del tránsito aéreo y marítimo nacional",
+        "Prevención, investigación y sanción de faltas disciplinarias y hechos de corrupción",
+        "Regulación del mercado cambiario y de valores",
+        "Expedición de licencias ambientales a proyectos privados"
+      ],
+      "respuesta": 1,
+      "explicacion": "La Ley 1952 de 2019, conocida como Ley de Anticorrupción, introduce mecanismos para fortalecer la actuación de la Procuraduría en la prevención, investigación y sanción de faltas disciplinarias y conductas corruptas en el servicio público.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Ley de Anticorrupción",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 276 de la Constitución, la Procuraduría General de la Nación ejerce vigilancia del cumplimiento de: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La Constitución, las leyes, las decisiones judiciales, los actos de las autoridades y los deberes del Estado",
+        "Los reglamentos internos de cooperativas y asociaciones sin fines de lucro únicamente",
+        "Las resoluciones de las juntas directivas de empresas privadas sin participación estatal",
+        "Solamente las ordenanzas municipales y acuerdos departamentales"
+      ],
+      "respuesta": 0,
+      "explicacion": "El artículo 276 señala que la vigilancia de la Procuraduría abarca la Constitución, las leyes, las decisiones judiciales, los actos de las autoridades y los deberes del Estado, sin limitarse a normas de un solo nivel territorial o sectorial.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 276",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "El Decreto Ley 1851 de 2021, Código de Procedimiento Administrativo y de lo Contencioso Administrativo, prevé que la Procuraduría General de la Nación puede actuar en procesos administrativos como: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Parte o tercero con interés legítimo, conforme a la ley procesal",
+        "Árbitro obligatorio en contratos estatales de cualquier naturaleza",
+        "Notario único nacional para actos de autoridad",
+        "Juez de primera instancia en asuntos contencioso-administrativos"
+      ],
+      "respuesta": 0,
+      "explicacion": "El Código de Procedimiento Administrativo y de lo Contencioso Administrativo reconoce a la Procuraduría la posibilidad de intervenir como parte o tercero con interés legítimo en procesos administrativos y contenciosos, de acuerdo con sus funciones de vigilancia.",
+      "norma": "Decreto Ley 1851/2021",
+      "articulo": "Código de Procedimiento Administrativo y de lo Contencioso Administrativo",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "¿Cuál de los siguientes NO es un requisito constitucional para ser Procurador General de la Nación según el artículo 279 de la Constitución? (perfil 35 / 1AS-19)",
+      "opciones": [
+        "No haber sido condenado por delito doloso ni haber sido sancionado disciplinariamente",
+        "Ser ciudadano colombiano de nacimiento y estar en ejercicio de derechos políticos",
+        "Ser abogado inscrito en el Colegio de Abogados de Colombia",
+        "Ser abogado con título universitario y tener alta moralidad"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 279 exige ser ciudadano nato, estar en ejercicio de derechos políticos, ser abogado, tener alta moralidad y no tener antecedentes por delito doloso o sanción disciplinaria; la inscripción en un colegio de abogados no es un requisito constitucional.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 279",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 281 de la Constitución, los agentes del Ministerio Público son: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Únicamente los fiscales adscritos a la Fiscalía General de la Nación",
+        "Los procuradores judiciales, los personeros municipales y distritales, y los agentes especiales",
+        "Solamente los jueces de paz y de pequeñas causas",
+        "Los congresistas en ejercicio en comisiones investigadoras"
+      ],
+      "respuesta": 1,
+      "explicacion": "El artículo 281 define como agentes del Ministerio Público a los procuradores judiciales, los personeros municipales y distritales, y los agentes especiales, quienes actúan bajo la dirección de la Procuraduría General de la Nación.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 281",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "De acuerdo con el numeral 3 del artículo 277 de la Constitución, el Procurador General de la Nación puede: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Decretar la privación de la libertad como medida cautelar",
+        "Expedir decretos con fuerza de ley en ausencia del Congreso",
+        "Interponer acciones populares, de grupo y constitucionales cuando corresponda",
+        "Nombrar procuradores regionales sin necesidad de concurso público"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 277 numeral 3 faculta al Procurador General para interponer acciones populares, de grupo y demás acciones que la ley determine, contribuyendo así a la defensa de intereses colectivos y al ordenamiento constitucional.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 277",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el artículo 282 de la Constitución, los agentes del Ministerio Público tienen derecho a: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Elegir a los integrantes de la Sala Disciplinaria de la Corte Suprema",
+        "Vetar decisiones judiciales que consideren contrarias a la ley",
+        "Percibir una remuneración idéntica a la del Presidente de la República",
+        "Obtener de las autoridades la información necesaria para el ejercicio de sus funciones"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 282 garantiza a los agentes del Ministerio Público el derecho a obtener información de las autoridades para el cumplimiento de sus funciones, lo cual es esencial para ejercer efectivamente la vigilancia que les compete.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 282",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "El artículo 283 de la Constitución prohíbe expresamente a los agentes del Ministerio Público: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Recibir auxilio de transporte por el desempeño de sus funciones",
+        "Solicitar la tutela de sus propios derechos fundamentales",
+        "Ejercer cargos públicos de elección popular durante el período para el cual fueron nombrados",
+        "Participar en eventos académicos y de capacitación permanente"
+      ],
+      "respuesta": 2,
+      "explicacion": "El artículo 283 establece inhabilidades e incompatibilidades para los agentes del Ministerio Público, entre ellas la de ejercer cargos públicos de elección popular durante su período, a fin de preservar su independencia funcional.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 283",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "Según el Decreto Ley 262 de 2000, la Procuraduría General de la Nación puede adelantar investigaciones disciplinarias por: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Incumplimiento de obligaciones mercantiles entre empresas privadas",
+        "Presunta falta disciplinaria cometida por servidores públicos sujetos a su competencia",
+        "Deudas civiles derivadas de contratos entre particulares",
+        "Infracciones de tránsito cometidas por particulares en vías públicas"
+      ],
+      "respuesta": 1,
+      "explicacion": "El Decreto Ley 262 de 2000 desarrolla la función disciplinaria de la Procuraduría, permitiéndole investigar presuntas faltas disciplinarias de servidores públicos dentro de su competencia constitucional y legal.",
+      "norma": "Decreto Ley 262/2000",
+      "articulo": "Estatuto Orgánico de la Procuraduría",
+      "dificultad": "dificil"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "De conformidad con el artículo 284 de la Constitución, la ley determinará: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "La estructura orgánica de las Fuerzas Militares y de la Policía",
+        "El sistema electoral para la elección de gobernadores y alcaldes",
+        "El monto del salario de los congresistas de la República",
+        "El régimen disciplinario, las inhabilidades e incompatibilidades de los agentes del Ministerio Público"
+      ],
+      "respuesta": 3,
+      "explicacion": "El artículo 284 remite a la ley la regulación del régimen disciplinario, así como las inhabilidades e incompatibilidades de los agentes del Ministerio Público, permitiendo un desarrollo legal detallado de su estatus.",
+      "norma": "Constitución Política de Colombia",
+      "articulo": "Art. 284",
+      "dificultad": "medio"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "enunciado": "La Ley 1952 de 2019, en relación con la Procuraduría General de la Nación, establece que esta entidad podrá: (perfil 35 / 1AS-19)",
+      "opciones": [
+        "Adelantar investigaciones disciplinarias con funciones de policía judicial, conforme a la ley",
+        "Expedir licencias de construcción y de urbanismo a entidades territoriales",
+        "Regular tarifas de servicios públicos domiciliarios a nivel nacional",
+        "Definir la política monetaria y cambiaria del país"
+      ],
+      "respuesta": 0,
+      "explicacion": "La Ley 1952 de 2019 faculta a la Procuraduría para que algunos de sus funcionarios ejerzan funciones de policía judicial durante las investigaciones disciplinarias, fortaleciendo así la recolección de prueba en casos de corrupción.",
+      "norma": "Ley 1952/2019",
+      "articulo": "Ley de Anticorrupción",
+      "dificultad": "dificil"
+    }
+  ],
+  "flashcards": [
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "¿Qué tipo de entidad es la Procuraduría General de la Nación según el artículo 275 de la Constitución Política? (perfil 35 / 1AS-19)",
+      "reverso": "Entidad autónoma del orden nacional, con personería jurídica, patrimonio propio e independencia administrativa",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 276 de la Constitución, ¿cuál es una función esencial de la Procuraduría General de la Nación? (perfil 35 / 1AS-19)",
+      "reverso": "Vigilar el cumplimiento de la Constitución, las leyes, las decisiones judiciales y los actos de las autoridades",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "De conformidad con el artículo 278 de la Constitución, ¿quién elige al Procurador General de la Nación? (perfil 35 / 1AS-19)",
+      "reverso": "La Corte Suprema de Justicia",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "¿Cuál es la duración del período para el cual es elegido el Procurador General de la Nación según la Constitución Política? (perfil 35 / 1AS-19)",
+      "reverso": "Cuatro años",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 280 de la Constitución, la Procuraduría General de la Nación se conforma, entre otros, por: (perfil 35 / 1AS-19)",
+      "reverso": "La Procuraduría Delegada ante la Corte Constitucional y ante el Consejo de Estado",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "Conforme al Decreto Ley 262 de 2000, ¿quién dirige y representa la Procuraduría General de la Nación? (perfil 35 / 1AS-19)",
+      "reverso": "El Procurador General de la Nación",
+      "norma": "Decreto Ley 262/2000"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "Según el artículo 277 de la Constitución, ¿cuál es una atribución del Procurador General de la Nación? (perfil 35 / 1AS-19)",
+      "reverso": "Ejercer la representación judicial y extrajudicial del Estado cuando no corresponda a otra autoridad",
+      "norma": "Constitución Política de Colombia"
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "frente": "En materia de derechos humanos, ¿qué función cumple la Procuraduría General de la Nación de acuerdo con el artículo 276 de la Constitución? (perfil 35 / 1AS-19)",
+      "reverso": "Protegerlos y promoverlos como parte de su misión constitucional",
+      "norma": "Constitución Política de Colombia"
+    }
+  ],
+  "resumenes": [
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "titulo": "Estructura del Ministerio Público",
+      "contenido_html": "<h3>Estructura del Ministerio Público</h3><ul><li>Procuraduría General, Defensoría del Pueblo y personerías.</li><li>Procuradores delegados y agentes del Ministerio Público.</li><li>Autonomía e independencia del Ministerio Público.</li></ul>",
+      "orden": 1
+    },
+    {
+      "tema_clave": "pgn-35",
+      "perfil_codigo": "35",
+      "titulo": "Funciones de la Procuraduría General de la Nación",
+      "contenido_html": "<h3>Funciones de la Procuraduría General de la Nación</h3><ul><li>Vigilancia superior de la conducta oficial.</li><li>Ejercicio preferente del poder disciplinario.</li><li>Protección de derechos humanos e intereses colectivos.</li></ul>",
+      "orden": 2
+    }
+  ]
+}

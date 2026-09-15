@@ -38,22 +38,20 @@ export const temasPorPerfil: Record<string, TemaSeed[]> = {
     { clave: 'simulacro', nombre: 'Simulacro mixto', descripcion: 'Preguntas aleatorias de todos los ejes del perfil para medir tu nivel general antes del concurso.', eje: 'Mixto', color: 'bg-fuchsia-600', icono: 'Shuffle' },
   ],
   '35': [
-    { clave: 'constitucional', nombre: 'Derecho constitucional', descripcion: 'Derechos fundamentales, tutela, acciones populares, bloque de constitucionalidad y control constitucional.', eje: 'Específico', color: 'bg-blue-500', icono: 'BookOpen' },
+    { clave: 'planeacion', nombre: 'Planeación estratégica', descripcion: 'Plan Nacional de Desarrollo, planes institucionales, indicadores, seguimiento y evaluación de políticas públicas.', eje: 'Específico', color: 'bg-blue-500', icono: 'BookOpen' },
+    { clave: 'contratacion', nombre: 'Contratación estatal', descripcion: 'Licitación, selección abreviada, mínima cuantía, decreto 1082 de 2015, SECOP II, garantías y supervisión.', eje: 'Específico', color: 'bg-amber-500', icono: 'FileText' },
+    { clave: 'administrativo', nombre: 'Derecho administrativo', descripcion: 'Acto administrativo, procedimiento administrativo, CPACA, recursos, nulidad y restablecimiento del derecho.', eje: 'Específico', color: 'bg-indigo-500', icono: 'Scale' },
     { clave: 'disciplinario', nombre: 'Derecho disciplinario', descripcion: 'Ley 1952 de 2019, Código General Disciplinario, proceso disciplinario, faltas, sanciones e investigación.', eje: 'Específico', color: 'bg-red-500', icono: 'Gavel' },
-    { clave: 'administrativo', nombre: 'Derecho administrativo', descripcion: 'Acto administrativo, procedimiento administrativo, CPACA, recursos, contratación y responsabilidad.', eje: 'Específico', color: 'bg-indigo-500', icono: 'Scale' },
-    { clave: 'procesal', nombre: 'Derecho procesal', descripcion: 'Competencia, actuaciones procesales, recursos, pruebas y garantías del debido proceso.', eje: 'Específico', color: 'bg-amber-500', icono: 'FileText' },
-    { clave: 'probatorio', nombre: 'Derecho probatorio', descripcion: 'Medios de prueba, valoración, carga de la prueba, informe pericial y prueba en el proceso disciplinario.', eje: 'Específico', color: 'bg-emerald-500', icono: 'Search' },
-    { clave: 'contratacion', nombre: 'Contratación estatal', descripcion: 'Régimen de contratación pública, modalidades, SECOP II, garantías y responsabilidad contractual.', eje: 'Específico', color: 'bg-rose-500', icono: 'Landmark' },
-    { clave: 'anticorrupcion', nombre: 'Estatuto anticorrupción', descripcion: 'Ley 1474 de 2011, prevención de la corrupción, denuncias y régimen disciplinario anticorrupción.', eje: 'Específico', color: 'bg-orange-500', icono: 'ShieldAlert' },
-    { clave: 'interpretacion', nombre: 'Interpretación y argumentación jurídica', descripcion: 'Métodos de interpretación, argumentación, precedente, analogía y sistematización del ordenamiento.', eje: 'Específico', color: 'bg-cyan-500', icono: 'MessageSquare' },
-    { clave: 'territorial', nombre: 'Ordenamiento territorial', descripcion: 'División político-administrativa, competencias de municipios y departamentos, planificación territorial.', eje: 'Específico', color: 'bg-teal-500', icono: 'Map' },
-    { clave: 'pgn', nombre: 'Estructura y funciones de la PGN', descripcion: 'Ministerio Público, control disciplinario y estructura de la Procuraduría General de la Nación.', eje: 'Común', color: 'bg-slate-600', icono: 'Building2' },
-    { clave: 'sistemas-gestion', nombre: 'Sistemas de gestión', descripcion: 'Modelo Integrado de Planeación y Gestión, MECI, FURAG y gestión de calidad.', eje: 'Común', color: 'bg-violet-500', icono: 'Settings' },
-    { clave: 'gestion-documental', nombre: 'Gestión documental', descripcion: 'Ciclo vital del documento, archivo y tablas de retención documental.', eje: 'Común', color: 'bg-pink-500', icono: 'FolderOpen' },
-    { clave: 'gestion-publica', nombre: 'Gestión pública y funcionamiento del Estado', descripcion: 'Constitución Política, organización del Estado, función pública y control.', eje: 'Común', color: 'bg-lime-500', icono: 'Globe' },
-    { clave: 'documentos-oficina', nombre: 'Elaboración de documentos de oficina', descripcion: 'Conceptos técnicos, informes, comunicaciones y redacción de documentos administrativos.', eje: 'Común', color: 'bg-sky-500', icono: 'FileEdit' },
-    { clave: 'atencion-usuario', nombre: 'Atención al usuario', descripcion: 'Servicio al ciudadano, PQRD, derecho de petición y canales de atención.', eje: 'Común', color: 'bg-yellow-500', icono: 'Headphones' },
-    { clave: 'ofimatica', nombre: 'Herramientas ofimáticas', descripcion: 'Hojas de cálculo, procesadores de texto y herramientas de productividad ofimática.', eje: 'Común', color: 'bg-fuchsia-500', icono: 'Calculator' },
+    { clave: 'proyectos', nombre: 'Formulación y evaluación de proyectos', descripcion: 'Metodología MGA del DNP, marco lógico, indicadores, BPIN, evaluación de costos y beneficios.', eje: 'Específico', color: 'bg-rose-500', icono: 'ClipboardList' },
+    { clave: 'anticorrupcion', nombre: 'Estatuto anticorrupción', descripcion: 'Ley 1474 de 2011, planes anticorrupción, denuncias, ética pública, prevención y control de la corrupción.', eje: 'Específico', color: 'bg-orange-500', icono: 'ShieldAlert' },
+    { clave: 'disciplinar-derecho', nombre: 'Conocimientos específicos del área disciplinar (Derecho)', descripcion: 'Fuentes del derecho, interpretación jurídica, Constitución Política, derechos fundamentales, bloque de constitucionalidad y Ministerio Público.', eje: 'Específico', color: 'bg-cyan-500', icono: 'MessageSquare' },
+    { clave: 'pgn', nombre: 'Estructura y funciones de la PGN', descripcion: 'Ministerio Público, control disciplinario, estructura de la Procuraduría General de la Nación y competencias.', eje: 'Común', color: 'bg-slate-600', icono: 'Building2' },
+    { clave: 'sistemas-gestion', nombre: 'Sistemas de gestión', descripcion: 'Modelo Integrado de Planeación y Gestión, MECI, FURAG, gestión de calidad y gestión del riesgo.', eje: 'Común', color: 'bg-violet-500', icono: 'Settings' },
+    { clave: 'gestion-documental', nombre: 'Gestión documental', descripcion: 'Ciclo vital del documento, archivo, tablas de retención, AGN y normativa de gestión documental.', eje: 'Común', color: 'bg-pink-500', icono: 'FolderOpen' },
+    { clave: 'gestion-publica', nombre: 'Gestión pública y funcionamiento del Estado', descripcion: 'Constitución Política, organización del Estado, descentralización, función pública y control.', eje: 'Común', color: 'bg-lime-500', icono: 'Globe' },
+    { clave: 'documentos-oficina', nombre: 'Elaboración de documentos de oficina', descripcion: 'Conceptos técnicos, informes, comunicaciones, memorandos y redacción de documentos administrativos.', eje: 'Común', color: 'bg-sky-500', icono: 'FileEdit' },
+    { clave: 'atencion-usuario', nombre: 'Atención al usuario', descripcion: 'Servicio al ciudadano, PQRD, derecho de petición, trámites y canales de atención.', eje: 'Común', color: 'bg-yellow-500', icono: 'Headphones' },
+    { clave: 'ofimatica', nombre: 'Herramientas ofimáticas', descripcion: 'Hojas de cálculo, procesadores de texto, presentaciones y herramientas de productividad ofimática.', eje: 'Común', color: 'bg-fuchsia-500', icono: 'Calculator' },
     { clave: 'simulacro', nombre: 'Simulacro mixto', descripcion: 'Preguntas aleatorias de todos los ejes del perfil para medir tu nivel general antes del concurso.', eje: 'Mixto', color: 'bg-fuchsia-600', icono: 'Shuffle' },
   ],
 };
@@ -156,6 +154,16 @@ export function insertarPerfiles() {
   }
 }
 
+export function limpiarTemasObsoletos() {
+  for (const [perfilCodigo, temas] of Object.entries(temasPorPerfil)) {
+    const claves = temas.map((tema) => `${tema.clave}-${perfilCodigo}`);
+    const placeholders = claves.map(() => '?').join(',');
+    db.prepare(
+      `DELETE FROM temas WHERE perfil_codigo = ? AND clave NOT IN (${placeholders})`
+    ).run(perfilCodigo, ...claves);
+  }
+}
+
 export function insertarTemasEstructura() {
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO temas (perfil_codigo, clave, nombre, eje, color, icono, orden, descripcion)
@@ -180,6 +188,7 @@ export function insertarTemasEstructura() {
 export function seed() {
   crearTablas();
   insertarPerfiles();
+  limpiarTemasObsoletos();
   insertarTemasEstructura();
 }
 
