@@ -1,6 +1,6 @@
 'use client';
 
-import { User } from 'lucide-react';
+import { User, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import type { Perfil } from '@/lib/types';
 
@@ -37,6 +37,15 @@ function Header({ perfilCodigo, perfilNombre, perfil, onCambiarPerfil, backHref 
               <User size={16} className="text-pgn-600" />
               <span className="text-callout font-semibold text-pgn-700">{nombre}</span>
             </div>
+          )}
+          {perfilCodigo && !backHref && (
+            <Link
+              href="/analisis"
+              className="btn-secondary h-11 px-3 rounded-xl inline-flex items-center gap-1.5"
+            >
+              <BarChart3 size={16} className="text-pgn-600" />
+              <span className="hidden sm:inline">Análisis</span>
+            </Link>
           )}
           {onCambiarPerfil && (
             <button
