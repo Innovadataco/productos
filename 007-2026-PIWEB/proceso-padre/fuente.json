@@ -11,115 +11,352 @@
       {
         "id": "completo",
         "label": "Recorrido completo",
-        "focus": ["registro", "consentimiento", "circulo", "reporte", "expediente", "clasifica", "pantalla"],
-        "note": "Del alta con consentimiento al seguimiento del expediente."
+        "focus": [
+          "registro",
+          "consentimiento",
+          "menores",
+          "reporte",
+          "expediente",
+          "clasifica",
+          "pantalla",
+          "revelar",
+          "derechos",
+          "psicologo"
+        ],
+        "note": "Del alta por correo con consentimiento al expediente en pantalla, el PASE y el apoyo profesional."
       },
       {
         "id": "privacidad",
         "label": "Privacidad y derechos",
-        "focus": ["registro", "consentimiento", "revelar", "derechos"],
-        "note": "Consentimiento, revelar con código de 6 dígitos y derechos del titular (Ley 1581)."
+        "focus": [
+          "registro",
+          "consentimiento",
+          "revelar",
+          "derechos",
+          "psicologo"
+        ],
+        "note": "Consentimiento, llave de 6 dígitos para revelar, EL PASE de 8 caracteres y apelaciones del titular."
       },
       {
         "id": "expediente",
         "label": "Expediente y apoyo",
-        "focus": ["reporte", "expediente", "clasifica", "pantalla", "psicologo"],
-        "note": "Del primer reporte al seguimiento en pantalla y al apoyo psicológico."
+        "focus": [
+          "reporte",
+          "expediente",
+          "clasifica",
+          "pantalla",
+          "psicologo"
+        ],
+        "note": "Del primer reporte al expediente en pantalla, el PASE para el psicólogo y el apoyo profesional."
       }
     ],
     "legend": {
       "mode": "auto",
       "entries": {
-        "frontend": { "label": "Padre / interfaz" },
-        "backend": { "label": "Plataforma" },
-        "database": { "label": "Expediente y datos" },
-        "security": { "label": "Privacidad y seguridad" },
-        "external": { "label": "Servicios externos" }
+        "frontend": {
+          "label": "Padre / interfaz"
+        },
+        "backend": {
+          "label": "Plataforma"
+        },
+        "database": {
+          "label": "Expediente y datos"
+        },
+        "security": {
+          "label": "Privacidad y seguridad"
+        },
+        "external": {
+          "label": "Servicios externos"
+        }
       }
     }
   },
   "lanes": [
-    { "id": "padre", "label": "Padre o cuidador" },
-    { "id": "privacidad", "label": "Privacidad y seguridad", "variant": "exception" },
-    { "id": "plataforma", "label": "Plataforma" }
+    {
+      "id": "padre",
+      "label": "Padre o cuidador"
+    },
+    {
+      "id": "privacidad",
+      "label": "Privacidad y seguridad",
+      "variant": "exception"
+    },
+    {
+      "id": "plataforma",
+      "label": "Plataforma"
+    }
   ],
   "phases": [
-    { "id": "alta", "label": "Alta y consentimiento", "fromCol": 0, "toCol": 1 },
-    { "id": "reporte", "label": "Primer reporte", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
-    { "id": "seguimiento", "label": "Seguimiento", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+    {
+      "id": "alta",
+      "label": "Alta y consentimiento",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "reporte",
+      "label": "Primer reporte",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "seguimiento",
+      "label": "Seguimiento",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
   ],
-  "mainPath": ["registro", "consentimiento", "circulo", "reporte", "expediente", "clasifica", "pantalla"],
+  "mainPath": [
+    "registro",
+    "consentimiento",
+    "menores",
+    "reporte",
+    "expediente",
+    "clasifica",
+    "pantalla"
+  ],
   "semanticChecks": {
-    "allowedRoots": ["registro"],
-    "allowedTerminals": ["revelar", "derechos", "psicologo"]
+    "allowedRoots": [
+      "registro"
+    ],
+    "allowedTerminals": [
+      "revelar",
+      "derechos",
+      "psicologo"
+    ]
   },
   "nodes": [
-    { "id": "registro", "lane": "padre", "col": 0, "type": "frontend", "label": "Registro", "sublabel": "correo o Google", "width": 132 },
-    { "id": "consentimiento", "lane": "privacidad", "col": 0, "type": "security", "label": "Consentimiento", "sublabel": "tratamiento de datos", "width": 140 },
-    { "id": "circulo", "lane": "padre", "col": 1, "type": "frontend", "label": "Círculo de confianza", "sublabel": "nombre y fecha de nacimiento", "tag": "sin documento", "width": 170 },
-    { "id": "reporte", "lane": "padre", "col": 2, "type": "frontend", "label": "Reporta", "sublabel": "elige primero al hijo", "tag": "edad automática", "width": 140 },
-    { "id": "expediente", "lane": "plataforma", "col": 3, "type": "database", "label": "Expediente del hijo", "sublabel": "nace al primer reporte", "tag": "RPT-XXXX", "width": 150 },
-    { "id": "clasifica", "lane": "plataforma", "col": 4, "type": "backend", "label": "Clasificación IA", "sublabel": "un solo correo", "width": 140 },
-    { "id": "pantalla", "lane": "padre", "col": 4, "type": "frontend", "label": "Sigue el expediente", "sublabel": "5 bloques", "width": 150 },
-    { "id": "revelar", "lane": "padre", "col": 5, "type": "frontend", "label": "Revelar texto", "sublabel": "código de 6 dígitos", "tag": "acceso auditado", "width": 140 },
-    { "id": "derechos", "lane": "privacidad", "col": 5, "type": "security", "label": "Derechos del titular", "sublabel": "Ley 1581", "width": 150 },
-    { "id": "psicologo", "lane": "plataforma", "col": 5, "type": "external", "label": "Apoyo psicológico", "sublabel": "agenda citas", "width": 140 }
+    {
+      "id": "registro",
+      "lane": "padre",
+      "col": 0,
+      "type": "frontend",
+      "label": "Registro",
+      "sublabel": "enlace y clave",
+      "width": 132
+    },
+    {
+      "id": "consentimiento",
+      "lane": "privacidad",
+      "col": 0,
+      "type": "security",
+      "label": "Consentimiento",
+      "sublabel": "tratamiento de datos",
+      "width": 140
+    },
+    {
+      "id": "menores",
+      "lane": "padre",
+      "col": 1,
+      "type": "frontend",
+      "label": "Menores de edad",
+      "sublabel": "nombre y nacimiento",
+      "tag": "sin documento",
+      "width": 150
+    },
+    {
+      "id": "reporte",
+      "lane": "padre",
+      "col": 2,
+      "type": "frontend",
+      "label": "Reporta",
+      "sublabel": "¿para quién reportas?",
+      "tag": "edad automática",
+      "width": 150
+    },
+    {
+      "id": "expediente",
+      "lane": "plataforma",
+      "col": 3,
+      "type": "database",
+      "label": "Expediente del hijo",
+      "sublabel": "nace al primer reporte",
+      "tag": "RPT-XXXXXX",
+      "width": 150
+    },
+    {
+      "id": "clasifica",
+      "lane": "plataforma",
+      "col": 4,
+      "type": "backend",
+      "label": "Clasificación IA",
+      "sublabel": "un solo correo",
+      "width": 140
+    },
+    {
+      "id": "pantalla",
+      "lane": "padre",
+      "col": 4,
+      "type": "frontend",
+      "label": "Sigue el expediente",
+      "sublabel": "5 bloques",
+      "width": 150
+    },
+    {
+      "id": "revelar",
+      "lane": "padre",
+      "col": 5,
+      "type": "frontend",
+      "label": "Revelar texto",
+      "sublabel": "llave de 6 dígitos",
+      "tag": "5 intentos · auditado",
+      "width": 140
+    },
+    {
+      "id": "derechos",
+      "lane": "privacidad",
+      "col": 5,
+      "type": "security",
+      "label": "Apelaciones",
+      "sublabel": "resuelve el comité",
+      "width": 140
+    },
+    {
+      "id": "psicologo",
+      "lane": "plataforma",
+      "col": 5,
+      "type": "external",
+      "label": "Apoyo psicológico",
+      "sublabel": "cita con reloj de 48 h",
+      "width": 150
+    }
   ],
   "edges": [
-    { "id": "e-reg-cons", "from": "registro", "to": "consentimiento", "label": "cuenta nueva", "variant": "security", "role": "main" },
-    { "id": "e-cons-circ", "from": "consentimiento", "to": "circulo", "role": "main" },
-    { "id": "e-circ-rep", "from": "circulo", "to": "reporte", "role": "main" },
-    { "id": "e-rep-exp", "from": "reporte", "to": "expediente", "label": "primer reporte", "role": "main" },
-    { "id": "e-exp-cla", "from": "expediente", "to": "clasifica", "role": "main" },
-    { "id": "e-cla-pan", "from": "clasifica", "to": "pantalla", "label": "un correo", "variant": "emphasis", "role": "main" },
-    { "id": "e-pan-rev", "from": "pantalla", "to": "revelar", "role": "branch" },
-    { "id": "e-pan-der", "from": "pantalla", "to": "derechos", "variant": "security", "role": "branch" },
-    { "id": "e-pan-psi", "from": "pantalla", "to": "psicologo", "role": "branch" }
+    {
+      "id": "e-reg-cons",
+      "from": "registro",
+      "to": "consentimiento",
+      "label": "cuenta nueva",
+      "variant": "security",
+      "role": "main"
+    },
+    {
+      "id": "e-cons-men",
+      "from": "consentimiento",
+      "to": "menores",
+      "role": "main"
+    },
+    {
+      "id": "e-men-rep",
+      "from": "menores",
+      "to": "reporte",
+      "role": "main"
+    },
+    {
+      "id": "e-rep-exp",
+      "from": "reporte",
+      "to": "expediente",
+      "label": "primer reporte",
+      "role": "main"
+    },
+    {
+      "id": "e-exp-cla",
+      "from": "expediente",
+      "to": "clasifica",
+      "role": "main"
+    },
+    {
+      "id": "e-cla-pan",
+      "from": "clasifica",
+      "to": "pantalla",
+      "label": "un correo",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-pan-rev",
+      "from": "pantalla",
+      "to": "revelar",
+      "role": "branch"
+    },
+    {
+      "id": "e-pan-der",
+      "from": "pantalla",
+      "to": "derechos",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "e-pan-psi",
+      "from": "pantalla",
+      "to": "psicologo",
+      "label": "PASE de 8 caracteres",
+      "role": "branch"
+    }
   ],
   "cards": [
     {
       "dot": "emerald",
-      "title": "Círculo de confianza",
+      "title": "Menores de edad",
       "items": [
-        "Registra hijos solo con nombre y fecha de nacimiento",
-        "Sin tipo ni número de documento"
+        "Solo nombre y fecha de nacimiento",
+        "Sin tipo ni número de documento",
+        "«A quién protejo»: vista de lectura"
       ]
     },
     {
       "dot": "cyan",
-      "title": "Expediente en pantalla (5 bloques)",
+      "title": "Expediente: 5 bloques",
       "items": [
-        "Semáforo de atención",
-        "Línea de tiempo",
-        "Otros reportes: fecha, lugar y clasificación (nunca textos)",
-        "Análisis",
-        "Acciones con «Consultar estado»"
+        "Semáforo · línea de tiempo",
+        "Tu evidencia tapada · análisis",
+        "Qué puedes hacer · Consultar estado",
+        "RPT-XXXXXX · /mis-reportes · /seguimiento"
       ]
     },
     {
       "dot": "violet",
       "title": "Privacidad",
       "items": [
-        "Un solo correo al clasificar; ninguno por lecturas internas",
-        "Revelar texto: código de 6 dígitos al correo, 5 intentos",
-        "Acceso revelado queda auditado"
+        "Un solo correo al clasificar",
+        "Revelar: llave de 6 dígitos, 5 intentos",
+        "Acceso revelado, auditado"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "EL PASE",
+      "items": [
+        "Código de 8 caracteres al psicólogo",
+        "Canje en /canjear-acceso · 15 min",
+        "Distinto de la llave de 6 dígitos"
       ]
     },
     {
       "dot": "amber",
-      "title": "Derechos del titular (Ley 1581)",
+      "title": "Apelaciones (Ley 1581)",
       "items": [
-        "Revisión",
-        "Anonimización",
-        "Eliminación"
+        "Radica en /dashboard/apelaciones",
+        "«Mis apelaciones» para seguimiento",
+        "La resuelve el comité"
       ]
     },
     {
       "dot": "slate",
-      "title": "¿Reportar como anónimo?",
+      "title": "Apoyo psicológico",
       "items": [
-        "Cierra sesión",
-        "Usa el flujo anónimo"
+        "Presentación › directorio › perfil",
+        "Pago › cita con reloj de 48 h",
+        "Agenda y citas"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Camino guiado",
+      "items": [
+        "Tras el muro de consentimiento",
+        "datos › hijos › plan › listo"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Reportar",
+      "items": [
+        "Elige primero al hijo",
+        "Alta inline solo con nombre",
+        "Formulario autenticado en 4 pasos"
       ]
     }
   ]

@@ -73,12 +73,12 @@
   </div>
 
   <section class="grupo" aria-labelledby="g-sistema">
-    <h2 id="g-sistema">El sistema</h2>
+    <h2 id="g-sistema">La plataforma</h2>
     <div class="rejilla">
       <a class="mapa" href="/arquitectura/sistema/">
         <div class="tipo">Arquitectura</div>
         <h3>Sistema completo</h3>
-        <p>Componentes de producción y sus conexiones: app Next.js, worker de la cola, PostgreSQL con pgvector, Ollama, correos, OAuth de Google, túnel de Cloudflare y la réplica hacia BI.</p>
+        <p>Componentes de producción y sus conexiones: app Next.js, worker único de la cola pg-boss, PostgreSQL 16 con pgvector, Ollama local, correos Resend, túnel de Cloudflare y la réplica hacia BI.</p>
         <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
       <a class="mapa" href="/flujo-reporte/">
@@ -123,6 +123,12 @@
         <p>Registro y verificación, perfil público en el directorio, solicitudes y agenda de citas con el padre, evolución del caso y acceso mínimo auditado al expediente.</p>
         <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
+      <a class="mapa" href="/proceso-operacion/">
+        <div class="tipo">Proceso · Equipo interno</div>
+        <h3>La operación resuelve</h3>
+        <p>Operador, comité de validación y verificador dentro del área interna: bandeja de pendientes, revelado auditado del texto, escalados, apelaciones del titular (Ley 1581) y expediente consolidado.</p>
+        <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
     </div>
   </section>
 
@@ -132,7 +138,7 @@
       <a class="mapa" href="/navegacion/">
         <div class="tipo">Arquitectura</div>
         <h3>Navegación de pantallas</h3>
-        <p>Zona pública, área del padre, del operador y del admin, con el motor de guardas: sesión huérfana, redirects de autenticados y el aterrizaje del registro con Google.</p>
+        <p>Zona pública, área del padre y área interna única del equipo operativo, con el motor de guardas: sesión huérfana, redirects de autenticados y control de acceso por ruta y rol.</p>
         <span class="abrir">Abrir mapa <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
     </div>
@@ -157,7 +163,7 @@
   </section>
 
   <p class="hub-nota">
-    Generados con <code>Archify</code> (MIT) desde el estado real de producción del producto 002 en el commit <code>893b4c15</code>, y publicados en el PR #622 (SPEC-608). Cada mapa incluye su fuente (<code>fuente.json</code>) para regenerarlo. Para el seguimiento operativo del día a día existe el <a href="/operacion/">Tablero de Operación</a> y la vista estática del <a href="/modelo/">Modelo de datos</a>.
+    Generados con <code>Archify</code> (MIT) desde el estado real de producción del producto 002 y corregidos contra el catálogo vigente de rutas, roles y flujos (SPEC-611: sin OAuth de Google, consulta pública integrada en la portada y área interna única <code>/dashboard/admin</code>). Cada mapa incluye su fuente (<code>fuente.json</code>) para regenerarlo. Para el seguimiento operativo del día a día existe el <a href="/operacion/">Tablero de Operación</a> y la vista estática del <a href="/modelo/">Modelo de datos</a>.
   </p>
 </main>
 

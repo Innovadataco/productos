@@ -3,7 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "Proceso del colegio",
-    "subtitle": "Del alta del tenant a la huella de auditoría",
+    "subtitle": "Del registro institucional al informe firmado y verificable",
     "animation": "trace",
     "visual_preset": "classic",
     "quality_profile": "showcase",
@@ -11,28 +11,28 @@
       {
         "id": "puesta-en-marcha",
         "label": "Puesta en marcha",
-        "focus": ["alta", "perfil", "comite"],
-        "note": "Del alta del tenant aislado al comité de protección configurado."
+        "focus": ["registro", "consentimiento", "camino"],
+        "note": "El colegio se registra solo, acepta el convenio de datos y recorre el camino guiado del rector."
       },
       {
-        "id": "alertas-y-decision",
-        "label": "Alertas y decisión",
+        "id": "alertas-y-comite",
+        "label": "Alertas y comité",
         "focus": ["reportes", "alertas", "revision"],
-        "note": "Los reportes comunitarios se cruzan por patrón y el comité decide el acompañamiento."
+        "note": "Los reportes de la comunidad cruzan con cuentas registradas; el comité resuelve con firma."
       },
       {
         "id": "visibilidad-y-auditoria",
         "label": "Visibilidad y auditoría",
-        "focus": ["panel", "audit"],
-        "note": "Panel con estadísticas agregadas y registro de toda acción sensible."
+        "focus": ["informe", "panel", "audit"],
+        "note": "Informe PDF verificable, panel del rector con KPIs y huella de auditoría completa."
       }
     ]
   },
   "lanes": [
-    { "id": "innovadataco", "label": "Innovadataco" },
     { "id": "colegio", "label": "Colegio" },
     { "id": "motor", "label": "Motor de análisis" },
     { "id": "comunidad", "label": "Comunidad" },
+    { "id": "evidencia", "label": "Evidencia" },
     { "id": "auditoria", "label": "Auditoría" }
   ],
   "phases": [
@@ -43,25 +43,27 @@
   "groups": [
     { "id": "config-institucional", "label": "Configuración institucional", "lane": "colegio", "fromCol": 1, "toCol": 2, "variant": "emphasis" }
   ],
-  "mainPath": ["alta", "perfil", "comite", "alertas", "revision", "panel", "audit"],
+  "mainPath": ["registro", "consentimiento", "camino", "alertas", "revision", "informe"],
   "nodes": [
-    { "id": "alta", "lane": "innovadataco", "col": 0, "type": "cloud", "label": "Alta del colegio", "sublabel": "tenant aislado", "width": 132 },
-    { "id": "perfil", "lane": "colegio", "col": 1, "type": "frontend", "label": "Perfil y cursos", "sublabel": "cursos e integrantes", "tag": "SCHOOL_ADMIN", "width": 132 },
-    { "id": "comite", "lane": "colegio", "col": 2, "type": "security", "label": "Configurar comité", "sublabel": "roles de protección", "tag": "COMITÉ", "width": 132 },
-    { "id": "alertas", "lane": "motor", "col": 3, "type": "backend", "label": "Generar alertas", "sublabel": "periodo · grado · conducta", "width": 132 },
+    { "id": "registro", "lane": "colegio", "col": 0, "type": "frontend", "label": "Registro del colegio", "sublabel": "nombre · NIT · correo", "width": 132 },
+    { "id": "consentimiento", "lane": "colegio", "col": 1, "type": "security", "label": "Consentimiento", "sublabel": "Ley 1581 · Dec. 1377", "tag": "MURO", "width": 132 },
+    { "id": "camino", "lane": "colegio", "col": 2, "type": "frontend", "label": "Camino del rector", "sublabel": "/plan → /listo", "tag": "RECTOR", "width": 132 },
+    { "id": "alertas", "lane": "motor", "col": 3, "type": "backend", "label": "Alertas", "sublabel": "fecha · ciudad · tipo", "width": 132 },
     { "id": "reportes", "lane": "comunidad", "col": 3, "type": "external", "label": "Reportes", "sublabel": "de la comunidad", "width": 132 },
-    { "id": "revision", "lane": "colegio", "col": 4, "type": "security", "label": "Revisar casos", "sublabel": "acompañamiento", "tag": "COMITÉ", "width": 132 },
-    { "id": "panel", "lane": "colegio", "col": 5, "type": "frontend", "label": "Panel del colegio", "sublabel": "estadísticas agregadas", "width": 132 },
-    { "id": "audit", "lane": "auditoria", "col": 5, "type": "database", "label": "AuditLog", "sublabel": "huella de auditoría", "width": 132 }
+    { "id": "revision", "lane": "colegio", "col": 4, "type": "security", "label": "Comité resuelve", "sublabel": "con firma e historia", "tag": "COMITÉ", "width": 132 },
+    { "id": "panel", "lane": "colegio", "col": 5, "type": "frontend", "label": "Panel del rector", "sublabel": "KPIs · cobertura", "width": 132 },
+    { "id": "informe", "lane": "evidencia", "col": 5, "type": "backend", "label": "Informe firmado", "sublabel": "/verificar/[codigo]", "tag": "PDF", "width": 132 },
+    { "id": "audit", "lane": "auditoria", "col": 5, "type": "database", "label": "AuditLog", "sublabel": "auditoría completa", "width": 132 }
   ],
   "edges": [
-    { "id": "alta-perfil", "from": "alta", "to": "perfil" },
-    { "id": "perfil-comite", "from": "perfil", "to": "comite" },
-    { "id": "comite-alertas", "from": "comite", "to": "alertas" },
+    { "id": "registro-consentimiento", "from": "registro", "to": "consentimiento" },
+    { "id": "consentimiento-camino", "from": "consentimiento", "to": "camino" },
+    { "id": "camino-alertas", "from": "camino", "to": "alertas" },
     { "id": "reportes-alertas", "from": "reportes", "to": "alertas", "role": "branch" },
     { "id": "alertas-revision", "from": "alertas", "to": "revision" },
-    { "id": "revision-panel", "from": "revision", "to": "panel" },
-    { "id": "panel-audit", "from": "panel", "to": "audit", "variant": "dashed", "role": "async" }
+    { "id": "revision-informe", "from": "revision", "to": "informe" },
+    { "id": "revision-panel", "from": "revision", "to": "panel", "role": "branch" },
+    { "id": "informe-audit", "from": "informe", "to": "audit", "variant": "dashed", "role": "async" }
   ],
   "cards": [
     {
@@ -69,26 +71,38 @@
       "title": "Tenant aislado",
       "items": [
         "Cada colegio es un Tenant independiente",
-        "Los datos de un colegio no se mezclan con otros",
-        "La consulta pública agrega todo sin revelar la fuente"
+        "Un colegio no ve datos de otros tenants",
+        "La consulta pública agrega sin revelar la fuente"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Patrones y alertas",
+      "title": "Alta en minutos",
       "items": [
-        "Los reportes se cruzan por periodo, grado y conducta",
-        "El comité revisa los casos escalados",
-        "Las decisiones definen el acompañamiento"
+        "Registro propio: correo institucional, nombre y NIT",
+        "Camino guiado: /plan /profesores /cursos /estudiantes /listo",
+        "11 grados listos; Excel validado fila a fila",
+        "Comité de convivencia: solo el rector gestiona integrantes"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Alertas sin exposición",
+      "items": [
+        "Una cuenta registrada aparece en un reporte",
+        "Solo fecha, ciudad y tipo de conducta",
+        "Nunca el relato ni quién reportó",
+        "El comité escala, resuelve con firma y guarda la historia"
       ]
     },
     {
       "dot": "rose",
-      "title": "Evidencia permanente",
+      "title": "Informe verificable",
       "items": [
-        "Toda acción sensible queda en el AuditLog",
-        "El panel muestra solo estadísticas agregadas",
-        "Nunca se exponen datos de otros colegios"
+        "PDF membreteado con el escudo, firmado por el rector",
+        "Código de verificación pública /verificar/[codigo]",
+        "Historial inborrable; informe mensual al consejo directivo",
+        "Decreto 769 de 2026: 5 de 6 conductas de la Ley 2564"
       ]
     }
   ]

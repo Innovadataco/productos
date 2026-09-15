@@ -5086,7 +5086,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <p class="subtitle">Protección Infantil — rutas por rol y guardas de acceso (proxy.ts)</p>
     </div>
 
-    <script id="archify-guided-views-data" type="application/json">[{"id":"vista-padre","label":"Vista padre","focus":["portada","consulta","reportar","acceso","consentimiento","motor","padre-inicio","padre-gestion","padre-exp","padre-perfil"],"note":"De la zona pública al tablero del padre, pasando por el motor de guardas."},{"id":"vista-operador","label":"Vista operador","focus":["acceso","motor","operador"],"note":"Entrada con sesión de operador: bandeja accionable y caso asignado."},{"id":"vista-admin","label":"Vista admin","focus":["acceso","motor","admin"],"note":"Entrada con sesión de admin o comité: bandeja global y módulos."}]</script>
+    <script id="archify-guided-views-data" type="application/json">[{"id":"vista-publica","label":"Vista zona pública","focus":["portada","reportar","seguimiento","acceso","altas","consentimiento"],"note":"Home con consulta embebida, reporte, seguimiento y accesos."},{"id":"vista-padre","label":"Vista padre","focus":["acceso","motor","padre","padre-exp","consentimiento"],"note":"Del acceso al tablero del padre pasando por el motor de guardas."},{"id":"vista-interna","label":"Vista área interna","focus":["acceso","motor","admin"],"note":"Área única compartida por ADMIN, OPERADOR y COMITÉ."},{"id":"vista-colegio","label":"Vista colegio","focus":["acceso","motor","colegio"],"note":"Tablero del SCHOOL_ADMIN y comité de convivencia."},{"id":"vista-profesional","label":"Vista profesional","focus":["altas","acceso","motor","profesional"],"note":"Alta con canje de pase, verificación y tablero profesional."}]</script>
 
     <script id="archify-i18n-data" type="application/json">{"locale":"en","messages":{"viewer.kind.frontend":"Frontend","viewer.kind.backend":"Backend","viewer.kind.database":"Database","viewer.kind.cloud":"Cloud","viewer.kind.security":"Security","viewer.kind.messagebus":"Message bus","viewer.kind.external":"External","viewer.kind.neutral":"Neutral","viewer.kind.node":"Node","viewer.kind.start":"Start","viewer.kind.active":"Active","viewer.kind.waiting":"Waiting","viewer.kind.decision":"Decision","viewer.kind.success":"Success","viewer.kind.failure":"Failure","viewer.toolbar.actions":"Diagram actions","viewer.theme.toggle.title":"Toggle theme (T)","viewer.theme.toggle":"Toggle color theme","viewer.theme.dark":"Dark","viewer.theme.light":"Light","viewer.preset.choose.title":"Choose visual style (S cycles)","viewer.preset.choose":"Choose visual style","viewer.preset.style":"Style","viewer.preset.menu":"Visual style","viewer.preset.identity":"Visual identity","viewer.preset.cycles":"S cycles","viewer.preset.classic":"Classic","viewer.preset.classic.short":"Classic","viewer.preset.classic.hint":"Stable technical default","viewer.preset.flow":"Signal Flow","viewer.preset.flow.short":"Flow","viewer.preset.flow.hint":"Motion-forward presentation","viewer.preset.blueprint":"Blueprint","viewer.preset.blueprint.hint":"Engineering review","viewer.preset.editorial":"Editorial","viewer.preset.editorial.hint":"Publication and launch notes","viewer.preset.badge.signalFlow":"SIGNAL FLOW","viewer.preset.badge.blueprint":"BLUEPRINT / REV 01","viewer.preset.badge.editorial":"EDITORIAL / FIELD NOTE","viewer.preset.badge.editorialPlate":"ARCHIFY / PLATE 04","viewer.preset.current":"Visual style: {style}. Choose visual style","viewer.motion.live":"Live","viewer.motion.still":"Still","viewer.motion.pause":"Pause motion","viewer.motion.resume":"Resume motion","viewer.motion.reduced":"Motion paused by reduced-motion preference","viewer.motion.hidden":"Motion paused while this page is hidden","viewer.motion.yielding":"Pause motion; currently yielding to {owner}","viewer.motion.yielding.title":"Live preview enabled · yielding to {owner}","viewer.owner.story":"the guided story","viewer.owner.chapter":"the active chapter","viewer.owner.chapterPreview":"the chapter delta preview","viewer.owner.handoff":"the chapter handoff","viewer.owner.route":"Route Probe","viewer.owner.lens":"Semantic Lens","viewer.owner.relationship":"Relationship Preview","viewer.owner.intent":"Intent Trace","viewer.owner.focus":"semantic focus","viewer.owner.legend":"legend preview","viewer.owner.reader":"reader interaction","viewer.present.enter":"Enter presentation stage","viewer.present.enter.title":"Presentation stage (F)","viewer.present.exit":"Exit presentation stage","viewer.present.exit.title":"Exit presentation stage (F or Escape)","viewer.present.present":"Present","viewer.present.exit.label":"Exit","viewer.export.button":"Export","viewer.export.button.title":"Export diagram (E)","viewer.export.diagram":"Export diagram","viewer.export.menu":"Export","viewer.export.subtitle":"Portable, clean outputs","viewer.export.share":"Share","viewer.export.shareCard":"Share Card","viewer.export.routeShareCard":"Route Share Card","viewer.export.reachShareCard":"Reach Share Card","viewer.export.copyShareCard":"Copy Share Card","viewer.export.copyDiagram":"Copy diagram","viewer.export.clipboardPng":"PNG to clipboard","viewer.export.raster":"Raster images","viewer.export.image":"Image","viewer.export.lossless":"Lossless image","viewer.export.compact":"Compact image","viewer.export.modern":"Modern image","viewer.export.vectorMotion":"Vector and motion","viewer.export.vectorMotion.heading":"Vector \u0026 motion","viewer.export.editable":"Editable vector","viewer.export.motion6s":"6s motion","viewer.export.unsupported":"Not supported by this browser","viewer.export.clipboardUnsupported":"Clipboard image write not supported by this browser","viewer.export.clipboardUnsupported.period":"Clipboard image write not supported by this browser.","viewer.export.clipboardUnsupported.short":"Clipboard image write not supported in this browser.","viewer.export.motionUnavailable":"Motion capture unavailable in this browser","viewer.export.webmUnavailable":"WebM unavailable in this browser","viewer.export.failed":"Export failed: {message}","viewer.export.unknownVariant":"Unknown Share Card variant: {variant}","viewer.export.routeRequired":"Trace a route before exporting a Route Share Card","viewer.export.reachRequired":"Trace authored reach before exporting a Reach Share Card","viewer.export.unknown":"unknown","viewer.export.routeFailed":"Route Share Card export failed: {message}","viewer.export.reachFailed":"Reach Share Card export failed: {message}","viewer.export.copyFailed":"Copy failed: {message}","viewer.export.copiedPng":"Copied PNG to clipboard","viewer.export.copiedShare":"Copied Share Card","viewer.export.downloadedShare":"Downloaded Share Card","viewer.export.downloadedRoute":"Downloaded Route Share Card","viewer.export.downloadedReach":"Downloaded Reach Share Card","viewer.export.downloadedWebm":"Downloaded WebM","viewer.export.recording":"Recording 6 seconds of motion…","viewer.export.card.routeSummary.one":"Route: {source} → {target} · {count} directed hop","viewer.export.card.routeSummary.other":"Route: {source} → {target} · {count} directed hops","viewer.export.card.reachSummary":"Authored {direction} from {origin} · {nodes} · {links} · max {hops}","viewer.export.card.node.one":"{count} node","viewer.export.card.node.other":"{count} nodes","viewer.export.card.link.one":"{count} link","viewer.export.card.link.other":"{count} links","viewer.export.card.hop.one":"{count} hop","viewer.export.card.hop.other":"{count} hops","viewer.export.card.routeBadge":"ARCHIFY · ROUTE · {hops}","viewer.export.card.reachBadge":"ARCHIFY · {direction} REACH","viewer.export.card.defaultBadge":"ARCHIFY · {preset} · {theme}","viewer.export.direction.upstream":"Upstream","viewer.export.direction.downstream":"Downstream","viewer.export.error.canvasUnavailable":"Canvas unavailable for {label}","viewer.export.error.contextUnavailable":"2D canvas context unavailable for {label}","viewer.export.error.toBlobUnavailable":"canvas.toBlob unavailable for {label}","viewer.export.error.toBlobNull":"canvas.toBlob returned no data for {label}","viewer.export.error.variantsCombined":"Share Card variants cannot be combined","viewer.export.error.viewerState":"Share Card export could not remove temporary viewer state","viewer.export.error.routeState":"Route Card export could not preserve the resolved route safely","viewer.export.error.reachState":"Reach Card export could not preserve authored reach safely","viewer.export.error.webmRequirements":"WebM motion export requires a trace animation and browser MediaRecorder support","viewer.export.error.mediaRecorder":"MediaRecorder failed","viewer.export.error.emptyWebm":"MediaRecorder produced an empty WebM","viewer.export.error.webmBackground":"SVG background could not be loaded for WebM export","viewer.guided.region":"Guided diagram views","viewer.guided.previous":"Previous guided view","viewer.guided.previous.title":"Previous guided view ([)","viewer.guided.next":"Next guided view","viewer.guided.next.title":"Next guided view (])","viewer.guided.views":"Guided views","viewer.guided.explore":"Explore this system","viewer.guided.intro":"Step through curated paths without changing the source diagram.","viewer.guided.trail":"Story trail","viewer.guided.beat":"Beat","viewer.guided.nextBeat":"Next","viewer.guided.play":"Play guided story","viewer.guided.play.title":"Play guided story (P)","viewer.guided.pause":"Pause guided story","viewer.guided.pause.title":"Pause guided story (P)","viewer.guided.replay":"Replay guided story","viewer.guided.replay.title":"Replay guided story (P)","viewer.guided.playStory":"Play story","viewer.guided.pauseStory":"Pause","viewer.guided.replayStory":"Replay story","viewer.guided.motionUnavailable":"Story playback unavailable while motion is Still","viewer.guided.enableMotion":"Switch motion to Live to play the guided story","viewer.guided.selectBeatLink":"Select a Story Beat to copy its exact link","viewer.guided.copyMoment":"Copy moment","viewer.guided.momentCopied":"Moment link copied","viewer.guided.momentCopyFailed":"Could not copy story moment link","viewer.guided.copied":"Copied","viewer.guided.copyFailed":"Copy failed","viewer.guided.showAll":"Show all","viewer.guided.showAll.aria":"Show entire diagram","viewer.guided.chapters":"Story chapters","viewer.guided.storyTrail":"Story trail for {label}: {count} beats","viewer.guided.chapter.open":"Open chapter {index} of {total}: {label}, {count} stops","viewer.guided.chapter.current":"Current chapter {index} of {total}: {label}, {count} stops","viewer.guided.chapter.selectedNodes":"{count} selected nodes","viewer.guided.chapter.stops":"{count} stops","viewer.guided.chapter.stop.one":"{count} stop","viewer.guided.chapter.stop.other":"{count} stops","viewer.guided.chapter.current.title":"{label} — current chapter, {count} stops","viewer.guided.chapter.delta.expanded":"{stay} stay, {enter} enter, {leave} leave","viewer.guided.chapter.delta.aria":"Open chapter {index} of {total}: {label}. Chapter focus delta: {delta}","viewer.guided.chapter.delta.title":"{label} — {delta} chapter focus","viewer.guided.handoff":"{from} → {to} · via {label}","viewer.guided.share.chapter":"Chapter {index} / {total}","viewer.guided.share.initial":"Chapter 01 / 01","viewer.guided.share.default":"Guided chapter","viewer.guided.state.ready":"Ready","viewer.guided.state.playing":"Playing","viewer.guided.state.settled":"Settled","viewer.guided.state.paused":"Paused","viewer.guided.state.pinned":"Pinned","viewer.guided.state.still":"Still","viewer.guided.share.step":"Step {index} / {total} · {label}","viewer.guided.share.staticMoment":"{step} · Static moment","viewer.guided.share.complete":"{count} steps complete · {note}","viewer.guided.share.settled":"Path settled for reading.","viewer.guided.share.staticPath":"{count} steps · Static path","viewer.guided.share.ready":"{count} steps · Ready","viewer.guided.share.aria":"{state} chapter {index} of {total}: {label}. {beat}. {route}","viewer.guided.beat.start":"Beat {index} / {total} · {label} · starting point","viewer.guided.beat.forward":"Beat {index} / {total} · {from} → {to}","viewer.guided.beat.reverse":"Beat {index} / {total} · {from} → {to} · reverse authored link","viewer.guided.beat.multiple":"Beat {index} / {total} · {from} ⇄ {to} · {count} authored links","viewer.guided.beat.group":"Beat {index} / {total} · {from} · {to} · grouped · no direct link","viewer.guided.beat.aria.prefix":"Story beat {index} of {total}: {label}. ","viewer.guided.beat.aria.start":"Starting point.","viewer.guided.beat.aria.forward":"From {from} through one authored forward relationship.","viewer.guided.beat.aria.reverse":"From {from}; the authored relationship points from {to} to {from}.","viewer.guided.beat.aria.multiple":"From {from} through {count} authored relationships; shown without arbitrary motion.","viewer.guided.beat.aria.group":"Grouped from {from} with no direct authored relationship.","viewer.guided.caption.start":"Starting point","viewer.guided.caption.grouped":"Grouped transition · no direct authored link","viewer.guided.caption.more":" +{count} more","viewer.guided.caption.reverse":"Reverse authored relationship","viewer.guided.caption.relationships":"{count} authored relationships","viewer.guided.caption.relationship":"Authored relationship","viewer.guided.caption.direction":"authored direction: {from} → {to}","viewer.guided.caption.starting":"Authored starting point","viewer.guided.beatLink":"Copy link to current story moment: Beat {index} of {total}: {label}","viewer.guided.noStory":"This diagram has no authored guided story.","viewer.guide.eyebrow":"Diagram guide","viewer.guide.close":"Close diagram guide","viewer.guide.inspecting":"Inspecting compiled semantics","viewer.guide.actions":"Diagram exploration actions","viewer.guide.find":"Find any node","viewer.guide.find.hint":"Search labels, responsibilities, kinds, and stable IDs.","viewer.guide.route":"Trace a route","viewer.guide.route.aria":"Trace a directed route","viewer.guide.route.hint":"Ask how two semantic nodes connect in authored direction.","viewer.guide.map":"See the whole system","viewer.guide.map.hint":"Open Semantic Radar with a live viewport and stable nodes.","viewer.guide.lens":"Compare semantic kinds","viewer.guide.lens.hint":"Count roles, reveal their traffic, and compare direct authored links.","viewer.guide.story":"Play the guided story","viewer.guide.story.hint":"Walk the authored chapters and real relationships.","viewer.guide.present":"Enter Presentation Stage","viewer.guide.present.hint":"Give the live diagram the viewport without changing export.","viewer.guide.shortcuts":"Additional keyboard shortcuts","viewer.guide.shortcut.export":"Export","viewer.guide.shortcut.theme":"Theme","viewer.guide.shortcut.style":"Style","viewer.guide.shortcut.reset":"Reset","viewer.guide.shortcut.zoomIn":"Zoom in","viewer.guide.shortcut.zoomOut":"Zoom out","viewer.guide.shortcut.close":"Close","viewer.guide.facts":"{nodes} · {relationships} · {views}","viewer.guide.fact.node.one":"{count} semantic node","viewer.guide.fact.node.other":"{count} semantic nodes","viewer.guide.fact.relationship.one":"{count} relationship","viewer.guide.fact.relationship.other":"{count} relationships","viewer.guide.fact.view.one":"{count} guided view","viewer.guide.fact.view.other":"{count} guided views","viewer.guide.story.available.one":"Walk {count} authored chapter and its real relationships.","viewer.guide.story.available.other":"Walk {count} authored chapters and their real relationships.","viewer.guide.story.unavailable":"No authored guided story in this diagram.","viewer.guide.open":"Open diagram guide","viewer.guide.noStory":"This diagram has no authored guided story.","viewer.finder.title":"Find a node","viewer.finder.close":"Close node finder","viewer.finder.placeholder":"Search labels or IDs","viewer.finder.search":"Search diagram nodes","viewer.finder.results":"Diagram nodes","viewer.finder.empty":"No matching nodes","viewer.finder.result.focus":"Focus {label}","viewer.finder.result.routeStart":"Choose {label} as route start","viewer.finder.result.routeTarget":"Choose {label} as route destination, {links}","viewer.finder.status.empty":"No matching nodes","viewer.finder.status.count.one":"{count} matching node","viewer.finder.status.count.other":"{count} matching nodes","viewer.finder.noun.nodes":"nodes","viewer.finder.link.one":"{count} link","viewer.finder.link.other":"{count} links","viewer.finder.result.focus.one":"Focus {label}, {count} related connection","viewer.finder.result.focus.other":"Focus {label}, {count} related connections","viewer.finder.status.filtered":"{visible} of {available} {noun}","viewer.finder.status.all":"{available} {noun}","viewer.passport.eyebrow":"Semantic passport","viewer.passport.metadata":"Node metadata","viewer.passport.evidence":"Verified source evidence","viewer.passport.verified":"Verified source","viewer.passport.verificationScope":"Verified against local Git at the pinned revision. Remote access has not been checked.","viewer.passport.reach":"Authored reach","viewer.passport.reach.trace":"Trace authored reachability","viewer.passport.upstream":"Upstream","viewer.passport.downstream":"Downstream","viewer.passport.upstream.trace":"Trace upstream authored reachability","viewer.passport.downstream.trace":"Trace downstream authored reachability","viewer.passport.close":"Close semantic passport","viewer.passport.copy":"Copy link","viewer.passport.copy.focus":"Copy link to focused node","viewer.passport.relations":"Relations","viewer.passport.relations.show":"Show connected relationships","viewer.passport.relations.hide":"Hide connected relationships","viewer.passport.relations.list":"Connected relationships","viewer.passport.copyRelation":"Copy relation","viewer.passport.copyNode":"Copy node","viewer.passport.copyPinned":"Copy link to pinned relationship","viewer.passport.copySource":"Copy link to source node","viewer.passport.copy.focused.success":"Focused node link copied","viewer.passport.copy.pinned.success":"Pinned relationship link copied","viewer.passport.copy.focused.failed":"Could not copy focused node link","viewer.passport.copy.pinned.failed":"Could not copy pinned relationship link","viewer.passport.relationship.none":"No connected relationships","viewer.passport.relationship.count.one":"{count} relation","viewer.passport.relationship.count.other":"{count} relations","viewer.passport.relationship.show.one":"Show {count} connected relationship","viewer.passport.relationship.show.other":"Show {count} connected relationships","viewer.passport.relationship.summary":"{out} outgoing · {in} incoming{loops}","viewer.passport.relationship.loops":" · {count} loop","viewer.passport.relationship.explorer":"Direct relationship explorer","viewer.passport.relationship.help":"Use arrow keys to explore relationships. Press Enter or Space to pin details; Escape clears.","viewer.passport.relationship.loopsBack":"loops back","viewer.passport.relationship.connectsTo":"connects to","viewer.passport.relationship.connectsFrom":"connects from","viewer.passport.relationship.pinned":"Pinned relationship · {from} → {to} · {label}","viewer.passport.relationship.inspect":"Inspect relationship {index} of {total}: {from} to {to}, {label}. Press Enter for details.","viewer.passport.relationship.group.out":"Outgoing","viewer.passport.relationship.group.in":"Incoming","viewer.passport.relationship.group.loop":"Self loops","viewer.passport.relationship.row":"{group}: {relationship}, {neighbor}","viewer.passport.relationship.direction.out":"OUT →","viewer.passport.relationship.direction.in":"← IN","viewer.passport.relationship.direction.loop":"LOOP","viewer.passport.sourceCount.one":"{count} verified source reference","viewer.passport.sourceCount.other":"{count} verified source references","viewer.passport.sourceMarker":"SRC","viewer.passport.beacon.one":"{count} verified source; focus this node to inspect","viewer.passport.beacon.other":"{count} verified sources; focus this node to inspect","viewer.passport.repository.open":"Open verified repository revision {revision}","viewer.passport.source.open":"Open verified source {path} at revision {revision}","viewer.passport.source.openLink":"Open ↗","viewer.passport.reach.upstream.one":"Trace {count} upstream authored node","viewer.passport.reach.upstream.other":"Trace {count} upstream authored nodes","viewer.passport.reach.downstream.one":"Trace {count} downstream authored node","viewer.passport.reach.downstream.other":"Trace {count} downstream authored nodes","viewer.passport.reach.noUpstream":"No upstream authored nodes","viewer.passport.reach.noDownstream":"No downstream authored nodes","viewer.passport.reach.status":"{direction} · {nodes} nodes · {links} links · max {hops} hops","viewer.route.eyebrow":"Route probe","viewer.route.start":"Choose a start node","viewer.route.start.find":"Find start","viewer.route.start.find.aria":"Find a route start","viewer.route.copy":"Copy link","viewer.route.copy.aria":"Copy link to traced route","viewer.route.clear":"Clear","viewer.route.clear.aria":"Clear route probe","viewer.route.traced":"Traced route","viewer.route.pickTwo":"Pick two semantic nodes on the diagram","viewer.route.pickOne":"Pick a semantic node on the diagram","viewer.route.controls":"Route journey controls","viewer.route.previous":"Previous route position","viewer.route.play":"Play route journey","viewer.route.pause":"Pause route journey","viewer.route.replay":"Replay route journey","viewer.route.next":"Next route position","viewer.route.journey":"Journey","viewer.route.pause.label":"Pause","viewer.route.replay.label":"Replay","viewer.route.overview":"Overview","viewer.route.overview.aria":"Show complete route overview","viewer.route.instructions":"Choose the source, then the destination. Direction matters.","viewer.route.destination":"Choose a destination from {label}","viewer.route.destination.find":"Find target","viewer.route.destination.find.aria":"Find a reachable route destination","viewer.route.differentDestination":"Choose a different destination","viewer.route.distinct":"A route needs two distinct semantic nodes.","viewer.route.unreachable":"No directed route to {label}","viewer.route.unreachable.detail":"{target} is not reachable from {source}. Pick a highlighted destination.","viewer.route.start.instructions":"Select the source. The next step will reveal only directed destinations.","viewer.route.copy.success":"Traced route link copied","viewer.route.copy.failed":"Could not copy traced route link","viewer.route.position":"Route position {index} of {total}: {label}","viewer.route.step":"Step {index} of {total} · {phase} · {label}","viewer.route.motionRequired":"Automatic journey requires Live motion","viewer.route.trigger.clear":"Clear traced route","viewer.route.overview.status":"{nodes} · {hops} · shortest authored route","viewer.route.overview.node.one":"{count} node","viewer.route.overview.node.other":"{count} nodes","viewer.route.overview.hop.one":"{count} directed hop","viewer.route.overview.hop.other":"{count} directed hops","viewer.route.phase.playing":"Playing","viewer.route.phase.complete":"Complete","viewer.route.phase.inspecting":"Inspecting","viewer.route.destination.count.one":"{count} directed destination available. Pick a highlighted node.","viewer.route.destination.count.other":"{count} directed destinations available. Pick a highlighted node.","viewer.route.noOutgoing":"No outgoing route starts here. Clear and choose another source.","viewer.route.result.title":"{source} to {target}","viewer.route.finder.source.title":"Choose route start","viewer.route.finder.source.placeholder":"Search route sources","viewer.route.finder.source.empty":"No matching route sources","viewer.route.finder.source.results":"Nodes that can start a route","viewer.route.finder.source.noun":"route sources","viewer.route.finder.source.badge":"start","viewer.route.finder.target.title":"Destination from {label}","viewer.route.finder.target.placeholder":"Search reachable destinations","viewer.route.finder.target.empty":"No matching reachable destinations","viewer.route.finder.target.results":"Reachable route destinations","viewer.route.finder.target.noun":"reachable destinations","viewer.route.hop.one":"{count} hop","viewer.route.hop.other":"{count} hops","viewer.lens.eyebrow":"Semantic lens","viewer.lens.title":"Compare system roles","viewer.lens.close":"Close semantic lens","viewer.lens.instruction":"Choose up to two semantic kinds. One reveals its real traffic; two compare only direct authored relationships.","viewer.lens.kinds":"Semantic kinds","viewer.lens.choose":"Choose a kind to inspect its nodes and touching relationships.","viewer.lens.copy":"Copy link to semantic lens","viewer.lens.clear":"Clear semantic lens","viewer.lens.open":"Open semantic lens","viewer.lens.openActive":"Open active semantic lens","viewer.lens.legend":"Semantic legend","viewer.lens.legend.inspect.one":"Inspect {label}, {count} node","viewer.lens.legend.inspect.other":"Inspect {label}, {count} nodes","viewer.lens.kind.count.one":"{label}, {count} node","viewer.lens.kind.count.other":"{label}, {count} nodes","viewer.lens.compare.one":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationship","viewer.lens.compare.other":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationships","viewer.lens.single":"{nodes} · {relationships} · connected peers remain visible","viewer.lens.node.one":"{count} {label} node","viewer.lens.node.other":"{count} {label} nodes","viewer.lens.relationship.one":"{count} touching relationship","viewer.lens.relationship.other":"{count} touching relationships","viewer.radar.title":"Semantic radar","viewer.radar.building":"Building overview","viewer.radar.openFull":"Open full semantic radar","viewer.radar.open":"Open radar","viewer.radar.close":"Close semantic radar","viewer.radar.surface":"Diagram overview. Click a node to focus it, or use arrow keys to pan.","viewer.radar.click":"Click node","viewer.radar.drag":"Drag to pan","viewer.radar.space":"Semantic radar needs more MAP space.","viewer.radar.nodes":"Semantic diagram radar nodes","viewer.radar.focus":"Focus {label} from Semantic Radar","viewer.radar.status":"{count} nodes · {viewport}","viewer.radar.fullMap":"{count} nodes · full map","viewer.radar.compacted":"Radar compacted to avoid covering the Semantic Passport or MAP controls.","viewer.radar.cancelWaiting":"Cancel semantic radar waiting for more MAP space","viewer.radar.needsSpace":"Semantic radar needs more visible MAP space","viewer.radar.viewport.full":"full map","viewer.radar.viewport.width":"{percent}% width","viewer.radar.viewport.scale":"{percent}% viewport","viewer.nav.controls":"Diagram view controls","viewer.nav.route":"Trace a directed route","viewer.nav.route.title":"Trace route (R)","viewer.nav.route.short":"PATH","viewer.nav.radar":"Open semantic radar","viewer.nav.radar.title":"Semantic radar (M)","viewer.nav.radar.short":"MAP","viewer.nav.lens":"Open semantic lens","viewer.nav.lens.title":"Semantic lens (L)","viewer.nav.lens.short":"LENS","viewer.nav.find":"Find a node","viewer.nav.find.title":"Find a node (/)","viewer.nav.guide":"Open diagram guide","viewer.nav.guide.title":"Diagram guide (?)","viewer.nav.zoomOut":"Zoom out","viewer.nav.zoomOut.title":"Zoom out (-)","viewer.nav.reset":"Reset diagram view","viewer.nav.reset.title":"Reset view (0)","viewer.nav.read":"READ","viewer.nav.zoomIn":"Zoom in","viewer.nav.zoomIn.title":"Zoom in (+)","viewer.nav.camera":"{hint}. Reset diagram view","viewer.nav.camera.title":"{semantic}{hint} · reset view (0)","viewer.nav.camera.semantic":"Semantic camera active · ","viewer.nav.level.map":"MAP","viewer.nav.level.read":"READ","viewer.nav.level.full":"FULL","viewer.nav.level.auto":"AUTO","viewer.nav.detail.map":"Zoom in to reveal relationship labels and node context","viewer.nav.detail.read":"Zoom in again to reveal tags and annotations","viewer.nav.detail.full":"Full diagram detail","viewer.intent.summary":"{label}. {out} outgoing, {in} incoming{loops}. {total} connections. Press Enter for details.","viewer.intent.loops":", {count} self loop","viewer.common.copied":"Copied","viewer.common.copyFailed":"Copy failed","viewer.common.copyLink":"Copy link","viewer.common.clear":"Clear","viewer.common.close":"Close"}}</script>
     <div class="guided-views no-print" id="guided-views" hidden aria-label="Guided diagram views">
@@ -5131,7 +5131,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / PLATE 04">
-      <svg viewBox="0 0 1180 760" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase">
+      <svg viewBox="0 0 1180 800" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase">
         <title id="archify-diagram-title">Mapa de navegación de pantallas</title>
         <desc id="archify-diagram-description">Protección Infantil — rutas por rol y guardas de acceso (proxy.ts)</desc>
         <!-- Definitions -->
@@ -5157,254 +5157,285 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="Zona pública" x="44" y="66" width="192" height="638" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="Zona pública" x="44" y="36" width="192" height="681" rx="12" class="c-region" stroke-width="1"/>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" data-composition-frame-label="Área padre" x="644" y="56" width="212" height="516" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" data-composition-frame-label="Área padre" x="624" y="306" width="212" height="238" rx="12" class="c-region" stroke-width="1"/>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="2" data-composition-frame-label="Área operador" x="914" y="126" width="212" height="108" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="2" data-composition-frame-label="Área interna única" x="884" y="46" width="212" height="108" rx="12" class="c-region" stroke-width="1"/>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="3" data-composition-frame-label="Área admin · comité" x="914" y="306" width="212" height="108" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="3" data-composition-frame-label="Área colegio" x="884" y="186" width="212" height="108" rx="12" class="c-region" stroke-width="1"/>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="4" data-composition-frame-label="Guardas de acceso · proxy.ts" x="314" y="406" width="212" height="128" rx="8" class="c-security-group" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="4" data-composition-frame-label="Área profesional" x="884" y="369" width="212" height="108" rx="12" class="c-region" stroke-width="1"/>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="5" data-composition-frame-label="Guardas de acceso · proxy.ts" x="324" y="356" width="222" height="134" rx="8" class="c-security-group" stroke-width="1"/>
 
         <!-- Connection paths (before components for correct z-order) -->
-        <path data-edge-from="portada" data-edge-to="consulta" data-edge-key="0" data-edge-id="nav-portada-consulta" data-composition-points="140,154;140,210" d="M 140 154 L 140 210" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="consulta" data-edge-to="reportar" data-edge-key="1" data-edge-id="nav-consulta-reportar" data-composition-points="140,274;140,330" d="M 140 274 L 140 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="reportar" data-edge-to="acceso" data-edge-key="2" data-edge-id="nav-reportar-acceso" data-composition-points="140,394;140,480" d="M 140 394 L 140 480" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="acceso" data-edge-to="consentimiento" data-edge-label="OAuth nuevo" data-edge-key="3" data-edge-id="oauth-consentimiento" data-composition-points="140,544;140,620" d="M 140 544 L 140 620" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="motor" data-edge-to="acceso" data-edge-label="anónimo/huérfana" data-edge-key="4" data-edge-id="guard-anon-login" data-composition-points="330,472;280,472;280,512;220,512" d="M 330 472 L 288 472 Q 280 472 280 480 L 280 504 Q 280 512 272 512 L 220 512" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="motor" data-edge-to="padre-inicio" data-edge-label="SPEC-602 → home padre" data-edge-key="5" data-edge-id="guard-home-padre" data-composition-points="420,430;420,112;660,112" d="M 420 430 L 420 120 Q 420 112 428 112 L 660 112" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="motor" data-edge-to="operador" data-edge-label="SPEC-602 → home operador" data-edge-key="6" data-edge-id="guard-home-operador" data-composition-points="510,472;560,472;560,182;930,182" d="M 510 472 L 552 472 Q 560 472 560 464 L 560 190 Q 560 182 568 182 L 930 182" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="motor" data-edge-to="admin" data-edge-label="SPEC-602 → home admin" data-edge-key="7" data-edge-id="guard-home-admin" data-composition-points="420,514;420,600;1020,600;1020,394" d="M 420 514 L 420 592 Q 420 600 428 600 L 1012 600 Q 1020 600 1020 592 L 1020 394" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="portada" data-edge-to="reportar" data-edge-label="reportar riesgo" data-edge-key="0" data-edge-id="nav-portada-reportar" data-composition-points="140,124;140,168" d="M 140 124 L 140 168" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="reportar" data-edge-to="seguimiento" data-edge-label="estado con nº RPT" data-edge-key="1" data-edge-id="nav-reportar-seguimiento" data-composition-points="140,232;140,276" d="M 140 232 L 140 276" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="altas" data-edge-to="acceso" data-edge-label="crea cuenta y clave" data-edge-key="2" data-edge-id="nav-altas-acceso" data-composition-points="140,513;140,457" d="M 140 513 L 140 457" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="altas" data-edge-to="consentimiento" data-edge-label="primer ingreso" data-edge-key="3" data-edge-id="nav-altas-consentimiento" data-composition-points="140,577;140,633" d="M 140 577 L 140 633" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="motor" data-edge-to="acceso" data-edge-label="sin sesión" data-edge-key="4" data-edge-id="guard-no-session" data-composition-points="340,425;220,425" d="M 340 425 L 220 425" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="motor" data-edge-to="consentimiento" data-edge-label="sin consentimiento" data-edge-key="5" data-edge-id="guard-consentimiento" data-composition-points="435,470;435,665;220,665" d="M 435 470 L 435 657 Q 435 665 427 665 L 220 665" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="motor" data-edge-to="padre" data-edge-label="home padre" data-edge-key="6" data-edge-id="guard-home-padre" data-composition-points="530,425;620,425;620,362;640,362" d="M 530 425 L 612 425 Q 620 425 620 417 L 620 370 Q 620 362 628 362 L 640 362" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="motor" data-edge-to="admin" data-edge-label="home admin · comité" data-edge-key="7" data-edge-id="guard-home-admin" data-composition-points="435,380;435,102;900,102" d="M 435 380 L 435 110 Q 435 102 443 102 L 900 102" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="motor" data-edge-to="colegio" data-edge-label="home colegio" data-edge-key="8" data-edge-id="guard-home-colegio" data-composition-points="530,425;540,425;540,242;900,242" d="M 530 425 L 535 425 Q 540 425 540 420 L 540 250 Q 540 242 548 242 L 900 242" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="motor" data-edge-to="profesional" data-edge-label="home profesional" data-edge-key="9" data-edge-id="guard-home-profesional" data-composition-points="530,425;555,425;555,548;880,548;880,425;900,425" d="M 530 425 L 547 425 Q 555 425 555 433 L 555 540 Q 555 548 563 548 L 872 548 Q 880 548 880 540 L 880 433 Q 880 425 888 425 L 900 425" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="padre" data-edge-to="padre-exp" data-edge-key="10" data-edge-id="nav-padre-expediente" data-composition-points="730,394;730,460" d="M 730 394 L 730 460" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
 
         <!-- Components -->
-        <g id="node-portada" data-node-id="portada" data-node-label="Portada" tabindex="0" role="button" aria-label="Focus Portada, /, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/" data-node-context="Zona pública">
-          <title>Portada · / · Zona pública</title>
-          <rect x="60" y="90" width="160" height="64" rx="6" class="c-mask"/>
-          <rect x="60" y="90" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 96) scale(0.6875)">
+        <g id="node-portada" data-node-id="portada" data-node-label="Portada" tabindex="0" role="button" aria-label="Focus Portada, / · consulta embebida, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/ · consulta embebida" data-node-context="Zona pública">
+          <title>Portada · / · consulta embebida · Zona pública</title>
+          <rect x="60" y="60" width="160" height="64" rx="6" class="c-mask"/>
+          <rect x="60" y="60" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 66) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="140" y="120" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Portada</text>
-        <text data-detail="context" x="140" y="136" class="t-muted" font-size="9" text-anchor="middle">/</text>
+          <text data-node-label="" data-detail-anchor="" x="140" y="90" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Portada</text>
+        <text data-detail="context" x="140" y="106" class="t-muted" font-size="9" text-anchor="middle">/ · consulta embebida</text>
         </g>
 
-        <g id="node-consulta" data-node-id="consulta" data-node-label="Consulta pública" tabindex="0" role="button" aria-label="Focus Consulta pública, estadísticas agregadas, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="estadísticas agregadas" data-node-context="Zona pública">
-          <title>Consulta pública · estadísticas agregadas · Zona pública</title>
-          <rect x="60" y="210" width="160" height="64" rx="6" class="c-mask"/>
-          <rect x="60" y="210" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 216) scale(0.6875)">
+        <g id="node-reportar" data-node-id="reportar" data-node-label="Reportar riesgo" tabindex="0" role="button" aria-label="Focus Reportar riesgo, /reportar, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/reportar" data-node-context="Zona pública">
+          <title>Reportar riesgo · /reportar · Zona pública</title>
+          <rect x="60" y="168" width="160" height="64" rx="6" class="c-mask"/>
+          <rect x="60" y="168" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 174) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="140" y="240" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Consulta pública</text>
-        <text data-detail="context" x="140" y="256" class="t-muted" font-size="9" text-anchor="middle">estadísticas agregadas</text>
+          <text data-node-label="" data-detail-anchor="" x="140" y="198" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Reportar riesgo</text>
+        <text data-detail="context" x="140" y="214" class="t-muted" font-size="9" text-anchor="middle">/reportar</text>
         </g>
 
-        <g id="node-reportar" data-node-id="reportar" data-node-label="Reportar" tabindex="0" role="button" aria-label="Focus Reportar, anónimo o con cuenta, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="anónimo o con cuenta" data-node-context="Zona pública">
-          <title>Reportar · anónimo o con cuenta · Zona pública</title>
-          <rect x="60" y="330" width="160" height="64" rx="6" class="c-mask"/>
-          <rect x="60" y="330" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 336) scale(0.6875)">
+        <g id="node-seguimiento" data-node-id="seguimiento" data-node-label="Seguimiento" tabindex="0" role="button" aria-label="Focus Seguimiento, /seguimiento · nº RPT, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/seguimiento · nº RPT" data-node-context="Zona pública">
+          <title>Seguimiento · /seguimiento · nº RPT · Zona pública</title>
+          <rect x="60" y="276" width="160" height="64" rx="6" class="c-mask"/>
+          <rect x="60" y="276" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 282) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="140" y="360" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Reportar</text>
-        <text data-detail="context" x="140" y="376" class="t-muted" font-size="9" text-anchor="middle">anónimo o con cuenta</text>
+          <text data-node-label="" data-detail-anchor="" x="140" y="306" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Seguimiento</text>
+        <text data-detail="context" x="140" y="322" class="t-muted" font-size="9" text-anchor="middle">/seguimiento · nº RPT</text>
         </g>
 
         <g id="node-acceso" data-node-id="acceso" data-node-label="Acceso" tabindex="0" role="button" aria-label="Focus Acceso, /login · /registro, Zona pública" aria-pressed="false" data-node-kind="security" data-node-sublabel="/login · /registro" data-node-tag="JWT 24 h" data-node-context="Zona pública">
           <title>Acceso · /login · /registro · Zona pública · JWT 24 h</title>
-          <rect x="60" y="480" width="160" height="64" rx="6" class="c-mask"/>
-          <rect x="60" y="480" width="160" height="64" rx="6" class="c-security" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(66 486) scale(0.6875)">
+          <rect x="60" y="393" width="160" height="64" rx="6" class="c-mask"/>
+          <rect x="60" y="393" width="160" height="64" rx="6" class="c-security" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(66 399) scale(0.6875)">
             <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="140" y="510" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Acceso</text>
-        <text data-detail="context" x="140" y="526" class="t-muted" font-size="9" text-anchor="middle">/login · /registro</text>
-        <text data-detail="fine" x="140" y="536" class="t-security" font-size="7" text-anchor="middle">JWT 24 h</text>
+          <text data-node-label="" data-detail-anchor="" x="140" y="423" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Acceso</text>
+        <text data-detail="context" x="140" y="439" class="t-muted" font-size="9" text-anchor="middle">/login · /registro</text>
+        <text data-detail="fine" x="140" y="449" class="t-security" font-size="7" text-anchor="middle">JWT 24 h</text>
+        </g>
+
+        <g id="node-altas" data-node-id="altas" data-node-label="Altas y canje" tabindex="0" role="button" aria-label="Focus Altas y canje, colegio · prof · canje, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="colegio · prof · canje" data-node-context="Zona pública">
+          <title>Altas y canje · colegio · prof · canje · Zona pública</title>
+          <rect x="60" y="513" width="160" height="64" rx="6" class="c-mask"/>
+          <rect x="60" y="513" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 519) scale(0.6875)">
+            <rect x="2" y="3" width="12" height="10" rx="2"/>
+            <path d="M2 6.5h12"/>
+            <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
+            <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="140" y="543" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Altas y canje</text>
+        <text data-detail="context" x="140" y="559" class="t-muted" font-size="9" text-anchor="middle">colegio · prof · canje</text>
         </g>
 
         <g id="node-consentimiento" data-node-id="consentimiento" data-node-label="Consentimiento" tabindex="0" role="button" aria-label="Focus Consentimiento, /consentimiento, Zona pública" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/consentimiento" data-node-context="Zona pública">
           <title>Consentimiento · /consentimiento · Zona pública</title>
-          <rect x="60" y="620" width="160" height="64" rx="6" class="c-mask"/>
-          <rect x="60" y="620" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 626) scale(0.6875)">
+          <rect x="60" y="633" width="160" height="64" rx="6" class="c-mask"/>
+          <rect x="60" y="633" width="160" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(66 639) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="140" y="650" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Consentimiento</text>
-        <text data-detail="context" x="140" y="666" class="t-muted" font-size="9" text-anchor="middle">/consentimiento</text>
+          <text data-node-label="" data-detail-anchor="" x="140" y="663" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Consentimiento</text>
+        <text data-detail="context" x="140" y="679" class="t-muted" font-size="9" text-anchor="middle">/consentimiento</text>
         </g>
 
-        <g id="node-motor" data-node-id="motor" data-node-label="Motor de guardas" tabindex="0" role="button" aria-label="Focus Motor de guardas, proxy.ts, Guardas de acceso · proxy.ts" aria-pressed="false" data-node-kind="security" data-node-sublabel="proxy.ts" data-node-tag="4 reglas" data-node-context="Guardas de acceso · proxy.ts">
-          <title>Motor de guardas · proxy.ts · Guardas de acceso · proxy.ts · 4 reglas</title>
-          <rect x="330" y="430" width="180" height="84" rx="6" class="c-mask"/>
-          <rect x="330" y="430" width="180" height="84" rx="6" class="c-security" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(336 436) scale(0.6875)">
+        <g id="node-motor" data-node-id="motor" data-node-label="Motor de guardas" tabindex="0" role="button" aria-label="Focus Motor de guardas, proxy.ts, Guardas de acceso · proxy.ts" aria-pressed="false" data-node-kind="security" data-node-sublabel="proxy.ts" data-node-tag="7 reglas" data-node-context="Guardas de acceso · proxy.ts">
+          <title>Motor de guardas · proxy.ts · Guardas de acceso · proxy.ts · 7 reglas</title>
+          <rect x="340" y="380" width="190" height="90" rx="6" class="c-mask"/>
+          <rect x="340" y="380" width="190" height="90" rx="6" class="c-security" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(346 386) scale(0.6875)">
             <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="420" y="470" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Motor de guardas</text>
-        <text data-detail="context" x="420" y="486" class="t-muted" font-size="9" text-anchor="middle">proxy.ts</text>
-        <text data-detail="fine" x="420" y="506" class="t-security" font-size="7" text-anchor="middle">4 reglas</text>
+          <text data-node-label="" data-detail-anchor="" x="435" y="423" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Motor de guardas</text>
+        <text data-detail="context" x="435" y="439" class="t-muted" font-size="9" text-anchor="middle">proxy.ts</text>
+        <text data-detail="fine" x="435" y="462" class="t-security" font-size="7" text-anchor="middle">7 reglas</text>
         </g>
 
-        <g id="node-padre-inicio" data-node-id="padre-inicio" data-node-label="Padre · inicio" tabindex="0" role="button" aria-label="Focus Padre · inicio, /dashboard/padre, Área padre" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/dashboard/padre" data-node-context="Área padre">
-          <title>Padre · inicio · /dashboard/padre · Área padre</title>
-          <rect x="660" y="80" width="180" height="64" rx="6" class="c-mask"/>
-          <rect x="660" y="80" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(666 86) scale(0.6875)">
+        <g id="node-padre" data-node-id="padre" data-node-label="Área padre" tabindex="0" role="button" aria-label="Focus Área padre, /dashboard/padre, Área padre" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/dashboard/padre" data-node-tag="menú 6 entradas" data-node-context="Área padre">
+          <title>Área padre · /dashboard/padre · Área padre · menú 6 entradas</title>
+          <rect x="640" y="330" width="180" height="64" rx="6" class="c-mask"/>
+          <rect x="640" y="330" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(646 336) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="750" y="110" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Padre · inicio</text>
-        <text data-detail="context" x="750" y="126" class="t-muted" font-size="9" text-anchor="middle">/dashboard/padre</text>
+          <text data-node-label="" data-detail-anchor="" x="730" y="360" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Área padre</text>
+        <text data-detail="context" x="730" y="376" class="t-muted" font-size="9" text-anchor="middle">/dashboard/padre</text>
+        <text data-detail="fine" x="730" y="386" class="t-frontend" font-size="7" text-anchor="middle">menú 6 entradas</text>
         </g>
 
-        <g id="node-padre-gestion" data-node-id="padre-gestion" data-node-label="Padre · gestión" tabindex="0" role="button" aria-label="Focus Padre · gestión, hijos · citas · apoyo, Área padre" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="hijos · citas · apoyo" data-node-context="Área padre">
-          <title>Padre · gestión · hijos · citas · apoyo · Área padre</title>
-          <rect x="660" y="216" width="180" height="64" rx="6" class="c-mask"/>
-          <rect x="660" y="216" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(666 222) scale(0.6875)">
+        <g id="node-padre-exp" data-node-id="padre-exp" data-node-label="Expediente [id]" tabindex="0" role="button" aria-label="Focus Expediente [id], 5 bloques + pase, Área padre" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="5 bloques + pase" data-node-context="Área padre">
+          <title>Expediente [id] · 5 bloques + pase · Área padre</title>
+          <rect x="640" y="460" width="180" height="64" rx="6" class="c-mask"/>
+          <rect x="640" y="460" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(646 466) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="750" y="246" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Padre · gestión</text>
-        <text data-detail="context" x="750" y="262" class="t-muted" font-size="9" text-anchor="middle">hijos · citas · apoyo</text>
+          <text data-node-label="" data-detail-anchor="" x="730" y="490" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Expediente [id]</text>
+        <text data-detail="context" x="730" y="506" class="t-muted" font-size="9" text-anchor="middle">5 bloques + pase</text>
         </g>
 
-        <g id="node-padre-exp" data-node-id="padre-exp" data-node-label="Padre · expedientes" tabindex="0" role="button" aria-label="Focus Padre · expedientes, detalle · 5 bloques, Área padre" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="detalle · 5 bloques" data-node-context="Área padre">
-          <title>Padre · expedientes · detalle · 5 bloques · Área padre</title>
-          <rect x="660" y="352" width="180" height="64" rx="6" class="c-mask"/>
-          <rect x="660" y="352" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(666 358) scale(0.6875)">
+        <g id="node-admin" data-node-id="admin" data-node-label="Área interna única" tabindex="0" role="button" aria-label="Focus Área interna única, ADMIN · OPER · COMITÉ, Área interna única" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="ADMIN · OPER · COMITÉ" data-node-tag="/dashboard/admin" data-node-context="Área interna única">
+          <title>Área interna única · ADMIN · OPER · COMITÉ · Área interna única · /dashboard/admin</title>
+          <rect x="900" y="70" width="180" height="64" rx="6" class="c-mask"/>
+          <rect x="900" y="70" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(906 76) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="750" y="382" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Padre · expedientes</text>
-        <text data-detail="context" x="750" y="398" class="t-muted" font-size="9" text-anchor="middle">detalle · 5 bloques</text>
+          <text data-node-label="" data-detail-anchor="" x="990" y="100" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Área interna única</text>
+        <text data-detail="context" x="990" y="116" class="t-muted" font-size="9" text-anchor="middle">ADMIN · OPER · COMITÉ</text>
+        <text data-detail="fine" x="990" y="126" class="t-frontend" font-size="7" text-anchor="middle">/dashboard/admin</text>
         </g>
 
-        <g id="node-padre-perfil" data-node-id="padre-perfil" data-node-label="Padre · mi perfil" tabindex="0" role="button" aria-label="Focus Padre · mi perfil, info · notif · plan, Área padre" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="info · notif · plan" data-node-context="Área padre">
-          <title>Padre · mi perfil · info · notif · plan · Área padre</title>
-          <rect x="660" y="488" width="180" height="64" rx="6" class="c-mask"/>
-          <rect x="660" y="488" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(666 494) scale(0.6875)">
+        <g id="node-colegio" data-node-id="colegio" data-node-label="Área colegio" tabindex="0" role="button" aria-label="Focus Área colegio, /dashboard/colegio, Área colegio" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/dashboard/colegio" data-node-tag="SCHOOL_ADMIN" data-node-context="Área colegio">
+          <title>Área colegio · /dashboard/colegio · Área colegio · SCHOOL_ADMIN</title>
+          <rect x="900" y="210" width="180" height="64" rx="6" class="c-mask"/>
+          <rect x="900" y="210" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(906 216) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="750" y="518" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Padre · mi perfil</text>
-        <text data-detail="context" x="750" y="534" class="t-muted" font-size="9" text-anchor="middle">info · notif · plan</text>
+          <text data-node-label="" data-detail-anchor="" x="990" y="240" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Área colegio</text>
+        <text data-detail="context" x="990" y="256" class="t-muted" font-size="9" text-anchor="middle">/dashboard/colegio</text>
+        <text data-detail="fine" x="990" y="266" class="t-frontend" font-size="7" text-anchor="middle">SCHOOL_ADMIN</text>
         </g>
 
-        <g id="node-operador" data-node-id="operador" data-node-label="Operador" tabindex="0" role="button" aria-label="Focus Operador, bandeja · caso, Área operador" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="bandeja · caso" data-node-context="Área operador">
-          <title>Operador · bandeja · caso · Área operador</title>
-          <rect x="930" y="150" width="180" height="64" rx="6" class="c-mask"/>
-          <rect x="930" y="150" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(936 156) scale(0.6875)">
+        <g id="node-profesional" data-node-id="profesional" data-node-label="Área profesional" tabindex="0" role="button" aria-label="Focus Área profesional, /dashboard/profesional, Área profesional" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="/dashboard/profesional" data-node-context="Área profesional">
+          <title>Área profesional · /dashboard/profesional · Área profesional</title>
+          <rect x="900" y="393" width="180" height="64" rx="6" class="c-mask"/>
+          <rect x="900" y="393" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(906 399) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="1020" y="180" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Operador</text>
-        <text data-detail="context" x="1020" y="196" class="t-muted" font-size="9" text-anchor="middle">bandeja · caso</text>
-        </g>
-
-        <g id="node-admin" data-node-id="admin" data-node-label="Admin · comité" tabindex="0" role="button" aria-label="Focus Admin · comité, 5 módulos, Área admin · comité" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="5 módulos" data-node-context="Área admin · comité">
-          <title>Admin · comité · 5 módulos · Área admin · comité</title>
-          <rect x="930" y="330" width="180" height="64" rx="6" class="c-mask"/>
-          <rect x="930" y="330" width="180" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(936 336) scale(0.6875)">
-            <rect x="2" y="3" width="12" height="10" rx="2"/>
-            <path d="M2 6.5h12"/>
-            <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
-            <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="1020" y="360" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Admin · comité</text>
-        <text data-detail="context" x="1020" y="376" class="t-muted" font-size="9" text-anchor="middle">5 módulos</text>
+          <text data-node-label="" data-detail-anchor="" x="990" y="423" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Área profesional</text>
+        <text data-detail="context" x="990" y="439" class="t-muted" font-size="9" text-anchor="middle">/dashboard/profesional</text>
         </g>
 
         <!-- Connection labels -->
+        <g data-detail="context" data-edge-from="portada" data-edge-to="reportar" data-edge-label="reportar riesgo" data-edge-key="0" data-edge-id="nav-portada-reportar">
+          <rect x="124" y="136" width="82" height="14" rx="3" class="c-mask"/>
+          <text x="165" y="146" class="t-muted" font-size="8" text-anchor="middle">reportar riesgo</text>
+        </g>
+        <g data-detail="context" data-edge-from="reportar" data-edge-to="seguimiento" data-edge-label="estado con nº RPT" data-edge-key="1" data-edge-id="nav-reportar-seguimiento">
+          <rect x="119.2" y="244" width="91.6" height="14" rx="3" class="c-mask"/>
+          <text x="165" y="254" class="t-muted" font-size="8" text-anchor="middle">estado con nº RPT</text>
+        </g>
+        <g data-detail="context" data-edge-from="altas" data-edge-to="acceso" data-edge-label="crea cuenta y clave" data-edge-key="2" data-edge-id="nav-altas-acceso">
+          <rect x="114.4" y="475" width="101.2" height="14" rx="3" class="c-mask"/>
+          <text x="165" y="485" class="t-muted" font-size="8" text-anchor="middle">crea cuenta y clave</text>
+        </g>
+        <g data-detail="context" data-edge-from="altas" data-edge-to="consentimiento" data-edge-label="primer ingreso" data-edge-key="3" data-edge-id="nav-altas-consentimiento">
+          <rect x="126.4" y="595" width="77.2" height="14" rx="3" class="c-mask"/>
+          <text x="165" y="605" class="t-muted" font-size="8" text-anchor="middle">primer ingreso</text>
+        </g>
+        <g data-detail="context" data-edge-from="motor" data-edge-to="acceso" data-edge-label="sin sesión" data-edge-key="4" data-edge-id="guard-no-session">
+          <rect x="261" y="403" width="58" height="14" rx="3" class="c-mask"/>
+          <text x="290" y="413" class="t-security" font-size="8" text-anchor="middle">sin sesión</text>
+        </g>
+        <g data-detail="context" data-edge-from="motor" data-edge-to="consentimiento" data-edge-label="sin consentimiento" data-edge-key="5" data-edge-id="guard-consentimiento">
+          <rect x="398.8" y="550" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
+          <text x="447" y="560" class="t-security" font-size="8" text-anchor="middle">sin consentimiento</text>
+        </g>
+        <g data-detail="context" data-edge-from="motor" data-edge-to="padre" data-edge-label="home padre" data-edge-key="6" data-edge-id="guard-home-padre">
+          <rect x="599" y="398" width="58" height="14" rx="3" class="c-mask"/>
+          <text x="628" y="408" class="t-security" font-size="8" text-anchor="middle">home padre</text>
+        </g>
+        <g data-detail="context" data-edge-from="motor" data-edge-to="admin" data-edge-label="home admin · comité" data-edge-key="7" data-edge-id="guard-home-admin">
+          <rect x="389.4" y="198" width="101.2" height="14" rx="3" class="c-mask"/>
+          <text x="440" y="208" class="t-security" font-size="8" text-anchor="middle">home admin · comité</text>
+        </g>
+        <g data-detail="context" data-edge-from="motor" data-edge-to="colegio" data-edge-label="home colegio" data-edge-key="8" data-edge-id="guard-home-colegio">
+          <rect x="517.2" y="220" width="67.6" height="14" rx="3" class="c-mask"/>
+          <text x="551" y="230" class="t-security" font-size="8" text-anchor="middle">home colegio</text>
+        </g>
+        <g data-detail="context" data-edge-from="motor" data-edge-to="profesional" data-edge-label="home profesional" data-edge-key="9" data-edge-id="guard-home-profesional">
+          <rect x="671.6" y="556" width="86.8" height="14" rx="3" class="c-mask"/>
+          <text x="715" y="566" class="t-security" font-size="8" text-anchor="middle">home profesional</text>
+        </g>
 
-
-
-        <g data-detail="context" data-edge-from="acceso" data-edge-to="consentimiento" data-edge-label="OAuth nuevo" data-edge-key="3" data-edge-id="oauth-consentimiento">
-          <rect x="144.6" y="560" width="62.8" height="14" rx="3" class="c-mask"/>
-          <text x="176" y="570" class="t-backend" font-size="8" text-anchor="middle">OAuth nuevo</text>
-        </g>
-        <g data-detail="context" data-edge-from="motor" data-edge-to="acceso" data-edge-label="anónimo/huérfana" data-edge-key="4" data-edge-id="guard-anon-login">
-          <rect x="206.6" y="445" width="86.8" height="14" rx="3" class="c-mask"/>
-          <text x="250" y="455" class="t-security" font-size="8" text-anchor="middle">anónimo/huérfana</text>
-        </g>
-        <g data-detail="context" data-edge-from="motor" data-edge-to="padre-inicio" data-edge-label="SPEC-602 → home padre" data-edge-key="5" data-edge-id="guard-home-padre">
-          <rect x="484.6" y="114" width="110.8" height="14" rx="3" class="c-mask"/>
-          <text x="540" y="124" class="t-security" font-size="8" text-anchor="middle">SPEC-602 → home padre</text>
-        </g>
-        <g data-detail="context" data-edge-from="motor" data-edge-to="operador" data-edge-label="SPEC-602 → home operador" data-edge-key="6" data-edge-id="guard-home-operador">
-          <rect x="682.4" y="186" width="125.19999999999999" height="14" rx="3" class="c-mask"/>
-          <text x="745" y="196" class="t-security" font-size="8" text-anchor="middle">SPEC-602 → home operador</text>
-        </g>
-        <g data-detail="context" data-edge-from="motor" data-edge-to="admin" data-edge-label="SPEC-602 → home admin" data-edge-key="7" data-edge-id="guard-home-admin">
-          <rect x="892.6" y="487" width="110.8" height="14" rx="3" class="c-mask"/>
-          <text x="948" y="497" class="t-security" font-size="8" text-anchor="middle">SPEC-602 → home admin</text>
-        </g>
 
         <!-- Boundary labels (foreground masks keep routes out of titles) -->
         <g data-graph-role="structural-frame-label" data-composition-frame-id="0" data-composition-frame-kind="region" data-composition-frame-label="Zona pública">
-          <rect data-graph-role="structural-frame-label-mask" x="48" y="70" width="74.8" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="52" y="83" class="t-cloud" font-size="9" font-weight="600">Zona pública</text>
+          <rect data-graph-role="structural-frame-label-mask" x="48" y="40" width="74.8" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="52" y="53" class="t-cloud" font-size="9" font-weight="600">Zona pública</text>
         </g>
 
         <g data-graph-role="structural-frame-label" data-composition-frame-id="1" data-composition-frame-kind="region" data-composition-frame-label="Área padre">
-          <rect data-graph-role="structural-frame-label-mask" x="648" y="60" width="64" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="652" y="73" class="t-cloud" font-size="9" font-weight="600">Área padre</text>
+          <rect data-graph-role="structural-frame-label-mask" x="628" y="310" width="64" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="632" y="323" class="t-cloud" font-size="9" font-weight="600">Área padre</text>
         </g>
 
-        <g data-graph-role="structural-frame-label" data-composition-frame-id="2" data-composition-frame-kind="region" data-composition-frame-label="Área operador">
-          <rect data-graph-role="structural-frame-label-mask" x="918" y="130" width="80.2" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="922" y="143" class="t-cloud" font-size="9" font-weight="600">Área operador</text>
+        <g data-graph-role="structural-frame-label" data-composition-frame-id="2" data-composition-frame-kind="region" data-composition-frame-label="Área interna única">
+          <rect data-graph-role="structural-frame-label-mask" x="888" y="50" width="107.2" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="892" y="63" class="t-cloud" font-size="9" font-weight="600">Área interna única</text>
         </g>
 
-        <g data-graph-role="structural-frame-label" data-composition-frame-id="3" data-composition-frame-kind="region" data-composition-frame-label="Área admin · comité">
-          <rect data-graph-role="structural-frame-label-mask" x="918" y="310" width="112.6" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="922" y="323" class="t-cloud" font-size="9" font-weight="600">Área admin · comité</text>
+        <g data-graph-role="structural-frame-label" data-composition-frame-id="3" data-composition-frame-kind="region" data-composition-frame-label="Área colegio">
+          <rect data-graph-role="structural-frame-label-mask" x="888" y="190" width="74.8" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="892" y="203" class="t-cloud" font-size="9" font-weight="600">Área colegio</text>
         </g>
 
-        <g data-graph-role="structural-frame-label" data-composition-frame-id="4" data-composition-frame-kind="security-group" data-composition-frame-label="Guardas de acceso · proxy.ts">
-          <rect data-graph-role="structural-frame-label-mask" x="318" y="410" width="161.2" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="322" y="423" class="t-security" font-size="9" font-weight="600">Guardas de acceso · proxy.ts</text>
+        <g data-graph-role="structural-frame-label" data-composition-frame-id="4" data-composition-frame-kind="region" data-composition-frame-label="Área profesional">
+          <rect data-graph-role="structural-frame-label-mask" x="888" y="373" width="96.39999999999999" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="892" y="386" class="t-cloud" font-size="9" font-weight="600">Área profesional</text>
+        </g>
+
+        <g data-graph-role="structural-frame-label" data-composition-frame-id="5" data-composition-frame-kind="security-group" data-composition-frame-label="Guardas de acceso · proxy.ts">
+          <rect data-graph-role="structural-frame-label-mask" x="328" y="360" width="161.2" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="332" y="373" class="t-security" font-size="9" font-weight="600">Guardas de acceso · proxy.ts</text>
         </g>
 
         <!-- Legend -->
         <g data-legend="" data-legend-bridge="">
-          <text x="40" y="724" class="t-primary" font-size="12" font-weight="650">Legend</text>
-          <g data-legend-semantic-kind="frontend" data-legend-kind="frontend" data-legend-label="Pantalla" data-legend-x="40" data-legend-baseline="744" data-legend-width="83">
-            <rect x="40" y="735" width="16" height="10" rx="2.5" class="c-frontend" stroke-width="1"/>
-            <text x="62" y="744" class="t-muted" font-size="10" font-weight="500">Pantalla</text>
+          <text x="40" y="764" class="t-primary" font-size="12" font-weight="650">Legend</text>
+          <g data-legend-semantic-kind="frontend" data-legend-kind="frontend" data-legend-label="Pantalla" data-legend-x="40" data-legend-baseline="784" data-legend-width="83">
+            <rect x="40" y="775" width="16" height="10" rx="2.5" class="c-frontend" stroke-width="1"/>
+            <text x="62" y="784" class="t-muted" font-size="10" font-weight="500">Pantalla</text>
           </g>
-          <g data-legend-semantic-kind="security" data-legend-kind="security" data-legend-label="Guarda de acceso" data-legend-x="145" data-legend-baseline="744" data-legend-width="123">
-            <rect x="145" y="735" width="16" height="10" rx="2.5" class="c-security" stroke-width="1"/>
-            <text x="167" y="744" class="t-muted" font-size="10" font-weight="500">Guarda de acceso</text>
+          <g data-legend-semantic-kind="security" data-legend-kind="security" data-legend-label="Guarda de acceso" data-legend-x="145" data-legend-baseline="784" data-legend-width="123">
+            <rect x="145" y="775" width="16" height="10" rx="2.5" class="c-security" stroke-width="1"/>
+            <text x="167" y="784" class="t-muted" font-size="10" font-weight="500">Guarda de acceso</text>
           </g>
         </g>
       </svg>
@@ -5599,10 +5630,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Reglas del motor (proxy.ts)</h3>
         </div>
         <ul>
-          <li>&bull; Sesión huérfana → trata como anónima y limpia cookies (SPEC-603)</li>
-          <li>&bull; Autenticado en /login o /registro → redirect al home de su rol (SPEC-602)</li>
-          <li>&bull; OAuth Google nuevo → aterriza en /consentimiento (SPEC-588)</li>
-          <li>&bull; Anónimo que pide /dashboard/* → /login</li>
+          <li>&bull; Sin sesión en ruta privada → /login</li>
+          <li>&bull; Sesión huérfana → anónima y limpia cookies (SPEC-603)</li>
+          <li>&bull; Autenticado en /login · /registro · /registro/inicio → home de su rol (SPEC-602)</li>
+          <li>&bull; Muros: consentimiento → /consentimiento · camino pendiente → /camino/**</li>
+          <li>&bull; Vigencia vencida → suscripción · APIs gateadas → 403 JSON</li>
         </ul>
       </div>
 
@@ -5612,22 +5644,51 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Zona pública (sin sesión)</h3>
         </div>
         <ul>
-          <li>&bull; Portada, consulta de estadísticas agregadas y reporte de riesgo</li>
-          <li>&bull; El reporte admite anónimo o cuenta; el acceso usa JWT de 24 h</li>
-          <li>&bull; Toda pantalla muestra Línea 141 ICBF, CAI Virtual y Te Protejo</li>
+          <li>&bull; / con la consulta pública embebida (no existe /consulta)</li>
+          <li>&bull; /reportar anónimo o con cuenta · /seguimiento con nº RPT</li>
+          <li>&bull; /registro-colegio · /registro-profesional · /canjear-acceso (pase de 8)</li>
+          <li>&bull; Legales · Línea 141 ICBF · CAI Virtual · Te Protejo</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Área padre · /dashboard/padre</h3>
+          <h3>Área padre · menú de 6 entradas (SPEC-607)</h3>
         </div>
         <ul>
-          <li>&bull; Inicio, reportar y expedientes; expediente/[id] con 5 bloques</li>
-          <li>&bull; Hijos (círculo de confianza), citas y encontrar psicólogo</li>
-          <li>&bull; Mi perfil en 3 acordeones: información, notificaciones y suscripción</li>
-          <li>&bull; A quién protejo · a quién vigilo</li>
+          <li>&bull; Inicio · A quién protejo (solo lectura) · A quién vigilo</li>
+          <li>&bull; Reportar + Mis expedientes · psicólogo + Mis citas</li>
+          <li>&bull; Mi perfil: 4 acordeones (info, menores, notif., plan)</li>
+          <li>&bull; Fuera de menú: /mis-reportes · /dashboard/apelaciones (Ley 1581)</li>
+          <li>&bull; Expediente/[id]: pantalla de 5 bloques + pase</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Área interna única · /dashboard/admin</h3>
+        </div>
+        <ul>
+          <li>&bull; Compartida por ADMIN · OPERADOR · COMITÉ (no hay /dashboard/operador)</li>
+          <li>&bull; Inicio · Bandeja · Spam · Comité (casos, apelaciones, gestión)</li>
+          <li>&bull; Operadores · Verificadores · Verificación de profesionales</li>
+          <li>&bull; Usuarios · Padres · Profesionales · Pagos · Colegios</li>
+          <li>&bull; Estadísticas · Centro de Control IA · Configuración</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Áreas colegio y profesional</h3>
+        </div>
+        <ul>
+          <li>&bull; Colegio: inicio rector, estadísticas, alertas, cursos, profesores</li>
+          <li>&bull; Colegio: comité de convivencia, configuración, auditoría, suscripción</li>
+          <li>&bull; Profesional: inicio (solicitudes 48 h), citaciones, casos, calendario</li>
+          <li>&bull; Profesional: /perfil-profesional/completar · /verificacion</li>
         </ul>
       </div>
     </div>

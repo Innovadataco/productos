@@ -4,9 +4,9 @@
   "meta": {
     "title": "Mapa de navegación de pantallas",
     "subtitle": "Protección Infantil — rutas por rol y guardas de acceso (proxy.ts)",
-    "output": "navegacion-pantallas.html",
+    "output": "navegacion.html",
     "quality_profile": "showcase",
-    "viewBox": [1180, 760],
+    "viewBox": [1180, 800],
     "legend": {
       "mode": "auto",
       "entries": {
@@ -16,84 +16,124 @@
     },
     "views": [
       {
+        "id": "vista-publica",
+        "label": "Vista zona pública",
+        "focus": ["portada", "reportar", "seguimiento", "acceso", "altas", "consentimiento"],
+        "note": "Home con consulta embebida, reporte, seguimiento y accesos."
+      },
+      {
         "id": "vista-padre",
         "label": "Vista padre",
-        "focus": ["portada", "consulta", "reportar", "acceso", "consentimiento", "motor", "padre-inicio", "padre-gestion", "padre-exp", "padre-perfil"],
-        "note": "De la zona pública al tablero del padre, pasando por el motor de guardas."
+        "focus": ["acceso", "motor", "padre", "padre-exp", "consentimiento"],
+        "note": "Del acceso al tablero del padre pasando por el motor de guardas."
       },
       {
-        "id": "vista-operador",
-        "label": "Vista operador",
-        "focus": ["acceso", "motor", "operador"],
-        "note": "Entrada con sesión de operador: bandeja accionable y caso asignado."
-      },
-      {
-        "id": "vista-admin",
-        "label": "Vista admin",
+        "id": "vista-interna",
+        "label": "Vista área interna",
         "focus": ["acceso", "motor", "admin"],
-        "note": "Entrada con sesión de admin o comité: bandeja global y módulos."
+        "note": "Área única compartida por ADMIN, OPERADOR y COMITÉ."
+      },
+      {
+        "id": "vista-colegio",
+        "label": "Vista colegio",
+        "focus": ["acceso", "motor", "colegio"],
+        "note": "Tablero del SCHOOL_ADMIN y comité de convivencia."
+      },
+      {
+        "id": "vista-profesional",
+        "label": "Vista profesional",
+        "focus": ["altas", "acceso", "motor", "profesional"],
+        "note": "Alta con canje de pase, verificación y tablero profesional."
       }
     ]
   },
   "components": [
-    { "id": "portada", "type": "frontend", "label": "Portada", "sublabel": "/", "pos": [60, 90], "size": [160, 64] },
-    { "id": "consulta", "type": "frontend", "label": "Consulta pública", "sublabel": "estadísticas agregadas", "pos": [60, 210], "size": [160, 64] },
-    { "id": "reportar", "type": "frontend", "label": "Reportar", "sublabel": "anónimo o con cuenta", "pos": [60, 330], "size": [160, 64] },
-    { "id": "acceso", "type": "security", "label": "Acceso", "sublabel": "/login · /registro", "pos": [60, 480], "size": [160, 64], "tag": "JWT 24 h" },
-    { "id": "consentimiento", "type": "frontend", "label": "Consentimiento", "sublabel": "/consentimiento", "pos": [60, 620], "size": [160, 64] },
-    { "id": "motor", "type": "security", "label": "Motor de guardas", "sublabel": "proxy.ts", "pos": [330, 430], "size": [180, 84], "tag": "4 reglas" },
-    { "id": "padre-inicio", "type": "frontend", "label": "Padre · inicio", "sublabel": "/dashboard/padre", "pos": [660, 80], "size": [180, 64] },
-    { "id": "padre-gestion", "type": "frontend", "label": "Padre · gestión", "sublabel": "hijos · citas · apoyo", "pos": [660, 216], "size": [180, 64] },
-    { "id": "padre-exp", "type": "frontend", "label": "Padre · expedientes", "sublabel": "detalle · 5 bloques", "pos": [660, 352], "size": [180, 64] },
-    { "id": "padre-perfil", "type": "frontend", "label": "Padre · mi perfil", "sublabel": "info · notif · plan", "pos": [660, 488], "size": [180, 64] },
-    { "id": "operador", "type": "frontend", "label": "Operador", "sublabel": "bandeja · caso", "pos": [930, 150], "size": [180, 64] },
-    { "id": "admin", "type": "frontend", "label": "Admin · comité", "sublabel": "5 módulos", "pos": [930, 330], "size": [180, 64] }
+    { "id": "portada", "type": "frontend", "label": "Portada", "sublabel": "/ · consulta embebida", "pos": [60, 60], "size": [160, 64] },
+    { "id": "reportar", "type": "frontend", "label": "Reportar riesgo", "sublabel": "/reportar", "pos": [60, 168], "size": [160, 64] },
+    { "id": "seguimiento", "type": "frontend", "label": "Seguimiento", "sublabel": "/seguimiento · nº RPT", "pos": [60, 276], "size": [160, 64] },
+    { "id": "acceso", "type": "security", "label": "Acceso", "sublabel": "/login · /registro", "pos": [60, 393], "size": [160, 64], "tag": "JWT 24 h" },
+    { "id": "altas", "type": "frontend", "label": "Altas y canje", "sublabel": "colegio · prof · canje", "pos": [60, 513], "size": [160, 64] },
+    { "id": "consentimiento", "type": "frontend", "label": "Consentimiento", "sublabel": "/consentimiento", "pos": [60, 633], "size": [160, 64] },
+    { "id": "motor", "type": "security", "label": "Motor de guardas", "sublabel": "proxy.ts", "pos": [340, 380], "size": [190, 90], "tag": "7 reglas" },
+    { "id": "padre", "type": "frontend", "label": "Área padre", "sublabel": "/dashboard/padre", "pos": [640, 330], "size": [180, 64], "tag": "menú 6 entradas" },
+    { "id": "padre-exp", "type": "frontend", "label": "Expediente [id]", "sublabel": "5 bloques + pase", "pos": [640, 460], "size": [180, 64] },
+    { "id": "admin", "type": "frontend", "label": "Área interna única", "sublabel": "ADMIN · OPER · COMITÉ", "pos": [900, 70], "size": [180, 64], "tag": "/dashboard/admin" },
+    { "id": "colegio", "type": "frontend", "label": "Área colegio", "sublabel": "/dashboard/colegio", "pos": [900, 210], "size": [180, 64], "tag": "SCHOOL_ADMIN" },
+    { "id": "profesional", "type": "frontend", "label": "Área profesional", "sublabel": "/dashboard/profesional", "pos": [900, 393], "size": [180, 64] }
   ],
   "boundaries": [
-    { "kind": "region", "label": "Zona pública", "wraps": ["portada", "consulta", "reportar", "acceso", "consentimiento"], "pad": 16 },
-    { "kind": "region", "label": "Área padre", "wraps": ["padre-inicio", "padre-gestion", "padre-exp", "padre-perfil"], "pad": 16 },
-    { "kind": "region", "label": "Área operador", "wraps": ["operador"], "pad": 16 },
-    { "kind": "region", "label": "Área admin · comité", "wraps": ["admin"], "pad": 16 },
+    { "kind": "region", "label": "Zona pública", "wraps": ["portada", "reportar", "seguimiento", "acceso", "altas", "consentimiento"], "pad": 16 },
+    { "kind": "region", "label": "Área padre", "wraps": ["padre", "padre-exp"], "pad": 16 },
+    { "kind": "region", "label": "Área interna única", "wraps": ["admin"], "pad": 16 },
+    { "kind": "region", "label": "Área colegio", "wraps": ["colegio"], "pad": 16 },
+    { "kind": "region", "label": "Área profesional", "wraps": ["profesional"], "pad": 16 },
     { "kind": "security-group", "label": "Guardas de acceso · proxy.ts", "wraps": ["motor"], "pad": 16 }
   ],
   "connections": [
-    { "id": "nav-portada-consulta", "from": "portada", "to": "consulta", "fromSide": "bottom", "toSide": "top", "route": "straight" },
-    { "id": "nav-consulta-reportar", "from": "consulta", "to": "reportar", "fromSide": "bottom", "toSide": "top", "route": "straight" },
-    { "id": "nav-reportar-acceso", "from": "reportar", "to": "acceso", "fromSide": "bottom", "toSide": "top", "route": "straight" },
-    { "id": "oauth-consentimiento", "from": "acceso", "to": "consentimiento", "fromSide": "bottom", "toSide": "top", "route": "straight", "label": "OAuth nuevo", "variant": "emphasis", "labelAt": [176, 570] },
-    { "id": "guard-anon-login", "from": "motor", "to": "acceso", "fromSide": "left", "toSide": "right", "via": [[280, 472], [280, 512]], "label": "anónimo/huérfana", "variant": "security", "labelAt": [250, 455] },
-    { "id": "guard-home-padre", "from": "motor", "to": "padre-inicio", "fromSide": "top", "toSide": "left", "via": [[420, 112]], "label": "SPEC-602 → home padre", "variant": "security", "labelAt": [540, 124] },
-    { "id": "guard-home-operador", "from": "motor", "to": "operador", "fromSide": "right", "toSide": "left", "via": [[560, 472], [560, 182]], "label": "SPEC-602 → home operador", "variant": "security", "labelAt": [745, 196] },
-    { "id": "guard-home-admin", "from": "motor", "to": "admin", "fromSide": "bottom", "toSide": "bottom", "via": [[420, 600], [1020, 600]], "label": "SPEC-602 → home admin", "variant": "security", "labelAt": [948, 497] }
+    { "id": "nav-portada-reportar", "from": "portada", "to": "reportar", "fromSide": "bottom", "toSide": "top", "route": "straight", "label": "reportar riesgo", "labelAt": [165, 146] },
+    { "id": "nav-reportar-seguimiento", "from": "reportar", "to": "seguimiento", "fromSide": "bottom", "toSide": "top", "route": "straight", "label": "estado con nº RPT", "labelAt": [165, 254] },
+    { "id": "nav-altas-acceso", "from": "altas", "to": "acceso", "fromSide": "top", "toSide": "bottom", "route": "straight", "label": "crea cuenta y clave", "labelAt": [165, 485] },
+    { "id": "nav-altas-consentimiento", "from": "altas", "to": "consentimiento", "fromSide": "bottom", "toSide": "top", "route": "straight", "label": "primer ingreso", "labelAt": [165, 605] },
+    { "id": "guard-no-session", "from": "motor", "to": "acceso", "fromSide": "left", "toSide": "right", "route": "straight", "label": "sin sesión", "variant": "security", "labelAt": [290, 413] },
+    { "id": "guard-consentimiento", "from": "motor", "to": "consentimiento", "fromSide": "bottom", "toSide": "right", "via": [[435, 665]], "label": "sin consentimiento", "variant": "security", "labelAt": [447, 560] },
+    { "id": "guard-home-padre", "from": "motor", "to": "padre", "fromSide": "right", "toSide": "left", "via": [[620, 425], [620, 362]], "label": "home padre", "variant": "security", "labelAt": [628, 408] },
+    { "id": "guard-home-admin", "from": "motor", "to": "admin", "fromSide": "top", "toSide": "left", "via": [[435, 102]], "label": "home admin · comité", "variant": "security", "labelAt": [440, 208] },
+    { "id": "guard-home-colegio", "from": "motor", "to": "colegio", "fromSide": "right", "toSide": "left", "via": [[540, 425], [540, 242]], "label": "home colegio", "variant": "security", "labelAt": [551, 230] },
+    { "id": "guard-home-profesional", "from": "motor", "to": "profesional", "fromSide": "right", "toSide": "left", "via": [[555, 425], [555, 548], [880, 548], [880, 425]], "label": "home profesional", "variant": "security", "labelAt": [715, 566] },
+    { "id": "nav-padre-expediente", "from": "padre", "to": "padre-exp", "fromSide": "bottom", "toSide": "top", "route": "straight" }
   ],
   "cards": [
     {
       "dot": "rose",
       "title": "Reglas del motor (proxy.ts)",
       "items": [
-        "Sesión huérfana → trata como anónima y limpia cookies (SPEC-603)",
-        "Autenticado en /login o /registro → redirect al home de su rol (SPEC-602)",
-        "OAuth Google nuevo → aterriza en /consentimiento (SPEC-588)",
-        "Anónimo que pide /dashboard/* → /login"
+        "Sin sesión en ruta privada → /login",
+        "Sesión huérfana → anónima y limpia cookies (SPEC-603)",
+        "Autenticado en /login · /registro · /registro/inicio → home de su rol (SPEC-602)",
+        "Muros: consentimiento → /consentimiento · camino pendiente → /camino/**",
+        "Vigencia vencida → suscripción · APIs gateadas → 403 JSON"
       ]
     },
     {
       "dot": "cyan",
       "title": "Zona pública (sin sesión)",
       "items": [
-        "Portada, consulta de estadísticas agregadas y reporte de riesgo",
-        "El reporte admite anónimo o cuenta; el acceso usa JWT de 24 h",
-        "Toda pantalla muestra Línea 141 ICBF, CAI Virtual y Te Protejo"
+        "/ con la consulta pública embebida (no existe /consulta)",
+        "/reportar anónimo o con cuenta · /seguimiento con nº RPT",
+        "/registro-colegio · /registro-profesional · /canjear-acceso (pase de 8)",
+        "Legales · Línea 141 ICBF · CAI Virtual · Te Protejo"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Área padre · /dashboard/padre",
+      "title": "Área padre · menú de 6 entradas (SPEC-607)",
       "items": [
-        "Inicio, reportar y expedientes; expediente/[id] con 5 bloques",
-        "Hijos (círculo de confianza), citas y encontrar psicólogo",
-        "Mi perfil en 3 acordeones: información, notificaciones y suscripción",
-        "A quién protejo · a quién vigilo"
+        "Inicio · A quién protejo (solo lectura) · A quién vigilo",
+        "Reportar + Mis expedientes · psicólogo + Mis citas",
+        "Mi perfil: 4 acordeones (info, menores, notif., plan)",
+        "Fuera de menú: /mis-reportes · /dashboard/apelaciones (Ley 1581)",
+        "Expediente/[id]: pantalla de 5 bloques + pase"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Área interna única · /dashboard/admin",
+      "items": [
+        "Compartida por ADMIN · OPERADOR · COMITÉ (no hay /dashboard/operador)",
+        "Inicio · Bandeja · Spam · Comité (casos, apelaciones, gestión)",
+        "Operadores · Verificadores · Verificación de profesionales",
+        "Usuarios · Padres · Profesionales · Pagos · Colegios",
+        "Estadísticas · Centro de Control IA · Configuración"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Áreas colegio y profesional",
+      "items": [
+        "Colegio: inicio rector, estadísticas, alertas, cursos, profesores",
+        "Colegio: comité de convivencia, configuración, auditoría, suscripción",
+        "Profesional: inicio (solicitudes 48 h), citaciones, casos, calendario",
+        "Profesional: /perfil-profesional/completar · /verificacion"
       ]
     }
   ]

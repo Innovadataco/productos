@@ -33,3 +33,6 @@ services:
       - ./proceso-padre/index.html:/usr/share/nginx/html/proceso-padre/index.html:ro
       - ./proceso-colegio/index.html:/usr/share/nginx/html/proceso-colegio/index.html:ro
       - ./proceso-profesional/index.html:/usr/share/nginx/html/proceso-profesional/index.html:ro
+      # SPEC-611 · Proceso del equipo interno (operador + comité + verificador).
+      # Archivo por archivo, igual que los demás procesos.
+      - ./proceso-operacion/index.html:/usr/share/nginx/html/proceso-operacion/index.html:ro

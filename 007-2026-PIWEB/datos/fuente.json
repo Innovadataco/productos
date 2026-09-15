@@ -32,7 +32,7 @@
     { "label": "Salidas y auditoría" }
   ],
   "nodes": [
-    { "id": "usuario", "type": "frontend", "label": "Usuario", "sublabel": "5 roles de acceso", "tag": "sesión JWT 24 h", "stage": 0, "row": 0, "width": 128, "height": 80 },
+    { "id": "usuario", "type": "frontend", "label": "Usuario", "sublabel": "8 roles de acceso", "tag": "sesión JWT 24 h", "stage": 0, "row": 0, "width": 128, "height": 80 },
     { "id": "reporte", "type": "backend", "label": "Reporte", "sublabel": "texto + identificador", "tag": "solo texto", "stage": 1, "row": 0, "width": 160, "height": 80 },
     { "id": "hijo", "type": "database", "label": "Hijo", "sublabel": "sin documento", "tag": "perfil del menor", "stage": 1, "row": 2, "width": 160, "height": 80 },
     { "id": "expediente", "type": "database", "label": "Expediente", "sublabel": "se crea solo", "tag": "al primer reporte", "stage": 1, "row": 4, "width": 160, "height": 80 },
@@ -61,6 +61,7 @@
     { "id": "apel-aud", "from": "apelacion", "to": "auditlog", "label": "constancia", "classification": "revisión ARCO", "variant": "dashed", "fromSide": "right", "toSide": "bottom", "via": [[852, 624], [852, 824], [960, 824]], "labelAt": [852, 757] }
   ],
   "cards": [
+    { "dot": "cyan", "title": "Roles de acceso (RolUsuario)", "items": ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "VERIFICADOR", "PARENT", "SCHOOL_ADMIN", "COMITE_CONVIVENCIA", "PROFESIONAL"] },
     { "dot": "emerald", "title": "Ruta de un reporte", "items": ["El texto se cifra con AES-256-GCM antes de persistirse", "La IA local (Ollama) clasifica la conducta por votos de rúbrica", "El identificador se agrega solo al superar el umbral"] },
     { "dot": "rose", "title": "Datos sensibles y derechos", "items": ["Solo texto: jamás fotos, video ni audio", "El titular puede pedir revisión, anonimización o eliminación (Ley 1581)", "La consulta pública muestra solo agregados: nunca textos ni identidad de quien reporta"] },
     { "dot": "amber", "title": "Trazabilidad y notificaciones", "items": ["AuditLog es append-only; la purga deja constancia", "Embeddings HNSW (vector_cosine) para dedup y RAG", "Correos por Resend según reglas configurables"] }
