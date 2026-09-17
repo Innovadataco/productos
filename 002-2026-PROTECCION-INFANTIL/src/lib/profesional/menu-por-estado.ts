@@ -32,6 +32,7 @@ const HREF_CITACIONES = "/dashboard/profesional/citaciones";
 const HREF_CASOS = "/dashboard/profesional/casos";
 const HREF_CALENDARIO = "/dashboard/profesional/calendario";
 const HREF_FICHA = "/perfil-profesional/completar";
+const HREF_MI_PERFIL = "/dashboard/profesional/mi-perfil";
 const HREF_ESTADO = "/perfil-profesional/verificacion";
 
 /** Toma el ítem base de PROFESIONAL_NAV_ITEMS (href + módulo) y le fija el rótulo del estado. */
@@ -52,7 +53,9 @@ function menuVerificado(): NavItem[] {
         entrada(HREF_CITACIONES, "Citaciones"),
         entrada(HREF_CASOS, "Casos"),
         entrada(HREF_CALENDARIO, "Calendario"),
-        entrada(HREF_FICHA, "Mi perfil"),
+        // SPEC-685 (PR2-bis): «Mi perfil» del habilitado es su propia pantalla
+        // (datos + tarifa + documentos + estado), ya no la ficha de completar.
+        entrada(HREF_MI_PERFIL, "Mi perfil"),
     ];
 }
 

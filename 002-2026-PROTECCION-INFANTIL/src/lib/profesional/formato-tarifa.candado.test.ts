@@ -48,8 +48,10 @@ describe("SPEC-694 · tarifa: se ve con puntos, se guarda entera", () => {
     });
 
     it("el input REAL está cableado a estas funciones (no volvió a type=number)", () => {
+        // SPEC-685 (PR2-bis): la tarifa salió de la ficha (`completar`) y vive en
+        // «Mi perfil» del habilitado. El cableado se verifica donde ahora vive.
         const src = fs.readFileSync(
-            path.resolve(process.cwd(), "src/app/perfil-profesional/completar/page.tsx"),
+            path.resolve(process.cwd(), "src/components/modules/profesional/MiPerfilProfesionalClient.tsx"),
             "utf-8",
         );
         // El valor mostrado pasa por conPuntosDeMiles; lo guardado por tarifaDesdeTexto.

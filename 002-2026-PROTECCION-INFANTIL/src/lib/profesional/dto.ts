@@ -115,8 +115,11 @@ export function perfilCompletoParaRevision(perfil: PerfilProfesional): boolean {
         (perfil.atiendeVirtual || perfil.atiendePresencial) &&
         perfil.aniosExperiencia >= 0 &&
         perfil.presentacion.trim().length > 0 &&
-        perfil.tarifaConsultaCOP > 0 &&
-        perfil.duracionMinutos > 0 &&
+        // SPEC-685 (PR2-bis): la tarifa y la duración SALEN de la ficha y viven en
+        // «Mi perfil», que solo ve el HABILITADO (FORMA-MI-PERFIL). Antes de estar
+        // habilitado no hay tarifa que fijar, así que YA NO gatean el paso a
+        // EN_REVISION — se fijan después, en Mi perfil. (La 1ª cita cobra el precio
+        // estándar del admin, no la tarifa del profesional — SPEC-428 §4.)
         perfil.autorizacionArchivoId !== null
     );
 }

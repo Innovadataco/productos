@@ -26,7 +26,6 @@ import { Alerta } from "@/components/ui/Alerta";
 import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { MENSAJE_MODALIDAD_REQUERIDA, MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
-import { conPuntosDeMiles, tarifaDesdeTexto } from "@/lib/profesional/formato-tarifa";
 import type { OpcionCatalogo, GrupoAreas } from "@/lib/profesional/catalogos";
 
 type Catalogos = { profesion: OpcionCatalogo[]; areas: GrupoAreas[]; rangoEtario: OpcionCatalogo[] };
@@ -43,8 +42,6 @@ type Perfil = {
     atiendePresencial: boolean;
     aniosExperiencia: number;
     presentacion: string;
-    tarifaConsultaCOP: number;
-    duracionMinutos: number;
     emiteFactura: boolean;
     estado: string;
     autorizacionSubida: boolean;
@@ -91,8 +88,6 @@ export default function CompletarPerfilProfesionalPage() {
     const [atiendePresencial, setAtiendePresencial] = useState(false);
     const [aniosExperiencia, setAniosExperiencia] = useState<string>("");
     const [presentacion, setPresentacion] = useState("");
-    const [tarifaConsultaCOP, setTarifaConsultaCOP] = useState<number>(0);
-    const [duracionMinutos, setDuracionMinutos] = useState<number>(45);
     const [numeroTarjetaProfesional, setNumeroTarjeta] = useState("");
     const [archivo, setArchivo] = useState<File | null>(null);
     const [guardando, setGuardando] = useState(false);
@@ -139,8 +134,6 @@ export default function CompletarPerfilProfesionalPage() {
                         setAtiendePresencial(p.atiendePresencial);
                         setAniosExperiencia(p.aniosExperiencia > 0 ? String(p.aniosExperiencia) : "");
                         setPresentacion(p.presentacion);
-                        setTarifaConsultaCOP(p.tarifaConsultaCOP);
-                        setDuracionMinutos(p.duracionMinutos);
                     }
                 }
             } finally {
@@ -178,8 +171,6 @@ export default function CompletarPerfilProfesionalPage() {
                     atiendePresencial,
                     aniosExperiencia: anios,
                     presentacion,
-                    tarifaConsultaCOP,
-                    duracionMinutos,
                     numeroTarjetaProfesional: numeroTarjetaProfesional || null,
                 }),
             });
@@ -384,31 +375,16 @@ export default function CompletarPerfilProfesionalPage() {
                             {MENSAJE_MODALIDAD_FALTA_CAMPO}
                         </p>
                     )}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {/* SPEC-685 (PR2-bis): la TARIFA y la duración salieron de la ficha
+                        y viven en «Mi perfil» (solo el habilitado). Antes de estar
+                        habilitado no hay tarifa que fijar ni cobrar. */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {/* SPEC-434 punto 4 · años como selector 1..50. */}
                         <Select
                             label="Años de experiencia"
                             value={aniosExperiencia}
                             onChange={(e) => setAniosExperiencia(e.target.value)}
                             options={ANIOS_EXPERIENCIA_OPCIONES}
-                        />
-                        {/* SPEC-694: se ve con puntos de miles («200.000») mientras escribe;
-                            el estado guarda el ENTERO (200000) y eso es lo que se envía. Por eso
-                            es type=text (un number no muestra separadores) + inputMode numérico. */}
-                        <Input
-                            label="Tarifa por consulta (COP)"
-                            type="text"
-                            inputMode="numeric"
-                            value={conPuntosDeMiles(tarifaConsultaCOP)}
-                            onChange={(e) => setTarifaConsultaCOP(tarifaDesdeTexto(e.target.value))}
-                        />
-                        <Input
-                            label="Duración (min)"
-                            type="number"
-                            min={15}
-                            max={240}
-                            value={duracionMinutos}
-                            onChange={(e) => setDuracionMinutos(Number(e.target.value))}
                         />
                     </div>
                     <label className="block text-sm text-body">

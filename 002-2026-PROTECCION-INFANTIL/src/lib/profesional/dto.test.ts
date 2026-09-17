@@ -136,7 +136,12 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
         expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never)).toBe(true);
     });
 
-    it("tarifa 0 → false", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, tarifaConsultaCOP: 0 } as never)).toBe(false);
+    // SPEC-685 (PR2-bis): la tarifa/duración SALEN de la ficha a «Mi perfil»
+    // (habilitado). Antes de estar habilitado no hay tarifa que fijar → ya NO
+    // gatean el paso a EN_REVISION. Un borrador sin tarifa puede pasar a revisión.
+    it("tarifa/duración 0 → sigue completo (ya no gatean; se fijan en Mi perfil)", () => {
+        expect(
+            perfilCompletoParaRevision({ ...PERFIL_COMPLETO, tarifaConsultaCOP: 0, duracionMinutos: 0 } as never),
+        ).toBe(true);
     });
 });
