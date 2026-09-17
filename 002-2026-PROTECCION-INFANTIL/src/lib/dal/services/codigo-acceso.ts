@@ -12,6 +12,7 @@ import { programar } from "@/lib/notificaciones";
 import { logger } from "@/lib/logger";
 import { descifrarCampoReporte } from "./descifrar-contenido";
 import { CodigoAccesoContenidoRepository } from "../repositories/codigo-acceso";
+import { contenidoIdDeAnotacion } from "../anotacion-texto";
 
 /**
  * SPEC-584 (Fase 3) + SPEC-610 (D-123/D-129/D-130) · Ciclo de vida del PASE de
@@ -266,7 +267,13 @@ export async function leerExpedienteConSesion(params: {
             for (const ev of registro.expediente.eventos) {
                 // Cada descifrado escribe su propia fila LecturaReporte (por eventoId,
                 // vía resolverDuenos en la frontera DAL). Nunca textoOriginal.
-                const texto = await descifrarCampoReporte(ev.contenidoId, "texto");
+                // SPEC-699 (I-424): el sobre correcto lo da la fuente única — el del REPORTE
+                // para anotaciones de origen reporte (el propio está vacío), no `ev.contenidoId`.
+                // La auditoría se ata al EVENTO (no al reporte dueño del contenido): una fila
+                // por evento leído (gate SPEC-610) y sin notificar al padre por esta vía.
+                const texto = await descifrarCampoReporte(contenidoIdDeAnotacion(ev), "texto", {
+                    dueno: { eventoId: ev.id },
+                });
                 salida.push({
                     eventoId: ev.id,
                     fecha: ev.fechaEvento,

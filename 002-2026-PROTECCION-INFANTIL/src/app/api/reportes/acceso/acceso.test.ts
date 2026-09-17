@@ -80,13 +80,17 @@ async function crearExpedienteDePrueba(padreId: string, opciones: { gravedad?: S
             scoreGravedadActual: opciones.gravedad ?? "AMARILLO",
         },
     });
-    // Evento 1 · origen REPORTE: FK a un Reporte real + su PROPIO contenido cifrado
-    // (el evento nunca comparte fila de contenido con su reporte, S-D · D-117).
+    // Evento 1 · origen REPORTE — ALTA REAL (AD-3 · SPEC-699/I-424): el relato vive en el
+    // REPORTE; el sobre PROPIO del evento va VACÍO (`texto:""`). Antes este fixture sembraba
+    // el texto en el sobre propio del evento, un escenario IRREAL que ocultó I-424 (el pase
+    // descifraba el sobre propio y entregaba el relato en blanco). El `textoOriginal` va en el
+    // reporte para poder afirmar que la vía del pase NUNCA lo devuelve.
     const reporte = await crearReporteFixture(prisma, {
         data: {
             identificador: expediente.identificadorReportado,
             plataformaId: plataforma.id,
-            texto: "Relato del reporte (fuente del evento 1)",
+            texto: TEXTO_EVENTO_REPORTE,
+            textoOriginal: ORIGINAL_EVENTO_REPORTE,
             fechaIncidente: new Date("2026-09-01T10:00:00Z"),
             ciudad: "Bogotá",
             pais: "Colombia",
@@ -95,15 +99,13 @@ async function crearExpedienteDePrueba(padreId: string, opciones: { gravedad?: S
             estado: "REVISION_MANUAL",
         },
     });
-    const contenidoReporte = await prisma.$transaction((tx) =>
-        sellarTextoNuevo(tx, { texto: TEXTO_EVENTO_REPORTE, textoOriginal: ORIGINAL_EVENTO_REPORTE })
-    );
+    const contenidoEventoVacio = await prisma.$transaction((tx) => sellarTextoNuevo(tx, { texto: "" }));
     const eventoReporte = await prisma.eventoExpediente.create({
         data: {
             expedienteId: expediente.id,
             ordenSecuencial: 1,
             reporteId: reporte.id,
-            contenidoId: contenidoReporte.contenidoId,
+            contenidoId: contenidoEventoVacio.contenidoId,
             categoriaDetectada: "CONTACTO_INSISTENTE",
             confianzaClasificacion: 0.9,
             fechaEvento: new Date("2026-09-01T10:05:00Z"),

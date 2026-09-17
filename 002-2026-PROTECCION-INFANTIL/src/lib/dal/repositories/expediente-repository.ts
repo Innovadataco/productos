@@ -8,6 +8,7 @@ import { EstadoExpediente } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import { sellarTextoNuevo, descifrarCampos } from "@/lib/reporte-texto-contenido";
+import { contenidoIdDeAnotacion } from "@/lib/dal/anotacion-texto";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { DbClient } from "../unit-of-work";
 import { withUnitOfWork } from "../unit-of-work";
@@ -390,15 +391,16 @@ export class ExpedienteRepository {
             },
         });
 
-        // S-C: descifrado en LOTE del texto del reporte de cada evento (2 queries).
-        const contenidoIdsEventos = eventosPropiosRaw
-            .map((ev) => ev.reporte?.contenidoId)
-            .filter((c): c is string => Boolean(c));
+        // S-C: descifrado en LOTE del texto de cada evento (2 queries). SPEC-699 (I-424): el
+        // sobre lo resuelve la fuente única `contenidoIdDeAnotacion` — el del REPORTE para las
+        // de origen reporte (el propio está vacío), el propio para las manuales. Los tres
+        // lectores (esta vista, el pase y el timeline del círculo) usan la MISMA regla.
+        const contenidoIdsEventos = eventosPropiosRaw.map((ev) => contenidoIdDeAnotacion(ev));
         const textosEventos = await descifrarCampos(this.db, contenidoIdsEventos, "texto");
         const eventosPropios = eventosPropiosRaw.map((ev) => ({
             ...ev,
             // C/AD-3: descifrado en memoria, no persistido.
-            textoDescifrado: ev.reporte?.contenidoId ? textosEventos.get(ev.reporte.contenidoId)! : "",
+            textoDescifrado: textosEventos.get(contenidoIdDeAnotacion(ev))!,
         }));
 
         // Contexto de otros: solo fecha/ciudad/país/clasificación (Ley 1581 § SELECT).
