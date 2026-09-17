@@ -50,6 +50,15 @@ describe("toPerfilProfesionalPublico · candado de reserva", () => {
         }
     });
 
+    it("H-2 (SPEC-685 PR2): profesión/áreas/rango NO llegan al padre por el DTO público", () => {
+        // Si algún día deben llegar al directorio, se agregan a la allowlist A PROPÓSITO
+        // (con este candado actualizado). Hoy NO llegan: este candado lo prueba.
+        const publico = toPerfilProfesionalPublico(PERFIL_COMPLETO as never) as unknown as Record<string, unknown>;
+        expect(publico).not.toHaveProperty("profesion");
+        expect(publico).not.toHaveProperty("areasAtencion");
+        expect(publico).not.toHaveProperty("rangoEtario");
+    });
+
     it("expone SOLO los 14 campos aprobados (allowlist explícita)", () => {
         const publico = toPerfilProfesionalPublico(PERFIL_COMPLETO as never);
         expect(Object.keys(publico).sort()).toEqual(
