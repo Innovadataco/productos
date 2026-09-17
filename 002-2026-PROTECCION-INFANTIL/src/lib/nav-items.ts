@@ -186,6 +186,9 @@ export const PROFESIONAL_NAV_ITEMS: NavItem[] = [
     // habría llevado a una pantalla inexistente (candado I-299); hoy existe.
     { href: "/dashboard/profesional/calendario", label: "Calendario", modulo: "profesional_calendario" },
     { href: "/perfil-profesional/completar", label: "Mi ficha", modulo: "profesional_ficha" },
+    // SPEC-685 (PR2-bis): «Mi perfil» del habilitado — reúne datos, tarifa, documentos
+    // y estado. Mismo módulo que la ficha (`profesional_ficha`).
+    { href: "/dashboard/profesional/mi-perfil", label: "Mi perfil", modulo: "profesional_ficha" },
     { href: "/perfil-profesional/verificacion", label: "Verificación", modulo: "profesional_verificacion" },
 ];
 

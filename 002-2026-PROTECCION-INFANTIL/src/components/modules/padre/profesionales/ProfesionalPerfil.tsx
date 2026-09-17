@@ -93,8 +93,15 @@ export function ProfesionalPerfil({
                 <p className="mt-1 text-sm text-muted">
                     Sesión de {p.duracionMinutos} minutos{p.emiteFactura ? " · emite factura" : ""}.
                 </p>
+                {/* SPEC-685 (PR2-bis · FORMA §2-ter c): la tarifa de la 2ª cita se muestra
+                    solo si el profesional la fijó; si no, «por definir» — NUNCA «$0» (un $0
+                    le diría a la familia que las siguientes citas son gratis, y es falso). */}
                 <p className="mt-2 text-xs text-muted">
-                    De la 2ª cita en adelante: <span className="font-medium">{CURRENCY_COP.format(p.tarifaConsultaCOP)}</span> (tarifa del profesional).
+                    De la segunda cita en adelante:{" "}
+                    <span className="font-medium">
+                        {p.tarifaConsultaCOP !== null ? `${CURRENCY_COP.format(p.tarifaConsultaCOP)} (tarifa del profesional)` : "por definir"}
+                    </span>
+                    .
                 </p>
                 <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-ambar/10 dark:bg-ambar/10 px-3 py-1 text-xs font-medium text-ambar dark:text-ambar">
                     Nuevo en la red

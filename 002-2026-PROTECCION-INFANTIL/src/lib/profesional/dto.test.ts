@@ -59,6 +59,13 @@ describe("toPerfilProfesionalPublico · candado de reserva", () => {
         expect(publico).not.toHaveProperty("rangoEtario");
     });
 
+    it("SPEC-685 (PR2-bis): la tarifa se devuelve null cuando está «por fijar» (nunca 0)", () => {
+        const publico = toPerfilProfesionalPublico({ ...PERFIL_COMPLETO, tarifaConsultaCOP: null } as never);
+        expect(publico.tarifaConsultaCOP).toBeNull();
+        // La clave sigue en el DTO (forma estable); el consumidor decide no pintarla.
+        expect(Object.keys(publico)).toContain("tarifaConsultaCOP");
+    });
+
     it("expone SOLO los 14 campos aprobados (allowlist explícita)", () => {
         const publico = toPerfilProfesionalPublico(PERFIL_COMPLETO as never);
         expect(Object.keys(publico).sort()).toEqual(
@@ -136,7 +143,12 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
         expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never)).toBe(true);
     });
 
-    it("tarifa 0 → false", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, tarifaConsultaCOP: 0 } as never)).toBe(false);
+    // SPEC-685 (PR2-bis): la tarifa/duración SALEN de la ficha a «Mi perfil»
+    // (habilitado). Antes de estar habilitado no hay tarifa que fijar → ya NO
+    // gatean el paso a EN_REVISION. Un borrador sin tarifa puede pasar a revisión.
+    it("tarifa/duración 0 → sigue completo (ya no gatean; se fijan en Mi perfil)", () => {
+        expect(
+            perfilCompletoParaRevision({ ...PERFIL_COMPLETO, tarifaConsultaCOP: 0, duracionMinutos: 0 } as never),
+        ).toBe(true);
     });
 });

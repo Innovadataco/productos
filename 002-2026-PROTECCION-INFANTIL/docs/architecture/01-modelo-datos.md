@@ -1378,7 +1378,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | atiendePresencial | Boolean | — |
 | aniosExperiencia | Int | — |
 | presentacion | String | — |
-| tarifaConsultaCOP | Int | — |
+| tarifaConsultaCOP | Int | opcional |
 | duracionMinutos | Int | — |
 | emiteFactura | Boolean | — |
 | estado | EstadoPerfilProfesional | — |
