@@ -433,6 +433,14 @@ describe("SPEC-610 · candados del pase (I-372 · gates del CEO)", () => {
 
         expect(filas.length).toBe(2);
         expect(filas.map((f) => f.eventoId).sort()).toEqual([eventoReporte.id, eventoManual.id].sort());
+        // SPEC-701 (I-421): la fila NOMBRA el reporte además del evento. El evento de
+        // origen REPORTE lleva su `reporteId`; el MANUAL (sin reporte) queda en null.
+        // Antes ambas dejaban `reporteId` NULL y «¿quién leyó el reporte X?» solo se
+        // respondía uniendo por eventoId → EventoExpediente.reporteId.
+        const filaReporte = filas.find((f) => f.eventoId === eventoReporte.id)!;
+        const filaManual = filas.find((f) => f.eventoId === eventoManual.id)!;
+        expect(filaReporte.reporteId).toBe(eventoReporte.reporteId);
+        expect(filaManual.reporteId).toBeNull();
         expect(filas.every((f) => f.tipoActor === "EXTERNO")).toBe(true);
         expect(filas.every((f) => f.campo === "texto")).toBe(true);
         // Ninguna fila de esta sesión audita el original.
@@ -652,7 +660,7 @@ describe("SPEC-592/594 · render del detalle admin y notificaciones al padre", (
         });
     }
 
-    it("SPEC-592: el GET del detalle admin es un RENDER — ni audita ni notifica", async () => {
+    it("SPEC-701: el GET del detalle admin DEJA FILA (audita) pero NO notifica al padre", async () => {
         await sembrarReglaTextoLeido();
         const padre = await crearUsuario("PARENT");
         const reporte = await crearReporteDePrueba(padre.id);
@@ -668,9 +676,11 @@ describe("SPEC-592/594 · render del detalle admin y notificaciones al padre", (
         const data = await res.json();
         expect(data.reporte.texto).toBe("Relato de prueba del flujo de código temporal");
 
-        // El render no es una acción de lectura: cero filas de auditoría…
-        expect(await prisma.lecturaReporte.count({ where: { reporteId: reporte.id } })).toBe(0);
-        // …y cero notificaciones al padre (SPEC-594: rol interno lee → cero correos).
+        // SPEC-701 (I-421): el detalle DEJA FILA — toda lectura del relato por el
+        // personal queda rastreada (delitos contra menores no prescriben).
+        expect(await prisma.lecturaReporte.count({ where: { reporteId: reporte.id } })).toBe(1);
+        // …pero SIGUE sin notificar al padre (SPEC-594: rol interno lee → cero correos).
+        // El rastro y el aviso son cosas distintas: SPEC-701 los desacopló.
         expect(await prisma.notificacion.count({ where: { evento: "padre.reporte.texto_leido" } })).toBe(0);
     });
 

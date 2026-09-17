@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { idSchema } from "@/lib/validators";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { esAdminRol, esComiteRol } from "@/lib/operadores/permisos";
+import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { ComiteApelacionesService } from "@/lib/dal/services/comite-apelaciones";
 
 /**
@@ -45,8 +46,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         const id = parsedId.data;
 
         // SPEC-053: detalle, metadatos del documento y reportes del identificador
-        // viven en el DAL.
-        const resultado = await new ComiteApelacionesService().obtenerDetalle(id);
+        // viven en el DAL. SPEC-701 (I-421): el descifrado de los relatos corre dentro
+        // de `conActor` para que cada lectura deje fila en LecturaReporte con el actor
+        // del comité (antes pasaba por la primitiva cruda, sin rastro).
+        const resultado = await conActor(actorDesdeRequest(user, request), () =>
+            new ComiteApelacionesService().obtenerDetalle(id),
+        );
 
         return NextResponse.json(resultado);
     } catch (error) {

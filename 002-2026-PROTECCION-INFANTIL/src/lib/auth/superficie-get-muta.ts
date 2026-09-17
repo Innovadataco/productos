@@ -34,6 +34,8 @@ export const SUPERFICIE_GET_MUTA: readonly EntradaGetMuta[] = [
     // Tier B — escriben LecturaReporte (descifrado con registro de lectura).
     { archivo: "src/app/api/reportes/acceso/ver/route.ts", tipo: "route-GET", tier: "B-lectura-audit", razon: "leerExpedienteConSesion → una LecturaReporte por evento (lectura externa del expediente por pase; SPEC-610)" },
     { archivo: "src/app/api/admin/spam/pendientes/route.ts", tipo: "route-GET", tier: "B-lectura-audit", razon: "descifrarCamposReporte → una LecturaReporte por reporte en cola" },
+    { archivo: "src/app/api/admin/reportes-revision/[id]/route.ts", tipo: "route-GET", tier: "B-lectura-audit", razon: "SPEC-701 (I-421): el detalle descifra el relato → una LecturaReporte (antes el render no dejaba rastro)" },
+    { archivo: "src/app/api/admin/comite/apelaciones/[id]/route.ts", tipo: "route-GET", tier: "B-lectura-audit", razon: "SPEC-701 (I-421): el comité ve los relatos del identificador → una LecturaReporte por reporte (vía servicio; NO detectable por scan)" },
     { archivo: "src/app/api/admin/comite/consolidacion/[expedienteId]/route.ts", tipo: "route-GET", tier: "B-lectura-audit", razon: "obtenerDetalleConsolidacion descifra relatos → LecturaReporte (vía servicio read-named; NO detectable por scan)" },
     { archivo: "src/app/api/admin/reportes/[id]/expediente/route.ts", tipo: "route-GET", tier: "B-lectura-audit", razon: "?revelar=true: armarEtapas descifra + logAudit TEXTO_ORIGINAL_REVELADO" },
 
