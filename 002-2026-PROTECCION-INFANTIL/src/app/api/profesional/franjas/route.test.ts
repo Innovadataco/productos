@@ -217,10 +217,15 @@ describe("POST /api/profesional/franjas · SPEC-447 (I-311)", () => {
 
         const res = await POST(req(cuerpo("10:00")));
 
+        // SPEC-690 (I-414): sin verificación vigente el profesional NO está
+        // habilitado. La compuerta de la ruta operativa lo corta con 403 ANTES
+        // del tope de vencimiento de SPEC-447 (que sigue como defensa en
+        // profundidad, ahora inalcanzable por esta vía). El invariante «sin
+        // vigencia no se publica» se mantiene, ahora más fuerte.
         expect(
             res.status,
-            "Sin vigencia no hay tope posible: publicar sería abrir agenda sin límite.",
-        ).toBe(400);
+            "Sin vigencia no está habilitado: la compuerta corta con 403 antes de cualquier tope.",
+        ).toBe(403);
     });
 
     it("sin sesión de PROFESIONAL no se publica nada", async () => {

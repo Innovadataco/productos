@@ -59,7 +59,48 @@ async function crearReporteDePrueba(usuarioId?: string) {
 async function autenticar(rol: "PARENT" | "PROFESIONAL" | "ADMIN" | "OPERADOR") {
     const usuario = await crearUsuario(rol);
     activeToken = await crearTokenUsuario(usuario.id, rol);
+    // SPEC-690 (I-414): canjar es la ruta MÁS grave — solo un profesional
+    // HABILITADO abre el expediente de un menor. En producción quien canjea un
+    // pase es ACTIVO con verificación aprobada vigente (ambos sellados en la
+    // misma transacción de aprobación). Sembrarlo así hace que el fixture
+    // describa al profesional real; sin la habilitación la compuerta lo frena
+    // —con razón— con 403 antes de llegar a la lógica del pase.
+    if (rol === "PROFESIONAL") {
+        await sembrarHabilitacionProfesional(usuario.id);
+    }
     return usuario;
+}
+
+/** SPEC-690: perfil ACTIVO + verificación APROBADA vigente = profesional habilitado. */
+async function sembrarHabilitacionProfesional(usuarioId: string) {
+    const ciudad = await prisma.ciudad.findFirstOrThrow({ where: { nombre: "Bogotá" } });
+    const perfil = await prisma.perfilProfesional.create({
+        data: {
+            usuarioId,
+            nombreVisible: "Profesional Habilitado",
+            tituloProfesional: "Psicología",
+            especialidades: ["infantil"],
+            ciudadId: ciudad.id,
+            atiendeVirtual: true,
+            aniosExperiencia: 5,
+            presentacion: "Perfil habilitado de prueba SPEC-690.",
+            tarifaConsultaCOP: 150000,
+            duracionMinutos: 45,
+            estado: "ACTIVO",
+        },
+    });
+    const revisor = await crearUsuario("ADMIN");
+    await prisma.verificacionProfesional.create({
+        data: {
+            perfilProfesionalId: perfil.id,
+            revisadoPorId: revisor.id,
+            revisadoEn: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            checklist: {},
+            resultado: "APROBADO",
+            autorizacionArchivoId: "archivo-de-prueba-610",
+            venceEn: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // vigente
+        },
+    });
 }
 
 /**

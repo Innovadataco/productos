@@ -53,6 +53,23 @@ async function sembrarProfesional() {
             estado: "ACTIVO",
         },
     });
+    // SPEC-690 (I-414): «recién verificado» = ACTIVO CON su verificación APROBADA
+    // vigente. En producción no existe un ACTIVO sin ella: `verificador/service.ts`
+    // sella ambos en la MISMA transacción. La compuerta de la ruta exige esa
+    // vigencia, así que sin sembrarla el panel daría 403 (fixture anterior a la
+    // compuerta, no defecto de la compuerta).
+    const revisor = await crearUsuario("ADMIN", `admin.${Date.now()}.${Math.random()}@ejemplo.local`);
+    await prisma.verificacionProfesional.create({
+        data: {
+            perfilProfesionalId: perfil.id,
+            revisadoPorId: revisor.id,
+            revisadoEn: new Date(Date.now() - 24 * HORA),
+            checklist: {},
+            resultado: "APROBADO",
+            autorizacionArchivoId: "archivo-de-prueba-425",
+            venceEn: new Date(Date.now() + 90 * 24 * HORA), // vigente
+        },
+    });
     return { usuario, perfil };
 }
 
