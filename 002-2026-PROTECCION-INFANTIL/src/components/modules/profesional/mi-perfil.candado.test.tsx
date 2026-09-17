@@ -66,6 +66,31 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa con valores en vivo", 
         expect(screen.getByText(/desde la segunda cita/)).toBeTruthy();
     });
 
+    it("tarifa por fijar (null): muestra el estado §2-ter, en positivo, no «$0»", () => {
+        render(
+            <MiPerfilProfesionalClient
+                perfil={{ ...PERFIL, tarifaConsultaCOP: null }}
+                rangoCatalogo={RANGO}
+                aviso={{ precioEstandar: 80_000, pct: 15 }}
+                vista={VISTA}
+            />,
+        );
+        expect(screen.getByText(/Su tarifa está sin fijar/)).toBeTruthy();
+        expect(screen.getByText(/Fije su tarifa/)).toBeTruthy();
+    });
+
+    it("con tarifa fijada: NO aparece el estado «por fijar»", () => {
+        render(
+            <MiPerfilProfesionalClient
+                perfil={{ ...PERFIL, tarifaConsultaCOP: 120_000 }}
+                rangoCatalogo={RANGO}
+                aviso={{ precioEstandar: 80_000, pct: 15 }}
+                vista={VISTA}
+            />,
+        );
+        expect(screen.queryByText(/Su tarifa está sin fijar/)).toBeNull();
+    });
+
     it("si falta un parámetro: la frase va SIN número, nunca una cifra inventada", () => {
         const { container } = render(
             <MiPerfilProfesionalClient
@@ -107,5 +132,27 @@ describe("SPEC-685 · «Mi perfil» · orden y mudanza de la tarifa", () => {
         );
         expect(ficha).not.toContain("Tarifa por consulta");
         expect(ficha).not.toContain("tarifaConsultaCOP");
+    });
+});
+
+describe("SPEC-685 · FORMA §2-ter c · lo que ve la familia: «por definir», nunca «$0»", () => {
+    const perfilPadre = fs.readFileSync(
+        path.resolve(process.cwd(), "src/components/modules/padre/profesionales/ProfesionalPerfil.tsx"),
+        "utf-8",
+    );
+    const panelPadre = fs.readFileSync(
+        path.resolve(process.cwd(), "src/components/modules/padre/profesionales/SolicitarCitaPanel.tsx"),
+        "utf-8",
+    );
+
+    it("ProfesionalPerfil dice «por definir» y formatea la tarifa SOLO si no es null", () => {
+        expect(perfilPadre).toContain("por definir");
+        // El format de la tarifa está guardado por `!== null` (no incondicional → no «$0»).
+        expect(/tarifaConsultaCOP !== null\s*\?/.test(perfilPadre)).toBe(true);
+    });
+
+    it("SolicitarCitaPanel también dice «por definir» cuando la tarifa está sin fijar", () => {
+        expect(panelPadre).toContain("por definir");
+        expect(/tarifaProfesionalCOP !== null/.test(panelPadre)).toBe(true);
     });
 });

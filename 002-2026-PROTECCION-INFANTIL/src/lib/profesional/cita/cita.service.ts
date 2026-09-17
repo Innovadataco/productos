@@ -117,8 +117,10 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
         // se rechaza con un error claro.
         const base = input.montoConsultaOverride ?? pro.tarifaConsultaCOP;
         if (base === null || base <= 0) {
+            // FORMA-MI-PERFIL §2-ter (b) · mensaje al PADRE (voz tú): la 1ª cita
+            // (precio estándar) sí se agenda; las siguientes, no, hasta que fije tarifa.
             throw new AppError(
-                "Este profesional aún no fijó su tarifa; no se puede agendar una cita a su tarifa.",
+                "Por ahora solo puedes agendar la primera cita con este profesional. El valor de las siguientes todavía no está disponible.",
                 ERROR_CODES.VALIDATION_ERROR,
                 400,
             );

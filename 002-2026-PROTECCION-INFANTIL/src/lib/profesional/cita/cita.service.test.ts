@@ -120,16 +120,24 @@ describe("SPEC-685 (PR2-bis) · cita a la tarifa del profesional SIN fijar", { t
         const franja = await seedFranja(pro.id);
 
         // SIN override → usaría la tarifa del profesional, que está sin fijar.
-        await expect(
-            crearSolicitudCita({
+        let statusCode: number | undefined;
+        let message = "";
+        try {
+            await crearSolicitudCita({
                 padreUsuarioId: padre.id,
                 profesionalId: pro.id,
                 franjaId: franja.id,
                 presentacion: "Contexto suficiente para pasar el mínimo del schema.",
                 urgencia: "SIN_APURO",
                 porcentajeServicio: 15,
-            }),
-        ).rejects.toMatchObject({ statusCode: 400 });
+            });
+        } catch (e) {
+            statusCode = (e as { statusCode?: number }).statusCode;
+            message = (e as { message?: string }).message ?? "";
+        }
+        expect(statusCode).toBe(400);
+        // FORMA §2-ter (b): mensaje al padre — puede la 1ª, no las siguientes.
+        expect(message).toContain("primera cita");
 
         // Conducta, no texto: NO se creó ninguna solicitud (nada de cobrar 0).
         expect(await prisma.solicitudCita.count()).toBe(0);

@@ -197,7 +197,7 @@ export function SolicitarCitaPanel({
                                     {duracionMinutos ? ` · ${duracionMinutos} min` : ""}
                                 </>
                             )
-                            : "Primera cita al precio estándar."}
+                            : "Primera cita al precio estándar. De la segunda cita en adelante: por definir."}
                 </p>
             </div>
 

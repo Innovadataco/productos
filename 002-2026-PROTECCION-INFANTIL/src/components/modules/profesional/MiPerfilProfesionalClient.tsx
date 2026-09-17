@@ -135,12 +135,16 @@ export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista 
                     />
                 </div>
 
-                {/* SPEC-685 (PR2-bis · acción e): estado «por fijar». La forma final la
-                    define Diseño; por ahora, una nota honesta con la consecuencia real. */}
+                {/* SPEC-685 (PR2-bis · FORMA §2-ter a): estado «tarifa por fijar», en POSITIVO
+                    (ámbar de acción pendiente, no alarma), enmarcado en lo que ya puede hacer.
+                    Valor del precio estándar EN VIVO; si falta, la frase va sin número. */}
                 {tarifaSinFijar && (
                     <p className="mt-2 text-sm text-estado-ambar">
-                        Aún no ha fijado su tarifa. Fíjela para poder recibir citas a partir de la segunda con cada
-                        familia. La primera cita se cobra al precio estándar de la Plataforma.
+                        <span className="font-medium">Su tarifa está sin fijar.</span> Ya puede recibir familias: la
+                        primera cita se cobra al precio estándar
+                        {aviso.precioEstandar !== null ? ` (hoy ${conPuntosDeMiles(aviso.precioEstandar)} COP)` : ""}.{" "}
+                        <span className="font-medium">Fije su tarifa</span> para poder atender de la segunda cita en
+                        adelante.
                     </p>
                 )}
 
