@@ -285,18 +285,20 @@ export async function decidir(
             409,
         );
     }
-    // SPEC-686 (I-420): la revisión necesita una autorización PREVIA. Acepta la ACEPTACIÓN en
-    // pantalla (mecanismo nuevo) o el archivo firmado (legacy, filas pre-686). Sin ninguna, no
-    // se decide — «una verificación no puede quedar revisada sin autorización con fecha anterior»
-    // (candado de anterioridad). La aceptación se busca con fecha <= ahora, así que la que se
-    // registre en la verificación SIEMPRE es previa a `revisadoEn`.
+    // SPEC-686 (I-420) · CUTOVER (veredicto CEO 17-09): toda decisión NUEVA exige la ACEPTACIÓN
+    // EN PANTALLA — el archivo firmado queda solo como HISTORIA (las verificaciones pre-686 con
+    // archivo siguen válidas, no se tocan; pero una revisión nueva no se respalda ya en el
+    // archivo). Los ACTIVOS con archivo aceptan v0.1 en su próximo ingreso (guard de
+    // re-aceptación), así que para cuando vuelvan a ser revisados ya tienen aceptación. La
+    // aceptación se busca con fecha <= ahora → la que se registra es SIEMPRE previa a `revisadoEn`
+    // (candado de anterioridad, Ley 1918/2018 · Decreto 753/2019).
     const aceptacionPrevia = await new AutorizacionProfesionalService().aceptacionAntesDe(
         perfil.usuarioId,
         new Date(),
     );
-    if (!aceptacionPrevia && !perfil.autorizacionArchivoId) {
+    if (!aceptacionPrevia) {
         throw new AppError(
-            "El profesional no tiene una autorización previa (aceptada en pantalla ni archivo firmado) — no se puede decidir sin ella.",
+            "El profesional no ha aceptado la autorización en pantalla — no se puede decidir sin ella.",
             ERROR_CODES.VALIDATION_ERROR,
             409,
         );
@@ -387,12 +389,11 @@ export async function decidir(
             revisadoEn,
             checklist: entrada.checklist as unknown as Prisma.InputJsonValue,
             resultado,
-            // SPEC-686: se registra EXACTAMENTE UNA vía de autorización (CHECK XOR en BD,
-            // recomendación D-121 de Datos): se prefiere la ACEPTACIÓN en pantalla (mecanismo
-            // nuevo); si el profesional no aceptó pero tiene archivo legacy, ese. La guarda de
-            // arriba garantiza que al menos una existe, así que nunca quedan las dos en null.
-            autorizacionArchivoId: aceptacionPrevia ? null : perfil.autorizacionArchivoId,
-            aceptacionAutorizacionId: aceptacionPrevia?.id ?? null,
+            // SPEC-686 · CUTOVER: toda decisión nueva se respalda en la ACEPTACIÓN en pantalla
+            // (la guarda de arriba garantiza que existe). El archivo NO se registra en filas
+            // nuevas — es historia. EXACTAMENTE una vía (CHECK XOR en BD, D-121 de Datos).
+            autorizacionArchivoId: null,
+            aceptacionAutorizacionId: aceptacionPrevia.id,
             venceEn,
             notaInterna,
         });

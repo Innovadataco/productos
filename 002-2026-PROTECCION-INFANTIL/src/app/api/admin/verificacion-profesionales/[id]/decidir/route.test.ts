@@ -110,6 +110,18 @@ async function sembrarPerfilEnRevision() {
             },
         });
     }
+    // SPEC-686: decidir exige la aceptación PREVIA de la autorización (cutover). Se siembra
+    // acá para que estos tests sigan probando LO SUYO (que el aviso quede encolado), no la
+    // guarda de autorización.
+    await prisma.aceptacionAutorizacionProfesional.create({
+        data: {
+            usuarioId: profesional.id,
+            version: "v0.1",
+            documentoHash: "h",
+            ip: "1.1.1.1",
+            aceptadoEn: new Date(Date.now() - 3_600_000),
+        },
+    });
     return { perfil, profesional };
 }
 

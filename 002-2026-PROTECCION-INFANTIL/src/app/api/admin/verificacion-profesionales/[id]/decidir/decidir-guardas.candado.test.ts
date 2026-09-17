@@ -120,6 +120,17 @@ async function sembrarPerfilEnRevision() {
             },
         });
     }
+    // SPEC-686: decidir exige aceptación previa de la autorización (cutover); se siembra para
+    // que este candado pruebe LO SUYO (las guardas del §5-bis), no la guarda de autorización.
+    await prisma.aceptacionAutorizacionProfesional.create({
+        data: {
+            usuarioId: profesional.id,
+            version: "v0.1",
+            documentoHash: "h",
+            ip: "1.1.1.1",
+            aceptadoEn: new Date(Date.now() - 3_600_000),
+        },
+    });
     return { perfil, profesional };
 }
 

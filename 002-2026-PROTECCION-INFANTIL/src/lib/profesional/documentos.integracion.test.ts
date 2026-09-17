@@ -79,6 +79,17 @@ async function sembrarProfesional(sufijo: string) {
             estado: "EN_REVISION",
         },
     });
+    // SPEC-686: decidir exige la aceptación previa de la autorización (cutover). Se siembra
+    // para que el test del CUMPLE llegue a esa guarda y no choque antes con la de autorización.
+    await prisma.aceptacionAutorizacionProfesional.create({
+        data: {
+            usuarioId: usuario.id,
+            version: "v0.1",
+            documentoHash: "h",
+            ip: "1.1.1.1",
+            aceptadoEn: new Date(Date.now() - 3_600_000),
+        },
+    });
     return { usuario, perfil };
 }
 

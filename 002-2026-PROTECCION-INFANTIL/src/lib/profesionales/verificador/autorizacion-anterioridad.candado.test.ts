@@ -106,6 +106,17 @@ describe("SPEC-686 · B · decidir exige y registra la autorización previa", ()
         expect(await prisma.verificacionProfesional.count()).toBe(0);
     });
 
+    it("CUTOVER: solo archivo legacy y SIN aceptación → 409 (el archivo ya no basta para una decisión nueva)", async () => {
+        // Veredicto CEO 17-09: toda decisión NUEVA exige la aceptación en pantalla; el archivo
+        // queda como historia. Un perfil con archivo pero sin aceptación no se puede decidir.
+        const admin = await crearUsuario("ADMIN", `ad.${Date.now()}@e.local`);
+        const { perfil } = await sembrarPerfilEnRevision({ conArchivo: true });
+        await expect(
+            decidir(perfil.id, { id: admin.id, email: admin.email }, CHECKLIST_OK),
+        ).rejects.toMatchObject({ statusCode: 409 });
+        expect(await prisma.verificacionProfesional.count()).toBe(0);
+    });
+
     it("con aceptación PREVIA → aprueba y la fija en la verificación con aceptadoEn <= revisadoEn", async () => {
         const admin = await crearUsuario("ADMIN", `ad.${Date.now()}@e.local`);
         const { perfil, prof } = await sembrarPerfilEnRevision({ conArchivo: false });
