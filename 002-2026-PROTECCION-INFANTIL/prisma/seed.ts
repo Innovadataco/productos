@@ -2,6 +2,7 @@ import { RUBRICA_SEMILLA, DEFINICIONES_CATEGORIA } from "../src/lib/ai/rubrica-s
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { SEMILLAS_CATALOGO_PROFESIONAL } from "../src/lib/profesional/catalogos";
+import { REQUISITOS_VERIFICACION_DEFAULT, CLAVE_PARAMETRO_REQUISITOS } from "../src/lib/profesionales/verificador/requisitos-default";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -4425,31 +4426,27 @@ async function seedParametrosBarridoCitas() {
     console.log("[SEED] parámetro cita.barrido.cron listo");
 }
 
-// ── SPEC-408 (A-75 · brief §9): la lista de 4 requisitos que el Verificador chequea ──
+// ── SPEC-408 (A-75 · brief §9) · SPEC-700 (I-425): la lista de requisitos que el Verificador chequea ──
 // Orden permanente de Jelkin: NO quemar en código. Se siembra idempotente
 // (`update: {}`) — agregar/quitar/renombrar un requisito NO cuesta un despliegue,
 // se edita desde el admin en el ConfigPanel (parámetro clave = valor JSON).
+// SPEC-700: se retiró el 4º «otro» (traía «pendiente de definir por Jelkin»); quedan tres.
+// La lista vive en `requisitos-default.ts` (fuente única: seed + corrector + candado).
 async function seedRequisitosVerificacion() {
-    const requisitos = [
-        { clave: "tarjeta_profesional", nombre: "Tarjeta profesional vigente", descripcion: "Imagen o PDF de la tarjeta profesional emitida por el ente competente." },
-        { clave: "antecedentes", nombre: "Antecedentes del profesional", descripcion: "Certificado de antecedentes (Ley 1918/2018 · 2375/2024, §5). El resultado es reservado por ley." },
-        { clave: "cedula", nombre: "Cédula de ciudadanía", descripcion: "Documento de identidad vigente." },
-        { clave: "otro", nombre: "Otro documento de soporte", descripcion: "Cuarto espacio libre — pendiente de definir por Jelkin. El Verificador lo trata como los demás." },
-    ];
     await prisma.parametroSistema.upsert({
-        where: { clave: "verificacion.requisitos" },
+        where: { clave: CLAVE_PARAMETRO_REQUISITOS },
         update: {},
         create: {
-            clave: "verificacion.requisitos",
-            valor: JSON.stringify(requisitos),
+            clave: CLAVE_PARAMETRO_REQUISITOS,
+            valor: JSON.stringify(REQUISITOS_VERIFICACION_DEFAULT),
             tipo: TipoParametro.JSON,
             categoria: CategoriaParametro.SYSTEM,
             esPublico: false,
             esSecreto: false,
-            descripcion: "Lista de requisitos que el Verificador chequea al admitir un profesional. Editable desde el admin (JSON con { clave, nombre, descripcion }). SPEC-408.",
+            descripcion: "Lista de requisitos que el Verificador chequea al admitir un profesional. Editable desde el admin (JSON con { clave, nombre, descripcion }). SPEC-408 · SPEC-700.",
         },
     });
-    console.log("[SEED] verificacion.requisitos listo (4 requisitos por defecto)");
+    console.log(`[SEED] verificacion.requisitos listo (${REQUISITOS_VERIFICACION_DEFAULT.length} requisitos por defecto)`);
 }
 
 // ── SPEC-244 (002-PI-147): catálogo Motor Notif del ciclo de vida de suscripción ──

@@ -1,10 +1,10 @@
 /**
  * SPEC-408 (A-75 · brief §9): lee la lista de requisitos parametrizada.
  *
- * Orden permanente de Jelkin: los 4 requisitos que revisa el Verificador NO
+ * Orden permanente de Jelkin: los requisitos que revisa el Verificador NO
  * están quemados en el código — viven en `ParametroSistema.verificacion.requisitos`
  * (JSON) que el seed siembra idempotente. Agregar, quitar o renombrar un
- * requisito no cuesta un despliegue.
+ * requisito no cuesta un despliegue (SPEC-700 retiró el 4º «otro» sin desplegar).
  */
 import { z } from "zod";
 import { getParametroSistemaValor, type ParametroClient } from "@/lib/parametros";
