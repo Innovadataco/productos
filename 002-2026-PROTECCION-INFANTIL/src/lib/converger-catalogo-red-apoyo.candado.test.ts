@@ -1,9 +1,9 @@
 /**
- * SPEC-685 · CANDADO DE INTEGRACIÓN — converger las 5 columnas de catálogo/legado de los perfiles
- * MARCADOS de la corrida red-apoyo-676, sin purgar (los ids y vínculos se conservan):
+ * SPEC-685 · CANDADO DE INTEGRACIÓN — converger las 5 columnas de catálogo/legado de los
+ * perfiles MARCADOS de la corrida red-apoyo-676, sin purgar (ids y vínculos se conservan):
  *   - DRY-RUN deja la base IDÉNTICA (defecto-1 del CEO: un dry-run que escribe es una trampa).
- *   - --confirm escribe SOLO las 5 columnas y SOLO en los marcados (control positivo: un perfil
- *     sin marca queda intacto).
+ *   - --confirm llena las 5 columnas con claves VÁLIDAS y VARIADAS (no clona el directorio) y
+ *     SOLO en los marcados (control positivo: un perfil sin marca queda intacto).
  *   - Idempotente: una 2ª corrida converge 0.
  *
  * Vive en `src/**` a propósito (integración con base). Ejercita la función del script.
@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { convergerCatalogoRedApoyo } from "../../scripts/demo-prod/converger-catalogo-red-apoyo";
 import { CORRIDA_RED, SCRIPT_RED } from "../../scripts/demo-prod/lib/red-apoyo-plan";
-import { derivarPerfilCatalogoSeed, CLAVES_SEED_RED_APOYO } from "../../scripts/lib/perfil-catalogo-seed";
+import { firmaCombo } from "../../scripts/lib/perfil-catalogo-seed";
 
 async function ciudadDePrueba(): Promise<string> {
     const existente = await prisma.ciudad.findFirst({ select: { id: true } });
@@ -23,11 +23,13 @@ async function ciudadDePrueba(): Promise<string> {
     return ciudad.id;
 }
 
+let seq = 0;
 /** Perfil con las columnas de catálogo VACÍAS y las legado con texto viejo (estado pre-convergencia). */
 async function crearPerfilCatalogoVacio(ciudadId: string, marcado: boolean): Promise<string> {
+    const n = seq++;
     const prof = await prisma.usuario.create({
         data: {
-            email: `prof.s685.${marcado ? "m" : "u"}.${Date.now()}.${Math.random()}@example.com`,
+            email: `prof.s685.${marcado ? "m" : "u"}.${String(n).padStart(3, "0")}@example.com`,
             nombre: "Prof S685",
             passwordHash: "fixture-no-login",
             rol: "PROFESIONAL",
@@ -71,6 +73,7 @@ const converger = (dryRun: boolean) => prisma.$transaction((tx) => convergerCata
 describe("SPEC-685 · convergerCatalogoRedApoyo", () => {
     beforeEach(async () => {
         await resetDatabase();
+        seq = 0;
     });
 
     it("DRY-RUN deja la base IDÉNTICA (no escribe; defecto-1 del CEO)", async () => {
@@ -81,25 +84,40 @@ describe("SPEC-685 · convergerCatalogoRedApoyo", () => {
         const r = await converger(true);
 
         expect(r.escrito).toBe(false);
-        expect(r.porConverger).toBe(1); // habría 1 por converger, pero NO se escribió
+        expect(r.porConverger).toBe(1);
         expect(await leer(id)).toEqual(antes); // profesion null, areas [], titulo "…(viejo)": intacto
     });
 
-    it("--confirm converge las 5 columnas al catálogo (misma derivación que la API)", async () => {
+    it("--confirm llena las 5 columnas con claves válidas y NO vacías", async () => {
         const ciudadId = await ciudadDePrueba();
         const id = await crearPerfilCatalogoVacio(ciudadId, true);
-        const esperado = await derivarPerfilCatalogoSeed(CLAVES_SEED_RED_APOYO);
 
         const r = await converger(false);
         expect(r.escrito).toBe(true);
         expect(r.porConverger).toBe(1);
 
         const p = await leer(id);
-        expect(p.profesion).toBe(esperado.profesion);
-        expect(p.areasAtencion).toEqual(esperado.areasAtencion);
-        expect(p.rangoEtario).toEqual(esperado.rangoEtario);
-        expect(p.tituloProfesional).toBe(esperado.tituloProfesional); // etiqueta del catálogo, no el texto viejo
-        expect(p.especialidades).toEqual(esperado.especialidades);
+        expect(p.profesion).toBeTruthy();
+        expect(p.areasAtencion.length).toBeGreaterThanOrEqual(1);
+        expect(p.areasAtencion.length).toBeLessThanOrEqual(3);
+        expect(p.rangoEtario.length).toBeGreaterThanOrEqual(1);
+        expect(p.tituloProfesional).not.toContain("viejo"); // se pisó por la etiqueta del catálogo
+        expect(p.especialidades.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("VARIADO · varios marcados NO reciben todos la misma combinación", async () => {
+        const ciudadId = await ciudadDePrueba();
+        const ids: string[] = [];
+        for (let i = 0; i < 5; i++) ids.push(await crearPerfilCatalogoVacio(ciudadId, true));
+
+        await converger(false);
+
+        const firmas = new Set<string>();
+        for (const id of ids) {
+            const p = await leer(id);
+            firmas.add(firmaCombo({ profesion: p.profesion ?? "", areasAtencion: p.areasAtencion, rangoEtario: p.rangoEtario }));
+        }
+        expect(firmas.size).toBeGreaterThanOrEqual(2); // no clonado
     });
 
     it("CONTROL POSITIVO · solo toca los MARCADOS; un perfil sin marca queda intacto", async () => {
@@ -109,10 +127,10 @@ describe("SPEC-685 · convergerCatalogoRedApoyo", () => {
         const sinMarcaAntes = await leer(sinMarca);
 
         const r = await converger(false);
-        expect(r.marcados).toBe(1); // solo el marcado
+        expect(r.marcados).toBe(1);
 
-        expect((await leer(marcado)).profesion).not.toBeNull(); // convergido
-        expect(await leer(sinMarca)).toEqual(sinMarcaAntes); // intacto
+        expect((await leer(marcado)).profesion).not.toBeNull();
+        expect(await leer(sinMarca)).toEqual(sinMarcaAntes);
     });
 
     it("idempotente: la 2ª corrida converge 0 y no cambia la base", async () => {
@@ -129,7 +147,7 @@ describe("SPEC-685 · convergerCatalogoRedApoyo", () => {
 
     it("sin perfiles marcados de la corrida → no-op (marcados 0)", async () => {
         const ciudadId = await ciudadDePrueba();
-        await crearPerfilCatalogoVacio(ciudadId, false); // sin marca
+        await crearPerfilCatalogoVacio(ciudadId, false);
         const r = await converger(false);
         expect(r).toMatchObject({ marcados: 0, porConverger: 0, escrito: false });
     });

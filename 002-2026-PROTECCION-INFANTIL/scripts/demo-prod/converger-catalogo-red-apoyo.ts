@@ -17,7 +17,12 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
 import { parseArgs } from "../limpieza/_common";
 import { CORRIDA_RED } from "./lib/red-apoyo-plan";
-import { derivarPerfilCatalogoSeed, CLAVES_SEED_RED_APOYO } from "../lib/perfil-catalogo-seed";
+import {
+    derivarPerfilCatalogoSeed,
+    leerListasCatalogo,
+    combosRedApoyo,
+    clavesRedApoyoParaIndice,
+} from "../lib/perfil-catalogo-seed";
 
 export interface ResultadoConvergencia {
     /** Perfiles marcados de la corrida. */
@@ -48,11 +53,14 @@ export async function convergerCatalogoRedApoyo(
     const ids = marcas.map((m) => m.entidadId);
     if (ids.length === 0) return { marcados: 0, porConverger: 0, yaAlDia: 0, escrito: false };
 
-    // Misma derivación que la siembra/API; ABORTA si el catálogo vivo no valida (nunca "" ni []).
-    const catalogo = await derivarPerfilCatalogoSeed(CLAVES_SEED_RED_APOYO);
+    // Combinaciones VARIADAS del catálogo vivo; cada perfil toma UNA por POSICIÓN estable
+    // (orden por email + id → el MISMO perfil recibe la MISMA combinación entre corridas →
+    // idempotente y determinista). No se clona el directorio.
+    const combos = combosRedApoyo(await leerListasCatalogo());
 
     const perfiles = await tx.perfilProfesional.findMany({
         where: { id: { in: ids } },
+        orderBy: [{ usuario: { email: "asc" } }, { id: "asc" }],
         select: {
             id: true,
             profesion: true,
@@ -62,29 +70,42 @@ export async function convergerCatalogoRedApoyo(
             especialidades: true,
         },
     });
-    const alDia = (p: (typeof perfiles)[number]): boolean =>
-        p.profesion === catalogo.profesion &&
-        mismaLista(p.areasAtencion, catalogo.areasAtencion) &&
-        mismaLista(p.rangoEtario, catalogo.rangoEtario) &&
-        p.tituloProfesional === catalogo.tituloProfesional &&
-        mismaLista(p.especialidades, catalogo.especialidades);
 
-    const porConverger = perfiles.filter((p) => !alDia(p)).map((p) => p.id);
-    const base = { marcados: perfiles.length, porConverger: porConverger.length, yaAlDia: perfiles.length - porConverger.length };
+    type Objetivo = {
+        id: string;
+        data: { profesion: string; areasAtencion: string[]; rangoEtario: string[]; tituloProfesional: string; especialidades: string[] };
+    };
+    const objetivos: Objetivo[] = [];
+    for (let i = 0; i < perfiles.length; i++) {
+        const p = perfiles[i]!;
+        // Misma derivación que la siembra/API; ABORTA si el catálogo vivo no valida (nunca "" ni []).
+        const der = await derivarPerfilCatalogoSeed(clavesRedApoyoParaIndice(i, combos));
+        const alDia =
+            p.profesion === der.profesion &&
+            mismaLista(p.areasAtencion, der.areasAtencion) &&
+            mismaLista(p.rangoEtario, der.rangoEtario) &&
+            p.tituloProfesional === der.tituloProfesional &&
+            mismaLista(p.especialidades, der.especialidades);
+        if (!alDia) {
+            objetivos.push({
+                id: p.id,
+                data: {
+                    profesion: der.profesion,
+                    areasAtencion: der.areasAtencion,
+                    rangoEtario: der.rangoEtario,
+                    tituloProfesional: der.tituloProfesional,
+                    especialidades: der.especialidades,
+                },
+            });
+        }
+    }
+    const base = { marcados: perfiles.length, porConverger: objetivos.length, yaAlDia: perfiles.length - objetivos.length };
 
     if (opts.dryRun) return { ...base, escrito: false };
 
-    if (porConverger.length > 0) {
-        await tx.perfilProfesional.updateMany({
-            where: { id: { in: porConverger } },
-            data: {
-                profesion: catalogo.profesion,
-                areasAtencion: catalogo.areasAtencion,
-                rangoEtario: catalogo.rangoEtario,
-                tituloProfesional: catalogo.tituloProfesional,
-                especialidades: catalogo.especialidades,
-            },
-        });
+    // Cada perfil recibe SUS valores (no updateMany: la asignación es distinta por perfil).
+    for (const o of objetivos) {
+        await tx.perfilProfesional.update({ where: { id: o.id }, data: o.data });
     }
     return { ...base, escrito: true };
 }
