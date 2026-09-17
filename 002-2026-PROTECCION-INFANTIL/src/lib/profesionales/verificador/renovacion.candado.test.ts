@@ -47,7 +47,7 @@ async function sembrarRequisitos() {
  * documento VIGENTE del requisito `tarjeta` y la fila de unión que fija los bytes
  * revisados. Es el estado del que parte una renovación.
  */
-async function sembrarPerfilActivo(venceEnDias: number) {
+async function sembrarPerfilActivo(venceEnDias: number, conAceptacion = true) {
     const pais = await prisma.pais.upsert({
         where: { codigo: "CO" },
         update: {},
@@ -60,6 +60,19 @@ async function sembrarPerfilActivo(venceEnDias: number) {
         }));
     const profesional = await crearUsuario("PROFESIONAL", `profe.${Date.now()}.${Math.random()}@ejemplo.local`);
     const admin = await crearUsuario("ADMIN", `verif.${Date.now()}.${Math.random()}@ejemplo.local`);
+    // SPEC-704: revisarRenovacion exige la aceptación PREVIA (misma guarda que decidir). Se siembra
+    // por defecto para los tests de SPEC-693; el candado de SPEC-704 usa `conAceptacion=false`.
+    if (conAceptacion) {
+        await prisma.aceptacionAutorizacionProfesional.create({
+            data: {
+                usuarioId: profesional.id,
+                version: "v0.1",
+                documentoHash: "h",
+                ip: "1.1.1.1",
+                aceptadoEn: new Date(Date.now() - 3600_000),
+            },
+        });
+    }
     const perfil = await prisma.perfilProfesional.create({
         data: {
             usuarioId: profesional.id,
@@ -339,5 +352,44 @@ describe("SPEC-693 · abrirDocumentoNuevo alimenta la pantalla de comparar", () 
 
         // Sin versión pendiente (otro requisito), la pantalla no abre: lanza para que diga «volver».
         await expect(abrirDocumentoNuevo(perfil.id, "tarjeta_inexistente")).rejects.toBeTruthy();
+    });
+});
+
+// SPEC-704 · CANDADO: revisar un «documento nuevo» es consultar antecedentes (el documento puede
+// ser un certificado de antecedentes) → exige la autorización PREVIA aceptada en pantalla, la MISMA
+// guarda que `decidir`. Sin aceptación previa → rechazo (AUTORIZACION_REQUERIDA, antes de cualquier
+// rama); con aceptación → la revisión procede. Sin esta guarda, la ruta de la API decidía sobre
+// antecedentes sin autorización (la guardia del ACTIVO lo tapaba en la práctica, no en la API).
+describe("SPEC-704 · «documentos nuevos» exige la autorización aceptada (misma guarda que decidir)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await sembrarRequisitos();
+    });
+    afterAll(async () => prisma.$disconnect());
+
+    it("CONTROL · revisar SIN aceptación previa → AUTORIZACION_REQUERIDA (409) y el pendiente no se promueve", async () => {
+        const { perfil, admin } = await sembrarPerfilActivo(60, false); // SIN aceptación
+        const pendiente = await subirVersionNueva(perfil.id, "sha-nueva");
+        await expect(
+            revisarRenovacion(perfil.id, { id: admin.id, email: "x@x" }, {
+                requisitoClave: "tarjeta",
+                decision: "APROBAR",
+                observacion: "",
+            }),
+        ).rejects.toMatchObject({ code: "AUTORIZACION_REQUERIDA", statusCode: 409 });
+        // La revisión no procedió: el pendiente sigue EN_REVISION, no se promovió a VIGENTE.
+        expect((await prisma.documentoProfesional.findUniqueOrThrow({ where: { id: pendiente.id } })).estado).toBe("EN_REVISION");
+    });
+
+    it("CON aceptación previa → la revisión procede (aprueba: pendiente → VIGENTE)", async () => {
+        const { perfil, admin } = await sembrarPerfilActivo(60); // CON aceptación (default)
+        const pendiente = await subirVersionNueva(perfil.id, "sha-nueva");
+        const r = await revisarRenovacion(perfil.id, { id: admin.id, email: "x@x" }, {
+            requisitoClave: "tarjeta",
+            decision: "APROBAR",
+            observacion: "",
+        });
+        expect(r.decision).toBe("APROBAR");
+        expect((await prisma.documentoProfesional.findUniqueOrThrow({ where: { id: pendiente.id } })).estado).toBe("VIGENTE");
     });
 });

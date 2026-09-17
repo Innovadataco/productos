@@ -228,7 +228,9 @@ export default function CompletarPerfilProfesionalPage() {
         <main className="mx-auto max-w-3xl px-4 py-8">
             <h1 className="font-serif text-3xl text-body">Complete su perfil</h1>
             <p className="mt-2 text-sm text-muted">
-                Cuando termine la ficha y suba su autorización firmada, el equipo de
+                {/* SPEC-704 (ajuste del CEO): la autorización se ACEPTA en pantalla, no se sube
+                    firmada — el encabezado tiene que decir lo que el usuario realmente hace. */}
+                Cuando termine la ficha y acepte la autorización, el equipo de
                 Innovadataco la revisa. Mientras tanto queda como borrador y nadie la ve.
             </p>
             {yaEnRevision && (
