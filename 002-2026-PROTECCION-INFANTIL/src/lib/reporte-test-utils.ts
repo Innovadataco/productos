@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { createToken, hashPassword } from "./auth";
 import { normalizarNombreGeografico } from "./normalizar";
+import { SEMILLAS_CATALOGO_PROFESIONAL } from "./profesional/catalogos";
 import type { RolUsuario } from "@prisma/client";
 
 export async function crearUsuario(rol: RolUsuario = "PARENT", email?: string, password = "TestPass123") {
@@ -437,6 +438,15 @@ export async function crearParametrosExpediente() {
         update: { valor: "10" },
         create: { clave: "comision.porcentaje", valor: "10", tipo: "INTEGER", categoria: "SYSTEM", esPublico: false },
     });
+    // SPEC-685: catálogos cerrados de la ficha del profesional (profesión·áreas·rango),
+    // para que los tests que validan contra el catálogo tengan el parámetro sembrado.
+    for (const c of SEMILLAS_CATALOGO_PROFESIONAL) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: c.clave },
+            update: {},
+            create: { clave: c.clave, valor: c.valor, tipo: "JSON", categoria: "SYSTEM", esPublico: false },
+        });
+    }
 }
 
 /**

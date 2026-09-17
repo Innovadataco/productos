@@ -1,6 +1,7 @@
 import { RUBRICA_SEMILLA, DEFINICIONES_CATEGORIA } from "../src/lib/ai/rubrica-semilla";
 import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
+import { SEMILLAS_CATALOGO_PROFESIONAL } from "../src/lib/profesional/catalogos";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -85,6 +86,29 @@ async function upsertNotificacionRegla(
 
 // SPEC-230 (002-PI-130): parámetros del módulo Padre.
 // Idempotencia anti-I-100: upsert por clave, propaga cambios de default definidos en código.
+/**
+ * SPEC-685 · Catálogos cerrados de la ficha del profesional (profesión · áreas · rango
+ * etario) como parámetro editable por el admin. `update: {}`: en re-siembra NO pisa lo
+ * que el admin haya editado — solo garantiza que existan (el default vive en código).
+ */
+async function seedCatalogosProfesional() {
+    for (const c of SEMILLAS_CATALOGO_PROFESIONAL) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: c.clave },
+            update: {},
+            create: {
+                clave: c.clave,
+                valor: c.valor,
+                tipo: TipoParametro.JSON,
+                categoria: CategoriaParametro.SYSTEM,
+                esPublico: false,
+                descripcion: c.descripcion,
+            },
+        });
+    }
+    console.log("[SEED] Catálogos del profesional listos (SPEC-685)");
+}
+
 async function seedParametrosPadre() {
     const parametrosPadre = [
         { clave: "padre.expediente.auto_cierre_meses", valor: "0", tipo: TipoParametro.INTEGER, descripcion: "DEROGADO (SPEC-340): 0 = los expedientes no se cierran nunca. Regla de Jelkin 01-09-2026." },
@@ -4262,6 +4286,7 @@ async function main() {
 
     // ── Parámetros del módulo Padre (SPEC-230) ─────────────────────────────
     await seedParametrosPadre();
+    await seedCatalogosProfesional();
 
     // ── Parámetros y evento de consentimiento informado (SPEC-241) ─────────
     await seedConsentimiento();
