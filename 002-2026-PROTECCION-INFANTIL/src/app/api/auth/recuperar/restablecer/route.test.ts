@@ -39,7 +39,12 @@ describe("POST /api/auth/recuperar/restablecer", { timeout: 30_000 }, () => {
 
         const actualizado = await prisma.usuario.findUnique({ where: { id: user.id } });
         expect(actualizado?.intentosFallidos).toBe(0);
-        expect(actualizado?.estado).toBe("activo");
+        // SPEC-698 (I-423): el reset PRESERVA el estado — aquí la cuenta ya era `activo`,
+        // así que sigue `activo`. El reset ya NO lo fija (antes ponía "activo" sin
+        // condición y reactivaba cuentas desactivadas). La preservación en cuentas NO
+        // activas —donde estaba el defecto— la prueba el candado
+        // `autenticacion-reset-no-reactiva.candado.test.ts`.
+        expect(actualizado?.estado, "el reset no cambia el estado (aquí ya era activo)").toBe("activo");
     });
 
     it("rechaza token vacío con VALIDATION_ERROR", async () => {

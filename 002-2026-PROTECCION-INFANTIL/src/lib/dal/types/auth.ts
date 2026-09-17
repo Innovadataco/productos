@@ -25,6 +25,10 @@ export type ResultadoCambioPassword =
 export type ResultadoSolicitudRecuperacion =
     | { ok: true; tipo: "ok"; token: string }
     | { ok: true; tipo: "sin_usuario" }
+    // SPEC-698 (I-423): cuenta desactivada por el admin — no se emite token (el reset
+    // no reactiva). Externamente indistinguible de `sin_usuario`: la ruta no manda nada
+    // para `tipo !== "ok"` y responde el cuerpo constante (sin enumeración).
+    | { ok: true; tipo: "inactiva" }
     | { ok: false; tipo: "limite" };
 
 export type ResultadoValidacionToken =
