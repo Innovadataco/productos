@@ -67,7 +67,13 @@ const RE_DROP_EXTENSION = /\bDROP\s+EXTENSION\b/i;
 const RE_A_TIMESTAMP = /(SET DATA TYPE|\bTYPE)\s+TIMESTAMP(?!TZ)/i;
 const RE_ES_TIMESTAMPTZ = /TIMESTAMPTZ|WITH TIME ZONE/i;
 
-export function buscarDriftDestructivo(migrationsDir: string): Hallazgo[] {
+export interface ResultadoEscaneo {
+    hallazgos: Hallazgo[];
+    /** Cuántas migraciones (con `migration.sql` legible) se escanearon de verdad. 0 = candado CIEGO. */
+    migracionesLeidas: number;
+}
+
+export function buscarDriftDestructivo(migrationsDir: string): ResultadoEscaneo {
     const hallazgos: Hallazgo[] = [];
     let migraciones: string[];
     try {
@@ -75,8 +81,9 @@ export function buscarDriftDestructivo(migrationsDir: string): Hallazgo[] {
             .filter((d) => d.isDirectory())
             .map((d) => d.name);
     } catch {
-        return hallazgos;
+        return { hallazgos, migracionesLeidas: 0 };
     }
+    let migracionesLeidas = 0;
     for (const mig of migraciones) {
         let sql: string;
         try {
@@ -84,6 +91,7 @@ export function buscarDriftDestructivo(migrationsDir: string): Hallazgo[] {
         } catch {
             continue;
         }
+        migracionesLeidas += 1;
         sql.split("\n").forEach((raw, i) => {
             const L = raw.trim();
             if (L.startsWith("--") || L === "") return; // comentario/vacío: no es un statement
@@ -99,7 +107,7 @@ export function buscarDriftDestructivo(migrationsDir: string): Hallazgo[] {
             }
         });
     }
-    return hallazgos;
+    return { hallazgos, migracionesLeidas };
 }
 
 const esEntry =
@@ -107,7 +115,16 @@ const esEntry =
     (process.argv[1].endsWith("no-drift-destructivo-migracion.ts") || process.argv[1].endsWith("no-drift-destructivo-migracion.js"));
 
 if (esEntry) {
-    const hallazgos = buscarDriftDestructivo(MIGRATIONS_DIR);
+    const { hallazgos, migracionesLeidas } = buscarDriftDestructivo(MIGRATIONS_DIR);
+    // El candado NO puede quedar ciego en silencio: leer 0 migraciones significa que no validó
+    // NADA (carpeta equivocada, cwd distinto). Se trata como FALLO, no como verde (I-420, seguimiento).
+    if (migracionesLeidas === 0) {
+        console.error(
+            `\n❌ I-420 · el candado leyó 0 migraciones en ${MIGRATIONS_DIR} — está CIEGO y no valida nada. ` +
+                "Corré desde la raíz del producto (donde vive prisma/migrations). Se aborta, no pasa verde.\n",
+        );
+        process.exit(1);
+    }
     if (hallazgos.length > 0) {
         console.error(`\n❌ I-420 · migración(es) con drift destructivo NO permitido (${hallazgos.length}):\n`);
         for (const h of hallazgos) {
@@ -122,7 +139,7 @@ if (esEntry) {
         process.exit(1);
     }
     console.log(
-        `✅ I-420 · sin drift destructivo en migraciones (allowlist DROP INDEX: ${DROP_INDEX_PERMITIDAS.size} revisadas; ` +
-            "DROP EXTENSION y timestamptz→timestamp: 0 permitidas).",
+        `✅ I-420 · ${migracionesLeidas} migraciones revisadas, sin drift destructivo ` +
+            `(allowlist DROP INDEX: ${DROP_INDEX_PERMITIDAS.size}; DROP EXTENSION y timestamptz→timestamp: 0 permitidas).`,
     );
 }
