@@ -29,6 +29,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
 import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
+import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 
 /** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
  *  SPEC-434 (I-302): agregamos `paisId` — la pantalla de completar necesita
@@ -244,13 +245,17 @@ export class PerfilProfesionalRepository {
      * perfil sigue `ACTIVO`. Este filtro cierra esa ventana **en la consulta**,
      * y por eso las dos defensas suman en vez de sustituirse.
      *
-     * La condición es la misma que `puedeAparecerEnDirectorio` (`vigencia.ts:127`)
-     * expresada en SQL: existe una verificación **APROBADA** cuyo `venceEn`
-     * todavía no pasó. El esquema ya trae `@@index([venceEn])` puesto para esto.
+     * SPEC-690-B: es un pre-filtro GRUESO, NO el criterio autoritativo. Expresa
+     * «existe ALGUNA verificación APROBADA con `venceEn` > ahora» — un SUPERSET de
+     * `puedeAparecerEnDirectorio`/`verificacionVigente`, que exige que la
+     * aprobación MÁS RECIENTE (por `revisadoEn`) sea la vigente. Estrecha el
+     * barrido por `@@index([venceEn])`; la palabra final la da
+     * `idsConVigenciaAutoritativa` en JS. Coinciden hoy (`venceEn = revisadoEn +
+     * plazo fijo`), divergen si cambia el plazo — por eso NO se usa este SQL como
+     * criterio último.
      *
      * **Deliberadamente conservador:** un perfil SIN ninguna verificación
-     * aprobada tampoco aparece. Es la lectura correcta de la ley — no se muestra
-     * a quien nunca se verificó— y coincide con `puedeAparecerEnDirectorio`.
+     * aprobada tampoco aparece — no se muestra a quien nunca se verificó.
      */
     private static vigenciaVigente(ahora: Date): Prisma.PerfilProfesionalWhereInput {
         return {
@@ -351,6 +356,41 @@ export class PerfilProfesionalRepository {
     }
 
     /**
+     * SPEC-690-B (I-414) · Filtro de vigencia AUTORITATIVO. `vigenciaVigente` (SQL,
+     * arriba) es un pre-filtro GRUESO —«existe ALGUNA aprobada con venceEn > ahora»,
+     * un SUPERSET— que estrecha el barrido por el índice `@@index([venceEn])`. La
+     * palabra FINAL la tiene `verificacionVigente`: la aprobación MÁS RECIENTE por
+     * `revisadoEn` sigue vigente (una re-verificación SUPERSEDE a la anterior). Es el
+     * MISMO término que la compuerta (`estaHabilitado`) y `/api/me`, así el directorio
+     * y «poder operar» no pueden divergir. Hoy el SQL y este filtro coinciden porque
+     * `venceEn = revisadoEn + plazo fijo`; el día que cambie el plazo, el SQL dejaría
+     * pasar a alguien cuya ÚLTIMA verificación venció pero con una vieja aún vigente —
+     * este filtro lo excluye (candado `perfil-profesional-directorio-vigencia`).
+     *
+     * Las verificaciones se traen en esta consulta INTERNA aparte —NUNCA en
+     * `SELECT_TARJETA_PUBLICA`— para conservar el allowlist H-2: el DTO público jamás
+     * ve `resultado`, `revisadoEn`, `venceEn` ni ningún interno de la verificación.
+     */
+    private async idsConVigenciaAutoritativa(perfilIds: string[], ahora: Date): Promise<Set<string>> {
+        if (perfilIds.length === 0) return new Set();
+        const verifs = await this.db.verificacionProfesional.findMany({
+            where: { perfilProfesionalId: { in: perfilIds }, resultado: "APROBADO" },
+            select: { perfilProfesionalId: true, resultado: true, revisadoEn: true, venceEn: true },
+        });
+        const porPerfil = new Map<string, VerificacionResumenInput[]>();
+        for (const v of verifs) {
+            const arr = porPerfil.get(v.perfilProfesionalId) ?? [];
+            arr.push({ resultado: v.resultado, revisadoEn: v.revisadoEn, venceEn: v.venceEn });
+            porPerfil.set(v.perfilProfesionalId, arr);
+        }
+        const vigentes = new Set<string>();
+        for (const [id, vs] of porPerfil) {
+            if (verificacionVigente(vs, ahora)) vigentes.add(id);
+        }
+        return vigentes;
+    }
+
+    /**
      * Lista PÚBLICA (para el directorio del padre). Solo `estado = ACTIVO`.
      * Sin orden en BD: el orden lo pone Node con una semilla por sesión
      * (candado H-4 · «da turno a todos» sin marear al padre al filtrar).
@@ -370,7 +410,10 @@ export class PerfilProfesionalRepository {
             where,
             select: SELECT_TARJETA_PUBLICA,
         });
-        return rows.map(toPublicoDTO);
+        // SPEC-690-B: la palabra final es `verificacionVigente` (autoritativa) sobre
+        // el pre-filtro grueso del SQL. Mismo término que la compuerta.
+        const vigentes = await this.idsConVigenciaAutoritativa(rows.map((r) => r.id), ahora);
+        return rows.filter((r) => vigentes.has(r.id)).map(toPublicoDTO);
     }
 
     /**
@@ -379,11 +422,20 @@ export class PerfilProfesionalRepository {
      * por eso el conteo y la lista no pueden discrepar. Lo consume el directorio
      * del padre para separar el vacío ESTRUCTURAL (0 en total) del vacío POR FILTRO
      * (hay, ninguno con esos filtros): sin este conteo la pantalla culpa la
-     * búsqueda del padre cuando el problema es que no hay gente. Un `count` no
-     * proyecta ningún campo ⇒ nada que ver con el allowlist H-2.
+     * búsqueda del padre cuando el problema es que no hay gente. Solo proyecta
+     * `id` para el filtro autoritativo ⇒ nada que ver con el allowlist H-2.
      */
     async contarActivos(viewerUsuarioId: string | null, ahora: Date = new Date()): Promise<number> {
-        return this.db.perfilProfesional.count({ where: await this.whereDirectorioPublico(ahora, viewerUsuarioId) });
+        // SPEC-690-B: el conteo pasa por el MISMO filtro autoritativo que la lista
+        // (fetch + filter, no `count` crudo), o divergirían justo en el caso que el
+        // SQL grueso deja pasar (SPEC-656: el conteo es el que separa vacío
+        // estructural de vacío por filtro; si miente, la pantalla culpa al padre).
+        const candidatos = await this.db.perfilProfesional.findMany({
+            where: await this.whereDirectorioPublico(ahora, viewerUsuarioId),
+            select: { id: true },
+        });
+        const vigentes = await this.idsConVigenciaAutoritativa(candidatos.map((c) => c.id), ahora);
+        return candidatos.filter((c) => vigentes.has(c.id)).length;
     }
 
     /**
@@ -404,7 +456,11 @@ export class PerfilProfesionalRepository {
             where: await this.whereDirectorioPublico(ahora, viewerUsuarioId, { id }),
             select: SELECT_TARJETA_PUBLICA,
         });
-        return row ? toPublicoDTO(row) : null;
+        if (!row) return null;
+        // SPEC-690-B: mismo filtro autoritativo que la lista — un profesional cuya
+        // ÚLTIMA verificación venció no se abre por id (ni deja crear cita contra él).
+        const vigentes = await this.idsConVigenciaAutoritativa([row.id], ahora);
+        return vigentes.has(row.id) ? toPublicoDTO(row) : null;
     }
 
     /**

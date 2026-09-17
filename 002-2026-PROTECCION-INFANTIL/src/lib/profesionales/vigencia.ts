@@ -165,8 +165,9 @@ export function verificacionVigente(
  *
  * SPEC-690: es EXACTAMENTE `estaHabilitado` — «aparecer en el directorio» y «poder
  * operar» son la misma habilitación. Delega en la fuente única para que no puedan
- * divergir (el `vigenciaVigente` en SQL de `perfil-profesional.ts` es su expresión
- * a nivel de consulta; las dos defensas suman).
+ * divergir. En `perfil-profesional.ts` el directorio aplica este mismo término:
+ * `vigenciaVigente` (SQL) es un pre-filtro GRUESO (superset, estrecha por índice) y
+ * `idsConVigenciaAutoritativa` (JS) da la palabra final con `verificacionVigente`.
  */
 export function puedeAparecerEnDirectorio(
     perfil: PerfilPublicoInput,
