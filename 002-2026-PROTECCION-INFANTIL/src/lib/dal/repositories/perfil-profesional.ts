@@ -61,7 +61,9 @@ export interface PerfilPublicoDTO {
     atiendePresencial: boolean;
     aniosExperiencia: number;
     presentacion: string;
-    tarifaConsultaCOP: number;
+    // SPEC-685 (PR2-bis): la tarifa se fija tras la habilitación; `null` = «por fijar».
+    // La tarjeta/perfil del padre NO la muestran cuando es null (nunca 0 ni inventada).
+    tarifaConsultaCOP: number | null;
     duracionMinutos: number;
     emiteFactura: boolean;
     /**

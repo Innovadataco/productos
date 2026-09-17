@@ -52,8 +52,11 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 }
 
 export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista }: Props) {
-    const [tarifaConsultaCOP, setTarifaConsultaCOP] = useState<number>(perfil.tarifaConsultaCOP);
+    // SPEC-685 (PR2-bis): la tarifa es nulable («por fijar»). En el input se ve vacío
+    // (conPuntosDeMiles(0) === "") hasta que la fija.
+    const [tarifaConsultaCOP, setTarifaConsultaCOP] = useState<number>(perfil.tarifaConsultaCOP ?? 0);
     const [duracionMinutos, setDuracionMinutos] = useState<number>(perfil.duracionMinutos || 45);
+    const tarifaSinFijar = tarifaConsultaCOP <= 0;
     const [guardando, setGuardando] = useState(false);
     const [ok, setOk] = useState("");
     const [error, setError] = useState("");
@@ -118,6 +121,7 @@ export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista 
                         label="Tarifa por consulta (COP)"
                         type="text"
                         inputMode="numeric"
+                        placeholder="Por fijar"
                         value={conPuntosDeMiles(tarifaConsultaCOP)}
                         onChange={(e) => setTarifaConsultaCOP(tarifaDesdeTexto(e.target.value))}
                     />
@@ -130,6 +134,15 @@ export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista 
                         onChange={(e) => setDuracionMinutos(Number(e.target.value))}
                     />
                 </div>
+
+                {/* SPEC-685 (PR2-bis · acción e): estado «por fijar». La forma final la
+                    define Diseño; por ahora, una nota honesta con la consecuencia real. */}
+                {tarifaSinFijar && (
+                    <p className="mt-2 text-sm text-estado-ambar">
+                        Aún no ha fijado su tarifa. Fíjela para poder recibir citas a partir de la segunda con cada
+                        familia. La primera cita se cobra al precio estándar de la Plataforma.
+                    </p>
+                )}
 
                 {/* FORMA §2-bis · aviso de cómo se cobra. Nota informativa NEUTRA
                     (no ámbar): es contexto, no una alarma. Valores EN VIVO; si falta

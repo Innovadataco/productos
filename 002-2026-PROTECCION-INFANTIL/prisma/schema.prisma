@@ -3741,7 +3741,10 @@ model PerfilProfesional {
   atiendePresencial        Boolean                  @default(false)
   aniosExperiencia         Int
   presentacion             String                   @db.Text
-  tarifaConsultaCOP        Int
+  // SPEC-685 (PR2-bis): la tarifa se fija en «Mi perfil» tras la habilitación; antes
+  // no hay tarifa. NULABLE, sin 0 centinela — `null` = «por fijar». El servidor no
+  // crea una cita que use la tarifa del profesional si es null (cita.service).
+  tarifaConsultaCOP        Int?
   duracionMinutos          Int
   emiteFactura             Boolean                  @default(false)
   estado                   EstadoPerfilProfesional  @default(BORRADOR)

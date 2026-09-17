@@ -25,7 +25,9 @@ export interface PerfilProfesionalPublicoDto {
     atiendePresencial: boolean;
     aniosExperiencia: number;
     presentacion: string;
-    tarifaConsultaCOP: number;
+    // SPEC-685 (PR2-bis): la tarifa se fija tras la habilitación. `null` = «por fijar»;
+    // el consumidor NO la muestra cuando es null (nunca un 0 ni un precio inventado).
+    tarifaConsultaCOP: number | null;
     duracionMinutos: number;
     emiteFactura: boolean;
     estado: string;

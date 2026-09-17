@@ -189,7 +189,9 @@ export async function panelDelProfesional(
         porCobrar: {
             montoRetenido: retenidas.reduce((suma, s) => suma + s.montoConsulta, 0),
             citasEsperandoCierre: retenidas.length,
-            desglose: desglosarTarifa(perfil.tarifaConsultaCOP, porcentaje),
+            // SPEC-685 (PR2-bis): tarifa nulable («por fijar»). El desglose ilustra la
+            // tarifa vigente; sin fijar, 0 (computado, no un 0 guardado).
+            desglose: desglosarTarifa(perfil.tarifaConsultaCOP ?? 0, porcentaje),
         },
         marcador,
         verificacion: construirVerificacion(perfil.verificaciones[0], ahora),

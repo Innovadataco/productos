@@ -112,7 +112,18 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
         // aplica desde la 2ª cita en adelante y se muestra al padre como
         // informativa en el perfil. Si el caller no envía override (compatibilidad
         // hacia atrás para tests/callers viejos), cae a la tarifa del profesional.
-        montoConsulta = input.montoConsultaOverride ?? pro.tarifaConsultaCOP;
+        // SPEC-685 (PR2-bis): la tarifa es NULABLE («por fijar»). Si esta cita usaría
+        // la tarifa del profesional y no está fijada, NO se cobra 0 ni un centinela:
+        // se rechaza con un error claro.
+        const base = input.montoConsultaOverride ?? pro.tarifaConsultaCOP;
+        if (base === null || base <= 0) {
+            throw new AppError(
+                "Este profesional aún no fijó su tarifa; no se puede agendar una cita a su tarifa.",
+                ERROR_CODES.VALIDATION_ERROR,
+                400,
+            );
+        }
+        montoConsulta = base;
         porcentajeServicio = input.porcentajeServicio;
         montoServicio = Math.round((montoConsulta * porcentajeServicio) / 100);
         montoTotal = montoConsulta + montoServicio;

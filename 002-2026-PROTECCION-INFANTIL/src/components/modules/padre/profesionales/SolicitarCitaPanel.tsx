@@ -25,7 +25,9 @@ interface Franja {
 
 interface Props {
     profesionalId: string;
-    tarifaProfesionalCOP: number;
+    // SPEC-685 (PR2-bis): la tarifa del profesional es nulable («por fijar»); cuando
+    // es null no se muestra la línea de la 2ª cita (nunca 0 ni una cifra inventada).
+    tarifaProfesionalCOP: number | null;
     precioEstandarPrimeraCitaCOP: number;
     duracionMinutos: number;
     /** Si el padre viene de un expediente, se propone compartirlo. */
@@ -187,13 +189,15 @@ export function SolicitarCitaPanel({
                 <p className="mt-1 text-xs text-subtle">
                     {esReasignacion
                         ? "El pago viaja con esta nueva solicitud desde tu cita anterior — no se cobra de nuevo."
-                        : (
-                            <>
+                        : tarifaProfesionalCOP !== null
+                            ? (
+                                <>
                                 Primera cita al precio estándar. De la 2ª cita en adelante:
-                                <span className="cifra"> {CURRENCY_COP.format(tarifaProfesionalCOP)}</span>
-                                {duracionMinutos ? ` · ${duracionMinutos} min` : ""}
-                            </>
-                        )}
+                                    <span className="cifra"> {CURRENCY_COP.format(tarifaProfesionalCOP)}</span>
+                                    {duracionMinutos ? ` · ${duracionMinutos} min` : ""}
+                                </>
+                            )
+                            : "Primera cita al precio estándar."}
                 </p>
             </div>
 

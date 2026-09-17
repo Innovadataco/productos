@@ -14,7 +14,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
 import { crearSolicitudCita, reasignarPorPadre } from "./cita.service";
 
-async function seedProfesional(tarifaCOP = 120_000) {
+async function seedProfesional(tarifaCOP: number | null = 120_000) {
     const { ciudad } = await crearPaisCiudad();
     const usuario = await crearUsuario("PROFESIONAL");
     const perfil = await prisma.perfilProfesional.create({
@@ -106,6 +106,50 @@ describe("SPEC-428 · crearSolicitudCita · precio ESTÁNDAR sobre tarifa del pr
         expect(solicitud.montoConsulta).toBe(120_000);
         expect(solicitud.montoServicio).toBe(18_000);
         expect(solicitud.montoTotal).toBe(138_000);
+    });
+});
+
+describe("SPEC-685 (PR2-bis) · cita a la tarifa del profesional SIN fijar", { timeout: 30_000 }, () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    it("RECHAZA (400) crear una cita a la tarifa del profesional cuando la tarifa es null", async () => {
+        const padre = await crearUsuario("PARENT");
+        const pro = await seedProfesional(null); // «por fijar»
+        const franja = await seedFranja(pro.id);
+
+        // SIN override → usaría la tarifa del profesional, que está sin fijar.
+        await expect(
+            crearSolicitudCita({
+                padreUsuarioId: padre.id,
+                profesionalId: pro.id,
+                franjaId: franja.id,
+                presentacion: "Contexto suficiente para pasar el mínimo del schema.",
+                urgencia: "SIN_APURO",
+                porcentajeServicio: 15,
+            }),
+        ).rejects.toMatchObject({ statusCode: 400 });
+
+        // Conducta, no texto: NO se creó ninguna solicitud (nada de cobrar 0).
+        expect(await prisma.solicitudCita.count()).toBe(0);
+    });
+
+    it("control positivo: CON override (1ª cita al estándar) SÍ crea aunque la tarifa esté null", async () => {
+        const padre = await crearUsuario("PARENT");
+        const pro = await seedProfesional(null);
+        const franja = await seedFranja(pro.id);
+
+        const solicitud = await crearSolicitudCita({
+            padreUsuarioId: padre.id,
+            profesionalId: pro.id,
+            franjaId: franja.id,
+            presentacion: "Contexto suficiente para pasar el mínimo del schema.",
+            urgencia: "SIN_APURO",
+            porcentajeServicio: 15,
+            montoConsultaOverride: 50_000, // la 1ª cita no depende de la tarifa del profesional
+        });
+        expect(solicitud.montoConsulta).toBe(50_000);
     });
 });
 

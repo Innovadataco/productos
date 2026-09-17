@@ -58,8 +58,10 @@ function armarCreate(usuarioId: string, data: PerfilProfesionalUpdateInput): Pri
         atiendePresencial: data.atiendePresencial ?? false,
         aniosExperiencia: data.aniosExperiencia ?? 0,
         presentacion: data.presentacion ?? "",
-        tarifaConsultaCOP: data.tarifaConsultaCOP ?? 0,
-        duracionMinutos: data.duracionMinutos ?? 0,
+        // SPEC-685 (PR2-bis): la tarifa se fija en «Mi perfil» tras la habilitación.
+        // NULL = «por fijar», sin 0 centinela. La duración cae a un default sensato.
+        tarifaConsultaCOP: data.tarifaConsultaCOP ?? null,
+        duracionMinutos: data.duracionMinutos ?? 45,
         emiteFactura: data.emiteFactura ?? false,
         numeroTarjetaProfesional: data.numeroTarjetaProfesional ?? null,
         // undefined explícito ≡ omitir (exactOptionalPropertyTypes).

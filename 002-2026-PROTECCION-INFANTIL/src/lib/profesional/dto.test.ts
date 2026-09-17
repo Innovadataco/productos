@@ -59,6 +59,13 @@ describe("toPerfilProfesionalPublico · candado de reserva", () => {
         expect(publico).not.toHaveProperty("rangoEtario");
     });
 
+    it("SPEC-685 (PR2-bis): la tarifa se devuelve null cuando está «por fijar» (nunca 0)", () => {
+        const publico = toPerfilProfesionalPublico({ ...PERFIL_COMPLETO, tarifaConsultaCOP: null } as never);
+        expect(publico.tarifaConsultaCOP).toBeNull();
+        // La clave sigue en el DTO (forma estable); el consumidor decide no pintarla.
+        expect(Object.keys(publico)).toContain("tarifaConsultaCOP");
+    });
+
     it("expone SOLO los 14 campos aprobados (allowlist explícita)", () => {
         const publico = toPerfilProfesionalPublico(PERFIL_COMPLETO as never);
         expect(Object.keys(publico).sort()).toEqual(
