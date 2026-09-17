@@ -5,6 +5,8 @@ import { AdminNav } from "./AdminNav";
 import { ADMIN_NAV_ITEMS } from "@/lib/nav-items";
 
 const mockPathname = vi.hoisted(() => ({ value: "/dashboard/admin" }));
+// SPEC-703: configurable para probar el menú del PROFESIONAL (habilitado / portero / muro).
+const mockUser = vi.hoisted(() => ({ value: null as null | { profesional?: { habilitado: boolean } } }));
 
 vi.mock("next/navigation", () => ({
     usePathname: () => mockPathname.value,
@@ -22,7 +24,7 @@ vi.mock("next/link", () => ({
 // su estado). Estos casos son de ADMIN, que sigue por módulo; basta con satisfacer
 // el hook con un usuario nulo.
 vi.mock("@/lib/contexts/AuthContext", () => ({
-    useAuth: () => ({ user: null }),
+    useAuth: () => ({ user: mockUser.value }),
 }));
 
 const TODOS_MODULOS = ADMIN_NAV_ITEMS.map((i) => i.modulo);
@@ -111,5 +113,37 @@ describe("AdminNav · chrome tokenizado (SPEC-502)", () => {
         expect(activo.className).toContain("shadow-cielo/25");
         expect(activo.className).toContain("dark:shadow-cielo/20");
         expect(activo.className).not.toMatch(/shadow-sky-/);
+    });
+});
+
+// SPEC-703 · CANDADO: en el MURO de aceptación (/perfil-profesional/autorizacion) el menú del
+// profesional se colapsa al PORTERO (Mi ficha / Mi estado), NUNCA al operativo — aunque el
+// profesional esté habilitado (re-aceptación DE FONDO). Sin esto, cada ítem operativo del menú
+// rebota a este mismo muro (guardia de SPEC-686). Prueba la CONDUCTA (labels renderizados) + un
+// CONTROL POSITIVO: el mismo habilitado FUERA del muro sí ve el operativo, así el candado no pasa
+// por colapsar siempre.
+describe("AdminNav · el muro de aceptación colapsa al portero (SPEC-703)", () => {
+    const OPERATIVOS = ["Inicio", "Citaciones", "Casos", "Calendario", "Mi perfil"];
+    const PORTERO = ["Mi ficha", "Mi estado"];
+
+    function etiquetas() {
+        return screen.getAllByRole("link").map((a) => a.textContent?.trim());
+    }
+
+    it("habilitado EN el muro de aceptación → menú de portero, ningún ítem operativo", () => {
+        mockUser.value = { profesional: { habilitado: true } };
+        mockPathname.value = "/perfil-profesional/autorizacion";
+        render(<AdminNav rol="PROFESIONAL" modulosPermitidos={[]} />);
+        const labels = etiquetas();
+        for (const p of PORTERO) expect(labels, `falta el portero «${p}»`).toContain(p);
+        for (const op of OPERATIVOS) expect(labels, `el operativo «${op}» rebota al muro`).not.toContain(op);
+    });
+
+    it("CONTROL · el MISMO habilitado FUERA del muro → menú operativo (el colapso es del muro, no siempre)", () => {
+        mockUser.value = { profesional: { habilitado: true } };
+        mockPathname.value = "/dashboard/profesional/mi-perfil";
+        render(<AdminNav rol="PROFESIONAL" modulosPermitidos={[]} />);
+        const labels = etiquetas();
+        for (const op of OPERATIVOS) expect(labels, `falta el operativo «${op}»`).toContain(op);
     });
 });

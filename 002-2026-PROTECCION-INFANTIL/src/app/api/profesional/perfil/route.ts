@@ -28,6 +28,7 @@ import {
 import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
 import { validarYderivarLegado } from "@/lib/profesional/catalogos-lectura";
 import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 
 async function requireProfesional() {
     const user = await verifyAuth();
@@ -99,8 +100,21 @@ export async function GET() {
     try {
         const user = await requireProfesional();
         const perfil = await new PerfilProfesionalRepository().findConCiudadPorUsuarioId(user.id);
-        if (!perfil) return NextResponse.json({ perfil: null });
-        return NextResponse.json({ perfil: toPerfilProfesionalPropio(perfil) });
+        if (!perfil) return NextResponse.json({ perfil: null, autorizacion: null });
+        // SPEC-703: la ficha muestra el ESTADO de la aceptación EN PANTALLA (no la subida de PDF).
+        // Si el parámetro de versión faltara, se degrada a «falta aceptar» (no tumba la ficha).
+        const servicio = new AutorizacionProfesionalService();
+        const [aceptacion, version] = await Promise.all([
+            servicio.aceptacionVigente(user.id),
+            servicio.versionVigente().catch(() => null),
+        ]);
+        const autorizacion = {
+            version,
+            aceptadaVigente: aceptacion != null && version != null && aceptacion.version === version,
+            aceptadaEn: aceptacion?.aceptadoEn.toISOString() ?? null,
+            versionAceptada: aceptacion?.version ?? null,
+        };
+        return NextResponse.json({ perfil: toPerfilProfesionalPropio(perfil), autorizacion });
     } catch (error) {
         return errorToResponse(error, "[PROFESIONAL/PERFIL/GET]");
     }
@@ -182,11 +196,19 @@ export async function PUT(request: Request) {
 
         const actualizado = await repo.actualizarParcial(existente.id, armarUpdate(data));
 
+        // SPEC-703: la completitud exige la ACEPTACIÓN EN PANTALLA de la versión vigente
+        // (no el PDF). Si el parámetro de versión faltara, `yaAceptoVersionVigente` tira;
+        // acá lo tratamos como «no aceptó» para no tumbar el guardado — el perfil queda
+        // en BORRADOR (lado seguro) en vez de un 500.
+        const aceptoVigente = await new AutorizacionProfesionalService()
+            .yaAceptoVersionVigente(user.id)
+            .catch(() => false);
+
         // Transición BORRADOR → EN_REVISION cuando quedó completo. Otros estados
         // (ACTIVO, RECHAZADO, VENCIDO, SUSPENDIDO) los mueve L2, no un PUT del
         // propio profesional: editar el perfil no puede reactivar una cuenta.
         const final =
-            actualizado.estado === "BORRADOR" && perfilCompletoParaRevision(actualizado)
+            actualizado.estado === "BORRADOR" && perfilCompletoParaRevision(actualizado, aceptoVigente)
                 ? await repo.cambiarEstado(actualizado.id, "EN_REVISION")
                 : actualizado;
 

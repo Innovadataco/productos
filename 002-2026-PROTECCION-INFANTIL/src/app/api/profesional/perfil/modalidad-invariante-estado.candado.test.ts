@@ -33,6 +33,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
 import { reenviarParaVerificacion } from "@/lib/profesionales/verificador/vista-profesional";
 import { ERROR_CODES } from "@/lib/errors";
+import { sembrarAceptacionAutorizacion } from "@/lib/autorizacion-profesional-test-utils";
 import { PUT } from "./route";
 
 let mockToken: string | undefined;
@@ -69,8 +70,9 @@ function datosPerfilBase(usuarioId: string, ciudadId: string) {
         presentacion: "Presentación de prueba.",
         tarifaConsultaCOP: 180000,
         duracionMinutos: 45,
-        // reenviar exige autorización firmada; la ponemos para aislar la
-        // modalidad como la única variable bajo prueba.
+        // SPEC-703: reenviar ya no exige el ARCHIVO sino la ACEPTACIÓN EN PANTALLA; la aceptación
+        // se siembra en `sembrarPerfil` (abajo) para aislar la modalidad como la única variable
+        // bajo prueba. El archivo queda por compatibilidad del fixture, ya no gatea nada.
         autorizacionArchivoId: "autorizacion-de-prueba",
     };
 }
@@ -82,6 +84,9 @@ async function sembrarPerfil(
 ) {
     const ciudad = await ciudadSemilla();
     const usuario = await crearUsuario("PROFESIONAL", `psi.${estado}.${Date.now()}.${Math.random()}@ejemplo.local`);
+    // SPEC-703: reenviar exige la aceptación de la versión vigente. Se siembra para aislar la
+    // modalidad; sin esto, reenviar tiraría AUTORIZACION_REQUERIDA antes del chequeo de modalidad.
+    await sembrarAceptacionAutorizacion(usuario.id);
     const perfil = await prisma.perfilProfesional.create({
         data: {
             ...datosPerfilBase(usuario.id, ciudad.id),

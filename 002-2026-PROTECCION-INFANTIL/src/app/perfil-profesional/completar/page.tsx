@@ -18,6 +18,7 @@
  * el backend transiciona a `EN_REVISION` — de ahí lo toma L2 (IDC).
  */
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -44,7 +45,14 @@ type Perfil = {
     presentacion: string;
     emiteFactura: boolean;
     estado: string;
-    autorizacionSubida: boolean;
+};
+
+// SPEC-703: estado de la autorización ACEPTADA EN PANTALLA (reemplaza la subida de PDF).
+type Autorizacion = {
+    version: string | null;
+    aceptadaVigente: boolean;
+    aceptadaEn: string | null;
+    versionAceptada: string | null;
 };
 
 type PaisOption = { id: string; nombre: string };
@@ -89,11 +97,10 @@ export default function CompletarPerfilProfesionalPage() {
     const [aniosExperiencia, setAniosExperiencia] = useState<string>("");
     const [presentacion, setPresentacion] = useState("");
     const [numeroTarjetaProfesional, setNumeroTarjeta] = useState("");
-    const [archivo, setArchivo] = useState<File | null>(null);
+    // SPEC-703: la autorización se ACEPTA EN PANTALLA (no se sube PDF); acá solo se muestra su estado.
+    const [autorizacion, setAutorizacion] = useState<Autorizacion | null>(null);
     const [guardando, setGuardando] = useState(false);
-    const [subiendo, setSubiendo] = useState(false);
     const [errorPerfil, setErrorPerfil] = useState("");
-    const [errorArchivo, setErrorArchivo] = useState("");
     const [ok, setOk] = useState("");
     // SPEC-434 punto 5: modal al pasar a EN_REVISION. Se abre una sola vez
     // por transición y NUNCA muestra el nombre técnico del estado.
@@ -113,6 +120,7 @@ export default function CompletarPerfilProfesionalPage() {
                 if (catJson.catalogos) setCatalogos(catJson.catalogos as Catalogos);
                 if (perfilRes.ok) {
                     const json = await perfilRes.json();
+                    setAutorizacion((json.autorizacion ?? null) as Autorizacion | null);
                     if (json.perfil) {
                         const p: Perfil = json.perfil;
                         setPerfil(p);
@@ -189,36 +197,6 @@ export default function CompletarPerfilProfesionalPage() {
             }
         } finally {
             setGuardando(false);
-        }
-    };
-
-    const subirAutorizacion = async () => {
-        if (!archivo) return;
-        setErrorArchivo("");
-        setSubiendo(true);
-        try {
-            const form = new FormData();
-            form.append("archivo", archivo);
-            const res = await fetch("/api/profesional/autorizacion", {
-                method: "POST",
-                credentials: "include",
-                body: form,
-            });
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                setErrorArchivo(json?.error?.message ?? "No fue posible subir la autorización.");
-                return;
-            }
-            const nuevo = json.perfil as Perfil;
-            const antes = perfil?.estado ?? "BORRADOR";
-            setPerfil(nuevo);
-            if (antes !== "EN_REVISION" && nuevo.estado === "EN_REVISION") {
-                setModalRevision(true);
-            } else {
-                setOk("Autorización recibida.");
-            }
-        } finally {
-            setSubiendo(false);
         }
     };
 
@@ -420,30 +398,40 @@ export default function CompletarPerfilProfesionalPage() {
             </GlassCard>
 
             <GlassCard className="mt-6">
-                <h2 className="text-lg font-semibold text-body">Autorización firmada</h2>
+                {/* SPEC-703: la autorización se ACEPTA EN PANTALLA (Ley 1918/2018), no se sube PDF.
+                    Aquí va su ESTADO + el enlace a leerla/aceptarla; al aceptar, el profesional
+                    vuelve a esta ficha. La completitud para pasar a revisión exige esta aceptación. */}
+                <h2 className="text-lg font-semibold text-body">Autorización</h2>
                 <p className="mt-1 text-sm text-muted">
-                    Suba el documento firmado que autoriza la consulta de antecedentes.
-                    Aceptamos PDF, PNG y JPG, hasta 5 MB. La ley exige que quede archivada —
-                    la guardamos cifrada y solo Innovadataco la lee.
+                    Para revisar su perfil necesitamos que autorice la verificación de sus
+                    antecedentes y el tratamiento de sus datos. La lee y la acepta en pantalla;
+                    queda registrada con su fecha y versión.
                 </p>
                 <div className="mt-4 space-y-3">
-                    <input
-                        type="file"
-                        accept="application/pdf,image/png,image/jpeg"
-                        onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-                        className="text-sm"
-                    />
-                    {perfil?.autorizacionSubida && (
-                        <p className="text-sm text-accent">Ya subió una autorización.</p>
+                    {autorizacion?.aceptadaVigente ? (
+                        <p className="text-sm text-body">
+                            <span className="font-medium">Autorización aceptada.</span>
+                            {autorizacion.aceptadaEn
+                                ? ` Aceptada el ${new Date(autorizacion.aceptadaEn).toLocaleDateString("es-CO", {
+                                    day: "numeric",
+                                    month: "long",
+                                    year: "numeric",
+                                })}`
+                                : ""}
+                            {autorizacion.version ? ` · versión ${autorizacion.version}` : ""}
+                        </p>
+                    ) : (
+                        <p className="text-sm text-estado-ambar">
+                            <span className="font-medium">Falta aceptar la autorización.</span> Sin ella no
+                            podemos pasar su perfil a revisión.
+                        </p>
                     )}
-                    {errorArchivo && (
-                        <Alerta tono="advertencia" className="text-center">
-                            {errorArchivo}
-                        </Alerta>
-                    )}
-                    <Button onClick={subirAutorizacion} isLoading={subiendo} disabled={!archivo} variant="secondary">
-                        {perfil?.autorizacionSubida ? "Reemplazar autorización" : "Subir autorización"}
-                    </Button>
+                    <Link
+                        href="/perfil-profesional/autorizacion"
+                        className="inline-block text-sm font-medium text-accent underline underline-offset-2"
+                    >
+                        {autorizacion?.aceptadaVigente ? "Ver la autorización" : "Leer y aceptar la autorización"}
+                    </Link>
                 </div>
 
                 {/* SPEC-436 (I-304): los requisitos que el Verificador va a revisar.

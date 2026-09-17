@@ -101,9 +101,21 @@ export function toPerfilProfesionalPropio(perfil: PerfilConCiudad): PerfilProfes
 }
 
 /** Verifica si el perfil está listo para pasar a `EN_REVISION`: todos los
- *  campos obligatorios llenos + autorización subida. Es la regla que dispara
- *  la transición cuando el profesional termina de rellenar. */
-export function perfilCompletoParaRevision(perfil: PerfilProfesional): boolean {
+ *  campos obligatorios llenos + la autorización ACEPTADA EN PANTALLA. Es la regla
+ *  que dispara la transición cuando el profesional termina de rellenar.
+ *
+ *  SPEC-703: la completitud exige `aceptoAutorizacionVigente` — la aceptación en
+ *  pantalla de la versión vigente (Ley 1918/2018), NO el PDF. El cutover de
+ *  SPEC-686 hizo que `decidir` exija esa aceptación; si la completitud siguiera
+ *  contando el archivo, un alta nueva pasaría a revisión sin aceptar y el
+ *  verificador daría 409. La aceptación vive en otra tabla (por usuario), así que
+ *  se pasa como booleano; el llamador lo calcula con
+ *  `AutorizacionProfesionalService.yaAceptoVersionVigente`. Los archivos legacy
+ *  (`autorizacionArchivoId`) quedan como historia, ya no gatean. */
+export function perfilCompletoParaRevision(
+    perfil: PerfilProfesional,
+    aceptoAutorizacionVigente: boolean,
+): boolean {
     return (
         perfil.nombreVisible.trim().length > 0 &&
         // SPEC-685 (PR2): la ficha ya no pide título/especialidades libres; la
@@ -122,6 +134,6 @@ export function perfilCompletoParaRevision(perfil: PerfilProfesional): boolean {
         // habilitado no hay tarifa que fijar, así que YA NO gatean el paso a
         // EN_REVISION — se fijan después, en Mi perfil. (La 1ª cita cobra el precio
         // estándar del admin, no la tarifa del profesional — SPEC-428 §4.)
-        perfil.autorizacionArchivoId !== null
+        aceptoAutorizacionVigente
     );
 }

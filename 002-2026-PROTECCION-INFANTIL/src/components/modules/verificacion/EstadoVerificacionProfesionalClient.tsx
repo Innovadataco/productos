@@ -76,7 +76,14 @@ export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vis
             });
             if (!res.ok) {
                 // I-410: el mensaje del servidor, no «HTTP NNN».
-                const j = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+                const j = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string } };
+                // SPEC-703: si falta aceptar la autorización, LLEVAMOS a la pantalla de aceptación
+                // (686, con el menú colapsado) — el paso de aceptación va ANTES de reenviar, no un
+                // error de texto. Navegación DURA como el consentimiento del padre.
+                if (j?.error?.code === "AUTORIZACION_REQUERIDA") {
+                    window.location.assign("/perfil-profesional/autorizacion");
+                    return;
+                }
                 throw new Error(j?.error?.message ?? `El servidor respondió con un error (HTTP ${res.status}).`);
             }
             router.refresh();

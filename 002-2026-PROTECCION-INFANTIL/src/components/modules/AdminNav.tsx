@@ -37,6 +37,13 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
     "/perfil-profesional/verificacion": ShieldIcon,
 };
 
+// SPEC-703: la pantalla de aceptación de la autorización es un MURO. Mientras el profesional
+// no haya aceptado la versión vigente, la guardia de SPEC-686 rebota a ACÁ cada ítem operativo
+// (incluido un ACTIVO que debe re-aceptar por un cambio DE FONDO). Ofrecer ese menú es ofrecer
+// entradas que rebotan al mismo muro. En esta ruta se colapsa al menú de PORTERO, igual que hace
+// SPEC-691 con el no habilitado — es cosmético; el cierre real lo hace la guardia del servidor.
+const RUTA_ACEPTACION_AUTORIZACION = "/perfil-profesional/autorizacion";
+
 export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermitidos: string[] }) {
     const pathname = usePathname();
     const { user } = useAuth();
@@ -46,9 +53,12 @@ export function AdminNav({ rol, modulosPermitidos }: { rol: RolNav; modulosPermi
     // verificar no puede haber entradas operativas (MAPA §0, seguridad). Fail-closed:
     // sin dato (cargando o antes de que 690 publique el campo) → portero.
     // El resto de los roles sigue por módulo de BD ∧ predicado del proxy (D-41 · SPEC-126).
+    const enMuroAceptacion = pathname === RUTA_ACEPTACION_AUTORIZACION;
     const base =
         rol === "PROFESIONAL"
-            ? entradasProfesional(user?.profesional).filter((l) => esDestinoPermitidoPorRol(rol, l.href))
+            ? entradasProfesional(enMuroAceptacion ? null : user?.profesional).filter((l) =>
+                esDestinoPermitidoPorRol(rol, l.href),
+            )
             : ADMIN_NAV_ITEMS.filter((l) => permitidos.has(l.modulo) && esDestinoPermitidoPorRol(rol, l.href));
     const links = base.map((l) => ({ ...l, icon: ICONS[l.href] ?? InboxIcon }));
     const titulo = rol === "OPERADOR" ? "Operador" : rol === "PROFESIONAL" ? "Profesional" : "Administración";

@@ -8,6 +8,10 @@ export const ERROR_CODES = {
     // Código PROPIO (no VALIDATION_ERROR genérico) para que el cliente señale el
     // CAMPO (modalidad) sin tener que parsear el texto del mensaje.
     MODALIDAD_REQUERIDA: "MODALIDAD_REQUERIDA",
+    // SPEC-703: falta la ACEPTACIÓN EN PANTALLA de la autorización vigente antes de
+    // enviar a revisión. Código PROPIO para que el cliente LLEVE a la pantalla de
+    // aceptación (686) en vez de mostrar un error de texto.
+    AUTORIZACION_REQUERIDA: "AUTORIZACION_REQUERIDA",
     CONFLICT: "CONFLICT",
     RATE_LIMITED: "RATE_LIMITED",
     // SPEC-587: fallo de un proveedor externo (OAuth de Google) — 502.
