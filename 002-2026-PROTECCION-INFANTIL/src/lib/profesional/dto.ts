@@ -41,6 +41,12 @@ export interface PerfilProfesionalPublicoDto {
 export interface PerfilProfesionalPropioDto extends Omit<PerfilProfesionalPublicoDto, "ciudad"> {
     ciudad: { id: string; nombre: string; paisId: string };
     autorizacionSubida: boolean;
+    // SPEC-685 (PR2) · listas cerradas de la ficha (claves, no nombres). La vista
+    // PROPIA las devuelve para que la ficha recargue lo ya elegido. El DTO PÚBLICO
+    // (directorio) las suma en el PR del directorio (PR5), no acá.
+    profesion: string | null;
+    areasAtencion: string[];
+    rangoEtario: string[];
 }
 
 /**
@@ -85,6 +91,10 @@ export function toPerfilProfesionalPropio(perfil: PerfilConCiudad): PerfilProfes
         ciudad: { id: perfil.ciudad.id, nombre: perfil.ciudad.nombre, paisId: perfil.ciudad.paisId },
         // SPEC-436 renombró `autorizacionArchivoUrl` a `autorizacionArchivoId`.
         autorizacionSubida: perfil.autorizacionArchivoId !== null,
+        // SPEC-685 (PR2): claves de las listas cerradas, para recargar la ficha.
+        profesion: perfil.profesion,
+        areasAtencion: perfil.areasAtencion,
+        rangoEtario: perfil.rangoEtario,
     };
 }
 
@@ -94,8 +104,13 @@ export function toPerfilProfesionalPropio(perfil: PerfilConCiudad): PerfilProfes
 export function perfilCompletoParaRevision(perfil: PerfilProfesional): boolean {
     return (
         perfil.nombreVisible.trim().length > 0 &&
-        perfil.tituloProfesional.trim().length > 0 &&
-        perfil.especialidades.length > 0 &&
+        // SPEC-685 (PR2): la ficha ya no pide título/especialidades libres; la
+        // completitud es de las LISTAS CERRADAS — profesión (única) + al menos un
+        // área + al menos un rango de edad. Cambiar esto de vuelta a los campos
+        // viejos deja la ficha nueva imposible de completar.
+        (perfil.profesion?.trim().length ?? 0) > 0 &&
+        perfil.areasAtencion.length > 0 &&
+        perfil.rangoEtario.length > 0 &&
         perfil.ciudadId.length > 0 &&
         (perfil.atiendeVirtual || perfil.atiendePresencial) &&
         perfil.aniosExperiencia >= 0 &&

@@ -218,8 +218,11 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
         const put1 = await PUT_PERFIL(
             reqJson("http://localhost:5005/api/profesional/perfil", {
                 nombreVisible: "Dr. Full",
-                tituloProfesional: "Psicólogo clínico",
-                especialidades: ["Ansiedad", "Familia"],
+                // SPEC-685 (PR2): la completitud es de las listas cerradas (claves del
+                // catálogo), no del título/especialidades libres. Claves del DEFAULT.
+                profesion: "psicologo",
+                areasAtencion: ["ansiedad", "conducta"],
+                rangoEtario: ["12-17"],
                 ciudadId: ciudad,
                 atiendeVirtual: true,
                 atiendePresencial: false,

@@ -13,6 +13,12 @@ export const perfilProfesionalUpdateSchema = z.object({
     fotoUrl: z.string().url().max(2048).nullable().optional(),
     tituloProfesional: z.string().trim().min(1, "Escribe tu título profesional").max(150).optional(),
     especialidades: z.array(z.string().trim().min(1).max(80)).min(1, "Elija al menos una especialidad").max(20).optional(),
+    // SPEC-685 (PR2) · listas cerradas. El schema solo valida la FORMA (claves
+    // no vacías); la PERTENENCIA al catálogo la comprueba la ruta contra el
+    // parámetro vivo (un gate contra un valor del cliente falla abierto).
+    profesion: z.string().trim().min(1).max(80).optional(),
+    areasAtencion: z.array(z.string().trim().min(1).max(80)).max(40).optional(),
+    rangoEtario: z.array(z.string().trim().min(1).max(20)).max(10).optional(),
     ciudadId: z.string().min(1, "Elija su ciudad").optional(),
     atiendeVirtual: z.boolean().optional(),
     atiendePresencial: z.boolean().optional(),

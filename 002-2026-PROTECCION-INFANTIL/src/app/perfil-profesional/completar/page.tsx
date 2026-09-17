@@ -27,12 +27,17 @@ import { DocumentosRequisitos } from "@/components/modules/profesional/Documento
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { MENSAJE_MODALIDAD_REQUERIDA, MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
 import { conPuntosDeMiles, tarifaDesdeTexto } from "@/lib/profesional/formato-tarifa";
+import type { OpcionCatalogo, GrupoAreas } from "@/lib/profesional/catalogos";
+
+type Catalogos = { profesion: OpcionCatalogo[]; areas: GrupoAreas[]; rangoEtario: OpcionCatalogo[] };
 
 type Perfil = {
     id: string;
     nombreVisible: string;
-    tituloProfesional: string;
-    especialidades: string[];
+    // SPEC-685 (PR2): listas cerradas en vez de título/especialidades libres.
+    profesion: string | null;
+    areasAtencion: string[];
+    rangoEtario: string[];
     ciudad: { id: string; nombre: string; paisId: string };
     atiendeVirtual: boolean;
     atiendePresencial: boolean;
@@ -46,6 +51,19 @@ type Perfil = {
 };
 
 type PaisOption = { id: string; nombre: string };
+
+// SPEC-685 (PR2): alterna una clave en una lista múltiple (áreas / rango).
+const toggleEnLista = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    clave: string,
+) => setter((prev) => (prev.includes(clave) ? prev.filter((x) => x !== clave) : [...prev, clave]));
+
+// SPEC-685 (PR2): catálogos ya resueltos (vacíos mientras cargan) para el render.
+const catalogosOVacio = (c: Catalogos | null) => ({
+    profesion: c?.profesion ?? [],
+    areas: c?.areas ?? [],
+    rangoEtario: c?.rangoEtario ?? [],
+});
 
 const ANIOS_EXPERIENCIA_OPCIONES = (() => {
     const opts: Array<{ value: string; label: string }> = [
@@ -61,9 +79,12 @@ export default function CompletarPerfilProfesionalPage() {
     const [perfil, setPerfil] = useState<Perfil | null>(null);
     const [cargando, setCargando] = useState(true);
     const [paises, setPaises] = useState<PaisOption[]>([]);
+    const [catalogos, setCatalogos] = useState<Catalogos | null>(null);
     const [nombreVisible, setNombreVisible] = useState("");
-    const [tituloProfesional, setTituloProfesional] = useState("");
-    const [especialidadesTexto, setEspecialidadesTexto] = useState("");
+    // SPEC-685 (PR2): profesión (única) + áreas y rango etario (múltiples), por CLAVE.
+    const [profesion, setProfesion] = useState("");
+    const [areasAtencion, setAreasAtencion] = useState<string[]>([]);
+    const [rangoEtario, setRangoEtario] = useState<string[]>([]);
     const [paisId, setPaisId] = useState("");
     const [ciudad, setCiudad] = useState<CiudadOpcion | null>(null);
     const [atiendeVirtual, setAtiendeVirtual] = useState(false);
@@ -86,20 +107,24 @@ export default function CompletarPerfilProfesionalPage() {
     useEffect(() => {
         (async () => {
             try {
-                const [perfilRes, paisRes] = await Promise.all([
+                const [perfilRes, paisRes, catRes] = await Promise.all([
                     fetch("/api/profesional/perfil", { credentials: "include" }),
                     fetch("/api/paises", { credentials: "include" }),
+                    fetch("/api/profesional/catalogos", { credentials: "include" }),
                 ]);
                 const paisJson = await paisRes.json().catch(() => ({}));
                 setPaises((paisJson.paises ?? []) as PaisOption[]);
+                const catJson = await catRes.json().catch(() => ({}));
+                if (catJson.catalogos) setCatalogos(catJson.catalogos as Catalogos);
                 if (perfilRes.ok) {
                     const json = await perfilRes.json();
                     if (json.perfil) {
                         const p: Perfil = json.perfil;
                         setPerfil(p);
                         setNombreVisible(p.nombreVisible);
-                        setTituloProfesional(p.tituloProfesional);
-                        setEspecialidadesTexto(p.especialidades.join(", "));
+                        setProfesion(p.profesion ?? "");
+                        setAreasAtencion(p.areasAtencion ?? []);
+                        setRangoEtario(p.rangoEtario ?? []);
                         if (p.ciudad?.id && p.ciudad.paisId) {
                             setPaisId(p.ciudad.paisId);
                             setCiudad({
@@ -139,18 +164,15 @@ export default function CompletarPerfilProfesionalPage() {
         }
         setGuardando(true);
         try {
-            const especialidades = especialidadesTexto
-                .split(",")
-                .map((s) => s.trim())
-                .filter((s) => s.length > 0);
             const res = await fetch("/api/profesional/perfil", {
                 method: "PUT",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     nombreVisible,
-                    tituloProfesional,
-                    especialidades,
+                    profesion,
+                    areasAtencion,
+                    rangoEtario,
                     ciudadId: ciudad.id,
                     atiendeVirtual,
                     atiendePresencial,
@@ -229,6 +251,10 @@ export default function CompletarPerfilProfesionalPage() {
     // el profesional no queda «terminado y trabado» sin saber qué falta.
     const faltaModalidad = !atiendeVirtual && !atiendePresencial;
 
+    // SPEC-685 (PR2): catálogos ya con fallback resuelto (vacío mientras cargan).
+    const { profesion: opcionesProfesion, areas: gruposAreas, rangoEtario: opcionesRango } =
+        catalogosOVacio(catalogos);
+
     return (
         <main className="mx-auto max-w-3xl px-4 py-8">
             <h1 className="font-serif text-3xl text-body">Complete su perfil</h1>
@@ -250,13 +276,77 @@ export default function CompletarPerfilProfesionalPage() {
 
             <GlassCard className="mt-6">
                 <form onSubmit={guardar} className="space-y-4">
-                    <Input label="Cómo desea que lo vean" value={nombreVisible} onChange={(e) => setNombreVisible(e.target.value)} />
-                    <Input label="Título profesional" value={tituloProfesional} onChange={(e) => setTituloProfesional(e.target.value)} />
-                    <Input
-                        label="Especialidades (separadas por coma)"
-                        value={especialidadesTexto}
-                        onChange={(e) => setEspecialidadesTexto(e.target.value)}
+                    {/* SPEC-685 (PR2 · FORMA de Diseño): «Nombre público» NOMBRA la cosa
+                        (sustantivo) + un ejemplo que ES un nombre → empuja a un nombre, no a
+                        una descripción. La ayuda dice «en el directorio» y nada más: tras una
+                        cita confirmada el contacto SÍ se comparte (H-2). maxLength 50 ahoga un
+                        párrafo. La descripción tiene casa: Presentación. */}
+                    <div>
+                        <Input
+                            label="Nombre público"
+                            value={nombreVisible}
+                            onChange={(e) => setNombreVisible(e.target.value)}
+                            placeholder="Dra. Ramírez"
+                            maxLength={50}
+                        />
+                        <p className="mt-1 text-sm text-subtle">
+                            Así lo verán las familias en el directorio. Escríbalo como un nombre, no como una descripción.
+                        </p>
+                        <p className="mt-1 text-xs text-subtle">
+                            ¿Quiere contar su experiencia? Eso va en Presentación.
+                        </p>
+                    </div>
+
+                    {/* SPEC-685 (PR2): profesión = lista cerrada (única). */}
+                    <Select
+                        label="Profesión"
+                        value={profesion}
+                        onChange={(e) => setProfesion(e.target.value)}
+                        options={[
+                            { value: "", label: "Elija su profesión" },
+                            ...opcionesProfesion.map((o) => ({ value: o.clave, label: o.nombre })),
+                        ]}
                     />
+
+                    {/* SPEC-685 (PR2): áreas de atención = lista cerrada agrupada (múltiple). */}
+                    <fieldset className="space-y-3">
+                        <legend className="block text-sm font-medium text-body">Áreas de atención</legend>
+                        <p className="text-sm text-subtle">Marque en lo que trabaja. Puede elegir varias.</p>
+                        {gruposAreas.map((g) => (
+                            <div key={g.grupo} className="space-y-1.5">
+                                <p className="text-xs uppercase tracking-wide text-subtle">{g.grupo}</p>
+                                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                                    {g.items.map((o) => (
+                                        <label key={o.clave} className="flex items-center gap-2 text-sm text-body">
+                                            <input
+                                                type="checkbox"
+                                                checked={areasAtencion.includes(o.clave)}
+                                                onChange={() => toggleEnLista(setAreasAtencion, o.clave)}
+                                            />
+                                            {o.nombre}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </fieldset>
+
+                    {/* SPEC-685 (PR2): rango etario = lista cerrada (múltiple). Reemplaza «Niños». */}
+                    <fieldset className="space-y-1.5">
+                        <legend className="block text-sm font-medium text-body">Edad que atiende</legend>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2">
+                            {opcionesRango.map((o) => (
+                                <label key={o.clave} className="flex items-center gap-2 text-sm text-body">
+                                    <input
+                                        type="checkbox"
+                                        checked={rangoEtario.includes(o.clave)}
+                                        onChange={() => toggleEnLista(setRangoEtario, o.clave)}
+                                    />
+                                    {o.nombre}
+                                </label>
+                            ))}
+                        </div>
+                    </fieldset>
 
                     {/* SPEC-434 punto 1 · país + ciudad como en el reporte. */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

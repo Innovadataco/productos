@@ -20,6 +20,10 @@ const PERFIL_COMPLETO = {
     fotoUrl: "https://cdn/x.png",
     tituloProfesional: "Psicóloga clínica",
     especialidades: ["Ansiedad", "Familia"],
+    // SPEC-685 (PR2): listas cerradas (claves). La completitud se mide sobre éstas.
+    profesion: "psicologo",
+    areasAtencion: ["ansiedad", "duelo"],
+    rangoEtario: ["6-11"],
     ciudadId: "ciudad-1",
     atiendeVirtual: true,
     atiendePresencial: false,
@@ -104,8 +108,23 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
         ).toBe(false);
     });
 
-    it("sin especialidades → false", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never)).toBe(false);
+    // SPEC-685 (PR2): la completitud es de las LISTAS CERRADAS, no de los campos
+    // libres viejos. `especialidades: []` ya NO importa; lo que gatea es
+    // profesión + al menos un área + al menos un rango.
+    it("sin profesión → false", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, profesion: null } as never)).toBe(false);
+    });
+
+    it("sin ningún área de atención → false", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, areasAtencion: [] } as never)).toBe(false);
+    });
+
+    it("sin ningún rango de edad → false", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, rangoEtario: [] } as never)).toBe(false);
+    });
+
+    it("los campos libres viejos ya NO gatean: sin especialidades sigue completo", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never)).toBe(true);
     });
 
     it("tarifa 0 → false", () => {

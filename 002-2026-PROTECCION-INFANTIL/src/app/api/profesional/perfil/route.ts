@@ -26,6 +26,7 @@ import {
     toPerfilProfesionalPropio,
 } from "@/lib/profesional/dto";
 import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
+import { clavesValidasCatalogo } from "@/lib/profesional/catalogos-lectura";
 
 async function requireProfesional() {
     const user = await verifyAuth();
@@ -47,6 +48,11 @@ function armarCreate(usuarioId: string, data: PerfilProfesionalUpdateInput): Pri
         fotoUrl: data.fotoUrl ?? null,
         tituloProfesional: data.tituloProfesional ?? "",
         especialidades: data.especialidades ?? [],
+        // SPEC-685 (PR2) · listas cerradas (claves). profesion nulable; arrays
+        // vacíos por defecto (mismo trato que `especialidades`).
+        profesion: data.profesion && data.profesion.length > 0 ? data.profesion : null,
+        areasAtencion: data.areasAtencion ?? [],
+        rangoEtario: data.rangoEtario ?? [],
         ciudad: { connect: { id: data.ciudadId ?? "" } },
         atiendeVirtual: data.atiendeVirtual ?? false,
         atiendePresencial: data.atiendePresencial ?? false,
@@ -62,6 +68,30 @@ function armarCreate(usuarioId: string, data: PerfilProfesionalUpdateInput): Pri
     };
 }
 
+/**
+ * SPEC-685 (PR2): valida que profesión/áreas/rango caigan DENTRO del catálogo vivo.
+ * Devuelve el mensaje de error (400) o null si todo lo enviado es válido. Solo
+ * consulta el parámetro si el body trae alguna de las tres listas.
+ */
+async function validarClavesCatalogo(d: PerfilProfesionalUpdateInput): Promise<string | null> {
+    const pideProfesion = d.profesion !== undefined && d.profesion !== "";
+    const pideAreas = d.areasAtencion !== undefined && d.areasAtencion.length > 0;
+    const pideRango = d.rangoEtario !== undefined && d.rangoEtario.length > 0;
+    if (!pideProfesion && !pideAreas && !pideRango) return null;
+
+    const valido = await clavesValidasCatalogo();
+    if (pideProfesion && !valido.profesion.has(d.profesion as string)) {
+        return "Elija una profesión de la lista.";
+    }
+    if (pideAreas && !(d.areasAtencion as string[]).every((a) => valido.areas.has(a))) {
+        return "Hay un área de atención que no está en la lista. Elíjalas del listado.";
+    }
+    if (pideRango && !(d.rangoEtario as string[]).every((r) => valido.rango.has(r))) {
+        return "Hay un rango de edad que no está en la lista. Elíjalos del listado.";
+    }
+    return null;
+}
+
 /** Solo los campos presentes en el body llegan al `update`. */
 function armarUpdate(data: PerfilProfesionalUpdateInput): Prisma.PerfilProfesionalUpdateInput {
     const u: Prisma.PerfilProfesionalUpdateInput = {};
@@ -69,6 +99,10 @@ function armarUpdate(data: PerfilProfesionalUpdateInput): Prisma.PerfilProfesion
     if (data.fotoUrl !== undefined) u.fotoUrl = data.fotoUrl;
     if (data.tituloProfesional !== undefined) u.tituloProfesional = data.tituloProfesional;
     if (data.especialidades !== undefined) u.especialidades = data.especialidades;
+    // SPEC-685 (PR2) · listas cerradas. "" en profesion ≡ sin elegir → null.
+    if (data.profesion !== undefined) u.profesion = data.profesion.length > 0 ? data.profesion : null;
+    if (data.areasAtencion !== undefined) u.areasAtencion = data.areasAtencion;
+    if (data.rangoEtario !== undefined) u.rangoEtario = data.rangoEtario;
     if (data.ciudadId !== undefined) u.ciudad = { connect: { id: data.ciudadId } };
     if (data.atiendeVirtual !== undefined) u.atiendeVirtual = data.atiendeVirtual;
     if (data.atiendePresencial !== undefined) u.atiendePresencial = data.atiendePresencial;
@@ -116,6 +150,17 @@ export async function PUT(request: Request) {
                     { status: 400 }
                 );
             }
+        }
+
+        // SPEC-685 (PR2): las tres listas son CERRADAS. No basta el `<select>` del
+        // cliente —un gate contra un valor del cliente falla abierto—: la ruta
+        // rechaza cualquier clave fuera del catálogo vivo (parámetro editable).
+        const errorCatalogo = await validarClavesCatalogo(parsed.data);
+        if (errorCatalogo) {
+            return NextResponse.json(
+                { error: { message: errorCatalogo, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 },
+            );
         }
 
         const repo = new PerfilProfesionalRepository();
