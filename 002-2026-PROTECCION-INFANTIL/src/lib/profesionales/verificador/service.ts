@@ -130,13 +130,21 @@ export interface FilaRenovacion {
  * la vigente y la nueva lado a lado. «documento nuevo», nunca «renovación» (Diseño: la
  * palabra reabre la confusión tarjeta/verificación que SPEC-691 cerró).
  */
-export async function listarRenovaciones(): Promise<FilaRenovacion[]> {
-    const [perfiles, requisitos] = await Promise.all([
-        new VerificadorRepository().listarRenovacionesPendientes(),
-        leerRequisitosVerificacion(),
-    ]);
-    const nombrePorClave = new Map(requisitos.map((r) => [r.clave, r.nombre]));
+type PerfilRenovacion = Awaited<ReturnType<VerificadorRepository["listarRenovacionesPendientes"]>>[number];
 
+/**
+ * Transforma los perfiles con versión nueva en las filas de la cola. Puro (sin BD) para
+ * poder candarlo. SPEC-700 (I-425): la cola solo muestra requisitos CONFIGURADOS hoy —
+ * un requisito RETIRADO puede dejar un documento EN_REVISION huérfano, y ese NO debe
+ * aparecer como un renglón muerto (abrirlo daría 400 «ese requisito no existe»). El filtro
+ * por `nombrePorClave.has(clave)` (que trae exactamente las claves vigentes) hace que el
+ * invariante «la cola mira solo los vigentes» se cumpla SIEMPRE, no por suerte de los datos.
+ */
+export function armarFilasRenovacion(
+    perfiles: PerfilRenovacion[],
+    requisitos: RequisitoVerificacion[],
+): FilaRenovacion[] {
+    const nombrePorClave = new Map(requisitos.map((r) => [r.clave, r.nombre]));
     return perfiles.map((p) => {
         type Doc = (typeof p.documentos)[number];
         const porClave = new Map<string, { vigente?: Doc; pendiente?: Doc }>();
@@ -147,7 +155,7 @@ export async function listarRenovaciones(): Promise<FilaRenovacion[]> {
             porClave.set(d.requisitoClave, slot);
         }
         const requisitosPendientes: RequisitoRenovacion[] = [...porClave.entries()]
-            .filter(([, s]) => s.pendiente !== undefined)
+            .filter(([clave, s]) => s.pendiente !== undefined && nombrePorClave.has(clave))
             .map(([clave, s]) => ({
                 clave,
                 nombre: nombrePorClave.get(clave) ?? clave,
@@ -166,6 +174,14 @@ export async function listarRenovaciones(): Promise<FilaRenovacion[]> {
             requisitos: requisitosPendientes,
         };
     });
+}
+
+export async function listarRenovaciones(): Promise<FilaRenovacion[]> {
+    const [perfiles, requisitos] = await Promise.all([
+        new VerificadorRepository().listarRenovacionesPendientes(),
+        leerRequisitosVerificacion(),
+    ]);
+    return armarFilasRenovacion(perfiles, requisitos);
 }
 
 export interface FichaVerificacion {
@@ -201,6 +217,22 @@ export interface FichaVerificacion {
 }
 
 /**
+ * SPEC-700 (I-425): la ficha se pinta por los requisitos VIGENTES, no por las claves
+ * guardadas en `ultimaChecklist`. Si un requisito se retiró (p.ej. «otro») y quedó en el
+ * checklist de una verificación previa, se DESCARTA; una clave vigente ausente del checklist
+ * viejo entra como PENDIENTE. Así el verificador nunca decide sobre una clave que ya no existe
+ * (y `decidir` —que exige checklist == claves configuradas— no la rebota como sobrante).
+ */
+export function proyectarChecklistVigente(
+    requisitos: RequisitoVerificacion[],
+    ultimaChecklist: Record<string, ItemChecklist> | undefined,
+): Record<string, ItemChecklist> {
+    return Object.fromEntries(
+        requisitos.map((r) => [r.clave, ultimaChecklist?.[r.clave] ?? { estado: "PENDIENTE" as const, observacion: "" }]),
+    );
+}
+
+/**
  * Devuelve la ficha completa VISTA POR EL VERIFICADOR. Contiene datos internos
  * (URL de autorización, notaInterna del historial, checklist). Nunca serializar
  * este objeto en un endpoint público; el Verificador lee, el profesional no.
@@ -231,9 +263,7 @@ export async function abrirFicha(solicitudId: string): Promise<FichaVerificacion
         autorizacionArchivoId: perfil.autorizacionArchivoId,
         requisitos,
         documentos: await estadoDeDocumentos(perfil.id),
-        checklist:
-            ultimaChecklist ??
-            Object.fromEntries(requisitos.map((r) => [r.clave, { estado: "PENDIENTE" as const, observacion: "" }])),
+        checklist: proyectarChecklistVigente(requisitos, ultimaChecklist),
         historial: perfil.verificaciones.map((v) => ({
             id: v.id,
             resultado: v.resultado,
