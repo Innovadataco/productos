@@ -12,6 +12,7 @@ import { VerificadorRepository } from "@/lib/dal/repositories/verificador-reposi
 import { leerRequisitosVerificacion, type ItemChecklist } from "./requisitos";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 
 export interface ObservacionParaProfesional {
     requisito: string; // nombre humano del ítem
@@ -105,10 +106,15 @@ export async function reenviarParaVerificacion(usuarioId: string): Promise<void>
             409,
         );
     }
-    if (!perfil.autorizacionArchivoId) {
+    // SPEC-703: reenviar (reactivación de un VENCIDO, o reenvío de un BORRADOR) exige la
+    // ACEPTACIÓN EN PANTALLA de la versión vigente, NO el archivo. Es la misma puerta que
+    // `decidir` (cutover de SPEC-686): sin aceptación, el verificador daría 409 al decidir, así
+    // que el perfil quedaría atascado en revisión. El archivo legacy ya no cuenta. El código
+    // propio AUTORIZACION_REQUERIDA hace que el cliente LLEVE a la pantalla de aceptación.
+    if (!(await new AutorizacionProfesionalService().yaAceptoVersionVigente(usuarioId))) {
         throw new AppError(
-            "Falta subir la autorización firmada antes de reenviar",
-            ERROR_CODES.VALIDATION_ERROR,
+            "Debe aceptar la autorización vigente antes de enviar su perfil a revisión.",
+            ERROR_CODES.AUTORIZACION_REQUERIDA,
             409,
         );
     }

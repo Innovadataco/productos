@@ -17,11 +17,13 @@ import { AceptacionAutorizacion } from "@/components/modules/profesional/Aceptac
 
 export const dynamic = "force-dynamic";
 
-// SPEC-703: a dónde vuelve el profesional tras aceptar. El HABILITADO va a «Mi perfil»; el que
-// aún no está habilitado (alta nueva en BORRADOR / EN_REVISION) vuelve a la FICHA — su guardia
-// (SPEC-691) no le deja ver el dashboard todavía, así que mandarlo ahí lo rebotaría.
+// SPEC-703: a dónde vuelve el profesional tras aceptar. El HABILITADO va a «Mi perfil». El que aún
+// no está habilitado NO va al dashboard (su guardia SPEC-691 lo rebotaría): un BORRADOR (alta
+// nueva) o sin perfil vuelve a la FICHA a terminar de completar; un VENCIDO/EN_REVISION/etc. (ya
+// salió de BORRADOR) vuelve a «Mi estado», desde donde envía a revisión (reactivación del VENCIDO).
 const DESTINO_HABILITADO = "/dashboard/profesional/mi-perfil";
 const DESTINO_FICHA = "/perfil-profesional/completar";
+const DESTINO_ESTADO = "/perfil-profesional/verificacion";
 
 export default async function AutorizacionProfesionalPage({
     searchParams,
@@ -44,7 +46,11 @@ export default async function AutorizacionProfesionalPage({
         obtenerHabilitacionProfesional(userId),
     ]);
     const yaAceptoVigente = ultima?.version === version;
-    const destino = hab?.habilitado ? DESTINO_HABILITADO : DESTINO_FICHA;
+    const destino = hab?.habilitado
+        ? DESTINO_HABILITADO
+        : !hab || hab.estado === "BORRADOR"
+            ? DESTINO_FICHA
+            : DESTINO_ESTADO;
 
     // Ya aceptó la versión vigente y no viene a releer: no hay nada que aceptar acá.
     if (yaAceptoVigente && !releer) redirect(destino);

@@ -18,8 +18,9 @@ import { POST as POST_ACEPTAR } from "./aceptar/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
-import { crearParametrosAutorizacionProfesional } from "@/lib/autorizacion-profesional-test-utils";
+import { crearParametrosAutorizacionProfesional, sembrarAceptacionAutorizacion } from "@/lib/autorizacion-profesional-test-utils";
 import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
+import { reenviarParaVerificacion } from "@/lib/profesionales/verificador/vista-profesional";
 
 let activeToken: string | undefined;
 
@@ -125,5 +126,59 @@ describe("SPEC-703 · recorrido del alta: aceptar en pantalla pasa a revisión s
         // Es exactamente lo que `decidir` consulta para no dar 409 por falta de autorización previa.
         const previa = await new AutorizacionProfesionalService().aceptacionAntesDe(user.id, new Date());
         expect(previa).not.toBeNull();
+    });
+});
+
+/** Un VENCIDO completo (con modalidad, que el CHECK del VENCIDO exige). */
+async function vencidoCompleto(email: string) {
+    const user = await crearUsuario("PROFESIONAL", email);
+    const perfil = await prisma.perfilProfesional.create({
+        data: {
+            usuarioId: user.id,
+            nombreVisible: "Dra. Vencida",
+            tituloProfesional: "",
+            especialidades: [],
+            profesion: "psicologo",
+            areasAtencion: ["ansiedad"],
+            rangoEtario: ["6-11"],
+            ciudadId: await ciudadId(),
+            atiendeVirtual: true,
+            atiendePresencial: false,
+            aniosExperiencia: 6,
+            presentacion: "Acompaño a familias con niñez y adolescencia.",
+            duracionMinutos: 45,
+            estado: "VENCIDO",
+        },
+    });
+    return { user, perfil };
+}
+
+describe("SPEC-703 · reactivación del VENCIDO: aceptar antes de reenviar (mismo muro del cutover)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        await crearPaisCiudad();
+        await crearParametrosAutorizacionProfesional();
+        if (!process.env.PARAM_ENCRYPTION_KEY) process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+    });
+    afterAll(async () => prisma.$disconnect());
+
+    it("VENCIDO con aceptación → reenviarParaVerificacion pasa a EN_REVISION (sin 409 al decidir)", async () => {
+        const { user, perfil } = await vencidoCompleto("vencido-ok@test.local");
+        await sembrarAceptacionAutorizacion(user.id);
+        await reenviarParaVerificacion(user.id);
+        expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).estado).toBe("EN_REVISION");
+        // Y la aceptación es PREVIA → la guarda de anterioridad de decidir no dará 409.
+        const previa = await new AutorizacionProfesionalService().aceptacionAntesDe(user.id, new Date());
+        expect(previa).not.toBeNull();
+    });
+
+    it("CONTROL · VENCIDO SIN aceptación → reenviar tira AUTORIZACION_REQUERIDA (409) y queda VENCIDO", async () => {
+        const { user, perfil } = await vencidoCompleto("vencido-sin@test.local");
+        // Parámetros sembrados (beforeEach) pero SIN aceptación → no puede reenviar.
+        await expect(reenviarParaVerificacion(user.id)).rejects.toMatchObject({
+            code: "AUTORIZACION_REQUERIDA",
+            statusCode: 409,
+        });
+        expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).estado).toBe("VENCIDO");
     });
 });
