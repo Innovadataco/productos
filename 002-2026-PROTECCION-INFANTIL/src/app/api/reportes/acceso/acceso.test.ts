@@ -321,6 +321,33 @@ describe("SPEC-610 (I-372) · el pase abre el EXPEDIENTE, no un reporte suelto",
         expect(res403.status).toBe(403);
     });
 
+    it("SPEC-690: un profesional SUSPENDIDO NO abre el expediente de un menor — 403 (control positivo de la compuerta)", async () => {
+        const padre = await autenticar("PARENT");
+        const { expediente } = await crearExpedienteDePrueba(padre.id);
+        const resSol = await POST_SOLICITAR(
+            crearRequestAutenticado("POST", `http://localhost/api/padre/expedientes/${expediente.id}/solicitar-acceso`, {}),
+            { params: Promise.resolve({ id: expediente.id }) }
+        );
+        const { codigo } = await resSol.json();
+
+        // Profesional con verificación aprobada vigente PERO estado SUSPENDIDO:
+        // `estaHabilitado` = ACTIVO ∧ vigente = false por el ESTADO, no por la
+        // verificación. Prueba que la compuerta mira el estado, no solo la
+        // vigencia (si mirara solo la verificación, este pase se abriría — I-414).
+        const usuario = await crearUsuario("PROFESIONAL");
+        activeToken = await crearTokenUsuario(usuario.id, "PROFESIONAL");
+        await sembrarHabilitacionProfesional(usuario.id);
+        await prisma.perfilProfesional.update({ where: { usuarioId: usuario.id }, data: { estado: "SUSPENDIDO" } });
+
+        const resCanje = await POST_CANJEAR(
+            crearRequestAutenticado("POST", "http://localhost/api/reportes/acceso/canjar", { codigo })
+        );
+        expect(resCanje.status, "un SUSPENDIDO con sesión válida recibe 403 en la llamada siguiente").toBe(403);
+        // El pase sigue sin canjear: nadie lo consumió.
+        const pase = await prisma.codigoAccesoContenido.findFirstOrThrow({ where: { expedienteId: expediente.id } });
+        expect(pase.canjeadoEn, "un canje frenado no marca el pase como usado").toBeNull();
+    });
+
     it("ver: la sesión devuelve TODOS los eventos del expediente y audita como actor EXTERNO", async () => {
         const padre = await autenticar("PARENT");
         const { expediente, eventoReporte, eventoManual } = await crearExpedienteDePrueba(padre.id);
