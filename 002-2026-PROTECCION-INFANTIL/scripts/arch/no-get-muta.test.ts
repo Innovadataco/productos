@@ -28,11 +28,14 @@ describe("SPEC-619 · candado GET-que-muta (ratchet de la superficie)", () => {
         ).toEqual([]);
     });
 
-    it("forma de la lista: 18 entradas, 3 de ellas páginas al render", () => {
+    it("forma de la lista: 20 entradas, 3 de ellas páginas al render", () => {
         // 18 → 17: SPEC-647/D-136 retiró el login de Google, y con él su callback OAuth (tier oauth-exento),
         // única superficie exenta. `entradasObsoletas()` lo cazó al rebasar #537 sobre el main sin Google.
         // 17 → 18 (SPEC-693): la pantalla «documento nuevo» del Verificador audita la apertura al render.
-        expect(SUPERFICIE_GET_MUTA.length).toBe(18);
+        // 18 → 20 (SPEC-701 · I-421): la bandeja de revisión (`reportes-revision/[id]`) y el detalle de
+        // apelaciones del comité (`comite/apelaciones/[id]`) dejan de saltarse la fila y ahora descifran el
+        // relato por la frontera auditada → una LecturaReporte por lectura. Dos GET-que-audita nuevos (route-GET).
+        expect(SUPERFICIE_GET_MUTA.length).toBe(20);
         expect(SUPERFICIE_GET_MUTA.filter((e) => e.tipo === "page-render").length).toBe(3);
     });
 
