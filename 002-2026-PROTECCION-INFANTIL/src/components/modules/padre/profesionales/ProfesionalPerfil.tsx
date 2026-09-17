@@ -99,7 +99,9 @@ export function ProfesionalPerfil({
                 <p className="mt-2 text-xs text-muted">
                     De la segunda cita en adelante:{" "}
                     <span className="font-medium">
-                        {p.tarifaConsultaCOP !== null ? `${CURRENCY_COP.format(p.tarifaConsultaCOP)} (tarifa del profesional)` : "por definir"}
+                        {/* SPEC-685 (Diseño): «> 0», no «!== null» — misma regla que cita.service.
+                            Un 0 (viejo centinela) también es «por definir», nunca «$0». */}
+                        {p.tarifaConsultaCOP !== null && p.tarifaConsultaCOP > 0 ? `${CURRENCY_COP.format(p.tarifaConsultaCOP)} (tarifa del profesional)` : "por definir"}
                     </span>
                     .
                 </p>

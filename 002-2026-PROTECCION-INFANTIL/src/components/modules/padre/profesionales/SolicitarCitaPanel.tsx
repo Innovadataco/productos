@@ -189,7 +189,7 @@ export function SolicitarCitaPanel({
                 <p className="mt-1 text-xs text-subtle">
                     {esReasignacion
                         ? "El pago viaja con esta nueva solicitud desde tu cita anterior — no se cobra de nuevo."
-                        : tarifaProfesionalCOP !== null
+                        : tarifaProfesionalCOP !== null && tarifaProfesionalCOP > 0
                             ? (
                                 <>
                                 Primera cita al precio estándar. De la 2ª cita en adelante:

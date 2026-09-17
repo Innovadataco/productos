@@ -69,6 +69,12 @@ export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista 
     const guardarTarifa = async () => {
         setError("");
         setOk("");
+        // SPEC-685 (Diseño): campo vacío ⇒ tarifaDesdeTexto("")=0. No se manda 0
+        // (el servidor lo rechaza 400 min(1)); se pide fijarla, sin ir al servidor.
+        if (tarifaConsultaCOP <= 0) {
+            setError("Escriba su tarifa.");
+            return;
+        }
         setGuardando(true);
         try {
             const res = await fetch("/api/profesional/perfil", {
