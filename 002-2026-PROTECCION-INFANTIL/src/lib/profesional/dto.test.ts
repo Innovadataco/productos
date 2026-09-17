@@ -106,12 +106,25 @@ describe("toPerfilProfesionalPropio", () => {
 });
 
 describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVISION", () => {
-    it("perfil completo + autorización → true", () => {
-        expect(perfilCompletoParaRevision(PERFIL_COMPLETO as never)).toBe(true);
+    it("perfil completo + autorización aceptada → true", () => {
+        expect(perfilCompletoParaRevision(PERFIL_COMPLETO as never, true)).toBe(true);
     });
 
-    it("sin autorización → false (aunque el resto esté lleno)", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, autorizacionArchivoId: null } as never)).toBe(false);
+    // SPEC-703: la completitud exige la ACEPTACIÓN EN PANTALLA de la versión vigente, NO el PDF.
+    it("sin aceptación → false (aunque el resto esté lleno)", () => {
+        expect(perfilCompletoParaRevision(PERFIL_COMPLETO as never, false)).toBe(false);
+    });
+
+    it("SPEC-703 · el archivo legacy YA NO cuenta: con archivo pero SIN aceptar → false", () => {
+        expect(
+            perfilCompletoParaRevision({ ...PERFIL_COMPLETO, autorizacionArchivoId: "legacy-file" } as never, false),
+        ).toBe(false);
+    });
+
+    it("SPEC-703 · basta la aceptación: SIN archivo pero aceptada → true", () => {
+        expect(
+            perfilCompletoParaRevision({ ...PERFIL_COMPLETO, autorizacionArchivoId: null } as never, true),
+        ).toBe(true);
     });
 
     it("sin ninguna modalidad marcada → false", () => {
@@ -120,7 +133,7 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
                 ...PERFIL_COMPLETO,
                 atiendeVirtual: false,
                 atiendePresencial: false,
-            } as never)
+            } as never, true)
         ).toBe(false);
     });
 
@@ -128,19 +141,19 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
     // libres viejos. `especialidades: []` ya NO importa; lo que gatea es
     // profesión + al menos un área + al menos un rango.
     it("sin profesión → false", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, profesion: null } as never)).toBe(false);
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, profesion: null } as never, true)).toBe(false);
     });
 
     it("sin ningún área de atención → false", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, areasAtencion: [] } as never)).toBe(false);
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, areasAtencion: [] } as never, true)).toBe(false);
     });
 
     it("sin ningún rango de edad → false", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, rangoEtario: [] } as never)).toBe(false);
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, rangoEtario: [] } as never, true)).toBe(false);
     });
 
     it("los campos libres viejos ya NO gatean: sin especialidades sigue completo", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never)).toBe(true);
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never, true)).toBe(true);
     });
 
     // SPEC-685 (PR2-bis): la tarifa/duración SALEN de la ficha a «Mi perfil»
@@ -148,7 +161,7 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
     // gatean el paso a EN_REVISION. Un borrador sin tarifa puede pasar a revisión.
     it("tarifa/duración 0 → sigue completo (ya no gatean; se fijan en Mi perfil)", () => {
         expect(
-            perfilCompletoParaRevision({ ...PERFIL_COMPLETO, tarifaConsultaCOP: 0, duracionMinutos: 0 } as never),
+            perfilCompletoParaRevision({ ...PERFIL_COMPLETO, tarifaConsultaCOP: 0, duracionMinutos: 0 } as never, true),
         ).toBe(true);
     });
 });

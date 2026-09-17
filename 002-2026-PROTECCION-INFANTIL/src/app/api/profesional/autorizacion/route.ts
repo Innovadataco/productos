@@ -28,6 +28,7 @@ import {
     perfilCompletoParaRevision,
     toPerfilProfesionalPropio,
 } from "@/lib/profesional/dto";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 
 async function requireProfesional() {
     const user = await verifyAuth();
@@ -95,10 +96,15 @@ export async function POST(request: Request) {
             autorizacionSubidaEn: new Date(),
         });
 
-        // Igual que PUT /perfil: si con esta subida quedó completo y estaba en
-        // BORRADOR, pasa a EN_REVISION. Otros estados no se tocan desde acá.
+        // SPEC-703: la completitud ya NO cuenta el PDF sino la aceptación EN PANTALLA de la
+        // versión vigente (el cutover de SPEC-686 la exige en `decidir`). Esta ruta legacy sigue
+        // guardando el archivo, pero por sí sola ya no completa: hace falta la aceptación. Se
+        // conserva la transición por si el archivo se sube DESPUÉS de aceptar.
+        const aceptoVigente = await new AutorizacionProfesionalService()
+            .yaAceptoVersionVigente(user.id)
+            .catch(() => false);
         const final =
-            actualizado.estado === "BORRADOR" && perfilCompletoParaRevision(actualizado)
+            actualizado.estado === "BORRADOR" && perfilCompletoParaRevision(actualizado, aceptoVigente)
                 ? await repo.cambiarEstado(actualizado.id, "EN_REVISION")
                 : actualizado;
 

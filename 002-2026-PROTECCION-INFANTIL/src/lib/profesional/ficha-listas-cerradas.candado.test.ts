@@ -40,22 +40,25 @@ function perfilCompleto(over: Partial<PerfilProfesional> = {}): PerfilProfesiona
     } as PerfilProfesional;
 }
 
+// SPEC-703: la completitud exige la aceptación de la autorización. Este candado prueba los
+// CAMPOS de la ficha, así que se pasa `aceptó = true` para aislarlos (la regla de la aceptación
+// la cubren dto.test.ts y el candado de recorrido de SPEC-703).
 describe("SPEC-685 · completitud sobre listas cerradas", () => {
     it("perfil con profesión + área + rango (y lo demás) → COMPLETO", () => {
-        expect(perfilCompletoParaRevision(perfilCompleto())).toBe(true);
+        expect(perfilCompletoParaRevision(perfilCompleto(), true)).toBe(true);
     });
 
     it("sin profesión → NO completo", () => {
-        expect(perfilCompletoParaRevision(perfilCompleto({ profesion: null }))).toBe(false);
-        expect(perfilCompletoParaRevision(perfilCompleto({ profesion: "" }))).toBe(false);
+        expect(perfilCompletoParaRevision(perfilCompleto({ profesion: null }), true)).toBe(false);
+        expect(perfilCompletoParaRevision(perfilCompleto({ profesion: "" }), true)).toBe(false);
     });
 
     it("sin ningún área → NO completo", () => {
-        expect(perfilCompletoParaRevision(perfilCompleto({ areasAtencion: [] }))).toBe(false);
+        expect(perfilCompletoParaRevision(perfilCompleto({ areasAtencion: [] }), true)).toBe(false);
     });
 
     it("sin ningún rango de edad → NO completo", () => {
-        expect(perfilCompletoParaRevision(perfilCompleto({ rangoEtario: [] }))).toBe(false);
+        expect(perfilCompletoParaRevision(perfilCompleto({ rangoEtario: [] }), true)).toBe(false);
     });
 
     it("control por remoción: SOLO los campos viejos (título/especialidades) NO bastan", () => {
@@ -66,7 +69,7 @@ describe("SPEC-685 · completitud sobre listas cerradas", () => {
             tituloProfesional: "Psicólogo clínico",
             especialidades: ["Terapia familiar"],
         });
-        expect(perfilCompletoParaRevision(soloViejos)).toBe(false);
+        expect(perfilCompletoParaRevision(soloViejos, true)).toBe(false);
     });
 });
 

@@ -211,10 +211,10 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
         expect(enBd.numeroTarjetaProfesional).toBe("TP-INTERNO-42");
     });
 
-    it("subir autorización completa el perfil y transiciona a EN_REVISION", async () => {
+    it("SPEC-703 · subir el PDF (legacy) guarda el archivo pero NO transiciona sin aceptar en pantalla", async () => {
         await crearProfesionalAutenticado();
         const ciudad = await ciudadId();
-        // 1er PUT con TODO lleno menos autorización → BORRADOR.
+        // 1er PUT con TODO lleno menos la autorización → BORRADOR.
         const put1 = await PUT_PERFIL(
             reqJson("http://localhost:5005/api/profesional/perfil", {
                 nombreVisible: "Dr. Full",
@@ -234,13 +234,15 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
         );
         expect((await put1.json()).perfil.estado).toBe("BORRADOR");
 
-        // Subo la autorización → transiciona a EN_REVISION.
+        // SPEC-703: la completitud ya NO cuenta el PDF sino la ACEPTACIÓN EN PANTALLA. La ruta
+        // legacy sigue guardando el archivo cifrado (historia), pero por sí sola ya NO pasa a
+        // EN_REVISION — sin aceptación, el verificador daría 409. Queda en BORRADOR.
         const subida = await POST_AUTORIZACION(
             reqMultipart("http://localhost:5005/api/profesional/autorizacion", PDF_BUFFER)
         );
-        expect(subida.status).toBe(201);
         const body = await subida.json();
-        expect(body.perfil.estado).toBe("EN_REVISION");
+        expect(subida.status).toBe(201);
+        expect(body.perfil.estado).toBe("BORRADOR");
         expect(body.perfil.autorizacionSubida).toBe(true);
         // La ruta cifrada y la fecha NO salen por la API.
         for (const clave of CAMPOS_INTERNOS_PROFESIONAL) {

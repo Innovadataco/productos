@@ -12,11 +12,16 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
+import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 import { AceptacionAutorizacion } from "@/components/modules/profesional/AceptacionAutorizacion";
 
 export const dynamic = "force-dynamic";
 
-const DESTINO_PROFESIONAL = "/dashboard/profesional/mi-perfil";
+// SPEC-703: a dónde vuelve el profesional tras aceptar. El HABILITADO va a «Mi perfil»; el que
+// aún no está habilitado (alta nueva en BORRADOR / EN_REVISION) vuelve a la FICHA — su guardia
+// (SPEC-691) no le deja ver el dashboard todavía, así que mandarlo ahí lo rebotaría.
+const DESTINO_HABILITADO = "/dashboard/profesional/mi-perfil";
+const DESTINO_FICHA = "/perfil-profesional/completar";
 
 export default async function AutorizacionProfesionalPage({
     searchParams,
@@ -33,14 +38,16 @@ export default async function AutorizacionProfesionalPage({
 
     const { releer } = await searchParams;
     const servicio = new AutorizacionProfesionalService();
-    const [version, ultima] = await Promise.all([
+    const [version, ultima, hab] = await Promise.all([
         servicio.versionVigente(),
         servicio.aceptacionVigente(userId),
+        obtenerHabilitacionProfesional(userId),
     ]);
     const yaAceptoVigente = ultima?.version === version;
+    const destino = hab?.habilitado ? DESTINO_HABILITADO : DESTINO_FICHA;
 
     // Ya aceptó la versión vigente y no viene a releer: no hay nada que aceptar acá.
-    if (yaAceptoVigente && !releer) redirect(DESTINO_PROFESIONAL);
+    if (yaAceptoVigente && !releer) redirect(destino);
 
     const documentoContenido = await servicio.obtenerDocumentoVigente();
 
@@ -48,7 +55,7 @@ export default async function AutorizacionProfesionalPage({
         <AceptacionAutorizacion
             version={version}
             documentoContenido={documentoContenido}
-            redirectUrl={DESTINO_PROFESIONAL}
+            redirectUrl={destino}
             {...(yaAceptoVigente ? { soloLectura: true } : {})}
             {...(!yaAceptoVigente && ultima ? { avisoReAceptacion: true } : {})}
         />
