@@ -2666,7 +2666,11 @@ model DatasetEntrenamiento {
   textoAnonimizado       Boolean           @default(false)
   creadoEn               DateTime          @default(now())
 
-  correccion CorreccionAdmin?  @relation(fields: [correccionId], references: [id])
+  // SPEC-702 (I-422 p1) · la copia de entrenamiento se borra CON su corrección (y, por la
+  // cadena Reporte→ClasificacionIA→CorreccionAdmin, con su reporte): antes el default de una
+  // relación opcional era SetNull y la copia quedaba huérfana en claro. correccionId sigue
+  // nullable SOLO por el huérfano histórico (1 fila) que Jelkin decide aparte. D-121 de Datos.
+  correccion CorreccionAdmin?  @relation(fields: [correccionId], references: [id], onDelete: Cascade)
   embedding  EmbeddingDataset?
 
   @@index([usadoParaEntrenamiento])

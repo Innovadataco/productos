@@ -13,7 +13,7 @@ import { descifrarCampoReporte } from "@/lib/dal/services/descifrar-contenido";
 import { conActor, actorDesdeRequest } from "@/lib/auditoria-lectura/actor";
 import { recalcularYGuardarScore } from "@/lib/scoring";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
-import { publishDatasetAnonimizacionBackfill, publishDatasetEmbeddingBackfill } from "@/lib/queue";
+import { publishDatasetEmbeddingBackfill } from "@/lib/queue";
 import { registrarTransicion, responsableTipoFromRol } from "@/lib/reporte-transiciones";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { ReporteRepository } from "@/lib/dal/repositories/reporte";
@@ -214,68 +214,60 @@ export async function POST(request: Request) {
             userAgent,
         });
 
-        // Preparar texto seguro para el dataset de entrenamiento.
-        // Si el reporte ya fue anonimizado previamente, su campo `texto` es seguro.
-        // Si no, y la clasificación indica PII, forzamos anonimización antes de guardar.
-        // S-C (D-116/D-117): el original (evidencia) SIEMPRE está sellado desde el alta, así que
-        // «ya anonimizado» ya NO se infiere de textoOriginal!=null — se infiere de que el texto de
-        // TRABAJO divergió del original. La lectura del original es fail-loud (fuera del try de IA).
+        // SPEC-702 (I-422 · p1): la copia para entrenar la IA se guarda SOLO anonimizada.
+        // Un relato en claro NUNCA entra al dataset. Por eso:
+        //  · si el texto de TRABAJO ya divergió del original, ya viene anonimizado del flujo de
+        //    procesamiento (S-C · D-116/D-117: el original/evidencia está sellado desde el alta,
+        //    así que «ya anonimizado» se infiere de esa divergencia, no de textoOriginal!=null);
+        //  · si no, se anonimiza SIEMPRE antes de guardar — no solo cuando `contienePii`;
+        //  · si la anonimización FALLA, NO se guarda la copia. Se perdió el ejemplo antes que
+        //    guardar el relato crudo. Se retiró la copia con textoAnonimizado=false y su backfill:
+        //    un reintento futuro se hará desde el SOBRE del reporte, nunca desde una copia en claro.
+        // La lectura del original es fail-loud (fuera del try de IA).
         const textoOriginalPlano = await conActor(actorDesdeRequest(user, request), () =>
             descifrarCampoReporte(reporteRow.contenidoId, "textoOriginal")
         );
         const yaAnonimizado = reporte.texto !== textoOriginalPlano;
-        let textoDataset = reporte.texto;
-        let datasetAnonimizado = false;
-        let requiereBackfill = false;
+        let textoDataset: string | null = null;
         try {
             if (yaAnonimizado) {
-                // El texto ya fue anonimizado en el flujo de procesamiento.
                 textoDataset = reporte.texto;
-                datasetAnonimizado = true;
-            } else if (reporte.clasificacion?.contienePii) {
+            } else {
                 const paramModelo = await new ParametroRepository().findByClave("reportes.classification_model");
                 const modelo = paramModelo?.valor || process.env.IA_MODEL_ANONIMIZACION || MODELO_ANONIMIZACION_DEFAULT;
                 const resultado = await anonimizarTexto(modelo, reporte.texto);
                 textoDataset = resultado.textoAnonimizado;
-                datasetAnonimizado = true;
             }
         } catch (err) {
-            logger.error("[CORRECCION] Fallo anonimización para dataset, guardando texto sin anonimizar y encolando backfill:", err);
-            textoDataset = reporte.texto;
-            datasetAnonimizado = false;
-            requiereBackfill = true;
+            logger.error("[CORRECCION] Falló la anonimización del dataset; NO se guarda la copia (nunca un relato en claro). Reintento futuro desde el sobre del reporte:", err);
+            textoDataset = null;
         }
 
-        // Guardar en dataset de entrenamiento
-        const datasetRegistro = await new DatasetEntrenamientoRepository().crear({
-            texto: textoDataset,
-            clasificacionCorrecta: categoriaCorregida,
-            fuente: "correccion_admin",
-            correccionId: correccion.id,
-            textoAnonimizado: datasetAnonimizado,
-        });
+        // Solo se persiste si quedó anonimizada. textoAnonimizado es SIEMPRE true: no existe la
+        // fila cruda. Si no hay copia, tampoco hay embedding que generar.
+        if (textoDataset !== null) {
+            const datasetRegistro = await new DatasetEntrenamientoRepository().crear({
+                texto: textoDataset,
+                clasificacionCorrecta: categoriaCorregida,
+                fuente: "correccion_admin",
+                correccionId: correccion.id,
+                textoAnonimizado: true,
+            });
 
-        if (requiereBackfill) {
+            // Generar embedding para RAG (F5). Si falla, no bloquear la corrección.
             try {
-                await publishDatasetAnonimizacionBackfill(datasetRegistro.id);
-            } catch (queueErr) {
-                logger.error("[CORRECCION] No se pudo encolar backfill de anonimización:", queueErr);
-            }
-        }
-
-        // Generar embedding para RAG (F5). Si falla, no bloquear la corrección.
-        try {
-            const paramEmbedding = await new ParametroRepository().findByClave("reportes.embedding_model");
-            const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
-            const vector = await generarEmbedding(modeloEmbedding, datasetRegistro.texto);
-            // E-8 (D3): la raw de inserción vive en el adaptador EmbeddingRepository.
-            await new EmbeddingRepository().insertDatasetEmbedding(datasetRegistro.id, modeloEmbedding, vector);
-        } catch (embedErr) {
-            logger.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
-            try {
-                await publishDatasetEmbeddingBackfill(datasetRegistro.id);
-            } catch (queueErr) {
-                logger.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
+                const paramEmbedding = await new ParametroRepository().findByClave("reportes.embedding_model");
+                const modeloEmbedding = paramEmbedding?.valor || MODELO_EMBEDDING_DEFAULT;
+                const vector = await generarEmbedding(modeloEmbedding, datasetRegistro.texto);
+                // E-8 (D3): la raw de inserción vive en el adaptador EmbeddingRepository.
+                await new EmbeddingRepository().insertDatasetEmbedding(datasetRegistro.id, modeloEmbedding, vector);
+            } catch (embedErr) {
+                logger.error("[CORRECCION] Fallo embedding para dataset, encolando backfill:", embedErr);
+                try {
+                    await publishDatasetEmbeddingBackfill(datasetRegistro.id);
+                } catch (queueErr) {
+                    logger.error("[CORRECCION] No se pudo encolar backfill de embedding:", queueErr);
+                }
             }
         }
 
