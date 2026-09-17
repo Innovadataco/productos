@@ -55,7 +55,7 @@ export async function exigirProfesionalHabilitadoApi(
     const hab = await obtenerHabilitacionProfesional(usuarioId, ahora);
     if (!hab || !hab.habilitado) {
         throw new AppError(
-            "Tu perfil no está habilitado para esta acción. Revisa el estado de tu verificación.",
+            "Su perfil no está habilitado para esta acción. Revise el estado de su verificación.",
             ERROR_CODES.FORBIDDEN,
             403,
         );

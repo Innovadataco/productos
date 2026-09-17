@@ -14,6 +14,11 @@
  *   - app/dashboard/profesional/**
  *   - components/modules/profesional/**
  *   - components/modules/verificacion/EstadoVerificacionProfesionalClient.tsx
+ *   - lib/profesionales/habilitacion.ts (SPEC-690-B · veredicto CEO 00:40): el
+ *     mensaje 403 de la compuerta LLEGA a la pantalla (#612) — p. ej. a un
+ *     SUSPENDIDO que intenta canjear un pase—, así que su copia es del área del
+ *     profesional y habla de USTED. La cadena concreta se canda por ancla positiva
+ *     abajo (usa «Su»/«Revise», formas que la clase inequívoca no caza).
  *
  * Detector: borde de letra UNICODE `(?<![\p{L}])…(?![\p{L}])/u` (mismo que 504/
  * 505/529). La CLASE se caza con lexemas INEQUÍVOCOS (2ª singular, voseo,
@@ -33,6 +38,9 @@ const DIRS = [
 ];
 const ARCHIVOS = [
     path.join(SRC, "components/modules/verificacion/EstadoVerificacionProfesionalClient.tsx"),
+    // SPEC-690-B (veredicto CEO 00:40): la copia del 403 de la compuerta también
+    // es del área del profesional (llega a la pantalla vía #612).
+    path.join(SRC, "lib/profesionales/habilitacion.ts"),
 ];
 
 function* recorrer(dir: string): Generator<string> {
@@ -83,6 +91,7 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
             "profesional/PanelProfesional.tsx",
             "profesional/CalendarioProfesional.tsx",
             "verificacion/EstadoVerificacionProfesionalClient.tsx",
+            "profesionales/habilitacion.ts",
         ];
         for (const c of clave) {
             expect(archivos.some((a) => a.replace(/\\/g, "/").endsWith(c)), `falta ${c}`).toBe(true);
@@ -114,6 +123,7 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         const page = fs.readFileSync(path.join(SRC, "app/dashboard/profesional/page.tsx"), "utf-8");
         const calPage = fs.readFileSync(path.join(SRC, "app/dashboard/profesional/calendario/page.tsx"), "utf-8");
         const verif = fs.readFileSync(path.join(SRC, "components/modules/verificacion/EstadoVerificacionProfesionalClient.tsx"), "utf-8");
+        const habil = fs.readFileSync(path.join(SRC, "lib/profesionales/habilitacion.ts"), "utf-8");
 
         // presentes (usted) — mueren si se revierte la corrección
         expect(page).toContain("Sus solicitudes de primera cita, su agenda y su verificación.");
@@ -140,6 +150,12 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         // vence no puede volver (no colisiona con «revisando sus documentos» del estado en revisión).
         expect(verif).not.toContain("actualice el documento que");
         expect(verif).toContain("Su perfil profesional está suspendido");
+
+        // SPEC-690-B (veredicto CEO 00:40): el 403 de la compuerta habla de USTED
+        // (llega a la pantalla vía #612). Muere si vuelve al tuteo.
+        expect(habil).toContain("Su perfil no está habilitado para esta acción. Revise el estado de su verificación.");
+        expect(habil).not.toContain("Tu perfil");
+        expect(habil).not.toContain("Revisa el estado de tu");
 
         // vetados (tú) — mueren si reaparecen
         for (const veto of ["Tu tarifa", "te entrega en la sesión", "ves quién te lo", "Revisa tu conexión", "según tu ficha", "agendar contigo", "Le compartió".replace("Le", "Te"), "Te avisamos"]) {
