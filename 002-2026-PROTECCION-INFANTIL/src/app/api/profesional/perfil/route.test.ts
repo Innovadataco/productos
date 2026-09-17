@@ -37,7 +37,8 @@ function bodyBase() {
         atiendePresencial: false,
         aniosExperiencia: 10,
         presentacion: "Experiencia con familias en Bogotá.",
-        tarifaConsultaCOP: 120_000,
+        // SPEC-685 (PR3): la tarifa salió de la ficha; solo la fija el habilitado
+        // (el servidor rechaza tarifa de un borrador). No se envía en este PUT.
         duracionMinutos: 50,
     };
 }

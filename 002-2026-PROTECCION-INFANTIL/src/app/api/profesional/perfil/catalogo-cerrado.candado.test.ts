@@ -68,7 +68,8 @@ function bodyBase(ciudadId: string) {
         atiendePresencial: false,
         aniosExperiencia: 10,
         presentacion: "Acompaño a familias con niñez y adolescencia.",
-        tarifaConsultaCOP: 120_000,
+        // SPEC-685 (PR3): la tarifa salió de la ficha y solo la fija el habilitado;
+        // un PUT de borrador con tarifa lo rechaza el servidor. No se envía acá.
         duracionMinutos: 50,
     };
 }

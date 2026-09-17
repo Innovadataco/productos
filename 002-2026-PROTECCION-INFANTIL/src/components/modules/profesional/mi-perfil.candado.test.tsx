@@ -10,7 +10,7 @@
  *  3. La tarifa SE MUDÓ: ya no está en la ficha (`completar`), vive acá.
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import fs from "node:fs";
 import path from "node:path";
 import type { PerfilProfesionalPropioDto } from "@/lib/profesional/dto";
@@ -79,6 +79,22 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa con valores en vivo", 
         expect(screen.getByText(/Fije su tarifa/)).toBeTruthy();
     });
 
+    it("con la tarifa vacía (0), Guardar NO manda 0 al servidor: pide «Escriba su tarifa»", async () => {
+        const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+        render(
+            <MiPerfilProfesionalClient
+                perfil={{ ...PERFIL, tarifaConsultaCOP: null }}
+                rangoCatalogo={RANGO}
+                aviso={{ precioEstandar: 80_000, pct: 15 }}
+                vista={VISTA}
+            />,
+        );
+        fireEvent.click(screen.getByRole("button", { name: /Guardar tarifa/ }));
+        expect(await screen.findByText(/Escriba su tarifa/)).toBeTruthy();
+        expect(fetchSpy).not.toHaveBeenCalled(); // el 0 NUNCA sale al servidor
+        fetchSpy.mockRestore();
+    });
+
     it("con tarifa fijada: NO aparece el estado «por fijar»", () => {
         render(
             <MiPerfilProfesionalClient
@@ -145,14 +161,14 @@ describe("SPEC-685 · FORMA §2-ter c · lo que ve la familia: «por definir», 
         "utf-8",
     );
 
-    it("ProfesionalPerfil dice «por definir» y formatea la tarifa SOLO si no es null", () => {
+    it("ProfesionalPerfil dice «por definir» y formatea la tarifa SOLO si es > 0 (no «$0»)", () => {
         expect(perfilPadre).toContain("por definir");
-        // El format de la tarifa está guardado por `!== null` (no incondicional → no «$0»).
-        expect(/tarifaConsultaCOP !== null\s*\?/.test(perfilPadre)).toBe(true);
+        // SPEC-685 (Diseño): gatea por «> 0», no por «!== null» — un 0 también es «por definir».
+        expect(/tarifaConsultaCOP !== null && p\.tarifaConsultaCOP > 0/.test(perfilPadre)).toBe(true);
     });
 
-    it("SolicitarCitaPanel también dice «por definir» cuando la tarifa está sin fijar", () => {
+    it("SolicitarCitaPanel también dice «por definir» y gatea por > 0", () => {
         expect(panelPadre).toContain("por definir");
-        expect(/tarifaProfesionalCOP !== null/.test(panelPadre)).toBe(true);
+        expect(/tarifaProfesionalCOP !== null && tarifaProfesionalCOP > 0/.test(panelPadre)).toBe(true);
     });
 });
