@@ -22,6 +22,7 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { VerificadorRepository } from "@/lib/dal/repositories/verificador-repository";
 import { DocumentoProfesionalRepository } from "@/lib/dal/repositories/documento-profesional";
 import { leerRequisitosVerificacion } from "./requisitos";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Pantalla de comparar — el documento vigente y el nuevo, lado a lado
@@ -136,6 +137,23 @@ export async function revisarRenovacion(
         throw new AppError(
             `La renovación por requisito es solo para profesionales activos (este está ${perfil.estado}).`,
             ERROR_CODES.VALIDATION_ERROR,
+            409,
+        );
+    }
+
+    // SPEC-704: revisar un documento nuevo es CONSULTAR ANTECEDENTES — el documento puede ser un
+    // certificado de antecedentes — y eso requiere la autorización PREVIA aceptada EN PANTALLA
+    // (Ley 1918/2018). La MISMA guarda que `decidir` (`aceptacionAntesDe`, antes de cualquier rama
+    // de la revisión). La guardia del ACTIVO lo obliga en la práctica, pero la ruta de la API lo
+    // exige acá también. Código propio AUTORIZACION_REQUERIDA (más específico que el genérico).
+    const aceptacionPrevia = await new AutorizacionProfesionalService().aceptacionAntesDe(
+        perfil.usuarioId,
+        new Date(),
+    );
+    if (!aceptacionPrevia) {
+        throw new AppError(
+            "El profesional no ha aceptado la autorización en pantalla — no se puede revisar un documento sin ella.",
+            ERROR_CODES.AUTORIZACION_REQUERIDA,
             409,
         );
     }
