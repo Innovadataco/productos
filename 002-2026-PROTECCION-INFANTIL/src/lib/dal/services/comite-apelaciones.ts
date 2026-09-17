@@ -8,13 +8,12 @@
  */
 import type { Prisma } from "@prisma/client";
 import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { diasHabilesTranscurridos, estaEnAvisoPrevio, getAvisoPrevioDias } from "@/lib/apelaciones";
 import { ApelacionStorageError, leerDocumentoDescifrado, sha256Hex } from "@/lib/apelacion-storage";
 import { darDeBajaReporte } from "@/lib/dal/services/reporte-lifecycle";
-import { descifrarCampos } from "@/lib/reporte-texto-contenido";
+import { descifrarCamposReporte } from "./descifrar-contenido";
 import { whereReporteVigente } from "@/lib/reportes-acceso";
 import { actualizarVisibilidadPublica } from "@/lib/visibility";
 import { ApelacionRepository } from "../repositories/apelacion";
@@ -79,9 +78,12 @@ export class ComiteApelacionesService {
         // El comité decide bajas: ve los reportes del identificador + plataforma.
         const reportes = await this.reportes.findPorIdentificadorYPlataforma(apelacion.identificador, apelacion.plataformaId);
         // S-C (D-116/D-117, O-2): el relato sale descifrado SOLO por este camino autorizado del
-        // comité. Batch (2 queries, fail-loud); un reporte purgado devuelve el marcador tal cual.
-        const textosReportes = await descifrarCampos(
-            this.tx ?? prisma,
+        // comité. SPEC-701 (I-421): pasa por la FRONTERA AUDITADA (`descifrarCamposReporte`), no
+        // por la primitiva cruda — el comité ve los relatos de TODOS los reportes del identificador
+        // y cada lectura DEBE dejar fila en LecturaReporte con el actor del comité (la ruta corre
+        // esto dentro de `conActor`). Batch (2 queries, fail-loud); un reporte purgado devuelve el
+        // marcador tal cual.
+        const textosReportes = await descifrarCamposReporte(
             reportes.map((r) => r.contenidoId),
             "texto"
         );

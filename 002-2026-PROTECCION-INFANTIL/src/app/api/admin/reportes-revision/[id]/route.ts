@@ -68,15 +68,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        // SPEC-592: el GET del detalle es un RENDER, no una acción de lectura —
-        // NO audita ni notifica. La auditoría queda para acciones explícitas
-        // («Revelar original», canje de código, correcciones).
+        // SPEC-701 (I-421): el detalle DEJA FILA en LecturaReporte. Antes usaba
+        // `registrarLectura:false` (SPEC-592, «el render no es una acción de lectura»)
+        // para no avisarle al padre en cada vista — pero SPEC-594 ya sacó el aviso al
+        // padre de esta frontera, así que quedaban ACOPLADOS dos asuntos distintos (el
+        // aviso y el rastro) sin razón. Los delitos contra menores no prescriben: la
+        // pregunta «¿quién del personal leyó este relato?» debe tener respuesta.
         const reporteDetalle = await conActor(actorDesdeRequest(user, request), async () => {
             const detalle = await new ReporteRepository().findDetalleRevision(id);
             if (!detalle) return null;
             // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
             // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
-            const texto = await descifrarCampoReporte(detalle.contenidoId, "texto", { registrarLectura: false });
+            const texto = await descifrarCampoReporte(detalle.contenidoId, "texto");
             // SPEC-644: enum persistido → franja de dominio (server-side, como en la
             // capa de análisis) para que el detalle muestre lo GUARDADO, no la derivada.
             const franja = detalle.franjaHoraria ? ENUM_A_FRANJA[detalle.franjaHoraria] : null;

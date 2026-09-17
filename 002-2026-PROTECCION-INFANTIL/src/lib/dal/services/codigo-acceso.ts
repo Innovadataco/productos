@@ -272,7 +272,11 @@ export async function leerExpedienteConSesion(params: {
                 // La auditoría se ata al EVENTO (no al reporte dueño del contenido): una fila
                 // por evento leído (gate SPEC-610) y sin notificar al padre por esta vía.
                 const texto = await descifrarCampoReporte(contenidoIdDeAnotacion(ev), "texto", {
-                    dueno: { eventoId: ev.id },
+                    // SPEC-701 (I-421): la fila NOMBRA el reporte además del evento —
+                    // «¿quién leyó el reporte X?» se responde sin unir por
+                    // eventoId → EventoExpediente.reporteId. Un evento MANUAL no tiene
+                    // reporteId (queda solo el eventoId).
+                    dueno: { eventoId: ev.id, ...(ev.reporteId ? { reporteId: ev.reporteId } : {}) },
                 });
                 salida.push({
                     eventoId: ev.id,
