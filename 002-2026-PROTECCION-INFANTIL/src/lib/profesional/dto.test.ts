@@ -20,6 +20,10 @@ const PERFIL_COMPLETO = {
     fotoUrl: "https://cdn/x.png",
     tituloProfesional: "Psicóloga clínica",
     especialidades: ["Ansiedad", "Familia"],
+    // SPEC-685 (PR2): listas cerradas (claves). La completitud se mide sobre éstas.
+    profesion: "psicologo",
+    areasAtencion: ["ansiedad", "duelo"],
+    rangoEtario: ["6-11"],
     ciudadId: "ciudad-1",
     atiendeVirtual: true,
     atiendePresencial: false,
@@ -44,6 +48,15 @@ describe("toPerfilProfesionalPublico · candado de reserva", () => {
         for (const clave of CAMPOS_INTERNOS_PROFESIONAL) {
             expect(publico as unknown as Record<string, unknown>, `campo interno "${clave}" se coló al DTO público`).not.toHaveProperty(clave);
         }
+    });
+
+    it("H-2 (SPEC-685 PR2): profesión/áreas/rango NO llegan al padre por el DTO público", () => {
+        // Si algún día deben llegar al directorio, se agregan a la allowlist A PROPÓSITO
+        // (con este candado actualizado). Hoy NO llegan: este candado lo prueba.
+        const publico = toPerfilProfesionalPublico(PERFIL_COMPLETO as never) as unknown as Record<string, unknown>;
+        expect(publico).not.toHaveProperty("profesion");
+        expect(publico).not.toHaveProperty("areasAtencion");
+        expect(publico).not.toHaveProperty("rangoEtario");
     });
 
     it("expone SOLO los 14 campos aprobados (allowlist explícita)", () => {
@@ -104,8 +117,23 @@ describe("perfilCompletoParaRevision · regla de transición BORRADOR→EN_REVIS
         ).toBe(false);
     });
 
-    it("sin especialidades → false", () => {
-        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never)).toBe(false);
+    // SPEC-685 (PR2): la completitud es de las LISTAS CERRADAS, no de los campos
+    // libres viejos. `especialidades: []` ya NO importa; lo que gatea es
+    // profesión + al menos un área + al menos un rango.
+    it("sin profesión → false", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, profesion: null } as never)).toBe(false);
+    });
+
+    it("sin ningún área de atención → false", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, areasAtencion: [] } as never)).toBe(false);
+    });
+
+    it("sin ningún rango de edad → false", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, rangoEtario: [] } as never)).toBe(false);
+    });
+
+    it("los campos libres viejos ya NO gatean: sin especialidades sigue completo", () => {
+        expect(perfilCompletoParaRevision({ ...PERFIL_COMPLETO, especialidades: [] } as never)).toBe(true);
     });
 
     it("tarifa 0 → false", () => {

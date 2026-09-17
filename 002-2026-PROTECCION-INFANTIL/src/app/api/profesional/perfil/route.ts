@@ -26,6 +26,7 @@ import {
     toPerfilProfesionalPropio,
 } from "@/lib/profesional/dto";
 import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
+import { validarYderivarLegado } from "@/lib/profesional/catalogos-lectura";
 
 async function requireProfesional() {
     const user = await verifyAuth();
@@ -47,6 +48,11 @@ function armarCreate(usuarioId: string, data: PerfilProfesionalUpdateInput): Pri
         fotoUrl: data.fotoUrl ?? null,
         tituloProfesional: data.tituloProfesional ?? "",
         especialidades: data.especialidades ?? [],
+        // SPEC-685 (PR2) · listas cerradas (claves). profesion nulable; arrays
+        // vacíos por defecto (mismo trato que `especialidades`).
+        profesion: data.profesion && data.profesion.length > 0 ? data.profesion : null,
+        areasAtencion: data.areasAtencion ?? [],
+        rangoEtario: data.rangoEtario ?? [],
         ciudad: { connect: { id: data.ciudadId ?? "" } },
         atiendeVirtual: data.atiendeVirtual ?? false,
         atiendePresencial: data.atiendePresencial ?? false,
@@ -69,6 +75,10 @@ function armarUpdate(data: PerfilProfesionalUpdateInput): Prisma.PerfilProfesion
     if (data.fotoUrl !== undefined) u.fotoUrl = data.fotoUrl;
     if (data.tituloProfesional !== undefined) u.tituloProfesional = data.tituloProfesional;
     if (data.especialidades !== undefined) u.especialidades = data.especialidades;
+    // SPEC-685 (PR2) · listas cerradas. "" en profesion ≡ sin elegir → null.
+    if (data.profesion !== undefined) u.profesion = data.profesion.length > 0 ? data.profesion : null;
+    if (data.areasAtencion !== undefined) u.areasAtencion = data.areasAtencion;
+    if (data.rangoEtario !== undefined) u.rangoEtario = data.rangoEtario;
     if (data.ciudadId !== undefined) u.ciudad = { connect: { id: data.ciudadId } };
     if (data.atiendeVirtual !== undefined) u.atiendeVirtual = data.atiendeVirtual;
     if (data.atiendePresencial !== undefined) u.atiendePresencial = data.atiendePresencial;
@@ -118,11 +128,29 @@ export async function PUT(request: Request) {
             }
         }
 
+        // SPEC-685 (PR2): las tres listas son CERRADAS. No basta el `<select>` del
+        // cliente —un gate contra un valor del cliente falla abierto—: la ruta
+        // rechaza cualquier clave fuera del catálogo vivo (parámetro editable) y,
+        // de paso, DERIVA las etiquetas para las columnas legado.
+        const resol = await validarYderivarLegado(parsed.data);
+        if (resol.error) {
+            return NextResponse.json(
+                { error: { message: resol.error, code: ERROR_CODES.VALIDATION_ERROR } },
+                { status: 400 },
+            );
+        }
+        // Expandir-contraer sin huecos: mientras `tituloProfesional`/`especialidades`
+        // sigan NOT NULL y con lectores, se escriben DESDE las claves nuevas (etiquetas
+        // del catálogo) — nunca cadena vacía ni centinela. Los borra el PR4.
+        const data: PerfilProfesionalUpdateInput = { ...parsed.data };
+        if (resol.tituloProfesional !== undefined) data.tituloProfesional = resol.tituloProfesional;
+        if (resol.especialidades !== undefined) data.especialidades = resol.especialidades;
+
         const repo = new PerfilProfesionalRepository();
         const existente = await repo.findPorUsuarioId(user.id);
 
         if (!existente) {
-            const creado = await repo.crearBorrador(armarCreate(user.id, parsed.data));
+            const creado = await repo.crearBorrador(armarCreate(user.id, data));
             // El 1er PUT no puede completar (sin autorización).
             return NextResponse.json({ perfil: toPerfilProfesionalPropio(creado) }, { status: 201 });
         }
@@ -136,7 +164,7 @@ export async function PUT(request: Request) {
             atiendePresencial: parsed.data.atiendePresencial ?? existente.atiendePresencial,
         });
 
-        const actualizado = await repo.actualizarParcial(existente.id, armarUpdate(parsed.data));
+        const actualizado = await repo.actualizarParcial(existente.id, armarUpdate(data));
 
         // Transición BORRADOR → EN_REVISION cuando quedó completo. Otros estados
         // (ACTIVO, RECHAZADO, VENCIDO, SUSPENDIDO) los mueve L2, no un PUT del
