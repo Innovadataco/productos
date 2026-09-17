@@ -44,6 +44,11 @@ const RUTAS_REGISTRO: Record<string, string> = {
     "documentos/[clave]/route.ts": "Descargar un documento propio.",
     "verificacion/route.ts": "Consultar el estado de la propia verificación.",
     "verificacion/reenviar/route.ts": "Reenviar a revisión tras corregir (reintento del ciclo).",
+    // SPEC-685 PR2 (#633): taxonomía de producto (profesión/áreas/rango) para el
+    // <select> de la ficha. `verifyAuth()` sin rol; la usa la ficha del profesional
+    // (que un BORRADOR debe poder llenar) y el filtro del directorio del padre. No
+    // es superficie operativa ni dato reservado → no gatea.
+    "catalogos/route.ts": "Catálogos cerrados de la ficha (taxonomía); solo exige sesión, la usa la ficha y el directorio.",
 };
 
 /** Las 6 rutas operativas conocidas — control positivo explícito del alcance. */
