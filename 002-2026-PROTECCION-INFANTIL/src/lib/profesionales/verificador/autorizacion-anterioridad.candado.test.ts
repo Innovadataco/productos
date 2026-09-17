@@ -151,3 +151,61 @@ describe("SPEC-686 · C · aceptar guarda QUÉ texto exacto se aceptó (versión
         expect(await prisma.aceptacionAutorizacionProfesional.count({ where: { usuarioId: u.id } })).toBe(1);
     });
 });
+
+describe("SPEC-686 · D · CHECK XOR: toda verificación con EXACTAMENTE una prueba de autorización", () => {
+    beforeEach(async () => resetDatabase());
+    afterAll(async () => prisma.$disconnect());
+
+    async function base() {
+        const cid = await ciudadId();
+        const prof = await crearUsuario("PROFESIONAL", `d.${Date.now()}.${Math.random()}@e.local`);
+        const admin = await crearUsuario("ADMIN", `da.${Date.now()}.${Math.random()}@e.local`);
+        const perfil = await prisma.perfilProfesional.create({
+            data: {
+                usuarioId: prof.id, nombreVisible: "P", tituloProfesional: "T", especialidades: ["infantil"],
+                ciudadId: cid, aniosExperiencia: 1, presentacion: "x", tarifaConsultaCOP: 1, duracionMinutos: 45,
+                atiendeVirtual: true, estado: "ACTIVO",
+            },
+        });
+        const aceptacion = await prisma.aceptacionAutorizacionProfesional.create({
+            data: { usuarioId: prof.id, version: "v0.1", documentoHash: "h", ip: "1.1.1.1" },
+        });
+        return { perfil, admin, aceptacion };
+    }
+    const verif = (extra: Record<string, unknown>) => ({
+        perfilProfesionalId: "", revisadoPorId: "", checklist: {}, resultado: "APROBADO" as const,
+        venceEn: new Date(Date.now() + 86_400_000), ...extra,
+    });
+
+    it("ninguna vía (ambas null) → rechazado por el CHECK", async () => {
+        const { perfil, admin } = await base();
+        await expect(
+            prisma.verificacionProfesional.create({
+                data: verif({ perfilProfesionalId: perfil.id, revisadoPorId: admin.id, autorizacionArchivoId: null, aceptacionAutorizacionId: null }),
+            }),
+        ).rejects.toThrow();
+    });
+
+    it("las dos vías a la vez → rechazado por el CHECK", async () => {
+        const { perfil, admin, aceptacion } = await base();
+        await expect(
+            prisma.verificacionProfesional.create({
+                data: verif({ perfilProfesionalId: perfil.id, revisadoPorId: admin.id, autorizacionArchivoId: "/x.pdf", aceptacionAutorizacionId: aceptacion.id }),
+            }),
+        ).rejects.toThrow();
+    });
+
+    it("exactamente una (solo aceptación, o solo archivo) → permitido", async () => {
+        const { perfil, admin, aceptacion } = await base();
+        await expect(
+            prisma.verificacionProfesional.create({
+                data: verif({ perfilProfesionalId: perfil.id, revisadoPorId: admin.id, aceptacionAutorizacionId: aceptacion.id }),
+            }),
+        ).resolves.toBeTruthy();
+        await expect(
+            prisma.verificacionProfesional.create({
+                data: verif({ perfilProfesionalId: perfil.id, revisadoPorId: admin.id, autorizacionArchivoId: "/x.pdf" }),
+            }),
+        ).resolves.toBeTruthy();
+    });
+});

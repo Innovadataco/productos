@@ -3920,8 +3920,9 @@ model VerificacionProfesional {
   resultado              ResultadoVerificacion
   // LEGACY (pre SPEC-686): ruta a la autorización firmada en archivo. Ahora NULLABLE:
   // las verificaciones nuevas apuntan a la ACEPTACIÓN en pantalla (`aceptacionAutorizacionId`),
-  // no a un archivo. Las filas viejas conservan su id de archivo. Exactamente una de las dos
-  // vías respalda cada verificación; el servicio lo garantiza (candado de anterioridad).
+  // no a un archivo. Las filas viejas conservan su id de archivo. EXACTAMENTE una de las dos
+  // vías respalda cada verificación — invariante ESTRUCTURAL: un CHECK XOR en la migración
+  // (`num_nonnulls(...) = 1`, recomendación D-121 de Datos; Prisma no lo expresa en el DSL).
   autorizacionArchivoId  String?
   // SPEC-686 (I-420): la aceptación en pantalla que respaldaba la autorización al momento de
   // revisar. La anterioridad (`aceptadoEn <= revisadoEn`) prueba que la autorización fue PREVIA

@@ -387,9 +387,11 @@ export async function decidir(
             revisadoEn,
             checklist: entrada.checklist as unknown as Prisma.InputJsonValue,
             resultado,
-            // SPEC-686: se registra la vía que respaldó la revisión — la aceptación previa
-            // (mecanismo nuevo) y/o el archivo legacy. Una de las dos existe (guarda de arriba).
-            autorizacionArchivoId: perfil.autorizacionArchivoId,
+            // SPEC-686: se registra EXACTAMENTE UNA vía de autorización (CHECK XOR en BD,
+            // recomendación D-121 de Datos): se prefiere la ACEPTACIÓN en pantalla (mecanismo
+            // nuevo); si el profesional no aceptó pero tiene archivo legacy, ese. La guarda de
+            // arriba garantiza que al menos una existe, así que nunca quedan las dos en null.
+            autorizacionArchivoId: aceptacionPrevia ? null : perfil.autorizacionArchivoId,
             aceptacionAutorizacionId: aceptacionPrevia?.id ?? null,
             venceEn,
             notaInterna,

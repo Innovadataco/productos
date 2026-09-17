@@ -52,3 +52,14 @@ ALTER TABLE "VerificacionProfesional"
     ADD CONSTRAINT "VerificacionProfesional_aceptacionAutorizacionId_fkey"
     FOREIGN KEY ("aceptacionAutorizacionId") REFERENCES "aceptaciones_autorizacion_profesional"("id")
     ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- 6) CHECK XOR (recomendación D-121 de Datos): toda verificación se respalda por EXACTAMENTE
+--    UNA vía de autorización — la ACEPTACIÓN en pantalla O el archivo legacy, nunca ambas ni
+--    ninguna. Vuelve ESTRUCTURAL el invariante legal (Ley 2375/2024: autorización previa,
+--    expresa, escrita): un candado de servicio lo puede saltar un callsite nuevo; el CHECK no.
+--    NOT VALID (precedente SPEC-673): enforcea filas NUEVAS o modificadas; las filas pre-686
+--    tienen solo el archivo (num_nonnulls = 1), así que un VALIDATE futuro también pasaría.
+--    Prisma ignora los CHECK → sin drift (I-420) y el centinela de Datos no lo flaggea.
+ALTER TABLE "VerificacionProfesional"
+    ADD CONSTRAINT "VerificacionProfesional_una_autorizacion_check"
+    CHECK (num_nonnulls("autorizacionArchivoId", "aceptacionAutorizacionId") = 1) NOT VALID;
