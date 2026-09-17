@@ -3723,6 +3723,15 @@ model PerfilProfesional {
   // `String[]` en Postgres se guarda como text[] — L3 filtra por especialidad
   // con `has` de Prisma sin necesitar una tabla puente.
   especialidades           String[]
+  // SPEC-685 · listas cerradas (REPORTE-061), sembradas como PARÁMETRO editable por el
+  // admin sin tocar código. `profesion` reemplaza a `tituloProfesional`; `areasAtencion`
+  // a `especialidades`; `rangoEtario` es nuevo (MÚLTIPLE — un profesional atiende varias
+  // bandas; vacío = «sin especificar», que NO gatea visibilidad, REPORTE-061 addendum).
+  // Fase ADD: conviven con las viejas hasta el PR de DROP (split ADD/DROP · I-… ). La API
+  // valida contra el catálogo (PR2), no basta el <select>.
+  profesion                String?
+  areasAtencion            String[]
+  rangoEtario              String[]
   ciudadId                 String
   // SPEC-673 (I-398) · Invariante ESTADO↔modalidad como CHECK en la BD (Prisma no modela
   // CHECK): estado≠BORRADOR ⟹ atiendeVirtual OR atiendePresencial. Respaldo de fondo del

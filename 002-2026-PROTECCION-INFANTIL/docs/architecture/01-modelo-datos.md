@@ -1370,6 +1370,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | fotoUrl | String | opcional |
 | tituloProfesional | String | — |
 | especialidades | String | lista |
+| profesion | String | opcional |
+| areasAtencion | String | lista |
+| rangoEtario | String | lista |
 | ciudadId | String | — |
 | atiendeVirtual | Boolean | — |
 | atiendePresencial | Boolean | — |
