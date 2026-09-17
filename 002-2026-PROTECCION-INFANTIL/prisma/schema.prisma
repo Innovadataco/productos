@@ -2119,8 +2119,12 @@ model LecturaReporte {
   userAgent      String?
   creadoEn       DateTime @default(now()) @db.Timestamptz(6)
 
-  reporte  Reporte?              @relation(fields: [reporteId], references: [id], onDelete: Cascade)
-  evento   EventoExpediente?     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  // SPEC-701 (I-421) · conservación 20 años: borrar el Reporte o el EventoExpediente
+  // NO borra el rastro de quién leyó el relato. La fila sobrevive con `contenidoId` +
+  // `hashContenido` (ambos NOT NULL) — el rastro es por hash del contenido, no por el
+  // vínculo al padre. Alinea con `usuario`/`codigo`, que ya son SetNull. (D-121 de Datos.)
+  reporte  Reporte?              @relation(fields: [reporteId], references: [id], onDelete: SetNull)
+  evento   EventoExpediente?     @relation(fields: [eventoId], references: [id], onDelete: SetNull)
   usuario  Usuario?              @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   codigo   CodigoAccesoContenido? @relation(fields: [codigoAccesoId], references: [id], onDelete: SetNull)
 

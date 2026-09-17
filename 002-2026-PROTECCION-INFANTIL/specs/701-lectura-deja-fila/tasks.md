@@ -10,7 +10,7 @@
 - [x] T5 · Corregir el test SPEC-592 «ni audita ni notifica» → audita (1 fila), NO notifica. + aserción del `reporteId` del pase.
 
 ## Datos (D-121)
-- [ ] T6 · Parte 3 · `LecturaReporte.reporte`/`evento` FK `Cascade → SetNull`. Migración a mano. **Coordinado con Datos ANTES del PR** («esquema a Datos primero»).
+- [x] T6 · Parte 3 · `LecturaReporte.reporte`/`evento` FK `Cascade → SetNull` (Datos pre-aprobó el diseño; lo escribo yo en esta rama, Datos hace la D-121 final). Migración a mano `20260917073857_spec701_lecturareporte_fk_setnull` (puro swap de constraint, sin DROP INDEX; pasa el candado no-drift-destructivo). Candado de conservación `lectura-reporte-conservacion.candado.test.ts` (borrar Reporte/Evento → la fila sobrevive con reporteId/eventoId=null y contenidoId/hash intactos). Barrido de lectores: `historialPorReporte` filtra por reporteId (seguro con SetNull); nadie asume no-null.
 
 ## Cierre
 - [ ] T7 · Preflight (tsc · lint · arch:check · specs-discipline). PR verde. Reportar al CEO. Calidad camina el recorrido.
