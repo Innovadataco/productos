@@ -68,6 +68,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword, verifyPassword } from "../src/lib/auth";
 import { calcularVenceEn } from "../src/lib/profesionales/vigencia";
+import { derivarPerfilCatalogoSeed, CLAVES_SEED_E2E_ESTADO } from "./lib/perfil-catalogo-seed";
 import { EMAIL_INTOCABLE, leerCredencialesE2E, type CredencialCuenta } from "./lib/credenciales-e2e-calidad";
 import { marcar } from "./demo/_marcado";
 
@@ -223,6 +224,11 @@ export async function sembrarProfesionalesPorEstado(
     });
     await marcar(tx, "Usuario", [revisor.id], { corrida: CORRIDA_SPEC690, script: SCRIPT, notas: "verificador demo (firmante, sin acceso)" });
 
+    // SPEC-685: claves del catálogo + etiquetas legado (misma derivación que la API). Se resuelve
+    // una vez y CONVERGE en cada perfil (create y update) — así una re-corrida rellena los perfiles
+    // ya sembrados que quedaron con las columnas nuevas vacías. Valores estables → sin churn.
+    const catalogo = await derivarPerfilCatalogoSeed(CLAVES_SEED_E2E_ESTADO);
+
     const fixtures: ResultadoProfesionalEstado[] = [];
 
     for (const plan of PLAN) {
@@ -254,8 +260,7 @@ export async function sembrarProfesionalesPorEstado(
             create: {
                 usuarioId: usuario.id,
                 nombreVisible: nombre,
-                tituloProfesional: "Psicólogo (E2E)",
-                especialidades: ["Psicología infantil"],
+                ...catalogo,
                 ciudadId,
                 aniosExperiencia: 5,
                 presentacion: `Cuenta de prueba de Calidad (E2E · compuerta SPEC-690, estado ${plan.estado}). No atender consultas reales.`,
@@ -263,7 +268,7 @@ export async function sembrarProfesionalesPorEstado(
                 duracionMinutos: 50,
                 ...camposEstado,
             },
-            update: camposEstado,
+            update: { ...camposEstado, ...catalogo },
             select: { id: true },
         });
 
