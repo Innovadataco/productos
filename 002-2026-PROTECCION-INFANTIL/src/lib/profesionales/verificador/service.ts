@@ -31,6 +31,7 @@ import { VerificadorRepository } from "@/lib/dal/repositories/verificador-reposi
 import { leerRequisitosVerificacion, type ItemChecklist, type RequisitoVerificacion } from "./requisitos";
 import { DocumentoProfesionalRepository } from "@/lib/dal/repositories/documento-profesional";
 import { estadoDeDocumentos, type EstadoDocumento } from "@/lib/profesional/documentos.service";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Schemas de entrada (validación en el borde)
@@ -284,9 +285,18 @@ export async function decidir(
             409,
         );
     }
-    if (!perfil.autorizacionArchivoId) {
+    // SPEC-686 (I-420): la revisión necesita una autorización PREVIA. Acepta la ACEPTACIÓN en
+    // pantalla (mecanismo nuevo) o el archivo firmado (legacy, filas pre-686). Sin ninguna, no
+    // se decide — «una verificación no puede quedar revisada sin autorización con fecha anterior»
+    // (candado de anterioridad). La aceptación se busca con fecha <= ahora, así que la que se
+    // registre en la verificación SIEMPRE es previa a `revisadoEn`.
+    const aceptacionPrevia = await new AutorizacionProfesionalService().aceptacionAntesDe(
+        perfil.usuarioId,
+        new Date(),
+    );
+    if (!aceptacionPrevia && !perfil.autorizacionArchivoId) {
         throw new AppError(
-            "El profesional aún no subió la autorización firmada — no se puede decidir sin ella.",
+            "El profesional no tiene una autorización previa (aceptada en pantalla ni archivo firmado) — no se puede decidir sin ella.",
             ERROR_CODES.VALIDATION_ERROR,
             409,
         );
@@ -377,7 +387,10 @@ export async function decidir(
             revisadoEn,
             checklist: entrada.checklist as unknown as Prisma.InputJsonValue,
             resultado,
-            autorizacionArchivoId: perfil.autorizacionArchivoId!,
+            // SPEC-686: se registra la vía que respaldó la revisión — la aceptación previa
+            // (mecanismo nuevo) y/o el archivo legacy. Una de las dos existe (guarda de arriba).
+            autorizacionArchivoId: perfil.autorizacionArchivoId,
+            aceptacionAutorizacionId: aceptacionPrevia?.id ?? null,
             venceEn,
             notaInterna,
         });

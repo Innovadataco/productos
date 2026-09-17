@@ -317,6 +317,40 @@ async function seedConsentimiento() {
     console.log("[SEED] Evento consentimiento.aceptado (SPEC-241) listo");
 }
 
+// SPEC-686 (I-420): parámetros de la AUTORIZACIÓN del profesional (aceptación en pantalla).
+// Versionado por parámetro: el texto vive en public/legal/ y cambiar de versión NO requiere
+// migración (solo un archivo nuevo + subir la versión). Idempotente (upsert).
+async function seedAutorizacionProfesional() {
+    const parametros = [
+        {
+            clave: "autorizacion_profesional.version_actual",
+            valor: "v0.1",
+            descripcion: "Versión vigente de la autorización del profesional (SPEC-686)",
+        },
+        {
+            clave: "autorizacion_profesional.documento_ruta",
+            valor: "public/legal/AUTORIZACION-PROFESIONAL-v0.1.md",
+            descripcion: "Ruta del texto legal de la autorización del profesional (SPEC-686)",
+        },
+    ];
+    for (const p of parametros) {
+        await prisma.parametroSistema.upsert({
+            where: { clave: p.clave },
+            update: { valor: p.valor, tipo: TipoParametro.STRING, categoria: CategoriaParametro.LEGAL, descripcion: p.descripcion },
+            create: {
+                clave: p.clave,
+                valor: p.valor,
+                tipo: TipoParametro.STRING,
+                categoria: CategoriaParametro.LEGAL,
+                esPublico: false,
+                esSecreto: false,
+                descripcion: p.descripcion,
+            },
+        });
+    }
+    console.log("[SEED] Parámetros de autorización del profesional (SPEC-686) listos");
+}
+
 // ── SPEC-236 (002-PI-mega-cola): parámetros del motor de expediente + 11 eventos
 // y plantillas de Motor Notif. Idempotente (patrón I-100 de SPEC-201: upsert con
 // update explícito para propagar cambios de default definidos en código).
@@ -4290,6 +4324,9 @@ async function main() {
 
     // ── Parámetros y evento de consentimiento informado (SPEC-241) ─────────
     await seedConsentimiento();
+
+    // ── Parámetros de la autorización del profesional (SPEC-686) ───────────
+    await seedAutorizacionProfesional();
 
     // ── Parámetros de señal comunitaria (SPEC-234) ─────────────────────────
     await seedParametrosSenalComunitaria();

@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **118** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **119** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,22 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (70)
+### Otros (sin regla de dominio) (71)
+
+#### `AceptacionAutorizacionProfesional`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| usuarioId | String | — |
+| version | String | — |
+| documentoHash | String | — |
+| aceptadoEn | DateTime | — |
+| ip | String | — |
+| userAgent | String | opcional |
+| creadoEn | DateTime | — |
+| usuario | Usuario | relación |
+| verificaciones | VerificacionProfesional | lista, relación |
 
 #### `AclaracionExpediente`
 
@@ -1717,7 +1732,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | revisadoEn | DateTime | — |
 | checklist | Json | — |
 | resultado | ResultadoVerificacion | — |
-| autorizacionArchivoId | String | — |
+| autorizacionArchivoId | String | opcional |
+| aceptacionAutorizacionId | String | opcional |
 | venceEn | DateTime | — |
 | creadoEn | DateTime | — |
 | avisoVencimientoEnviadoEn | DateTime | opcional |
@@ -1725,6 +1741,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | perfilProfesional | PerfilProfesional | relación (FK) |
 | revisadoPor | Usuario | relación |
 | documentosRevisados | VerificacionDocumento | lista, relación |
+| aceptacionAutorizacion | AceptacionAutorizacionProfesional | opcional, relación (FK) |
 
 #### `WorkerLog`
 
@@ -2293,6 +2310,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | perfilProfesional | PerfilProfesional | opcional, relación |
 | verificacionesProfesionalRevisadas | VerificacionProfesional | lista, relación |
 | revisionesRenovacionHechas | RevisionRenovacion | lista, relación |
+| aceptacionesAutorizacionProfesional | AceptacionAutorizacionProfesional | lista, relación |
 | solicitudesCitaComoPadre | SolicitudCita | lista, relación |
 
 ## Diagrama ER (Mermaid)
@@ -2301,6 +2319,7 @@ Derivado de las FK (`@relation(fields: ...)`); cardinalidad 1:1 si la FK es úni
 
 ```mermaid
 erDiagram
+    AceptacionAutorizacionProfesional ||--o{ VerificacionProfesional : "aceptacionAutorizacion (opcional)"
     AcudienteEstudiante ||--o{ IdentificadorAcudiente : "acudiente"
     AlertaColegio ||--o{ SeguimientoCaso : "alerta"
     AlertaColegio ||--o{ SolicitudComite : "alerta (opcional)"

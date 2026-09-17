@@ -157,7 +157,10 @@ export class VerificadorRepository {
             revisadoEn: Date;
             checklist: Prisma.InputJsonValue;
             resultado: ResultadoVerificacion;
-            autorizacionArchivoId: string;
+            // SPEC-686: la autorización que respaldó la revisión — el archivo LEGACY o la
+            // ACEPTACIÓN en pantalla. Al menos una; el service exige anterioridad de la aceptación.
+            autorizacionArchivoId: string | null;
+            aceptacionAutorizacionId: string | null;
             venceEn: Date;
             notaInterna: string;
         },
@@ -172,6 +175,7 @@ export class VerificadorRepository {
                 checklist: params.checklist,
                 resultado: params.resultado,
                 autorizacionArchivoId: params.autorizacionArchivoId,
+                aceptacionAutorizacionId: params.aceptacionAutorizacionId,
                 venceEn: params.venceEn,
                 notaInterna: params.notaInterna,
             },
