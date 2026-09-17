@@ -1,0 +1,56 @@
+/**
+ * SPEC-686 (I-420) · Página de ACEPTACIÓN de la autorización del profesional.
+ *
+ * Server Component: carga el texto legal versionado + la versión vigente y decide.
+ *  · Ya aceptó la versión vigente y NO viene a releer → vuelve a su área (nada que hacer).
+ *  · `?releer=1` con la versión ya aceptada → SOLO LECTURA (derecho a releer, legal §8).
+ *  · No aceptó la versión vigente → pantalla de aceptación (con aviso de re-aceptación si ya
+ *    había aceptado una versión anterior — cambio DE FONDO, o «Leer y aceptar» de un MENOR).
+ * El registro y el enlace «Leer la autorización» en reposo viven en Mi perfil (forma hermana).
+ */
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
+import { AceptacionAutorizacion } from "@/components/modules/profesional/AceptacionAutorizacion";
+
+export const dynamic = "force-dynamic";
+
+const DESTINO_PROFESIONAL = "/dashboard/profesional/mi-perfil";
+
+export default async function AutorizacionProfesionalPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ releer?: string }>;
+}) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
+    if (!token) redirect("/login");
+
+    const payload = await verifyToken(token);
+    const userId = payload?.sub as string | undefined;
+    if (!userId) redirect("/login");
+
+    const { releer } = await searchParams;
+    const servicio = new AutorizacionProfesionalService();
+    const [version, ultima] = await Promise.all([
+        servicio.versionVigente(),
+        servicio.aceptacionVigente(userId),
+    ]);
+    const yaAceptoVigente = ultima?.version === version;
+
+    // Ya aceptó la versión vigente y no viene a releer: no hay nada que aceptar acá.
+    if (yaAceptoVigente && !releer) redirect(DESTINO_PROFESIONAL);
+
+    const documentoContenido = await servicio.obtenerDocumentoVigente();
+
+    return (
+        <AceptacionAutorizacion
+            version={version}
+            documentoContenido={documentoContenido}
+            redirectUrl={DESTINO_PROFESIONAL}
+            {...(yaAceptoVigente ? { soloLectura: true } : {})}
+            {...(!yaAceptoVigente && ultima ? { avisoReAceptacion: true } : {})}
+        />
+    );
+}

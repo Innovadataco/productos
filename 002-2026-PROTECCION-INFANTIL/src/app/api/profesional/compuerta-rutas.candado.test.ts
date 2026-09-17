@@ -40,6 +40,7 @@ const LLAMADA = /exigirProfesionalHabilitadoApi\s*\(/;
 const RUTAS_REGISTRO: Record<string, string> = {
     "perfil/route.ts": "Crear/editar el propio perfil (BORRADOR → EN_REVISION).",
     "autorizacion/route.ts": "Subir la autorización firmada (transiciona a EN_REVISION).",
+    "autorizacion/aceptar/route.ts": "Aceptar la autorización EN PANTALLA (SPEC-686); paso PREVIO a la habilitación — el profesional acepta antes de ser verificado/habilitado.",
     "documentos/route.ts": "Cargar/listar los propios documentos de verificación.",
     "documentos/[clave]/route.ts": "Descargar un documento propio.",
     "verificacion/route.ts": "Consultar el estado de la propia verificación.",

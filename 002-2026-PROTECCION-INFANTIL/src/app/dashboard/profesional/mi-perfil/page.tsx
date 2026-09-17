@@ -22,6 +22,7 @@ import { leerCatalogosFicha } from "@/lib/profesional/catalogos-lectura";
 import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
 import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
 import { verificacionParaProfesional } from "@/lib/profesionales/verificador/vista-profesional";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 import { MiPerfilProfesionalClient } from "@/components/modules/profesional/MiPerfilProfesionalClient";
 
 export const dynamic = "force-dynamic";
@@ -34,14 +35,26 @@ export default async function MiPerfilProfesionalPage() {
     // Defensivo: un habilitado siempre tiene perfil; si no, a completarlo.
     if (!perfil) redirect("/perfil-profesional/completar");
 
-    const [catalogos, vista, precioEstandar, pct] = await Promise.all([
+    const servicioAut = new AutorizacionProfesionalService();
+    const [catalogos, vista, precioEstandar, pct, aceptacion, versionAut] = await Promise.all([
         leerCatalogosFicha(),
         verificacionParaProfesional(user.id),
         // Los readers TIRAN si el parámetro falta; acá NO tumbamos la pantalla:
         // se pasa null y el aviso va sin número (nunca una cifra inventada).
         leerPrecioEstandarPrimeraCita().catch(() => null),
         obtenerPorcentajeServicio().catch(() => null),
+        // SPEC-686: el registro de la autorización aceptada (versión + fecha) para «Mi perfil».
+        servicioAut.aceptacionVigente(user.id),
+        servicioAut.versionVigente().catch(() => null),
     ]);
+
+    // Un habilitado que pasó la guardia ya aceptó la versión vigente si es DE FONDO; si la
+    // vigente es MENOR y aceptó una anterior, aquí se muestra el aviso suave.
+    const autorizacion = {
+        version: aceptacion?.version ?? null,
+        aceptadaEn: aceptacion?.aceptadoEn.toISOString() ?? null,
+        hayActualizacionMenor: aceptacion != null && versionAut != null && aceptacion.version !== versionAut,
+    };
 
     return (
         <MiPerfilProfesionalClient
@@ -49,6 +62,7 @@ export default async function MiPerfilProfesionalPage() {
             rangoCatalogo={catalogos.rangoEtario}
             aviso={{ precioEstandar, pct }}
             vista={vista}
+            autorizacion={autorizacion}
         />
     );
 }

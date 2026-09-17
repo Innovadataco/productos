@@ -22,14 +22,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const { redirectMock, verifyAuthMock, habMock } = vi.hoisted(() => ({
+const { redirectMock, verifyAuthMock, habMock, necesitaAceptarMock } = vi.hoisted(() => ({
     redirectMock: vi.fn(),
     verifyAuthMock: vi.fn(),
     habMock: vi.fn(),
+    necesitaAceptarMock: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("@/lib/auth", () => ({ verifyAuth: verifyAuthMock }));
 vi.mock("./habilitacion", () => ({ obtenerHabilitacionProfesional: habMock }));
+// SPEC-686: la guardia también lleva a (re)aceptar la autorización DE FONDO.
+vi.mock("@/lib/dal/services/autorizacion-profesional", () => ({
+    AutorizacionProfesionalService: class {
+        necesitaAceptar = necesitaAceptarMock;
+    },
+}));
 
 import { exigirProfesionalHabilitado } from "./guardia-habilitado";
 
@@ -55,6 +62,8 @@ describe("SPEC-691 · toda página operativa del profesional pasa por la compuer
         habMock.mockReset();
         verifyAuthMock.mockReset();
         verifyAuthMock.mockResolvedValue({ id: "u1", rol: "PROFESIONAL" });
+        necesitaAceptarMock.mockReset();
+        necesitaAceptarMock.mockResolvedValue(false);
     });
 
     it("CONTROL POSITIVO · el barrido encuentra las páginas operativas conocidas", () => {
@@ -87,6 +96,15 @@ describe("SPEC-691 · toda página operativa del profesional pasa por la compuer
         const r = await exigirProfesionalHabilitado();
         expect(redirectMock).not.toHaveBeenCalled();
         expect(r.hab?.habilitado).toBe(true);
+    });
+
+    it("SPEC-686 · habilitado pero debe (re)aceptar la autorización DE FONDO → a la pantalla de aceptación", async () => {
+        // Punto 4 del cutover: el ACTIVO con archivo acepta v0.1 en su ingreso, por la MISMA
+        // compuerta (no un redirect aparte). No toca estado ni vigencia.
+        habMock.mockResolvedValue({ estado: "ACTIVO", habilitado: true });
+        necesitaAceptarMock.mockResolvedValue(true);
+        await exigirProfesionalHabilitado();
+        expect(redirectMock).toHaveBeenCalledWith("/perfil-profesional/autorizacion");
     });
 
     it("no habilitado → redirige al portero por estado (nunca al Inicio operativo)", async () => {

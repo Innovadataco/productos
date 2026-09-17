@@ -31,6 +31,7 @@ import { VerificadorRepository } from "@/lib/dal/repositories/verificador-reposi
 import { leerRequisitosVerificacion, type ItemChecklist, type RequisitoVerificacion } from "./requisitos";
 import { DocumentoProfesionalRepository } from "@/lib/dal/repositories/documento-profesional";
 import { estadoDeDocumentos, type EstadoDocumento } from "@/lib/profesional/documentos.service";
+import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Schemas de entrada (validación en el borde)
@@ -314,9 +315,20 @@ export async function decidir(
             409,
         );
     }
-    if (!perfil.autorizacionArchivoId) {
+    // SPEC-686 (I-420) · CUTOVER (veredicto CEO 17-09): toda decisión NUEVA exige la ACEPTACIÓN
+    // EN PANTALLA — el archivo firmado queda solo como HISTORIA (las verificaciones pre-686 con
+    // archivo siguen válidas, no se tocan; pero una revisión nueva no se respalda ya en el
+    // archivo). Los ACTIVOS con archivo aceptan v0.1 en su próximo ingreso (guard de
+    // re-aceptación), así que para cuando vuelvan a ser revisados ya tienen aceptación. La
+    // aceptación se busca con fecha <= ahora → la que se registra es SIEMPRE previa a `revisadoEn`
+    // (candado de anterioridad, Ley 1918/2018 · Decreto 753/2019).
+    const aceptacionPrevia = await new AutorizacionProfesionalService().aceptacionAntesDe(
+        perfil.usuarioId,
+        new Date(),
+    );
+    if (!aceptacionPrevia) {
         throw new AppError(
-            "El profesional aún no subió la autorización firmada — no se puede decidir sin ella.",
+            "El profesional no ha aceptado la autorización en pantalla — no se puede decidir sin ella.",
             ERROR_CODES.VALIDATION_ERROR,
             409,
         );
@@ -407,7 +419,11 @@ export async function decidir(
             revisadoEn,
             checklist: entrada.checklist as unknown as Prisma.InputJsonValue,
             resultado,
-            autorizacionArchivoId: perfil.autorizacionArchivoId!,
+            // SPEC-686 · CUTOVER: toda decisión nueva se respalda en la ACEPTACIÓN en pantalla
+            // (la guarda de arriba garantiza que existe). El archivo NO se registra en filas
+            // nuevas — es historia. EXACTAMENTE una vía (CHECK XOR en BD, D-121 de Datos).
+            autorizacionArchivoId: null,
+            aceptacionAutorizacionId: aceptacionPrevia.id,
             venceEn,
             notaInterna,
         });
