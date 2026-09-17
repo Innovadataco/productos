@@ -16,6 +16,7 @@ import type {
 } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
+import { whereExcluirPerfilesSembrados } from "../demo-exclusion";
 
 const INCLUDE_COLA = {
     usuario: { select: { email: true } },
@@ -43,10 +44,14 @@ export class VerificadorRepository {
         this.db = tx ?? prisma;
     }
 
-    /** Cola de perfiles en revisión, más viejos primero (más esperan, más urgen). */
-    listarPerfilesEnRevision() {
+    /**
+     * Cola de perfiles en revisión, más viejos primero (más esperan, más urgen).
+     * I-419: EXCLUYE los perfiles SEMBRADOS (demo) — el visor es un verificador real y un
+     * profesional de prueba no es una solicitud real. Mismo predicado que SPEC-655.
+     */
+    async listarPerfilesEnRevision() {
         return this.db.perfilProfesional.findMany({
-            where: { estado: "EN_REVISION" },
+            where: { estado: "EN_REVISION", ...(await whereExcluirPerfilesSembrados(this.db)) },
             orderBy: { actualizadoEn: "asc" },
             include: INCLUDE_COLA,
         });
@@ -200,11 +205,13 @@ export class VerificadorRepository {
      * documentos ACTUALES (vigente + pendiente) para pintarlos lado a lado, y la última
      * verificación APROBADA para `venceEn` (la franja ámbar de ≤30 días la calcula la vista).
      */
-    listarRenovacionesPendientes() {
+    async listarRenovacionesPendientes() {
         return this.db.perfilProfesional.findMany({
             where: {
                 estado: "ACTIVO",
                 documentos: { some: { estado: "EN_REVISION" } },
+                // I-419: fuera los sembrados (mismo predicado que la cola de solicitudes).
+                ...(await whereExcluirPerfilesSembrados(this.db)),
             },
             orderBy: { actualizadoEn: "asc" },
             include: {
