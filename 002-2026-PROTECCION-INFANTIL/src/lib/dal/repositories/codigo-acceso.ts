@@ -28,6 +28,9 @@ const EXPEDIENTE_PARA_LECTURA = {
             id: true,
             contenidoId: true,
             reporteId: true,
+            // SPEC-699 (I-424): el relato de una anotación de origen reporte vive en el sobre
+            // del REPORTE, no en el propio (vacío). Se trae para resolverlo con `contenidoIdDeAnotacion`.
+            reporte: { select: { contenidoId: true } },
             fechaEvento: true,
             categoriaDetectada: true,
             confianzaClasificacion: true,

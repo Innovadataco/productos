@@ -4,6 +4,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { descifrarCampos } from "@/lib/reporte-texto-contenido";
+import { contenidoIdDeAnotacion } from "@/lib/dal/anotacion-texto";
 import { whereReportesCirculo } from "@/lib/dal/services/circulo-confianza/estado";
 import type { DatosReporte } from "@/lib/dal/services/circulo-confianza/tipos";
 
@@ -91,6 +92,10 @@ export class TimelineCirculoRepository {
                 expedienteId: true,
                 fechaEvento: true,
                 contenidoId: true,
+                // SPEC-699 (I-424): el relato de una anotación de origen reporte vive en el sobre
+                // del REPORTE (el propio está vacío). Se traen para la fuente única del texto.
+                reporteId: true,
+                reporte: { select: { contenidoId: true } },
                 categoriaDetectada: true,
                 ordenSecuencial: true,
             },
@@ -98,16 +103,18 @@ export class TimelineCirculoRepository {
         });
         // S-C (D-116/D-117): el relato del evento vive cifrado en ContenidoReporte. Se descifra el
         // lote (2 queries, fail-loud) y se proyecta al campo `texto` del contrato del timeline.
+        // SPEC-699 (I-424): el sobre correcto lo da `contenidoIdDeAnotacion` (el del reporte para
+        // las de origen reporte), no `e.contenidoId` — que estaba vacío y mostraba el relato en blanco.
         const textos = await descifrarCampos(
             prisma,
-            eventos.map((e) => e.contenidoId),
+            eventos.map((e) => contenidoIdDeAnotacion(e)),
             "texto"
         );
         return eventos.map((e) => ({
             id: e.id,
             expedienteId: e.expedienteId,
             fechaEvento: e.fechaEvento,
-            texto: textos.get(e.contenidoId)!,
+            texto: textos.get(contenidoIdDeAnotacion(e))!,
             categoriaDetectada: e.categoriaDetectada,
             ordenSecuencial: e.ordenSecuencial,
         }));

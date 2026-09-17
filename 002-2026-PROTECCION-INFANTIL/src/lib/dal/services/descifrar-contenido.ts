@@ -63,6 +63,14 @@ async function resolverDuenos(contenidoIds: string[]): Promise<Map<string, Dueno
 export interface OpcionesDescifrado {
     /** Default true. false = no escribir fila en LecturaReporte (render, no acción). */
     registrarLectura?: boolean;
+    /**
+     * SPEC-699 (I-424): dueño EXPLÍCITO de la fila de auditoría, cuando el `contenidoId`
+     * descifrado NO es el del recurso que se está leyendo. El pase lee un EVENTO cuyo relato
+     * vive en el sobre del REPORTE: se descifra el contenido del reporte pero la lectura se
+     * audita contra el EVENTO (`{ eventoId }`), no contra el reporte. Sin esto, `resolverDuenos`
+     * ataría la fila al reporte (y podría notificar al padre) en vez de al evento.
+     */
+    dueno?: DuenoContenido;
 }
 
 /** Descifra UN campo ("texto" | "textoOriginal") de un contenido, con el singleton de Prisma. */
@@ -86,8 +94,10 @@ export async function descifrarCampoReporte(
         }
         return texto;
     }
-    const duenos = await resolverDuenos([contenidoId]);
-    await registrarLecturaTexto(contenidoId, campo, texto, duenos.get(contenidoId) ?? {});
+    // SPEC-699: si el llamador declara el dueño (p. ej. el pase: el evento, no el reporte
+    // dueño del contenido), se audita contra ESE; si no, se resuelve por el contenido.
+    const dueno = opciones.dueno ?? (await resolverDuenos([contenidoId])).get(contenidoId) ?? {};
+    await registrarLecturaTexto(contenidoId, campo, texto, dueno);
     return texto;
 }
 
