@@ -27,6 +27,7 @@ import {
 } from "@/lib/profesional/dto";
 import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
 import { validarYderivarLegado } from "@/lib/profesional/catalogos-lectura";
+import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 
 async function requireProfesional() {
     const user = await verifyAuth();
@@ -126,6 +127,19 @@ export async function PUT(request: Request) {
                 return NextResponse.json(
                     { error: { message: "La ciudad seleccionada no existe. Usá el buscador para elegirla.", code: ERROR_CODES.VALIDATION_ERROR } },
                     { status: 400 }
+                );
+            }
+        }
+
+        // SPEC-685 (PR3): la tarifa vive en «Mi perfil», que solo ve el HABILITADO.
+        // La UI ya no la muestra a otros, pero esconder el campo NO es cerrarlo: la
+        // regla es del SERVIDOR. Un profesional NO habilitado no puede fijar tarifa.
+        if (parsed.data.tarifaConsultaCOP !== undefined) {
+            const hab = await obtenerHabilitacionProfesional(user.id);
+            if (!hab?.habilitado) {
+                return NextResponse.json(
+                    { error: { message: "Su tarifa se fija cuando su perfil está habilitado.", code: ERROR_CODES.VALIDATION_ERROR } },
+                    { status: 400 },
                 );
             }
         }

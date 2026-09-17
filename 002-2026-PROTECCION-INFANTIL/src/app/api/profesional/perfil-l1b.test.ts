@@ -189,7 +189,7 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
                 atiendeVirtual: true,
                 aniosExperiencia: 5,
                 presentacion: "Trabajo con adolescentes y sus familias, con enfoque cognitivo-conductual.",
-                tarifaConsultaCOP: 100000,
+                // SPEC-685 (PR3): la tarifa la fija solo el habilitado, en Mi perfil.
                 duracionMinutos: 50,
                 numeroTarjetaProfesional: "TP-INTERNO-42",
             }, "PUT")
@@ -228,7 +228,7 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
                 atiendePresencial: false,
                 aniosExperiencia: 10,
                 presentacion: "Trabajo hace diez años con adolescentes en riesgo. Enfoque sistémico.",
-                tarifaConsultaCOP: 150000,
+                // SPEC-685 (PR3): la tarifa la fija solo el habilitado, en Mi perfil.
                 duracionMinutos: 50,
             }, "PUT")
         );
@@ -261,7 +261,7 @@ describe("SPEC-391 · registro del profesional (L1b)", { timeout: 30_000 }, () =
                 nombreVisible: "Test", tituloProfesional: "Test", especialidades: ["X"],
                 ciudadId: ciudad, atiendeVirtual: true, aniosExperiencia: 0,
                 presentacion: "presentacion de prueba con longitud suficiente",
-                tarifaConsultaCOP: 1, duracionMinutos: 30,
+                duracionMinutos: 30,
             }, "PUT")
         );
         const invalido = Buffer.from("HTML disfrazado <html></html>");
