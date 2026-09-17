@@ -73,7 +73,7 @@ export function AuditFilters({ filters, defaultActions, onApply, onReset }: Audi
                                                 if (el) el.indeterminate = groupPartial;
                                             }}
                                             onChange={() => toggleGroup(group.actions)}
-                                            className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                                            className="h-4 w-4 rounded border-slate-300 text-accent ring-accent-input"
                                         />
                                         <span className="text-sm font-semibold text-body">{group.label}</span>
                                     </label>
@@ -87,7 +87,7 @@ export function AuditFilters({ filters, defaultActions, onApply, onReset }: Audi
                                                     type="checkbox"
                                                     checked={filters.selectedActions.includes(action)}
                                                     onChange={() => toggleAction(action)}
-                                                    className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                                                    className="h-4 w-4 rounded border-slate-300 text-accent ring-accent-input"
                                                 />
                                                 {labelAccionAudit(action)}
                                             </label>

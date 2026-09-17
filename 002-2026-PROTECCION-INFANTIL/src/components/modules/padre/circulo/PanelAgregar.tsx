@@ -112,7 +112,7 @@ export function PanelAgregar({
                             maxLength={100}
                             autoComplete="off"
                             placeholder="Su nombre"
-                            className="h-12 rounded-xl border border-tinta/15 bg-papel px-3.5 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                            className="h-12 rounded-xl border border-tinta/15 bg-papel px-3.5 text-body outline-none transition ring-accent-input"
                         />
                     </div>
 
@@ -163,7 +163,7 @@ export function PanelAgregar({
                                 maxLength={60}
                                 aria-label="Escribe qué es de tus hijos"
                                 placeholder="Escríbelo tú"
-                                className="mt-1 h-11 rounded-xl border border-tinta/15 bg-papel px-3.5 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                                className="mt-1 h-11 rounded-xl border border-tinta/15 bg-papel px-3.5 text-body outline-none transition ring-accent-input"
                             />
                         )}
                     </fieldset>
@@ -182,7 +182,7 @@ export function PanelAgregar({
                                 value={d.plataformaId}
                                 onChange={(e) => cambiarDato(i, "plataformaId", e.target.value)}
                                 aria-label="Dónde"
-                                className="h-12 rounded-xl border border-tinta/15 bg-papel px-3 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25 sm:w-44"
+                                className="h-12 rounded-xl border border-tinta/15 bg-papel px-3 text-body outline-none transition ring-accent-input sm:w-44"
                             >
                                 <option value="">¿Dónde?</option>
                                 {plataformas.map((p) => (
@@ -197,7 +197,7 @@ export function PanelAgregar({
                                 aria-label="Su celular o usuario"
                                 autoComplete="off"
                                 placeholder="Su celular o usuario"
-                                className="h-12 flex-1 rounded-xl border border-tinta/15 bg-papel px-3.5 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                                className="h-12 flex-1 rounded-xl border border-tinta/15 bg-papel px-3.5 text-body outline-none transition ring-accent-input"
                             />
                             {datos.length > 1 && (
                                 <button

@@ -185,7 +185,7 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
                     max={maxFecha}
                     min={minFecha}
                     onChange={(e) => cambiarFecha(e.target.value)}
-                    className="h-12 min-w-0 flex-1 basis-40 rounded-xl border border-tinta/15 bg-papel px-3 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                    className="h-12 min-w-0 flex-1 basis-40 rounded-xl border border-tinta/15 bg-papel px-3 text-body outline-none transition ring-accent-input"
                 />
                 {/* SPEC-580: en modo franja la hora exacta se OCULTA, no se
                     deshabilita: un select deshabilitado sugiere que sigue
@@ -196,7 +196,7 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
                             aria-label="Hora del incidente"
                             value={hora12 ?? ""}
                             onChange={(e) => emitir(fecha, e.target.value ? Number(e.target.value) : null, meridiano)}
-                            className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                            className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition ring-accent-input"
                         >
                             <option value="">Hora</option>
                             {HORAS.map((h) => (
@@ -209,7 +209,7 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
                             aria-label="a.m. o p.m."
                             value={meridiano}
                             onChange={(e) => emitir(fecha, hora12, e.target.value as Meridiano)}
-                            className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                            className="h-12 shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition ring-accent-input"
                         >
                             <option value="am">a.m.</option>
                             <option value="pm" disabled={pmDeshabilitado}>
@@ -251,7 +251,7 @@ export function FechaHoraIncidente({ value, max, min, onChange, error }: Props) 
                             setFranjaElegida(v);
                             emitirFranja(fecha, v);
                         }}
-                        className="h-12 w-fit shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition focus:border-pino focus:ring-2 focus:ring-pino/25"
+                        className="h-12 w-fit shrink-0 rounded-xl border border-tinta/15 bg-papel px-2 text-body outline-none transition ring-accent-input"
                     >
                         <option value="">Elige una franja</option>
                         {FRANJAS.map((f) => (
