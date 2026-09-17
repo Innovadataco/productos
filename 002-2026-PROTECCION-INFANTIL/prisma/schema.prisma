@@ -788,6 +788,8 @@ model Usuario {
   verificacionesProfesionalRevisadas VerificacionProfesional[]     @relation("VerificacionesRevisadasPor")
   // SPEC-693 (I-416): re-revisiones de renovación de documentos que hizo este verificador.
   revisionesRenovacionHechas       RevisionRenovacion[]            @relation("RevisionesRenovacionHechas")
+  // SPEC-686 (I-420): aceptaciones de la autorización del profesional (en pantalla).
+  aceptacionesAutorizacionProfesional AceptacionAutorizacionProfesional[] @relation("AceptacionesAutorizacionProfesional")
   solicitudesCitaComoPadre         SolicitudCita[]                 @relation("SolicitudesCitaPadre")
 
   @@index([email])
@@ -3878,6 +3880,34 @@ model RevisionRenovacion {
   @@index([revisadoPorId])
 }
 
+// SPEC-686 (I-420): la autorización del profesional (Ley 1918/2018 · Decreto 753/2019 ·
+// Ley 2375/2024 — «previa, expresa, escrita y archivada») se ACEPTA EN PANTALLA, como el
+// consentimiento del padre, pero en TABLA APARTE: el profesional es el PRESTADOR, no el
+// TITULAR del dato; meter su firma en `audit_consentimientos` degrada el valor probatorio
+// de ese audit (roles-titulares.ts, prohibición explícita). No se guarda «aceptó»: se
+// guarda QUÉ TEXTO EXACTO aceptó (versión + SHA-256 del documento), CUÁNDO (`aceptadoEn`)
+// y desde DÓNDE (ip + userAgent). Mismo MECANISMO que `ConsentimientoService`, distinto
+// DESTINO. Conservación (REPORTE-062 · criterio Jelkin/abogado): ≥ cuenta activa + 10 años
+// y NUNCA se purga antes que lo que ampara — lo hará un purgador futuro, no este modelo.
+model AceptacionAutorizacionProfesional {
+  id            String   @id @default(cuid())
+  usuarioId     String
+  version       String
+  documentoHash String
+  aceptadoEn    DateTime @default(now()) @db.Timestamptz(6)
+  ip            String
+  userAgent     String?
+  creadoEn      DateTime @default(now()) @db.Timestamptz(6)
+
+  usuario        Usuario                   @relation("AceptacionesAutorizacionProfesional", fields: [usuarioId], references: [id], onDelete: Cascade)
+  // Las verificaciones que se respaldaron en ESTA aceptación (Restrict del otro lado).
+  verificaciones VerificacionProfesional[]
+
+  @@index([usuarioId, aceptadoEn])
+  @@index([version])
+  @@map("aceptaciones_autorizacion_profesional")
+}
+
 // N por profesional — el HISTORIAL importa: si venció y hay una nueva
 // aprobación, la anterior queda para auditoría. `venceEn` se calcula al
 // insertar (revisadoEn + 4 meses) y el worker de L2 avisa un mes antes.
@@ -3888,10 +3918,16 @@ model VerificacionProfesional {
   revisadoEn             DateTime               @default(now()) @db.Timestamptz(6)
   checklist              Json
   resultado              ResultadoVerificacion
-  // Ruta a la autorización firmada por el profesional (Ley 2375/2024 exige
-  // documento archivado). Storage PROTEGIDO — se sirve tras auth + módulo de
-  // admin, nunca por URL adivinable. El servicio de storage lo trae L1b.
-  autorizacionArchivoId  String
+  // LEGACY (pre SPEC-686): ruta a la autorización firmada en archivo. Ahora NULLABLE:
+  // las verificaciones nuevas apuntan a la ACEPTACIÓN en pantalla (`aceptacionAutorizacionId`),
+  // no a un archivo. Las filas viejas conservan su id de archivo. Exactamente una de las dos
+  // vías respalda cada verificación; el servicio lo garantiza (candado de anterioridad).
+  autorizacionArchivoId  String?
+  // SPEC-686 (I-420): la aceptación en pantalla que respaldaba la autorización al momento de
+  // revisar. La anterioridad (`aceptadoEn <= revisadoEn`) prueba que la autorización fue PREVIA
+  // a la consulta de antecedentes (Ley 1918/2018 · Decreto 753/2019). onDelete: Restrict — la
+  // prueba de la aceptación NUNCA se borra antes que la verificación que ampara (REPORTE-062).
+  aceptacionAutorizacionId String?
   venceEn                DateTime               @db.Timestamptz(6)
   creadoEn               DateTime               @default(now()) @db.Timestamptz(6)
 
@@ -3909,11 +3945,16 @@ model VerificacionProfesional {
   revisadoPor       Usuario           @relation("VerificacionesRevisadasPor", fields: [revisadoPorId], references: [id])
   // SPEC-693 (I-416): las versiones de documento que ESTA verificación revisó.
   documentosRevisados VerificacionDocumento[]
+  // SPEC-686 (I-420): la aceptación de autorización que la respaldó (Restrict: no se
+  // puede purgar la aceptación mientras una verificación la referencie).
+  aceptacionAutorizacion AceptacionAutorizacionProfesional? @relation(fields: [aceptacionAutorizacionId], references: [id], onDelete: Restrict)
 
   // L2 lista las verificaciones vigentes por profesional en orden descendente
   // y consulta la próxima que vence para el aviso de 30 días.
   @@index([perfilProfesionalId, revisadoEn(sort: Desc)])
   @@index([venceEn])
+  // SPEC-686: lookup por la aceptación (reverse relation + el Restrict la consulta).
+  @@index([aceptacionAutorizacionId])
 }
 
 model FranjaDisponible {
