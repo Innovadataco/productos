@@ -40,9 +40,11 @@ import { nombrePersona } from "./lib/datos";
 import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
 import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
 import { verificacionDemo, REVISADO_HACE_DIAS } from "./lib/profesional-demo";
+import { asegurarVerificadorDemoSinAcceso } from "./lib/verificador-demo-sin-acceso";
 import {
     CORRIDA_RED,
     SCRIPT_RED,
+    EMAIL_VERIFICADOR_DEMO_RED,
     NUM_PROFESIONALES,
     FRANJAS_LIBRES_MIN,
     FRANJAS_LIBRES_MAX,
@@ -137,13 +139,15 @@ async function verificarIdempotencia(): Promise<void> {
 }
 
 async function cargarBase() {
-    const admin = await prisma.usuario.findFirst({ where: { rol: "ADMIN" } });
+    // Sanity: la base debe estar sembrada. El ADMIN ya NO firma las verificaciones (I-418): las
+    // firma un VERIFICADOR demo sin acceso; el chequeo se conserva como guarda de «corrió el seed».
+    const admin = await prisma.usuario.findFirst({ where: { rol: "ADMIN" }, select: { id: true } });
     if (!admin) throw new Error("No hay ADMIN; correr seed primero");
     const ciudades = await prisma.ciudad.findMany({ take: 8, orderBy: { nombre: "asc" } });
     if (ciudades.length === 0) throw new Error("No hay ciudades base");
     const porcentajeServicio = await obtenerPorcentajeServicio();
     const precioEstandar = await leerPrecioEstandarPrimeraCita();
-    return { admin, ciudades, porcentajeServicio, precioEstandar };
+    return { ciudades, porcentajeServicio, precioEstandar };
 }
 
 interface ProfSembrado {
@@ -167,7 +171,7 @@ function pagoAprobadoPara(estado: EstadoSolicitudCita, creadoEn: Date): Date | n
 
 async function sembrarProfesional(
     idx: number,
-    adminId: string,
+    verificadorId: string,
     ciudadId: string,
     passwordHash: string,
 ): Promise<ProfSembrado> {
@@ -217,7 +221,7 @@ async function sembrarProfesional(
         const verificacion = await tx.verificacionProfesional.create({
             data: {
                 perfilProfesionalId: perfil.id,
-                revisadoPorId: adminId,
+                revisadoPorId: verificadorId,
                 revisadoEn: verif.revisadoEn,
                 checklist: { antecedentes: true, tarjetaProfesional: true, autorizacionFirmada: true },
                 resultado: verif.resultado,
@@ -385,7 +389,7 @@ interface Resumen {
 
 async function main(): Promise<void> {
     await verificarIdempotencia();
-    const { admin, ciudades, porcentajeServicio, precioEstandar } = await cargarBase();
+    const { ciudades, porcentajeServicio, precioEstandar } = await cargarBase();
 
     if (!CONFIRM) {
         const plan = construirPlanEstados();
@@ -400,13 +404,18 @@ async function main(): Promise<void> {
     }
 
     const passwordHash = await hashDemoPassword();
+    // I-418: las verificaciones sembradas las firma un VERIFICADOR demo SIN ACCESO (no un admin
+    // real). Se crea una vez, marcado en esta corrida (se purga con ella), y firma las 50.
+    const verificadorDemoId = await prisma.$transaction((tx) =>
+        asegurarVerificadorDemoSinAcceso(tx, { corrida: CORRIDA_RED, script: SCRIPT_RED, email: EMAIL_VERIFICADOR_DEMO_RED }),
+    );
     const resumen: Resumen = { profesionales: 0, franjasLibres: 0, porEstado: {}, encuestas: 0, padres: 0 };
 
     // 1) Profesionales visibles + franjas libres futuras.
     const profs: ProfSembrado[] = [];
     for (let i = 0; i < NUM_PROFESIONALES; i++) {
         const ciudadId = ciudades[i % ciudades.length]!.id;
-        const p = await sembrarProfesional(i, admin.id, ciudadId, passwordHash);
+        const p = await sembrarProfesional(i, verificadorDemoId, ciudadId, passwordHash);
         profs.push(p);
         resumen.profesionales++;
     }
