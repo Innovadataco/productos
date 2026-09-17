@@ -21,6 +21,13 @@ import {
 
 export const CORRIDA_RED = "red-apoyo-676";
 export const SCRIPT_RED = "poblar-red-apoyo";
+/**
+ * I-418 · correo del VERIFICADOR demo sin acceso que FIRMA las verificaciones de esta corrida
+ * (no un admin real). Sub-dirección `+` sobre `soporte@` (distinto de la cuenta intocable, que no
+ * lleva `+`). Fuente ÚNICA: lo usan el poblador (firma al sembrar) y el corrector I-418 (reasigna
+ * lo ya sembrado) → apuntan al MISMO verificador, no pueden divergir.
+ */
+export const EMAIL_VERIFICADOR_DEMO_RED = "soporte+redapoyo-verificador@innovadataco.com";
 
 // ── Profesionales ─────────────────────────────────────────────────────────
 export const NUM_PROFESIONALES = 50;
