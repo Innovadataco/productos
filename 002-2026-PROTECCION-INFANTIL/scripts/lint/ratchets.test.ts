@@ -13,6 +13,7 @@ import { buscarRedirectsEnLayouts } from "./no-redirect-en-layout-de-dashboard";
 import { buscarSelfRedirects, rutaDePagina } from "./no-self-redirect-server-actions";
 import { buscarUsosPrecioUSD } from "./no-usd-en-vistas-suscripcion";
 import { buscarTimersEnWorkers, buscarInfractores } from "./no-unref-timer-nuevo";
+import { buscarDriftDestructivo } from "./no-drift-destructivo-migracion";
 
 let raiz: string;
 
@@ -318,5 +319,57 @@ describe("no-unref-timer-nuevo", () => {
 
     it("directorio inexistente → sin error, cero ocurrencias", () => {
         expect(buscarTimersEnWorkers(join(raiz, "no-existe"))).toHaveLength(0);
+    });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Ratchet 7 — no-drift-destructivo-migracion (I-420)
+// ────────────────────────────────────────────────────────────────────────────
+describe("no-drift-destructivo-migracion (I-420)", () => {
+    function mig(nombre: string, sql: string) {
+        mkdirSync(join(raiz, nombre), { recursive: true });
+        writeFileSync(join(raiz, nombre, "migration.sql"), sql);
+    }
+
+    it("caso feliz: migración limpia (CREATE TABLE) → 0 hallazgos", () => {
+        mig("29990101000000_limpia", 'CREATE TABLE "X" ("id" TEXT NOT NULL);\n');
+        expect(buscarDriftDestructivo(raiz)).toHaveLength(0);
+    });
+
+    it("CONTROL POSITIVO: detecta DROP INDEX en una migración NO allowlisted", () => {
+        mig("29990101000001_drop", 'DROP INDEX "algo_idx";\n');
+        const h = buscarDriftDestructivo(raiz);
+        expect(h).toHaveLength(1);
+        expect(h[0].patron).toBe("DROP INDEX");
+    });
+
+    it("CONTROL POSITIVO: detecta timestamptz→timestamp (SET DATA TYPE TIMESTAMP(3))", () => {
+        mig("29990101000002_ts", 'ALTER TABLE "X" ALTER COLUMN "y" SET DATA TYPE TIMESTAMP(3);\n');
+        const h = buscarDriftDestructivo(raiz);
+        expect(h).toHaveLength(1);
+        expect(h[0].patron).toBe("timestamptz→timestamp");
+    });
+
+    it("NO flaggea una columna timestamptz (WITH TIME ZONE / TIMESTAMPTZ)", () => {
+        mig(
+            "29990101000003_tz",
+            'ALTER TABLE "X" ALTER COLUMN "y" SET DATA TYPE TIMESTAMPTZ(6);\nALTER TABLE "X" ADD COLUMN "z" TIMESTAMP WITH TIME ZONE;\n',
+        );
+        expect(buscarDriftDestructivo(raiz)).toHaveLength(0);
+    });
+
+    it("NO flaggea un índice PARCIAL creado (CREATE … WHERE): solo miramos DROP", () => {
+        mig("29990101000004_parcial", 'CREATE UNIQUE INDEX "u" ON "X"("a") WHERE "estado" = \'VIGENTE\';\n');
+        expect(buscarDriftDestructivo(raiz)).toHaveLength(0);
+    });
+
+    it("una migración ALLOWLISTED puede tener DROP INDEX (no se flaggea)", () => {
+        mig("20260913120000_spec693_documentos_versionados", 'DROP INDEX "viejo_idx";\n');
+        expect(buscarDriftDestructivo(raiz)).toHaveLength(0);
+    });
+
+    it("ignora líneas de comentario (-- DROP INDEX …)", () => {
+        mig("29990101000005_comentario", '-- DROP INDEX "solo un comentario";\nCREATE TABLE "X" ("id" TEXT);\n');
+        expect(buscarDriftDestructivo(raiz)).toHaveLength(0);
     });
 });
