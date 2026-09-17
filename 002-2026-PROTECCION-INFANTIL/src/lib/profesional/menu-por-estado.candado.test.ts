@@ -44,7 +44,9 @@ describe("SPEC-691 · el menú del profesional = exactamente las entradas de su 
     it("verificado (habilitado) → inicio · citaciones · casos · calendario · mi perfil (en ese orden)", () => {
         const pro = { estado: "ACTIVO", habilitado: true };
         expect(labels(pro)).toEqual(["Inicio", "Citaciones", "Casos", "Calendario", "Mi perfil"]);
-        expect(hrefs(pro)).toEqual([...OPERATIVAS, "/perfil-profesional/completar"]);
+        // SPEC-685 (PR2-bis): «Mi perfil» del habilitado es su propia pantalla
+        // (datos + tarifa + documentos + estado), ya no la ficha de completar.
+        expect(hrefs(pro)).toEqual([...OPERATIVAS, "/dashboard/profesional/mi-perfil"]);
     });
 
     it("portero (no habilitado, CUALQUIER estado) → SOLO «Mi ficha» · «Mi estado», nada operativo", () => {
