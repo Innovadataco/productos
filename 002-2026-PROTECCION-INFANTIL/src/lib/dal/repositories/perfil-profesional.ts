@@ -28,6 +28,7 @@ import type { EstadoPerfilProfesional, PerfilProfesional } from "@prisma/client"
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
+import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 
 /** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
  *  SPEC-434 (I-302): agregamos `paisId` — la pantalla de completar necesita
@@ -273,12 +274,9 @@ export class PerfilProfesionalRepository {
      * de VOLUMEN, cambiar a un anti-join (`LEFT JOIN … IS NULL`) ANTES de acercarse
      * a ese piso.
      */
-    private async idsSembrados(): Promise<string[]> {
-        const marcas = await this.db.demoMarcado.findMany({
-            where: { entidad: "PerfilProfesional" },
-            select: { entidadId: true },
-        });
-        return marcas.map((m) => m.entidadId);
+    private idsSembrados(): Promise<string[]> {
+        // I-419: predicado canónico compartido (una fuente) con la cola del Verificador.
+        return idsPerfilesProfesionalesSembrados(this.db);
     }
 
     /**
