@@ -120,8 +120,7 @@ export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vis
             {estadoMostrado === "VENCIDO" && (
                 <div className="glass rounded-2xl p-6 space-y-2">
                     <p className="cuerpo text-body">
-                        La vigencia de su verificación se cumplió. Para volver a atender, actualice el documento que
-                        venció y envíelo a revisión otra vez.
+                        La vigencia de su verificación se cumplió. Para volver a atender, envíela de nuevo a revisión.
                     </p>
                     <p className="cuerpo text-subtle">
                         Mientras se revisa, su perfil no aparece para las familias.

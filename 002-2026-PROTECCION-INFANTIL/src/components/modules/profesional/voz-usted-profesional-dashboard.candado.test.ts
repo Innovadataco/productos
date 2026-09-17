@@ -133,7 +133,12 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         expect(verif).toContain("Ya estamos revisando sus documentos. Le avisamos apenas haya novedad");
         // SPEC-691 · las pantallas nuevas por estado, en usted (mueren si se revierten).
         expect(verif).toContain("Su verificación venció.");
-        expect(verif).toContain("actualice el documento que");
+        // SPEC-691 · no conformidad de Diseño (FORMA-SPEC691 · certificación 09af30a · vigencia.ts:66):
+        // lo que vence es la VERIFICACIÓN, no un documento. Se envía «la verificación» de nuevo, no «el documento».
+        expect(verif).toContain("envíela de nuevo a revisión");
+        // El texto que miente sostiene el hueco: la vieja frase que hablaba de un «documento» que
+        // vence no puede volver (no colisiona con «revisando sus documentos» del estado en revisión).
+        expect(verif).not.toContain("actualice el documento que");
         expect(verif).toContain("Su perfil profesional está suspendido");
 
         // vetados (tú) — mueren si reaparecen
