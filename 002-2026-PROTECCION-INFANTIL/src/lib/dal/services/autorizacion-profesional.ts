@@ -21,6 +21,14 @@ import type { DbClient } from "../unit-of-work";
 
 export const CLAVE_VERSION_AUTORIZACION = "autorizacion_profesional.version_actual";
 export const CLAVE_RUTA_AUTORIZACION = "autorizacion_profesional.documento_ruta";
+/**
+ * SPEC-686 · «cuánto» cambió la versión vigente lo declara quien la publica (CEO/abogado):
+ * FONDO (cambia QUÉ autoriza) → re-aceptación FORZADA por la guardia; MENOR (redacción) →
+ * aviso suave, no bloqueo. Default FONDO: forzar es el lado seguro (la primera versión, v0.1,
+ * se trata como FONDO — todos la aceptan, incluidos los ACTIVOS con archivo legacy).
+ */
+export const CLAVE_TIPO_AUTORIZACION = "autorizacion_profesional.version_tipo";
+export type TipoVersionAutorizacion = "FONDO" | "MENOR";
 
 export interface AceptarAutorizacionInput {
     usuarioId: string;
@@ -72,6 +80,28 @@ export class AutorizacionProfesionalService {
     async yaAceptoVersionVigente(usuarioId: string): Promise<boolean> {
         const [ultima, version] = await Promise.all([this.repo.buscarUltima(usuarioId), this.versionVigente()]);
         return ultima?.version === version;
+    }
+
+    /** Tipo de la versión vigente (default FONDO — forzar es lo seguro). */
+    async tipoVersionVigente(): Promise<TipoVersionAutorizacion> {
+        const tipo = await getParametroSistemaValor(CLAVE_TIPO_AUTORIZACION);
+        return tipo === "MENOR" ? "MENOR" : "FONDO";
+    }
+
+    /**
+     * SPEC-686 · ¿la guardia debe llevar al profesional a (re)aceptar antes de operar?
+     * FONDO (o primera versión): exige haber aceptado la versión VIGENTE — si aceptó una
+     * anterior, la vuelve a aceptar. MENOR: solo si NUNCA aceptó nada (un cambio de redacción
+     * no fuerza; la aceptación vieja sigue válida y Mi perfil muestra el aviso suave).
+     */
+    async necesitaAceptar(usuarioId: string): Promise<boolean> {
+        const [version, tipo, ultima] = await Promise.all([
+            this.versionVigente(),
+            this.tipoVersionVigente(),
+            this.repo.buscarUltima(usuarioId),
+        ]);
+        if (tipo === "MENOR") return ultima === null;
+        return ultima?.version !== version;
     }
 
     /**

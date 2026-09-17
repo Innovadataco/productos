@@ -33,6 +33,17 @@ interface Props {
     rangoCatalogo: OpcionCatalogo[];
     aviso: { precioEstandar: number | null; pct: number | null };
     vista: VistaProfesionalVerificacion;
+    /**
+     * SPEC-686 (I-420 · forma hermana): el registro de la autorización aceptada. `version`/
+     * `aceptadaEn` null = todavía no aceptó ninguna (no debería para un habilitado que pasó
+     * la guardia). `hayActualizacionMenor` = hay una versión nueva MENOR sin aceptar (aviso
+     * suave, no bloqueo — la guardia solo fuerza las DE FONDO).
+     */
+    autorizacion?: {
+        version: string | null;
+        aceptadaEn: string | null;
+        hayActualizacionMenor: boolean;
+    };
 }
 
 /** Resuelve claves de rango a sus nombres visibles (el resto ya viene con etiqueta). */
@@ -51,7 +62,7 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
     );
 }
 
-export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista }: Props) {
+export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista, autorizacion }: Props) {
     // SPEC-685 (PR2-bis): la tarifa es nulable («por fijar»). En el input se ve vacío
     // (conPuntosDeMiles(0) === "") hasta que la fija.
     const [tarifaConsultaCOP, setTarifaConsultaCOP] = useState<number>(perfil.tarifaConsultaCOP ?? 0);
@@ -191,6 +202,35 @@ export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista 
             <div className="mt-6">
                 <EstadoVerificacionProfesionalClient vista={vista} habilitado={true} />
             </div>
+
+            {/* 5 · SPEC-686 · el registro de la autorización aceptada + el derecho a releerla. */}
+            {autorizacion?.version && (
+                <GlassCard className="mt-6">
+                    <h2 className="text-lg font-semibold text-body">Autorización</h2>
+                    <p className="mt-2 text-sm text-body">
+                        Autorización aceptada · versión {autorizacion.version}
+                        {autorizacion.aceptadaEn
+                            ? ` · ${new Date(autorizacion.aceptadaEn).toLocaleDateString("es-CO", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                            })}`
+                            : ""}
+                    </p>
+                    {autorizacion.hayActualizacionMenor && (
+                        // Cambio MENOR: aviso suave, no bloqueo (la guardia no fuerza los menores).
+                        <p className="mt-2 text-sm text-estado-ambar">
+                            Actualizamos el texto de la autorización. Puede leer la nueva versión.
+                        </p>
+                    )}
+                    <a
+                        href="/perfil-profesional/autorizacion?releer=1"
+                        className="mt-3 inline-block text-sm font-medium text-body underline underline-offset-2"
+                    >
+                        {autorizacion.hayActualizacionMenor ? "Leer y aceptar" : "Leer la autorización"}
+                    </a>
+                </GlassCard>
+            )}
         </main>
     );
 }

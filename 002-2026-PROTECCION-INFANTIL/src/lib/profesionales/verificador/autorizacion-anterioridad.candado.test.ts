@@ -220,3 +220,42 @@ describe("SPEC-686 · D · CHECK XOR: toda verificación con EXACTAMENTE una pru
         ).resolves.toBeTruthy();
     });
 });
+
+describe("SPEC-686 · E · necesitaAceptar: FONDO fuerza la versión vigente; MENOR es aviso suave", () => {
+    async function seedVersion(tipo: "FONDO" | "MENOR", version = "v0.2") {
+        await prisma.parametroSistema.createMany({
+            data: [
+                { clave: "autorizacion_profesional.version_actual", valor: version, tipo: "STRING", categoria: "LEGAL", esPublico: false, descripcion: "t" },
+                { clave: "autorizacion_profesional.version_tipo", valor: tipo, tipo: "STRING", categoria: "LEGAL", esPublico: false, descripcion: "t" },
+            ],
+        });
+    }
+    const aceptar = (usuarioId: string, version: string) =>
+        prisma.aceptacionAutorizacionProfesional.create({
+            data: { usuarioId, version, documentoHash: "h", ip: "1.1.1.1" },
+        });
+
+    beforeEach(async () => resetDatabase());
+    afterAll(async () => prisma.$disconnect());
+
+    it("FONDO: sin aceptar → true; aceptó la vigente → false; aceptó una anterior → true", async () => {
+        await seedVersion("FONDO", "v0.2");
+        const svc = new AutorizacionProfesionalService();
+        const u = await crearUsuario("PROFESIONAL", `f.${Date.now()}@e.local`);
+        expect(await svc.necesitaAceptar(u.id), "sin aceptar nada").toBe(true);
+        await aceptar(u.id, "v0.1"); // versión anterior
+        expect(await svc.necesitaAceptar(u.id), "aceptó una anterior → re-aceptar").toBe(true);
+        await aceptar(u.id, "v0.2"); // la vigente
+        expect(await svc.necesitaAceptar(u.id), "aceptó la vigente → no").toBe(false);
+    });
+
+    it("MENOR: aceptó una anterior → false (aviso suave, no bloqueo); sin aceptar nada → true", async () => {
+        await seedVersion("MENOR", "v0.2");
+        const svc = new AutorizacionProfesionalService();
+        const conVieja = await crearUsuario("PROFESIONAL", `m1.${Date.now()}@e.local`);
+        await aceptar(conVieja.id, "v0.1");
+        expect(await svc.necesitaAceptar(conVieja.id), "MENOR no fuerza si ya aceptó algo").toBe(false);
+        const sinNada = await crearUsuario("PROFESIONAL", `m2.${Date.now()}@e.local`);
+        expect(await svc.necesitaAceptar(sinNada.id), "sin ninguna aceptación → sí").toBe(true);
+    });
+});

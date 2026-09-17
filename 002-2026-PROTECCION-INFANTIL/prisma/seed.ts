@@ -332,6 +332,13 @@ async function seedAutorizacionProfesional() {
             valor: "public/legal/AUTORIZACION-PROFESIONAL-v0.1.md",
             descripcion: "Ruta del texto legal de la autorización del profesional (SPEC-686)",
         },
+        {
+            clave: "autorizacion_profesional.version_tipo",
+            valor: "FONDO",
+            descripcion:
+                "Tipo de la versión vigente (FONDO=re-aceptación forzada por la guardia · MENOR=aviso suave). " +
+                "v0.1 es FONDO: todos la aceptan, incluidos los ACTIVOS con archivo legacy (SPEC-686)",
+        },
     ];
     for (const p of parametros) {
         await prisma.parametroSistema.upsert({

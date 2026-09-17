@@ -22,6 +22,8 @@ interface AceptacionAutorizacionProps {
     redirectUrl: string;
     /** B · re-aceptación por cambio DE FONDO: línea arriba del texto. */
     avisoReAceptacion?: boolean;
+    /** SPEC-686 §2: «Leer la autorización» — reabre el texto en SOLO LECTURA (sin aceptar). */
+    soloLectura?: boolean;
 }
 
 // La declaración es TEXTO LEGAL verbatim (borrador §Declaración) — no se edita acá.
@@ -35,6 +37,7 @@ export function AceptacionAutorizacion({
     documentoContenido,
     redirectUrl,
     avisoReAceptacion,
+    soloLectura,
 }: AceptacionAutorizacionProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const finalRef = useRef<HTMLDivElement>(null);
@@ -114,6 +117,8 @@ export function AceptacionAutorizacion({
                                 La autorización cambió. Léala y acéptela de nuevo para seguir atendiendo.
                             </Alerta>
                         </div>
+                    ) : soloLectura ? (
+                        <p className="mt-2 text-sm text-muted">Esta es la autorización que usted aceptó.</p>
                     ) : (
                         <p className="mt-2 text-sm text-muted">
                             Lea el texto completo y acéptelo para que la Plataforma pueda verificar sus
@@ -160,40 +165,54 @@ export function AceptacionAutorizacion({
                         )}
                     </div>
 
-                    <label className="mt-6 flex items-start gap-3">
-                        <input
-                            type="checkbox"
-                            checked={declaraVerdad}
-                            onChange={(e) => setDeclaraVerdad(e.target.checked)}
-                            className="mt-1 h-4 w-4 accent-cielo"
-                            data-testid="check-declaracion"
-                        />
-                        <span className="text-sm text-body">{DECLARACION}</span>
-                    </label>
-
-                    {error && (
-                        <div className="mt-4">
-                            <Alerta tono="error">{error}</Alerta>
+                    {soloLectura ? (
+                        <div className="mt-6 flex items-center justify-between">
+                            <span className="text-xs text-muted">Versión {version}</span>
+                            <a
+                                href={redirectUrl}
+                                className="text-sm font-medium text-body underline underline-offset-2"
+                            >
+                                Volver
+                            </a>
                         </div>
-                    )}
+                    ) : (
+                        <>
+                            <label className="mt-6 flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={declaraVerdad}
+                                    onChange={(e) => setDeclaraVerdad(e.target.checked)}
+                                    className="mt-1 h-4 w-4 accent-cielo"
+                                    data-testid="check-declaracion"
+                                />
+                                <span className="text-sm text-body">{DECLARACION}</span>
+                            </label>
 
-                    <div className="mt-6 flex flex-col items-end gap-2">
-                        <Button
-                            onClick={handleAceptar}
-                            disabled={!puedeAceptar || loading}
-                            isLoading={loading}
-                            data-testid="btn-aceptar-autorizacion"
-                        >
-                            Acepto la autorización
-                        </Button>
-                        {/* Decir POR QUÉ está inerte (lección del wizard) — desaparece al cumplir ambos. */}
-                        {!puedeAceptar && (
-                            <span className="text-xs text-muted">
-                                Baje hasta el final del texto y marque la casilla para aceptar.
-                            </span>
-                        )}
-                        <span className="text-xs text-muted">Versión {version}</span>
-                    </div>
+                            {error && (
+                                <div className="mt-4">
+                                    <Alerta tono="error">{error}</Alerta>
+                                </div>
+                            )}
+
+                            <div className="mt-6 flex flex-col items-end gap-2">
+                                <Button
+                                    onClick={handleAceptar}
+                                    disabled={!puedeAceptar || loading}
+                                    isLoading={loading}
+                                    data-testid="btn-aceptar-autorizacion"
+                                >
+                                    Acepto la autorización
+                                </Button>
+                                {/* Decir POR QUÉ está inerte (lección del wizard) — desaparece al cumplir ambos. */}
+                                {!puedeAceptar && (
+                                    <span className="text-xs text-muted">
+                                        Baje hasta el final del texto y marque la casilla para aceptar.
+                                    </span>
+                                )}
+                                <span className="text-xs text-muted">Versión {version}</span>
+                            </div>
+                        </>
+                    )}
                 </GlassCard>
             </main>
         </div>
