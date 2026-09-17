@@ -130,7 +130,26 @@ export function estaHabilitado(
     verificaciones: readonly VerificacionResumenInput[],
     ahora: Date,
 ): boolean {
-    if (perfil.estado !== "ACTIVO") return false;
+    return perfil.estado === "ACTIVO" && verificacionVigente(verificaciones, ahora);
+}
+
+/**
+ * SPEC-690-B · El TÉRMINO de vigencia, SOLO — sin el estado. La verificación
+ * AUTORITATIVA es la MÁS RECIENTE por `revisadoEn` (`ultimaAprobacion`): una
+ * re-verificación SUPERSEDE a la anterior. Si la más reciente venció, el
+ * profesional NO está vigente **aunque una aprobación vieja tuviera un `venceEn`
+ * posterior** — el caso que separa este criterio de «alguna aprobada vigente»
+ * (SQL viejo) y de «la de mayor `venceEn`» (`venceEnVigente` viejo). Hoy coinciden
+ * porque `venceEn = revisadoEn + plazo fijo`; el día que cambie el plazo, divergen.
+ *
+ * FUENTE ÚNICA del término para: `estaHabilitado` (+ estado ACTIVO), el directorio,
+ * el tope de horizonte de franjas, y levantar suspensión (SPEC-692, Dev 3) — que
+ * necesita el término SIN exigir ACTIVO (al levantar, el perfil aún es SUSPENDIDO).
+ */
+export function verificacionVigente(
+    verificaciones: readonly VerificacionResumenInput[],
+    ahora: Date,
+): boolean {
     const ultima = ultimaAprobacion(verificaciones);
     return ultima !== null && ultima.venceEn.getTime() > ahora.getTime();
 }
@@ -146,8 +165,9 @@ export function estaHabilitado(
  *
  * SPEC-690: es EXACTAMENTE `estaHabilitado` — «aparecer en el directorio» y «poder
  * operar» son la misma habilitación. Delega en la fuente única para que no puedan
- * divergir (el `vigenciaVigente` en SQL de `perfil-profesional.ts` es su expresión
- * a nivel de consulta; las dos defensas suman).
+ * divergir. En `perfil-profesional.ts` el directorio aplica este mismo término:
+ * `vigenciaVigente` (SQL) es un pre-filtro GRUESO (superset, estrecha por índice) y
+ * `idsConVigenciaAutoritativa` (JS) da la palabra final con `verificacionVigente`.
  */
 export function puedeAparecerEnDirectorio(
     perfil: PerfilPublicoInput,
