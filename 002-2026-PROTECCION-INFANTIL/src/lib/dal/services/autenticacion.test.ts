@@ -57,7 +57,12 @@ describe("AutenticacionService · reset/cambio de password · SPEC-315", () => {
 
         const after = await prisma.usuario.findUnique({ where: { id: usuario.id } });
         expect(after?.intentosFallidos).toBe(0);
-        expect(after?.estado).toBe("activo");
+        // SPEC-698 (I-423): el reset DESBLOQUEA el lockout (intentosFallidos,
+        // bloqueadoHasta) pero NO cambia el estado. Un `bloqueado` queda `bloqueado`
+        // con el lockout limpio; el primer login exitoso lo pasará a `activo` (:102).
+        // Antes esta línea afirmaba "activo" — la conducta que reactivaba una cuenta
+        // desactivada desde el reset (el defecto de I-423).
+        expect(after?.estado).toBe("bloqueado");
         expect(after?.bloqueadoHasta).toBeNull();
         expect(after?.debeCambiarPassword).toBe(false);
         // El hash quedó actualizado a la nueva clave (verifica el password real).

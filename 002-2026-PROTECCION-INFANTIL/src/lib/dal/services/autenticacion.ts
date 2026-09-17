@@ -175,6 +175,22 @@ export class AutenticacionService {
             return { ok: true, tipo: "sin_usuario" };
         }
 
+        // SPEC-698 (I-423): una cuenta que el admin DESACTIVÓ (`inactivo`) no recibe
+        // token — el reset no puede reactivar lo que el login niega (:96). Se niega
+        // SOLO `inactivo`, no `bloqueado`: quien olvidó su clave suele quedar
+        // `bloqueado` (falló logins) y necesita justamente el reset; `bloqueado` solo
+        // se limpia con un login exitoso que no puede hacer. La respuesta externa es la
+        // genérica constante (la ruta no manda nada para tipo≠"ok") → sin enumeración.
+        // SPEC-698 (I-423): una cuenta que el admin DESACTIVÓ (`inactivo`) no recibe
+        // token — el reset no puede reactivar lo que el login niega (:96). Se niega
+        // SOLO `inactivo`, no `bloqueado`: quien olvidó su clave suele quedar
+        // `bloqueado` (falló logins) y necesita justamente el reset; `bloqueado` solo
+        // se limpia con un login exitoso que no puede hacer. La respuesta externa es la
+        // genérica constante (la ruta no manda nada para tipo≠"ok") → sin enumeración.
+        if (usuario.estado === "inactivo") {
+            return { ok: true, tipo: "inactiva" };
+        }
+
         const desde = new Date(Date.now() - VENTANA_MS);
         const activosRecientes = await this.tokens.countActivosRecientes(email, desde);
         if (activosRecientes >= LIMITE_SOLICITUDES) {
@@ -233,8 +249,13 @@ export class AutenticacionService {
         await withUnitOfWork(async (tx) => {
             await new UsuarioRepository(tx).actualizar(usuarioId, {
                 passwordHash,
+                // SPEC-698 (I-423): el reset SOLO desbloquea el mecanismo de lockout
+                // (intentosFallidos, bloqueadoHasta) — NUNCA cambia `estado`. Ponerlo en
+                // "activo" sin condición reactivaba una cuenta que el admin desactivó
+                // (el login la niega en :96, pero el reset era la puerta trasera). Un
+                // `inactivo` queda `inactivo`; un `bloqueado` queda `bloqueado` con el
+                // lockout limpio y el primer login exitoso lo pasa a `activo` (:102).
                 intentosFallidos: 0,
-                estado: "activo",
                 bloqueadoHasta: null,
                 // SPEC-315 (002-PI-215): el reset por email deja al usuario con su clave
                 // definitiva elegida en el formulario; se limpia el flag para no mandarlo
