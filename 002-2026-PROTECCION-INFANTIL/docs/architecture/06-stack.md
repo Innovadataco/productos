@@ -76,8 +76,9 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `indices:check` | `tsx scripts/verify-hnsw-indexes.ts` |
 | `lint` | `eslint .` |
 | `locks:check` | `tsx scripts/locks-check.ts` |
-| `ratchets:check` | `npm run ratchets:no-x-invoke-path && npm run ratchets:no-redirect-layout && npm run ratchets:no-self-redirect && npm run ratchets:guardia-invariante && npm run ratchets:no-usd-vistas && npm run ratchets:no-unref-timer` |
+| `ratchets:check` | `npm run ratchets:no-x-invoke-path && npm run ratchets:no-redirect-layout && npm run ratchets:no-self-redirect && npm run ratchets:guardia-invariante && npm run ratchets:no-usd-vistas && npm run ratchets:no-unref-timer && npm run ratchets:no-drift-destructivo` |
 | `ratchets:guardia-invariante` | `tsx scripts/lint/guardia-invariante.ts` |
+| `ratchets:no-drift-destructivo` | `tsx scripts/lint/no-drift-destructivo-migracion.ts` |
 | `ratchets:no-redirect-layout` | `tsx scripts/lint/no-redirect-en-layout-de-dashboard.ts` |
 | `ratchets:no-self-redirect` | `tsx scripts/lint/no-self-redirect-server-actions.ts` |
 | `ratchets:no-unref-timer` | `tsx scripts/lint/no-unref-timer-nuevo.ts` |
