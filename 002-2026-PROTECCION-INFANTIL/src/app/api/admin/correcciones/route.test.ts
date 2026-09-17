@@ -11,14 +11,11 @@ import {
     crearPaisCiudad,
     crearParametrosReportes,
 } from "@/lib/reporte-test-utils";
-import { procesarBackfillAnonimizacion } from "@/lib/ai/dataset-anonimizacion-backfill";
-import { procesarBackfillEmbedding } from "@/lib/ai/dataset-embedding-backfill";
 import type { CategoriaConducta } from "@prisma/client";
 
 let mockToken: string | undefined;
 
 const mockAnonimizar = vi.fn();
-const mockPublishBackfill = vi.fn().mockResolvedValue(undefined);
 const mockPublishEmbeddingBackfill = vi.fn().mockResolvedValue(undefined);
 const mockGenerarEmbedding = vi.fn().mockResolvedValue(new Array(768).fill(0.01));
 
@@ -38,7 +35,6 @@ vi.mock("@/lib/ai/embedder", () => ({
 }));
 
 vi.mock("@/lib/queue", () => ({
-    publishDatasetAnonimizacionBackfill: (...args: unknown[]) => mockPublishBackfill(...args),
     publishDatasetEmbeddingBackfill: (...args: unknown[]) => mockPublishEmbeddingBackfill(...args),
 }));
 
@@ -50,7 +46,6 @@ describe("POST /api/admin/correcciones", () => {
         await crearPaisCiudad();
         mockToken = undefined;
         mockAnonimizar.mockReset();
-        mockPublishBackfill.mockReset().mockResolvedValue(undefined);
         mockPublishEmbeddingBackfill.mockReset().mockResolvedValue(undefined);
         mockGenerarEmbedding.mockReset().mockResolvedValue(new Array(768).fill(0.01));
     });
@@ -144,7 +139,8 @@ describe("POST /api/admin/correcciones", () => {
         expect(dataset).not.toBeNull();
         expect(dataset!.textoAnonimizado).toBe(true);
         expect(dataset!.texto).toContain("[NOMBRE]");
-        expect(mockPublishBackfill).not.toHaveBeenCalled();
+        // SPEC-702: ninguna copia se persiste sin anonimizar.
+        expect(await prisma.datasetEntrenamiento.count({ where: { textoAnonimizado: false } })).toBe(0);
 
         const embedding = await prisma.embeddingDataset.findUnique({
             where: { datasetId: dataset!.id },
@@ -153,13 +149,17 @@ describe("POST /api/admin/correcciones", () => {
         expect(mockPublishEmbeddingBackfill).not.toHaveBeenCalled();
     });
 
-    it("encola backfill cuando la anonimización sincrónica falla y el backfill anonimiza el registro", async () => {
+    // SPEC-702 (I-422 p1) · CANDADO de conducta: si la anonimización falla, NO se guarda copia.
+    // Antes se guardaba el relato en claro con textoAnonimizado=false y se encolaba un backfill;
+    // eso se retiró. Ahora una corrección con anonimización fallida deja 0 filas nuevas, y NINGUNA
+    // fila queda con textoAnonimizado=false. Control positivo: la corrección sí ocurre (200).
+    it("CANDADO · anonimización fallida NO guarda copia: 0 filas, ninguna con textoAnonimizado=false", async () => {
         const admin = await crearUsuario("ADMIN");
         mockToken = await crearTokenUsuario(admin.id, "ADMIN");
         const { reporte } = await setupReporteConPii();
 
-        // Primera llamada (corrección sincrónica) falla.
-        mockAnonimizar.mockRejectedValueOnce(new Error("Ollama no disponible"));
+        // La anonimización del dataset falla (Ollama caído, timeout, etc.).
+        mockAnonimizar.mockRejectedValue(new Error("Ollama no disponible"));
 
         const req = crearRequestAutenticado("POST", "http://localhost:5005/api/admin/correcciones", {
             reporteId: reporte.id,
@@ -167,31 +167,21 @@ describe("POST /api/admin/correcciones", () => {
         }, mockToken);
 
         const res = await POST(req);
+        // La corrección misma SÍ se completa; solo se omite la copia de entrenamiento.
         expect(res.status).toBe(200);
 
-        const dataset = await prisma.datasetEntrenamiento.findFirst({
-            where: { fuente: "correccion_admin" },
-        });
-        expect(dataset).not.toBeNull();
-        expect(dataset!.textoAnonimizado).toBe(false);
-        expect(dataset!.texto).toContain("María");
-        expect(mockPublishBackfill).toHaveBeenCalledWith(dataset!.id);
+        // Ninguna copia se guardó (ni cruda ni anonimizada): el relato en claro nunca entra.
+        expect(await prisma.datasetEntrenamiento.count()).toBe(0);
+        expect(await prisma.datasetEntrenamiento.count({ where: { textoAnonimizado: false } })).toBe(0);
+        // Y no queda ningún embedding colgando de una copia inexistente.
+        expect(await prisma.embeddingDataset.count()).toBe(0);
 
-        // Simular que el worker reintenta y ahora Ollama responde.
-        mockAnonimizar.mockResolvedValueOnce({
-            textoAnonimizado: "Mi hija [NOMBRE] del [COLEGIO] recibió mensajes ofreciendo regalos.",
-            piiDetectada: ["María", "colegio San José"],
-            metrics: { modelo: "ornith:9b", latenciaMs: 500 },
+        // La corrección quedó registrada aunque la copia no: el reporte pasó a CORREGIDO.
+        const reporteActualizado = await prisma.reporte.findUnique({
+            where: { id: reporte.id },
+            select: { estado: true },
         });
-
-        await procesarBackfillAnonimizacion(dataset!.id);
-
-        const datasetActualizado = await prisma.datasetEntrenamiento.findUnique({
-            where: { id: dataset!.id },
-        });
-        expect(datasetActualizado!.textoAnonimizado).toBe(true);
-        expect(datasetActualizado!.texto).toContain("[NOMBRE]");
-        expect(datasetActualizado!.texto).not.toContain("María");
+        expect(reporteActualizado?.estado).toBe("CORREGIDO");
     });
 
     it("deja el reporte en CORREGIDO y registra transición con responsable OPERADOR", async () => {
@@ -339,4 +329,7 @@ describe("POST /api/admin/correcciones", () => {
         const res = await POST(req);
         expect(res.status).toBe(409);
     });
+
+    // El borrado en cascada de la copia (borrar corrección/reporte → 0 filas, sin huérfanas) + su
+    // control positivo viven en el candado dedicado `dataset-erradicacion.candado.test.ts`.
 });
