@@ -41,6 +41,7 @@ import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
 import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
 import { verificacionDemo, REVISADO_HACE_DIAS } from "./lib/profesional-demo";
 import { asegurarVerificadorDemoSinAcceso } from "./lib/verificador-demo-sin-acceso";
+import { derivarPerfilCatalogoSeed, CLAVES_SEED_RED_APOYO, type PerfilCatalogoSeed } from "../lib/perfil-catalogo-seed";
 import {
     CORRIDA_RED,
     SCRIPT_RED,
@@ -174,6 +175,7 @@ async function sembrarProfesional(
     verificadorId: string,
     ciudadId: string,
     passwordHash: string,
+    catalogo: PerfilCatalogoSeed,
 ): Promise<ProfSembrado> {
     const modalidades = modalidadesDeProfesional(idx);
     const bucket = bucketActividad(idx);
@@ -200,8 +202,13 @@ async function sembrarProfesional(
             data: {
                 usuarioId: usuario.id,
                 nombreVisible: `Dra. ${nombre} ${apellidos}`,
-                tituloProfesional: "Psicóloga clínica",
-                especialidades: ["Ansiedad infantil", "Acoso escolar"],
+                // SPEC-685: claves del catálogo + etiquetas legado derivadas con la MISMA
+                // función que la API (doble escritura). Nunca "" ni [].
+                profesion: catalogo.profesion,
+                areasAtencion: catalogo.areasAtencion,
+                rangoEtario: catalogo.rangoEtario,
+                tituloProfesional: catalogo.tituloProfesional,
+                especialidades: catalogo.especialidades,
                 ciudadId,
                 atiendeVirtual: modalidades.includes("VIRTUAL"),
                 atiendePresencial: modalidades.includes("PRESENCIAL"),
@@ -409,13 +416,15 @@ async function main(): Promise<void> {
     const verificadorDemoId = await prisma.$transaction((tx) =>
         asegurarVerificadorDemoSinAcceso(tx, { corrida: CORRIDA_RED, script: SCRIPT_RED, email: EMAIL_VERIFICADOR_DEMO_RED }),
     );
+    // SPEC-685: catálogo (claves + etiquetas legado) resuelto una vez contra el catálogo vivo.
+    const catalogo = await derivarPerfilCatalogoSeed(CLAVES_SEED_RED_APOYO);
     const resumen: Resumen = { profesionales: 0, franjasLibres: 0, porEstado: {}, encuestas: 0, padres: 0 };
 
     // 1) Profesionales visibles + franjas libres futuras.
     const profs: ProfSembrado[] = [];
     for (let i = 0; i < NUM_PROFESIONALES; i++) {
         const ciudadId = ciudades[i % ciudades.length]!.id;
-        const p = await sembrarProfesional(i, verificadorDemoId, ciudadId, passwordHash);
+        const p = await sembrarProfesional(i, verificadorDemoId, ciudadId, passwordHash, catalogo);
         profs.push(p);
         resumen.profesionales++;
     }
