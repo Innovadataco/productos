@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { verifyPassword } from "@/lib/auth";
 import { reasignarVerificacionesRedApoyo } from "../../scripts/demo-prod/reasignar-verificaciones-red-apoyo";
-import { CORRIDA_RED } from "../../scripts/demo-prod/lib/red-apoyo-plan";
+import { CORRIDA_RED, EMAIL_VERIFICADOR_DEMO_RED } from "../../scripts/demo-prod/lib/red-apoyo-plan";
 
 async function ciudadDePrueba(): Promise<string> {
     const existente = await prisma.ciudad.findFirst({ select: { id: true } });
@@ -124,14 +124,18 @@ describe("I-418 · reasignar firmante de verificaciones de la Red de Apoyo", () 
         });
 
         const r = await reasignar(false);
+        expect(r.verificadorExiste).toBe(true);
+        const vid = r.verificadorDemoId!;
 
-        const v = await prisma.usuario.findUniqueOrThrow({ where: { id: r.verificadorDemoId }, select: { rol: true, estado: true, passwordHash: true } });
+        const v = await prisma.usuario.findUniqueOrThrow({ where: { id: vid }, select: { rol: true, estado: true, passwordHash: true, email: true } });
         expect(v.rol).toBe("VERIFICADOR");
         expect(v.estado).toBe("inactivo");
         // Clave no usable: ninguna contraseña conocida valida contra su hash.
         expect(await verifyPassword("cualquier-clave-de-prueba", v.passwordHash)).toBe(false);
+        // Correo que NO puede recibir (.invalid) → el reset de contraseña no puede reactivarla.
+        expect(v.email.endsWith(".invalid")).toBe(true);
         // Marcado en demo_marcado (se purga con la corrida).
-        expect(await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: r.verificadorDemoId } })).not.toBeNull();
+        expect(await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: vid } })).not.toBeNull();
     });
 
     it("idempotente: la segunda corrida reasigna 0", async () => {
@@ -151,7 +155,7 @@ describe("I-418 · reasignar firmante de verificaciones de la Red de Apoyo", () 
         expect(r2.despuesAlDemo).toBe(1);
     });
 
-    it("dry-run no escribe: la marcada sigue con el admin real", async () => {
+    it("dry-run DEJA LA BASE IDÉNTICA: no crea el verificador, no reasigna (candado del CEO, defecto 1)", async () => {
         const ciudadId = await ciudadDePrueba();
         const adminId = await crearAdminReal();
         const perfilId = await crearPerfil(ciudadId);
@@ -160,9 +164,44 @@ describe("I-418 · reasignar firmante de verificaciones de la Red de Apoyo", () 
             data: { entidad: "VerificacionProfesional", entidadId: marcada, metadata: { corrida: CORRIDA_RED, script: "candado" } },
         });
 
+        // Foto ANTES. El verificador NO debe existir todavía.
+        const usuariosAntes = await prisma.usuario.count();
+        const marcasAntes = await prisma.demoMarcado.count();
+        expect(await prisma.usuario.findUnique({ where: { email: EMAIL_VERIFICADOR_DEMO_RED } })).toBeNull();
+
         const r = await reasignar(true);
+
         expect(r.escrito).toBe(false);
-        expect(r.porReasignar).toBe(1); // lo que se reasignaría
+        expect(r.verificadorExiste).toBe(false); // el dry-run NO lo crea
+        expect(r.verificadorDemoId).toBeNull();
+        expect(r.porReasignar).toBe(1); // lo que se reasignaría AL CONFIRMAR
+        // Base IDÉNTICA: mismos conteos, el verificador sigue sin existir, la marcada sigue con el admin.
+        expect(await prisma.usuario.count()).toBe(usuariosAntes);
+        expect(await prisma.demoMarcado.count()).toBe(marcasAntes);
+        expect(await prisma.usuario.findUnique({ where: { email: EMAIL_VERIFICADOR_DEMO_RED } })).toBeNull();
         expect((await prisma.verificacionProfesional.findUniqueOrThrow({ where: { id: marcada } })).revisadoPorId).toBe(adminId);
+    });
+
+    it("aborta si ya existe una cuenta con ese correo SIN la marca de la corrida (no la secuestra)", async () => {
+        const ciudadId = await ciudadDePrueba();
+        const adminId = await crearAdminReal();
+        const perfilId = await crearPerfil(ciudadId);
+        const marcada = await crearVerif(perfilId, adminId, "m");
+        await prisma.demoMarcado.create({
+            data: { entidad: "VerificacionProfesional", entidadId: marcada, metadata: { corrida: CORRIDA_RED, script: "candado" } },
+        });
+        // Una cuenta AJENA ya ocupa ese correo, sin marca demo.
+        await prisma.usuario.create({
+            data: { email: EMAIL_VERIFICADOR_DEMO_RED, nombre: "Ajeno", passwordHash: "x", rol: "PARENT", estado: "activo", estadoActivacion: "ACTIVO", debeCambiarPassword: false },
+        });
+        await expect(reasignar(false)).rejects.toThrow(/cuenta ajena|SIN marca/i);
+    });
+});
+
+describe("I-418 · el firmante NO puede recibir correo (candado del CEO, defecto 2)", () => {
+    it("EMAIL_VERIFICADOR_DEMO_RED usa un dominio no resoluble (.invalid, RFC 2606)", () => {
+        // Un correo que recibe → `solicitarRecuperacion` le manda el token y `restablecerPassword`
+        // reactiva la cuenta a VERIFICADOR activo. `.invalid` no resuelve: ningún buzón lo recibe.
+        expect(EMAIL_VERIFICADOR_DEMO_RED.endsWith(".invalid")).toBe(true);
     });
 });

@@ -47,6 +47,17 @@ export async function asegurarVerificadorDemoSinAcceso(
     const existente = await tx.usuario.findUnique({ where: { email }, select: { id: true } });
     let id: string;
     if (existente) {
+        // D-121: si el correo YA existe pero NO lleva la marca demo de ESTA corrida, es una cuenta
+        // AJENA — no se secuestra (abortar, no convertir). Con el correo `.invalid` esto no debería
+        // pasar nunca; es defensa. Si está marcada para la corrida, es la nuestra → reafirmar.
+        const marca = await tx.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: existente.id }, select: { metadata: true } });
+        const corridaMarca = (marca?.metadata as { corrida?: string } | null)?.corrida;
+        if (corridaMarca !== corrida) {
+            throw new Error(
+                `[verificador-demo] ya existe una cuenta ${email} ${marca ? `marcada para la corrida '${corridaMarca}'` : "SIN marca demo"}; ` +
+                    "no se convierte una cuenta ajena en verificador. Aborto.",
+            );
+        }
         // Reafirma sin-acceso; NO toca passwordHash (ya nació inutilizable acá) → idempotente.
         await tx.usuario.update({
             where: { id: existente.id },

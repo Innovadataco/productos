@@ -27,7 +27,8 @@ import { CORRIDA_RED, SCRIPT_RED, EMAIL_VERIFICADOR_DEMO_RED } from "./lib/red-a
 import { asegurarVerificadorDemoSinAcceso } from "./lib/verificador-demo-sin-acceso";
 
 export interface ResultadoReasignacion {
-    verificadorDemoId: string;
+    verificadorDemoId: string | null; // null en dry-run si el verificador aún no existe
+    verificadorExiste: boolean;
     marcadas: number;
     yaAlDemo: number;
     porReasignar: number;
@@ -38,18 +39,15 @@ export interface ResultadoReasignacion {
 
 /**
  * Reasigna, dentro de `tx`, las verificaciones marcadas `red-apoyo-676` al verificador demo sin
- * acceso. Devuelve los conteos antes/después. `dryRun` no escribe (solo mide).
+ * acceso. Devuelve los conteos antes/después.
+ *
+ * `dryRun` es PURO: NO escribe NADA. No crea el verificador (solo lo BUSCA) — un dry-run tiene que
+ * dejar la base IDÉNTICA (candado). Solo la corrida real (`--confirm`) asegura el verificador y reasigna.
  */
 export async function reasignarVerificacionesRedApoyo(
     tx: Prisma.TransactionClient,
     opts: { dryRun: boolean },
 ): Promise<ResultadoReasignacion> {
-    const verificadorDemoId = await asegurarVerificadorDemoSinAcceso(tx, {
-        corrida: CORRIDA_RED,
-        script: SCRIPT_RED,
-        email: EMAIL_VERIFICADOR_DEMO_RED,
-    });
-
     // IDs de las verificaciones SEMBRADAS por la Red de Apoyo (marca de la corrida). Solo estas.
     const marcas = await tx.demoMarcado.findMany({
         where: { entidad: "VerificacionProfesional", metadata: { path: ["corrida"], equals: CORRIDA_RED } },
@@ -57,29 +55,47 @@ export async function reasignarVerificacionesRedApoyo(
     });
     const ids = marcas.map((m) => m.entidadId);
 
-    // ANTES: quién firma hoy esas verificaciones (grupo por revisadoPorId).
+    // ANTES: quién firma hoy esas verificaciones (grupo por revisadoPorId). Solo lectura.
     const grupos = ids.length
         ? await tx.verificacionProfesional.groupBy({ by: ["revisadoPorId"], where: { id: { in: ids } }, _count: { _all: true } })
         : [];
     const firmantesAntes = grupos
         .map((g) => ({ revisadoPorId: g.revisadoPorId, cuenta: g._count._all }))
         .sort((a, b) => b.cuenta - a.cuenta);
+
+    if (opts.dryRun) {
+        // NO escribe: solo BUSCA el verificador (puede no existir todavía) y pronostica.
+        const verificador = await tx.usuario.findUnique({ where: { email: EMAIL_VERIFICADOR_DEMO_RED }, select: { id: true } });
+        const yaAlDemo = verificador ? (firmantesAntes.find((f) => f.revisadoPorId === verificador.id)?.cuenta ?? 0) : 0;
+        return {
+            verificadorDemoId: verificador?.id ?? null,
+            verificadorExiste: verificador !== null,
+            marcadas: ids.length,
+            yaAlDemo,
+            porReasignar: ids.length - yaAlDemo,
+            despuesAlDemo: yaAlDemo,
+            firmantesAntes,
+            escrito: false,
+        };
+    }
+
+    // Escritura (--confirm): asegura el verificador demo y reasigna las que aún no lo apuntan.
+    const verificadorDemoId = await asegurarVerificadorDemoSinAcceso(tx, {
+        corrida: CORRIDA_RED,
+        script: SCRIPT_RED,
+        email: EMAIL_VERIFICADOR_DEMO_RED,
+    });
     const yaAlDemo = firmantesAntes.find((f) => f.revisadoPorId === verificadorDemoId)?.cuenta ?? 0;
     const porReasignar = ids.length - yaAlDemo;
-
-    if (!opts.dryRun && porReasignar > 0) {
+    if (porReasignar > 0) {
         await tx.verificacionProfesional.updateMany({
             where: { id: { in: ids }, revisadoPorId: { not: verificadorDemoId } },
             data: { revisadoPorId: verificadorDemoId },
         });
     }
+    const despuesAlDemo = await tx.verificacionProfesional.count({ where: { id: { in: ids }, revisadoPorId: verificadorDemoId } });
 
-    // DESPUÉS: cuántas de las marcadas apuntan ya al verificador demo (tras escribir, debe = marcadas).
-    const despuesAlDemo = opts.dryRun
-        ? yaAlDemo
-        : await tx.verificacionProfesional.count({ where: { id: { in: ids }, revisadoPorId: verificadorDemoId } });
-
-    return { verificadorDemoId, marcadas: ids.length, yaAlDemo, porReasignar, despuesAlDemo, firmantesAntes, escrito: !opts.dryRun };
+    return { verificadorDemoId, verificadorExiste: true, marcadas: ids.length, yaAlDemo, porReasignar, despuesAlDemo, firmantesAntes, escrito: true };
 }
 
 /** Aborta ante cualquier flag no reconocido (no tragar flags en un script que escribe prod). */
@@ -102,15 +118,15 @@ async function main(): Promise<void> {
     const r = await prisma.$transaction((tx) => reasignarVerificacionesRedApoyo(tx, { dryRun }));
 
     console.log("");
-    console.log(`[reasignar-verif-redapoyo] ${dryRun ? "DRY-RUN (sin --confirm, no escribe)" : "ESCRITO"}`);
-    console.log(`  verificador demo (firmante): ${r.verificadorDemoId}`);
+    console.log(`[reasignar-verif-redapoyo] ${dryRun ? "DRY-RUN (sin --confirm, NO escribe nada)" : "ESCRITO"}`);
+    console.log(`  verificador demo (firmante): ${r.verificadorDemoId ?? "(no existe aún — se crearía al confirmar)"}`);
     console.log(`  verificaciones marcadas ${CORRIDA_RED}: ${r.marcadas}`);
     console.log("  firmantes ANTES:");
     for (const f of r.firmantesAntes) {
         const cual = f.revisadoPorId === r.verificadorDemoId ? " (verificador demo)" : " (otro — a reasignar)";
         console.log(`    ${f.revisadoPorId}: ${f.cuenta}${cual}`);
     }
-    console.log(`  ${dryRun ? "se reasignarían" : "reasignadas"}: ${r.escrito ? r.porReasignar : r.porReasignar} · ya al demo: ${r.yaAlDemo}`);
+    console.log(`  ${dryRun ? "se reasignarían" : "reasignadas"}: ${r.porReasignar} · ya al demo: ${r.yaAlDemo}`);
     console.log(`  DESPUÉS al verificador demo: ${r.despuesAlDemo}${!dryRun ? (r.despuesAlDemo === r.marcadas ? " ✅ (= marcadas)" : " ⚠️ ¡no todas!") : ""}`);
 }
 

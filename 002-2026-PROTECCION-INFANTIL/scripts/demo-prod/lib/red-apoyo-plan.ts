@@ -23,11 +23,18 @@ export const CORRIDA_RED = "red-apoyo-676";
 export const SCRIPT_RED = "poblar-red-apoyo";
 /**
  * I-418 · correo del VERIFICADOR demo sin acceso que FIRMA las verificaciones de esta corrida
- * (no un admin real). Sub-dirección `+` sobre `soporte@` (distinto de la cuenta intocable, que no
- * lleva `+`). Fuente ÚNICA: lo usan el poblador (firma al sembrar) y el corrector I-418 (reasigna
- * lo ya sembrado) → apuntan al MISMO verificador, no pueden divergir.
+ * (no un admin real). Fuente ÚNICA: lo usan el poblador (firma al sembrar) y el corrector I-418
+ * (reasigna lo ya sembrado) → apuntan al MISMO verificador, no pueden divergir.
+ *
+ * DOMINIO `.invalid` (RFC 2606, no resoluble → NINGÚN buzón lo recibe) A PROPÓSITO: `estado=inactivo`
+ * NO alcanza como único cerrojo, porque el reset de contraseña reactiva la cuenta —
+ * `restablecerPassword` pone `estado:"activo"` sin condición y `solicitarRecuperacion` manda el token
+ * a cualquier cuenta que exista. Con un `soporte+…@innovadataco.com` el token llega al buzón de
+ * soporte y alguien podría convertir al firmante en un VERIFICADOR ACTIVO que aprueba profesionales
+ * reales. Un correo que NO puede recibir nada corta esa vía. (El reset-reactiva-desactivada es defecto
+ * de plataforma, radicado aparte como I-423.) El candado exige que este correo termine en `.invalid`.
  */
-export const EMAIL_VERIFICADOR_DEMO_RED = "soporte+redapoyo-verificador@innovadataco.com";
+export const EMAIL_VERIFICADOR_DEMO_RED = "verificador-demo@red-apoyo-676.invalid";
 
 // ── Profesionales ─────────────────────────────────────────────────────────
 export const NUM_PROFESIONALES = 50;
