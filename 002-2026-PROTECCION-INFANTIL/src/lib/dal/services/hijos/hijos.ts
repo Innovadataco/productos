@@ -151,6 +151,18 @@ export function marcarTieneReportes<
  * padre quita, queda quitado.
  */
 export async function listarHijos(usuarioId: string) {
+    return (await listarHijosConEstado(usuarioId)).hijos;
+}
+
+/**
+ * SPEC-716 (Parte A · I-427): los hijos con `tieneReportes` MÁS `cuentasConReporte` = cuántas
+ * CUENTAS activas del padre tienen un reporte visible (= `paresConReporte.size`, el MISMO cálculo y
+ * la MISMA consulta, no uno paralelo; el par identificador+plataforma de I-429). La línea de estado
+ * de «A quién protejo» necesita ese número; derivarlo por otro criterio daría DOS VERDADES sobre el
+ * mismo hecho (el gráfico pinta ámbar por `tieneReportes` y la línea, debajo, no puede decir «Sin
+ * reportes» — I-427).
+ */
+export async function listarHijosConEstado(usuarioId: string) {
     const hijos = await prisma.hijo.findMany({
         where: { usuarioId },
         select: {
@@ -212,7 +224,13 @@ export async function listarHijos(usuarioId: string) {
         );
     }
 
-    return marcarTieneReportes(hijos, paresConReporte);
+    return {
+        hijos: marcarTieneReportes(hijos, paresConReporte),
+        // SPEC-716 (Parte A): el conteo de CUENTAS con reporte visible — el tamaño del MISMO conjunto
+        // de PARES (identificador, plataforma) que decide `tieneReportes` (I-429). Solo el número
+        // cruza a la pantalla (no la lista), y de la misma verdad que enciende el ámbar del gráfico.
+        cuentasConReporte: paresConReporte.size,
+    };
 }
 
 /**

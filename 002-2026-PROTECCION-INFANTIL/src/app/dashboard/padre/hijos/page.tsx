@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { verifyAuth } from "@/lib/auth";
-import { listarHijos } from "@/lib/dal/services/hijos";
+import { listarHijosConEstado } from "@/lib/dal/services/hijos";
 import { obtenerHomePadre } from "@/lib/padre/home";
 import { AQuienProtejoView, type AQuienProtejoData } from "@/components/modules/padre/AQuienProtejoView";
 
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 
 export default async function PadreHijosPage() {
     const usuario = await verifyAuth("PARENT");
-    const [hijos, home] = await Promise.all([
-        listarHijos(usuario.id),
+    const [{ hijos, cuentasConReporte }, home] = await Promise.all([
+        listarHijosConEstado(usuario.id),
         obtenerHomePadre(usuario.id, usuario.nombre ?? null),
     ]);
 
@@ -33,6 +33,8 @@ export default async function PadreHijosPage() {
             motorVivo: home.estadoClasificador.motorVivo,
             ultimaVerificacionEn: home.estadoClasificador.ultimaVerificacionEn,
         },
+        // SPEC-716 (Parte A · I-427): el conteo de CUENTAS con reporte visible, para la línea de estado.
+        cuentasConReporte,
         circulo: {
             personas: home.resumen.totalContactos,
             // «todas tranquilas» solo se afirma con motor VIVO y sin reportes en el
