@@ -357,7 +357,7 @@ export function CirculoConfianzaClient() {
                                 </span>
                             </div>
 
-                            {enAtencion.length > 0 && <BloqueAtencion personas={enAtencion} onVer={verDetalle} />}
+                            {enAtencion.length > 0 && <BloqueAtencion personas={enAtencion} />}
 
                             <section className="mt-7">
                                 <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
