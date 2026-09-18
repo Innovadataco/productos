@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { formatCategoria } from "@/lib/labels";
@@ -67,7 +68,18 @@ export default function CanjearAccesoPage() {
 
     return (
         <main className="mx-auto max-w-2xl px-4 py-12">
-            <h1 className="text-2xl font-bold text-body">Abrir un caso con un pase</h1>
+            {/* SPEC-710 (I-427 · veredicto CEO): esta pantalla vive FUERA de /dashboard y no lleva el
+                menú lateral; sin una salida el profesional (o el padre) queda sin cómo volver a su
+                área. `/dashboard` enruta a CADA rol a su casa (homeParaRol): el padre a su panel, el
+                profesional a su área. Salida SIEMPRE visible, en reposo y con el caso abierto. (No es
+                el muro de aceptación de SPEC-686, donde el menú se colapsa a propósito.) */}
+            <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+            >
+                <span aria-hidden>←</span> Volver a mi panel
+            </Link>
+            <h1 className="mt-4 text-2xl font-bold text-body">Abrir un caso con un pase</h1>
             <p className="mt-2 text-sm text-muted">
                 Pídale el pase al padre o a la madre. Son 8 caracteres. Al abrirlo podrá leer el caso completo durante
                 15 minutos.
