@@ -23,6 +23,10 @@ interface EstadoDocumento {
     enRevision: boolean;
     extension: string | null;
     subidoEn: string | null;
+    /** SPEC-707: aprobado y bloqueado mientras la verificación está en revisión/devuelta. */
+    bloqueado: boolean;
+    /** SPEC-707: motivo que escribió el verificador si este documento fue devuelto. */
+    observacion: string | null;
 }
 
 function IconCheck() {
@@ -115,7 +119,14 @@ export function DocumentosRequisitos() {
                 >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <p className="text-sm font-semibold text-body">{d.nombre}</p>
-                        {d.enRevision ? (
+                        {d.bloqueado ? (
+                            // SPEC-707: aprobado por el verificador; no se reemplaza mientras la
+                            // verificación sigue en revisión o con observaciones.
+                            <span className="flex items-center gap-1 text-xs text-body">
+                                <IconCheck />
+                                Aprobado
+                            </span>
+                        ) : d.enRevision ? (
                             // SPEC-693 (FORMA §3): subió una versión nueva; sigue activo mientras se revisa.
                             <span className="text-xs font-medium text-estado-ambar">
                                 En revisión — enviaste un documento nuevo
@@ -130,18 +141,34 @@ export function DocumentosRequisitos() {
                         )}
                     </div>
                     {d.descripcion && <p className="mt-1 text-xs text-muted">{d.descripcion}</p>}
+                    {d.observacion && (
+                        // SPEC-707: el MOTIVO que escribió el verificador, junto al documento
+                        // devuelto. La forma del aviso la afina Diseño.
+                        <p role="note" className="mt-2 rounded-lg bg-tinta/5 px-3 py-2 text-xs text-body">
+                            <span className="font-semibold text-estado-ambar">Le devolvieron este documento. </span>
+                            {d.observacion}
+                        </p>
+                    )}
                     <div className="mt-3 flex flex-wrap items-center gap-3">
-                        <input
-                            type="file"
-                            accept="application/pdf,image/png,image/jpeg"
-                            aria-label={`Subir ${d.nombre}`}
-                            disabled={subiendo !== null}
-                            onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) void subir(d.clave, f);
-                            }}
-                            className="text-sm"
-                        />
+                        {d.bloqueado ? (
+                            // SPEC-707: aprobado → no se reemplaza mientras la verificación sigue
+                            // en revisión (el servidor también lo rechaza). Solo el devuelto se sube.
+                            <span className="text-xs text-muted">
+                                Ya está aprobado. No necesita volver a subirlo mientras su verificación está en revisión.
+                            </span>
+                        ) : (
+                            <input
+                                type="file"
+                                accept="application/pdf,image/png,image/jpeg"
+                                aria-label={`Subir ${d.nombre}`}
+                                disabled={subiendo !== null}
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) void subir(d.clave, f);
+                                }}
+                                className="text-sm"
+                            />
+                        )}
                         {subiendo === d.clave && <span className="text-xs text-muted">Subiendo…</span>}
                         {d.cargado && (
                             <a

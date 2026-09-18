@@ -209,6 +209,26 @@ export class PerfilProfesionalRepository {
         });
     }
 
+    /**
+     * SPEC-707 · estado del perfil + la ÚLTIMA verificación (resultado + checklist), por id.
+     * FUENTE ÚNICA para (a) bloquear el reemplazo de un documento ya APROBADO (CUMPLE)
+     * mientras el perfil no está ACTIVO, y (b) mostrarle al profesional la observación del
+     * requisito que le devolvieron. Solo la más reciente (`revisadoEn desc, take 1`).
+     */
+    estadoYUltimaRevision(perfilProfesionalId: string) {
+        return this.db.perfilProfesional.findUnique({
+            where: { id: perfilProfesionalId },
+            select: {
+                estado: true,
+                verificaciones: {
+                    orderBy: { revisadoEn: "desc" },
+                    take: 1,
+                    select: { resultado: true, checklist: true },
+                },
+            },
+        });
+    }
+
     crearBorrador(data: Prisma.PerfilProfesionalCreateInput): Promise<PerfilConCiudad> {
         return this.db.perfilProfesional.create({
             data,
