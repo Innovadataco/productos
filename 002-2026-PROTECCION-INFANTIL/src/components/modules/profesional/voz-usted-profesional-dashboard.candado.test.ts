@@ -82,6 +82,29 @@ const TUTEO = [
 ];
 const PATRONES = [...VOSEO, ...TUTEO].map(rx);
 
+// SPEC-719 · los PRETÉRITOS de 2ª persona (tú y vos coinciden: -aste / -iste) son la parte
+// de la clase que 505/550 no cazaban — por eso el tuteo de SPEC-693 («subiste», «enviaste»)
+// entró en verde. Se cazan por MORFOLOGÍA (la terminación), no por lista: subiste, enviaste,
+// mandaste, elegiste, aceptaste, guardaste y cualquier otro quedan cubiertos sin tocar código.
+// La 3ª persona de usted NUNCA termina así (subió / envió), así que la terminación discrimina.
+// Excepciones (ANCLA, como tu/te/ves): homógrafos válidos en usted/3ª y sustantivos que
+// terminan igual (existe, insiste, consiste, contraste, triste…); y los identificadores en
+// camelCase/MAYÚSCULA (yaExiste, onPaste) se descartan por su mayúscula interna.
+const PRETERITO_2A = /(?<![\p{L}])(\p{L}*(?:aste|iste))(?![\p{L}])/giu;
+const PRETERITO_EXCEPCIONES = new Set(
+    [
+        "existe", "coexiste", "preexiste", "subsiste", "insiste", "consiste",
+        "persiste", "resiste", "asiste", "desiste", "embiste", "reviste", "inviste",
+        "contraste", "desgaste", "engaste", "gaste", "traste",
+        "triste", "chiste", "batiste", "alpiste", "viste", "paste",
+    ].map((w) => w.toLowerCase()),
+);
+/** ¿es un pretérito de 2ª persona (tuteo/voseo) y no una excepción ni un identificador? */
+function esPreteritoTuteo(palabra: string): boolean {
+    if (/\p{Lu}/u.test(palabra.slice(1))) return false; // mayúscula interna → identificador (yaExiste, onPaste)
+    return !PRETERITO_EXCEPCIONES.has(palabra.toLowerCase());
+}
+
 describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin voseo ni tuteo)", () => {
     const archivos = archivosDelAlcance();
 
@@ -107,13 +130,20 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
                     const m = linea.match(patron);
                     if (m) hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${m[0]}»: ${linea.trim().slice(0, 90)}`);
                 }
+                // SPEC-719 · la CLASE también incluye los pretéritos de 2ª persona (-aste/-iste).
+                for (const m of linea.matchAll(PRETERITO_2A)) {
+                    if (esPreteritoTuteo(m[1])) {
+                        hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${m[1]}» (pretérito 2ª): ${linea.trim().slice(0, 90)}`);
+                    }
+                }
             }
         }
         expect(
             hits,
-            ["SPEC-550 — voz informal (voseo/tuteo) en el área logueada del profesional:", ...hits,
+            ["SPEC-550/719 — voz informal (voseo/tuteo, incluidos pretéritos) en el área logueada del profesional:", ...hits,
                 "", "El profesional logueado habla de USTED. Pase a usted (tienes→tiene, atiendes→atiende,",
-                "podés→puede). Los imperativos y tu/te/ves de estas cadenas van en la contraprueba."].join("\n"),
+                "podés→puede, subiste→subió, enviaste→envió). Los imperativos y tu/te/ves de estas cadenas",
+                "van en la contraprueba."].join("\n"),
         ).toEqual([]);
     });
 
