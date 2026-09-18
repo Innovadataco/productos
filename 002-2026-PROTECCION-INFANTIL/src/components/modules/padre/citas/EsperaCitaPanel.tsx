@@ -13,6 +13,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
+import { GenerarPase } from "@/components/modules/padre/GenerarPase";
+import { Button } from "@/components/ui/Button";
 
 interface Props {
     citaInicial: CitaParaPadreDto;
@@ -81,6 +83,41 @@ function formatearFranja(inicioISO: string, finISO: string): string {
 
 function formatearMonto(cop: number): string {
     return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(cop);
+}
+
+/**
+ * SPEC-715 · «Agregar a mi calendario»: un `.ics` armado en el cliente desde la
+ * fecha/hora que la cita ya trae (sin backend, sin infra). Solo datos públicos
+ * (nombre visible del profesional + modalidad); nada del menor, y todavía sin
+ * dirección/enlace (eso llega con SPEC-708).
+ */
+function fechaIcs(iso: string): string {
+    return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+function descargarIcs(cita: CitaParaPadreDto): void {
+    const escapar = (s: string) => s.replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+    const ics = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Proteccion Infantil//cita//ES",
+        "BEGIN:VEVENT",
+        `UID:${cita.id}@proteccion-infantil`,
+        `DTSTAMP:${fechaIcs(new Date().toISOString())}`,
+        `DTSTART:${fechaIcs(cita.franja.inicio)}`,
+        `DTEND:${fechaIcs(cita.franja.fin)}`,
+        `SUMMARY:${escapar(`Cita con ${cita.profesional.nombreVisible}`)}`,
+        `DESCRIPTION:${escapar(`Modalidad: ${cita.franja.modalidad}`)}`,
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ].join("\r\n");
+    const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cita.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
 function useCountdown(hastaISO: string | null): { horas: number; minutos: number; vencido: boolean } | null {
@@ -185,6 +222,56 @@ export function EsperaCitaPanel({ citaInicial }: Props) {
                     </div>
                 )}
             </section>
+
+            {/* SPEC-715 · con la cita CONFIRMADA, el padre tiene acciones reales: compartir el
+                caso (el pase) y agendar en su calendario. Nada de esto antes de CONFIRMADA
+                (candado). El «dónde/enlace» llega con SPEC-708; el recordatorio por correo y la
+                encuesta NO existen y esta pantalla no los promete. */}
+            {cita.estado === "CONFIRMADA" && (
+                <section className="glass rounded-2xl p-4 sm:p-5 space-y-4">
+                    <div className="space-y-2">
+                        <p className="etiqueta text-subtle">Compartir el caso con {cita.profesional.nombreVisible}</p>
+                        {cita.expedienteCompartidoId ? (
+                            <>
+                                <p className="cuerpo text-subtle">
+                                    Cuando estén en la cita, dale este <strong>pase</strong> para que abra el expediente.
+                                    Son 8 caracteres y se muestran una sola vez.
+                                </p>
+                                <GenerarPase expedienteId={cita.expedienteCompartidoId} />
+                            </>
+                        ) : (
+                            <p className="cuerpo text-subtle">
+                                Esta cita no quedó ligada a un caso. Genera el pase desde el expediente que quieras
+                                compartir:{" "}
+                                <Link href="/dashboard/padre" className="underline hover:text-body">
+                                    elige desde cuál caso compartir
+                                </Link>
+                                .
+                            </p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        <p className="etiqueta text-subtle">Antes de la cita</p>
+                        <Button variant="secondary" onClick={() => descargarIcs(cita)}>
+                            Agregar a mi calendario
+                        </Button>
+                    </div>
+                </section>
+            )}
+
+            {/* SPEC-715 · después de la cita (CUMPLIDA): la salida real es pedir otra por el
+                directorio. Sin encuesta (no existe) y sin «te avisaremos» (tampoco). */}
+            {cita.estado === "CUMPLIDA" && (
+                <section className="glass rounded-2xl p-4 sm:p-5">
+                    <p className="cuerpo text-body">¿Quieres seguir? Puedes pedir otra cita con {cita.profesional.nombreVisible}.</p>
+                    <Link
+                        href={`/dashboard/padre/profesionales/${encodeURIComponent(cita.profesional.id)}`}
+                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
+                    >
+                        Pedir otra cita
+                    </Link>
+                </section>
+            )}
 
             {puedeElegirOtro && (
                 <section className="rounded-2xl border border-pino/30 bg-pino/5 p-4 sm:p-5">

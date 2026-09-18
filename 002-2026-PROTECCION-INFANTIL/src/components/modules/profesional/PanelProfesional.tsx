@@ -240,6 +240,17 @@ export function CitasConfirmadas({ data }: { data: PanelProfesionalDto }) {
                     ))}
                 </ul>
             )}
+            {/* SPEC-715 · abrir el caso con el pase: la familia le dicta 8 caracteres en la
+                sesión; usted los canjea acá (la pantalla ya existe). No se le muestra el pase —
+                lo dicta la familia—; solo el camino para canjearlo. */}
+            {n > 0 && (
+                <p className="mt-4 border-t border-tinta/8 pt-3 text-xs text-muted">
+                    La familia le dará un pase en la sesión (8 caracteres) para abrir su caso.{" "}
+                    <Link href="/canjear-acceso" className="font-medium text-accent underline">
+                        Abrir un caso con un pase
+                    </Link>
+                </p>
+            )}
         </Bloque>
     );
 }
