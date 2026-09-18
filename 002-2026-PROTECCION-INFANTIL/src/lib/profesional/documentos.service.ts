@@ -80,32 +80,76 @@ export interface EstadoDocumento {
      * fue devuelto (o no hay devolución con observación).
      */
     observacion: string | null;
+    /**
+     * SPEC-707 · estado de revisión para la insignia de la pantalla (Diseño FORMA-SPEC707):
+     * `aprobado` (✓ pino, bloqueado), `devuelto` (ámbar, con motivo, «Volver a subir»),
+     * `en_revision` (solicitud en revisión, todo bloqueado), `null` (no aplica).
+     */
+    revision: RevisionDocumento;
 }
 
 /**
- * SPEC-707 · el perfil está en el CICLO de verificación (no ACTIVO ni VENCIDO): mientras
- * lo esté, un documento ya aprobado (CUMPLE) se bloquea. `ACTIVO`/`VENCIDO` renuevan la
- * versión aprobada sin bloqueo (SPEC-693, no se toca). Un `BORRADOR` recién creado no tiene
- * checklist (nada CUMPLE) → nada bloqueado; un `BORRADOR` DEVUELTO sí.
+ * SPEC-707 · estado de revisión de UN documento del profesional, para la pantalla y el
+ * bloqueo. `null` = no aplica (no muestra insignia de revisión ni bloquea).
  */
-function enCicloDeVerificacion(estado: EstadoPerfilProfesional): boolean {
-    return estado === "BORRADOR" || estado === "EN_REVISION";
-}
+export type RevisionDocumento = "aprobado" | "devuelto" | "en_revision" | null;
 
 /**
- * SPEC-707 · FUENTE ÚNICA: estado del perfil + el checklist de la ÚLTIMA verificación. Lo
- * consumen el bloqueo (al subir) y la vista (`estadoDeDocumentos`), para que «qué está
- * bloqueado» y «qué se muestra bloqueado/con motivo» no puedan divergir.
+ * SPEC-707 · FUENTE ÚNICA: estado del perfil + resultado y checklist de la ÚLTIMA
+ * verificación. Lo consumen el bloqueo (al subir) y la vista (`estadoDeDocumentos`), para
+ * que «qué está bloqueado» y «qué se muestra bloqueado/con motivo» no puedan divergir.
  */
-async function ultimaRevision(
-    perfilProfesionalId: string,
-): Promise<{ estadoPerfil: EstadoPerfilProfesional; checklist: Record<string, ItemChecklist> }> {
+async function ultimaRevision(perfilProfesionalId: string): Promise<{
+    estadoPerfil: EstadoPerfilProfesional;
+    resultadoUltima: string | null;
+    checklist: Record<string, ItemChecklist>;
+}> {
     const p = await new PerfilProfesionalRepository().estadoYUltimaRevision(perfilProfesionalId);
     if (!p) throw new AppError("Perfil profesional no existe.", ERROR_CODES.NOT_FOUND, 404);
+    const ultima = p.verificaciones[0];
     return {
         estadoPerfil: p.estado,
-        checklist: (p.verificaciones[0]?.checklist ?? {}) as unknown as Record<string, ItemChecklist>,
+        resultadoUltima: ultima?.resultado ?? null,
+        checklist: (ultima?.checklist ?? {}) as unknown as Record<string, ItemChecklist>,
     };
+}
+
+/**
+ * SPEC-707 (Diseño FORMA-SPEC707) · el estado de revisión de un documento SEGÚN EL ESTADO
+ * DE LA SOLICITUD, no solo del documento. Devuelve `revision` (la insignia/forma de la
+ * pantalla) y `bloqueado` (lo que el SERVIDOR rechaza al subir):
+ *  · EN_REVISION (esperando decisión): la pantalla es de solo lectura (`revision:"en_revision"`
+ *    para todos); el servidor bloquea reemplazar los APROBADOS (radicado candado a). La primera
+ *    carga real es en BORRADOR, así que el servidor no necesita bloquear los NO aprobados aquí —
+ *    y la pantalla igual no ofrece botón. Coherente con SPEC-706 §4.
+ *  · DEVUELTA (BORRADOR tras MAS_INFORMACION): solo el DEVUELTO (NO_CUMPLE) se vuelve a subir;
+ *    los aprobados (y cualquier otro) quedan bloqueados en el servidor y en la pantalla.
+ *  · Resto (borrador fresco, ACTIVO, VENCIDO…): no bloquea — la renovación del ACTIVO
+ *    (SPEC-693) sigue permitida.
+ */
+function revisionDeDocumento(
+    estadoPerfil: EstadoPerfilProfesional,
+    resultadoUltima: string | null,
+    item: ItemChecklist | undefined,
+): { revision: RevisionDocumento; bloqueado: boolean; observacion: string | null } {
+    const aprobado = item?.estado === "CUMPLE";
+    // `bloqueado` es la regla del SERVIDOR (radicado candado a): NO reemplazar un documento
+    // APROBADO mientras la solicitud está en el ciclo (en revisión o devuelta). La pantalla,
+    // aparte, es de solo lectura durante EN_REVISION (via `revision`, Diseño FORMA-SPEC707) —
+    // más estricta que el servidor, sin hueco: el servidor no bloquea subir un NO aprobado ahí
+    // (la primera carga real ocurre en BORRADOR), pero la pantalla no ofrece el botón.
+    if (estadoPerfil === "EN_REVISION") {
+        return { revision: "en_revision", bloqueado: aprobado, observacion: null };
+    }
+    if (estadoPerfil === "BORRADOR" && resultadoUltima === "MAS_INFORMACION") {
+        if (item?.estado === "NO_CUMPLE") {
+            const observacion = item.observacion.trim() ? item.observacion.trim() : null;
+            return { revision: "devuelto", bloqueado: false, observacion };
+        }
+        // Aprobado (o cualquier otro que no sea el devuelto): bloqueado — solo el devuelto se re-sube.
+        return { revision: "aprobado", bloqueado: true, observacion: null };
+    }
+    return { revision: null, bloqueado: false, observacion: null };
 }
 
 /**
@@ -117,12 +161,11 @@ async function ultimaRevision(
  * profesional ve (la pendiente si la hay; si no, la vigente) y se marca `enRevision`.
  */
 export async function estadoDeDocumentos(perfilProfesionalId: string): Promise<EstadoDocumento[]> {
-    const [requisitos, actuales, revision] = await Promise.all([
+    const [requisitos, actuales, ctx] = await Promise.all([
         leerRequisitosVerificacion(),
         new DocumentoProfesionalRepository().listarPorPerfil(perfilProfesionalId),
         ultimaRevision(perfilProfesionalId),
     ]);
-    const enCiclo = enCicloDeVerificacion(revision.estadoPerfil);
     type DocActual = (typeof actuales)[number];
     const porClave = new Map<string, { vigente?: DocActual; pendiente?: DocActual }>();
     for (const d of actuales) {
@@ -134,11 +177,13 @@ export async function estadoDeDocumentos(perfilProfesionalId: string): Promise<E
     return requisitos.map((r) => {
         const slot = porClave.get(r.clave);
         const mostrar = slot?.pendiente ?? slot?.vigente ?? null;
-        // SPEC-707: la última revisión gobierna qué está aprobado (CUMPLE → bloqueado en
-        // ciclo) y qué se devolvió (NO_CUMPLE → motivo junto al documento).
-        const item = revision.checklist[r.clave];
-        const observacion =
-            item?.estado === "NO_CUMPLE" && item.observacion.trim() ? item.observacion.trim() : null;
+        // SPEC-707: el estado de revisión (aprobado/devuelto/en_revision + bloqueo + motivo)
+        // según el estado de la SOLICITUD — la MISMA regla que aplica el bloqueo al subir.
+        const { revision, bloqueado, observacion } = revisionDeDocumento(
+            ctx.estadoPerfil,
+            ctx.resultadoUltima,
+            ctx.checklist[r.clave],
+        );
         return {
             clave: r.clave,
             nombre: r.nombre,
@@ -147,8 +192,9 @@ export async function estadoDeDocumentos(perfilProfesionalId: string): Promise<E
             enRevision: slot?.pendiente !== undefined,
             extension: mostrar?.extension ?? null,
             subidoEn: mostrar ? mostrar.subidoEn.toISOString() : null,
-            bloqueado: enCiclo && item?.estado === "CUMPLE",
+            bloqueado,
             observacion,
+            revision,
         };
     });
 }
@@ -167,15 +213,19 @@ export async function guardarDocumentoDeRequisito(
             400
         );
     }
-    // SPEC-707 (I-421 hermano): mientras el perfil está en el CICLO (BORRADOR devuelto /
-    // EN_REVISION), un documento ya APROBADO (CUMPLE en la última revisión) NO se reemplaza
-    // — solo el DEVUELTO (NO_CUMPLE) se vuelve a subir. El bloqueo va en el SERVIDOR, no
-    // solo en la pantalla (Jelkin lo probó: podía modificar los aprobados). El ACTIVO/VENCIDO
-    // sí sube versión nueva de un aprobado (renovación, SPEC-693): por eso el gate es `enCiclo`.
-    const { estadoPerfil, checklist } = await ultimaRevision(perfilProfesionalId);
-    if (enCicloDeVerificacion(estadoPerfil) && checklist[requisitoClave]?.estado === "CUMPLE") {
+    // SPEC-707 (radicado candado a): el SERVIDOR bloquea REEMPLAZAR UN APROBADO mientras la
+    // solicitud está en el ciclo — EN_REVISION o DEVUELTA. Solo el devuelto (NO_CUMPLE) se
+    // vuelve a subir. Va en el servidor (Jelkin lo probó: la pantalla no bastaba). El
+    // ACTIVO/VENCIDO renueva su aprobado sin bloqueo (SPEC-693, no se toca). La pantalla, aparte,
+    // es de solo lectura durante EN_REVISION (Diseño). MISMA regla que la vista
+    // (`revisionDeDocumento`): «qué bloquea el servidor» y «qué muestra bloqueado» no divergen.
+    const ctx = await ultimaRevision(perfilProfesionalId);
+    const { revision, bloqueado } = revisionDeDocumento(ctx.estadoPerfil, ctx.resultadoUltima, ctx.checklist[requisitoClave]);
+    if (bloqueado) {
         throw new AppError(
-            "Este documento ya fue aprobado. Mientras su verificación está en revisión o con observaciones, solo puede volver a subir el documento que le devolvieron.",
+            revision === "en_revision"
+                ? "Su solicitud está en revisión. No puede cambiar sus documentos hasta que el verificador decida."
+                : "Este documento ya fue aprobado. Mientras revisamos su solicitud, solo puede volver a subir el que le devolvieron.",
             ERROR_CODES.VALIDATION_ERROR,
             409,
         );

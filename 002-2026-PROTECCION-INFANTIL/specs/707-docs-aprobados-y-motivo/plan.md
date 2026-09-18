@@ -4,7 +4,8 @@
 
 - **Lectura única** — `PerfilProfesionalRepository.estadoYUltimaRevision(perfilId)`: estado del perfil + checklist de la última verificación. La consumen el bloqueo y la vista.
 - **Bloqueo (servidor)** — `guardarDocumentoDeRequisito`: si `enCiclo` (BORRADOR/EN_REVISION) y el requisito es `CUMPLE` en la última revisión → 409. El ACTIVO/VENCIDO no entra al bloqueo (renovación SPEC-693).
-- **Vista** — `estadoDeDocumentos`: cada requisito gana `bloqueado` (aprobado en ciclo) y `observacion` (motivo del `NO_CUMPLE`). `DocumentosRequisitos.tsx` muestra el motivo junto al devuelto y no ofrece reemplazar los bloqueados (en *usted*; Diseño afina la forma).
+- **Vista** — `estadoDeDocumentos`: cada requisito gana `bloqueado` (aprobado en ciclo), `observacion` (motivo del `NO_CUMPLE`) y `revision` (`aprobado`/`devuelto`/`en_revision`/`null`, la insignia). `DocumentosRequisitos.tsx` (forma de Diseño, `FORMA-SPEC707`) muestra el motivo junto al devuelto con «Qué revisar», «Volver a subir» como único botón del devuelto, la línea que dice por qué el aprobado no se cambia, y solo lectura durante EN_REVISION. En *usted*.
+- **Servidor vs. pantalla** — el servidor bloquea `enCiclo ∧ CUMPLE`; la pantalla es de solo lectura durante EN_REVISION (más estricta, sin hueco: la primera carga real es en BORRADOR). Ambas leen `revisionDeDocumento` — no divergen en qué aprobado se puede reemplazar.
 - Sin esquema, sin migración, sin ruta nueva.
 
 ## Orden

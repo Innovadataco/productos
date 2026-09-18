@@ -23,10 +23,12 @@ interface EstadoDocumento {
     enRevision: boolean;
     extension: string | null;
     subidoEn: string | null;
-    /** SPEC-707: aprobado y bloqueado mientras la verificación está en revisión/devuelta. */
+    /** SPEC-707: no se puede subir/reemplazar por ahora (aprobado, o solicitud en revisión). */
     bloqueado: boolean;
     /** SPEC-707: motivo que escribió el verificador si este documento fue devuelto. */
     observacion: string | null;
+    /** SPEC-707: insignia de revisión (Diseño FORMA-SPEC707). */
+    revision: "aprobado" | "devuelto" | "en_revision" | null;
 }
 
 function IconCheck() {
@@ -119,15 +121,18 @@ export function DocumentosRequisitos() {
                 >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <p className="text-sm font-semibold text-body">{d.nombre}</p>
-                        {d.bloqueado ? (
-                            // SPEC-707: aprobado por el verificador; no se reemplaza mientras la
-                            // verificación sigue en revisión o con observaciones.
-                            <span className="flex items-center gap-1 text-xs text-body">
+                        {/* SPEC-707 (Diseño FORMA-SPEC707): la insignia por estado de la revisión. */}
+                        {d.revision === "devuelto" ? (
+                            <span className="text-xs font-medium text-estado-ambar">Devuelto</span>
+                        ) : d.revision === "aprobado" ? (
+                            <span className="flex items-center gap-1 text-xs text-pino">
                                 <IconCheck />
                                 Aprobado
                             </span>
+                        ) : d.revision === "en_revision" ? (
+                            <span className="text-xs font-medium text-estado-ambar">En revisión</span>
                         ) : d.enRevision ? (
-                            // SPEC-693 (FORMA §3): subió una versión nueva; sigue activo mientras se revisa.
+                            // SPEC-693: subió una versión nueva mientras sigue ACTIVO.
                             <span className="text-xs font-medium text-estado-ambar">
                                 En revisión — enviaste un documento nuevo
                             </span>
@@ -141,26 +146,25 @@ export function DocumentosRequisitos() {
                         )}
                     </div>
                     {d.descripcion && <p className="mt-1 text-xs text-muted">{d.descripcion}</p>}
-                    {d.observacion && (
-                        // SPEC-707: el MOTIVO que escribió el verificador, junto al documento
-                        // devuelto. La forma del aviso la afina Diseño.
-                        <p role="note" className="mt-2 rounded-lg bg-tinta/5 px-3 py-2 text-xs text-body">
-                            <span className="font-semibold text-estado-ambar">Le devolvieron este documento. </span>
-                            {d.observacion}
-                        </p>
+                    {d.revision === "devuelto" && d.observacion && (
+                        // SPEC-707 (Diseño FORMA-SPEC707): el MOTIVO del verificador, VERBATIM, junto
+                        // al documento devuelto. Rótulo «Qué revisar» — corrección, no culpa.
+                        <div role="note" className="mt-2 rounded-lg border-l-2 border-estado-ambar bg-tinta/5 px-3 py-2 text-xs text-body">
+                            <p className="font-semibold text-estado-ambar">Qué revisar</p>
+                            <p className="mt-1">«{d.observacion}»</p>
+                        </div>
                     )}
                     <div className="mt-3 flex flex-wrap items-center gap-3">
-                        {d.bloqueado ? (
-                            // SPEC-707: aprobado → no se reemplaza mientras la verificación sigue
-                            // en revisión (el servidor también lo rechaza). Solo el devuelto se sube.
+                        {d.revision === "aprobado" ? (
+                            // Diseño §3: se DICE por qué no hay botón (no uno ausente y mudo).
                             <span className="text-xs text-muted">
-                                Ya está aprobado. No necesita volver a subirlo mientras su verificación está en revisión.
+                                Aprobado. Mientras revisamos su solicitud, este documento no se cambia.
                             </span>
-                        ) : (
+                        ) : d.revision === "en_revision" ? null : (
                             <input
                                 type="file"
                                 accept="application/pdf,image/png,image/jpeg"
-                                aria-label={`Subir ${d.nombre}`}
+                                aria-label={`${d.revision === "devuelto" ? "Volver a subir" : "Subir"} ${d.nombre}`}
                                 disabled={subiendo !== null}
                                 onChange={(e) => {
                                     const f = e.target.files?.[0];

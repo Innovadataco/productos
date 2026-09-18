@@ -13,7 +13,8 @@
 
 1. **Los aprobados se bloquean en el SERVIDOR** mientras la solicitud está DEVUELTA (BORRADOR tras `MAS_INFORMACION`) o EN_REVISION. Solo el documento DEVUELTO (`NO_CUMPLE`) se vuelve a subir. La regla vive en `guardarDocumentoDeRequisito` (servicio), no solo en la pantalla — Jelkin comprobó que la pantalla no bastaba.
    - **Excepción (SPEC-693, no se toca):** un profesional ACTIVO/VENCIDO SÍ sube una versión nueva de un aprobado (renovación). Por eso el bloqueo es `enCiclo` (BORRADOR/EN_REVISION), no «tiene un aprobado».
-2. **El motivo se muestra.** `estadoDeDocumentos` trae, por requisito, la `observacion` que el verificador escribió (del checklist `NO_CUMPLE` de la última devolución) y `bloqueado` (aprobado en ciclo). La pantalla del profesional muestra el motivo JUNTO al documento devuelto y no ofrece reemplazar los bloqueados. **Diseño define la forma del aviso** (la versión actual es funcional, en *usted*).
+2. **El motivo se muestra.** `estadoDeDocumentos` trae, por requisito, la `observacion` que el verificador escribió (del checklist `NO_CUMPLE` de la última devolución), `bloqueado` (aprobado en ciclo) y `revision` (la insignia). La pantalla del profesional muestra el motivo JUNTO al documento devuelto y no ofrece reemplazar los bloqueados. **La forma la definió Diseño** (`FORMA-SPEC707-…`, commit 573de54): insignia por revisión — `aprobado` (✓ pino, sin botón, con la línea que DICE por qué), `devuelto` (ámbar, rótulo «Qué revisar» + el motivo verbatim, «Volver a subir» como único botón), `en_revision` (ámbar, solo lectura). Todo en *usted*.
+   - **Servidor vs. pantalla.** El SERVIDOR bloquea reemplazar un APROBADO en ciclo (`enCiclo ∧ CUMPLE`). La PANTALLA, además, es de solo lectura durante EN_REVISION (no ofrece botón a NINGÚN documento) — más estricta que el servidor, sin hueco: la primera carga real ocurre en BORRADOR, así que el servidor no necesita bloquear los NO aprobados ahí. Las dos leen la MISMA fuente (`revisionDeDocumento`), así que no divergen en lo que importa: qué aprobado se puede reemplazar.
 
 ## Fuente única
 
@@ -22,9 +23,11 @@ El bloqueo (al subir) y la vista (`estadoDeDocumentos`) leen lo mismo: `PerfilPr
 ## Candados
 
 - `documentos-aprobados-bloqueados.candado.test.ts` (conducta, con `decidir` real):
-  (a) con la solicitud devuelta, reemplazar el aprobado → 409; el devuelto sí se vuelve a subir. **Control positivo por el otro lado:** un ACTIVO sí renueva el aprobado.
-  (b) tras devolver con observación, `estadoDeDocumentos` trae el motivo real del devuelto y marca el aprobado como bloqueado.
-  Mutación-verificado: neutralizar el bloqueo → (a) rojo.
+  (a) con la solicitud devuelta, reemplazar el aprobado → 409; el devuelto sí se vuelve a subir.
+  (a·en revisión) reenviada la solicitud (EN_REVISION, misma transición que `reenviarParaVerificacion`), el aprobado SIGUE bloqueado — el radicado dice «devuelta **o en revisión**».
+  **Control positivo por el otro lado:** un ACTIVO sí renueva el aprobado.
+  (b) tras devolver con observación, `estadoDeDocumentos` trae el motivo real del devuelto, marca el aprobado como bloqueado y da la insignia (`devuelto` / `aprobado`).
+  Mutación-verificado: neutralizar el discriminador (`bloqueado`) → (a), (a·en revisión) y (b) rojo; el control ACTIVO queda verde (prueba que la exención no es «el bloqueo nunca dispara»).
 
 ## Impacto
 

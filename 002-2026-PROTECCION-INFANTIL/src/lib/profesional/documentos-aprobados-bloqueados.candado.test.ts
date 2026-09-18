@@ -108,6 +108,26 @@ describe("SPEC-707 · docs aprobados se bloquean con la solicitud devuelta; el d
         await expect(guardarDocumentoDeRequisito(perfil.id, "antecedentes", PDF)).resolves.toBeDefined();
     });
 
+    it("(a·en revisión) reenviada la solicitud (EN_REVISION), el aprobado SIGUE bloqueado — radicado: «devuelta o en revisión»", async () => {
+        const { perfil, verificador } = await sembrarProfesionalConDocs("rev");
+        // Devolución real: tarjeta CUMPLE (aprobado), antecedentes NO_CUMPLE → MAS_INFORMACION → BORRADOR.
+        await decidir(perfil.id, verificador, {
+            checklist: {
+                tarjeta: { estado: "CUMPLE", observacion: "" },
+                antecedentes: { estado: "NO_CUMPLE", observacion: MOTIVO },
+            },
+        });
+        // El profesional corrige el devuelto y REENVÍA. La transición es la misma que hace
+        // `reenviarParaVerificacion` (vista-profesional.ts:125 · `cambiarEstadoPerfil(EN_REVISION)`);
+        // la última verificación sigue siendo la MAS_INFORMACION que marcó `tarjeta` CUMPLE. No se
+        // usa `reenviarParaVerificacion` para no acoplar este candado a la config de aceptación (SPEC-686).
+        await guardarDocumentoDeRequisito(perfil.id, "antecedentes", PDF);
+        await prisma.perfilProfesional.update({ where: { id: perfil.id }, data: { estado: "EN_REVISION" } });
+
+        // El aprobado NO se puede reemplazar mientras la solicitud está EN REVISIÓN (no solo devuelta).
+        await expect(guardarDocumentoDeRequisito(perfil.id, "tarjeta", PDF)).rejects.toMatchObject({ statusCode: 409 });
+    });
+
     it("(a·control positivo) un ACTIVO SÍ sube versión nueva de un aprobado (renovación SPEC-693)", async () => {
         const { perfil, verificador } = await sembrarProfesionalConDocs("act");
         // Aprobación total → APROBADO → perfil ACTIVO.
@@ -140,5 +160,8 @@ describe("SPEC-707 · docs aprobados se bloquean con la solicitud devuelta; el d
         expect(antecedentes.bloqueado, "el devuelto se puede volver a subir").toBe(false);
         expect(tarjeta.bloqueado, "el aprobado queda bloqueado").toBe(true);
         expect(tarjeta.observacion, "el aprobado no lleva motivo de devolución").toBeNull();
+        // La FORMA (Diseño FORMA-SPEC707): la insignia sale de la misma lectura, no de un flag suelto.
+        expect(antecedentes.revision, "el devuelto lleva la insignia «Devuelto»").toBe("devuelto");
+        expect(tarjeta.revision, "el aprobado lleva la insignia «Aprobado»").toBe("aprobado");
     });
 });
