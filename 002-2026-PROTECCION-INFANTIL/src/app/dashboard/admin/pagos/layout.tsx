@@ -11,6 +11,9 @@ const TABS = [
     { href: "/dashboard/admin/pagos/bonos", label: "Bonos" },
     { href: "/dashboard/admin/pagos/planes", label: "Planes" },
     { href: "/dashboard/admin/pagos/reembolsos", label: "Reembolsos" },
+    // SPEC-713: citas con pago por aprobar (SIN_CONFIRMAR) — la ruta `activar` existía
+    // sin pantalla que la llamara; sin esta entrada la cita vence sin poder aprobarse.
+    { href: "/dashboard/admin/pagos/citas-por-aprobar", label: "Citas por aprobar" },
     { href: "/dashboard/admin/pagos/citas-vencidas", label: "Citas sin respuesta" },
     { href: "/dashboard/admin/pagos/analitica", label: "Analítica" },
 ];
