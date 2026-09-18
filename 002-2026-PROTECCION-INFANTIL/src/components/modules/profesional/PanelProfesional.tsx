@@ -139,7 +139,16 @@ export function Solicitudes({ data }: { data: PanelProfesionalDto }) {
                         <li key={s.id} className="flex gap-3 border-t border-tinta/8 pt-4 first:border-0 first:pt-0">
                             <Avatar nombre={s.padreNombre} />
                             <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-body">{s.padreNombre}</p>
+                                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-body">
+                                    {s.padreNombre}
+                                    {/* SPEC-712 §3: la marca urgente para que el profesional trie a quién
+                                        confirmar. No promete rapidez al padre; ordena la atención. */}
+                                    {s.urgente && (
+                                        <span className="rounded-full bg-ambar/15 px-2 py-0.5 text-[11px] font-medium text-estado-ambar">
+                                            Urgente
+                                        </span>
+                                    )}
+                                </p>
                                 <p className="text-xs text-muted">
                                     Pidió {fechaHora(s.inicio)} · {s.modalidad.toLowerCase()}
                                     {s.reservaPagada && <span className="text-pino"> · reserva pagada</span>}
@@ -149,7 +158,7 @@ export function Solicitudes({ data }: { data: PanelProfesionalDto }) {
                                         Le compartió el expediente de su hijo
                                     </p>
                                 )}
-                                <SolicitudAcciones solicitudId={s.id} />
+                                <SolicitudAcciones estado={s.estado} solicitudId={s.id} />
                                 {s.venceEnRespuesta ? (
                                     <p className="mt-2 text-xs text-ambar">
                                         Plazo hasta el {fechaHora(s.venceEnRespuesta)}. Vencido, se abre

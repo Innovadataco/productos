@@ -1,15 +1,31 @@
 "use client";
 
 /**
- * SPEC-428 (A-75 §9 M4) · Panel de reserva de cita del padre.
+ * SPEC-428 (A-75 §9 M4) + SPEC-712 (FORMA-SPEC712 · Jelkin probando 17-09) ·
+ * Panel de reserva de cita del padre.
  *
  * Reemplaza el botón "Solicitar cita (próximamente)" de L3 con el flujo real:
- * elegir franja → confirmar pago (§4: se paga el PRECIO ESTÁNDAR, no la tarifa
- * del profesional — que aplica desde la 2ª cita) → decidir si comparte
- * expediente → cita creada en `SIN_CONFIRMAR` esperando aprobación de admin.
+ * elegir horario → confirmar (§4: se paga el PRECIO ESTÁNDAR, no la tarifa del
+ * profesional — que aplica desde la 2ª cita) → decidir si comparte expediente →
+ * cita creada en `SIN_CONFIRMAR` esperando que se valide el pago.
  *
- * Diseño: tokens del sistema. Instrument Serif títulos. DM Mono precios y
- * fechas. Motion suave con `anim-entrada`. Cero color crudo.
+ * SPEC-712 (medido contra `da40aa9e`, forma de Diseño):
+ *  1. Fuera el texto del «admin»; encabezado simple «Elige un horario».
+ *  2. La presentación se pregunta UNA vez (en el paso previo): acá se MUESTRA con
+ *     opción de editar, sin re-exigir el mínimo si no la toca. Si llega sin
+ *     borrador, se pide acá (una vez).
+ *  3. Urgencia honesta: franjas ordenadas de la más próxima a la más lejana;
+ *     chip «Solo esta semana» que FILTRA de verdad; línea de emergencia SIEMPRE
+ *     visible; se retira el toggle binario inerte (no filtraba ni ordenaba). La
+ *     urgencia sigue viajando (desde el borrador) para que el profesional trie.
+ *  4. Modal SÓLIDO (`bg-superficie-2`), velo firme (`bg-tinta/55` + blur) y
+ *     `z-50`: un cuadro de confirmación de pago no puede leerse a medias.
+ *  5. Sin «admin» ni «48h» prometidas: «Tu pago está en proceso de validación…».
+ *     Mientras la pasarela esté apagada y no se cobre nada, el botón dice
+ *     «Confirmar solicitud» (no «…y pagar») y la CTA «Solicitar la cita» (no
+ *     «Pagar…»): un botón que dice que cobra sin cobrar miente (veredicto CEO).
+ *
+ * Diseño: tokens del sistema. Voz del padre = «tú» (D-107).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -62,6 +78,20 @@ function fmtRango(f: Franja): string {
     return `${fmtFranja(f.inicio)} — ${new Date(f.fin).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
+/**
+ * SPEC-712 §3 · fin de la SEMANA en curso (domingo 23:59 local). El chip «Solo
+ * esta semana» filtra hasta acá; si hoy es domingo, la ventana es sólo hoy — y
+ * el mensaje honesto («el más próximo es el …») cubre el vacío. Puro (recibe
+ * `now`) para poder probarlo sin depender del reloj.
+ */
+export function finDeSemana(now: Date = new Date()): Date {
+    const d = new Date(now);
+    const faltanParaDomingo = (7 - d.getDay()) % 7; // getDay: 0=Dom … 6=Sáb
+    d.setDate(d.getDate() + faltanParaDomingo);
+    d.setHours(23, 59, 59, 999);
+    return d;
+}
+
 export function SolicitarCitaPanel({
     profesionalId,
     tarifaProfesionalCOP,
@@ -79,7 +109,17 @@ export function SolicitarCitaPanel({
     // desde `sessionStorage` (el borrador que dejó el paso previo). No viene
     // por props ni por URL.
     const [presentacion, setPresentacion] = useState("");
+    // SPEC-712 §2: si el padre YA contó su situación en el paso previo, acá la
+    // MOSTRAMOS (no la re-pedimos). `tieneBorrador` distingue ese caso del padre
+    // que aterriza directo (a ese sí se le pide, una vez). `editando` abre el
+    // textarea para ajustar el relato ya contado.
+    const [tieneBorrador, setTieneBorrador] = useState(false);
+    const [editandoPresentacion, setEditandoPresentacion] = useState(false);
+    // SPEC-712 §3: la urgencia YA no se elige acá (el toggle inerte se retiró);
+    // viaja desde el borrador del paso previo para que el profesional priorice.
     const [urgencia, setUrgencia] = useState<"ESTA_SEMANA" | "SIN_APURO">("SIN_APURO");
+    // SPEC-712 §3: chip que FILTRA la lista de franjas a la semana en curso.
+    const [soloEstaSemana, setSoloEstaSemana] = useState(false);
     const [compartirExpediente, setCompartirExpediente] = useState(Boolean(expedienteIdSugerido));
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
@@ -114,6 +154,7 @@ export function SolicitarCitaPanel({
         if (borrador) {
             setPresentacion(borrador.presentacion);
             setUrgencia(borrador.urgencia);
+            setTieneBorrador(true); // SPEC-712 §2: mostrar, no re-pedir.
         }
     }, [esReasignacion]);
 
@@ -121,6 +162,24 @@ export function SolicitarCitaPanel({
     // el service la propaga y la cita nueva la hereda; el panel no la exige.
     const presentacionValida = esReasignacion || presentacion.trim().length >= 20;
     const puedeContinuar = franjaSel !== null && presentacionValida;
+
+    // SPEC-712 §3: franjas ordenadas de la más próxima a la más lejana; el chip
+    // filtra sobre esa lista ya ordenada. La «más próxima» global sostiene el
+    // mensaje honesto cuando no hay nada esta semana.
+    const franjasOrdenadas = useMemo(
+        () =>
+            franjas
+                ? [...franjas].sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())
+                : null,
+        [franjas],
+    );
+    const limiteSemana = useMemo(() => finDeSemana(), []);
+    const franjasEstaSemana = useMemo(
+        () => franjasOrdenadas?.filter((f) => new Date(f.inicio) <= limiteSemana) ?? null,
+        [franjasOrdenadas, limiteSemana],
+    );
+    const franjasMostradas = (soloEstaSemana ? franjasEstaSemana ?? [] : franjasOrdenadas ?? []).slice(0, 10);
+    const semanaVacia = soloEstaSemana && (franjasEstaSemana?.length ?? 0) === 0;
 
     async function enviar() {
         if (!franjaSel) return;
@@ -170,10 +229,25 @@ export function SolicitarCitaPanel({
 
     return (
         <section aria-labelledby="reservar" className="glass rounded-2xl p-5 anim-entrada">
-            <h2 id="reservar" className="text-sm font-semibold text-body">Solicitar cita</h2>
-            <p className="mt-1 text-xs text-muted">
-                Elige una franja libre. El pago se aprueba luego con un admin;
-                mientras tanto la franja queda reservada.
+            {/* SPEC-712 §1: encabezado simple; fuera el texto del «admin». */}
+            <h2 id="reservar" className="text-sm font-semibold text-body">Elige un horario</h2>
+
+            {/* SPEC-712 §3.4: en protección infantil, la salida de emergencia va SIEMPRE
+                visible — antes de cualquier cola de cita paga. Canales oficiales de la casa
+                (ver CanalesOficiales.tsx): 141 ICBF · 123 emergencias · Te Protejo. */}
+            <p className="mt-2 rounded-xl bg-ambar/10 p-3 text-xs text-body">
+                <span className="font-semibold">¿Es una emergencia?</span> No esperes la cita. Llama a{" "}
+                <a href="tel:141" className="font-semibold text-accent underline">141</a> (ICBF) o{" "}
+                <a href="tel:123" className="font-semibold text-accent underline">123</a>, o entra a{" "}
+                <a
+                    href="https://www.teprotejo.gov.co"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-accent underline"
+                >
+                    Te Protejo
+                </a>
+                .
             </p>
 
             {/* Precio estándar por delante — el que se paga (§4). La tarifa
@@ -201,55 +275,67 @@ export function SolicitarCitaPanel({
                 </p>
             </div>
 
-            {/* Presentación — se pide sólo cuando NO es reasignación (en la
-                reasignación viaja desde la solicitud original). */}
+            {/* SPEC-712 §2 · Presentación. Con borrador: se MUESTRA con «Editar» (sin
+                re-exigir el mínimo si no la toca). Sin borrador (llegó directo): se pide
+                acá, una vez. En reasignación viaja desde la solicitud original. */}
             {!esReasignacion && (
                 <div className="mt-4">
-                    <label htmlFor="presentacion" className="text-xs font-semibold text-body">
-                        Cuéntanos qué pasa (mín. 20 caracteres)
-                    </label>
-                    <textarea
-                        id="presentacion"
-                        className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
-                        rows={3}
-                        value={presentacion}
-                        onChange={(e) => setPresentacion(e.target.value)}
-                        placeholder="Un párrafo corto que ayude al profesional a prepararse."
-                    />
-                    {!presentacionValida && presentacion.length > 0 && (
-                        <p className="mt-1 text-xs text-estado-rubi">
-                            Faltan {Math.max(0, 20 - presentacion.trim().length)} caracteres.
-                        </p>
+                    {tieneBorrador && !editandoPresentacion ? (
+                        <div className="rounded-xl bg-tinta/5 p-3">
+                            <p className="text-xs font-semibold text-body">Lo que nos contaste</p>
+                            <p className="mt-1 whitespace-pre-line text-sm text-body">«{presentacion}»</p>
+                            {/* Acción (no chip): va por el `<Button>` de la casa (frontera SPEC-633). */}
+                            <Button
+                                variant="ghost"
+                                type="button"
+                                onClick={() => setEditandoPresentacion(true)}
+                                className="mt-2"
+                            >
+                                Editar
+                            </Button>
+                        </div>
+                    ) : (
+                        <>
+                            <label htmlFor="presentacion" className="text-xs font-semibold text-body">
+                                {tieneBorrador ? "Ajusta lo que nos contaste" : "Cuéntanos qué pasa (mín. 20 caracteres)"}
+                            </label>
+                            <textarea
+                                id="presentacion"
+                                className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                                rows={3}
+                                value={presentacion}
+                                onChange={(e) => setPresentacion(e.target.value)}
+                                placeholder="Un párrafo corto que ayude al profesional a prepararse."
+                            />
+                            {!presentacionValida && presentacion.length > 0 && (
+                                <p className="mt-1 text-xs text-estado-rubi">
+                                    Faltan {Math.max(0, 20 - presentacion.trim().length)} caracteres.
+                                </p>
+                            )}
+                        </>
                     )}
                 </div>
             )}
 
-            {/* Urgencia — sólo aplica a solicitud nueva. */}
-            {!esReasignacion && (
-                <div className="mt-3">
-                    <p className="text-xs font-semibold text-body">Urgencia</p>
-                    <div className="mt-2 flex gap-2">
-                        {(["ESTA_SEMANA", "SIN_APURO"] as const).map((u) => (
-                            <button
-                                key={u}
-                                type="button"
-                                onClick={() => setUrgencia(u)}
-                                className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
-                                    urgencia === u
-                                        ? "bg-cielo text-acento-ink shadow"
-                                        : "bg-tinta/5 text-body hover:bg-tinta/10"
-                                }`}
-                            >
-                                {u === "ESTA_SEMANA" ? "Esta semana" : "Sin apuro"}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Franjas */}
+            {/* Franjas — SPEC-712 §3: ordenadas más-próxima-primero + chip «Solo esta semana». */}
             <div className="mt-4">
-                <p className="text-xs font-semibold text-body">Franjas libres</p>
+                <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-body">Franjas libres</p>
+                    {franjas && franjas.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setSoloEstaSemana((v) => !v)}
+                            aria-pressed={soloEstaSemana}
+                            className={`rounded-full px-3 py-1 text-[11px] font-medium transition ${
+                                soloEstaSemana
+                                    ? "bg-cielo text-acento-ink shadow"
+                                    : "bg-tinta/5 text-body hover:bg-tinta/10"
+                            }`}
+                        >
+                            Solo esta semana
+                        </button>
+                    )}
+                </div>
                 {cargaError && (
                     <p className="mt-1 text-xs text-estado-rubi">No pudimos cargar las franjas: {cargaError}</p>
                 )}
@@ -259,9 +345,15 @@ export function SolicitarCitaPanel({
                 {franjas && franjas.length === 0 && (
                     <p className="mt-1 text-xs text-subtle">Este profesional no tiene franjas libres en este momento.</p>
                 )}
-                {franjas && franjas.length > 0 && (
+                {franjas && franjas.length > 0 && semanaVacia && (
+                    <p className="mt-2 text-xs text-subtle">
+                        Este profesional no tiene horarios esta semana; el más próximo es el{" "}
+                        <span className="cifra">{fmtFranja(franjasOrdenadas![0].inicio)}</span>.
+                    </p>
+                )}
+                {franjas && franjas.length > 0 && !semanaVacia && (
                     <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                        {franjas.slice(0, 10).map((f) => {
+                        {franjasMostradas.map((f) => {
                             const seleccionada = franjaSel?.id === f.id;
                             return (
                                 <li key={f.id}>
@@ -285,33 +377,49 @@ export function SolicitarCitaPanel({
             </div>
 
             <Button type="button" disabled={!puedeContinuar} onClick={() => setModalAbierto(true)} className="mt-4 w-full">
-                {esReasignacion ? "Elegir a este profesional" : "Pagar y solicitar la cita"}
+                {/* SPEC-712 §5: mientras no se cobre, la CTA no dice «Pagar». */}
+                {esReasignacion ? "Elegir a este profesional" : "Solicitar la cita"}
             </Button>
 
-            {/* Modal de confirmación */}
+            {/* Modal de confirmación — SPEC-712 §4: superficie SÓLIDA, velo firme, z-50,
+                hoja desde abajo en móvil. Jerarquía: título → franja → Total a pagar → el
+                mensaje del pago → compartir → botones. */}
             {modalAbierto && franjaSel && (
                 <div
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="modal-cita-titulo"
-                    className="fixed inset-0 z-40 flex items-center justify-center bg-tinta/40 p-4 anim-entrada"
+                    className="fixed inset-0 z-50 flex items-end justify-center bg-tinta/55 p-0 backdrop-blur-sm anim-entrada sm:items-center sm:p-4"
                 >
-                    <div className="glass w-full max-w-md rounded-2xl p-6">
+                    <div className="w-full max-w-md rounded-t-2xl bg-superficie-2 p-6 shadow-2xl ring-1 ring-tinta/10 sm:rounded-2xl">
                         <h3 id="modal-cita-titulo" className="titular-seccion">
                             {esReasignacion ? "Elegir a este profesional" : "Confirmar solicitud"}
                         </h3>
                         <p className="cuerpo text-subtle mt-1">
                             Franja: <span className="cifra font-medium text-body">{nombreFranjaSel}</span>
                         </p>
-                        <p className="cuerpo text-subtle mt-1">
-                            {esReasignacion
-                                ? <>Pago: <span className="cifra font-bold text-estado-pino">heredado de tu solicitud anterior</span></>
-                                : <>Total a pagar: <span className="cifra font-bold text-estado-pino">{CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}</span></>}
-                        </p>
+
+                        {/* Total a pagar — lo que más pesa (en pino). Mientras no se cobre, es el
+                            VALOR de la reserva, no un cobro hecho (§5). */}
+                        <div className="mt-3 rounded-xl bg-pino/10 p-3">
+                            <p className="text-[11px] uppercase tracking-wide text-estado-pino">
+                                {esReasignacion ? "Pago" : "Total a pagar"}
+                            </p>
+                            <p className="cifra text-2xl font-bold text-estado-pino">
+                                {esReasignacion ? "Sin cargo" : CURRENCY_COP.format(precioEstandarPrimeraCitaCOP)}
+                            </p>
+                        </div>
+
                         <p className="mt-3 text-xs text-subtle">
-                            {esReasignacion
-                                ? "Se crea una solicitud nueva con este profesional y el pago viaja con ella; no se cobra otra vez. Tienes 48 h de espera nuevamente."
-                                : "El pago se aprueba manualmente por un admin. La franja queda reservada mientras tanto; si el profesional no confirma en 48h, puedes elegir otro sin volver a pagar."}
+                            {esReasignacion ? (
+                                "Se crea una solicitud nueva con este profesional y el pago viaja con ella; no se cobra otra vez. Tienes 48 h de espera nuevamente."
+                            ) : (
+                                <>
+                                    <span className="font-medium text-body">Tu pago está en proceso de validación.</span>{" "}
+                                    Estamos terminando de conectar la pasarela de pago; en cuanto esté lista, lo validamos
+                                    y te confirmamos la cita. La franja queda reservada para ti mientras tanto.
+                                </>
+                            )}
                         </p>
 
                         {expedienteIdSugerido && (
@@ -324,7 +432,7 @@ export function SolicitarCitaPanel({
                                 />
                                 <span className="text-xs text-body">
                                     Compartir mi expediente con este profesional (podrá abrirlo con
-                                    tu autorización). Al pagar se registra tu decisión.
+                                    tu autorización). Al enviar la solicitud se registra tu decisión.
                                 </span>
                             </label>
                         )}
@@ -337,8 +445,9 @@ export function SolicitarCitaPanel({
                             <Button variant="ghost" type="button" onClick={() => setModalAbierto(false)}>
                                 Volver
                             </Button>
-                            <Button type="button" disabled={enviando} onClick={() => void enviar()}>
-                                {enviando ? "Enviando…" : esReasignacion ? "Confirmar reasignación" : "Confirmar y pagar"}
+                            <Button type="button" disabled={enviando} isLoading={enviando} onClick={() => void enviar()}>
+                                {/* SPEC-712 §5: no dice «pagar» sin cobrar (veredicto CEO). */}
+                                {esReasignacion ? "Confirmar reasignación" : "Confirmar solicitud"}
                             </Button>
                         </div>
                     </div>

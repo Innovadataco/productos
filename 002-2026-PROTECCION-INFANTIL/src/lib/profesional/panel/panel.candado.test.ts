@@ -38,7 +38,11 @@ describe("SPEC-425 · el panel no promete lo que no puede hacer", () => {
         // acción sale del tipo — por eso se afirma el tipo y el endpoint base.
         expect(acciones).toContain('"confirmar" | "rechazar"');
         expect(acciones).toContain("/api/profesional/solicitudes/");
-        const botones = (leerCodigo(PANEL) + acciones).match(/<button/g) ?? [];
+        // SPEC-712: los dos botones vivos pasaron al `<Button>` de la casa (Confirmar
+        // = primario; «No puedo» = secundario) y ahora se pintan SOLO en
+        // PAGADA_PENDIENTE. Que sigan siendo exactamente DOS es lo que este candado
+        // cuida; que aparezcan por estado lo cuida el candado de SPEC-712.
+        const botones = (leerCodigo(PANEL) + acciones).match(/<Button\b/g) ?? [];
         expect(botones, "dos botones: Confirmar y No puedo").toHaveLength(2);
     });
 

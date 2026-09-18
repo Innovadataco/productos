@@ -77,7 +77,12 @@ async function sembrarProfesional() {
 async function sembrarSolicitud(
     perfilId: string,
     estado: EstadoSolicitudCita,
-    opciones: { horasDesdeAhora?: number; padreId?: string; conExpediente?: boolean } = {},
+    opciones: {
+        horasDesdeAhora?: number;
+        padreId?: string;
+        conExpediente?: boolean;
+        urgencia?: "ESTA_SEMANA" | "SIN_APURO";
+    } = {},
 ) {
     const padreId =
         opciones.padreId ?? (await crearUsuario("PARENT", `papa.${Date.now()}.${Math.random()}@ejemplo.local`)).id;
@@ -97,7 +102,7 @@ async function sembrarSolicitud(
             profesionalId: perfilId,
             franjaId: franja.id,
             presentacion: "Necesito orientación.",
-            urgencia: "SIN_APURO",
+            urgencia: opciones.urgencia ?? "SIN_APURO",
             estado,
             venceEn: new Date(Date.now() + 48 * HORA),
             pagoAprobadoEn: estado === "SIN_CONFIRMAR" ? null : new Date(),
@@ -163,6 +168,19 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
             panel.marcador.familiasAtendidas,
             "solo la confirmada: las dos sin responder no son trabajo hecho",
         ).toBe(1);
+    });
+
+    it("SPEC-712 §3: la solicitud URGENTE se ordena y marca primero, aunque su cita sea más lejana", async () => {
+        const { perfil } = await sembrarProfesional();
+        // No urgente pero con cita MÁS PRÓXIMA (24h); urgente con cita LEJANA (72h).
+        // Control positivo: sin la clave `urgencia` en el orden, ganaría la de 24h.
+        await sembrarSolicitud(perfil.id, "PAGADA_PENDIENTE", { horasDesdeAhora: 24, urgencia: "SIN_APURO" });
+        await sembrarSolicitud(perfil.id, "PAGADA_PENDIENTE", { horasDesdeAhora: 72, urgencia: "ESTA_SEMANA" });
+
+        const panel = await leerPanel();
+        expect(panel.solicitudes).toHaveLength(2);
+        expect(panel.solicitudes[0].urgente, "la urgente va primero").toBe(true);
+        expect(panel.solicitudes[1].urgente).toBe(false);
     });
 
     it("una familia que pidió dos citas es UNA familia, no dos", async () => {
