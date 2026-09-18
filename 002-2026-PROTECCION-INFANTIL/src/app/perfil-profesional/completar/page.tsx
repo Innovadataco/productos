@@ -429,7 +429,14 @@ export default function CompletarPerfilProfesionalPage() {
                         </p>
                     )}
                     <Link
-                        href="/perfil-profesional/autorizacion"
+                        // SPEC-705: si YA aceptó, hay que ir en modo RELEER; sin `?releer=1` la página
+                        // ve que ya aceptó y redirige de vuelta a la ficha → «Ver la autorización» no
+                        // mostraba nada. Sin aceptar, va sin el parámetro (a leer y aceptar).
+                        href={
+                            autorizacion?.aceptadaVigente
+                                ? "/perfil-profesional/autorizacion?releer=1"
+                                : "/perfil-profesional/autorizacion"
+                        }
                         className="inline-block text-sm font-medium text-accent underline underline-offset-2"
                     >
                         {autorizacion?.aceptadaVigente ? "Ver la autorización" : "Leer y aceptar la autorización"}
