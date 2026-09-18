@@ -22,7 +22,7 @@ import {
     type PerfilProfesionalUpdateInput,
 } from "@/lib/profesional/perfil-schema";
 import {
-    perfilCompletoParaRevision,
+    camposFaltantesParaRevision,
     toPerfilProfesionalPropio,
 } from "@/lib/profesional/dto";
 import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
@@ -114,7 +114,10 @@ export async function GET() {
             aceptadaEn: aceptacion?.aceptadoEn.toISOString() ?? null,
             versionAceptada: aceptacion?.version ?? null,
         };
-        return NextResponse.json({ perfil: toPerfilProfesionalPropio(perfil), autorizacion });
+        return NextResponse.json({
+            perfil: toPerfilProfesionalPropio(perfil),
+            autorizacion,
+        });
     } catch (error) {
         return errorToResponse(error, "[PROFESIONAL/PERFIL/GET]");
     }
@@ -123,7 +126,11 @@ export async function GET() {
 export async function PUT(request: Request) {
     try {
         const user = await requireProfesional();
-        const parsed = perfilProfesionalUpdateSchema.safeParse(await request.json().catch(() => ({})));
+        const body = await request.json().catch(() => ({}));
+        // SPEC-706: enviar a revisión es un acto EXPLÍCITO (botón «Guardar y enviar a revisión»),
+        // no una auto-transición al completarse. Bandera de control, fuera del schema del perfil.
+        const enviarARevision = (body as { enviarARevision?: unknown })?.enviarARevision === true;
+        const parsed = perfilProfesionalUpdateSchema.safeParse(body);
         if (!parsed.success) {
             return NextResponse.json(
                 { error: { message: parsed.error.issues[0]?.message ?? "Datos inválidos", code: ERROR_CODES.VALIDATION_ERROR } },
@@ -185,10 +192,29 @@ export async function PUT(request: Request) {
             return NextResponse.json({ perfil: toPerfilProfesionalPropio(creado) }, { status: 201 });
         }
 
+        // SPEC-706 (punto 4): la ficha es de SOLO LECTURA EN EL SERVIDOR cuando la pelota NO es
+        // del profesional — EN_REVISION (la tenemos nosotros, esperando decisión) o SUSPENDIDO (de
+        // nadie). No basta el `disabled` de la pantalla: la ruta rechaza CUALQUIER edición (borrador
+        // o envío) en esos estados. Editable solo cuando es su turno: BORRADOR (incl. «devuelto»),
+        // VENCIDO. (ACTIVO no ve esta ficha — edita en «Mi perfil».)
+        if (existente.estado === "EN_REVISION" || existente.estado === "SUSPENDIDO") {
+            return NextResponse.json(
+                {
+                    error: {
+                        message:
+                            existente.estado === "EN_REVISION"
+                                ? "Su solicitud está en revisión: no puede cambiar su información hasta que el equipo decida."
+                                : "Su cuenta está suspendida: no puede editar su ficha.",
+                        code: ERROR_CODES.CONFLICT,
+                    },
+                },
+                { status: 409 },
+            );
+        }
+
         // SPEC-673 (I-398): la edición no puede dejar un perfil que ya salió de
         // BORRADOR sin modalidad (un ACTIVO desmarcando ambas quedaba ACTIVO e
-        // invisible, sin poder crear franjas). La invariante es del estado; el PUT
-        // que completa un BORRADOR ya pasa por `perfilCompletoParaRevision`.
+        // invisible, sin poder crear franjas). La invariante es del estado.
         exigirModalidadParaEstado(existente.estado, {
             atiendeVirtual: parsed.data.atiendeVirtual ?? existente.atiendeVirtual,
             atiendePresencial: parsed.data.atiendePresencial ?? existente.atiendePresencial,
@@ -196,22 +222,31 @@ export async function PUT(request: Request) {
 
         const actualizado = await repo.actualizarParcial(existente.id, armarUpdate(data));
 
-        // SPEC-703: la completitud exige la ACEPTACIÓN EN PANTALLA de la versión vigente
-        // (no el PDF). Si el parámetro de versión faltara, `yaAceptoVersionVigente` tira;
-        // acá lo tratamos como «no aceptó» para no tumbar el guardado — el perfil queda
-        // en BORRADOR (lado seguro) en vez de un 500.
+        // SPEC-706 (punto 2): NO hay auto-transición. «Guardar borrador» (enviarARevision=false)
+        // guarda y nada más — el profesional vuelve luego. Enviar a revisión es EXPLÍCITO.
+        if (!enviarARevision) {
+            return NextResponse.json({ perfil: toPerfilProfesionalPropio(actualizado) });
+        }
+
+        // SPEC-706 (ampliación): enviar exige la ficha COMPLETA + la autorización aceptada. Si
+        // falta algo, se RECHAZA NOMBRANDO los campos (antes la transición era silenciosa: un
+        // `rangoEtario` vacío dejaba el perfil en BORRADOR y el profesional creía haber enviado).
+        // El botón del cliente ya se inactiva con la MISMA lista; el servidor es la regla.
         const aceptoVigente = await new AutorizacionProfesionalService()
             .yaAceptoVersionVigente(user.id)
             .catch(() => false);
+        const faltan = camposFaltantesParaRevision(actualizado, aceptoVigente);
+        if (faltan.length > 0) {
+            return NextResponse.json(
+                { error: { message: `Falta completar: ${faltan.join(", ")}.`, code: ERROR_CODES.FICHA_INCOMPLETA, campos: faltan } },
+                { status: 400 },
+            );
+        }
 
-        // Transición BORRADOR → EN_REVISION cuando quedó completo. Otros estados
-        // (ACTIVO, RECHAZADO, VENCIDO, SUSPENDIDO) los mueve L2, no un PUT del
-        // propio profesional: editar el perfil no puede reactivar una cuenta.
-        const final =
-            actualizado.estado === "BORRADOR" && perfilCompletoParaRevision(actualizado, aceptoVigente)
-                ? await repo.cambiarEstado(actualizado.id, "EN_REVISION")
-                : actualizado;
-
+        // Solo BORRADOR (incl. «devuelto») y VENCIDO llegan acá (los read-only se cortaron arriba;
+        // ACTIVO no ve la ficha). Completa + aceptada → EN_REVISION. La invariante de modalidad por
+        // estado la sostiene el CHECK de la BD.
+        const final = await repo.cambiarEstado(actualizado.id, "EN_REVISION");
         return NextResponse.json({ perfil: toPerfilProfesionalPropio(final) });
     } catch (error) {
         return errorToResponse(error, "[PROFESIONAL/PERFIL/PUT]");

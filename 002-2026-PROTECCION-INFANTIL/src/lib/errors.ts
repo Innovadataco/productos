@@ -12,6 +12,10 @@ export const ERROR_CODES = {
     // enviar a revisión. Código PROPIO para que el cliente LLEVE a la pantalla de
     // aceptación (686) en vez de mostrar un error de texto.
     AUTORIZACION_REQUERIDA: "AUTORIZACION_REQUERIDA",
+    // SPEC-706: se intentó enviar a revisión una ficha incompleta. El error lleva `campos`
+    // (la lista de obligatorios que faltan) para que el cliente los NOMBRE y marque, en vez
+    // de una transición silenciosa que deja al profesional trabado sin saber qué falta.
+    FICHA_INCOMPLETA: "FICHA_INCOMPLETA",
     CONFLICT: "CONFLICT",
     RATE_LIMITED: "RATE_LIMITED",
     // SPEC-587: fallo de un proveedor externo (OAuth de Google) — 502.
