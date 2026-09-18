@@ -97,6 +97,13 @@ export interface CitaParaPadreDto {
     solicitudPreviaId: string | null;
     /** Si heredó pago, indica de dónde (para que el padre no dude si le van a cobrar). */
     pagoHeredadoDeId: string | null;
+    /**
+     * SPEC-715: el caso que esta cita comparte con el profesional (si el padre lo
+     * vinculó al agendar). Es el expediente del PROPIO padre — se le expone para
+     * que genere el «pase» desde la cita (los 8 caracteres que le dicta al
+     * profesional en la sesión). `null` = la cita no quedó atada a un caso.
+     */
+    expedienteCompartidoId: string | null;
 }
 
 type PerfilConCiudadYUsuario = PerfilProfesional & {
@@ -136,6 +143,7 @@ export function toCitaParaPadre(
         },
         solicitudPreviaId: solicitud.solicitudPreviaId,
         pagoHeredadoDeId: solicitud.pagoHeredadoDeId,
+        expedienteCompartidoId: solicitud.expedienteCompartidoId,
     };
     // SPEC-449: el estado del PERFIL entra en la decisión. `solicitud.profesional`
     // ya es un `PerfilProfesional` completo, así que el dato está a mano y no
