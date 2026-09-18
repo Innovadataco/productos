@@ -14,7 +14,7 @@
  *
  * Uso: node --import tsx scripts/corregir-catalogo-cuentas-prueba.ts [--confirm]
  */
-import type { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { parseArgs } from "./limpieza/_common";
 import {
@@ -36,10 +36,19 @@ export interface FilaCorreccion {
     cambia: boolean;
 }
 
+/** SPEC-717 (I-428): una fila que no se pudo aplicar, con su motivo — para reportarla al final. */
+export interface FilaFallida {
+    email: string;
+    perfilId: string;
+    error: string;
+}
+
 export interface ResultadoCorreccion {
     resueltos: number;
     filas: FilaCorreccion[];
     escrito: boolean;
+    /** SPEC-717 (I-428): filas que reventaron al aplicar (p. ej. 23514). Vacío si todo salió. */
+    fallidas: FilaFallida[];
 }
 
 function mismaLista(a: string[], b: string[]): boolean {
@@ -47,12 +56,17 @@ function mismaLista(a: string[], b: string[]): boolean {
 }
 
 /**
- * PURA sobre `tx`. Resuelve los aliases, deriva el objetivo por índice (distinto por cuenta) y
- * —salvo dry-run— actualiza SOLO esos perfiles. ABORTA si algún alias no resuelve a exactamente
- * un perfil (no toca a nadie más).
+ * Resuelve los aliases, deriva el objetivo por índice (distinto por cuenta) y —salvo dry-run—
+ * actualiza esos perfiles FILA POR FILA. ABORTA (pre-flight) si algún alias no resuelve a
+ * exactamente un perfil (no toca a nadie más).
+ *
+ * SPEC-717 (I-428): recibe el `PrismaClient` (no una transacción compartida) y aplica cada
+ * fila en su PROPIA escritura, atrapando su error. Antes todo iba en un solo `$transaction`:
+ * una fila que reventaba (la cuenta E2E que el CHECK de modalidad indultó → 23514) abortaba a
+ * las demás y dejaba el trabajo a medias, sin registro de qué faltó. [[dev-corrector-idempotente-no-es-no-destructivo]]
  */
 export async function corregirCatalogoCuentasPrueba(
-    tx: Prisma.TransactionClient,
+    db: PrismaClient,
     opts: { dryRun: boolean; aliases?: readonly string[] },
 ): Promise<ResultadoCorreccion> {
     const aliases = opts.aliases ?? ALIASES_OBJETIVO;
@@ -60,7 +74,7 @@ export async function corregirCatalogoCuentasPrueba(
     // Resolver cada alias a EXACTAMENTE un perfil (orden estable por email para asignar distinto).
     const resueltos: { email: string; perfilId: string; antes: FilaCorreccion["antes"] }[] = [];
     for (const alias of aliases) {
-        const usuarios = await tx.usuario.findMany({
+        const usuarios = await db.usuario.findMany({
             where: { email: { startsWith: `${alias}@` }, perfilProfesional: { isNot: null } },
             select: {
                 email: true,
@@ -94,22 +108,34 @@ export async function corregirCatalogoCuentasPrueba(
         filas.push({ email: r.email, perfilId: r.perfilId, antes: r.antes, objetivo, cambia });
     }
 
-    if (opts.dryRun) return { resueltos: resueltos.length, filas, escrito: false };
+    if (opts.dryRun) return { resueltos: resueltos.length, filas, escrito: false, fallidas: [] };
 
+    // SPEC-717 (I-428): FILA POR FILA, cada una en su propia escritura y con su error
+    // atrapado. Una que reviente (23514 de una cuenta indultada por el CHECK) NO aborta
+    // a las demás; al final se reporta cuáles no se pudieron y por qué.
+    const fallidas: FilaFallida[] = [];
     for (const f of filas) {
-        // Acotado a ESTE id resuelto — estructuralmente no puede tocar otro perfil.
-        await tx.perfilProfesional.update({
-            where: { id: f.perfilId },
-            data: {
-                profesion: f.objetivo.profesion,
-                areasAtencion: f.objetivo.areasAtencion,
-                rangoEtario: f.objetivo.rangoEtario,
-                tituloProfesional: f.objetivo.tituloProfesional,
-                especialidades: f.objetivo.especialidades,
-            },
-        });
+        try {
+            // Acotado a ESTE id resuelto — estructuralmente no puede tocar otro perfil.
+            await db.perfilProfesional.update({
+                where: { id: f.perfilId },
+                data: {
+                    profesion: f.objetivo.profesion,
+                    areasAtencion: f.objetivo.areasAtencion,
+                    rangoEtario: f.objetivo.rangoEtario,
+                    tituloProfesional: f.objetivo.tituloProfesional,
+                    especialidades: f.objetivo.especialidades,
+                },
+            });
+        } catch (e) {
+            fallidas.push({
+                email: f.email,
+                perfilId: f.perfilId,
+                error: e instanceof Error ? e.message : String(e),
+            });
+        }
     }
-    return { resueltos: resueltos.length, filas, escrito: true };
+    return { resueltos: resueltos.length, filas, escrito: fallidas.length < filas.length, fallidas };
 }
 
 async function main(): Promise<void> {
@@ -118,7 +144,9 @@ async function main(): Promise<void> {
     console.log(
         `[corregir-catalogo] modo: ${confirm ? "APLICAR (--confirm)" : "DRY-RUN (sin --confirm, no se escribe nada)"}`,
     );
-    const r = await prisma.$transaction((tx) => corregirCatalogoCuentasPrueba(tx, { dryRun: !confirm }));
+    // SPEC-717 (I-428): sin `$transaction` envolvente — el corrector aplica fila por fila
+    // para que una que reviente no arrastre a las demás.
+    const r = await corregirCatalogoCuentasPrueba(prisma, { dryRun: !confirm });
     console.log(`[corregir-catalogo] resueltos: ${r.resueltos}/2 · escrito: ${r.escrito}`);
     for (const f of r.filas) {
         console.log(
@@ -126,8 +154,13 @@ async function main(): Promise<void> {
                 `  →  prof=${f.objetivo.profesion} areas=[${f.objetivo.areasAtencion.join(",")}] rango=[${f.objetivo.rangoEtario.join(",")}] titulo="${f.objetivo.tituloProfesional}"`,
         );
     }
+    if (r.fallidas.length > 0) {
+        console.error(`[corregir-catalogo] ${r.fallidas.length} fila(s) NO se pudieron aplicar:`);
+        for (const f of r.fallidas) console.error(`  ✗ ${f.email} (${f.perfilId}): ${f.error}`);
+        process.exitCode = 1; // el trabajo quedó incompleto; el operador tiene que verlo.
+    }
     if (!confirm) console.log("[corregir-catalogo] DRY-RUN: no se escribió nada. Corré con --confirm para aplicar.");
-    else console.log("[corregir-catalogo] Listo.");
+    else if (r.fallidas.length === 0) console.log("[corregir-catalogo] Listo.");
 }
 
 if (process.argv[1]?.endsWith("corregir-catalogo-cuentas-prueba.ts") || process.argv[1]?.endsWith("corregir-catalogo-cuentas-prueba.js")) {
