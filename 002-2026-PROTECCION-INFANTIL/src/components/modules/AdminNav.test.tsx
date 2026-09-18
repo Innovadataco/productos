@@ -124,7 +124,8 @@ describe("AdminNav · chrome tokenizado (SPEC-502)", () => {
 // por colapsar siempre.
 describe("AdminNav · el muro de aceptación colapsa al portero (SPEC-703)", () => {
     const OPERATIVOS = ["Inicio", "Citaciones", "Casos", "Calendario", "Mi perfil"];
-    const PORTERO = ["Mi ficha", "Mi estado"];
+    // SPEC-706: el portero quedó con UNA entrada («Mi ficha»); «Mi estado» se retiró.
+    const PORTERO = ["Mi ficha"];
 
     function etiquetas() {
         return screen.getAllByRole("link").map((a) => a.textContent?.trim());

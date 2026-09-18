@@ -1,18 +1,19 @@
 "use client";
 
 /**
- * SPEC-391 (A-75 · L1b) · SPEC-434 (I-302) · SPEC-706 PR A — el profesional completa su ficha.
+ * SPEC-391 (A-75 · L1b) · SPEC-434 (I-302) · SPEC-706 — el profesional completa su ficha.
  *
- * SPEC-706 PR A (Jelkin: «se queda ahí congelado»): el envío a revisión es un acto EXPLÍCITO con
- * DOS acciones — «Guardar borrador» (guarda, no transiciona) y «Guardar y enviar a revisión». El
- * botón de enviar queda INERTE hasta que la ficha esté completa Y la autorización aceptada, y la
- * pantalla NOMBRA lo que falta (como el «Acepto»); ya NO hay auto-transición silenciosa al
- * completarse (un `rangoEtario` vacío dejaba el perfil en BORRADOR sin decir nada). Al guardar, el
- * mensaje dice EN QUÉ QUEDÓ (guardado como borrador / enviado a revisión), nunca solo «Cambios
- * guardados». Al enviar, la ficha queda de SOLO LECTURA EN EL SERVIDOR (EN_REVISION/SUSPENDIDO →
- * 409 en el PUT) y muestra el aviso de entrega de Diseño; el modal viejo se retiró.
+ * SPEC-706: la ficha es la ÚNICA pantalla del profesional no habilitado («Mi estado» /
+ * /perfil-profesional/verificacion se retiró — PR B). Lleva ARRIBA el ENCABEZADO de estado
+ * (EstadoVerificacionProfesionalClient, display-only) y, cuando es su turno (BORRADOR/VENCIDO), el
+ * formulario editable con DOS acciones explícitas: «Guardar borrador» (guarda, no transiciona) y
+ * «Guardar y enviar a revisión». El botón de enviar queda INERTE hasta que la ficha esté completa Y
+ * la autorización aceptada, y la pantalla NOMBRA lo que falta (como el «Acepto»); ya NO hay
+ * auto-transición silenciosa (PR A). Al guardar, el mensaje dice EN QUÉ QUEDÓ, nunca solo «Cambios
+ * guardados». En EN_REVISION/SUSPENDIDO la ficha es de SOLO LECTURA EN EL SERVIDOR (409 en el PUT) y
+ * el encabezado muestra el aviso de entrega de Diseño; el modal viejo se retiró.
  *
- * PR B (aparte): retiro de «Mi estado» (/perfil-profesional/verificacion) y chips en áreas.
+ * PR B: áreas como CHIPS que togglean (antes casillas) + el encabezado de estado reubicado acá.
  * De SPEC-434: país+ciudad con `CiudadSearchSelect`; voz neutra Colombia; años como selector 1..50.
  */
 import { useEffect, useState } from "react";
@@ -24,6 +25,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
 import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
+import { EstadoVerificacionProfesionalClient } from "@/components/modules/verificacion/EstadoVerificacionProfesionalClient";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
 import { camposFaltantesParaRevision } from "@/lib/profesional/dto";
@@ -53,6 +55,14 @@ type Autorizacion = {
     aceptadaVigente: boolean;
     aceptadaEn: string | null;
     versionAceptada: string | null;
+};
+
+// SPEC-706 (PR B): el estado de verificación viaja con el perfil y se pinta como ENCABEZADO de la
+// ficha (una sola pantalla). Mismo shape que `EstadoVerificacionProfesionalClient`.
+type Vista = {
+    estadoPerfil: "BORRADOR" | "EN_REVISION" | "ACTIVO" | "RECHAZADO" | "VENCIDO" | "SUSPENDIDO";
+    puedeReenviar: boolean;
+    observaciones: Array<{ requisito: string; observacion: string }>;
 };
 
 type PaisOption = { id: string; nombre: string };
@@ -99,6 +109,9 @@ export default function CompletarPerfilProfesionalPage() {
     const [numeroTarjetaProfesional, setNumeroTarjeta] = useState("");
     // SPEC-703: la autorización se ACEPTA EN PANTALLA (no se sube PDF); acá solo se muestra su estado.
     const [autorizacion, setAutorizacion] = useState<Autorizacion | null>(null);
+    // SPEC-706 (PR B): estado de verificación (encabezado) + habilitado, para la copy del encabezado.
+    const [vista, setVista] = useState<Vista | null>(null);
+    const [habilitado, setHabilitado] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [errorPerfil, setErrorPerfil] = useState("");
     // SPEC-706: los obligatorios que faltan según el SERVIDOR al intentar enviar (los nombra).
@@ -120,6 +133,8 @@ export default function CompletarPerfilProfesionalPage() {
                 if (perfilRes.ok) {
                     const json = await perfilRes.json();
                     setAutorizacion((json.autorizacion ?? null) as Autorizacion | null);
+                    setVista((json.vista ?? null) as Vista | null);
+                    setHabilitado(json.habilitado === true);
                     if (json.perfil) {
                         const p: Perfil = json.perfil;
                         setPerfil(p);
@@ -189,14 +204,15 @@ export default function CompletarPerfilProfesionalPage() {
                 return;
             }
             const nuevo = json.perfil as Perfil;
-            setPerfil(nuevo);
-            // SPEC-706 PR A (Jelkin): el mensaje dice EN QUÉ QUEDÓ — nunca solo «Cambios guardados»,
-            // que dejaba al profesional sin saber si envió. Al ENVIAR y quedar EN_REVISION, el aviso de
-            // entrega + el bloqueo de solo lectura los pinta el banner de estado de abajo (no un `ok`).
+            // SPEC-706 (Jelkin): el mensaje dice EN QUÉ QUEDÓ — nunca solo «Cambios guardados».
+            // Al ENVIAR y quedar EN_REVISION recargamos: el GET trae la `vista` nueva y el ENCABEZADO
+            // muestra el aviso de entrega de Diseño + la ficha queda de solo lectura (PR B). «Guardar
+            // borrador» solo confirma, sin transición.
             if (enviar && nuevo.estado === "EN_REVISION") {
-                setOk("");
+                window.location.reload();
                 return;
             }
+            setPerfil(nuevo);
             setOk("Guardado como borrador. Todavía no lo enviamos a revisión.");
         } finally {
             setGuardando(false);
@@ -250,16 +266,14 @@ export default function CompletarPerfilProfesionalPage() {
             {/* SPEC-706 PR A: cuando la ficha es de SOLO LECTURA (en revisión / suspendida), un aviso
                 arriba dice en qué quedó y por qué no se puede editar. En revisión: el texto de entrega
                 de Diseño (Gestión e69b591). El servidor igual bloquea el PUT (no es solo pantalla). */}
-            {soloLectura && (
-                <Alerta
-                    tono={perfil?.estado === "EN_REVISION" ? "info" : "advertencia"}
-                    role="status"
-                    className="mb-6"
-                >
-                    {perfil?.estado === "EN_REVISION"
-                        ? "Su solicitud quedó en revisión. El resultado le llegará por correo — esté atento a su bandeja. Mientras la revisamos, su ficha no se puede cambiar."
-                        : "Su perfil está suspendido y por ahora no se puede editar."}
-                </Alerta>
+            {/* SPEC-706 (PR B): el ESTADO de verificación va ARRIBA (una sola pantalla; «Mi estado» se
+                retiró). Enmarca todo: ¿puedo editar?, ¿qué espero?, ¿qué corrijo? Es la copy
+                certificada de SPEC-691/706 reubicada como encabezado (display-only). En EN_REVISION
+                muestra el aviso de entrega de Diseño; el servidor igual bloquea el PUT. */}
+            {vista && (
+                <div className="mb-8">
+                    <EstadoVerificacionProfesionalClient vista={vista} habilitado={habilitado} />
+                </div>
             )}
             <h1 className="font-serif text-3xl text-body">
                 {soloLectura ? "Su perfil" : "Complete su perfil"}
@@ -317,24 +331,36 @@ export default function CompletarPerfilProfesionalPage() {
                             ]}
                         />
 
-                        {/* SPEC-685 (PR2): áreas = lista cerrada (múltiple), agrupada. Los CHIPS son PR B. */}
+                        {/* SPEC-706 (PR B · punto 1): áreas = grupos legibles con CHIPS (togglean), no
+                            casillas planas. Elegida = relleno cielo + tinta (relleno-acento seguro,
+                            SPEC-662); sin elegir = contorno tinta fantasma (SPEC-659). Contador de
+                            ayuda. Mantiene los grupos + selección múltiple + catálogo parametrizado. */}
                         <fieldset className="space-y-3">
                             <legend className="block text-sm font-medium text-body">Áreas de atención</legend>
-                            <p className="text-sm text-subtle">Marque en lo que trabaja. Puede elegir varias.</p>
+                            <p className="text-sm text-subtle">Elija en lo que trabaja. Puede elegir varias.</p>
+                            <p className="text-xs text-subtle">{areasAtencion.length} áreas elegidas</p>
                             {gruposAreas.map((g) => (
-                                <div key={g.grupo} className="space-y-1.5">
+                                <div key={g.grupo} className="space-y-2 border-t border-tinta/10 pt-3 first:border-0 first:pt-0">
                                     <p className="text-xs uppercase tracking-wide text-subtle">{g.grupo}</p>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                        {g.items.map((o) => (
-                                            <label key={o.clave} className="flex items-center gap-2 text-sm text-body">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={areasAtencion.includes(o.clave)}
-                                                    onChange={() => toggleEnLista(setAreasAtencion, o.clave)}
-                                                />
-                                                {o.nombre}
-                                            </label>
-                                        ))}
+                                    <div className="flex flex-wrap gap-2">
+                                        {g.items.map((o) => {
+                                            const elegido = areasAtencion.includes(o.clave);
+                                            return (
+                                                <button
+                                                    key={o.clave}
+                                                    type="button"
+                                                    aria-pressed={elegido}
+                                                    onClick={() => toggleEnLista(setAreasAtencion, o.clave)}
+                                                    className={
+                                                        elegido
+                                                            ? "rounded-full bg-cielo px-3 py-1.5 text-sm font-medium text-tinta transition"
+                                                            : "rounded-full border border-tinta/30 px-3 py-1.5 text-sm text-body transition hover:border-tinta/50"
+                                                    }
+                                                >
+                                                    {o.nombre}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}

@@ -344,8 +344,10 @@ function Verificacion({ data }: { data: PanelProfesionalDto }) {
                             ? "Aviso un mes antes del vencimiento. Vencida, el perfil deja de mostrarse."
                             : "Vencida, el perfil no se muestra a las familias. Envíelo de nuevo para revisión."}
                     </p>
+                    {/* SPEC-706: «Mi estado» (/perfil-profesional/verificacion) se retiró. El detalle
+                        de verificación del habilitado vive en «Mi perfil». */}
                     <Link
-                        href="/perfil-profesional/verificacion"
+                        href="/dashboard/profesional/mi-perfil"
                         className="mt-3 inline-block rounded-xl border border-tinta/15 px-3 py-1.5 text-xs font-medium text-body transition hover:bg-tinta/5"
                     >
                         Ver el detalle

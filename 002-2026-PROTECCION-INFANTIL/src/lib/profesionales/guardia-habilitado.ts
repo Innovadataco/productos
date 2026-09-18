@@ -28,12 +28,12 @@ export async function exigirProfesionalHabilitado() {
     const user = await verifyAuth("PROFESIONAL");
     const hab = await obtenerHabilitacionProfesional(user.id);
     if (!hab?.habilitado) {
-        // Portero por estado: sin perfil o en borrador → a completar la ficha; en
-        // revisión / vencido / suspendido → a «Mi estado», que muestra dónde está y
-        // qué puede hacer (y SUSPENDIDO en solo lectura). Nunca al Inicio operativo.
-        const destino =
-            !hab || hab.estado === "BORRADOR" ? "/perfil-profesional/completar" : "/perfil-profesional/verificacion";
-        redirect(destino);
+        // SPEC-706: una sola pantalla. «Mi estado» (/perfil-profesional/verificacion) se retiró;
+        // su contenido (el estado + observaciones) vive ahora como ENCABEZADO de la ficha. Todo no
+        // habilitado —sin perfil, BORRADOR, EN_REVISION, VENCIDO, SUSPENDIDO— va a la FICHA, que le
+        // muestra su estado arriba y (según de quién es el turno) lo deja editar o no. Nunca al
+        // Inicio operativo.
+        redirect("/perfil-profesional/completar");
     }
     // SPEC-686 (I-420): la guardia de RE-ACEPTACIÓN vive EN la misma compuerta (no un redirect
     // aparte). Aun HABILITADO, si la autorización vigente es DE FONDO y el profesional no la

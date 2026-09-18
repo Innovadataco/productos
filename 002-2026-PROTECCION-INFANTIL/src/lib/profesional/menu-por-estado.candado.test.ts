@@ -49,23 +49,25 @@ describe("SPEC-691 · el menú del profesional = exactamente las entradas de su 
         expect(hrefs(pro)).toEqual([...OPERATIVAS, "/dashboard/profesional/mi-perfil"]);
     });
 
-    it("portero (no habilitado, CUALQUIER estado) → SOLO «Mi ficha» · «Mi estado», nada operativo", () => {
+    // SPEC-706: «Mi estado» (/perfil-profesional/verificacion) se retiró — su contenido es el
+    // ENCABEZADO de la ficha, una sola pantalla. El portero queda con UNA entrada: «Mi ficha».
+    it("portero (no habilitado, CUALQUIER estado) → SOLO «Mi ficha», nada operativo", () => {
         for (const pro of NO_HABILITADOS) {
-            expect(labels(pro), `estado ${pro.estado}`).toEqual(["Mi ficha", "Mi estado"]);
-            expect(hrefs(pro)).toEqual(["/perfil-profesional/completar", "/perfil-profesional/verificacion"]);
+            expect(labels(pro), `estado ${pro.estado}`).toEqual(["Mi ficha"]);
+            expect(hrefs(pro)).toEqual(["/perfil-profesional/completar"]);
             expect(tieneOperativa(pro), `estado ${pro.estado} filtró una entrada operativa`).toBe(false);
         }
     });
 
     it("worker-lag (ajuste del CEO): ACTIVO con habilitado=false → portero, NO operativo", () => {
         const pro = { estado: "ACTIVO", habilitado: false };
-        expect(labels(pro)).toEqual(["Mi ficha", "Mi estado"]);
+        expect(labels(pro)).toEqual(["Mi ficha"]);
         expect(tieneOperativa(pro)).toBe(false);
     });
 
     it("fail-closed: sin dato (null / undefined / cargando) → portero", () => {
-        expect(labels(null)).toEqual(["Mi ficha", "Mi estado"]);
-        expect(labels(undefined)).toEqual(["Mi ficha", "Mi estado"]);
+        expect(labels(null)).toEqual(["Mi ficha"]);
+        expect(labels(undefined)).toEqual(["Mi ficha"]);
         expect(tieneOperativa(null)).toBe(false);
     });
 
