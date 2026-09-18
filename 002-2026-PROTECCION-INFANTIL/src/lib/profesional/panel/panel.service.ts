@@ -41,6 +41,20 @@ const RETIENEN_PAGO: EstadoSolicitudCita[] = ["CONFIRMADA"];
 
 export interface SolicitudPanelDto {
     id: string;
+    /**
+     * SPEC-712 (FORMA §6): el estado REAL de la solicitud. `SolicitudAcciones`
+     * pinta por estado —los botones solo en `PAGADA_PENDIENTE`, donde su acción
+     * aplica— en vez de pintarlos siempre y chocar contra el 409 del motor.
+     * En esta lista solo llegan `SIN_CONFIRMAR` | `PAGADA_PENDIENTE`
+     * (`ESPERAN_RESPUESTA`); el tipo es el del enum para no mentir sobre el dato.
+     */
+    estado: EstadoSolicitudCita;
+    /**
+     * SPEC-712 (FORMA §3): el padre marcó la consulta como «esta semana». No le
+     * promete rapidez al padre; le da al profesional el dato para TRIAR — las
+     * urgentes se ordenan y se marcan primero en su lista de por-confirmar.
+     */
+    urgente: boolean;
     padreNombre: string;
     /** Cuándo pidió la cita. */
     pedidaEn: string;
@@ -133,7 +147,14 @@ export async function panelDelProfesional(
     const repo = new SolicitudCitaRepository();
     const solicitudes = await repo.listarPorProfesional(perfil.id);
 
-    const esperandoRespuesta = solicitudes.filter((s) => ESPERAN_RESPUESTA.includes(s.estado));
+    // SPEC-712 (FORMA §3): las urgentes primero (para que el profesional trie a quién
+    // confirmar), y dentro de cada grupo la cita más próxima antes.
+    const esperandoRespuesta = solicitudes
+        .filter((s) => ESPERAN_RESPUESTA.includes(s.estado))
+        .sort((a, b) => {
+            const urg = Number(b.urgencia === "ESTA_SEMANA") - Number(a.urgencia === "ESTA_SEMANA");
+            return urg !== 0 ? urg : a.franja.inicio.getTime() - b.franja.inicio.getTime();
+        });
     const confirmadas = solicitudes.filter((s) => s.estado === "CONFIRMADA");
     const porCerrar = confirmadas.filter((s) => yaOcurrio(s.franja.inicio, ahora));
     const agenda = confirmadas.filter((s) => !yaOcurrio(s.franja.inicio, ahora));
@@ -160,6 +181,8 @@ export async function panelDelProfesional(
         saludo: saludoDelPanel(cuenta?.nombre, perfil.nombreVisible),
         solicitudes: esperandoRespuesta.map((s) => ({
             id: s.id,
+            estado: s.estado,
+            urgente: s.urgencia === "ESTA_SEMANA",
             padreNombre: s.padreUsuario.nombre ?? "Una familia",
             pedidaEn: s.creadoEn.toISOString(),
             inicio: s.franja.inicio.toISOString(),
