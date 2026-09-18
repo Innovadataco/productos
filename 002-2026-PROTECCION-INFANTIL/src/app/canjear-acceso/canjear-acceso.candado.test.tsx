@@ -19,6 +19,16 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import CanjearAccesoPage from "./page";
 
+// SPEC-710: la página ahora lleva un enlace de salida (next/link). Se mockea a un <a> plano para
+// que el render no dependa del router del App Router en jsdom.
+vi.mock("next/link", () => ({
+    default: ({ children, href, className }: { children: React.ReactNode; href: string; className?: string }) => (
+        <a href={href} className={className}>
+            {children}
+        </a>
+    ),
+}));
+
 const EVENTO_REPORTE = {
     eventoId: "ev-rep",
     fecha: "2026-09-01T10:05:00Z",
@@ -135,5 +145,33 @@ describe("SPEC-610 · D-129 · en las superficies del pase nunca se dice «códi
         // Y el generador sí habla de «pase».
         const generar = fs.readFileSync(path.join(base, "GenerarPase.tsx"), "utf-8").toLowerCase();
         expect(generar.includes("pase")).toBe(true);
+    });
+});
+
+/**
+ * SPEC-710 (I-427 · veredicto CEO) · CANDADO de conducta: `/canjear-acceso` vive FUERA de
+ * `/dashboard` y no lleva el menú lateral; sin una salida, el profesional (o el padre) que abre un
+ * caso queda «SIN cómo volver» a su área. Se exige, derivado del ÁRBOL DE RENDER de la página, una
+ * navegación a su área (`/dashboard`, que enruta a cada rol a su casa vía `homeParaRol`), SIEMPRE
+ * presente: en reposo Y con el caso abierto (no se pierde al canjear). Muere si alguien la quita.
+ * No confundir con el muro de aceptación de SPEC-686, donde el menú se colapsa a propósito.
+ */
+describe("SPEC-710 · desde /canjear-acceso siempre hay una salida a su área", () => {
+    const salida = () =>
+        screen.getAllByRole("link").find((a) => (a.getAttribute("href") ?? "") === "/dashboard");
+
+    it("en reposo (formulario del pase) hay un enlace visible a su área (/dashboard)", () => {
+        render(<CanjearAccesoPage />);
+        const link = salida();
+        expect(link, "falta la salida a /dashboard en la pantalla del pase").toBeTruthy();
+        expect(link!.textContent).toMatch(/volver a mi panel/i);
+    });
+
+    it("con el caso ABIERTO la salida sigue presente (no se pierde al canjear)", async () => {
+        mockFetch();
+        await abrirCasoEnLaUI();
+        const link = salida();
+        expect(link, "tras abrir el caso, el profesional se queda sin cómo volver a su área").toBeTruthy();
+        expect(link!.textContent).toMatch(/volver a mi panel/i);
     });
 });
