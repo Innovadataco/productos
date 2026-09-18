@@ -49,9 +49,9 @@ const PERFIL: PerfilProfesionalPropioDto = {
 const RANGO = [{ clave: "6-11", nombre: "Niñez (6–11)" }];
 const VISTA = { estadoPerfil: "ACTIVO", puedeReenviar: false, observaciones: [] } as unknown as VistaProfesionalVerificacion;
 
-describe("SPEC-685 · «Mi perfil» · aviso de la tarifa con valores en vivo", () => {
-    it("con parámetros presentes: muestra el precio estándar y el % vigentes", () => {
-        render(
+describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin valores en vivo)", () => {
+    it("el aviso es UNA frase, sin precio estándar ni % (decisión de Jelkin)", () => {
+        const { container } = render(
             <MiPerfilProfesionalClient
                 perfil={PERFIL}
                 rangoCatalogo={RANGO}
@@ -59,11 +59,12 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa con valores en vivo", 
                 vista={VISTA}
             />,
         );
-        expect(screen.getByText(/Cómo se cobra/)).toBeTruthy();
-        // Valores EN VIVO, formateados (80.000 con puntos de miles; 15%).
-        expect(screen.getByText(/80\.000/)).toBeTruthy();
-        expect(screen.getByText(/15%/)).toBeTruthy();
-        expect(screen.getByText(/desde la segunda cita/)).toBeTruthy();
+        // La frase verbatim que dejó el CEO.
+        expect(screen.getByText("El valor que fija aquí es lo que usted recibe desde la segunda cita con cada familia.")).toBeTruthy();
+        // Lo que se quitó: el marco «Cómo se cobra», el precio estándar y el %.
+        expect(container.textContent).not.toContain("Cómo se cobra");
+        expect(container.textContent).not.toContain("80.000");
+        expect(container.textContent).not.toContain("15%");
     });
 
     it("tarifa por fijar (null): muestra el estado §2-ter, en positivo, no «$0»", () => {
@@ -107,24 +108,19 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa con valores en vivo", 
         expect(screen.queryByText(/Su tarifa está sin fijar/)).toBeNull();
     });
 
-    it("si falta un parámetro: la frase va SIN número, nunca una cifra inventada", () => {
+    it("estado «por fijar» sin el parámetro: la frase va SIN número, nunca inventada", () => {
+        // El único valor EN VIVO que queda es el precio estándar de la nota «por
+        // fijar» (§2-ter). Si falta el parámetro, la nota va sin número.
         const { container } = render(
             <MiPerfilProfesionalClient
-                perfil={PERFIL}
+                perfil={{ ...PERFIL, tarifaConsultaCOP: null }}
                 rangoCatalogo={RANGO}
                 aviso={{ precioEstandar: null, pct: null }}
                 vista={VISTA}
             />,
         );
-        // El marco del aviso sigue estando.
-        expect(screen.getByText(/Cómo se cobra/)).toBeTruthy();
-        // Pero NO aparece un precio estándar inventado ni un % inventado. La única
-        // cifra que puede haber en la pantalla es la tarifa del propio profesional
-        // (input), no en el texto del aviso: verificamos que el párrafo del aviso
-        // no trae «hoy <número>» ni «(hoy <número>%)».
-        const avisoTexto = container.querySelector("p")?.parentElement?.textContent ?? container.textContent ?? "";
-        expect(/hoy\s*[\d.]+\s*COP/.test(avisoTexto)).toBe(false);
-        expect(/\(hoy\s*\d+%\)/.test(avisoTexto)).toBe(false);
+        expect(screen.getByText(/Su tarifa está sin fijar/)).toBeTruthy();
+        expect(/hoy\s*[\d.]+\s*COP/.test(container.textContent ?? "")).toBe(false);
     });
 });
 
