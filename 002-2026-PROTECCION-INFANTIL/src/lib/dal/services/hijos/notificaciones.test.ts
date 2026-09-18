@@ -49,10 +49,13 @@ async function crearReporte(identificador: string, estado: EstadoReporte = "CLAS
 
 async function padreConHijo(identificador: string, nombre = "Juan David") {
     const padre = await crearUsuario("PARENT");
+    // I-429: el cruce es por (identificador, plataforma). El aviso se dispara con el MISMO par que
+    // el reporte (crearReporte usa la 1ª plataforma) → el identificador del hijo la comparte.
+    const plataforma = await prisma.plataforma.findFirst();
     const { hijoId } = await registrarHijo(padre.id, {
         nombre,
         apellidos: "De Prueba",
-        identificadores: [{ valor: identificador }],
+        identificadores: [{ valor: identificador, plataformaId: plataforma!.id }],
     });
     return { padre, hijoId };
 }

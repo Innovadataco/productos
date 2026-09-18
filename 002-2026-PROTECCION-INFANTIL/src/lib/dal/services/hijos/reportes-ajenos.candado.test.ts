@@ -32,11 +32,12 @@ async function sembrarReporte(opts: {
     texto: string;
     conClasificacion?: boolean;
     sufijo: string;
+    plataformaId?: string;
 }) {
     const r = await crearReporteFixture(prisma, {
         data: {
             identificador: opts.identificador,
-            plataformaId,
+            plataformaId: opts.plataformaId ?? plataformaId,
             usuarioId: opts.usuarioId,
             esAnonimo: opts.esAnonimo,
             estado: opts.estado as never,
@@ -151,6 +152,40 @@ describe("SPEC-716 · listarCuentasReportadasPorOtros", () => {
         const cuentas = out[0]!.cuentas;
         expect(cuentas.map((c) => c.valor)).toEqual([ACTIVA]); // inactiva no se lista
         expect(cuentas[0]!.total).toBe(1);
+    });
+
+    it("I-429: mismo alias en dos plataformas → cada cuenta cuenta SOLO el reporte de SU red", async () => {
+        const padre = await crearUsuario("PARENT");
+        const otro = await crearUsuario("PARENT");
+        const platB = await prisma.plataforma.upsert({
+            where: { clave: "instagram" },
+            update: {},
+            create: { clave: "instagram", nombre: "Instagram" },
+        });
+        const ALIAS = "@zaira.716";
+        await prisma.hijo.create({
+            data: {
+                usuarioId: padre.id,
+                nombre: "Zaira",
+                identificadores: {
+                    create: [
+                        { valor: ALIAS, activo: true, plataformaId }, // plataforma A (del beforeEach)
+                        { valor: ALIAS, activo: true, plataformaId: platB.id }, // plataforma B
+                    ],
+                },
+            },
+        });
+        // El MISMO alias reportado por otros: uno en A, uno en B.
+        await sembrarReporte({ identificador: ALIAS, usuarioId: otro.id, esAnonimo: false, estado: "CLASIFICADO", texto: "en A", sufijo: "a" });
+        await sembrarReporte({ identificador: ALIAS, usuarioId: otro.id, esAnonimo: false, estado: "CLASIFICADO", texto: "en B", sufijo: "b", plataformaId: platB.id });
+
+        const cuentas = (await listarCuentasReportadasPorOtros(padre.id))[0]!.cuentas;
+        // Dos cuentas (mismo valor, distinta plataforma); CADA una cuenta SOLO su red.
+        // Control positivo por remoción del discriminador: si el where ignorara la plataforma,
+        // cada cuenta contaría 2 → estas aserciones caen en rojo.
+        expect(cuentas).toHaveLength(2);
+        for (const c of cuentas) expect(c.total).toBe(1);
+        expect(cuentas[0]!.reportes[0]!.id).not.toBe(cuentas[1]!.reportes[0]!.id);
     });
 
     it("sin hijos → arreglo vacío (sin romperse)", async () => {
