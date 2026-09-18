@@ -42,6 +42,7 @@ import { AppError, ERROR_CODES } from "../../../errors";
 import type { Prisma } from "@prisma/client";
 import { normalizarIdentificador } from "../../identificadores/normalizar";
 import { ESTADOS_VISIBLES } from "../circulo-confianza/tipos";
+import { claveParIdentificador, paresMatcheables, type ParIdentificadorPlataforma } from "./cruce-identificador-plataforma";
 import type { RegistrarHijoInput, ActualizarHijoInput, IdentificadorHijoInput } from "./tipos";
 
 function normalizarIdentificadores(identificadores: IdentificadorHijoInput[]) {
@@ -131,11 +132,14 @@ export async function obtenerHijoDePadre(hijoId: string, usuarioId: string) {
  * hijo tiene reportes si alguno de sus identificadores ACTIVOS aparece en el conjunto.
  */
 export function marcarTieneReportes<
-    H extends { identificadores: { valor: string; activo: boolean }[] },
->(hijos: H[], identificadoresConReporte: ReadonlySet<string>): (H & { tieneReportes: boolean })[] {
+    H extends { identificadores: { valor: string; activo: boolean; plataformaId: string | null }[] },
+>(hijos: H[], paresConReporte: ReadonlySet<string>): (H & { tieneReportes: boolean })[] {
     return hijos.map((h) => ({
         ...h,
-        tieneReportes: h.identificadores.some((i) => i.activo && identificadoresConReporte.has(i.valor)),
+        // I-429: el cruce es por el PAR (identificador, plataforma), no por el texto solo.
+        tieneReportes: h.identificadores.some(
+            (i) => i.activo && paresConReporte.has(claveParIdentificador({ valor: i.valor, plataformaId: i.plataformaId })),
+        ),
     }));
 }
 
@@ -162,6 +166,7 @@ export async function listarHijos(usuarioId: string) {
                 select: {
                     id: true,
                     valor: true,
+                    plataformaId: true,
                     tipo: true,
                     activo: true,
                     plataforma: { select: { id: true, nombre: true, clave: true } },
@@ -172,11 +177,12 @@ export async function listarHijos(usuarioId: string) {
         orderBy: { creadoEn: "desc" },
     });
 
-    // SPEC-660: ¿tiene reportes? — MISMO criterio que el aviso (`hijos/notificaciones.ts`):
-    // identificador ACTIVO del hijo = `Reporte.identificador` de un reporte VISIBLE y no
-    // eliminado. UNA consulta para toda la lista (los valores activos que aparecen en algún
-    // reporte visible); el `@@index([identificador, plataformaId])` la cubre. Solo el SI/NO
-    // cruza a la pantalla — nunca cuántos.
+    // SPEC-660 · I-429: ¿tiene reportes? — MISMO criterio que el aviso (`hijos/notificaciones.ts`)
+    // y que «A quién protejo»: el PAR (identificador, plataforma) ACTIVO del hijo = un reporte
+    // VISIBLE y no eliminado con ESE mismo par. El mismo alias en OTRA red es OTRA cuenta (comparar
+    // solo el texto encendía un ámbar falso, medido en prod). Helper compartido `cruce-identificador-
+    // plataforma`. UNA consulta para toda la lista; el `@@index([identificador, plataformaId])` la
+    // cubre. Solo el SI/NO cruza a la pantalla — nunca cuántos.
     //
     // ⚠️ DEGRADACIÓN CONOCIDA (I-396, 3ª vez): «VISIBLE» = ESTADOS_VISIBLES (clasificado o en
     // revisión). Un reporte sin clasificar queda PENDIENTE = NO visible. Con el MOTOR CAÍDO un
@@ -186,24 +192,27 @@ export async function listarHijos(usuarioId: string) {
     // avisos disparan sobre REVISION_MANUAL, que SÍ es visible → `tieneReportes` se enciende
     // también), sin tocar este código. Mientras 671 no esté en producción, «tranquilo» NO puede
     // leerse como «no pasó nada» en el copy del gráfico (forma → decide Diseño).
-    const valoresActivos = [
-        ...new Set(hijos.flatMap((h) => h.identificadores.filter((i) => i.activo).map((i) => i.valor))),
-    ];
-    let identificadoresConReporte: ReadonlySet<string> = new Set();
-    if (valoresActivos.length > 0) {
+    const paresActivos: ParIdentificadorPlataforma[] = hijos.flatMap((h) =>
+        h.identificadores.filter((i) => i.activo).map((i) => ({ valor: i.valor, plataformaId: i.plataformaId })),
+    );
+    const matcheables = paresMatcheables(paresActivos);
+    let paresConReporte: ReadonlySet<string> = new Set();
+    if (matcheables.length > 0) {
         const conReporte = await prisma.reporte.findMany({
             where: {
-                identificador: { in: valoresActivos },
                 estado: { in: ESTADOS_VISIBLES },
                 eliminado: false,
+                OR: matcheables,
             },
-            select: { identificador: true },
-            distinct: ["identificador"],
+            select: { identificador: true, plataformaId: true },
+            distinct: ["identificador", "plataformaId"],
         });
-        identificadoresConReporte = new Set(conReporte.map((r) => r.identificador));
+        paresConReporte = new Set(
+            conReporte.map((r) => claveParIdentificador({ valor: r.identificador, plataformaId: r.plataformaId })),
+        );
     }
 
-    return marcarTieneReportes(hijos, identificadoresConReporte);
+    return marcarTieneReportes(hijos, paresConReporte);
 }
 
 /**

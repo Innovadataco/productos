@@ -49,10 +49,13 @@ async function crearReporte(identificador: string, estado: EstadoReporte = "CLAS
 
 async function padreConHijo(identificador: string, nombre = "Juan David") {
     const padre = await crearUsuario("PARENT");
+    // I-429: el cruce es por (identificador, plataforma). El aviso se dispara con el MISMO par que
+    // el reporte (crearReporte usa la 1ª plataforma) → el identificador del hijo la comparte.
+    const plataforma = await prisma.plataforma.findFirst();
     const { hijoId } = await registrarHijo(padre.id, {
         nombre,
         apellidos: "De Prueba",
-        identificadores: [{ valor: identificador }],
+        identificadores: [{ valor: identificador, plataformaId: plataforma!.id }],
     });
     return { padre, hijoId };
 }
@@ -64,6 +67,17 @@ describe("notificarHijosSiCorresponde (SPEC-339)", { timeout: 60_000 }, () => {
         await crearPlataforma();
         await crearParams();
         vi.clearAllMocks();
+    });
+
+    it("I-429 · caso NULO: hijo con identificador SIN plataforma → el reporte del mismo alias NO avisa", async () => {
+        const padre = await crearUsuario("PARENT");
+        // Identificador SIN plataforma (plataformaId=null); el reporte del mismo alias SÍ tiene plataforma.
+        await registrarHijo(padre.id, { nombre: "SinPlat", apellidos: "X", identificadores: [{ valor: "SinPlataforma716" }] });
+        const reporte = await crearReporte("SinPlataforma716");
+
+        await notificarHijosSiCorresponde(reporte.id);
+
+        expect(enviarMock).not.toHaveBeenCalled(); // sin plataforma → no cruza → no avisa (decisión I-429)
     });
 
     it("un reporte visible sobre la cuenta del hijo avisa al padre dueño", async () => {

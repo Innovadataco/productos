@@ -65,7 +65,10 @@ export async function notificarHijosSiCorresponde(reporteId: string) {
         const hijos = await prisma.hijo.findMany({
             where: {
                 estado: "activo",
-                identificadores: { some: { valor: reporte.identificador, activo: true } },
+                // I-429: el cruce es por el PAR (identificador, plataforma) — una sola verdad con
+                // `tieneReportes` y «A quién protejo». `Reporte.plataformaId` es NOT NULL; un
+                // identificador sin plataforma (null) no matchea (no se puede afirmar «misma red»).
+                identificadores: { some: { valor: reporte.identificador, plataformaId: reporte.plataformaId, activo: true } },
             },
             select: {
                 id: true,
