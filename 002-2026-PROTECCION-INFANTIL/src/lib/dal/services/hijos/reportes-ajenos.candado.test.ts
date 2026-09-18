@@ -188,6 +188,26 @@ describe("SPEC-716 · listarCuentasReportadasPorOtros", () => {
         expect(cuentas[0]!.reportes[0]!.id).not.toBe(cuentas[1]!.reportes[0]!.id);
     });
 
+    it("I-429 · caso NULO (decisión, no efecto): identificador activo SIN plataforma + reporte del mismo alias → NO cuenta", async () => {
+        const padre = await crearUsuario("PARENT");
+        const otro = await crearUsuario("PARENT");
+        const ALIAS = "@sinplat.716";
+        await prisma.hijo.create({
+            data: {
+                usuarioId: padre.id,
+                nombre: "Zaira",
+                identificadores: { create: [{ valor: ALIAS, activo: true, plataformaId: null }] },
+            },
+        });
+        // Un reporte del MISMO alias, pero con plataforma (todos la tienen; Reporte.plataformaId es NOT NULL).
+        await sembrarReporte({ identificador: ALIAS, usuarioId: otro.id, esAnonimo: false, estado: "CLASIFICADO", texto: "x", sufijo: "sp" });
+
+        const cuentas = (await listarCuentasReportadasPorOtros(padre.id))[0]!.cuentas;
+        expect(cuentas).toHaveLength(1);
+        expect(cuentas[0]!.total).toBe(0); // sin plataforma → no se puede afirmar «misma red» → NO cruza
+        expect(cuentas[0]!.reportes).toEqual([]);
+    });
+
     it("sin hijos → arreglo vacío (sin romperse)", async () => {
         const padre = await crearUsuario("PARENT");
         expect(await listarCuentasReportadasPorOtros(padre.id)).toEqual([]);

@@ -69,6 +69,17 @@ describe("notificarHijosSiCorresponde (SPEC-339)", { timeout: 60_000 }, () => {
         vi.clearAllMocks();
     });
 
+    it("I-429 · caso NULO: hijo con identificador SIN plataforma → el reporte del mismo alias NO avisa", async () => {
+        const padre = await crearUsuario("PARENT");
+        // Identificador SIN plataforma (plataformaId=null); el reporte del mismo alias SÍ tiene plataforma.
+        await registrarHijo(padre.id, { nombre: "SinPlat", apellidos: "X", identificadores: [{ valor: "SinPlataforma716" }] });
+        const reporte = await crearReporte("SinPlataforma716");
+
+        await notificarHijosSiCorresponde(reporte.id);
+
+        expect(enviarMock).not.toHaveBeenCalled(); // sin plataforma → no cruza → no avisa (decisión I-429)
+    });
+
     it("un reporte visible sobre la cuenta del hijo avisa al padre dueño", async () => {
         const { padre } = await padreConHijo("RobloxJuan");
         const reporte = await crearReporte("RobloxJuan");
