@@ -165,21 +165,12 @@ export function MiPerfilProfesionalClient({ perfil, rangoCatalogo, aviso, vista,
                     </p>
                 )}
 
-                {/* FORMA §2-bis · aviso de cómo se cobra. Nota informativa NEUTRA
-                    (no ámbar): es contexto, no una alarma. Valores EN VIVO; si falta
-                    un parámetro, la frase va SIN número — nunca una cifra inventada. */}
-                <div className="mt-3 text-sm text-subtle">
-                    <p>
-                        <span className="font-medium text-body">Cómo se cobra.</span> El valor que fija aquí es lo que
-                        usted recibe <span className="font-medium">desde la segunda cita</span> con cada familia. La{" "}
-                        <span className="font-medium">primera cita</span> se cobra a un precio estándar que fija la
-                        Plataforma
-                        {aviso.precioEstandar !== null ? `: hoy ${conPuntosDeMiles(aviso.precioEstandar)} COP.` : "."}{" "}
-                        En cualquier cita, la familia paga la consulta más un % de servicio de la Plataforma
-                        {aviso.pct !== null ? ` (hoy ${aviso.pct}%)` : ""} que{" "}
-                        <span className="font-medium">no se descuenta de lo suyo</span> — se suma a lo que paga la familia.
-                    </p>
-                </div>
+                {/* FORMA §2-bis · aviso de cómo se cobra. Decisión de Jelkin (probando):
+                    se reduce a UNA sola frase, SIN el precio estándar en vivo ni el % de
+                    servicio. Diseño actualiza §2-bis en paralelo. */}
+                <p className="mt-3 text-sm text-subtle">
+                    El valor que fija aquí es lo que usted recibe desde la segunda cita con cada familia.
+                </p>
 
                 {error && (
                     <Alerta tono="advertencia" className="mt-3 text-center">
