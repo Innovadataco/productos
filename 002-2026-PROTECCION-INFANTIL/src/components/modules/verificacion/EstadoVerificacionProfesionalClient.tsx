@@ -1,27 +1,20 @@
 "use client";
 
 /**
- * SPEC-408 + SPEC-691 · «Mi estado»: el profesional ve su estado de verificación y,
- * según cuál sea, qué puede hacer. No ve `resultado` ni checklist estructurado — solo
- * la observación escrita por el Verificador, tal cual.
+ * SPEC-408 + SPEC-691 · Estado de verificación del profesional: según cuál sea, qué puede hacer.
+ * No ve `resultado` ni checklist estructurado — solo la observación escrita por el Verificador.
  *
- * SPEC-691 (forma de Diseño, FORMA-SPEC691 · 13-09): cada estado tiene su pantalla.
- * NUNCA rubí — el rojo se reserva a la criticidad de protección de un menor (D-120);
- * estos son estados de CUENTA. VENCIDO y RECHAZADO van en ámbar (piden su acción);
- * SUSPENDIDO en tinta neutra (no hay acción que él pueda tomar). Color + rótulo
- * SIEMPRE (WCAG 1.4.1), nunca color solo.
+ * SPEC-706: este componente ya NO es una pantalla propia («Mi estado» / `/perfil-profesional/
+ * verificacion` se retira). Se REUBICA como ENCABEZADO de la ficha (una sola pantalla). Es
+ * DISPLAY-ONLY: el botón «Enviar a revisión» se movió a la ficha (un solo camino de envío por el
+ * PUT del perfil, que valida y nombra lo que falta). Acá solo se muestran estado + observaciones.
  *
- * Ajustes medidos por el CEO sobre la forma:
- *  · RECHAZADO no se produce nunca (el ciclo devuelve MAS_INFORMACION, no rechaza —
- *    verificador/service.ts). Se maneja a la DEFENSIVA: sin nada operativo, sin
- *    recorrido propio.
- *  · SUSPENDIDO: copy aprobada por Diseño (Gestión 17c375e/8d9ecf2), verbatim — la
- *    causa como hecho (tres citas vencidas sin respuesta), sin culpar al profesional
- *    (no le avisamos), y la salida real (el equipo lo levanta vía contacto). Insignia
- *    neutra, solo lectura, sin reenviar. La acción del administrador va en SPEC-692.
+ * SPEC-691 (forma de Diseño, FORMA-SPEC691 · 13-09): cada estado tiene su copy. NUNCA rubí — el
+ * rojo se reserva a la criticidad de protección de un menor (D-120); estos son estados de CUENTA.
+ * VENCIDO/en-corrección van en ámbar (piden su acción); SUSPENDIDO en tinta neutra. Color + rótulo
+ * SIEMPRE (WCAG 1.4.1). SUSPENDIDO: copy verbatim de Diseño (Gestión 17c375e/8d9ecf2). RECHAZADO
+ * no se produce (el ciclo devuelve MAS_INFORMACION → BORRADOR); defensivo, sin nada operativo.
  */
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface Vista {
     estadoPerfil: "BORRADOR" | "EN_REVISION" | "ACTIVO" | "RECHAZADO" | "VENCIDO" | "SUSPENDIDO";
@@ -55,9 +48,6 @@ const TITULO: Record<Vista["estadoPerfil"], string> = {
 };
 
 export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vista: Vista; habilitado: boolean }) {
-    const router = useRouter();
-    const [enviando, setEnviando] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     // SPEC-691 (ajuste del CEO): la pantalla se decide por `habilitado`, no solo por
     // `estado`. ACTIVO con la vigencia vencida pero el worker sin correr
     // (habilitado=false) se MUESTRA como VENCIDO — si no, diría «activo» a quien no
@@ -66,36 +56,8 @@ export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vis
         vista.estadoPerfil === "ACTIVO" && !habilitado ? "VENCIDO" : vista.estadoPerfil;
     const insignia = INSIGNIA[estadoMostrado];
 
-    async function reenviar() {
-        setEnviando(true);
-        setError(null);
-        try {
-            const res = await fetch("/api/profesional/verificacion/reenviar", {
-                method: "POST",
-                credentials: "include",
-            });
-            if (!res.ok) {
-                // I-410: el mensaje del servidor, no «HTTP NNN».
-                const j = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string } };
-                // SPEC-703: si falta aceptar la autorización, LLEVAMOS a la pantalla de aceptación
-                // (686, con el menú colapsado) — el paso de aceptación va ANTES de reenviar, no un
-                // error de texto. Navegación DURA como el consentimiento del padre.
-                if (j?.error?.code === "AUTORIZACION_REQUERIDA") {
-                    window.location.assign("/perfil-profesional/autorizacion");
-                    return;
-                }
-                throw new Error(j?.error?.message ?? `El servidor respondió con un error (HTTP ${res.status}).`);
-            }
-            router.refresh();
-        } catch (e) {
-            setError(e instanceof Error ? e.message : String(e));
-        } finally {
-            setEnviando(false);
-        }
-    }
-
     return (
-        <div className="mx-auto max-w-3xl space-y-6 anim-entrada">
+        <div className="space-y-6 anim-entrada">
             <header className="space-y-2">
                 <p className="microetiqueta">Verificación de su perfil</p>
                 <div className="flex flex-wrap items-center gap-3">
@@ -107,10 +69,18 @@ export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vis
             </header>
 
             {estadoMostrado === "EN_REVISION" && (
-                <div className="glass rounded-2xl p-6">
+                <div className="glass rounded-2xl p-6 space-y-2">
+                    {/* SPEC-706 (Jelkin, ampliación 2): corto y honesto. El resultado llega por CORREO
+                        (verificado: el verificador envía email al decidir), con recordatorio de
+                        revisarlo; y se DICE el bloqueo antes de que lo descubra tocando un campo. */}
                     <p className="cuerpo text-body">
-                        Ya estamos revisando sus documentos. Le avisamos apenas haya novedad — no hace falta que
-                        haga nada.
+                        Su solicitud quedó en revisión. El equipo va a revisar sus documentos y su ficha, y{" "}
+                        <span className="font-medium">le avisaremos por correo</span> cuando haya una decisión —
+                        revise su correo.
+                    </p>
+                    <p className="cuerpo text-subtle">
+                        Mientras tanto <span className="font-medium">no puede cambiar su información</span> y su
+                        perfil no aparece para las familias.
                     </p>
                 </div>
             )}
@@ -184,22 +154,9 @@ export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vis
                 </section>
             )}
 
-            {vista.puedeReenviar && (
-                <div className="glass rounded-2xl p-6">
-                    <p className="cuerpo text-body">
-                        Cuando termine de corregir, envíe su perfil a revisión otra vez.
-                    </p>
-                    <button
-                        type="button"
-                        disabled={enviando}
-                        onClick={reenviar}
-                        className="mt-4 rounded-full bg-pino px-6 py-2 text-sm font-semibold text-white transition hover:bg-pino/90 disabled:cursor-not-allowed disabled:bg-tinta/30"
-                    >
-                        {enviando ? "Enviando…" : "Enviar a revisión"}
-                    </button>
-                    {error && <p className="mt-2 text-sm text-estado-rubi">{error}</p>}
-                </div>
-            )}
+            {/* SPEC-706: el envío se movió a la ficha (botón «Guardar y enviar a revisión», que valida
+                y nombra lo que falta). Este encabezado es DISPLAY-ONLY; `vista.puedeReenviar` ya no
+                pinta un botón acá. La ficha, debajo, vuelve a ser editable cuando es su turno. */}
         </div>
     );
 }

@@ -138,9 +138,13 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         expect(cal).toContain("puede agendar una cita.");
         expect(calPage).toContain("Publique y retire las franjas en las que atiende.");
         expect(verif).toContain("Verificación de su perfil");
-        // SPEC-691: se quitó «por correo» (el correo no entrega — MAPA §Correo; el aviso
-        // real es in-app) y se corrigió «hagas»→«haga» (tuteo). Ancla a la copia nueva (usted).
-        expect(verif).toContain("Ya estamos revisando sus documentos. Le avisamos apenas haya novedad");
+        // SPEC-706 (ampliación · Jelkin): la copy de EN_REVISION se reescribió — el resultado
+        // llega por CORREO (verificado: el verificador envía email al decidir), se pide revisarlo y
+        // se DICE el bloqueo antes de que lo descubra tocando un campo. Ancla a la copia nueva
+        // (usted, imperativo «revise»); muere si se revierte a tú («revisa tu correo»).
+        expect(verif).toContain("le avisaremos por correo");
+        expect(verif).toContain("revise su correo");
+        expect(verif).toContain("no puede cambiar su información");
         // SPEC-691 · las pantallas nuevas por estado, en usted (mueren si se revierten).
         expect(verif).toContain("Su verificación venció.");
         // SPEC-691 · no conformidad de Diseño (FORMA-SPEC691 · certificación 09af30a · vigencia.ts:66):

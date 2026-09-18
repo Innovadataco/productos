@@ -73,7 +73,7 @@ export const CLAVES_POR_ROL: Record<string, string[]> = {
         "profesional_casos",
         "profesional_calendario",
         "profesional_ficha",
-        "profesional_verificacion",
+        // SPEC-706: `profesional_verificacion` retirado (su pantalla se fusionó en la ficha).
     ],
 };
 

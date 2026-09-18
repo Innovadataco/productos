@@ -34,7 +34,7 @@ const ICONS: Record<string, (props: { className?: string }) => React.JSX.Element
     "/dashboard/profesional/casos": ScaleIcon,
     "/dashboard/profesional/calendario": ChartIcon,
     "/perfil-profesional/completar": UserCircleIcon,
-    "/perfil-profesional/verificacion": ShieldIcon,
+    // SPEC-706: /perfil-profesional/verificacion se retiró (su estado vive en la ficha).
 };
 
 // SPEC-703: la pantalla de aceptación de la autorización es un MURO. Mientras el profesional

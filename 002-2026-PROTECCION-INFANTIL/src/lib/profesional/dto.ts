@@ -116,24 +116,34 @@ export function perfilCompletoParaRevision(
     perfil: PerfilProfesional,
     aceptoAutorizacionVigente: boolean,
 ): boolean {
-    return (
-        perfil.nombreVisible.trim().length > 0 &&
-        // SPEC-685 (PR2): la ficha ya no pide título/especialidades libres; la
-        // completitud es de las LISTAS CERRADAS — profesión (única) + al menos un
-        // área + al menos un rango de edad. Cambiar esto de vuelta a los campos
-        // viejos deja la ficha nueva imposible de completar.
-        (perfil.profesion?.trim().length ?? 0) > 0 &&
-        perfil.areasAtencion.length > 0 &&
-        perfil.rangoEtario.length > 0 &&
-        perfil.ciudadId.length > 0 &&
-        (perfil.atiendeVirtual || perfil.atiendePresencial) &&
-        perfil.aniosExperiencia >= 0 &&
-        perfil.presentacion.trim().length > 0 &&
-        // SPEC-685 (PR2-bis): la tarifa y la duración SALEN de la ficha y viven en
-        // «Mi perfil», que solo ve el HABILITADO (FORMA-MI-PERFIL). Antes de estar
-        // habilitado no hay tarifa que fijar, así que YA NO gatean el paso a
-        // EN_REVISION — se fijan después, en Mi perfil. (La 1ª cita cobra el precio
-        // estándar del admin, no la tarifa del profesional — SPEC-428 §4.)
-        aceptoAutorizacionVigente
-    );
+    return camposFaltantesParaRevision(perfil, aceptoAutorizacionVigente).length === 0;
+}
+
+/**
+ * SPEC-706 (ampliación · Jelkin): los campos OBLIGATORIOS que le FALTAN al perfil para pasar a
+ * revisión, con su ETIQUETA humana (voz «usted», la misma que muestra la ficha). Vacío = listo.
+ *
+ * Es la fuente ÚNICA de «qué falta»: el botón «Guardar y enviar a revisión» del cliente se inactiva
+ * con esta lista y la nombra, y el SERVIDOR la usa para rechazar el envío nombrando el campo (antes
+ * la transición era silenciosa: un `rangoEtario` vacío dejaba el perfil en BORRADOR sin decir nada,
+ * y el profesional creía que había enviado). Las etiquetas espejan los labels de `completar`.
+ *
+ * SPEC-685 (PR2): las listas son CERRADAS (profesión única + ≥1 área + ≥1 rango). La tarifa/duración
+ * NO gatean: viven en «Mi perfil» del habilitado. La autorización se ACEPTA en pantalla (SPEC-703).
+ */
+export function camposFaltantesParaRevision(
+    perfil: PerfilProfesional,
+    aceptoAutorizacionVigente: boolean,
+): string[] {
+    const faltan: string[] = [];
+    if (perfil.nombreVisible.trim().length === 0) faltan.push("Nombre público");
+    if ((perfil.profesion?.trim().length ?? 0) === 0) faltan.push("Profesión");
+    if (perfil.areasAtencion.length === 0) faltan.push("Áreas de atención");
+    if (perfil.rangoEtario.length === 0) faltan.push("Edad que atiende");
+    if (perfil.ciudadId.length === 0) faltan.push("Ciudad");
+    if (!perfil.atiendeVirtual && !perfil.atiendePresencial) faltan.push("Cómo atiende (virtual o presencial)");
+    if (perfil.aniosExperiencia < 1) faltan.push("Años de experiencia");
+    if (perfil.presentacion.trim().length === 0) faltan.push("Presentación");
+    if (!aceptoAutorizacionVigente) faltan.push("Aceptar la autorización");
+    return faltan;
 }

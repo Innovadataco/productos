@@ -15,7 +15,10 @@ import { verificacionParaProfesional } from "@/lib/profesionales/verificador/vis
 export async function GET() {
     try {
         const user = await verifyAuth("PROFESIONAL");
-        await assertModulo(user, "profesional_verificacion");
+        // SPEC-706: se retiró el módulo `profesional_verificacion` (su menú desapareció). Esta ruta quedó
+        // SIN uso en la UI (el estado vive en la ficha, el envío va por el PUT del perfil); se gatea
+        // con `profesional_ficha` por ahora. Candidata a retiro en un follow-up.
+        await assertModulo(user, "profesional_ficha");
         const data = await verificacionParaProfesional(user.id);
         return NextResponse.json({ data });
     } catch (error) {

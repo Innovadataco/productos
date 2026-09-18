@@ -33,7 +33,6 @@ const HREF_CASOS = "/dashboard/profesional/casos";
 const HREF_CALENDARIO = "/dashboard/profesional/calendario";
 const HREF_FICHA = "/perfil-profesional/completar";
 const HREF_MI_PERFIL = "/dashboard/profesional/mi-perfil";
-const HREF_ESTADO = "/perfil-profesional/verificacion";
 
 /** Toma el ítem base de PROFESIONAL_NAV_ITEMS (href + módulo) y le fija el rótulo del estado. */
 function entrada(href: string, label: string): NavItem {
@@ -59,9 +58,11 @@ function menuVerificado(): NavItem[] {
     ];
 }
 
-/** Portero (no habilitado, cualquier estado): solo su ficha y su estado. Nada operativo. */
+/** Portero (no habilitado, cualquier estado): SOLO su ficha. Nada operativo.
+ *  SPEC-706: «Mi estado» (/perfil-profesional/verificacion) se retiró — su contenido es ahora el
+ *  encabezado de la ficha. El no habilitado no elige entre dos pantallas que eran lo mismo. */
 function menuPortero(): NavItem[] {
-    return [entrada(HREF_FICHA, "Mi ficha"), entrada(HREF_ESTADO, "Mi estado")];
+    return [entrada(HREF_FICHA, "Mi ficha")];
 }
 
 /**

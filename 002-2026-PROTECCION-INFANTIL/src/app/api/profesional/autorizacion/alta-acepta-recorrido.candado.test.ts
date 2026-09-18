@@ -1,16 +1,16 @@
 /**
- * CANDADO de recorrido · SPEC-703 · El alta nueva ACEPTA EN PANTALLA y pasa a revisión sin 409.
+ * CANDADO de recorrido · SPEC-706 (+ SPEC-703 cutover) · El cierre de la ficha por el PUT del perfil.
  *
- * El hueco que cierra: el cutover de SPEC-686 hizo que `decidir` exija la aceptación en pantalla,
- * pero la completitud del alta seguía exigiendo el PDF. Un alta nueva subía el PDF, pasaba a
- * revisión y el verificador la rechazaba con 409. Ahora la completitud exige la ACEPTACIÓN.
- *
- * Prueba la CONDUCTA end-to-end golpeando los routes reales:
- *  1. CONTROL · alta completa SIN aceptar → el PUT NO la pasa a revisión (queda BORRADOR).
- *  2. alta completa + POST /aceptar → pasa a EN_REVISION (aceptar es el gate de completitud).
- *  3. «sin 409»: tras aceptar, la aceptación es PREVIA (`aceptacionAntesDe(now)` no es null) — es
- *     exactamente lo que la guarda de anterioridad de `decidir` (SPEC-686) exige para NO dar 409.
- *     El camino completo de `decidir` con aceptación lo cubren sus tests de SPEC-686.
+ * Enviar a revisión es un acto EXPLÍCITO (botón «Guardar y enviar a revisión» → PUT con
+ * `enviarARevision`), NO una auto-transición al completarse. El PUT:
+ *   · «Guardar borrador» (sin la bandera) guarda y NO transiciona, aunque esté completa + aceptada.
+ *   · Enviar con la ficha INCOMPLETA → 400 FICHA_INCOMPLETA que NOMBRA los campos que faltan (antes
+ *     la transición era silenciosa: un `rangoEtario` vacío dejaba el perfil en BORRADOR sin decir
+ *     nada — el bug medido por Jelkin).
+ *   · Enviar SIN aceptar la autorización → falta «Aceptar la autorización» (mismo mecanismo).
+ *   · Enviar completa + aceptada → EN_REVISION, y la aceptación es PREVIA (sin 409 al decidir).
+ *   · En EN_REVISION la ficha es de SOLO LECTURA EN EL SERVIDOR: el PUT rechaza toda edición (409).
+ *   · Un VENCIDO reactiva por la MISMA ficha (editable) → PUT enviar → EN_REVISION.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { PUT as PUT_PERFIL } from "../perfil/route";
@@ -18,9 +18,8 @@ import { POST as POST_ACEPTAR } from "./aceptar/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
-import { crearParametrosAutorizacionProfesional, sembrarAceptacionAutorizacion } from "@/lib/autorizacion-profesional-test-utils";
+import { crearParametrosAutorizacionProfesional } from "@/lib/autorizacion-profesional-test-utils";
 import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
-import { reenviarParaVerificacion } from "@/lib/profesionales/verificador/vista-profesional";
 
 let activeToken: string | undefined;
 
@@ -39,8 +38,8 @@ async function ciudadId(): Promise<string> {
     return c.id;
 }
 
-/** Un profesional autenticado con su ficha COMPLETA en BORRADOR (todo menos la autorización). */
-async function altaCompletaEnBorrador(email: string) {
+/** Crea el profesional autenticado y su perfil en `estado` con todos los campos (menos los `over`). */
+async function crearPerfil(email: string, estado: "BORRADOR" | "VENCIDO", over: Record<string, unknown> = {}) {
     const user = await crearUsuario("PROFESIONAL", email);
     activeToken = await crearTokenUsuario(user.id, "PROFESIONAL");
     const perfil = await prisma.perfilProfesional.create({
@@ -58,14 +57,15 @@ async function altaCompletaEnBorrador(email: string) {
             aniosExperiencia: 6,
             presentacion: "Acompaño a familias con niñez y adolescencia.",
             duracionMinutos: 45,
-            estado: "BORRADOR",
+            estado,
+            ...over,
         },
     });
     return { user, perfil };
 }
 
-/** Re-guarda la ficha por el route real (dispara la evaluación de completitud del PUT). */
-function guardarFicha(ciudad: string) {
+/** PUT de la ficha. `enviar` dispara la transición; sin él, guarda borrador. `over` pisa campos. */
+async function putFicha(enviar: boolean, over: Record<string, unknown> = {}) {
     return PUT_PERFIL(
         new Request("http://localhost:5005/api/profesional/perfil", {
             method: "PUT",
@@ -75,12 +75,13 @@ function guardarFicha(ciudad: string) {
                 profesion: "psicologo",
                 areasAtencion: ["ansiedad"],
                 rangoEtario: ["6-11"],
-                ciudadId: ciudad,
+                ciudadId: await ciudadId(),
                 atiendeVirtual: true,
                 atiendePresencial: false,
                 aniosExperiencia: 6,
                 presentacion: "Acompaño a familias con niñez y adolescencia.",
-                duracionMinutos: 45,
+                ...(enviar ? { enviarARevision: true } : {}),
+                ...over,
             }),
         }),
     );
@@ -96,7 +97,10 @@ function aceptar() {
     );
 }
 
-describe("SPEC-703 · recorrido del alta: aceptar en pantalla pasa a revisión sin 409", () => {
+const estadoDe = (id: string) =>
+    prisma.perfilProfesional.findUniqueOrThrow({ where: { id } }).then((p) => p.estado);
+
+describe("SPEC-706 · el cierre de la ficha: enviar explícito, nombra lo que falta, bloquea en revisión", () => {
     beforeEach(async () => {
         await resetDatabase();
         await crearPaisCiudad();
@@ -106,79 +110,68 @@ describe("SPEC-703 · recorrido del alta: aceptar en pantalla pasa a revisión s
     });
     afterAll(async () => prisma.$disconnect());
 
-    it("CONTROL · alta completa SIN aceptar → el PUT NO la pasa a revisión (queda BORRADOR)", async () => {
-        const { perfil } = await altaCompletaEnBorrador("sin-aceptar@test.local");
-        const res = await guardarFicha(perfil.ciudadId);
-        expect(res.status).toBeLessThan(400);
-        expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).estado).toBe("BORRADOR");
-    });
-
-    it("alta completa + aceptar en pantalla → pasa a EN_REVISION", async () => {
-        const { perfil } = await altaCompletaEnBorrador("acepta@test.local");
-        const res = await aceptar();
-        expect(res.status).toBe(200);
-        expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).estado).toBe("EN_REVISION");
-    });
-
-    it("«sin 409»: la aceptación es PREVIA — la guarda de anterioridad de decidir la ve", async () => {
-        const { user } = await altaCompletaEnBorrador("previa@test.local");
+    it("«Guardar borrador» (sin enviar) NO transiciona, aunque esté completa y aceptada", async () => {
+        const { perfil } = await crearPerfil("borrador@test.local", "BORRADOR");
         await aceptar();
-        // Es exactamente lo que `decidir` consulta para no dar 409 por falta de autorización previa.
-        const previa = await new AutorizacionProfesionalService().aceptacionAntesDe(user.id, new Date());
-        expect(previa).not.toBeNull();
+        const res = await putFicha(false);
+        expect(res.status).toBeLessThan(400);
+        expect(await estadoDe(perfil.id)).toBe("BORRADOR");
     });
-});
 
-/** Un VENCIDO completo (con modalidad, que el CHECK del VENCIDO exige). */
-async function vencidoCompleto(email: string) {
-    const user = await crearUsuario("PROFESIONAL", email);
-    const perfil = await prisma.perfilProfesional.create({
-        data: {
-            usuarioId: user.id,
-            nombreVisible: "Dra. Vencida",
-            tituloProfesional: "",
-            especialidades: [],
-            profesion: "psicologo",
-            areasAtencion: ["ansiedad"],
-            rangoEtario: ["6-11"],
-            ciudadId: await ciudadId(),
-            atiendeVirtual: true,
-            atiendePresencial: false,
-            aniosExperiencia: 6,
-            presentacion: "Acompaño a familias con niñez y adolescencia.",
-            duracionMinutos: 45,
-            estado: "VENCIDO",
-        },
+    it("CANDADO · enviar con un obligatorio vacío (Edad que atiende) → 400 que NOMBRA el campo, queda BORRADOR", async () => {
+        const { perfil } = await crearPerfil("incompleta@test.local", "BORRADOR");
+        await aceptar();
+        const res = await putFicha(true, { rangoEtario: [] });
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.code).toBe("FICHA_INCOMPLETA");
+        expect(json.error.campos).toContain("Edad que atiende");
+        expect(await estadoDe(perfil.id)).toBe("BORRADOR");
     });
-    return { user, perfil };
-}
 
-describe("SPEC-703 · reactivación del VENCIDO: aceptar antes de reenviar (mismo muro del cutover)", () => {
-    beforeEach(async () => {
-        await resetDatabase();
-        await crearPaisCiudad();
-        await crearParametrosAutorizacionProfesional();
-        if (!process.env.PARAM_ENCRYPTION_KEY) process.env.PARAM_ENCRYPTION_KEY = "a".repeat(32);
+    it("enviar SIN aceptar la autorización → falta «Aceptar la autorización», queda BORRADOR", async () => {
+        const { perfil } = await crearPerfil("sin-aceptar@test.local", "BORRADOR");
+        const res = await putFicha(true); // completa pero SIN aceptar
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error.campos).toContain("Aceptar la autorización");
+        expect(await estadoDe(perfil.id)).toBe("BORRADOR");
     });
-    afterAll(async () => prisma.$disconnect());
 
-    it("VENCIDO con aceptación → reenviarParaVerificacion pasa a EN_REVISION (sin 409 al decidir)", async () => {
-        const { user, perfil } = await vencidoCompleto("vencido-ok@test.local");
-        await sembrarAceptacionAutorizacion(user.id);
-        await reenviarParaVerificacion(user.id);
-        expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).estado).toBe("EN_REVISION");
-        // Y la aceptación es PREVIA → la guarda de anterioridad de decidir no dará 409.
+    it("enviar completa + aceptada → EN_REVISION, y la aceptación es PREVIA (sin 409 al decidir)", async () => {
+        const { user, perfil } = await crearPerfil("ok@test.local", "BORRADOR");
+        await aceptar();
+        const res = await putFicha(true);
+        expect(res.status).toBeLessThan(400);
+        expect(await estadoDe(perfil.id)).toBe("EN_REVISION");
         const previa = await new AutorizacionProfesionalService().aceptacionAntesDe(user.id, new Date());
         expect(previa).not.toBeNull();
     });
 
-    it("CONTROL · VENCIDO SIN aceptación → reenviar tira AUTORIZACION_REQUERIDA (409) y queda VENCIDO", async () => {
-        const { user, perfil } = await vencidoCompleto("vencido-sin@test.local");
-        // Parámetros sembrados (beforeEach) pero SIN aceptación → no puede reenviar.
-        await expect(reenviarParaVerificacion(user.id)).rejects.toMatchObject({
-            code: "AUTORIZACION_REQUERIDA",
-            statusCode: 409,
-        });
-        expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).estado).toBe("VENCIDO");
+    it("CANDADO · en EN_REVISION la ficha es SOLO LECTURA en el servidor: el PUT rechaza la edición (409)", async () => {
+        const { perfil } = await crearPerfil("en-revision@test.local", "BORRADOR", { estado: "EN_REVISION" });
+        const res = await putFicha(false, { presentacion: "intento de editar en revisión" });
+        expect(res.status).toBe(409);
+        // No cambió nada.
+        expect((await prisma.perfilProfesional.findUniqueOrThrow({ where: { id: perfil.id } })).presentacion).toBe(
+            "Acompaño a familias con niñez y adolescencia.",
+        );
+    });
+
+    it("SUSPENDIDO: el PUT también rechaza la edición (409)", async () => {
+        // SUSPENDIDO exige modalidad (CHECK); el perfil base ya tiene atiendeVirtual.
+        const { perfil } = await crearPerfil("suspendido@test.local", "BORRADOR", { estado: "SUSPENDIDO" });
+        // Cuerpo VÁLIDO (pasa el schema): así el 409 es la compuerta de estado, no un 400 de validación.
+        const res = await putFicha(false, { presentacion: "Intento de editar mi ficha estando suspendida." });
+        expect(res.status).toBe(409);
+        expect(await estadoDe(perfil.id)).toBe("SUSPENDIDO");
+    });
+
+    it("reactivación del VENCIDO por la MISMA ficha: acepta + enviar → EN_REVISION", async () => {
+        const { perfil } = await crearPerfil("vencido@test.local", "VENCIDO");
+        await aceptar();
+        const res = await putFicha(true);
+        expect(res.status).toBeLessThan(400);
+        expect(await estadoDe(perfil.id)).toBe("EN_REVISION");
     });
 });

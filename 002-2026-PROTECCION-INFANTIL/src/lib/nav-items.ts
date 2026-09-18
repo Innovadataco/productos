@@ -189,7 +189,8 @@ export const PROFESIONAL_NAV_ITEMS: NavItem[] = [
     // SPEC-685 (PR2-bis): «Mi perfil» del habilitado — reúne datos, tarifa, documentos
     // y estado. Mismo módulo que la ficha (`profesional_ficha`).
     { href: "/dashboard/profesional/mi-perfil", label: "Mi perfil", modulo: "profesional_ficha" },
-    { href: "/perfil-profesional/verificacion", label: "Verificación", modulo: "profesional_verificacion" },
+    // SPEC-706: «Verificación» (/perfil-profesional/verificacion) se retiró — el estado del no
+    // habilitado es ahora el encabezado de la ficha («Mi ficha»). No hay ítem de menú separado.
 ];
 
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */
