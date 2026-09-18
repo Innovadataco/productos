@@ -108,9 +108,12 @@ export function EstadoVerificacionProfesionalClient({ vista, habilitado }: { vis
 
             {estadoMostrado === "EN_REVISION" && (
                 <div className="glass rounded-2xl p-6">
+                    {/* SPEC-706 (PR A · texto de Diseño, Gestión e69b591): el resultado llega por
+                        CORREO (el verificador envía email al decidir) y se dice el bloqueo — la ficha
+                        no se puede cambiar mientras está en revisión (lo aplica el servidor en el PUT). */}
                     <p className="cuerpo text-body">
-                        Ya estamos revisando sus documentos. Le avisamos apenas haya novedad — no hace falta que
-                        haga nada.
+                        Su solicitud quedó en revisión. El resultado le llegará por correo — esté atento a su
+                        bandeja. Mientras la revisamos, su ficha no se puede cambiar.
                     </p>
                 </div>
             )}

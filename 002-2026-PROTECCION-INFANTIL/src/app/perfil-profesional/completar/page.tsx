@@ -1,23 +1,22 @@
 "use client";
 
 /**
- * SPEC-391 (A-75 · L1b) · SPEC-434 (I-302 · Jelkin vivo 04-09) — el profesional
- * completa su ficha.
+ * SPEC-391 (A-75 · L1b) · SPEC-434 (I-302) · SPEC-706 PR A — el profesional completa su ficha.
  *
- * Cambios de SPEC-434:
- *  · País + ciudad con `<Select>` y `CiudadSearchSelect` (mismo componente
- *    que ya usa el reporte y el perfil del padre). El texto libre «ID de tu
- *    ciudad» era un cuid oculto — nadie podía usarlo.
- *  · Voz neutra Colombia (sin voseo) — alinea con módulo de colegio (I-250).
- *  · «Emito factura» fuera de la pantalla (el dato queda en el modelo).
- *  · Años de experiencia como selector 1..50 (antes texto libre).
- *  · Al pasar a `EN_REVISION`, modal con el mensaje humano (no «EN_REVISION»
- *    a la vista del usuario, jamás — ni siquiera como fallback).
+ * SPEC-706 PR A (Jelkin: «se queda ahí congelado»): el envío a revisión es un acto EXPLÍCITO con
+ * DOS acciones — «Guardar borrador» (guarda, no transiciona) y «Guardar y enviar a revisión». El
+ * botón de enviar queda INERTE hasta que la ficha esté completa Y la autorización aceptada, y la
+ * pantalla NOMBRA lo que falta (como el «Acepto»); ya NO hay auto-transición silenciosa al
+ * completarse (un `rangoEtario` vacío dejaba el perfil en BORRADOR sin decir nada). Al guardar, el
+ * mensaje dice EN QUÉ QUEDÓ (guardado como borrador / enviado a revisión), nunca solo «Cambios
+ * guardados». Al enviar, la ficha queda de SOLO LECTURA EN EL SERVIDOR (EN_REVISION/SUSPENDIDO →
+ * 409 en el PUT) y muestra el aviso de entrega de Diseño; el modal viejo se retiró.
  *
- * Estado inicial: `BORRADOR`. Cuando la ficha queda completa Y hay autorización,
- * el backend transiciona a `EN_REVISION` — de ahí lo toma L2 (IDC).
+ * PR B (aparte): retiro de «Mi estado» (/perfil-profesional/verificacion) y chips en áreas.
+ * De SPEC-434: país+ciudad con `CiudadSearchSelect`; voz neutra Colombia; años como selector 1..50.
  */
 import { useEffect, useState } from "react";
+import type { PerfilProfesional } from "@prisma/client";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
@@ -26,7 +25,8 @@ import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
 import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
-import { MENSAJE_MODALIDAD_REQUERIDA, MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
+import { MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
+import { camposFaltantesParaRevision } from "@/lib/profesional/dto";
 import type { OpcionCatalogo, GrupoAreas } from "@/lib/profesional/catalogos";
 
 type Catalogos = { profesion: OpcionCatalogo[]; areas: GrupoAreas[]; rangoEtario: OpcionCatalogo[] };
@@ -101,10 +101,9 @@ export default function CompletarPerfilProfesionalPage() {
     const [autorizacion, setAutorizacion] = useState<Autorizacion | null>(null);
     const [guardando, setGuardando] = useState(false);
     const [errorPerfil, setErrorPerfil] = useState("");
+    // SPEC-706: los obligatorios que faltan según el SERVIDOR al intentar enviar (los nombra).
+    const [camposFaltantesServidor, setCamposFaltantesServidor] = useState<string[]>([]);
     const [ok, setOk] = useState("");
-    // SPEC-434 punto 5: modal al pasar a EN_REVISION. Se abre una sola vez
-    // por transición y NUNCA muestra el nombre técnico del estado.
-    const [modalRevision, setModalRevision] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -150,19 +149,15 @@ export default function CompletarPerfilProfesionalPage() {
         })();
     }, []);
 
-    const guardar = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // SPEC-706: dos acciones sobre la ficha. «Guardar borrador» (enviar=false) guarda tal cual, sin
+    // transición — el profesional vuelve luego. «Guardar y enviar a revisión» (enviar=true) pide
+    // `enviarARevision`; el servidor valida la completitud y, si falta algo, lo NOMBRA (400
+    // FICHA_INCOMPLETA con `campos`) — el botón de enviar ya se inactivó con la misma lista, pero el
+    // servidor es la regla. Enviar es un acto EXPLÍCITO: ya no hay auto-transición al completarse.
+    const guardar = async (enviar: boolean) => {
         setErrorPerfil("");
         setOk("");
-        if (!ciudad?.id) {
-            setErrorPerfil("Seleccione su ciudad usando el buscador.");
-            return;
-        }
-        const anios = Number(aniosExperiencia);
-        if (!Number.isInteger(anios) || anios < 1 || anios > 50) {
-            setErrorPerfil("Seleccione sus años de experiencia (entre 1 y 50).");
-            return;
-        }
+        setCamposFaltantesServidor([]);
         setGuardando(true);
         try {
             const res = await fetch("/api/profesional/perfil", {
@@ -174,27 +169,35 @@ export default function CompletarPerfilProfesionalPage() {
                     profesion,
                     areasAtencion,
                     rangoEtario,
-                    ciudadId: ciudad.id,
+                    ...(ciudad?.id ? { ciudadId: ciudad.id } : {}),
                     atiendeVirtual,
                     atiendePresencial,
-                    aniosExperiencia: anios,
+                    ...(aniosExperiencia ? { aniosExperiencia: Number(aniosExperiencia) } : {}),
                     presentacion,
                     numeroTarjetaProfesional: numeroTarjetaProfesional || null,
+                    ...(enviar ? { enviarARevision: true } : {}),
                 }),
             });
             const json = await res.json().catch(() => ({}));
             if (!res.ok) {
+                if (json?.error?.code === "FICHA_INCOMPLETA" && Array.isArray(json.error.campos)) {
+                    setCamposFaltantesServidor(json.error.campos as string[]);
+                    setErrorPerfil("Faltan datos obligatorios para enviar a revisión.");
+                    return;
+                }
                 setErrorPerfil(json?.error?.message ?? "No fue posible guardar la ficha.");
                 return;
             }
             const nuevo = json.perfil as Perfil;
-            const antes = perfil?.estado ?? "BORRADOR";
             setPerfil(nuevo);
-            if (antes !== "EN_REVISION" && nuevo.estado === "EN_REVISION") {
-                setModalRevision(true);
-            } else {
-                setOk("Cambios guardados.");
+            // SPEC-706 PR A (Jelkin): el mensaje dice EN QUÉ QUEDÓ — nunca solo «Cambios guardados»,
+            // que dejaba al profesional sin saber si envió. Al ENVIAR y quedar EN_REVISION, el aviso de
+            // entrega + el bloqueo de solo lectura los pinta el banner de estado de abajo (no un `ok`).
+            if (enviar && nuevo.estado === "EN_REVISION") {
+                setOk("");
+                return;
             }
+            setOk("Guardado como borrador. Todavía no lo enviamos a revisión.");
         } finally {
             setGuardando(false);
         }
@@ -208,17 +211,35 @@ export default function CompletarPerfilProfesionalPage() {
         );
     }
 
-    // SPEC-434 punto 2: voz neutra Colombia — sin voseo.
-    // SPEC-434 punto 5: en pantalla NUNCA aparece «EN_REVISION». Si el perfil
-    // ya está en ese estado (usuario recarga después de entregar), se pinta
-    // un mensaje humano.
-    const yaEnRevision = perfil?.estado === "EN_REVISION";
+    // SPEC-706 (punto 4): la ficha es de SOLO LECTURA cuando la pelota NO es del profesional —
+    // EN_REVISION (la tenemos nosotros) o SUSPENDIDO (de nadie). El servidor lo aplica en el PUT;
+    // acá se desactiva y atenúa el formulario, y se dice el bloqueo en el encabezado (antes de que
+    // lo descubra tocando un campo muerto). Editable: BORRADOR (incl. «devuelto»), VENCIDO, o alta
+    // nueva sin perfil todavía.
+    const soloLectura = perfil?.estado === "EN_REVISION" || perfil?.estado === "SUSPENDIDO";
 
-    // SPEC-673 (I-398 · Diseño opción ii): la aptitud de ENVÍO se evalúa en el
-    // cliente (distinta del guard de servidor, que exime BORRADOR a propósito).
-    // Hace la incompletitud legible SIEMPRE — no recién al intentar enviar — así
-    // el profesional no queda «terminado y trabado» sin saber qué falta.
+    // SPEC-673 (I-398): la falta de modalidad, legible como hint al lado del campo.
     const faltaModalidad = !atiendeVirtual && !atiendePresencial;
+
+    // SPEC-706 (ampliación): qué falta para ENVIAR, con la MISMA fuente que el servidor
+    // (`camposFaltantesParaRevision`). El botón de enviar se inactiva con esta lista y la nombra
+    // (como el «Acepto» de la autorización): nada de envío silencioso que deja al profesional
+    // trabado sin saber. El servidor revalida y nombra igual (el botón es la forma, no la regla).
+    const faltantesEnvio = camposFaltantesParaRevision(
+        {
+            nombreVisible,
+            profesion: profesion || null,
+            areasAtencion,
+            rangoEtario,
+            ciudadId: ciudad?.id ?? "",
+            atiendeVirtual,
+            atiendePresencial,
+            aniosExperiencia: Number(aniosExperiencia) || 0,
+            presentacion,
+        } as PerfilProfesional,
+        autorizacion?.aceptadaVigente ?? false,
+    );
+    const puedeEnviar = faltantesEnvio.length === 0;
 
     // SPEC-685 (PR2): catálogos ya con fallback resuelto (vacío mientras cargan).
     const { profesion: opcionesProfesion, areas: gruposAreas, rangoEtario: opcionesRango } =
@@ -226,16 +247,29 @@ export default function CompletarPerfilProfesionalPage() {
 
     return (
         <main className="mx-auto max-w-3xl px-4 py-8">
-            <h1 className="font-serif text-3xl text-body">Complete su perfil</h1>
-            <p className="mt-2 text-sm text-muted">
-                {/* SPEC-704 (ajuste del CEO): la autorización se ACEPTA en pantalla, no se sube
-                    firmada — el encabezado tiene que decir lo que el usuario realmente hace. */}
-                Cuando termine la ficha y acepte la autorización, el equipo de
-                Innovadataco la revisa. Mientras tanto queda como borrador y nadie la ve.
-            </p>
-            {yaEnRevision && (
-                <p className="mt-3 rounded-lg bg-accent/10 px-3 py-2 text-sm text-body">
-                    Su ficha está en revisión. Le enviaremos un correo cuando pueda continuar.
+            {/* SPEC-706 PR A: cuando la ficha es de SOLO LECTURA (en revisión / suspendida), un aviso
+                arriba dice en qué quedó y por qué no se puede editar. En revisión: el texto de entrega
+                de Diseño (Gestión e69b591). El servidor igual bloquea el PUT (no es solo pantalla). */}
+            {soloLectura && (
+                <Alerta
+                    tono={perfil?.estado === "EN_REVISION" ? "info" : "advertencia"}
+                    role="status"
+                    className="mb-6"
+                >
+                    {perfil?.estado === "EN_REVISION"
+                        ? "Su solicitud quedó en revisión. El resultado le llegará por correo — esté atento a su bandeja. Mientras la revisamos, su ficha no se puede cambiar."
+                        : "Su perfil está suspendido y por ahora no se puede editar."}
+                </Alerta>
+            )}
+            <h1 className="font-serif text-3xl text-body">
+                {soloLectura ? "Su perfil" : "Complete su perfil"}
+            </h1>
+            {!soloLectura && (
+                <p className="mt-2 text-sm text-muted">
+                    {/* SPEC-704/706: la autorización se ACEPTA en pantalla y el envío es un acto
+                        EXPLÍCITO (el botón de abajo), no algo que pase solo al completarse. */}
+                    Cuando termine la ficha y acepte la autorización, envíela a revisión con el botón de
+                    abajo. Mientras tanto queda como borrador y nadie la ve.
                 </p>
             )}
 
@@ -246,156 +280,192 @@ export default function CompletarPerfilProfesionalPage() {
             )}
 
             <GlassCard className="mt-6">
-                <form onSubmit={guardar} className="space-y-4">
-                    {/* SPEC-685 (PR2 · FORMA de Diseño): «Nombre público» NOMBRA la cosa
+                <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                    {/* SPEC-706 (punto 4): en revisión/suspendido la ficha es de SOLO LECTURA — el
+                        fieldset deshabilitado apaga todos los controles (el servidor igual lo aplica
+                        en el PUT). Editable cuando es el turno del profesional. */}
+                    <fieldset disabled={soloLectura} className={soloLectura ? "space-y-4 opacity-60" : "space-y-4"}>
+                        {/* SPEC-685 (PR2 · FORMA de Diseño): «Nombre público» NOMBRA la cosa
                         (sustantivo) + un ejemplo que ES un nombre → empuja a un nombre, no a
                         una descripción. La ayuda dice «en el directorio» y nada más: tras una
                         cita confirmada el contacto SÍ se comparte (H-2). maxLength 50 ahoga un
                         párrafo. La descripción tiene casa: Presentación. */}
-                    <div>
-                        <Input
-                            label="Nombre público"
-                            value={nombreVisible}
-                            onChange={(e) => setNombreVisible(e.target.value)}
-                            placeholder="Dra. Ramírez"
-                            maxLength={50}
-                        />
-                        <p className="mt-1 text-sm text-subtle">
+                        <div>
+                            <Input
+                                label="Nombre público"
+                                value={nombreVisible}
+                                onChange={(e) => setNombreVisible(e.target.value)}
+                                placeholder="Dra. Ramírez"
+                                maxLength={50}
+                            />
+                            <p className="mt-1 text-sm text-subtle">
                             Así lo verán las familias en el directorio. Escríbalo como un nombre, no como una descripción.
-                        </p>
-                        <p className="mt-1 text-xs text-subtle">
+                            </p>
+                            <p className="mt-1 text-xs text-subtle">
                             ¿Quiere contar su experiencia? Eso va en Presentación.
-                        </p>
-                    </div>
-
-                    {/* SPEC-685 (PR2): profesión = lista cerrada (única). */}
-                    <Select
-                        label="Profesión"
-                        value={profesion}
-                        onChange={(e) => setProfesion(e.target.value)}
-                        options={[
-                            { value: "", label: "Elija su profesión" },
-                            ...opcionesProfesion.map((o) => ({ value: o.clave, label: o.nombre })),
-                        ]}
-                    />
-
-                    {/* SPEC-685 (PR2): áreas de atención = lista cerrada agrupada (múltiple). */}
-                    <fieldset className="space-y-3">
-                        <legend className="block text-sm font-medium text-body">Áreas de atención</legend>
-                        <p className="text-sm text-subtle">Marque en lo que trabaja. Puede elegir varias.</p>
-                        {gruposAreas.map((g) => (
-                            <div key={g.grupo} className="space-y-1.5">
-                                <p className="text-xs uppercase tracking-wide text-subtle">{g.grupo}</p>
-                                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                    {g.items.map((o) => (
-                                        <label key={o.clave} className="flex items-center gap-2 text-sm text-body">
-                                            <input
-                                                type="checkbox"
-                                                checked={areasAtencion.includes(o.clave)}
-                                                onChange={() => toggleEnLista(setAreasAtencion, o.clave)}
-                                            />
-                                            {o.nombre}
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </fieldset>
-
-                    {/* SPEC-685 (PR2): rango etario = lista cerrada (múltiple). Reemplaza «Niños». */}
-                    <fieldset className="space-y-1.5">
-                        <legend className="block text-sm font-medium text-body">Edad que atiende</legend>
-                        <div className="flex flex-wrap gap-x-4 gap-y-2">
-                            {opcionesRango.map((o) => (
-                                <label key={o.clave} className="flex items-center gap-2 text-sm text-body">
-                                    <input
-                                        type="checkbox"
-                                        checked={rangoEtario.includes(o.clave)}
-                                        onChange={() => toggleEnLista(setRangoEtario, o.clave)}
-                                    />
-                                    {o.nombre}
-                                </label>
-                            ))}
+                            </p>
                         </div>
-                    </fieldset>
 
-                    {/* SPEC-434 punto 1 · país + ciudad como en el reporte. */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        {/* SPEC-685 (PR2): profesión = lista cerrada (única). */}
                         <Select
-                            label="País"
-                            value={paisId}
-                            onChange={(e) => {
-                                setPaisId(e.target.value);
-                                setCiudad(null);
-                            }}
-                            options={[{ value: "", label: "Elija país" }, ...paises.map((p) => ({ value: p.id, label: p.nombre }))]}
+                            label="Profesión"
+                            value={profesion}
+                            onChange={(e) => setProfesion(e.target.value)}
+                            options={[
+                                { value: "", label: "Elija su profesión" },
+                                ...opcionesProfesion.map((o) => ({ value: o.clave, label: o.nombre })),
+                            ]}
                         />
-                        <CiudadSearchSelect
-                            paisId={paisId}
-                            value={ciudad}
-                            onSelect={setCiudad}
-                            disabled={!paisId}
-                            permitirOtra={false}
-                        />
-                    </div>
 
-                    <div className="flex flex-wrap gap-4 text-sm">
-                        <label className="flex items-center gap-2">
-                            <input type="checkbox" checked={atiendeVirtual} onChange={(e) => setAtiendeVirtual(e.target.checked)} />
+                        {/* SPEC-685 (PR2): áreas = lista cerrada (múltiple), agrupada. Los CHIPS son PR B. */}
+                        <fieldset className="space-y-3">
+                            <legend className="block text-sm font-medium text-body">Áreas de atención</legend>
+                            <p className="text-sm text-subtle">Marque en lo que trabaja. Puede elegir varias.</p>
+                            {gruposAreas.map((g) => (
+                                <div key={g.grupo} className="space-y-1.5">
+                                    <p className="text-xs uppercase tracking-wide text-subtle">{g.grupo}</p>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-2">
+                                        {g.items.map((o) => (
+                                            <label key={o.clave} className="flex items-center gap-2 text-sm text-body">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={areasAtencion.includes(o.clave)}
+                                                    onChange={() => toggleEnLista(setAreasAtencion, o.clave)}
+                                                />
+                                                {o.nombre}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </fieldset>
+
+                        {/* SPEC-685 (PR2): rango etario = lista cerrada (múltiple). Reemplaza «Niños». */}
+                        <fieldset className="space-y-1.5">
+                            <legend className="block text-sm font-medium text-body">Edad que atiende</legend>
+                            <div className="flex flex-wrap gap-x-4 gap-y-2">
+                                {opcionesRango.map((o) => (
+                                    <label key={o.clave} className="flex items-center gap-2 text-sm text-body">
+                                        <input
+                                            type="checkbox"
+                                            checked={rangoEtario.includes(o.clave)}
+                                            onChange={() => toggleEnLista(setRangoEtario, o.clave)}
+                                        />
+                                        {o.nombre}
+                                    </label>
+                                ))}
+                            </div>
+                        </fieldset>
+
+                        {/* SPEC-434 punto 1 · país + ciudad como en el reporte. */}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <Select
+                                label="País"
+                                value={paisId}
+                                onChange={(e) => {
+                                    setPaisId(e.target.value);
+                                    setCiudad(null);
+                                }}
+                                options={[{ value: "", label: "Elija país" }, ...paises.map((p) => ({ value: p.id, label: p.nombre }))]}
+                            />
+                            <CiudadSearchSelect
+                                paisId={paisId}
+                                value={ciudad}
+                                onSelect={setCiudad}
+                                disabled={!paisId}
+                                permitirOtra={false}
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap gap-4 text-sm">
+                            <label className="flex items-center gap-2">
+                                <input type="checkbox" checked={atiendeVirtual} onChange={(e) => setAtiendeVirtual(e.target.checked)} />
                             Atiendo virtual
-                        </label>
-                        <label className="flex items-center gap-2">
-                            <input type="checkbox" checked={atiendePresencial} onChange={(e) => setAtiendePresencial(e.target.checked)} />
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input type="checkbox" checked={atiendePresencial} onChange={(e) => setAtiendePresencial(e.target.checked)} />
                             Atiendo presencial
-                        </label>
-                    </div>
-                    {/* SPEC-673 (I-398): la incompletitud, legible SIEMPRE (no al intentar). */}
-                    {faltaModalidad && (
-                        <p role="status" className="text-sm text-estado-ambar">
-                            {MENSAJE_MODALIDAD_FALTA_CAMPO}
-                        </p>
-                    )}
-                    {/* SPEC-685 (PR2-bis): la TARIFA y la duración salieron de la ficha
+                            </label>
+                        </div>
+                        {/* SPEC-673 (I-398): la incompletitud, legible SIEMPRE (no al intentar). */}
+                        {faltaModalidad && (
+                            <p role="status" className="text-sm text-estado-ambar">
+                                {MENSAJE_MODALIDAD_FALTA_CAMPO}
+                            </p>
+                        )}
+                        {/* SPEC-685 (PR2-bis): la TARIFA y la duración salieron de la ficha
                         y viven en «Mi perfil» (solo el habilitado). Antes de estar
                         habilitado no hay tarifa que fijar ni cobrar. */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {/* SPEC-434 punto 4 · años como selector 1..50. */}
-                        <Select
-                            label="Años de experiencia"
-                            value={aniosExperiencia}
-                            onChange={(e) => setAniosExperiencia(e.target.value)}
-                            options={ANIOS_EXPERIENCIA_OPCIONES}
-                        />
-                    </div>
-                    <label className="block text-sm text-body">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            {/* SPEC-434 punto 4 · años como selector 1..50. */}
+                            <Select
+                                label="Años de experiencia"
+                                value={aniosExperiencia}
+                                onChange={(e) => setAniosExperiencia(e.target.value)}
+                                options={ANIOS_EXPERIENCIA_OPCIONES}
+                            />
+                        </div>
+                        <label className="block text-sm text-body">
                         Presentación
-                        <textarea
-                            value={presentacion}
-                            onChange={(e) => setPresentacion(e.target.value)}
-                            className="mt-1 w-full min-h-32 rounded-lg border border-tinta/15 bg-transparent px-3 py-2 text-sm"
-                            maxLength={1500}
-                            placeholder="Escriba quién es y con quién trabaja mejor, en pocas líneas."
+                            <textarea
+                                value={presentacion}
+                                onChange={(e) => setPresentacion(e.target.value)}
+                                className="mt-1 w-full min-h-32 rounded-lg border border-tinta/15 bg-transparent px-3 py-2 text-sm"
+                                maxLength={1500}
+                                placeholder="Escriba quién es y con quién trabaja mejor, en pocas líneas."
+                            />
+                        </label>
+                        <Input
+                            label="Número de tarjeta profesional (interno)"
+                            value={numeroTarjetaProfesional}
+                            onChange={(e) => setNumeroTarjeta(e.target.value)}
                         />
-                    </label>
-                    <Input
-                        label="Número de tarjeta profesional (interno)"
-                        value={numeroTarjetaProfesional}
-                        onChange={(e) => setNumeroTarjeta(e.target.value)}
-                    />
-                    {errorPerfil && (
-                        <Alerta tono="advertencia" className="text-center">
-                            {errorPerfil}
-                        </Alerta>
+                    </fieldset>
+
+                    {/* SPEC-706: los botones y avisos SOLO cuando es su turno (editable). En
+                        revisión/suspendido no hay controles — el encabezado explica por qué. */}
+                    {!soloLectura && (
+                        <div className="space-y-3">
+                            {errorPerfil && (
+                                <Alerta tono="advertencia" className="text-center">
+                                    {errorPerfil}
+                                </Alerta>
+                            )}
+                            {/* SPEC-706 (ampliación · Jelkin): qué falta para enviar, NOMBRADO. El
+                                botón de enviar queda inerte hasta que no falte nada (como el «Acepto»
+                                de la autorización); el servidor revalida y nombra igual. */}
+                            {!puedeEnviar && (
+                                <p role="status" className="text-sm text-estado-ambar">
+                                    Para enviar a revisión, falta: {faltantesEnvio.join(", ")}.
+                                </p>
+                            )}
+                            {camposFaltantesServidor.length > 0 && (
+                                <p role="alert" className="text-sm text-estado-ambar">
+                                    Faltan datos obligatorios: {camposFaltantesServidor.join(", ")}.
+                                </p>
+                            )}
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => guardar(false)}
+                                    isLoading={guardando}
+                                    className="sm:flex-1"
+                                >
+                                    Guardar borrador
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => guardar(true)}
+                                    isLoading={guardando}
+                                    disabled={!puedeEnviar || guardando}
+                                    className="sm:flex-1"
+                                >
+                                    Guardar y enviar a revisión
+                                </Button>
+                            </div>
+                        </div>
                     )}
-                    {/* SPEC-673 (I-398 · pieza 3): junto al botón, la razón por la que
-                        guardar no pasa a revisión. Guardar sigue permitido (opción ii);
-                        no es un botón gris sin explicación. */}
-                    {faltaModalidad && (
-                        <p className="text-sm text-estado-ambar">{MENSAJE_MODALIDAD_REQUERIDA}</p>
-                    )}
-                    <Button type="submit" isLoading={guardando} className="w-full">
-                        Guardar perfil
-                    </Button>
                 </form>
             </GlassCard>
 
@@ -456,31 +526,9 @@ export default function CompletarPerfilProfesionalPage() {
                     </div>
                 </div>
             </GlassCard>
-
-            {modalRevision && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="revision-titulo"
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-tinta/60 p-4"
-                >
-                    <div className="w-full max-w-md rounded-2xl bg-page p-6 shadow-xl">
-                        <h2 id="revision-titulo" className="font-serif text-xl text-body">
-                            Su ficha quedó entregada
-                        </h2>
-                        <p className="mt-3 text-sm text-body">
-                            El equipo de Innovadataco va a revisar su caso. Cuando termine, le llegará
-                            un correo con el resultado y los pasos a seguir.
-                        </p>
-                        <p className="mt-2 text-sm text-muted">
-                            Mientras tanto, esta pantalla queda a su disposición para editar la ficha.
-                        </p>
-                        <div className="mt-5 flex justify-end">
-                            <Button onClick={() => setModalRevision(false)}>Entendido</Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* SPEC-706 PR A: se retiró el modal de «ficha entregada» (pasaba desapercibido y decía que
+                la pantalla «queda a su disposición para editar», que contradice el bloqueo en
+                revisión). Ahora el aviso de entrega vive en el banner persistente (arriba) tras enviar. */}
         </main>
     );
 }

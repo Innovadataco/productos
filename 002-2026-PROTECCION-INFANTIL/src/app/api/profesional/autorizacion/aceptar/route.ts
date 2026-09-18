@@ -10,8 +10,6 @@ import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
-import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
-import { perfilCompletoParaRevision } from "@/lib/profesional/dto";
 
 function obtenerIp(request: Request): string {
     const forwarded = request.headers.get("x-forwarded-for");
@@ -29,15 +27,9 @@ export async function POST(request: Request) {
             userAgent: request.headers.get("user-agent"),
         });
 
-        // SPEC-703: aceptar es ahora el gate de completitud (reemplaza a la subida de PDF). Si con
-        // esta aceptación el BORRADOR quedó completo, pasa a EN_REVISION — simétrico al PUT /perfil
-        // y a la vieja subida de PDF. Acabamos de aceptar la versión vigente → aceptó = true.
-        const repo = new PerfilProfesionalRepository();
-        const perfil = await repo.findPorUsuarioId(user.id);
-        if (perfil && perfil.estado === "BORRADOR" && perfilCompletoParaRevision(perfil, true)) {
-            await repo.cambiarEstado(perfil.id, "EN_REVISION");
-        }
-
+        // SPEC-706: aceptar SOLO registra la aceptación. Ya NO transiciona a EN_REVISION — enviar a
+        // revisión es un acto explícito del profesional (botón «Guardar y enviar a revisión» en la
+        // ficha), nunca un efecto colateral de aceptar. El profesional vuelve a la ficha y decide.
         return NextResponse.json({
             data: { aceptadoEn: aceptacion.aceptadoEn.toISOString(), version },
         });
