@@ -32,6 +32,7 @@ import { leerRequisitosVerificacion, type ItemChecklist, type RequisitoVerificac
 import { DocumentoProfesionalRepository } from "@/lib/dal/repositories/documento-profesional";
 import { estadoDeDocumentos, type EstadoDocumento } from "@/lib/profesional/documentos.service";
 import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
+import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Schemas de entrada (validación en el borde)
@@ -394,6 +395,16 @@ export async function decidir(
     const venceEn = calcularVenceEn(revisadoEn);
 
     const nuevoEstadoPerfil = resultado === "APROBADO" ? "ACTIVO" : "BORRADOR";
+
+    // SPEC-717 (I-428) · la PUERTA que le faltaba al candado de estado de SPEC-673.
+    // Aprobar lleva el perfil a ACTIVO; un ACTIVO sin modalidad es inservible
+    // (invisible a búsquedas filtradas, sin poder crear franjas) y, además, el CHECK
+    // NOT VALID de la BD rebota el UPDATE con un 23514 CRUDO en la cara del admin. Se
+    // exige la modalidad ACÁ, con el mensaje de Diseño, para que el admin lea POR QUÉ
+    // no puede aprobar. BORRADOR (devolución) queda exento a propósito. Es la misma
+    // clase de compuerta que el cutover de la autorización: el candado es del ESTADO,
+    // y esta era la última puerta abierta.
+    exigirModalidadParaEstado(nuevoEstadoPerfil, perfil);
     // La nota interna se usa como resumen indexable de la devolución (aparece en
     // el historial); el detalle por ítem vive en `checklist`. Nunca sale por API pública.
     const notaInterna =
