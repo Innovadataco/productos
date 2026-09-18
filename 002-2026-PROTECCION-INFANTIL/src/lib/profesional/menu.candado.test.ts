@@ -80,7 +80,9 @@ describe("SPEC-437 · misma mecánica que el operador: módulo por ítem", () =>
         }
     });
 
-    it("los seis módulos del profesional existen aunque su pantalla todavía no", () => {
+    // SPEC-706: `profesional_verificacion` se retiró — «Mi estado» dejó de ser pantalla propia; su
+    // estado vive en la ficha (`profesional_ficha`). Quedan CINCO módulos del profesional.
+    it("los cinco módulos del profesional existen aunque su pantalla todavía no", () => {
         const delProfesional = CATALOGO_MODULOS.filter((m) => m.categoria === "profesional").map((m) => m.clave);
         expect(delProfesional.sort()).toEqual([
             "profesional_calendario",
@@ -88,7 +90,6 @@ describe("SPEC-437 · misma mecánica que el operador: módulo por ítem", () =>
             "profesional_ficha",
             "profesional_inicio",
             "profesional_citaciones",
-            "profesional_verificacion",
         ].sort());
     });
 

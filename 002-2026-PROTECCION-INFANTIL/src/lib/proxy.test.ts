@@ -299,10 +299,13 @@ describe("PUBLIC_ROUTES — SPEC-286 (I-136) quitar /consulta", () => {
 // `/api/reportes/procesar`) — cada handler validaba rol pero no la puerta.
 describe("SPEC-426 · PROFESIONAL con lista blanca", () => {
     describe("predicado esDestinoPermitidoPorRol — lo listado pasa", () => {
-        it("permite su superficie propia (dashboard + APIs + verificación)", () => {
+        it("permite su superficie propia (dashboard + APIs + ficha)", () => {
             expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/profesional")).toBe(true);
             expect(esDestinoPermitidoPorRol("PROFESIONAL", "/dashboard/profesional/agenda")).toBe(true);
-            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/perfil-profesional/verificacion")).toBe(true);
+            // SPEC-706: `/perfil-profesional/verificacion` se retiró (fusionado en la ficha). La
+            // superficie propia del profesional bajo `/perfil-profesional/**` la representan hoy la
+            // ficha (`completar`) y el muro de aceptación (`autorizacion`), ambos vivos.
+            expect(esDestinoPermitidoPorRol("PROFESIONAL", "/perfil-profesional/autorizacion")).toBe(true);
             expect(esDestinoPermitidoPorRol("PROFESIONAL", "/perfil-profesional/completar")).toBe(true);
             expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/panel")).toBe(true);
             expect(esDestinoPermitidoPorRol("PROFESIONAL", "/api/profesional/perfil")).toBe(true);

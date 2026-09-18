@@ -29,6 +29,7 @@ import { exigirModalidadParaEstado } from "@/lib/profesional/modalidad-estado";
 import { validarYderivarLegado } from "@/lib/profesional/catalogos-lectura";
 import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
+import { verificacionParaProfesional } from "@/lib/profesionales/verificador/vista-profesional";
 
 async function requireProfesional() {
     const user = await verifyAuth();
@@ -100,13 +101,18 @@ export async function GET() {
     try {
         const user = await requireProfesional();
         const perfil = await new PerfilProfesionalRepository().findConCiudadPorUsuarioId(user.id);
-        if (!perfil) return NextResponse.json({ perfil: null, autorizacion: null });
+        if (!perfil) return NextResponse.json({ perfil: null, autorizacion: null, vista: null, habilitado: false });
         // SPEC-703: la ficha muestra el ESTADO de la aceptación EN PANTALLA (no la subida de PDF).
         // Si el parámetro de versión faltara, se degrada a «falta aceptar» (no tumba la ficha).
+        // SPEC-706 (PR B): la ficha es la ÚNICA pantalla — trae también su ESTADO de verificación
+        // (`vista`, el encabezado que antes vivía en «Mi estado») y `habilitado` (para la copy del
+        // encabezado; el solo-lectura lo aplica igual el servidor en el PUT).
         const servicio = new AutorizacionProfesionalService();
-        const [aceptacion, version] = await Promise.all([
+        const [aceptacion, version, vista, hab] = await Promise.all([
             servicio.aceptacionVigente(user.id),
             servicio.versionVigente().catch(() => null),
+            verificacionParaProfesional(user.id),
+            obtenerHabilitacionProfesional(user.id),
         ]);
         const autorizacion = {
             version,
@@ -117,6 +123,8 @@ export async function GET() {
         return NextResponse.json({
             perfil: toPerfilProfesionalPropio(perfil),
             autorizacion,
+            vista,
+            habilitado: hab?.habilitado ?? false,
         });
     } catch (error) {
         return errorToResponse(error, "[PROFESIONAL/PERFIL/GET]");

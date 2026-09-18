@@ -107,14 +107,17 @@ describe("SPEC-691 · toda página operativa del profesional pasa por la compuer
         expect(redirectMock).toHaveBeenCalledWith("/perfil-profesional/autorizacion");
     });
 
-    it("no habilitado → redirige al portero por estado (nunca al Inicio operativo)", async () => {
+    // SPEC-706: «Mi estado» (/perfil-profesional/verificacion) se retiró — su contenido es el
+    // encabezado de la ficha. TODO no habilitado, en cualquier estado, va a la FICHA (una sola
+    // pantalla); nunca al Inicio operativo.
+    it("no habilitado → redirige SIEMPRE a la ficha (nunca al Inicio operativo)", async () => {
         const casos: Array<[unknown, string]> = [
             [null, "/perfil-profesional/completar"], // sin perfil
             [{ estado: "BORRADOR", habilitado: false }, "/perfil-profesional/completar"],
-            [{ estado: "EN_REVISION", habilitado: false }, "/perfil-profesional/verificacion"],
-            [{ estado: "VENCIDO", habilitado: false }, "/perfil-profesional/verificacion"],
-            [{ estado: "SUSPENDIDO", habilitado: false }, "/perfil-profesional/verificacion"],
-            [{ estado: "ACTIVO", habilitado: false }, "/perfil-profesional/verificacion"], // worker-lag
+            [{ estado: "EN_REVISION", habilitado: false }, "/perfil-profesional/completar"],
+            [{ estado: "VENCIDO", habilitado: false }, "/perfil-profesional/completar"],
+            [{ estado: "SUSPENDIDO", habilitado: false }, "/perfil-profesional/completar"],
+            [{ estado: "ACTIVO", habilitado: false }, "/perfil-profesional/completar"], // worker-lag
         ];
         for (const [hab, destino] of casos) {
             redirectMock.mockClear();

@@ -113,5 +113,6 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     { clave: "profesional_casos", nombre: "Casos", categoria: "profesional", orden: 520 },
     { clave: "profesional_calendario", nombre: "Calendario", categoria: "profesional", orden: 530 },
     { clave: "profesional_ficha", nombre: "Mi ficha", categoria: "profesional", orden: 540 },
-    { clave: "profesional_verificacion", nombre: "Verificación", categoria: "profesional", orden: 550 },
+    // SPEC-706: `profesional_verificacion` se retiró — «Mi estado» dejó de ser una pantalla; su
+    // estado vive en la ficha (módulo `profesional_ficha`). Sin módulo ⇒ sin ítem de menú huérfano.
 ];

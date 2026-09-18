@@ -8,13 +8,17 @@
  * pero el endpoint seguía respondiendo 200. Un admin que revoca cree que cortó
  * el acceso y no lo cortó.
  *
- * Se prueba sobre `GET /api/profesional/verificacion` (módulo
- * `profesional_verificacion`) porque su camino 200 pide setup mínimo (usuario +
- * perfil ACTIVO, sin parámetros del motor). Muere con el defecto: con el módulo
- * activo responde 200; tras revocarlo debe responder 403. Si se quita el
- * `assertModulo` del handler, el segundo caso vuelve a 200 y este test se pone
- * rojo. Usa TOKEN real (no mockea `verifyAuth`) para que la puerta del módulo se
- * ejecute de verdad.
+ * Se prueba sobre `GET /api/profesional/verificacion` porque su camino 200 pide
+ * setup mínimo (usuario + perfil ACTIVO, sin parámetros del motor). Muere con el
+ * defecto: con el módulo activo responde 200; tras revocarlo debe responder 403.
+ * Si se quita el `assertModulo` del handler, el segundo caso vuelve a 200 y este
+ * test se pone rojo. Usa TOKEN real (no mockea `verifyAuth`) para que la puerta
+ * del módulo se ejecute de verdad.
+ *
+ * SPEC-706: `profesional_verificacion` se retiró (su pantalla se fusionó en la ficha). Esta
+ * ruta quedó UI-muerta pero AÚN EXISTE y por tanto AÚN debe gatearse: se re-gateó sobre
+ * `profesional_ficha` (el módulo de la ficha, que es lo que hoy la alcanza). El candado sigue
+ * vigente sobre el módulo nuevo — retirar la ruta es un seguimiento aparte (necesita SPEC).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { RolUsuario } from "@prisma/client";
@@ -72,7 +76,7 @@ async function revocarModulo(rol: string, clave: string) {
     });
 }
 
-describe("SPEC-496 · `profesional_verificacion` gatea GET /api/profesional/verificacion (no solo el menú)", () => {
+describe("SPEC-496 (+706) · `profesional_ficha` gatea GET /api/profesional/verificacion (no solo el menú)", () => {
     beforeEach(async () => {
         await resetDatabase();
         mockToken = undefined;
@@ -82,9 +86,9 @@ describe("SPEC-496 · `profesional_verificacion` gatea GET /api/profesional/veri
         await sembrarProfesionalConPerfil();
 
         const antes = await GET();
-        expect(antes.status, "con `profesional_verificacion` activo el profesional entra").toBe(200);
+        expect(antes.status, "con `profesional_ficha` activo el profesional entra").toBe(200);
 
-        await revocarModulo("PROFESIONAL", "profesional_verificacion");
+        await revocarModulo("PROFESIONAL", "profesional_ficha");
 
         const despues = await GET();
         expect(
