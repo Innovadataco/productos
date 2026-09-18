@@ -61,7 +61,7 @@ export interface EstadoDocumento {
     /**
      * SPEC-693 (I-416): el profesional subió una versión NUEVA de este requisito que
      * está esperando revisión (hay un documento EN_REVISION). La pantalla lo pinta como
-     * «En revisión — enviaste un documento nuevo». Si además hay una versión vigente,
+     * «En revisión — envió un documento nuevo». Si además hay una versión vigente,
      * el profesional sigue atendiendo con ella mientras tanto.
      */
     enRevision: boolean;
