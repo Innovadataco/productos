@@ -17,6 +17,9 @@ const RUTA_PERFIL_MENORES = "/dashboard/padre/perfil#menores";
 export interface AQuienProtejoData {
     hijos: HijoGrafico[];
     estadoClasificador: EstadoClasificador;
+    // SPEC-716 (Parte A · I-427): cuántas CUENTAS activas tienen un reporte visible. La línea de
+    // estado deriva su texto de ESTE número (mismo hecho que el ámbar del gráfico), no de una constante.
+    cuentasConReporte: number;
     circulo: { personas: number; todasTranquilas: boolean };
 }
 
@@ -28,7 +31,7 @@ function Titulo() {
     );
 }
 
-export function AQuienProtejoView({ hijos, estadoClasificador, circulo }: AQuienProtejoData) {
+export function AQuienProtejoView({ hijos, estadoClasificador, cuentasConReporte, circulo }: AQuienProtejoData) {
     if (hijos.length === 0) {
         return (
             <div className="mx-auto w-full max-w-xl space-y-4 p-4 text-center">
@@ -53,7 +56,7 @@ export function AQuienProtejoView({ hijos, estadoClasificador, circulo }: AQuien
         <div className="mx-auto w-full max-w-xl space-y-4 p-4">
             <Titulo />
             <GraficoProteccion hijos={hijos} motorVivo={estadoClasificador.motorVivo} circuloPersonas={circulo.personas} />
-            <LineaEstadoProteccion estado={estadoClasificador} />
+            <LineaEstadoProteccion estado={estadoClasificador} cuentasConReporte={cuentasConReporte} />
             {circulo.personas > 0 && (
                 <p className="flex items-center gap-2 rounded-xl bg-tinta/[0.035] px-3 py-2 text-sm text-muted">
                     <span className="h-2 w-2 shrink-0 rounded-full bg-pino" aria-hidden />
