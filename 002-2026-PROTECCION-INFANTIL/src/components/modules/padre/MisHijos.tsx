@@ -84,8 +84,9 @@ export function MisHijos({
 
     useEffect(() => {
         void cargar();
-        // Las plataformas son opcionales: si el catálogo falla, el padre igual
-        // puede registrar el identificador "suelto" (plataformaId null).
+        // SPEC-721: la plataforma es OBLIGATORIA para una cuenta (I-429). Si el
+        // catálogo falla, no hay red que elegir → no se pueden agregar cuentas (el
+        // menor se registra por nombre igual y las cuentas se suman después).
         fetch("/api/plataformas")
             .then((res) => (res.ok ? res.json() : { plataformas: [] }))
             .then((json: { plataformas?: Plataforma[] }) => setPlataformas(json.plataformas ?? []))
@@ -93,14 +94,14 @@ export function MisHijos({
     }, []);
 
     // SPEC-555 (I-337): «Sin plataforma» confundía al padre —parecía una opción
-    // afirmativa de «esto no está en ninguna plataforma»— cuando lo que faltaba
-    // era el «Número telefónico» (ahora sembrado por Datos, entra por el catálogo
-    // de abajo). La primera entrada pasa a ser un prompt neutro. Se CONSERVA su
-    // value "" a propósito: es la red de resiliencia del comentario de arriba
-    // (registrar el identificador «suelto», plataformaId null, si el catálogo
-    // /api/plataformas no carga) y el estado inicial del select.
+    // afirmativa de «esto no está en ninguna plataforma»—. La primera entrada es un
+    // prompt neutro que pide la acción («Elige la red o app», forma de Diseño).
+    // SPEC-721: la plataforma es OBLIGATORIA (I-429: sin la red la cuenta no se puede
+    // vigilar). El value "" es SOLO el estado inicial del select / placeholder — ya
+    // NO habilita registrar «suelto»: el botón exige la red y la API la rechaza sin
+    // ella.
     const opcionesPlataforma = [
-        { value: "", label: "Elige una plataforma" },
+        { value: "", label: "Elige la red o app" },
         ...plataformas.map((p) => ({ value: p.id, label: p.nombre })),
     ];
 
@@ -178,17 +179,17 @@ export function MisHijos({
         );
     };
 
+    // SPEC-721: la plataforma viaja SIEMPRE (ya no se omite «si está vacía»). La
+    // pantalla la exige antes de llegar acá; si por el camino del «Deshacer» faltara
+    // (una cuenta vieja sin red, hoy 0 en prod), la API responde pidiéndola — nunca
+    // se adivina la red (I-429).
     const agregarIdentificador = async (hijoId: string, valor: string, plataformaId: string) => {
         await accion(
             () =>
                 fetch("/api/padre/hijos/identificadores", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        hijoId,
-                        valor,
-                        ...(plataformaId ? { plataformaId } : {}),
-                    }),
+                    body: JSON.stringify({ hijoId, valor, plataformaId }),
                 }),
             "No se pudo agregar la cuenta"
         );

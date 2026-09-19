@@ -4,6 +4,7 @@ import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { registrarHijo, listarHijos, SEXOS } from "@/lib/dal/services/hijos";
+import { camposIdentificadorEntrada } from "@/lib/dal/services/hijos/identificador-schema";
 import { sellarCookieSesionEstado } from "@/lib/routing/sellar-sesion-estado";
 import { maximoHijosActivos, plantillaMensajeTope, resolverMensajeTope } from "@/lib/padre/tope-hijos";
 import { validarAnioNacimientoMenor } from "@/lib/padre/documento-menor";
@@ -22,15 +23,9 @@ const createSchema = z.object({
     apellidos: z.string().max(120, "Los apellidos son muy largos.").optional(),
     anioNacimiento: z.number().int().min(1900).max(2100).optional(),
     sexo: z.enum(SEXOS).optional(),
-    identificadores: z
-        .array(
-            z.object({
-                valor: z.string().min(1).max(100),
-                tipo: z.string().max(50).optional(),
-                plataformaId: z.string().max(100).optional(),
-            })
-        )
-        .optional(),
+    // SPEC-721: cada cuenta EXIGE plataforma (esquema compartido). El array sigue opcional
+    // (alta «solo nombre», SPEC-604); pero si viene una cuenta, la plataforma es obligatoria.
+    identificadores: z.array(z.object(camposIdentificadorEntrada)).optional(),
 });
 
 export async function GET() {

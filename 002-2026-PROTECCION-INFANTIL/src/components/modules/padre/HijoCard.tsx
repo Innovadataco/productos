@@ -242,10 +242,12 @@ export function HijoCard({
                     value={nuevo.plataformaId}
                     onChange={(e) => setNuevo({ ...nuevo, plataformaId: e.target.value })}
                 />
+                {/* SPEC-721: sin plataforma la cuenta no se puede vigilar (I-429) → el
+                    botón queda inactivo hasta que estén el valor Y la red, igual que en el alta. */}
                 <Button
                     type="button"
                     variant="outline"
-                    disabled={!nuevo.valor.trim()}
+                    disabled={!nuevo.valor.trim() || !nuevo.plataformaId}
                     onClick={async () => {
                         await onAgregarIdentificador(hijo.id, nuevo.valor.trim(), nuevo.plataformaId);
                         setNuevo({ valor: "", plataformaId: "" });
@@ -254,6 +256,13 @@ export function HijoCard({
                     Agregar
                 </Button>
             </div>
+            {/* SPEC-721 (forma de Diseño): el porqué en voz del padre, una línea. */}
+            <p className="mt-2 text-xs text-muted">
+                <span className="font-medium text-body">¿En qué red o app está esta cuenta?</span>{" "}
+                Sin la red no podemos saber si un reporte es sobre <strong>tu</strong> hijo o sobre otra
+                persona con el mismo usuario.{" "}
+                <span className="italic">(«ruby1» en Discord no es «ruby1» en Roblox.)</span>
+            </p>
 
             {/* A-70 · F10 — la historia del cuidado, bajo demanda: si se cargara
                 sola, abrir "A quién protejo" dispararía una consulta por cada
