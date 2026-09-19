@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { verifyAuth } from "@/lib/auth";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { obtenerHomePadre } from "@/lib/padre/home";
 import { HomePadreDashboard } from "@/components/modules/padre/HomePadreDashboard";
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PadreInicioPage() {
-    const usuario = await verifyAuth("PARENT");
+    const usuario = await exigirPadre();
     const data = await obtenerHomePadre(usuario.id, usuario.nombre ?? null);
 
     return (

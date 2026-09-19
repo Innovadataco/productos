@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { verifyAuth } from "@/lib/auth";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { listarHijosConEstado } from "@/lib/dal/services/hijos";
 // SPEC-716 (Parte B): por ruta DIRECTA (no por el barril): el barril entra en la cadena de workers y
 // estos servicios usan alias `@/lib/*` (I-88/SPEC-197). La pantalla no es worker → alias permitido.
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PadreHijosPage() {
-    const usuario = await verifyAuth("PARENT");
+    const usuario = await exigirPadre();
     const [{ hijos, cuentasConReporte }, home, grupoA, grupoB] = await Promise.all([
         listarHijosConEstado(usuario.id),
         obtenerHomePadre(usuario.id, usuario.nombre ?? null),

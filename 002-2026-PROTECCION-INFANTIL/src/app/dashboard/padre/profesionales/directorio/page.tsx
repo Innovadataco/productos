@@ -12,12 +12,14 @@
 // NO se relee la URL — reintroducir eso reabriría la fuga de PII de menores.)
 import { DirectorioProfesionales } from "@/components/modules/padre/profesionales/DirectorioProfesionales";
 import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 
 export default async function PadreProfesionalesDirectorioPage({
     searchParams,
 }: {
     searchParams: Promise<{ expedienteId?: string; heredarDe?: string }>;
 }) {
+    await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
     const { expedienteId, heredarDe } = await searchParams;
     const precioPrimeraCitaCOP = await leerPrecioEstandarPrimeraCita();
     return (

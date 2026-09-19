@@ -1,6 +1,5 @@
-import { redirect, notFound } from "next/navigation";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { notFound } from "next/navigation";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { detalleExpedientePadre } from "@/lib/dal/services/expediente-detalle";
 import { ExpedienteMadreClient, type ExpedienteMadreDto } from "@/components/modules/padre/ExpedienteMadreClient";
 
@@ -13,19 +12,9 @@ import { ExpedienteMadreClient, type ExpedienteMadreDto } from "@/components/mod
  */
 export default async function PadreExpedienteDetallePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const cookieStore = await cookies();
-    const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
+    const usuario = await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
 
-    if (!token) {
-        redirect("/login");
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload?.sub || payload.rol !== "PARENT") {
-        redirect("/login");
-    }
-
-    const dto = await detalleExpedientePadre(id, payload.sub as string);
+    const dto = await detalleExpedientePadre(id, usuario.id);
     if (!dto) {
         notFound();
     }

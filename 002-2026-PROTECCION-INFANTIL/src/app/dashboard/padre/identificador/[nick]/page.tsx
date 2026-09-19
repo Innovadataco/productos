@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { ExpedienteRepository } from "@/lib/dal/repositories/expediente-repository";
 import { IdentificadorBusquedaClient } from "@/components/modules/padre/IdentificadorBusquedaClient";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -17,17 +15,7 @@ import {
  */
 export default async function PadreIdentificadorPage({ params }: { params: Promise<{ nick: string }> }) {
     const { nick } = await params;
-    const cookieStore = await cookies();
-    const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
-
-    if (!token) {
-        redirect("/login");
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload?.sub || payload.rol !== "PARENT") {
-        redirect("/login");
-    }
+    const usuario = await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
 
     const identificador = decodificarIdentificadorParam(nick);
 
@@ -43,7 +31,7 @@ export default async function PadreIdentificadorPage({ params }: { params: Promi
     }
 
     const resultado = await new ExpedienteRepository().listarExpedientesDePadrePorIdentificador(
-        payload.sub as string,
+        usuario.id,
         identificador,
         { page: 1, pageSize: 100 }
     );

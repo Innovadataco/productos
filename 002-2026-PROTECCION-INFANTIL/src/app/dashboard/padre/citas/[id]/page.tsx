@@ -8,7 +8,7 @@
  * cliente que trae el detalle vivo y calcula el countdown.
  */
 import { redirect } from "next/navigation";
-import { verifyAuth } from "@/lib/auth";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
 import { EsperaCitaPanel } from "@/components/modules/padre/citas/EsperaCitaPanel";
@@ -19,7 +19,7 @@ export default async function CitaPadreDetallePage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const user = await verifyAuth("PARENT");
+    const user = await exigirPadre();
     const cita = await new SolicitudCitaRepository().findParaPadre(id, user.id);
     if (!cita) {
         // No revela si existe o no — enruta a la lista de citas (SPEC-545 la creó).

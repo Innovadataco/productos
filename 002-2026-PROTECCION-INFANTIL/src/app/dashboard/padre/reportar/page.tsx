@@ -1,4 +1,5 @@
 import { ReporteWizard } from "@/components/modules/ReporteWizard";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 
 /**
  * SPEC-295 (002-PI-196 · cierra I-146): página real del padre autenticado
@@ -6,7 +7,8 @@ import { ReporteWizard } from "@/components/modules/ReporteWizard";
  * componente que la ruta pública `/reportar`, con banner de identidad y
  * redirect a `/dashboard/padre/mis-reportes` post-envío.
  */
-export default function PadreReportarPage() {
+export default async function PadreReportarPage() {
+    await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
     return (
         <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
             <div className="mb-8 text-center">
