@@ -4,15 +4,15 @@ import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { AppError, ERROR_CODES, safeErrorMessage } from "@/lib/errors";
 import { agregarIdentificador } from "@/lib/dal/services/hijos";
+import { camposIdentificadorEntrada } from "@/lib/dal/services/hijos/identificador-schema";
 
 // SPEC-325 (extensión) · agregar un identificador a un hijo YA creado. El DAL
 // exige que el padre sea dueño del hijo (PII acceso-solo-dueño) y normaliza el
 // valor (mecanismo compartido · candado 22).
+// SPEC-721: agregar una cuenta a un hijo existente EXIGE plataforma (esquema compartido con el alta).
 const createSchema = z.object({
     hijoId: z.string().min(1).max(100),
-    valor: z.string().min(1).max(100),
-    tipo: z.string().max(50).optional(),
-    plataformaId: z.string().max(100).optional(),
+    ...camposIdentificadorEntrada,
 });
 
 export async function POST(request: Request) {
