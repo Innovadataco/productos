@@ -39,6 +39,29 @@ export class FranjaDisponibleRepository {
     }
 
     /**
+     * SPEC-714 · el calendario nivel dios lee un RANGO (una semana / un día) con
+     * la reserva de cada franja: el estado del bloque sale de `solicitud.estado`
+     * (libre si no hay reserva). Trae el relato (`presentacion`) y el contacto del
+     * padre; el DTO decide qué exponer por H-2 (correo solo en CONFIRMADA).
+     */
+    listarConSolicitud(profesionalId: string, desde: Date, hasta: Date) {
+        return this.db.franjaDisponible.findMany({
+            where: { profesionalId, inicio: { gte: desde, lt: hasta } },
+            orderBy: { inicio: "asc" },
+            include: {
+                solicitud: {
+                    select: {
+                        id: true,
+                        estado: true,
+                        presentacion: true,
+                        padreUsuario: { select: { nombre: true, email: true } },
+                    },
+                },
+            },
+        });
+    }
+
+    /**
      * SPEC-447 (I-311): ¿hay ya una franja del profesional que se pise con
      * `[inicio, fin)`? Dos franjas se solapan cuando cada una empieza antes de
      * que termine la otra. Se comparan en UTC —que es como se guardan— así que

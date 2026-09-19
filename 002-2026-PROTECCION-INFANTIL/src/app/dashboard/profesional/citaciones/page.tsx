@@ -2,15 +2,16 @@ import type { Metadata } from "next";
 import { exigirProfesionalHabilitado } from "@/lib/profesionales/guardia-habilitado";
 import { puedeAccederAModulo } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
-import { panelDelProfesional } from "@/lib/profesional/panel/panel.service";
-import { Solicitudes, CitasConfirmadas } from "@/components/modules/profesional/PanelProfesional";
+import { calendarioDelProfesional } from "@/lib/profesional/calendario/calendario.service";
+import { CalendarioProfesional } from "@/components/modules/profesional/CalendarioProfesional";
 
 /**
  * SPEC-437 (A-75) · «Citaciones» del menú del profesional.
  *
- * Reusa los bloques del Inicio y `panelDelProfesional`: la pantalla dedicada y
- * el resumen tienen que decir lo mismo del mismo dato, y copiar el bloque es
- * exactamente cómo empiezan a divergir.
+ * SPEC-714 (pedido de Jelkin): «Citaciones» muestra el MISMO calendario que
+ * «Calendario» — un solo componente, no dos cuadrículas. En este modo lidera con
+ * la lista «Esperando su respuesta» encima de la rejilla, para que lo accionable
+ * salte primero; los estados de la cita viven dentro de la cuadrícula.
  *
  * `force-dynamic`: cambia con cada solicitud que llega y cada confirmación.
  */
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Citaciones",
-    description: "Solicitudes por responder y citas confirmadas.",
+    description: "Sus solicitudes por responder y su agenda, en el calendario.",
 };
 
 export default async function CitacionesPage() {
@@ -28,16 +29,11 @@ export default async function CitacionesPage() {
     if (!(await puedeAccederAModulo(usuario.rol, "profesional_citaciones"))) {
         return <SinAccesoModulo />;
     }
-    const data = await panelDelProfesional(usuario.id);
+    const datos = await calendarioDelProfesional(usuario.id);
 
     return (
-        <div className="mx-auto max-w-3xl space-y-6 p-6">
-            <header>
-                <h1 className="text-2xl font-bold text-body">Citaciones</h1>
-                <p className="text-muted">Solicitudes por responder y citas confirmadas.</p>
-            </header>
-            <Solicitudes data={data} />
-            <CitasConfirmadas data={data} />
-        </div>
+        <main className="min-h-screen bg-page py-4">
+            <CalendarioProfesional datos={datos} modo="citaciones" />
+        </main>
     );
 }
