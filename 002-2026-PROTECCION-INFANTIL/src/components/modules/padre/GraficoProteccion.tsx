@@ -20,6 +20,7 @@
  * Es presentacional: recibe los hijos con su estado YA derivado y el conteo del
  * círculo. La derivación (de `listarHijos`) y el cableado viven en la pantalla.
  */
+import type React from "react";
 
 /**
  * Estado del hijo en el gráfico. Se DERIVA de dos señales (Diseño SPEC-660 · I-396):
@@ -100,11 +101,17 @@ export function GraficoProteccion({
     hijos,
     motorVivo,
     circuloPersonas,
+    onSelectHijo,
+    hijoSeleccionado,
 }: {
     hijos: HijoGrafico[];
     /** LatidoMotor (SPEC-670, #572): si el motor no confirma, el verde degrada a neutro. */
     motorVivo: boolean;
     circuloPersonas: number;
+    /** SPEC-716 (Parte B): el gráfico ORIENTA — tocar un hijo baja a sus dos grupos. Opcional:
+     *  sin él, el gráfico es el presentacional de SPEC-660 (sin interacción). NUNCA un número encima. */
+    onSelectHijo?: (hijoId: string) => void;
+    hijoSeleccionado?: string | null;
 }) {
     const xs = posicionesHijos(hijos.length);
     const puntos = PUNTOS_CIRCULO.slice(0, Math.max(0, Math.min(circuloPersonas, PUNTOS_CIRCULO.length)));
@@ -135,8 +142,30 @@ export function GraficoProteccion({
                 const x = xs[i]!;
                 const estado = estados[i]!;
                 const c = COLOR[estado];
+                const interactivo = typeof onSelectHijo === "function";
+                const seleccionado = hijoSeleccionado === h.id;
+                const propsInteraccion = interactivo
+                    ? {
+                        role: "button",
+                        tabIndex: 0,
+                        style: { cursor: "pointer" },
+                        "aria-label": `Ver las cuentas de ${h.nombre}`,
+                        "aria-pressed": seleccionado,
+                        onClick: () => onSelectHijo!(h.id),
+                        onKeyDown: (e: React.KeyboardEvent) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onSelectHijo!(h.id);
+                            }
+                        },
+                    }
+                    : {};
                 return (
-                    <g key={h.id}>
+                    <g key={h.id} {...propsInteraccion}>
+                        {seleccionado && (
+                            // SPEC-716 (Parte B): anillo de selección (cielo), sin número. Marca cuál está abierto.
+                            <circle cx={x} cy={104} r="31" fill="none" stroke="rgb(var(--cielo-rgb))" strokeWidth="2" strokeDasharray="3 3" />
+                        )}
                         {estado === "atencion" && (
                             // Anillo exterior ámbar: el hijo domina. Nunca rojo.
                             <circle cx={x} cy={104} r="33" fill="none" stroke="rgb(var(--ambar-rgb))" strokeWidth="2" opacity="0.4" />

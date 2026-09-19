@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { verifyAuth } from "@/lib/auth";
 import { listarHijosConEstado } from "@/lib/dal/services/hijos";
+// SPEC-716 (Parte B): por ruta DIRECTA (no por el barril): el barril entra en la cadena de workers y
+// estos servicios usan alias `@/lib/*` (I-88/SPEC-197). La pantalla no es worker → alias permitido.
+import { listarCuentasReportadasPorOtros } from "@/lib/dal/services/hijos/reportes-ajenos";
+import { listarCuentasQueReporte } from "@/lib/dal/services/hijos/reportes-propios-por-hijo";
 import { obtenerHomePadre } from "@/lib/padre/home";
 import { AQuienProtejoView, type AQuienProtejoData } from "@/components/modules/padre/AQuienProtejoView";
 
@@ -16,9 +20,12 @@ export const metadata: Metadata = {
 
 export default async function PadreHijosPage() {
     const usuario = await verifyAuth("PARENT");
-    const [{ hijos, cuentasConReporte }, home] = await Promise.all([
+    const [{ hijos, cuentasConReporte }, home, grupoA, grupoB] = await Promise.all([
         listarHijosConEstado(usuario.id),
         obtenerHomePadre(usuario.id, usuario.nombre ?? null),
+        // SPEC-716 (Parte B): los dos grupos por hijo, cargados en el servidor (la cuenta no va a la URL).
+        listarCuentasReportadasPorOtros(usuario.id), // «Sus cuentas» (reportes de OTROS)
+        listarCuentasQueReporte(usuario.id), // «Cuentas que reportaste por ella» (reportes propios)
     ]);
 
     const datos: AQuienProtejoData = {
@@ -35,6 +42,9 @@ export default async function PadreHijosPage() {
         },
         // SPEC-716 (Parte A · I-427): el conteo de CUENTAS con reporte visible, para la línea de estado.
         cuentasConReporte,
+        // SPEC-716 (Parte B): los dos grupos por hijo.
+        grupoA,
+        grupoB,
         circulo: {
             personas: home.resumen.totalContactos,
             // «todas tranquilas» solo se afirma con motor VIVO y sin reportes en el
