@@ -25,7 +25,8 @@ import type { EstadoSolicitudCita } from "@prisma/client";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
-import { TIMEZONE_BOGOTA } from "@/lib/fechas/formato-bogota";
+import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
+import { TIMEZONE_BOGOTA, diaBogota } from "@/lib/fechas/formato-bogota";
 
 export type EstadoBloque = "libre" | "validando" | "esperando" | "confirmada" | "reservada";
 
@@ -63,7 +64,7 @@ export interface CalendarioProfesionalDto {
      * compara fechas/minutos. `null` = sin verificación aprobada.
      */
     muro: { fecha: string; minuto: number } | null;
-    /** Días cerrados por el profesional (`yyyy-MM-dd` Bogotá). Vacío hasta que exista el modelo (SPEC-714 · bloquear-día). */
+    /** Días cerrados por el profesional (`yyyy-MM-dd` Bogotá) — modelo `DiaBloqueado`. El rayado durable es el reflejo de la fila. */
     diasBloqueados: string[];
     atiendeVirtual: boolean;
     atiendePresencial: boolean;
@@ -72,9 +73,8 @@ export interface CalendarioProfesionalDto {
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
-function fechaBogota(d: Date): string {
-    return formatInTimeZone(d, TIMEZONE_BOGOTA, "yyyy-MM-dd");
-}
+// El «día Bogotá» (yyyy-MM-dd) viene de una sola verdad: `diaBogota` (SPEC-714/Datos).
+const fechaBogota = diaBogota;
 function minutosBogota(d: Date): number {
     const [h, m] = formatInTimeZone(d, TIMEZONE_BOGOTA, "HH:mm").split(":").map(Number);
     return h * 60 + m;
@@ -107,7 +107,10 @@ export async function calendarioDelProfesional(
     const desde = new Date(ahora.getTime() - 8 * DIA_MS);
     const hasta = venceEn ? new Date(venceEn.getTime() + DIA_MS) : new Date(ahora.getTime() + 120 * DIA_MS);
 
-    const franjas = await new FranjaDisponibleRepository().listarConSolicitud(perfil.id, desde, hasta);
+    const [franjas, diasBloqueados] = await Promise.all([
+        new FranjaDisponibleRepository().listarConSolicitud(perfil.id, desde, hasta),
+        new DiaBloqueadoRepository().diasBloqueadosDe(perfil.id),
+    ]);
 
     const bloques: BloqueCalendario[] = franjas.map((f) => {
         const estado = estadoBloque(f.tomada, f.solicitud?.estado);
@@ -138,7 +141,7 @@ export async function calendarioDelProfesional(
         bloques,
         venceEn: venceEn ? venceEn.toISOString() : null,
         muro: venceEn ? { fecha: fechaBogota(venceEn), minuto: minutosBogota(venceEn) } : null,
-        diasBloqueados: [], // SPEC-714 · bloquear-día entra con el modelo de Datos (PR chico posterior).
+        diasBloqueados, // SPEC-714 · días cerrados por el profesional (modelo DiaBloqueado, Datos).
         atiendeVirtual: perfil.atiendeVirtual,
         atiendePresencial: perfil.atiendePresencial,
         duracionMinutos: perfil.duracionMinutos,

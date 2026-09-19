@@ -10,6 +10,7 @@ export function ColumnaDia(props: {
     ghost: { a: number; b: number } | null;
     altura: number;
     muro: { fecha: string; minuto: number } | null;
+    bloqueado: boolean;
     sel: Set<string>;
     selModo: boolean;
     onPointerDown: (e: React.PointerEvent) => void;
@@ -18,7 +19,7 @@ export function ColumnaDia(props: {
     onBloque: (b: BloqueCalendario) => void;
     onQuitar: (id: string) => void;
 }) {
-    const { fecha, bloques, ghost, altura, muro } = props;
+    const { fecha, bloques, ghost, altura, muro, bloqueado } = props;
     // Muro de vigencia: y (px) donde empieza la zona rayada en este día. Comparación
     // pura contra el muro que ya proyectó el servidor a Bogotá — sin zona horaria acá.
     let muroTop: number | null = null;
@@ -38,6 +39,11 @@ export function ColumnaDia(props: {
             {Array.from({ length: H1 - H0 }, (_, i) => (
                 <div key={i} className="border-b border-tinta/5" style={{ height: PXH }} />
             ))}
+            {bloqueado && (
+                // SPEC-714 · día cerrado: rayado ámbar durable (reflejo de la fila DiaBloqueado).
+                // Va detrás de las franjas (z-0): las citas confirmadas se conservan y se ven encima.
+                <div className="pointer-events-none absolute inset-0 z-0 bg-[repeating-linear-gradient(135deg,rgb(var(--ambar-ink-rgb)/0.1)_0_6px,transparent_6px_12px)]" aria-hidden="true" />
+            )}
             {muroTop !== null && (
                 <div
                     className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-tinta/25 bg-[repeating-linear-gradient(135deg,rgb(var(--tinta-rgb)/0.06)_0_6px,transparent_6px_12px)]"

@@ -17,6 +17,8 @@ import { AppError, ERROR_CODES } from "@/lib/errors";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
+import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
+import { diaBogota } from "@/lib/fechas/formato-bogota";
 
 export interface FranjaLoteInput {
     inicio: string; // ISO UTC
@@ -24,7 +26,7 @@ export interface FranjaLoteInput {
     modalidad: "VIRTUAL" | "PRESENCIAL";
 }
 
-export type MotivoOmision = "rango" | "modalidad" | "vigencia" | "solape";
+export type MotivoOmision = "rango" | "modalidad" | "vigencia" | "bloqueado" | "solape";
 
 export interface ResultadoLote {
     creadas: number;
@@ -47,6 +49,7 @@ export async function materializarFranjas(
             );
         }
         const repo = new FranjaDisponibleRepository(tx);
+        const diasRepo = new DiaBloqueadoRepository(tx);
         const omitidas: ResultadoLote["omitidas"] = [];
         let creadas = 0;
 
@@ -68,6 +71,12 @@ export async function materializarFranjas(
             }
             if (fin.getTime() > venceEn.getTime()) {
                 omitidas.push({ inicio: e.inicio, motivo: "vigencia" });
+                continue;
+            }
+            // SPEC-714 · misma regla que la creación unitaria (franjas/route.ts): no se publica
+            // en un día que el profesional cerró. Sin esto, repetir/copiar sería la puerta hermana.
+            if (await diasRepo.estaBloqueado(perfilId, diaBogota(inicio))) {
+                omitidas.push({ inicio: e.inicio, motivo: "bloqueado" });
                 continue;
             }
             if (await repo.existeSolapada(perfilId, inicio, fin)) {

@@ -14,10 +14,11 @@
  * (cielo = disponible, pino = confirmada, ámbar = necesita su respuesta). Las horas
  * se muestran en Bogotá; el servidor ya las proyecta (fecha + minutos).
  *
- * Deferido (decisión del CEO): bloquear día llega con el modelo `DiaBloqueado` de
- * Datos, en un PR chico — por eso NO se pinta el botón de bloquear (nunca uno falso).
- * El detalle de la confirmada NO muestra código de cierre (no existe el flujo, L6)
- * ni dirección/enlace (SPEC-708): muestra el contacto que sí existe.
+ * Bloquear día (SPEC-714, modelo `DiaBloqueado` de Datos): el profesional cierra un día
+ * (vacaciones) — no se publican franjas ahí y el día va rayado; las citas ya confirmadas se
+ * conservan (bloquear solo inserta la fila, imposibilidad estructural). El detalle de la
+ * confirmada NO muestra código de cierre (no existe el flujo, L6) ni dirección/enlace
+ * (SPEC-708): muestra el contacto que sí existe.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -64,6 +65,7 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
 
     const modalidadFija: Modalidad = datos.atiendeVirtual ? "VIRTUAL" : "PRESENCIAL";
     const muro = datos.muro;
+    const diasBloqueados = useMemo(() => new Set(datos.diasBloqueados), [datos.diasBloqueados]);
 
     // En un teléfono la vista principal es el día (la semana es ilegible).
     useEffect(() => {
@@ -216,6 +218,31 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
         }
     }
 
+    async function bloquearODesbloquear(fecha: string) {
+        const bloqueado = diasBloqueados.has(fecha);
+        setEnviando(true);
+        try {
+            const res = await fetch("/api/profesional/dias-bloqueados", {
+                method: bloqueado ? "DELETE" : "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fecha }),
+            });
+            if (!res.ok) {
+                toast(await mensajeError(res, "No se pudo cambiar el estado del día."));
+                return;
+            }
+            toast(
+                bloqueado
+                    ? `${DOW[diaSemana(fecha)]} ${numMes(fecha)} reabierto. Ya puede publicar horas.`
+                    : `${DOW[diaSemana(fecha)]} ${numMes(fecha)} bloqueado. No se ofrecen horas nuevas; sus citas confirmadas se conservan.`,
+            );
+            router.refresh();
+        } finally {
+            setEnviando(false);
+        }
+    }
+
     async function responder(bloque: BloqueCalendario, accion: "confirmar" | "rechazar") {
         if (!bloque.solicitudId) return;
         setEnviando(true);
@@ -239,6 +266,10 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
 
     function onPointerDown(ev: React.PointerEvent, fecha: string) {
         if (selModo || (ev.target as HTMLElement).closest("[data-franja]")) return; // no crear sobre un bloque
+        if (diasBloqueados.has(fecha)) {
+            toast("Este día está bloqueado. Reábralo para publicar horas.");
+            return;
+        }
         const col = ev.currentTarget as HTMLElement;
         const rect = col.getBoundingClientRect();
         const startMin = snap(((ev.clientY - rect.top) / PXH) * 60 + H0 * 60);
@@ -345,6 +376,9 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
             <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="rounded-lg bg-cielo/15 px-3 py-1.5 text-xs font-semibold text-cielo-700">Arrastre sobre un espacio vacío para publicar una hora</span>
                 <button className="rounded-lg border border-tinta/10 px-3 py-1.5 text-xs font-semibold text-muted hover:text-body" onClick={copiarDia} disabled={enviando}>Copiar día</button>
+                <button className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${diasBloqueados.has(ancla) ? "border-estado-ambar/40 bg-estado-ambar/10 text-estado-ambar" : "border-tinta/10 text-muted hover:text-body"}`} onClick={() => bloquearODesbloquear(ancla)} disabled={enviando}>
+                    {diasBloqueados.has(ancla) ? `Reabrir ${DOW[diaSemana(ancla)]} ${numMes(ancla)}` : `Bloquear ${DOW[diaSemana(ancla)]} ${numMes(ancla)}`}
+                </button>
                 <button aria-pressed={selModo} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${selModo ? "border-cielo/40 bg-cielo/15 text-cielo-700" : "border-tinta/10 text-muted hover:text-body"}`} onClick={() => { setSelModo((v) => !v); setSel(new Set()); }}>Seleccionar</button>
                 {sel.size > 0 && (
                     <span className="text-xs font-semibold text-cielo-700">{sel.size} elegidas · <button className="underline" onClick={() => quitar([...sel])} disabled={enviando}>quitar</button></span>
@@ -367,8 +401,8 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
                     <div />
                     {diasVisibles.map((d) => (
                         <button key={d} className="border-l border-tinta/10 py-2 text-center hover:bg-tinta/5" onClick={() => { setVista("dia"); setAncla(d); }}>
-                            <div className="font-mono text-[10px] uppercase text-subtle">{DOW[diaSemana(d)]}</div>
-                            <div className={`mx-auto mt-0.5 grid h-7 w-7 place-items-center rounded-full text-sm font-semibold ${d === datos.hoy ? "bg-cielo text-white" : "text-body"}`}>{numMes(d)}</div>
+                            <div className={`font-mono text-[10px] uppercase ${diasBloqueados.has(d) ? "text-estado-ambar" : "text-subtle"}`}>{DOW[diaSemana(d)]}</div>
+                            <div className={`mx-auto mt-0.5 grid h-7 w-7 place-items-center rounded-full text-sm font-semibold ${d === datos.hoy ? "bg-cielo text-white" : diasBloqueados.has(d) ? "text-estado-ambar" : "text-body"}`}>{numMes(d)}</div>
                         </button>
                     ))}
                 </div>
@@ -388,6 +422,7 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
                             ghost={ghost && ghost.fecha === fecha ? ghost : null}
                             altura={altura}
                             muro={muro}
+                            bloqueado={diasBloqueados.has(fecha)}
                             sel={sel}
                             selModo={selModo}
                             onPointerDown={(e) => onPointerDown(e, fecha)}
