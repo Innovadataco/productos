@@ -3749,6 +3749,14 @@ model PerfilProfesional {
   // fila-evidencia E2E de I-398; el VALIDATE es paso aparte cuando esa fila se resuelva).
   atiendeVirtual           Boolean                  @default(false)
   atiendePresencial        Boolean                  @default(false)
+  // SPEC-708: dónde/cómo atiende. v1: dirección FIJA del consultorio (presencial) y
+  // enlace FIJO de videollamada (virtual). NULABLES. **H-2 (Ley 2375/2024): son dato de
+  // CONTACTO — NUNCA salen al DTO público del directorio; la familia los ve solo con la
+  // cita CONFIRMADA (SPEC-715).** La coherencia (presencial⟹dirección, virtual⟹enlace)
+  // la gatea el carril del calendario/servidor, no un CHECK crudo. Enlace generado por
+  // cita = mejora futura (exige integración de video), se radica aparte.
+  direccionAtencion        String?                  @db.Text
+  enlaceVideollamada       String?
   aniosExperiencia         Int
   presentacion             String                   @db.Text
   // SPEC-685 (PR2-bis): la tarifa se fija en «Mi perfil» tras la habilitación; antes
