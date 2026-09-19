@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { exigirPadre } from "@/lib/padre/guardia-padre";
 
 interface PageProps {
     searchParams: Promise<{ bienvenida?: string }>;
@@ -13,7 +12,8 @@ interface PageProps {
  * `SuscripcionVista` para el saludo post-autorización.
  */
 export default async function PadreSuscripcionRedirectPage({ searchParams }: PageProps) {
-    await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
+    // SPEC-711: stub de redirect PURO — no rinde cascarón, sin compuerta de rol
+    // (mismo criterio que SPEC-571 · mecanismo 4). El destino (Mi perfil) sí gatea.
     const params = await searchParams;
     const bienvenida = params.bienvenida === "1" ? "?bienvenida=1" : "";
     redirect(`/dashboard/padre/perfil${bienvenida}#suscripcion`);

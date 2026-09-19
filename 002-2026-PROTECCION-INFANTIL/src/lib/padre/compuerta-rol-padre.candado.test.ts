@@ -44,6 +44,16 @@ function paginasPadre(): string[] {
 
 const rel = (p: string) => p.slice(p.indexOf("dashboard/padre"));
 
+// Mecanismo 4 (mismo criterio que SPEC-571 · guardia-rol-pagina): un stub de redirect
+// PURO no rinde JSX y solo llama redirect/permanentRedirect — no hay cascarón que filtrar,
+// así que no necesita compuerta de rol (su destino sí gatea). Se mide SIN comentarios.
+const REDIR = /(?:permanentRedirect|redirect)\s*\(/;
+const JSX = /<[A-Za-z]/;
+function sinComentarios(s: string): string {
+    return s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+}
+const esStubDeRedirectPuro = (sc: string) => REDIR.test(sc) && !JSX.test(sc);
+
 describe("SPEC-711 · toda pantalla del padre pasa por la compuerta de rol", () => {
     beforeEach(() => {
         redirectMock.mockClear();
@@ -63,13 +73,15 @@ describe("SPEC-711 · toda pantalla del padre pasa por la compuerta de rol", () 
         }
     });
 
-    it("DERIVADO DEL ÁRBOL · cada page.tsx del padre LLAMA a exigirPadre()", () => {
+    it("DERIVADO DEL ÁRBOL · cada page.tsx que rinde cascarón LLAMA a exigirPadre()", () => {
         for (const p of paginasPadre()) {
-            const src = fs.readFileSync(p, "utf-8");
+            const sc = sinComentarios(fs.readFileSync(p, "utf-8"));
+            // Un stub de redirect PURO no rinde cascarón → exento (mecanismo 4, SPEC-571).
+            if (esStubDeRedirectPuro(sc)) continue;
             // La LLAMADA (con paréntesis), no el identificador: un `import` suelto sin invocar
             // dejaría la página sin compuerta y el candado en falso verde.
             expect(
-                /exigirPadre\s*\(/.test(src),
+                /exigirPadre\s*\(/.test(sc),
                 `«${rel(p)}» no LLAMA a exigirPadre() (una pantalla del padre sin compuerta de rol)`,
             ).toBe(true);
         }
