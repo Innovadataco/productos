@@ -46,7 +46,12 @@ const PERFIL: PerfilProfesionalPropioDto = {
     areasAtencion: ["ansiedad"],
     rangoEtario: ["6-11"],
 };
-const RANGO = [{ clave: "6-11", nombre: "Niñez (6–11)" }];
+// SPEC-709: «Mi perfil» recibe los tres catálogos cerrados para editar los datos en sitio.
+const CATALOGOS = {
+    profesion: [{ clave: "psicologo", nombre: "Psicólogo/a" }],
+    areas: [{ grupo: "Emocional", items: [{ clave: "ansiedad", nombre: "Ansiedad" }] }],
+    rangoEtario: [{ clave: "6-11", nombre: "Niñez (6–11)" }],
+};
 const VISTA = { estadoPerfil: "ACTIVO", puedeReenviar: false, observaciones: [] } as unknown as VistaProfesionalVerificacion;
 
 describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin valores en vivo)", () => {
@@ -54,7 +59,7 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin val
         const { container } = render(
             <MiPerfilProfesionalClient
                 perfil={PERFIL}
-                rangoCatalogo={RANGO}
+                catalogos={CATALOGOS}
                 aviso={{ precioEstandar: 80_000, pct: 15 }}
                 vista={VISTA}
             />,
@@ -71,7 +76,7 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin val
         render(
             <MiPerfilProfesionalClient
                 perfil={{ ...PERFIL, tarifaConsultaCOP: null }}
-                rangoCatalogo={RANGO}
+                catalogos={CATALOGOS}
                 aviso={{ precioEstandar: 80_000, pct: 15 }}
                 vista={VISTA}
             />,
@@ -85,7 +90,7 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin val
         render(
             <MiPerfilProfesionalClient
                 perfil={{ ...PERFIL, tarifaConsultaCOP: null }}
-                rangoCatalogo={RANGO}
+                catalogos={CATALOGOS}
                 aviso={{ precioEstandar: 80_000, pct: 15 }}
                 vista={VISTA}
             />,
@@ -100,7 +105,7 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin val
         render(
             <MiPerfilProfesionalClient
                 perfil={{ ...PERFIL, tarifaConsultaCOP: 120_000 }}
-                rangoCatalogo={RANGO}
+                catalogos={CATALOGOS}
                 aviso={{ precioEstandar: 80_000, pct: 15 }}
                 vista={VISTA}
             />,
@@ -114,7 +119,7 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin val
         const { container } = render(
             <MiPerfilProfesionalClient
                 perfil={{ ...PERFIL, tarifaConsultaCOP: null }}
-                rangoCatalogo={RANGO}
+                catalogos={CATALOGOS}
                 aviso={{ precioEstandar: null, pct: null }}
                 vista={VISTA}
             />,
