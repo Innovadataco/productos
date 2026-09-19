@@ -11,6 +11,8 @@ import { assertModulo } from "@/lib/permisos-modulos";
 import { errorToResponse } from "@/lib/api-handler";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
+import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
+import { diaBogota } from "@/lib/fechas/formato-bogota";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 
 const crearSchema = z.object({
@@ -45,6 +47,19 @@ export async function POST(request: Request) {
         const fin = new Date(body.fin);
         if (fin.getTime() <= inicio.getTime()) {
             throw new AppError("El fin debe ser posterior al inicio", ERROR_CODES.VALIDATION_ERROR, 400);
+        }
+        // SPEC-714 (regla 1 · CEO): no se publica una franja en un día que el
+        // profesional CERRÓ en su agenda. La misma decisión que el rayado de la
+        // cuadrícula, pero del lado del SERVIDOR (no solo la pantalla). El día se
+        // compara en Bogotá —igual que lo ve el profesional y como se guarda el
+        // bloqueo—, con la misma proyección que usa el DTO del calendario.
+        const diaFranja = diaBogota(inicio);
+        if (await new DiaBloqueadoRepository().estaBloqueado(perfil.id, diaFranja)) {
+            throw new AppError(
+                "Ese día está bloqueado en su agenda. Reábralo para publicar franjas.",
+                ERROR_CODES.VALIDATION_ERROR,
+                400,
+            );
         }
         // SPEC-447 (I-311): dos validaciones que la ruta no tenía y que la
         // pantalla nueva vuelve alcanzables por primera vez de verdad.

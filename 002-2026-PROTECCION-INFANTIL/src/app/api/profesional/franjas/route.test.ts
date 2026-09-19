@@ -235,6 +235,45 @@ describe("POST /api/profesional/franjas · SPEC-447 (I-311)", () => {
     });
 });
 
+describe("POST /api/profesional/franjas · SPEC-714 · día bloqueado (regla 1)", () => {
+    beforeEach(async () => {
+        await resetDatabase();
+        mockToken = undefined;
+    });
+
+    it("un día CERRADO rechaza la franja (400) y NO deja fila", async () => {
+        const { perfil } = await sembrarProfesional();
+        // El día del fixture (DIA = 2027-03-10) queda cerrado en la agenda.
+        await prisma.diaBloqueado.create({ data: { profesionalId: perfil.id, fecha: DIA } });
+
+        const res = await POST(req(cuerpo("10:00")));
+
+        expect(res.status).toBe(400);
+        expect(await prisma.franjaDisponible.count({ where: { profesionalId: perfil.id } })).toBe(0);
+    });
+
+    it("CONTRAPRUEBA · con OTRO día cerrado, la franja de DIA se publica normal", async () => {
+        const { perfil } = await sembrarProfesional();
+        await prisma.diaBloqueado.create({ data: { profesionalId: perfil.id, fecha: "2027-03-11" } });
+
+        const res = await POST(req(cuerpo("10:00")));
+
+        expect(res.status).toBe(200);
+        expect(await prisma.franjaDisponible.count({ where: { profesionalId: perfil.id } })).toBe(1);
+    });
+
+    it("el bloqueo es POR PROFESIONAL: el día cerrado de OTRO no me estorba", async () => {
+        const { perfil: ajeno } = await sembrarProfesional();
+        await prisma.diaBloqueado.create({ data: { profesionalId: ajeno.id, fecha: DIA } });
+        // Segundo profesional (reemplaza el token de sesión); su DIA está abierto.
+        await sembrarProfesional();
+
+        const res = await POST(req(cuerpo("10:00")));
+
+        expect(res.status).toBe(200);
+    });
+});
+
 describe("DELETE /api/profesional/franjas/[id] · SPEC-447", () => {
     beforeEach(async () => {
         await resetDatabase();
