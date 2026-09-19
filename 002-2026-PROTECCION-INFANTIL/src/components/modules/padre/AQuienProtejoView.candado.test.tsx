@@ -20,7 +20,7 @@ const ESTADO = { motorVivo: true, ultimaVerificacionEn: null };
 const CIRCULO = { personas: 0, todasTranquilas: false };
 
 function pintarVacio() {
-    return render(<AQuienProtejoView hijos={[]} estadoClasificador={ESTADO} cuentasConReporte={0} circulo={CIRCULO} />);
+    return render(<AQuienProtejoView hijos={[]} estadoClasificador={ESTADO} cuentasConReporte={0} grupoA={[]} grupoB={[]} circulo={CIRCULO} />);
 }
 
 describe("SPEC-660 · estado vacío de «A quién protejo» (render)", () => {
@@ -58,6 +58,8 @@ describe("SPEC-716 (Parte A · I-427) · la línea, en el árbol de la vista, no
                 hijos={[HIJO]}
                 estadoClasificador={{ motorVivo, ultimaVerificacionEn: null }}
                 cuentasConReporte={cuentasConReporte}
+                grupoA={[]}
+                grupoB={[]}
                 circulo={CIRCULO}
             />,
         );
