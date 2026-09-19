@@ -38,8 +38,8 @@ describe("PendientesCaso", () => {
         render(
             <PendientesCaso
                 pendientes={[
-                    { clave: "revisar", texto: "Revisa la alerta: márcala como vista cuando la leas" },
-                    { clave: "registrar", texto: "Registra lo que hiciste en la bitácora" },
+                    { clave: "revisar", texto: "Revise la alerta: márquela como vista cuando la lea" },
+                    { clave: "registrar", texto: "Registre lo que hizo en la bitácora" },
                 ]}
                 alertaId="a1"
             />
