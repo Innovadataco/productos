@@ -18,20 +18,20 @@ const PLANTILLAS: Record<
     (entidadTipo: string) => { titulo: string; mensaje: string }
 > = {
     ALERTA_NUEVA: () => ({
-        titulo: "Nueva alerta en tu colegio",
-        mensaje: "Se registró una alerta que requiere revisión. Entra para ver el detalle.",
+        titulo: "Nueva alerta en su colegio",
+        mensaje: "Se registró una alerta que requiere revisión. Entre para ver el detalle.",
     }),
     ALERTA_GESTIONADA: () => ({
         titulo: "Alerta gestionada",
-        mensaje: "Una alerta fue marcada como gestionada. Puedes revisar el seguimiento.",
+        mensaje: "Una alerta fue marcada como gestionada. Puede revisar el seguimiento.",
     }),
     ALERTA_ESCALADA: () => ({
         titulo: "Alerta escalada",
-        mensaje: "Una alerta fue escalada. Revisa el caso para conocer los siguientes pasos.",
+        mensaje: "Una alerta fue escalada. Revise el caso para conocer los siguientes pasos.",
     }),
     SISTEMA: () => ({
         titulo: "Aviso del sistema",
-        mensaje: "Hay una novedad importante sobre tu servicio. Entra para más detalles.",
+        mensaje: "Hay una novedad importante sobre su servicio. Entre para más detalles.",
     }),
 };
 
