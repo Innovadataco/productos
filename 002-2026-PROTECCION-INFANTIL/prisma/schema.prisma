@@ -3780,6 +3780,7 @@ model PerfilProfesional {
   franjas        FranjaDisponible[]
   solicitudes    SolicitudCita[]
   documentos     DocumentoProfesional[]
+  diasBloqueados DiaBloqueado[]
 
   // L3 filtra el directorio abierto por estado ACTIVO + ciudad; el índice
   // compuesto sirve al listado. La búsqueda por especialidad no lo necesita
@@ -3983,6 +3984,34 @@ model FranjaDisponible {
 
   // L3 lista franjas libres del profesional ordenadas por inicio.
   @@index([profesionalId, tomada, inicio])
+}
+
+// SPEC-714 (decisión CEO 18-09) · Día que el profesional CIERRA en su agenda.
+// El rayado durable del calendario es el REFLEJO de estas filas, no un estado de
+// UI: bloquear un día y recargar debe conservarlo (un control que el usuario
+// aprieta y que después olvida lo hecho es la clase de defecto a cerrar).
+//
+// `fecha` es el DÍA calendario en America/Bogota como texto `yyyy-MM-dd` — el
+// MISMO formato del DTO del calendario (`diasBloqueados: string[]`, D-69). Se
+// guarda como texto y NO como `@db.Date` a propósito: un `@db.Date` se lee de
+// vuelta a medianoche UTC y, proyectado a Bogotá, se corre un día (off-by-one).
+// El día es una etiqueta de calendario, no un instante.
+//
+// FK onDelete: Cascade — un día cerrado no tiene sentido sin su profesional y no
+// debe trabar una purga; los hijos con dinero/historial (franjas, citas) son
+// Restrict a propósito, esto es estado operativo liviano.
+model DiaBloqueado {
+  id            String   @id @default(cuid())
+  profesionalId String
+  fecha         String // día calendario Bogotá `yyyy-MM-dd` (no @db.Date: evita el off-by-one de TZ)
+  motivo        String?
+  creadoEn      DateTime @default(now()) @db.Timestamptz(6)
+
+  profesional PerfilProfesional @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
+
+  // Un día se bloquea UNA sola vez por profesional (idempotente). El compuesto
+  // ya indexa el prefijo `profesionalId`, así que no hace falta @@index aparte.
+  @@unique([profesionalId, fecha])
 }
 
 model SolicitudCita {

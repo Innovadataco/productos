@@ -58,9 +58,19 @@ export function crearDateTimeFormatBogota(options?: Intl.DateTimeFormatOptions):
  * de repositorios; se puede usar en cualquier capa.
  */
 export function diaCalendarioBogota(fecha: Date | string | number = new Date()): Date {
-    const iso = formatInTimeZone(toDate(fecha), TIMEZONE_BOGOTA, "yyyy-MM-dd");
-    const [y, m, d] = iso.split("-").map(Number);
+    const [y, m, d] = diaBogota(fecha).split("-").map(Number);
     return new Date(Date.UTC(y!, m! - 1, d!));
+}
+
+/**
+ * SPEC-714: el DÍA calendario en America/Bogota como texto `yyyy-MM-dd` — la
+ * etiqueta de día del calendario del profesional (`diasBloqueados`, el `fecha`
+ * de cada bloque del DTO). UNA sola verdad para «¿de qué día calendario es este
+ * instante?»: así el bloqueo del día, el rayado de la cuadrícula y la validación
+ * de franjas hablan del MISMO día y no se corren por zona horaria (D-69).
+ */
+export function diaBogota(fecha: Date | string | number = new Date()): string {
+    return formatInTimeZone(toDate(fecha), TIMEZONE_BOGOTA, "yyyy-MM-dd");
 }
 
 /**

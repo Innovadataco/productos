@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **119** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **120** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (71)
+### Otros (sin regla de dominio) (72)
 
 #### `AceptacionAutorizacionProfesional`
 
@@ -772,6 +772,17 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | brechaPp | Float | opcional |
 | alertada | Boolean | — |
 | creadoEn | DateTime | — |
+
+#### `DiaBloqueado`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| profesionalId | String | — |
+| fecha | String | — |
+| motivo | String | opcional |
+| creadoEn | DateTime | — |
+| profesional | PerfilProfesional | relación (FK) |
 
 #### `DigestSemanal`
 
@@ -1409,6 +1420,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | franjas | FranjaDisponible | lista, relación |
 | solicitudes | SolicitudCita | lista, relación |
 | documentos | DocumentoProfesional | lista, relación |
+| diasBloqueados | DiaBloqueado | lista, relación |
 
 #### `PreferenciaAlertaColegio`
 
@@ -2400,6 +2412,7 @@ erDiagram
     Pais ||--o{ Reporte : "paisRel (opcional)"
     ParametroSistema ||--o{ AuditLog : "parametro (opcional)"
     PatronInstitucional ||--o{ AlertaColegio : "patronInstitucional (opcional)"
+    PerfilProfesional ||--o{ DiaBloqueado : "profesional"
     PerfilProfesional ||--o{ DocumentoProfesional : "perfil"
     PerfilProfesional ||--o{ FranjaDisponible : "profesional"
     PerfilProfesional ||--o{ SolicitudCita : "profesional"
