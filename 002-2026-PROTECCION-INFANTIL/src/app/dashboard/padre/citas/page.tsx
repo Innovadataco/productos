@@ -4,13 +4,13 @@
  * para no ser un enlace a 404. RSC autenticada (solo PARENT vía proxy) que trae
  * las citas del padre y las entrega al cliente para agrupar/pintar.
  */
-import { verifyAuth } from "@/lib/auth";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
 import { MisCitasList } from "@/components/modules/padre/citas/MisCitasList";
 
 export default async function PadreCitasPage() {
-    const user = await verifyAuth("PARENT");
+    const user = await exigirPadre();
     const solicitudes = await new SolicitudCitaRepository().listarPorPadre(user.id);
     const citas = solicitudes.map((s) => toCitaParaPadre(s));
     return (

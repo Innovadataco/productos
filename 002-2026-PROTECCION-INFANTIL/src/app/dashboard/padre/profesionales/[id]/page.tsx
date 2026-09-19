@@ -6,8 +6,7 @@
 // `SolicitarCitaPanel` los lee del `sessionStorage` en cliente. La página
 // server solo pasa IDs opacos.
 import { notFound } from "next/navigation";
-import { verifyAuth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { ProfesionalPerfil } from "@/components/modules/padre/profesionales/ProfesionalPerfil";
 import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-primera-cita";
@@ -19,8 +18,7 @@ export default async function PadreProfesionalPerfilPage({
     params: Promise<{ id: string }>;
     searchParams: Promise<{ expedienteId?: string; heredarDe?: string }>;
 }) {
-    const user = await verifyAuth();
-    if (user.rol !== "PARENT") redirect("/");
+    const user = await exigirPadre(); // SPEC-711: rol ≠ PARENT → su área (antes: redirect a "/")
 
     const { id } = await params;
     const { expedienteId, heredarDe } = await searchParams;

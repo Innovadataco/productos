@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { listarExpedientesPadreConUrgencia } from "@/lib/dal/services/expediente-detalle";
 import { ExpedientesListClient } from "@/components/modules/padre/ExpedientesListClient";
 
@@ -10,19 +8,8 @@ import { ExpedientesListClient } from "@/components/modules/padre/ExpedientesLis
  * menor, EXP/id, semáforo, aporte propio/comunitario y última actividad.
  */
 export default async function PadreExpedientesPage() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("__Host-token")?.value ?? cookieStore.get("token")?.value;
-
-    if (!token) {
-        redirect("/login");
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload?.sub || payload.rol !== "PARENT") {
-        redirect("/login");
-    }
-
-    const expedientes = await listarExpedientesPadreConUrgencia(payload.sub as string);
+    const usuario = await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
+    const expedientes = await listarExpedientesPadreConUrgencia(usuario.id);
 
     return (
         <div className="p-4 sm:p-6">

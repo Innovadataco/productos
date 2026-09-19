@@ -5,12 +5,14 @@
 // volver a pagar» — la cita nueva reasigna heredando el pago.
 // Ruta EXENTA de vigencia — el directorio no se esconde detrás del pago.
 import { PresentacionUrgenciaForm } from "@/components/modules/padre/profesionales/PresentacionUrgenciaForm";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 
 export default async function PadreProfesionalesPage({
     searchParams,
 }: {
     searchParams: Promise<{ expedienteId?: string; heredarDe?: string }>;
 }) {
+    await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
     const { expedienteId, heredarDe } = await searchParams;
     return (
         <PresentacionUrgenciaForm

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { verifyAuth } from "@/lib/auth";
+import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { PagosClienteRepository } from "@/lib/dal/repositories/pagos-cliente-repository";
 import { obtenerVistaSuscripcion, obtenerSuscripcionTitular } from "@/lib/pagos/suscripcion-vista.service";
 import { solicitarPlan } from "@/lib/pagos/suscripcion-solicitud.service";
@@ -157,7 +158,7 @@ function Acordeon({
 export default async function PadrePerfilPage({ searchParams }: PageProps) {
     const params = await searchParams;
     const mostrarBienvenida = params.bienvenida === "1";
-    const usuario = await verifyAuth("PARENT");
+    const usuario = await exigirPadre(); // SPEC-711: compuerta por rol (rol ≠ PARENT → su área)
     // SPEC-660 (Fase C): «Configurar» (registrar/editar menores) se muda a Mi
     // perfil como sección desplegable. El cupo sale del parámetro, igual que en
     // /dashboard/padre/hijos (que sigue vivo — expandir, después Dev 1 contrae).
