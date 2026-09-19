@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { exigirProfesionalHabilitado } from "@/lib/profesionales/guardia-habilitado";
 import { puedeAccederAModulo } from "@/lib/permisos-modulos";
 import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
-import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
-import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
-import { AppError, ERROR_CODES } from "@/lib/errors";
+import { calendarioDelProfesional } from "@/lib/profesional/calendario/calendario.service";
 import { CalendarioProfesional } from "@/components/modules/profesional/CalendarioProfesional";
 
 /**
@@ -37,27 +35,11 @@ export default async function CalendarioProfesionalPage() {
     if (!(await puedeAccederAModulo(usuario.rol, "profesional_calendario"))) {
         return <SinAccesoModulo />;
     }
-    const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(usuario.id);
-    if (!perfil) {
-        throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);
-    }
-
-    const franjas = await new FranjaDisponibleRepository().listarDeProfesional(perfil.id);
+    const datos = await calendarioDelProfesional(usuario.id);
 
     return (
         <main className="min-h-screen bg-page py-4">
-            <CalendarioProfesional
-                duracionMinutos={perfil.duracionMinutos}
-                atiendeVirtual={perfil.atiendeVirtual}
-                atiendePresencial={perfil.atiendePresencial}
-                franjas={franjas.map((f) => ({
-                    id: f.id,
-                    inicio: f.inicio.toISOString(),
-                    fin: f.fin.toISOString(),
-                    modalidad: f.modalidad,
-                    tomada: f.tomada,
-                }))}
-            />
+            <CalendarioProfesional datos={datos} modo="calendario" />
         </main>
     );
 }

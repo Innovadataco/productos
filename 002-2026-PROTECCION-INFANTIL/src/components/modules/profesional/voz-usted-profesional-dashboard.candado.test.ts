@@ -161,11 +161,13 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         expect(panel).toContain("Su tarifa por consulta");
         expect(panel).toContain("la familia le entrega en la sesión. Desde aquí");
         expect(panel).toContain("solo ve quién se lo compartió.");
-        expect(cal).toContain("Publique las franjas en las que puede atender.");
-        expect(cal).toContain("Primero indique en su ficha si atiende virtual o presencial.");
-        expect(cal).toContain("Revise su conexión.");
-        expect(cal).toContain("según su ficha.");
-        expect(cal).toContain("puede agendar una cita.");
+        // SPEC-714: el calendario se reescribió (nivel dios). Anclas de usted del
+        // componente nuevo — mueren si se revierten a tú (imperativos «Arrastre»/«Renuévela»,
+        // futuro «podrá», enclítico «Renuévela»).
+        expect(cal).toContain("Arrastre sobre un espacio vacío para publicar una hora");
+        expect(cal).toContain("No puede ofrecer horas después de que venza su verificación. Renuévela para abrir fechas más adelante.");
+        expect(cal).toContain("Cuando se apruebe, aquí podrá responder");
+        expect(cal).toContain("se gestiona en Citaciones.");
         expect(calPage).toContain("Publique y retire las franjas en las que atiende.");
         expect(verif).toContain("Verificación de su perfil");
         // SPEC-706 PR A (texto de Diseño, Gestión e69b591): el resultado llega por CORREO y se dice
