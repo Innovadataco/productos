@@ -18,6 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import { instanteDesdeHoraBogota, sumarMinutos } from "@/lib/fechas/formato-bogota";
+import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
 import { materializarFranjas } from "./franjas.service";
 
 async function sembrar(opciones: { virtual?: boolean; presencial?: boolean; venceEn?: Date } = {}) {
@@ -81,6 +82,18 @@ describe("SPEC-714 · materializar franjas en lote (repetir / copiar)", () => {
         ]);
         expect(r.creadas).toBe(1);
         expect(r.omitidas.some((o) => o.motivo === "solape")).toBe(true);
+        expect(await prisma.franjaDisponible.count({ where: { profesionalId: perfil.id } })).toBe(1);
+    });
+
+    it("(c2) una franja en un día BLOQUEADO se omite — misma regla que el single (no la puerta hermana)", async () => {
+        const { perfil } = await sembrar({ virtual: true });
+        await new DiaBloqueadoRepository().bloquear(perfil.id, "2027-03-10");
+        const r = await materializarFranjas(perfil.id, [
+            slot("2027-03-10", "10:00", "VIRTUAL"), // día cerrado → se omite
+            slot("2027-03-11", "10:00", "VIRTUAL"), // día abierto → se crea
+        ]);
+        expect(r.creadas).toBe(1);
+        expect(r.omitidas.some((o) => o.motivo === "bloqueado")).toBe(true);
         expect(await prisma.franjaDisponible.count({ where: { profesionalId: perfil.id } })).toBe(1);
     });
 

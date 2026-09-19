@@ -18,5 +18,11 @@
 ## Cierre
 - [ ] T10 · Preflight (tsc · lint · arch:check · specs-discipline · voz-usted) · PR verde · avisar al CEO. Diseño certifica contra el mockup; Calidad camina.
 
-## Deferido (no bloquea, PR chico posterior)
-- Bloquear día (modelo `DiaBloqueado` de Datos) + c2. · Cierre con código (L6). · Dirección/enlace (SPEC-708).
+## Bloquear día (PR chico de seguimiento — HECHO, tras el modelo de Datos)
+- [x] T11 · `diasBloqueados` real (DiaBloqueadoRepository) en calendario.service; `fechaBogota`→`diaBogota`.
+- [x] T12 · Regla de día-bloqueado en el camino LOTE (`materializarFranjas`) — la puerta hermana del single (Datos ya la puso en franjas/route.ts).
+- [x] T13 · Endpoint `POST/DELETE /api/profesional/dias-bloqueados` + botón bloquear/reabrir + rayado durable + no-crear en día cerrado.
+- [x] T14 · Candado c2 (lote omite día bloqueado) mutación-verificado; «bloquear no borra citas» ya lo cubre `dia-bloqueado.candado.test.ts` (Datos).
+
+## Deferido (no bloquea)
+- Cierre con código (L6). · Dirección/enlace (SPEC-708, Dev 2).
