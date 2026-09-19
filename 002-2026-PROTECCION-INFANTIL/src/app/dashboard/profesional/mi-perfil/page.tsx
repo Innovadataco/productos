@@ -59,7 +59,7 @@ export default async function MiPerfilProfesionalPage() {
     return (
         <MiPerfilProfesionalClient
             perfil={toPerfilProfesionalPropio(perfil)}
-            rangoCatalogo={catalogos.rangoEtario}
+            catalogos={catalogos}
             aviso={{ precioEstandar, pct }}
             vista={vista}
             autorizacion={autorizacion}
