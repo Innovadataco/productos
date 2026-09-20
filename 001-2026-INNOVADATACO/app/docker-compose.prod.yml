@@ -1,0 +1,30 @@
+# Producción en VPS — sigue el patrón de PI (002).
+# La app escucha SOLO en 127.0.0.1:5001; Cloudflare Tunnel expone proyectos.innovadataco.com.
+# Uso: docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-}
+    image: idc-admin:${IDC_ADMIN_TAG:-latest}
+    container_name: idc-admin-app
+    restart: always
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      PORT: "5001"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      # Solo localhost: lo publica Cloudflare Tunnel (proyectos.innovadataco.com).
+      - "127.0.0.1:5001:5001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5001/login || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  idc_admin_node_modules:
