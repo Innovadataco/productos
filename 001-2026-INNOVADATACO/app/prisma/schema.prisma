@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  nombre        String
+  rol           String        // ADMIN | COMERCIAL | PROJECT_MANAGER | CONSULTOR
+  activo        Boolean       @default(true)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  oportunidades Oportunidad[]
+  proyectos     Proyecto[]
+  documentos    Documento[]
+
+  @@map("users")
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nombre    String
+  nit       String?  @unique
+  tipo      String   // PUBLICO | PRIVADO | MIXTO
+  contacto  String?
+  email     String?
+  telefono  String?
+  direccion String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  oportunidades Oportunidad[]
+  proyectos     Proyecto[]
+
+  @@map("clientes")
+}
+
+model Oportunidad {
+  id                  String   @id @default(cuid())
+  codigo              String   @unique
+  nombre              String
+  modalidad           String   // LICITACION | CONTRATACION_DIRECTA | SUBASTA_INVERSA | CONTRATO_PRIVADO | CONVENIO | OTRO
+  entidadContratante  String   @map("entidad_contratante")
+  fechaInicioPlaneada DateTime? @map("fecha_inicio_planeada")
+  fechaFinPlaneada    DateTime? @map("fecha_fin_planeada")
+  valorEstimado       Decimal? @db.Decimal(15, 2) @map("valor_estimado")
+  alcance             String?
+  estado              String   // IDENTIFICADA | EN_PROPUESTA | PRESENTADA | ADJUDICADA | NO_ADJUDICADA | CERRADA
+  motivoCierre        String?  @map("motivo_cierre")
+  comentarioCierre    String?  @map("comentario_cierre")
+
+  clienteId   String?
+  cliente     Cliente? @relation(fields: [clienteId], references: [id])
+  responsableId String?
+  responsable   User?    @relation(fields: [responsableId], references: [id])
+
+  proyecto    Proyecto?
+  documentos  Documento[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("oportunidades")
+}
+
+model Proyecto {
+  id                   String   @id @default(cuid())
+  codigo               String   @unique
+  nombre               String
+  fechaInicioReal      DateTime? @map("fecha_inicio_real")
+  fechaEntregaPlaneada DateTime? @map("fecha_entrega_planeada")
+  fechaEntregaReal     DateTime? @map("fecha_entrega_real")
+  estado               String   // PLANIFICACION | ACTIVO | EN_PAUSA | ENTREGADO | CERRADO | CANCELADO
+  progreso             Int      @default(0)
+  valorContratado      Decimal? @db.Decimal(15, 2) @map("valor_contratado")
+  alcance              String?
+
+  oportunidadId String?     @unique @map("oportunidad_id")
+  oportunidad   Oportunidad? @relation(fields: [oportunidadId], references: [id])
+  clienteId     String
+  cliente       Cliente     @relation(fields: [clienteId], references: [id])
+  responsableId String?
+  responsable   User?       @relation(fields: [responsableId], references: [id])
+
+  hitos      Hito[]
+  documentos Documento[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("proyectos")
+}
+
+model Hito {
+  id          String    @id @default(cuid())
+  nombre      String
+  fechaInicio DateTime? @map("fecha_inicio")
+  fechaFin    DateTime? @map("fecha_fin")
+  estado      String    // PENDIENTE | EN_CURSO | COMPLETADO
+  orden       Int       @default(0)
+
+  proyectoId String
+  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("hitos")
+}
+
+model Documento {
+  id              String   @id @default(cuid())
+  nombre          String
+  archivoOriginal String   @map("archivo_original")
+  ruta            String
+  mimeType        String   @map("mime_type")
+  tamanioBytes    Int      @map("tamanio_bytes")
+  tipo            String   // PLIEGOS | PROPUESTA_TECNICA | PROPUESTA_ECONOMICA | CONTRATO | ACTA_INICIO | ACTA_SEGUIMIENTO | ENTREGABLE | FACTURA | OTRO
+
+  oportunidadId String?
+  oportunidad   Oportunidad? @relation(fields: [oportunidadId], references: [id], onDelete: Cascade)
+  proyectoId    String?
+  proyecto      Proyecto?    @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  subidoPorId   String       @map("subido_por_id")
+  subidoPor     User         @relation(fields: [subidoPorId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("documentos")
+}
