@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Innovadataco — Módulo Negocios (Mockup v10)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --navy: #0f2444;
+      --navy-mid: #1a365d;
+      --data: #3b82f6;
+      --data-light: #60a5fa;
+      --gold: #f59e0b;
+      --gold-light: #fbbf24;
+      --red: #ef4444;
+      --bg: #030712;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .bg-page {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(1400px 900px at 10% -10%, rgba(26, 54, 93, 0.38) 0%, transparent 55%),
+        radial-gradient(1200px 800px at 90% 5%, rgba(59, 130, 246, 0.22) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 50% 120%, rgba(245, 158, 11, 0.14) 0%, transparent 55%),
+        var(--bg);
+    }
+
+    .bg-noise {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.035;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .glass {
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 28px 90px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .glass-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
+      backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.4);
+      transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+    }
+
+    .glass-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 70px rgba(0,0,0,0.5), 0 0 30px rgba(59,130,246,0.08);
+    }
+
+    .screen {
+      display: none;
+      animation: fadeIn 0.45s var(--ease-out) forwards;
+    }
+
+    .screen.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.25s var(--ease-out);
+    }
+
+    .input-field:focus {
+      border-color: var(--data);
+      background: rgba(255,255,255,0.08);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+    }
+
+    .input-field::placeholder { color: rgba(255,255,255,0.35); }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--data), var(--navy-mid));
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.25s var(--ease-out);
+      box-shadow: 0 8px 28px rgba(59,130,246,0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(59,130,246,0.45);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-out);
+    }
+
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    .btn-gold {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #0f172a;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s var(--ease-out);
+      box-shadow: 0 8px 28px rgba(245,158,11,0.3);
+    }
+
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(245,158,11,0.45);
+    }
+
+    .btn-danger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 12px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #f87171;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-out);
+    }
+
+    .btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .status-identificada { background: rgba(59,130,246,0.15); color: var(--data-light); border: 1px solid rgba(59,130,246,0.25); }
+    .status-propuesta { background: rgba(139,92,246,0.15); color: #c084fc; border: 1px solid rgba(139,92,246,0.25); }
+    .status-presentada { background: rgba(245,158,11,0.15); color: var(--gold-light); border: 1px solid rgba(245,158,11,0.25); }
+    .status-adjudicada { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+    .status-no-adjudicada { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+    .status-cerrada { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+    .status-activo { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+    .status-planificacion { background: rgba(245,158,11,0.15); color: var(--gold-light); border: 1px solid rgba(245,158,11,0.25); }
+
+    .kanban-column {
+      min-width: 300px;
+      max-width: 340px;
+      flex: 1;
+    }
+
+    .kanban-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-out);
+    }
+
+    .kanban-card:hover {
+      background: rgba(255,255,255,0.08);
+      transform: translateY(-2px);
+    }
+
+    .doc-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 8px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.active { display: flex; }
+
+    .timeline-item {
+      position: relative;
+      padding-left: 28px;
+      padding-bottom: 20px;
+      border-left: 2px solid rgba(255,255,255,0.1);
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 2px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--data);
+    }
+
+    .timeline-item:last-child { border-left: 2px solid transparent; }
+
+    .tab {
+      padding: 10px 18px;
+      border-radius: 12px;
+      color: rgba(255,255,255,0.5);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: rgba(255,255,255,0.08);
+      color: white;
+    }
+
+    .upload-zone {
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--data);
+      background: rgba(59,130,246,0.05);
+    }
+
+    @media (max-width: 1024px) {
+      .kanban-scroll { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-page"></div>
+  <div class="bg-noise"></div>
+
+  <!-- MODAL: Convertir a Proyecto -->
+  <div id="modal-convertir" class="modal">
+    <div class="glass rounded-3xl p-8 w-full max-w-lg">
+      <h3 class="text-xl font-bold mb-2">Convertir oportunidad en proyecto</h3>
+      <p class="text-white/50 text-sm mb-6">Se creará el proyecto con los datos de la oportunidad adjudicada.</p>
+      <div class="space-y-4 mb-6">
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">CÓDIGO DEL PROYECTO</label>
+          <input type="text" class="input-field" value="IDC-2026-005" readonly>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">FECHA DE INICIO REAL</label>
+          <input type="date" class="input-field" value="2026-09-20">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">RESPONSABLE</label>
+          <select class="input-field">
+            <option>Jelkin</option>
+            <option>Andrea</option>
+            <option>Luis</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-3 justify-end">
+        <button class="btn-secondary" onclick="closeModal('modal-convertir')">Cancelar</button>
+        <button class="btn-gold" onclick="convertirAProyecto()">Crear proyecto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Cerrar Oportunidad -->
+  <div id="modal-cerrar" class="modal">
+    <div class="glass rounded-3xl p-8 w-full max-w-lg">
+      <h3 class="text-xl font-bold mb-2">Cerrar oportunidad</h3>
+      <p class="text-white/50 text-sm mb-6">Indica por qué esta oportunidad no se convierte en proyecto.</p>
+      <div class="space-y-4 mb-6">
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">MOTIVO DE CIERRE</label>
+          <select class="input-field" id="motivo-cierre">
+            <option>Perdió contra competidor</option>
+            <option>Se declaró desierta</option>
+            <option>Cancelada por el cliente</option>
+            <option>No cumplimos requisitos</option>
+            <option>No es rentable</option>
+            <option>Postergada indefinidamente</option>
+            <option>Descartada por Innovadataco</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">COMENTARIO</label>
+          <textarea class="input-field" rows="3" placeholder="Detalles adicionales..."></textarea>
+        </div>
+      </div>
+      <div class="flex gap-3 justify-end">
+        <button class="btn-secondary" onclick="closeModal('modal-cerrar')">Cancelar</button>
+        <button class="btn-danger" onclick="cerrarOportunidad()">Cerrar oportunidad</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA 1: PIPELINE DE OPORTUNIDADES -->
+  <div id="screen-oportunidades" class="screen active max-w-[1600px] mx-auto px-6 py-8">
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h2 class="text-3xl font-bold">Negocios</h2>
+        <p class="text-white/50">Pipeline de oportunidades y proyectos</p>
+      </div>
+      <div class="flex gap-3">
+        <button class="btn-secondary"><i class="fas fa-filter mr-2"></i>Filtros</button>
+        <button class="btn-gold" onclick="showScreen('screen-nueva-oportunidad')"><i class="fas fa-plus mr-2"></i>Nueva oportunidad</button>
+      </div>
+    </header>
+
+    <div class="flex gap-3 mb-8 overflow-x-auto pb-2">
+      <button class="tab active">Pipeline</button>
+      <button class="tab" onclick="showScreen('screen-proyectos')">Proyectos</button>
+      <button class="tab">Clientes</button>
+      <button class="tab">Reportes</button>
+    </div>
+
+    <div class="kanban-scroll flex gap-5 overflow-x-auto pb-4">
+      <!-- Columna: Identificada -->
+      <div class="kanban-column">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-white/80">Identificada</h3>
+          <span class="status-badge status-identificada">2</span>
+        </div>
+        <div class="kanban-card" onclick="showScreen('screen-oportunidad-detalle')">
+          <div class="flex justify-between items-start mb-3">
+            <span class="status-badge status-identificada">Identificada</span>
+            <span class="text-xs text-white/40">OPP-2026-003</span>
+          </div>
+          <h4 class="font-bold mb-1">Modernización BI Municipal</h4>
+          <p class="text-sm text-white/50 mb-3">Alcaldía de Bogotá · Contrato privado</p>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-[var(--gold-light)] font-semibold">$380M</span>
+            <span class="text-white/40">Oct 2026</span>
+          </div>
+        </div>
+        <div class="kanban-card">
+          <div class="flex justify-between items-start mb-3">
+            <span class="status-badge status-identificada">Identificada</span>
+            <span class="text-xs text-white/40">OPP-2026-004</span>
+          </div>
+          <h4 class="font-bold mb-1">Plataforma de Denuncias Anónimas</h4>
+          <p class="text-sm text-white/50 mb-3">Supertransporte · Licitación</p>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-[var(--gold-light)] font-semibold">$210M</span>
+            <span class="text-white/40">Nov 2026</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna: En propuesta -->
+      <div class="kanban-column">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-white/80">En propuesta</h3>
+          <span class="status-badge status-propuesta">1</span>
+        </div>
+        <div class="kanban-card">
+          <div class="flex justify-between items-start mb-3">
+            <span class="status-badge status-propuesta">En propuesta</span>
+            <span class="text-xs text-white/40">OPP-2026-002</span>
+          </div>
+          <h4 class="font-bold mb-1">Sistema de Gestión Documental</h4>
+          <p class="text-sm text-white/50 mb-3">Ministerio de Justicia · Licitación</p>
+          <div class="flex items-center justify-between text-sm mb-3">
+            <span class="text-[var(--gold-light)] font-semibold">$450M</span>
+            <span class="text-white/40">Dic 2026</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-white/40">
+            <i class="fas fa-paperclip"></i> 3 documentos
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna: Presentada -->
+      <div class="kanban-column">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-white/80">Presentada</h3>
+          <span class="status-badge status-presentada">1</span>
+        </div>
+        <div class="kanban-card">
+          <div class="flex justify-between items-start mb-3">
+            <span class="status-badge status-presentada">Presentada</span>
+            <span class="text-xs text-white/40">OPP-2026-001</span>
+          </div>
+          <h4 class="font-bold mb-1">Portal de Transparencia PGN</h4>
+          <p class="text-sm text-white/50 mb-3">Procuraduría · Contratación de mérito</p>
+          <div class="flex items-center justify-between text-sm mb-3">
+            <span class="text-[var(--gold-light)] font-semibold">$180M</span>
+            <span class="text-white/40">Sep 2026</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-white/40">
+            <i class="fas fa-paperclip"></i> 5 documentos
+          </div>
+        </div>
+      </div>
+
+      <!-- Columna: Adjudicada -->
+      <div class="kanban-column">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-white/80">Adjudicada</h3>
+          <span class="status-badge status-adjudicada">1</span>
+        </div>
+        <div class="kanban-card">
+          <div class="flex justify-between items-start mb-3">
+            <span class="status-badge status-adjudicada">Adjudicada</span>
+            <span class="text-xs text-white/40">OPP-2026-000</span>
+          </div>
+          <h4 class="font-bold mb-1">SICOV OTPC Fase 2</h4>
+          <p class="text-sm text-white/50 mb-3">OTPC · Subasta inversa</p>
+          <div class="flex items-center justify-between text-sm mb-3">
+            <span class="text-[var(--gold-light)] font-semibold">$95M</span>
+            <span class="text-white/40">Ago 2026</span>
+          </div>
+          <button class="btn-primary w-full text-sm" onclick="openModal('modal-convertir')">Convertir a proyecto</button>
+        </div>
+      </div>
+
+      <!-- Columna: Cerrada -->
+      <div class="kanban-column">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-white/80">Cerrada</h3>
+          <span class="status-badge status-cerrada">1</span>
+        </div>
+        <div class="kanban-card opacity-60">
+          <div class="flex justify-between items-start mb-3">
+            <span class="status-badge status-no-adjudicada">No adjudicada</span>
+            <span class="text-xs text-white/40">OPP-2026-005</span>
+          </div>
+          <h4 class="font-bold mb-1">App de Veeduría Ciudadana</h4>
+          <p class="text-sm text-white/50 mb-3">Contraloría · Licitación</p>
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-[var(--gold-light)] font-semibold">$120M</span>
+            <span class="text-white/40">Jul 2026</span>
+          </div>
+          <p class="text-xs text-white/40"><i class="fas fa-info-circle mr-1"></i>Perdió contra competidor</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA 2: NUEVA OPORTUNIDAD -->
+  <div id="screen-nueva-oportunidad" class="screen max-w-4xl mx-auto px-6 py-8">
+    <div class="flex items-center gap-3 mb-6">
+      <button class="btn-secondary" onclick="showScreen('screen-oportunidades')"><i class="fas fa-arrow-left"></i></button>
+      <div>
+        <h2 class="text-2xl font-bold">Nueva oportunidad</h2>
+        <p class="text-white/50 text-sm">OPP-2026-006</p>
+      </div>
+    </div>
+
+    <div class="glass-card p-6 mb-6">
+      <h3 class="font-bold mb-5">Información general</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-white/60 mb-2">NOMBRE DEL PROYECTO / NEGOCIO</label>
+          <input type="text" class="input-field" placeholder="Ej: Plataforma de Gestión Documental">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">MODALIDAD</label>
+          <select class="input-field">
+            <option>Licitación</option>
+            <option>Contratación de mérito</option>
+            <option>Subasta inversa</option>
+            <option>Contrato privado</option>
+            <option>Convenio</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">ENTIDAD / CONTRATANTE</label>
+          <input type="text" class="input-field" placeholder="Ej: Ministerio de Justicia">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">CLIENTE (si ya existe)</label>
+          <select class="input-field">
+            <option>-- Nuevo cliente --</option>
+            <option>PGN</option>
+            <option>OTPC</option>
+            <option>Supertransporte</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">RESPONSABLE</label>
+          <select class="input-field">
+            <option>Jelkin</option>
+            <option>Andrea</option>
+            <option>Luis</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">VALOR ESTIMADO</label>
+          <input type="text" class="input-field" placeholder="$ 0">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">FECHA INICIO PLANEADA</label>
+          <input type="date" class="input-field">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-white/60 mb-2">FECHA FIN PLANEADA</label>
+          <input type="date" class="input-field">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-white/60 mb-2">ALCANCE</label>
+          <textarea class="input-field" rows="3" placeholder="Descripción del alcance..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card p-6 mb-6">
+      <h3 class="font-bold mb-5">Documentos</h3>
+      <div class="upload-zone mb-4">
+        <i class="fas fa-cloud-upload-alt text-3xl text-white/30 mb-3"></i>
+        <p class="text-white/60">Arrastra archivos aquí o haz clic para subir</p>
+        <p class="text-xs text-white/40 mt-2">Pliegos, términos de referencia, propuestas</p>
+      </div>
+      <div class="doc-item">
+        <div class="w-10 h-10 rounded-lg bg-[var(--data)]/20 flex items-center justify-center text-[var(--data-light)]"><i class="fas fa-file-pdf"></i></div>
+        <div class="flex-1">
+          <div class="font-medium text-sm">TdR_Plataforma_Gestion.pdf</div>
+          <div class="text-xs text-white/40">2.4 MB · Pliegos</div>
+        </div>
+        <button class="btn-secondary text-xs"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3">
+      <button class="btn-secondary" onclick="showScreen('screen-oportunidades')">Cancelar</button>
+      <button class="btn-primary" onclick="showScreen('screen-oportunidades')">Guardar oportunidad</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 3: DETALLE OPORTUNIDAD -->
+  <div id="screen-oportunidad-detalle" class="screen max-w-6xl mx-auto px-6 py-8">
+    <div class="flex items-center gap-3 mb-6">
+      <button class="btn-secondary" onclick="showScreen('screen-oportunidades')"><i class="fas fa-arrow-left"></i></button>
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold">Portal de Transparencia PGN</h2>
+        <p class="text-white/50 text-sm">OPP-2026-001 · Presentada</p>
+      </div>
+      <span class="status-badge status-presentada">Presentada</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="glass-card p-6">
+          <div class="flex gap-3 mb-6 border-b border-white/10 pb-4">
+            <button class="tab active" onclick="setTab(this, 'opp-info')">Información</button>
+            <button class="tab" onclick="setTab(this, 'opp-docs')">Documentos</button>
+            <button class="tab" onclick="setTab(this, 'opp-historial')">Historial</button>
+          </div>
+
+          <div id="opp-info" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">MODALIDAD</label>
+                <input type="text" class="input-field" value="Contratación de mérito" readonly>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">ENTIDAD</label>
+                <input type="text" class="input-field" value="Procuraduría General de la Nación" readonly>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">FECHA INICIO PLANEADA</label>
+                <input type="date" class="input-field" value="2026-10-01">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">FECHA FIN PLANEADA</label>
+                <input type="date" class="input-field" value="2026-12-15">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">VALOR ESTIMADO</label>
+                <input type="text" class="input-field" value="$180.000.000">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">RESPONSABLE</label>
+                <input type="text" class="input-field" value="Jelkin">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-white/60 mb-2">ALCANCE</label>
+                <textarea class="input-field" rows="3">Desarrollo de portal de transparencia con consulta pública, descarga de documentos y panel administrativo.</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div id="opp-docs" class="tab-content hidden">
+            <div class="upload-zone mb-4">
+              <i class="fas fa-cloud-upload-alt text-3xl text-white/30 mb-3"></i>
+              <p class="text-white/60">Subir nuevo documento</p>
+            </div>
+            <div class="doc-item">
+              <div class="w-10 h-10 rounded-lg bg-[var(--data)]/20 flex items-center justify-center text-[var(--data-light)]"><i class="fas fa-file-pdf"></i></div>
+              <div class="flex-1">
+                <div class="font-medium text-sm">Propuesta_Tecnica_Portal_PGN.pdf</div>
+                <div class="text-xs text-white/40">1.8 MB · Propuesta técnica</div>
+              </div>
+              <button class="btn-secondary text-xs"><i class="fas fa-download mr-1"></i></button>
+            </div>
+            <div class="doc-item">
+              <div class="w-10 h-10 rounded-lg bg-[var(--gold)]/20 flex items-center justify-center text-[var(--gold-light)]"><i class="fas fa-file-excel"></i></div>
+              <div class="flex-1">
+                <div class="font-medium text-sm">Propuesta_Economica_Portal_PGN.xlsx</div>
+                <div class="text-xs text-white/40">580 KB · Propuesta económica</div>
+              </div>
+              <button class="btn-secondary text-xs"><i class="fas fa-download mr-1"></i></button>
+            </div>
+            <div class="doc-item">
+              <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400"><i class="fas fa-file-word"></i></div>
+              <div class="flex-1">
+                <div class="font-medium text-sm">Carta_Presentacion.docx</div>
+                <div class="text-xs text-white/40">320 KB · Carta de presentación</div>
+              </div>
+              <button class="btn-secondary text-xs"><i class="fas fa-download mr-1"></i></button>
+            </div>
+          </div>
+
+          <div id="opp-historial" class="tab-content hidden">
+            <div class="timeline-item">
+              <div class="font-medium text-sm">Oportunidad presentada</div>
+              <div class="text-xs text-white/40">15 sep 2026 · Jelkin</div>
+            </div>
+            <div class="timeline-item">
+              <div class="font-medium text-sm">Propuesta técnica subida</div>
+              <div class="text-xs text-white/40">12 sep 2026 · Andrea</div>
+            </div>
+            <div class="timeline-item">
+              <div class="font-medium text-sm">Oportunidad creada</div>
+              <div class="text-xs text-white/40">05 sep 2026 · Jelkin</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-4">Acciones</h3>
+          <div class="space-y-3">
+            <button class="btn-primary w-full" onclick="openModal('modal-convertir')">Convertir a proyecto</button>
+            <button class="btn-secondary w-full"><i class="fas fa-edit mr-2"></i>Editar</button>
+            <button class="btn-secondary w-full" onclick="openModal('modal-cerrar')"><i class="fas fa-lock mr-2"></i>Cerrar oportunidad</button>
+          </div>
+        </div>
+
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-4">Resumen</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between"><span class="text-white/50">Estado</span><span class="status-badge status-presentada">Presentada</span></div>
+            <div class="flex justify-between"><span class="text-white/50">Valor</span><span>$180M</span></div>
+            <div class="flex justify-between"><span class="text-white/50">Inicio</span><span>Oct 2026</span></div>
+            <div class="flex justify-between"><span class="text-white/50">Entrega</span><span>Dic 2026</span></div>
+            <div class="flex justify-between"><span class="text-white/50">Documentos</span><span>5</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA 4: LISTA DE PROYECTOS -->
+  <div id="screen-proyectos" class="screen max-w-7xl mx-auto px-6 py-8">
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h2 class="text-3xl font-bold">Proyectos</h2>
+        <p class="text-white/50">Proyectos en ejecución y entregados</p>
+      </div>
+      <div class="flex gap-3">
+        <button class="btn-secondary" onclick="showScreen('screen-oportunidades')"><i class="fas fa-arrow-left mr-2"></i>Pipeline</button>
+        <button class="btn-gold"><i class="fas fa-plus mr-2"></i>Nuevo proyecto</button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div class="glass-card p-5 cursor-pointer" onclick="showScreen('screen-proyecto-detalle')">
+        <div class="flex justify-between items-start mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--data)] to-[var(--navy-mid)] flex items-center justify-center text-xl"><i class="fas fa-shield-alt text-white"></i></div>
+          <span class="status-badge status-activo">Activo</span>
+        </div>
+        <h3 class="font-bold text-lg mb-1">PI Web</h3>
+        <p class="text-white/50 text-sm mb-4">Plataforma de Protección Infantil · PGN</p>
+        <div class="flex justify-between text-sm mb-2"><span class="text-white/60">Progreso</span><span class="text-[var(--data-light)]">78%</span></div>
+        <div class="h-1.5 rounded-full bg-white/10 mb-4"><div class="h-full rounded-full bg-gradient-to-r from-[var(--data)] to-[var(--gold)]" style="width:78%"></div></div>
+        <div class="flex justify-between text-xs text-white/40"><span><i class="fas fa-user mr-1"></i>PGN</span><span><i class="fas fa-clock mr-1"></i>3 hitos</span></div>
+      </div>
+
+      <div class="glass-card p-5 cursor-pointer">
+        <div class="flex justify-between items-start mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--gold)] to-[var(--red)] flex items-center justify-center text-xl"><i class="fas fa-chart-bar text-white"></i></div>
+          <span class="status-badge status-activo">Activo</span>
+        </div>
+        <h3 class="font-bold text-lg mb-1">BI Inteligencia de Negocio</h3>
+        <p class="text-white/50 text-sm mb-4">Dashboards y análisis de datos</p>
+        <div class="flex justify-between text-sm mb-2"><span class="text-white/60">Progreso</span><span class="text-[var(--gold-light)]">45%</span></div>
+        <div class="h-1.5 rounded-full bg-white/10 mb-4"><div class="h-full rounded-full bg-gradient-to-r from-[var(--data)] to-[var(--gold)]" style="width:45%"></div></div>
+        <div class="flex justify-between text-xs text-white/40"><span><i class="fas fa-user mr-1"></i>Interno</span><span><i class="fas fa-clock mr-1"></i>2 hitos</span></div>
+      </div>
+
+      <div class="glass-card p-5 cursor-pointer">
+        <div class="flex justify-between items-start mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-800 flex items-center justify-center text-xl"><i class="fas fa-ambulance text-white"></i></div>
+          <span class="status-badge status-planificacion">Planificación</span>
+        </div>
+        <h3 class="font-bold text-lg mb-1">SICOV OTPC</h3>
+        <p class="text-white/50 text-sm mb-4">Sistema de Convocatorias OTPC</p>
+        <div class="flex justify-between text-sm mb-2"><span class="text-white/60">Progreso</span><span class="text-white">12%</span></div>
+        <div class="h-1.5 rounded-full bg-white/10 mb-4"><div class="h-full rounded-full bg-gradient-to-r from-[var(--data)] to-[var(--gold)]" style="width:12%"></div></div>
+        <div class="flex justify-between text-xs text-white/40"><span><i class="fas fa-user mr-1"></i>OTPC</span><span><i class="fas fa-clock mr-1"></i>1 hito</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA 5: DETALLE PROYECTO -->
+  <div id="screen-proyecto-detalle" class="screen max-w-6xl mx-auto px-6 py-8">
+    <div class="flex items-center gap-3 mb-6">
+      <button class="btn-secondary" onclick="showScreen('screen-proyectos')"><i class="fas fa-arrow-left"></i></button>
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold">PI Web</h2>
+        <p class="text-white/50 text-sm">IDC-2026-001 · Activo</p>
+      </div>
+      <span class="status-badge status-activo">Activo</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="glass-card p-6">
+          <div class="flex gap-3 mb-6 border-b border-white/10 pb-4">
+            <button class="tab active" onclick="setTab(this, 'proj-info')">Información</button>
+            <button class="tab" onclick="setTab(this, 'proj-hitos')">Hitos</button>
+            <button class="tab" onclick="setTab(this, 'proj-docs')">Documentos</button>
+          </div>
+
+          <div id="proj-info" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-white/60 mb-2">NOMBRE</label>
+                <input type="text" class="input-field" value="PI Web">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">CLIENTE</label>
+                <input type="text" class="input-field" value="PGN - Protección Infantil">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">ESTADO</label>
+                <select class="input-field">
+                  <option selected>Activo</option>
+                  <option>Planificación</option>
+                  <option>En pausa</option>
+                  <option>Entregado</option>
+                  <option>Cerrado</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">FECHA INICIO</label>
+                <input type="date" class="input-field" value="2026-01-15">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-white/60 mb-2">FECHA ENTREGA</label>
+                <input type="date" class="input-field" value="2026-12-20">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-white/60 mb-2">ALCANCE</label>
+                <textarea class="input-field" rows="3">Plataforma integral para gestión de alertas, casos y reportes de protección infantil.</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div id="proj-hitos" class="tab-content hidden">
+            <button class="btn-secondary mb-4"><i class="fas fa-plus mr-2"></i>Agregar hito</button>
+            <div class="space-y-3">
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                <div class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center text-green-400 text-xs"><i class="fas fa-check"></i></div>
+                <div class="flex-1">
+                  <div class="font-medium text-sm">Levantamiento de requerimientos</div>
+                  <div class="text-xs text-white/40">15 ene - 30 ene</div>
+                </div>
+                <span class="status-badge status-activo">Completado</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                <div class="w-8 h-8 rounded-lg bg-[var(--data)]/20 flex items-center justify-center text-[var(--data-light)] text-xs"><i class="fas fa-spinner"></i></div>
+                <div class="flex-1">
+                  <div class="font-medium text-sm">Desarrollo módulo de reportes</div>
+                  <div class="text-xs text-white/40">1 feb - 30 sep</div>
+                </div>
+                <span class="status-badge status-activo">En curso</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/50 text-xs"><i class="fas fa-lock"></i></div>
+                <div class="flex-1">
+                  <div class="font-medium text-sm">Lanzamiento a producción</div>
+                  <div class="text-xs text-white/40">1 oct - 20 dic</div>
+                </div>
+                <span class="status-badge status-planificacion">Pendiente</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="proj-docs" class="tab-content hidden">
+            <div class="upload-zone mb-4">
+              <i class="fas fa-cloud-upload-alt text-3xl text-white/30 mb-3"></i>
+              <p class="text-white/60">Subir documento del proyecto</p>
+            </div>
+            <div class="doc-item">
+              <div class="w-10 h-10 rounded-lg bg-[var(--data)]/20 flex items-center justify-center text-[var(--data-light)]"><i class="fas fa-file-signature"></i></div>
+              <div class="flex-1">
+                <div class="font-medium text-sm">Contrato_PGN_PI_Web.pdf</div>
+                <div class="text-xs text-white/40">3.1 MB · Contrato</div>
+              </div>
+              <button class="btn-secondary text-xs"><i class="fas fa-download mr-1"></i></button>
+            </div>
+            <div class="doc-item">
+              <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400"><i class="fas fa-file-word"></i></div>
+              <div class="flex-1">
+                <div class="font-medium text-sm">Acta_Inicio_Proyecto.docx</div>
+                <div class="text-xs text-white/40">520 KB · Acta de inicio</div>
+              </div>
+              <button class="btn-secondary text-xs"><i class="fas fa-download mr-1"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-4">Progreso</h3>
+          <div class="text-4xl font-bold text-[var(--data-light)] mb-2">78%</div>
+          <div class="h-1.5 rounded-full bg-white/10 mb-4"><div class="h-full rounded-full bg-gradient-to-r from-[var(--data)] to-[var(--gold)]" style="width:78%"></div></div>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between"><span class="text-white/50">Hitos</span><span>1 de 3</span></div>
+            <div class="flex justify-between"><span class="text-white/50">Tareas</span><span>24 abiertas</span></div>
+            <div class="flex justify-between"><span class="text-white/50">Días rest.</span><span>92</span></div>
+          </div>
+        </div>
+
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-4">Equipo</h3>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--data)] to-[var(--gold)] flex items-center justify-center text-xs font-bold">JE</div>
+              <div><div class="text-sm font-medium">Jelkin</div><div class="text-xs text-white/40">Product Owner</div></div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold">AN</div>
+              <div><div class="text-sm font-medium">Andrea</div><div class="text-xs text-white/40">Tech Lead</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card p-6">
+          <h3 class="font-bold mb-4">Acciones</h3>
+          <div class="space-y-3">
+            <button class="btn-primary w-full">Guardar cambios</button>
+            <button class="btn-secondary w-full"><i class="fas fa-file-export mr-2"></i>Exportar ficha</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function setTab(btn, contentId) {
+      const parent = btn.parentElement.parentElement;
+      parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      parent.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      btn.classList.add('active');
+      document.getElementById(contentId).classList.remove('hidden');
+    }
+
+    function convertirAProyecto() {
+      closeModal('modal-convertir');
+      showScreen('screen-proyecto-detalle');
+    }
+
+    function cerrarOportunidad() {
+      closeModal('modal-cerrar');
+      showScreen('screen-oportunidades');
+    }
+
+    document.querySelectorAll('.modal').forEach(m => {
+      m.addEventListener('click', (e) => {
+        if (e.target === m) closeModal(m.id);
+      });
+    });
+  </script>
+</body>
+</html>
