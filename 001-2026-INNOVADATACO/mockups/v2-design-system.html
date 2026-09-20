@@ -710,7 +710,7 @@
       background: var(--surface);
     }
 
-    /* Login */
+    /* Login — Liquid Glass style */
     .login-bg {
       position: fixed;
       inset: 0;
@@ -719,13 +719,230 @@
       justify-content: center;
       padding: 20px;
       z-index: 500;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .login-bg::before {
+      content: '';
+      position: absolute;
+      inset: -50%;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(10, 132, 255, 0.55), transparent 35%),
+        radial-gradient(circle at 70% 80%, rgba(94, 92, 230, 0.5), transparent 35%),
+        radial-gradient(circle at 80% 30%, rgba(255, 55, 95, 0.35), transparent 30%),
+        radial-gradient(circle at 20% 70%, rgba(48, 209, 88, 0.3), transparent 30%);
+      filter: blur(60px);
+      animation: liquidMove 18s ease-in-out infinite alternate;
+    }
+
+    @keyframes liquidMove {
+      0% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(4%, -3%) scale(1.05); }
+      66% { transform: translate(-3%, 4%) scale(0.98); }
+      100% { transform: translate(2%, 2%) scale(1.02); }
+    }
+
+    .login-orbs {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px);
+      opacity: 0.7;
+      animation: orbFloat 12s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 300px;
+      height: 300px;
+      top: 10%;
+      left: 15%;
+      background: radial-gradient(circle, rgba(10, 132, 255, 0.6), transparent 70%);
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 260px;
+      height: 260px;
+      bottom: 15%;
+      right: 10%;
+      background: radial-gradient(circle, rgba(94, 92, 230, 0.6), transparent 70%);
+      animation-delay: -4s;
+    }
+
+    .orb-3 {
+      width: 180px;
+      height: 180px;
+      top: 50%;
+      right: 25%;
+      background: radial-gradient(circle, rgba(255, 55, 95, 0.45), transparent 70%);
+      animation-delay: -8s;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-30px) scale(1.08); }
     }
 
     .login-card {
+      position: relative;
       width: 100%;
       max-width: 420px;
-      padding: 44px;
+      padding: 52px 44px 44px;
       text-align: center;
+      border-radius: 40px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    }
+
+    .login-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      right: -50%;
+      bottom: -50%;
+      background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.12), transparent 50%);
+      pointer-events: none;
+    }
+
+    .login-logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 24px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(10, 132, 255, 0.25);
+    }
+
+    .login-title {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.7));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .login-subtitle {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 36px;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 16px 18px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 18px;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 16px;
+      outline: none;
+      transition: all 0.2s ease;
+      margin-bottom: 16px;
+    }
+
+    .login-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .login-input:focus {
+      background: rgba(255, 255, 255, 0.11);
+      border-color: rgba(255, 255, 255, 0.35);
+      box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.15);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 17px 24px;
+      margin-top: 8px;
+      border-radius: 20px;
+      border: none;
+      font-size: 17px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(10, 132, 255, 0.85), rgba(10, 132, 255, 0.65));
+      box-shadow:
+        0 8px 24px rgba(10, 132, 255, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .login-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 32px rgba(10, 132, 255, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    }
+
+    .login-btn:hover::before {
+      left: 100%;
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .login-footer {
+      margin-top: 28px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .login-footer a {
+      color: rgba(255, 255, 255, 0.75);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .login-footer a:hover {
+      color: white;
     }
 
     /* Sections */
@@ -811,27 +1028,31 @@
 <body>
   <div class="ambient"></div>
 
-  <!-- Login Screen -->
+  <!-- Login Screen — Liquid Glass -->
   <div id="login-screen" class="login-bg">
-    <div class="login-card glass">
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold mb-2">Innovadataco</h1>
-        <p class="text-sm text-gray-400">Gestión comercial y operativa</p>
+    <div class="login-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+    <div class="login-card">
+      <div class="login-logo">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
       </div>
-      <div class="space-y-4 text-left">
-        <div>
-          <label class="label">Correo electrónico</label>
-          <input type="email" class="input" placeholder="hola@innovadataco.com">
-        </div>
-        <div>
-          <label class="label">Contraseña</label>
-          <input type="password" class="input" placeholder="••••••••">
-        </div>
-        <button onclick="login()" class="btn btn-primary w-full btn-lg mt-2">
+      <h1 class="login-title">Innovadataco</h1>
+      <p class="login-subtitle">Gestión comercial y operativa</p>
+      <div class="text-left">
+        <input type="email" class="login-input" placeholder="Correo electrónico">
+        <input type="password" class="login-input" placeholder="Contraseña">
+        <button onclick="login()" class="login-btn">
           Ingresar
         </button>
       </div>
-      <p class="mt-6 text-xs text-gray-500">¿Olvidaste tu contraseña? <a href="#" class="text-blue-400 hover:underline">Recuperar acceso</a></p>
+      <p class="login-footer">¿Olvidaste tu contraseña? <a href="#">Recuperar acceso</a></p>
     </div>
   </div>
 
