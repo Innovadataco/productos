@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Innovadataco — Ultra God Design System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      /* Innovadataco brand colors */
+      --navy-rgb: 26 54 93;
+      --data-rgb: 59 130 246;
+      --gold-rgb: 245 158 11;
+      --red-rgb: 239 68 68;
+      --yellow-rgb: 251 191 36;
+      --blue-rgb: 96 165 250;
+
+      --bg-rgb: 3 7 18;
+      --surface: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #ffffff;
+      --text-dim: rgba(255, 255, 255, 0.6);
+
+      --curva: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: rgb(var(--bg-rgb));
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* Background inspired by PI: ambient light field */
+    .bg-page {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(1200px 800px at 10% -10%, rgb(var(--navy-rgb) / 0.25) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 90% 10%, rgb(var(--data-rgb) / 0.18) 0%, transparent 45%),
+        radial-gradient(900px 600px at 50% 110%, rgb(var(--gold-rgb) / 0.12) 0%, transparent 50%),
+        rgb(var(--bg-rgb));
+    }
+
+    /* Glass from PI */
+    .glass {
+      background: rgb(var(--bg-rgb) / 0.55);
+      backdrop-filter: saturate(185%) blur(22px);
+      -webkit-backdrop-filter: saturate(185%) blur(22px);
+      border: 1px solid rgb(255 255 255 / 0.1);
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      border-radius: 24px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgb(var(--data-rgb));
+      text-shadow: 0 0 20px rgb(var(--data-rgb) / 0.4);
+      margin-bottom: 20px;
+      animation: entrada 0.6s var(--curva) both;
+    }
+
+    /* Logo inspired by PI's El Guardián */
+    .logo-shield {
+      filter: drop-shadow(0 0 25px rgb(var(--data-rgb) / 0.4));
+    }
+
+    .idc-cuerpo {
+      animation: idc-respirar 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      transform-origin: 50px 52px;
+    }
+
+    @keyframes idc-respirar {
+      0%, 100% { transform: scale(1); }
+      44% { transform: scale(1.028); }
+    }
+
+    .idc-barrido {
+      animation: idc-barrido 5s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+    }
+
+    @keyframes idc-barrido {
+      0% { transform: translateY(-42px); opacity: 0; }
+      12% { opacity: 0.9; }
+      88% { opacity: 0.9; }
+      100% { transform: translateY(46px); opacity: 0; }
+    }
+
+    .idc-nodo {
+      animation: idc-nodo 5s ease-in-out infinite;
+      transform-origin: center;
+    }
+    .idc-nodo:nth-child(1) { animation-delay: 0s; }
+    .idc-nodo:nth-child(2) { animation-delay: 0.6s; }
+    .idc-nodo:nth-child(3) { animation-delay: 1.2s; }
+    .idc-nodo:nth-child(4) { animation-delay: 1.8s; }
+    .idc-nodo:nth-child(5) { animation-delay: 2.4s; }
+
+    @keyframes idc-nodo {
+      0%, 100% { opacity: 0.28; transform: scale(1); }
+      18% { opacity: 1; transform: scale(1.25); }
+      36% { opacity: 0.28; transform: scale(1); }
+    }
+
+    .idc-trazo {
+      stroke-dasharray: 120;
+      stroke-dashoffset: 120;
+      animation: idc-dibujo 1.5s var(--curva) forwards;
+    }
+
+    @keyframes idc-dibujo {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .idc-barra {
+      transform-origin: bottom;
+      animation: idc-barra 1.2s var(--curva) forwards;
+    }
+    .idc-barra:nth-child(2) { animation-delay: 0.2s; }
+    .idc-barra:nth-child(3) { animation-delay: 0.4s; }
+    .idc-barra:nth-child(4) { animation-delay: 0.6s; }
+
+    @keyframes idc-barra {
+      from { transform: scaleY(0); }
+      to { transform: scaleY(1); }
+    }
+
+    /* Button with PI's grain + orbit */
+    :root {
+      --btn-grano: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .btn-ultra {
+      min-height: 52px;
+      border-radius: 16px;
+      padding: 0 28px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      transition: transform 0.28s var(--curva), box-shadow 0.28s var(--curva), filter 0.24s var(--curva);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-ultra--primary {
+      background: linear-gradient(135deg, rgb(var(--data-rgb)), rgb(var(--navy-rgb)));
+      color: white;
+      box-shadow: 0 6px 22px rgb(var(--data-rgb) / 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-ultra--primary::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--btn-grano);
+      background-size: 140px 140px;
+      mix-blend-mode: overlay;
+      opacity: 0.3;
+      pointer-events: none;
+      border-radius: inherit;
+      z-index: 0;
+    }
+
+    .btn-ultra--primary::before {
+      content: "";
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 255, 255, 0.8);
+      top: -4px;
+      left: 22px;
+      z-index: 2;
+      animation: btn-orbita 4.5s var(--curva) infinite;
+    }
+
+    .btn-ultra--primary > * { position: relative; z-index: 1; }
+
+    .btn-ultra--primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgb(var(--data-rgb) / 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    @keyframes btn-orbita {
+      0%   { left: 22px; top: -4px; }
+      25%  { left: calc(100% - 30px); top: -4px; }
+      50%  { left: calc(100% - 30px); top: calc(100% - 4px); }
+      75%  { left: 22px; top: calc(100% - 4px); }
+      100% { left: 22px; top: -4px; }
+    }
+
+    .btn-ultra--gold {
+      background: linear-gradient(135deg, rgb(var(--gold-rgb)), #fbbf24);
+      color: #000;
+      box-shadow: 0 6px 22px rgb(var(--gold-rgb) / 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+
+    .btn-ultra--gold::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--btn-grano);
+      background-size: 140px 140px;
+      mix-blend-mode: overlay;
+      opacity: 0.25;
+      pointer-events: none;
+      border-radius: inherit;
+      z-index: 0;
+    }
+
+    .btn-ultra--ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-ultra--ghost:hover { background: rgba(255, 255, 255, 0.06); }
+
+    /* Inputs */
+    .input-ultra {
+      width: 100%;
+      padding: 15px 18px;
+      background: rgb(255 255 255 / 0.04);
+      border: 1px solid rgb(255 255 255 / 0.1);
+      border-radius: 14px;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: all 0.2s var(--curva);
+    }
+
+    .input-ultra:focus {
+      border-color: rgb(var(--data-rgb));
+      box-shadow: 0 0 0 3px rgb(var(--data-rgb) / 0.12);
+    }
+
+    /* Badges */
+    .badge-ultra {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge-blue { background: rgb(var(--data-rgb) / 0.12); color: rgb(var(--data-rgb)); }
+    .badge-gold { background: rgb(var(--gold-rgb) / 0.12); color: rgb(var(--gold-rgb)); }
+    .badge-red { background: rgb(var(--red-rgb) / 0.12); color: rgb(var(--red-rgb)); }
+    .badge-green { background: rgb(34 197 94 / 0.12); color: #4ade80; }
+
+    /* Progress */
+    .progress-ultra {
+      height: 8px;
+      background: rgb(255 255 255 / 0.06);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .progress-bar-ultra {
+      height: 100%;
+      background: linear-gradient(90deg, rgb(var(--navy-rgb)), rgb(var(--data-rgb)), rgb(var(--gold-rgb)));
+      background-size: 200% 100%;
+      border-radius: 100px;
+      animation: gradientMove 2s linear infinite;
+    }
+
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    /* Cards */
+    .card-ultra {
+      composes: glass;
+      padding: 28px;
+      transition: transform 0.3s var(--curva), box-shadow 0.3s var(--curva);
+      animation: entrada 0.6s var(--curva) both;
+    }
+
+    .card-ultra:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 60px rgb(0 0 0 / 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    /* Animations */
+    @keyframes entrada {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 14px 18px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+    td { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+    tr:hover td { background: rgb(var(--data-rgb) / 0.03); }
+
+    /* Calendar */
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .cal-header { text-align: center; font-size: 12px; font-weight: 700; color: var(--text-dim); padding: 10px 0; }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 14px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .cal-day:hover { background: rgb(255 255 255 / 0.05); }
+    .cal-day.today {
+      background: linear-gradient(135deg, rgb(var(--data-rgb)), rgb(var(--navy-rgb)));
+      color: white;
+      box-shadow: 0 0 20px rgb(var(--data-rgb) / 0.35);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgb(0 0 0 / 0.7);
+      backdrop-filter: blur(12px);
+      z-index: 200;
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-ultra {
+      width: 100%; max-width: 420px;
+      padding: 32px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02));
+      border: 1px solid rgb(255 255 255 / 0.12);
+      box-shadow: 0 40px 100px rgb(0 0 0 / 0.7);
+    }
+
+    /* Toast */
+    .toast-container {
+      position: fixed; top: 24px; right: 24px;
+      z-index: 300;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .toast-ultra {
+      background: linear-gradient(135deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02));
+      border: 1px solid rgb(255 255 255 / 0.12);
+      border-radius: 18px;
+      padding: 16px 20px;
+      box-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+      display: flex; align-items: center; gap: 14px;
+      min-width: 320px;
+      animation: toastIn 0.3s var(--curva);
+    }
+    @keyframes toastIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .component-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-page"></div>
+
+  <div class="max-w-7xl mx-auto px-6 py-12">
+    <header class="mb-16 text-center" style="animation: entrada 0.8s var(--curva) both;">
+      <div class="flex justify-center mb-6">
+        <svg class="logo-shield" width="140" height="165" viewBox="0 0 100 120" fill="none">
+          <defs>
+            <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="rgb(var(--data-rgb))"/>
+              <stop offset="100%" stop-color="rgb(var(--navy-rgb))"/>
+            </linearGradient>
+            <linearGradient id="shieldFill" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="rgb(var(--data-rgb) / 0.25)"/>
+              <stop offset="100%" stop-color="rgb(var(--navy-rgb) / 0.08)"/>
+            </linearGradient>
+            <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="rgb(var(--blue-rgb))"/>
+              <stop offset="50%" stop-color="rgb(var(--yellow-rgb))"/>
+              <stop offset="100%" stop-color="rgb(var(--red-rgb))"/>
+            </linearGradient>
+            <linearGradient id="lineGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="rgb(var(--yellow-rgb))"/>
+              <stop offset="100%" stop-color="rgb(var(--gold-rgb))"/>
+            </linearGradient>
+            <linearGradient id="barGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="rgb(var(--data-rgb))"/>
+              <stop offset="100%" stop-color="rgb(var(--navy-rgb))"/>
+            </linearGradient>
+            <mask id="idc-hueco">
+              <rect width="100" height="100" fill="#fff"/>
+              <g fill="#000">
+                <circle cx="50" cy="44" r="7"/>
+                <path d="M50 53c-7.2 0-12.7 5.3-12.7 12.5v6.2c0 1.2 1 2.2 2.2 2.2h21c1.2 0 2.2-1 2.2-2.2v-6.2C62.7 58.3 57.2 53 50 53Z"/>
+              </g>
+            </mask>
+            <clipPath id="idc-dentro">
+              <path d="M50 8 88 22v29C88 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/>
+            </clipPath>
+          </defs>
+
+          <g class="idc-cuerpo">
+            <path mask="url(#idc-hueco)" fill="url(#shieldFill)" stroke="url(#shieldGrad)" stroke-width="2" d="M50 8 88 22v29C88 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/>
+
+            <g clip-path="url(#idc-dentro)">
+              <rect class="idc-barrido" x="14" y="47" width="72" height="2.4" rx="1.2" fill="rgb(var(--gold-rgb))"/>
+            </g>
+
+            <path class="idc-trazo" d="M28 45 L42 55 L58 42 L72 35" stroke="url(#lineGrad)" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path class="idc-trazo" d="M42 55 L48 78" stroke="url(#lineGrad2)" stroke-width="3" fill="none" stroke-linecap="round" style="animation-delay:0.4s"/>
+
+            <rect class="idc-barra" x="55" y="62" width="8" height="28" rx="2" fill="url(#barGrad)"/>
+            <rect class="idc-barra" x="67" y="52" width="8" height="38" rx="2" fill="url(#barGrad)" style="animation-delay:0.2s"/>
+            <rect class="idc-barra" x="79" y="42" width="8" height="48" rx="2" fill="url(#barGrad)" style="animation-delay:0.4s"/>
+
+            <circle class="idc-nodo" cx="28" cy="45" r="4" fill="rgb(var(--blue-rgb))"/>
+            <circle class="idc-nodo" cx="42" cy="55" r="4" fill="rgb(var(--yellow-rgb))"/>
+            <circle class="idc-nodo" cx="58" cy="42" r="4" fill="rgb(var(--red-rgb))"/>
+            <circle class="idc-nodo" cx="72" cy="35" r="4" fill="rgb(var(--blue-rgb))"/>
+            <circle class="idc-nodo" cx="48" cy="78" r="4" fill="rgb(var(--gold-rgb))"/>
+          </g>
+        </svg>
+      </div>
+      <h1 class="text-5xl md:text-7xl font-bold mb-4 tracking-tight">
+        <span style="color: rgb(var(--navy-rgb));">INNOVA</span><span style="color: rgb(var(--data-rgb));">DATA</span><span style="color: rgb(var(--gold-rgb));">CO</span>
+      </h1>
+      <p class="text-xl text-gray-400">Soluciones tecnológicas · Design System Ultra</p>
+    </header>
+
+    <!-- Buttons -->
+    <section class="mb-16">
+      <h2 class="section-label delay-1">Botones Ultra — grano + órbita + degradado</h2>
+      <div class="component-grid">
+        <div class="glass p-6 delay-1">
+          <div class="flex flex-wrap gap-3">
+            <button class="btn-ultra btn-ultra--primary">Guardar</button>
+            <button class="btn-ultra btn-ultra--gold">Acción dorada</button>
+            <button class="btn-ultra btn-ultra--ghost">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Forms -->
+    <section class="mb-16">
+      <h2 class="section-label delay-2">Formularios</h2>
+      <div class="component-grid">
+        <div class="glass p-6 space-y-4 delay-2">
+          <input type="text" class="input-ultra" placeholder="Nombre del cliente">
+          <input type="email" class="input-ultra" placeholder="correo@innovadataco.com">
+          <input type="password" class="input-ultra" placeholder="Contraseña">
+        </div>
+        <div class="glass p-6 space-y-4 delay-3">
+          <select class="input-ultra">
+            <option>Seleccionar sector</option>
+            <option>Público</option>
+            <option>Privado</option>
+          </select>
+          <textarea class="input-ultra" rows="3" placeholder="Notas..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Badges & Progress -->
+    <section class="mb-16">
+      <h2 class="section-label delay-3">Estados y progreso</h2>
+      <div class="component-grid">
+        <div class="glass p-6 delay-3">
+          <div class="flex flex-wrap gap-2">
+            <span class="badge-ultra badge-blue">Activo</span>
+            <span class="badge-ultra badge-gold">Pendiente</span>
+            <span class="badge-ultra badge-red">Crítico</span>
+            <span class="badge-ultra badge-green">Completado</span>
+          </div>
+        </div>
+        <div class="glass p-6 delay-4">
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-2"><span>Avance</span><span>72%</span></div>
+              <div class="progress-ultra"><div class="progress-bar-ultra" style="width: 72%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="mb-16">
+      <h2 class="section-label delay-4">Tarjetas</h2>
+      <div class="component-grid">
+        <div class="card-ultra delay-2">
+          <div class="flex justify-between items-start mb-4">
+            <h3 class="text-xl font-bold">P-001 · Plataforma datos</h3>
+            <span class="badge-ultra badge-gold">Ejecución</span>
+          </div>
+          <p class="text-gray-400 mb-4">Ministerio de Tecnologías</p>
+          <div class="progress-ultra"><div class="progress-bar-ultra" style="width: 65%"></div></div>
+        </div>
+        <div class="card-ultra delay-3" style="background: linear-gradient(135deg, rgb(var(--data-rgb) / 0.12), rgb(var(--gold-rgb) / 0.05));">
+          <p class="text-sm text-gray-400">Facturación mensual</p>
+          <p class="text-4xl font-bold mt-3 mb-2">$450M</p>
+          <p class="text-sm" style="color: rgb(var(--gold-rgb));">+12% vs mes anterior</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="mb-16">
+      <h2 class="section-label">Tabla</h2>
+      <div class="glass p-0 overflow-hidden">
+        <table>
+          <thead>
+            <tr><th>Cliente</th><th>Contrato</th><th>Valor</th><th>Estado</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-semibold">MinTIC</td>
+              <td>CT-2025-001</td>
+              <td>$450.000.000</td>
+              <td><span class="badge-ultra badge-blue">Vigente</span></td>
+            </tr>
+            <tr>
+              <td class="font-semibold">Ecopetrol</td>
+              <td>CT-2025-004</td>
+              <td>$1.200.000.000</td>
+              <td><span class="badge-ultra badge-red">Por vencer</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="mb-16">
+      <h2 class="section-label">Calendario</h2>
+      <div class="glass p-6 max-w-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold">Septiembre 2026</h3>
+          <div class="flex gap-2">
+            <button class="btn-ultra btn-ultra--ghost" style="padding:8px 14px;font-size:13px;min-height:36px;">&lt;</button>
+            <button class="btn-ultra btn-ultra--ghost" style="padding:8px 14px;font-size:13px;min-height:36px;">Hoy</button>
+            <button class="btn-ultra btn-ultra--ghost" style="padding:8px 14px;font-size:13px;min-height:36px;">&gt;</button>
+          </div>
+        </div>
+        <div class="calendar">
+          <div class="cal-header">Lun</div><div class="cal-header">Mar</div><div class="cal-header">Mié</div><div class="cal-header">Jue</div><div class="cal-header">Vie</div><div class="cal-header">Sáb</div><div class="cal-header">Dom</div>
+          <div class="cal-day text-gray-600">31</div>
+          <div class="cal-day">1</div><div class="cal-day">2</div><div class="cal-day">3</div><div class="cal-day">4</div><div class="cal-day">5</div><div class="cal-day">6</div>
+          <div class="cal-day">7</div><div class="cal-day">8</div><div class="cal-day">9</div><div class="cal-day">10</div><div class="cal-day">11</div><div class="cal-day">12</div><div class="cal-day">13</div>
+          <div class="cal-day">14</div><div class="cal-day">15</div><div class="cal-day">16</div><div class="cal-day">17</div><div class="cal-day">18</div><div class="cal-day today">19</div><div class="cal-day">20</div>
+          <div class="cal-day">21</div><div class="cal-day">22</div><div class="cal-day">23</div><div class="cal-day">24</div><div class="cal-day">25</div><div class="cal-day">26</div><div class="cal-day">27</div>
+          <div class="cal-day">28</div><div class="cal-day">29</div><div class="cal-day">30</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Login -->
+    <section class="mb-16">
+      <h2 class="section-label">Login</h2>
+      <div class="flex justify-center">
+        <div class="glass p-10 max-w-md text-center" style="border-radius: 32px;">
+          <svg class="logo-shield mx-auto mb-6" width="90" height="105" viewBox="0 0 100 120" fill="none">
+            <g class="idc-cuerpo">
+              <path mask="url(#idc-hueco)" fill="url(#shieldFill)" stroke="url(#shieldGrad)" stroke-width="2" d="M50 8 88 22v29C88 69.4 68.4 85.6 50 91 31.6 85.6 18 69.4 18 49V20L50 8Z"/>
+              <g clip-path="url(#idc-dentro)">
+                <rect class="idc-barrido" x="14" y="47" width="72" height="2.4" rx="1.2" fill="rgb(var(--gold-rgb))"/>
+              </g>
+              <path class="idc-trazo" d="M28 45 L42 55 L58 42 L72 35" stroke="url(#lineGrad)" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <path class="idc-trazo" d="M42 55 L48 78" stroke="url(#lineGrad2)" stroke-width="3" fill="none" stroke-linecap="round" style="animation-delay:0.4s"/>
+              <rect class="idc-barra" x="55" y="62" width="8" height="28" rx="2" fill="url(#barGrad)"/>
+              <rect class="idc-barra" x="67" y="52" width="8" height="38" rx="2" fill="url(#barGrad)" style="animation-delay:0.2s"/>
+              <rect class="idc-barra" x="79" y="42" width="8" height="48" rx="2" fill="url(#barGrad)" style="animation-delay:0.4s"/>
+              <circle class="idc-nodo" cx="28" cy="45" r="4" fill="rgb(var(--blue-rgb))"/>
+              <circle class="idc-nodo" cx="42" cy="55" r="4" fill="rgb(var(--yellow-rgb))"/>
+              <circle class="idc-nodo" cx="58" cy="42" r="4" fill="rgb(var(--red-rgb))"/>
+              <circle class="idc-nodo" cx="72" cy="35" r="4" fill="rgb(var(--blue-rgb))"/>
+              <circle class="idc-nodo" cx="48" cy="78" r="4" fill="rgb(var(--gold-rgb))"/>
+            </g>
+          </svg>
+          <h2 class="text-2xl font-bold mb-2">Innovadataco</h2>
+          <p class="text-gray-400 mb-6">Sistema de gestión empresarial</p>
+          <input type="email" class="input-ultra mb-3" placeholder="Correo electrónico">
+          <input type="password" class="input-ultra mb-4" placeholder="Contraseña">
+          <button class="btn-ultra btn-ultra--primary w-full" onclick="showToast('Bienvenido a Innovadataco')">Ingresar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notifications -->
+    <section class="mb-20">
+      <h2 class="section-label">Notificaciones</h2>
+      <div class="glass p-6">
+        <button class="btn-ultra btn-ultra--primary" onclick="showToast('Cliente guardado correctamente')">Mostrar toast</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal-overlay" onclick="closeModal()">
+    <div class="modal-ultra" onclick="event.stopPropagation()">
+      <h3 class="text-2xl font-bold mb-3">Confirmar</h3>
+      <p class="text-gray-400 mb-6">¿Estás seguro de eliminar este registro?</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn-ultra btn-ultra--ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn-ultra btn-ultra--primary" onclick="closeModal(); showToast('Registro eliminado')">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script>
+    function openModal() { document.getElementById('modal').classList.add('open'); }
+    function closeModal() { document.getElementById('modal').classList.remove('open'); }
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast-ultra';
+      toast.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--data-rgb))" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p class="font-medium">${message}</p>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+    }
+  </script>
+</body>
+</html>
