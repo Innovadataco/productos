@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Innovadataco — Design System 2050</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg: #020204;
+      --surface: rgba(255, 255, 255, 0.04);
+      --surface-2: rgba(255, 255, 255, 0.08);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(0, 240, 255, 0.3);
+      --text: #ffffff;
+      --text-dim: rgba(255, 255, 255, 0.6);
+      --text-faint: rgba(255, 255, 255, 0.35);
+      --cyan: #00f0ff;
+      --blue: #0066ff;
+      --purple: #7c3aed;
+      --magenta: #ff00aa;
+      --green: #00ff88;
+      --yellow: #ffcc00;
+      --red: #ff3366;
+    }
+
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Animated mesh background */
+    .universe {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(0, 240, 255, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(124, 58, 237, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(255, 0, 170, 0.06) 0%, transparent 60%),
+        var(--bg);
+    }
+
+    .grid-floor {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image:
+        linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      transform: perspective(600px) rotateX(60deg) translateY(-100px) scale(2);
+      opacity: 0.4;
+      animation: gridMove 20s linear infinite;
+    }
+
+    @keyframes gridMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 60px; }
+    }
+
+    .particles {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--cyan);
+      animation: floatParticle linear infinite;
+      opacity: 0.6;
+    }
+
+    @keyframes floatParticle {
+      0% { transform: translateY(110vh) translateX(0); opacity: 0; }
+      10% { opacity: 0.6; }
+      90% { opacity: 0.6; }
+      100% { transform: translateY(-10vh) translateX(40px); opacity: 0; }
+    }
+
+    /* Typography */
+    .mega {
+      font-size: clamp(48px, 8vw, 96px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      background: linear-gradient(135deg, #fff 0%, var(--cyan) 50%, var(--purple) 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 6s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+      margin-bottom: 24px;
+    }
+
+    /* Glass panels */
+    .panel {
+      background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+      backdrop-filter: blur(30px) saturate(220%);
+      -webkit-backdrop-filter: blur(30px) saturate(220%);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255,255,255,0.12),
+        inset 0 -1px 0 rgba(255,255,255,0.03);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.1), transparent 50%);
+      pointer-events: none;
+    }
+
+    .panel:hover {
+      transform: translateY(-4px);
+      box-shadow:
+        0 32px 100px rgba(0, 0, 0, 0.7),
+        0 0 40px rgba(0, 240, 255, 0.08),
+        inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+
+    /* Glowing border effect */
+    .glow-border::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, var(--cyan), var(--purple), var(--magenta), var(--cyan));
+      background-size: 300% 300%;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: borderRotate 4s linear infinite;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .glow-border:hover::after { opacity: 1; }
+
+    @keyframes borderRotate {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 26px;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      isolation: isolate;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.6s ease;
+      z-index: 1;
+    }
+
+    .btn:hover::before { transform: translateX(100%); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      color: #000;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.35), 0 8px 24px rgba(0, 102, 255, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 50px rgba(0, 240, 255, 0.5), 0 12px 32px rgba(0, 102, 255, 0.35);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(0, 240, 255, 0.4);
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.1);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ff3366, #ff0066);
+      color: white;
+      box-shadow: 0 0 25px rgba(255, 51, 102, 0.3);
+    }
+
+    .btn-danger:hover { box-shadow: 0 0 45px rgba(255, 51, 102, 0.45); }
+
+    .btn-gradient {
+      background: linear-gradient(135deg, var(--purple), var(--magenta), var(--cyan));
+      background-size: 200% 200%;
+      color: white;
+      animation: gradientShift 3s ease infinite;
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-sm { padding: 10px 18px; font-size: 13px; border-radius: 12px; }
+    .btn-lg { padding: 18px 34px; font-size: 17px; border-radius: 18px; }
+    .btn-icon { width: 46px; height: 46px; padding: 0; border-radius: 50%; }
+
+    /* Ripple effect */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.4);
+      transform: scale(0);
+      animation: rippleAnim 0.6s ease-out;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes rippleAnim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* Inputs */
+    .input {
+      width: 100%;
+      padding: 15px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .input::placeholder { color: var(--text-faint); }
+
+    .input:focus {
+      background: rgba(255,255,255,0.07);
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.12), 0 0 25px rgba(0, 240, 255, 0.1);
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      transition: all 0.25s ease;
+    }
+
+    .input-group:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.12), 0 0 25px rgba(0, 240, 255, 0.1);
+    }
+
+    .input-group input {
+      flex: 1; background: transparent; border: none; padding: 14px 0;
+      color: var(--text); outline: none; font-size: 15px;
+    }
+
+    /* Toggle futuristic */
+    .toggle {
+      appearance: none;
+      width: 56px;
+      height: 32px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 100px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 26px;
+      height: 26px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toggle:checked {
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+    }
+
+    .toggle:checked::after { transform: translateX(24px); }
+
+    /* Checkbox futuristic */
+    .checkbox {
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .checkbox:checked {
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      border-color: transparent;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 3px;
+      width: 6px;
+      height: 11px;
+      border: solid #000;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .badge::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transform: translateX(-100%);
+      animation: shimmer 2.5s infinite;
+    }
+
+    @keyframes shimmer {
+      100% { transform: translateX(100%); }
+    }
+
+    .badge-cyan { background: rgba(0, 240, 255, 0.12); color: var(--cyan); box-shadow: 0 0 15px rgba(0, 240, 255, 0.1); }
+    .badge-green { background: rgba(0, 255, 136, 0.12); color: var(--green); }
+    .badge-yellow { background: rgba(255, 204, 0, 0.12); color: var(--yellow); }
+    .badge-red { background: rgba(255, 51, 102, 0.12); color: var(--red); }
+    .badge-purple { background: rgba(124, 58, 237, 0.12); color: #a78bfa; }
+
+    /* Progress bars */
+    .progress {
+      height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 100px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--blue), var(--purple));
+      background-size: 200% 100%;
+      border-radius: 100px;
+      animation: gradientMove 2s linear infinite;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 30px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    /* Tabs */
+    .tabs {
+      display: inline-flex;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 5px;
+      gap: 4px;
+      position: relative;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: color 0.2s ease;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tab.active {
+      color: #000;
+    }
+
+    .tab-slider {
+      position: absolute;
+      top: 5px;
+      bottom: 5px;
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      border-radius: 12px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 0;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+    }
+
+    /* Cards */
+    .card {
+      composes: panel;
+      padding: 28px;
+    }
+
+    .card-3d {
+      transform-style: preserve-3d;
+      transition: transform 0.4s ease;
+    }
+
+    .card-3d:hover {
+      transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateZ(10px);
+    }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th {
+      text-align: left;
+      padding: 16px 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    td {
+      padding: 18px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: var(--text);
+      transition: background 0.15s ease;
+    }
+    tr:hover td { background: rgba(0, 240, 255, 0.03); }
+
+    /* Calendar */
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .cal-header { text-align: center; font-size: 12px; font-weight: 700; color: var(--text-dim); padding: 12px 0; }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .cal-day:hover { background: rgba(255,255,255,0.06); }
+    .cal-day.today {
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      color: #000;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+    }
+    .cal-day.event::after {
+      content: '';
+      position: absolute;
+      bottom: 5px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    /* Sidebar */
+    .sidebar-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      color: var(--text-dim);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 6px;
+      position: relative;
+    }
+    .sidebar-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .sidebar-item.active {
+      background: linear-gradient(135deg, rgba(0,240,255,0.15), rgba(0,102,255,0.1));
+      color: var(--cyan);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(12px);
+      z-index: 200;
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.open { display: flex; opacity: 1; }
+    .modal {
+      width: 100%; max-width: 440px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      backdrop-filter: blur(40px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 60px rgba(0, 240, 255, 0.1);
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+
+    /* Toast */
+    .toast-container {
+      position: fixed; top: 24px; right: 24px;
+      z-index: 300;
+      display: flex; flex-direction: column; gap: 12px;
+      pointer-events: none;
+    }
+    .toast {
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 18px 22px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 30px rgba(0, 240, 255, 0.1);
+      display: flex; align-items: center; gap: 14px;
+      min-width: 320px;
+      pointer-events: auto;
+      animation: toastIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @keyframes toastIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Login futuristic */
+    .login-orb {
+      position: fixed; border-radius: 50%;
+      filter: blur(80px);
+      z-index: -1;
+      animation: orbPulse 8s ease-in-out infinite;
+    }
+    @keyframes orbPulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+    }
+
+    .login-card {
+      width: 100%; max-width: 440px;
+      padding: 48px 40px;
+      border-radius: 36px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      backdrop-filter: blur(40px);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 60px rgba(0, 240, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(135deg, var(--cyan), var(--purple), var(--magenta), var(--cyan));
+      background-size: 300% 300%;
+      border-radius: 38px;
+      z-index: -1;
+      animation: borderRotate 5s linear infinite;
+      opacity: 0.5;
+    }
+
+    .login-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    }
+
+    .login-input {
+      width: 100%; padding: 18px 20px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      color: var(--text); font-size: 16px;
+      outline: none; margin-bottom: 16px;
+      transition: all 0.25s ease;
+    }
+    .login-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 4px rgba(0, 240, 255, 0.1), 0 0 30px rgba(0, 240, 255, 0.15);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .mega { font-size: 42px; }
+      .component-grid { grid-template-columns: 1fr; }
+      .toast-container { right: 16px; left: 16px; }
+      .toast { min-width: auto; width: 100%; }
+    }
+
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="universe"></div>
+  <div class="grid-floor"></div>
+  <div class="particles" id="particles"></div>
+
+  <div class="max-w-7xl mx-auto px-6 py-12">
+    <header class="mb-16">
+      <p class="section-label">Innovadataco · Design System 2050</p>
+      <h1 class="mega mb-4">Futuro visual</h1>
+      <p class="text-lg text-gray-400 max-w-2xl">Degradados animados, microinteracciones, glow dinámico y movimiento en cada acción. Nivel Dios 2050.</p>
+    </header>
+
+    <!-- Buttons -->
+    <section class="mb-16">
+      <h2 class="section-label">Botones con movimiento</h2>
+      <div class="component-grid">
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Gradientes y brillo</p>
+          <div class="flex flex-wrap gap-3">
+            <button class="btn btn-primary" onclick="createRipple(event)">Guardar</button>
+            <button class="btn btn-secondary" onclick="createRipple(event)">Cancelar</button>
+            <button class="btn btn-danger" onclick="createRipple(event)">Eliminar</button>
+            <button class="btn btn-gradient" onclick="createRipple(event)">Acción</button>
+            <button class="btn btn-ghost" onclick="createRipple(event)">Ghost</button>
+          </div>
+        </div>
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Tamaños e iconos</p>
+          <div class="flex flex-wrap items-center gap-3">
+            <button class="btn btn-primary btn-sm" onclick="createRipple(event)">Pequeño</button>
+            <button class="btn btn-primary" onclick="createRipple(event)">Normal</button>
+            <button class="btn btn-primary btn-lg" onclick="createRipple(event)">Grande</button>
+            <button class="btn btn-primary btn-icon" onclick="createRipple(event)">+</button>
+          </div>
+        </div>
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Estados animados</p>
+          <div class="flex flex-wrap gap-3">
+            <button class="btn btn-primary btn-loading"><span class="spinner"></span>Guardando...</button>
+            <button class="btn btn-secondary" style="opacity:0.4;cursor:not-allowed;" disabled>Deshabilitado</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Forms -->
+    <section class="mb-16">
+      <h2 class="section-label">Formularios futuristas</h2>
+      <div class="component-grid">
+        <div class="panel p-6 glow-border space-y-4">
+          <p class="text-sm text-gray-400">Inputs con glow</p>
+          <input type="text" class="login-input" placeholder="Nombre del proyecto">
+          <input type="email" class="login-input" placeholder="correo@empresa.com">
+          <input type="password" class="login-input" placeholder="Contraseña segura">
+        </div>
+        <div class="panel p-6 glow-border space-y-4">
+          <p class="text-sm text-gray-400">Búsqueda y selects</p>
+          <div class="input-group">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar en el sistema...">
+          </div>
+          <select class="input">
+            <option>Seleccionar cliente</option>
+            <option>MinTIC</option>
+            <option>Ecopetrol</option>
+          </select>
+          <textarea class="input" rows="3" placeholder="Notas adicionales..."></textarea>
+        </div>
+        <div class="panel p-6 glow-border space-y-5">
+          <p class="text-sm text-gray-400">Controles</p>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" class="checkbox" checked>
+            <span>Activar notificaciones</span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
+            <span>Modo futurista</span>
+            <input type="checkbox" class="toggle" checked>
+          </label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="plan" class="radio" checked><span>Público</span></label>
+            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="plan" class="radio"><span>Privado</span></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Badges & Progress -->
+    <section class="mb-16">
+      <h2 class="section-label">Badges y progreso</h2>
+      <div class="component-grid">
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Badges con shimmer</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="badge badge-cyan">Activo</span>
+            <span class="badge badge-green">Completado</span>
+            <span class="badge badge-yellow">Pendiente</span>
+            <span class="badge badge-red">Crítico</span>
+            <span class="badge badge-purple">Nuevo</span>
+          </div>
+        </div>
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Barras animadas</p>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-2"><span>Avance proyecto</span><span>78%</span></div>
+              <div class="progress"><div class="progress-bar" style="width: 78%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-2"><span>Cartera</span><span>45%</span></div>
+              <div class="progress"><div class="progress-bar" style="width: 45%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cards 3D -->
+    <section class="mb-16">
+      <h2 class="section-label">Tarjetas 3D</h2>
+      <div class="component-grid">
+        <div class="panel card-3d p-6 glow-border">
+          <div class="flex justify-between items-start mb-4">
+            <h3 class="text-xl font-bold">P-001 · Plataforma IA</h3>
+            <span class="badge badge-cyan">Ejecución</span>
+          </div>
+          <p class="text-gray-400 mb-4">Ministerio de Tecnologías · $2.1B</p>
+          <div class="progress mb-2"><div class="progress-bar" style="width: 65%"></div></div>
+          <p class="text-xs text-gray-500 mt-2">65% completado</p>
+        </div>
+        <div class="panel card-3d p-6 glow-border" style="background: linear-gradient(135deg, rgba(0,240,255,0.08), rgba(124,58,237,0.05));">
+          <p class="text-sm text-gray-400">Facturación anual</p>
+          <p class="text-5xl font-bold mt-3 mb-2">$4.2B</p>
+          <p class="text-sm text-green-400">+23% vs 2025</p>
+        </div>
+        <div class="panel card-3d p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Distribución</p>
+          <div class="flex items-center gap-4">
+            <div class="w-24 h-24 rounded-full relative" style="background: conic-gradient(var(--cyan) 0% 45%, var(--purple) 45% 75%, var(--magenta) 75% 100%);">
+              <div class="absolute inset-3 rounded-full" style="background: var(--bg);"></div>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:var(--cyan)"></div><span>Proyectos 45%</span></div>
+              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:var(--purple)"></div><span>Consultoría 30%</span></div>
+              <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full" style="background:var(--magenta)"></div><span>Otros 25%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <section class="mb-16">
+      <h2 class="section-label">Navegación</h2>
+      <div class="component-grid">
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Tabs con slider animado</p>
+          <div class="tabs" id="futuristic-tabs">
+            <div class="tab-slider" id="tab-slider"></div>
+            <div class="tab active" onclick="moveTab(this, 0)">General</div>
+            <div class="tab" onclick="moveTab(this, 1)">Avanzado</div>
+            <div class="tab" onclick="moveTab(this, 2)">Historial</div>
+          </div>
+        </div>
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Sidebar preview</p>
+          <div style="max-width: 240px;">
+            <div class="sidebar-item active">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </div>
+            <div class="sidebar-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              Clientes
+            </div>
+            <div class="sidebar-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Proyectos
+            </div>
+          </div>
+        </div>
+        <div class="panel p-6 glow-border">
+          <p class="text-sm text-gray-400 mb-4">Modal animado</p>
+          <button class="btn btn-primary" onclick="openModal()">Abrir modal</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="mb-16">
+      <h2 class="section-label">Calendario</h2>
+      <div class="panel p-6 glow-border max-w-2xl">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="text-xl font-bold">Septiembre 2026</h3>
+          <div class="flex gap-2">
+            <button class="btn btn-sm btn-secondary">&lt;</button>
+            <button class="btn btn-sm btn-secondary">Hoy</button>
+            <button class="btn btn-sm btn-secondary">&gt;</button>
+          </div>
+        </div>
+        <div class="calendar">
+          <div class="cal-header">Lun</div><div class="cal-header">Mar</div><div class="cal-header">Mié</div><div class="cal-header">Jue</div><div class="cal-header">Vie</div><div class="cal-header">Sáb</div><div class="cal-header">Dom</div>
+          <div class="cal-day text-gray-600">31</div>
+          <div class="cal-day">1</div><div class="cal-day">2</div><div class="cal-day">3</div><div class="cal-day">4</div><div class="cal-day">5</div><div class="cal-day">6</div>
+          <div class="cal-day">7</div><div class="cal-day">8</div><div class="cal-day">9</div><div class="cal-day">10</div><div class="cal-day">11</div><div class="cal-day">12</div><div class="cal-day">13</div>
+          <div class="cal-day">14</div><div class="cal-day">15</div><div class="cal-day">16</div><div class="cal-day">17</div><div class="cal-day">18</div><div class="cal-day today">19</div><div class="cal-day">20</div>
+          <div class="cal-day event">21</div><div class="cal-day">22</div><div class="cal-day event">23</div><div class="cal-day">24</div><div class="cal-day">25</div><div class="cal-day">26</div><div class="cal-day">27</div>
+          <div class="cal-day">28</div><div class="cal-day">29</div><div class="cal-day">30</div>
+          <div class="cal-day text-gray-600">1</div><div class="cal-day text-gray-600">2</div><div class="cal-day text-gray-600">3</div><div class="cal-day text-gray-600">4</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="mb-16">
+      <h2 class="section-label">Tabla futurista</h2>
+      <div class="panel p-0 glow-border overflow-hidden">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Contrato</th>
+                <th>Valor</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,var(--cyan),var(--blue));color:#000;">MT</div><span class="font-semibold">MinTIC</span></div></td>
+                <td>CT-2025-001</td>
+                <td>$450.000.000</td>
+                <td><span class="badge badge-cyan">Vigente</span></td>
+                <td><button class="btn btn-sm btn-ghost">Ver</button></td>
+              </tr>
+              <tr>
+                <td><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,var(--green),var(--cyan));color:#000;">EC</div><span class="font-semibold">Ecopetrol</span></div></td>
+                <td>CT-2025-004</td>
+                <td>$1.200.000.000</td>
+                <td><span class="badge badge-red">Por vencer</span></td>
+                <td><button class="btn btn-sm btn-ghost">Ver</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Login -->
+    <section class="mb-16">
+      <h2 class="section-label">Login del futuro</h2>
+      <div class="flex justify-center">
+        <div class="login-card">
+          <div class="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center" style="background:linear-gradient(135deg,var(--cyan),var(--blue));box-shadow:0 0 40px rgba(0,240,255,0.4);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <h2 class="text-3xl font-bold mb-2">Innovadataco</h2>
+          <p class="text-gray-400 mb-8">Sistema de gestión empresarial</p>
+          <input type="email" class="login-input" placeholder="Correo electrónico">
+          <input type="password" class="login-input" placeholder="Contraseña">
+          <button class="btn btn-primary w-full btn-lg mt-2" onclick="createRipple(event); showToast('Bienvenido al futuro')">Ingresar</button>
+          <p class="mt-6 text-sm text-gray-500">¿Olvidaste tu acceso? <a href="#" class="text-cyan-400 hover:text-cyan-300">Recuperar</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notifications -->
+    <section class="mb-20">
+      <h2 class="section-label">Notificaciones</h2>
+      <div class="panel p-6 glow-border">
+        <button class="btn btn-primary" onclick="showToast('Cliente guardado con éxito')">Toast éxito</button>
+        <button class="btn btn-danger ml-3" onclick="showToast('Error de conexión detectada')">Toast error</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3 class="text-2xl font-bold mb-3">Confirmar eliminación</h3>
+      <p class="text-gray-400 mb-8">¿Estás seguro? Esta acción no se puede deshacer y eliminará todos los datos asociados.</p>
+      <div class="flex justify-end gap-3">
+        <button class="btn btn-secondary" onclick="closeModal(event)">Cancelar</button>
+        <button class="btn btn-danger" onclick="closeModal(event); showToast('Registro eliminado')">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script>
+    // Generate particles
+    const particlesContainer = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDuration = (8 + Math.random() * 12) + 's';
+      p.style.animationDelay = Math.random() * 10 + 's';
+      particlesContainer.appendChild(p);
+    }
+
+    // Ripple effect
+    function createRipple(e) {
+      const btn = e.currentTarget;
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      btn.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+    }
+
+    // Tab slider
+    function moveTab(tab, index) {
+      const tabs = tab.parentElement;
+      const slider = tabs.querySelector('.tab-slider');
+      const allTabs = tabs.querySelectorAll('.tab');
+      allTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      slider.style.width = tab.offsetWidth + 'px';
+      slider.style.left = tab.offsetLeft + 'px';
+    }
+
+    // Initialize tab slider
+    window.addEventListener('load', () => {
+      const firstTab = document.querySelector('.tab.active');
+      if (firstTab) moveTab(firstTab, 0);
+    });
+
+    // Modal
+    function openModal() {
+      document.getElementById('modal').classList.add('open');
+    }
+
+    function closeModal(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    // Toast
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <p class="font-medium">${message}</p>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(120%)';
+        setTimeout(() => toast.remove(), 400);
+      }, 4500);
+    }
+  </script>
+</body>
+</html>
