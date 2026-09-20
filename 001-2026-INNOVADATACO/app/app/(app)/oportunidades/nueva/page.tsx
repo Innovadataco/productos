@@ -9,9 +9,17 @@ interface Cliente {
   nombre: string;
 }
 
+interface Usuario {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: string;
+}
+
 export default function NuevaOportunidadPage() {
   const router = useRouter();
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [form, setForm] = useState({
     nombre: "",
     modalidad: "LICITACION",
@@ -25,9 +33,13 @@ export default function NuevaOportunidadPage() {
   });
 
   useEffect(() => {
-    fetch("/api/clientes")
-      .then((res) => res.json())
-      .then(setClientes);
+    Promise.all([
+      fetch("/api/clientes").then((res) => res.json()),
+      fetch("/api/usuarios").then((res) => res.json()),
+    ]).then(([cli, usrs]) => {
+      setClientes(Array.isArray(cli) ? cli : []);
+      setUsuarios(Array.isArray(usrs) ? usrs : []);
+    });
   }, []);
 
   const guardar = async (e: React.FormEvent) => {
@@ -76,6 +88,13 @@ export default function NuevaOportunidadPage() {
             <select className="input-field" value={form.clienteId} onChange={(e) => setForm({ ...form, clienteId: e.target.value })}>
               <option value="">-- Nuevo / Sin cliente --</option>
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-white/60 mb-2">RESPONSABLE</label>
+            <select className="input-field" value={form.responsableId} onChange={(e) => setForm({ ...form, responsableId: e.target.value })}>
+              <option value="">-- Sin responsable --</option>
+              {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre} ({u.rol})</option>)}
             </select>
           </div>
           <div>
