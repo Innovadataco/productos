@@ -3,6 +3,21 @@
 # Uso: docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: idc-admin-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: innovadataco
+    volumes:
+      - idc_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   app:
     build:
       context: .
@@ -17,9 +32,13 @@ services:
       NODE_ENV: production
       PORT: "5001"
       HOSTNAME: "0.0.0.0"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/innovadataco?schema=public
     ports:
       # Solo localhost: lo publica Cloudflare Tunnel (proyectos.innovadataco.com).
       - "127.0.0.1:5001:5001"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5001/login || exit 1"]
       interval: 30s
@@ -31,3 +50,4 @@ services:
 volumes:
   idc_admin_node_modules:
   idc_admin_uploads:
+  idc_postgres_data:
