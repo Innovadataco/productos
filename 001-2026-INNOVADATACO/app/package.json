@@ -6,6 +6,11 @@
     "dev": "next dev -p 5001 -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 5001 -H 0.0.0.0",
+    "start:all": "pm2 start ecosystem.config.js",
+    "stop:all": "pm2 stop ecosystem.config.js",
+    "restart:all": "pm2 restart ecosystem.config.js",
+    "status": "pm2 status",
+    "logs": "pm2 logs",
     "lint": "eslint"
   },
   "dependencies": {
@@ -20,6 +25,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "pm2": "^7.0.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5001:5001"
+    environment:
+      NODE_ENV: production
+      PORT: "5001"
+      HOSTNAME: "0.0.0.0"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5001/login || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
