@@ -13,6 +13,7 @@ ARG APP_BUILD_SHA
 ENV NEXT_PUBLIC_APP_BUILD_SHA=${APP_BUILD_SHA}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 
 FROM base AS runner
