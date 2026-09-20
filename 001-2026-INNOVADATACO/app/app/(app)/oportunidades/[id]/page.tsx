@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import DocumentosSection from "../../../components/DocumentosSection";
 
 interface Oportunidad {
   id: string;
@@ -135,6 +136,8 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
           )}
         </div>
       </div>
+
+      <DocumentosSection relacion="oportunidad" entidadId={id} />
     </div>
   );
 }

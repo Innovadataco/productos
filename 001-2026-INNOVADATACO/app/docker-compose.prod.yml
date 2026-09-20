@@ -25,6 +25,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    volumes:
+      - idc_admin_uploads:/app/uploads
 
 volumes:
   idc_admin_node_modules:
+  idc_admin_uploads:

@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import DocumentosSection from "../../../components/DocumentosSection";
 
 interface Proyecto {
   id: string;
@@ -141,6 +142,8 @@ export default function ProyectoDetallePage({ params }: { params: Promise<{ id: 
           </div>
         </div>
       </form>
+
+      <DocumentosSection relacion="proyecto" entidadId={id} />
     </div>
   );
 }
