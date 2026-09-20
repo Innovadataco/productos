@@ -6,6 +6,25 @@ import { useRouter } from "next/navigation";
 import DocumentosSection from "../../../components/DocumentosSection";
 import { formatCOP, parseCOP, diasEjecucion, formatDateInput, formatDateDisplay } from "../../../lib/format";
 
+function CollapsibleSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="glass-card p-5 md:p-6">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between text-left"
+      >
+        <h3 className="font-bold">{title}</h3>
+        <i className={`fas fa-chevron-down text-white/50 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <div className={`overflow-hidden transition-all duration-300 ${open ? "mt-4 max-h-[2000px] opacity-100" : "max-h-0 opacity-0"}`}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 interface Usuario { id: string; nombre: string; email: string; rol: string; }
 
 interface Oportunidad {
@@ -125,11 +144,6 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
     if (res.ok) setOportunidad(await res.json());
   };
 
-  const convertir = async () => {
-    await fetch(`/api/oportunidades/${id}/convertir`, { method: "POST" });
-    router.push("/portafolio");
-  };
-
   const cerrar = async () => {
     await fetch(`/api/oportunidades/${id}/cerrar`, {
       method: "POST",
@@ -183,12 +197,11 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass-card p-6">
+      <div className="space-y-5 max-w-4xl">
+        <CollapsibleSection title="Información" defaultOpen={true}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold">Información</h3>
             {!editando && (
-              <button onClick={() => setEditando(true)} className="btn-secondary text-sm">
+              <button onClick={() => setEditando(true)} className="btn-secondary text-sm ml-auto">
                 <i className="fas fa-pen mr-2"></i>Editar
               </button>
             )}
@@ -299,47 +312,46 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
               </button>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
 
-        <div className="space-y-6">
-          <div className="glass-card p-6">
-            <h3 className="font-bold mb-4">Acciones</h3>
-            <div className="space-y-3">
-              {(oportunidad.estado === "PRESENTADA" || oportunidad.estado === "ADJUDICADA") && (
-                <button onClick={convertir} className="btn-primary w-full">Convertir a proyecto</button>
-              )}
-              {!mostrarCerrar && oportunidad.estado !== "NO_ADJUDICADA" && oportunidad.estado !== "CERRADA" && (
-                <button onClick={() => setMostrarCerrar(true)} className="btn-secondary w-full"><i className="fas fa-lock mr-2"></i>Cerrar oportunidad</button>
-              )}
-              {mostrarCerrar && (
-                <div className="space-y-3">
-                  <select className="input-field" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
-                    <option value="">Selecciona motivo</option>
-                    <option value="Perdió contra competidor">Perdió contra competidor</option>
-                    <option value="Se declaró desierta">Se declaró desierta</option>
-                    <option value="Cancelada por el cliente">Cancelada por el cliente</option>
-                    <option value="No cumplimos requisitos">No cumplimos requisitos</option>
-                    <option value="No es rentable">No es rentable</option>
-                    <option value="Postergada indefinidamente">Postergada indefinidamente</option>
-                    <option value="Descartada por Innovadataco">Descartada por Innovadataco</option>
-                    <option value="Otro">Otro</option>
-                  </select>
-                  <button onClick={cerrar} className="btn-danger w-full">Confirmar cierre</button>
-                </div>
-              )}
-            </div>
+        <CollapsibleSection title="Acciones" defaultOpen={true}>
+          <div className="space-y-3">
+            <Link href={`/proyectos/nuevo?oportunidadId=${id}`} className="btn-primary w-full inline-flex">
+              <i className="fas fa-rocket mr-2"></i>Crear proyecto
+            </Link>
+            {!mostrarCerrar && oportunidad.estado !== "NO_ADJUDICADA" && oportunidad.estado !== "CERRADA" && (
+              <button onClick={() => setMostrarCerrar(true)} className="btn-secondary w-full"><i className="fas fa-lock mr-2"></i>Cerrar oportunidad</button>
+            )}
+            {mostrarCerrar && (
+              <div className="space-y-3">
+                <select className="input-field" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+                  <option value="">Selecciona motivo</option>
+                  <option value="Perdió contra competidor">Perdió contra competidor</option>
+                  <option value="Se declaró desierta">Se declaró desierta</option>
+                  <option value="Cancelada por el cliente">Cancelada por el cliente</option>
+                  <option value="No cumplimos requisitos">No cumplimos requisitos</option>
+                  <option value="No es rentable">No es rentable</option>
+                  <option value="Postergada indefinidamente">Postergada indefinidamente</option>
+                  <option value="Descartada por Innovadataco">Descartada por Innovadataco</option>
+                  <option value="Otro">Otro</option>
+                </select>
+                <button onClick={cerrar} className="btn-danger w-full">Confirmar cierre</button>
+              </div>
+            )}
           </div>
 
           {oportunidad.motivoCierre && (
-            <div className="glass-card p-6">
-              <h3 className="font-bold mb-2">Motivo de cierre</h3>
+            <div className="mt-5 pt-5 border-t border-white/10">
+              <h4 className="font-bold mb-2 text-sm">Motivo de cierre</h4>
               <p className="text-white/60 text-sm">{oportunidad.motivoCierre}</p>
             </div>
           )}
-        </div>
-      </div>
+        </CollapsibleSection>
 
-      <DocumentosSection relacion="oportunidad" entidadId={id} />
+        <CollapsibleSection title="Documentos" defaultOpen={false}>
+          <DocumentosSection relacion="oportunidad" entidadId={id} />
+        </CollapsibleSection>
+      </div>
     </div>
   );
 }

@@ -80,21 +80,6 @@ export default function LoginPage() {
               Ingresar
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-white/10">
-            <p className="text-white/40 text-sm mb-4">O ingresa con</p>
-            <div className="flex justify-center gap-4">
-              <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition">
-                <i className="fab fa-google text-white/70" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition">
-                <i className="fab fa-microsoft text-white/70" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition">
-                <i className="fab fa-apple text-white/70" />
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
