@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Innovadataco — Logo Final V8</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --navy: #0f2444;
+      --navy-mid: #1a365d;
+      --data: #3b82f6;
+      --data-light: #60a5fa;
+      --gold: #f59e0b;
+      --gold-light: #fbbf24;
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.45);
+      --blue-glow: rgba(59, 130, 246, 0.5);
+      --gold-glow: rgba(245, 158, 11, 0.5);
+      --bg: #030712;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .bg-page {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(1400px 900px at 15% -10%, rgba(26, 54, 93, 0.35) 0%, transparent 55%),
+        radial-gradient(1200px 800px at 85% 5%, rgba(59, 130, 246, 0.22) 0%, transparent 50%),
+        radial-gradient(1000px 700px at 50% 120%, rgba(245, 158, 11, 0.16) 0%, transparent 55%),
+        var(--bg);
+    }
+
+    .bg-noise {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.04;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .glass {
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 32px;
+      box-shadow:
+        0 28px 90px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.1),
+        inset 0 -1px 0 rgba(0,0,0,0.2);
+    }
+
+    /* Animaciones */
+    @keyframes respirar {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+      50% { transform: scale(1.02); filter: drop-shadow(0 0 18px rgba(59,130,246,0.25)); }
+    }
+
+    @keyframes flotar {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes barrido {
+      0% { transform: translateY(-55px); opacity: 0; }
+      10% { opacity: 0.95; }
+      90% { opacity: 0.95; }
+      100% { transform: translateY(58px); opacity: 0; }
+    }
+
+    @keyframes brillo {
+      0% { transform: translateX(-120px) rotate(25deg); opacity: 0; }
+      20% { opacity: 0.5; }
+      60% { opacity: 0.5; }
+      80% { transform: translateX(120px) rotate(25deg); opacity: 0; }
+      100% { opacity: 0; }
+    }
+
+    @keyframes dibujo {
+      from { stroke-dashoffset: 220; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes barra-crecer {
+      from { transform: scaleY(0); opacity: 0; }
+      to { transform: scaleY(1); opacity: 1; }
+    }
+
+    @keyframes nodo-pulsar {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.35); opacity: 1; }
+    }
+
+    @keyframes halo {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    @keyframes particula-subir {
+      0% { transform: translateY(0) scale(0.6); opacity: 0; }
+      20% { opacity: 0.8; }
+      80% { opacity: 0.6; }
+      100% { transform: translateY(-70px) scale(0.2); opacity: 0; }
+    }
+
+    @keyframes sombra-respirar {
+      0%, 100% { transform: scale(1); opacity: 0.25; }
+      50% { transform: scale(1.08); opacity: 0.35; }
+    }
+
+    .logo-stage {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      animation: flotar 6s ease-in-out infinite;
+    }
+
+    .logo-svg {
+      width: 220px;
+      height: 240px;
+      filter: drop-shadow(0 20px 50px rgba(0,0,0,0.5));
+      animation: respirar 5s ease-in-out infinite;
+    }
+
+    .shield-shadow {
+      position: absolute;
+      bottom: -20px;
+      width: 160px;
+      height: 24px;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: sombra-respirar 5s ease-in-out infinite;
+      z-index: -1;
+    }
+
+    .scan-line {
+      animation: barrido 4s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+    }
+
+    .shine {
+      animation: brillo 5s ease-in-out infinite;
+    }
+
+    .trend-line {
+      stroke-dasharray: 220;
+      stroke-dashoffset: 220;
+      animation: dibujo 2s var(--ease-out) forwards;
+    }
+
+    .bar {
+      transform-origin: bottom;
+      transform-box: fill-box;
+      animation: barra-crecer 1.4s var(--ease-spring) forwards;
+    }
+
+    .node {
+      transform-origin: center;
+      animation: nodo-pulsar 2.5s ease-in-out infinite;
+    }
+
+    .halo {
+      transform-origin: center;
+      animation: halo 2s ease-out infinite;
+    }
+
+    .particle {
+      animation: particula-subir 3.5s ease-out infinite;
+      opacity: 0;
+    }
+
+    .bar:nth-child(1) { animation-delay: 0.2s; }
+    .bar:nth-child(2) { animation-delay: 0.5s; }
+    .bar:nth-child(3) { animation-delay: 0.8s; }
+    .bar:nth-child(4) { animation-delay: 1.1s; }
+
+    .node:nth-of-type(1) { animation-delay: 0s; }
+    .node:nth-of-type(2) { animation-delay: 0.4s; }
+    .node:nth-of-type(3) { animation-delay: 0.8s; }
+    .node:nth-of-type(4) { animation-delay: 1.2s; }
+
+    .particle:nth-child(1) { animation-delay: 0s; left: 35%; }
+    .particle:nth-child(2) { animation-delay: 1.2s; left: 55%; }
+    .particle:nth-child(3) { animation-delay: 2.4s; left: 45%; }
+
+    .brand-title {
+      font-size: 56px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin-top: 32px;
+      text-align: center;
+    }
+
+    .brand-subtitle {
+      font-size: 18px;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .variant-card {
+      padding: 32px;
+      text-align: center;
+      transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
+    }
+
+    .variant-card:hover {
+      transform: translateY(-6px);
+      box-shadow:
+        0 36px 100px rgba(0,0,0,0.65),
+        0 0 50px rgba(59,130,246,0.12);
+    }
+
+    .small-logo {
+      width: 80px;
+      height: 88px;
+    }
+
+    .medium-logo {
+      width: 140px;
+      height: 154px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 14px;
+      background: linear-gradient(135deg, rgba(59,130,246,0.9), rgba(26,54,93,0.9));
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      cursor: pointer;
+      transition: all 0.25s var(--ease-out);
+      backdrop-filter: blur(10px);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(59,130,246,0.35);
+    }
+
+    .btn-outline {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255,255,255,0.1);
+      box-shadow: 0 12px 32px rgba(255,255,255,0.08);
+    }
+
+    .color-dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+
+    @media (max-width: 768px) {
+      .brand-title { font-size: 38px; }
+      .brand-subtitle { font-size: 14px; }
+      .logo-svg { width: 170px; height: 186px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-page"></div>
+  <div class="bg-noise"></div>
+
+  <div class="max-w-6xl mx-auto px-6 py-16">
+    <!-- Hero -->
+    <div class="text-center mb-20">
+      <div class="logo-stage mb-6">
+        <svg class="logo-svg" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Degradado escudo -->
+            <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1e3a6f"/>
+              <stop offset="50%" stop-color="#0f2444"/>
+              <stop offset="100%" stop-color="#1a365d"/>
+            </linearGradient>
+
+            <!-- Degradado borde escudo -->
+            <linearGradient id="strokeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#60a5fa"/>
+              <stop offset="50%" stop-color="#3b82f6"/>
+              <stop offset="100%" stop-color="#1a365d"/>
+            </linearGradient>
+
+            <!-- Degradado interior cristal -->
+            <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="rgba(59,130,246,0.22)"/>
+              <stop offset="100%" stop-color="rgba(26,54,93,0.04)"/>
+            </linearGradient>
+
+            <!-- Degradado barras -->
+            <linearGradient id="barGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#60a5fa"/>
+              <stop offset="50%" stop-color="#3b82f6"/>
+              <stop offset="100%" stop-color="#1a365d"/>
+            </linearGradient>
+
+            <!-- Degradado dorado línea -->
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#fbbf24"/>
+              <stop offset="100%" stop-color="#f59e0b"/>
+            </linearGradient>
+
+            <!-- Brillo escudo -->
+            <linearGradient id="shineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="rgba(255,255,255,0)"/>
+              <stop offset="45%" stop-color="rgba(255,255,255,0)"/>
+              <stop offset="50%" stop-color="rgba(255,255,255,0.35)"/>
+              <stop offset="55%" stop-color="rgba(255,255,255,0)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+            </linearGradient>
+
+            <clipPath id="shieldClip">
+              <path d="M50 6 L90 21 V56 C90 80 72 97 50 106 C28 97 10 80 10 56 V21 L50 6Z"/>
+            </clipPath>
+
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,0.4)"/>
+            </filter>
+          </defs>
+
+          <!-- Sombra base -->
+          <ellipse cx="50" cy="104" rx="32" ry="5" fill="rgba(0,0,0,0.35)" filter="url(#shadow)"/>
+
+          <!-- Escudo -->
+          <g clip-path="url(#shieldClip)">
+            <!-- Fondo cristal -->
+            <path fill="url(#glassGrad)" d="M50 6 L90 21 V56 C90 80 72 97 50 106 C28 97 10 80 10 56 V21 L50 6Z"/>
+
+            <!-- Línea de escaneo -->
+            <rect class="scan-line" x="8" y="48" width="84" height="1.5" rx="0.75" fill="var(--gold-light)" opacity="0.9" filter="url(#glow)"/>
+
+            <!-- Partículas ascendiendo -->
+            <circle class="particle" cx="35" cy="85" r="1.2" fill="var(--data-light)"/>
+            <circle class="particle" cx="55" cy="90" r="1" fill="var(--gold-light)"/>
+            <circle class="particle" cx="45" cy="80" r="1.4" fill="var(--data-light)"/>
+            <circle class="particle" cx="62" cy="88" r="0.9" fill="var(--gold-light)"/>
+            <circle class="particle" cx="28" cy="92" r="1.1" fill="var(--data-light)"/>
+
+            <!-- Barras (3 principales + 1 de crecimiento) -->
+            <rect class="bar" x="30" y="64" width="9" height="22" rx="2.5" fill="url(#barGrad)" filter="url(#shadow)"/>
+            <rect class="bar" x="44" y="52" width="9" height="34" rx="2.5" fill="url(#barGrad)" filter="url(#shadow)"/>
+            <rect class="bar" x="58" y="58" width="9" height="28" rx="2.5" fill="url(#barGrad)" filter="url(#shadow)"/>
+            <rect class="bar" x="72" y="36" width="9" height="50" rx="2.5" fill="url(#barGrad)" filter="url(#shadow)"/>
+
+            <!-- Línea de tendencia ascendente -->
+            <path class="trend-line" d="M25 62 L39.5 51.5 L53.5 57.5 L76 34" stroke="url(#goldGrad)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+
+            <!-- Nodos en la tendencia -->
+            <circle class="node" cx="25" cy="62" r="4" fill="#3b82f6" filter="url(#glow)"/>
+            <circle class="halo" cx="25" cy="62" r="4" fill="none" stroke="#3b82f6" stroke-width="1"/>
+
+            <circle class="node" cx="39.5" cy="51.5" r="4" fill="#60a5fa" filter="url(#glow)"/>
+            <circle class="halo" cx="39.5" cy="51.5" r="4" fill="none" stroke="#60a5fa" stroke-width="1"/>
+
+            <circle class="node" cx="53.5" cy="57.5" r="4" fill="#fbbf24" filter="url(#glow)"/>
+            <circle class="halo" cx="53.5" cy="57.5" r="4" fill="none" stroke="#fbbf24" stroke-width="1"/>
+
+            <circle class="node" cx="76" cy="34" r="5" fill="#f59e0b" filter="url(#glow)"/>
+            <circle class="halo" cx="76" cy="34" r="5" fill="none" stroke="#f59e0b" stroke-width="1.2"/>
+
+            <!-- Flecha de crecimiento al final -->
+            <path d="M74 40 L76 34 L82 36" stroke="#f59e0b" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+          </g>
+
+          <!-- Borde escudo -->
+          <path fill="none" stroke="url(#strokeGrad)" stroke-width="2.5" d="M50 6 L90 21 V56 C90 80 72 97 50 106 C28 97 10 80 10 56 V21 L50 6Z"/>
+
+          <!-- Reflejo/brillo que cruza -->
+          <rect class="shine" x="0" y="0" width="40" height="120" fill="url(#shineGrad)" clip-path="url(#shieldClip)" style="mix-blend-mode: overlay;"/>
+        </svg>
+        <div class="shield-shadow"></div>
+      </div>
+
+      <h1 class="brand-title">
+        <span style="color: var(--navy-mid);">INNOVA</span><span style="color: var(--data);">DATA</span><span style="color: var(--gold);">CO</span>
+      </h1>
+      <p class="brand-subtitle">Soluciones Tecnológicas · Datos · IA</p>
+
+      <div class="flex flex-wrap justify-center gap-4 mt-10">
+        <button class="btn" onclick="reproducirAnimacion()">Reproducir animación</button>
+        <button class="btn btn-outline" onclick="descargarSVG()">Descargar SVG</button>
+      </div>
+    </div>
+
+    <!-- Variantes -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+      <div class="variant-card glass">
+        <svg class="small-logo mx-auto" viewBox="0 0 100 110">
+          <use href="#logo-symbol"/>
+        </svg>
+        <h3 class="text-lg font-semibold mt-6 mb-2">Favicon / App icon</h3>
+        <p class="text-sm text-white/50">48px · 64px · 180px</p>
+      </div>
+
+      <div class="variant-card glass">
+        <svg class="medium-logo mx-auto" viewBox="0 0 100 110">
+          <use href="#logo-symbol"/>
+        </svg>
+        <h3 class="text-lg font-semibold mt-6 mb-2">Header / Navbar</h3>
+        <p class="text-sm text-white/50">Versión compacta para menú</p>
+      </div>
+
+      <div class="variant-card glass">
+        <svg class="medium-logo mx-auto" viewBox="0 0 100 110">
+          <use href="#logo-symbol"/>
+        </svg>
+        <h3 class="text-lg font-semibold mt-6 mb-2">Loader / Splash</h3>
+        <p class="text-sm text-white/50">Animación infinita suave</p>
+      </div>
+    </div>
+
+    <!-- Paleta -->
+    <div class="glass p-8 mb-16">
+      <h2 class="text-2xl font-bold mb-6 text-center">Paleta de marca</h2>
+      <div class="flex flex-wrap justify-center gap-6">
+        <div class="text-center">
+          <div class="color-dot mx-auto" style="background: var(--navy-mid);"></div>
+          <p class="text-xs text-white/50 mt-2 font-mono">#1A365D</p>
+          <p class="text-sm">Navy</p>
+        </div>
+        <div class="text-center">
+          <div class="color-dot mx-auto" style="background: var(--data);"></div>
+          <p class="text-xs text-white/50 mt-2 font-mono">#3B82F6</p>
+          <p class="text-sm">Data</p>
+        </div>
+        <div class="text-center">
+          <div class="color-dot mx-auto" style="background: var(--gold);"></div>
+          <p class="text-xs text-white/50 mt-2 font-mono">#F59E0B</p>
+          <p class="text-sm">Growth</p>
+        </div>
+        <div class="text-center">
+          <div class="color-dot mx-auto" style="background: var(--data-light);"></div>
+          <p class="text-xs text-white/50 mt-2 font-mono">#60A5FA</p>
+          <p class="text-sm">Light</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Símbolo reutilizable -->
+  <svg width="0" height="0" style="position:absolute;">
+    <defs>
+      <g id="logo-symbol">
+        <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1e3a6f"/>
+          <stop offset="100%" stop-color="#1a365d"/>
+        </linearGradient>
+        <linearGradient id="sgb" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#60a5fa"/>
+          <stop offset="100%" stop-color="#1a365d"/>
+        </linearGradient>
+        <linearGradient id="sgg" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#fbbf24"/>
+          <stop offset="100%" stop-color="#f59e0b"/>
+        </linearGradient>
+        <clipPath id="sc"><path d="M50 6 L90 21 V56 C90 80 72 97 50 106 C28 97 10 80 10 56 V21 L50 6Z"/></clipPath>
+        <path fill="rgba(59,130,246,0.15)" stroke="url(#sgb)" stroke-width="2.5" d="M50 6 L90 21 V56 C90 80 72 97 50 106 C28 97 10 80 10 56 V21 L50 6Z"/>
+        <g clip-path="url(#sc)">
+          <rect x="30" y="64" width="9" height="22" rx="2.5" fill="url(#sgb)"/>
+          <rect x="44" y="52" width="9" height="34" rx="2.5" fill="url(#sgb)"/>
+          <rect x="58" y="58" width="9" height="28" rx="2.5" fill="url(#sgb)"/>
+          <rect x="72" y="36" width="9" height="50" rx="2.5" fill="url(#sgb)"/>
+          <path d="M25 62 L39.5 51.5 L53.5 57.5 L76 34" stroke="url(#sgg)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="25" cy="62" r="4" fill="#3b82f6"/>
+          <circle cx="39.5" cy="51.5" r="4" fill="#60a5fa"/>
+          <circle cx="53.5" cy="57.5" r="4" fill="#fbbf24"/>
+          <circle cx="76" cy="34" r="5" fill="#f59e0b"/>
+        </g>
+      </g>
+    </defs>
+  </svg>
+
+  <script>
+    function reproducirAnimacion() {
+      const svg = document.querySelector('.logo-svg');
+      const clone = svg.cloneNode(true);
+      svg.parentNode.replaceChild(clone, svg);
+    }
+
+    function descargarSVG() {
+      const svg = document.querySelector('.logo-svg').outerHTML;
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'innovadataco-logo.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
