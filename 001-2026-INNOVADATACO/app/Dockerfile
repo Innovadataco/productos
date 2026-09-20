@@ -1,8 +1,7 @@
 # Dockerfile para Innovadataco Admin (Next.js 16)
-FROM node:22-alpine AS base
+FROM node:22-slim AS base
 
 FROM base AS deps
-RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -17,11 +16,11 @@ RUN npx prisma generate
 RUN npm run build
 
 FROM base AS runner
-RUN apk add --no-cache openssl
 WORKDIR /app
 ENV NODE_ENV production
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
