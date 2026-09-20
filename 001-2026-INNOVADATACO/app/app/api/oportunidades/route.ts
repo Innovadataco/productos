@@ -12,6 +12,17 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = await request.json();
 
+  if (body.fechaInicioPlaneada && body.fechaFinPlaneada) {
+    const inicio = new Date(body.fechaInicioPlaneada);
+    const fin = new Date(body.fechaFinPlaneada);
+    if (fin < inicio) {
+      return NextResponse.json(
+        { error: "La fecha de fin no puede ser menor a la fecha de inicio." },
+        { status: 400 }
+      );
+    }
+  }
+
   const ultimas = await prisma.oportunidad.findMany({
     where: { codigo: { startsWith: "OPP-2026-" } },
     orderBy: { codigo: "desc" },

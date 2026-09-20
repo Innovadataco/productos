@@ -10,7 +10,6 @@ const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: "fa-home" },
   { href: "/oportunidades", label: "Oportunidades", icon: "fa-lightbulb" },
   { href: "/portafolio", label: "Proyectos", icon: "fa-folder-open" },
-  { href: "/clientes", label: "Clientes", icon: "fa-users" },
   { href: "/contratos", label: "Contratos", icon: "fa-file-signature" },
   { href: "/finanzas", label: "Finanzas", icon: "fa-chart-line" },
   { href: "/reportes", label: "Reportes", icon: "fa-chart-pie" },

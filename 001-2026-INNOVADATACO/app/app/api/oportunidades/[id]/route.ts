@@ -25,6 +25,17 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
+  if (body.fechaInicioPlaneada && body.fechaFinPlaneada) {
+    const inicio = new Date(body.fechaInicioPlaneada);
+    const fin = new Date(body.fechaFinPlaneada);
+    if (fin < inicio) {
+      return NextResponse.json(
+        { error: "La fecha de fin no puede ser menor a la fecha de inicio." },
+        { status: 400 }
+      );
+    }
+  }
+
   const oportunidad = await prisma.oportunidad.update({
     where: { id },
     data: {

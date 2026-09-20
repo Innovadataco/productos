@@ -1,11 +1,11 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DocumentosSection from "../../../components/DocumentosSection";
+import { formatCOP, parseCOP, diasEjecucion, formatDateInput, formatDateDisplay } from "../../../lib/format";
 
-interface Cliente { id: string; nombre: string; }
 interface Usuario { id: string; nombre: string; email: string; rol: string; }
 
 interface Oportunidad {
@@ -20,8 +20,6 @@ interface Oportunidad {
   fechaFinPlaneada: string | null;
   alcance: string | null;
   motivoCierre: string | null;
-  clienteId: string | null;
-  cliente: { nombre: string } | null;
   responsableId: string | null;
   responsable: { nombre: string } | null;
 }
@@ -54,17 +52,14 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
   const [mensaje, setMensaje] = useState<{ tipo: "exito" | "error"; texto: string } | null>(null);
   const [mostrarCerrar, setMostrarCerrar] = useState(false);
   const [motivo, setMotivo] = useState("");
-  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/oportunidades/${id}`).then((r) => r.json()),
-      fetch("/api/clientes").then((r) => r.json()),
       fetch("/api/usuarios").then((r) => r.json()),
-    ]).then(([opp, cli, usrs]) => {
+    ]).then(([opp, usrs]) => {
       setOportunidad(opp);
-      setClientes(Array.isArray(cli) ? cli : []);
       setUsuarios(Array.isArray(usrs) ? usrs : []);
       setCargando(false);
     }).catch(() => setCargando(false));
@@ -75,10 +70,25 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
     setOportunidad({ ...oportunidad, [campo]: valor } as Oportunidad);
   };
 
+  const dias = useMemo(
+    () => diasEjecucion(oportunidad?.fechaInicioPlaneada ?? null, oportunidad?.fechaFinPlaneada ?? null),
+    [oportunidad?.fechaInicioPlaneada, oportunidad?.fechaFinPlaneada]
+  );
+
   const guardar = async () => {
     if (!oportunidad) return;
     setGuardando(true);
     setMensaje(null);
+
+    if (oportunidad.fechaInicioPlaneada && oportunidad.fechaFinPlaneada) {
+      const inicio = new Date(oportunidad.fechaInicioPlaneada);
+      const fin = new Date(oportunidad.fechaFinPlaneada);
+      if (fin < inicio) {
+        setGuardando(false);
+        setMensaje({ tipo: "error", texto: "La fecha de fin no puede ser menor a la fecha de inicio." });
+        return;
+      }
+    }
 
     const res = await fetch(`/api/oportunidades/${id}`, {
       method: "PATCH",
@@ -87,7 +97,7 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
         nombre: oportunidad.nombre,
         modalidad: oportunidad.modalidad,
         entidadContratante: oportunidad.entidadContratante,
-        clienteId: oportunidad.clienteId,
+        clienteId: null,
         responsableId: oportunidad.responsableId,
         fechaInicioPlaneada: oportunidad.fechaInicioPlaneada,
         fechaFinPlaneada: oportunidad.fechaFinPlaneada,
@@ -145,8 +155,6 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
       default: return "status-identificada";
     }
   };
-
-  const inputFecha = (valor: string | null) => valor ? new Date(valor).toISOString().split("T")[0] : "";
 
   return (
     <div className="page-enter max-w-5xl">
@@ -219,18 +227,6 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-white/60 mb-2">CLIENTE</label>
-              {editando ? (
-                <select className="input-field" value={oportunidad.clienteId || ""} onChange={(e) => actualizarCampo("clienteId", e.target.value || null)}>
-                  <option value="">-- Sin cliente --</option>
-                  {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-              ) : (
-                <input className="input-field" value={oportunidad.cliente?.nombre || "-"} readOnly />
-              )}
-            </div>
-
-            <div>
               <label className="block text-xs font-semibold text-white/60 mb-2">RESPONSABLE</label>
               {editando ? (
                 <select className="input-field" value={oportunidad.responsableId || ""} onChange={(e) => actualizarCampo("responsableId", e.target.value || null)}>
@@ -245,27 +241,43 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
             <div>
               <label className="block text-xs font-semibold text-white/60 mb-2">VALOR ESTIMADO</label>
               {editando ? (
-                <input type="number" className="input-field" value={oportunidad.valorEstimado ?? ""} onChange={(e) => actualizarCampo("valorEstimado", e.target.value === "" ? null : e.target.value)} />
+                <input
+                  inputMode="numeric"
+                  className="input-field"
+                  value={oportunidad.valorEstimado !== null && oportunidad.valorEstimado !== undefined ? formatCOP(oportunidad.valorEstimado) : ""}
+                  onChange={(e) => {
+                    const num = parseCOP(e.target.value);
+                    actualizarCampo("valorEstimado", num === null ? null : String(num));
+                  }}
+                  placeholder="$0"
+                />
               ) : (
-                <input className="input-field" value={oportunidad.valorEstimado ? new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(Number(oportunidad.valorEstimado)) : "-"} readOnly />
+                <input className="input-field" value={formatCOP(oportunidad.valorEstimado) || "-"} readOnly />
               )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-white/60 mb-2">DÍAS DE EJECUCIÓN</label>
+              <div className="input-field flex items-center text-white/70">
+                {dias !== null ? `${dias} días` : "--"}
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-white/60 mb-2">FECHA INICIO PLANEADA</label>
               {editando ? (
-                <input type="date" className="input-field" value={inputFecha(oportunidad.fechaInicioPlaneada)} onChange={(e) => actualizarCampo("fechaInicioPlaneada", e.target.value || null)} />
+                <input type="date" className="input-field" value={formatDateInput(oportunidad.fechaInicioPlaneada)} onChange={(e) => actualizarCampo("fechaInicioPlaneada", e.target.value || null)} />
               ) : (
-                <input className="input-field" value={oportunidad.fechaInicioPlaneada ? new Date(oportunidad.fechaInicioPlaneada).toLocaleDateString("es-CO") : "-"} readOnly />
+                <input className="input-field" value={formatDateDisplay(oportunidad.fechaInicioPlaneada)} readOnly />
               )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-white/60 mb-2">FECHA FIN PLANEADA</label>
               {editando ? (
-                <input type="date" className="input-field" value={inputFecha(oportunidad.fechaFinPlaneada)} onChange={(e) => actualizarCampo("fechaFinPlaneada", e.target.value || null)} />
+                <input type="date" className="input-field" value={formatDateInput(oportunidad.fechaFinPlaneada)} onChange={(e) => actualizarCampo("fechaFinPlaneada", e.target.value || null)} />
               ) : (
-                <input className="input-field" value={oportunidad.fechaFinPlaneada ? new Date(oportunidad.fechaFinPlaneada).toLocaleDateString("es-CO") : "-"} readOnly />
+                <input className="input-field" value={formatDateDisplay(oportunidad.fechaFinPlaneada)} readOnly />
               )}
             </div>
 
