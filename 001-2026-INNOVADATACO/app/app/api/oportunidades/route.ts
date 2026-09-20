@@ -1,0 +1,36 @@
+import { NextResponse } from "next/server";
+import { prisma } from "../../lib/prisma";
+
+export async function GET() {
+  const oportunidades = await prisma.oportunidad.findMany({
+    include: { cliente: true, responsable: true, proyecto: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return NextResponse.json(oportunidades);
+}
+
+export async function POST(request: Request) {
+  const body = await request.json();
+
+  const count = await prisma.oportunidad.count();
+  const codigo = `OPP-2026-${String(count).padStart(3, "0")}`;
+
+  const oportunidad = await prisma.oportunidad.create({
+    data: {
+      codigo,
+      nombre: body.nombre,
+      modalidad: body.modalidad,
+      entidadContratante: body.entidadContratante,
+      clienteId: body.clienteId || null,
+      responsableId: body.responsableId || null,
+      fechaInicioPlaneada: body.fechaInicioPlaneada ? new Date(body.fechaInicioPlaneada) : null,
+      fechaFinPlaneada: body.fechaFinPlaneada ? new Date(body.fechaFinPlaneada) : null,
+      valorEstimado: body.valorEstimado ? Number(body.valorEstimado) : null,
+      alcance: body.alcance,
+      estado: "IDENTIFICADA",
+    },
+    include: { cliente: true, responsable: true },
+  });
+
+  return NextResponse.json(oportunidad, { status: 201 });
+}

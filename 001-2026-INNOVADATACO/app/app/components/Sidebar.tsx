@@ -8,7 +8,7 @@ import Logo from "./Logo";
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: "fa-home" },
-  { href: "/portafolio", label: "Portafolio", icon: "fa-briefcase" },
+  { href: "/oportunidades", label: "Oportunidades", icon: "fa-lightbulb" },
   { href: "/portafolio", label: "Proyectos", icon: "fa-folder-open" },
   { href: "/clientes", label: "Clientes", icon: "fa-users" },
   { href: "/contratos", label: "Contratos", icon: "fa-file-signature" },
