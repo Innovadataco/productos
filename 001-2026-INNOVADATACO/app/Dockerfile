@@ -1,5 +1,6 @@
 # Dockerfile para Innovadataco Admin (Next.js 16)
-FROM node:22-slim AS base
+# Usamos bullseye porque Prisma 5/6 necesita libssl1.1 y bookworm trae libssl3.
+FROM node:20-bullseye-slim AS base
 
 FROM base AS deps
 WORKDIR /app
