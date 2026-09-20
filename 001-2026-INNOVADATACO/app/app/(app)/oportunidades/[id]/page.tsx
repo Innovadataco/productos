@@ -53,12 +53,8 @@ const modalidades = [
 ];
 
 const estados = [
-  { key: "IDENTIFICADA", label: "Identificada" },
-  { key: "EN_PROPUESTA", label: "En propuesta" },
-  { key: "PRESENTADA", label: "Presentada" },
-  { key: "ADJUDICADA", label: "Adjudicada" },
-  { key: "NO_ADJUDICADA", label: "No adjudicada" },
-  { key: "CERRADA", label: "Cerrada" },
+  { key: "ACTIVA", label: "Activa" },
+  { key: "CERRADA", label: "Finalizada" },
 ];
 
 export default function OportunidadDetallePage({ params }: { params: Promise<{ id: string }> }) {
@@ -159,15 +155,7 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
   if (!oportunidad) return <div className="page-enter text-white/50">Oportunidad no encontrada</div>;
 
   const statusClass = (estado: string) => {
-    switch (estado) {
-      case "IDENTIFICADA": return "status-identificada";
-      case "EN_PROPUESTA": return "status-propuesta";
-      case "PRESENTADA": return "status-presentada";
-      case "ADJUDICADA": return "status-adjudicada";
-      case "NO_ADJUDICADA": return "status-no-adjudicada";
-      case "CERRADA": return "status-cerrada";
-      default: return "status-identificada";
-    }
+    return estado === "CERRADA" ? "status-cerrada" : "status-activo";
   };
 
   return (
@@ -319,8 +307,8 @@ export default function OportunidadDetallePage({ params }: { params: Promise<{ i
             <Link href={`/proyectos/nuevo?oportunidadId=${id}`} className="btn-primary w-full inline-flex">
               <i className="fas fa-rocket mr-2"></i>Crear proyecto
             </Link>
-            {!mostrarCerrar && oportunidad.estado !== "NO_ADJUDICADA" && oportunidad.estado !== "CERRADA" && (
-              <button onClick={() => setMostrarCerrar(true)} className="btn-secondary w-full"><i className="fas fa-lock mr-2"></i>Cerrar oportunidad</button>
+            {!mostrarCerrar && oportunidad.estado !== "CERRADA" && (
+              <button onClick={() => setMostrarCerrar(true)} className="btn-secondary w-full"><i className="fas fa-lock mr-2"></i>Finalizar oportunidad</button>
             )}
             {mostrarCerrar && (
               <div className="space-y-3">

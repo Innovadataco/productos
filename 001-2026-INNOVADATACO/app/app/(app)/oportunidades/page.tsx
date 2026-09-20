@@ -3,28 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatCOP, diasEjecucion } from "../../lib/format";
+import { formatCOP, diasEjecucion, formatDateDisplay } from "../../lib/format";
 
 interface Oportunidad {
   id: string;
   codigo: string;
   nombre: string;
-  modalidad: string;
   entidadContratante: string;
   estado: string;
   valorEstimado: number | null;
   fechaInicioPlaneada: string | null;
   fechaFinPlaneada: string | null;
+  responsable: { nombre: string } | null;
 }
-
-const columnas = [
-  { key: "IDENTIFICADA", label: "Identificada", class: "status-identificada" },
-  { key: "EN_PROPUESTA", label: "En propuesta", class: "status-propuesta" },
-  { key: "PRESENTADA", label: "Presentada", class: "status-presentada" },
-  { key: "ADJUDICADA", label: "Adjudicada", class: "status-adjudicada" },
-  { key: "NO_ADJUDICADA", label: "No adjudicada", class: "status-no-adjudicada" },
-  { key: "CERRADA", label: "Cerrada", class: "status-cerrada" },
-];
 
 export default function OportunidadesPage() {
   const router = useRouter();
@@ -41,6 +32,18 @@ export default function OportunidadesPage() {
       .catch(() => setCargando(false));
   }, []);
 
+  const finalizar = async (id: string) => {
+    if (!confirm("¿Finalizar esta oportunidad?")) return;
+    await fetch(`/api/oportunidades/${id}/cerrar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ motivoCierre: "Finalizada por el usuario" }),
+    });
+    setOportunidades((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, estado: "CERRADA" } : o))
+    );
+  };
+
   if (cargando) return <div className="page-enter text-white/50">Cargando oportunidades...</div>;
 
   return (
@@ -50,57 +53,80 @@ export default function OportunidadesPage() {
           <h2 className="text-2xl md:text-3xl font-bold">Oportunidades</h2>
           <p className="text-white/50 text-sm md:text-base">Pipeline de negocios</p>
         </div>
-        <div className="flex gap-3">
-          <Link href="/oportunidades/nueva" className="btn-gold text-sm md:text-base">
-            <i className="fas fa-plus mr-2"></i>Nueva
-          </Link>
-        </div>
+        <Link href="/oportunidades/nueva" className="btn-gold text-sm md:text-base">
+          <i className="fas fa-plus mr-2"></i>Nueva oportunidad
+        </Link>
       </header>
 
-      <div className="kanban-board">
-        {columnas.map((col) => (
-          <div key={col.key} className="kanban-column">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-white/80 text-sm">{col.label}</h3>
-              <span className={`status-badge ${col.class}`}>
-                {oportunidades.filter((o) => o.estado === col.key).length}
-              </span>
-            </div>
-            <div className="kanban-cards">
-              {oportunidades
-                .filter((o) => o.estado === col.key)
-                .map((o) => {
-                  const dias = diasEjecucion(o.fechaInicioPlaneada, o.fechaFinPlaneada);
-                  return (
-                    <div
-                      key={o.id}
-                      onClick={() => router.push(`/oportunidades/${o.id}`)}
-                      className="kanban-card cursor-pointer"
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {oportunidades.map((o) => {
+          const dias = diasEjecucion(o.fechaInicioPlaneada, o.fechaFinPlaneada);
+          const activa = o.estado === "ACTIVA";
+          return (
+            <div key={o.id} className="glass-card p-5 flex flex-col">
+              <div className="flex justify-between items-start mb-3">
+                <span className={`status-badge ${activa ? "status-activo" : "status-cerrado"}`}>
+                  {activa ? "Activa" : "Finalizada"}
+                </span>
+                <span className="text-xs text-white/40">{o.codigo}</span>
+              </div>
+
+              <h3 className="font-bold text-lg mb-1">{o.nombre}</h3>
+              <p className="text-sm text-white/50 mb-4">{o.entidadContratante}</p>
+
+              <div className="space-y-2 text-sm mb-5">
+                <div className="flex justify-between">
+                  <span className="text-white/40">Valor estimado</span>
+                  <span className="text-[var(--gold-light)] font-semibold">{formatCOP(o.valorEstimado) || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Ejecución</span>
+                  <span className="text-white/70">{dias !== null ? `${dias} días` : "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Entrega</span>
+                  <span className="text-white/70">{formatDateDisplay(o.fechaFinPlaneada)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Responsable</span>
+                  <span className="text-white/70">{o.responsable?.nombre || "-"}</span>
+                </div>
+              </div>
+
+              <div className="mt-auto flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => router.push(`/oportunidades/${o.id}`)}
+                    className="btn-secondary text-xs py-2"
+                  >
+                    <i className="fas fa-pen mr-1"></i>Editar
+                  </button>
+                  {activa && (
+                    <button
+                      onClick={() => finalizar(o.id)}
+                      className="btn-secondary text-xs py-2"
                     >
-                      <div className="flex justify-between items-start mb-3">
-                        <span className={`status-badge ${col.class}`}>{col.label}</span>
-                        <span className="text-xs text-white/40">{o.codigo}</span>
-                      </div>
-                      <h4 className="font-bold mb-1 text-sm md:text-base text-white">{o.nombre}</h4>
-                      <p className="text-xs md:text-sm text-white/50 mb-3">{o.entidadContratante}</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                        <span className="text-[var(--gold-light)] font-semibold">{formatCOP(o.valorEstimado) || "-"}</span>
-                        <span className="text-white/40 text-right">{dias !== null ? `${dias} días` : "-"}</span>
-                      </div>
-                      <Link
-                        href={`/proyectos/nuevo?oportunidadId=${o.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="btn-primary w-full text-xs py-2"
-                      >
-                        <i className="fas fa-rocket mr-2"></i>Crear proyecto
-                      </Link>
-                    </div>
-                  );
-                })}
+                      <i className="fas fa-lock mr-1"></i>Finalizar
+                    </button>
+                  )}
+                </div>
+                <Link
+                  href={`/proyectos/nuevo?oportunidadId=${o.id}`}
+                  className="btn-primary text-xs py-2 inline-flex justify-center"
+                >
+                  <i className="fas fa-rocket mr-2"></i>Crear proyecto
+                </Link>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {oportunidades.length === 0 && (
+        <div className="glass-card p-10 text-center mt-8">
+          <p className="text-white/50">No hay oportunidades. Crea la primera.</p>
+        </div>
+      )}
     </div>
   );
 }

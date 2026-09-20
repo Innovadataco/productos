@@ -53,7 +53,7 @@ model Oportunidad {
   fechaFinPlaneada    DateTime? @map("fecha_fin_planeada")
   valorEstimado       Decimal? @db.Decimal(15, 2) @map("valor_estimado")
   alcance             String?
-  estado              String   // IDENTIFICADA | EN_PROPUESTA | PRESENTADA | ADJUDICADA | NO_ADJUDICADA | CERRADA
+  estado              String   // ACTIVA | CERRADA
   motivoCierre        String?  @map("motivo_cierre")
   comentarioCierre    String?  @map("comentario_cierre")
 

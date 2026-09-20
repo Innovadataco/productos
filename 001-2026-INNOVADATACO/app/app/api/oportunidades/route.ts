@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       fechaFinPlaneada: body.fechaFinPlaneada ? new Date(body.fechaFinPlaneada) : null,
       valorEstimado: body.valorEstimado ? Number(body.valorEstimado) : null,
       alcance: body.alcance,
-      estado: "IDENTIFICADA",
+      estado: "ACTIVA",
     },
     include: { cliente: true, responsable: true },
   });

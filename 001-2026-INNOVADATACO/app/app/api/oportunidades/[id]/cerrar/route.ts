@@ -14,12 +14,10 @@ export async function POST(
     return NextResponse.json({ error: "Oportunidad no encontrada" }, { status: 404 });
   }
 
-  const estado = body.adjudicada === true ? "ADJUDICADA" : "NO_ADJUDICADA";
-
   const actualizada = await prisma.oportunidad.update({
     where: { id },
     data: {
-      estado,
+      estado: "CERRADA",
       motivoCierre: body.motivoCierre || null,
       comentarioCierre: body.comentarioCierre || null,
     },
