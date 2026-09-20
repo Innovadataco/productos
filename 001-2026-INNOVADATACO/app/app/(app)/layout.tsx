@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../components/AuthProvider";
 import Sidebar from "../components/Sidebar";
@@ -8,15 +8,25 @@ import Sidebar from "../components/Sidebar";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const [verificando, setVerificando] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    const timer = setTimeout(() => setVerificando(false), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!verificando && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, verificando]);
 
-  if (!isAuthenticated) {
-    return null;
+  if (verificando || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white/50">
+        <i className="fas fa-circle-notch fa-spin text-2xl mr-3"></i> Cargando...
+      </div>
+    );
   }
 
   return (
