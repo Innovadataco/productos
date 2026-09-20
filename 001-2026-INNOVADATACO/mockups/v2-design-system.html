@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Innovadataco — Design System v2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            glass: {
+              50: 'rgba(255,255,255,0.05)',
+              100: 'rgba(255,255,255,0.10)',
+              200: 'rgba(255,255,255,0.15)',
+              300: 'rgba(255,255,255,0.20)',
+              400: 'rgba(255,255,255,0.30)',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-primary: #000000;
+      --bg-secondary: #0a0a0f;
+      --bg-tertiary: rgba(20, 20, 28, 0.6);
+      --surface: rgba(255, 255, 255, 0.06);
+      --surface-hover: rgba(255, 255, 255, 0.10);
+      --surface-active: rgba(255, 255, 255, 0.14);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.55);
+      --text-tertiary: rgba(255, 255, 255, 0.35);
+      --accent: #0a84ff;
+      --accent-glow: rgba(10, 132, 255, 0.45);
+      --accent-purple: #5e5ce6;
+      --success: #30d158;
+      --warning: #ff9f0a;
+      --danger: #ff453a;
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255,255,255,0.06);
+      --shadow-glow: 0 0 40px var(--accent-glow);
+    }
+
+    * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    /* Ambient background */
+    .ambient {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(10, 132, 255, 0.18), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(94, 92, 230, 0.14), transparent 55%),
+        radial-gradient(ellipse 70% 60% at 60% 90%, rgba(10, 132, 255, 0.10), transparent 55%),
+        linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    }
+
+    /* Glass card */
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .glass-strong {
+      background: rgba(255, 255, 255, 0.10);
+      backdrop-filter: blur(32px) saturate(200%);
+      -webkit-backdrop-filter: blur(32px) saturate(200%);
+      border: 1px solid var(--border-strong);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 20px;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 0 20px rgba(10, 132, 255, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 30px rgba(10, 132, 255, 0.5), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 0 12px rgba(10, 132, 255, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+
+    .btn-danger {
+      background: rgba(255, 69, 58, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(255, 69, 58, 0.25);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 69, 58, 0.25);
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 13px;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-lg {
+      padding: 15px 28px;
+      font-size: 16px;
+      border-radius: var(--radius-lg);
+    }
+
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+    }
+
+    .btn-loading {
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Inputs */
+    .input {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 15px;
+      outline: none;
+      transition: all 0.18s ease;
+    }
+
+    .input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .input:focus {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    .input-group:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+    }
+
+    .input-group input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 13px 0;
+      color: var(--text-primary);
+      outline: none;
+      font-size: 15px;
+    }
+
+    /* Labels */
+    .label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-success { background: rgba(48, 209, 88, 0.14); color: var(--success); }
+    .badge-warning { background: rgba(255, 159, 10, 0.14); color: var(--warning); }
+    .badge-danger { background: rgba(255, 69, 58, 0.14); color: var(--danger); }
+    .badge-info { background: rgba(10, 132, 255, 0.14); color: var(--accent); }
+    .badge-neutral { background: var(--surface); color: var(--text-secondary); }
+
+    /* Toggle */
+    .toggle {
+      appearance: none;
+      width: 50px;
+      height: 30px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 100px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 26px;
+      height: 26px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toggle:checked {
+      background: var(--accent);
+    }
+
+    .toggle:checked::after {
+      transform: translateX(20px);
+    }
+
+    /* Checkbox & Radio */
+    .checkbox {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-strong);
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+
+    .checkbox:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 1px;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 14px 20px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+
+    tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      height: 100%;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 10, 15, 0.72);
+      backdrop-filter: blur(36px) saturate(200%);
+      -webkit-backdrop-filter: blur(36px) saturate(200%);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-logo {
+      padding: 28px 24px 20px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 4px 14px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .nav-link:hover {
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+
+    .nav-link.active {
+      background: rgba(10, 132, 255, 0.16);
+      color: var(--accent);
+    }
+
+    .nav-link.active::before {
+      content: '';
+      position: absolute;
+      left: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 0 4px 4px 0;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* Main layout */
+    .main {
+      margin-left: 260px;
+      height: 100%;
+      overflow-y: auto;
+      padding: 28px 32px;
+    }
+
+    /* Header */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    /* Mobile bottom nav */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 76px;
+      background: rgba(10, 10, 15, 0.88);
+      backdrop-filter: blur(32px) saturate(200%);
+      -webkit-backdrop-filter: blur(32px) saturate(200%);
+      border-top: 1px solid var(--border);
+      z-index: 100;
+      padding: 8px 16px 20px;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .bottom-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .bottom-nav-item.active {
+      color: var(--accent);
+    }
+
+    .bottom-nav-item svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 460px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.open .modal {
+      transform: scale(1);
+    }
+
+    /* Toast / Notification */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: rgba(30, 30, 38, 0.92);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 320px;
+      pointer-events: auto;
+      animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Calendar */
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .calendar-day-header {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 10px 0;
+    }
+
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .calendar-day:hover {
+      background: var(--surface);
+    }
+
+    .calendar-day.today {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .calendar-day.event::after {
+      content: '';
+      position: absolute;
+      bottom: 6px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* Progress */
+    .progress {
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-purple));
+      border-radius: 100px;
+      transition: width 0.4s ease;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: inline-flex;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab.active {
+      background: var(--surface-active);
+      color: var(--text-primary);
+    }
+
+    /* Dropdown */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      min-width: 180px;
+      background: rgba(30, 30, 38, 0.95);
+      backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: none;
+      z-index: 50;
+    }
+
+    .dropdown-menu.open {
+      display: block;
+      animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      font-size: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+
+    .dropdown-item:hover {
+      background: var(--surface);
+    }
+
+    /* Login */
+    .login-bg {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 500;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 44px;
+      text-align: center;
+    }
+
+    /* Sections */
+    .section-view {
+      display: none;
+    }
+
+    .section-view.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* Filters bar */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    /* Mobile menu overlay */
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 90;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+        padding-bottom: 100px;
+      }
+
+      .bottom-nav {
+        display: flex;
+      }
+
+      .mobile-overlay.open {
+        display: block;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .page-title {
+        font-size: 24px;
+      }
+
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .toast-container {
+        left: 16px;
+        right: 16px;
+        top: 16px;
+      }
+
+      .toast {
+        min-width: auto;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient"></div>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-bg">
+    <div class="login-card glass">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold mb-2">Innovadataco</h1>
+        <p class="text-sm text-gray-400">Gestión comercial y operativa</p>
+      </div>
+      <div class="space-y-4 text-left">
+        <div>
+          <label class="label">Correo electrónico</label>
+          <input type="email" class="input" placeholder="hola@innovadataco.com">
+        </div>
+        <div>
+          <label class="label">Contraseña</label>
+          <input type="password" class="input" placeholder="••••••••">
+        </div>
+        <button onclick="login()" class="btn btn-primary w-full btn-lg mt-2">
+          Ingresar
+        </button>
+      </div>
+      <p class="mt-6 text-xs text-gray-500">¿Olvidaste tu contraseña? <a href="#" class="text-blue-400 hover:underline">Recuperar acceso</a></p>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app" style="display: none; height: 100%;">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-logo">
+        <h1 class="text-xl font-bold">Innovadataco</h1>
+        <p class="text-xs text-gray-500 mt-1">Gestión empresarial</p>
+      </div>
+      <nav class="flex-1 px-2">
+        <div onclick="nav('dashboard')" id="nav-dashboard" class="nav-link active">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </div>
+        <div onclick="nav('clientes')" id="nav-clientes" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Clientes
+        </div>
+        <div onclick="nav('proyectos')" id="nav-proyectos" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Proyectos
+        </div>
+        <div onclick="nav('contratos')" id="nav-contratos" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Contratos
+        </div>
+        <div onclick="nav('cuentas')" id="nav-cuentas" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Cuentas
+        </div>
+        <div onclick="nav('calendario')" id="nav-calendario" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Calendario
+        </div>
+      </nav>
+      <div class="p-4 border-t border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold">JE</div>
+          <div>
+            <p class="text-sm font-medium">Jelkin</p>
+            <p class="text-xs text-gray-500">CEO</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="topbar">
+        <div class="flex items-center gap-4">
+          <button onclick="toggleSidebar()" class="lg:hidden btn btn-icon btn-secondary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <h2 id="page-title" class="page-title">Dashboard</h2>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="input-group hidden md:flex">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar en todo...">
+          </div>
+          <button onclick="showToast('Tienes 3 notificaciones nuevas')" class="btn btn-icon btn-secondary relative">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900"></span>
+          </button>
+          <div class="dropdown">
+            <button onclick="toggleDropdown(this)" class="btn btn-icon btn-secondary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item">Mi perfil</div>
+              <div class="dropdown-item">Configuración</div>
+              <div class="dropdown-item" onclick="logout()">Cerrar sesión</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="view-dashboard" class="section-view active">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+          <div class="card p-5">
+            <p class="text-sm text-gray-400">Clientes activos</p>
+            <p class="text-3xl font-bold mt-2">24</p>
+            <div class="mt-3 flex items-center gap-2">
+              <span class="badge badge-success">+3 este mes</span>
+            </div>
+          </div>
+          <div class="card p-5">
+            <p class="text-sm text-gray-400">Proyectos en ejecución</p>
+            <p class="text-3xl font-bold mt-2">8</p>
+            <div class="mt-3">
+              <span class="badge badge-warning">2 con alerta</span>
+            </div>
+          </div>
+          <div class="card p-5">
+            <p class="text-sm text-gray-400">Contratos vigentes</p>
+            <p class="text-3xl font-bold mt-2">15</p>
+            <div class="mt-3">
+              <span class="badge badge-danger">1 por vencer</span>
+            </div>
+          </div>
+          <div class="card p-5">
+            <p class="text-sm text-gray-400">Cuentas por cobrar</p>
+            <p class="text-3xl font-bold mt-2">$320M</p>
+            <div class="mt-3">
+              <span class="badge badge-info">4 facturas</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div class="card lg:col-span-2 p-5">
+            <h3 class="font-bold text-lg mb-5">Proyectos por fase</h3>
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between text-sm mb-2"><span>Inicio</span><span class="font-semibold">2</span></div>
+                <div class="progress"><div class="progress-bar" style="width: 25%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-2"><span>Planeación</span><span class="font-semibold">3</span></div>
+                <div class="progress"><div class="progress-bar" style="width: 37%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-2"><span>Ejecución</span><span class="font-semibold">2</span></div>
+                <div class="progress"><div class="progress-bar" style="width: 25%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-2"><span>Cierre</span><span class="font-semibold">1</span></div>
+                <div class="progress"><div class="progress-bar" style="width: 13%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Alertas</h3>
+            <div class="space-y-3">
+              <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                <p class="text-sm font-medium">Contrato CT-2025-004</p>
+                <p class="text-xs text-gray-400 mt-1">Vence en 12 días</p>
+              </div>
+              <div class="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <p class="text-sm font-medium">Entrega proyecto P-003</p>
+                <p class="text-xs text-gray-400 mt-1">En 30 días</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div id="view-clientes" class="section-view">
+        <div class="filters">
+          <div class="input-group flex-1 max-w-md">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar cliente...">
+          </div>
+          <select class="input w-40">
+            <option>Sector</option>
+            <option>Público</option>
+            <option>Privado</option>
+          </select>
+          <select class="input w-40">
+            <option>Estado</option>
+            <option>Activo</option>
+            <option>Inactivo</option>
+          </select>
+          <button class="btn btn-primary">+ Nuevo cliente</button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>NIT</th>
+                  <th>Contacto</th>
+                  <th>Sector</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center text-sm font-semibold text-blue-400">MT</div>
+                      <span class="font-medium">Ministerio de Tecnologías</span>
+                    </div>
+                  </td>
+                  <td>899.999.123-4</td>
+                  <td>carlos@mintic.gov.co</td>
+                  <td>Público</td>
+                  <td><span class="badge badge-success">Activo</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-ghost">Editar</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-green-500/20 flex items-center justify-center text-sm font-semibold text-green-400">EC</div>
+                      <span class="font-medium">Ecopetrol S.A.</span>
+                    </div>
+                  </td>
+                  <td>860.506.117-3</td>
+                  <td>juliana@ecopetrol.com</td>
+                  <td>Privado</td>
+                  <td><span class="badge badge-success">Activo</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-ghost">Editar</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-gray-500/20 flex items-center justify-center text-sm font-semibold text-gray-400">BA</div>
+                      <span class="font-medium">Banco Agrario</span>
+                    </div>
+                  </td>
+                  <td>860.013.954-1</td>
+                  <td>andres@bancoagrario.gov.co</td>
+                  <td>Público</td>
+                  <td><span class="badge badge-neutral">Inactivo</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-ghost">Editar</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROYECTOS -->
+      <div id="view-proyectos" class="section-view">
+        <div class="filters">
+          <div class="tabs">
+            <div class="tab active">Todos</div>
+            <div class="tab">Inicio</div>
+            <div class="tab">Planeación</div>
+            <div class="tab">Ejecución</div>
+            <div class="tab">Cierre</div>
+          </div>
+          <button class="btn btn-primary ml-auto">+ Nuevo proyecto</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div class="card p-5">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="font-bold">P-001 · Plataforma de datos</h3>
+                <p class="text-sm text-gray-400 mt-1">Ministerio de Tecnologías</p>
+              </div>
+              <span class="badge badge-warning">Ejecución</span>
+            </div>
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-2"><span>Avance</span><span>65%</span></div>
+              <div class="progress"><div class="progress-bar" style="width: 65%"></div></div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-sm btn-secondary">Ver detalle</button>
+              <button class="btn btn-sm btn-ghost">Editar</button>
+            </div>
+          </div>
+          <div class="card p-5">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="font-bold">P-002 · Modernización interna</h3>
+                <p class="text-sm text-gray-400 mt-1">Ecopetrol S.A.</p>
+              </div>
+              <span class="badge badge-info">Inicio</span>
+            </div>
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-2"><span>Avance</span><span>15%</span></div>
+              <div class="progress"><div class="progress-bar" style="width: 15%"></div></div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-sm btn-secondary">Ver detalle</button>
+              <button class="btn btn-sm btn-ghost">Editar</button>
+            </div>
+          </div>
+          <div class="card p-5">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="font-bold">P-003 · Sistema de gestión</h3>
+                <p class="text-sm text-gray-400 mt-1">Innovadataco</p>
+              </div>
+              <span class="badge badge-info">Planeación</span>
+            </div>
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-2"><span>Avance</span><span>40%</span></div>
+              <div class="progress"><div class="progress-bar" style="width: 40%"></div></div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-sm btn-secondary">Ver detalle</button>
+              <button class="btn btn-sm btn-ghost">Editar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTRATOS -->
+      <div id="view-contratos" class="section-view">
+        <div class="filters">
+          <div class="input-group flex-1 max-w-md">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar contrato...">
+          </div>
+          <select class="input w-44">
+            <option>Todos los estados</option>
+            <option>Vigente</option>
+            <option>Por vencer</option>
+            <option>Cerrado</option>
+          </select>
+          <button class="btn btn-primary">+ Nuevo contrato</button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Número</th>
+                  <th>Cliente</th>
+                  <th>Objeto</th>
+                  <th>Valor</th>
+                  <th>Vencimiento</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="font-medium">CT-2025-001</td>
+                  <td>Ministerio de Tecnologías</td>
+                  <td>Consultoría en datos</td>
+                  <td>$450.000.000</td>
+                  <td>2025-12-15</td>
+                  <td><span class="badge badge-success">Vigente</span></td>
+                  <td><button class="btn btn-sm btn-ghost">Ver</button></td>
+                </tr>
+                <tr>
+                  <td class="font-medium">CT-2025-004</td>
+                  <td>Ecopetrol S.A.</td>
+                  <td>Desarrollo de software</td>
+                  <td>$1.200.000.000</td>
+                  <td class="text-red-400 font-medium">2025-10-01</td>
+                  <td><span class="badge badge-danger">Por vencer</span></td>
+                  <td><button class="btn btn-sm btn-ghost">Ver</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUENTAS -->
+      <div id="view-cuentas" class="section-view">
+        <div class="card p-5 mb-5 bg-amber-500/5 border-amber-500/20">
+          <p class="text-sm text-amber-200">
+            <strong>Por definir:</strong> Este módulo puede ser cuentas por cobrar, bancarias, de acceso a portales o contables. Ajustamos según lo que necesites.
+          </p>
+        </div>
+        <div class="filters">
+          <div class="input-group flex-1 max-w-md">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar cuenta...">
+          </div>
+          <select class="input w-44">
+            <option>Todos los tipos</option>
+            <option>Por cobrar</option>
+            <option>Bancaria</option>
+            <option>Portal</option>
+          </select>
+          <button class="btn btn-primary">+ Nueva cuenta</button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Descripción</th>
+                  <th>Asociado</th>
+                  <th>Monto / Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-warning">Por cobrar</span></td>
+                  <td>Factura #F-2025-08</td>
+                  <td>Ecopetrol S.A.</td>
+                  <td>$120.000.000</td>
+                  <td><button class="btn btn-sm btn-ghost">Ver</button></td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-info">Portal</span></td>
+                  <td>Acceso SECOP II</td>
+                  <td>Ministerio de Tecnologías</td>
+                  <td><span class="badge badge-success">Activo</span></td>
+                  <td><button class="btn btn-sm btn-ghost">Ver</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALENDARIO -->
+      <div id="view-calendario" class="section-view">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div class="card lg:col-span-2 p-5">
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="font-bold text-lg">Septiembre 2026</h3>
+              <div class="flex gap-2">
+                <button class="btn btn-sm btn-secondary">&lt;</button>
+                <button class="btn btn-sm btn-secondary">Hoy</button>
+                <button class="btn btn-sm btn-secondary">&gt;</button>
+              </div>
+            </div>
+            <div class="calendar">
+              <div class="calendar-day-header">Lun</div>
+              <div class="calendar-day-header">Mar</div>
+              <div class="calendar-day-header">Mié</div>
+              <div class="calendar-day-header">Jue</div>
+              <div class="calendar-day-header">Vie</div>
+              <div class="calendar-day-header">Sáb</div>
+              <div class="calendar-day-header">Dom</div>
+              <!-- Week 1 -->
+              <div class="calendar-day text-gray-500">31</div>
+              <div class="calendar-day">1</div>
+              <div class="calendar-day">2</div>
+              <div class="calendar-day">3</div>
+              <div class="calendar-day">4</div>
+              <div class="calendar-day">5</div>
+              <div class="calendar-day">6</div>
+              <!-- Week 2 -->
+              <div class="calendar-day">7</div>
+              <div class="calendar-day">8</div>
+              <div class="calendar-day">9</div>
+              <div class="calendar-day">10</div>
+              <div class="calendar-day">11</div>
+              <div class="calendar-day">12</div>
+              <div class="calendar-day">13</div>
+              <!-- Week 3 -->
+              <div class="calendar-day">14</div>
+              <div class="calendar-day">15</div>
+              <div class="calendar-day">16</div>
+              <div class="calendar-day">17</div>
+              <div class="calendar-day">18</div>
+              <div class="calendar-day today">19</div>
+              <div class="calendar-day">20</div>
+              <!-- Week 4 -->
+              <div class="calendar-day event">21</div>
+              <div class="calendar-day">22</div>
+              <div class="calendar-day event">23</div>
+              <div class="calendar-day">24</div>
+              <div class="calendar-day">25</div>
+              <div class="calendar-day">26</div>
+              <div class="calendar-day">27</div>
+              <!-- Week 5 -->
+              <div class="calendar-day">28</div>
+              <div class="calendar-day">29</div>
+              <div class="calendar-day">30</div>
+              <div class="calendar-day text-gray-500">1</div>
+              <div class="calendar-day text-gray-500">2</div>
+              <div class="calendar-day text-gray-500">3</div>
+              <div class="calendar-day text-gray-500">4</div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Próximos eventos</h3>
+            <div class="space-y-3">
+              <div class="p-4 rounded-xl glass-strong">
+                <p class="text-sm font-medium">Reunión MinTIC</p>
+                <p class="text-xs text-gray-400 mt-1">21 sept · 10:00 a.m.</p>
+              </div>
+              <div class="p-4 rounded-xl glass-strong">
+                <p class="text-sm font-medium">Entrega propuesta Ecopetrol</p>
+                <p class="text-xs text-gray-400 mt-1">23 sept · 3:00 p.m.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DESIGN SYSTEM COMPONENTS SHOWCASE -->
+      <div id="view-components" class="section-view">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Botones</h3>
+            <div class="space-y-3">
+              <div class="flex flex-wrap gap-3">
+                <button class="btn btn-primary">Guardar</button>
+                <button class="btn btn-secondary">Cancelar</button>
+                <button class="btn btn-ghost">Secundario</button>
+                <button class="btn btn-danger">Eliminar</button>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <button class="btn btn-primary btn-sm">Guardar</button>
+                <button class="btn btn-secondary btn-sm">Cancelar</button>
+                <button class="btn btn-primary btn-lg">Guardar</button>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <button class="btn btn-primary btn-loading">
+                  <span class="spinner"></span>
+                  Guardando...
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Formularios</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="label">Nombre</label>
+                <input type="text" class="input" placeholder="Ej: Ministerio de Tecnologías">
+              </div>
+              <div>
+                <label class="label">Descripción</label>
+                <textarea class="input" rows="3" placeholder="Escribe aquí..."></textarea>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="checkbox" class="checkbox" checked>
+                <span class="text-sm">Activar notificaciones</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="checkbox" class="toggle" checked>
+                <span class="text-sm">Modo oscuro</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Badges y estados</h3>
+            <div class="flex flex-wrap gap-2">
+              <span class="badge badge-success">Activo</span>
+              <span class="badge badge-warning">Pendiente</span>
+              <span class="badge badge-danger">Por vencer</span>
+              <span class="badge badge-info">En análisis</span>
+              <span class="badge badge-neutral">Inactivo</span>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Tabs y filtros</h3>
+            <div class="tabs mb-4">
+              <div class="tab active">General</div>
+              <div class="tab">Avanzado</div>
+              <div class="tab">Historial</div>
+            </div>
+            <div class="input-group">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" placeholder="Buscar...">
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Modal y notificaciones</h3>
+            <div class="flex flex-wrap gap-3">
+              <button onclick="openModal()" class="btn btn-secondary">Abrir modal</button>
+              <button onclick="showToast('Notificación de ejemplo')" class="btn btn-secondary">Mostrar toast</button>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <h3 class="font-bold text-lg mb-5">Dropdown</h3>
+            <div class="dropdown">
+              <button onclick="toggleDropdown(this)" class="btn btn-secondary">Opciones ▾</button>
+              <div class="dropdown-menu">
+                <div class="dropdown-item">Editar</div>
+                <div class="dropdown-item">Duplicar</div>
+                <div class="dropdown-item">Eliminar</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Mobile bottom nav -->
+    <nav class="bottom-nav">
+      <div onclick="nav('dashboard')" id="bottom-dashboard" class="bottom-nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Inicio
+      </div>
+      <div onclick="nav('clientes')" id="bottom-clientes" class="bottom-nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Clientes
+      </div>
+      <div onclick="nav('proyectos')" id="bottom-proyectos" class="bottom-nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Proyectos
+      </div>
+      <div onclick="nav('calendario')" id="bottom-calendario" class="bottom-nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendario
+      </div>
+      <div onclick="nav('components')" id="bottom-components" class="bottom-nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        UI
+      </div>
+    </nav>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal-overlay">
+    <div class="modal glass-strong">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-2">Confirmar acción</h3>
+        <p class="text-sm text-gray-400 mb-6">¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.</p>
+        <div class="flex justify-end gap-3">
+          <button onclick="closeModal()" class="btn btn-secondary">Cancelar</button>
+          <button onclick="closeModal(); showToast('Registro eliminado')" class="btn btn-danger">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script>
+    const titles = {
+      dashboard: 'Dashboard',
+      clientes: 'Clientes',
+      proyectos: 'Proyectos',
+      contratos: 'Contratos',
+      cuentas: 'Cuentas',
+      calendario: 'Calendario',
+      components: 'Componentes UI'
+    };
+
+    function login() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      showToast('Bienvenido, Jelkin');
+    }
+
+    function logout() {
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+
+    function nav(section) {
+      document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+
+      const view = document.getElementById('view-' + section);
+      if (view) view.classList.add('active');
+
+      const navEl = document.getElementById('nav-' + section);
+      if (navEl) navEl.classList.add('active');
+
+      const bottomEl = document.getElementById('bottom-' + section);
+      if (bottomEl) bottomEl.classList.add('active');
+
+      document.getElementById('page-title').textContent = titles[section] || section;
+
+      if (window.innerWidth <= 1024) {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('mobile-overlay').classList.remove('open');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('mobile-overlay').classList.toggle('open');
+    }
+
+    function openModal() {
+      document.getElementById('modal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div>
+          <p class="text-sm font-medium">${message}</p>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function toggleDropdown(btn) {
+      const menu = btn.nextElementSibling;
+      document.querySelectorAll('.dropdown-menu.open').forEach(m => {
+        if (m !== menu) m.classList.remove('open');
+      });
+      menu.classList.toggle('open');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+      }
+    });
+
+    // Tab interaction
+    document.querySelectorAll('.tabs').forEach(tabs => {
+      tabs.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+        });
+      });
+    });
+
+    // Allow Enter key on login
+    document.querySelectorAll('#login-screen input').forEach(input => {
+      input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') login();
+      });
+    });
+  </script>
+</body>
+</html>
