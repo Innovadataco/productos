@@ -41,6 +41,7 @@ import {
     type EstadoFrescoExpedienteDto,
     type ExpedienteDetalleDto,
     type ExpedienteListaItemDto,
+    type ExpedienteParaCompartirDto,
     type HijoResumenDto,
     type ReporteAjenoRow,
     type ReportePropioRow,
@@ -186,6 +187,47 @@ export async function listarExpedientesPadreConUrgencia(usuarioId: string): Prom
         return b.ultimaActividad.getTime() - a.ultimaActividad.getTime();
     });
     return items;
+}
+
+/**
+ * SPEC-731 · lista CORTA de los casos del padre para el selector «compartir un
+ * caso» de la cita confirmada. Consulta ligera (sin urgencia, conteos ni línea
+ * de tiempo): una lectura de expedientes + una de vínculos identificador→hijo.
+ * Solo id + etiqueta legible; NUNCA contenido ni el identificador crudo. Si el
+ * padre no tiene ningún caso, devuelve [] y la pantalla muestra «no hace falta»
+ * (nunca un callejón que lo mande a elegir de una lista vacía).
+ */
+export async function listarExpedientesPadreParaCompartir(
+    usuarioId: string,
+): Promise<ExpedienteParaCompartirDto[]> {
+    const expedientes = await prisma.expediente.findMany({
+        where: { padreUsuarioId: usuarioId },
+        orderBy: { fechaApertura: "desc" },
+        select: { id: true, identificadorReportado: true },
+    });
+    if (expedientes.length === 0) return [];
+
+    // Un solo golpe para todos los identificadores: vínculo activo → hijo vivo.
+    const identificadores = [...new Set(expedientes.map((e) => e.identificadorReportado))];
+    const vinculos = await prisma.identificadorHijo.findMany({
+        where: { valor: { in: identificadores }, activo: true, hijo: { usuarioId, estado: "activo" } },
+        select: { valor: true, hijo: { select: { nombre: true, apellidos: true } } },
+        orderBy: { creadoEn: "desc" },
+    });
+    const hijoPorIdentificador = new Map<string, string>();
+    for (const v of vinculos) {
+        // El más reciente gana (orderBy desc): no lo pisamos con uno viejo.
+        if (hijoPorIdentificador.has(v.valor)) continue;
+        const nombre = `${v.hijo.nombre} ${v.hijo.apellidos}`.trim();
+        if (nombre) hijoPorIdentificador.set(v.valor, nombre);
+    }
+
+    return expedientes.map((e) => {
+        const codigo = codigoExpediente(e.id);
+        const hijo = hijoPorIdentificador.get(e.identificadorReportado);
+        // Sin hijo vinculado: solo el código (nunca el identificador crudo).
+        return { expedienteId: e.id, etiqueta: hijo ? `${codigo} · ${hijo}` : codigo };
+    });
 }
 
 /** Pantalla madre del expediente (los 5 bloques). Null si no es del padre. */
