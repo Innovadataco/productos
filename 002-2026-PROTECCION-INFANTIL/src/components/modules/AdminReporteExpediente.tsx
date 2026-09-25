@@ -72,20 +72,7 @@ interface ExpedienteResponse {
     sintesis: { analisisInterno: string; mensajePadre: string };
     revelado: boolean;
     puedeRevelar: boolean;
-    /** SPEC-140 (F2): presentes solo cuando el usuario tiene el módulo denuncia_formal. */
-    puedeDenunciar?: boolean;
-    canalesDenuncia?: CanalOficial[];
 }
-
-/** Canal oficial de denuncia (parámetro `mensaje.padre.canales`). */
-interface CanalOficial {
-    nombre: string;
-    contacto: string;
-    descripcion: string;
-}
-
-/** SPEC-140 (FR-001): la denuncia formal exige clasificación confirmada. */
-const ESTADOS_DENUNCIABLES = new Set(["CLASIFICADO", "CORREGIDO", "REVISION_MANUAL"]);
 
 interface AdminReporteExpedienteProps {
     reporteId: string;
@@ -250,147 +237,6 @@ return (
 );
 }
 
-/**
- * SPEC-140 (F2 + N-4): acciones de denuncia formal y exportación forense.
- * Visible solo con el módulo `denuncia_formal` (lo decide el endpoint del
- * expediente vía `puedeDenunciar`) y con clasificación confirmada. El PDF se
- * genera por plantilla determinista y se descarga; la plataforma no lo retiene.
- */
-function SeccionDenunciaFormal({ reporteId, canales }: { reporteId: string; canales: CanalOficial[] }) {
-    const [abierto, setAbierto] = useState(false);
-    const [canal, setCanal] = useState("");
-    const [generando, setGenerando] = useState(false);
-    const [errorDenuncia, setErrorDenuncia] = useState("");
-
-    const descargarBlob = (blob: Blob, nombre: string) => {
-        const url = URL.createObjectURL(blob);
-        const enlace = document.createElement("a");
-        enlace.href = url;
-        enlace.download = nombre;
-        document.body.appendChild(enlace);
-        enlace.click();
-        enlace.remove();
-        URL.revokeObjectURL(url);
-    };
-
-    const generarDenuncia = async () => {
-        if (!canal) return;
-        setGenerando(true);
-        setErrorDenuncia("");
-        try {
-            const res = await fetch(`/api/admin/reportes/${reporteId}/denuncia-formal`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ canalDestino: canal }),
-            });
-            if (!res.ok) {
-                const json = await res.json().catch(() => ({}));
-                throw new Error(
-                    typeof json?.error?.message === "string" ? json.error.message : "No se pudo generar la denuncia"
-                );
-            }
-            const blob = await res.blob();
-            descargarBlob(blob, `denuncia-formal-${reporteId}.pdf`);
-            setAbierto(false);
-        } catch (e) {
-            setErrorDenuncia(e instanceof Error ? e.message : "No se pudo generar la denuncia");
-        } finally {
-            setGenerando(false);
-        }
-    };
-
-    const exportarForense = async () => {
-        setGenerando(true);
-        setErrorDenuncia("");
-        try {
-            const res = await fetch(`/api/admin/reportes/${reporteId}/forense/pdf`, { credentials: "include" });
-            if (!res.ok) {
-                const json = await res.json().catch(() => ({}));
-                throw new Error(
-                    typeof json?.error?.message === "string" ? json.error.message : "No se pudo exportar el expediente"
-                );
-            }
-            const blob = await res.blob();
-            descargarBlob(blob, `expediente-forense-${reporteId}.pdf`);
-        } catch (e) {
-            setErrorDenuncia(e instanceof Error ? e.message : "No se pudo exportar el expediente");
-        } finally {
-            setGenerando(false);
-        }
-    };
-
-    return (
-        <GlassCard className="p-4">
-            <div className="mb-1 flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-body">Denuncia formal ante autoridades</h3>
-                <Badge variant="neutral">Sin retención del documento</Badge>
-            </div>
-            <p className="mb-3 text-xs text-muted">
-                Genera un documento por plantilla (sin IA) para presentar ante un canal oficial. La plataforma no
-                conserva el documento; la generación queda registrada en auditoría sin su contenido.
-            </p>
-            {!abierto ? (
-                <div className="flex flex-wrap gap-2">
-                    <Button onClick={() => setAbierto(true)} className="px-3 py-2 text-xs" disabled={generando}>
-                        Llevar a denuncia formal
-                    </Button>
-                    <Button onClick={exportarForense} variant="outline" className="px-3 py-2 text-xs" disabled={generando}>
-                        {generando ? "Generando..." : "Exportar expediente forense (PDF)"}
-                    </Button>
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    <div>
-                        <label htmlFor="canal-denuncia" className="mb-1 block text-xs font-medium text-muted">
-                            Canal oficial destino
-                        </label>
-                        <select
-                            id="canal-denuncia"
-                            value={canal}
-                            onChange={(e) => setCanal(e.target.value)}
-                            className="w-full rounded-lg border border-tinta/20 bg-papel px-3 py-2 text-sm text-body"
-                        >
-                            <option value="">Selecciona un canal...</option>
-                            {canales.map((c) => (
-                                <option key={c.nombre} value={c.nombre}>
-                                    {c.nombre} ({c.contacto})
-                                </option>
-                            ))}
-                        </select>
-                        {canales.length === 0 && (
-                            <p className="mt-1 text-xs text-estado-ambar">
-                                No hay canales oficiales configurados. Un administrador debe revisar el parámetro de canales.
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <Button onClick={generarDenuncia} className="px-3 py-2 text-xs" disabled={!canal || generando}>
-                            {generando ? "Generando..." : "Generar y descargar PDF"}
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                setAbierto(false);
-                                setErrorDenuncia("");
-                            }}
-                            variant="outline"
-                            className="px-3 py-2 text-xs"
-                            disabled={generando}
-                        >
-                            Cancelar
-                        </Button>
-                    </div>
-                </div>
-            )}
-            {errorDenuncia && (
-                <p className="mt-2 text-xs text-estado-rubi" role="alert">
-                    {errorDenuncia}
-                </p>
-            )}
-        </GlassCard>
-    );
-}
-
 type PestañaExpediente = "pipeline" | "proceso";
 
 export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExpedienteProps) {
@@ -500,13 +346,6 @@ export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExped
 
                     {pestaña === "pipeline" && (
                         <>
-                            {expediente.puedeDenunciar === true && ESTADOS_DENUNCIABLES.has(expediente.reporte.estado) && (
-                                <SeccionDenunciaFormal
-                                    reporteId={expediente.reporte.id}
-                                    canales={expediente.canalesDenuncia ?? []}
-                                />
-                            )}
-
                             <div className="space-y-1">
                                 {expediente.etapas.map((etapa, indice) => {
                                     const iniciaFase = indice === 0 || expediente.etapas[indice - 1].fase !== etapa.fase;

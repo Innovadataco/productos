@@ -17,7 +17,10 @@
  *  ④ «El análisis» — clasificación dominante, confianza, quién revisó,
  *    «También consideró», caja «¿Qué significa?» y TENDENCIA simple (7 días).
  *  ⑤ Acciones — «+ Agregar evento» (flujo existente), «Llevar a un
- *    profesional» (?expedienteId=, ya soportado) y canales oficiales.
+ *    profesional» (?expedienteId=, ya soportado), «Descargar el informe (PDF)»
+ *    y canales oficiales. SPEC-738: generar el informe para autoridades es del
+ *    PADRE, no del admin; acá surface el endpoint que ya existía (SPEC-323,
+ *    GET /api/padre/expedientes/[id]/pdf, con sello).
  */
 import { useState } from "react";
 import Link from "next/link";
@@ -420,6 +423,15 @@ export function ExpedienteMadreClient({ detalle }: { detalle: ExpedienteMadreDto
                     >
                         Llevar a un profesional
                     </Link>
+                    {/* SPEC-738: el informe con sello lo genera el PADRE (no el admin).
+                        Enlace directo al endpoint SPEC-323; el servidor lo entrega como
+                        descarga (Content-Disposition: attachment) y no retiene el PDF. */}
+                    <a
+                        href={`/api/padre/expedientes/${encodeURIComponent(expediente.id)}/pdf`}
+                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-tinta/25 px-4 text-sm font-semibold text-body transition hover:bg-tinta/5 dark:border-tinta/20 dark:hover:bg-papel/10"
+                    >
+                        Descargar el informe (PDF)
+                    </a>
                 </div>
                 {agregando && detalle.reportePrincipalId && (
                     <div className="mt-3">

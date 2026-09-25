@@ -1,3 +1,4 @@
+// TODO(SPEC-738 · I-431): endpoint sin UI; retirar o reusar del lado del padre según decisión
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
