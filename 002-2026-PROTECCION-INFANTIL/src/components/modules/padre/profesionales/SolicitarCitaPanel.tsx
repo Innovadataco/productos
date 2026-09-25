@@ -28,9 +28,9 @@
  * Diseño: tokens del sistema. Voz del padre = «tú» (D-107).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { leerBorradorConsulta, borrarBorradorConsulta } from "@/lib/padre/borrador-consulta";
 
 interface Franja {
     id: string;
@@ -105,19 +105,15 @@ export function SolicitarCitaPanel({
     const [franjas, setFranjas] = useState<Franja[] | null>(null);
     const [cargaError, setCargaError] = useState<string | null>(null);
     const [franjaSel, setFranjaSel] = useState<Franja | null>(null);
-    // SPEC-440 (I-306): estado inicial vacío; el useEffect al montar rellena
-    // desde `sessionStorage` (el borrador que dejó el paso previo). No viene
-    // por props ni por URL.
+    // SPEC-729 §2: la presentación se toma de Mi perfil (presentacionEstandar) al
+    // montar; no viene por borrador, props ni URL. Si Mi perfil la tiene, se MUESTRA
+    // (con «Editar»); si está vacía, se ofrece completarla en Mi perfil (sin formulario acá).
     const [presentacion, setPresentacion] = useState("");
-    // SPEC-712 §2: si el padre YA contó su situación en el paso previo, acá la
-    // MOSTRAMOS (no la re-pedimos). `tieneBorrador` distingue ese caso del padre
-    // que aterriza directo (a ese sí se le pide, una vez). `editando` abre el
-    // textarea para ajustar el relato ya contado.
-    const [tieneBorrador, setTieneBorrador] = useState(false);
+    const [tienePresentacion, setTienePresentacion] = useState(false);
     const [editandoPresentacion, setEditandoPresentacion] = useState(false);
-    // SPEC-712 §3: la urgencia YA no se elige acá (el toggle inerte se retiró);
-    // viaja desde el borrador del paso previo para que el profesional priorice.
-    const [urgencia, setUrgencia] = useState<"ESTA_SEMANA" | "SIN_APURO">("SIN_APURO");
+    // SPEC-712 §3: la urgencia ya no se elige acá (toggle inerte retirado). SPEC-729
+    // §4 la retiró también del paso previo; hoy viaja fija en SIN_APURO.
+    const [urgencia] = useState<"ESTA_SEMANA" | "SIN_APURO">("SIN_APURO");
     // SPEC-712 §3: chip que FILTRA la lista de franjas a la semana en curso.
     const [soloEstaSemana, setSoloEstaSemana] = useState(false);
     const [compartirExpediente, setCompartirExpediente] = useState(Boolean(expedienteIdSugerido));
@@ -145,22 +141,31 @@ export function SolicitarCitaPanel({
         void cargarFranjas();
     }, [cargarFranjas]);
 
-    // SPEC-440 (I-306): al montar, rellenar desde el borrador de sessionStorage
-    // (dejado por `PresentacionUrgenciaForm`). Solo aplica al alta nueva; en
-    // reasignación la presentación viaja desde la solicitud original.
+    // SPEC-729 §2: al montar (alta nueva), la presentación se toma de Mi perfil.
+    // En reasignación viaja desde la solicitud original (no se pide ni se muestra acá).
     useEffect(() => {
         if (esReasignacion) return;
-        const borrador = leerBorradorConsulta();
-        if (borrador) {
-            setPresentacion(borrador.presentacion);
-            setUrgencia(borrador.urgencia);
-            setTieneBorrador(true); // SPEC-712 §2: mostrar, no re-pedir.
-        }
+        let cancelado = false;
+        void (async () => {
+            try {
+                const res = await fetch("/api/padre/perfil", { credentials: "include" });
+                if (!res.ok || cancelado) return;
+                const { perfil } = (await res.json()) as { perfil?: { presentacionEstandar?: string | null } };
+                if (cancelado || !perfil?.presentacionEstandar) return;
+                setPresentacion(perfil.presentacionEstandar);
+                setTienePresentacion(true); // SPEC-712 §2: mostrar, no re-pedir.
+            } catch {
+                // Sin red/perfil: se trata como vacía → enlace a Mi perfil. No bloquea.
+            }
+        })();
+        return () => {
+            cancelado = true;
+        };
     }, [esReasignacion]);
 
-    // En reasignación la presentación ya está en la solicitud original —
-    // el service la propaga y la cita nueva la hereda; el panel no la exige.
-    const presentacionValida = esReasignacion || presentacion.trim().length >= 20;
+    // SPEC-729 §3: mínimo único = 10. En reasignación la presentación ya está en la
+    // solicitud original — el service la propaga; el panel no la exige.
+    const presentacionValida = esReasignacion || presentacion.trim().length >= 10;
     const puedeContinuar = franjaSel !== null && presentacionValida;
 
     // SPEC-712 §3: franjas ordenadas de la más próxima a la más lejana; el chip
@@ -213,10 +218,6 @@ export function SolicitarCitaPanel({
             if (!res.ok || !json.data?.id) {
                 throw new Error(json.error?.message ?? `HTTP ${res.status}`);
             }
-            // SPEC-440 (I-306): la solicitud quedó registrada — el borrador
-            // ya cumplió su misión. Lo limpiamos para no arrastrarlo a la
-            // próxima búsqueda (ni dejar PII rondando en sessionStorage).
-            borrarBorradorConsulta();
             router.push(`/dashboard/padre/citas/${json.data.id}`);
         } catch (e) {
             setErrorEnvio(e instanceof Error ? e.message : String(e));
@@ -275,44 +276,58 @@ export function SolicitarCitaPanel({
                 </p>
             </div>
 
-            {/* SPEC-712 §2 · Presentación. Con borrador: se MUESTRA con «Editar» (sin
-                re-exigir el mínimo si no la toca). Sin borrador (llegó directo): se pide
-                acá, una vez. En reasignación viaja desde la solicitud original. */}
+            {/* SPEC-712 §2 + SPEC-729 §2 · Presentación tomada de Mi perfil. Si la tiene,
+                se MUESTRA con «Editar» (ajuste puntual para esta cita, sin re-exigir el
+                mínimo salvo que la toque). Si está vacía, NO un formulario acá: enlace a
+                Mi perfil. En reasignación viaja desde la solicitud original. */}
             {!esReasignacion && (
                 <div className="mt-4">
-                    {tieneBorrador && !editandoPresentacion ? (
-                        <div className="rounded-xl bg-tinta/5 p-3">
-                            <p className="text-xs font-semibold text-body">Lo que nos contaste</p>
-                            <p className="mt-1 whitespace-pre-line text-sm text-body">«{presentacion}»</p>
-                            {/* Acción (no chip): va por el `<Button>` de la casa (frontera SPEC-633). */}
-                            <Button
-                                variant="ghost"
-                                type="button"
-                                onClick={() => setEditandoPresentacion(true)}
-                                className="mt-2"
-                            >
-                                Editar
-                            </Button>
-                        </div>
+                    {tienePresentacion ? (
+                        editandoPresentacion ? (
+                            <>
+                                <label htmlFor="presentacion" className="text-xs font-semibold text-body">
+                                    Ajusta lo que nos contaste
+                                </label>
+                                <textarea
+                                    id="presentacion"
+                                    className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                                    rows={3}
+                                    value={presentacion}
+                                    onChange={(e) => setPresentacion(e.target.value)}
+                                    placeholder="Un párrafo corto que ayude al profesional a prepararse."
+                                />
+                                {!presentacionValida && presentacion.length > 0 && (
+                                    <p className="mt-1 text-xs text-estado-rubi">
+                                        Faltan {Math.max(0, 10 - presentacion.trim().length)} caracteres.
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <div className="rounded-xl bg-tinta/5 p-3">
+                                <p className="text-xs font-semibold text-body">Lo que nos contaste</p>
+                                <p className="mt-1 whitespace-pre-line text-sm text-body">«{presentacion}»</p>
+                                {/* Acción (no chip): va por el `<Button>` de la casa (frontera SPEC-633). */}
+                                <Button
+                                    variant="ghost"
+                                    type="button"
+                                    onClick={() => setEditandoPresentacion(true)}
+                                    className="mt-2"
+                                >
+                                    Editar
+                                </Button>
+                            </div>
+                        )
                     ) : (
-                        <>
-                            <label htmlFor="presentacion" className="text-xs font-semibold text-body">
-                                {tieneBorrador ? "Ajusta lo que nos contaste" : "Cuéntanos qué pasa (mín. 20 caracteres)"}
-                            </label>
-                            <textarea
-                                id="presentacion"
-                                className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
-                                rows={3}
-                                value={presentacion}
-                                onChange={(e) => setPresentacion(e.target.value)}
-                                placeholder="Un párrafo corto que ayude al profesional a prepararse."
-                            />
-                            {!presentacionValida && presentacion.length > 0 && (
-                                <p className="mt-1 text-xs text-estado-rubi">
-                                    Faltan {Math.max(0, 20 - presentacion.trim().length)} caracteres.
-                                </p>
-                            )}
-                        </>
+                        <div className="rounded-xl bg-tinta/5 p-3">
+                            <p className="text-xs font-semibold text-body">Tu presentación</p>
+                            <p className="mt-1 text-sm text-subtle">
+                                Aún no tienes una presentación.{" "}
+                                <Link href="/dashboard/padre/perfil" className="font-semibold text-accent underline">
+                                    Complétala en Mi perfil
+                                </Link>{" "}
+                                para que el profesional sepa de qué se trata.
+                            </p>
+                        </div>
                     )}
                 </div>
             )}
