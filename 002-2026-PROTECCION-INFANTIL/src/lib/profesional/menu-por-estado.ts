@@ -44,7 +44,7 @@ function entrada(href: string, label: string): NavItem {
     return { ...base, label };
 }
 
-/** Verificado (habilitado): se abre la casa — inicio, citaciones, casos, calendario, mi perfil. */
+/** Verificado (habilitado): se abre la casa — inicio, casos, calendario, mi perfil. */
 function menuVerificado(): NavItem[] {
     return [
         entrada(HREF_INICIO, "Inicio"),
