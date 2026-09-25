@@ -25,16 +25,28 @@
  *   node --env-file=.env --import tsx scripts/demo-prod/sembrar-estados-padre.ts            (DRY-RUN)
  *   node --env-file=.env --import tsx scripts/demo-prod/sembrar-estados-padre.ts --confirm  (APLICA)
  */
+import type { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "./lib/prisma";
 import { marcarDemo } from "./lib/marcar";
 import { parseArgs } from "../limpieza/_common";
 import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
+import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
 import { verificacionDemo, ESTADO_PERFIL_DEMO } from "./lib/profesional-demo";
 import { nombrePersona, telefonoDemo, nickDemo, textoDemo } from "./lib/datos";
 
 const CORRIDA = "e2epadre-722";
 const MARCA = { corrida: CORRIDA, script: "sembrar-estados-padre" } as const;
+/**
+ * La marca de la CUENTA +e2epadre como «visor demo» (SPEC-655) vive en una corrida SEPARADA y
+ * PERSISTENTE. `purgar-demo --corrida e2epadre-722` limpia el ESTADO sembrado (hijo, reportes,
+ * círculo, cita, profesional y reportante demo) pero NO borra la cuenta fija de Calidad ni su
+ * marca de visor — si compartieran corrida, la purga del estado se llevaría la cuenta y rompería
+ * el re-run (`padresE2E` encontraría menos cuentas). Un reset TOTAL purga además esta corrida.
+ * `esUsuarioSembrado` (SPEC-655) mira cualquier marca Usuario, sin importar la corrida.
+ */
+const CORRIDA_CUENTAS = "e2epadre-cuentas";
+const MARCA_CUENTA = { corrida: CORRIDA_CUENTAS, script: "sembrar-estados-padre", notas: "padre-e2e-visor-demo" } as const;
 /** Nombre DETERMINISTA del hijo sembrado → idempotencia por padre (¿ya tiene ese hijo?). */
 const HIJO_NOMBRE = "Zaira (prueba SPEC-722)";
 const EMAIL_OTRO = "soporte+e2e-otro-reportante@innovadataco.com";
@@ -166,39 +178,45 @@ async function asegurarProfConFranjas(base: Base, cuantas: number): Promise<{ pe
     return { perfilId: perfil.id, franjasLibres };
 }
 
-/** Un reporte demo de OTRO reportante sobre (identificador, plataforma), visible/clasificado. */
+/**
+ * Un reporte demo de OTRO reportante sobre (identificador, plataforma), visible/clasificado.
+ * Corre DENTRO de la transacción del padre (`tx`): si algo falla después, el reporte y su marca
+ * hacen rollback con todo lo demás. `numeroSeguimiento` sale del generador canónico
+ * (`generarNumeroSeguimiento`, CSPRNG, formato RPT-XXXXXX): ÚNICO por reporte — nunca un valor
+ * fijo/derivado del índice, que colisiona entre cuentas y entre corridas (el bug del 25-09).
+ */
 async function crearReporteDeOtro(
+    tx: Prisma.TransactionClient,
     base: Base,
     otroReportanteId: string,
     identificador: string,
-    idx: number,
+    diasAtras: number,
 ): Promise<void> {
-    const reporte = await prisma.$transaction((tx) =>
-        crearReporteConTexto(tx, {
-            texto: textoDemo("CONTACTO_INSISTENTE"),
-            reporte: {
-                identificador,
-                plataformaId: base.plataformaId,
-                fechaIncidente: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
-                ciudad: "Bogotá",
-                pais: "Colombia",
-                paisId: base.paisId,
-                ciudadId: base.ciudadId,
-                estado: "CLASIFICADO",
-                esAnonimo: false,
-                edadVictima: 13,
-                numeroSeguimiento: `RPT-E2E722-${String(idx).padStart(5, "0")}`,
-                creadoEn: new Date(Date.now() - (idx + 1) * 24 * 60 * 60 * 1000),
-                usuarioId: otroReportanteId,
-            },
-        }),
-    );
-    await marcarDemo("Reporte", reporte.id, MARCA);
-    const clasif = await prisma.clasificacionIA.create({
+    const cuando = new Date(Date.now() - diasAtras * 24 * 60 * 60 * 1000);
+    const reporte = await crearReporteConTexto(tx, {
+        texto: textoDemo("CONTACTO_INSISTENTE"),
+        reporte: {
+            identificador,
+            plataformaId: base.plataformaId,
+            fechaIncidente: cuando,
+            ciudad: "Bogotá",
+            pais: "Colombia",
+            paisId: base.paisId,
+            ciudadId: base.ciudadId,
+            estado: "CLASIFICADO",
+            esAnonimo: false,
+            edadVictima: 13,
+            numeroSeguimiento: generarNumeroSeguimiento(),
+            creadoEn: cuando,
+            usuarioId: otroReportanteId,
+        },
+    });
+    await marcarDemo("Reporte", reporte.id, MARCA, tx);
+    const clasif = await tx.clasificacionIA.create({
         data: { reporteId: reporte.id, categoria: "CONTACTO_INSISTENTE", confianza: 0.82, modeloUsado: "ornith:9b", latenciaMs: 1200 },
         select: { id: true },
     });
-    await marcarDemo("ClasificacionIA", clasif.id, MARCA);
+    await marcarDemo("ClasificacionIA", clasif.id, MARCA, tx);
 }
 
 interface ResumenPadre {
@@ -213,63 +231,78 @@ interface ResumenPadre {
 async function sembrarPadre(base: Base, padre: { id: string; email: string }, otroReportanteId: string, franjaCitaId: string): Promise<ResumenPadre> {
     const r: ResumenPadre = { email: padre.email, hijos: 0, reportesVisibles: 0, contactos: 0, citasConfirmadas: 0, marcadoSembrado: false };
 
-    // Estado 4: el padre marcado sembrado → ve profesionales demo con franjas (SPEC-655).
-    await marcarDemo("Usuario", padre.id, { ...MARCA, notas: "padre-e2e-visor-demo" });
-    r.marcadoSembrado = true;
+    // TODO el padre en UNA transacción: si algo falla, hace ROLLBACK COMPLETO (filas + marcas).
+    // Así una falla parcial NO deja «marcado-pero-incompleto» (el bug del 25-09): yaSembrado(hijo)
+    // vuelve a ser un señalador fiable de «sembrado entero» y el re-run puede sanar. maxWait/timeout
+    // holgados por el cifrado del texto (crearReporteConTexto sella ContenidoReporte por reporte).
+    await prisma.$transaction(
+        async (tx) => {
+            // Estado 4: el padre marcado sembrado → ve profesionales demo con franjas (SPEC-655).
+            // Marca en la corrida PERSISTENTE de cuentas (no la del estado): la purga del estado
+            // NO se lleva la cuenta fija de Calidad.
+            await marcarDemo("Usuario", padre.id, MARCA_CUENTA, tx);
+            r.marcadoSembrado = true;
 
-    // Estado 1: hijo + cuenta ACTIVA con plataforma + reporte de OTRO sobre esa cuenta.
-    const valorHijo = nickDemo(722100);
-    const hijo = await prisma.hijo.create({ data: { usuarioId: padre.id, nombre: HIJO_NOMBRE, apellidos: "Demo" }, select: { id: true } });
-    await marcarDemo("Hijo", hijo.id, MARCA);
-    r.hijos++;
-    const identHijo = await prisma.identificadorHijo.create({
-        data: { hijoId: hijo.id, valor: valorHijo, tipo: "nick", plataformaId: base.plataformaId, activo: true },
-        select: { id: true },
-    });
-    await marcarDemo("IdentificadorHijo", identHijo.id, MARCA);
-    await crearReporteDeOtro(base, otroReportanteId, valorHijo, 100);
-    r.reportesVisibles++;
+            // Estado 1: hijo + cuenta ACTIVA con plataforma + reporte de OTRO sobre esa cuenta.
+            const valorHijo = nickDemo(722100);
+            const hijo = await tx.hijo.create({ data: { usuarioId: padre.id, nombre: HIJO_NOMBRE, apellidos: "Demo" }, select: { id: true } });
+            await marcarDemo("Hijo", hijo.id, MARCA, tx);
+            r.hijos++;
+            const identHijo = await tx.identificadorHijo.create({
+                data: { hijoId: hijo.id, valor: valorHijo, tipo: "nick", plataformaId: base.plataformaId, activo: true },
+                select: { id: true },
+            });
+            await marcarDemo("IdentificadorHijo", identHijo.id, MARCA, tx);
+            await crearReporteDeOtro(tx, base, otroReportanteId, valorHijo, 100);
+            r.reportesVisibles++;
 
-    // Estado 2: círculo con 2 personas reportadas (cada contacto con su identificador + reporte).
-    for (let c = 0; c < 2; c++) {
-        const contacto = await prisma.contactoConfianza.create({
-            data: { usuarioId: padre.id, etiqueta: `Contacto prueba SPEC-722 #${c + 1}`, activo: true },
-            select: { id: true },
-        });
-        await marcarDemo("ContactoConfianza", contacto.id, MARCA);
-        r.contactos++;
-        const valorContacto = telefonoDemo(722200 + c);
-        const identC = await prisma.identificadorContacto.create({
-            data: { contactoId: contacto.id, valor: valorContacto, tipo: "telefono", plataformaId: base.plataformaId, activo: true },
-            select: { id: true },
-        });
-        await marcarDemo("IdentificadorContacto", identC.id, MARCA);
-        await crearReporteDeOtro(base, otroReportanteId, valorContacto, 200 + c);
-    }
+            // Estado 2: círculo con 2 personas reportadas (cada contacto con su identificador + reporte).
+            for (let c = 0; c < 2; c++) {
+                const contacto = await tx.contactoConfianza.create({
+                    data: { usuarioId: padre.id, etiqueta: `Contacto prueba SPEC-722 #${c + 1}`, activo: true },
+                    select: { id: true },
+                });
+                await marcarDemo("ContactoConfianza", contacto.id, MARCA, tx);
+                r.contactos++;
+                const valorContacto = telefonoDemo(722200 + c);
+                const identC = await tx.identificadorContacto.create({
+                    data: { contactoId: contacto.id, valor: valorContacto, tipo: "telefono", plataformaId: base.plataformaId, activo: true },
+                    select: { id: true },
+                });
+                await marcarDemo("IdentificadorContacto", identC.id, MARCA, tx);
+                await crearReporteDeOtro(tx, base, otroReportanteId, valorContacto, 200 + c);
+            }
 
-    // Estado 3: una cita CONFIRMADA (ocupa una franja libre del prof demo).
-    await prisma.franjaDisponible.update({ where: { id: franjaCitaId }, data: { tomada: true } });
-    const perfilCita = await prisma.franjaDisponible.findUniqueOrThrow({ where: { id: franjaCitaId }, select: { profesionalId: true } });
-    const ahora = new Date();
-    const cita = await prisma.solicitudCita.create({
-        data: {
-            padreUsuarioId: padre.id,
-            profesionalId: perfilCita.profesionalId,
-            franjaId: franjaCitaId,
-            presentacion: "Solicitud de prueba SPEC-722 para caminar Mis-citas y la presentación de la cita.",
-            urgencia: "SIN_APURO",
-            estado: "CONFIRMADA",
-            venceEn: new Date(ahora.getTime() + 48 * 60 * 60 * 1000),
-            pagoAprobadoEn: ahora,
-            montoConsulta: 120000,
-            montoServicio: 18000,
-            montoTotal: 138000,
-            porcentajeServicio: 15,
+            // Estado 3: una cita CONFIRMADA (ocupa una franja libre del prof demo). El update
+            // devuelve la fila → sin un findUnique extra; si la franja no existe, tira y hace rollback.
+            const franja = await tx.franjaDisponible.update({
+                where: { id: franjaCitaId },
+                data: { tomada: true },
+                select: { profesionalId: true },
+            });
+            const ahora = new Date();
+            const cita = await tx.solicitudCita.create({
+                data: {
+                    padreUsuarioId: padre.id,
+                    profesionalId: franja.profesionalId,
+                    franjaId: franjaCitaId,
+                    presentacion: "Solicitud de prueba SPEC-722 para caminar Mis-citas y la presentación de la cita.",
+                    urgencia: "SIN_APURO",
+                    estado: "CONFIRMADA",
+                    venceEn: new Date(ahora.getTime() + 48 * 60 * 60 * 1000),
+                    pagoAprobadoEn: ahora,
+                    montoConsulta: 120000,
+                    montoServicio: 18000,
+                    montoTotal: 138000,
+                    porcentajeServicio: 15,
+                },
+                select: { id: true },
+            });
+            await marcarDemo("SolicitudCita", cita.id, MARCA, tx);
+            r.citasConfirmadas++;
         },
-        select: { id: true },
-    });
-    await marcarDemo("SolicitudCita", cita.id, MARCA);
-    r.citasConfirmadas++;
+        { maxWait: 15000, timeout: 30000 },
+    );
 
     return r;
 }
@@ -313,13 +346,33 @@ async function main(): Promise<void> {
     const otroReportanteId = await asegurarOtroReportante(base);
     const { franjasLibres } = await asegurarProfConFranjas(base, pendientes.length);
 
+    // Por padre y aislado: cada cuenta es atómica (rollback completo si falla), y la falla de una
+    // NO frena a las demás ni las envenena. Reporto las fallidas y salgo con código ≠ 0 para que el
+    // corredor sepa que quedó trabajo (reintentable en el próximo --confirm; las OK no se re-siembran).
+    let fallidas = 0;
     for (let i = 0; i < pendientes.length; i++) {
+        const padre = pendientes[i]!;
         const franjaCitaId = franjasLibres[i];
         if (!franjaCitaId) throw new Error("[sembrar-estados-padre] No hay franja libre para la cita — aborta.");
-        const r = await sembrarPadre(base, pendientes[i]!, otroReportanteId, franjaCitaId);
-        console.log(
-            `[sembrar-estados-padre] APLICADO ${r.email}: hijo=${r.hijos} reporteVisible=${r.reportesVisibles} círculo=${r.contactos} citaCONFIRMADA=${r.citasConfirmadas} sembrado=${r.marcadoSembrado}`,
+        try {
+            const r = await sembrarPadre(base, padre, otroReportanteId, franjaCitaId);
+            console.log(
+                `[sembrar-estados-padre] APLICADO ${r.email}: hijo=${r.hijos} reporteVisible=${r.reportesVisibles} círculo=${r.contactos} citaCONFIRMADA=${r.citasConfirmadas} sembrado=${r.marcadoSembrado}`,
+            );
+        } catch (err) {
+            fallidas++;
+            console.error(
+                `[sembrar-estados-padre] FALLÓ ${padre.email} — rollback COMPLETO (nada marcado; reintentable en el próximo --confirm):`,
+                err instanceof Error ? err.message : err,
+            );
+        }
+    }
+    if (fallidas > 0) {
+        console.error(
+            `[sembrar-estados-padre] ${fallidas} de ${pendientes.length} cuenta(s) fallaron y quedaron SIN sembrar. Reintentá con --confirm (las completas no se re-siembran).`,
         );
+        process.exitCode = 1;
+        return;
     }
     console.log(`[sembrar-estados-padre] Listo: ${pendientes.length} cuenta(s) sembrada(s). Todo marcado corrida="${CORRIDA}" (purgable).`);
 }
@@ -333,4 +386,4 @@ if (process.argv[1]?.endsWith("sembrar-estados-padre.ts")) {
         .finally(() => prisma.$disconnect());
 }
 
-export { padresE2E, yaSembrado, sembrarPadre, resolverBase, asegurarOtroReportante, asegurarProfConFranjas, CORRIDA, HIJO_NOMBRE };
+export { padresE2E, yaSembrado, sembrarPadre, resolverBase, asegurarOtroReportante, asegurarProfConFranjas, CORRIDA, CORRIDA_CUENTAS, HIJO_NOMBRE };

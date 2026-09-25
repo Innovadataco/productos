@@ -15,6 +15,7 @@ import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import { listarCuentasReportadasPorOtros } from "@/lib/dal/services/hijos/reportes-ajenos";
 import { prisma as demoPrisma } from "../../scripts/demo-prod/lib/prisma";
+import { purgar } from "../../scripts/demo-prod/purgar-demo";
 import {
     padresE2E,
     yaSembrado,
@@ -23,6 +24,7 @@ import {
     asegurarOtroReportante,
     asegurarProfConFranjas,
     CORRIDA,
+    CORRIDA_CUENTAS,
     HIJO_NOMBRE,
 } from "../../scripts/demo-prod/sembrar-estados-padre";
 
@@ -96,10 +98,16 @@ describe("SPEC-722 · siembra de estados del padre (+e2epadre)", () => {
         // (3) una cita CONFIRMADA.
         expect(await prisma.solicitudCita.count({ where: { padreUsuarioId: padre.id, estado: "CONFIRMADA" } })).toBe(1);
 
-        // (4) el padre marcado sembrado (ve profesionales demo).
-        expect(await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: padre.id } })).not.toBeNull();
+        // (4) el padre marcado sembrado (ve profesionales demo) EN LA CORRIDA PERSISTENTE de cuentas,
+        // no en la del estado purgable → la purga del estado NO se lleva la cuenta fija.
+        const marcaPadre = await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: padre.id } });
+        expect(marcaPadre, "el padre queda marcado como visor demo (SPEC-655)").not.toBeNull();
+        expect(
+            (marcaPadre?.metadata as { corrida?: string } | null)?.corrida,
+            "la cuenta se marca en la corrida PERSISTENTE, no en la del estado",
+        ).toBe(CORRIDA_CUENTAS);
 
-        // todo marcado con la corrida (purgable).
+        // el ESTADO (hijo, reportes, …) va en la corrida purgable e2epadre-722.
         const marca = await prisma.demoMarcado.findFirst({ where: { entidad: "Hijo", entidadId: hijo.id } });
         expect((marca?.metadata as { corrida?: string } | null)?.corrida).toBe(CORRIDA);
     });
@@ -115,5 +123,61 @@ describe("SPEC-722 · siembra de estados del padre (+e2epadre)", () => {
         expect(await prisma.hijo.count({ where: { usuarioId: padre.id, nombre: HIJO_NOMBRE } })).toBe(1);
         expect(await prisma.contactoConfianza.count({ where: { usuarioId: padre.id } })).toBe(2);
         expect(await prisma.solicitudCita.count({ where: { padreUsuarioId: padre.id } })).toBe(1);
+    });
+
+    it("ATÓMICO: si la siembra de un padre falla a mitad, rollback COMPLETO (nada marcado) y el re-run sana", async () => {
+        const padre = await crearUsuario("PARENT", "cal+e2epadre@innovadataco.com");
+        const base = await resolverBase();
+        const otroId = await asegurarOtroReportante(base);
+
+        // Falla TARDÍA dentro de la transacción (franja inexistente = estado 3), ya creados el hijo +
+        // reporte + círculo: si NO fuera atómico, el hijo quedaría y yaSembrado mentiría (el bug real).
+        await expect(sembrarPadre(base, padre, otroId, "franja-inexistente-xyz")).rejects.toThrow();
+
+        // Rollback COMPLETO: ni hijo, ni contactos, ni la marca del padre. yaSembrado sigue en false.
+        expect(await yaSembrado(padre.id)).toBe(false);
+        expect(await prisma.hijo.count({ where: { usuarioId: padre.id } })).toBe(0);
+        expect(await prisma.contactoConfianza.count({ where: { usuarioId: padre.id } })).toBe(0);
+        expect(await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: padre.id } })).toBeNull();
+
+        // Sana: con una franja real, el re-run lo siembra entero (la falla no lo dejó bloqueado).
+        const { franjasLibres } = await asegurarProfConFranjas(base, 1);
+        await sembrarPadre(base, padre, otroId, franjasLibres[0]!);
+        expect(await yaSembrado(padre.id)).toBe(true);
+        expect(await prisma.solicitudCita.count({ where: { padreUsuarioId: padre.id, estado: "CONFIRMADA" } })).toBe(1);
+    });
+
+    it("numeroSeguimiento ÚNICO por reporte: 2 cuentas +e2epadre no colisionan (bug del 25-09)", async () => {
+        await crearUsuario("PARENT", "cal+e2epadre1@innovadataco.com");
+        await crearUsuario("PARENT", "cal+e2epadre2@innovadataco.com");
+
+        const n = await correrSiembra();
+        expect(n, "siembra las 2 cuentas sin reventar por colisión de numeroSeguimiento").toBe(2);
+
+        // 2 cuentas × 3 reportes (hijo + 2 del círculo) = 6, cada uno con RPT-XXXXXX ÚNICO y en formato.
+        const nums = (await prisma.reporte.findMany({ select: { numeroSeguimiento: true } })).map((r) => r.numeroSeguimiento);
+        expect(nums.length).toBe(6);
+        expect(nums.every((x) => x !== null && /^RPT-[A-Z0-9]{6}$/.test(x))).toBe(true);
+        expect(new Set(nums).size, "todos los numeroSeguimiento distintos (sin colisión)").toBe(nums.length);
+    });
+
+    it("purgar el ESTADO (corrida e2epadre-722) limpia lo sembrado pero DEJA viva la cuenta +e2epadre", async () => {
+        const padre = await crearUsuario("PARENT", "cal+e2epadre@innovadataco.com");
+        await correrSiembra();
+        expect(await yaSembrado(padre.id)).toBe(true);
+
+        // Lo que corre el CEO para «dejar limpio» antes del re-run.
+        await purgar({ corrida: CORRIDA });
+
+        // La cuenta fija de Calidad SIGUE viva y marcada como visor demo (SPEC-655) → el re-run puede
+        // volver a sembrarla. Si el estado y la cuenta compartieran corrida, esto sería null (bug).
+        expect(await prisma.usuario.findUnique({ where: { id: padre.id } }), "la cuenta +e2epadre NO se borra con el estado").not.toBeNull();
+        expect(await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: padre.id } }), "sigue marcada como visor demo").not.toBeNull();
+
+        // El ESTADO sembrado sí se fue: sin hijo → yaSembrado false → reintentable.
+        expect(await yaSembrado(padre.id)).toBe(false);
+        expect(await prisma.hijo.count({ where: { usuarioId: padre.id } })).toBe(0);
+        expect(await prisma.solicitudCita.count({ where: { padreUsuarioId: padre.id } })).toBe(0);
+        expect(await prisma.contactoConfianza.count({ where: { usuarioId: padre.id } })).toBe(0);
     });
 });
