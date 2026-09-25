@@ -18,9 +18,9 @@ import path from "node:path";
 import { entradasProfesional, type EstadoProfesionalSesion } from "./menu-por-estado";
 import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 
+// SPEC-732: «Citaciones» se unificó en «Calendario» — ya no es una ruta operativa aparte.
 const OPERATIVAS = [
     "/dashboard/profesional",
-    "/dashboard/profesional/citaciones",
     "/dashboard/profesional/casos",
     "/dashboard/profesional/calendario",
 ];
@@ -41,9 +41,10 @@ const NO_HABILITADOS: { estado: string; habilitado: boolean }[] = [
 ];
 
 describe("SPEC-691 · el menú del profesional = exactamente las entradas de su estado", () => {
-    it("verificado (habilitado) → inicio · citaciones · casos · calendario · mi perfil (en ese orden)", () => {
+    it("verificado (habilitado) → inicio · casos · calendario · mi perfil (en ese orden)", () => {
         const pro = { estado: "ACTIVO", habilitado: true };
-        expect(labels(pro)).toEqual(["Inicio", "Citaciones", "Casos", "Calendario", "Mi perfil"]);
+        // SPEC-732: «Citaciones» se unificó en «Calendario» — un solo ítem operativo del calendario.
+        expect(labels(pro)).toEqual(["Inicio", "Casos", "Calendario", "Mi perfil"]);
         // SPEC-685 (PR2-bis): «Mi perfil» del habilitado es su propia pantalla
         // (datos + tarifa + documentos + estado), ya no la ficha de completar.
         expect(hrefs(pro)).toEqual([...OPERATIVAS, "/dashboard/profesional/mi-perfil"]);
@@ -74,9 +75,9 @@ describe("SPEC-691 · el menú del profesional = exactamente las entradas de su 
     it("CONTROL POSITIVO: el mismo usuario, cambiando solo `habilitado`, cambia sus entradas", () => {
         const base = { estado: "ACTIVO" };
         expect(labels({ ...base, habilitado: false })).not.toEqual(labels({ ...base, habilitado: true }));
-        // El cambio es exactamente la dimensión operativa: 0 → 4.
+        // El cambio es exactamente la dimensión operativa: 0 → 3 (SPEC-732 unificó Citaciones en Calendario).
         expect(hrefs({ ...base, habilitado: false }).filter((h) => OPERATIVAS.includes(h)).length).toBe(0);
-        expect(hrefs({ ...base, habilitado: true }).filter((h) => OPERATIVAS.includes(h)).length).toBe(4);
+        expect(hrefs({ ...base, habilitado: true }).filter((h) => OPERATIVAS.includes(h)).length).toBe(3);
     });
 
     it("estructural (I-299): cada entrada está en PROFESIONAL_NAV_ITEMS y tiene page.tsx", () => {

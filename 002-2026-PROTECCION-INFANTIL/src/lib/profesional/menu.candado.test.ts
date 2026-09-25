@@ -80,16 +80,16 @@ describe("SPEC-437 · misma mecánica que el operador: módulo por ítem", () =>
         }
     });
 
-    // SPEC-706: `profesional_verificacion` se retiró — «Mi estado» dejó de ser pantalla propia; su
-    // estado vive en la ficha (`profesional_ficha`). Quedan CINCO módulos del profesional.
-    it("los cinco módulos del profesional existen aunque su pantalla todavía no", () => {
+    // SPEC-706: `profesional_verificacion` se retiró (su estado vive en la ficha).
+    // SPEC-732: `profesional_citaciones` se retiró — «Citaciones» se unificó en «Calendario».
+    // Quedan CUATRO módulos del profesional.
+    it("los cuatro módulos del profesional existen aunque su pantalla todavía no", () => {
         const delProfesional = CATALOGO_MODULOS.filter((m) => m.categoria === "profesional").map((m) => m.clave);
         expect(delProfesional.sort()).toEqual([
             "profesional_calendario",
             "profesional_casos",
             "profesional_ficha",
             "profesional_inicio",
-            "profesional_citaciones",
         ].sort());
     });
 

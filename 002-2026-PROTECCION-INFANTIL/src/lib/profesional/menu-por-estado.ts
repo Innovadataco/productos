@@ -28,7 +28,6 @@ import { PROFESIONAL_NAV_ITEMS, type NavItem } from "@/lib/nav-items";
 export type EstadoProfesionalSesion = { habilitado: boolean } | null | undefined;
 
 const HREF_INICIO = "/dashboard/profesional";
-const HREF_CITACIONES = "/dashboard/profesional/citaciones";
 const HREF_CASOS = "/dashboard/profesional/casos";
 const HREF_CALENDARIO = "/dashboard/profesional/calendario";
 const HREF_FICHA = "/perfil-profesional/completar";
@@ -49,7 +48,7 @@ function entrada(href: string, label: string): NavItem {
 function menuVerificado(): NavItem[] {
     return [
         entrada(HREF_INICIO, "Inicio"),
-        entrada(HREF_CITACIONES, "Citaciones"),
+        // SPEC-732: «Citaciones» se unificó en «Calendario» (una sola entrada, una sola pantalla).
         entrada(HREF_CASOS, "Casos"),
         entrada(HREF_CALENDARIO, "Calendario"),
         // SPEC-685 (PR2-bis): «Mi perfil» del habilitado es su propia pantalla

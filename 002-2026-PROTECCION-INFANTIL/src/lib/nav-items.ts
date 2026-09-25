@@ -179,7 +179,8 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
  */
 export const PROFESIONAL_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/profesional", label: "Inicio", modulo: "profesional_inicio" },
-    { href: "/dashboard/profesional/citaciones", label: "Citaciones", modulo: "profesional_citaciones" },
+    // SPEC-732: «Citaciones» se unificó en «Calendario» (un solo ítem, una sola pantalla:
+    // publicar franjas + responder solicitudes). La ruta vieja redirige (no 404).
     { href: "/dashboard/profesional/casos", label: "Casos", modulo: "profesional_casos" },
     // SPEC-437 · T013: «Calendario» entra al menú ahora que SPEC-447 (#353)
     // construyó y desplegó `/dashboard/profesional/calendario`. Antes su ítem

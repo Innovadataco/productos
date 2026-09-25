@@ -3,7 +3,10 @@
 /**
  * SPEC-714 · El calendario del profesional, nivel dios (mockup aprobado por Jelkin).
  *
- * UN SOLO componente para «Calendario» (publicar) y «Citaciones» (responder):
+ * SPEC-732 · UNA sola pantalla «Calendario»: el profesional publica franjas Y ve/responde
+ * solicitudes en el mismo lugar (antes eran dos ítems «Calendario»/«Citaciones»). El aviso
+ * «Esperando su respuesta · N por responder» lidera cuando hay pendientes; si no, es solo
+ * publicar. La ruta vieja `/citaciones` redirige acá.
  * la rejilla se PINTA (semana/día), la hora se arrastra para crear, se repite y
  * se copia; lo reservado se ve pero no se borra por accidente. Los estados de la
  * cita viven DENTRO de la cuadrícula (SPEC-712): libre · validando · esperando ·
@@ -47,11 +50,12 @@ async function mensajeError(res: Response, respaldo: string): Promise<string> {
 
 interface Props {
     datos: CalendarioProfesionalDto;
-    /** «calendario» lidera con publicar; «citaciones» antepone «Esperando su respuesta». */
-    modo?: "calendario" | "citaciones";
 }
 
-export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
+// SPEC-732: una sola pantalla «Calendario» — publica franjas Y responde solicitudes.
+// El aviso «Esperando su respuesta» LIDERA cuando hay pendientes (antes era el
+// «modo citaciones», una entrada aparte); cuando no hay, es solo publicar.
+export function CalendarioProfesional({ datos }: Props) {
     const router = useRouter();
     const [vista, setVista] = useState<"semana" | "dia">("semana");
     const [ancla, setAncla] = useState(datos.hoy); // fecha dentro de la semana/día visible
@@ -320,7 +324,7 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
         if (b.estado === "esperando") return setPanel({ tipo: "responder", bloque: b });
         if (b.estado === "confirmada") return setPanel({ tipo: "detalle", bloque: b });
         if (b.estado === "validando") return toast("Reservada, validando el pago. Cuando se apruebe, aquí podrá responder. Por ahora no tiene que hacer nada.");
-        if (b.estado === "reservada") return toast("Esta hora está reservada. No se puede borrar desde acá; se gestiona en Citaciones.");
+        if (b.estado === "reservada") return toast("Esta hora está reservada. No se puede borrar desde acá.");
         if (selModo) {
             setSel((s) => {
                 const n = new Set(s);
@@ -337,7 +341,7 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
     return (
         <div className="mx-auto max-w-6xl p-3 sm:p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-semibold text-body">{modo === "citaciones" ? "Citaciones" : "Calendario"}</h1>
+                <h1 className="text-xl font-semibold text-body">Calendario</h1>
                 <span className="font-mono text-xs text-muted">{rango}</span>
                 <div className="ml-auto flex items-center gap-2">
                     <button aria-label="Ir al período anterior" className="rounded-lg border border-tinta/10 px-2 py-1 text-muted hover:text-body" onClick={() => setAncla(addDias(ancla, vista === "dia" ? -1 : -7))}>‹</button>
@@ -354,23 +358,19 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
                 </div>
             </div>
 
-            {modo === "citaciones" && (
+            {esperando.length > 0 && (
                 <div className="mb-3 rounded-xl border border-estado-ambar/30 bg-estado-ambar/5 p-3">
-                    <p className="text-sm font-semibold text-body">Esperando su respuesta</p>
-                    {esperando.length ? (
-                        <ul className="mt-1 space-y-1">
-                            {esperando.map((b) => (
-                                <li key={b.id}>
-                                    <button className="w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-estado-ambar/10" onClick={() => onBloque(b)}>
-                                        <span className="font-medium text-body">{b.familia}</span>
-                                        <span className="ml-2 font-mono text-xs text-subtle">{DOW[diaSemana(b.fecha)]} {numMes(b.fecha)} · {fmt(b.minInicio)} · {b.modalidad === "VIRTUAL" ? "Virtual" : "Presencial"}</span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="mt-1 text-xs text-subtle">Nada por responder. Cuando una familia reserve y pague, aparece acá.</p>
-                    )}
+                    <p className="text-sm font-semibold text-body">Esperando su respuesta · {esperando.length} por responder</p>
+                    <ul className="mt-1 space-y-1">
+                        {esperando.map((b) => (
+                            <li key={b.id}>
+                                <button className="w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-estado-ambar/10" onClick={() => onBloque(b)}>
+                                    <span className="font-medium text-body">{b.familia}</span>
+                                    <span className="ml-2 font-mono text-xs text-subtle">{DOW[diaSemana(b.fecha)]} {numMes(b.fecha)} · {fmt(b.minInicio)} · {b.modalidad === "VIRTUAL" ? "Virtual" : "Presencial"}</span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 

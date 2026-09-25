@@ -69,11 +69,13 @@ export const CLAVES_POR_ROL: Record<string, string[]> = {
     // pantalla real, así que least-privilege se cumple igual.
     PROFESIONAL: [
         "profesional_inicio",
-        "profesional_citaciones",
         "profesional_casos",
         "profesional_calendario",
         "profesional_ficha",
         // SPEC-706: `profesional_verificacion` retirado (su pantalla se fusionó en la ficha).
+        // SPEC-732: `profesional_citaciones` retirado del grant — «Citaciones» se unificó en
+        // «Calendario» (un solo ítem/pantalla). Responder solicitudes lo gatea ahora
+        // `profesional_calendario` (mismo lugar). El módulo sigue en el catálogo.
     ],
 };
 

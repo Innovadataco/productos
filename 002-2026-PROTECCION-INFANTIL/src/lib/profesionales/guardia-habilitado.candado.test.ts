@@ -71,7 +71,7 @@ describe("SPEC-691 · toda página operativa del profesional pasa por la compuer
         expect(rutas.length).toBeGreaterThanOrEqual(4);
         for (const esperada of [
             "dashboard/profesional/page.tsx",
-            "dashboard/profesional/citaciones/page.tsx",
+            // SPEC-732: «citaciones» dejó de ser operativa — es un redirect a «calendario».
             "dashboard/profesional/casos/page.tsx",
             "dashboard/profesional/calendario/page.tsx",
         ]) {
@@ -82,6 +82,11 @@ describe("SPEC-691 · toda página operativa del profesional pasa por la compuer
     it("DERIVADO DEL ÁRBOL · cada page.tsx operativa llama a exigirProfesionalHabilitado", () => {
         for (const p of paginasOperativas()) {
             const src = fs.readFileSync(p, "utf-8");
+            // SPEC-732 (mismo criterio que SPEC-711/571 mec. 4): un stub de redirect PURO
+            // —redirige y no rinde cascarón (sin JSX)— no lleva compuerta; su destino sí
+            // gatea. `/dashboard/profesional/citaciones` es ese caso tras unificarse en
+            // «Calendario». Un `page.tsx` que renderiza (tiene JSX) NO queda exento.
+            if (/\bredirect\s*\(/.test(src) && !/<[A-Za-z]/.test(src)) continue;
             // La LLAMADA (con paréntesis), no el identificador: un `import` suelto sin
             // invocar dejaría la página sin guardia y el candado en falso verde.
             expect(
