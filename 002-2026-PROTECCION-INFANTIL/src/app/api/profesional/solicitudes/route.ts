@@ -17,7 +17,8 @@ export async function GET() {
     try {
         const user = await verifyAuth("PROFESIONAL");
         await exigirProfesionalHabilitadoApi(user.id); // SPEC-690: ruta operativa — solo habilitado
-        await assertModulo(user, "profesional_citaciones");
+        // SPEC-732: responder solicitudes vive en el calendario unificado → su módulo.
+        await assertModulo(user, "profesional_calendario");
         const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
         if (!perfil) throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);
         const solicitudes = await new SolicitudCitaRepository().listarPorProfesional(perfil.id);

@@ -1,5 +1,6 @@
 /**
- * CANDADO · SPEC-712 (FORMA-SPEC712 §6) · «Citaciones» muestra el ESTADO, no la regla.
+ * CANDADO · SPEC-712 (FORMA-SPEC712 §6) · el calendario muestra el ESTADO, no la regla.
+ * (SPEC-732: responder vive en «Calendario», la pantalla unificada; antes «Citaciones».)
  *
  * El bug de Jelkin (medido): pulsó «No puedo» en una solicitud SIN_CONFIRMAR y
  * saltó la regla del motor «Solo se puede rechazar una solicitud pagada y

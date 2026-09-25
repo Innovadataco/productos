@@ -14,7 +14,8 @@ export async function PATCH(_request: Request, context: { params: Promise<{ id: 
     try {
         const user = await verifyAuth("PROFESIONAL");
         await exigirProfesionalHabilitadoApi(user.id); // SPEC-690: ruta operativa — solo habilitado
-        await assertModulo(user, "profesional_citaciones");
+        // SPEC-732: confirmar vive en el calendario unificado → su módulo.
+        await assertModulo(user, "profesional_calendario");
         const { id } = await context.params;
         const solicitud = await confirmarPorProfesional(id, user.id);
         return NextResponse.json({ data: { id: solicitud.id, estado: solicitud.estado } });

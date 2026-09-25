@@ -123,7 +123,8 @@ describe("AdminNav · chrome tokenizado (SPEC-502)", () => {
 // CONTROL POSITIVO: el mismo habilitado FUERA del muro sí ve el operativo, así el candado no pasa
 // por colapsar siempre.
 describe("AdminNav · el muro de aceptación colapsa al portero (SPEC-703)", () => {
-    const OPERATIVOS = ["Inicio", "Citaciones", "Casos", "Calendario", "Mi perfil"];
+    // SPEC-732: «Citaciones» se unificó en «Calendario» — el operativo trae «Calendario», no «Citaciones».
+    const OPERATIVOS = ["Inicio", "Casos", "Calendario", "Mi perfil"];
     // SPEC-706: el portero quedó con UNA entrada («Mi ficha»); «Mi estado» se retiró.
     const PORTERO = ["Mi ficha"];
 

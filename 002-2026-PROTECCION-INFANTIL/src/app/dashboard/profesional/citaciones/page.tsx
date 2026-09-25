@@ -1,39 +1,16 @@
-import type { Metadata } from "next";
-import { exigirProfesionalHabilitado } from "@/lib/profesionales/guardia-habilitado";
-import { puedeAccederAModulo } from "@/lib/permisos-modulos";
-import { SinAccesoModulo } from "@/components/modules/SinAccesoModulo";
-import { calendarioDelProfesional } from "@/lib/profesional/calendario/calendario.service";
-import { CalendarioProfesional } from "@/components/modules/profesional/CalendarioProfesional";
+import { redirect } from "next/navigation";
 
 /**
- * SPEC-437 (A-75) · «Citaciones» del menú del profesional.
+ * SPEC-732 · «Citaciones» se unificó en «Calendario»: una sola pantalla donde el
+ * profesional publica franjas Y responde solicitudes (el aviso «Esperando su
+ * respuesta» lidera cuando hay pendientes). Esta ruta vieja REDIRIGE — no 404
+ * (misma disciplina que SPEC-723): un enlace o favorito guardado cae en la única
+ * pantalla.
  *
- * SPEC-714 (pedido de Jelkin): «Citaciones» muestra el MISMO calendario que
- * «Calendario» — un solo componente, no dos cuadrículas. En este modo lidera con
- * la lista «Esperando su respuesta» encima de la rejilla, para que lo accionable
- * salte primero; los estados de la cita viven dentro de la cuadrícula.
- *
- * `force-dynamic`: cambia con cada solicitud que llega y cada confirmación.
+ * Stub de redirect PURO — no rinde cascarón, así que no lleva compuerta de estado
+ * (mismo criterio que SPEC-711 · mecanismo 4 de SPEC-571). El destino
+ * (/dashboard/profesional/calendario) sí gatea por habilitación y módulo.
  */
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-    title: "Citaciones",
-    description: "Sus solicitudes por responder y su agenda, en el calendario.",
-};
-
-export default async function CitacionesPage() {
-    // SPEC-691: compuerta primero — no habilitado → portero (contra la base).
-    const { user: usuario } = await exigirProfesionalHabilitado();
-    // SPEC-496: el módulo manda — revocar `profesional_citaciones` corta el acceso.
-    if (!(await puedeAccederAModulo(usuario.rol, "profesional_citaciones"))) {
-        return <SinAccesoModulo />;
-    }
-    const datos = await calendarioDelProfesional(usuario.id);
-
-    return (
-        <main className="min-h-screen bg-page py-4">
-            <CalendarioProfesional datos={datos} modo="citaciones" />
-        </main>
-    );
+export default function CitacionesRedirectPage() {
+    redirect("/dashboard/profesional/calendario");
 }

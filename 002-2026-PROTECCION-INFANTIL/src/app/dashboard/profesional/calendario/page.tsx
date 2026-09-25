@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
     title: "Calendario",
-    description: "Publique y retire las franjas en las que atiende.",
+    description: "Publique sus franjas y responda las solicitudes, en un solo lugar.",
 };
 
 export default async function CalendarioProfesionalPage() {
@@ -39,7 +39,7 @@ export default async function CalendarioProfesionalPage() {
 
     return (
         <main className="min-h-screen bg-page py-4">
-            <CalendarioProfesional datos={datos} modo="calendario" />
+            <CalendarioProfesional datos={datos} />
         </main>
     );
 }

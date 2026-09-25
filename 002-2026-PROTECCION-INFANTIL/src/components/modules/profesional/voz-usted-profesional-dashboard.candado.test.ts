@@ -167,8 +167,9 @@ describe("SPEC-550 · el área logueada del profesional habla de «usted» (sin 
         expect(cal).toContain("Arrastre sobre un espacio vacío para publicar una hora");
         expect(cal).toContain("No puede ofrecer horas después de que venza su verificación. Renuévela para abrir fechas más adelante.");
         expect(cal).toContain("Cuando se apruebe, aquí podrá responder");
-        expect(cal).toContain("se gestiona en Citaciones.");
-        expect(calPage).toContain("Publique y retire las franjas en las que atiende.");
+        // SPEC-732: la reservada ya no manda a «Citaciones» (se unificó). Ancla usted robusta:
+        expect(cal).toContain("Revise su conexión");
+        expect(calPage).toContain("Publique sus franjas y responda las solicitudes, en un solo lugar.");
         expect(verif).toContain("Verificación de su perfil");
         // SPEC-706 PR A (texto de Diseño, Gestión e69b591): el resultado llega por CORREO y se dice
         // el bloqueo. Ancla a la copia nueva (usted, imperativo «esté»); muere si se revierte a tú.

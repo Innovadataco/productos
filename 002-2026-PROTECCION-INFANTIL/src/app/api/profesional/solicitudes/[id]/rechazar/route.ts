@@ -17,7 +17,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     try {
         const user = await verifyAuth("PROFESIONAL");
         await exigirProfesionalHabilitadoApi(user.id); // SPEC-690: ruta operativa — solo habilitado
-        await assertModulo(user, "profesional_citaciones");
+        // SPEC-732: rechazar («No puedo») vive en el calendario unificado → su módulo.
+        await assertModulo(user, "profesional_calendario");
         const { id } = await context.params;
         // El body es opcional; si no hay JSON válido, sigue con motivo undefined.
         let motivo: string | undefined;

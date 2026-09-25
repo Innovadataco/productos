@@ -109,7 +109,10 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // Tener el permiso sin pantalla no pinta nada; tener la pantalla sin
     // permiso tampoco. Los dos hacen falta.
     { clave: "profesional_inicio", nombre: "Inicio del profesional", categoria: "profesional", orden: 500 },
-    { clave: "profesional_citaciones", nombre: "Citaciones", categoria: "profesional", orden: 510 },
+    // SPEC-732: `profesional_citaciones` retirado del catálogo — «Citaciones» se unificó
+    // en «Calendario» (un solo módulo/pantalla). Sin catálogo, ADMIN deja de recibirlo
+    // (grant computado) y ningún módulo queda solo-NAV (SPEC-496). Responder solicitudes
+    // lo gatea `profesional_calendario`.
     { clave: "profesional_casos", nombre: "Casos", categoria: "profesional", orden: 520 },
     { clave: "profesional_calendario", nombre: "Calendario", categoria: "profesional", orden: 530 },
     { clave: "profesional_ficha", nombre: "Mi ficha", categoria: "profesional", orden: 540 },
