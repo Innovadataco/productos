@@ -660,26 +660,39 @@ describe("SPEC-592/594 · render del detalle admin y notificaciones al padre", (
         });
     }
 
-    it("SPEC-701: el GET del detalle admin DEJA FILA (audita) pero NO notifica al padre", async () => {
+    it("SPEC-734: el GET por defecto NO trae el relato ni deja fila; con ?revelar=true trae relato + fila, sin notificar al padre", async () => {
         await sembrarReglaTextoLeido();
         const padre = await crearUsuario("PARENT");
         const reporte = await crearReporteDePrueba(padre.id);
         await autenticar("ADMIN");
 
-        const res = await GET_DETALLE_ADMIN(
+        // (1) SPEC-734: la carga por defecto NO descifra ni envía el relato, y NO deja
+        // fila — abrir el caso ya no es «ver el texto». El invariante de SPEC-701 no se
+        // afloja: cambia de «fila en cada apertura» a «fila solo en el acto de revelar».
+        const resSin = await GET_DETALLE_ADMIN(
             new Request(`http://localhost/api/admin/reportes-revision/${reporte.id}`, {
                 headers: { cookie: `token=${activeToken}` },
             }),
             { params: Promise.resolve({ id: reporte.id }) }
         );
-        expect(res.status).toBe(200);
-        const data = await res.json();
-        expect(data.reporte.texto).toBe("Relato de prueba del flujo de código temporal");
+        expect(resSin.status).toBe(200);
+        const dataSin = await resSin.json();
+        expect(dataSin.reporte.texto).toBeNull();
+        expect(await prisma.lecturaReporte.count({ where: { reporteId: reporte.id } })).toBe(0);
 
-        // SPEC-701 (I-421): el detalle DEJA FILA — toda lectura del relato por el
-        // personal queda rastreada (delitos contra menores no prescriben).
+        // (2) SPEC-734: con ?revelar=true el relato viaja Y deja UNA fila a nombre del
+        // admin (frontera auditada). Se conserva el invariante «relato en el payload ⇒ fila».
+        const resRev = await GET_DETALLE_ADMIN(
+            new Request(`http://localhost/api/admin/reportes-revision/${reporte.id}?revelar=true`, {
+                headers: { cookie: `token=${activeToken}` },
+            }),
+            { params: Promise.resolve({ id: reporte.id }) }
+        );
+        expect(resRev.status).toBe(200);
+        const dataRev = await resRev.json();
+        expect(dataRev.reporte.texto).toBe("Relato de prueba del flujo de código temporal");
         expect(await prisma.lecturaReporte.count({ where: { reporteId: reporte.id } })).toBe(1);
-        // …pero SIGUE sin notificar al padre (SPEC-594: rol interno lee → cero correos).
+        // …y SIGUE sin notificar al padre (SPEC-594: rol interno lee → cero correos).
         // El rastro y el aviso son cosas distintas: SPEC-701 los desacopló.
         expect(await prisma.notificacion.count({ where: { evento: "padre.reporte.texto_leido" } })).toBe(0);
     });
