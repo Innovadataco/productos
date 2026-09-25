@@ -1,10 +1,13 @@
 /**
  * SPEC-725 (I-430) · Corrector de PROD (dry-run → --confirm, idempotente): retira los módulos
  * de permisos HUÉRFANOS que el catálogo del código (`CATALOGO_MODULOS`) YA NO declara, junto con
- * sus grants. Hoy son dos claves, retiradas por distintos SPECs:
- *   - `profesional_verificacion` (SPEC-706): «Mi estado» dejó de ser pantalla; su estado vive en
- *     la ficha (`profesional_ficha`).
+ * sus grants. Hoy son cinco claves, retiradas por distintos SPECs (verificadas huérfanas contra el
+ * barrido en prod + confirmadas sin lector de permiso — ni catálogo ni assertModulo/nav):
+ *   - `profesional_verificacion` (SPEC-706): «Mi estado» dejó de ser pantalla; vive en `profesional_ficha`.
  *   - `profesional_citaciones` (SPEC-732 / #684): «Citaciones» se unificó en `profesional_calendario`.
+ *   - `padre` (SPEC-194): renombrado a `padres` (vista unificada de usuarios); la clave singular no gatea nada.
+ *   - `ia_eval`: superseded por `centro_control_ia` + `ia_*`; 0 referencias en src/.
+ *   - `apelaciones`: la feature vive pero la gatea `comite_bandeja` (SPEC-110); esta clave suelta no gatea nada.
  *
  * Contexto: `prisma/seed-modulos-grants.ts` es ADITIVO y NUNCA borra (deriva de `CATALOGO_MODULOS`,
  * así que un retiro deja de sembrar la clave, pero NO borra la fila ya existente). En una BD de
@@ -45,8 +48,11 @@ import { CATALOGO_MODULOS } from "../src/lib/permisos-catalogo";
  * = un módulo retirado del catálogo por un SPEC.
  */
 export const CLAVES_A_RETIRAR = [
-    "profesional_verificacion", // SPEC-706
-    "profesional_citaciones", // SPEC-732 (#684)
+    "profesional_verificacion", // SPEC-706: «Mi estado» dejó de ser pantalla (vive en profesional_ficha).
+    "profesional_citaciones", // SPEC-732 (#684): «Citaciones» se unificó en profesional_calendario.
+    "padre", // SPEC-194: renombrado a `padres` (vista unificada de usuarios); 0 usos como llave de permiso.
+    "ia_eval", // Superseded por `centro_control_ia` + `ia_*`; 0 referencias en src/.
+    "apelaciones", // Feature viva pero gateada por `comite_bandeja` (SPEC-110); la clave suelta no gatea nada.
 ] as const;
 
 export interface ResultadoRetiroModulo {
