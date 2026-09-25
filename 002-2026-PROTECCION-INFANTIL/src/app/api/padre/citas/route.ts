@@ -22,7 +22,10 @@ import { leerPrecioEstandarPrimeraCita } from "@/lib/profesional/cita/precio-pri
 const crearSchema = z.object({
     profesionalId: cuidIdSchema,
     franjaId: cuidIdSchema,
-    presentacion: z.string().trim().min(20).max(2000),
+    // SPEC-729 §3: mínimo ÚNICO = 10 (igual que el perfil). En protección no se
+    // rechaza la descripción breve y real de un padre («Acoso a mi hija» = 15). La
+    // presentación es un solo campo (presentacionEstandar, max 500): se alinea acá.
+    presentacion: z.string().trim().min(10).max(500),
     urgencia: z.enum(["ESTA_SEMANA", "SIN_APURO"]),
     expedienteCompartidoId: cuidIdSchema.optional(),
     pagoHeredadoDeId: cuidIdSchema.optional(),

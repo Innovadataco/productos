@@ -624,6 +624,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/padre/home-estado-clasificador.candado.test.ts",
     // SPEC-541 (cliente): el input de fecha de nacimiento del perfil acota 18-100.
     "src/components/modules/padre/PerfilPadreForm.test.tsx",
+    // SPEC-729 (cliente): la presentación del padre se edita desde Mi perfil (bloque).
+    "src/components/modules/padre/presentacion-en-mi-perfil.candado.test.tsx",
     // SPEC-536 (bandeja admin + permisos AD-06 + simulador anti-abuso AD-14): color crudo por arbol de render (frontera Dev1 #458 = Historial).
     "src/components/modules/crudo-admin-reportes-permisos-simulador.candado.test.ts",
     // SPEC-609: el área del padre no ofrece crear contraseña (antirregresión de clase, revierte 598).

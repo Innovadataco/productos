@@ -20,6 +20,12 @@ function fechaHaceAnios(anios: number): string {
 
 type PaisOption = { id: string; nombre: string };
 
+// SPEC-729: la presentación del padre (lo que verá el profesional) vive en «Mi
+// perfil». El servidor exige mínimo 10 si viene con texto (perfilSchema); vacío
+// = null. El «mínimo único» con el flujo de cita lo define Diseño (§2, aparte).
+const PRESENTACION_MIN = 10;
+const PRESENTACION_MAX = 500;
+
 type Perfil = {
     email: string;
     nombre: string | null;
@@ -32,6 +38,8 @@ type Perfil = {
     ciudadId: string | null;
     paisPerfil: { id: string; nombre: string } | null;
     ciudadPerfil: { id: string; nombre: string } | null;
+    // SPEC-729: presentación estándar del padre (nullable; opcional en el perfil).
+    presentacionEstandar: string | null;
 };
 
 // SPEC-334: perfil del padre — ver y editar los 6 datos. País/ciudad del catálogo
@@ -70,6 +78,9 @@ export function PerfilPadreForm({
     const [telefono, setTelefono] = useState("");
     const [paisId, setPaisId] = useState("");
     const [ciudad, setCiudad] = useState<CiudadOpcion | null>(null);
+    // SPEC-729: la presentación se edita acá (Mi perfil), no se re-pide en cada
+    // búsqueda de psicólogo. En el camino no se pide (el Paso 2 son otros campos).
+    const [presentacion, setPresentacion] = useState("");
 
     useEffect(() => {
         void (async () => {
@@ -89,6 +100,7 @@ export function PerfilPadreForm({
                     setDocumentoNumero(perfil.documentoNumero ?? "");
                     setFechaNacimiento(perfil.fechaNacimiento ? perfil.fechaNacimiento.slice(0, 10) : "");
                     setTelefono(perfil.telefono ?? "");
+                    setPresentacion(perfil.presentacionEstandar ?? "");
                     setPaisId(perfil.paisId ?? "");
                     if (perfil.ciudadId && perfil.ciudadPerfil) {
                         setCiudad({ id: perfil.ciudadId, nombre: perfil.ciudadPerfil.nombre, paisId: perfil.paisId ?? "", departamentoId: null, departamento: null });
@@ -121,6 +133,13 @@ export function PerfilPadreForm({
                 return;
             }
         }
+        // SPEC-729: la presentación es opcional, pero si la escribes el servidor
+        // exige un mínimo. Lo decimos ANTES de enviar (vacío se guarda como null).
+        const presentacionLimpia = presentacion.trim();
+        if (!esCamino && presentacionLimpia.length > 0 && presentacionLimpia.length < PRESENTACION_MIN) {
+            setError(`Tu presentación necesita al menos ${PRESENTACION_MIN} caracteres, o déjala vacía.`);
+            return;
+        }
         setSaving(true);
         setError(null);
         setOk(false);
@@ -139,6 +158,9 @@ export function PerfilPadreForm({
                     documentoNumero: documentoNumero.trim() || undefined,
                     // D-2: el camino no pide la fecha; el perfil normal la conserva.
                     ...(esCamino ? {} : { fechaNacimiento: fechaNacimiento || null }),
+                    // SPEC-729: la presentación solo se edita desde el perfil, no en
+                    // el camino. Vacío → null; con texto → el servidor valida el mínimo.
+                    ...(esCamino ? {} : { presentacionEstandar: presentacionLimpia || null }),
                     telefono: telefono.trim() || null,
                     paisId: paisId || null,
                     ciudadId: ciudad?.id || null,
@@ -210,6 +232,31 @@ export function PerfilPadreForm({
                 />
                 <CiudadSearchSelect paisId={paisId} value={ciudad} onSelect={setCiudad} disabled={!paisId} permitirOtra={false} />
             </div>
+
+            {/* SPEC-729: la presentación vive acá (no se re-pide en cada búsqueda de
+                psicólogo). Opcional; el profesional la ve cuando le solicitas cita.
+                No se pide en el camino (Paso 2 son otros campos). */}
+            {!esCamino && (
+                <label className="block">
+                    <span className="text-sm font-medium text-body">Tu presentación</span>
+                    <p className="mt-0.5 text-xs text-subtle">
+                        Es lo que verá el profesional cuando le pidas una cita. Cuéntale en pocas palabras qué
+                        está pasando y qué buscas. La guardamos aquí y la usamos cada vez — no tendrás que
+                        escribirla de nuevo.
+                    </p>
+                    <textarea
+                        value={presentacion}
+                        onChange={(e) => setPresentacion(e.target.value.slice(0, PRESENTACION_MAX))}
+                        rows={5}
+                        maxLength={PRESENTACION_MAX}
+                        placeholder="Ej.: A mi hija de 10 años un desconocido le escribe por Roblox y no sé cómo hablarle del tema."
+                        className="mt-1.5 w-full rounded-xl border border-cielo/40 bg-white px-3 py-2 text-sm text-body focus:border-cielo focus:outline-none dark:border-cielo/30 dark:bg-cielo/10"
+                    />
+                    <span className="text-xs text-subtle">
+                        {presentacion.trim().length}/{PRESENTACION_MAX} · mínimo {PRESENTACION_MIN}
+                    </span>
+                </label>
+            )}
 
             {error && <p className="text-sm text-estado-rubi">{error}</p>}
             {ok && <p className="text-sm text-estado-pino">Tus datos quedaron guardados.</p>}

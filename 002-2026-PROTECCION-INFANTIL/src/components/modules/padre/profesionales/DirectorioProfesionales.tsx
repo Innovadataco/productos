@@ -60,8 +60,8 @@ export function DirectorioProfesionales({
     expedienteIdInicial?: string | undefined;
     heredarDeInicial?: string | undefined;
 }) {
-    // SPEC-440 (I-306): presentación/urgencia NO viajan en URL; el perfil
-    // las lee del `sessionStorage` en cliente (helper `borrador-consulta`).
+    // SPEC-729: la presentación NO viaja en URL; la solicitud de cita la toma de
+    // «Mi perfil» (presentacionEstandar) en el servidor. La urgencia se retiró.
     const [seed, setSeed] = useState<string | null>(null);
     const [facetas, setFacetas] = useState<Facetas | null>(null);
     const [items, setItems] = useState<PerfilPublicoDTO[] | null>(null);
@@ -111,9 +111,8 @@ export function DirectorioProfesionales({
             });
     }, [seed, ciudadId, especialidad, modalidad]);
 
-    // El link al perfil conserva SOLO los IDs opacos. La urgencia y la
-    // presentación las lee el perfil del `sessionStorage` en cliente
-    // (SPEC-440 · I-306): no volver a poner PII en la URL.
+    // El link al perfil conserva SOLO los IDs opacos (no PII en la URL). La
+    // presentación la toma la cita de «Mi perfil» en el servidor (SPEC-729).
     const queryPerfil = useMemo(() => {
         const q = new URLSearchParams();
         if (expedienteIdInicial) q.set("expedienteId", expedienteIdInicial);

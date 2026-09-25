@@ -1,18 +1,18 @@
 /**
- * CANDADO · SPEC-712 (FORMA-SPEC712 §1-§5) · la pantalla del padre para pedir cita,
- * medida por Jelkin en `/dashboard/padre/profesionales/<id>`.
+ * CANDADO · SPEC-712 (FORMA-SPEC712 §1-§5) + SPEC-729 (§2/§3) · la pantalla del
+ * padre para pedir cita, medida por Jelkin en `/dashboard/padre/profesionales/<id>`.
  *
  * Conductas que no se pueden fingir (render real + candado de copy):
- *  §1  El encabezado es «Elige un horario»; la frase del «admin» no vuelve.
- *  §2  Con borrador: MUESTRA «Lo que nos contaste» + «Editar», sin re-pedir el
- *      relato; sin borrador: lo pide acá, una vez.
- *  §3  Franjas ordenadas de la más próxima a la más lejana; chip «Solo esta
- *      semana» que FILTRA de verdad (y lo dice honesto si no hay); línea de
- *      emergencia SIEMPRE visible (141/123/Te Protejo); toggle inerte retirado.
- *  §4  El modal es SÓLIDO (superficie opaca), velo firme + blur, z-50 — no el
- *      vidrio translúcido en z-40 que se leía transparente.
- *  §5  Sin «admin»/«48h» en el flujo estándar; «Tu pago está en proceso de
- *      validación…»; y ningún botón dice «pagar» sin cobrar (veredicto CEO).
+ *  §1  Encabezado «Elige un horario»; la frase del «admin» no vuelve.
+ *  §2 (reencuadrado por SPEC-729): la presentación se TOMA de Mi perfil. Si la tiene
+ *      → «Lo que nos contaste» + «Editar» (no se re-pide). Si está vacía → enlace
+ *      «Complétala en Mi perfil», NO un formulario acá.
+ *  §3  Franjas ordenadas más-próxima-primero; chip «Solo esta semana» que FILTRA (y
+ *      lo dice honesto si no hay); línea de emergencia SIEMPRE visible; toggle inerte
+ *      retirado.
+ *  §4  Modal SÓLIDO, velo firme + blur, z-50.
+ *  §5  Sin «admin»/«48h»; «en proceso de validación»; ningún botón dice «pagar».
+ *  SPEC-729 §3: el mínimo de la presentación es 10 (no 20), en cliente Y servidor.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
@@ -21,13 +21,6 @@ import path from "node:path";
 
 const pushSpy = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushSpy }) }));
-
-// El borrador del paso previo (sessionStorage) se controla por test.
-const leerBorrador = vi.fn();
-vi.mock("@/lib/padre/borrador-consulta", () => ({
-    leerBorradorConsulta: () => leerBorrador(),
-    borrarBorradorConsulta: vi.fn(),
-}));
 
 import { SolicitarCitaPanel, finDeSemana } from "./SolicitarCitaPanel";
 
@@ -41,18 +34,26 @@ const PROPS = {
     duracionMinutos: 45,
 };
 
-function mockFranjas(franjas: Array<Record<string, unknown>>) {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        new Response(JSON.stringify({ data: franjas }), { status: 200 }),
-    );
-}
 function franja(id: string, inicio: Date, modalidad: "VIRTUAL" | "PRESENCIAL") {
     return { id, inicio: inicio.toISOString(), fin: new Date(inicio.getTime() + 3_600_000).toISOString(), modalidad };
 }
 
+// SPEC-729: al montar, el panel hace DOS fetch — /api/padre/perfil (presentacionEstandar)
+// y las franjas. El mock enruta por URL.
+function mockFetch(opts: { franjas?: Array<Record<string, unknown>>; presentacion?: string | null } = {}) {
+    const { franjas = [], presentacion = null } = opts;
+    vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
+        const u = typeof input === "string" ? input : input.toString();
+        if (u.startsWith("/api/padre/perfil")) {
+            return Promise.resolve(
+                new Response(JSON.stringify({ perfil: { presentacionEstandar: presentacion } }), { status: 200 }),
+            );
+        }
+        return Promise.resolve(new Response(JSON.stringify({ data: franjas }), { status: 200 }));
+    });
+}
+
 beforeEach(() => {
-    leerBorrador.mockReset();
-    leerBorrador.mockReturnValue(null);
     pushSpy.mockReset();
 });
 afterEach(() => {
@@ -60,16 +61,16 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-describe("SPEC-712 · pantalla del padre para pedir cita", () => {
+describe("SPEC-712 + SPEC-729 · pantalla del padre para pedir cita", () => {
     it("§1 encabezado «Elige un horario»; la frase del «admin» no vuelve", async () => {
-        mockFranjas([]);
+        mockFetch();
         render(<SolicitarCitaPanel {...PROPS} />);
         expect(await screen.findByRole("heading", { name: "Elige un horario" })).toBeTruthy();
         expect(SRC).not.toContain("El pago se aprueba luego con un admin");
     });
 
     it("§3 la línea de emergencia va SIEMPRE visible: 141 y 123 (tel) + Te Protejo", async () => {
-        mockFranjas([]);
+        mockFetch();
         const { container } = render(<SolicitarCitaPanel {...PROPS} />);
         expect(await screen.findByText(/¿Es una emergencia\?/)).toBeTruthy();
         expect(container.querySelector('a[href="tel:141"]')).toBeTruthy();
@@ -77,27 +78,24 @@ describe("SPEC-712 · pantalla del padre para pedir cita", () => {
         expect(container.querySelector('a[href="https://www.teprotejo.gov.co"]')).toBeTruthy();
     });
 
-    it("§2 con borrador: MUESTRA «Lo que nos contaste» + Editar, sin re-pedir; Editar abre el textarea", async () => {
-        leerBorrador.mockReturnValue({
-            presentacion: "Mi hijo de 12 está siendo acosado en el colegio.",
-            urgencia: "SIN_APURO",
-        });
-        mockFranjas([]);
+    it("§2 con presentación en Mi perfil: MUESTRA «Lo que nos contaste» + Editar; no re-pide", async () => {
+        mockFetch({ presentacion: "Mi hijo de 12 está siendo acosado en el colegio." });
         render(<SolicitarCitaPanel {...PROPS} />);
         expect(await screen.findByText("Lo que nos contaste")).toBeTruthy();
         expect(screen.getByText(/Mi hijo de 12/)).toBeTruthy();
-        // No se re-pide el relato (no hay textarea todavía).
-        expect(screen.queryByLabelText(/Cuéntanos qué pasa/)).toBeNull();
-        // «Editar» abre el textarea para ajustarlo.
+        expect(screen.queryByText(/Complétala en Mi perfil/)).toBeNull();
+        // «Editar» abre el textarea para ajustarlo (ajuste puntual, SPEC-729 §2).
         fireEvent.click(screen.getByRole("button", { name: "Editar" }));
         expect(screen.getByLabelText(/Ajusta lo que nos contaste/)).toBeTruthy();
     });
 
-    it("§2 sin borrador: se pide el relato acá (una vez), sin «Lo que nos contaste»", async () => {
-        leerBorrador.mockReturnValue(null);
-        mockFranjas([]);
+    it("§2 sin presentación: enlaza a «Mi perfil», NO un formulario acá", async () => {
+        mockFetch({ presentacion: null });
         render(<SolicitarCitaPanel {...PROPS} />);
-        expect(await screen.findByLabelText(/Cuéntanos qué pasa/)).toBeTruthy();
+        expect(await screen.findByText(/Aún no tienes una presentación/)).toBeTruthy();
+        const link = screen.getByRole("link", { name: /Complétala en Mi perfil/ });
+        expect(link.getAttribute("href")).toBe("/dashboard/padre/perfil");
+        expect(screen.queryByRole("textbox")).toBeNull(); // no se re-pide acá
         expect(screen.queryByText("Lo que nos contaste")).toBeNull();
     });
 
@@ -106,12 +104,11 @@ describe("SPEC-712 · pantalla del padre para pedir cita", () => {
         const dentro = new Date(Math.floor((Date.now() + fin.getTime()) / 2)); // esta semana
         const fuera = new Date(fin.getTime() + 3 * 24 * 3_600_000); // semana siguiente
         // La API los entrega DESORDENADOS (la lejana primero): el orden lo pone el componente.
-        mockFranjas([franja("lejos", fuera, "PRESENCIAL"), franja("cerca", dentro, "VIRTUAL")]);
+        mockFetch({ franjas: [franja("lejos", fuera, "PRESENCIAL"), franja("cerca", dentro, "VIRTUAL")] });
         const { container } = render(<SolicitarCitaPanel {...PROPS} />);
         await screen.findByText("Virtual");
         const html = container.innerHTML;
         expect(html.indexOf("Virtual")).toBeLessThan(html.indexOf("Presencial")); // próxima antes
-        // Chip ON → solo la de esta semana; la lejana desaparece.
         fireEvent.click(screen.getByRole("button", { name: "Solo esta semana" }));
         expect(screen.getByText("Virtual")).toBeTruthy();
         expect(screen.queryByText("Presencial")).toBeNull();
@@ -120,7 +117,7 @@ describe("SPEC-712 · pantalla del padre para pedir cita", () => {
     it("§3 sin horarios esta semana: lo dice honesto («el más próximo es el …»)", async () => {
         const fin = finDeSemana();
         const fuera = new Date(fin.getTime() + 3 * 24 * 3_600_000);
-        mockFranjas([franja("lejos", fuera, "PRESENCIAL")]);
+        mockFetch({ franjas: [franja("lejos", fuera, "PRESENCIAL")] });
         render(<SolicitarCitaPanel {...PROPS} />);
         await screen.findByText("Presencial");
         fireEvent.click(screen.getByRole("button", { name: "Solo esta semana" }));
@@ -137,7 +134,6 @@ describe("SPEC-712 · pantalla del padre para pedir cita", () => {
         expect(SRC).toContain("bg-tinta/55"); // velo firme
         expect(SRC).toContain("backdrop-blur");
         expect(SRC).toContain("z-50");
-        // Lo que se quitó: el velo débil, el z bajo y el vidrio translúcido del modal.
         expect(SRC).not.toContain("bg-tinta/40");
         expect(SRC).not.toContain("z-40");
         expect(SRC).not.toContain("glass w-full max-w-md");
@@ -152,15 +148,28 @@ describe("SPEC-712 · pantalla del padre para pedir cita", () => {
     it("§5 ningún botón dice «pagar» sin cobrar: CTA «Solicitar la cita», confirm «Confirmar solicitud»", async () => {
         expect(SRC).not.toContain("Pagar y solicitar");
         expect(SRC).not.toContain("Confirmar y pagar");
-        // En vivo: la CTA abre el modal y el confirm dice «Confirmar solicitud».
-        leerBorrador.mockReturnValue({ presentacion: "Un relato suficientemente largo para pasar el mínimo.", urgencia: "SIN_APURO" });
+        // En vivo: con presentación de Mi perfil + franja, la CTA abre el modal.
         const dentro = new Date(Math.floor((Date.now() + finDeSemana().getTime()) / 2));
-        mockFranjas([franja("cerca", dentro, "VIRTUAL")]);
+        mockFetch({
+            presentacion: "Un relato suficientemente largo para pasar el mínimo.",
+            franjas: [franja("cerca", dentro, "VIRTUAL")],
+        });
         render(<SolicitarCitaPanel {...PROPS} />);
         const cta = await screen.findByRole("button", { name: "Solicitar la cita" });
         fireEvent.click(screen.getByText("Virtual")); // selecciona franja → habilita la CTA
         fireEvent.click(cta);
         expect(await screen.findByRole("button", { name: "Confirmar solicitud" })).toBeTruthy();
         expect(screen.getByText(/Tu pago está en proceso de validación/)).toBeTruthy();
+    });
+
+    it("SPEC-729 §3 · el mínimo de la presentación es 10 (no 20), en cliente Y servidor", () => {
+        // Cliente: la validez y el «Faltan N» usan 10.
+        expect(SRC).toContain(">= 10");
+        expect(SRC).not.toContain(">= 20");
+        // Servidor: el schema de la cita exige min(10), max(500) — el 20 viejo se fue.
+        const rutaSrv = path.resolve(process.cwd(), "src/app/api/padre/citas/route.ts");
+        const srcSrv = fs.readFileSync(rutaSrv, "utf-8");
+        expect(/presentacion:\s*z\.string\(\)\.trim\(\)\.min\(10\)\.max\(500\)/.test(srcSrv)).toBe(true);
+        expect(srcSrv).not.toContain(".min(20)");
     });
 });
