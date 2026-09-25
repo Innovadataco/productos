@@ -219,4 +219,29 @@ describe("AdminReporteExpediente", () => {
             expect(screen.getByRole("alert").textContent).toContain("Error interno");
         });
     });
+
+    // SPEC-738 · CANDADO de exclusión: la denuncia formal y el expediente forense
+    // ante autoridades son del PADRE, no del admin. Aunque el expediente traiga
+    // puedeDenunciar:true y un estado denunciable (CLASIFICADO) —el MISMO payload que
+    // antes de SPEC-738 renderizaba la sección—, el admin ya NO ofrece esas acciones.
+    // Control positivo: este payload mostraba los botones antes de quitar la sección.
+    it("SPEC-738 · el admin VE el expediente pero NO ofrece denuncia formal ni exportación forense", async () => {
+        mockFetchExpediente(
+            expedienteBase({
+                puedeDenunciar: true,
+                canalesDenuncia: [{ nombre: "Línea 141", contacto: "141", descripcion: "ICBF" }],
+            })
+        );
+
+        render(<AdminReporteExpediente reporteId="reporte-123" onClose={vi.fn()} />);
+
+        // El expediente carga (el admin sí VE lo que pasó).
+        await waitFor(() => {
+            expect(screen.getByText("Recepción")).toBeTruthy();
+        });
+        // Pero NO genera documentos para autoridades.
+        expect(screen.queryByText("Llevar a denuncia formal")).toBeNull();
+        expect(screen.queryByText(/Exportar expediente forense/i)).toBeNull();
+        expect(screen.queryByText("Denuncia formal ante autoridades")).toBeNull();
+    });
 });
