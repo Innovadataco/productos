@@ -103,6 +103,8 @@ describe("SPEC-436 · el documento se sirve auditado y nunca crudo", () => {
         // guardó nunca la extensión); el número mágico del archivo no miente.
         const i = servicio.indexOf("export async function servirDocumento");
         const cuerpo = servicio.slice(i);
-        expect(cuerpo).toContain("validarAutorizacion(buffer)");
+        // SPEC-726: la detección de formato se llama `detectarFormato` (el tope y el
+        // copy de tamaño se separaron del detector).
+        expect(cuerpo).toContain("detectarFormato(buffer)");
     });
 });

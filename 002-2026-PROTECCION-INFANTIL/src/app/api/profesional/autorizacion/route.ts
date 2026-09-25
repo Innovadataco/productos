@@ -22,8 +22,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import {
     guardarAutorizacion,
-    validarAutorizacion,
+    validarArchivoSubido,
 } from "@/lib/profesional/autorizacion-storage";
+import { topeAutorizacionMb } from "@/lib/profesional/tope-subida";
 import {
     perfilCompletoParaRevision,
     toPerfilProfesionalPropio,
@@ -81,7 +82,13 @@ export async function POST(request: Request) {
         }
 
         const buffer = Buffer.from(await (archivo as Blob).arrayBuffer());
-        const validacion = validarAutorizacion(buffer);
+        // SPEC-726: tope por PARÁMETRO (autorización), mensaje que nombra la autorización en usted.
+        const maxMb = await topeAutorizacionMb();
+        const validacion = validarArchivoSubido(buffer, {
+            maxBytes: maxMb * 1024 * 1024,
+            maxMb,
+            sujeto: "La autorización",
+        });
         if (!validacion.ok) {
             return NextResponse.json(
                 { error: { message: validacion.motivo, code: ERROR_CODES.VALIDATION_ERROR } },

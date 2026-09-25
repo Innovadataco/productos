@@ -25,7 +25,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { cifrarBuffer, descifrarBuffer, sha256Hex } from "@/lib/apelacion-storage";
 
-export const AUTORIZACION_TAMANO_MAX_BYTES = 5 * 1024 * 1024;
+// SPEC-726: el tope dejó de ser una constante quemada — vive en `ParametroSistema`
+// (`tope-subida.ts`, dos claves editables). El validador lo recibe por parámetro.
 const MAGIA_PDF = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]);
 const MAGIA_PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 const MAGIA_JPG = Buffer.from([0xff, 0xd8, 0xff]);
@@ -50,16 +51,42 @@ export function rutaAutorizacion(archivoId: string): string {
     return path.join(getAutorizacionesStorageDir(), `${path.basename(archivoId)}.enc`);
 }
 
-/** Función pura: valida contenido, tamaño y firma. NO toca disco ni red. */
-export function validarAutorizacion(buffer: Buffer): ResultadoValidacion {
-    if (buffer.length === 0) return { ok: false, motivo: "El archivo está vacío" };
-    if (buffer.length > AUTORIZACION_TAMANO_MAX_BYTES) {
-        return { ok: false, motivo: "La autorización supera el tamaño máximo de 5 MB" };
-    }
+/**
+ * SPEC-726 · Detecta el formato por MAGIA DE BYTES (no por extensión). Puro. Voz USTED.
+ * Lo usa `validarArchivoSubido` y también la lectura de un archivo YA guardado
+ * (`servirDocumento`), donde solo importa el formato, no el tamaño.
+ */
+export function detectarFormato(buffer: Buffer): ResultadoValidacion {
     if (buffer.subarray(0, 5).equals(MAGIA_PDF)) return { ok: true, extension: "pdf" };
     if (buffer.subarray(0, 4).equals(MAGIA_PNG)) return { ok: true, extension: "png" };
     if (buffer.subarray(0, 3).equals(MAGIA_JPG)) return { ok: true, extension: "jpg" };
-    return { ok: false, motivo: "Formato no aceptado. Sube un PDF, PNG o JPG." };
+    return { ok: false, motivo: "Formato no aceptado. Suba un PDF, PNG o JPG." };
+}
+
+/**
+ * SPEC-726 · Valida un archivo SUBIDO por el profesional. Función pura (no toca disco
+ * ni red).
+ *
+ * El tope (`maxBytes`) y **cómo NOMBRAR el archivo en el error** (`sujeto`, en USTED)
+ * los pasa el LLAMADOR: así el mensaje nombra la cosa que el usuario tocó —su
+ * documento—, NO «la autorización» (el defecto de I-… que vio Jelkin), y el número del
+ * tope coincide con el parámetro vigente (`maxMb`). Reusar la lógica (magia de bytes,
+ * tope, cifrado aguas abajo) está bien; reusar el COPY de la autorización no lo estaba.
+ */
+export function validarArchivoSubido(
+    buffer: Buffer,
+    opts: { maxBytes: number; maxMb: number; sujeto: string },
+): ResultadoValidacion {
+    // Copy de Diseño (FORMA-SPEC726 §4/§5, voz usted): nombra el sujeto real y el {N} del
+    // parámetro; NUNCA «la autorización» al subir otra cosa, NUNCA un tope quemado.
+    if (buffer.length === 0) return { ok: false, motivo: "Ese archivo está vacío. Elija otro." };
+    if (buffer.length > opts.maxBytes) {
+        return {
+            ok: false,
+            motivo: `${opts.sujeto} pesa más del máximo permitido (${opts.maxMb} MB). Si es una foto, tómela con menos resolución o envíela como PDF.`,
+        };
+    }
+    return detectarFormato(buffer);
 }
 
 export interface AutorizacionGuardada {
