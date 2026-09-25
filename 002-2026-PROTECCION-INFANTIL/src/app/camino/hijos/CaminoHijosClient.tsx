@@ -3,9 +3,11 @@
 /**
  * SPEC-339 (A-67 §2.4) — Paso 3 de 4: ¿a quién vas a cuidar?
  *
- * Reusa el módulo de menores completo (alta con nombre y apellidos, cuentas
- * opcionales, tope del parámetro). El «Siguiente» se enciende con el primer
- * menor ACTIVO — la misma condición que el guardián deriva (FR-018).
+ * Reusa el módulo de menores en `variante="alta"` (SPEC-728): alta con nombre y
+ * apellidos, cuentas opcionales, tope del parámetro, y solo las acciones del alta
+ * (agregar, corregir, sacar un error) — SIN la gestión de vigilancia (pausar/reanudar/
+ * inactivar), que vive después en «A quién protejo»/Mi perfil. El «Siguiente» se enciende
+ * con el primer menor ACTIVO — la misma condición que el guardián deriva (FR-018).
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -25,7 +27,9 @@ export function CaminoHijosClient({ maximoActivos }: { maximoActivos: number }) 
                 un teléfono— súmalas; es opcional y puedes hacerlo después.
             </p>
 
-            <MisHijos onListaCambio={setActivos} maximoActivos={maximoActivos} />
+            {/* SPEC-728: primer registro = alta fácil. Se oculta la gestión de vigilancia
+                (pausar/reanudar/inactivar); solo agregar, corregir y sacar un error. */}
+            <MisHijos onListaCambio={setActivos} maximoActivos={maximoActivos} variante="alta" />
 
             <div className="mt-6">
                 <Button

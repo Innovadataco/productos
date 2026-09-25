@@ -48,6 +48,11 @@ export function HijoCard({
     onCambiarEstadoIdentificador,
     onDesvincular,
     onAgregarIdentificador,
+    // SPEC-728: en el PRIMER registro (`/camino/hijos`) el alta debe ser muy fácil: solo agregar +
+    // corregir + sacar un error. La gestión de VIGILANCIA (pausar/reanudar una cuenta, inactivar al
+    // hijo) vive después en «A quién protejo»/Mi perfil. `variante="alta"` la oculta; el default
+    // "gestion" conserva todo. (No confundir con el viejo `varianteAlta` del wizard, ya derogado.)
+    variante = "gestion",
 }: {
     hijo: Hijo;
     opcionesPlataforma: { value: string; label: string }[];
@@ -64,10 +69,13 @@ export function HijoCard({
     onCambiarEstadoIdentificador: (identificadorId: string, activo: boolean) => Promise<void>;
     onDesvincular: (identificadorId: string) => Promise<void>;
     onAgregarIdentificador: (hijoId: string, valor: string, plataformaId: string) => Promise<void>;
+    variante?: "alta" | "gestion";
 }) {
     const [nuevo, setNuevo] = useState({ valor: "", plataformaId: "" });
     const [verBitacora, setVerBitacora] = useState(false);
     const inactivo = hijo.estado === "inactivo";
+    // SPEC-728: en el alta no se ofrece la gestión de vigilancia (pausar/reanudar/inactivar).
+    const esAlta = variante === "alta";
     // SPEC-539: edición de los datos del menor (UI que faltaba sobre el PATCH existente).
     const [editando, setEditando] = useState(false);
     const [edicion, setEdicion] = useState({
@@ -125,13 +133,16 @@ export function HijoCard({
                     <Button type="button" variant="outline" onClick={() => setEditando((v) => !v)}>
                         {editando ? "Cancelar" : "Editar"}
                     </Button>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => onCambiarEstadoHijo(hijo.id, inactivo ? "activo" : "inactivo")}
-                    >
-                        {inactivo ? "Activar" : "Inactivar"}
-                    </Button>
+                    {/* SPEC-728: inactivar al hijo es GESTIÓN de vigilancia (pausa) — fuera del alta. */}
+                    {!esAlta && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onCambiarEstadoHijo(hijo.id, inactivo ? "activo" : "inactivo")}
+                        >
+                            {inactivo ? "Activar" : "Inactivar"}
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -184,23 +195,27 @@ export function HijoCard({
                                 <div className="flex flex-col gap-2 sm:flex-row">
                                     {/* SPEC-660 (Fase D) · Pausar/Reanudar: toggle reversible, sin
                                         confirmación (se deshace con un tap). Borde SUAVE. El title
-                                        (voz de #569) no cambia. Local a ESTE padre (I-394). */}
-                                    <button
-                                        type="button"
-                                        aria-label={`${i.activo ? "Pausar" : "Reanudar"} la vigilancia de ${i.valor}`}
-                                        title="Activa o inactiva la vigilancia de esta cuenta."
-                                        className="rounded-lg border border-tinta/15 px-3 py-2 text-left transition-colors hover:bg-tinta/5"
-                                        onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
-                                    >
-                                        <span className="block text-sm font-medium text-body">
-                                            {i.activo ? "Pausar la vigilancia" : "Reanudar la vigilancia"}
-                                        </span>
-                                        <span className="block text-xs text-muted">
-                                            {i.activo
-                                                ? "Dejamos de avisarte por esta cuenta. Queda acá y la reanudas cuando quieras."
-                                                : "Esta cuenta está en pausa: no te avisamos por ella. Reanuda cuando quieras y volvemos a avisarte."}
-                                        </span>
-                                    </button>
+                                        (voz de #569) no cambia. Local a ESTE padre (I-394).
+                                        SPEC-728: es GESTIÓN de vigilancia — NO se ofrece en el alta
+                                        (`variante="alta"`); vive después en «A quién protejo»/Mi perfil. */}
+                                    {!esAlta && (
+                                        <button
+                                            type="button"
+                                            aria-label={`${i.activo ? "Pausar" : "Reanudar"} la vigilancia de ${i.valor}`}
+                                            title="Activa o inactiva la vigilancia de esta cuenta."
+                                            className="rounded-lg border border-tinta/15 px-3 py-2 text-left transition-colors hover:bg-tinta/5"
+                                            onClick={() => onCambiarEstadoIdentificador(i.id, !i.activo)}
+                                        >
+                                            <span className="block text-sm font-medium text-body">
+                                                {i.activo ? "Pausar la vigilancia" : "Reanudar la vigilancia"}
+                                            </span>
+                                            <span className="block text-xs text-muted">
+                                                {i.activo
+                                                    ? "Dejamos de avisarte por esta cuenta. Queda acá y la reanudas cuando quieras."
+                                                    : "Esta cuenta está en pausa: no te avisamos por ella. Reanuda cuando quieras y volvemos a avisarte."}
+                                            </span>
+                                        </button>
+                                    )}
                                     {/* SPEC-660 (Fase D) · Quitar: BORRA la fila. El peso lo carga el
                                         borde más firme (claridad), NUNCA el rojo (D-120): la red es el
                                         deshacer (toast en MisHijos), no un color de alarma. */}

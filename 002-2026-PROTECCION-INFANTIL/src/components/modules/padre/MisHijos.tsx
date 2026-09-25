@@ -49,9 +49,13 @@ export function MisHijos({
     // SPEC-361 (F6): el tope llega del servidor (parámetro `padre.hijos.maximo`)
     // para poder mostrar "3 de 5" sin que la pantalla lo adivine.
     maximoActivos,
+    // SPEC-728: `variante="alta"` (primer registro, `/camino/hijos`) oculta la gestión de vigilancia
+    // (pausar/reanudar/inactivar) en cada tarjeta; el default "gestion" la conserva.
+    variante = "gestion",
 }: {
     onListaCambio?: (activos: number) => void;
     maximoActivos?: number;
+    variante?: "alta" | "gestion";
 } = {}) {
     const [hijos, setHijos] = useState<Hijo[]>([]);
     const [plataformas, setPlataformas] = useState<Plataforma[]>([]);
@@ -273,6 +277,7 @@ export function MisHijos({
                                 onCambiarEstadoIdentificador={cambiarEstadoIdentificador}
                                 onDesvincular={desvincular}
                                 onAgregarIdentificador={agregarIdentificador}
+                                variante={variante}
                             />
                         </li>
                     ))}
