@@ -3,7 +3,7 @@
 /** SPEC-714 · Popover de crear y panel de responder/detalle del calendario. Voz «usted». */
 import { useState } from "react";
 import type { BloqueCalendario } from "@/lib/profesional/calendario/calendario.service";
-import { DOW, diaSemana, fmt, numMes, type Modalidad, type Repeticion } from "./fechas";
+import { DOW, diaSemana, fmt, numMes, type Modalidad, type Repeticion } from "@/components/modules/calendario/fechas";
 
 export interface CrearState {
     fecha: string;

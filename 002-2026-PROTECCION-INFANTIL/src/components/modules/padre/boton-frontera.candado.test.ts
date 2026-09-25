@@ -146,11 +146,10 @@ const BASE: string[] = [
     "components/modules/padre/TextoSensible.tsx :: Ocultar",
     "components/modules/padre/TextoSensible.tsx :: cargando Un momento… 👁 Revelar texto · se ocultó por tu seguridad",
     "components/modules/padre/VerAnalisis.tsx :: Ver análisis",
-    // SPEC-712 §3: el toggle inerte «Esta semana / Sin apuro» se retiró; en su lugar el
-    // chip de control segmentado «Solo esta semana» que SÍ filtra (chip = otro carril).
-    "components/modules/padre/profesionales/SolicitarCitaPanel.tsx :: Solo esta semana",
-    "components/modules/padre/profesionales/SolicitarCitaPanel.tsx :: VIRTUAL Virtual Presencial",
-    "components/modules/padre/citas/MisCitasList.tsx :: ` : \"\"}",
+    // SPEC-730: la elección de franja pasó de LISTA a la rejilla visual compartida
+    // (SPEC-714). El chip «Solo esta semana» y la fila de lista de SolicitarCitaPanel se
+    // retiraron; el bloque seleccionable de la rejilla hereda ese lugar en la deuda.
+    "components/modules/padre/citas/RejillaElegirFranja.tsx :: – VIRTUAL Virtual Presencial",
     "components/modules/padre/circulo/CirculoConfianzaClient.tsx :: Agregar a alguien Un minuto: nombre, qué es de tus hijos y su celular o usuario.",
     "components/modules/padre/circulo/DetallePersona.tsx :: ",
     "components/modules/padre/circulo/DetallePersona.tsx :: Pausar este dato Reanudar este dato",

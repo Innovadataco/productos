@@ -7,9 +7,10 @@
  *  §2 (reencuadrado por SPEC-729): la presentación se TOMA de Mi perfil. Si la tiene
  *      → «Lo que nos contaste» + «Editar» (no se re-pide). Si está vacía → enlace
  *      «Complétala en Mi perfil», NO un formulario acá.
- *  §3  Franjas ordenadas más-próxima-primero; chip «Solo esta semana» que FILTRA (y
- *      lo dice honesto si no hay); línea de emergencia SIEMPRE visible; toggle inerte
- *      retirado.
+ *  §3 (reencuadrado por SPEC-730): las franjas se eligen en la MISMA rejilla visual
+ *      del profesional (SPEC-714), no en una lista; el toque selecciona. La lista, su
+ *      orden lineal y el chip «Solo esta semana» se retiraron. Línea de emergencia
+ *      SIEMPRE visible; toggle inerte retirado.
  *  §4  Modal SÓLIDO, velo firme + blur, z-50.
  *  §5  Sin «admin»/«48h»; «en proceso de validación»; ningún botón dice «pagar».
  *  SPEC-729 §3: el mínimo de la presentación es 10 (no 20), en cliente Y servidor.
@@ -22,7 +23,10 @@ import path from "node:path";
 const pushSpy = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushSpy }) }));
 
-import { SolicitarCitaPanel, finDeSemana } from "./SolicitarCitaPanel";
+import { SolicitarCitaPanel } from "./SolicitarCitaPanel";
+
+// SPEC-730: una franja en el futuro cercano (cae en la semana que abre la rejilla).
+const futuro = (dias: number) => new Date(Date.now() + dias * 24 * 3_600_000);
 
 const RUTA = path.resolve(process.cwd(), "src/components/modules/padre/profesionales/SolicitarCitaPanel.tsx");
 const SRC = fs.readFileSync(RUTA, "utf-8");
@@ -99,30 +103,27 @@ describe("SPEC-712 + SPEC-729 · pantalla del padre para pedir cita", () => {
         expect(screen.queryByText("Lo que nos contaste")).toBeNull();
     });
 
-    it("§3 franjas ordenadas más-próxima-primero; el chip «Solo esta semana» filtra de verdad", async () => {
-        const fin = finDeSemana();
-        const dentro = new Date(Math.floor((Date.now() + fin.getTime()) / 2)); // esta semana
-        const fuera = new Date(fin.getTime() + 3 * 24 * 3_600_000); // semana siguiente
-        // La API los entrega DESORDENADOS (la lejana primero): el orden lo pone el componente.
-        mockFetch({ franjas: [franja("lejos", fuera, "PRESENCIAL"), franja("cerca", dentro, "VIRTUAL")] });
-        const { container } = render(<SolicitarCitaPanel {...PROPS} />);
-        await screen.findByText("Virtual");
-        const html = container.innerHTML;
-        expect(html.indexOf("Virtual")).toBeLessThan(html.indexOf("Presencial")); // próxima antes
-        fireEvent.click(screen.getByRole("button", { name: "Solo esta semana" }));
-        expect(screen.getByText("Virtual")).toBeTruthy();
-        expect(screen.queryByText("Presencial")).toBeNull();
+    // SPEC-730 (Jelkin probando 24-09): las franjas se eligen en la MISMA rejilla visual
+    // del profesional (SPEC-714), NO en una lista. El chip «Solo esta semana» y el orden
+    // lineal de la lista quedaron superados por la navegación semana/día de la rejilla.
+    it("§3/SPEC-730 la franja libre se pinta en la rejilla y el toque la selecciona", async () => {
+        mockFetch({ franjas: [franja("cerca", futuro(2), "VIRTUAL")] });
+        render(<SolicitarCitaPanel {...PROPS} />);
+        // La rejilla abre en la semana de la franja más próxima → el bloque «Virtual» se ve.
+        const bloque = await screen.findByText("Virtual");
+        // Es un control seleccionable, no una fila de lista muerta.
+        const boton = bloque.closest("button");
+        expect(boton).toBeTruthy();
+        fireEvent.click(bloque);
+        expect(boton?.getAttribute("aria-pressed")).toBe("true");
+        // Ya NO es una lista ni el chip de la lista.
+        expect(screen.queryByRole("button", { name: "Solo esta semana" })).toBeNull();
     });
 
-    it("§3 sin horarios esta semana: lo dice honesto («el más próximo es el …»)", async () => {
-        const fin = finDeSemana();
-        const fuera = new Date(fin.getTime() + 3 * 24 * 3_600_000);
-        mockFetch({ franjas: [franja("lejos", fuera, "PRESENCIAL")] });
+    it("§3/SPEC-730 sin franjas libres: lo dice honesto, sin rejilla", async () => {
+        mockFetch({ franjas: [] });
         render(<SolicitarCitaPanel {...PROPS} />);
-        await screen.findByText("Presencial");
-        fireEvent.click(screen.getByRole("button", { name: "Solo esta semana" }));
-        expect(screen.getByText(/no tiene horarios esta semana; el más próximo es el/)).toBeTruthy();
-        expect(screen.queryByText("Presencial")).toBeNull();
+        expect(await screen.findByText(/no tiene franjas libres en este momento/)).toBeTruthy();
     });
 
     it("§3 el toggle binario inerte «Sin apuro» se retiró", () => {
@@ -149,10 +150,9 @@ describe("SPEC-712 + SPEC-729 · pantalla del padre para pedir cita", () => {
         expect(SRC).not.toContain("Pagar y solicitar");
         expect(SRC).not.toContain("Confirmar y pagar");
         // En vivo: con presentación de Mi perfil + franja, la CTA abre el modal.
-        const dentro = new Date(Math.floor((Date.now() + finDeSemana().getTime()) / 2));
         mockFetch({
             presentacion: "Un relato suficientemente largo para pasar el mínimo.",
-            franjas: [franja("cerca", dentro, "VIRTUAL")],
+            franjas: [franja("cerca", futuro(2), "VIRTUAL")],
         });
         render(<SolicitarCitaPanel {...PROPS} />);
         const cta = await screen.findByRole("button", { name: "Solicitar la cita" });

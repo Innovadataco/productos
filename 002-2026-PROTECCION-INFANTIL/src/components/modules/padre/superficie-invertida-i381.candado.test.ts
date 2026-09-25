@@ -52,7 +52,7 @@ const RAICES = [
 // Las áreas que migró SPEC-650 (colegio · citas · perfil · círculo · camino · consentimiento).
 const RAICES_650 = [
     path.join(SRC, "app/dashboard/colegio/alertas/[id]/page.tsx"), // CasoVivoColegio, InformesCasoPanel, EscudoColegioUploader
-    path.join(SRC, "app/dashboard/padre/citas/page.tsx"), // MisCitasList
+    path.join(SRC, "app/dashboard/padre/citas/page.tsx"), // RejillaMisCitas (SPEC-730)
     path.join(SRC, "app/dashboard/padre/perfil/page.tsx"), // nota de suscripción en pausa (borde)
     path.join(SRC, "app/dashboard/padre/circulo-confianza/page.tsx"), // círculo: tarjetas + option-chips migrados
     path.join(SRC, "app/camino/listo/page.tsx"),
@@ -123,7 +123,7 @@ const MARCA_RAIZ: Record<string, string> = {
     [path.join(SRC, "app/dashboard/padre/expedientes/[id]/page.tsx")]: "ExpedienteMadreClient",
     [path.join(SRC, "app/dashboard/padre/layout.tsx")]: "PadreNavMovil",
     [path.join(SRC, "app/dashboard/colegio/alertas/[id]/page.tsx")]: "CasoVivoColegio",
-    [path.join(SRC, "app/dashboard/padre/citas/page.tsx")]: "MisCitasList",
+    [path.join(SRC, "app/dashboard/padre/citas/page.tsx")]: "RejillaMisCitas",
     [path.join(SRC, "app/dashboard/padre/perfil/page.tsx")]: "HistorialCambiosPerfil",
     [path.join(SRC, "app/dashboard/padre/circulo-confianza/page.tsx")]: "CirculoConfianzaClient",
     [path.join(SRC, "app/camino/listo/page.tsx")]: "camino/listo/page", // el arreglo vive en el propio page

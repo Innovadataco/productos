@@ -24,8 +24,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { instanteDesdeHoraBogota } from "@/lib/fechas/formato-bogota";
 import type { BloqueCalendario, CalendarioProfesionalDto } from "@/lib/profesional/calendario/calendario.service";
-import { DOW, H0, H1, PXH, SNAP, addDias, diaSemana, fmt, lunesDe, nombreMes, numMes, snap, type Modalidad, type Repeticion } from "./calendario/fechas";
-import { BellIcon, ColumnaDia } from "./calendario/Rejilla";
+import { DOW, H0, H1, PXH, SNAP, addDias, diaSemana, fmt, lunesDe, nombreMes, numMes, snap, type Modalidad, type Repeticion } from "@/components/modules/calendario/fechas";
+import { BellIcon, RejillaCalendario } from "@/components/modules/calendario/Rejilla";
+import { BloqueFranja, OverlayDiaProfesional } from "./calendario/Rejilla";
 import { PanelBloque, PopoverCrear, type CrearState, type PanelState } from "./calendario/Paneles";
 
 /**
@@ -396,44 +397,22 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
                 </div>
             )}
 
-            <div className="relative overflow-x-auto rounded-xl border border-tinta/10 bg-page">
-                <div className="grid border-b border-tinta/10" style={{ gridTemplateColumns: `56px ${anchoDia}` }}>
-                    <div />
-                    {diasVisibles.map((d) => (
-                        <button key={d} className="border-l border-tinta/10 py-2 text-center hover:bg-tinta/5" onClick={() => { setVista("dia"); setAncla(d); }}>
-                            <div className={`font-mono text-[10px] uppercase ${diasBloqueados.has(d) ? "text-estado-ambar" : "text-subtle"}`}>{DOW[diaSemana(d)]}</div>
-                            <div className={`mx-auto mt-0.5 grid h-7 w-7 place-items-center rounded-full text-sm font-semibold ${d === datos.hoy ? "bg-cielo text-white" : diasBloqueados.has(d) ? "text-estado-ambar" : "text-body"}`}>{numMes(d)}</div>
-                        </button>
-                    ))}
-                </div>
-                <div className="grid" style={{ gridTemplateColumns: `56px ${anchoDia}`, height: altura }}>
-                    <div className="border-r border-tinta/10">
-                        {Array.from({ length: H1 - H0 }, (_, i) => (
-                            <div key={i} className="relative text-right font-mono text-[10px] text-subtle" style={{ height: PXH }}>
-                                <span className="pr-1.5" style={{ position: "relative", top: -6 }}>{fmt((H0 + i) * 60)}</span>
-                            </div>
-                        ))}
-                    </div>
-                    {diasVisibles.map((fecha) => (
-                        <ColumnaDia
-                            key={fecha}
-                            fecha={fecha}
-                            bloques={bloquesPorDia.get(fecha) ?? []}
-                            ghost={ghost && ghost.fecha === fecha ? ghost : null}
-                            altura={altura}
-                            muro={muro}
-                            bloqueado={diasBloqueados.has(fecha)}
-                            sel={sel}
-                            selModo={selModo}
-                            onPointerDown={(e) => onPointerDown(e, fecha)}
-                            onPointerMove={onPointerMove}
-                            onPointerUp={onPointerUp}
-                            onBloque={onBloque}
-                            onQuitar={(id) => quitar([id])}
-                        />
-                    ))}
-                </div>
-
+            <RejillaCalendario
+                diasVisibles={diasVisibles}
+                hoy={datos.hoy}
+                anchoDia={anchoDia}
+                bloquesPorDia={bloquesPorDia}
+                ghost={ghost}
+                diaHeaderTono={(d) => (diasBloqueados.has(d) ? "text-estado-ambar" : undefined)}
+                overlayDia={(fecha) => <OverlayDiaProfesional fecha={fecha} muro={muro} bloqueado={diasBloqueados.has(fecha)} altura={altura} />}
+                onDiaHeaderClick={(d) => { setVista("dia"); setAncla(d); }}
+                onColumnaPointerDown={onPointerDown}
+                onColumnaPointerMove={onPointerMove}
+                onColumnaPointerUp={onPointerUp}
+                renderBloque={(b) => (
+                    <BloqueFranja key={b.id} b={b} sel={sel.has(b.id)} selModo={selModo} onClick={() => onBloque(b)} onQuitar={() => quitar([b.id])} />
+                )}
+            >
                 {crear && (
                     <PopoverCrear
                         crear={crear}
@@ -463,7 +442,7 @@ export function CalendarioProfesional({ datos, modo = "calendario" }: Props) {
                 )}
 
                 {panel && <PanelBloque panel={panel} enviando={enviando} onCerrar={() => setPanel(null)} onResponder={responder} />}
-            </div>
+            </RejillaCalendario>
 
             {aviso && <p role="status" className="mt-3 rounded-lg bg-tinta/90 px-4 py-2 text-sm text-page">{aviso}</p>}
         </div>
