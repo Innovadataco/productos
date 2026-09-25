@@ -3,6 +3,7 @@ import { normalizarNombreGeografico } from "../src/lib/normalizar";
 import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { SEMILLAS_CATALOGO_PROFESIONAL } from "../src/lib/profesional/catalogos";
 import { REQUISITOS_VERIFICACION_DEFAULT, CLAVE_PARAMETRO_REQUISITOS } from "../src/lib/profesionales/verificador/requisitos-default";
+import { sembrarTopesSubida } from "../src/lib/profesional/tope-subida";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -4335,6 +4336,11 @@ async function main() {
 
     // ── Parámetros de la autorización del profesional (SPEC-686) ───────────
     await seedAutorizacionProfesional();
+
+    // ── SPEC-726: topes de subida configurables (documentos=10, autorización=5),
+    //    editables desde Configuración › Parámetros. Idempotente y NO pisa el
+    //    valor que el admin haya editado (update: {}).
+    await sembrarTopesSubida(prisma);
 
     // ── Parámetros de señal comunitaria (SPEC-234) ─────────────────────────
     await seedParametrosSenalComunitaria();
