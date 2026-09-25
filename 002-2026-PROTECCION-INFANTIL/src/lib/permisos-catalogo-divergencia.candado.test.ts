@@ -61,7 +61,7 @@ describe("SPEC-725 · barrido: la BD no puede tener claves de módulo que el có
         expect(await clavesModuloDesconocidas(prisma)).toContain(fantasma);
     });
 
-    it("los casos REALES (ambas claves retiradas) son señalados si viven en BD", async () => {
+    it("los casos REALES (todas las claves retiradas) son señalados si viven en BD", async () => {
         for (const clave of CLAVES) expect(clavesCatalogo()).not.toContain(clave);
         for (const clave of CLAVES) await sembrarModuloHuerfano(clave, [RolUsuario.ADMIN, RolUsuario.PROFESIONAL]);
         const desconocidas = await clavesModuloDesconocidas(prisma);
@@ -89,7 +89,7 @@ describe("SPEC-725 · corrector: retira las claves huérfanas (fila + grants), a
         expect(await clavesModuloDesconocidas(prisma)).not.toContain(clave);
     });
 
-    it("AMBAS a la vez: sembradas las 2 → tras retirar cada una, el barrido queda VERDE", async () => {
+    it("TODAS a la vez: sembradas todas → tras retirar cada una, el barrido queda VERDE", async () => {
         for (const clave of CLAVES) await sembrarModuloHuerfano(clave, [RolUsuario.ADMIN, RolUsuario.PROFESIONAL]);
         for (const clave of CLAVES) await retirarModuloDivergente(prisma, clave, { confirm: true });
         expect(await clavesModuloDesconocidas(prisma)).toEqual([]);
