@@ -159,6 +159,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/AdminAntiAbusoSimulacion.test.tsx",
     "src/components/modules/AdminReporteDetalle.test.tsx",
     "src/components/modules/AdminReporteExpediente.test.tsx",
+    // SPEC-734 (UI): el relato del reporte queda oculto hasta un revelar auditado.
+    "src/components/modules/reporte-detalle/texto-oculto-hasta-revelar-ui.candado.test.tsx",
     "src/components/modules/admin/UsuariosSubNav.test.tsx",
     "src/components/modules/admin/tables/tables.test.tsx",
     // SPEC-233: búsqueda por identificador (padre + admin)

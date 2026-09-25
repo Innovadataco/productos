@@ -26,11 +26,16 @@ export function ReporteDetalleSoloLectura({ reporteId, onClose }: ReporteDetalle
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [retry, setRetry] = useState(0);
+    // SPEC-734: aun en solo-lectura, el relato arranca OCULTO y se revela con una
+    // acción auditada (?revelar=true) — ningún texto del reporte se ve sin dejar fila.
+    const [textoActualRevelado, setTextoActualRevelado] = useState<string | null>(null);
+    const [loadingRevelarTexto, setLoadingRevelarTexto] = useState(false);
 
     useEffect(() => {
         let cancelado = false;
         setLoading(true);
         setError("");
+        setTextoActualRevelado(null);
         fetch(`/api/admin/reportes-revision/${reporteId}`, { credentials: "include" })
             .then(async (r) => {
                 if (!r.ok) throw new Error("Error cargando detalle");
@@ -50,6 +55,20 @@ export function ReporteDetalleSoloLectura({ reporteId, onClose }: ReporteDetalle
             cancelado = true;
         };
     }, [reporteId, retry]);
+
+    const handleRevelarTexto = async () => {
+        setLoadingRevelarTexto(true);
+        try {
+            const res = await fetch(`/api/admin/reportes-revision/${reporteId}?revelar=true`, { credentials: "include" });
+            if (!res.ok) throw new Error();
+            const json = (await res.json()) as { reporte?: DetalleReporte };
+            setTextoActualRevelado(json.reporte?.texto ?? null);
+        } catch {
+            setError("No se pudo revelar el texto.");
+        } finally {
+            setLoadingRevelarTexto(false);
+        }
+    };
 
     return (
         <Modal isOpen onClose={onClose} title="Detalle del reporte — solo visualización">
@@ -73,7 +92,13 @@ export function ReporteDetalleSoloLectura({ reporteId, onClose }: ReporteDetalle
                     </div>
                 </div>
             ) : (
-                <ReporteDetalleInfo reporte={reporte} />
+                <ReporteDetalleInfo
+                    reporte={reporte}
+                    textoActualRevelado={textoActualRevelado}
+                    puedeRevelarTexto
+                    loadingRevelarTexto={loadingRevelarTexto}
+                    onRevelarTexto={handleRevelarTexto}
+                />
             )}
         </Modal>
     );
