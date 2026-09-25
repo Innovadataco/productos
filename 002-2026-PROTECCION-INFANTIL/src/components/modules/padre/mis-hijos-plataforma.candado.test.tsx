@@ -64,7 +64,8 @@ describe("SPEC-555 · el select de plataforma no ofrece «Sin plataforma»", () 
         // SPEC-627 (D-133): alta inline — el select de plataforma está de entrada, sin wizard.
         const select = screen.getByLabelText("Plataforma") as HTMLSelectElement;
         const etiquetas = within(select).queryAllByRole("option").map((o) => o.textContent);
-        expect(etiquetas).toContain("Elige una plataforma");
+        // SPEC-721 (forma de Diseño): el prompt neutro pide la acción en voz del padre.
+        expect(etiquetas).toContain("Elige la red o app");
         // El catálogo mockeado (no la semilla) alimenta el resto.
         expect(etiquetas).toContain("Roblox");
         expect(etiquetas).toContain("WhatsApp");

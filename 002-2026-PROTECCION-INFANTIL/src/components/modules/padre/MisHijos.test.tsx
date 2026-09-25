@@ -145,9 +145,10 @@ describe("MisHijos", () => {
         });
     });
 
-    // El alta manda TODOS los identificadores cargados, no solo el último: el
-    // padre suele conocer varios (Roblox, teléfono) y cargarlos de una.
-    it("el alta envía VARIOS identificadores, con y sin plataforma", async () => {
+    // SPEC-721 (I-429): cada cuenta EXIGE su red. El alta manda TODOS los
+    // identificadores cargados —el padre suele conocer varios—, cada uno con su
+    // plataforma; una cuenta escrita SIN red NO entra: se pide, no se envía suelta.
+    it("el alta envía VARIOS identificadores, cada uno con su plataforma; sin red no entra", async () => {
         mockRutas([], { hijoId: "h9", vinculadoAExistente: false });
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("mis-hijos-vacio")).toBeDefined());
@@ -158,23 +159,28 @@ describe("MisHijos", () => {
         fireEvent.change(screen.getByLabelText("Nombres"), { target: { value: "Ana" } });
         fireEvent.change(screen.getByLabelText("Apellidos"), { target: { value: "Ramírez" } });
 
-        // 1º con plataforma → se acumula en la lista
+        // 1ª con plataforma → se acumula en la lista
         fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "anaroblox" } });
         fireEvent.change(screen.getByLabelText("Plataforma"), { target: { value: "p1" } });
         fireEvent.click(screen.getByRole("button", { name: "Agregar otro" }));
         await waitFor(() => expect(screen.getByTestId("identificadores-nuevos")).toBeDefined());
 
-        // 2º sin plataforma, escrito pero NO "agregado": debe entrar igual.
+        // 2ª escrita SIN plataforma: al enviar se pide la red y el alta NO sale.
         fireEvent.change(screen.getByLabelText("Cuenta"), { target: { value: "+573001112233" } });
         fireEvent.submit(screen.getByTestId("form-hijo"));
+        expect(screen.getByTestId("form-alta-error").textContent).toContain("Elige la red o app");
+        expect(llamada("POST", "/api/padre/hijos")).toBeUndefined();
 
+        // Con su red elegida, el alta sale con LAS DOS cuentas, cada una con plataforma.
+        fireEvent.change(screen.getByLabelText("Plataforma"), { target: { value: "p1" } });
+        fireEvent.submit(screen.getByTestId("form-hijo"));
         await waitFor(() => {
             const post = llamada("POST", "/api/padre/hijos");
             expect(post).toBeDefined();
             const body = JSON.parse(String(post![1].body));
             expect(body.identificadores).toEqual([
                 { valor: "anaroblox", plataformaId: "p1" },
-                { valor: "+573001112233" },
+                { valor: "+573001112233", plataformaId: "p1" },
             ]);
         });
     });
@@ -283,19 +289,24 @@ describe("MisHijos", () => {
         });
     });
 
-    it("agrega un identificador a un hijo ya creado", async () => {
+    // SPEC-721: agregar una cuenta a un hijo existente también EXIGE la red (I-429).
+    it("agrega un identificador a un hijo ya creado, con su plataforma", async () => {
         mockRutas([hijoBase()], { ok: true, identificadorId: "i2", yaExistia: false });
         render(<MisHijos />);
         await waitFor(() => expect(screen.getByTestId("lista-hijos")).toBeDefined());
         await waitFor(() => expect(screen.getAllByRole("option", { name: "Roblox" }).length).toBeGreaterThan(0));
 
-        fireEvent.change(screen.getByLabelText("Agregar cuenta"), { target: { value: "juan@correo.com" } });
-        fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
+        // El «Plataforma» del alta y el de la tarjeta comparten label → se apunta a la tarjeta.
+        const card = screen.getByTestId("hijo-h1");
+        fireEvent.change(within(card).getByLabelText("Agregar cuenta"), { target: { value: "juan@correo.com" } });
+        // SPEC-721: sin plataforma el botón está inactivo — se elige la red primero.
+        fireEvent.change(within(card).getByLabelText("Plataforma"), { target: { value: "p1" } });
+        fireEvent.click(within(card).getByRole("button", { name: "Agregar" }));
 
         await waitFor(() => {
             const post = llamada("POST", "/api/padre/hijos/identificadores");
             expect(post).toBeDefined();
-            expect(JSON.parse(String(post![1].body))).toEqual({ hijoId: "h1", valor: "juan@correo.com" });
+            expect(JSON.parse(String(post![1].body))).toEqual({ hijoId: "h1", valor: "juan@correo.com", plataformaId: "p1" });
         });
     });
 });

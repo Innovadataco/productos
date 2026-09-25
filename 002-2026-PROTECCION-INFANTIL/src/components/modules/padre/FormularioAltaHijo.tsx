@@ -42,9 +42,13 @@ export function FormularioAltaHijo({
     const [error, setError] = useState<string | null>(null);
     const [guardando, setGuardando] = useState(false);
 
+    // SPEC-721: una cuenta sin plataforma no se puede vigilar (I-429: sin la red no
+    // se sabe si un reporte es sobre tu hijo o sobre otra persona con el mismo
+    // usuario). Por eso NO se agrega sin la red — el botón queda inactivo hasta que
+    // estén el valor Y la plataforma; este guardia es su contraparte en la lógica.
     function agregarBorrador() {
         const valor = borrador.valor.trim();
-        if (!valor) return;
+        if (!valor || !borrador.plataformaId) return;
         setNuevos((lista) => [...lista, { valor, plataformaId: borrador.plataformaId }]);
         setBorrador(BORRADOR_VACIO);
     }
@@ -68,10 +72,18 @@ export function FormularioAltaHijo({
             return;
         }
 
+        // SPEC-721: el identificador escrito pero no "agregado" no se pierde: entra
+        // igual. Pero sin plataforma no se puede vigilar (I-429), así que si falta la
+        // red se pide (no se envía suelto): el mensaje dice la razón, no regaña.
+        const borradorValor = borrador.valor.trim();
+        if (borradorValor && !borrador.plataformaId) {
+            setError("Elige la red o app de esta cuenta — es lo que nos deja vigilarla. Si no sabes cuál es, mejor no la agregues todavía.");
+            return;
+        }
+
         setGuardando(true);
         setError(null);
-        // El identificador escrito pero no "agregado" no se pierde: entra igual.
-        const pendiente = borrador.valor.trim() ? [...nuevos, { valor: borrador.valor.trim(), plataformaId: borrador.plataformaId }] : nuevos;
+        const pendiente = borradorValor ? [...nuevos, { valor: borradorValor, plataformaId: borrador.plataformaId }] : nuevos;
         try {
             const res = await fetch("/api/padre/hijos", {
                 method: "POST",
@@ -167,10 +179,19 @@ export function FormularioAltaHijo({
                             value={borrador.plataformaId}
                             onChange={(e) => setBorrador({ ...borrador, plataformaId: e.target.value })}
                         />
-                        <Button type="button" variant="outline" onClick={agregarBorrador} disabled={!borrador.valor.trim()}>
+                        <Button type="button" variant="outline" onClick={agregarBorrador} disabled={!borrador.valor.trim() || !borrador.plataformaId}>
                             Agregar otro
                         </Button>
                     </div>
+                    {/* SPEC-721 (forma de Diseño): el porqué en voz del padre, una línea
+                        (no un muro). Sin la red, `ruby1` en Discord y `ruby1` en Roblox
+                        son cuentas distintas y un reporte sobre una no dice nada de la otra. */}
+                    <p className="mt-2 text-xs text-muted">
+                        <span className="font-medium text-body">¿En qué red o app está esta cuenta?</span>{" "}
+                        Sin la red no podemos saber si un reporte es sobre <strong>tu</strong> hijo o sobre otra
+                        persona con el mismo usuario.{" "}
+                        <span className="italic">(«ruby1» en Discord no es «ruby1» en Roblox.)</span>
+                    </p>
                 </div>
 
                 <Button type="submit" isLoading={guardando} disabled={guardando}>
