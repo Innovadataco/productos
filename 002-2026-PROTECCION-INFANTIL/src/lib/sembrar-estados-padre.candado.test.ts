@@ -16,6 +16,8 @@ import { crearUsuario } from "@/lib/reporte-test-utils";
 import { listarCuentasReportadasPorOtros } from "@/lib/dal/services/hijos/reportes-ajenos";
 import { prisma as demoPrisma } from "../../scripts/demo-prod/lib/prisma";
 import { purgar } from "../../scripts/demo-prod/purgar-demo";
+import { marcarDemo } from "../../scripts/demo-prod/lib/marcar";
+import { limpiarEstado } from "../../scripts/demo-prod/limpiar-estado-padre-e2e";
 import {
     padresE2E,
     yaSembrado,
@@ -179,5 +181,26 @@ describe("SPEC-722 · siembra de estados del padre (+e2epadre)", () => {
         expect(await prisma.hijo.count({ where: { usuarioId: padre.id } })).toBe(0);
         expect(await prisma.solicitudCita.count({ where: { padreUsuarioId: padre.id } })).toBe(0);
         expect(await prisma.contactoConfianza.count({ where: { usuarioId: padre.id } })).toBe(0);
+    });
+
+    it("limpieza state-only: borra el ESTADO parcial (marcado 722) pero DEJA viva la cuenta fija +e2epadre", async () => {
+        // Simula el PARCIAL del código VIEJO: la cuenta +e2epadre marcada Usuario/722 + un hijo 722
+        // + un actor demo (otro) 722. La limpieza debe quitar el estado y PRESERVAR la cuenta fija.
+        const padre = await crearUsuario("PARENT", "cal+e2epadre@innovadataco.com");
+        const otro = await crearUsuario("PARENT", "soporte+e2e-otro@innovadataco.com");
+        await marcarDemo("Usuario", padre.id, { corrida: CORRIDA, script: "viejo" }); // como el código viejo
+        await marcarDemo("Usuario", otro.id, { corrida: CORRIDA, script: "viejo" });
+        const hijo = await prisma.hijo.create({ data: { usuarioId: padre.id, nombre: HIJO_NOMBRE, apellidos: "Demo" }, select: { id: true } });
+        await marcarDemo("Hijo", hijo.id, { corrida: CORRIDA, script: "viejo" });
+
+        await limpiarEstado({ dryRun: false });
+
+        // La cuenta fija SIGUE viva y SIN marca (desmarcada) → el re-run la re-siembra bajo e2epadre-cuentas.
+        expect(await prisma.usuario.findUnique({ where: { id: padre.id } }), "la cuenta +e2epadre NO se borra").not.toBeNull();
+        expect(await prisma.demoMarcado.findFirst({ where: { entidad: "Usuario", entidadId: padre.id } }), "queda desmarcada").toBeNull();
+        // El estado y los actores demo (no +e2epadre) sí se fueron.
+        expect(await prisma.hijo.count({ where: { usuarioId: padre.id } })).toBe(0);
+        expect(await prisma.usuario.findUnique({ where: { id: otro.id } }), "el actor demo (no +e2epadre) sí se borra").toBeNull();
+        expect(await prisma.demoMarcado.count({ where: { metadata: { path: ["corrida"], equals: CORRIDA } } })).toBe(0);
     });
 });
