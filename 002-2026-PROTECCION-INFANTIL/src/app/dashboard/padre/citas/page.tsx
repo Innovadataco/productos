@@ -7,7 +7,7 @@
 import { exigirPadre } from "@/lib/padre/guardia-padre";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
-import { MisCitasList } from "@/components/modules/padre/citas/MisCitasList";
+import { RejillaMisCitas } from "@/components/modules/padre/citas/RejillaMisCitas";
 
 export default async function PadreCitasPage() {
     const user = await exigirPadre();
@@ -18,10 +18,10 @@ export default async function PadreCitasPage() {
             <header className="mb-6">
                 <h1 className="titular-seccion text-body">Mis citas</h1>
                 <p className="mt-1 text-sm text-muted">
-                    Tus citas con los psicólogos de la red. Aquí ves las próximas y el historial.
+                    Tus citas con los psicólogos de la red, en tu calendario. Toca una para verla.
                 </p>
             </header>
-            <MisCitasList citas={citas} />
+            <RejillaMisCitas citas={citas} />
         </div>
     );
 }

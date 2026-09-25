@@ -31,6 +31,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { RejillaElegirFranja } from "@/components/modules/padre/citas/RejillaElegirFranja";
 
 interface Franja {
     id: string;
@@ -78,20 +79,6 @@ function fmtRango(f: Franja): string {
     return `${fmtFranja(f.inicio)} — ${new Date(f.fin).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
-/**
- * SPEC-712 §3 · fin de la SEMANA en curso (domingo 23:59 local). El chip «Solo
- * esta semana» filtra hasta acá; si hoy es domingo, la ventana es sólo hoy — y
- * el mensaje honesto («el más próximo es el …») cubre el vacío. Puro (recibe
- * `now`) para poder probarlo sin depender del reloj.
- */
-export function finDeSemana(now: Date = new Date()): Date {
-    const d = new Date(now);
-    const faltanParaDomingo = (7 - d.getDay()) % 7; // getDay: 0=Dom … 6=Sáb
-    d.setDate(d.getDate() + faltanParaDomingo);
-    d.setHours(23, 59, 59, 999);
-    return d;
-}
-
 export function SolicitarCitaPanel({
     profesionalId,
     tarifaProfesionalCOP,
@@ -111,11 +98,9 @@ export function SolicitarCitaPanel({
     const [presentacion, setPresentacion] = useState("");
     const [tienePresentacion, setTienePresentacion] = useState(false);
     const [editandoPresentacion, setEditandoPresentacion] = useState(false);
-    // SPEC-712 §3: la urgencia ya no se elige acá (toggle inerte retirado). SPEC-729
-    // §4 la retiró también del paso previo; hoy viaja fija en SIN_APURO.
+    // SPEC-712 §3 + SPEC-729 §4: la urgencia ya no se elige acá; viaja fija en SIN_APURO.
+    // SPEC-730: el chip «Solo esta semana» se retiró — la navegación de la rejilla lo suple.
     const [urgencia] = useState<"ESTA_SEMANA" | "SIN_APURO">("SIN_APURO");
-    // SPEC-712 §3: chip que FILTRA la lista de franjas a la semana en curso.
-    const [soloEstaSemana, setSoloEstaSemana] = useState(false);
     const [compartirExpediente, setCompartirExpediente] = useState(Boolean(expedienteIdSugerido));
     const [modalAbierto, setModalAbierto] = useState(false);
     const [enviando, setEnviando] = useState(false);
@@ -167,24 +152,6 @@ export function SolicitarCitaPanel({
     // solicitud original — el service la propaga; el panel no la exige.
     const presentacionValida = esReasignacion || presentacion.trim().length >= 10;
     const puedeContinuar = franjaSel !== null && presentacionValida;
-
-    // SPEC-712 §3: franjas ordenadas de la más próxima a la más lejana; el chip
-    // filtra sobre esa lista ya ordenada. La «más próxima» global sostiene el
-    // mensaje honesto cuando no hay nada esta semana.
-    const franjasOrdenadas = useMemo(
-        () =>
-            franjas
-                ? [...franjas].sort((a, b) => new Date(a.inicio).getTime() - new Date(b.inicio).getTime())
-                : null,
-        [franjas],
-    );
-    const limiteSemana = useMemo(() => finDeSemana(), []);
-    const franjasEstaSemana = useMemo(
-        () => franjasOrdenadas?.filter((f) => new Date(f.inicio) <= limiteSemana) ?? null,
-        [franjasOrdenadas, limiteSemana],
-    );
-    const franjasMostradas = (soloEstaSemana ? franjasEstaSemana ?? [] : franjasOrdenadas ?? []).slice(0, 10);
-    const semanaVacia = soloEstaSemana && (franjasEstaSemana?.length ?? 0) === 0;
 
     async function enviar() {
         if (!franjaSel) return;
@@ -332,25 +299,10 @@ export function SolicitarCitaPanel({
                 </div>
             )}
 
-            {/* Franjas — SPEC-712 §3: ordenadas más-próxima-primero + chip «Solo esta semana». */}
+            {/* Franjas — SPEC-730: la MISMA rejilla visual del profesional (no una lista);
+                el toque selecciona la franja libre. Solo lectura salvo esa selección. */}
             <div className="mt-4">
-                <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-body">Franjas libres</p>
-                    {franjas && franjas.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={() => setSoloEstaSemana((v) => !v)}
-                            aria-pressed={soloEstaSemana}
-                            className={`rounded-full px-3 py-1 text-[11px] font-medium transition ${
-                                soloEstaSemana
-                                    ? "bg-cielo text-acento-ink shadow"
-                                    : "bg-tinta/5 text-body hover:bg-tinta/10"
-                            }`}
-                        >
-                            Solo esta semana
-                        </button>
-                    )}
-                </div>
+                <p className="text-xs font-semibold text-body">Elige un horario libre</p>
                 {cargaError && (
                     <p className="mt-1 text-xs text-estado-rubi">No pudimos cargar las franjas: {cargaError}</p>
                 )}
@@ -360,34 +312,19 @@ export function SolicitarCitaPanel({
                 {franjas && franjas.length === 0 && (
                     <p className="mt-1 text-xs text-subtle">Este profesional no tiene franjas libres en este momento.</p>
                 )}
-                {franjas && franjas.length > 0 && semanaVacia && (
-                    <p className="mt-2 text-xs text-subtle">
-                        Este profesional no tiene horarios esta semana; el más próximo es el{" "}
-                        <span className="cifra">{fmtFranja(franjasOrdenadas![0].inicio)}</span>.
-                    </p>
+                {franjas && franjas.length > 0 && (
+                    <div className="mt-2">
+                        <RejillaElegirFranja
+                            franjas={franjas}
+                            franjaSelId={franjaSel?.id ?? null}
+                            onSeleccionar={setFranjaSel}
+                        />
+                    </div>
                 )}
-                {franjas && franjas.length > 0 && !semanaVacia && (
-                    <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                        {franjasMostradas.map((f) => {
-                            const seleccionada = franjaSel?.id === f.id;
-                            return (
-                                <li key={f.id}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFranjaSel(f)}
-                                        className={`w-full rounded-xl p-3 text-left text-sm transition ${
-                                            seleccionada
-                                                ? "bg-cielo/15 ring-2 ring-cielo text-body"
-                                                : "bg-tinta/5 hover:bg-tinta/10 text-body"
-                                        }`}
-                                    >
-                                        <p className="cifra font-medium">{fmtRango(f)}</p>
-                                        <p className="text-[11px] uppercase tracking-wide text-subtle">{f.modalidad === "VIRTUAL" ? "Virtual" : "Presencial"}</p>
-                                    </button>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                {franjaSel && (
+                    <p className="mt-2 text-xs text-body">
+                        Elegiste: <span className="cifra font-medium">{fmtRango(franjaSel)}</span>
+                    </p>
                 )}
             </div>
 
