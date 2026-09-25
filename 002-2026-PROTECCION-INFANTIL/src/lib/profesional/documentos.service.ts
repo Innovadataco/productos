@@ -28,9 +28,11 @@ import { leerRequisitosVerificacion, type ItemChecklist } from "@/lib/profesiona
 import {
     guardarAutorizacion,
     leerAutorizacion,
-    validarAutorizacion,
+    validarArchivoSubido,
+    detectarFormato,
     type ExtensionAutorizacion,
 } from "./autorizacion-storage";
+import { topeDocumentosMb } from "./tope-subida";
 
 /**
  * La clave `autorizacion` no es un requisito del parámetro: es el documento
@@ -206,7 +208,8 @@ export async function guardarDocumentoDeRequisito(
     buffer: Buffer
 ) {
     const requisitos = await leerRequisitosVerificacion();
-    if (!requisitos.some((r) => r.clave === requisitoClave)) {
+    const requisito = requisitos.find((r) => r.clave === requisitoClave);
+    if (!requisito) {
         throw new AppError(
             "Ese requisito no existe en la lista configurada.",
             ERROR_CODES.VALIDATION_ERROR,
@@ -230,12 +233,18 @@ export async function guardarDocumentoDeRequisito(
             409,
         );
     }
-    const validacion = validarAutorizacion(buffer);
+    // SPEC-726: el tope es el PARÁMETRO de documentos (no la constante), y el mensaje
+    // nombra ESTE documento en usted — no «la autorización» (el defecto que vio Jelkin).
+    const maxMb = await topeDocumentosMb();
+    // Copy de Diseño: «Su {requisito} pesa más…». El requisito arranca con minúscula para
+    // que fluya tras «Su» ("Su tarjeta profesional vigente…").
+    const sujeto = `Su ${requisito.nombre.charAt(0).toLowerCase()}${requisito.nombre.slice(1)}`;
+    const validacion = validarArchivoSubido(buffer, { maxBytes: maxMb * 1024 * 1024, maxMb, sujeto });
     if (!validacion.ok) {
         throw new AppError(validacion.motivo, ERROR_CODES.VALIDATION_ERROR, 400);
     }
-    // Mismo storage que la autorización: cifrado, nombre opaco, 5 MB, magia de
-    // bytes. No se reescribe criptografía.
+    // Mismo storage que la autorización: cifrado, nombre opaco, magia de bytes.
+    // No se reescribe criptografía.
     const guardado = await guardarAutorizacion(buffer, validacion.extension);
     return new DocumentoProfesionalRepository().guardar({
         perfilProfesionalId,
@@ -308,7 +317,7 @@ export async function servirDocumento(params: {
         userAgent: "profesional/documentos",
     });
 
-    const deteccion = validarAutorizacion(buffer);
+    const deteccion = detectarFormato(buffer);
     const extension: ExtensionAutorizacion = deteccion.ok ? deteccion.extension : "pdf";
     return {
         buffer,

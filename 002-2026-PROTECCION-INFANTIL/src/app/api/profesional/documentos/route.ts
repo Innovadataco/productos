@@ -17,6 +17,7 @@ import {
     estadoDeDocumentos,
     guardarDocumentoDeRequisito,
 } from "@/lib/profesional/documentos.service";
+import { topeDocumentosMb } from "@/lib/profesional/tope-subida";
 
 async function perfilDelProfesional() {
     const user = await verifyAuth("PROFESIONAL");
@@ -34,8 +35,20 @@ async function perfilDelProfesional() {
 
 export async function GET() {
     try {
-        const { perfil } = await perfilDelProfesional();
-        return NextResponse.json({ data: await estadoDeDocumentos(perfil.id) });
+        const user = await verifyAuth("PROFESIONAL");
+        await assertModulo(user, "profesional_ficha");
+        const perfil = await new PerfilProfesionalRepository().findPorUsuarioId(user.id);
+        // SPEC-726: el cliente lee el MISMO tope que valida el servidor (una sola verdad).
+        const tamanoMaxMb = await topeDocumentosMb();
+        // SPEC-727: un profesional NUEVO sin perfil abre «completar» y su sección de documentos
+        // hace este GET al montar. Sin perfil NO es un error: es el estado vacío LEGÍTIMO de su
+        // primera pantalla. Antes tiraba 400 y ensuciaba consola/monitoreo. Ahora 200, lista
+        // vacía, `sinPerfil` — la pantalla muestra «Guarde su ficha para poder cargar documentos».
+        if (!perfil) {
+            return NextResponse.json({ data: [], tamanoMaxMb, sinPerfil: true });
+        }
+        const data = await estadoDeDocumentos(perfil.id);
+        return NextResponse.json({ data, tamanoMaxMb, sinPerfil: false });
     } catch (error) {
         return errorToResponse(error, "[PROFESIONAL/DOCUMENTOS/GET]");
     }

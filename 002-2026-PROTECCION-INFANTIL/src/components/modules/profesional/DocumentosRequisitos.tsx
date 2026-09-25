@@ -1,17 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ModalCargaArchivo } from "@/components/modules/profesional/ModalCargaArchivo";
 
 /**
  * SPEC-436 (I-304) · el bloque donde el profesional carga sus documentos.
  *
  * La lista NO está quemada: sale de `GET /api/profesional/documentos`, que la
  * deriva del parámetro `verificacion.requisitos`. Si mañana se agrega un quinto
- * requisito, aparece acá **sin tocar código** — que es exactamente para lo que
- * ese parámetro existe.
+ * requisito, aparece acá **sin tocar código**.
  *
- * Hasta esta spec, al Verificador se le pedía decidir sobre documentos que
- * nadie había recolectado: el formulario subía un solo archivo, la autorización.
+ * SPEC-727: un profesional NUEVO sin perfil abre «completar» y esta sección hace el
+ * GET al montar. Sin perfil ya NO es 400 (ensuciaba consola/monitoreo): el server
+ * responde 200 `sinPerfil`, y acá se muestra el estado vacío legítimo.
+ *
+ * SPEC-726: el tope de tamaño es un parámetro (`tamanoMaxMb`, leído del MISMO valor
+ * que valida el servidor). El cliente rechaza temprano con ese número + copy de
+ * Diseño, y la subida usa el modal «nivel Dios» con barra de % real (XHR).
  */
 
 interface EstadoDocumento {
@@ -31,6 +36,25 @@ interface EstadoDocumento {
     revision: "aprobado" | "devuelto" | "en_revision" | null;
 }
 
+const TIPOS_OK = ["application/pdf", "image/png", "image/jpeg"];
+const lcFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
+/**
+ * SPEC-726 · rechazo temprano en el CLIENTE (cortesía): mismo número (parámetro) y
+ * mismo copy que el servidor. El servidor sigue siendo la verdad; esto solo evita
+ * gastar una subida cuando ya se ve que no pasa.
+ */
+function rechazoTemprano(archivo: File, nombre: string, maxMb: number): string | null {
+    if (archivo.size === 0) return "Ese archivo está vacío. Elija otro.";
+    if (archivo.size > maxMb * 1024 * 1024) {
+        return `Su ${lcFirst(nombre)} pesa más del máximo permitido (${maxMb} MB). Si es una foto, tómela con menos resolución o envíela como PDF.`;
+    }
+    if (archivo.type && !TIPOS_OK.includes(archivo.type)) {
+        return "Formato no aceptado. Suba un PDF, PNG o JPG.";
+    }
+    return null;
+}
+
 function IconCheck() {
     return (
         <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="none" aria-hidden="true">
@@ -47,24 +71,28 @@ function IconCheck() {
 
 export function DocumentosRequisitos() {
     const [docs, setDocs] = useState<EstadoDocumento[] | null>(null);
+    const [tamanoMaxMb, setTamanoMaxMb] = useState<number | null>(null);
+    const [sinPerfil, setSinPerfil] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [subiendo, setSubiendo] = useState<string | null>(null);
+    const [rechazo, setRechazo] = useState<{ clave: string; mensaje: string } | null>(null);
+    const [modal, setModal] = useState<{ clave: string; nombre: string; archivo: File } | null>(null);
 
     const cargar = useCallback(async () => {
         try {
             const res = await fetch("/api/profesional/documentos", { credentials: "include" });
             if (!res.ok) {
-                // I-410: mostrar el MENSAJE del servidor (p. ej. «Complete su perfil
-                // antes de cargar documentos.»), no «HTTP 400». El respaldo solo si el
-                // servidor no manda mensaje. Candado: pantalla-muestra-mensaje-servidor.
+                // I-410: mostrar el MENSAJE del servidor, no «HTTP 400». Candado:
+                // pantalla-muestra-mensaje-servidor.
                 const cuerpo = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
                 throw new Error(cuerpo?.error?.message ?? `El servidor respondió con un error (HTTP ${res.status}).`);
             }
-            const json = (await res.json()) as { data: EstadoDocumento[] };
+            const json = (await res.json()) as { data: EstadoDocumento[]; tamanoMaxMb: number; sinPerfil?: boolean };
             setDocs(json.data);
+            setTamanoMaxMb(json.tamanoMaxMb);
+            setSinPerfil(json.sinPerfil === true);
         } catch (e) {
-            // Se dice qué pasó: una lista vacía por error no puede parecer
-            // «no hay requisitos» (lección I-294).
+            // Se dice qué pasó: una lista vacía por error no puede parecer «no hay
+            // requisitos» (lección I-294).
             setError(e instanceof Error ? e.message : String(e));
         }
     }, []);
@@ -73,31 +101,15 @@ export function DocumentosRequisitos() {
         void cargar();
     }, [cargar]);
 
-    async function subir(clave: string, archivo: File) {
-        setSubiendo(clave);
-        setError(null);
-        try {
-            const form = new FormData();
-            form.append("archivo", archivo);
-            form.append("requisito", clave);
-            const res = await fetch("/api/profesional/documentos", {
-                method: "POST",
-                credentials: "include",
-                body: form,
-            });
-            if (!res.ok) {
-                const cuerpo = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-                setError(cuerpo?.error?.message ?? `No se pudo subir (HTTP ${res.status}).`);
-                return;
-            }
-            const json = (await res.json()) as { data: EstadoDocumento[] };
-            setDocs(json.data);
-        } catch (e) {
-            console.error("[DocumentosRequisitos]", e);
-            setError("No pudimos comunicarnos con el servidor. Revise su conexión e intente de nuevo.");
-        } finally {
-            setSubiendo(null);
+    function elegir(d: EstadoDocumento, archivo: File | undefined) {
+        if (!archivo || tamanoMaxMb === null) return;
+        const msg = rechazoTemprano(archivo, d.nombre, tamanoMaxMb);
+        if (msg) {
+            setRechazo({ clave: d.clave, mensaje: msg });
+            return;
         }
+        setRechazo(null);
+        setModal({ clave: d.clave, nombre: d.nombre, archivo });
     }
 
     if (error && docs === null) {
@@ -109,6 +121,14 @@ export function DocumentosRequisitos() {
     }
     if (docs === null) {
         return <p className="text-sm text-muted">Cargando la lista de documentos…</p>;
+    }
+    // SPEC-727: sin perfil todavía — estado vacío legítimo (no un error), en usted.
+    if (sinPerfil) {
+        return (
+            <p className="rounded-xl bg-tinta/5 p-4 text-sm text-muted">
+                Guarde su ficha para poder cargar documentos.
+            </p>
+        );
     }
 
     return (
@@ -132,7 +152,6 @@ export function DocumentosRequisitos() {
                         ) : d.revision === "en_revision" ? (
                             <span className="text-xs font-medium text-estado-ambar">En revisión</span>
                         ) : d.enRevision ? (
-                            // SPEC-693: subió una versión nueva mientras sigue ACTIVO.
                             <span className="text-xs font-medium text-estado-ambar">
                                 En revisión — envió un documento nuevo
                             </span>
@@ -147,8 +166,6 @@ export function DocumentosRequisitos() {
                     </div>
                     {d.descripcion && <p className="mt-1 text-xs text-muted">{d.descripcion}</p>}
                     {d.revision === "devuelto" && d.observacion && (
-                        // SPEC-707 (Diseño FORMA-SPEC707): el MOTIVO del verificador, VERBATIM, junto
-                        // al documento devuelto. Rótulo «Qué revisar» — corrección, no culpa.
                         <div role="note" className="mt-2 rounded-lg border-l-2 border-estado-ambar bg-tinta/5 px-3 py-2 text-xs text-body">
                             <p className="font-semibold text-estado-ambar">Qué revisar</p>
                             <p className="mt-1">«{d.observacion}»</p>
@@ -156,7 +173,6 @@ export function DocumentosRequisitos() {
                     )}
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                         {d.revision === "aprobado" ? (
-                            // Diseño §3: se DICE por qué no hay botón (no uno ausente y mudo).
                             <span className="text-xs text-muted">
                                 Aprobado. Mientras revisamos su solicitud, este documento no se cambia.
                             </span>
@@ -165,15 +181,15 @@ export function DocumentosRequisitos() {
                                 type="file"
                                 accept="application/pdf,image/png,image/jpeg"
                                 aria-label={`${d.revision === "devuelto" ? "Volver a subir" : "Subir"} ${d.nombre}`}
-                                disabled={subiendo !== null}
+                                disabled={modal !== null}
                                 onChange={(e) => {
                                     const f = e.target.files?.[0];
-                                    if (f) void subir(d.clave, f);
+                                    e.target.value = ""; // permite re-elegir el mismo archivo tras un rechazo
+                                    elegir(d, f);
                                 }}
                                 className="text-sm"
                             />
                         )}
-                        {subiendo === d.clave && <span className="text-xs text-muted">Subiendo…</span>}
                         {d.cargado && (
                             <a
                                 href={`/api/profesional/documentos/${d.clave}`}
@@ -185,12 +201,34 @@ export function DocumentosRequisitos() {
                             </a>
                         )}
                     </div>
+                    {rechazo?.clave === d.clave && (
+                        <p role="alert" className="mt-2 text-xs text-estado-ambar">
+                            {rechazo.mensaje}
+                        </p>
+                    )}
                 </div>
             ))}
             {error && (
                 <p role="alert" className="text-sm text-ambar">
                     {error}
                 </p>
+            )}
+
+            {/* SPEC-726 · modal de carga con barra de % real (XHR). Bloquea la ficha, permite
+                cancelar, timeout por estancamiento, y muestra el error correcto en usted. */}
+            {modal && (
+                <ModalCargaArchivo
+                    url="/api/profesional/documentos"
+                    campos={{ requisito: modal.clave }}
+                    archivo={modal.archivo}
+                    requisitoNombre={lcFirst(modal.nombre)}
+                    onExito={(resp) => {
+                        const j = resp as { data?: EstadoDocumento[] } | null;
+                        if (j?.data) setDocs(j.data);
+                        setModal(null);
+                    }}
+                    onCerrar={() => setModal(null)}
+                />
             )}
         </div>
     );

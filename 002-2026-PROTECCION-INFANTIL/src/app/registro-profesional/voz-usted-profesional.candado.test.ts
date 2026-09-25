@@ -40,6 +40,11 @@ const DIRS_PROFESIONAL = [
 // pisar §C), + la mixta resuelta a usted.
 const ARCHIVOS_PROFESIONAL = [
     path.join(SRC, "lib/profesional/perfil-schema.ts"),
+    // SPEC-726: copy de USTED que nace en `lib/` compartido — el subárbol propio no lo
+    // cubría (el mensaje de tamaño/formato de la subida). El validador y el que arma el
+    // sujeto quedan vigilados acá (el «Suba…» en usted, sin voseo).
+    path.join(SRC, "lib/profesional/autorizacion-storage.ts"),
+    path.join(SRC, "lib/profesional/documentos.service.ts"),
     path.join(SRC, "components/modules/verificacion/EstadoVerificacionProfesionalClient.tsx"),
     path.join(SRC, "app/cambiar-password/page.tsx"),
 ];
