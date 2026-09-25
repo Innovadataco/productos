@@ -4,7 +4,9 @@ export type DetalleReporte = {
     id: string;
     identificador: string;
     plataforma: { nombre: string; clave: string };
-    texto: string;
+    // SPEC-734: el relato NO viaja en la carga por defecto (seguridad). El detalle
+    // lo trae SOLO con `?revelar=true` (y ese acceso deja fila). null = oculto.
+    texto: string | null;
     estado: string;
     ciudad: string;
     pais: string;
@@ -97,6 +99,12 @@ export interface UseReporteDetalleResult {
     puedeRevelarOriginal: boolean;
     textoOriginalRevelado: string | null;
     loadingRevelar: boolean;
+    // SPEC-734: revelar el «texto actual» (el de trabajo). Re-consulta el detalle
+    // con `?revelar=true` — el servidor descifra + audita y devuelve el relato.
+    puedeRevelarTexto: boolean;
+    textoActualRevelado: string | null;
+    loadingRevelarTexto: boolean;
+    handleRevelarTexto: () => Promise<void>;
     observacionesValidacion: string;
     setObservacionesValidacion: (v: string) => void;
     validando: boolean;

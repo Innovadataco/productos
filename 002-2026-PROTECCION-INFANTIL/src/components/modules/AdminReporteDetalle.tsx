@@ -46,6 +46,10 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
         puedeRevelarOriginal,
         textoOriginalRevelado,
         loadingRevelar,
+        puedeRevelarTexto,
+        textoActualRevelado,
+        loadingRevelarTexto,
+        handleRevelarTexto,
         observacionesValidacion,
         setObservacionesValidacion,
         validando,
@@ -108,12 +112,21 @@ function AdminReporteDetalleContent({ reporteId, onClose, onRefresh }: Omit<Admi
                 </Alerta>
             )}
 
-            <ReporteDetalleInfo reporte={reporte} />
+            <ReporteDetalleInfo
+                reporte={reporte}
+                textoActualRevelado={textoActualRevelado}
+                puedeRevelarTexto={puedeRevelarTexto}
+                loadingRevelarTexto={loadingRevelarTexto}
+                onRevelarTexto={handleRevelarTexto}
+            />
 
+            {/* SPEC-734: el dedup «idéntico al vigente» compara contra el texto REVELADO,
+                no el de la carga (que ya no viaja). Si el actual no se reveló, revelar el
+                original lo PINTA (antes decía «idéntico» y no mostraba nada). */}
             <TextoOriginalPanel
                 puedeRevelarOriginal={puedeRevelarOriginal}
                 textoOriginalRevelado={textoOriginalRevelado}
-                textoActual={reporte.texto}
+                textoActual={textoActualRevelado ?? ""}
                 loadingRevelar={loadingRevelar}
                 onRevelar={handleRevelarOriginal}
             />

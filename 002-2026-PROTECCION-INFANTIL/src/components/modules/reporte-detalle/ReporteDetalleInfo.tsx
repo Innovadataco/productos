@@ -3,12 +3,26 @@
 import type { DetalleReporte } from "./types";
 import { formatCategoria, formatEstado } from "./types";
 import { fechaHechoLegible } from "@/lib/format/fecha";
+import { Button } from "@/components/ui/Button";
 
 interface ReporteDetalleInfoProps {
     reporte: DetalleReporte;
+    // SPEC-734: el relato NO se pinta por defecto. Se muestra SOLO cuando el padre
+    // (aquí: el personal) lo revela — un acto auditado. Sin estas props, el bloque
+    // muestra el marcador sin botón (vista sin capacidad de revelar).
+    textoActualRevelado?: string | null;
+    puedeRevelarTexto?: boolean;
+    loadingRevelarTexto?: boolean;
+    onRevelarTexto?: () => void;
 }
 
-export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
+export function ReporteDetalleInfo({
+    reporte,
+    textoActualRevelado = null,
+    puedeRevelarTexto = false,
+    loadingRevelarTexto = false,
+    onRevelarTexto,
+}: ReporteDetalleInfoProps) {
     return (
         <div className="space-y-4 text-sm text-body">
             <div className="grid grid-cols-2 gap-4">
@@ -151,9 +165,30 @@ export function ReporteDetalleInfo({ reporte }: ReporteDetalleInfoProps) {
                 </div>
             )}
 
+            {/* SPEC-734: el relato del reporte de un menor queda OCULTO hasta un acto
+                deliberado de revelar, que el servidor descifra y AUDITA (deja fila de
+                quién lo vio). Antes se pintaba por defecto en cada apertura. */}
             <div>
                 <h3 className="mb-1 font-medium text-body">Texto actual</h3>
-                <p className="whitespace-pre-wrap rounded-lg glass-input p-3">{reporte.texto}</p>
+                {textoActualRevelado !== null ? (
+                    <p className="whitespace-pre-wrap rounded-lg glass-input p-3">{textoActualRevelado}</p>
+                ) : (
+                    <div className="rounded-lg border border-tinta/10 bg-tinta/5 p-3">
+                        <p className="text-subtle">
+                            El texto queda oculto; al revelarlo se registra quién lo vio.
+                        </p>
+                        {puedeRevelarTexto && onRevelarTexto && (
+                            <Button
+                                variant="secondary"
+                                onClick={onRevelarTexto}
+                                disabled={loadingRevelarTexto}
+                                className="mt-2"
+                            >
+                                {loadingRevelarTexto ? "Revelando…" : "Revelar texto"}
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

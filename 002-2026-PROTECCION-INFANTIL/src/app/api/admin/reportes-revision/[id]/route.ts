@@ -68,18 +68,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             );
         }
 
-        // SPEC-701 (I-421): el detalle DEJA FILA en LecturaReporte. Antes usaba
-        // `registrarLectura:false` (SPEC-592, «el render no es una acción de lectura»)
-        // para no avisarle al padre en cada vista — pero SPEC-594 ya sacó el aviso al
-        // padre de esta frontera, así que quedaban ACOPLADOS dos asuntos distintos (el
-        // aviso y el rastro) sin razón. Los delitos contra menores no prescriben: la
-        // pregunta «¿quién del personal leyó este relato?» debe tener respuesta.
+        // SPEC-734 (seguridad): el relato NO viaja en la carga por defecto. Se
+        // descifra y se envía SOLO con `?revelar=true`; ese descifrado, por la
+        // frontera auditada (conActor + descifrarCampoReporte), DEJA FILA en
+        // LecturaReporte a nombre de quien reveló. Sin `revelar`: `texto: null` (la
+        // UI pinta el marcador), sin descifrar y SIN fila.
+        //
+        // Refina —no revierte— el invariante de SPEC-701 (I-421): «no se ve el relato
+        // sin dejar fila» sigue en pie (ver el texto exige revelar, y revelar escribe
+        // la fila); lo único que cambia es que ABRIR el caso sin revelar ya no escribe
+        // fila, porque no se vio el texto. El rastro pasa de «cada apertura» a «acto
+        // deliberado de revelar».
+        const revelar = new URL(request.url).searchParams.get("revelar") === "true";
         const reporteDetalle = await conActor(actorDesdeRequest(user, request), async () => {
             const detalle = await new ReporteRepository().findDetalleRevision(id);
             if (!detalle) return null;
             // SPEC-130 (BL-4, O-2): el texto sale descifrado SOLO por este camino
-            // autorizado (bandeja/expediente del operador); purgado → marcador tal cual.
-            const texto = await descifrarCampoReporte(detalle.contenidoId, "texto");
+            // autorizado y SOLO al revelar; purgado → marcador tal cual.
+            const texto = revelar ? await descifrarCampoReporte(detalle.contenidoId, "texto") : null;
             // SPEC-644: enum persistido → franja de dominio (server-side, como en la
             // capa de análisis) para que el detalle muestre lo GUARDADO, no la derivada.
             const franja = detalle.franjaHoraria ? ENUM_A_FRANJA[detalle.franjaHoraria] : null;

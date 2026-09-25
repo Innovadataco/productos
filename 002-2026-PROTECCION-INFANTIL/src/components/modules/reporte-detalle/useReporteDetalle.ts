@@ -23,6 +23,11 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
     const [puedeRevelarOriginal, setPuedeRevelarOriginal] = useState(false);
     const [textoOriginalRevelado, setTextoOriginalRevelado] = useState<string | null>(null);
     const [loadingRevelar, setLoadingRevelar] = useState(false);
+    // SPEC-734: el «texto actual» (de trabajo) también arranca OCULTO y se revela
+    // con una acción auditada (?revelar=true). No sale en la carga por defecto.
+    const [puedeRevelarTexto, setPuedeRevelarTexto] = useState(false);
+    const [textoActualRevelado, setTextoActualRevelado] = useState<string | null>(null);
+    const [loadingRevelarTexto, setLoadingRevelarTexto] = useState(false);
     const [observacionesValidacion, setObservacionesValidacion] = useState("");
     const [validando, setValidando] = useState(false);
     const [puedeEscalar, setPuedeEscalar] = useState(false);
@@ -40,6 +45,9 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         setMotivoCorreccion("");
         setTextoOriginalRevelado(null);
         setPuedeRevelarOriginal(false);
+        // SPEC-734: cada (re)carga sin revelar arranca el relato OCULTO.
+        setTextoActualRevelado(null);
+        setPuedeRevelarTexto(false);
         setObservacionesValidacion("");
         fetch(`/api/admin/reportes-revision/${reporteId}`, { credentials: "include" })
             .then(async (r) => {
@@ -51,6 +59,11 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
                 setReporte(data);
                 setPuedeRevelarOriginal(json.puedeRevelarOriginal === true);
                 setPuedeEscalar(json.puedeEscalar === true);
+                // SPEC-734: quien puede abrir el detalle puede revelar el texto (antes lo
+                // veía por defecto). El servidor re-verifica el permiso en el ?revelar=true.
+                setPuedeRevelarTexto(true);
+                // El relato ya NO viene en la carga (texto:null); el textarea de
+                // anonimización se prellena al revelar (handleRevelarTexto).
                 setTextoAnonimizado(data.texto || "");
             })
             .catch(() => setError("No se pudo cargar el detalle del caso."))
@@ -64,8 +77,31 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
             setReporte(data.reporte || data);
             setPuedeRevelarOriginal(data.puedeRevelarOriginal === true);
             setPuedeEscalar(data.puedeEscalar === true);
+            // SPEC-734: tras una acción el detalle vuelve SIN revelar (texto:null); el
+            // relato mostrado se re-oculta para no dejar en pantalla un texto ya viejo.
+            setTextoActualRevelado(null);
         }
     }
+
+    // SPEC-734: revelar el «texto actual» = re-consultar el detalle con `?revelar=true`.
+    // El servidor descifra por la frontera auditada (deja fila en LecturaReporte) y lo
+    // devuelve; acá lo PINTAMOS y prellenamos el textarea de anonimización.
+    const handleRevelarTexto = async () => {
+        setLoadingRevelarTexto(true);
+        setError("");
+        try {
+            const res = await fetch(`/api/admin/reportes-revision/${reporteId}?revelar=true`, { credentials: "include" });
+            if (!res.ok) throw new Error("Error al revelar el texto");
+            const json = await res.json();
+            const texto: string | null = (json.reporte ?? json)?.texto ?? null;
+            setTextoActualRevelado(texto);
+            setTextoAnonimizado(texto ?? "");
+        } catch {
+            setError("No se pudo revelar el texto.");
+        } finally {
+            setLoadingRevelarTexto(false);
+        }
+    };
 
     const handleAnonimizar = async () => {
         if (!textoAnonimizado || textoAnonimizado.length < 20 || textoAnonimizado.length > 5000) {
@@ -363,6 +399,10 @@ export function useReporteDetalle(reporteId: string, onRefresh: () => void): Use
         puedeRevelarOriginal,
         textoOriginalRevelado,
         loadingRevelar,
+        puedeRevelarTexto,
+        textoActualRevelado,
+        loadingRevelarTexto,
+        handleRevelarTexto,
         observacionesValidacion,
         setObservacionesValidacion,
         validando,
