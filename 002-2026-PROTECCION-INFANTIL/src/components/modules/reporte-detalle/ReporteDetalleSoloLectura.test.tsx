@@ -4,7 +4,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { ReporteDetalleSoloLectura } from "./ReporteDetalleSoloLectura";
 
 // SPEC-595: el detalle de un reporte procesado se consulta en modal solo-lectura
-// con la estructura de campos pedida por el dueño y sin ninguna acción.
+// con la estructura de campos pedida por el dueño y sin acciones EDITABLES.
+// SPEC-734: el relato arranca oculto también acá; se permite «Revelar texto» (una
+// LECTURA auditada, no una edición) — el resto de acciones (clasificar, corregir,
+// anonimizar, escalar, dar de baja, validar) sigue prohibido en la consulta.
 
 const detalle = {
     id: "reporte-123",
@@ -97,7 +100,7 @@ describe("ReporteDetalleSoloLectura", () => {
         expect(screen.getByText("Corrección registrada")).toBeTruthy();
     });
 
-    it("no ofrece acciones del detalle editable", async () => {
+    it("no ofrece acciones EDITABLES (pero sí «Revelar texto», que es una lectura auditada)", async () => {
         mockDetalleFetch();
 
         render(<ReporteDetalleSoloLectura reporteId="reporte-123" onClose={() => {}} />);
@@ -106,9 +109,15 @@ describe("ReporteDetalleSoloLectura", () => {
             expect(screen.getByText("RPT-SOLO001")).toBeTruthy();
         });
 
-        // Las acciones son botones; los textos informativos («Categoría corregida»)
-        // sí pueden aparecer en la ficha y no cuentan como acción.
-        const nombresProhibidos = [/confirmar/i, /corregir/i, /revelar/i, /anonimizar/i, /escalar/i, /dar de baja/i, /validar/i];
+        // SPEC-734: el relato NO se pinta por defecto — marcador + «Revelar texto».
+        expect(screen.getByText(/El texto queda oculto; al revelarlo se registra quién lo vio/)).toBeTruthy();
+        const revelar = screen.getByRole("button", { name: /Revelar texto/ });
+        expect(revelar).toBeTruthy();
+
+        // Ninguna acción EDITABLE (mutación del caso). «Revelar texto» es LECTURA
+        // auditada, no edición: se excluye de la lista prohibida a propósito. No hay
+        // «Revelar original» acá (la consulta no ofrece la evidencia original).
+        const nombresProhibidos = [/confirmar/i, /corregir/i, /anonimizar/i, /escalar/i, /dar de baja/i, /validar/i, /revelar original/i];
         const botones = screen.getAllByRole("button");
         for (const boton of botones) {
             for (const nombre of nombresProhibidos) {
