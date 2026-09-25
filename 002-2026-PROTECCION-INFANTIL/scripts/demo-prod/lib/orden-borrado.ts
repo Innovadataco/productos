@@ -29,6 +29,11 @@ export const ORDEN_BORRADO: string[] = [
     "VerificacionProfesional",
     "FranjaDisponible",
     "PerfilProfesional",
+    // SPEC-722 · el padre demo (+e2epadre) siembra un hijo con cuenta. Ambos cuelgan del
+    // Usuario (FK Cascade), pero se marcan y se listan explícitos (como el profesional demo)
+    // para que la purga los borre por marca; hoja antes que padre: IdentificadorHijo → Hijo.
+    "IdentificadorHijo",
+    "Hijo",
     "Estudiante",
     "Curso",
     "Profesor",
