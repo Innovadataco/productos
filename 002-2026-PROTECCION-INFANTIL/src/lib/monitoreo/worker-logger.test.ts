@@ -101,12 +101,46 @@ describe("workerLogger (SPEC-193 Fase 5)", () => {
         expect(createMock).not.toHaveBeenCalled();
     });
 
-    it("NO lanza si la escritura a BD falla", async () => {
+    it("NO lanza si la escritura a BD falla, y deja RASTRO en el propio workerLog (SPEC-737)", async () => {
         setConfig(true, "INFO");
-        createMock.mockRejectedValueOnce(new Error("base de datos caida"));
+        createMock.mockRejectedValueOnce(new Error("base de datos caida")); // solo el 1er INSERT falla
 
         await expect(workerLogger.info("mensaje seguro")).resolves.toBeUndefined();
+
+        // El original falla → se intenta un renglón de RASTRO (2º INSERT), que sí entra:
+        // el tab de operación no se apaga en silencio.
+        expect(createMock).toHaveBeenCalledTimes(2);
+        expect(createMock).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    nivel: "ERROR",
+                    mensaje: expect.stringContaining("no se pudo persistir un log"),
+                }),
+            })
+        );
+    });
+
+    it("si el rastro TAMBIÉN falla (BD caída) no lanza ni recursa infinito — solo 2 intentos (SPEC-737)", async () => {
+        setConfig(true, "INFO");
+        createMock
+            .mockRejectedValueOnce(new Error("base de datos caida"))
+            .mockRejectedValueOnce(new Error("base de datos caida"));
+
+        await expect(workerLogger.error("nada entra")).resolves.toBeUndefined();
+
+        // Exactamente 2: el original + UN rastro; la guarda anti-recursión corta ahí.
+        expect(createMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("trunca el mensaje a 500 para que un log largo no tumbe el INSERT (SPEC-737)", async () => {
+        setConfig(true, "INFO");
+        await workerLogger.info("x".repeat(600));
+
         expect(createMock).toHaveBeenCalledTimes(1);
+        const arg = createMock.mock.calls[0]![0] as { data: { mensaje: string } };
+        expect(arg.data.mensaje.length).toBe(500);
+        expect(arg.data.mensaje.endsWith("…")).toBe(true);
     });
 
     it(".child() hereda el servicio por defecto y permite override", async () => {

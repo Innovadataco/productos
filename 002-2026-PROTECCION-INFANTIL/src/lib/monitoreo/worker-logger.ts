@@ -73,24 +73,52 @@ async function debePersistir(nivel: NivelLog): Promise<boolean> {
     return cumpleNivelMinimo(nivel, minimo);
 }
 
+/** El límite de la columna `WorkerLog.mensaje` (VarChar(500)). */
+const MENSAJE_MAX = 500;
+
+/**
+ * SPEC-737: un `mensaje` más largo que la columna hace fallar el INSERT
+ * («value too long for type character varying(500)») y perdíamos el log. Se
+ * trunca a 500 (con marcador) para que un mensaje largo NUNCA tumbe la escritura.
+ */
+function truncarMensaje(mensaje: string): string {
+    return mensaje.length > MENSAJE_MAX ? `${mensaje.slice(0, MENSAJE_MAX - 1)}…` : mensaje;
+}
+
 async function persistir(
     servicio: string,
     nivel: NivelLog,
     mensaje: string,
-    contextoJson?: ContextoWorkerLog
+    contextoJson?: ContextoWorkerLog,
+    esRastroDeFallo = false
 ): Promise<void> {
     try {
         await prisma.workerLog.create({
             data: {
                 servicio,
                 nivel,
-                mensaje,
+                mensaje: truncarMensaje(mensaje),
                 ...(contextoJson ? { contextoJson: contextoJson as never } : {}),
             },
         });
     } catch (error) {
         const detalle = error instanceof Error ? error.message : String(error);
         logger.error(`[WorkerLogger] Fallo al persistir log: ${detalle}`, { servicio, nivel });
+        // SPEC-737: un worker «vivo» sin log es peor que nada. Si el INSERT falla,
+        // dejamos RASTRO en el propio `workerLog` (un renglón ERROR mínimo y seguro:
+        // sin `contextoJson`, con el mensaje truncado), para que el tab de operación
+        // no se apague en silencio. Un solo intento, y JAMÁS desde el propio rastro
+        // (`esRastroDeFallo`) → si la BD está caída no hay recursión infinita, cae al
+        // `logger.error` de arriba (stdout del contenedor).
+        if (!esRastroDeFallo) {
+            await persistir(
+                servicio,
+                "ERROR",
+                `WorkerLogger: no se pudo persistir un log (${servicio}/${nivel}): ${detalle}`,
+                undefined,
+                true
+            );
+        }
     }
 }
 
