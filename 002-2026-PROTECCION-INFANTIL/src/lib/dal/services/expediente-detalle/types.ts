@@ -35,6 +35,16 @@ export interface ExpedienteListaItemDto {
     cerrado: boolean;
 }
 
+/**
+ * SPEC-731 · el mínimo para el selector «compartir un caso» de la cita
+ * confirmada: id + una etiqueta legible (código + hijo, o solo código). NUNCA
+ * contenido del expediente ni el identificador crudo reportado.
+ */
+export interface ExpedienteParaCompartirDto {
+    expedienteId: string;
+    etiqueta: string;
+}
+
 export interface TimelineItemDto {
     /** Fecha del hecho (fechaIncidente); la UI la muestra sin minutos (A-70 · G20). */
     fecha: Date;

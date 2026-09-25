@@ -49,23 +49,24 @@ function cita(over: Partial<CitaParaPadreDto> = {}): CitaParaPadreDto {
 afterEach(() => cleanup());
 
 describe("SPEC-715 §4 · la cita confirmada tiene acciones reales", () => {
-    it("CONFIRMADA con caso ligado: «Compartir el caso» + el pase + «Agregar a mi calendario»", () => {
-        render(<EsperaCitaPanel citaInicial={cita({ expedienteCompartidoId: "exp1" })} />);
-        expect(screen.getByText(/Compartir el caso/)).toBeTruthy();
+    // SPEC-731 refina §1b: el detalle de «compartir un caso» (selector, casos a/b,
+    // pie) vive en cita-confirmada-sin-expediente.candado.test.tsx. Acá queda lo que
+    // SPEC-715 sigue garantizando: el pase se MONTA con un caso ligado y el calendario.
+    it("CONFIRMADA con caso ligado: el pase se monta para ese caso + «Agregar a mi calendario»", () => {
+        render(
+            <EsperaCitaPanel
+                citaInicial={cita({ expedienteCompartidoId: "exp1" })}
+                expedientes={[{ expedienteId: "exp1", etiqueta: "EXP-1 · Ana" }]}
+            />,
+        );
+        expect(screen.getByText(/Compartir un caso/)).toBeTruthy();
         expect(screen.getByTestId("generar-pase").textContent).toBe("exp1");
-        expect(screen.getByRole("button", { name: /Agregar a mi calendario/ })).toBeTruthy();
-    });
-
-    it("CONFIRMADA sin caso ligado: ofrece «elige desde cuál caso compartir», sin pase inventado", () => {
-        render(<EsperaCitaPanel citaInicial={cita({ expedienteCompartidoId: null })} />);
-        expect(screen.getByText(/elige desde cuál caso compartir/)).toBeTruthy();
-        expect(screen.queryByTestId("generar-pase")).toBeNull();
         expect(screen.getByRole("button", { name: /Agregar a mi calendario/ })).toBeTruthy();
     });
 
     it("PAGADA_PENDIENTE: NINGÚN bloque de acción (control positivo — nada antes de CONFIRMADA)", () => {
         render(<EsperaCitaPanel citaInicial={cita({ estado: "PAGADA_PENDIENTE" })} />);
-        expect(screen.queryByText(/Compartir el caso/)).toBeNull();
+        expect(screen.queryByText(/Compartir un caso/)).toBeNull();
         expect(screen.queryByTestId("generar-pase")).toBeNull();
         expect(screen.queryByRole("button", { name: /Agregar a mi calendario/ })).toBeNull();
         expect(screen.queryByRole("link", { name: /Pedir otra cita/ })).toBeNull();
