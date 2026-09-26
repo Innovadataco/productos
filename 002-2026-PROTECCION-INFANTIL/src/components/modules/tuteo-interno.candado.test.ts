@@ -60,6 +60,23 @@ const LEXEMAS_TUTEO = [
 ];
 const PATRONES = LEXEMAS_TUTEO.map((l) => new RegExp(B + l + E, "iu"));
 
+// SPEC-720 · los PRETÉRITOS de 2ª persona (-aste/-iste) se cazan por MORFOLOGÍA (la clase de
+// SPEC-719), no por lista: la 3ª de usted nunca termina así (envió/asignó). Ancla de homógrafos
+// válidos en usted/3ª y sustantivos; los identificadores camelCase se descartan por mayúscula interna.
+const PRETERITO_2A = /(?<![\p{L}])(\p{L}*(?:aste|iste))(?![\p{L}])/giu;
+const PRETERITO_EXCEPCIONES = new Set(
+    [
+        "existe", "coexiste", "preexiste", "subsiste", "insiste", "consiste",
+        "persiste", "resiste", "asiste", "desiste", "embiste", "reviste", "inviste",
+        "contraste", "desgaste", "engaste", "gaste", "traste",
+        "triste", "chiste", "batiste", "alpiste", "viste", "paste",
+    ].map((w) => w.toLowerCase()),
+);
+function esPreteritoTuteo(palabra: string): boolean {
+    if (/\p{Lu}/u.test(palabra.slice(1))) return false; // mayúscula interna → identificador
+    return !PRETERITO_EXCEPCIONES.has(palabra.toLowerCase());
+}
+
 describe("SPEC-529 · el área interna habla de «usted» (sin tuteo)", () => {
     it("ninguna forma de tuteo aparece en el árbol interno (comentarios/tests excluidos)", () => {
         const hits: string[] = [];
@@ -70,6 +87,10 @@ describe("SPEC-529 · el área interna habla de «usted» (sin tuteo)", () => {
                     for (const patron of PATRONES) {
                         const m = linea.match(patron);
                         if (m) hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${m[0]}»: ${linea.trim().slice(0, 90)}`);
+                    }
+                    // SPEC-720 · pretéritos de 2ª persona por morfología (-aste/-iste).
+                    for (const m of linea.matchAll(PRETERITO_2A)) {
+                        if (esPreteritoTuteo(m[1])) hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${m[1]}» (pretérito 2ª): ${linea.trim().slice(0, 90)}`);
                     }
                 }
             }
