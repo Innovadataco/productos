@@ -452,6 +452,19 @@
 | [605](605-pantalla-expediente/spec.md) | SPEC-605 · Pantalla madre del EXPEDIENTE (5 bloques) + lista por urgencia | 🟢 IMPLEMENTADO |
 | [606](606-revelar-codigo/spec.md) | SPEC-606 · Revelar texto con CÓDIGO por correo (step-up sin contraseña) | 🟢 IMPLEMENTADO |
 | [607](607-menu-perfil-hijos/spec.md) | SPEC-607 · Menú definitivo del padre + «Mi perfil» unificado + hijos sin documento | 🟢 IMPLEMENTADO |
+| [656](656-directorio-vacio-estructural/spec.md) | SPEC-656 · «Encontrar psicólogo» sin psicólogos: separar el vacío estructural del vacío por filtro | 🟡 DESARROLLO |
+| [659](659-fantasma-marca-neutra/spec.md) | SPEC-659 / I-403 · El acento del padre por superficie — relleno CIELO, marca TINTA NEUTRA | 🟡 DESARROLLO |
+| [660](660-a-quien-protejo-dos-procesos/spec.md) | SPEC-660 · «A quién protejo» — dos procesos (configurar y enterarse) | 🟡 DESARROLLO |
+| [690](690-compuerta-verificacion-profesional/spec.md) | SPEC-690 (I-414) · La compuerta de verificación del profesional | 🟡 DESARROLLO |
+| [698](698-reset-no-reactiva-cuenta/spec.md) | SPEC-698 (I-423) · «Olvidé mi contraseña» nunca reactiva una cuenta desactivada | 🟡 DESARROLLO |
+| [701](701-lectura-deja-fila/spec.md) | SPEC-701 (I-421) · Toda lectura del relato por el personal deja rastro, nombra el reporte y sobrevive al borrado | 🟡 DESARROLLO |
+| [707](707-docs-aprobados-y-motivo/spec.md) | SPEC-707 · Devolución de documentos: se bloquean los aprobados y se le dice al profesional por qué le devolvieron el suyo | 🟡 DESARROLLO |
+| [711](711-compuerta-rol-padre/spec.md) | SPEC-711 · Un profesional entra a las pantallas del padre — compuerta por rol | 🟡 DESARROLLO |
+| [714](714-calendario-profesional/spec.md) | SPEC-714 · El calendario del profesional, nivel dios (mockup aprobado por Jelkin) | 🟡 DESARROLLO |
+| [719](719-voz-preteritos-usted/spec.md) | SPEC-719 · El candado de voz no cazaba los pretéritos («subiste», «enviaste») | 🟡 DESARROLLO |
+| [721](721-plataforma-obligatoria/spec.md) | SPEC-721 · La cuenta del hijo sin plataforma no se puede vigilar | 🟡 DESARROLLO |
+| [730](730-calendario-padre/spec.md) | SPEC-730 · El padre elige y ve sus citas en el MISMO calendario visual del profesional | 🟡 DESARROLLO |
+| [732](732-calendario-citaciones-unificado/spec.md) | SPEC-732 · Unificar «Calendario» y «Citaciones» del profesional en una sola pantalla | 🟡 DESARROLLO |
 <!-- SPEC-413:END tabla -->
 | [001](001-multi-role-auth-config/spec.md) | Autenticación Multi-Rol y Parámetros de Configuración | 🟢 Cerrada |
 | [003](003-frontend-publico/spec.md) | 003-frontend-publico | 🟢 Cerrada |
