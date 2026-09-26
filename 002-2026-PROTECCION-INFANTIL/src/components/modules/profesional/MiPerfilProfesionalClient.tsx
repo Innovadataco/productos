@@ -20,7 +20,8 @@
  * junto a la modalidad — por eso este bloque queda preparado para sumar campos.
  */
 import { useMemo, useState } from "react";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { SeccionColapsable } from "@/components/ui/SeccionColapsable";
+import { resumenSeccionesMiPerfil } from "@/lib/profesional/mi-perfil-resumen";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -162,6 +163,22 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
     const [ok, setOk] = useState("");
     const [error, setError] = useState("");
 
+    // SPEC-741 (Diseño · doc 333da98): cada sección es plegable (disclosure). El estado
+    // abierto/plegado vive acá y NO persiste entre visitas (sin memoria: arranca del default
+    // en cada montaje). Default: TODAS recogidas. INDEPENDIENTE: abrir una no cierra otra
+    // (el Set admite varias abiertas; «exclusivo» sería un one-liner del toggle, no es el caso).
+    const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
+    const alternarSeccion = (id: string) =>
+        setAbiertas((prev) => {
+            const siguiente = new Set(prev);
+            if (siguiente.has(id)) siguiente.delete(id);
+            else siguiente.add(id);
+            return siguiente;
+        });
+
+    // SPEC-741 (doc 333da98): resumen del encabezado de cada sección, para verlo sin desplegar.
+    const resumen = resumenSeccionesMiPerfil({ perfil, vista, autorizacion });
+
     const modalidadTexto = useMemo(
         () =>
             [atiendeVirtual ? "Virtual" : null, atiendePresencial ? "Presencial" : null]
@@ -264,8 +281,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
             <h1 className="font-serif text-3xl text-body">Mi perfil</h1>
 
             {/* 1 · Sus datos — SPEC-709: se editan ACÁ, por bloque (muere el botón global). */}
-            <GlassCard className="mt-6">
-                <h2 className="text-lg font-semibold text-body">Sus datos</h2>
+            <SeccionColapsable titulo="Sus datos" estado={resumen.datos.estado} tono={resumen.datos.tono} className="mt-6" abierta={abiertas.has("datos")} onToggle={() => alternarSeccion("datos")}>
                 {errorDato && (
                     <Alerta tono="advertencia" className="mt-3">
                         {errorDato}
@@ -459,11 +475,10 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
                         </div>
                     </BloqueDato>
                 </div>
-            </GlassCard>
+            </SeccionColapsable>
 
             {/* 2 · Su tarifa — editable acá; solo la ve el habilitado. */}
-            <GlassCard className="mt-6">
-                <h2 className="text-lg font-semibold text-body">Su tarifa</h2>
+            <SeccionColapsable titulo="Su tarifa" estado={resumen.tarifa.estado} tono={resumen.tarifa.tono} className="mt-6" abierta={abiertas.has("tarifa")} onToggle={() => alternarSeccion("tarifa")}>
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {/* SPEC-694: se ve con puntos de miles, se guarda el entero. */}
                     <Input
@@ -517,15 +532,14 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
                 <Button onClick={guardarTarifa} isLoading={guardando} className="mt-4">
                     Guardar tarifa
                 </Button>
-            </GlassCard>
+            </SeccionColapsable>
 
             {/* 3 · Sus documentos. */}
-            <GlassCard className="mt-6">
-                <h2 className="text-lg font-semibold text-body">Sus documentos</h2>
+            <SeccionColapsable titulo="Sus documentos" estado={resumen.documentos.estado} tono={resumen.documentos.tono} className="mt-6" abierta={abiertas.has("documentos")} onToggle={() => alternarSeccion("documentos")}>
                 <div className="mt-4">
                     <DocumentosRequisitos />
                 </div>
-            </GlassCard>
+            </SeccionColapsable>
 
             {/* 4 · El estado de su verificación — al final de los documentos. */}
             <div className="mt-6">
@@ -534,8 +548,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
 
             {/* 5 · SPEC-686 · el registro de la autorización aceptada + el derecho a releerla. */}
             {autorizacion?.version && (
-                <GlassCard className="mt-6">
-                    <h2 className="text-lg font-semibold text-body">Autorización</h2>
+                <SeccionColapsable titulo="Autorización" estado={resumen.autorizacion.estado} tono={resumen.autorizacion.tono} className="mt-6" abierta={abiertas.has("autorizacion")} onToggle={() => alternarSeccion("autorizacion")}>
                     <p className="mt-2 text-sm text-body">
                         Autorización aceptada · versión {autorizacion.version}
                         {autorizacion.aceptadaEn
@@ -558,7 +571,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
                     >
                         {autorizacion.hayActualizacionMenor ? "Leer y aceptar" : "Leer la autorización"}
                     </a>
-                </GlassCard>
+                </SeccionColapsable>
             )}
         </main>
     );

@@ -57,9 +57,14 @@ const CATALOGOS = {
 const VISTA = { estadoPerfil: "ACTIVO", puedeReenviar: false, observaciones: [] } as unknown as VistaProfesionalVerificacion;
 
 function montar() {
-    return render(
+    const r = render(
         <MiPerfilProfesionalClient perfil={PERFIL} catalogos={CATALOGOS} aviso={{ precioEstandar: 80_000, pct: 15 }} vista={VISTA} />,
     );
+    // SPEC-741: las secciones arrancan RECOGIDAS. «Sus datos» (edición por bloque) se
+    // despliega para ejercer sus «Editar»/«Guardar» (el candado de edición es de SPEC-709).
+    // El encabezado suma el subtítulo de estado («Completos») al nombre accesible → regex.
+    fireEvent.click(screen.getByRole("button", { name: /^Sus datos/ }));
+    return r;
 }
 /** El bloque «Sus datos» de la fila cuya etiqueta se da (para acotar el «Editar»/«Guardar»). */
 function bloque(etiqueta: string): HTMLElement {
