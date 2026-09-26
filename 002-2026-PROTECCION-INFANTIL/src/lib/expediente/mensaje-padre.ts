@@ -1,15 +1,37 @@
 /**
- * Mensaje al padre/madre/cuidador (spec 096-US7).
- * BORRADOR generado por PLANTILLAS DETERMINISTAS ensambladas según las
- * conductas detectadas — PROHIBIDO generarlo con un LLM. Reglas duras:
+ * Mensaje al padre/madre/cuidador (spec 096-US7) y acompañamiento al reportante
+ * anónimo (SPEC-736).
+ * BORRADOR/textos por PLANTILLAS DETERMINISTAS ensambladas según las conductas
+ * detectadas — PROHIBIDO generarlo con un LLM. Reglas duras:
  * (a) SIN score ni nivel de riesgo (constitución §1.3/§1.5);
  * (b) canales de ayuda desde el parámetro `mensaje.padre.canales`
  *     (editable sin desplegar, revisable por legal);
  * (c) se marca como borrador; no existe botón de enviar/publicar.
- * Tono: tranquilo pero firme, con recomendaciones concretas.
+ *
+ * SPEC-735 · Los textos de las plantillas ya NO están quemados: los builders son
+ * PUROS (reciben las plantillas) y el CALLER las carga del parámetro
+ * (`cargarPlantillasConducta` / `cargarReencuadreAnonimo`), con los defaults de
+ * `plantillas-conducta-semilla.ts` como respaldo. Mismo patrón que
+ * `cargarCanalesPadre`. Dos variantes por audiencia (Diseño, FORMA-SPEC736 §3):
+ * padre-personalizada («tu hijo») y anónimo-genérica («la persona afectada»).
  */
 
 import { getParametroSistema } from "@/lib/parametros";
+import {
+    CLAVE_GENERICA,
+    PLANTILLAS_DEFECTO,
+    REENCUADRE_ANONIMO_DEFECTO,
+    type PlantillaConducta,
+    type PlantillasConducta,
+} from "./plantillas-conducta-semilla";
+
+export type { PlantillaConducta, PlantillasConducta } from "./plantillas-conducta-semilla";
+export { PLANTILLAS_DEFECTO, REENCUADRE_ANONIMO_DEFECTO } from "./plantillas-conducta-semilla";
+
+/** Clave del parámetro con la variante PADRE (personalizada). */
+export const CLAVE_PARAM_PLANTILLAS = "mensaje.padre.plantillas";
+/** Clave del parámetro con la variante ANÓNIMO (solo las recomendaciones que cambian). */
+export const CLAVE_PARAM_REENCUADRE_ANONIMO = "mensaje.anonimo.recomendaciones";
 
 export interface CanalAyuda {
     nombre: string;
@@ -21,68 +43,23 @@ export interface MensajePadreInput {
     /** Conductas detectadas (categorías presentes). Vacío si ninguna. */
     conductas: string[];
     canales: CanalAyuda[];
+    /** Plantillas (variante PADRE). El caller las carga con `cargarPlantillasConducta`. */
+    plantillas: PlantillasConducta;
 }
 
-interface PlantillaConducta {
-    hallazgo: string;
-    recomendacion: string;
+/** Acompañamiento al reportante anónimo (SPEC-736): datos para pintar en /seguimiento. */
+export interface AcompanamientoAnonimo {
+    /** Hallazgos (hedgeados) para la línea puente; vacío si no hay conductas. */
+    hallazgos: string[];
+    /** Recomendaciones reencuadradas genéricas, deduplicadas por hallazgo. */
+    acciones: string[];
 }
-
-const PLANTILLA_GENERICA: PlantillaConducta = {
-    hallazgo: "señales de una conducta que requiere atención",
-    recomendacion: "Habla con tu hijo o hija sobre lo ocurrido y conserva cualquier registro de la conversación.",
-};
-
-const PLANTILLAS_CONDUCTA: Record<string, PlantillaConducta> = {
-    COMPARTIMIENTO_SEXUAL: {
-        hallazgo: "posibles señales de difusión de contenido sexual",
-        recomendacion: "Conserva las capturas o registros disponibles y evita difundir el material, incluso para pedir ayuda.",
-    },
-    SOLICITUD_MATERIAL: {
-        hallazgo: "posibles solicitudes de fotos o videos íntimos dirigidas a un menor",
-        recomendacion: "No respondas a la solicitud ni envíes material íntimo, y conserva los mensajes como evidencia.",
-    },
-    SOLICITUD_ENCUENTRO: {
-        hallazgo: "posibles propuestas de encuentro en persona con un desconocido",
-        recomendacion: "Evita cualquier encuentro presencial con el contacto y acompaña a tu hijo o hija en el manejo de sus redes.",
-    },
-    CONTACTO_INSISTENTE: {
-        hallazgo: "posible contacto insistente que genera incomodidad",
-        recomendacion: "Bloquea el contacto en la plataforma y conserva el registro de los mensajes recibidos.",
-    },
-    OFRECIMIENTO_REGALOS: {
-        hallazgo: "posibles ofrecimientos de regalos, dinero o beneficios a cambio de contacto",
-        recomendacion: "Desconfía de ofrecimientos de valor dirigidos a un menor y conversa en casa sobre esta táctica de ganarse la confianza.",
-    },
-    SUPLANTACION_IDENTIDAD: {
-        hallazgo: "posible suplantación de identidad para contactar a un menor",
-        recomendacion: "Verifica la identidad del contacto por canales oficiales antes de responder y reporta el perfil en la plataforma.",
-    },
-    EXTORSION: {
-        hallazgo: "posibles señales de extorsión o amenazas",
-        recomendacion: "No cedas a las exigencias, conserva todas las evidencias y denuncia de inmediato ante las autoridades.",
-    },
-    DIFUSION_NO_CONSENTIDA: {
-        hallazgo: "posible difusión de imágenes o información sin consentimiento",
-        recomendacion: "Solicita el retiro del contenido en la plataforma y conserva las evidencias de la publicación.",
-    },
-    DOXING: {
-        hallazgo: "posible publicación de datos personales (doxing)",
-        recomendacion: "Solicita el retiro de los datos en la plataforma y refuerza la privacidad de las cuentas del menor.",
-    },
-    CONTENIDO_GENERADO_IA: {
-        hallazgo: "posible contenido sintético generado con inteligencia artificial",
-        recomendacion: "Conserva las evidencias y reporta el contenido en la plataforma donde circula.",
-    },
-    OTRO: PLANTILLA_GENERICA,
-    SPAM: PLANTILLA_GENERICA,
-};
 
 /** Plantillas de las conductas dadas, deduplicadas por texto de hallazgo. */
-function plantillasUnicas(conductas: string[]): PlantillaConducta[] {
-    const plantillas = conductas.map((c) => PLANTILLAS_CONDUCTA[c] ?? PLANTILLA_GENERICA);
+function plantillasUnicas(conductas: string[], plantillas: PlantillasConducta): PlantillaConducta[] {
+    const items = conductas.map((c) => plantillas.porConducta[c] ?? plantillas.generica);
     // Dedup por texto de hallazgo (varias conductas pueden mapear a la genérica).
-    return plantillas.filter((p, i) => plantillas.findIndex((q) => q.hallazgo === p.hallazgo) === i);
+    return items.filter((p, i) => items.findIndex((q) => q.hallazgo === p.hallazgo) === i);
 }
 
 /** Une los hallazgos en una lista en español: "a", "a y b", "a, b y c". */
@@ -94,7 +71,7 @@ function listarHallazgos(unicas: PlantillaConducta[]): string {
 }
 
 export function construirMensajePadre(input: MensajePadreInput): string {
-    const unicas = plantillasUnicas(input.conductas);
+    const unicas = plantillasUnicas(input.conductas, input.plantillas);
 
     const lineas: string[] = [];
     lineas.push("[BORRADOR — mensaje de referencia para el acompañamiento a la familia. No se envía automáticamente.]");
@@ -128,14 +105,14 @@ export function construirMensajePadre(input: MensajePadreInput): string {
 
 /**
  * Explicación para la VISTA del padre (spec 116): reutiliza las MISMAS
- * plantillas deterministas de arriba (D-23, nunca salida cruda del modelo),
- * pero sin el marco de "borrador" (eso es del expediente del admin) y sin
- * canales dentro del texto (en la vista los muestra <CanalesOficiales />).
- * Recibe SOLO las conductas confirmadas (las que superaron el umbral en el
- * motor); las descartadas nunca llegan aquí.
+ * plantillas deterministas (D-23, nunca salida cruda del modelo), pero sin el
+ * marco de "borrador" (eso es del expediente del admin) y sin canales dentro del
+ * texto (en la vista los muestra <CanalesOficiales />). Recibe SOLO las conductas
+ * confirmadas (las que superaron el umbral en el motor).
+ * SPEC-736: la audiencia del padre se CONOCE → conserva la variante «tu hijo».
  */
-export function construirExplicacionPadre(conductas: string[]): string {
-    const unicas = plantillasUnicas(conductas);
+export function construirExplicacionPadre(conductas: string[], plantillas: PlantillasConducta): string {
+    const unicas = plantillasUnicas(conductas, plantillas);
 
     if (unicas.length === 0) {
         return "Revisamos el caso y no encontramos conductas concretas que describir en este momento.";
@@ -149,6 +126,42 @@ export function construirExplicacionPadre(conductas: string[]): string {
         lineas.push(`- ${p.recomendacion}`);
     }
     return lineas.join("\n");
+}
+
+/**
+ * SPEC-736 · Acompañamiento al reportante ANÓNIMO. Mismo motor, pero la
+ * `recomendacion` de las conductas reencuadradas se reemplaza por su variante
+ * genérica («la persona afectada» en vez de «tu hijo»). El `hallazgo` es común.
+ * Devuelve datos (hallazgos + acciones) para que la pantalla arme el texto; el
+ * mensaje de calma y los canales son forma de la pantalla (Diseño §2/§4).
+ */
+export function construirAcompanamientoAnonimo(
+    conductas: string[],
+    plantillas: PlantillasConducta,
+    reencuadre: Record<string, string>
+): AcompanamientoAnonimo {
+    const items = conductas.map((c) => {
+        const especifica = plantillas.porConducta[c];
+        const base = especifica ?? plantillas.generica;
+        // La conducta específica se reencuadra por su clave; la que cae en la
+        // genérica, por CLAVE_GENERICA. Sin override → queda la de la padre (ya neutral).
+        const claveOverride = especifica ? c : CLAVE_GENERICA;
+        const override = reencuadre[claveOverride];
+        return override ? { ...base, recomendacion: override } : base;
+    });
+    const unicas = items.filter((p, i) => items.findIndex((q) => q.hallazgo === p.hallazgo) === i);
+    return {
+        hallazgos: unicas.map((p) => p.hallazgo),
+        acciones: unicas.map((p) => p.recomendacion),
+    };
+}
+
+/** Une los hallazgos para la línea puente del acompañamiento (misma prosa que listarHallazgos). */
+export function listarHallazgosTexto(hallazgos: string[]): string {
+    if (hallazgos.length === 0) return "";
+    return hallazgos.length === 1
+        ? hallazgos[0]
+        : `${hallazgos.slice(0, -1).join(", ")} y ${hallazgos[hallazgos.length - 1]}`;
 }
 
 /**
@@ -170,5 +183,58 @@ export async function cargarCanalesPadre(): Promise<CanalAyuda[]> {
         );
     } catch {
         return [];
+    }
+}
+
+function esPlantilla(v: unknown): v is PlantillaConducta {
+    return (
+        typeof v === "object" && v !== null &&
+        typeof (v as PlantillaConducta).hallazgo === "string" &&
+        typeof (v as PlantillaConducta).recomendacion === "string"
+    );
+}
+
+/**
+ * SPEC-735 · Carga la variante PADRE de las plantillas del parámetro
+ * `mensaje.padre.plantillas`. Ante ausencia o forma inválida devuelve
+ * `PLANTILLAS_DEFECTO` (fail-safe: el texto nunca queda vacío).
+ */
+export async function cargarPlantillasConducta(): Promise<PlantillasConducta> {
+    const param = await getParametroSistema(CLAVE_PARAM_PLANTILLAS);
+    if (!param) return PLANTILLAS_DEFECTO;
+    try {
+        const parsed: unknown = JSON.parse(param.valor);
+        if (typeof parsed !== "object" || parsed === null) return PLANTILLAS_DEFECTO;
+        const obj = parsed as { generica?: unknown; porConducta?: unknown };
+        if (!esPlantilla(obj.generica)) return PLANTILLAS_DEFECTO;
+        if (typeof obj.porConducta !== "object" || obj.porConducta === null) return PLANTILLAS_DEFECTO;
+        const porConducta: Record<string, PlantillaConducta> = {};
+        for (const [clave, valor] of Object.entries(obj.porConducta as Record<string, unknown>)) {
+            if (esPlantilla(valor)) porConducta[clave] = valor;
+        }
+        return { generica: obj.generica, porConducta };
+    } catch {
+        return PLANTILLAS_DEFECTO;
+    }
+}
+
+/**
+ * SPEC-735 · Carga la variante ANÓNIMO (solo las `recomendacion` que cambian) del
+ * parámetro `mensaje.anonimo.recomendaciones`. Ante ausencia o forma inválida
+ * devuelve `REENCUADRE_ANONIMO_DEFECTO`.
+ */
+export async function cargarReencuadreAnonimo(): Promise<Record<string, string>> {
+    const param = await getParametroSistema(CLAVE_PARAM_REENCUADRE_ANONIMO);
+    if (!param) return REENCUADRE_ANONIMO_DEFECTO;
+    try {
+        const parsed: unknown = JSON.parse(param.valor);
+        if (typeof parsed !== "object" || parsed === null) return REENCUADRE_ANONIMO_DEFECTO;
+        const out: Record<string, string> = {};
+        for (const [clave, valor] of Object.entries(parsed as Record<string, unknown>)) {
+            if (typeof valor === "string") out[clave] = valor;
+        }
+        return Object.keys(out).length > 0 ? out : REENCUADRE_ANONIMO_DEFECTO;
+    } catch {
+        return REENCUADRE_ANONIMO_DEFECTO;
     }
 }

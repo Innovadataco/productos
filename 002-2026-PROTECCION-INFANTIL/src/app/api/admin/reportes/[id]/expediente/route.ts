@@ -15,7 +15,7 @@ import {
 } from "@/lib/expediente/expediente";
 import { armarVotacion, cargarPreguntasRubrica } from "@/lib/expediente/votacion";
 import { construirAnalisisInterno, type VotoInterno } from "@/lib/expediente/analisis-interno";
-import { construirMensajePadre, cargarCanalesPadre } from "@/lib/expediente/mensaje-padre";
+import { construirMensajePadre, cargarCanalesPadre, cargarPlantillasConducta } from "@/lib/expediente/mensaje-padre";
 
 /**
  * GET /api/admin/reportes/[id]/expediente (spec 096).
@@ -91,7 +91,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         const preguntas = await cargarPreguntasRubrica();
         const clasificacion = c ? armarVotacion(c, preguntas) : null;
 
-        const [severidades, canales] = await Promise.all([obtenerSeveridades(), cargarCanalesPadre()]);
+        // SPEC-735: el borrador del admin acompaña a una FAMILIA → variante padre.
+        const [severidades, canales, plantillas] = await Promise.all([
+            obtenerSeveridades(),
+            cargarCanalesPadre(),
+            cargarPlantillasConducta(),
+        ]);
         // SPEC-140 (F2, FR-001): el botón "Llevar a denuncia formal" se muestra solo
         // con el módulo denuncia_formal; los canales del selector son los oficiales.
         const accesoDenuncia = await resolverAccesoDenuncia(user.rol, canales);
@@ -121,6 +126,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             mensajePadre: construirMensajePadre({
                 conductas: clasificacion?.categorias ?? [],
                 canales,
+                plantillas,
             }),
         };
 

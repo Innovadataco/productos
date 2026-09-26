@@ -150,17 +150,30 @@ describe("AdminReporteExpediente", () => {
         expect(screen.queryByText("textoOriginal")).toBeNull();
     });
 
-    it("el mensaje al padre se muestra como borrador y sin score", async () => {
+    it("el mensaje se muestra como borrador y sin score", async () => {
+        // expedienteBase es esAnonimo:true → SPEC-736 §6: no se rotula «mensaje al padre».
         mockFetchExpediente(expedienteBase());
 
         render(<AdminReporteExpediente reporteId="reporte-123" onClose={vi.fn()} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Mensaje al padre")).toBeTruthy();
+            expect(screen.getByText("Mensaje de referencia (reporte anónimo)")).toBeTruthy();
         });
+        expect(screen.queryByText("Mensaje al padre")).toBeNull();
         expect(screen.getByText("Borrador de revisión")).toBeTruthy();
         const mensaje = screen.getByText(/\[BORRADOR\]/);
         expect(mensaje.textContent).not.toMatch(/score|riesgo|confianza/i);
+    });
+
+    it("SPEC-736 §6: reporte de padre identificado → «Mensaje para la familia (borrador)»", async () => {
+        mockFetchExpediente(expedienteBase({ reporte: { ...expedienteBase().reporte, esAnonimo: false } }));
+
+        render(<AdminReporteExpediente reporteId="reporte-123" onClose={vi.fn()} />);
+
+        await waitFor(() => {
+            expect(screen.getByText("Mensaje para la familia (borrador)")).toBeTruthy();
+        });
+        expect(screen.queryByText("Mensaje al padre")).toBeNull();
     });
 
     it("muestra la votación pregunta por pregunta con tipo y votos por modelo", async () => {

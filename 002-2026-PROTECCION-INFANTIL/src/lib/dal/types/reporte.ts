@@ -77,6 +77,14 @@ export interface SeguimientoDto {
     actividad: "alta" | "baja" | null;
     ranking: RankingPublicoDto | null;
     /**
+     * SPEC-736: acompañamiento al reportante (calma → acciones → canales). `null`
+     * mientras el reporte no esté clasificado (en proceso). `hallazgos` y
+     * `acciones` pueden ir vacíos (clasificado sin conductas de riesgo visibles):
+     * la pantalla muestra igual la calma y los canales. El texto NUNCA viaja aquí
+     * como relato del reporte — son plantillas deterministas genéricas.
+     */
+    acompanamiento: { hallazgos: string[]; acciones: string[] } | null;
+    /**
      * SPEC-324: otros reportes aprobados del MISMO identificador. `null` para el
      * visitante anónimo (su pantalla no cambia); lista solo para el usuario
      * autenticado y cuando el identificador ya es visible públicamente.

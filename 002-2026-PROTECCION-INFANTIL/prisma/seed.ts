@@ -4,6 +4,7 @@ import { REGLAS_SEMILLA } from "../src/lib/analisis/reglas/seed-reglas";
 import { SEMILLAS_CATALOGO_PROFESIONAL } from "../src/lib/profesional/catalogos";
 import { REQUISITOS_VERIFICACION_DEFAULT, CLAVE_PARAMETRO_REQUISITOS } from "../src/lib/profesionales/verificador/requisitos-default";
 import { sembrarTopesSubida } from "../src/lib/profesional/tope-subida";
+import { PLANTILLAS_DEFECTO, REENCUADRE_ANONIMO_DEFECTO } from "../src/lib/expediente/plantillas-conducta-semilla";
 import { syncModulosYGrants } from "./seed-modulos-grants";
 import { PrismaClient, RolUsuario, TipoParametro, CategoriaParametro, TipoTitular, DuracionPlan, EstadoGuiaAccion, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -3640,6 +3641,10 @@ async function main() {
     const expedienteParams = [
         { clave: "admin.expediente.etapas", valor: JSON.stringify(ETAPAS_EXPEDIENTE), descripcion: "Etapas del expediente del reporte (traza del pipeline, vista admin; ADR_004: nada quemado en código)" },
         { clave: "mensaje.padre.canales", valor: JSON.stringify(CANALES_PADRE), descripcion: "Canales oficiales que se muestran en el mensaje al padre (revisable por legal, editable sin desplegar)" },
+        // SPEC-735: las plantillas por conducta dejan de estar quemadas. DOS variantes
+        // por audiencia (Diseño FORMA-SPEC736 §3/§6): padre-personalizada y anónimo-genérica.
+        { clave: "mensaje.padre.plantillas", valor: JSON.stringify(PLANTILLAS_DEFECTO), descripcion: "Plantillas deterministas por conducta (variante PADRE, «tu hijo»): hallazgo + recomendación. Alimenta la vista del padre y el borrador del admin (SPEC-735). Editable sin desplegar." },
+        { clave: "mensaje.anonimo.recomendaciones", valor: JSON.stringify(REENCUADRE_ANONIMO_DEFECTO), descripcion: "Recomendaciones GENÉRICAS (variante anónimo, «la persona afectada») para el acompañamiento del reportante anónimo (SPEC-736): solo las que cambian por audiencia. Editable sin desplegar." },
     ];
     for (const ep of expedienteParams) {
         await prisma.parametroSistema.upsert({

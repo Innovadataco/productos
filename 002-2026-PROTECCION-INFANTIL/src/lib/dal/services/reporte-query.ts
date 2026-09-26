@@ -12,7 +12,12 @@ import { mapEstadoUsuario, getMensajeUsuario, parseSlaHoras } from "@/lib/report
 import { obtenerGruposCategoria, nombreGrupoParaCategoria } from "@/lib/categoria-grupos";
 import { formatPlataforma } from "@/lib/plataforma";
 import { formatCategoria } from "@/lib/labels";
-import { construirExplicacionPadre } from "@/lib/expediente/mensaje-padre";
+import {
+    construirExplicacionPadre,
+    construirAcompanamientoAnonimo,
+    cargarPlantillasConducta,
+    cargarReencuadreAnonimo,
+} from "@/lib/expediente/mensaje-padre";
 import { whereReporteVigente, whereReporteAprobado } from "@/lib/reportes-acceso";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import type { EstadoReporte } from "@prisma/client";
@@ -173,6 +178,25 @@ export class ReporteQueryService {
         const mensaje = getMensajeUsuario(efectivo.estado, slaHoras);
         const gruposCategoria = await obtenerGruposCategoria();
 
+        // SPEC-736: acompañamiento al reportante cuando el reporte ya está
+        // clasificado (Procesado). Conductas visibles = principal + secundarias,
+        // sin SPAM/OTRO (nunca se muestran). Plantillas y reencuadre por parámetro
+        // (SPEC-735). Si no hay conductas visibles, acompañamiento con listas
+        // vacías: la pantalla muestra igual la calma y los canales.
+        const clasificada = efectivo.clasificacion && ESTADOS_CLASIFICACION_FINAL.includes(efectivo.estado);
+        let acompanamiento: { hallazgos: string[]; acciones: string[] } | null = null;
+        if (clasificada && efectivo.clasificacion) {
+            const conductasVisibles = [
+                efectivo.clasificacion.categoria,
+                ...categoriasDeSecundarias(efectivo.clasificacion.categoriasSecundarias ?? []),
+            ].filter((cat, i, arr) => !CATEGORIAS_OCULTAS.has(cat) && arr.indexOf(cat) === i);
+            const [plantillas, reencuadre] = await Promise.all([
+                cargarPlantillasConducta(),
+                cargarReencuadreAnonimo(),
+            ]);
+            acompanamiento = construirAcompanamientoAnonimo(conductasVisibles, plantillas, reencuadre);
+        }
+
         return {
             numeroSeguimiento: reporte.numeroSeguimiento,
             estadoVisual: estadoUsuario.estadoVisual,
@@ -203,6 +227,7 @@ export class ReporteQueryService {
                     reportesAnonimos: ranking.reportesAnonimos,
                 }
                 : null,
+            acompanamiento,
             otrosReportes,
         };
     }
@@ -272,11 +297,14 @@ export class ReporteQueryService {
             (cat, i, arr) => !CATEGORIAS_OCULTAS.has(cat) && arr.indexOf(cat) === i
         );
 
+        // SPEC-735: las plantillas (variante padre, «tu hijo») vienen del parámetro.
+        const plantillas = await cargarPlantillasConducta();
+
         return {
             reporte: reporteJson,
             clasificacion: {
                 conductas: confirmadas.map((cat) => ({ categoria: cat, label: formatCategoria(cat) })),
-                mensaje: construirExplicacionPadre(confirmadas),
+                mensaje: construirExplicacionPadre(confirmadas, plantillas),
             },
         };
     }
