@@ -149,7 +149,9 @@ export function FormularioAltaHijo({
                             {nuevos.map((i, idx) => (
                                 <li key={`${i.valor}-${i.plataformaId}-${idx}`} className="inline-flex items-center gap-1">
                                     <Badge>
-                                        {i.valor}
+                                        {/* SPEC-728 (pulido): un identificador largo estiraba el chip
+                                            y desbordaba en móvil; se trunca con el valor completo en el título. */}
+                                        <span className="inline-block max-w-[12rem] truncate align-bottom" title={i.valor}>{i.valor}</span>
                                         {i.plataformaId
                                             ? ` · ${opcionesPlataforma.find((p) => p.value === i.plataformaId)?.label ?? ""}`
                                             : ""}

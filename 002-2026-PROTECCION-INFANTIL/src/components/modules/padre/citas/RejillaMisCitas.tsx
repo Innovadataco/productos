@@ -41,6 +41,23 @@ function claseBloque(estado: EstadoSolicitudCita): string {
     }
 }
 
+// SPEC-730 (Diseño · FORMA-SPEC730-MIS-CITAS-BLOQUE-ESTADO): señal de estado NO-color
+// (WCAG 1.4.1 · daltonismo). Cada estado tiene una FORMA propia; con el ícono, recortar
+// la etiqueta de texto deja de perder información.
+function iconoEstado(estado: EstadoSolicitudCita): string {
+    switch (estado) {
+        case "CONFIRMADA":
+            return "✓";
+        case "SIN_CONFIRMAR":
+        case "PAGADA_PENDIENTE":
+            return "◷";
+        case "CUMPLIDA":
+            return "✓✓";
+        default:
+            return "–";
+    }
+}
+
 export function RejillaMisCitas({ citas }: { citas: CitaParaPadreDto[] }) {
     const hoy = diaBogota();
 
@@ -99,16 +116,29 @@ export function RejillaMisCitas({ citas }: { citas: CitaParaPadreDto[] }) {
                             key={b.id}
                             href={`/dashboard/padre/citas/${b.cita.id}`}
                             aria-label={`${b.cita.profesional.nombreVisible} · ${badge.label} · ${fmt(b.minInicio)}`}
-                            className={`absolute inset-x-1 z-10 block overflow-hidden rounded-lg border px-2 py-1 text-[11px] transition hover:brightness-105 ${claseBloque(b.cita.estado)}`}
-                            style={{ top, height }}
+                            // SPEC-730 (Diseño): alto MÍNIMO 28px para que la línea 1 (ícono + nombre)
+                            // no se recorte aunque la cita sea corta — legibilidad sobre pixel-perfect.
+                            className={`absolute inset-x-1 z-10 flex flex-col overflow-hidden rounded-lg border px-1.5 py-0.5 text-[11px] transition hover:brightness-105 ${claseBloque(b.cita.estado)}`}
+                            style={{ top, height, minHeight: 28 }}
                         >
-                            <div className="font-mono text-[10px] font-semibold">{fmt(b.minInicio)}</div>
-                            <div className="truncate font-medium">{b.cita.profesional.nombreVisible}</div>
-                            <div className="truncate opacity-90">{badge.label}</div>
+                            {/* Línea 1 — nunca se recorta: ícono de estado (señal no-color) + nombre. */}
+                            <div className="flex items-center gap-1 font-medium leading-tight">
+                                <span aria-hidden="true" className="shrink-0 font-mono">{iconoEstado(b.cita.estado)}</span>
+                                <span className="truncate">{b.cita.profesional.nombreVisible}</span>
+                            </div>
+                            {/* Línea 2 — puede recortarse: el estado ya lo dicen ícono + color + leyenda. */}
+                            <div className="truncate text-[10px] leading-tight opacity-90">{fmt(b.minInicio)} · {badge.label}</div>
                         </Link>
                     );
                 }}
             />
+            {/* SPEC-730 (Diseño): leyenda ícono+color → estado, para decodificar el bloque sin tocar. */}
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
+                <span><span aria-hidden="true" className="font-mono text-cielo-700">✓</span> Confirmada</span>
+                <span><span aria-hidden="true" className="font-mono text-estado-ambar">◷</span> Esperando confirmación</span>
+                <span><span aria-hidden="true" className="font-mono text-estado-pino">✓✓</span> Realizada</span>
+                <span><span aria-hidden="true" className="font-mono text-muted">–</span> Otro estado</span>
+            </div>
         </div>
     );
 }

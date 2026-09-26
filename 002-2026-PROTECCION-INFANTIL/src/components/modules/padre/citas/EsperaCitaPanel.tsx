@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
 import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-detalle/types";
+import { badgeDeCita } from "@/lib/padre/citas-listado";
 import { GenerarPase } from "@/components/modules/padre/GenerarPase";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -193,9 +194,11 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 <p className="cuerpo text-subtle">{estado.detalle}</p>
             </header>
 
+            {/* SPEC-730/731 (Diseño): la caja muestra la ETIQUETA AMIGABLE del estado, nunca el
+                enum crudo «PAGADA_PENDIENTE»; el reloj de 48 h y el aviso de vencimiento van debajo. */}
             <section className={`rounded-2xl border p-4 sm:p-5 ${tonoClases}`}>
                 <p className="etiqueta">Estado</p>
-                <p className="cuerpo mt-1">{cita.estado.replaceAll("_", " ")}</p>
+                <p className="cuerpo mt-1">{badgeDeCita(cita.estado).label}</p>
                 {countdown && !countdown.vencido && (
                     <p className="cuerpo mt-3">
                         Vence en <strong className="font-mono">{countdown.horas}h {String(countdown.minutos).padStart(2, "0")}m</strong>.
@@ -233,9 +236,10 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 {cita.contactoProfesional && (
                     <div>
                         <p className="etiqueta text-subtle">Contacto (visible al confirmar)</p>
-                        <p className="cuerpo text-body">{cita.contactoProfesional.email}</p>
+                        {/* SPEC-730/731 (pulido): un correo largo sin espacios desbordaba a 375px. */}
+                        <p className="cuerpo text-body break-all">{cita.contactoProfesional.email}</p>
                         {cita.contactoProfesional.telefono && (
-                            <p className="cuerpo text-body">{cita.contactoProfesional.telefono}</p>
+                            <p className="cuerpo text-body break-words">{cita.contactoProfesional.telefono}</p>
                         )}
                     </div>
                 )}

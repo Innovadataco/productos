@@ -24,6 +24,7 @@ vi.mock("@/lib/padre/borrador-consulta", () => ({
 
 import { SolicitarCitaPanel } from "@/components/modules/padre/profesionales/SolicitarCitaPanel";
 import { RejillaMisCitas } from "./RejillaMisCitas";
+import { EsperaCitaPanel } from "./EsperaCitaPanel";
 
 beforeEach(() => {
     leerBorrador.mockReset();
@@ -39,11 +40,11 @@ function franja(id: string, dias: number, modalidad: "VIRTUAL" | "PRESENCIAL") {
     return { id, inicio: inicio.toISOString(), fin: new Date(inicio.getTime() + 3_600_000).toISOString(), modalidad };
 }
 
-function citaPadre(id: string, dias: number): CitaParaPadreDto {
+function citaPadre(id: string, dias: number, estado: CitaParaPadreDto["estado"] = "CONFIRMADA"): CitaParaPadreDto {
     const inicio = new Date(Date.now() + dias * 24 * 3_600_000);
     return {
         id,
-        estado: "CONFIRMADA",
+        estado,
         urgencia: "SIN_APURO",
         creadoEn: new Date().toISOString(),
         venceEn: new Date().toISOString(),
@@ -88,5 +89,24 @@ describe("SPEC-730 · el padre elige y ve sus citas en la rejilla, no en una lis
         const { container } = render(<RejillaMisCitas citas={[]} />);
         expect(container.querySelectorAll("[data-col]").length).toBe(0);
         expect(screen.getByText("Todavía no tienes citas.")).toBeTruthy();
+    });
+
+    // SPEC-730 (Diseño · FORMA-SPEC730-MIS-CITAS-BLOQUE-ESTADO): el estado del bloque NO
+    // depende solo del color (WCAG 1.4.1). Cada bloque trae un ícono por estado + hay leyenda.
+    it("(3/Diseño) el bloque de cita lleva ÍCONO de estado (señal no-color) y hay leyenda", () => {
+        const { container } = render(<RejillaMisCitas citas={[citaPadre("citaC", 1, "CONFIRMADA"), citaPadre("citaP", 1, "PAGADA_PENDIENTE")]} />);
+        // El ícono viaja DENTRO del enlace del bloque (no solo el color de fondo).
+        expect(container.querySelector('a[href="/dashboard/padre/citas/citaC"]')?.textContent).toContain("✓");
+        expect(container.querySelector('a[href="/dashboard/padre/citas/citaP"]')?.textContent).toContain("◷");
+        // Leyenda ícono → estado bajo la rejilla (texto único de la leyenda).
+        expect(screen.getByText("Esperando confirmación")).toBeTruthy();
+        expect(screen.getByText("Realizada")).toBeTruthy();
+    });
+
+    // SPEC-731 (Diseño): en la UI de citas NUNCA se pinta el enum crudo; se usa la etiqueta amigable.
+    it("(4/Diseño) el detalle de la cita no muestra el enum crudo «PAGADA PENDIENTE», sí la etiqueta", () => {
+        render(<EsperaCitaPanel citaInicial={citaPadre("citaP", 2, "PAGADA_PENDIENTE")} />);
+        expect(screen.queryByText(/PAGADA[_ ]PENDIENTE/i)).toBeNull();
+        expect(screen.getByText("Esperando al profesional")).toBeTruthy();
     });
 });
