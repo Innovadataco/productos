@@ -17,6 +17,8 @@
  *  3. Una CITA CONFIRMADA (SPEC-715: compartir, agendar, pedir otra).
  *  4. El padre marcado sembrado/demo (`marcarDemo("Usuario", …)`) → el directorio le muestra
  *     los profesionales demo con franjas y puede PEDIR cita (SPEC-655/I-387).
+ *  5. Una SUSCRIPCIÓN ACTIVA (plan PADRE) → `/camino/plan` no dispara y «Mis citas» + la cita
+ *     (SPEC-730/731) quedan alcanzables. Sin esto el padre queda atrapado en el paso del plan.
  *
  * Nunca escribe la base a mano nadie: todo por acá. Nunca una contraseña en un mensaje/doc:
  * los demo actores llevan un hash sin sentido (no hacen login real).
@@ -32,6 +34,7 @@ import { marcarDemo } from "./lib/marcar";
 import { parseArgs } from "../limpieza/_common";
 import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 import { generarNumeroSeguimiento } from "@/lib/reporte-utils";
+import { generarCodigoReferido } from "@/lib/utils/referido-codigo";
 import { verificacionDemo, ESTADO_PERFIL_DEMO } from "./lib/profesional-demo";
 import { nombrePersona, telefonoDemo, nickDemo, textoDemo } from "./lib/datos";
 
@@ -57,6 +60,7 @@ interface Base {
     ciudadId: string;
     plataformaId: string;
     adminId: string;
+    planId: string;
     passwordHash: string;
 }
 
@@ -65,13 +69,15 @@ async function resolverBase(): Promise<Base> {
     const ciudad = await prisma.ciudad.findFirst({ where: { nombre: "Bogotá" }, select: { id: true } });
     const plataforma = await prisma.plataforma.findFirst({ where: { clave: "whatsapp" }, select: { id: true } });
     const admin = await prisma.usuario.findFirst({ where: { rol: "ADMIN" }, select: { id: true } });
-    if (!pais || !ciudad || !plataforma || !admin) {
+    // Plan PADRE activo para colgar la suscripción (dato de referencia, sembrado por prisma/seed.ts).
+    const plan = await prisma.plan.findFirst({ where: { tipoTitular: "PADRE", activo: true }, select: { id: true }, orderBy: { anio: "desc" } });
+    if (!pais || !ciudad || !plataforma || !admin || !plan) {
         throw new Error(
-            "[sembrar-estados-padre] Faltan datos base (país CO / ciudad Bogotá / plataforma whatsapp / admin ADMIN). Corré el seed primero.",
+            "[sembrar-estados-padre] Faltan datos base (país CO / ciudad Bogotá / plataforma whatsapp / admin ADMIN / plan PADRE activo). Corré el seed primero.",
         );
     }
     const passwordHash = await bcrypt.hash("PruebaDemo2026!", 10);
-    return { paisId: pais.id, ciudadId: ciudad.id, plataformaId: plataforma.id, adminId: admin.id, passwordHash };
+    return { paisId: pais.id, ciudadId: ciudad.id, plataformaId: plataforma.id, adminId: admin.id, planId: plan.id, passwordHash };
 }
 
 /** SOLO cuentas `+e2epadre` (por construcción: el patrón está en el WHERE). */
@@ -226,10 +232,11 @@ interface ResumenPadre {
     contactos: number;
     citasConfirmadas: number;
     marcadoSembrado: boolean;
+    suscripcionActiva: boolean;
 }
 
 async function sembrarPadre(base: Base, padre: { id: string; email: string }, otroReportanteId: string, franjaCitaId: string): Promise<ResumenPadre> {
-    const r: ResumenPadre = { email: padre.email, hijos: 0, reportesVisibles: 0, contactos: 0, citasConfirmadas: 0, marcadoSembrado: false };
+    const r: ResumenPadre = { email: padre.email, hijos: 0, reportesVisibles: 0, contactos: 0, citasConfirmadas: 0, marcadoSembrado: false, suscripcionActiva: false };
 
     // TODO el padre en UNA transacción: si algo falla, hace ROLLBACK COMPLETO (filas + marcas).
     // Así una falla parcial NO deja «marcado-pero-incompleto» (el bug del 25-09): yaSembrado(hijo)
@@ -300,6 +307,29 @@ async function sembrarPadre(base: Base, padre: { id: string; email: string }, ot
             });
             await marcarDemo("SolicitudCita", cita.id, MARCA, tx);
             r.citasConfirmadas++;
+
+            // Estado 5: suscripción ACTIVA. Sin esto el padre cae a /camino/plan y NO alcanza
+            // «Mis citas» ni la cita (SPEC-730/731). El camino (derivarPasoPendiente, paso 4) exige
+            // suscripcion.count > 0, y la vigencia (obtenerSuscripcionActivaPorUsuarioId) exige estado
+            // ∈ {ACTIVA, EN_GRACIA} → ACTIVA satisface ambos. Cuelga de un plan PADRE de referencia
+            // (no se marca demo: la purga del estado no toca el catálogo de planes).
+            const suscripcion = await tx.suscripcion.create({
+                data: {
+                    tipoTitular: "PADRE",
+                    usuarioId: padre.id,
+                    estado: "ACTIVA",
+                    planActualId: base.planId,
+                    fechaInicio: ahora,
+                    fechaFin: new Date(ahora.getTime() + 365 * 24 * 60 * 60 * 1000),
+                    codigoReferidoPropio: generarCodigoReferido("PADRE"),
+                    esFreemium: false,
+                    monedaLocal: "COP",
+                    paisCliente: "CO",
+                },
+                select: { id: true },
+            });
+            await marcarDemo("Suscripcion", suscripcion.id, MARCA, tx);
+            r.suscripcionActiva = true;
         },
         { maxWait: 15000, timeout: 30000 },
     );
@@ -357,7 +387,7 @@ async function main(): Promise<void> {
         try {
             const r = await sembrarPadre(base, padre, otroReportanteId, franjaCitaId);
             console.log(
-                `[sembrar-estados-padre] APLICADO ${r.email}: hijo=${r.hijos} reporteVisible=${r.reportesVisibles} círculo=${r.contactos} citaCONFIRMADA=${r.citasConfirmadas} sembrado=${r.marcadoSembrado}`,
+                `[sembrar-estados-padre] APLICADO ${r.email}: hijo=${r.hijos} reporteVisible=${r.reportesVisibles} círculo=${r.contactos} citaCONFIRMADA=${r.citasConfirmadas} suscripción=${r.suscripcionActiva} sembrado=${r.marcadoSembrado}`,
             );
         } catch (err) {
             fallidas++;
