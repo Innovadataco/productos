@@ -17,14 +17,13 @@
  * De SPEC-434: país+ciudad con `CiudadSearchSelect`; voz neutra Colombia; años como selector 1..50.
  */
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { PerfilProfesional } from "@prisma/client";
-import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Alerta } from "@/components/ui/Alerta";
-import { DocumentosRequisitos } from "@/components/modules/profesional/DocumentosRequisitos";
 import { EstadoVerificacionProfesionalClient } from "@/components/modules/verificacion/EstadoVerificacionProfesionalClient";
 import { CiudadSearchSelect, type CiudadOpcion } from "@/components/ui/CiudadSearchSelect";
 import { MENSAJE_MODALIDAD_FALTA_CAMPO } from "@/lib/profesional/modalidad-estado";
@@ -91,6 +90,7 @@ const ANIOS_EXPERIENCIA_OPCIONES = (() => {
 })();
 
 export default function CompletarPerfilProfesionalPage() {
+    const router = useRouter();
     const [perfil, setPerfil] = useState<Perfil | null>(null);
     const [cargando, setCargando] = useState(true);
     const [paises, setPaises] = useState<PaisOption[]>([]);
@@ -169,7 +169,7 @@ export default function CompletarPerfilProfesionalPage() {
     // `enviarARevision`; el servidor valida la completitud y, si falta algo, lo NOMBRA (400
     // FICHA_INCOMPLETA con `campos`) — el botón de enviar ya se inactivó con la misma lista, pero el
     // servidor es la regla. Enviar es un acto EXPLÍCITO: ya no hay auto-transición al completarse.
-    const guardar = async (enviar: boolean) => {
+    const guardar = async (enviar: boolean): Promise<boolean> => {
         setErrorPerfil("");
         setOk("");
         setCamposFaltantesServidor([]);
@@ -198,10 +198,10 @@ export default function CompletarPerfilProfesionalPage() {
                 if (json?.error?.code === "FICHA_INCOMPLETA" && Array.isArray(json.error.campos)) {
                     setCamposFaltantesServidor(json.error.campos as string[]);
                     setErrorPerfil("Faltan datos obligatorios para enviar a revisión.");
-                    return;
+                    return false;
                 }
                 setErrorPerfil(json?.error?.message ?? "No fue posible guardar la ficha.");
-                return;
+                return false;
             }
             const nuevo = json.perfil as Perfil;
             // SPEC-706 (Jelkin): el mensaje dice EN QUÉ QUEDÓ — nunca solo «Cambios guardados».
@@ -210,20 +210,30 @@ export default function CompletarPerfilProfesionalPage() {
             // borrador» solo confirma, sin transición.
             if (enviar && nuevo.estado === "EN_REVISION") {
                 window.location.reload();
-                return;
+                return true;
             }
             setPerfil(nuevo);
             setOk("Guardado como borrador. Todavía no lo enviamos a revisión.");
+            return true;
         } finally {
             setGuardando(false);
         }
     };
 
+    // SPEC-740: «Siguiente» = GUARDAR el borrador y AVANZAR al paso 2 (Documentos). Guardar
+    // ANTES de navegar es lo que MATA el bug: hoy ir a autorizar sin guardar perdía la ficha
+    // al re-cargar. Si el guardado falla, NO se avanza (el error queda a la vista).
+    const guardarYSiguiente = async () => {
+        if (await guardar(false)) {
+            router.push("/perfil-profesional/documentos");
+        }
+    };
+
     if (cargando) {
         return (
-            <main className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
+            <div className="flex min-h-[40vh] items-center justify-center">
                 <p className="text-muted">Cargando…</p>
-            </main>
+            </div>
         );
     }
 
@@ -255,37 +265,36 @@ export default function CompletarPerfilProfesionalPage() {
         } as PerfilProfesional,
         autorizacion?.aceptadaVigente ?? false,
     );
-    const puedeEnviar = faltantesEnvio.length === 0;
 
     // SPEC-685 (PR2): catálogos ya con fallback resuelto (vacío mientras cargan).
     const { profesion: opcionesProfesion, areas: gruposAreas, rangoEtario: opcionesRango } =
         catalogosOVacio(catalogos);
 
     return (
-        <main className="mx-auto max-w-3xl px-4 py-8">
-            {/* SPEC-706 PR A: cuando la ficha es de SOLO LECTURA (en revisión / suspendida), un aviso
-                arriba dice en qué quedó y por qué no se puede editar. En revisión: el texto de entrega
-                de Diseño (Gestión e69b591). El servidor igual bloquea el PUT (no es solo pantalla). */}
-            {/* SPEC-706 (PR B): el ESTADO de verificación va ARRIBA (una sola pantalla; «Mi estado» se
-                retiró). Enmarca todo: ¿puedo editar?, ¿qué espero?, ¿qué corrijo? Es la copy
-                certificada de SPEC-691/706 reubicada como encabezado (display-only). En EN_REVISION
-                muestra el aviso de entrega de Diseño; el servidor igual bloquea el PUT. */}
+        // SPEC-740: paso 1 del asistente (la Ficha). El marco («Paso 1 de 3», progreso, salida)
+        // lo pone `WizardProfesionalShell` desde el layout; acá va SOLO el contenido del paso.
+        <div className="space-y-6">
+            {/* SPEC-706 PR A/B: el ESTADO de verificación (encabezado display-only) enmarca la ficha
+                cuando NO es su turno de editar (EN_REVISION: entregada; SUSPENDIDO; RECHAZADO con
+                observaciones). El servidor igual bloquea el PUT. En BORRADOR el asistente edita. */}
             {vista && (
-                <div className="mb-8">
+                <div className="mb-2">
                     <EstadoVerificacionProfesionalClient vista={vista} habilitado={habilitado} />
                 </div>
             )}
-            <h1 className="font-serif text-3xl text-body">
-                {soloLectura ? "Su perfil" : "Complete su perfil"}
-            </h1>
-            {!soloLectura && (
-                <p className="mt-2 text-sm text-muted">
-                    {/* SPEC-704/706: la autorización se ACEPTA en pantalla y el envío es un acto
-                        EXPLÍCITO (el botón de abajo), no algo que pase solo al completarse. */}
-                    Cuando termine la ficha y acepte la autorización, envíela a revisión con el botón de
-                    abajo. Mientras tanto queda como borrador y nadie la ve.
-                </p>
-            )}
+            <header>
+                <h1 className="font-serif text-3xl text-body">
+                    {soloLectura ? "Su perfil" : "Complete su perfil"}
+                </h1>
+                {!soloLectura && (
+                    <p className="mt-2 text-sm text-muted">
+                        {/* SPEC-740: la ficha es el paso 1. Al continuar la GUARDAMOS y seguimos a
+                            los documentos; la autorización y el envío a revisión son el último paso. */}
+                        Cuéntenos quién es. Guardamos lo que escribe al continuar, así no pierde nada
+                        entre pasos.
+                    </p>
+                )}
+            </header>
 
             {ok && (
                 <Alerta tono="exito" className="mt-4">
@@ -448,8 +457,10 @@ export default function CompletarPerfilProfesionalPage() {
                         />
                     </fieldset>
 
-                    {/* SPEC-706: los botones y avisos SOLO cuando es su turno (editable). En
-                        revisión/suspendido no hay controles — el encabezado explica por qué. */}
+                    {/* SPEC-740: paso 1 (Ficha). Botones «Guardar borrador» (queda, no avanza) y
+                        «Siguiente: documentos» (guarda el borrador y avanza — guardar-por-paso, el
+                        bug-killer). El envío a revisión NO vive acá: es el acto terminal del paso 3
+                        (Autorización). SOLO cuando es su turno (editable). */}
                     {!soloLectura && (
                         <div className="space-y-3">
                             {errorPerfil && (
@@ -457,17 +468,15 @@ export default function CompletarPerfilProfesionalPage() {
                                     {errorPerfil}
                                 </Alerta>
                             )}
-                            {/* SPEC-706 (ampliación · Jelkin): qué falta para enviar, NOMBRADO. El
-                                botón de enviar queda inerte hasta que no falte nada (como el «Acepto»
-                                de la autorización); el servidor revalida y nombra igual. */}
-                            {!puedeEnviar && (
-                                <p role="status" className="text-sm text-estado-ambar">
-                                    Para enviar a revisión, falta: {faltantesEnvio.join(", ")}.
-                                </p>
-                            )}
                             {camposFaltantesServidor.length > 0 && (
                                 <p role="alert" className="text-sm text-estado-ambar">
                                     Faltan datos obligatorios: {camposFaltantesServidor.join(", ")}.
+                                </p>
+                            )}
+                            {/* Guía honesta: lo que aún faltará para enviar al final (no bloquea avanzar). */}
+                            {faltantesEnvio.length > 0 && (
+                                <p role="status" className="text-sm text-subtle">
+                                    Para enviar a revisión al final, aún falta: {faltantesEnvio.join(", ")}.
                                 </p>
                             )}
                             <div className="flex flex-col gap-2 sm:flex-row">
@@ -482,79 +491,17 @@ export default function CompletarPerfilProfesionalPage() {
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={() => guardar(true)}
+                                    onClick={guardarYSiguiente}
                                     isLoading={guardando}
-                                    disabled={!puedeEnviar || guardando}
                                     className="sm:flex-1"
                                 >
-                                    Guardar y enviar a revisión
+                                    Siguiente: documentos
                                 </Button>
                             </div>
                         </div>
                     )}
                 </form>
             </GlassCard>
-
-            <GlassCard className="mt-6">
-                {/* SPEC-703: la autorización se ACEPTA EN PANTALLA (Ley 1918/2018), no se sube PDF.
-                    Aquí va su ESTADO + el enlace a leerla/aceptarla; al aceptar, el profesional
-                    vuelve a esta ficha. La completitud para pasar a revisión exige esta aceptación. */}
-                <h2 className="text-lg font-semibold text-body">Autorización</h2>
-                <p className="mt-1 text-sm text-muted">
-                    Para revisar su perfil necesitamos que autorice la verificación de sus
-                    antecedentes y el tratamiento de sus datos. La lee y la acepta en pantalla;
-                    queda registrada con su fecha y versión.
-                </p>
-                <div className="mt-4 space-y-3">
-                    {autorizacion?.aceptadaVigente ? (
-                        <p className="text-sm text-body">
-                            <span className="font-medium">Autorización aceptada.</span>
-                            {autorizacion.aceptadaEn
-                                ? ` Aceptada el ${new Date(autorizacion.aceptadaEn).toLocaleDateString("es-CO", {
-                                    day: "numeric",
-                                    month: "long",
-                                    year: "numeric",
-                                })}`
-                                : ""}
-                            {autorizacion.version ? ` · versión ${autorizacion.version}` : ""}
-                        </p>
-                    ) : (
-                        <p className="text-sm text-estado-ambar">
-                            <span className="font-medium">Falta aceptar la autorización.</span> Sin ella no
-                            podemos pasar su perfil a revisión.
-                        </p>
-                    )}
-                    <Link
-                        // SPEC-705: si YA aceptó, hay que ir en modo RELEER; sin `?releer=1` la página
-                        // ve que ya aceptó y redirige de vuelta a la ficha → «Ver la autorización» no
-                        // mostraba nada. Sin aceptar, va sin el parámetro (a leer y aceptar).
-                        href={
-                            autorizacion?.aceptadaVigente
-                                ? "/perfil-profesional/autorizacion?releer=1"
-                                : "/perfil-profesional/autorizacion"
-                        }
-                        className="inline-block text-sm font-medium text-accent underline underline-offset-2"
-                    >
-                        {autorizacion?.aceptadaVigente ? "Ver la autorización" : "Leer y aceptar la autorización"}
-                    </Link>
-                </div>
-
-                {/* SPEC-436 (I-304): los requisitos que el Verificador va a revisar.
-                    La lista sale del parámetro, no de una constante. */}
-                <div className="mt-8 border-t border-tinta/10 pt-6">
-                    <h2 className="text-lg font-semibold text-body">Documentos para su verificación</h2>
-                    <p className="mt-1 text-sm text-muted">
-                        Estos son los documentos que revisa Innovadataco antes de activarte. Se guardan
-                        cifrados, igual que la autorización, y solo los abre quien revisa su solicitud.
-                    </p>
-                    <div className="mt-4">
-                        <DocumentosRequisitos />
-                    </div>
-                </div>
-            </GlassCard>
-            {/* SPEC-706 PR A: se retiró el modal de «ficha entregada» (pasaba desapercibido y decía que
-                la pantalla «queda a su disposición para editar», que contradice el bloqueo en
-                revisión). Ahora el aviso de entrega vive en el banner persistente (arriba) tras enviar. */}
-        </main>
+        </div>
     );
 }

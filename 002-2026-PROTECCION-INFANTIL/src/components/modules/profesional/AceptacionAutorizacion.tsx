@@ -24,6 +24,20 @@ interface AceptacionAutorizacionProps {
     avisoReAceptacion?: boolean;
     /** SPEC-686 §2: «Leer la autorización» — reabre el texto en SOLO LECTURA (sin aceptar). */
     soloLectura?: boolean;
+    /**
+     * SPEC-740: cuando la aceptación es el PASO 3 del asistente de registro, el marco
+     * (theme + centrado + «Paso 3 de 3») lo pone `WizardProfesionalShell`; acá se rinde
+     * SOLO la tarjeta, sin el envoltorio de pantalla completa (evita doble chrome).
+     */
+    dentroDeAsistente?: boolean;
+    /**
+     * SPEC-740: qué hacer tras aceptar CON ÉXITO. Si se pasa, se llama en vez de la
+     * navegación dura (el asistente lo usa para «enviar a revisión» — el acto terminal).
+     * Sin él, se conserva el comportamiento de siempre (redirect duro a `redirectUrl`).
+     */
+    onAceptado?: () => void | Promise<void>;
+    /** Etiqueta del botón de aceptar (por defecto «Acepto la autorización»). */
+    textoBoton?: string;
 }
 
 // La declaración es TEXTO LEGAL verbatim (borrador §Declaración) — no se edita acá.
@@ -38,6 +52,9 @@ export function AceptacionAutorizacion({
     redirectUrl,
     avisoReAceptacion,
     soloLectura,
+    dentroDeAsistente,
+    onAceptado,
+    textoBoton,
 }: AceptacionAutorizacionProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const finalRef = useRef<HTMLDivElement>(null);
@@ -96,125 +113,135 @@ export function AceptacionAutorizacion({
                 setError(data.error?.message ?? "No se pudo registrar la aceptación.");
                 return;
             }
-            // Navegación DURA (igual que el consentimiento del padre): que el guard/portero
-            // decida con el estado ya actualizado.
-            window.location.assign(redirectUrl);
+            // SPEC-740: dentro del asistente, el acto terminal (enviar a revisión) lo hace
+            // `onAceptado`; sin él, se conserva la navegación DURA de siempre (que el
+            // guard/portero decida con el estado ya actualizado).
+            if (onAceptado) {
+                await onAceptado();
+            } else {
+                window.location.assign(redirectUrl);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error de red");
         } finally {
             setLoading(false);
         }
-    }, [puedeAceptar, redirectUrl]);
+    }, [puedeAceptar, redirectUrl, onAceptado]);
 
-    return (
-        <div className="theme-profesional min-h-screen bg-page">
-            <main className="flex min-h-screen items-center justify-center px-4 py-8">
-                <GlassCard className="w-full max-w-2xl">
-                    <h1 className="text-2xl font-bold text-body">Autorización del profesional</h1>
-                    {avisoReAceptacion ? (
-                        <div className="mt-3">
-                            <Alerta tono="info">
+    const tarjeta = (
+        <GlassCard className="w-full max-w-2xl">
+            <h1 className="text-2xl font-bold text-body">Autorización del profesional</h1>
+            {avisoReAceptacion ? (
+                <div className="mt-3">
+                    <Alerta tono="info">
                                 La autorización cambió. Léala y acéptela de nuevo para seguir atendiendo.
-                            </Alerta>
-                        </div>
-                    ) : soloLectura ? (
-                        <p className="mt-2 text-sm text-muted">Esta es la autorización que usted aceptó.</p>
-                    ) : (
-                        <p className="mt-2 text-sm text-muted">
+                    </Alerta>
+                </div>
+            ) : soloLectura ? (
+                <p className="mt-2 text-sm text-muted">Esta es la autorización que usted aceptó.</p>
+            ) : (
+                <p className="mt-2 text-sm text-muted">
                             Lea el texto completo y acéptelo para que la Plataforma pueda verificar sus
                             antecedentes y habilitar su perfil.
-                        </p>
-                    )}
+                </p>
+            )}
 
-                    <div className="relative">
-                        <div
-                            ref={scrollRef}
-                            onScroll={marcarSiLlegoAlFinal}
-                            data-testid="autorizacion-scroll"
-                            className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-superficie-1 p-4 text-sm text-body dark:border-tinta/12"
+            <div className="relative">
+                <div
+                    ref={scrollRef}
+                    onScroll={marcarSiLlegoAlFinal}
+                    data-testid="autorizacion-scroll"
+                    className="mt-6 max-h-[50vh] overflow-y-auto rounded-xl border border-tinta/10 bg-superficie-1 p-4 text-sm text-body dark:border-tinta/12"
+                >
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                                table: ({ children }) => (
+                                    <div className="overflow-x-auto">
+                                        <table>{children}</table>
+                                    </div>
+                                ),
+                            }}
                         >
-                            <div className="prose prose-sm max-w-none dark:prose-invert">
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                        table: ({ children }) => (
-                                            <div className="overflow-x-auto">
-                                                <table>{children}</table>
-                                            </div>
-                                        ),
-                                    }}
-                                >
-                                    {documentoContenido}
-                                </ReactMarkdown>
-                            </div>
-                            <div ref={finalRef} className="h-2" aria-hidden="true" />
-                        </div>
-                        {!scrollCompleto && (
-                            <div
-                                data-testid="senal-scroll"
-                                aria-hidden="true"
-                                className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 rounded-b-xl bg-gradient-to-t from-papel via-papel/80 to-transparent pb-2 pt-8 dark:from-tinta dark:via-tinta/80"
-                            >
-                                <span className="text-xs font-medium text-muted">
-                                    Baje hasta el final del texto para poder aceptar
-                                </span>
-                                <svg className="h-5 w-5 animate-bounce text-cielo motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M12 5v14M5 12l7 7 7-7" />
-                                </svg>
-                            </div>
-                        )}
+                            {documentoContenido}
+                        </ReactMarkdown>
                     </div>
+                    <div ref={finalRef} className="h-2" aria-hidden="true" />
+                </div>
+                {!scrollCompleto && (
+                    <div
+                        data-testid="senal-scroll"
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 rounded-b-xl bg-gradient-to-t from-papel via-papel/80 to-transparent pb-2 pt-8 dark:from-tinta dark:via-tinta/80"
+                    >
+                        <span className="text-xs font-medium text-muted">
+                                    Baje hasta el final del texto para poder aceptar
+                        </span>
+                        <svg className="h-5 w-5 animate-bounce text-cielo motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 5v14M5 12l7 7 7-7" />
+                        </svg>
+                    </div>
+                )}
+            </div>
 
-                    {soloLectura ? (
-                        <div className="mt-6 flex items-center justify-between">
-                            <span className="text-xs text-muted">Versión {version}</span>
-                            <a
-                                href={redirectUrl}
-                                className="text-sm font-medium text-body underline underline-offset-2"
-                            >
+            {soloLectura ? (
+                <div className="mt-6 flex items-center justify-between">
+                    <span className="text-xs text-muted">Versión {version}</span>
+                    <a
+                        href={redirectUrl}
+                        className="text-sm font-medium text-body underline underline-offset-2"
+                    >
                                 Volver
-                            </a>
+                    </a>
+                </div>
+            ) : (
+                <>
+                    <label className="mt-6 flex items-start gap-3">
+                        <input
+                            type="checkbox"
+                            checked={declaraVerdad}
+                            onChange={(e) => setDeclaraVerdad(e.target.checked)}
+                            className="mt-1 h-4 w-4 accent-cielo"
+                            data-testid="check-declaracion"
+                        />
+                        <span className="text-sm text-body">{DECLARACION}</span>
+                    </label>
+
+                    {error && (
+                        <div className="mt-4">
+                            <Alerta tono="error">{error}</Alerta>
                         </div>
-                    ) : (
-                        <>
-                            <label className="mt-6 flex items-start gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={declaraVerdad}
-                                    onChange={(e) => setDeclaraVerdad(e.target.checked)}
-                                    className="mt-1 h-4 w-4 accent-cielo"
-                                    data-testid="check-declaracion"
-                                />
-                                <span className="text-sm text-body">{DECLARACION}</span>
-                            </label>
-
-                            {error && (
-                                <div className="mt-4">
-                                    <Alerta tono="error">{error}</Alerta>
-                                </div>
-                            )}
-
-                            <div className="mt-6 flex flex-col items-end gap-2">
-                                <Button
-                                    onClick={handleAceptar}
-                                    disabled={!puedeAceptar || loading}
-                                    isLoading={loading}
-                                    data-testid="btn-aceptar-autorizacion"
-                                >
-                                    Acepto la autorización
-                                </Button>
-                                {/* Decir POR QUÉ está inerte (lección del wizard) — desaparece al cumplir ambos. */}
-                                {!puedeAceptar && (
-                                    <span className="text-xs text-muted">
-                                        Baje hasta el final del texto y marque la casilla para aceptar.
-                                    </span>
-                                )}
-                                <span className="text-xs text-muted">Versión {version}</span>
-                            </div>
-                        </>
                     )}
-                </GlassCard>
-            </main>
+
+                    <div className="mt-6 flex flex-col items-end gap-2">
+                        <Button
+                            onClick={handleAceptar}
+                            disabled={!puedeAceptar || loading}
+                            isLoading={loading}
+                            data-testid="btn-aceptar-autorizacion"
+                        >
+                            {textoBoton ?? "Acepto la autorización"}
+                        </Button>
+                        {/* Decir POR QUÉ está inerte (lección del wizard) — desaparece al cumplir ambos. */}
+                        {!puedeAceptar && (
+                            <span className="text-xs text-muted">
+                                        Baje hasta el final del texto y marque la casilla para aceptar.
+                            </span>
+                        )}
+                        <span className="text-xs text-muted">Versión {version}</span>
+                    </div>
+                </>
+            )}
+        </GlassCard>
+    );
+
+    // SPEC-740: dentro del asistente, la tarjeta va SOLA (el shell pone theme + centrado +
+    // «Paso 3 de 3»). Fuera (re-aceptación del habilitado, solo lectura), envoltorio propio.
+    if (dentroDeAsistente) return tarjeta;
+    return (
+        <div className="theme-profesional min-h-screen bg-page">
+            <main className="flex min-h-screen items-center justify-center px-4 py-8">{tarjeta}</main>
         </div>
     );
 }

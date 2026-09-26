@@ -14,14 +14,13 @@ import { verifyToken } from "@/lib/auth";
 import { AutorizacionProfesionalService } from "@/lib/dal/services/autorizacion-profesional";
 import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 import { AceptacionAutorizacion } from "@/components/modules/profesional/AceptacionAutorizacion";
+import { AutorizacionPasoFinal } from "@/components/modules/profesional/AutorizacionPasoFinal";
 
 export const dynamic = "force-dynamic";
 
-// SPEC-703/706: a dónde vuelve el profesional tras aceptar. El HABILITADO va a «Mi perfil». El que
-// aún no está habilitado (BORRADOR, VENCIDO, etc.) vuelve a la FICHA — la ÚNICA pantalla del no
-// habilitado (SPEC-706 retiró «Mi estado»), donde ve su estado arriba y decide enviar a revisión.
+// SPEC-703/706: a dónde vuelve el HABILITADO tras (re)aceptar. El no habilitado está en el
+// asistente de registro (SPEC-740): su paso 3 es `AutorizacionPasoFinal`, que envía a revisión.
 const DESTINO_HABILITADO = "/dashboard/profesional/mi-perfil";
-const DESTINO_FICHA = "/perfil-profesional/completar";
 
 export default async function AutorizacionProfesionalPage({
     searchParams,
@@ -44,12 +43,25 @@ export default async function AutorizacionProfesionalPage({
         obtenerHabilitacionProfesional(userId),
     ]);
     const yaAceptoVigente = ultima?.version === version;
-    const destino = hab?.habilitado ? DESTINO_HABILITADO : DESTINO_FICHA;
-
-    // Ya aceptó la versión vigente y no viene a releer: no hay nada que aceptar acá.
-    if (yaAceptoVigente && !releer) redirect(destino);
-
     const documentoContenido = await servicio.obtenerDocumentoVigente();
+
+    // SPEC-740: el NO habilitado está en el REGISTRO — la autorización es el PASO 3 (terminal)
+    // del asistente: aceptar desbloquea «enviar a revisión». No se rebota aunque ya haya
+    // aceptado (ahí ofrece el envío). El marco «Paso 3 de 3» lo pone el shell del layout.
+    if (!hab?.habilitado) {
+        return (
+            <AutorizacionPasoFinal
+                version={version}
+                documentoContenido={documentoContenido}
+                yaAcepto={yaAceptoVigente}
+            />
+        );
+    }
+
+    // Habilitado: re-aceptación por versión nueva (SPEC-686) o releer en solo lectura. NO es
+    // el asistente — conserva su pantalla propia y vuelve a «Mi perfil» (decisión CEO SPEC-740).
+    const destino = DESTINO_HABILITADO;
+    if (yaAceptoVigente && !releer) redirect(destino);
 
     return (
         <AceptacionAutorizacion
