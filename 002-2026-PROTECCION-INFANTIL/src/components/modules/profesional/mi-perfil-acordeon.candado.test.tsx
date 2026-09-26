@@ -44,7 +44,7 @@ const PERFIL: PerfilProfesionalPropioDto = {
     atiendeVirtual: true,
     atiendePresencial: false,
     aniosExperiencia: 8,
-    presentacion: "Acompaño familias.",
+    presentacion: "Acompaño a las familias con cuidado y experiencia.",
     tarifaConsultaCOP: 120_000,
     duracionMinutos: 50,
     emiteFactura: false,
@@ -60,21 +60,27 @@ const CATALOGOS = {
     rangoEtario: [{ clave: "6-11", nombre: "Niñez (6–11)" }],
 };
 const VISTA = { estadoPerfil: "ACTIVO", puedeReenviar: false, observaciones: [] } as unknown as VistaProfesionalVerificacion;
+const vistaConDevueltos = (n: number): VistaProfesionalVerificacion =>
+    ({
+        estadoPerfil: "ACTIVO",
+        puedeReenviar: n > 0,
+        observaciones: Array.from({ length: n }, (_, i) => ({ requisito: `Documento ${i + 1}`, observacion: "corrija esto" })),
+    }) as unknown as VistaProfesionalVerificacion;
 // La 4ª sección (Autorización) sólo se pinta si hay una versión aceptada (SPEC-686).
 const AUTORIZACION = { version: "1.0", aceptadaEn: "2026-01-01T00:00:00.000Z", hayActualizacionMenor: false };
 
-// Las 4 secciones plegables. El regex ancla en el título: el marcador ámbar añade texto
-// («requiere atención») al nombre accesible del botón, y así el query lo tolera.
+// Las 4 secciones plegables. El regex ancla en el título: el subtítulo de estado
+// («Completos», «Sin fijar», …) se suma al nombre accesible del botón, y así el query lo tolera.
 const SECCIONES = ["Sus datos", "Su tarifa", "Sus documentos", "Autorización"];
 const cab = (titulo: string) => screen.getByRole("button", { name: new RegExp("^" + titulo) });
 
-function montar(overrides: Partial<PerfilProfesionalPropioDto> = {}) {
+function montar({ perfil = {}, vista = VISTA }: { perfil?: Partial<PerfilProfesionalPropioDto>; vista?: VistaProfesionalVerificacion } = {}) {
     return render(
         <MiPerfilProfesionalClient
-            perfil={{ ...PERFIL, ...overrides }}
+            perfil={{ ...PERFIL, ...perfil }}
             catalogos={CATALOGOS}
             aviso={{ precioEstandar: 80_000, pct: 15 }}
-            vista={VISTA}
+            vista={vista}
             autorizacion={AUTORIZACION}
         />,
     );
@@ -133,14 +139,35 @@ describe("SPEC-741 · «Mi perfil»: secciones plegables (Diseño doc 333da98)",
         expect(within(panel!).getByLabelText("Tarifa por consulta (COP)")).toBeTruthy();
     });
 
-    it("MARCADOR ÁMBAR: aparece con tarifa sin fijar y NO cuando está resuelta", () => {
-        // Tarifa sin fijar → «Su tarifa» necesita atención → marcador (texto para lector).
-        montar({ tarifaConsultaCOP: null });
-        expect(cab("Su tarifa").textContent).toMatch(/requiere atención/i);
+    it("ENCABEZADO INFORMATIVO: cada sección resume su estado bajo el título (sin desplegar)", () => {
+        montar(); // fixture: datos completos, tarifa fijada, sin devueltos, autorización aceptada
+        expect(cab("Sus datos").textContent).toMatch(/Completos/);
+        expect(cab("Su tarifa").textContent).toMatch(/120\.000/);
+        expect(cab("Sus documentos").textContent).toMatch(/Al día/);
+        expect(cab("Autorización").textContent).toMatch(/Aceptada/);
+    });
+
+    it("ÁMBAR de atención en «Sus documentos» cuando hay devueltos; «Al día» cuando no", () => {
+        // Un ítem de verificación DEVUELTO → «1 por corregir» en el encabezado (atención).
+        montar({ vista: vistaConDevueltos(1) });
+        expect(cab("Sus documentos").textContent).toMatch(/1 por corregir/);
         cleanup();
-        // Control positivo: quitá el discriminador (tarifa fijada) → sin marcador.
-        montar({ tarifaConsultaCOP: 120_000 });
-        expect(cab("Su tarifa").textContent).not.toMatch(/requiere atención/i);
+        // Control positivo: sin devueltos → «Al día», sin «por corregir».
+        montar({ vista: vistaConDevueltos(0) });
+        const docs = cab("Sus documentos");
+        expect(docs.textContent).toMatch(/Al día/);
+        expect(docs.textContent).not.toMatch(/por corregir/);
+    });
+
+    it("ÁMBAR de atención en «Su tarifa» cuando está sin fijar; muestra el valor cuando está fijada", () => {
+        montar({ perfil: { tarifaConsultaCOP: null } });
+        expect(cab("Su tarifa").textContent).toMatch(/Sin fijar/);
+        cleanup();
+        // Control positivo: quitá el discriminador (tarifa fijada) → valor, sin «Sin fijar».
+        montar({ perfil: { tarifaConsultaCOP: 120_000 } });
+        const t = cab("Su tarifa");
+        expect(t.textContent).toMatch(/120\.000/);
+        expect(t.textContent).not.toMatch(/Sin fijar/);
     });
 });
 

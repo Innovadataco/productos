@@ -21,6 +21,7 @@
  */
 import { useMemo, useState } from "react";
 import { SeccionColapsable } from "@/components/ui/SeccionColapsable";
+import { resumenSeccionesMiPerfil } from "@/lib/profesional/mi-perfil-resumen";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -175,6 +176,9 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
             return siguiente;
         });
 
+    // SPEC-741 (doc 333da98): resumen del encabezado de cada sección, para verlo sin desplegar.
+    const resumen = resumenSeccionesMiPerfil({ perfil, vista, autorizacion });
+
     const modalidadTexto = useMemo(
         () =>
             [atiendeVirtual ? "Virtual" : null, atiendePresencial ? "Presencial" : null]
@@ -277,7 +281,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
             <h1 className="font-serif text-3xl text-body">Mi perfil</h1>
 
             {/* 1 · Sus datos — SPEC-709: se editan ACÁ, por bloque (muere el botón global). */}
-            <SeccionColapsable titulo="Sus datos" className="mt-6" abierta={abiertas.has("datos")} onToggle={() => alternarSeccion("datos")}>
+            <SeccionColapsable titulo="Sus datos" estado={resumen.datos.estado} tono={resumen.datos.tono} className="mt-6" abierta={abiertas.has("datos")} onToggle={() => alternarSeccion("datos")}>
                 {errorDato && (
                     <Alerta tono="advertencia" className="mt-3">
                         {errorDato}
@@ -474,7 +478,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
             </SeccionColapsable>
 
             {/* 2 · Su tarifa — editable acá; solo la ve el habilitado. */}
-            <SeccionColapsable titulo="Su tarifa" className="mt-6" abierta={abiertas.has("tarifa")} onToggle={() => alternarSeccion("tarifa")} necesitaAtencion={tarifaSinFijar}>
+            <SeccionColapsable titulo="Su tarifa" estado={resumen.tarifa.estado} tono={resumen.tarifa.tono} className="mt-6" abierta={abiertas.has("tarifa")} onToggle={() => alternarSeccion("tarifa")}>
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {/* SPEC-694: se ve con puntos de miles, se guarda el entero. */}
                     <Input
@@ -531,7 +535,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
             </SeccionColapsable>
 
             {/* 3 · Sus documentos. */}
-            <SeccionColapsable titulo="Sus documentos" className="mt-6" abierta={abiertas.has("documentos")} onToggle={() => alternarSeccion("documentos")}>
+            <SeccionColapsable titulo="Sus documentos" estado={resumen.documentos.estado} tono={resumen.documentos.tono} className="mt-6" abierta={abiertas.has("documentos")} onToggle={() => alternarSeccion("documentos")}>
                 <div className="mt-4">
                     <DocumentosRequisitos />
                 </div>
@@ -544,7 +548,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
 
             {/* 5 · SPEC-686 · el registro de la autorización aceptada + el derecho a releerla. */}
             {autorizacion?.version && (
-                <SeccionColapsable titulo="Autorización" className="mt-6" abierta={abiertas.has("autorizacion")} onToggle={() => alternarSeccion("autorizacion")} necesitaAtencion={autorizacion.hayActualizacionMenor}>
+                <SeccionColapsable titulo="Autorización" estado={resumen.autorizacion.estado} tono={resumen.autorizacion.tono} className="mt-6" abierta={abiertas.has("autorizacion")} onToggle={() => alternarSeccion("autorizacion")}>
                     <p className="mt-2 text-sm text-body">
                         Autorización aceptada · versión {autorizacion.version}
                         {autorizacion.aceptadaEn
