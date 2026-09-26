@@ -193,22 +193,27 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 <p className="cuerpo text-subtle">{estado.detalle}</p>
             </header>
 
-            <section className={`rounded-2xl border p-4 sm:p-5 ${tonoClases}`}>
-                <p className="etiqueta">Estado</p>
-                <p className="cuerpo mt-1">{cita.estado.replaceAll("_", " ")}</p>
-                {countdown && !countdown.vencido && (
-                    <p className="cuerpo mt-3">
-                        Vence en <strong className="font-mono">{countdown.horas}h {String(countdown.minutos).padStart(2, "0")}m</strong>.
-                    </p>
-                )}
-                {countdown?.vencido && (
-                    <p className="cuerpo mt-3">
-                        <strong>Se cumplieron las 48 h.</strong> Refresca la página o espera al próximo tick del sistema
-                        para que quede como vencida y puedas elegir otro profesional.
-                    </p>
-                )}
-                {refrescando && <p className="etiqueta mt-2 text-subtle">Actualizando…</p>}
-            </section>
+            {/* SPEC-730/731 (pulido): el estado se lee del título amigable (arriba) y del color;
+                esta caja aparece SOLO cuando aporta algo vivo —el reloj de 48 h o el aviso de
+                vencimiento—. Antes repetía el enum crudo «PAGADA_PENDIENTE» y quedaba vacía en
+                los demás estados. */}
+            {(countdown || refrescando) && (
+                <section className={`rounded-2xl border p-4 sm:p-5 ${tonoClases}`}>
+                    <p className="etiqueta">Estado</p>
+                    {countdown && !countdown.vencido && (
+                        <p className="cuerpo mt-3">
+                            Vence en <strong className="font-mono">{countdown.horas}h {String(countdown.minutos).padStart(2, "0")}m</strong>.
+                        </p>
+                    )}
+                    {countdown?.vencido && (
+                        <p className="cuerpo mt-3">
+                            <strong>Se cumplieron las 48 h.</strong> Refresca la página o espera al próximo tick del sistema
+                            para que quede como vencida y puedas elegir otro profesional.
+                        </p>
+                    )}
+                    {refrescando && <p className="etiqueta mt-2 text-subtle">Actualizando…</p>}
+                </section>
+            )}
 
             <section className="glass rounded-2xl p-4 sm:p-5 space-y-3">
                 <div>
@@ -233,9 +238,10 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 {cita.contactoProfesional && (
                     <div>
                         <p className="etiqueta text-subtle">Contacto (visible al confirmar)</p>
-                        <p className="cuerpo text-body">{cita.contactoProfesional.email}</p>
+                        {/* SPEC-730/731 (pulido): un correo largo sin espacios desbordaba a 375px. */}
+                        <p className="cuerpo text-body break-all">{cita.contactoProfesional.email}</p>
                         {cita.contactoProfesional.telefono && (
-                            <p className="cuerpo text-body">{cita.contactoProfesional.telefono}</p>
+                            <p className="cuerpo text-body break-words">{cita.contactoProfesional.telefono}</p>
                         )}
                     </div>
                 )}
