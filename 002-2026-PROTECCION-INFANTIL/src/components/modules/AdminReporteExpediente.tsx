@@ -370,13 +370,22 @@ export function AdminReporteExpediente({ reporteId, onClose }: AdminReporteExped
                                 <p className="whitespace-pre-line text-sm text-body">{expediente.sintesis.analisisInterno}</p>
                             </GlassCard>
 
+                            {/* SPEC-736 §6: el borrador acompaña a una FAMILIA. En un reporte
+                                ANÓNIMO no hay a quién dirigirlo, así que no se rotula «mensaje al
+                                padre»; el acompañamiento del anónimo vive en su pantalla de seguimiento. */}
                             <GlassCard className="p-4">
                                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                                    <h3 className="text-sm font-semibold text-body">Mensaje al padre</h3>
+                                    <h3 className="text-sm font-semibold text-body">
+                                        {expediente.reporte.esAnonimo
+                                            ? "Mensaje de referencia (reporte anónimo)"
+                                            : "Mensaje para la familia (borrador)"}
+                                    </h3>
                                     <Badge variant="warning">Borrador de revisión</Badge>
                                 </div>
                                 <p className="mb-2 text-xs text-muted">
-                                    Texto preliminar pendiente de revisión humana. No existe acción de envío ni publicación.
+                                    {expediente.reporte.esAnonimo
+                                        ? "Texto de referencia del equipo. El reporte es anónimo: no hay una familia a quién dirigirlo; a quien reportó se le muestra un acompañamiento en su pantalla de seguimiento."
+                                        : "Texto preliminar pendiente de revisión humana. No existe acción de envío ni publicación."}
                                 </p>
                                 <p className="whitespace-pre-line text-sm text-body">{expediente.sintesis.mensajePadre}</p>
                             </GlassCard>

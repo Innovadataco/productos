@@ -55,9 +55,18 @@ type SeguimientoData = {
     clasificacion: ClasificacionData | null;
     actividad: "alta" | "baja" | null;
     ranking: RankingData | null;
+    // SPEC-736: acompañamiento (calma → acciones → canales). null mientras no esté
+    // clasificado; listas vacías = clasificado sin conductas de riesgo visibles.
+    acompanamiento: { hallazgos: string[]; acciones: string[] } | null;
     // null para el visitante anónimo (su pantalla es la de siempre).
     otrosReportes: OtroReporte[] | null;
 };
+
+/** Une textos en una lista en español: "a", "a y b", "a, b y c". */
+function listaEspanol(items: string[]): string {
+    if (items.length <= 1) return items[0] ?? "";
+    return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
+}
 
 /** Fecha y hora del evento en hora de Colombia (nunca UTC en pantalla). */
 function fechaHoraColombia(iso: string): string {
@@ -237,6 +246,47 @@ export function SeguimientoClient() {
                         </div>
                     )}
 
+                    {/* SPEC-736: acompañamiento a quien reportó — calma → acciones → canales.
+                        Copy de Diseño (FORMA-SPEC736). Voz tú, sin culpar y sin prometer
+                        lo que el sistema hará (nada de «investigaremos»/«recibirás respuesta»). */}
+                    {data.acompanamiento && (
+                        <>
+                            <div className={infoBox}>
+                                <h3 className="text-sm font-semibold text-body">Hiciste bien en reportar.</h3>
+                                <p className="mt-1 text-sm text-body">
+                                    Lo que nos contaste ayuda a proteger a niños, niñas y adolescentes. No tienes
+                                    que resolver esto solo.
+                                </p>
+                                <p className="mt-2 text-sm text-body">
+                                    Reportaste de forma anónima, así que no podemos escribirte de vuelta — guarda tu
+                                    número de seguimiento para consultar el estado cuando quieras.
+                                </p>
+
+                                {data.acompanamiento.acciones.length > 0 && (
+                                    <>
+                                        {data.acompanamiento.hallazgos.length > 0 && (
+                                            <p className="mt-3 text-sm text-body">
+                                                Por lo que describiste, hay {listaEspanol(data.acompanamiento.hallazgos)}.
+                                                Esto es lo que puedes hacer.
+                                            </p>
+                                        )}
+                                        <p className="mt-3 text-sm font-medium text-body">Lo que puedes hacer:</p>
+                                        <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-body">
+                                            {data.acompanamiento.acciones.map((accion, i) => (
+                                                <li key={i}>{accion}</li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                )}
+
+                                <p className="mt-3 text-sm font-medium text-body">
+                                    Si tú o alguien necesita ayuda ahora:
+                                </p>
+                            </div>
+                            <CanalesOficiales />
+                        </>
+                    )}
+
                     {data.ranking && (
                         <div className={infoBox}>
                             <h3 className="mb-2 text-sm font-semibold text-body">Actividad de la cuenta</h3>
@@ -294,7 +344,9 @@ export function SeguimientoClient() {
                 </div>
             )}
 
-            <CanalesOficiales />
+            {/* Red de seguridad: los canales siempre están a la vista, salvo cuando
+                el acompañamiento (SPEC-736) ya los muestra arriba (evita duplicarlos). */}
+            {!data?.acompanamiento && <CanalesOficiales />}
         </main>
     );
 }
