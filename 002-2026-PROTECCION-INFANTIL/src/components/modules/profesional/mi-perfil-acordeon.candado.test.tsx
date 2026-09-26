@@ -1,19 +1,21 @@
 /**
- * SPEC-741 · CANDADO — «Mi perfil» del habilitado: cada sección es PLEGABLE, y plegar
- * OCULTA sin DESMONTAR (mejora de Jelkin, en vivo).
+ * SPEC-741 · CANDADO — «Mi perfil» del habilitado: cada sección es PLEGABLE, plegar OCULTA
+ * sin DESMONTAR, y la forma la fijó Diseño (doc 333da98): default TODAS recogidas,
+ * INDEPENDIENTE, con marcador ÁMBAR cuando la sección necesita atención.
  *
  * Conductas que no se pueden fingir (verificadas por MUTACIÓN):
  *  1. Cada una de las 4 secciones (Sus datos / Su tarifa / Sus documentos / Autorización)
- *     tiene por encabezado un `<button aria-expanded aria-controls>` REAL — no un `<div>`
- *     con onClick: accesible por teclado y lector de pantalla.
- *  2. Un clic en el encabezado ALTERNA plegar/desplegar (aria-expanded true↔false).
- *  3. CONTROL POSITIVO — «no desmontar el form, sólo ocultar»: al plegar, el input de la
- *     sección SIGUE en el DOM (sólo cambia `hidden`). Si alguien volviera `SeccionColapsable`
- *     al patrón del `Accordion` de array (`{abierta ? children : null}`), el input de la
- *     sección plegada desaparecería del DOM y este candado caería en ROJO.
+ *     tiene por encabezado un `<button aria-expanded aria-controls>` REAL y arranca RECOGIDA.
+ *  2. INDEPENDIENTE: abrir una sección NO cierra otra (mutación a «exclusivo» → rojo).
+ *  3. CONTROL POSITIVO — «no desmontar el form, sólo ocultar»: aun RECOGIDA por defecto, el
+ *     input de la sección YA está en el DOM (sólo `hidden`). Si `SeccionColapsable` volviera
+ *     al patrón del `Accordion` de array (`{abierta ? children : null}`), el input no existiría
+ *     mientras la sección está plegada y este candado caería en ROJO.
+ *  4. MARCADOR ÁMBAR: aparece cuando la sección necesita atención (tarifa sin fijar) y NO
+ *     cuando está resuelta (control positivo por remoción del discriminador).
  *
- * (El respeto a prefers-reduced-motion vive en `SeccionColapsable` con el prefijo
- *  `motion-safe:`, que jsdom no evalúa; se cubre con una aserción de fuente al final.)
+ * (El chevron ▸→▾ y que el movimiento vaya sólo bajo motion-safe —respeta prefers-reduced-motion—
+ *  se cubren con aserciones de fuente al final: jsdom no evalúa CSS.)
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
@@ -61,14 +63,15 @@ const VISTA = { estadoPerfil: "ACTIVO", puedeReenviar: false, observaciones: [] 
 // La 4ª sección (Autorización) sólo se pinta si hay una versión aceptada (SPEC-686).
 const AUTORIZACION = { version: "1.0", aceptadaEn: "2026-01-01T00:00:00.000Z", hayActualizacionMenor: false };
 
-// Las 4 secciones que Jelkin pidió plegables (el bloque «estado de verificación»
-// no es una de ellas y por diseño NO es plegable).
+// Las 4 secciones plegables. El regex ancla en el título: el marcador ámbar añade texto
+// («requiere atención») al nombre accesible del botón, y así el query lo tolera.
 const SECCIONES = ["Sus datos", "Su tarifa", "Sus documentos", "Autorización"];
+const cab = (titulo: string) => screen.getByRole("button", { name: new RegExp("^" + titulo) });
 
-function montar() {
+function montar(overrides: Partial<PerfilProfesionalPropioDto> = {}) {
     return render(
         <MiPerfilProfesionalClient
-            perfil={PERFIL}
+            perfil={{ ...PERFIL, ...overrides }}
             catalogos={CATALOGOS}
             aviso={{ precioEstandar: 80_000, pct: 15 }}
             vista={VISTA}
@@ -79,49 +82,69 @@ function montar() {
 
 afterEach(() => cleanup());
 
-describe("SPEC-741 · «Mi perfil»: secciones plegables (ocultar, no desmontar)", () => {
-    it("cada una de las 4 secciones tiene por encabezado un <button aria-expanded aria-controls>", () => {
+describe("SPEC-741 · «Mi perfil»: secciones plegables (Diseño doc 333da98)", () => {
+    it("las 4 secciones tienen <button aria-expanded aria-controls> y arrancan RECOGIDAS", () => {
         montar();
         for (const titulo of SECCIONES) {
-            const btn = screen.getByRole("button", { name: titulo });
+            const btn = cab(titulo);
             expect(btn.tagName).toBe("BUTTON");
-            // Por defecto abiertas (Diseño puede cambiar el estado inicial; el candado no lo fija).
-            expect(btn.getAttribute("aria-expanded")).toBe("true");
-            // El encabezado apunta a su panel (region), señal de disclosure accesible real.
+            // Default de Diseño: TODAS recogidas.
+            expect(btn.getAttribute("aria-expanded")).toBe("false");
             expect(btn.getAttribute("aria-controls")).toBeTruthy();
         }
     });
 
-    it("un clic en el encabezado ALTERNA plegar/desplegar (aria-expanded true↔false)", () => {
+    it("un clic en el encabezado ALTERNA plegar/desplegar (aria-expanded false↔true)", () => {
         montar();
-        const btn = screen.getByRole("button", { name: "Sus datos" });
-        expect(btn.getAttribute("aria-expanded")).toBe("true");
-        fireEvent.click(btn);
+        const btn = cab("Sus datos");
         expect(btn.getAttribute("aria-expanded")).toBe("false");
         fireEvent.click(btn);
         expect(btn.getAttribute("aria-expanded")).toBe("true");
+        fireEvent.click(btn);
+        expect(btn.getAttribute("aria-expanded")).toBe("false");
     });
 
-    it("CONTROL POSITIVO · plegar OCULTA sin DESMONTAR: el input de la sección sigue en el DOM", () => {
+    it("INDEPENDIENTE: abrir una sección NO cierra otra", () => {
         montar();
-        const btn = screen.getByRole("button", { name: "Su tarifa" });
+        const datos = cab("Sus datos");
+        const docs = cab("Sus documentos");
+        fireEvent.click(datos);
+        fireEvent.click(docs);
+        // Las dos quedan abiertas: abrir «documentos» no plegó «datos».
+        // MUTACIÓN a «exclusivo» (un solo Set de una clave) → «datos» se cerraría → rojo.
+        expect(datos.getAttribute("aria-expanded")).toBe("true");
+        expect(docs.getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("CONTROL POSITIVO · aun RECOGIDA, el input de la sección YA está en el DOM (oculto, no desmontado)", () => {
+        montar();
+        const btn = cab("Su tarifa");
         const panel = document.getElementById(btn.getAttribute("aria-controls") ?? "");
         expect(panel).not.toBeNull();
-        // Abierta: el panel se ve y contiene el input de la tarifa.
-        expect(panel!.hasAttribute("hidden")).toBe(false);
-        expect(within(panel!).getByLabelText("Tarifa por consulta (COP)")).toBeTruthy();
-        // Plegar la sección.
-        fireEvent.click(btn);
+        // Recogida por defecto: el panel está oculto…
         expect(btn.getAttribute("aria-expanded")).toBe("false");
         expect(panel!.hasAttribute("hidden")).toBe(true);
-        // El input SIGUE montado dentro del panel oculto (no se desmontó el formulario).
-        // MUTACIÓN: si `SeccionColapsable` desmontara el contenido al plegar
-        // (`{abierta ? children : null}`), este query devolvería null y el candado caería.
+        // …pero el input EXISTE (montado bajo `hidden`). MUTACIÓN a `{abierta ? children : null}`
+        // → recogida = sin input → este query devolvería null → rojo.
         expect(within(panel!).queryByLabelText("Tarifa por consulta (COP)")).not.toBeNull();
+        // Al desplegar, el panel se muestra y el mismo input sigue ahí.
+        fireEvent.click(btn);
+        expect(panel!.hasAttribute("hidden")).toBe(false);
+        expect(within(panel!).getByLabelText("Tarifa por consulta (COP)")).toBeTruthy();
+    });
+
+    it("MARCADOR ÁMBAR: aparece con tarifa sin fijar y NO cuando está resuelta", () => {
+        // Tarifa sin fijar → «Su tarifa» necesita atención → marcador (texto para lector).
+        montar({ tarifaConsultaCOP: null });
+        expect(cab("Su tarifa").textContent).toMatch(/requiere atención/i);
+        cleanup();
+        // Control positivo: quitá el discriminador (tarifa fijada) → sin marcador.
+        montar({ tarifaConsultaCOP: 120_000 });
+        expect(cab("Su tarifa").textContent).not.toMatch(/requiere atención/i);
     });
 });
 
-describe("SPEC-741 · SeccionColapsable: oculta con `hidden`, no desmonta; movimiento sólo motion-safe", () => {
+describe("SPEC-741 · SeccionColapsable: oculta con `hidden`, chevron ▸→▾ sólo motion-safe", () => {
     const src = fs.readFileSync(
         path.resolve(process.cwd(), "src/components/ui/SeccionColapsable.tsx"),
         "utf-8",
@@ -132,7 +155,8 @@ describe("SPEC-741 · SeccionColapsable: oculta con `hidden`, no desmonta; movim
         expect(src).toContain("{children}");
     });
 
-    it("el movimiento va SÓLO bajo motion-safe (respeta prefers-reduced-motion)", () => {
-        expect(src).toContain("motion-safe:");
+    it("el chevron rota SÓLO bajo motion-safe con ~180ms (respeta prefers-reduced-motion)", () => {
+        expect(src).toContain("motion-safe:transition-transform");
+        expect(src).toContain("motion-safe:duration-[180ms]");
     });
 });

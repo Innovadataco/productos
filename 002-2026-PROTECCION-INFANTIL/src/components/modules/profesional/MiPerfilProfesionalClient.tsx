@@ -162,11 +162,11 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
     const [ok, setOk] = useState("");
     const [error, setError] = useState("");
 
-    // SPEC-741: cada sección es plegable (disclosure). El estado abierto/plegado vive acá.
-    // Default: todas abiertas (equivale a la vista actual, todo visible). Independientes:
-    // plegar una no afecta a las otras. (Diseño define estado por defecto e independiente vs
-    // exclusivo; el modelo de Set deja el cambio a «exclusivo» en una línea del toggle.)
-    const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set(["datos", "tarifa", "documentos", "autorizacion"]));
+    // SPEC-741 (Diseño · doc 333da98): cada sección es plegable (disclosure). El estado
+    // abierto/plegado vive acá y NO persiste entre visitas (sin memoria: arranca del default
+    // en cada montaje). Default: TODAS recogidas. INDEPENDIENTE: abrir una no cierra otra
+    // (el Set admite varias abiertas; «exclusivo» sería un one-liner del toggle, no es el caso).
+    const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
     const alternarSeccion = (id: string) =>
         setAbiertas((prev) => {
             const siguiente = new Set(prev);
@@ -474,7 +474,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
             </SeccionColapsable>
 
             {/* 2 · Su tarifa — editable acá; solo la ve el habilitado. */}
-            <SeccionColapsable titulo="Su tarifa" className="mt-6" abierta={abiertas.has("tarifa")} onToggle={() => alternarSeccion("tarifa")}>
+            <SeccionColapsable titulo="Su tarifa" className="mt-6" abierta={abiertas.has("tarifa")} onToggle={() => alternarSeccion("tarifa")} necesitaAtencion={tarifaSinFijar}>
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {/* SPEC-694: se ve con puntos de miles, se guarda el entero. */}
                     <Input
@@ -544,7 +544,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
 
             {/* 5 · SPEC-686 · el registro de la autorización aceptada + el derecho a releerla. */}
             {autorizacion?.version && (
-                <SeccionColapsable titulo="Autorización" className="mt-6" abierta={abiertas.has("autorizacion")} onToggle={() => alternarSeccion("autorizacion")}>
+                <SeccionColapsable titulo="Autorización" className="mt-6" abierta={abiertas.has("autorizacion")} onToggle={() => alternarSeccion("autorizacion")} necesitaAtencion={autorizacion.hayActualizacionMenor}>
                     <p className="mt-2 text-sm text-body">
                         Autorización aceptada · versión {autorizacion.version}
                         {autorizacion.aceptadaEn

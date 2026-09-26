@@ -95,6 +95,9 @@ describe("SPEC-685 · «Mi perfil» · aviso de la tarifa (frase única, sin val
                 vista={VISTA}
             />,
         );
+        // SPEC-741: la sección arranca recogida; se despliega para llegar a «Guardar tarifa»
+        // (con tarifa sin fijar el encabezado lleva el marcador «requiere atención» → regex).
+        fireEvent.click(screen.getByRole("button", { name: /^Su tarifa/ }));
         fireEvent.click(screen.getByRole("button", { name: /Guardar tarifa/ }));
         expect(await screen.findByText(/Escriba su tarifa/)).toBeTruthy();
         expect(fetchSpy).not.toHaveBeenCalled(); // el 0 NUNCA sale al servidor
