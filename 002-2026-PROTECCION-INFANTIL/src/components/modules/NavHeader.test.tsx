@@ -122,6 +122,24 @@ describe("NavHeader", () => {
         expect(hrefs).not.toContain("/dashboard-publico");
     });
 
+    it("SPEC-742: «Cerrar sesión» vive SOLO en el avatar (cuenta), NUNCA en la hamburguesa — cada control, un trabajo", () => {
+        mockPathname = "/dashboard/padre";
+        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
+        render(<NavHeader />);
+        // La hamburguesa abierta (avatar cerrado) es SOLO navegación del rol: sin logout.
+        abrirNav();
+        expect(
+            screen.queryByText("Cerrar sesión"),
+            "la hamburguesa NO debe ofrecer «Cerrar sesión» — la sesión es cuenta, vive en el avatar",
+        ).toBeNull();
+        // CONTROL POSITIVO: el avatar (cuenta) SÍ lo ofrece — visible también en móvil.
+        abrirCuenta("Padre");
+        expect(
+            screen.getByText("Cerrar sesión"),
+            "el avatar (cuenta) debe ofrecer «Cerrar sesión»",
+        ).toBeTruthy();
+    });
+
     it("SCHOOL_ADMIN NO ve las entradas del área de padres (I-36) en ningún menú", () => {
         mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
         render(<NavHeader />);
