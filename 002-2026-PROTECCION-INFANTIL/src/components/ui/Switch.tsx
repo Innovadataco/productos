@@ -16,7 +16,7 @@ export function Switch({ checked, onChange, disabled, ariaLabel }: SwitchProps) 
             aria-label={ariaLabel}
             disabled={disabled}
             onClick={() => onChange(!checked)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pino focus-visible:ring-offset-2 focus-visible:ring-offset-papel ${
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 checked ? "bg-pino" : "bg-tinta/20"
             } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
         >

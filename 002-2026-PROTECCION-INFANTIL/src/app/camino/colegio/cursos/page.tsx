@@ -209,7 +209,7 @@ export default function PasoCursosColegio() {
                         value={nuevoNombre}
                         onChange={(e) => setNuevoNombre(e.target.value)}
                         placeholder="Nombre del curso"
-                        className="flex-1 rounded-xl border border-tinta/10 bg-white px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-pino dark:bg-tinta/5"
+                        className="flex-1 rounded-xl border border-tinta/10 bg-white px-3 py-2 text-sm text-body ring-accent-input dark:bg-tinta/5"
                         maxLength={80}
                     />
                     <Button
