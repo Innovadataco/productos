@@ -1,7 +1,7 @@
 /**
  * SPEC-114 · Journey sesión — los 5 roles, camino completo (no piezas):
  * entrar con credenciales REALES → aterrizar en el home del rol → menú solo con lo suyo →
- * logo nunca es clic muerto (nunca apunta al pathname actual) → salir con sesión muerta.
+ * logo/«Inicio» va al panel del rol (SPEC-742, nunca a «/» para un logueado) → salir con sesión muerta.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import "../mock-headers";
@@ -81,22 +81,27 @@ describe(`SPEC-114 · sesión de los 5 roles (ciclo ${CICLO})`, { timeout: 30_00
                 }
             }
 
-            // 4. El logo NUNCA es clic muerto: en el home del rol, no apunta al pathname actual (I-38)
+            // 4. SPEC-742 (supersede D-37 PARA EL HOME): el logo/«Inicio» de un LOGUEADO va a
+            //    SU PANEL (destinoLogo), AUNQUE sea la ruta actual — NUNCA a «/». El bug de Jelkin:
+            //    parado en su propio home, el logo caía a la landing PÚBLICA «/» (Diseño bd0e824).
             mockAuthState.sesion = sesion;
+            const { destinoLogo } = await import("@/components/modules/NavHeader");
             const { container } = render(<NavHeader />);
             const logo = container.querySelector("header a");
             const logoHref = logo?.getAttribute("href");
             expect(logoHref, "el logo debe existir").toBeTruthy();
-            expect(logoHref, `el logo no debe ser un clic muerto (${logoHref} === ${home})`).not.toBe(home);
+            // El logo respeta el contrato exportado: panel del rol para un logueado en /dashboard.
+            expect(logoHref, "SPEC-742: el logo va al panel del rol (destinoLogo), no a la página anterior").toBe(destinoLogo({ rol }, home));
+            expect(logoHref, "SPEC-742: un logueado NUNCA cae a «/» (landing pública) desde el logo").not.toBe("/");
 
-            // 4b. D-37 (SPEC-118): por propiedad, NINGÚN enlace visible del header apunta
-            // a la página actual (botón Dashboard incluido) — para los 5 roles.
+            // 4b. Invariante viva (SPEC-742): NINGÚN enlace del header manda a un LOGUEADO a la
+            // landing pública «/» — ni a un destino que el proxy vaya a bloquear para su rol.
             const enlaces = [...container.querySelectorAll("header a[href]")]
                 .map((a) => a.getAttribute("href"))
                 .filter((href): href is string => href !== null);
             expect(enlaces.length, "el header siempre muestra al menos el logo").toBeGreaterThan(0);
             for (const href of enlaces) {
-                expect(href, `D-37: el header no ofrece la página actual (${href} === ${home})`).not.toBe(home);
+                expect(href, `SPEC-742: un logueado no debe tener un enlace a la landing pública (${href})`).not.toBe("/");
             }
             // ...ni un destino que el proxy vaya a bloquear para este rol
             for (const href of enlaces) {

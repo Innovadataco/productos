@@ -150,28 +150,27 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
      * profesional quemado en cualquiera de los dos menús lo mata. Si mañana
      * aparece un tercer renderizador, también.
      */
-    it("`NavHeader` no lleva NINGÚN destino del profesional quemado, en ninguno de sus menús", () => {
+    // SPEC-742: la nav del profesional vive en UN solo menú — la hamburguesa (MobileLink) —,
+    // NUNCA también en el avatar (NavDropdownLink), que quedó de solo cuenta. Antes SPEC-691
+    // los pintaba en los dos; en móvil se veían dos menús con lo mismo (bug de Jelkin).
+    it("`NavHeader` pinta la nav del profesional SOLO en la hamburguesa, no en el avatar, y sin hrefs quemados", () => {
         const header = leerCodigo("src/components/modules/NavHeader.tsx");
         expect(
             /entradasProfesional/.test(header),
-            "Los menús del profesional salen de la fuente única `entradasProfesional`, no de enlaces sueltos.",
+            "La nav del profesional sale de la fuente única `entradasProfesional`, no de enlaces sueltos.",
         ).toBe(true);
+        // La hamburguesa (móvil) SÍ la pinta.
+        expect(
+            new RegExp("entradasProfesional[\\s\\S]{0,400}?<MobileLink\\b").test(header),
+            "La hamburguesa debe pintar `entradasProfesional`.",
+        ).toBe(true);
+        // El avatar NO — es solo cuenta (SPEC-742). Control positivo del arreglo del doble menú.
+        expect(
+            new RegExp("entradasProfesional[\\s\\S]{0,400}?<NavDropdownLink\\b").test(header),
+            "El avatar YA NO debe pintar `entradasProfesional` (SPEC-742: avatar = solo cuenta).",
+        ).toBe(false);
 
-        // SPEC-691: los dos renderizadores consumen la MISMA fuente
-        // (`entradasProfesional`, condicionada por estado). Que uno la use y el otro
-        // no es exactamente la divergencia que la spec cierra.
-        for (const componente of ["NavDropdownLink", "MobileLink"]) {
-            const usaLaFuente = new RegExp(
-                `entradasProfesional[\\s\\S]{0,400}?<${componente}\\b`,
-            ).test(header);
-            expect(
-                usaLaFuente,
-                `<${componente}> no pinta entradasProfesional: ese menú puede decir algo distinto del otro.`,
-            ).toBe(true);
-        }
-
-        // Y ningún href del profesional escrito a mano, sea cual sea el
-        // componente que lo pinte.
+        // Y ningún href del profesional escrito a mano, sea cual sea el componente que lo pinte.
         const quemados = header
             .split("\n")
             .filter((l) => /href="\/(perfil-profesional|dashboard\/profesional)\//.test(l));

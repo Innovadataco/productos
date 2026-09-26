@@ -40,122 +40,112 @@ describe("NavHeader", () => {
         mockPathname = "/";
     });
 
-    it("logo va al home público aunque haya sesión de ADMIN en ruta pública (SPEC-106)", () => {
+    // SPEC-742 · abre el menú de CUENTA (avatar) por el nombre del usuario.
+    const abrirCuenta = (nombre: string) => {
+        const toggle = screen.getByText(nombre).closest("button");
+        if (toggle) fireEvent.click(toggle);
+    };
+    // SPEC-742 · abre la NAV móvil (hamburguesa) por su aria-label.
+    const abrirNav = () => fireEvent.click(screen.getByLabelText("Menú"));
+
+    it("SPEC-106: logo va al home público «/» para un ADMIN en la ZONA PÚBLICA", () => {
+        // En zona pública `destinoLogo` ya devuelve «/» (un interno puede navegar el sitio público).
         mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
         render(<NavHeader />);
-        const logo = screen.getByText("Infantil").closest("a");
-        expect(logo?.getAttribute("href")).toBe("/");
+        expect(screen.getByText("Infantil").closest("a")?.getAttribute("href")).toBe("/");
     });
 
-    it("logo va al panel del rol desde OTRA página del área (SPEC-106); en el home del rol va al home público (I-38, nunca clic muerto)", () => {
-        // SPEC-404 (I-290): el logo ADMIN aterriza en la bandeja (URL propia)
-        // porque `/dashboard/admin` quedó como aterrizaje que redirige a otro
-        // item del menú — usarlo como destino del logo era un clic muerto para
-        // admins con `inicio_admin`.
+    it("SPEC-742: logueado en /dashboard/**, el logo va a su panel — NUNCA a «/», ni en su propio home", () => {
         mockPathname = "/dashboard/admin/reportes";
         mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
         const { unmount } = render(<NavHeader />);
-        let logo = screen.getByText("Infantil").closest("a");
-        expect(logo?.getAttribute("href")).toBe("/dashboard/admin/bandeja");
+        expect(screen.getByText("Infantil").closest("a")?.getAttribute("href")).toBe("/dashboard/admin/bandeja");
         unmount();
 
+        // El bug de Jelkin: parado en su propio home, el logo caía a «/» (landing pública).
+        // SPEC-742: sigue yendo a su panel, jamás a «/».
         mockPathname = "/dashboard/admin/bandeja";
         render(<NavHeader />);
-        logo = screen.getByText("Infantil").closest("a");
-        expect(logo?.getAttribute("href")).toBe("/");
+        expect(screen.getByText("Infantil").closest("a")?.getAttribute("href")).toBe("/dashboard/admin/bandeja");
     });
 
-    // SPEC-317: home de PARENT es /dashboard/padre (zona canónica).
-    it("botón Dashboard apunta a /dashboard/padre para padre autenticado", () => {
-        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
-        render(<NavHeader />);
-        const dashboard = screen.getByText("Dashboard").closest("a");
-        expect(dashboard?.getAttribute("href")).toBe("/dashboard/padre");
-    });
-
-    it("botón Dashboard apunta a /dashboard-publico para anónimos", () => {
+    it("SPEC-742: NO existe el botón «Dashboard» de home en el header (ningún rol, ninguna ruta)", () => {
+        for (const [rol, path] of [["PARENT", "/dashboard/padre/hijos"], ["SCHOOL_ADMIN", "/dashboard-publico"], ["ADMIN", "/dashboard/admin/reportes"]] as const) {
+            mockPathname = path;
+            mockAuth({ id: "1", email: "u@test.com", nombre: "U", rol });
+            const { unmount } = render(<NavHeader />);
+            expect(screen.queryByText("Dashboard"), `no debe haber botón Dashboard (${rol})`).toBeNull();
+            unmount();
+        }
+        // Anónimo tampoco.
+        mockPathname = "/dashboard-publico";
         mockAuth(null);
         render(<NavHeader />);
-        const dashboard = screen.getByText("Dashboard").closest("a");
-        expect(dashboard?.getAttribute("href")).toBe("/dashboard-publico");
+        expect(screen.queryByText("Dashboard")).toBeNull();
     });
 
-    it("SCHOOL_ADMIN NO ve las entradas del área de padres en el menú (I-36)", () => {
-        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
+    it("SPEC-742: el AVATAR es solo CUENTA — cero navegación del rol", () => {
+        mockPathname = "/dashboard/padre";
+        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
-        const toggle = screen.getByText("Colegio").closest("button");
-        if (toggle) fireEvent.click(toggle);
+        abrirCuenta("Padre");
+        // Cuenta: Cambiar contraseña + Cerrar sesión.
+        expect(screen.getByText("Cambiar contraseña").closest("a")?.getAttribute("href")).toBe("/cambiar-password");
+        expect(screen.getByText("Cerrar sesión")).toBeTruthy();
+        // NADA de navegación del rol acá (vive en la hamburguesa / barra lateral).
+        expect(screen.queryByText("Mi panel")).toBeNull();
         expect(screen.queryByText("Círculo de Confianza")).toBeNull();
         expect(screen.queryByText("Mis reportes")).toBeNull();
     });
 
-    // SPEC-317: rutas de PARENT actualizadas a zona canónica /dashboard/padre/*.
-    it("PARENT sí ve las entradas de su área en el menú (I-36)", () => {
-        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
+    it("SPEC-742: el AVATAR del admin es solo cuenta — sin «Panel de administración» ni «Configuración»", () => {
+        mockPathname = "/dashboard/admin/reportes";
+        mockAuth({ id: "1", email: "admin@test.com", nombre: "Admin", rol: "ADMIN" });
         render(<NavHeader />);
-        const toggle = screen.getByText("Padre").closest("button");
-        if (toggle) fireEvent.click(toggle);
-        expect(screen.getByText("Círculo de Confianza").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/circulo-confianza");
-        expect(screen.getByText("Mis reportes").closest("a")?.getAttribute("href")).toBe("/mis-reportes");
+        abrirCuenta("Admin");
+        expect(screen.getByText("Cerrar sesión")).toBeTruthy();
+        expect(screen.queryByText("Panel de administración")).toBeNull();
+        expect(screen.queryByText("Configuración")).toBeNull();
     });
 
-    // SPEC-317: "Mi panel" apunta a /dashboard/padre (zona canónica del padre).
-    it("menú desplegable de padre muestra enlace a Mi panel en /dashboard/padre", () => {
-        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
-        render(<NavHeader />);
-        const toggle = screen.getByText("Padre").closest("button");
-        if (toggle) fireEvent.click(toggle);
-        const link = screen.getByText("Mi panel").closest("a");
-        expect(link?.getAttribute("href")).toBe("/dashboard/padre");
-    });
-
-    // SPEC-118 (D-37, decisión ZEUS): ningún elemento de navegación ofrece un
-    // destino que el proxy bloquea o que es la página actual — para TODOS los roles.
-    it("D-37: el botón Dashboard NO se ofrece al colegio estando en /dashboard/colegio (clic muerto puro)", () => {
-        mockPathname = "/dashboard/colegio";
-        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
-        render(<NavHeader />);
-        expect(screen.queryByText("Dashboard")).toBeNull();
-    });
-
-    it("D-37: el botón Dashboard SÍ se ofrece al colegio fuera de su panel (destino vivo)", () => {
-        mockPathname = "/dashboard-publico";
-        mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
-        render(<NavHeader />);
-        const dashboard = screen.getByText("Dashboard").closest("a");
-        expect(dashboard?.getAttribute("href")).toBe("/dashboard/colegio");
-    });
-
-    // SPEC-317: home de PARENT es /dashboard/padre; el Dashboard es clic muerto solo ahí.
-    it("D-37: el botón Dashboard NO se ofrece al padre estando en /dashboard/padre", () => {
+    it("SPEC-742: la NAV del padre vive en la hamburguesa (móvil), NO «Inicio»→«/» ni «Dashboard»→/dashboard-publico", () => {
         mockPathname = "/dashboard/padre";
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
-        expect(screen.queryByText("Dashboard")).toBeNull();
+        abrirNav();
+        // La nav del rol está acá (una sola vez).
+        expect(screen.getByText("Círculo de Confianza").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/circulo-confianza");
+        expect(screen.getByText("Mis reportes").closest("a")?.getAttribute("href")).toBe("/mis-reportes");
+        // NINGÚN enlace de home equivocado: ni «/» ni /dashboard-publico.
+        const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+        expect(hrefs).not.toContain("/");
+        expect(hrefs).not.toContain("/dashboard-publico");
     });
 
-    it("D-37: el botón Dashboard NO se ofrece al anónimo estando en /dashboard-publico", () => {
-        mockPathname = "/dashboard-publico";
-        mockAuth(null);
+    it("SPEC-742: «Cerrar sesión» vive SOLO en el avatar (cuenta), NUNCA en la hamburguesa — cada control, un trabajo", () => {
+        mockPathname = "/dashboard/padre";
+        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
-        expect(screen.queryByText("Dashboard")).toBeNull();
+        // La hamburguesa abierta (avatar cerrado) es SOLO navegación del rol: sin logout.
+        abrirNav();
+        expect(
+            screen.queryByText("Cerrar sesión"),
+            "la hamburguesa NO debe ofrecer «Cerrar sesión» — la sesión es cuenta, vive en el avatar",
+        ).toBeNull();
+        // CONTROL POSITIVO: el avatar (cuenta) SÍ lo ofrece — visible también en móvil.
+        abrirCuenta("Padre");
+        expect(
+            screen.getByText("Cerrar sesión"),
+            "el avatar (cuenta) debe ofrecer «Cerrar sesión»",
+        ).toBeTruthy();
     });
 
-    it("D-37: el menú de usuario no ofrece la página actual (Mi colegio abierto en /dashboard/colegio)", () => {
-        mockPathname = "/dashboard/colegio";
+    it("SCHOOL_ADMIN NO ve las entradas del área de padres (I-36) en ningún menú", () => {
         mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
-        const { unmount } = render(<NavHeader />);
-        const toggle = screen.getByText("Colegio").closest("button");
-        if (toggle) fireEvent.click(toggle);
-        expect(screen.queryByText("Mi colegio")).toBeNull();
-        unmount();
-
-        // ...pero sí lo ofrece fuera de esa página
-        mockPathname = "/dashboard-publico";
         render(<NavHeader />);
-        const toggle2 = screen.getByText("Colegio").closest("button");
-        if (toggle2) fireEvent.click(toggle2);
-        expect(screen.getByText("Mi colegio").closest("a")?.getAttribute("href")).toBe("/dashboard/colegio");
+        abrirCuenta("Colegio");
+        expect(screen.queryByText("Círculo de Confianza")).toBeNull();
+        expect(screen.queryByText("Mis reportes")).toBeNull();
     });
 
     // ── SPEC-340 (A-68 §5 · T034): el ámbar del escudo ──────────────────────

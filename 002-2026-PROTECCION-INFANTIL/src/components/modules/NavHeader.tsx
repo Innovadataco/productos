@@ -37,22 +37,6 @@ export function destinoLogo(user: { rol: string } | null, pathname: string | nul
     return "/dashboard";
 }
 
-/**
- * SPEC-362 (A-70 · G16): entrada del menú apagada durante el camino. Se ve,
- * dice por qué no responde y no navega a ninguna parte.
- */
-function ItemApagado({ children }: { children: React.ReactNode }) {
-    return (
-        <span
-            data-testid="nav-item-apagado"
-            aria-disabled="true"
-            title="Disponible al terminar de configurar tu cuenta"
-            className="block cursor-not-allowed rounded-lg px-3 py-2 text-sm font-medium text-muted/60"
-        >
-            {children}
-        </span>
-    );
-}
 
 export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
@@ -132,25 +116,16 @@ export function NavHeader() {
 
     const rolBadgeClass = esRolInternoIdc ? "bg-ambar/10 text-estado-ambar" : "bg-tinta/10 text-muted";
 
-    const dashboardHref = user?.rol === "SCHOOL_ADMIN"
-        ? "/dashboard/colegio"
-        : user?.rol === "COMITE_CONVIVENCIA"
-            ? "/dashboard/colegio/comite/casos"
-            : user?.rol === "PARENT"
-                ? "/dashboard/padre" // SPEC-317: zona canónica del padre
-                // SPEC-424 (I-299) + SPEC-425 (A-75 L5): el «Dashboard» del
-                // profesional aterriza en el panel del rol, ya vivo en main.
-                : user?.rol === "PROFESIONAL"
-                    ? "/dashboard/profesional"
-                    : "/dashboard-publico";
+    // SPEC-742: se retiró el botón «Dashboard» de home del header (duplicaba el home que ya
+    // dan la marca y el ítem «Inicio» de la nav). El ítem «Dashboard»=estadísticas del ADMIN
+    // NO es esto (vive en la nav-items del admin) y no se toca.
 
-    // El logo lleva al panel del rol SOLO dentro del área autenticada (/dashboard/**).
-    // En rutas públicas va al home público aunque haya sesión (SPEC-106), EXCEPTO
-    // SCHOOL_ADMIN, cuyo logo siempre va a su panel (D-a de 002-PI-051).
     const logoDestino = destinoLogo(user, pathname ?? null);
-    // I-38 (SPEC-114): el logo NUNCA es un clic muerto — si el destino es la página actual,
-    // va al home público (destino vivo para todos los roles desde SPEC-118/D-37).
-    const logoHref = logoDestino === pathname ? "/" : logoDestino;
+    // SPEC-742: estando LOGUEADO, la marca va SIEMPRE al panel del rol — NUNCA a "/" (la
+    // landing pública). Antes, si el destino era la página actual, caía a "/" (I-38/SPEC-114):
+    // eso mandaba al logueado a la landing pública, el bug que reportó Jelkin. Sin sesión se
+    // conserva la regla vieja (anti-clic-muerto hacia el home público).
+    const logoHref = user ? logoDestino : logoDestino === pathname ? "/" : logoDestino;
 
     // D-37 (SPEC-118): ningún elemento de navegación ofrece un destino que el proxy
     // vaya a bloquear ni la página actual — una sola regla para TODOS los roles y
@@ -188,15 +163,9 @@ export function NavHeader() {
                 <nav className="flex items-center gap-2 sm:gap-3">
                     <ThemeToggle />
 
-                    {esEnlaceNavegable(dashboardHref) && (
-                        <Link
-                            href={dashboardHref}
-                            className="hidden sm:inline-flex rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-tinta/5 transition"
-                        >
-                            Dashboard
-                        </Link>
-                    )}
-
+                    {/* SPEC-742: el botón «Dashboard» de home se retiró — el home ya lo dan la marca
+                        (logo) y el ítem «Inicio» de la nav; tenerlo acá era una tercera entrada al
+                        mismo destino. (El ítem «Dashboard»=estadísticas del admin vive en su nav.) */}
                     {isLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-tinta/10 border-t-cielo" />
                     ) : user ? (
@@ -226,86 +195,10 @@ export function NavHeader() {
                                         </div>
                                     </div>
                                     <div className="py-1">
-                                        {user.rol === "ADMIN" && (
-                                            <>
-                                                {esEnlaceNavegable("/dashboard/admin") && (
-                                                    <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
-                                                        Panel de administración
-                                                    </NavDropdownLink>
-                                                )}
-                                                {esEnlaceNavegable("/dashboard/admin/configuracion") && (
-                                                    <NavDropdownLink href="/dashboard/admin/configuracion" onClick={() => setOpen(false)}>
-                                                        Configuración
-                                                    </NavDropdownLink>
-                                                )}
-                                            </>
-                                        )}
-                                        {user.rol === "SCHOOL_ADMIN" && esEnlaceNavegable("/dashboard/colegio") && (
-                                            <NavDropdownLink href="/dashboard/colegio" onClick={() => setOpen(false)}>
-                                                Mi colegio
-                                            </NavDropdownLink>
-                                        )}
-                                        {user.rol === "OPERADOR" && esEnlaceNavegable("/dashboard/admin") && (
-                                            <NavDropdownLink href="/dashboard/admin" onClick={() => setOpen(false)}>
-                                                Mis casos
-                                            </NavDropdownLink>
-                                        )}
-                                        {user.rol === "COMITE_VALIDACION" && esEnlaceNavegable("/dashboard/admin/comite") && (
-                                            <NavDropdownLink href="/dashboard/admin/comite" onClick={() => setOpen(false)}>
-                                                Mi bandeja
-                                            </NavDropdownLink>
-                                        )}
-                                        {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
-                                            <NavDropdownLink href="/dashboard/colegio/comite/casos" onClick={() => setOpen(false)}>
-                                                {/* SPEC-319 §2.5: un destino, un nombre — "Gestión de casos" (igual que el lateral) */}
-                                                Gestión de casos
-                                            </NavDropdownLink>
-                                        )}
-                                        {/* SPEC-437 (A-75): el desplegable sale de la MISMA fuente que la
-                                            barra lateral — antes `PROFESIONAL_NAV_ITEMS`, ahora
-                                            `entradasProfesional(user.profesional)` (SPEC-691): un solo actor,
-                                            un solo menú, condicionado a su estado. La compuerta debe cerrar
-                                            también acá (móvil/desplegable), no solo en la barra lateral. */}
-                                        {user.rol === "PROFESIONAL" && (
-                                            <>
-                                                {entradasProfesional(user.profesional).filter((item) => esEnlaceNavegable(item.href)).map((item) => (
-                                                    <NavDropdownLink key={item.href} href={item.href} onClick={() => setOpen(false)}>
-                                                        {item.label}
-                                                    </NavDropdownLink>
-                                                ))}
-                                            </>
-                                        )}
-                                        {!esEmpleado && (
-                                            <>
-                                                {enCamino ? (
-                                                    // SPEC-362 (G16): en gris mientras el camino no termina.
-                                                    <>
-                                                        <ItemApagado>Mi panel</ItemApagado>
-                                                        <ItemApagado>Círculo de Confianza</ItemApagado>
-                                                        <ItemApagado>Mis reportes</ItemApagado>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        {esEnlaceNavegable("/dashboard/padre") && (
-                                                            <NavDropdownLink href="/dashboard/padre" onClick={() => setOpen(false)}>
-                                                                Mi panel
-                                                            </NavDropdownLink>
-                                                        )}
-                                                        {esEnlaceNavegable("/dashboard/padre/circulo-confianza") && (
-                                                            <NavDropdownLink href="/dashboard/padre/circulo-confianza" onClick={() => setOpen(false)}>
-                                                                Círculo de Confianza
-                                                            </NavDropdownLink>
-                                                        )}
-                                                        {esEnlaceNavegable("/mis-reportes") && (
-                                                            <NavDropdownLink href="/mis-reportes" onClick={() => setOpen(false)}>
-                                                                Mis reportes
-                                                            </NavDropdownLink>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </>
-                                        )}
-                                        <hr className="my-1 border-tinta/10" />
+                                        {/* SPEC-742: el avatar es SOLO cuenta — la navegación del rol vive en
+                                            UN solo lugar (la hamburguesa en móvil / la barra lateral en desktop),
+                                            NUNCA también acá. Antes el dropdown repetía los ítems del rol, y en
+                                            móvil se veían dos menús con lo mismo. Acá quedan solo cuenta y sesión. */}
                                         {/* I-33 (SPEC-108): /cambiar-password estaba huérfana — entrada visible.
                                             SPEC-647 (D-136): sin Google, toda cuenta tiene contraseña local → sin el gate
                                             de «cuenta sin clave» que existía para las cuentas OAuth. */}
@@ -354,8 +247,10 @@ export function NavHeader() {
             {mobileOpen && (
                 <div className="sm:hidden border-t border-tinta/10 bg-papel px-4 py-3 shadow-lg">
                     <div className="flex flex-col gap-2">
-                        {esEnlaceNavegable("/") && <MobileLink href="/" onClick={() => setMobileOpen(false)}>Inicio</MobileLink>}
-                        {esEnlaceNavegable("/dashboard-publico") && <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Dashboard</MobileLink>}
+                        {/* SPEC-742: se retiran «Inicio»→"/" y «Dashboard»→/dashboard-publico — los dos
+                            enlaces de home equivocados para el logueado (a la landing pública y al dashboard
+                            público). El home del logueado es su panel de rol: lo dan la marca y el primer
+                            ítem de la nav del rol (abajo). Un anónimo no ve esta hamburguesa autenticada. */}
                         {user ? (
                             <>
                                 {!esEmpleado && (
@@ -396,16 +291,10 @@ export function NavHeader() {
                                         ))}
                                     </>
                                 )}
-                                <button
-                                    onClick={async () => {
-                                        setMobileOpen(false);
-                                        await logout();
-                                        window.location.href = "/";
-                                    }}
-                                    className="text-left text-sm font-medium text-muted px-3 py-2"
-                                >
-                                    Cerrar sesión
-                                </button>
+                                {/* SPEC-742: «Cerrar sesión» NO va acá — la sesión es CUENTA, y la cuenta vive
+                                    en el avatar, que es visible también en móvil (solo se oculta el nombre, no
+                                    el botón). Tenerlo también en la hamburguesa era el mismo control dos veces;
+                                    «cada control, un trabajo». La hamburguesa es SOLO navegación del rol. */}
                             </>
                         ) : (
                             esEnlaceNavegable("/login") && <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>
