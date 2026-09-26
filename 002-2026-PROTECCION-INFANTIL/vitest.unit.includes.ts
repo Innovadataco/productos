@@ -59,8 +59,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/perfil-profesional/completar/voz.candado.test.ts",
     // SPEC-704: la ficha no dice «suba»/«firmada» de la autorización (se ACEPTA en pantalla). fs-read puro.
     "src/app/perfil-profesional/completar/autorizacion-acepta-no-suba.candado.test.ts",
-    // SPEC-705: el enlace de la ficha lleva ?releer=1 cuando ya aceptó (render, mocks; sin BD).
-    "src/app/perfil-profesional/completar/ver-autorizacion-releer.candado.test.tsx",
+    // SPEC-740: el registro del profesional es un asistente de 3 pasos, espejo del /camino (render + datos).
+    "src/components/modules/profesional/wizard-profesional.candado.test.tsx",
     // SPEC-705: la pantalla de autorización respeta releer (solo lectura vs redirige; mocks, sin BD).
     "src/app/perfil-profesional/autorizacion/releer-solo-lectura.candado.test.tsx",
     // SPEC-505 (CEO · Jelkin): el ÁREA del profesional habla usted (sin voseo);
