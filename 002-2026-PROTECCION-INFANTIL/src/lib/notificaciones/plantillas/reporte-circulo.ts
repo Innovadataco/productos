@@ -7,6 +7,11 @@
  * identificadores o nombres de contacto con caracteres especiales.
  */
 
+// SPEC-574 (I-357): el rótulo de categoría DERIVA del mapa canónico `CATEGORIAS_LABELS` — este era el
+// tercer mapa paralelo de rótulos y, peor, en un correo A UN PADRE sobre un menor de su círculo tenía
+// «Happy slapping»/«Stalking» en inglés crudo. Una sola fuente: si un rótulo cambia, cambia acá también.
+import { CATEGORIAS_LABELS } from "@/lib/labels";
+
 export interface RenderEmailReporteCirculoInput {
     nombreContacto: string;
     identificador: string;
@@ -20,24 +25,6 @@ export interface RenderEmailReporteCirculoOutput {
     asunto: string;
     cuerpo: string;
 }
-
-const CATEGORIA_ETIQUETA: Record<string, string> = {
-    CONTACTO_INSISTENTE: "Contacto insistente",
-    SOLICITUD_MATERIAL: "Solicitud de material",
-    OFRECIMIENTO_REGALOS: "Ofrecimiento de regalos",
-    SUPLANTACION_IDENTIDAD: "Suplantación de identidad",
-    SOLICITUD_ENCUENTRO: "Solicitud de encuentro",
-    COMPARTIMIENTO_SEXUAL: "Compartimiento sexual",
-    OTRO: "Otro",
-    EXTORSION: "Extorsión",
-    CONTENIDO_GENERADO_IA: "Contenido generado por IA",
-    DIFUSION_NO_CONSENTIDA: "Difusión no consentida",
-    DOXING: "Doxing",
-    SPAM: "Spam",
-    CIBERACOSO: "Ciberacoso",
-    HAPPY_SLAPPING: "Happy slapping",
-    STALKING: "Stalking",
-};
 
 function escapeMarkdown(text: string): string {
     return text
@@ -53,7 +40,7 @@ function escapeMarkdown(text: string): string {
 
 function formatearCategoria(categoria: string): string {
     if (!categoria) return "Categoría en revisión";
-    return CATEGORIA_ETIQUETA[categoria] ?? categoria;
+    return CATEGORIAS_LABELS[categoria] ?? categoria;
 }
 
 function textoReportes(totalReportes: number): string {
