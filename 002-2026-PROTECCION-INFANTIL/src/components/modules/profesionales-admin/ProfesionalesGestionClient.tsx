@@ -321,7 +321,7 @@ function TabCuentas() {
                         </label>
                         <textarea
                             id="motivo-levantar"
-                            className="mb-4 w-full rounded-2xl border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                            className="mb-4 w-full rounded-2xl border border-tinta/15 bg-tinta/[0.03] px-4 py-2 text-sm text-body ring-accent-input"
                             rows={3}
                             value={motivoLevantar}
                             onChange={(e) => setMotivoLevantar(e.target.value)}

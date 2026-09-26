@@ -191,7 +191,7 @@ export function DocumentoNuevoClient({ data }: { data: DocumentoNuevoData }) {
                             </label>
                             <textarea
                                 id="obs-devolver"
-                                className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                                className="mt-1 w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body ring-accent-input"
                                 rows={3}
                                 value={observacion}
                                 onChange={(e) => setObservacion(e.target.value)}

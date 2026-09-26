@@ -445,7 +445,7 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
                     >
                         <div>
                             <textarea
-                                className="w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body focus:outline-none focus:ring-2 focus:ring-cielo"
+                                className="w-full rounded-xl border border-tinta/15 bg-tinta/[0.03] p-3 text-sm text-body ring-accent-input"
                                 rows={4}
                                 value={presentacion}
                                 onChange={(e) => setPresentacion(e.target.value)}
