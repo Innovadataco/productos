@@ -5,9 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
-import { navParaRol, aplanar } from "@/lib/nav/para-rol";
+import { navParaRol } from "@/lib/nav/para-rol";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { Guardian } from "@/components/ui/Guardian";
 
 /**
@@ -42,7 +41,6 @@ export function NavHeader() {
     const { user, isLoading, logout } = useAuth();
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
-    const [mobileOpen, setMobileOpen] = useState(false);
     // SPEC-340 (A-68 §5): el ámbar del escudo — SOLO para el padre, mientras
     // tenga alertas sin ver (del círculo o de sus hijos). Se consulta al montar
     // y al recuperar el foco; sin polling agresivo.
@@ -136,24 +134,14 @@ export function NavHeader() {
         esDestinoPermitidoPorRol(user?.rol, href) &&
         (!enCamino || SIEMPRE_VIVAS.includes(href));
 
-    // SPEC-744: toda la nav de este header sale de la fuente única `navParaRol`.
-    // ANÓNIMO (§3-bis Diseño): la superficie pública vive en el header, ambos tamaños,
-    // SIN hamburguesa — «Estadísticas públicas» sale de la fuente para que no se vuelva
-    // a quemar (fue la regresión 742→743).
+    // SPEC-744: la nav del LOGUEADO ya NO vive en el header — vive en la barra lateral
+    // (escritorio) y la barra inferior (móvil) por rol, que consumen `navParaRol`/
+    // `navMovilParaRol` desde sus layouts (con los módulos que este header global no tiene).
+    // La hamburguesa interina se retiró: el header del logueado es solo marca (logo) + avatar
+    // de cuenta. La ANÓNIMA sí queda acá (§3-bis Diseño): la superficie pública en el header,
+    // ambos tamaños, sin hamburguesa — «Estadísticas públicas» sale de la fuente única para
+    // que no se vuelva a quemar (regresión 742→743); el candado (A) anónimo la exige.
     const navAnonimo = navParaRol(null);
-    // LOGUEADO (INTERINO, hasta la barra inferior por rol de Diseño/Dev 1): la
-    // hamburguesa móvil. NavHeader es GLOBAL y NO tiene los módulos del usuario, así
-    // que solo resuelve bien los roles cuya nav no depende de módulos (PADRE,
-    // PROFESIONAL). Los internos/colegio dependen de módulo → sin módulos `navParaRol`
-    // devuelve vacío y no se pinta hamburguesa: su nav móvil llega con la barra inferior
-    // por rol (que vive en su layout, con módulos); el logo los devuelve a su panel
-    // mientras tanto. Se aplana (barra sin acordeones) y se pasa por `esEnlaceNavegable`
-    // (proxy ∧ no-página-actual ∧ apagado en el camino guiado, SPEC-362).
-    const navLogueado = user
-        ? aplanar(navParaRol(user.rol, { profesional: user.profesional, pathname })).filter(
-            (item) => item.href !== "#" && esEnlaceNavegable(item.href),
-        )
-        : [];
 
 
     return (
@@ -254,43 +242,10 @@ export function NavHeader() {
                             )}
                         </>
                     )}
-
-                    {/* SPEC-744: la hamburguesa es SOLO del logueado (el anónimo vive en el header,
-                        §3-bis). Y solo si hay nav que mostrar — los roles internos/colegio, sin
-                        módulos en este header global, resuelven vacío y no la pintan. */}
-                    {navLogueado.length > 0 && (
-                        <Tooltip content="Menú">
-                            <button
-                                className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl glass-input text-body"
-                                onClick={() => setMobileOpen((v) => !v)}
-                                aria-label="Menú"
-                            >
-                                {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
-                            </button>
-                        </Tooltip>
-                    )}
+                    {/* SPEC-744: sin hamburguesa. La nav móvil del logueado la da la barra inferior
+                        por rol (Diseño §3-bis); acá el logueado solo tiene marca + avatar de cuenta. */}
                 </nav>
             </div>
-
-            {mobileOpen && navLogueado.length > 0 && (
-                <div className="sm:hidden border-t border-tinta/10 bg-papel px-4 py-3 shadow-lg">
-                    <div className="flex flex-col gap-2">
-                        {/* SPEC-744: la nav del logueado sale de `navParaRol` (fuente única) — CERO
-                            listas a mano (el candado `nav-superficie-unica` rompe CI si alguna
-                            superficie vuelve a quemar destinos de nav). Antes acá vivían listas por
-                            rol escritas a mano —el padre STALE («Mi panel/Círculo de Confianza/Mis
-                            reportes»), distinta de PADRE_NAV_ITEMS—: la desincronización que cazó
-                            Jelkin. INTERINO: cuando llegue la barra inferior por rol (con módulos,
-                            Diseño §3-bis) esta hamburguesa se retira. «Cerrar sesión» vive en el
-                            avatar (cuenta), no acá (SPEC-742). */}
-                        {navLogueado.map((item) => (
-                            <MobileLink key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>
-                                {item.label}
-                            </MobileLink>
-                        ))}
-                    </div>
-                </div>
-            )}
         </header>
     );
 }
@@ -315,46 +270,10 @@ function NavDropdownLink({
     );
 }
 
-function MobileLink({
-    href,
-    onClick,
-    children,
-}: {
-    href: string;
-    onClick: () => void;
-    children: React.ReactNode;
-}) {
-    return (
-        <Link
-            href={href}
-            onClick={onClick}
-            className="block rounded-lg px-3 py-2 text-sm font-medium text-body hover:bg-tinta/5 transition"
-        >
-            {children}
-        </Link>
-    );
-}
-
 function ChevronIcon({ className }: { className?: string }) {
     return (
         <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-    );
-}
-
-function MenuIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-    );
-}
-
-function XIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
     );
 }
