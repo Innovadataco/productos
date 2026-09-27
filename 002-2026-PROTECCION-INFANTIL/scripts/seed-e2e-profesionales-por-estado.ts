@@ -155,8 +155,8 @@ function hashInutilizable(): Promise<string> {
     return hashPassword(randomBytes(32).toString("hex"));
 }
 
-/** Usuario demo idempotente. Devuelve id + si se creó. */
-async function upsertUsuarioDemo(
+/** Usuario demo idempotente. Devuelve id + si se creó. Exportado: lo reusa el fixture HABILITADO (SPEC-741). */
+export async function upsertUsuarioDemo(
     tx: Prisma.TransactionClient,
     email: string,
     nombre: string,
