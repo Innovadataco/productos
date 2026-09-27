@@ -23,12 +23,12 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/inicio", label: "Inicio", modulo: "inicio_admin" },
     // SPEC-404 (I-290): URL propia para la bandeja. `/dashboard/admin` quedó
     // como aterrizaje que redirige a Inicio o Bandeja según módulo.
-    { href: "/dashboard/admin/bandeja", label: "Bandeja de reportes", modulo: "bandeja_reportes" },
+    { href: "/dashboard/admin/bandeja", label: "Bandeja de reportes", labelCorto: "Bandeja", modulo: "bandeja_reportes" },
     { href: "/dashboard/admin/spam", label: "Revisión de spam", modulo: "revision_spam" },
     { href: "/dashboard/admin/comite", label: "Comité", modulo: "comite_bandeja" },
     // SPEC-744 (Diseño, aprob. Jelkin): «Estadísticas» —no «Dashboard» (techie)— casa con
     // el rótulo del colegio y no reaviva la ambigüedad de «Dashboard» que 742 limpió.
-    { href: "/dashboard/admin/estadisticas", label: "Estadísticas", modulo: "estadisticas" },
+    { href: "/dashboard/admin/estadisticas", label: "Estadísticas", labelCorto: "Cifras", modulo: "estadisticas" },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", modulo: "centro_control_ia" },
     { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
     // SPEC-435 (Jelkin vivo 04-09): cuentas VERIFICADOR con su user y pass —
@@ -80,10 +80,10 @@ export const COMITE_NAV_TABS: NavItem[] = [
 // Retirados: Onboarding, Materias y Subir lista (quedan accesibles por flujo, no por menú).
 export const COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio", label: "Inicio", modulo: "colegios" },
-    { href: "/dashboard/colegio/estadisticas", label: "Estadísticas", modulo: "colegios_gestion" },
+    { href: "/dashboard/colegio/estadisticas", label: "Estadísticas", labelCorto: "Cifras", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/alertas", label: "Alertas", modulo: "colegios_gestion" },
     { href: "/dashboard/colegio/cursos", label: "Cursos", modulo: "colegios_gestion" },
-    { href: "/dashboard/colegio/comite/casos", label: "Casos comité", modulo: "colegios_comite_bandeja" },
+    { href: "/dashboard/colegio/comite/casos", label: "Casos comité", labelCorto: "Casos", modulo: "colegios_comite_bandeja" },
     {
         href: "#",
         label: "Usuarios",
@@ -106,7 +106,7 @@ export const COLEGIO_NAV_ITEMS: NavItem[] = [
 export const COMITE_COLEGIO_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/colegio/comite", label: "Inicio", modulo: "colegios_comite_bandeja" },
     { href: "/dashboard/colegio/comite/estadisticas", label: "Estadísticas", modulo: "colegios_comite_bandeja" },
-    { href: "/dashboard/colegio/comite/casos", label: "Gestión de casos", modulo: "colegios_comite_bandeja" },
+    { href: "/dashboard/colegio/comite/casos", label: "Gestión de casos", labelCorto: "Casos", modulo: "colegios_comite_bandeja" },
 ];
 
 // SPEC-231 (002-PI-131): menú del padre.
@@ -134,7 +134,7 @@ export interface PadreNavItem {
 //    redirigen con ancla para no romper enlaces.
 export const PADRE_NAV_ITEMS: PadreNavItem[] = [
     { href: "/dashboard/padre", label: "Inicio" },
-    { href: "/dashboard/padre/hijos", label: "A quién protejo" }, // SPEC-325
+    { href: "/dashboard/padre/hijos", label: "A quién protejo", labelCorto: "Protejo" }, // SPEC-325
     { href: "/dashboard/padre/circulo-confianza", label: "A quién vigilo" }, // SPEC-325 (antes "Círculo confianza")
     {
         // Nodo expandible (href "#", no navegable — patrón "Usuarios" del colegio).
@@ -154,7 +154,7 @@ export const PADRE_NAV_ITEMS: PadreNavItem[] = [
         label: "Ayuda profesional",
         iconKey: "ayuda-profesional", // SPEC-744: ícono distinto del grupo (ver «Usuarios»)
         children: [
-            { href: "/dashboard/padre/profesionales", label: "Encontrar psicólogo" },
+            { href: "/dashboard/padre/profesionales", label: "Encontrar psicólogo", labelCorto: "Psicólogos" },
             { href: "/dashboard/padre/citas", label: "Mis citas" },
         ],
     },

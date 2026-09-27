@@ -236,6 +236,18 @@ describe("navMovilParaRol · barra móvil {principales≤4, resto}, DATA de la f
         expect(principales).toEqual(full.slice(0, 4));
         expect(resto).toEqual(full.slice(4));
     });
+
+    it("labelCorto (mock, Diseño) propaga a los principales; el no sembrado no lo lleva (fallback a label)", () => {
+        const padre = navMovilParaRol("PARENT").principales;
+        expect(padre.find((e) => e.href === "/dashboard/padre/hijos")?.labelCorto).toBe("Protejo");
+        expect(padre.find((e) => e.href === "/dashboard/padre/profesionales")?.labelCorto).toBe("Psicólogos");
+        // «Inicio» del padre no tiene labelCorto → la barra usa el label completo (labelCorto ?? label).
+        expect(padre.find((e) => e.href === "/dashboard/padre")?.labelCorto).toBeUndefined();
+        // Admin: «Bandeja de reportes»→«Bandeja», «Estadísticas»→«Cifras».
+        const admin = navMovilParaRol("ADMIN", ctxDe("ADMIN")).principales;
+        expect(admin.find((e) => e.href === "/dashboard/admin/bandeja")?.labelCorto).toBe("Bandeja");
+        expect(admin.find((e) => e.href === "/dashboard/admin/estadisticas")?.labelCorto).toBe("Cifras");
+    });
 });
 
 describe("PRINCIPALES_MOVIL · higiene del dato (no lista a mano que se desincroniza)", () => {
