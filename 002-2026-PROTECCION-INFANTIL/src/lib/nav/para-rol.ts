@@ -23,6 +23,7 @@ import {
     COMITE_COLEGIO_NAV_ITEMS,
     PADRE_NAV_ITEMS,
     ANONIMO_NAV_ITEMS,
+    PRINCIPALES_MOVIL,
     type NavItem,
     type PadreNavItem,
 } from "@/lib/nav-items";
@@ -138,4 +139,64 @@ export function navParaRol(rol: string | null | undefined, ctx: CtxNav = {}): Na
  */
 export function aplanar(items: NavEntry[]): NavEntry[] {
     return items.flatMap((item) => (item.children && item.children.length > 0 ? item.children : [item]));
+}
+
+/**
+ * La partición de la barra móvil: los ≤4 destinos principales + el resto (para el «Más»).
+ * `principales` son HOJAS (planas, con promoción de hojas de grupos). `resto` CONSERVA la
+ * estructura de grupos —un grupo va entero (menos los hijos ya promovidos), las hojas sueltas
+ * como ítem— para que el «Más» pinte cada grupo como sección (encabezado + hijos).
+ */
+export interface NavMovil {
+    principales: NavEntry[];
+    resto: NavEntry[];
+}
+
+/**
+ * SPEC-744 · la barra inferior móvil: `navMovilParaRol(rol, ctx)` → {principales≤4, resto}.
+ *
+ * Parte de la nav del rol YA gateada (`aplanar(navParaRol(rol, ctx))` — módulo/estado/proxy
+ * aplicados, grupos aplanados a sus hojas). Los PRINCIPALES salen de `PRINCIPALES_MOVIL[rol]`
+ * (data curada por Jelkin, b389037), en su orden, intersectada con lo gateado (un principal
+ * cuyo módulo no está concedido simplemente no aparece → puede quedar <4). Sin config para el
+ * rol (OPERADOR/COMITE_VALIDACION) el default es «los primeros ≤4 de la nav gateada». El resto
+ * conserva el orden de la lista.
+ *
+ * Es la MISMA fuente que el lateral (cero lista a mano en la barra); el candado de dato vive
+ * en `para-rol.test.ts` y el de render (la barra pinta EXACTO estos principales) es del
+ * componente BarraInferior (reparto con Dev-1). VISIBILIDAD, no acceso.
+ */
+export function navMovilParaRol(rol: string | null | undefined, ctx: CtxNav = {}): NavMovil {
+    const tree = navParaRol(rol, ctx); // árbol gateado (grupos conservados)
+    const plano = aplanar(tree); // hojas gateadas (para elegir los principales)
+    const orden = rol ? PRINCIPALES_MOVIL[rol] : undefined;
+
+    let principales: NavEntry[];
+    if (!orden) {
+        // Sin curaduría: las primeras ≤4 hojas en orden de la lista (FORMA §3, familia admin).
+        principales = plano.slice(0, 4);
+    } else {
+        const porHref = new Map(plano.map((e) => [e.href, e]));
+        principales = [];
+        for (const href of orden) {
+            const entrada = porHref.get(href);
+            if (entrada) principales.push(entrada); // omitido si el rol no lo tiene gateado
+            if (principales.length === 4) break;
+        }
+    }
+    const enPrincipales = new Set(principales.map((e) => e.href));
+
+    // `resto` CONSERVA los grupos (Dev-1 los pinta como sección en el «Más»): un grupo va
+    // entero menos los hijos ya promovidos a principal; si le quedan hijos, se incluye con
+    // ellos; si no, se omite. Las hojas sueltas van como ítem. NO se aplana.
+    const resto: NavEntry[] = [];
+    for (const item of tree) {
+        if (item.children && item.children.length > 0) {
+            const hijos = item.children.filter((h) => !enPrincipales.has(h.href));
+            if (hijos.length > 0) resto.push({ ...item, children: hijos });
+        } else if (!enPrincipales.has(item.href)) {
+            resto.push(item);
+        }
+    }
+    return { principales, resto };
 }

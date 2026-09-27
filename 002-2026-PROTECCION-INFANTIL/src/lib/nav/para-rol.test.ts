@@ -18,8 +18,26 @@ import {
     COMITE_COLEGIO_NAV_ITEMS,
     PADRE_NAV_ITEMS,
     ANONIMO_NAV_ITEMS,
+    PRINCIPALES_MOVIL,
 } from "@/lib/nav-items";
-import { navParaRol, aplanar } from "./para-rol";
+import { navParaRol, aplanar, navMovilParaRol } from "./para-rol";
+
+// Todos los módulos de una lista (incl. hijos) — para simular un rol con acceso completo.
+const modsDe = (items: Array<{ modulo?: string; children?: Array<{ modulo?: string }> }>): string[] => [
+    ...new Set(
+        items.flatMap((i) => [i.modulo, ...((i.children ?? []).map((c) => c.modulo))]).filter((m): m is string => !!m),
+    ),
+];
+const MODS_ADMIN = modsDe(ADMIN_NAV_ITEMS);
+const MODS_COLEGIO = modsDe(COLEGIO_NAV_ITEMS);
+const MODS_COMITE_COLEGIO = modsDe(COMITE_COLEGIO_NAV_ITEMS);
+const ctxDe = (rol: string) => {
+    if (rol === "PROFESIONAL") return { profesional: { estado: "ACTIVO", habilitado: true } };
+    if (rol === "SCHOOL_ADMIN") return { modulosPermitidos: MODS_COLEGIO };
+    if (rol === "COMITE_CONVIVENCIA") return { modulosPermitidos: MODS_COMITE_COLEGIO };
+    if (rol === "PARENT") return {};
+    return { modulosPermitidos: MODS_ADMIN };
+};
 
 describe("navParaRol · anónimo (sin sesión)", () => {
     it("devuelve la superficie pública (Estadísticas públicas → /dashboard-publico)", () => {
@@ -145,8 +163,99 @@ describe("navParaRol · higiene del contrato", () => {
             expect(e).not.toHaveProperty("modulo");
             expect(typeof e.href).toBe("string");
             expect(typeof e.label).toBe("string");
-            // iconKey siempre presente; por defecto = href (contrato SPEC-744 con Dev 1).
-            expect(e.iconKey).toBe(e.href);
+            // iconKey SIEMPRE presente y no vacía (por defecto = href; los grupos «#» llevan
+            // una semántica sembrada — el default href se prueba en el bloque del anónimo).
+            expect(typeof e.iconKey).toBe("string");
+            expect(e.iconKey.length).toBeGreaterThan(0);
         }
+    });
+});
+
+describe("navMovilParaRol · barra móvil {principales≤4, resto}, DATA de la fuente", () => {
+    const ROLES_CON_CONFIG = Object.keys(PRINCIPALES_MOVIL);
+
+    it("cada rol con config: los principales == Jelkin (b389037), en orden, ≤4", () => {
+        for (const rol of ROLES_CON_CONFIG) {
+            const { principales } = navMovilParaRol(rol, ctxDe(rol));
+            expect(principales.map((e) => e.href), `principales de ${rol}`).toEqual(PRINCIPALES_MOVIL[rol]);
+            expect(principales.length).toBeLessThanOrEqual(4);
+        }
+    });
+
+    it("partición: principales ∪ aplanar(resto) == nav gateada aplanada, sin duplicados", () => {
+        for (const rol of ROLES_CON_CONFIG) {
+            const ctx = ctxDe(rol);
+            const full = aplanar(navParaRol(rol, ctx)).map((e) => e.href);
+            const { principales, resto } = navMovilParaRol(rol, ctx);
+            // resto conserva grupos → se aplana para comparar el CONJUNTO de hojas.
+            const union = [...principales, ...aplanar(resto)].map((e) => e.href);
+            expect([...union].sort()).toEqual([...full].sort()); // mismo conjunto
+            expect(union.length).toBe(full.length); // disjuntos (sin duplicados)
+        }
+    });
+
+    it("resto CONSERVA los grupos (no aplana): el «Más» los pinta como sección", () => {
+        // Colegio «Usuarios»: sin hijos promovidos → va ENTERO al resto (grupo con children).
+        const { resto } = navMovilParaRol("SCHOOL_ADMIN", ctxDe("SCHOOL_ADMIN"));
+        expect(resto.find((e) => e.label === "Usuarios")?.children?.map((c) => c.href)).toEqual([
+            "/dashboard/colegio/profesores",
+            "/dashboard/colegio/comite/integrantes",
+        ]);
+        // Padre: /reportar y /profesionales se promovieron → los grupos quedan en el resto con
+        // el hijo que NO se promovió (Mis expedientes / Mis citas).
+        const { resto: restoPadre } = navMovilParaRol("PARENT");
+        expect(restoPadre.find((e) => e.label === "Reportar")?.children?.map((c) => c.href)).toEqual([
+            "/dashboard/padre/expedientes",
+        ]);
+        expect(restoPadre.find((e) => e.label === "Ayuda profesional")?.children?.map((c) => c.href)).toEqual([
+            "/dashboard/padre/citas",
+        ]);
+    });
+
+    it("padre PROMUEVE hojas de grupos: Reportar→/reportar y Psicólogos→/profesionales, sin «#»", () => {
+        const hrefs = navMovilParaRol("PARENT").principales.map((e) => e.href);
+        expect(hrefs).toContain("/dashboard/padre/reportar");
+        expect(hrefs).toContain("/dashboard/padre/profesionales");
+        expect(hrefs).not.toContain("#");
+    });
+
+    it("los principales van GATEADOS: un módulo no concedido cae del principal (no rebota)", () => {
+        const sinComite = MODS_ADMIN.filter((m) => m !== "comite_bandeja");
+        const { principales } = navMovilParaRol("ADMIN", { modulosPermitidos: sinComite });
+        expect(principales.map((e) => e.href)).toEqual([
+            "/dashboard/admin/inicio",
+            "/dashboard/admin/bandeja",
+            "/dashboard/admin/estadisticas",
+        ]); // «Comité» cayó por falta de módulo; los otros 3 siguen, en orden
+    });
+
+    it("sin config (OPERADOR/COMITE_VALIDACION): primeros ≤4 de la nav gateada", () => {
+        const ctx = { modulosPermitidos: ["bandeja_reportes", "revision_spam"] };
+        const full = aplanar(navParaRol("OPERADOR", ctx));
+        const { principales, resto } = navMovilParaRol("OPERADOR", ctx);
+        expect(principales).toEqual(full.slice(0, 4));
+        expect(resto).toEqual(full.slice(4));
+    });
+});
+
+describe("PRINCIPALES_MOVIL · higiene del dato (no lista a mano que se desincroniza)", () => {
+    it("cada rol: ≤4 hrefs, y cada uno EXISTE en la nav completa del rol (no stale/typo)", () => {
+        for (const [rol, hrefs] of Object.entries(PRINCIPALES_MOVIL)) {
+            expect(hrefs.length, `${rol} debe tener ≤4 principales`).toBeLessThanOrEqual(4);
+            const full = new Set(aplanar(navParaRol(rol, ctxDe(rol))).map((e) => e.href));
+            for (const href of hrefs) {
+                expect(full.has(href), `${rol}: «${href}» no está en su nav (stale/typo)`).toBe(true);
+            }
+        }
+    });
+});
+
+describe("iconKey semántica en los grupos «#» (SPEC-744, ícono distinto del lateral)", () => {
+    it("cada grupo lleva su iconKey (no colisionan en «#»)", () => {
+        const padre = navParaRol("PARENT");
+        expect(padre.find((e) => e.label === "Reportar")?.iconKey).toBe("reportar-grupo");
+        expect(padre.find((e) => e.label === "Ayuda profesional")?.iconKey).toBe("ayuda-profesional");
+        const colegio = navParaRol("SCHOOL_ADMIN", { modulosPermitidos: MODS_COLEGIO });
+        expect(colegio.find((e) => e.label === "Usuarios")?.iconKey).toBe("usuarios");
     });
 });
