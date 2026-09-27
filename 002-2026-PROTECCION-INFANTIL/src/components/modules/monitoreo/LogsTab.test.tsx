@@ -124,6 +124,9 @@ describe("LogsTab", () => {
             expect(screen.getByText(/Baje el nivel mínimo/i)).toBeTruthy();
             // Control positivo: NO se muestra el de filtro cuando no hay filtros.
             expect(screen.queryByText("No hay logs con estos filtros")).toBeNull();
+            // Diseño (cert #700): la NOTA persistente de scope (estado c, >0) NO debe salir
+            // acá — el empty-state ya lleva la explicación WARN+; nada de decirlo dos veces.
+            expect(screen.queryByText(/Solo se guardan avisos y errores \(WARN\+\)/)).toBeNull();
         });
 
         it("(a) con filtros + 0 filas: mensaje de FILTRO, NO el de sistema-sano", async () => {
