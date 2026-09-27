@@ -195,4 +195,14 @@ export class MonitoreoRepository {
               AND indexname NOT LIKE 'pg_%'
         `;
     }
+
+    /**
+     * SPEC-739: claves de `ModuloPermisible` presentes en la BD (solo lectura).
+     * Para el guardián blando de módulos huérfanos en pi-monitor — la decisión de
+     * cuáles son huérfanas la toma el helper puro `clavesModuloHuerfanas`.
+     */
+    async leerClavesModuloPermisible(): Promise<string[]> {
+        const filas = await this.db.moduloPermisible.findMany({ select: { clave: true } });
+        return filas.map((f) => f.clave);
+    }
 }
