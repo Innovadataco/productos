@@ -10,7 +10,8 @@
  * el probe de BD delega en `MonitoreoRepository`, y el piggyback/smoke
  * delega en `MonitoreoRepository` + `ClasificacionIARepository`.
  *
- * Señales: app | worker | bd | ollama_ping | ollama_smoke | tailscale.
+ * Señales: app | worker | bd | ollama_ping | ollama_smoke | tailscale | indices |
+ * notif_pendientes_vencidas | modulos_huerfanos (SPEC-739) | tick-vida.
  */
 import { MonitoreoRepository } from "../dal/repositories/monitoreo.ts";
 import { ClasificacionIARepository } from "../dal/repositories/clasificacion-ia.ts";
@@ -18,6 +19,7 @@ import { getParametroSistema } from "../parametros.ts";
 import { leerHeartbeatWorker } from "../worker-heartbeat.ts";
 import { leerAntiguedadTickSeg } from "./tick-vida.ts";
 import { contarPendientesVencidas } from "../notificaciones/metricas.ts";
+import { clavesModuloHuerfanas } from "../permisos-catalogo.ts";
 
 // SPEC-291 (002-PI-191): 7 nuevas señales por tick-vida (workers y app propios).
 export const SENALES_TICK_VIDA = [
@@ -49,6 +51,8 @@ const NOMBRE_CONTENEDOR_POR_SENAL: Record<SenalTickVida, string> = {
 export const SENALES_MONITOREO = [
     "app", "worker", "bd", "ollama_ping", "ollama_smoke", "tailscale", "indices",
     "notif_pendientes_vencidas",
+    // SPEC-739: guardián BLANDO de módulos huérfanos (drift catálogo BD ↔ código).
+    "modulos_huerfanos",
     ...SENALES_TICK_VIDA,
 ] as const;
 export type SenalMonitoreo = (typeof SENALES_MONITOREO)[number];
@@ -354,6 +358,42 @@ export async function probeNotifPendientesVencidas({
             ok: false,
             latenciaMs: Date.now() - inicio,
             detalle: `error contando pendientes vencidas: ${mensajeError(error)}`,
+            metodo: "PING",
+        };
+    }
+}
+
+/**
+ * SPEC-739: guardián BLANDO de módulos huérfanos. Rojo (OBSERVACIÓN, nunca gate)
+ * si la BD viva tiene claves de `ModuloPermisible` que `CATALOGO_MODULOS` no
+ * declara — el seed es aditivo y no borra al retirar un módulo (SPEC-706/732 →
+ * I-430/I-431). Corre en pi-monitor contra la BD de larga vida (una BD fresca de
+ * CI nunca las tiene). Puede ARRANCAR EN ROJO por drift existente: es el objetivo
+ * (surface), no un fallo — el corrector de Datos limpia y vuelve a verde. Fuente
+ * ÚNICA compartida con el barrido (SPEC-725) vía `clavesModuloHuerfanas`: no
+ * divergen. Nunca borra ni bloquea nada.
+ */
+export async function probeModulosHuerfanos({
+    repo = new MonitoreoRepository(),
+}: { repo?: MonitoreoRepository } = {}): Promise<ResultadoProbe> {
+    const inicio = Date.now();
+    try {
+        const clavesEnBd = await repo.leerClavesModuloPermisible();
+        const huerfanas = clavesModuloHuerfanas(clavesEnBd);
+        const ok = huerfanas.length === 0;
+        return {
+            ok,
+            latenciaMs: Date.now() - inicio,
+            detalle: ok
+                ? "0 módulos huérfanos en la BD"
+                : `${huerfanas.length} módulo(s) huérfano(s) en prod que el código no declara: ${huerfanas.join(", ")}`,
+            metodo: "PING",
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            latenciaMs: Date.now() - inicio,
+            detalle: `error verificando módulos huérfanos: ${mensajeError(error)}`,
             metodo: "PING",
         };
     }

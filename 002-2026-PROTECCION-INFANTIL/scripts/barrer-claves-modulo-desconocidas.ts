@@ -26,7 +26,7 @@
  */
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
-import { CATALOGO_MODULOS } from "../src/lib/permisos-catalogo";
+import { CATALOGO_MODULOS, clavesModuloHuerfanas } from "../src/lib/permisos-catalogo";
 
 /** Claves que el catálogo del CÓDIGO declara (fuente única). */
 export function clavesConocidasPorCodigo(): Set<string> {
@@ -36,14 +36,12 @@ export function clavesConocidasPorCodigo(): Set<string> {
 /**
  * Claves de `ModuloPermisible` en la BD que el catálogo del código NO conoce,
  * ordenadas. Vacío ⇒ sin divergencia. Solo lectura.
+ * SPEC-739: la decisión vive en el helper puro `clavesModuloHuerfanas` — fuente
+ * ÚNICA compartida con el guardián de pi-monitor (no divergen).
  */
 export async function clavesModuloDesconocidas(client: PrismaClient): Promise<string[]> {
-    const conocidas = clavesConocidasPorCodigo();
     const filas = await client.moduloPermisible.findMany({ select: { clave: true } });
-    return filas
-        .map((f) => f.clave)
-        .filter((clave) => !conocidas.has(clave))
-        .sort();
+    return clavesModuloHuerfanas(filas.map((f) => f.clave));
 }
 
 async function main(): Promise<void> {

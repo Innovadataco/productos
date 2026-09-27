@@ -119,3 +119,21 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // SPEC-706: `profesional_verificacion` se retiró — «Mi estado» dejó de ser una pantalla; su
     // estado vive en la ficha (módulo `profesional_ficha`). Sin módulo ⇒ sin ítem de menú huérfano.
 ];
+
+/**
+ * SPEC-725/739 · Claves de módulo que viven en la BD pero que el catálogo del
+ * código (`CATALOGO_MODULOS`) NO declara — divergencia de DATO (no de imports;
+ * eso es `scripts/arch/modulos-huerfanos`). El seed es aditivo y nunca borra, así
+ * que al retirar un módulo su fila `ModuloPermisible` queda inerte en una BD de
+ * larga vida (SPEC-706/732 → I-430/I-431).
+ *
+ * Puro (sin BD): la FUENTE ÚNICA de «lo que el código conoce» es este catálogo. El
+ * caller trae las claves de la BD —el barrido de Datos con prisma
+ * (`barrer-claves-modulo-desconocidas.ts`), pi-monitor con `MonitoreoRepository`
+ * (SPEC-739)— y esta función decide. Compartida a propósito para que guardián y
+ * barrido NO diverjan. Vacío ⇒ sin divergencia.
+ */
+export function clavesModuloHuerfanas(clavesEnBd: readonly string[]): string[] {
+    const conocidas = new Set(CATALOGO_MODULOS.map((m) => m.clave));
+    return [...new Set(clavesEnBd)].filter((clave) => !conocidas.has(clave)).sort();
+}
