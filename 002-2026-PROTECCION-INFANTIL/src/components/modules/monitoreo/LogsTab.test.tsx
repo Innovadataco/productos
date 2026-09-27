@@ -107,4 +107,46 @@ describe("LogsTab", () => {
         const pre = within(dialog).getByText((_, el) => el?.tagName === "PRE");
         expect(pre.textContent).toContain('"key": "value"');
     });
+
+    /**
+     * SPEC-737 · CANDADO de los TRES estados del tab (copy de Diseño FORMA-SPEC737).
+     * El defecto: el vacío decía «Ajusta el rango» aunque NO hubiera filtros —
+     * culpaba al filtro cuando en realidad no hay WARN+ (sistema sano). Control
+     * positivo en cada estado: el mensaje correcto aparece y los otros NO.
+     */
+    describe("SPEC-737 · estado vacío del tab (3 estados)", () => {
+        it("(b) sin filtros + 0 filas: «Todo tranquilo / no está congelada», NO el de filtros", async () => {
+            fetchMock.mockImplementation(async () => mockFetchResponse([], 0));
+            render(<LogsTab />);
+
+            await screen.findByText("Todo tranquilo — sin avisos ni errores");
+            expect(screen.getByText(/no está congelada/i)).toBeTruthy();
+            expect(screen.getByText(/Baje el nivel mínimo/i)).toBeTruthy();
+            // Control positivo: NO se muestra el de filtro cuando no hay filtros.
+            expect(screen.queryByText("No hay logs con estos filtros")).toBeNull();
+        });
+
+        it("(a) con filtros + 0 filas: mensaje de FILTRO, NO el de sistema-sano", async () => {
+            fetchMock.mockImplementation(async () => mockFetchResponse([], 0));
+            render(<LogsTab />);
+
+            // Sin filtros arranca en el estado (b)…
+            await screen.findByText("Todo tranquilo — sin avisos ni errores");
+            // …y al aplicar un filtro, el mismo 0 pasa a leerse como «de filtro».
+            fireEvent.change(screen.getByLabelText("Nivel"), { target: { value: "ERROR" } });
+            fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+
+            await screen.findByText("No hay logs con estos filtros");
+            expect(screen.queryByText("Todo tranquilo — sin avisos ni errores")).toBeNull();
+        });
+
+        it("(c) con tabla (>0): nota persistente WARN+ y ningún empty-state", async () => {
+            render(<LogsTab />); // beforeEach devuelve 1 fila
+
+            await screen.findByText("Mensaje l1");
+            expect(screen.getByText(/Solo se guardan avisos y errores \(WARN\+\)/)).toBeTruthy();
+            expect(screen.queryByText("Todo tranquilo — sin avisos ni errores")).toBeNull();
+            expect(screen.queryByText("No hay logs con estos filtros")).toBeNull();
+        });
+    });
 });
