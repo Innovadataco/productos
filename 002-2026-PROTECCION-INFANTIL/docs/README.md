@@ -6,6 +6,7 @@ Carpeta central de documentación técnica y operativa.
 
 - [`despliegue-v2-checklist.md`](despliegue-v2-checklist.md) — Checklist de despliegue de la v2: migraciones, parámetros, env vars, colas pg-boss y pasos de verificación.
 - [`runbook.md`](runbook.md) — Procedimientos operativos: laboratorio de IA, colas de mantenimiento, cambio de modelo y rollback de cifrado.
+- [`operacion/runbook-drift-modulos-permisos.md`](operacion/runbook-drift-modulos-permisos.md) — Corrección segura del drift del catálogo de módulos/permisos (guardianes `modulos_huerfanos`/`grants_modulos_muertos` de pi-monitor): comandos gated, guardas y verificación.
 
 ## Configuración
 
