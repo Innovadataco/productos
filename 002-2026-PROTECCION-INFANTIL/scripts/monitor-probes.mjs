@@ -34,6 +34,7 @@ import {
     probeIndices,
     probeNotifPendientesVencidas,
     probeModulosHuerfanos,
+    probeGrantsModulosMuertos,
 } from "../src/lib/monitoreo/probes.ts";
 import { registrarProbe, evaluarSenal, confirmarRojo } from "../src/lib/monitoreo/incidentes.ts";
 import { revisarSlaSpam } from "../src/lib/spam/sla.ts";
@@ -64,6 +65,8 @@ const SENALES = [
     "notif_pendientes_vencidas",
     // SPEC-739: guardián BLANDO de módulos huérfanos (drift catálogo BD ↔ código).
     "modulos_huerfanos",
+    // SPEC-745: guardián BLANDO de grants ACTIVOS a módulos muertos.
+    "grants_modulos_muertos",
     ...SENALES_TICK_VIDA,
 ];
 
@@ -139,6 +142,8 @@ async function leerConfig() {
         indicesIntervaloSeg: (await entero("monitoreo.indices.frecuencia_horas", 24)) * 3600,
         // SPEC-739: frecuencia del guardián de módulos huérfanos (drift lento → 1×/día).
         modulosHuerfanosIntervaloSeg: (await entero("monitoreo.modulos_huerfanos.frecuencia_horas", 24)) * 3600,
+        // SPEC-745: frecuencia del guardián de grants a módulos muertos (drift lento → 1×/día).
+        grantsModulosMuertosIntervaloSeg: (await entero("monitoreo.grants_modulos_muertos.frecuencia_horas", 24)) * 3600,
         // SPEC-291 (002-PI-191): antigüedad máxima aceptada del tick-vida antes de marcar rojo.
         tickVidaMaxSeg: await entero("monitoreo.tickVida.maxAntiguedadSeg", 90),
     };
@@ -151,6 +156,7 @@ function intervaloDe(senal, config) {
         case "tailscale": return config.tailscaleIntervaloSeg;
         case "indices": return config.indicesIntervaloSeg; // SPEC-251: 1×/día por defecto
         case "modulos_huerfanos": return config.modulosHuerfanosIntervaloSeg; // SPEC-739: 1×/día por defecto
+        case "grants_modulos_muertos": return config.grantsModulosMuertosIntervaloSeg; // SPEC-745: 1×/día por defecto
         default:
             // SPEC-291: las 7 señales tick-vida usan la cadencia base (app/worker/bd).
             return config.appIntervaloSeg;
@@ -177,6 +183,8 @@ async function correrProbe(senal, config) {
             case "notif_pendientes_vencidas": return await probeNotifPendientesVencidas();
             // SPEC-739: guardián BLANDO de módulos huérfanos. NUNCA borra ni bloquea.
             case "modulos_huerfanos": return await probeModulosHuerfanos();
+            // SPEC-745: guardián BLANDO de grants ACTIVOS a módulos muertos. NUNCA revoca ni bloquea.
+            case "grants_modulos_muertos": return await probeGrantsModulosMuertos();
             default:
                 // SPEC-291: 7 señales por tick-vida (workers propios).
                 if (SENALES_TICK_VIDA.includes(senal)) {

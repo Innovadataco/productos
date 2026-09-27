@@ -11,7 +11,8 @@
  * delega en `MonitoreoRepository` + `ClasificacionIARepository`.
  *
  * Señales: app | worker | bd | ollama_ping | ollama_smoke | tailscale | indices |
- * notif_pendientes_vencidas | modulos_huerfanos (SPEC-739) | tick-vida.
+ * notif_pendientes_vencidas | modulos_huerfanos (SPEC-739) |
+ * grants_modulos_muertos (SPEC-745) | tick-vida.
  */
 import { MonitoreoRepository } from "../dal/repositories/monitoreo.ts";
 import { ClasificacionIARepository } from "../dal/repositories/clasificacion-ia.ts";
@@ -19,7 +20,7 @@ import { getParametroSistema } from "../parametros.ts";
 import { leerHeartbeatWorker } from "../worker-heartbeat.ts";
 import { leerAntiguedadTickSeg } from "./tick-vida.ts";
 import { contarPendientesVencidas } from "../notificaciones/metricas.ts";
-import { clavesModuloHuerfanas } from "../permisos-catalogo.ts";
+import { clavesModuloHuerfanas, grantsAModulosMuertos } from "../permisos-catalogo.ts";
 
 // SPEC-291 (002-PI-191): 7 nuevas señales por tick-vida (workers y app propios).
 export const SENALES_TICK_VIDA = [
@@ -53,6 +54,8 @@ export const SENALES_MONITOREO = [
     "notif_pendientes_vencidas",
     // SPEC-739: guardián BLANDO de módulos huérfanos (drift catálogo BD ↔ código).
     "modulos_huerfanos",
+    // SPEC-745: guardián BLANDO de grants ACTIVOS a módulos muertos.
+    "grants_modulos_muertos",
     ...SENALES_TICK_VIDA,
 ] as const;
 export type SenalMonitoreo = (typeof SENALES_MONITOREO)[number];
@@ -394,6 +397,43 @@ export async function probeModulosHuerfanos({
             ok: false,
             latenciaMs: Date.now() - inicio,
             detalle: `error verificando módulos huérfanos: ${mensajeError(error)}`,
+            metodo: "PING",
+        };
+    }
+}
+
+/**
+ * SPEC-745: guardián BLANDO de grants ACTIVOS a módulos muertos. Rojo
+ * (OBSERVACIÓN, nunca gate) si la BD viva tiene grants `activo=true` cuyo módulo
+ * no está en `CATALOGO_MODULOS` — el módulo se retiró del código pero su permiso
+ * sigue OTORGANDO acceso. Complementa `probeModulosHuerfanos` (aquello marca la
+ * fila de módulo; esto, que ese módulo TODAVÍA otorga permiso). Hoy solo hay
+ * correctores con listas quemadas (`revocar-grants-modulos-muertos`); acá la
+ * decisión deriva del catálogo (fuente ÚNICA), vía el helper puro
+ * `grantsAModulosMuertos`. Frontera Q-3: la lectura va por `MonitoreoRepository`.
+ * Nunca revoca ni bloquea. Fail-safe: ante error da rojo, nunca verde silencioso.
+ */
+export async function probeGrantsModulosMuertos({
+    repo = new MonitoreoRepository(),
+}: { repo?: MonitoreoRepository } = {}): Promise<ResultadoProbe> {
+    const inicio = Date.now();
+    try {
+        const grants = await repo.leerGrantsActivosConClave();
+        const muertos = grantsAModulosMuertos(grants);
+        const ok = muertos.length === 0;
+        return {
+            ok,
+            latenciaMs: Date.now() - inicio,
+            detalle: ok
+                ? "0 grants activos a módulos muertos"
+                : `${muertos.length} grant(s) activo(s) a módulo(s) muerto(s) que el código no declara: ${muertos.map((g) => `${g.clave} (${g.rol})`).join(", ")}`,
+            metodo: "PING",
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            latenciaMs: Date.now() - inicio,
+            detalle: `error verificando grants a módulos muertos: ${mensajeError(error)}`,
             metodo: "PING",
         };
     }
