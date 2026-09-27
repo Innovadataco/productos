@@ -21,6 +21,12 @@ function localDateTimeToIso(valor: string): string | undefined {
     return d.toISOString();
 }
 
+/** SPEC-737: ¿el usuario acotó la vista con algún filtro? Distingue «no hay nada
+ * guardado» (sistema sano) de «tu filtro no trajo filas» (dos vacíos distintos). */
+function hayFiltrosActivos(f: LogsFiltersState): boolean {
+    return Boolean(f.servicio || f.nivel || f.desde || f.hasta || f.q);
+}
+
 type DatosLogs = {
     items: WorkerLog[];
     total: number;
@@ -135,12 +141,35 @@ export function LogsTab() {
             {cargando && datos.items.length === 0 ? (
                 <Cargando inline texto="Cargando logs..." className="py-8" />
             ) : datos.items.length === 0 && !error ? (
-                <EmptyState
-                    title="Sin logs para los filtros seleccionados"
-                    description="Ajusta el rango o los criterios de búsqueda."
-                />
+                hayFiltrosActivos(filters) ? (
+                    // (a) El vacío viene de un FILTRO: no se afirma «sistema sano»
+                    // (sería falso — hay filas ocultas por el filtro).
+                    <EmptyState
+                        title="No hay logs con estos filtros"
+                        description="Ajústelos o límpielos."
+                    />
+                ) : (
+                    // (b) SIN filtros y sin filas: el sistema está sano, NO congelado.
+                    // Copy de Diseño (FORMA-SPEC737), voz usted. Ícono neutro (check).
+                    <EmptyState
+                        icon={<IconoTranquilo />}
+                        title="Todo tranquilo — sin avisos ni errores"
+                        description="Esta vista no está congelada. Solo se guardan los avisos y errores (nivel WARN o más grave); un sistema sano la deja vacía casi todo el tiempo. Cuando aparezca algo acá, es porque vale la pena revisarlo."
+                        action={
+                            <p className="text-xs italic text-subtle">
+                                ¿Necesita ver el detalle fino (INFO/DEBUG)? Baje el nivel mínimo en
+                                Configuración del sistema (monitoreo.logs.nivel_minimo).
+                            </p>
+                        }
+                    />
+                )
             ) : (
                 <>
+                    {/* (c) Nota persistente sutil (scope): que «pocas filas» nunca se lea
+                        como «roto». No es banner ni alerta — una línea text-subtle. */}
+                    <p className="text-sm text-subtle">
+                        Solo se guardan avisos y errores (WARN+) — un sistema tranquilo deja esta vista rala.
+                    </p>
                     <LogsTable items={datos.items} onVerContexto={setContextoSeleccionado} />
                     <div className="flex flex-col gap-3 border-t border-tinta/10 px-2 pt-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-subtle">
@@ -180,6 +209,25 @@ export function LogsTab() {
                 onClose={() => setContextoSeleccionado(null)}
                 contextoJson={contextoSeleccionado?.contextoJson ?? null}
             />
+        </div>
+    );
+}
+
+/** SPEC-737: ícono NEUTRO (check en círculo) del estado «Todo tranquilo» — informativo,
+ * nunca una alerta ni rubí (Diseño: es salud, no falla). */
+function IconoTranquilo() {
+    return (
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tinta/5 text-muted">
+            <svg
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
         </div>
     );
 }
