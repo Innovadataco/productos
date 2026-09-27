@@ -91,6 +91,11 @@ function listarComponentes(dir: string): string[] {
  * o que pinta su navegación dentro de un elemento `<nav>` (la marca semántica de «esto es
  * navegación»). Contenido con CTAs contextuales sueltos —sin `<nav>` y sin resolver— NO es
  * superficie (p. ej. ComiteHome, EsperaCitaPanel): son enlaces de contenido, no un menú.
+ *
+ * LÍMITE ACEPTADO (CEO, verdict #698): una nav pintada en un `<div>` plano —sin `<nav>` y
+ * sin importar el resolver— escapa al descubridor. Es un límite consciente: la convención de
+ * accesibilidad de este código es envolver la navegación en `<nav>`; salirse de ella para
+ * quemar una nav es una desviación deliberada, no un olvido que el candado deba atrapar.
  */
 function esSuperficieDeNav(contenido: string): boolean {
     return importaResolver(contenido) || /<nav[\s/>]/.test(contenido);
@@ -235,6 +240,28 @@ describe("SPEC-744 (A) · cada superficie refleja la fuente (propagación por ce
         render(<NavHeader />);
         fireEvent.click(screen.getByLabelText("Menú"));
         expect(enlaceCentinela()).toBe(SENT_HREF);
+    });
+
+    // SPEC-744 (hallazgo del CEO): el candado de reflejo + no-quemado NO impide que el
+    // AVATAR pinte nav SOURCE-DRIVEN — y eso reviviría el bug exacto de Jelkin (dos menús
+    // en móvil: el avatar y la hamburguesa con la misma nav) vía el resolver. Lock explícito:
+    // los destinos de nav aparecen en UNA sola región del header (la hamburguesa), NUNCA en
+    // el avatar (que es solo cuenta). Con la hamburguesa CERRADA, si el centinela —la salida
+    // de navParaRol— aparece con el avatar abierto, es porque el avatar lo pintó.
+    it("doble-menú: el avatar (cuenta) NO pinta destinos de nav, ni source-driven", () => {
+        authRef.value = { user: { rol: "PARENT", nombre: "P", email: "p@x.co" }, isLoading: false, logout: vi.fn() };
+        render(<NavHeader />);
+        // Abrir SOLO el avatar (hamburguesa cerrada).
+        fireEvent.click(screen.getByLabelText("Menú de usuario"));
+        // El avatar SÍ abrió (control de cuenta presente) — así la aserción de abajo no pasa en falso.
+        expect(screen.getByText("Cerrar sesión"), "el avatar debió abrir (es la cuenta)").toBeTruthy();
+        expect(
+            screen.queryByText(SENT_LABEL),
+            "el avatar es SOLO cuenta: si pinta nav (source-driven o a mano) recurre el doble menú de Jelkin",
+        ).toBeNull();
+        // CONTROL POSITIVO: la hamburguesa es la ÚNICA región de nav del header → ahí SÍ aparece.
+        fireEvent.click(screen.getByLabelText("Menú"));
+        expect(screen.getByText(SENT_LABEL)).toBeTruthy();
     });
 
     it("CONTROL POSITIVO: una barra que NO usa navParaRol no refleja el centinela", () => {
