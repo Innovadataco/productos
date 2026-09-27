@@ -122,19 +122,17 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
             .filter((l) => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l))
             .join("\n");
 
-    it("`AdminNav` pinta la barra del profesional con `entradasProfesional` (SPEC-691: por estado, no por módulo)", () => {
+    it("`AdminNav` deriva su barra de `navParaRol` (SPEC-744: fuente única; la compuerta vive en el resolver)", () => {
         const nav = leerCodigo("src/components/modules/AdminNav.tsx");
-        // SPEC-691 movió la fuente única del menú del profesional de la constante
-        // estática (filtrada por módulo) a `entradasProfesional(user.profesional)`,
-        // que la DERIVA de PROFESIONAL_NAV_ITEMS pero la condiciona a `habilitado` —
-        // la compuerta (MAPA §0). El filtro por módulo era el hueco: un profesional
-        // con el grant veía lo operativo sin estar verificado.
-        expect(/entradasProfesional/.test(nav)).toBe(true);
-        // El resto de los roles (admin/operador) SÍ sigue por módulo.
-        expect(
-            /permitidos\.has\(l\.modulo\)/.test(nav),
-            "El filtrado por módulo sigue siendo la mecánica de admin/operador.",
-        ).toBe(true);
+        // SPEC-744 movió la compuerta DENTRO de `navParaRol` (la fuente única): el
+        // profesional por estado `habilitado` (con override del muro), el resto por
+        // módulo ∧ proxy. AdminNav ya NO arma la lista ni filtra por módulo a mano —
+        // llama al resolver. La compuerta la prueba `src/lib/nav/para-rol.test.ts`; que
+        // ninguna superficie vuelva a quemar la lista, `nav-superficie-unica.candado.test.tsx`.
+        expect(/navParaRol/.test(nav)).toBe(true);
+        // Y ya no arma la lista a mano: ni `entradasProfesional` ni el filtro por módulo sueltos.
+        expect(/entradasProfesional/.test(nav)).toBe(false);
+        expect(/permitidos\.has\(l\.modulo\)/.test(nav)).toBe(false);
     });
 
     /**
@@ -150,33 +148,28 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
      * profesional quemado en cualquiera de los dos menús lo mata. Si mañana
      * aparece un tercer renderizador, también.
      */
-    // SPEC-742: la nav del profesional vive en UN solo menú — la hamburguesa (MobileLink) —,
-    // NUNCA también en el avatar (NavDropdownLink), que quedó de solo cuenta. Antes SPEC-691
-    // los pintaba en los dos; en móvil se veían dos menús con lo mismo (bug de Jelkin).
-    it("`NavHeader` pinta la nav del profesional SOLO en la hamburguesa, no en el avatar, y sin hrefs quemados", () => {
+    // SPEC-744: NavHeader ya no tiene NINGUNA lista de nav por rol a mano —el padre STALE
+    // que cazó Jelkin, ni la del profesional—: todo sale de `navParaRol` (fuente única). El
+    // avatar quedó de solo cuenta (SPEC-742) y la nav del logueado en la hamburguesa. La
+    // cobertura fuerte (cada superficie refleja la fuente, control positivo) vive en el
+    // candado `nav-superficie-unica.candado.test.tsx`; acá se conserva el barrido de hrefs
+    // quemados por ARCHIVO (si mañana aparece un renderizador nuevo, también lo caza).
+    it("`NavHeader` deriva su nav de `navParaRol` (fuente única) y no quema destinos de rol", () => {
         const header = leerCodigo("src/components/modules/NavHeader.tsx");
         expect(
-            /entradasProfesional/.test(header),
-            "La nav del profesional sale de la fuente única `entradasProfesional`, no de enlaces sueltos.",
+            /navParaRol/.test(header),
+            "La nav del header sale de la fuente única `navParaRol`, no de listas por rol a mano.",
         ).toBe(true);
-        // La hamburguesa (móvil) SÍ la pinta.
-        expect(
-            new RegExp("entradasProfesional[\\s\\S]{0,400}?<MobileLink\\b").test(header),
-            "La hamburguesa debe pintar `entradasProfesional`.",
-        ).toBe(true);
-        // El avatar NO — es solo cuenta (SPEC-742). Control positivo del arreglo del doble menú.
-        expect(
-            new RegExp("entradasProfesional[\\s\\S]{0,400}?<NavDropdownLink\\b").test(header),
-            "El avatar YA NO debe pintar `entradasProfesional` (SPEC-742: avatar = solo cuenta).",
-        ).toBe(false);
+        // Ya NO referencia `entradasProfesional` directo (lo hace el resolver por dentro).
+        expect(/entradasProfesional/.test(header)).toBe(false);
 
-        // Y ningún href del profesional escrito a mano, sea cual sea el componente que lo pinte.
+        // Y ningún href de destino de rol escrito a mano, sea cual sea el componente que lo pinte.
         const quemados = header
             .split("\n")
             .filter((l) => /href="\/(perfil-profesional|dashboard\/profesional)\//.test(l));
         expect(
             quemados,
-            `Destinos del profesional quemados en NavHeader (deben salir de PROFESIONAL_NAV_ITEMS):\n${quemados.join("\n")}`,
+            `Destinos del profesional quemados en NavHeader (deben salir de la fuente única):\n${quemados.join("\n")}`,
         ).toEqual([]);
     });
 

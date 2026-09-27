@@ -9,6 +9,12 @@ export interface NavItem {
     modulo: string;
     /** Hijos para nodos expandibles (p. ej. "Usuarios" del menú del colegio). */
     children?: NavItem[];
+    // SPEC-744 (contrato con Dev 1): clave de ícono y rótulo corto viven en la DATA (fuente
+    // única), no en un mapa dentro de cada superficie. `iconKey` alimenta un registro cliente
+    // key→componente (una sola fuente de íconos); si falta, el resolver usa `href`. `labelCorto`
+    // es para la barra móvil (1 palabra); si falta, se usa `label`.
+    iconKey?: string;
+    labelCorto?: string;
 }
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
@@ -107,6 +113,9 @@ export interface PadreNavItem {
     label: string;
     /** Hijos para nodos expandibles (SPEC-607: «Reportar» y «Ayuda profesional»). */
     children?: PadreNavItem[];
+    // SPEC-744 (ver NavItem): clave de ícono y rótulo corto como DATA de la fuente única.
+    iconKey?: string;
+    labelCorto?: string;
 }
 // SPEC-607 (diseño final aprobado · design/expediente-final-mockup.html): menú
 // definitivo del padre — 6 entradas, dos con submódulos colapsables (chevron en
@@ -192,6 +201,15 @@ export const PROFESIONAL_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/profesional/mi-perfil", label: "Mi perfil", modulo: "profesional_ficha" },
     // SPEC-706: «Verificación» (/perfil-profesional/verificacion) se retiró — el estado del no
     // habilitado es ahora el encabezado de la ficha («Mi ficha»). No hay ítem de menú separado.
+];
+
+// SPEC-743/744: la superficie ANÓNIMA (deslogueado) también sale de la fuente única.
+// La consulta pública —estadísticas agregadas, sin login— es navegación de primera
+// clase del anónimo; quemarla en una superficie fue la regresión 742→743. Vive acá
+// para que `navParaRol(null)` la sirva y el candado la cubra como a cualquier rol.
+// Sin `modulo`: no hay permisos para el anónimo, el proxy la deja pública.
+export const ANONIMO_NAV_ITEMS: PadreNavItem[] = [
+    { href: "/dashboard-publico", label: "Estadísticas públicas" },
 ];
 
 /** Tabs del Centro de Control IA filtradas por submódulo (null = visible con la raíz). */

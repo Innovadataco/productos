@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PADRE_NAV_ITEMS, type PadreNavItem } from "@/lib/nav-items";
+import { navParaRol, type NavEntry } from "@/lib/nav/para-rol";
 
 /**
  * SPEC-231 (002-PI-131): navegación lateral del área del padre, patrón
@@ -18,10 +18,12 @@ import { PADRE_NAV_ITEMS, type PadreNavItem } from "@/lib/nav-items";
  */
 export function PadreSideNav() {
     const pathname = usePathname();
-    const raiz = PADRE_NAV_ITEMS[0]?.href;
+    // SPEC-744: la nav del padre sale de `navParaRol` (fuente única), no de una copia local.
+    const items = navParaRol("PARENT");
+    const raiz = items[0]?.href;
     const esActivo = (href: string) =>
         href !== "#" && (pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false)));
-    const grupoConActivo = (item: PadreNavItem) => (item.children ?? []).some((hijo) => esActivo(hijo.href));
+    const grupoConActivo = (item: NavEntry) => (item.children ?? []).some((hijo) => esActivo(hijo.href));
 
     // Los grupos nacen expandidos; acá solo se guarda cuál colapsó el usuario.
     const [colapsados, setColapsados] = useState<string[]>([]);
@@ -35,7 +37,7 @@ export function PadreSideNav() {
                 <p className="mt-1 text-xs text-subtle">Área del padre</p>
             </div>
             <ul className="flex-1 space-y-1 p-3">
-                {PADRE_NAV_ITEMS.map((item, indice) => {
+                {items.map((item, indice) => {
                     const Icon = ICONS[item.label] ?? InicioIcon;
                     if (!item.children) {
                         const active = esActivo(item.href);

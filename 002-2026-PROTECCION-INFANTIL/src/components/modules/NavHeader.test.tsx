@@ -21,7 +21,17 @@ vi.mock("@/lib/contexts/AuthContext", () => ({
 import { useAuth } from "@/lib/contexts/AuthContext";
 
 function mockAuth(
-    user: { id: string; email: string; nombre: string; rol: string; googleSub?: string | null; passwordCreadaEn?: string | null } | null,
+    user:
+        | {
+              id: string;
+              email: string;
+              nombre: string;
+              rol: string;
+              googleSub?: string | null;
+              passwordCreadaEn?: string | null;
+              profesional?: { estado: string | null; habilitado: boolean } | null;
+          }
+        | null,
     isLoading = false
 ) {
     (useAuth as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -93,9 +103,10 @@ describe("NavHeader", () => {
         expect(screen.getByText("Cambiar contraseña").closest("a")?.getAttribute("href")).toBe("/cambiar-password");
         expect(screen.getByText("Cerrar sesión")).toBeTruthy();
         // NADA de navegación del rol acá (vive en la hamburguesa / barra lateral).
-        expect(screen.queryByText("Mi panel")).toBeNull();
-        expect(screen.queryByText("Círculo de Confianza")).toBeNull();
-        expect(screen.queryByText("Mis reportes")).toBeNull();
+        // Labels VIGENTES de PADRE_NAV_ITEMS (SPEC-607): el avatar no los lleva.
+        expect(screen.queryByText("A quién protejo")).toBeNull();
+        expect(screen.queryByText("A quién vigilo")).toBeNull();
+        expect(screen.queryByText("Mi perfil")).toBeNull();
     });
 
     it("SPEC-742: el AVATAR del admin es solo cuenta — sin «Panel de administración» ni «Configuración»", () => {
@@ -108,18 +119,52 @@ describe("NavHeader", () => {
         expect(screen.queryByText("Configuración")).toBeNull();
     });
 
-    it("SPEC-742: la NAV del padre vive en la hamburguesa (móvil), NO «Inicio»→«/» ni «Dashboard»→/dashboard-publico", () => {
+    it("SPEC-744: la NAV del padre en la hamburguesa sale de la fuente única — labels VIGENTES, sin «Mis reportes» (stale) ni home equivocado", () => {
         mockPathname = "/dashboard/padre";
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
         abrirNav();
-        // La nav del rol está acá (una sola vez).
-        expect(screen.getByText("Círculo de Confianza").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/circulo-confianza");
-        expect(screen.getByText("Mis reportes").closest("a")?.getAttribute("href")).toBe("/mis-reportes");
+        // Labels vigentes de PADRE_NAV_ITEMS (SPEC-607), no las stale «Mi panel»/«Círculo de Confianza».
+        expect(screen.getByText("A quién vigilo").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/circulo-confianza");
+        // Grupo aplanado: «Mis citas» (hijo de «Ayuda profesional») queda a un toque.
+        expect(screen.getByText("Mis citas").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/citas");
+        // El defecto que cazó Jelkin: la hamburguesa mostraba labels/destinos stale. Ya no:
+        expect(screen.queryByText("Mi panel")).toBeNull();
+        expect(screen.queryByText("Círculo de Confianza")).toBeNull();
+        expect(screen.queryByText("Mis reportes")).toBeNull(); // /mis-reportes salió del menú (SPEC-607)
         // NINGÚN enlace de home equivocado: ni «/» ni /dashboard-publico.
         const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
         expect(hrefs).not.toContain("/");
         expect(hrefs).not.toContain("/dashboard-publico");
+    });
+
+    it("SPEC-744/§3-bis: el ANÓNIMO ve «Estadísticas públicas»→/dashboard-publico + «Iniciar sesión» en el HEADER, sin hamburguesa", () => {
+        mockPathname = "/";
+        mockAuth(null);
+        render(<NavHeader />);
+        // La consulta pública vive en el header (fuente única navParaRol(null)) — regresión 742→743 cerrada.
+        expect(screen.getByText("Estadísticas públicas").closest("a")?.getAttribute("href")).toBe("/dashboard-publico");
+        expect(screen.getByText("Iniciar sesión").closest("a")?.getAttribute("href")).toBe("/login");
+        // El anónimo NO tiene hamburguesa: su superficie es el header (§3-bis Diseño).
+        expect(screen.queryByLabelText("Menú")).toBeNull();
+    });
+
+    it("SPEC-744: el PROFESIONAL habilitado ve su nav en la hamburguesa (fuente única, sin módulos)", () => {
+        mockPathname = "/dashboard/profesional";
+        mockAuth({ id: "1", email: "p@t.com", nombre: "Pro", rol: "PROFESIONAL", profesional: { estado: "ACTIVO", habilitado: true } });
+        render(<NavHeader />);
+        abrirNav();
+        expect(screen.getByText("Casos").closest("a")?.getAttribute("href")).toBe("/dashboard/profesional/casos");
+    });
+
+    it("SPEC-744: un rol interno (sin módulos en el header global) NO pinta hamburguesa — su nav móvil vive en la barra por rol", () => {
+        mockPathname = "/dashboard/admin/bandeja";
+        mockAuth({ id: "1", email: "a@t.com", nombre: "Admin", rol: "ADMIN" });
+        render(<NavHeader />);
+        expect(
+            screen.queryByLabelText("Menú"),
+            "el header global no tiene los módulos del admin → resuelve vacío → sin hamburguesa (el logo lo devuelve a su panel)",
+        ).toBeNull();
     });
 
     it("SPEC-742: «Cerrar sesión» vive SOLO en el avatar (cuenta), NUNCA en la hamburguesa — cada control, un trabajo", () => {

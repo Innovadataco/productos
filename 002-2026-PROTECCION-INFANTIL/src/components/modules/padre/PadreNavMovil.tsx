@@ -20,13 +20,15 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PADRE_NAV_ITEMS } from "@/lib/nav-items";
+import { navParaRol, aplanar } from "@/lib/nav/para-rol";
 
 export function PadreNavMovil() {
     const pathname = usePathname();
-    const raiz = PADRE_NAV_ITEMS[0]?.href;
+    // SPEC-744: misma fuente única que el lateral (`navParaRol`); la barra aplana los grupos.
+    const items = navParaRol("PARENT");
+    const raiz = items[0]?.href;
     // Aplanado: un ítem con hijos aporta sus hijos a la barra, no su etiqueta.
-    const destinos = PADRE_NAV_ITEMS.flatMap((item) => item.children ?? [item]);
+    const destinos = aplanar(items);
     const esActivo = (href: string) =>
         pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false));
 

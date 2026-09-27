@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { esDestinoPermitidoPorRol } from "@/lib/proxy";
-import { entradasProfesional } from "@/lib/profesional/menu-por-estado";
+import { navParaRol, aplanar } from "@/lib/nav/para-rol";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Guardian } from "@/components/ui/Guardian";
@@ -88,19 +88,6 @@ export function NavHeader() {
         ? (user.nombre?.[0] || user.email[0]).toUpperCase()
         : "";
 
-    // SPEC-319 §2.6 + SPEC-424 (I-299): "empleado" es el flag histórico que
-    // controla si el usuario ve items del padre en el menú. VERIFICADOR y
-    // PROFESIONAL entran acá porque tampoco son "el padre" — el primero es
-    // interno, el segundo es prestador externo — y sin este check, ambos
-    // heredaban "Mi panel"/"Círculo de Confianza"/"Mis reportes" del padre.
-    const esEmpleado =
-        user?.rol === "ADMIN" ||
-        user?.rol === "OPERADOR" ||
-        user?.rol === "COMITE_VALIDACION" ||
-        user?.rol === "COMITE_CONVIVENCIA" ||
-        user?.rol === "VERIFICADOR" ||
-        user?.rol === "PROFESIONAL";
-
     // SPEC-488 · identidad de rol interno de IDC en un solo acento (ámbar): el
     // color NO codifica el rol (§3.1 color=función); se distinguen por NOMBRE +
     // inicial (badge con `user.rol` + avatar con iniciales). ADMIN/OPERADOR/
@@ -148,6 +135,25 @@ export function NavHeader() {
         href !== pathname &&
         esDestinoPermitidoPorRol(user?.rol, href) &&
         (!enCamino || SIEMPRE_VIVAS.includes(href));
+
+    // SPEC-744: toda la nav de este header sale de la fuente única `navParaRol`.
+    // ANÓNIMO (§3-bis Diseño): la superficie pública vive en el header, ambos tamaños,
+    // SIN hamburguesa — «Estadísticas públicas» sale de la fuente para que no se vuelva
+    // a quemar (fue la regresión 742→743).
+    const navAnonimo = navParaRol(null);
+    // LOGUEADO (INTERINO, hasta la barra inferior por rol de Diseño/Dev 1): la
+    // hamburguesa móvil. NavHeader es GLOBAL y NO tiene los módulos del usuario, así
+    // que solo resuelve bien los roles cuya nav no depende de módulos (PADRE,
+    // PROFESIONAL). Los internos/colegio dependen de módulo → sin módulos `navParaRol`
+    // devuelve vacío y no se pinta hamburguesa: su nav móvil llega con la barra inferior
+    // por rol (que vive en su layout, con módulos); el logo los devuelve a su panel
+    // mientras tanto. Se aplana (barra sin acordeones) y se pasa por `esEnlaceNavegable`
+    // (proxy ∧ no-página-actual ∧ apagado en el camino guiado, SPEC-362).
+    const navLogueado = user
+        ? aplanar(navParaRol(user.rol, { profesional: user.profesional, pathname })).filter(
+            (item) => item.href !== "#" && esEnlaceNavegable(item.href),
+        )
+        : [];
 
 
     return (
@@ -222,83 +228,66 @@ export function NavHeader() {
                             )}
                         </div>
                     ) : (
-                        esEnlaceNavegable("/login") && (
-                            <Link
-                                href="/login"
-                                className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-tinta/5 transition"
-                            >
-                                Iniciar sesión
-                            </Link>
-                        )
+                        <>
+                            {/* SPEC-744 (§3-bis, Diseño): superficie ANÓNIMA = header, ambos tamaños,
+                                SIN hamburguesa. «Estadísticas públicas» (la consulta pública) sale de
+                                `navParaRol(null)` —fuente única— para que no se vuelva a quemar
+                                (regresión 742→743). «Iniciar sesión» es el CTA primario. */}
+                            {navAnonimo.map((item) =>
+                                esEnlaceNavegable(item.href) ? (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className="text-sm font-medium text-subtle transition hover:text-body"
+                                    >
+                                        {item.label}
+                                    </Link>
+                                ) : null,
+                            )}
+                            {esEnlaceNavegable("/login") && (
+                                <Link
+                                    href="/login"
+                                    className="rounded-xl accent-gradient px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-cielo/25 transition hover:opacity-90"
+                                >
+                                    Iniciar sesión
+                                </Link>
+                            )}
+                        </>
                     )}
 
-                    <Tooltip content="Menú">
-                        <button
-                            className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl glass-input text-body"
-                            onClick={() => setMobileOpen((v) => !v)}
-                            aria-label="Menú"
-                        >
-                            {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
-                        </button>
-                    </Tooltip>
+                    {/* SPEC-744: la hamburguesa es SOLO del logueado (el anónimo vive en el header,
+                        §3-bis). Y solo si hay nav que mostrar — los roles internos/colegio, sin
+                        módulos en este header global, resuelven vacío y no la pintan. */}
+                    {navLogueado.length > 0 && (
+                        <Tooltip content="Menú">
+                            <button
+                                className="sm:hidden inline-flex h-11 w-11 items-center justify-center rounded-xl glass-input text-body"
+                                onClick={() => setMobileOpen((v) => !v)}
+                                aria-label="Menú"
+                            >
+                                {mobileOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+                            </button>
+                        </Tooltip>
+                    )}
                 </nav>
             </div>
 
-            {mobileOpen && (
+            {mobileOpen && navLogueado.length > 0 && (
                 <div className="sm:hidden border-t border-tinta/10 bg-papel px-4 py-3 shadow-lg">
                     <div className="flex flex-col gap-2">
-                        {/* SPEC-742: se retiran «Inicio»→"/" y «Dashboard»→/dashboard-publico — los dos
-                            enlaces de home equivocados para el logueado (a la landing pública y al dashboard
-                            público). El home del logueado es su panel de rol: lo dan la marca y el primer
-                            ítem de la nav del rol (abajo). Un anónimo no ve esta hamburguesa autenticada. */}
-                        {user ? (
-                            <>
-                                {!esEmpleado && (
-                                    <>
-                                        {esEnlaceNavegable("/dashboard/padre") && <MobileLink href="/dashboard/padre" onClick={() => setMobileOpen(false)}>Mi panel</MobileLink>}
-                                        {esEnlaceNavegable("/dashboard/padre/circulo-confianza") && <MobileLink href="/dashboard/padre/circulo-confianza" onClick={() => setMobileOpen(false)}>Círculo de Confianza</MobileLink>}
-                                        {esEnlaceNavegable("/mis-reportes") && <MobileLink href="/mis-reportes" onClick={() => setMobileOpen(false)}>Mis reportes</MobileLink>}
-                                    </>
-                                )}
-                                {user.rol === "ADMIN" && (
-                                    <>
-                                        {esEnlaceNavegable("/dashboard/admin") && <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Panel admin</MobileLink>}
-                                        {esEnlaceNavegable("/dashboard/admin/configuracion") && <MobileLink href="/dashboard/admin/configuracion" onClick={() => setMobileOpen(false)}>Configuración</MobileLink>}
-                                    </>
-                                )}
-                                {user.rol === "SCHOOL_ADMIN" && esEnlaceNavegable("/dashboard/colegio") && (
-                                    <MobileLink href="/dashboard/colegio" onClick={() => setMobileOpen(false)}>Mi colegio</MobileLink>
-                                )}
-                                {user.rol === "OPERADOR" && esEnlaceNavegable("/dashboard/admin") && (
-                                    <MobileLink href="/dashboard/admin" onClick={() => setMobileOpen(false)}>Mis casos</MobileLink>
-                                )}
-                                {user.rol === "COMITE_VALIDACION" && esEnlaceNavegable("/dashboard/admin/comite") && (
-                                    <MobileLink href="/dashboard/admin/comite" onClick={() => setMobileOpen(false)}>Mi bandeja</MobileLink>
-                                )}
-                                {user.rol === "COMITE_CONVIVENCIA" && esEnlaceNavegable("/dashboard/colegio/comite/casos") && (
-                                    <MobileLink href="/dashboard/colegio/comite/casos" onClick={() => setMobileOpen(false)}>Gestión de casos</MobileLink>
-                                )}
-                                {/* SPEC-437 (A-75): el menú móvil sale de la MISMA lista que el
-                                    desplegable y la barra lateral. Tenerlo quemado acá era el
-                                    defecto de verdad: el botón «Dashboard» del encabezado es
-                                    `hidden sm:inline-flex`, así que en teléfono un profesional
-                                    veía solo Verificación y Mi ficha y NO tenía por dónde volver
-                                    a su panel. Tres renderizadores, una sola fuente. */}
-                                {user.rol === "PROFESIONAL" && (
-                                    <>
-                                        {entradasProfesional(user.profesional).filter((item) => esEnlaceNavegable(item.href)).map((item) => (
-                                            <MobileLink key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>{item.label}</MobileLink>
-                                        ))}
-                                    </>
-                                )}
-                                {/* SPEC-742: «Cerrar sesión» NO va acá — la sesión es CUENTA, y la cuenta vive
-                                    en el avatar, que es visible también en móvil (solo se oculta el nombre, no
-                                    el botón). Tenerlo también en la hamburguesa era el mismo control dos veces;
-                                    «cada control, un trabajo». La hamburguesa es SOLO navegación del rol. */}
-                            </>
-                        ) : (
-                            esEnlaceNavegable("/login") && <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>
-                        )}
+                        {/* SPEC-744: la nav del logueado sale de `navParaRol` (fuente única) — CERO
+                            listas a mano (el candado `nav-superficie-unica` rompe CI si alguna
+                            superficie vuelve a quemar destinos de nav). Antes acá vivían listas por
+                            rol escritas a mano —el padre STALE («Mi panel/Círculo de Confianza/Mis
+                            reportes»), distinta de PADRE_NAV_ITEMS—: la desincronización que cazó
+                            Jelkin. INTERINO: cuando llegue la barra inferior por rol (con módulos,
+                            Diseño §3-bis) esta hamburguesa se retira. «Cerrar sesión» vive en el
+                            avatar (cuenta), no acá (SPEC-742). */}
+                        {navLogueado.map((item) => (
+                            <MobileLink key={item.href} href={item.href} onClick={() => setMobileOpen(false)}>
+                                {item.label}
+                            </MobileLink>
+                        ))}
                     </div>
                 </div>
             )}

@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId, useState } from "react";
-import { COLEGIO_NAV_ITEMS, COMITE_COLEGIO_NAV_ITEMS } from "@/lib/nav-items";
-import type { NavItem } from "@/lib/nav-items";
-import { esDestinoPermitidoPorRol } from "@/lib/proxy";
+import { navParaRol, type NavEntry } from "@/lib/nav/para-rol";
 
 /**
  * SPEC-129 (C3): navegación lateral del área del colegio, patrón AdminNav
@@ -17,12 +15,13 @@ import { esDestinoPermitidoPorRol } from "@/lib/proxy";
  */
 export function ColegioSideNav({ rol, modulosPermitidos }: { rol: string; modulosPermitidos: string[] }) {
     const pathname = usePathname();
-    const permitidos = new Set(modulosPermitidos);
-    const items = rol === "COMITE_CONVIVENCIA" ? COMITE_COLEGIO_NAV_ITEMS : COLEGIO_NAV_ITEMS;
+    // SPEC-744: la nav del colegio sale de `navParaRol` (fuente única). El resolver ya
+    // aplicó la compuerta —módulo ∧ proxy (D-41)— y filtró los hijos de cada grupo,
+    // ocultando los grupos que quedan vacíos. Acá solo se pinta el árbol resultante.
+    const items = navParaRol(rol, { modulosPermitidos });
     // La raíz del menú (primer ítem) solo se marca activa con match exacto; si no,
     // coincidiría con TODAS las subrutas (misma regla que AdminNav).
     const raiz = items[0]?.href;
-    const esVisible = (item: NavItem) => permitidos.has(item.modulo) && esDestinoPermitidoPorRol(rol, item.href);
     const esActivo = (href: string) =>
         pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false));
 
@@ -35,11 +34,9 @@ export function ColegioSideNav({ rol, modulosPermitidos }: { rol: string; modulo
             <ul className="flex-1 space-y-1 p-3">
                 {items.map((item) => {
                     if (item.children) {
-                        const hijos = item.children.filter(esVisible);
-                        if (!permitidos.has(item.modulo) || hijos.length === 0) return null;
-                        return <GrupoExpandible key={item.label} item={item} hijos={hijos} esActivo={esActivo} />;
+                        // El resolver ya filtró los hijos y descartó los grupos vacíos.
+                        return <GrupoExpandible key={item.label} item={item} hijos={item.children} esActivo={esActivo} />;
                     }
-                    if (!esVisible(item)) return null;
                     const Icon = ICONS[item.href] ?? InicioIcon;
                     const active = esActivo(item.href);
                     return (
@@ -74,8 +71,8 @@ function GrupoExpandible({
     hijos,
     esActivo,
 }: {
-    item: NavItem;
-    hijos: NavItem[];
+    item: NavEntry;
+    hijos: NavEntry[];
     esActivo: (href: string) => boolean;
 }) {
     const idLista = useId();

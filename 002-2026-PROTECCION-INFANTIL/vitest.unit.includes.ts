@@ -537,6 +537,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-437 (I-299): el menú del profesional no promete pantallas muertas
     // ni pinta items ajenos, y sale de la misma lista que el desplegable.
     "src/lib/profesional/menu.candado.test.ts",
+    // SPEC-744: `navParaRol` es la fuente única de nav por rol (candado B) y el
+    // candado (A/C) que ninguna superficie queme destinos de nav (descubridor).
+    "src/lib/nav/para-rol.test.ts",
+    "src/components/modules/nav-superficie-unica.candado.test.tsx",
     // SPEC-403 (I-288): la comisión es parámetro, no constante — y el seed no
     // le pisa al admin el valor que ajustó.
     "src/lib/profesional/cita/comision.test.ts",
