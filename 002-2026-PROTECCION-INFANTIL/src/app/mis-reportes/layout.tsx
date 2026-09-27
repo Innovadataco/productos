@@ -5,7 +5,7 @@ import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { ServicioVencidoScreen } from "@/components/modules/ServicioVencidoScreen";
 import { NavLateral } from "@/components/modules/nav/NavLateral";
-import { PadreNavMovil } from "@/components/modules/padre/PadreNavMovil";
+import { BarraInferior } from "@/components/modules/nav/BarraInferior";
 import { Alerta } from "@/components/ui/Alerta";
 import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
 
@@ -13,13 +13,13 @@ import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-
  * SPEC-440 P3 (Jelkin vivo 04-09) · `/mis-reportes` traía SU PROPIO layout
  * — banner de vigencia y `children` a pelo — mientras que TODAS las demás
  * pantallas del padre (`/dashboard/padre/**`) montan el shell del área:
- * `PadreSideNav` a la izquierda + `PadreNavMovil` en móvil + banner de
+ * `NavLateral` a la izquierda + `BarraInferior` en móvil + banner de
  * vigencia en grace. El padre entraba a «Mis reportes» y perdía su menú.
  * Radicado literal: «Todas las pantallas del padre traen la barra "Mi
  * protección"; esta no. Misma barra, mismo componente». Decisión CEO
  * (17:1x): opción (B) — se le AGREGA el sidebar; el shell se reusa exacto
  * del layout `/dashboard/padre/`. En móvil no cambia nada porque
- * `PadreNavMovil` ya sirve a ambos.
+ * `BarraInferior` ya sirve a ambos.
  *
  * La guarda de vigencia SPEC-119 sigue activa para PARENT; el resto (anónimo,
  * roles internos que llegan por seguimiento) pasa sin sidebar — el shell del
@@ -52,7 +52,7 @@ export default async function MisReportesLayout({ children }: { children: React.
     return (
         <div className="theme-padre flex min-h-screen bg-page">
             <NavLateral rol="PARENT" modulosPermitidos={[]} />
-            <PadreNavMovil />
+            <BarraInferior rol="PARENT" modulosPermitidos={[]} />
             <main className="min-w-0 flex-1 pb-16 sm:pb-0">
                 {debeMostrarBanner(estadoVigencia) && (
                     <div className="px-4 pt-4 sm:px-6">

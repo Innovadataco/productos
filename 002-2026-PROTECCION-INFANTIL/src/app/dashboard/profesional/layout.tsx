@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { NavLateral } from "@/components/modules/nav/NavLateral";
+import { BarraInferior } from "@/components/modules/nav/BarraInferior";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 /**
@@ -24,7 +25,8 @@ export default async function ProfesionalLayout({ children }: { children: React.
         // SPEC-460: el profesional comparte el acento cielo del padre (theme-profesional).
         <div className="theme-profesional flex min-h-screen">
             <NavLateral rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
-            <main className="flex-1 overflow-auto">{children}</main>
+            <BarraInferior rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
+            <main className="flex-1 overflow-auto pb-16 sm:pb-0">{children}</main>
         </div>
     );
 }

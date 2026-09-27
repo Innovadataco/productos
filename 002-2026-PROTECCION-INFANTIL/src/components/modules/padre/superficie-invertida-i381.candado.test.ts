@@ -40,7 +40,7 @@ const SRC = path.resolve(__dirname, "../../..");
 const GLOBALS = path.join(SRC, "app/globals.css");
 
 // Las pantallas del padre-núcleo que Jelkin recorre y donde vivía el defecto (I-381).
-// Se incluyen los LAYOUTS del padre: la barra de navegación móvil (PadreNavMovil) vive ahí
+// Se incluyen los LAYOUTS del padre: la barra de navegación móvil (BarraInferior) vive ahí
 // y sufría el mismo velo invertido (`dark:bg-tinta/95` → barra casi blanca en oscuro).
 const RAICES = [
     path.join(SRC, "app/mis-reportes/page.tsx"),
@@ -119,9 +119,9 @@ function arbolDeRender(entrada: string): Array<{ archivo: string; codigo: string
 // que el walker no sigue. El error nombra la RAÍZ muerta, nunca un total agregado.
 const MARCA_RAIZ: Record<string, string> = {
     [path.join(SRC, "app/mis-reportes/page.tsx")]: "MisReportesCadenas",
-    [path.join(SRC, "app/mis-reportes/layout.tsx")]: "PadreNavMovil",
+    [path.join(SRC, "app/mis-reportes/layout.tsx")]: "BarraInferior",
     [path.join(SRC, "app/dashboard/padre/expedientes/[id]/page.tsx")]: "ExpedienteMadreClient",
-    [path.join(SRC, "app/dashboard/padre/layout.tsx")]: "PadreNavMovil",
+    [path.join(SRC, "app/dashboard/padre/layout.tsx")]: "BarraInferior",
     [path.join(SRC, "app/dashboard/colegio/alertas/[id]/page.tsx")]: "CasoVivoColegio",
     [path.join(SRC, "app/dashboard/padre/citas/page.tsx")]: "RejillaMisCitas",
     [path.join(SRC, "app/dashboard/padre/perfil/page.tsx")]: "HistorialCambiosPerfil",

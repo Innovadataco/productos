@@ -55,8 +55,8 @@ vi.mock("@/lib/dal/repositories/pagos-repository", () => ({
 vi.mock("@/components/modules/nav/NavLateral", () => ({
     NavLateral: () => React.createElement("nav", { "data-testid": "nav-lateral" }),
 }));
-vi.mock("@/components/modules/padre/PadreNavMovil", () => ({
-    PadreNavMovil: () => React.createElement("nav", { "data-testid": "padre-nav-movil" }),
+vi.mock("@/components/modules/nav/BarraInferior", () => ({
+    BarraInferior: () => React.createElement("nav", { "data-testid": "barra-inferior" }),
 }));
 vi.mock("@/components/modules/ServicioVencidoScreen", () => ({
     ServicioVencidoScreen: ({ mensaje }: { mensaje?: string }) => React.createElement("div", { "data-testid": "vencido" }, mensaje),
@@ -107,7 +107,7 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
 
         const arbol = await MisReportesLayout({ children: React.createElement("main", { "data-testid": "contenido" }) });
         expect(pintar(arbol).includes("nav-lateral")).toBe(false);
-        expect(pintar(arbol).includes("padre-nav-movil")).toBe(false);
+        expect(pintar(arbol).includes("barra-inferior")).toBe(false);
         expect(pintar(arbol).includes("contenido")).toBe(true);
     });
 
@@ -117,7 +117,7 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
 
         const arbol = await MisReportesLayout({ children: React.createElement("main", { "data-testid": "contenido" }) });
         expect(pintar(arbol).includes("nav-lateral")).toBe(false);
-        expect(pintar(arbol).includes("padre-nav-movil")).toBe(false);
+        expect(pintar(arbol).includes("barra-inferior")).toBe(false);
         expect(pintar(arbol).includes("contenido")).toBe(true);
     });
 

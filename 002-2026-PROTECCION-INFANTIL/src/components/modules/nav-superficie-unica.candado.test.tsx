@@ -166,6 +166,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/contexts/AuthContext", () => ({ useAuth: () => authRef.value }));
 vi.mock("@/lib/nav/para-rol", () => ({
     navParaRol: () => [{ href: SENT_HREF, label: SENT_LABEL, iconKey: SENT_HREF }],
+    navMovilParaRol: () => ({ principales: [{ href: SENT_HREF, label: SENT_LABEL, iconKey: SENT_HREF }], resto: [] }),
     aplanar: (items: Array<{ href: string; label: string; children?: unknown[] }>) =>
         items.flatMap((i) => (i.children && (i.children as unknown[]).length > 0 ? (i.children as typeof items) : [i])),
 }));
@@ -174,7 +175,8 @@ vi.mock("@/components/ui/Tooltip", () => ({ Tooltip: ({ children }: { children: 
 vi.mock("@/components/ui/Guardian", () => ({ Guardian: () => null }));
 
 import { NavLateral } from "./nav/NavLateral";
-import { PadreNavMovil } from "./padre/PadreNavMovil";
+import { BarraInferior } from "./nav/BarraInferior";
+import { HojaMas } from "./nav/HojaMas";
 import { NavHeader } from "./NavHeader";
 
 const enlaceCentinela = () => screen.getByText(SENT_LABEL).closest("a")?.getAttribute("href");
@@ -190,10 +192,18 @@ const SUPERFICIES_CUBIERTAS: Array<{ rel: string; render: () => void }> = [
         },
     },
     {
-        rel: "src/components/modules/padre/PadreNavMovil.tsx",
+        // SPEC-744: la barra móvil única (reemplaza PadreNavMovil), por rol con módulos.
+        rel: "src/components/modules/nav/BarraInferior.tsx",
         render: () => {
             authRef.value = { user: { rol: "PARENT" }, isLoading: false };
-            render(<PadreNavMovil />);
+            render(<BarraInferior rol="PARENT" modulosPermitidos={[]} />);
+        },
+    },
+    {
+        // La hoja «Más» refleja el `resto` que recibe; el centinela va como ítem del resto.
+        rel: "src/components/modules/nav/HojaMas.tsx",
+        render: () => {
+            render(<HojaMas resto={[{ href: SENT_HREF, label: SENT_LABEL, iconKey: SENT_HREF }]} activo={() => false} onCerrar={() => {}} />);
         },
     },
     {
