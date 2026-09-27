@@ -26,7 +26,9 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     { href: "/dashboard/admin/bandeja", label: "Bandeja de reportes", modulo: "bandeja_reportes" },
     { href: "/dashboard/admin/spam", label: "Revisión de spam", modulo: "revision_spam" },
     { href: "/dashboard/admin/comite", label: "Comité", modulo: "comite_bandeja" },
-    { href: "/dashboard/admin/estadisticas", label: "Dashboard", modulo: "estadisticas" },
+    // SPEC-744 (Diseño, aprob. Jelkin): «Estadísticas» —no «Dashboard» (techie)— casa con
+    // el rótulo del colegio y no reaviva la ambigüedad de «Dashboard» que 742 limpió.
+    { href: "/dashboard/admin/estadisticas", label: "Estadísticas", modulo: "estadisticas" },
     { href: "/dashboard/admin/ia", label: "Centro de Control IA", modulo: "centro_control_ia" },
     { href: "/dashboard/admin/operadores", label: "Operadores", modulo: "operadores" },
     // SPEC-435 (Jelkin vivo 04-09): cuentas VERIFICADOR con su user y pass —
