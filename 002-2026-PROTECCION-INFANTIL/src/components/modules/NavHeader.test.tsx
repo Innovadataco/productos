@@ -140,6 +140,42 @@ describe("NavHeader", () => {
         ).toBeTruthy();
     });
 
+    // ── SPEC-743: la consulta pública («Estadísticas públicas») es del ANÓNIMO ──────────────
+    // 742 retiró su enlace por error; se restaura SOLO para el no-logueado. El logueado NO lo
+    // lleva (no reintroducir el botón redundante que 742 limpió). Candado POR ROL.
+    it("SPEC-743: el ANÓNIMO VE «Estadísticas públicas» → /dashboard-publico (header de escritorio + hamburguesa, arriba de «Iniciar sesión»)", () => {
+        mockPathname = "/";
+        mockAuth(null);
+        render(<NavHeader />);
+        // Escritorio: enlace de texto secundario presente desde el arranque (hamburguesa cerrada).
+        expect(screen.getByText("Estadísticas públicas").closest("a")?.getAttribute("href")).toBe("/dashboard-publico");
+        // Móvil: el MISMO ítem vive en la hamburguesa.
+        abrirNav();
+        const stats = screen.getAllByText("Estadísticas públicas");
+        const logins = screen.getAllByText("Iniciar sesión");
+        expect(stats.length, "header + hamburguesa").toBeGreaterThanOrEqual(2);
+        for (const n of stats) expect(n.closest("a")?.getAttribute("href")).toBe("/dashboard-publico");
+        // Orden (Diseño): en la hamburguesa «Estadísticas públicas» va ARRIBA de «Iniciar sesión».
+        const hamburgStats = stats[stats.length - 1];
+        const hamburgLogin = logins[logins.length - 1];
+        expect(
+            hamburgStats.compareDocumentPosition(hamburgLogin) & Node.DOCUMENT_POSITION_FOLLOWING,
+            "«Estadísticas públicas» debe preceder a «Iniciar sesión» en la hamburguesa",
+        ).toBeTruthy();
+    });
+
+    it("SPEC-743: el LOGUEADO NO lleva «Estadísticas públicas» en ningún menú (no reintroducir lo que 742 limpió)", () => {
+        for (const [rol, path] of [["PARENT", "/dashboard/padre"], ["ADMIN", "/dashboard/admin/reportes"]] as const) {
+            mockPathname = path;
+            mockAuth({ id: "1", email: "u@test.com", nombre: "U", rol });
+            const { unmount } = render(<NavHeader />);
+            expect(screen.queryByText("Estadísticas públicas"), `header no debe llevarlo (${rol})`).toBeNull();
+            abrirNav();
+            expect(screen.queryByText("Estadísticas públicas"), `hamburguesa no debe llevarlo (${rol})`).toBeNull();
+            unmount();
+        }
+    });
+
     it("SCHOOL_ADMIN NO ve las entradas del área de padres (I-36) en ningún menú", () => {
         mockAuth({ id: "2", email: "colegio@test.com", nombre: "Colegio", rol: "SCHOOL_ADMIN" });
         render(<NavHeader />);

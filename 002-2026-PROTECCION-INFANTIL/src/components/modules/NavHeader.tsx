@@ -222,14 +222,29 @@ export function NavHeader() {
                             )}
                         </div>
                     ) : (
-                        esEnlaceNavegable("/login") && (
-                            <Link
-                                href="/login"
-                                className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-tinta/5 transition"
-                            >
-                                Iniciar sesión
-                            </Link>
-                        )
+                        <>
+                            {/* SPEC-743: la consulta pública (estadísticas agregadas, sin login) es un
+                                destino legítimo del ANÓNIMO. 742 retiró su enlace por error; se restaura
+                                SOLO para el no-logueado — el logueado tiene su panel y NO reintroduce el
+                                botón que 742 limpió. En escritorio es un enlace de texto secundario; en
+                                móvil vive en la hamburguesa (mismo ítem, mismo destino). */}
+                            {esEnlaceNavegable("/dashboard-publico") && (
+                                <Link
+                                    href="/dashboard-publico"
+                                    className="hidden sm:inline text-sm font-medium text-subtle hover:text-body transition"
+                                >
+                                    Estadísticas públicas
+                                </Link>
+                            )}
+                            {esEnlaceNavegable("/login") && (
+                                <Link
+                                    href="/login"
+                                    className="rounded-xl glass-input px-4 py-2 text-sm font-semibold text-body hover:bg-tinta/5 transition"
+                                >
+                                    Iniciar sesión
+                                </Link>
+                            )}
+                        </>
                     )}
 
                     <Tooltip content="Menú">
@@ -297,7 +312,12 @@ export function NavHeader() {
                                     «cada control, un trabajo». La hamburguesa es SOLO navegación del rol. */}
                             </>
                         ) : (
-                            esEnlaceNavegable("/login") && <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>
+                            <>
+                                {/* SPEC-743: «Estadísticas públicas» ARRIBA de «Iniciar sesión» — la
+                                    consulta pública es del anónimo (mismo ítem que el enlace de escritorio). */}
+                                {esEnlaceNavegable("/dashboard-publico") && <MobileLink href="/dashboard-publico" onClick={() => setMobileOpen(false)}>Estadísticas públicas</MobileLink>}
+                                {esEnlaceNavegable("/login") && <MobileLink href="/login" onClick={() => setMobileOpen(false)}>Iniciar sesión</MobileLink>}
+                            </>
                         )}
                     </div>
                 </div>

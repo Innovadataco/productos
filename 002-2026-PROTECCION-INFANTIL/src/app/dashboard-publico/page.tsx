@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { PublicDashboard } from "@/components/modules/PublicDashboard";
 
 export const metadata: Metadata = {
-    title: "Dashboard público",
+    // SPEC-743: el título casa con el rótulo del enlace del menú («Estadísticas públicas»),
+    // antes «Dashboard público» (techie, y no coincidía con cómo se nombra el destino).
+    title: "Estadísticas públicas",
     description:
         "Estadísticas agregadas sobre cuentas reportadas visibles públicamente: total de reportes y distribución por plataforma, país y categoría.",
     alternates: {
@@ -11,7 +13,7 @@ export const metadata: Metadata = {
     openGraph: {
         type: "website",
         url: "/dashboard-publico",
-        title: "Dashboard público — Protección Infantil",
+        title: "Estadísticas públicas — Protección Infantil",
         description:
             "Estadísticas agregadas sobre cuentas reportadas visibles públicamente.",
     },
