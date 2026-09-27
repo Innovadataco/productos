@@ -205,4 +205,17 @@ export class MonitoreoRepository {
         const filas = await this.db.moduloPermisible.findMany({ select: { clave: true } });
         return filas.map((f) => f.clave);
     }
+
+    /**
+     * SPEC-745: grants ACTIVOS (activo=true) con la clave de su módulo (solo
+     * lectura). Para el guardián blando de grants a módulos muertos — la decisión
+     * de cuáles son muertos la toma el helper puro `grantsAModulosMuertos`.
+     */
+    async leerGrantsActivosConClave(): Promise<{ clave: string; rol: string }[]> {
+        const filas = await this.db.permisoModulo.findMany({
+            where: { activo: true },
+            select: { rol: true, modulo: { select: { clave: true } } },
+        });
+        return filas.map((f) => ({ clave: f.modulo.clave, rol: f.rol }));
+    }
 }

@@ -137,3 +137,30 @@ export function clavesModuloHuerfanas(clavesEnBd: readonly string[]): string[] {
     const conocidas = new Set(CATALOGO_MODULOS.map((m) => m.clave));
     return [...new Set(clavesEnBd)].filter((clave) => !conocidas.has(clave)).sort();
 }
+
+/** Un grant de permiso a un módulo, por rol. `rol` es string a propósito (este
+ * archivo es puro; el enum `RolUsuario` vive en @prisma/client). */
+export interface GrantModulo {
+    clave: string;
+    rol: string;
+}
+
+/**
+ * SPEC-745 · Grants ACTIVOS a módulos MUERTOS: pares (clave, rol) cuyo módulo NO
+ * está en `CATALOGO_MODULOS` — el módulo se retiró del código pero su permiso
+ * sigue OTORGANDO acceso en una BD de larga vida. Hoy solo hay correctores con
+ * listas QUEMADAS (`revocar-grants-modulos-muertos`); este helper deriva del
+ * catálogo (fuente ÚNICA) para el guardián de pi-monitor, que así no diverge de
+ * lo que el código declara.
+ *
+ * Puro (sin BD): el caller trae los grants activos de la BD por
+ * `MonitoreoRepository`; esta función decide. Complementa `clavesModuloHuerfanas`
+ * (aquello marca la FILA de módulo; esto, que ese módulo TODAVÍA otorga permiso).
+ * Ordenado por clave y luego rol. Vacío ⇒ sin grants muertos.
+ */
+export function grantsAModulosMuertos(grants: readonly GrantModulo[]): GrantModulo[] {
+    const conocidas = new Set(CATALOGO_MODULOS.map((m) => m.clave));
+    return grants
+        .filter((g) => !conocidas.has(g.clave))
+        .sort((a, b) => (a.clave === b.clave ? a.rol.localeCompare(b.rol) : a.clave.localeCompare(b.clave)));
+}
