@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { AdminNav } from "@/components/modules/AdminNav";
+import { NavLateral } from "@/components/modules/nav/NavLateral";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
 /**
@@ -23,7 +23,7 @@ export default async function ProfesionalLayout({ children }: { children: React.
     return (
         // SPEC-460: el profesional comparte el acento cielo del padre (theme-profesional).
         <div className="theme-profesional flex min-h-screen">
-            <AdminNav rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
+            <NavLateral rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
             <main className="flex-1 overflow-auto">{children}</main>
         </div>
     );

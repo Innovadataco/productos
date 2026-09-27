@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ComiteSubNav } from "@/app/dashboard/admin/comite/components/ComiteSubNav";
-import { AdminNav } from "@/components/modules/AdminNav";
+import { NavLateral } from "@/components/modules/nav/NavLateral";
 import { proxy } from "@/lib/proxy";
 import { createToken } from "@/lib/auth";
 import { puedeGestionarReporte } from "@/lib/operadores/permisos";
@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
     usePathname: () => "/dashboard/admin/comite",
 }));
 
-// SPEC-691: AdminNav ahora consume useAuth (el menú del profesional se condiciona a
+// SPEC-691: NavLateral ahora consume useAuth (el menú del profesional se condiciona a
 // su estado). Estos casos son de ADMIN/OPERADOR/COMITE/SCHOOL_ADMIN, que siguen por
 // módulo; basta con satisfacer el hook con un usuario nulo.
 vi.mock("@/lib/contexts/AuthContext", () => ({
@@ -134,7 +134,7 @@ describe("ComiteSubNav (módulo de BD ∧ predicado del proxy, spec 086 + D-41/S
     });
 });
 
-describe("AdminNav (filtrada por módulo, spec 086)", () => {
+describe("NavLateral (filtrada por módulo, spec 086)", () => {
     const todosLosModulos = [
         "bandeja_reportes",
         "revision_spam",
@@ -150,7 +150,7 @@ describe("AdminNav (filtrada por módulo, spec 086)", () => {
     ];
 
     it("con todos los módulos ve todas las secciones", () => {
-        render(<AdminNav rol="ADMIN" modulosPermitidos={todosLosModulos} />);
+        render(<NavLateral rol="ADMIN" modulosPermitidos={todosLosModulos} />);
         expect(screen.getByText("Bandeja de reportes")).toBeTruthy();
         expect(screen.getByText("Revisión de spam")).toBeTruthy();
         expect(screen.getByText("Comité")).toBeTruthy();
@@ -158,13 +158,13 @@ describe("AdminNav (filtrada por módulo, spec 086)", () => {
     });
 
     it("sin módulos permitidos no ve secciones", () => {
-        render(<AdminNav rol="SCHOOL_ADMIN" modulosPermitidos={[]} />);
+        render(<NavLateral rol="SCHOOL_ADMIN" modulosPermitidos={[]} />);
         expect(screen.queryByText("Bandeja de reportes")).toBeNull();
         expect(screen.queryByText("Configuración")).toBeNull();
     });
 
     it("con solo bandeja y spam ve solo esas dos", () => {
-        render(<AdminNav rol="OPERADOR" modulosPermitidos={["bandeja_reportes", "revision_spam"]} />);
+        render(<NavLateral rol="OPERADOR" modulosPermitidos={["bandeja_reportes", "revision_spam"]} />);
         expect(screen.getByText("Bandeja de reportes")).toBeTruthy();
         expect(screen.getByText("Revisión de spam")).toBeTruthy();
         expect(screen.queryByText("Comité")).toBeNull();
@@ -178,7 +178,7 @@ describe("AdminNav (filtrada por módulo, spec 086)", () => {
     });
 
     it("con solo comite_bandeja solo ve 'Comité'", () => {
-        render(<AdminNav rol="COMITE_VALIDACION" modulosPermitidos={["comite_bandeja"]} />);
+        render(<NavLateral rol="COMITE_VALIDACION" modulosPermitidos={["comite_bandeja"]} />);
         expect(screen.getByText("Comité")).toBeTruthy();
         expect(screen.queryByText("Bandeja de reportes")).toBeNull();
         expect(screen.queryByText("Configuración")).toBeNull();

@@ -4,7 +4,7 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { verificarVigenciaCliente } from "@/lib/colegio/vigencia";
 import { ServicioVencidoScreen } from "@/components/modules/ServicioVencidoScreen";
-import { PadreSideNav } from "@/components/modules/padre/PadreSideNav";
+import { NavLateral } from "@/components/modules/nav/NavLateral";
 import { PadreNavMovil } from "@/components/modules/padre/PadreNavMovil";
 import { Alerta } from "@/components/ui/Alerta";
 import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
@@ -51,7 +51,7 @@ export default async function MisReportesLayout({ children }: { children: React.
 
     return (
         <div className="theme-padre flex min-h-screen bg-page">
-            <PadreSideNav />
+            <NavLateral rol="PARENT" modulosPermitidos={[]} />
             <PadreNavMovil />
             <main className="min-w-0 flex-1 pb-16 sm:pb-0">
                 {debeMostrarBanner(estadoVigencia) && (

@@ -122,8 +122,8 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
             .filter((l) => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l))
             .join("\n");
 
-    it("`AdminNav` deriva su barra de `navParaRol` (SPEC-744: fuente única; la compuerta vive en el resolver)", () => {
-        const nav = leerCodigo("src/components/modules/AdminNav.tsx");
+    it("`NavLateral` deriva su barra de `navParaRol` (SPEC-744: fuente única; la compuerta vive en el resolver)", () => {
+        const nav = leerCodigo("src/components/modules/nav/NavLateral.tsx");
         // SPEC-744 movió la compuerta DENTRO de `navParaRol` (la fuente única): el
         // profesional por estado `habilitado` (con override del muro), el resto por
         // módulo ∧ proxy. AdminNav ya NO arma la lista ni filtra por módulo a mano —
@@ -179,7 +179,7 @@ describe("SPEC-437 · la barra lateral y el desplegable salen de la MISMA lista"
             "src/app/perfil-profesional/layout.tsx",
         ]) {
             expect(fs.existsSync(path.join(RAIZ, layout)), `falta ${layout}`).toBe(true);
-            expect(/AdminNav/.test(leerCodigo(layout))).toBe(true);
+            expect(/NavLateral/.test(leerCodigo(layout))).toBe(true);
         }
     });
 });
