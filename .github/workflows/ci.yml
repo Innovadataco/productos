@@ -538,6 +538,100 @@ jobs:
       # SPEC-677 (I-404) · el rótulo del botón «Deshacer» contrasta ≥4.5 sobre el relleno cielo, medido por render en los dos temas.
       - run: npm run render:deshacer:check
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # SPEC-775 (G2 · cableado por Calidad): la suite e2e (`tests/e2e/**`, Playwright)
+  # NUNCA corrió en CI — ningún job la ejecutaba (el `playwright install` de
+  # render-check es para los render-checks; `journeys` corre `src/lib/e2e/journeys/**`,
+  # otra cosa). Consecuencia doble: los candados que viven ahí (SPEC-764 H-2/pertenencia/
+  # monto, etc.) no disparaban, Y el arnés de siembra se pudrió sin que nadie lo viera.
+  #
+  # EL HALLAZGO (por qué existe este job): un solo INSERT crudo del seed acumuló CUATRO
+  # derivas de esquema —FK vieja (`profesionalId`→`perfilProfesionalId`), dos columnas
+  # NOT NULL nunca sumadas (`revisadoPorId`, `venceEn`) y un CHECK XOR (SPEC-686)— SIN
+  # fallar nunca. Dos cegueras multiplicándose: el SQL crudo está FUERA del alcance del
+  # compilador (justo lo que su comentario buscaba, «no depender del tipo generado») Y la
+  # suite no corría en runtime. Ninguna sola habría durado meses; juntas, sí.
+  #
+  # RATCHET (decisión CEO · mismo patrón que drift:check y el registro de límites):
+  #   • Entra BLANDO: `continue-on-error: true` en el paso de la suite; NO está en
+  #     `gate`/`pi-gate`, así que NO bloquea el merge.
+  #   • SIN línea base todavía. La PRIMERA corrida de CI produce el número N de specs
+  #     rojas. Ese primer N NO es deuda: es ENTORNO + rot destapado al estrenar la suite
+  #     (si alguien lo ve sin contexto va a creer que hay N defectos — no los hay aún).
+  #   • Endurecimiento (commit SIGUIENTE, con ESE N): se agrega un paso SIN
+  #     `continue-on-error` que falla si (specs rojas) > N. N solo BAJA; cada arreglo lo
+  #     reduce. Cuando N=0 se quita el `continue-on-error` del paso de la suite → GATE
+  #     DURO. La condición vive acá, al lado del paso que endurece, no en un documento.
+  test-e2e:
+    runs-on: ubuntu-latest
+    needs: [should-skip]
+    if: needs.should-skip.outputs.skip != 'true'
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: 002-2026-PROTECCION-INFANTIL
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: proteccion
+          POSTGRES_PASSWORD: proteccion_dev
+          POSTGRES_DB: proteccion_infantil_test
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U proteccion"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: 002-2026-PROTECCION-INFANTIL/package-lock.json
+      - run: npm ci
+      # Cliente Prisma FRESCO desde el esquema del repo. En CI no existe el drift de
+      # cliente viejo que aparece al symlinkear node_modules entre worktrees de ramas
+      # divergentes (el 500 `Unknown argument profesion` era eso, no producto).
+      - run: npx prisma generate
+      # `.env.test` es un archivo VERSIONADO (plantilla de test, placeholders seguros).
+      # Solo AGREGAMOS credenciales E2E dummy: BD fresca de CI, cuentas efímeras, cero
+      # secretos reales. Los seeders crean estas cuentas y los specs entran con las mismas.
+      - name: Agregar credenciales E2E dummy (solo CI)
+        run: |
+          cat >> .env.test <<'ENV_EOF'
+          E2E_PADRE_EMAIL=padre-e2e@ci.local
+          E2E_PADRE_PASSWORD=CiDummyPadre2026!
+          E2E_PADRE2_EMAIL=padre2-e2e@ci.local
+          E2E_PADRE2_PASSWORD=CiDummyPadre2b2026!
+          E2E_PROFESIONAL_EMAIL=prof-e2e@ci.local
+          E2E_PROFESIONAL_PASSWORD=CiDummyProf2026!
+          E2E_COLEGIO_A_ADMIN_PASSWORD=CiDummyColegioA2026!
+          E2E_COLEGIO_B_ADMIN_PASSWORD=CiDummyColegioB2026!
+          ENV_EOF
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # Siembra: parámetros del sistema (raíz de los 500 de consentimiento/precio que
+      # medí sin sembrar) + cuentas de rol + colegios multi-tenant. `--env-file=.env.test`
+      # da DATABASE_URL (BD `_test`) y las credenciales E2E a los seeders. NO seteamos
+      # NODE_ENV=test acá: el seeder multi-tenant se bloquea si NODE_ENV=test (esa var la
+      # pone el webServer de Playwright para la APP, no la siembra).
+      - name: Sembrar parámetros del sistema
+        run: node --env-file=.env.test ./node_modules/.bin/tsx prisma/seed.ts
+      - name: Sembrar cuentas de rol (Calidad)
+        run: node --env-file=.env.test ./node_modules/.bin/tsx scripts/seed-e2e-cuentas-calidad.ts
+      - name: Sembrar colegios multi-tenant
+        run: node --env-file=.env.test ./node_modules/.bin/tsx scripts/seed-e2e-multi-tenant.ts
+      - run: npx playwright install --with-deps chromium
+      # La suite. La guardia SPEC-770 (globalSetup) ABORTA si la BD conectada no termina
+      # en `_test` — su primera prueba real fuera de una máquina de dev: si aborta acá es
+      # la guardia FUNCIONANDO, no un defecto del job. `continue-on-error` = BLANDO (ratchet arriba).
+      - run: npm run test:e2e
+        continue-on-error: true
+
   # SPEC-280 (002-PI-180): resumen legible al final de cada corrida. Corre siempre
   # que el CI haya arrancado (verde, rojo o cancelado) — la pestaña "Summary" debe
   # existir aunque un shard se cayera. Nunca rompe el gate.
