@@ -666,6 +666,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-749 FR-2: la espera dice la verdad tras la hora para PAGADA_PENDIENTE/SIN_CONFIRMAR
     // (copy §14) y NO inventa CONFIRMADA-pasada (diferido → null). Control positivo por mutación. Sin BD.
     "src/lib/padre/vista-espera-cita.candado.test.ts",
+    // SPEC-772: el estado efectivo de una solicitud de habeas data no miente sobre el reloj legal —
+    // RESUELTA_TARDE ≠ resuelta; esIncumplimiento fuente única; falla conservador (incumplimiento). Sin BD.
+    "src/lib/habeas-data/estado-efectivo.candado.test.ts",
     // SPEC-541 (cliente): el input de fecha de nacimiento del perfil acota 18-100.
     "src/components/modules/padre/PerfilPadreForm.test.tsx",
     // SPEC-729 (cliente): la presentación del padre se edita desde Mi perfil (bloque).
