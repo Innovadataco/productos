@@ -380,6 +380,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // de ventanas de la asignación con simultaneidad. Sin BD. (SPEC-778 eliminó
     // `enlaceVisibleParaCita`: la visibilidad se deriva de estadoEfectivoDeCita.)
     "src/lib/operadores/enlace-sesion.test.ts",
+    // SPEC-793: el enlace solo puede ser de un proveedor de la ALLOWLIST (mecanismo, no contenido; el
+    // parecido no alcanza — `x.aprobado.atacante.co` se rechaza). Content-independent, sin BD.
+    "src/lib/operadores/enlace-proveedor-aprobado.candado.test.ts",
     // SPEC-778: la visibilidad del enlace al padre/profesional es UNA derivación gateada
     // (`derivarEnlaceParaCita`): url solo en PUBLICADO (cruzar el vivo), INDETERMINADO sin
     // reloj sin mentir, y el tiempo desde estadoEfectivoDeCita (746). + copy sin adjetivos.
