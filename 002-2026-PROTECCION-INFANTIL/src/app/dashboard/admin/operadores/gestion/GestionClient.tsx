@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Alerta } from "@/components/ui/Alerta";
 import { Cargando } from "@/components/ui/Cargando";
 import { Tabla, TablaBody, TablaHead } from "@/components/ui/Tabla";
+import { CargaDosTrabajos, chipAlTope } from "@/components/modules/operadores/CargaDosTrabajos";
 
 type Perfil = {
     cupoMaximo: number;
@@ -28,6 +29,10 @@ type Operador = {
     perfil: Perfil | null;
     casosAbiertos: number;
     casosTotales: number;
+    // SPEC-779: las dos cargas, cada una con su tope (misma fuente que el asignador).
+    topeCasos: number;
+    sesionesVigentes: number;
+    topeSesiones: number;
 };
 
 type Mensaje = { type: "success" | "error"; text: string } | null;
@@ -342,8 +347,7 @@ export default function AdminOperadoresGestionPage() {
                                         <th className="pb-3 font-medium">Nombre</th>
                                         <th className="pb-3 font-medium">Email</th>
                                         <th className="pb-3 font-medium">Estado</th>
-                                        <th className="pb-3 font-medium">Cupo</th>
-                                        <th className="pb-3 font-medium">Casos</th>
+                                        <th className="pb-3 font-medium">Carga (casos · sesiones)</th>
                                         <th className="pb-3 font-medium">Apelaciones</th>
                                         <th className="pb-3 font-medium">Notas</th>
                                         <th className="pb-3 font-medium text-right">Acciones</th>
@@ -444,9 +448,23 @@ function ReadOnlyRow({
                     {op.estado === "activo" ? "Activo" : "Inactivo"}
                 </Badge>
             </td>
-            <td className="py-3 pr-3 text-muted">{op.perfil?.cupoMaximo ?? "—"}</td>
-            <td className="py-3 pr-3 text-muted">
-                {op.casosAbiertos} / {op.casosTotales}
+            <td className="py-3 pr-3">
+                <CargaDosTrabajos
+                    className="min-w-[220px]"
+                    casos={{ actual: op.casosAbiertos, tope: op.topeCasos }}
+                    sesiones={{ actual: op.sesionesVigentes, tope: op.topeSesiones }}
+                />
+                {(() => {
+                    const chip = chipAlTope(
+                        { actual: op.casosAbiertos, tope: op.topeCasos },
+                        { actual: op.sesionesVigentes, tope: op.topeSesiones },
+                    );
+                    return chip ? (
+                        <span className="mt-2 inline-block rounded-full bg-ambar/10 px-2 py-0.5 text-xs font-medium text-estado-ambar">
+                            {chip}
+                        </span>
+                    ) : null;
+                })()}
             </td>
             <td className="py-3 pr-3 text-muted">{op.perfil?.esRevisorDeApelaciones ? "Sí" : "No"}</td>
             <td className="py-3 pr-3 text-muted max-w-[200px] truncate" title={op.perfil?.notasInternas || undefined}>
@@ -513,6 +531,7 @@ function EditableRow({
                 </select>
             </td>
             <td className="py-3 pr-3">
+                <label className="block text-xs text-muted">Cupo casos</label>
                 <input
                     type="number"
                     min={1}
@@ -521,9 +540,10 @@ function EditableRow({
                     onChange={(e) => setValues({ ...values, cupoMaximo: Number(e.target.value) })}
                     className="w-20 rounded-lg px-2 py-1 text-sm text-body glass-input"
                 />
-            </td>
-            <td className="py-3 pr-3 text-muted">
-                {op.casosAbiertos} / {op.casosTotales}
+                {/* El tope de SESIONES es global (parámetro), no per-operador: se muestra, no se edita acá. */}
+                <span className="mt-1 block text-xs text-muted">
+                    Sesiones: {op.sesionesVigentes}/{op.topeSesiones}
+                </span>
             </td>
             <td className="py-3 pr-3">
                 <select

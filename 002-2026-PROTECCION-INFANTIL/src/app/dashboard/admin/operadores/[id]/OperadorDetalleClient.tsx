@@ -7,6 +7,7 @@ import { Cargando } from "@/components/ui/Cargando";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { AdminReporteDetalle } from "@/components/modules/AdminReporteDetalle";
 import { ReasignarModal } from "@/components/modules/operadores/ReasignarModal";
+import { CargaDosTrabajos } from "@/components/modules/operadores/CargaDosTrabajos";
 import { MetricasCards } from "./components/MetricasCards";
 import { CasosAbiertosTable } from "./components/CasosAbiertosTable";
 import { DistribucionCategorias } from "./components/DistribucionCategorias";
@@ -100,10 +101,17 @@ export default function AdminOperadorDetallePage() {
             <div className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-body">{nombreOperador}</h1>
-                    <p className="text-sm text-muted">
-                        {metricas?.operador.email} · Cupo {metricas?.operador.cupoMaximo ?? "—"} ·{" "}
-                        {metricas?.casosAbiertos.length ?? 0} casos abiertos
-                    </p>
+                    <p className="text-sm text-muted">{metricas?.operador.email}</p>
+                    {/* SPEC-779: DOS cargas, cada una contra su tope (casos y sesiones son libros
+                        distintos). Reemplaza el «Cupo {cupoMaximo} · {n} casos abiertos» de antes,
+                        que escondía las sesiones detrás de un tope compartido. */}
+                    {metricas && (
+                        <CargaDosTrabajos
+                            className="mt-3 max-w-md"
+                            casos={{ actual: metricas.casosAbiertos.length, tope: metricas.operador.cupoMaximo }}
+                            sesiones={{ actual: metricas.sesionesVigentes, tope: metricas.operador.topeSesiones }}
+                        />
+                    )}
                 </div>
                 <Button variant="outline" onClick={() => router.push("/dashboard/admin/operadores/asignar")}>
                     Volver a asignar

@@ -27,8 +27,11 @@ import { metadatosHecho } from "./hecho-sesion-tipos";
 // El solape puro vive en `simultaneidad.ts` (unit sin infra); se re-exporta.
 export { ventanasSolapan } from "./simultaneidad";
 
-/** Estados en los que una cita OCUPA la agenda del operador (hay sesión programada). */
-const ESTADOS_OCUPAN_OPERADOR: EstadoSolicitudCita[] = ["CONFIRMADA"];
+/** Estados en los que una cita OCUPA la agenda del operador (hay sesión programada).
+ *  EXPORTADO para que la pantalla de carga del admin (SPEC-779) cuente las sesiones con la
+ *  MISMA fuente que este asignador: si contaran distinto, el admin vería un número y el
+ *  sistema decidiría con otro. */
+export const ESTADOS_OCUPAN_OPERADOR: EstadoSolicitudCita[] = ["CONFIRMADA"];
 
 export type ResultadoAsignacionCita =
     | { asignado: true; operadorId: string }
@@ -48,32 +51,40 @@ export async function asignarOperadorACita(
     }
 
     const { inicio: nuevaInicio, fin: nuevaFin } = cita.franja;
+    const ahora = new Date();
 
     const operadores = await new UsuarioRepository(tx).findOperadoresActivosConPerfil();
     if (operadores.length === 0) return { asignado: false, razon: "No hay operadores activos" };
 
+    const { cupoSesionesDefault, estrategia } = await obtenerConfigAsignacion(tx);
+
     // Filtro de SIMULTANEIDAD: descarta a quien ya tenga una cita solapada en la ventana.
+    // La CARGA es la de SESIONES vigentes (corte por fecha) y el cupo es el de SESIONES —libro
+    // propio, separado de `cupoMaximo` (que significa CASOS). El filtro POR CUPO lo aplica
+    // seleccionarOperador (invariante estructural, SPEC-779), no este llamador.
     const libres: OperadorCandidato[] = [];
     for (const op of operadores) {
         if (!op.perfilOperador) continue;
         if (await repo.operadorTieneSolape(op.id, nuevaInicio, nuevaFin, ESTADOS_OCUPAN_OPERADOR)) continue;
-        const casosAbiertos = await repo.contarAsignadasAOperador(op.id, ESTADOS_OCUPAN_OPERADOR);
         libres.push({
             id: op.id,
             email: op.email,
             nombre: op.nombre,
-            cupoMaximo: op.perfilOperador.cupoMaximo ?? 10,
-            casosAbiertos,
+            cupo: cupoSesionesDefault,
+            cargaActual: await repo.contarSesionesVigentesDeOperador(op.id, ESTADOS_OCUPAN_OPERADOR, ahora),
         });
     }
 
     if (libres.length === 0) {
-        // Contrato §5: sin operador libre → NO se asigna; sube al admin como capacidad.
+        // Contrato §5: sin operador libre en la ventana → NO se asigna; sube al admin como capacidad.
         return { asignado: false, razon: "Sin operador libre en la ventana" };
     }
 
-    const { estrategia } = await obtenerConfigAsignacion(tx);
     const elegido = seleccionarOperador(libres, estrategia);
+    if (!elegido) {
+        // Todos los libres están en su cupo de SESIONES → NO se asigna; sube al admin como capacidad.
+        return { asignado: false, razon: "Sin operador con cupo de sesiones disponible" };
+    }
 
     await repo.asignarOperador(solicitudId, elegido.id);
 
