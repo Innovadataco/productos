@@ -55,8 +55,7 @@ describe("NavHeader", () => {
         const toggle = screen.getByText(nombre).closest("button");
         if (toggle) fireEvent.click(toggle);
     };
-    // SPEC-742 · abre la NAV móvil (hamburguesa) por su aria-label.
-    const abrirNav = () => fireEvent.click(screen.getByLabelText("Menú"));
+    // SPEC-744: la hamburguesa se retiró — la nav del logueado vive en la barra por rol.
 
     it("SPEC-106: logo va al home público «/» para un ADMIN en la ZONA PÚBLICA", () => {
         // En zona pública `destinoLogo` ya devuelve «/» (un interno puede navegar el sitio público).
@@ -119,23 +118,18 @@ describe("NavHeader", () => {
         expect(screen.queryByText("Configuración")).toBeNull();
     });
 
-    it("SPEC-744: la NAV del padre en la hamburguesa sale de la fuente única — labels VIGENTES, sin «Mis reportes» (stale) ni home equivocado", () => {
-        mockPathname = "/dashboard/padre";
-        mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
-        render(<NavHeader />);
-        abrirNav();
-        // Labels vigentes de PADRE_NAV_ITEMS (SPEC-607), no las stale «Mi panel»/«Círculo de Confianza».
-        expect(screen.getByText("A quién vigilo").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/circulo-confianza");
-        // Grupo aplanado: «Mis citas» (hijo de «Ayuda profesional») queda a un toque.
-        expect(screen.getByText("Mis citas").closest("a")?.getAttribute("href")).toBe("/dashboard/padre/citas");
-        // El defecto que cazó Jelkin: la hamburguesa mostraba labels/destinos stale. Ya no:
-        expect(screen.queryByText("Mi panel")).toBeNull();
-        expect(screen.queryByText("Círculo de Confianza")).toBeNull();
-        expect(screen.queryByText("Mis reportes")).toBeNull(); // /mis-reportes salió del menú (SPEC-607)
-        // NINGÚN enlace de home equivocado: ni «/» ni /dashboard-publico.
-        const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
-        expect(hrefs).not.toContain("/");
-        expect(hrefs).not.toContain("/dashboard-publico");
+    it("SPEC-744: el LOGUEADO no tiene hamburguesa (retiro final) — su nav móvil vive en la barra por rol", () => {
+        for (const [rol, path] of [
+            ["PARENT", "/dashboard/padre"],
+            ["ADMIN", "/dashboard/admin/bandeja"],
+            ["PROFESIONAL", "/dashboard/profesional"],
+        ] as const) {
+            mockPathname = path;
+            mockAuth({ id: "1", email: "u@test.com", nombre: "U", rol });
+            const { unmount } = render(<NavHeader />);
+            expect(screen.queryByLabelText("Menú"), `${rol}: la hamburguesa se retiró (SPEC-744)`).toBeNull();
+            unmount();
+        }
     });
 
     it("SPEC-744/§3-bis: el ANÓNIMO ve «Estadísticas públicas»→/dashboard-publico + «Iniciar sesión» en el HEADER, sin hamburguesa", () => {
@@ -149,40 +143,14 @@ describe("NavHeader", () => {
         expect(screen.queryByLabelText("Menú")).toBeNull();
     });
 
-    it("SPEC-744: el PROFESIONAL habilitado ve su nav en la hamburguesa (fuente única, sin módulos)", () => {
-        mockPathname = "/dashboard/profesional";
-        mockAuth({ id: "1", email: "p@t.com", nombre: "Pro", rol: "PROFESIONAL", profesional: { estado: "ACTIVO", habilitado: true } });
-        render(<NavHeader />);
-        abrirNav();
-        expect(screen.getByText("Casos").closest("a")?.getAttribute("href")).toBe("/dashboard/profesional/casos");
-    });
-
-    it("SPEC-744: un rol interno (sin módulos en el header global) NO pinta hamburguesa — su nav móvil vive en la barra por rol", () => {
-        mockPathname = "/dashboard/admin/bandeja";
-        mockAuth({ id: "1", email: "a@t.com", nombre: "Admin", rol: "ADMIN" });
-        render(<NavHeader />);
-        expect(
-            screen.queryByLabelText("Menú"),
-            "el header global no tiene los módulos del admin → resuelve vacío → sin hamburguesa (el logo lo devuelve a su panel)",
-        ).toBeNull();
-    });
-
-    it("SPEC-742: «Cerrar sesión» vive SOLO en el avatar (cuenta), NUNCA en la hamburguesa — cada control, un trabajo", () => {
+    it("SPEC-742/744: «Cerrar sesión» vive en el avatar (cuenta); el logueado no tiene hamburguesa", () => {
         mockPathname = "/dashboard/padre";
         mockAuth({ id: "1", email: "padre@test.com", nombre: "Padre", rol: "PARENT" });
         render(<NavHeader />);
-        // La hamburguesa abierta (avatar cerrado) es SOLO navegación del rol: sin logout.
-        abrirNav();
-        expect(
-            screen.queryByText("Cerrar sesión"),
-            "la hamburguesa NO debe ofrecer «Cerrar sesión» — la sesión es cuenta, vive en el avatar",
-        ).toBeNull();
-        // CONTROL POSITIVO: el avatar (cuenta) SÍ lo ofrece — visible también en móvil.
+        // No hay hamburguesa (retiro SPEC-744): la sesión es cuenta y vive en el avatar.
+        expect(screen.queryByLabelText("Menú")).toBeNull();
         abrirCuenta("Padre");
-        expect(
-            screen.getByText("Cerrar sesión"),
-            "el avatar (cuenta) debe ofrecer «Cerrar sesión»",
-        ).toBeTruthy();
+        expect(screen.getByText("Cerrar sesión"), "el avatar (cuenta) ofrece «Cerrar sesión»").toBeTruthy();
     });
 
     it("SCHOOL_ADMIN NO ve las entradas del área de padres (I-36) en ningún menú", () => {
