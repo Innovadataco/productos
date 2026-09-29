@@ -12,30 +12,31 @@
 
 ## Diseño (contrato — lo que aprueba el CEO)
 
-### Datos (aditivo)
-1. `Hijo`: `oidoEn DateTime?`, `oidoVersion String?` (denormalizado, para el gate rápido; espeja `Usuario.consentimientoVersion`).
-2. Nueva tabla `AudienciaMenor` (inmutable, probatoria):
+### Datos (aditivo) — FUENTE ÚNICA, sin denormalizar (D-6, veredicto CEO)
+1. **NO** se agrega campo de audiencia a `Hijo`. El estado «oído» se deriva por consulta a `AudienciaMenor`, para que no exista un segundo origen de verdad que pueda mentir.
+2. Nueva tabla `AudienciaMenor` (inmutable, probatoria, **PII** · D-8):
    - `id`, `hijoId` (FK Cascade), `usuarioId` (FK Cascade, el representante que declara), `version`, `declaradoEn @default(now())`, `ip`, `userAgent String?`, `declaracion String` (texto/di­gest del enunciado legal declarado).
-   - índices `(hijoId, declaradoEn)`, `(version)`. `@@map("audiencias_menor")`.
+   - índices `(hijoId, version)` (para el gate: «¿existe fila del menor con la versión vigente?») y `(version)`. `@@map("audiencias_menor")`.
    - Migración **aditiva** escrita a mano (patrón de las de consentimiento); nada destructivo.
 
 ### Servicio / puerta
-3. `AudienciaMenorService` (espejo de `ConsentimientoService`): `menorEstaAlDia(hijoId)`, `menoresPendientes(usuarioId)`, `declarar({hijoId, usuarioId, ip, userAgent})` en `withUnitOfWork` (crea `AudienciaMenor` + sella `Hijo.oidoEn/oidoVersion` en la MISMA tx). DAL: repos, sin `@/lib/prisma` directo (Q-3).
-4. Extender el predicado de la puerta: «al día» = consentimiento de cuenta vigente **Y** `menoresPendientes(usuarioId).length === 0` (solo ACTIVOS). Reusar `esTitularDelDato`. La decisión vive en la MISMA fuente para página y endpoint (dos superficies, un predicado — como SPEC-756).
+3. `AudienciaMenorService` (espejo de `ConsentimientoService`): `menorEstaAlDia(hijoId)` (existe fila con `version == version_actual`), `menoresPendientes(usuarioId)` (menores ACTIVOS del titular sin fila vigente — una consulta, sin flag), `declarar({hijoId, usuarioId, ip, userAgent})` en `withUnitOfWork` (solo INSERTA la fila inmutable en `AudienciaMenor` + `AuditLog`). DAL: repos, sin `@/lib/prisma` directo (Q-3).
+4. Extender el predicado de la puerta: «al día» = consentimiento de cuenta vigente **Y** `menoresPendientes(usuarioId).length === 0` (solo ACTIVOS). Reusar `esTitularDelDato`. La decisión vive en la MISMA fuente para página y endpoint (dos superficies, un predicado — como SPEC-756). La puerta consulta `AudienciaMenor`; no hay derivado que sincronizar.
 
 ### Superficie
 5. Endpoint `POST /api/audiencia-menor/declarar` (autentica, 403 si no titular, idempotente por versión como `aceptar`, `AuditLog`).
-6. UI: paso/modal per-menor. Ubicación a confirmar con Diseño/CEO (candidato: paso del camino guiado SPEC-339 o modal análogo a `ModalConsentimiento`). **El TEXTO es [ABOGADO]** — placeholder marcado, no copy inventado.
+6. UI: paso/modal per-menor. Ubicación a confirmar con Diseño/CEO (candidato: paso del camino guiado SPEC-339 o modal análogo a `ModalConsentimiento`). **El TEXTO es [ABOGADO]** — placeholder marcado, no copy inventado. Incluye el momento «agregaste un menor → hay que oírlo» (D-7/FR-010): la pantalla explica por qué se detiene; copy = Diseño.
 
 ### Parametrización
-7. `audiencia_menor.reoir_en_cambio_de_version` (bool) — FR-008/D-4, para no cablear la política. Sembrado idempotente con default de FORMA (re-oír), a confirmar por abogado.
+7. `audiencia_menor.reoir_en_cambio_de_version` (bool) — FR-008/D-4, para no cablear la política. **SEMBRADO** idempotente en `prisma/seed.ts` con default `true` (conservador) y el porqué documentado en el seed. Un parametrizable sin sembrar es un `undefined` esperando (veredicto CEO). Política final = abogado.
 8. `audiencia_menor.documento_ruta` o clave de texto legal — FR-007, cuando llegue de abogado.
 
 ## Candados (fase implementación)
-- C-puerta per-menor (mock consentimiento de cuenta vigente; forzar menor sin versión → pide; con versión → pasa; control positivo).
-- C-per-menor-no-global (dos menores, remoción del discriminador `hijoId`).
-- C-inmutable/versión, C-activos, C-no-romper-cuenta (regresión SPEC-241).
-- D-121: `AudienciaMenor` clasificada (PRESERVADOS/orden de borrado) + FK Cascade verificadas; candado de inserción si hay CHECK/índice parcial crudo.
+- C-puerta per-menor (mock consentimiento de cuenta vigente; menor ACTIVO SIN fila vigente → pide; con fila vigente → pasa; control positivo). Se prueba plantando/quitando la FILA de `AudienciaMenor`, no un flag.
+- C-per-menor-no-global (dos menores, remoción del discriminador `hijoId`: quitar la fila de uno no cierra al otro).
+- C-versión, C-activos, C-no-romper-cuenta (regresión SPEC-241).
+- C-fuente-única (D-6): candado estructural de que `Hijo` NO gana campo de audiencia (evita reintroducir el segundo origen de verdad).
+- D-121: `AudienciaMenor` clasificada como **PII** con retención atada al menor (D-8, alcance SPEC-772) + FK Cascade verificadas; candado de inserción si hay CHECK/índice parcial crudo.
 
 ## Gates (antes de cerrar)
 `tsc --noEmit` + `npm run lint` + `npm run arch:check` + `npm run test:unit` COMPLETO (specs-discipline exige la línea «Impacto en arquitectura:», que ya está) + migración aditiva verificada.
