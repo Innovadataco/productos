@@ -1,6 +1,13 @@
 /**
  * SPEC-263 (002-PI-164) — audita registros de AuditConsentimiento firmados por
- * roles internos (OPERADOR, COMITE_VALIDACION, ADMIN, etc.) en lugar de por PARENT.
+ * roles que NO son titulares del dato (empleados internos / prestador de
+ * servicio) en lugar de por un titular (PARENT o SCHOOL_ADMIN).
+ *
+ * SPEC-755: la clasificación DERIVA de la fuente única `esTitularDelDato`
+ * (roles-titulares.ts) vía `scripts/lib/consentimiento-clasificacion.ts` — ya
+ * NO una lista de roles a mano. La lista vieja driftó y reportaba 50 firmas
+ * legítimas de colegios como «internas»; el detalle y las cifras de prod viven
+ * en la cabecera del módulo de clasificación.
  *
  * El modelo AuditConsentimiento no tiene campo de metadata mutable, por lo que
  * en modo --apply el script SOLO reporta los conteos (no puede marcar filas).
@@ -11,21 +18,9 @@
  *   node --env-file=.env --import tsx scripts/depurar-consentimientos-internos.ts --apply
  */
 import { prisma } from "../src/lib/prisma";
+import { clasificarFirmas, type ResultadoDepuracion } from "./lib/consentimiento-clasificacion";
 
-const ROLES_INTERNOS = ["ADMIN", "OPERADOR", "COMITE_VALIDACION", "COMITE_CONVIVENCIA", "SCHOOL_ADMIN"] as const;
 const applyMode = process.argv.includes("--apply");
-
-interface ConteoPorRol {
-    rol: string;
-    firmas: number;
-}
-
-interface ResultadoDepuracion {
-    dePadres: number;
-    deRolesInternos: number;
-    detallesPorRol: ConteoPorRol[];
-    marcadasComoInvalidas: number;
-}
 
 async function depurarConsentimientosInternos(): Promise<ResultadoDepuracion> {
     const todas = await prisma.auditConsentimiento.findMany({
@@ -33,31 +28,19 @@ async function depurarConsentimientosInternos(): Promise<ResultadoDepuracion> {
             usuario: { select: { id: true, rol: true } },
         },
     });
-
-    const dePadres = todas.filter((a) => a.usuario.rol === "PARENT").length;
-    const deRolesInternos = todas.filter((a) => (ROLES_INTERNOS as readonly string[]).includes(a.usuario.rol)).length;
-
-    const conteoMap = new Map<string, number>();
-    for (const a of todas) {
-        if ((ROLES_INTERNOS as readonly string[]).includes(a.usuario.rol)) {
-            conteoMap.set(a.usuario.rol, (conteoMap.get(a.usuario.rol) ?? 0) + 1);
-        }
-    }
-    const detallesPorRol: ConteoPorRol[] = Array.from(conteoMap.entries()).map(([rol, firmas]) => ({ rol, firmas }));
-
-    // AuditConsentimiento no tiene campo de metadata mutable.
-    // En --apply solo se reportan los conteos; documentar en cierre.md.
-    return { dePadres, deRolesInternos, detallesPorRol, marcadasComoInvalidas: 0 };
+    return clasificarFirmas(todas);
 }
 
 async function main() {
     console.log(`[DepuracionConsentimientos] Modo: ${applyMode ? "--apply" : "--dry-run (default)"}`);
     const resultado = await depurarConsentimientosInternos();
 
-    console.log(`[DepuracionConsentimientos] Total firmas de PARENT: ${resultado.dePadres}`);
-    console.log(`[DepuracionConsentimientos] Total firmas de roles internos: ${resultado.deRolesInternos}`);
+    console.log(`[DepuracionConsentimientos] Total firmas de titulares del dato: ${resultado.deTitulares}`);
+    console.log(
+        `[DepuracionConsentimientos] Total firmas de roles internos (sospechosas): ${resultado.deRolesInternos}`,
+    );
     if (resultado.detallesPorRol.length > 0) {
-        console.log("[DepuracionConsentimientos] Detalle por rol:");
+        console.log("[DepuracionConsentimientos] Detalle por rol interno:");
         for (const { rol, firmas } of resultado.detallesPorRol) {
             console.log(`  ${rol}: ${firmas} firma(s)`);
         }
@@ -65,7 +48,7 @@ async function main() {
     if (resultado.deRolesInternos > 0) {
         console.log(
             "[DepuracionConsentimientos] NOTA: AuditConsentimiento no tiene campo de metadata mutable. " +
-            "Documenta los conteos en cierre.md para evidencia legal."
+                "Documenta los conteos en cierre.md para evidencia legal.",
         );
     }
     console.log(JSON.stringify(resultado, null, 2));
