@@ -1403,7 +1403,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | atiendeVirtual | Boolean | — |
 | atiendePresencial | Boolean | — |
 | direccionAtencion | String | opcional |
-| enlaceVideollamada | String | opcional |
 | aniosExperiencia | Int | — |
 | presentacion | String | — |
 | tarifaConsultaCOP | Int | opcional |

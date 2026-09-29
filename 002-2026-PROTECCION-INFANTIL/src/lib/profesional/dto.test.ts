@@ -37,6 +37,8 @@ const PERFIL_COMPLETO = {
     datosFacturacion: { nit: "900000001" },
     autorizacionArchivoId: "uuid-secreto",
     autorizacionSubidaEn: new Date("2026-09-03T10:00:00Z"),
+    // SPEC-708: presente en el modelo → el candado prueba que se EXCLUYE del DTO público.
+    direccionAtencion: "Calle 1 # 2-3, Consultorio 4",
     creadoEn: new Date(),
     actualizadoEn: new Date(),
     ciudad: { id: "ciudad-1", nombre: "Bogotá" },
