@@ -228,6 +228,16 @@ function PerfilIcon({ className }: { className?: string }) {
     );
 }
 // ── El registro: iconKey → componente (iconKey por defecto = href) ────────────────────
+// SPEC-750/T014 · «Sesiones» del operador. Diseño: Heroicons outline `video-camera`
+// (FORMA-SPEC744-ICONOS-ADMIN-FASE2 · Gestión e2243f6) — la cámara = la sesión de video.
+export function SesionesIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+        </svg>
+    );
+}
+
 export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     // Admin + profesional (SPEC-437: misma barra).
     "/dashboard/admin": InboxIcon,
@@ -240,6 +250,7 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     "/dashboard/admin/usuarios": UsuariosIcon,
     "/dashboard/admin/verificacion/incidentes": AlertasIcon,
     "/dashboard/admin/spam": ShieldExclamationIcon,
+    "/dashboard/admin/sesiones": SesionesIcon, // SPEC-750/T014 · video-camera (Diseño e2243f6)
     "/dashboard/admin/comite": ScaleIcon,
     "/dashboard/admin/estadisticas": ChartIcon,
     "/dashboard/admin/analisis/recomendaciones": LightBulbIcon,

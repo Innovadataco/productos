@@ -16,12 +16,18 @@ Orden por dependencias. `[P]` = paralelizable.
 ## Fase 2 — Cableado a producción (MOTOR · #733)
 - [x] T010 Disparar `asignarOperadorACita` al CONFIRMAR la cita (cita.service) — antes del día.
 
-## Fase 3 — SUPERFICIE (→ T014, PR aparte sobre `main`; CEO cierra su DoD)
-> El corte es por NATURALEZA (veredicto CEO 04:18): #733 = motor, sin superficie; T014 = superficie completa.
-- [ ] T011 Módulo `sesiones_operador`: catálogo + grant a OPERADOR + **ítem de nav con su ícono de Diseño** + guardia de página. (Los tres juntos: grant sin ítem rompe nav-items; ítem sin ícono rompe nav-iconos.)
-- [ ] T012 Página del operador `/dashboard/admin/sesiones`: `calendarioDelOperador` (DTO SIN PII) + candado C-a + formulario de enlace.
-- [ ] T013 Componente de límites [NORMA] (copy FORMA §6; la pantalla NO se presenta como el guion).
-- [ ] T014 Capacidad al admin: en `/dashboard/admin/operadores/asignar`, citas CONFIRMADAS sin operador (ámbar) + acción de asignar.
+## Fase 3 — SUPERFICIE (2º PR `work/pi-SPEC-750-superficie-operador` sobre `main`; CEO cierra su DoD)
+> El corte es por NATURALEZA (veredicto CEO 04:18): #733 = motor, sin superficie; este PR = superficie completa.
+- [x] T011 Módulo `sesiones_operador`: catálogo + grant a OPERADOR + **ítem de nav con su ícono** (`SesionesIcon` = video-camera, Diseño e2243f6) + guardia de página. (Los tres juntos.)
+- [x] T012 Página del operador `/dashboard/admin/sesiones`: `calendarioDelOperador` (DTO SIN PII, `select` sin `padreUsuario`) + candado C-a + formulario de enlace.
+- [x] T013 Componente de límites [NORMA] (copy FORMA §6; la pantalla NO se presenta como el guion).
+- [x] T014 Capacidad al admin: en `/dashboard/admin/operadores/asignar`, citas CONFIRMADAS sin operador + acción de asignar (reusa el motor `asignarOperadorACita`).
+
+## Fuera (PR aparte, no bloquea): los 4 íconos restantes de FASE 2 (verificadores · profesionales/gestion ·
+## analisis/reglas · verificacion) → vacían `PENDIENTES_FASE_2` y vuelven la cláusula (3) regla dura.
+
+## Verificado (aviso Calidad): la vista del operador es LISTA ordenada por `franja.inicio`, sin filtro de
+## rango, sin agrupador «mañana/tarde», sin ventana 7am–8pm; muestra la hora REAL. No hereda el hueco del padre.
 
 ## Fase 3 — Cierre
 - [ ] T015 `test:unit` completo + tsc + eslint + arch:check verdes.
