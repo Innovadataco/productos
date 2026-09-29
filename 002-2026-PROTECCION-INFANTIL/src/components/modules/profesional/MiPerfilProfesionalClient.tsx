@@ -16,8 +16,10 @@
  *   3. Sus documentos — `DocumentosRequisitos` tal cual.
  *   4. Estado         — `EstadoVerificacionProfesionalClient` (variante activa).
  *
- * SPEC-708 (después): la captura de dirección/enlace entra en el bloque de datos,
- * junto a la modalidad — por eso este bloque queda preparado para sumar campos.
+ * SPEC-708 (después): la captura de la DIRECCIÓN presencial entra en el bloque de datos,
+ * junto a la modalidad — por eso este bloque queda preparado para sumar campos. El enlace
+ * de la reunión NO es un campo del perfil: es POR CITA y lo pone el operador (vive en
+ * `SolicitudCita`), así que NO se agrega acá.
  */
 import { useMemo, useState } from "react";
 import { SeccionColapsable } from "@/components/ui/SeccionColapsable";

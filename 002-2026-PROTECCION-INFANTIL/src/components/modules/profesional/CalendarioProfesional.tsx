@@ -20,8 +20,9 @@
  * Bloquear día (SPEC-714, modelo `DiaBloqueado` de Datos): el profesional cierra un día
  * (vacaciones) — no se publican franjas ahí y el día va rayado; las citas ya confirmadas se
  * conservan (bloquear solo inserta la fila, imposibilidad estructural). El detalle de la
- * confirmada NO muestra código de cierre (no existe el flujo, L6) ni dirección/enlace
- * (SPEC-708): muestra el contacto que sí existe.
+ * confirmada NO muestra código de cierre (no existe el flujo, L6) ni la dirección presencial
+ * (SPEC-708) ni el enlace de la reunión (es POR CITA, lo pone el operador — no un campo del
+ * perfil): muestra el contacto que sí existe.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";

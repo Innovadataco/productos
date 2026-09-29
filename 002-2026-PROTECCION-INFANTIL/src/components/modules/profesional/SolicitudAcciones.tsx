@@ -32,8 +32,9 @@ import type { EstadoSolicitudCita } from "@prisma/client";
  * si por una carrera el estado cambió bajo los pies, el 409 se traduce a un
  * mensaje de ESTADO, no a la regla cruda.
  *
- * (Al confirmar, la cita pasa a CONFIRMADA y recién ahí se comparte el
- * dónde/enlace — SPEC-708.)
+ * (Al confirmar, la cita pasa a CONFIRMADA y recién ahí se comparte el «dónde»: la
+ * dirección presencial (SPEC-708) y el enlace de la reunión —POR CITA, lo pone el
+ * operador, no un enlace fijo del perfil del profesional.)
  */
 export function SolicitudAcciones({
     estado,
