@@ -86,6 +86,46 @@ function esAlterColumnaBenigno(stmt: string): boolean {
     });
 }
 
+/**
+ * LÍMITES CONOCIDOS del clasificador — deuda DECLARADA, no un comentario suelto.
+ *
+ * El clasificador es CONSERVADOR salvo por estos puntos ciegos ACEPTADOS a propósito
+ * (para no ahogar el punto ciego sistemático de Prisma en falsos positivos). Cada entrada
+ * es un caso donde el guardián CALLA algo que PODRÍA ser drift real: se registra acá para
+ * que la decisión sea VISIBLE y contable —el CLI imprime el conteo, no vive en un comentario—
+ * y no una sorpresa en una auditoría. El candado `drift-clasificador.limites.test.ts` fija
+ * cada límite: si el clasificador deja de comportarse así, el candado se pone rojo y hay que
+ * MOVER la entrada (la deuda cambió), no borrarla en silencio.
+ */
+export interface LimiteClasificador {
+    /** slug estable del límite. */
+    id: string;
+    /** qué CALLA el clasificador. */
+    descripcion: string;
+    /** un statement REAL que ilustra el límite (el candado verifica que se marca benigno). */
+    ejemplo: string;
+    /** por qué se acepta el punto ciego (el costo de NO aceptarlo). */
+    porQueSeAcepta: string;
+    /** qué drift real podría enmascarar, y quién SÍ lo caza. */
+    riesgo: string;
+    /** de dónde viene el límite. */
+    desde: string;
+}
+
+export const LIMITES_CLASIFICADOR: readonly LimiteClasificador[] = [
+    {
+        id: "set-default-gen-random-uuid-aislado",
+        descripcion:
+            "Un `ALTER COLUMN ... SET DEFAULT gen_random_uuid()` AISLADO (única cláusula del ALTER TABLE) se clasifica BENIGNO (categoría prisma-representacion), no drift.",
+        ejemplo: 'ALTER TABLE "worker_logs" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();',
+        porQueSeAcepta:
+            "gen_random_uuid() está en VALOR_DEFAULT_BENIGNO: Prisma genera los id en la app (@default(cuid())) y NO round-trippea un default de BD, así que un SET DEFAULT así suele ser representación que Prisma re-emite en el diff, no drift. Tratarlo como drift ahogaría el guardián en falsos positivos en cada corrida.",
+        riesgo:
+            "Si una migración AGREGA un default gen_random_uuid() de BD que el esquema NO quiere (justo el caso que SPEC-766 corrigió en worker_logs.id con DROP DEFAULT: el id lo provee la app, el default de BD estaba muerto), este guardián NO lo marca. Ese drift historial↔esquema lo caza el guardián de SPEC-767, no éste.",
+        desde: "SPEC-760 (VALOR_DEFAULT_BENIGNO) · declarado como límite en el follow-up de SPEC-766.",
+    },
+];
+
 function extraerNombre(stmt: string, re: RegExp): string | null {
     return stmt.match(re)?.[1] ?? null;
 }

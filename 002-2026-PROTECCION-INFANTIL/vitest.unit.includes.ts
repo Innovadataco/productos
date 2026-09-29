@@ -90,6 +90,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-760 (D-121): clasificador del guardián de drift — aísla el drift REAL del punto
     // ciego de Prisma y es CONSERVADOR (lo desconocido nace rojo). Control positivo plantado. Sin BD.
     "scripts/verify-schema-drift.candado.test.ts",
+    // SPEC-760/766: registro de LÍMITES del clasificador (deuda declarada). Fija que la lista no
+    // se vacía en silencio y que cada ejemplo declarado SÍ se clasifica benigno. Sin BD.
+    "scripts/verify-schema-drift.limites.candado.test.ts",
     // SPEC-612: guarda de credenciales de la semilla de Calidad — PURA (sin base). El candado de
     // idempotencia (con base) vive en src/lib/seed-cuentas-calidad-siembra.candado.test.ts (integración).
     "scripts/lib/credenciales-e2e-calidad.candado.test.ts",
