@@ -138,7 +138,17 @@ export function navParaRol(rol: string | null | undefined, ctx: CtxNav = {}): Na
  * (Paridad con `PADRE_NAV_ITEMS.flatMap(i => i.children ?? [i])` de PadreNavMovil.)
  */
 export function aplanar(items: NavEntry[]): NavEntry[] {
-    return items.flatMap((item) => (item.children && item.children.length > 0 ? item.children : [item]));
+    // SPEC-744 (§5-bis, cert de Diseño): al PROMOVER una hoja de un grupo a la barra móvil,
+    // hereda la `iconKey` del GRUPO. El principal promovido representa al grupo → muestra su
+    // ícono. Si conservara su `href` como clave caería al fallback («casa»: su href no está en
+    // ICONOS_NAV), y registrarlo ahí duplicaría el ícono en el LATERAL (el hijo saldría con
+    // ícono junto al del encabezado de su grupo, desparejo con su hermano). Las hojas top-level
+    // pasan tal cual.
+    return items.flatMap((item) =>
+        item.children && item.children.length > 0
+            ? item.children.map((hijo) => ({ ...hijo, iconKey: item.iconKey }))
+            : [item],
+    );
 }
 
 /**
