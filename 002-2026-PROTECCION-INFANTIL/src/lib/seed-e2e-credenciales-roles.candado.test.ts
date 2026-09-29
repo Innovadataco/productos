@@ -10,6 +10,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { verifyPassword } from "@/lib/auth";
+import { ConsentimientoService } from "@/lib/dal/services/consentimiento";
+import { crearParametrosConsentimiento } from "@/lib/consentimiento-test-utils";
 import { EMAIL_INTOCABLE } from "../../scripts/lib/credenciales-e2e-calidad";
 import {
     sembrarCredencialesRoles,
@@ -40,6 +42,9 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
     beforeEach(async () => {
         await resetDatabase();
         base = await sembrarBase();
+        // SPEC-757: la siembra ahora asienta el consentimiento del titular, que lee
+        // versión + ruta del documento de ParametroSistema (existen en prod).
+        await crearParametrosConsentimiento();
     });
 
     it("las 3 cuentas quedan con LOGIN POSIBLE (rol + activo + clave del entorno verifica)", async () => {
@@ -92,5 +97,54 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
             E2E_COMITE_VALIDACION_PASSWORD: "x",
         };
         expect(() => leerCredencialesRoles(envIntocable), "cuenta intocable").toThrow(/intocable/i);
+    });
+
+    // SPEC-757 · el fixture asienta el consentimiento del TITULAR de prueba para
+    // que cruce la puerta (SPEC-756) como una cuenta real, sin fabricar firmas
+    // internas (SPEC-755). Control positivo en las dos direcciones.
+    const COLEGIO = CREDS[0].email; // SCHOOL_ADMIN (titular)
+    const OPERADOR = CREDS[1].email;
+    const COMITE = CREDS[2].email;
+
+    it("SPEC-757: el SCHOOL_ADMIN (titular) queda con firma CONVENIO_INSTITUCIONAL DERIVADA y cruza la puerta", async () => {
+        await correr(base);
+        const svc = new ConsentimientoService();
+        const version = await svc.versionVigente();
+        const sa = await prisma.usuario.findUniqueOrThrow({ where: { email: COLEGIO }, select: { id: true, consentimientoVersion: true } });
+
+        const audits = await prisma.auditConsentimiento.findMany({ where: { usuarioId: sa.id } });
+        expect(audits).toHaveLength(1);
+        // documentoTipo DERIVADO del rol (no quemado): igual a lo que dice el servicio.
+        expect(audits[0].documentoTipo).toBe("CONVENIO_INSTITUCIONAL");
+        expect(audits[0].documentoTipo).toBe(svc.documentoPorRol("SCHOOL_ADMIN"));
+        expect(audits[0].version).toBe(version);
+        expect(audits[0].esRepresentanteLegal).toBe(true);
+        // el campo que la compuerta LEE + la propia compuerta.
+        expect(sa.consentimientoVersion).toBe(version);
+        expect(await svc.versionEstaActual(sa.id)).toBe(true);
+    });
+
+    it("SPEC-757: OPERADOR y COMITE_VALIDACION (no titulares) NO reciben firma", async () => {
+        await correr(base);
+        for (const email of [OPERADOR, COMITE]) {
+            const u = await prisma.usuario.findUniqueOrThrow({ where: { email }, select: { id: true, consentimientoVersion: true } });
+            expect(await prisma.auditConsentimiento.count({ where: { usuarioId: u.id } }), `${email} no debe tener firma`).toBe(0);
+            expect(u.consentimientoVersion, `${email} no debe quedar con versión de consentimiento`).toBeNull();
+        }
+    });
+
+    it("SPEC-757: IDEMPOTENTE — la 2ª corrida no duplica la firma del titular ni siembra nuevas", async () => {
+        await correr(base);
+        const segunda = await correr(base);
+        const sa = await prisma.usuario.findUniqueOrThrow({ where: { email: COLEGIO }, select: { id: true } });
+        expect(await prisma.auditConsentimiento.count({ where: { usuarioId: sa.id } })).toBe(1);
+        expect(segunda.consentimientosSembrados, "la 2ª corrida no siembra firmas nuevas").toEqual([]);
+    });
+
+    it("SPEC-757: la 1ª corrida reporta el SCHOOL_ADMIN como firma sembrada y NO dispara notificaciones", async () => {
+        const { notifAntes, notifDespues, consentimientosSembrados } = await correr(base);
+        expect(consentimientosSembrados).toEqual(["SCHOOL_ADMIN"]);
+        expect(notifDespues, "sembrar el consentimiento NO encola avisos").toBe(notifAntes);
+        expect(await prisma.notificacion.count()).toBe(0);
     });
 });
