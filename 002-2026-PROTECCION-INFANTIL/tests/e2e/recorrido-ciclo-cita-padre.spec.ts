@@ -204,8 +204,13 @@ test.describe.serial("Ciclo completo del padre: reserva → pago → confirmaci�
             const putPerfil = await prof.put("/api/profesional/perfil", {
                 data: {
                     nombreVisible: `Psi E2E ${CORRIDA}`,
-                    tituloProfesional: "Psicóloga clínica",
-                    especialidades: ["Familia"],
+                    // Claves NUEVAS del catálogo cerrado (SPEC-685): el perfil exige
+                    // profesion/areasAtencion/rangoEtario para pasar a EN_REVISION. Las claves
+                    // LEGACY (tituloProfesional/especialidades) se ACEPTAN pero no derivan las
+                    // nuevas → el perfil quedaba en BORRADOR (defecto de producto SPEC-786).
+                    profesion: "psicologo",
+                    areasAtencion: ["ansiedad"],
+                    rangoEtario: ["12-17"],
                     ciudadId: ciudad!.id,
                     atiendeVirtual: true,
                     atiendePresencial: false,
@@ -251,8 +256,14 @@ test.describe.serial("Ciclo completo del padre: reserva → pago → confirmaci�
                 expect(subir.status(), `subir documento ${clave} body=${await subir.text().catch(() => "")}`).toBeLessThan(300);
             }
 
+            // SPEC-686/706: el perfil pasa a EN_REVISION solo si el profesional ACEPTÓ la
+            // autorización en pantalla (`yaAceptoVersionVigente`), no solo por subir el
+            // archivo. El spec viejo subía el archivo sin aceptar → quedaba en BORRADOR.
+            const aceptarAutoriz = await prof.post("/api/profesional/autorizacion/aceptar", {});
+            expect(aceptarAutoriz.status(), `aceptar autorización body=${await aceptarAutoriz.text().catch(() => "")}`).toBeLessThan(300);
+
             // Autorización firmada: setea `autorizacionArchivoId` y, con el perfil
-            // completo, transiciona BORRADOR → EN_REVISION (sin esto el admin no
+            // completo + aceptado, transiciona BORRADOR → EN_REVISION (sin esto el admin no
             // puede decidir).
             const autoriz = await prof.post("/api/profesional/autorizacion", {
                 multipart: {
@@ -456,7 +467,7 @@ test.describe.serial("Ciclo completo del padre: reserva → pago → confirmaci�
         }
     });
 
-    test("(4) el profesional confirma → CONFIRMADA y H-2 AHORA sí expone el contacto", async () => {
+    test("(4) el profesional confirma → CONFIRMADA; el contacto MUTUO ya NO viaja (SPEC-754)", async () => {
         const prof = await ctx();
         try {
             await login(prof, EMAIL_PROF);
@@ -474,9 +485,14 @@ test.describe.serial("Ciclo completo del padre: reserva → pago → confirmaci�
             const res = await request.get(`/api/padre/citas/${solicitudId}`);
             expect(res.status(), "GET detalle tras confirmar").toBe(200);
             const body = await res.text();
-            expect(body.includes("contactoProfesional"), "H-2 (CONFIRMADA): el body DEBE traer el bloque de contacto").toBe(true);
-            expect(body.includes(EMAIL_PROF), "H-2 (CONFIRMADA): el body DEBE exponer el correo del profesional").toBe(true);
-            expect(body.includes(TELEFONO_PROF), "H-2 (CONFIRMADA): el body DEBE exponer el teléfono del profesional").toBe(true);
+            // CONTRATO NUEVO · SPEC-754 (#743): el contacto MUTUO se CERRÓ (`contactoVisiblePorSesion`
+            // → false). Tras confirmar, `contactoProfesional`/correo/teléfono quedan SIEMPRE ausentes;
+            // el canal es el ENLACE de la reunión (SPEC-778/#750) + PQR (#752). Antes este test exigía
+            // lo contrario (contacto expuesto tras confirmar) — el mundo de AYER. Reescrito contra el
+            // contrato nuevo: el candado ahora VIGILA que el contacto NO reaparezca (guardián de 754).
+            expect(body.includes("contactoProfesional"), "SPEC-754: tras confirmar, el bloque de contacto NO viaja").toBe(false);
+            expect(body.includes(EMAIL_PROF), "SPEC-754: el correo del profesional NO viaja tras confirmar").toBe(false);
+            expect(body.includes(TELEFONO_PROF), "SPEC-754: el teléfono del profesional NO viaja tras confirmar").toBe(false);
         } finally {
             await request.dispose();
         }

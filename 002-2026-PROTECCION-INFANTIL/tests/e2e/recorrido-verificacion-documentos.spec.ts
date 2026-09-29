@@ -181,8 +181,9 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
             const putPerfil = await request.put("/api/profesional/perfil", {
                 data: {
                     nombreVisible: `Psi E2E ${CORRIDA}`,
-                    tituloProfesional: "Psicóloga clínica",
-                    especialidades: ["Familia"],
+                    profesion: "psicologo",
+                    areasAtencion: ["ansiedad"],
+                    rangoEtario: ["12-17"],
                     ciudadId: ciudad!.id,
                     atiendeVirtual: true,
                     atiendePresencial: false,
@@ -240,8 +241,8 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
             // tiene archivo cargado. El servidor debe rechazar por
             // `requisitoSinDocumento` sin documento.
             const ficha = await request.get(`/api/admin/verificacion-profesionales/${perfilProfesionalId}`);
-            const claves: string[] = (((await ficha.json())?.data?.checklist) as Array<{ clave?: string; id?: string }> ?? [])
-                .map((it) => it.clave ?? it.id ?? "").filter(Boolean);
+            // La ficha devuelve `checklist` como Record<clave, item> (objeto), no array (SPEC-408).
+            const claves: string[] = Object.keys(((await ficha.json())?.data?.checklist) ?? {});
             const clavesParaChecklist = claves.length > 0 ? claves : [requisitoConDocumento, requisitoSinDocumento];
             const checklist: Record<string, { estado: "CUMPLE" }> = {};
             for (const k of clavesParaChecklist) checklist[k] = { estado: "CUMPLE" };
