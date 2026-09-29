@@ -1389,6 +1389,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | montoReembolsoUSD | Float | opcional |
 | motivoReembolso | String | opcional |
 | referenciaReembolso | String | opcional |
+| reembolsoSolicitadoEn | DateTime | opcional |
+| reembolsoVenceEn | DateTime | opcional |
 | notasCliente | String | opcional |
 | createdAt | DateTime | — |
 | updatedAt | DateTime | — |
