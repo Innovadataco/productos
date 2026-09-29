@@ -6,8 +6,13 @@
  * (curso, 2 estudiantes, 1 profesor, 1 reporte OTRO) para desbloquear la
  * Campaña 6 de Calidad (aislamiento multi-tenant, D-89).
  *
- * Idempotente por diseño: correr N veces produce el mismo estado, con
- * regeneración de contraseñas de los rectores para permitir rotación limpia.
+ * Idempotente por diseño: correr N veces produce el mismo estado. La clave de
+ * cada rector es ESTABLE, del ENTORNO (E2E_COLEGIO_{A,B}_ADMIN_PASSWORD), y se
+ * re-hashea SOLO si cambió — mismo patrón que #709 (SPEC-612). Antes se generaba
+ * una clave ALEATORIA en cada corrida: cualquier re-siembra desincronizaba la
+ * clave que Calidad tenía guardada → 401 (el defecto que esto cierra). Las dos
+ * claves son INDEPENDIENTES (una variable por colegio): estables pero distintas,
+ * nunca una compartida. El aislamiento A/B lo da el TENANT, no la clave.
  *
  * Marcadores de origen (spec §Ajustes) — el schema no tiene metadatos JSON
  * en Colegio/Usuario/Reporte, así que se usan:
@@ -17,20 +22,21 @@
  *   - AuditLog.metadatos.origen = "e2e-multi-tenant" (al cierre)
  *
  * Candados: cero DROP/TRUNCATE/DELETE, cero cambios a "Sagrado corazón",
- * rectores por Prisma directo (NO por /api/auth/register), guard NODE_ENV
- * y PARAM_ENCRYPTION_KEY antes de tocar la BD.
+ * rectores por Prisma directo (NO por /api/auth/register), guard NODE_ENV,
+ * PARAM_ENCRYPTION_KEY y claves del entorno antes de tocar la BD. La clave
+ * NUNCA se imprime (SPEC-107): es un INPUT del entorno, no una salida.
  *
  * Uso (dev):
+ *   E2E_COLEGIO_A_ADMIN_PASSWORD=… E2E_COLEGIO_B_ADMIN_PASSWORD=… \
  *   node --env-file=.env --import tsx scripts/seed-e2e-multi-tenant.ts
  *
  * PRODUCCIÓN: NO lo corre ODIN. Lo ejecuta el responsable del despliegue
  * tras directriz explícita del CEO (spec §Candados).
  */
-import { randomBytes } from "node:crypto";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
-import { hashPassword } from "../src/lib/auth";
+import { hashPassword, verifyPassword } from "../src/lib/auth";
 import { encryptParameter } from "../src/lib/param-encryption";
 
 interface IntocableSnapshot {
@@ -45,20 +51,33 @@ interface ResultadoColegioE2E {
     letra: "A" | "B";
     colegioId: string;
     adminEmail: string;
-    adminPassword: string;
+    /** true si esta corrida (re)hasheó la clave (cuenta nueva o clave del entorno distinta). */
+    rehashClave: boolean;
 }
 
-const ALFANUM = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-const SIMBOLOS = "!@#$%^&*";
 const TEXTO_REPORTE = "Reporte de prueba E2E multi-tenant. NO tocar.";
 
-function generarPassword(): string {
-    // 15 chars alfanuméricos + 1 símbolo posicionado aleatoriamente = 16 chars.
-    const bytes = randomBytes(15);
-    const chars = Array.from(bytes, (b) => ALFANUM[b % ALFANUM.length]).join("");
-    const simbolo = SIMBOLOS[randomBytes(1)[0]! % SIMBOLOS.length]!;
-    const pos = randomBytes(1)[0]! % (chars.length + 1);
-    return chars.slice(0, pos) + simbolo + chars.slice(pos);
+/** Nombre de la variable de entorno con la clave estable del rector de cada colegio. */
+const ENV_PASSWORD: Record<"A" | "B", string> = {
+    A: "E2E_COLEGIO_A_ADMIN_PASSWORD",
+    B: "E2E_COLEGIO_B_ADMIN_PASSWORD",
+};
+
+/**
+ * Lee del ENTORNO la clave estable de cada rector (A y B). Pura: aborta ruidoso si falta alguna,
+ * SIN escribir nada (SPEC-107: cero literal de credencial en código). Dos variables separadas →
+ * claves independientes (estables pero distintas), nunca una compartida.
+ */
+export function leerPasswordsColegios(env: Record<string, string | undefined> = process.env): Record<"A" | "B", string> {
+    const faltantes: string[] = [];
+    const a = env[ENV_PASSWORD.A]?.trim();
+    const b = env[ENV_PASSWORD.B]?.trim();
+    if (!a) faltantes.push(ENV_PASSWORD.A);
+    if (!b) faltantes.push(ENV_PASSWORD.B);
+    if (faltantes.length > 0) {
+        throw new Error(`[seed-e2e] Faltan variables de entorno (${faltantes.join(", ")}). Aborto sin escribir nada.`);
+    }
+    return { A: a!, B: b! };
 }
 
 function nowCOT(): string {
@@ -111,9 +130,59 @@ function assertIntocablesSinCambios(antes: IntocableSnapshot[], despues: Intocab
     }
 }
 
-async function sembrarColegioE2E(
+export interface ResultadoRector {
+    adminEmail: string;
+    adminId: string;
+    /** true si esta corrida (re)hasheó la clave (cuenta nueva o clave del entorno distinta). */
+    rehashClave: boolean;
+}
+
+/**
+ * Rector SCHOOL_ADMIN del colegio {letra} con clave ESTABLE del entorno: re-hashea SOLO si la clave
+ * cambió (idempotencia del hash, patrón #709/SPEC-612) → una re-siembra NO rota la clave que Calidad
+ * tiene guardada, así que no reaparece el 401. Afirma LOGIN POSIBLE (existe + rol + activo + hash que
+ * verifica la clave del entorno), no la forma del sembrador. Aislado para el candado de conducta.
+ */
+export async function upsertRectorColegio(
     tx: Prisma.TransactionClient,
     letra: "A" | "B",
+    password: string,
+    tenantId: string,
+    colegioId: string,
+): Promise<ResultadoRector> {
+    const emailAdmin = `soporte+e2e-colegio-${letra.toLowerCase()}@innovadataco.com`;
+    const existente = await tx.usuario.findUnique({ where: { email: emailAdmin }, select: { passwordHash: true } });
+    const claveCoincide = existente ? await verifyPassword(password, existente.passwordHash) : false;
+    const passwordHash = claveCoincide ? existente!.passwordHash : await hashPassword(password);
+
+    const admin = await tx.usuario.upsert({
+        where: { email: emailAdmin },
+        create: {
+            email: emailAdmin,
+            nombre: `Rector E2E ${letra}`,
+            passwordHash,
+            rol: "SCHOOL_ADMIN",
+            estadoActivacion: "ACTIVO",
+            debeCambiarPassword: false,
+            tenantId,
+            colegioId,
+        },
+        update: {
+            passwordHash,
+            debeCambiarPassword: false,
+            estadoActivacion: "ACTIVO",
+            tenantId,
+            colegioId,
+        },
+        select: { id: true, email: true },
+    });
+    return { adminEmail: admin.email, adminId: admin.id, rehashClave: !claveCoincide };
+}
+
+export async function sembrarColegioE2E(
+    tx: Prisma.TransactionClient,
+    letra: "A" | "B",
+    password: string,
     plataformaId: string,
     paisId: string,
     ciudadId: string,
@@ -145,29 +214,8 @@ async function sembrarColegioE2E(
         update: { estado: "activo", nombre: nombreColegio },
     });
 
-    const password = generarPassword();
-    const passwordHash = await hashPassword(password);
-
-    const admin = await tx.usuario.upsert({
-        where: { email: emailAdmin },
-        create: {
-            email: emailAdmin,
-            nombre: `Rector E2E ${letra}`,
-            passwordHash,
-            rol: "SCHOOL_ADMIN",
-            estadoActivacion: "ACTIVO",
-            debeCambiarPassword: false,
-            tenantId: tenant.id,
-            colegioId: colegio.id,
-        },
-        update: {
-            passwordHash,
-            debeCambiarPassword: false,
-            estadoActivacion: "ACTIVO",
-            tenantId: tenant.id,
-            colegioId: colegio.id,
-        },
-    });
+    // Rector SCHOOL_ADMIN con clave ESTABLE del entorno (re-hash solo si cambió, patrón #709).
+    const { adminEmail, rehashClave } = await upsertRectorColegio(tx, letra, password, tenant.id, colegio.id);
 
     const curso = await tx.curso.upsert({
         where: {
@@ -268,8 +316,8 @@ async function sembrarColegioE2E(
     return {
         letra,
         colegioId: colegio.id,
-        adminEmail: admin.email,
-        adminPassword: password,
+        adminEmail,
+        rehashClave,
     };
 }
 
@@ -283,6 +331,8 @@ async function main(): Promise<void> {
     if (!process.env.PARAM_ENCRYPTION_KEY) {
         throw new Error("[seed-e2e] PARAM_ENCRYPTION_KEY requerida (cifra el texto del reporte)");
     }
+    // Claves ESTABLES del entorno (aborta ANTES de tocar la BD si falta alguna).
+    const passwords = leerPasswordsColegios();
 
     const [plataforma, pais, ciudad] = await Promise.all([
         prisma.plataforma.findUnique({ where: { clave: "whatsapp" } }),
@@ -296,8 +346,8 @@ async function main(): Promise<void> {
     const intocablesAntes = await snapshotIntocables(prisma);
 
     const [resultadoA, resultadoB] = await prisma.$transaction(async (tx) => {
-        const a = await sembrarColegioE2E(tx, "A", plataforma.id, pais.id, ciudad.id);
-        const b = await sembrarColegioE2E(tx, "B", plataforma.id, pais.id, ciudad.id);
+        const a = await sembrarColegioE2E(tx, "A", passwords.A, plataforma.id, pais.id, ciudad.id);
+        const b = await sembrarColegioE2E(tx, "B", passwords.B, plataforma.id, pais.id, ciudad.id);
         return [a, b];
     });
 
@@ -311,7 +361,7 @@ async function main(): Promise<void> {
                 origen: "e2e-multi-tenant",
                 colegios: [resultadoA.colegioId, resultadoB.colegioId],
                 admins: [resultadoA.adminEmail, resultadoB.adminEmail],
-                regeneradoContrasenas: true,
+                rehashClave: [resultadoA.rehashClave, resultadoB.rehashClave],
                 ejecutado: nowCOT(),
             } satisfies Prisma.InputJsonValue,
         },
@@ -323,15 +373,14 @@ async function main(): Promise<void> {
     console.log("");
     console.log("✅ Seed E2E multi-tenant COMPLETO (idempotente).");
     console.log("");
-    console.log("Copiar en ~/.config/pi-e2e/.env.e2e:");
+    console.log("La clave viene del ENTORNO (E2E_COLEGIO_{A,B}_ADMIN_PASSWORD) y NO se imprime.");
+    console.log("Confirmar en ~/.config/pi-e2e/.env.e2e (email + colegio_id, que sí se generan):");
     console.log("");
     console.log(`E2E_COLEGIO_A_ADMIN_EMAIL=${resultadoA.adminEmail}`);
-    console.log(`E2E_COLEGIO_A_ADMIN_PASSWORD=${resultadoA.adminPassword}`);
-    console.log(`E2E_COLEGIO_A_ADMIN_COLEGIO_ID=${resultadoA.colegioId}`);
+    console.log(`E2E_COLEGIO_A_ADMIN_COLEGIO_ID=${resultadoA.colegioId}   (clave ${resultadoA.rehashClave ? "(re)fijada" : "ya OK"})`);
     console.log("");
     console.log(`E2E_COLEGIO_B_ADMIN_EMAIL=${resultadoB.adminEmail}`);
-    console.log(`E2E_COLEGIO_B_ADMIN_PASSWORD=${resultadoB.adminPassword}`);
-    console.log(`E2E_COLEGIO_B_ADMIN_COLEGIO_ID=${resultadoB.colegioId}`);
+    console.log(`E2E_COLEGIO_B_ADMIN_COLEGIO_ID=${resultadoB.colegioId}   (clave ${resultadoB.rehashClave ? "(re)fijada" : "ya OK"})`);
     console.log("");
     console.log(`Ejecutado: ${nowCOT()}`);
 }
