@@ -90,6 +90,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-612: guarda de credenciales de la semilla de Calidad — PURA (sin base). El candado de
     // idempotencia (con base) vive en src/lib/seed-cuentas-calidad-siembra.candado.test.ts (integración).
     "scripts/lib/credenciales-e2e-calidad.candado.test.ts",
+    // SPEC-755: el auditor de consentimientos clasifica «firma sospechosa» derivando de
+    // esTitularDelDato (fuente única), no de una lista a mano; control positivo en las dos direcciones.
+    "scripts/lib/consentimiento-clasificacion.candado.test.ts",
     // SPEC-685: las claves de catálogo que siembran las dos semillas son reales y mapean a etiquetas no vacías (PURO).
     "scripts/lib/perfil-catalogo-seed.candado.test.ts",
     // SPEC-671 (I-397): los avisos de coincidencia sobreviven al motor caído (cableado del worker).
