@@ -21,8 +21,9 @@
  * (vacaciones) — no se publican franjas ahí y el día va rayado; las citas ya confirmadas se
  * conservan (bloquear solo inserta la fila, imposibilidad estructural). El detalle de la
  * confirmada NO muestra código de cierre (no existe el flujo, L6) ni la dirección presencial
- * (SPEC-708) ni el enlace de la reunión (es POR CITA, lo pone el operador — no un campo del
- * perfil): muestra el contacto que sí existe.
+ * (SPEC-708); el ENLACE de la reunión SÍ se muestra desde SPEC-778 (es POR CITA, lo pone el
+ * operador — derivado y gateado por `enlace-derivado`, no un campo del perfil): el botón
+ * «Entrar a la reunión» cuando está publicado y la cita no pasó (§5, «casi nada»).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";

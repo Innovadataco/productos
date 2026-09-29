@@ -54,6 +54,10 @@ export class FranjaDisponibleRepository {
                         id: true,
                         estado: true,
                         presentacion: true,
+                        // SPEC-778: para DERIVAR el estado del enlace en el calendario del
+                        // profesional (gateado por `enlace-derivado`); NO salen crudos al DTO.
+                        enlaceReunion: true,
+                        enlacePublicadoEn: true,
                         padreUsuario: { select: { nombre: true, email: true } },
                     },
                 },

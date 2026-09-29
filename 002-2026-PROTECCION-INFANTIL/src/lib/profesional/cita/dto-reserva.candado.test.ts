@@ -10,6 +10,15 @@
  * cuando el dato ESTÁ — no la ausencia de algo que nunca estuvo. El tercer test es el
  * control positivo de que la fixture realmente lo trae.
  *
+ * ⚠️ ALCANCE (SPEC-778 · el significado de este verde CAMBIÓ sin cambiar el código): este
+ * candado vigila NOMBRES (`CAMPOS_INTERNOS_CITA`), no valores. ANTES de 778 «ningún nombre
+ * crudo» equivalía a «el valor del enlace nunca sale», porque no había otra puerta. DESDE
+ * 778 el VALOR de `enlaceReunion` SÍ sale, gateado, bajo la clave derivada `enlace.url`; lo
+ * que lo protege es `enlace-derivado.candado.test.ts` (verificado por mutación), NO éste.
+ * `enlaceOperadorId`/`enlacePublicadoEn` siguen sin salir ni por nombre ni por valor. Si lees
+ * este verde y concluyes «el valor está reservado», te equivocas: la protección se mudó a la
+ * derivación gateada.
+ *
  * Unit puro (construcción de objetos, sin BD).
  */
 import { describe, it, expect } from "vitest";

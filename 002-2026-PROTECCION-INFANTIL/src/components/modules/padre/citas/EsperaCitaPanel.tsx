@@ -377,6 +377,51 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 )}
             </section>
 
+            {/* SPEC-778 · el ACCESO a la reunión — la razón por la que el padre vuelve a esta
+                pantalla. Va primero (antes de calendario/compartir). Copy de Diseño (FORMA-SPEC778,
+                §1-3). Solo con la cita viva (`confirmadaViva`): pasada la hora, el enlace DESAPARECE
+                y manda la vista «ya pasó» de FR-2 (750, no se rediscute). Nada del enlace que no
+                controlamos: cero «sala/segura/caduca/un solo uso»; «no lo compartas» es indicación,
+                no garantía. La `url` solo viene en PUBLICADO (derivada y gateada en el DTO). */}
+            {confirmadaViva && cita.enlace?.estado === "SIN_PUBLICAR" && (
+                <section className="rounded-2xl border border-ambar/40 bg-ambar/10 p-4 sm:p-5 text-ambar">
+                    <p className="etiqueta">Acceso a la reunión</p>
+                    <p className="cuerpo mt-1 text-body">
+                        Tu cita está confirmada. El acceso a la reunión aparecerá aquí. Vuelve a esta
+                        pantalla el día de tu cita.
+                    </p>
+                </section>
+            )}
+            {confirmadaViva && cita.enlace?.estado === "PUBLICADO" && cita.enlace.url && (
+                <section className="rounded-2xl border border-cielo/30 bg-cielo/10 p-4 sm:p-5 space-y-2">
+                    <p className="etiqueta text-cielo">Acceso a la reunión</p>
+                    <p className="cuerpo text-body">Ya puedes entrar a tu reunión.</p>
+                    <a
+                        href={cita.enlace.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
+                    >
+                        Entrar a la reunión
+                    </a>
+                    <p className="cuerpo text-subtle">
+                        Ábrelo a la hora de tu cita. Es tu acceso a la reunión de tu familia — no lo
+                        compartas con nadie.
+                    </p>
+                </section>
+            )}
+            {confirmadaViva && cita.enlace?.estado === "INDETERMINADO" && (
+                // Rama DEFENSIVA (condición 2 del CEO): el reloj del servidor siempre es válido, así
+                // que en la práctica no se alcanza; si se alcanzara, NO se afirma que la hora pasó ni
+                // que el operador no actuó — solo se pide recargar. Sin enlace (fail-closed).
+                <section className="rounded-2xl border border-tinta/10 bg-tinta/5 p-4 sm:p-5 text-subtle">
+                    <p className="etiqueta">Acceso a la reunión</p>
+                    <p className="cuerpo mt-1 text-body">
+                        No pudimos verificar el estado de tu reunión en este momento. Recarga la pantalla.
+                    </p>
+                </section>
+            )}
+
             {/* SPEC-715 + SPEC-731 · con la cita CONFIRMADA el padre YA puede «seguir»
                 sin depender de ningún caso: fecha/contacto (arriba) + agregar al calendario.
                 Compartir un caso es un EXTRA OPCIONAL (§2), nunca un requisito. Nada de esto

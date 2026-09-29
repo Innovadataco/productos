@@ -26,6 +26,7 @@ import type {
     Usuario,
 } from "@prisma/client";
 import { contactoVisiblePorSesion } from "./contacto-visible";
+import { derivarEnlaceParaCita, type EnlaceParaCita } from "./enlace-derivado";
 
 const HORAS_48_EN_MS = 48 * 60 * 60 * 1000;
 
@@ -113,6 +114,11 @@ export interface CitaParaPadreDto {
     franja: { inicio: string; fin: string; modalidad: SolicitudCita["urgencia"] extends never ? never : string };
     /** SOLO presente cuando `debeExponerContacto` es true. */
     contactoProfesional?: ContactoProfesionalDto;
+    /**
+     * SPEC-778 · estado del ENLACE de la reunión (derivado, fuente única `enlace-derivado`).
+     * SOLO presente en citas CONFIRMADA. La `url` viaja únicamente en estado PUBLICADO.
+     */
+    enlace?: EnlaceParaCita;
     /** Historial mínimo para el padre: si es una reprogramación, apunta a la previa. */
     solicitudPreviaId: string | null;
     /** Si heredó pago, indica de dónde (para que el padre no dude si le van a cobrar). */
@@ -174,6 +180,20 @@ export function toCitaParaPadre(
             telefono: solicitud.profesional.usuario.telefono,
         };
     }
+    // SPEC-778: el enlace de la reunión (derivado, gateado). Solo para CONFIRMADA — en otros
+    // estados no hay reunión viva. La `url` sale únicamente en PUBLICADO (nunca cruda por nombre).
+    if (solicitud.estado === "CONFIRMADA") {
+        base.enlace = derivarEnlaceParaCita(
+            {
+                estado: solicitud.estado,
+                enlaceReunion: solicitud.enlaceReunion,
+                enlacePublicadoEn: solicitud.enlacePublicadoEn,
+                franjaInicio: solicitud.franja.inicio,
+                franjaFin: solicitud.franja.fin,
+            },
+            now,
+        );
+    }
     return base;
 }
 
@@ -191,6 +211,11 @@ export interface CitaParaProfesionalDto {
     franja: { inicio: string; fin: string; modalidad: string };
     expedienteCompartidoId: string | null;
     montoConsulta: number;
+    /**
+     * SPEC-778 · estado del ENLACE de la reunión (misma fuente única que el padre).
+     * SOLO presente en CONFIRMADA. La `url` viaja únicamente en PUBLICADO.
+     */
+    enlace?: EnlaceParaCita;
 }
 
 type SolicitudParaProfesional = SolicitudCita & {
@@ -226,10 +251,18 @@ export function toCitaParaProfesional(
     if (contactoVisiblePorSesion(solicitud.estado)) {
         dto.padre.email = solicitud.padreUsuario.email;
     }
-    // Suprimir la fecha absoluta de vencimiento hasta que el reloj arranque.
-    if (!solicitud.pagoAprobadoEn) {
-        // no-op: ya se dejó null explícito arriba
+    // SPEC-778: el enlace de la reunión, misma derivación que el padre (solo CONFIRMADA).
+    if (solicitud.estado === "CONFIRMADA") {
+        dto.enlace = derivarEnlaceParaCita(
+            {
+                estado: solicitud.estado,
+                enlaceReunion: solicitud.enlaceReunion,
+                enlacePublicadoEn: solicitud.enlacePublicadoEn,
+                franjaInicio: solicitud.franja.inicio,
+                franjaFin: solicitud.franja.fin,
+            },
+            now,
+        );
     }
-    void now;
     return dto;
 }

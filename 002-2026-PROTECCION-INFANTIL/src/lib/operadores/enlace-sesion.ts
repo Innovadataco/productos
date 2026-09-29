@@ -20,9 +20,10 @@ import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { validarEnlaceReunion } from "./enlace-validacion";
 import { metadatosHecho } from "./hecho-sesion-tipos";
 
-// Las reglas puras (validación + visibilidad) viven en `enlace-validacion.ts` para que el
-// candado las pruebe como unit sin arrastrar infra. Se re-exportan por conveniencia.
-export { validarEnlaceReunion, enlaceVisibleParaCita, type ValidacionEnlace } from "./enlace-validacion";
+// La regla pura de validación (https/no-HTML) vive en `enlace-validacion.ts` para que el
+// candado la pruebe como unit sin arrastrar infra. Se re-exporta por conveniencia. (La
+// visibilidad ya NO vive acá: SPEC-778 la deriva de `estadoEfectivoDeCita` en `enlace-derivado.ts`.)
+export { validarEnlaceReunion, type ValidacionEnlace } from "./enlace-validacion";
 
 /**
  * Registra el HECHO de la convocatoria en AuditLog (append-only; `AuditLog` está en

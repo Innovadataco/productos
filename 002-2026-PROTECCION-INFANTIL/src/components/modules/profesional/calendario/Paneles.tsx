@@ -85,6 +85,26 @@ export function PanelBloque({ panel, enviando, onCerrar, onResponder }: {
                         <div><span className="font-mono text-[10px] uppercase text-subtle">Modo</span> {b.modalidad === "VIRTUAL" ? "Virtual" : "Presencial"}</div>
                         {b.contactoEmail && <div><span className="font-mono text-[10px] uppercase text-subtle">Contacto</span> {b.contactoEmail}</div>}
                     </div>
+                    {/* SPEC-778 · el ACCESO a la reunión para el profesional (FORMA §5: «casi nada»):
+                        el botón cuando está, un renglón factual cuando no, la verdad cuando pasó — y
+                        NADA MÁS. Sin «no lo compartas» (es el clínico de su propia sesión) y CERO
+                        adjetivos del enlace (sala/segura/caduca/un solo uso). `url` solo en PUBLICADO. */}
+                    {b.enlace?.estado === "PUBLICADO" && b.enlace.url && (
+                        <a
+                            href={b.enlace.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 block w-full rounded-lg bg-cielo px-3 py-2 text-center text-xs font-semibold text-acento-ink transition hover:bg-cielo/90"
+                        >
+                            Entrar a la reunión
+                        </a>
+                    )}
+                    {b.enlace?.estado === "SIN_PUBLICAR" && (
+                        <p className="mt-3 text-[11px] text-subtle">El acceso a la reunión aún no está disponible.</p>
+                    )}
+                    {b.enlace?.estado === "PASADA" && (
+                        <p className="mt-3 text-[11px] text-subtle">Esta cita ya pasó su hora acordada.</p>
+                    )}
                     <p className="mt-3 text-[11px] text-subtle">El cierre de la cita todavía no está disponible.</p>
                     <button className="mt-3 w-full rounded-lg border border-tinta/10 px-3 py-2 text-xs font-semibold text-muted" onClick={onCerrar}>Cerrar</button>
                 </>

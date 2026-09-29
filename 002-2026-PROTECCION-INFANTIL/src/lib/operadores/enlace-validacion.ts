@@ -24,11 +24,8 @@ export function validarEnlaceReunion(raw: string): ValidacionEnlace {
     return { ok: true, url: valor };
 }
 
-/**
- * ¿PI debe MOSTRAR el enlace? Solo si está publicado y la cita todavía no pasó. Esto sí
- * lo controla PI (cuándo lo pinta), no la vida del enlace en el proveedor. Lo consumen las
- * pantallas de padre/profesional (FUERA de alcance de SPEC-750).
- */
-export function enlaceVisibleParaCita(publicado: boolean, franjaFin: Date, now: Date): boolean {
-    return publicado && now.getTime() < franjaFin.getTime();
-}
+// SPEC-778: `enlaceVisibleParaCita` se ELIMINÓ. Era la frontera temporal placeholder de
+// 750 para estas pantallas (sin llamadores de producción, solo su propio test). La noción
+// de «pasó la hora» es UNA sola en el producto: `estadoEfectivoDeCita` (SPEC-746). La
+// visibilidad del enlace se deriva de ahí en `enlace-derivado.ts`, no acá. Dejar una segunda
+// frontera daba cobertura falsa (mismo animal que `grupoDeCita`, borrado en 749 FR-3).
