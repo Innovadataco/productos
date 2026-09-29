@@ -131,8 +131,9 @@ async function sembrarProfesionalActivoConFranja(): Promise<{ perfilId: string; 
         const putPerfil = await request.put("/api/profesional/perfil", {
             data: {
                 nombreVisible: `Psi E2E ${CORRIDA}`,
-                tituloProfesional: "Psicóloga clínica",
-                especialidades: ["Familia"],
+                profesion: "psicologo",
+                areasAtencion: ["ansiedad"],
+                rangoEtario: ["12-17"],
                 ciudadId: ciudad!.id,
                 atiendeVirtual: true,
                 atiendePresencial: false,

@@ -237,8 +237,9 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
             const putPerfil = await request.put("/api/profesional/perfil", {
                 data: {
                     nombreVisible: `Psi E2E ${CORRIDA}`,
-                    tituloProfesional: "Psicóloga clínica",
-                    especialidades: ["Familia"],
+                    profesion: "psicologo",
+                    areasAtencion: ["ansiedad"],
+                    rangoEtario: ["12-17"],
                     ciudadId: ciudad!.id,
                     atiendeVirtual: true,
                     atiendePresencial: false,
@@ -259,6 +260,11 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
             expect(perfil, "el PUT perfil debe haber creado el PerfilProfesional").not.toBeNull();
             perfilProfesionalId = perfil!.id;
             sembrados.perfiles.add(perfilProfesionalId);
+
+            // SPEC-686/706: aceptar la autorización en pantalla (`yaAceptoVersionVigente`)
+            // ANTES de subir el archivo — sin la aceptación el perfil NO pasa a EN_REVISION.
+            const aceptarAutor = await request.post("/api/profesional/autorizacion/aceptar", {});
+            expect(aceptarAutor.status(), `aceptar autorización body=${await aceptarAutor.text().catch(() => "")}`).toBeLessThan(300);
 
             // (3) Autorización firmada (SPEC-391) — sin ella el admin no puede
             // decidir (service.ts:210). Endpoint espera multipart `archivo` con
@@ -302,8 +308,9 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
             await aceptarConsentimiento(requestAdmin);
             await login(requestAdmin, EMAIL_ADMIN);
             const ficha = await requestAdmin.get(`/api/admin/verificacion-profesionales/${perfilProfesionalId}`);
-            const items: Array<{ clave?: string; id?: string; key?: string }> = ((await ficha.json())?.data?.checklist) ?? [];
-            const claves = items.map((it) => it.clave ?? it.id ?? it.key ?? "").filter(Boolean);
+            // La ficha del admin devuelve `checklist` como Record<clave, item> (objeto), no
+            // array (SPEC-408) — el test viejo lo trataba como array y reventaba SIEMPRE.
+            const claves = Object.keys(((await ficha.json())?.data?.checklist) ?? {});
             expect(claves.length, "la ficha del admin debe traer checklist con claves").toBeGreaterThan(0);
             const checklist = Object.fromEntries(claves.map((k) => [k, { estado: "CUMPLE" }]));
             const decidir = await requestAdmin.post(`/api/admin/verificacion-profesionales/${perfilProfesionalId}/decidir`, {

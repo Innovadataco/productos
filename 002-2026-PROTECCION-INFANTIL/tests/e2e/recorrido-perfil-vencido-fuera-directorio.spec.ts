@@ -209,8 +209,9 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
             const putPerfil = await request.put("/api/profesional/perfil", {
                 data: {
                     nombreVisible: `Psi E2E ${CORRIDA}`,
-                    tituloProfesional: "Psicóloga clínica",
-                    especialidades: ["Familia"],
+                    profesion: "psicologo",
+                    areasAtencion: ["ansiedad"],
+                    rangoEtario: ["12-17"],
                     ciudadId: ciudad!.id,
                     atiendeVirtual: true,
                     atiendePresencial: false,
@@ -233,6 +234,11 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
             });
             expect(perfil, "el PUT perfil debe haber creado el PerfilProfesional").not.toBeNull();
             perfilProfesionalId = perfil!.id;
+
+            // SPEC-686/706: aceptar la autorización en pantalla ANTES de subir el archivo —
+            // sin la aceptación (`yaAceptoVersionVigente`) el perfil NO pasa a EN_REVISION.
+            const aceptarAutor = await request.post("/api/profesional/autorizacion/aceptar", {});
+            expect(aceptarAutor.status(), `aceptar autorización body=${await aceptarAutor.text().catch(() => "")}`).toBeLessThan(300);
 
             // (3) el profesional sube autorización — transiciona a EN_REVISION
             const subirAutorizacion = await request.post("/api/profesional/autorizacion", {
@@ -285,9 +291,8 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
             await login(admReq, EMAIL_ADMIN);
 
             const ficha = await admReq.get(`/api/admin/verificacion-profesionales/${perfilProfesionalId}`);
-            const claves: string[] = (((await ficha.json())?.data?.checklist) as Array<{ clave?: string; id?: string }> ?? [])
-                .map((it) => it.clave ?? it.id ?? "")
-                .filter(Boolean);
+            // La ficha devuelve `checklist` como Record<clave, item> (objeto), no array (SPEC-408).
+            const claves: string[] = Object.keys(((await ficha.json())?.data?.checklist) ?? {});
             expect(claves.length, "checklist con al menos 1 requisito").toBeGreaterThanOrEqual(1);
             const checklist: Record<string, { estado: "CUMPLE" }> = {};
             for (const k of claves) checklist[k] = { estado: "CUMPLE" };

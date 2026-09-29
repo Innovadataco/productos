@@ -325,8 +325,9 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const putConTextoHumano = await request.put("/api/profesional/perfil", {
                 data: {
                     nombreVisible: "Psi E2E",
-                    tituloProfesional: "Psicóloga clínica",
-                    especialidades: ["Familia"],
+                    profesion: "psicologo",
+                    areasAtencion: ["ansiedad"],
+                    rangoEtario: ["12-17"],
                     ciudadId: "Bogotá", // <── texto humano en lugar del cuid
                     atiendeVirtual: true,
                     atiendePresencial: false,
@@ -347,8 +348,9 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const putConCuid = await request.put("/api/profesional/perfil", {
                 data: {
                     nombreVisible: "Psi E2E",
-                    tituloProfesional: "Psicóloga clínica",
-                    especialidades: ["Familia"],
+                    profesion: "psicologo",
+                    areasAtencion: ["ansiedad"],
+                    rangoEtario: ["12-17"],
                     ciudadId: ciudadCuidReal,
                     atiendeVirtual: true,
                     atiendePresencial: false,
@@ -415,8 +417,9 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const putPerfil = await request.put("/api/profesional/perfil", {
                 data: {
                     nombreVisible: `Psi Cal E2E ${CORRIDA}`,
-                    tituloProfesional: "Psicóloga clínica",
-                    especialidades: ["Familia"],
+                    profesion: "psicologo",
+                    areasAtencion: ["ansiedad"],
+                    rangoEtario: ["12-17"],
                     ciudadId: ciudad!.id,
                     atiendeVirtual: true,
                     atiendePresencial: false,
