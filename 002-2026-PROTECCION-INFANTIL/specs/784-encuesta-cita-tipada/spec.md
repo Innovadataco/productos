@@ -1,6 +1,6 @@
 # SPEC-784 · Rescatar las pantallas de la encuesta (#341) sobre el modelo tipado de 753
 
-> **Status:** DESARROLLO · **§4 aprobado (veredictos CEO 29-09: D-1..D-6).** T1-T4 en curso; el gate (FR-4/T5) espera SPEC-751 en `main`.
+> **Status**: `DESARROLLO` · §4 aprobado (veredictos CEO 29-09, D-1..D-7). Implementación T1–T4 hecha; SIN gate (D-7: Diseño eligió tarjeta) → no depende de SPEC-751. Cierre en curso.
 > **Rama:** `work/pi-SPEC-784-encuesta-cita-tipada` (base `main` = `fd3507f85`).
 > **Radicado:** `RADICADO-SPEC-784-2026-09-29.md` (repo de Gestión).
 > **Forma (Diseño, autoridad de copy):** `FORMA-SPEC784-FORMULARIO-ENCUESTA-CITA-2026-09-29.md` · commit `d682cdb`.
@@ -63,7 +63,8 @@ al service del cruce** — con lo que el `hueco-funcional` de 753 se cierra.
 - **US-2 (P1) · El profesional registra la sesión.** Igual, con voz de usted y desenlace de registro
   neutro; sus respuestas cruzan contra las del padre (mismas preguntas = misma vara).
 - **US-3 (P1) · Reportar nunca se bloquea.** Un padre con encuesta pendiente que va a **reportar** llega
-  a reportar — el gate de la encuesta jamás tapa una superficie de protección.
+  a reportar. Satisfecha POR CONSTRUCCIÓN: no se construye ninguna compuerta (Diseño eligió tarjeta); la
+  tarjeta va DEBAJO del reporte y el candado de orden lo vigila.
 - **US-4 (P2) · El cruce se registra al cerrar el segundo lado.** Cuando ambos lados respondieron,
   `cruzarEncuestasCita` registra los incidentes de contradicción (ya implementado en 753; 784 solo lo
   invoca).
@@ -93,11 +94,16 @@ al service del cruce** — con lo que el `hueco-funcional` de 753 se cierra.
   (sus valores «no hubo / no comenzó / no funcionó» son respuestas). La duración **desaparece**, nunca se
   ofrece un rango con `seRealizo=false` (ningún rango puede decir honestamente «no hubo sesión»). La UI
   **nunca construye** la combinación que el CHECK rechaza; el CHECK es la red, no el mecanismo.
-- **FR-4 · El gate vive en la PÁGINA y jamás tapa protección.** La redirección a `/encuesta` se decide
-  server-side. `encuestaGateDetiene(ruta, hayPendiente)` es PURA y devuelve `false` para toda
-  `SUPERFICIES_PROTECCION` (fuente única de SPEC-751). Se suma al candado
-  `proteccion-siempre-abierta.candado.test.ts` con control positivo (gate cerrado → las 4 superficies
-  siguen abiertas; gate cerrado → una ruta operativa SÍ se detiene).
+- **FR-4 · [REEMPLAZADA por Diseño — NO hay gate] El punto de entrada es una TARJETA/BLOQUE, no una
+  compuerta.** Diseño (`439d1c3`) decidió una **tarjeta** para el padre (en `DashboardUsuarioClient`,
+  DEBAJO del encabezado de reporte y ENCIMA de «Mis reportes»; la misma en `EsperaCitaPanel`) y un
+  **`Bloque`** «Sesiones por registrar ({n})» para el profesional (en `PanelProfesional`). Ambos → 
+  `/encuesta`. NO hay redirect, NO hay modal, NO hay toast. La invariante «**nunca sobre el reporte**»
+  no se sostiene con una exención de compuerta (que ya no existe) sino con un **candado de ORDEN**
+  derivado del árbol de render: en el panel del padre «Reportar un riesgo» PRECEDE a la tarjeta (control
+  positivo por mutación). **784 dejó de depender de SPEC-751.** La tarjeta es persistente + descartable
+  («Ahora no» de igual peso), no mendiga (desaparece sin pendientes), y su copy es ABIERTA (no presume
+  que la cita salió bien).
 - **FR-5 · Cero contenido, cero texto libre.** Ninguna de las 6 preguntas pide qué se habló, cómo está el
   menor, ni un relato. «Otra razón» es una **opción cerrada**, no abre campo. No hay ningún `textarea` ni
   input de texto en el formulario.
@@ -126,7 +132,7 @@ al service del cruce** — con lo que el `hueco-funcional` de 753 se cierra.
 | C-1 | **FR-2** · derivación de «pendiente» (núcleo puro) | estado ∈ {`PASADA`,`CUMPLIDA`,`NO_ASISTIO_PADRE`,`NO_ASISTIO_PROFESIONAL`} sin fila → pendiente; `PROXIMA`/`EN_CURSO`/`PAGADA_PENDIENTE`/`SIN_CONFIRMAR`/`REEMBOLSADA`/`REPROGRAMADA`/`VENCIDA_SIN_RESPUESTA`, o ya respondida ese lado → NO pendiente |
 | C-2 | **FR-6** · 409 desde la SUPERFICIE (endpoint), no solo el modelo | 2º POST del mismo `origen` → 409; 1er POST → 201 |
 | C-3 | **FR-3** · el formulario no puede construir la combinación incoherente | árbol de render: con `seRealizo=Sí` NO monta razón; con `No` NO monta duración; sin texto libre |
-| C-4 | **FR-4** · protección siempre abierta (se suma al candado de SPEC-751) | gate cerrado → las 4 `SUPERFICIES_PROTECCION` abiertas; gate cerrado → ruta operativa detenida |
+| C-4 | **FR-4** · «nunca sobre el reporte» (árbol de render de `DashboardUsuarioClient`) | «Reportar un riesgo» PRECEDE a la tarjeta de encuesta; invertir el orden hace caer el candado; sin pendientes la tarjeta no aparece |
 | C-5 | **FR-5** · cero texto libre / cero contenido | no hay `textarea`/input de texto; «Otra» no abre campo; ninguna pregunta de contenido |
 
 **NO reconciliar:** si un test de 753 se pone rojo al cablear, **es hallazgo** (puede ser un test mal
@@ -138,8 +144,8 @@ escrito de los 37 rojos de la línea base e2e sobre `main`), no una licencia par
   documentado como el instante que «dispara la encuesta».
 - 427 (transición explícita a `CUMPLIDA`) **no está en `main`**; la derivación no lo necesita: dispara con
   `PASADA` (CONFIRMADA + tiempo). Cuando 427 entre, `CUMPLIDA` ya está contemplado.
-- `SUPERFICIES_PROTECCION` + su candado (SPEC-751) entran a `main` **antes** del cableado del gate (FR-4).
-  El CEO parte 751 en su PR propio y avisa cuando entre.
+- ~~SPEC-751 como dependencia~~ — **ya NO aplica**: Diseño eligió tarjeta en vez de compuerta, así que no
+  hay gate que exima `SUPERFICIES_PROTECCION`. 784 no depende de 751.
 - La copy visible la manda Diseño (`d682cdb`); las `key`s (enums) las manda el modelo de 753.
 
 ## 8 · Decisiones para el CEO (compuerta §4)
@@ -172,9 +178,12 @@ escrito de los 37 rojos de la línea base e2e sobre `main`), no una licencia par
   fuera del alcance de 784. **Confirmado.**
 - **D-5 · `al-cumplir.ts` y el middleware `+16` de #341 NO se rescatan.** No hay ningún caller en `main`
   (verificado); nada se rompe. → informativo.
-- **D-6 · Orden de entrada.** 784 depende de SPEC-751 (`SUPERFICIES_PROTECCION` + candado) en `main` para
-  el FR-4. El resto (FR-1/2/3/5/6/7) no depende de 751 y se puede construir ya; el gate (FR-4) se cablea
-  cuando 751 entre. → informativo (el CEO ya decidió partir 751).
+- **D-6 · Orden de entrada.** ~~784 dependía de SPEC-751~~ → **anulada por D-7.**
+- **D-7 · [Diseño, `439d1c3`] El punto de entrada es una TARJETA/BLOQUE, NO una compuerta.** Cierra el
+  riesgo del FR-4 no construyendo la cosa peligrosa: sin gate, no hay exención de protección que mantener.
+  La invariante «nunca sobre el reporte» pasa a un **candado de ORDEN** del árbol de render (C-4). **784
+  se desacopla de SPEC-751.** La medición del middleware (D-1) mantiene su valor: probó que el gate no
+  podía vivir en el Edge, lo que empujó la decisión hacia la página y de ahí a «mejor ninguna compuerta».
 
 ---
 > **Impacto en arquitectura:** nuevas rutas de UI y un endpoint API (capa 1/2), una derivación pura +

@@ -43,7 +43,14 @@
   shell** — una sola noción de «pendiente» (la costura que el CEO advirtió).
 - Falla conservador (heredado de `estadoEfectivoDeCita`: tiempo inválido → `PASADA`).
 
-### C-2 · Gate de página (FR-4) — `src/lib/routing/encuesta-gate.ts` **(espera SPEC-751)**
+### C-2 · ~~Gate de página~~ **ELIMINADO (D-7, Diseño `439d1c3`)** — el punto de entrada es una TARJETA/BLOQUE
+> No se construye `encuestaGateDetiene` ni la exención de `SUPERFICIES_PROTECCION`. En su lugar: la tarjeta
+> del padre (`TarjetaEncuestaPendiente` en `DashboardUsuarioClient` + `EsperaCitaPanel`) y el `Bloque`
+> «Sesiones por registrar» del profesional (`PanelProfesional`, conteo por el DAL). La invariante «nunca
+> sobre el reporte» la sostiene el **candado de ORDEN** del árbol de render (C-4), no una compuerta. **784
+> deja de depender de SPEC-751.** El texto de abajo queda como registro del diseño descartado.
+
+#### (registro) diseño de gate descartado — `src/lib/routing/encuesta-gate.ts`
 - Molde exacto de `audiencia-gate.ts` (SPEC-751): PURA, import-light, **sin BD**.
   ```
   import { esSuperficieDeProteccion } from "@/lib/routing/guardias"; // ← de SPEC-751
