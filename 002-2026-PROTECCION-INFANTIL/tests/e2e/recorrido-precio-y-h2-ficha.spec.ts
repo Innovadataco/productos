@@ -244,7 +244,8 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
                     atiendePresencial: false,
                     aniosExperiencia: 5,
                     presentacion: "Presentación efímera SPEC-441.",
-                    tarifaConsultaCOP: TARIFA_PROF_COP,
+                    // La tarifa NO se fija acá: un profesional no habilitado no puede
+                    // (route.ts:166, SPEC-685). Se fija en el paso (6), ya ACTIVO.
                     duracionMinutos: 60,
                     emiteFactura: false,
                 },
@@ -317,6 +318,20 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
             expect(perfilActivo?.estado, "perfil debe quedar ACTIVO para entrar al directorio").toBe("ACTIVO");
         } finally {
             await requestAdmin.dispose();
+        }
+
+        // (6) Ya ACTIVO (habilitado = estado ACTIVO + verificación aprobada vigente),
+        // el profesional fija su tarifa por «Mi perfil». El PUT con `tarifaConsultaCOP`
+        // exige habilitado (route.ts:166, SPEC-685); antes de este punto devuelve 400.
+        const requestTarifa = await ctx();
+        try {
+            await login(requestTarifa, EMAIL_PROF);
+            const putTarifa = await requestTarifa.put("/api/profesional/perfil", {
+                data: { tarifaConsultaCOP: TARIFA_PROF_COP },
+            });
+            expect(putTarifa.status(), `PUT tarifa post-habilitación body=${await putTarifa.text().catch(() => "")}`).toBeLessThan(300);
+        } finally {
+            await requestTarifa.dispose();
         }
     });
 

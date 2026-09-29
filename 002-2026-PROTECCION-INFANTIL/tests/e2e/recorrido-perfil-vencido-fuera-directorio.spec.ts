@@ -216,7 +216,8 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
                     atiendePresencial: false,
                     aniosExperiencia: 5,
                     presentacion: "Presentación efímera SPEC-449.",
-                    tarifaConsultaCOP: 120_000,
+                    // Sin tarifa: un profesional no habilitado no puede fijarla (route.ts:166,
+                    // SPEC-685). Acá no se usa: el directorio filtra por estado ACTIVO, no por tarifa.
                     duracionMinutos: 60,
                     emiteFactura: false,
                 },

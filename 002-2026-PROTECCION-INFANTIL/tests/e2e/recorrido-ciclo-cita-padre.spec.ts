@@ -211,7 +211,9 @@ test.describe.serial("Ciclo completo del padre: reserva → pago → confirmaci�
                     atiendePresencial: false,
                     aniosExperiencia: 5,
                     presentacion: "Presentación efímera SPEC-447 ciclo de cita.",
-                    tarifaConsultaCOP: 120_000,
+                    // Sin tarifa: un profesional no habilitado no puede fijarla (route.ts:166,
+                    // SPEC-685). Acá no se usa: la 1ª cita se cobra al PRECIO ESTÁNDAR del
+                    // parámetro (SPEC-428), no a la tarifa; y el directorio filtra por estado ACTIVO.
                     duracionMinutos: 60,
                     emiteFactura: false,
                 },
