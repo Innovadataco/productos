@@ -24,21 +24,16 @@ ALTER TABLE "Plan" ALTER COLUMN "precio" DROP NOT NULL;
 ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- ── worker_logs (2ª tabla del drift, medida por el CEO contra prod) ──
--- Dos divergencias que el clasificador de 760 marca REAL contra prod:
---  a) `creadoEn` quedó como TIMESTAMP SIN zona — es la ÚNICA columna que la migración de I-420
---     (20260822010000) dejó afuera. El esquema la declara `@db.Timestamptz(3)`. Un `creadoEn` sin
---     zona en la tabla de logs, en un contenedor UTC, reporta horas mal. Conversión BARE (sin
---     `USING`), igual que I-420: en prod interpreta el naked como la TZ de sesión (UTC) → correcto;
---     en test (que ya es timestamptz(6)) baja la precisión a (3) preservando la zona. Un `USING AT
---     TIME ZONE 'UTC'` sería INCORRECTO en el caso ya-timestamptz (le quitaría la zona), por eso bare.
---  b) `id` tiene un DEFAULT `gen_random_uuid()` de la BD que el esquema NO declara (`@default(cuid())`,
---     lo genera la app). Es DRIFT REAL (no representación): Prisma siempre provee el id, así que
---     quitar el default de la BD no rompe inserts. OJO: `gen_random_uuid()` cae en el
---     `VALOR_DEFAULT_BENIGNO` del clasificador — un `SET DEFAULT gen_random_uuid()` aislado se
---     marcaría benigno (límite conocido del clasificador); acá NO se esconde porque la cláusula (a)
---     hace que el statement entero salga ROJO. Reportado aparte.
--- CAMBIA la base viva (a diferencia del createdAt de Plan, que es no-op): completa la conversión de
--- I-420 y quita el default. HALLAZGO si la reinterpretación naked→tz corre los timestamps (pasaría
--- solo si NO fueran UTC — el contenedor es UTC, misma premisa que I-420).
+-- `id` tiene un DEFAULT `gen_random_uuid()` de la BD que el esquema NO declara (`@default(cuid())`,
+-- lo genera la app). DRIFT REAL: el default de BD está MUERTO (Prisma siempre provee el id), así que
+-- quitarlo no rompe inserts; alinea la base con el esquema (historial↔esquema). OJO: `gen_random_uuid()`
+-- cae en `VALOR_DEFAULT_BENIGNO` del clasificador — un `SET DEFAULT gen_random_uuid()` aislado se
+-- marcaría benigno (límite conocido, va al registro de límites del guardián).
+--
+-- `creadoEn` NO se toca en la migración: su drift es historial↔ESQUEMA (no BD-viva↔historial). El
+-- esquema declara `@db.Timestamptz(3)` (intención original de 20260821), pero I-420 (20260822) la
+-- convirtió a `tz(6)` junto con TODO el resto — tz(6) es la convención del esquema entero. Prod y test
+-- YA son tz(6), fieles a sus migraciones. En vez de bajar la BD a tz(3) (truncar precisión de un dato
+-- vivo sin motivo), se corrige el ESQUEMA a tz(6) (el que quedó fuera de sincronía es él). Cero cambio
+-- de dato; el diff historial↔esquema se cierra por el lado del esquema. (Ver el schema.prisma de este PR.)
 ALTER TABLE "worker_logs" ALTER COLUMN "id" DROP DEFAULT;
-ALTER TABLE "worker_logs" ALTER COLUMN "creadoEn" SET DATA TYPE TIMESTAMPTZ(3);
