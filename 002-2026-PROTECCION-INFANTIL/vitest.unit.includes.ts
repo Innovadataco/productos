@@ -341,6 +341,11 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/dto.test.ts",
     "src/lib/profesional/autorizacion-storage.test.ts",
     "src/lib/profesional/cita/dto.test.ts",
+    // SPEC-395 (fuga prod): la visibilidad del contacto es UNA decisión (`contactoVisiblePorSesion`).
+    // Unit de la regla (falla cerrada) + candado de CONDUCTA de las 3 superficies (force false/true,
+    // correo real plantado) + barrido de decisores. Todo mockeado, sin BD.
+    "src/lib/profesional/cita/contacto-visible.test.ts",
+    "src/lib/profesional/cita/contacto-fuente-unica.candado.test.ts",
     // SPEC-353 (A-69 · C6): reglas puras de la frase "qué hacer hoy" del rector.
     "src/lib/colegio/que-hacer-hoy.test.ts",
     "src/lib/colegio/seguimiento.test.ts",
