@@ -19,6 +19,20 @@ export interface CargaTrabajo {
     tope: number;
 }
 
+/**
+ * Chip HONESTO de la lista (FORMA §3): un HECHO puntual «al tope en {trabajo}», NO un
+ * semáforo de disponibilidad. `null` = ninguno al tope (no se pinta nada). Nunca colapsa las
+ * dos cargas en un «ocupado» agregado.
+ */
+export function chipAlTope(casos: CargaTrabajo, sesiones: CargaTrabajo): string | null {
+    const casosAlTope = casos.actual >= casos.tope;
+    const sesionesAlTope = sesiones.actual >= sesiones.tope;
+    if (casosAlTope && sesionesAlTope) return "Al tope: casos y sesiones";
+    if (casosAlTope) return "Al tope: casos";
+    if (sesionesAlTope) return "Al tope: sesiones";
+    return null;
+}
+
 function BarraCarga({ etiqueta, clave, actual, tope }: CargaTrabajo & { etiqueta: string; clave: "casos" | "sesiones" }) {
     const alTope = actual >= tope;
     const pct = tope > 0 ? Math.min(100, (actual / tope) * 100) : 100;

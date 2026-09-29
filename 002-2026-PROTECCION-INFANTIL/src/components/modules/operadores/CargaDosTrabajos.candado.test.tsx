@@ -8,9 +8,20 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { CargaDosTrabajos } from "@/components/modules/operadores/CargaDosTrabajos";
+import { CargaDosTrabajos, chipAlTope } from "@/components/modules/operadores/CargaDosTrabajos";
 
 afterEach(() => cleanup());
+
+describe("SPEC-779 · chipAlTope (lista): HECHO puntual, no semáforo agregado", () => {
+    it("nombra el trabajo saturado; null si ninguno; nunca «ocupado/disponible»", () => {
+        expect(chipAlTope({ actual: 10, tope: 10 }, { actual: 0, tope: 20 })).toBe("Al tope: casos");
+        expect(chipAlTope({ actual: 0, tope: 10 }, { actual: 20, tope: 20 })).toBe("Al tope: sesiones");
+        expect(chipAlTope({ actual: 10, tope: 10 }, { actual: 20, tope: 20 })).toBe("Al tope: casos y sesiones");
+        expect(chipAlTope({ actual: 3, tope: 10 }, { actual: 5, tope: 20 })).toBeNull();
+        // sobre-tope también cuenta como al tope (n>tope).
+        expect(chipAlTope({ actual: 13, tope: 10 }, { actual: 0, tope: 20 })).toBe("Al tope: casos");
+    });
+});
 
 const alTopeDe = (c: HTMLElement, clave: string) =>
     c.querySelector(`[data-carga="${clave}"]`)?.getAttribute("data-al-tope");

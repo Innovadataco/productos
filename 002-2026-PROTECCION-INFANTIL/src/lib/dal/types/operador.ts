@@ -30,6 +30,11 @@ export interface OperadorListItemDto {
     perfil: OperadorPerfilDto | null;
     casosAbiertos: number;
     casosTotales: number;
+    /** SPEC-779 · las dos cargas resueltas (misma fuente que el asignador): casos y sesiones,
+     *  cada una con SU tope. `topeCasos` = cupoMaximo del perfil o el default. */
+    topeCasos: number;
+    sesionesVigentes: number;
+    topeSesiones: number;
 }
 
 export interface OperadorCreadoDto {

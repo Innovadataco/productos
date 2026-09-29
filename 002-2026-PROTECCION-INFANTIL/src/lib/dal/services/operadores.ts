@@ -15,10 +15,12 @@ import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
 import { whereReporteVigente, whereReporteEnEstado, whereReporteEnEstados } from "@/lib/reportes-acceso";
 import { ESTADOS_CARGA_OPERADOR } from "@/lib/operadores/estados";
 import type { EstrategiaAsignacion } from "@/lib/operadores/asignador";
+import { ESTADOS_OCUPAN_OPERADOR } from "@/lib/operadores/asignador-citas";
 import { UsuarioRepository } from "../repositories/usuario";
 import { PerfilOperadorRepository } from "../repositories/perfil-operador";
 import { ReporteRepository } from "../repositories/reporte";
 import { SolicitudComiteRepository } from "../repositories/solicitud-comite";
+import { SolicitudCitaRepository } from "../repositories/solicitud-cita";
 import { ParametroRepository } from "../repositories/parametro";
 import type {
     InfoClienteDto,
@@ -53,6 +55,7 @@ export class OperadorService {
     private readonly perfiles: PerfilOperadorRepository;
     private readonly reportes: ReporteRepository;
     private readonly solicitudes: SolicitudComiteRepository;
+    private readonly solicitudesCita: SolicitudCitaRepository;
     private readonly parametros: ParametroRepository;
 
     constructor(tx?: Prisma.TransactionClient) {
@@ -60,6 +63,7 @@ export class OperadorService {
         this.perfiles = new PerfilOperadorRepository(tx);
         this.reportes = new ReporteRepository(tx);
         this.solicitudes = new SolicitudComiteRepository(tx);
+        this.solicitudesCita = new SolicitudCitaRepository(tx);
         this.parametros = new ParametroRepository(tx);
     }
 
@@ -70,6 +74,11 @@ export class OperadorService {
             ...filtroTenant(admin),
         });
 
+        // SPEC-779 · carga de SESIONES por operador: MISMA fuente y mismo tope que el asignador,
+        // para que la lista del admin y el sistema no cuenten distinto.
+        const ahora = new Date();
+        const { cupoDefault, cupoSesionesDefault } = await obtenerConfigAsignacion();
+
         return Promise.all(
             operadores.map(async (op) => {
                 const casosAbiertos = op.rol === "OPERADOR"
@@ -78,6 +87,11 @@ export class OperadorService {
                 const casosTotales = op.rol === "OPERADOR"
                     ? await this.reportes.countWhere(whereReporteVigente({ operadorId: op.id }))
                     : await this.solicitudes.countPorComite(op.id);
+                const sesionesVigentes = await this.solicitudesCita.contarSesionesVigentesDeOperador(
+                    op.id,
+                    ESTADOS_OCUPAN_OPERADOR,
+                    ahora,
+                );
                 return {
                     id: op.id,
                     email: op.email,
@@ -98,6 +112,9 @@ export class OperadorService {
                         : null,
                     casosAbiertos,
                     casosTotales,
+                    sesionesVigentes,
+                    topeCasos: op.perfilOperador?.cupoMaximo ?? cupoDefault,
+                    topeSesiones: cupoSesionesDefault,
                 };
             })
         );
