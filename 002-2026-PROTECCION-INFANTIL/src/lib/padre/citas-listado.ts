@@ -1,34 +1,17 @@
 /**
- * SPEC-545 · agrupación y badge del listado «Mis citas» del padre.
+ * SPEC-545 · badge del listado «Mis citas» del padre.
  *
  * Regla de Diseño (layout 06-09): el estado de una cita es PROCESO, no criticidad,
  * así que NUNCA se pinta en rubí. Confirmada→cielo, esperando→ámbar, realizada→pino,
  * y los finales sin asistencia/vencida/reembolsada/reprogramada→neutro (tinta).
  *
  * Pura y sin React para que el candado la verifique por conducta.
+ *
+ * SPEC-749: se retiró `grupoDeCita` —agrupaba por tiempo con frontera propia (≈ FIN) y
+ * NO tenía llamador de producción; su candado daba cobertura falsa—. La verdad temporal
+ * de una cita la deriva la fuente única `estadoEfectivoDeCita` (#718).
  */
 import type { EstadoSolicitudCita } from "@prisma/client";
-
-export type GrupoCita = "proximas" | "pasadas" | "canceladas";
-
-/** A qué grupo del listado va la cita. `esFutura` = la franja aún no pasó. */
-export function grupoDeCita(estado: EstadoSolicitudCita, esFutura: boolean): GrupoCita {
-    switch (estado) {
-        case "SIN_CONFIRMAR":
-        case "PAGADA_PENDIENTE":
-            return "proximas";
-        case "CONFIRMADA":
-            return esFutura ? "proximas" : "pasadas";
-        case "CUMPLIDA":
-            return "pasadas";
-        case "NO_ASISTIO_PADRE":
-        case "NO_ASISTIO_PROFESIONAL":
-        case "VENCIDA_SIN_RESPUESTA":
-        case "REEMBOLSADA":
-        case "REPROGRAMADA":
-            return "canceladas";
-    }
-}
 
 export type BadgeCita = { label: string; clases: string };
 

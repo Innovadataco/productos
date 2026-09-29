@@ -16,7 +16,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { EstadoSolicitudCita } from "@prisma/client";
 import { PADRE_NAV_ITEMS } from "@/lib/nav-items";
-import { badgeDeCita, grupoDeCita } from "@/lib/padre/citas-listado";
+import { badgeDeCita } from "@/lib/padre/citas-listado";
 
 const SRC = path.resolve(__dirname, "..", ".."); // .../src
 
@@ -57,14 +57,5 @@ describe("SPEC-545 · «Mis citas» en el menú y su pantalla", () => {
         expect(badgeDeCita("PAGADA_PENDIENTE").clases).toContain("ambar");
         expect(badgeDeCita("CUMPLIDA").clases).toContain("pino");
         expect(badgeDeCita("REEMBOLSADA").clases).toContain("tinta");
-    });
-
-    it("(3c) agrupación: confirmada futura→próximas, pasada→pasadas, cumplida→pasadas, reembolsada→canceladas", () => {
-        expect(grupoDeCita("CONFIRMADA", true)).toBe("proximas");
-        expect(grupoDeCita("CONFIRMADA", false)).toBe("pasadas");
-        expect(grupoDeCita("SIN_CONFIRMAR", true)).toBe("proximas");
-        expect(grupoDeCita("CUMPLIDA", true)).toBe("pasadas");
-        expect(grupoDeCita("REEMBOLSADA", true)).toBe("canceladas");
-        expect(grupoDeCita("REPROGRAMADA", true)).toBe("canceladas");
     });
 });
