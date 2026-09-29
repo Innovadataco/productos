@@ -112,6 +112,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/worker-reportes-avisos.test.mjs",
     // SPEC-280 (002-PI-180): constructor puro del resumen del CI, sin BD ni red.
     "scripts/ci/resumen.test.mjs",
+    // SPEC-774: meta-aserción sobre el propio ci.yml — el trigger de push incluye `main` y la rama
+    // fantasma no queda en posición funcional (trigger ni gate de duraciones). Lee el ci.yml real.
+    "scripts/ci/trigger-push-main.candado.test.ts",
     // SPEC-281 (002-PI-180): algoritmo LPT de reparto de shards por peso.
     "scripts/ci/reparto-shards.test.mjs",
     // SPEC-450 (I-282): el margen contra el techo de 45 min — 6 shards, aviso

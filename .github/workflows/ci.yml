@@ -8,8 +8,12 @@
 name: ci-002-proteccion-infantil
 
 on:
+  # SPEC-774: la suite corre sobre `main` en cada push (merge). Antes apuntaba a una rama base
+  # OBSOLETA que ni existía → el push NUNCA disparaba y nadie verificaba el RESULTADO INTEGRADO
+  # (cada PR se verifica contra su base, pero A+B mergeados pueden romper `main`). El candado
+  # scripts/ci/trigger-push-main.candado.test.ts lee este `ci.yml` y falla si `main` no está acá.
   push:
-    branches: [feature/001-scaffolding]
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -25,13 +29,21 @@ on:
 # SPEC-396 (I-282): cada repush cancela la corrida vieja. Sin esto, dos runs del
 # mismo commit peleaban por la BD compartida (`lock not available` en PermisoModulo,
 # shards que se cancelaban solos, coverage sin blob para fusionar). Sale más barato
-# y evita el rojo fantasma que ya cazó a #279 (shard) y #298 (colgada). Excepción
-# para `main`: aunque este flujo hoy no dispara en push a main (solo a
-# feature/001-scaffolding + pull_request), la condición está por defensa por si el
-# trigger cambia; en cualquier rama principal no queremos cancelar a mitad.
+# y evita el rojo fantasma que ya cazó a #279 (shard) y #298 (colgada).
+# SPEC-774 (D-1): se cancela TAMBIÉN en `main`. Lo que importa es que el estado que se
+# DESPLIEGA esté verificado, y el deploy siempre es la PUNTA de `main`; verificar cada
+# estado intermedio de una ráfaga de merges es gastar sin ganar (nadie despliega un
+# intermedio). Antes se preservaban por atribución, pero el trigger a main ni siquiera
+# disparaba, así que la excepción nunca corrió.
+# CONSECUENCIA (escrita para que no reviva como defecto): el número de la suite (test-e2e) y la
+# actualización de `test-durations.json` aparecen en los períodos TRANQUILOS, NO durante una
+# ráfaga de merges — cada corrida de `main` la cancela la siguiente (y `test-durations.json`
+# tiene guarda `!cancelled()`, así que en ráfaga tampoco se actualiza). Es aceptado, no un job
+# roto: si dentro de un mes `main` no muestra número de e2e, es esto, no un defecto. Si necesitás
+# el número EN MEDIO de una ráfaga, se dispara a mano: `workflow_dispatch` sobre `main`.
 concurrency:
   group: ci-002-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 jobs:
   # SPEC-107 (doc-only) + SPEC-374 (PRs que no tocan PI): un job skipped reporta
@@ -372,10 +384,14 @@ jobs:
             002-2026-PROTECCION-INFANTIL/coverage/coverage-summary.json
           retention-days: 1
           if-no-files-found: warn
-      # SPEC-281 (002-PI-180): actualiza test-durations.json con media móvil de
-      # esta corrida. Solo en la rama base (feature/001-scaffolding). Nunca falla el CI.
-      - name: Actualizar test-durations.json (SPEC-281, solo rama base)
-        if: ${{ github.ref == 'refs/heads/feature/001-scaffolding' && !cancelled() }}
+      # SPEC-281 (002-PI-180): actualiza test-durations.json con media móvil de esta corrida.
+      # Solo en la rama base (`main`). Nunca falla el CI.
+      # SPEC-774 (2º defecto, APARTE del trigger): este `if` apuntaba a la MISMA rama fantasma
+      # (`feature/001-scaffolding`) → NUNCA corría → `test-durations.json` se CONGELÓ hace meses y
+      # el reparto por peso de los shards (arriba, `reparto-shards.mjs`) degradó EN SILENCIO: cada
+      # test nuevo desbalanceaba más los shards y nada avisaba. Por eso también va a `main`.
+      - name: Actualizar test-durations.json (SPEC-281, solo rama base main)
+        if: ${{ github.ref == 'refs/heads/main' && !cancelled() }}
         run: |
           node scripts/ci/actualizar-duraciones.mjs --vitest-json vitest-summary.json --durations test-durations.json || echo "[ci] actualizar-duraciones falló; sigo"
       - uses: actions/upload-artifact@v4
@@ -558,6 +574,12 @@ jobs:
   #   • SIN línea base todavía. La PRIMERA corrida de CI produce el número N de specs
   #     rojas. Ese primer N NO es deuda: es ENTORNO + rot destapado al estrenar la suite
   #     (si alguien lo ve sin contexto va a creer que hay N defectos — no los hay aún).
+  #   • SPEC-774 (por qué sigue BLANDO hoy, no un descuido): el trigger a `main` hace que esta
+  #     suite corra en CADA push a `main`, así que su número queda VISIBLE todo el tiempo. NO se
+  #     fija umbral mientras haya specs que no arrancan (Calidad midió 27 MUDOS): el número mediría
+  #     cuánto podemos VER, no cuánto está ROTO — un umbral clavado hoy se pondría rojo por hacer lo
+  #     correcto (destapar el clúster de onboarding SUBE la cuenta) y alguien apagaría el job. Se
+  #     endurece cuando la suite ENTERA corra. Si ves rojos recurrentes en `main`, la razón es ésta.
   #   • Endurecimiento (commit SIGUIENTE, con ESE N): se agrega un paso SIN
   #     `continue-on-error` que falla si (specs rojas) > N. N solo BAJA; cada arreglo lo
   #     reduce. Cuando N=0 se quita el `continue-on-error` del paso de la suite → GATE
