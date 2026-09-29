@@ -24,7 +24,7 @@
  * entonces es hueco-funcional declarado.
  */
 import { Prisma, type PrismaClient, type EncuestaCita, type PreguntaEncuesta } from "@prisma/client";
-import { type ClaseContradiccion, reclamadoEnDeClase, venceEnIncidente } from "./plazo-incidente";
+import { type ClaseContradiccion, claseDeContradiccion, reclamadoEnDeClase, venceEnIncidente } from "./plazo-incidente";
 
 /**
  * Cliente inyectado (Prisma o de transacción). El service NO importa el singleton
@@ -74,16 +74,15 @@ function valorServicio(e: EncuestaCita, pregunta: PreguntaServicio): string | nu
  */
 export function detectarContradicciones({ padre, profesional }: { padre: EncuestaCita; profesional: EncuestaCita }): Contradiccion[] {
     if (padre.seRealizo !== profesional.seRealizo) {
-        // La no-prestación la afirma quien dijo que NO. El término depende de quién fue:
-        // el padre reclamando (LEGAL) o el profesional (INTERNO).
-        const clase: ClaseContradiccion = padre.seRealizo === false
-            ? "NO_PRESTACION_RECLAMO_PADRE"
-            : "NO_PRESTACION_DICHA_PROFESIONAL";
+        // La no-prestación la afirma quien dijo que NO. La clase (y con ella el plazo legal/interno)
+        // sale de la fuente única `claseDeContradiccion` — la misma que lee la bandeja del verificador.
+        const padreValor = String(padre.seRealizo);
+        const profesionalValor = String(profesional.seRealizo);
         return [{
             pregunta: "SE_REALIZO",
-            padreValor: String(padre.seRealizo),
-            profesionalValor: String(profesional.seRealizo),
-            clase,
+            padreValor,
+            profesionalValor,
+            clase: claseDeContradiccion("SE_REALIZO", padreValor, profesionalValor),
         }];
     }
     // Ambos coinciden en que NO se realizó → nada que contradecir en el detalle.
@@ -94,7 +93,7 @@ export function detectarContradicciones({ padre, profesional }: { padre: Encuest
         const padreValor = valorServicio(padre, pregunta);
         const profesionalValor = valorServicio(profesional, pregunta);
         if (padreValor !== null && profesionalValor !== null && padreValor !== profesionalValor) {
-            contradicciones.push({ pregunta, padreValor, profesionalValor, clase: "DISCREPANCIA_SERVICIO" });
+            contradicciones.push({ pregunta, padreValor, profesionalValor, clase: claseDeContradiccion(pregunta, padreValor, profesionalValor) });
         }
     }
     return contradicciones;

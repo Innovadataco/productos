@@ -62,6 +62,22 @@ export function claseTieneTerminoLegal(clase: ClaseContradiccion): boolean {
 }
 
 /**
+ * Clase de una contradicción a partir de la pregunta y los dos valores. FUENTE ÚNICA: la usan
+ * tanto el cruce (al crear el incidente) como la bandeja del verificador (al leerlo) — así el
+ * «legal vs interno» que se calculó al crear y el que se muestra no pueden discrepar. NO adjudica:
+ * la clase dice de dónde sale el PLAZO (quién afirmó la no-prestación), no quién tiene razón.
+ *  - SE_REALIZO, el PADRE dijo que no (padreValor="false") → reclamo del consumidor → LEGAL.
+ *  - SE_REALIZO, el PROFESIONAL dijo que no → sin reclamo del consumidor → INTERNO.
+ *  - cualquier otra pregunta (ambos realizaron, difieren en un detalle) → INTERNO.
+ */
+export function claseDeContradiccion(pregunta: string, padreValor: string, _profesionalValor: string): ClaseContradiccion {
+    if (pregunta === "SE_REALIZO") {
+        return padreValor === "false" ? "NO_PRESTACION_RECLAMO_PADRE" : "NO_PRESTACION_DICHA_PROFESIONAL";
+    }
+    return "DISCREPANCIA_SERVICIO";
+}
+
+/**
  * `reclamadoEn` de un incidente según su clase: la `respondidaEn` del padre para el
  * término legal (su respuesta es el reclamo), o la detección para los internos.
  *
