@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { verificarAccesoPagina } from "@/lib/permisos-modulos";
 import { homeAccesoDenegado } from "../acceso-denegado";
 import AsignarClient from "./AsignarClient";
+import { CapacidadSesionesClient } from "@/components/modules/operador/CapacidadSesionesClient";
 
 /**
  * SPEC-571 (I-353): guardia de rol A NIVEL PÁGINA. Un componente cliente no
@@ -15,5 +16,11 @@ import AsignarClient from "./AsignarClient";
 export default async function Page() {
     const acceso = await verificarAccesoPagina("operadores");
     if (!acceso.permitido || acceso.rol !== "ADMIN") redirect(homeAccesoDenegado(acceso.rol));
-    return <AsignarClient />;
+    return (
+        <>
+            <AsignarClient />
+            {/* SPEC-750/T014: capacidad de sesiones — citas confirmadas sin operador libre. */}
+            <CapacidadSesionesClient />
+        </>
+    );
 }

@@ -289,9 +289,37 @@ export class SolicitudCitaRepository {
         return this.db.solicitudCita.update({ where: { id }, data: { enlaceOperadorId: operadorId } });
     }
 
-    // SPEC-750: `listarSesionesDeOperador` (calendario del operador, SIN PII) es SUPERFICIE →
-    // se movió a T014 junto con `calendarioDelOperador` y el candado C-a. El MOTOR (este PR)
-    // no lee el calendario del operador; solo asigna, publica y registra el hecho.
+    /** SPEC-750/T014 · Calendario del OPERADOR: sus citas CONFIRMADAS en la ventana, con
+     *  `select` SIN `padreUsuario` — el operador no puede cargar PII del padre (imposibilidad
+     *  estructural, no `omit` en render). Filtra por FECHA, no por hora: sin riel horario. */
+    listarSesionesDeOperador(operadorId: string, desde: Date, hasta: Date) {
+        return this.db.solicitudCita.findMany({
+            where: { enlaceOperadorId: operadorId, estado: "CONFIRMADA", franja: { inicio: { gte: desde, lt: hasta } } },
+            orderBy: { franja: { inicio: "asc" } },
+            select: {
+                id: true,
+                enlaceReunion: true,
+                enlacePublicadoEn: true,
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+                profesional: { select: { nombreVisible: true } },
+            },
+        });
+    }
+
+    /** SPEC-750/T014 · Capacidad al admin: citas CONFIRMADAS SIN operador asignado (el trigger
+     *  no encontró operador libre). El admin las ve «antes del día». Sin PII de más: lo mínimo
+     *  para que un humano las resuelva. */
+    listarCitasSinOperador() {
+        return this.db.solicitudCita.findMany({
+            where: { estado: "CONFIRMADA", enlaceOperadorId: null },
+            orderBy: { franja: { inicio: "asc" } },
+            select: {
+                id: true,
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+                profesional: { select: { nombreVisible: true } },
+            },
+        });
+    }
 
     /** Cita mínima para publicar el enlace (guardia de dueño + estado). */
     findParaPublicarEnlace(id: string) {

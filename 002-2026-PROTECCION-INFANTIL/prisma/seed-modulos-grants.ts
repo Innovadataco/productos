@@ -51,10 +51,9 @@ export const CLAVES_POR_ROL: Record<string, string[]> = {
     COMITE_VALIDACION: ["comite", "comite_bandeja", "comite_guias_accion", "expediente_revelar_original", "centro_control_ia", "ia_rubrica"],  // SPEC-452 (I-318): lee la rúbrica. Padre centro_control_ia + hijo ia_rubrica (jerarquía AND); abre solo la pestaña Rúbrica del Centro IA. Escritura cerrada por rol ADMIN (D-102).
     // SPEC-263 (002-PI-164): pagos_admin quitado de OPERADOR (la revocación en BD viva requiere scripts/revocar-grants-pagos-operador.ts).
     // expediente_revelar_original añadido para que el operador valide spam o dudas de contexto.
-    // SPEC-750/T014: el grant `sesiones_operador` entra en T014 junto con su pantalla, ítem de
-    // nav e ícono (los tres juntos: grant sin ítem rompe nav-items.test; ítem sin ícono rompe
-    // nav-iconos). El MOTOR (este PR) no concede el módulo.
-    OPERADOR: ["bandeja_reportes", "expediente_revelar_original", "revision_spam"],  // SPEC-452 (I-317): revisar spam es un resultado de clasificación del operador.
+    // SPEC-750/T014: `sesiones_operador` — la cola de sesiones (citas confirmadas asignadas) con
+    // su pantalla `/dashboard/admin/sesiones`, ítem de nav e ícono (video-camera). Los tres juntos.
+    OPERADOR: ["bandeja_reportes", "expediente_revelar_original", "revision_spam", "sesiones_operador"],  // SPEC-452 (I-317): revisar spam es un resultado de clasificación del operador.
     // SPEC-408 (A-75 · brief §9): el Verificador tiene perfil equivalente al
     // Operador — un SOLO módulo cubre solicitudes por revisar + incidentes
     // de citas (Jelkin: un rol, una persona, un trabajo — lección I-278).
