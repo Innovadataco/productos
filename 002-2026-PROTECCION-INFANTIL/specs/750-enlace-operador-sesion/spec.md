@@ -11,6 +11,19 @@
 
 Una cita CONFIRMADA hoy no tiene forma de realizarse: no hay sala, ni enlace, ni operador. El modelo (Jelkin): un **operador** del pool se asigna a la cita, crea el enlace de la reunión en una plataforma de video **ajena**, lo publica en PI, entra el día de la cita, presenta un guion **NO clínico** y se retira. El **esquema** del enlace ya está en `main` y firmado (SPEC-758: `SolicitudCita.enlaceReunion` + `enlaceOperadorId` + `enlacePublicadoEn`). Esta SPEC construye **el lado del OPERADOR** (se LEE el esquema de 758, no se toca).
 
+## División MOTOR / SUPERFICIE (veredicto CEO 04:18)
+
+**#733 = MOTOR, sin superficie; T014 = superficie completa del operador.** El corte es por
+NATURALEZA, no por lo que puso verde el CI:
+- **MOTOR (SPEC-750 · #733):** asignación con simultaneidad (§2), enlace + validación + publicación
+  (§4), registro del HECHO (§5), fallback DTO (C-d), FR-013, trigger al confirmar, ruta API de
+  enlace. Candados C-b (asignación) y C-c (URL fuera del HECHO). NO monta pantalla, módulo ni nav.
+- **SUPERFICIE (T014):** calendario del operador (§1) + `calendarioDelOperador` + candado C-a (DTO
+  sin PII) + los límites [NORMA] (§3) + el módulo `sesiones_operador` (catálogo + grant + ítem de
+  nav **con su ícono** de Diseño) + la superficie de capacidad del admin. Sin el ítem visible, T014
+  no cierra (DoD, la cierra el CEO). El ícono es estructuralmente obligatorio (dos candados lo
+  encierran: nav-iconos exige ícono a la hoja; nav-items exige ítem al módulo del catálogo).
+
 ## Impacto en arquitectura
 
 **Impacto en arquitectura:** Nuevo rol-superficie: el OPERADOR gana un módulo (`sesiones_operador`) y una pantalla de

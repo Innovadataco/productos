@@ -13,10 +13,13 @@ Orden por dependencias. `[P]` = paralelizable.
 - [x] T008 Parámetro sembrado `operador.guion.version` (prisma/seed.ts).
 - [x] T009 Ruta `POST /api/operador/citas/[id]/enlace`.
 
-## Fase 2 — Cableado a producción + superficies
-- [ ] T010 Disparar `asignarOperadorACita` al CONFIRMAR la cita (cita.service) — antes del día.
-- [ ] T011 Módulo `sesiones_operador`: catálogo (`permisos-catalogo.ts`) + grant a OPERADOR (`seed-modulos-grants.ts`) + nav item (fuente única) + guardia de página (`proxy.ts`).
-- [ ] T012 Página del operador `/dashboard/operador/sesiones`: reusa el calendario con el DTO del operador + límites [NORMA] (FORMA §6) + formulario de enlace.
+## Fase 2 — Cableado a producción (MOTOR · #733)
+- [x] T010 Disparar `asignarOperadorACita` al CONFIRMAR la cita (cita.service) — antes del día.
+
+## Fase 3 — SUPERFICIE (→ T014, PR aparte sobre `main`; CEO cierra su DoD)
+> El corte es por NATURALEZA (veredicto CEO 04:18): #733 = motor, sin superficie; T014 = superficie completa.
+- [ ] T011 Módulo `sesiones_operador`: catálogo + grant a OPERADOR + **ítem de nav con su ícono de Diseño** + guardia de página. (Los tres juntos: grant sin ítem rompe nav-items; ítem sin ícono rompe nav-iconos.)
+- [ ] T012 Página del operador `/dashboard/admin/sesiones`: `calendarioDelOperador` (DTO SIN PII) + candado C-a + formulario de enlace.
 - [ ] T013 Componente de límites [NORMA] (copy FORMA §6; la pantalla NO se presenta como el guion).
 - [ ] T014 Capacidad al admin: en `/dashboard/admin/operadores/asignar`, citas CONFIRMADAS sin operador (ámbar) + acción de asignar.
 

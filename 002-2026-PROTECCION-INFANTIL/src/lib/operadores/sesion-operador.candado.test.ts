@@ -16,7 +16,6 @@ import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearPaisCiudad } from "@/lib/reporte-test-utils";
 import { hashPassword } from "@/lib/auth";
-import { calendarioDelOperador } from "./calendario-operador.service";
 import { asignarOperadorACita } from "./asignador-citas";
 import { publicarEnlaceSesion } from "./enlace-sesion";
 
@@ -92,33 +91,8 @@ async function crearCitaConfirmada(opts: {
 
 const V = (h: number, m = 0) => new Date(Date.UTC(2026, 8, 20, h, m, 0)); // 2026-09-20 UTC
 
-describe("SPEC-750 · C-a · el DTO del operador no lleva PII del padre", () => {
-    beforeEach(async () => await resetDatabase());
-
-    it("con nombre/relato/correo del padre poblados, la vista del operador no los expone", async () => {
-        const admin = await crearAdmin();
-        const operador = await crearOperador(admin.id, "a");
-        const prof = await crearProfesional();
-        const cita = await crearCitaConfirmada({ profesionalId: prof.id, inicio: V(10), fin: V(10, 50), enlaceOperadorId: operador.id });
-
-        // Control positivo: la fuente SÍ tiene la PII (si no, el «no aparece» sería trivial).
-        const bruto = await prisma.solicitudCita.findUnique({ where: { id: cita.id }, include: { padreUsuario: true } });
-        expect(bruto?.padreUsuario.nombre).toBe(PADRE_NOMBRE);
-        expect(bruto?.presentacion).toBe(PADRE_RELATO);
-
-        const cal = await calendarioDelOperador(operador.id, V(9)); // `ahora` justo antes de la cita
-        const json = JSON.stringify(cal);
-        expect(json).not.toContain(PADRE_NOMBRE);
-        expect(json).not.toContain(PADRE_EMAIL);
-        expect(json).not.toContain(PADRE_RELATO);
-
-        const bloque = cal.bloques.find((b) => b.citaId === cita.id);
-        expect(bloque, "la sesión asignada debe aparecer en el calendario del operador").toBeDefined();
-        for (const prohibido of ["familia", "relato", "contactoEmail"]) {
-            expect(bloque as unknown as Record<string, unknown>).not.toHaveProperty(prohibido);
-        }
-    });
-});
+// C-a (DTO del operador SIN PII) es SUPERFICIE → su candado se movió a T014 junto con
+// `calendarioDelOperador`. Acá quedan C-b (asignación) y C-c (URL fuera del HECHO), que son MOTOR.
 
 describe("SPEC-750 · C-b · asignación con simultaneidad", () => {
     beforeEach(async () => await resetDatabase());

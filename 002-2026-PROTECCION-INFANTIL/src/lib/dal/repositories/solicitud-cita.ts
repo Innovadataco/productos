@@ -289,22 +289,9 @@ export class SolicitudCitaRepository {
         return this.db.solicitudCita.update({ where: { id }, data: { enlaceOperadorId: operadorId } });
     }
 
-    /** Calendario del OPERADOR: sus citas CONFIRMADAS en la ventana, con `select` SIN
-     *  `padreUsuario` — el operador no puede cargar PII del padre (SPEC-750, imposibilidad
-     *  estructural). */
-    listarSesionesDeOperador(operadorId: string, desde: Date, hasta: Date) {
-        return this.db.solicitudCita.findMany({
-            where: { enlaceOperadorId: operadorId, estado: "CONFIRMADA", franja: { inicio: { gte: desde, lt: hasta } } },
-            orderBy: { franja: { inicio: "asc" } },
-            select: {
-                id: true,
-                enlaceReunion: true,
-                enlacePublicadoEn: true,
-                franja: { select: { inicio: true, fin: true, modalidad: true } },
-                profesional: { select: { nombreVisible: true } },
-            },
-        });
-    }
+    // SPEC-750: `listarSesionesDeOperador` (calendario del operador, SIN PII) es SUPERFICIE →
+    // se movió a T014 junto con `calendarioDelOperador` y el candado C-a. El MOTOR (este PR)
+    // no lee el calendario del operador; solo asigna, publica y registra el hecho.
 
     /** Cita mínima para publicar el enlace (guardia de dueño + estado). */
     findParaPublicarEnlace(id: string) {

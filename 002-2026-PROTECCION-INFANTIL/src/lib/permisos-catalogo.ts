@@ -34,9 +34,9 @@ export const CATALOGO_MODULOS: ModuloCatalogo[] = [
     // expediente forense. Default: ADMIN + COMITE_VALIDACION.
     { clave: "denuncia_formal", nombre: "Denuncia formal y expediente forense", categoria: "operador", esCritico: true, orden: 32, padre: "bandeja_reportes" },
     { clave: "revision_spam", nombre: "Revisión de spam", categoria: "operador", orden: 35 },
-    // SPEC-750: la cola de sesiones del operador (citas confirmadas asignadas). Su pantalla
-    // es `/dashboard/admin/sesiones` (DTO propio sin PII del padre).
-    { clave: "sesiones_operador", nombre: "Sesiones", categoria: "operador", orden: 36 },
+    // SPEC-750/T014: el módulo `sesiones_operador` es SUPERFICIE (pantalla + grant + nav + ícono)
+    // → va en T014. El MOTOR (este PR) no lo declara: un módulo en el catálogo sin ítem de menú
+    // rompe `nav-items.test`, y el ítem sin ícono rompe `nav-iconos`. Los dos entran con T014.
     { clave: "comite", nombre: "Comité de Validación", categoria: "comite", orden: 50 },
     { clave: "comite_bandeja", nombre: "Bandeja del comité", categoria: "comite", orden: 51, padre: "comite" },
     { clave: "comite_auditoria", nombre: "Auditoría del comité", categoria: "comite", orden: 52, padre: "comite" },
