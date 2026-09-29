@@ -219,6 +219,20 @@ describe("navMovilParaRol · barra móvil {principales≤4, resto}, DATA de la f
         expect(hrefs).not.toContain("#");
     });
 
+    it("§5-bis: el principal PROMOVIDO hereda la iconKey de su GRUPO (no cae al fallback por usar su href)", () => {
+        const principales = navMovilParaRol("PARENT").principales;
+        const reportar = principales.find((e) => e.href === "/dashboard/padre/reportar");
+        const psicologos = principales.find((e) => e.href === "/dashboard/padre/profesionales");
+        // Heredan la iconKey del grupo («Reportar» / «Ayuda profesional»), no su href.
+        expect(reportar?.iconKey).toBe("reportar-grupo");
+        expect(psicologos?.iconKey).toBe("ayuda-profesional");
+        expect(reportar?.iconKey).not.toBe(reportar?.href); // usar el href caería al fallback «casa»
+        expect(psicologos?.iconKey).not.toBe(psicologos?.href);
+        // Una hoja top-level (no promovida) conserva su propia iconKey (= href por defecto).
+        const inicio = principales.find((e) => e.href === "/dashboard/padre");
+        expect(inicio?.iconKey).toBe("/dashboard/padre");
+    });
+
     it("los principales van GATEADOS: un módulo no concedido cae del principal (no rebota)", () => {
         const sinComite = MODS_ADMIN.filter((m) => m !== "comite_bandeja");
         const { principales } = navMovilParaRol("ADMIN", { modulosPermitidos: sinComite });
