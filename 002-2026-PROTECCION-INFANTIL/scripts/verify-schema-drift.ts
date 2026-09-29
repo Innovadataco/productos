@@ -18,10 +18,10 @@
  * Exit: 0 = sin drift real (o drift reportado, BLANDO) · 2 = error de infra.
  */
 import { execFileSync } from "node:child_process";
-import { clasificarDrift, partirStatements } from "../src/lib/monitoreo/drift-clasificador";
+import { clasificarDrift, partirStatements, LIMITES_CLASIFICADOR } from "../src/lib/monitoreo/drift-clasificador";
 
 // Re-export para consumidores del CLI (p.ej. el candado co-locado).
-export { clasificarDrift, partirStatements } from "../src/lib/monitoreo/drift-clasificador";
+export { clasificarDrift, partirStatements, LIMITES_CLASIFICADOR } from "../src/lib/monitoreo/drift-clasificador";
 
 /** Motor sincrónico del CLI: obtiene el `--script` de migrate diff (read-only). El probe usa
  *  su propia variante ASÍNCRONA con timeout duro (no bloquea el loop del monitor). */
@@ -52,13 +52,16 @@ if (esEntryPoint) {
         clearTimeout(watchdog);
 
         if (jsonMode) {
-            console.log(JSON.stringify({ ok: drift.length === 0, driftReal: drift.length, benignas: benignas.length, drift }));
+            console.log(JSON.stringify({ ok: drift.length === 0, driftReal: drift.length, benignas: benignas.length, limitesConocidos: LIMITES_CLASIFICADOR.length, drift }));
         } else {
             const porCategoria = benignas.reduce<Record<string, number>>((acc, b) => {
                 acc[b.categoria] = (acc[b.categoria] ?? 0) + 1;
                 return acc;
             }, {});
             console.log(`[drift] baseline benigno: ${benignas.length} sentencias (${Object.entries(porCategoria).map(([k, v]) => `${k}=${v}`).join(", ") || "ninguna"})`);
+            // Deuda DECLARADA: puntos ciegos aceptados del clasificador (LIMITES_CLASIFICADOR).
+            // Visible en cada corrida para que no sea una sorpresa de auditoría.
+            console.log(`[drift] límites conocidos declarados: ${LIMITES_CLASIFICADOR.length} (ver LIMITES_CLASIFICADOR en drift-clasificador.ts)${LIMITES_CLASIFICADOR.length ? " — p.ej. " + LIMITES_CLASIFICADOR[0]!.id : ""}`);
             if (drift.length === 0) {
                 console.log("[drift] VERDE: cero drift real — el esquema vivo coincide con lo declarado (salvo el punto ciego de Prisma, baselineado con razón).");
             } else {
