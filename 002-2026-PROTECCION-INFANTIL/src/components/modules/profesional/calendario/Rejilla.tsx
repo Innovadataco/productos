@@ -9,7 +9,7 @@
  * su voz «usted» (por eso sigue bajo `profesional/`, donde el candado de voz lo cubre).
  */
 import type { BloqueCalendario, EstadoBloque } from "@/lib/profesional/calendario/calendario.service";
-import { H0, PXH, estiloBloque, fmt } from "@/components/modules/calendario/fechas";
+import { PXH, estiloBloque, fmt } from "@/components/modules/calendario/fechas";
 
 /** Overlays de la columna de un día: día cerrado (rayado ámbar) + muro de vigencia. */
 export function OverlayDiaProfesional({
@@ -17,18 +17,21 @@ export function OverlayDiaProfesional({
     muro,
     bloqueado,
     altura,
+    railInicioMin,
 }: {
     fecha: string;
     muro: { fecha: string; minuto: number } | null;
     bloqueado: boolean;
     altura: number;
+    /** SPEC-771 · inicio del riel adaptativo (minutos), para posicionar el muro sobre él. */
+    railInicioMin: number;
 }) {
     // Muro de vigencia: y (px) donde empieza la zona rayada en este día. Comparación pura
     // contra el muro que ya proyectó el servidor a Bogotá — sin zona horaria acá.
     let muroTop: number | null = null;
     if (muro) {
         if (fecha > muro.fecha) muroTop = 0; // día entero fuera de vigencia
-        else if (fecha === muro.fecha) muroTop = Math.max(0, (muro.minuto / 60 - H0) * PXH);
+        else if (fecha === muro.fecha) muroTop = Math.max(0, ((muro.minuto - railInicioMin) / 60) * PXH);
     }
     return (
         <>
@@ -49,8 +52,8 @@ export function OverlayDiaProfesional({
     );
 }
 
-export function BloqueFranja({ b, sel, selModo, onClick, onQuitar }: { b: BloqueCalendario; sel: boolean; selModo: boolean; onClick: () => void; onQuitar: () => void }) {
-    const { top, height } = estiloBloque(b.minInicio, b.minFin);
+export function BloqueFranja({ b, sel, selModo, onClick, onQuitar, railInicioMin }: { b: BloqueCalendario; sel: boolean; selModo: boolean; onClick: () => void; onQuitar: () => void; railInicioMin: number }) {
+    const { top, height } = estiloBloque(b.minInicio, b.minFin, railInicioMin);
     const estilos: Record<EstadoBloque, string> = {
         libre: `bg-cielo/15 border-cielo/55 text-cielo-700 ${sel ? "ring-2 ring-cielo" : ""}`,
         esperando: "bg-estado-ambar/20 border-estado-ambar text-estado-ambar",

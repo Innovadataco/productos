@@ -11,7 +11,7 @@
  * el ancla abra en la semana de la franja más próxima.
  */
 import { useMemo } from "react";
-import { estiloBloque, fmt, posicionBogota } from "@/components/modules/calendario/fechas";
+import { DEFAULT_VACIO_PADRE, estiloBloque, fmt, posicionBogota, ventanaAdaptativa } from "@/components/modules/calendario/fechas";
 import { RejillaCalendario, type BloquePosicionado } from "@/components/modules/calendario/Rejilla";
 import { NavCalendario } from "@/components/modules/calendario/NavCalendario";
 import { useCalendarioNav } from "@/components/modules/calendario/useCalendarioNav";
@@ -60,6 +60,13 @@ export function RejillaElegirFranja({
 
     const nav = useCalendarioNav(hoy, anclaInicial);
 
+    // SPEC-771 · el riel se adapta a las franjas del período (padre = puro contenido) para que
+    // el padre PUEDA ELEGIR una franja publicada a cualquier hora (una de 6am ya no queda oculta).
+    const { inicioMin, finMin } = ventanaAdaptativa(
+        nav.diasVisibles.flatMap((d) => bloquesPorDia.get(d) ?? []),
+        { defaultVacioMin: DEFAULT_VACIO_PADRE },
+    );
+
     return (
         <div>
             <NavCalendario
@@ -74,10 +81,12 @@ export function RejillaElegirFranja({
                 diasVisibles={nav.diasVisibles}
                 hoy={hoy}
                 anchoDia={nav.anchoDia}
+                railInicioMin={inicioMin}
+                railFinMin={finMin}
                 bloquesPorDia={bloquesPorDia}
                 onDiaHeaderClick={(d) => { nav.setVista("dia"); nav.setAncla(d); }}
                 renderBloque={(b) => {
-                    const { top, height } = estiloBloque(b.minInicio, b.minFin);
+                    const { top, height } = estiloBloque(b.minInicio, b.minFin, inicioMin);
                     const sel = b.franja.id === franjaSelId;
                     return (
                         <button

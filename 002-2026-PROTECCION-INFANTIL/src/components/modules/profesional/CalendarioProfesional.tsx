@@ -28,7 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { instanteDesdeHoraBogota } from "@/lib/fechas/formato-bogota";
 import type { BloqueCalendario, CalendarioProfesionalDto } from "@/lib/profesional/calendario/calendario.service";
-import { DOW, H0, H1, PXH, SNAP, addDias, diaSemana, fmt, lunesDe, nombreMes, numMes, snap, type Modalidad, type Repeticion } from "@/components/modules/calendario/fechas";
+import { BANDA_CREABLE, DOW, H0, H1, PXH, SNAP, addDias, diaSemana, fmt, lunesDe, nombreMes, numMes, snap, ventanaAdaptativa, type Modalidad, type Repeticion } from "@/components/modules/calendario/fechas";
 import { BellIcon, RejillaCalendario } from "@/components/modules/calendario/Rejilla";
 import { BloqueFranja, OverlayDiaProfesional } from "./calendario/Rejilla";
 import { PanelBloque, PopoverCrear, type CrearState, type PanelState } from "./calendario/Paneles";
@@ -100,6 +100,14 @@ export function CalendarioProfesional({ datos }: Props) {
         }
         return m;
     }, [datos.bloques, diasVisibles]);
+
+    // SPEC-771 · el riel del PROFESIONAL siempre incluye la banda creable (D-2: la UI no esconde
+    // horas creables) y se EXPANDE si hay franjas fuera (una de 6am ya no queda oculta). Se comparte
+    // con la geometría de arrastre de abajo para que riel y creación usen la MISMA base.
+    const { inicioMin: railInicioMin, finMin: railFinMin } = ventanaAdaptativa(
+        [...bloquesPorDia.values()].flat(),
+        { bandaMinimaMin: BANDA_CREABLE, defaultVacioMin: BANDA_CREABLE },
+    );
 
     const esperando = useMemo(() => datos.bloques.filter((b) => b.estado === "esperando"), [datos.bloques]);
 
@@ -278,7 +286,7 @@ export function CalendarioProfesional({ datos }: Props) {
         }
         const col = ev.currentTarget as HTMLElement;
         const rect = col.getBoundingClientRect();
-        const startMin = snap(((ev.clientY - rect.top) / PXH) * 60 + H0 * 60);
+        const startMin = snap(((ev.clientY - rect.top) / PXH) * 60 + railInicioMin);
         dragRef.current = { fecha, startMin, curMin: startMin + 60, el: col };
         col.setPointerCapture?.(ev.pointerId);
         setGhost({ fecha, a: startMin, b: startMin + 60 });
@@ -287,7 +295,7 @@ export function CalendarioProfesional({ datos }: Props) {
         const d = dragRef.current;
         if (!d) return;
         const rect = d.el.getBoundingClientRect();
-        d.curMin = snap(((ev.clientY - rect.top) / PXH) * 60 + H0 * 60);
+        d.curMin = snap(((ev.clientY - rect.top) / PXH) * 60 + railInicioMin);
         const a = Math.min(d.startMin, d.curMin);
         const b = Math.max(a + SNAP, Math.max(d.startMin, d.curMin));
         setGhost({ fecha: d.fecha, a, b });
@@ -316,7 +324,7 @@ export function CalendarioProfesional({ datos }: Props) {
         }
         setBuzon(false);
         setPanel(null);
-        setCrear({ fecha: d.fecha, minInicio: a, minFin: b, modalidad: modalidadFija, x: 12, y: Math.max(8, (a / 60 - H0) * PXH) });
+        setCrear({ fecha: d.fecha, minInicio: a, minFin: b, modalidad: modalidadFija, x: 12, y: Math.max(8, ((a - railInicioMin) / 60) * PXH) });
     }
 
     function onBloque(b: BloqueCalendario) {
@@ -337,7 +345,7 @@ export function CalendarioProfesional({ datos }: Props) {
     }
 
     const anchoDia = vista === "dia" ? "1fr" : "repeat(7, minmax(84px, 1fr))";
-    const altura = (H1 - H0) * PXH;
+    const altura = ((railFinMin - railInicioMin) / 60) * PXH;
 
     return (
         <div className="mx-auto max-w-6xl p-3 sm:p-4">
@@ -402,16 +410,18 @@ export function CalendarioProfesional({ datos }: Props) {
                 diasVisibles={diasVisibles}
                 hoy={datos.hoy}
                 anchoDia={anchoDia}
+                railInicioMin={railInicioMin}
+                railFinMin={railFinMin}
                 bloquesPorDia={bloquesPorDia}
                 ghost={ghost}
                 diaHeaderTono={(d) => (diasBloqueados.has(d) ? "text-estado-ambar" : undefined)}
-                overlayDia={(fecha) => <OverlayDiaProfesional fecha={fecha} muro={muro} bloqueado={diasBloqueados.has(fecha)} altura={altura} />}
+                overlayDia={(fecha) => <OverlayDiaProfesional fecha={fecha} muro={muro} bloqueado={diasBloqueados.has(fecha)} altura={altura} railInicioMin={railInicioMin} />}
                 onDiaHeaderClick={(d) => { setVista("dia"); setAncla(d); }}
                 onColumnaPointerDown={onPointerDown}
                 onColumnaPointerMove={onPointerMove}
                 onColumnaPointerUp={onPointerUp}
                 renderBloque={(b) => (
-                    <BloqueFranja key={b.id} b={b} sel={sel.has(b.id)} selModo={selModo} onClick={() => onBloque(b)} onQuitar={() => quitar([b.id])} />
+                    <BloqueFranja key={b.id} b={b} sel={sel.has(b.id)} selModo={selModo} onClick={() => onBloque(b)} onQuitar={() => quitar([b.id])} railInicioMin={railInicioMin} />
                 )}
             >
                 {crear && (

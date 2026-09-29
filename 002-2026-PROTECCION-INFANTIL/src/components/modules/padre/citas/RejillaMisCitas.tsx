@@ -18,7 +18,7 @@ import type { EstadoSolicitudCita } from "@prisma/client";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
 import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
 import { estadoEfectivoDeCita } from "@/lib/profesional/cita/estado-efectivo";
-import { estiloBloque, fmt, posicionBogota } from "@/components/modules/calendario/fechas";
+import { DEFAULT_VACIO_PADRE, estiloBloque, fmt, posicionBogota, ventanaAdaptativa } from "@/components/modules/calendario/fechas";
 import { RejillaCalendario, type BloquePosicionado } from "@/components/modules/calendario/Rejilla";
 import { NavCalendario } from "@/components/modules/calendario/NavCalendario";
 import { useCalendarioNav } from "@/components/modules/calendario/useCalendarioNav";
@@ -106,6 +106,13 @@ export function RejillaMisCitas({ citas }: { citas: CitaParaPadreDto[] }) {
         );
     }
 
+    // SPEC-771 · el riel se ADAPTA al contenido del período visible (padre = puro contenido,
+    // vacío → default legible), para que ninguna cita quede fuera del área visible.
+    const { inicioMin, finMin } = ventanaAdaptativa(
+        nav.diasVisibles.flatMap((d) => bloquesPorDia.get(d) ?? []),
+        { defaultVacioMin: DEFAULT_VACIO_PADRE },
+    );
+
     return (
         <div>
             <NavCalendario
@@ -120,10 +127,12 @@ export function RejillaMisCitas({ citas }: { citas: CitaParaPadreDto[] }) {
                 diasVisibles={nav.diasVisibles}
                 hoy={hoy}
                 anchoDia={nav.anchoDia}
+                railInicioMin={inicioMin}
+                railFinMin={finMin}
                 bloquesPorDia={bloquesPorDia}
                 onDiaHeaderClick={(d) => { nav.setVista("dia"); nav.setAncla(d); }}
                 renderBloque={(b) => {
-                    const { top, height } = estiloBloque(b.minInicio, b.minFin);
+                    const { top, height } = estiloBloque(b.minInicio, b.minFin, inicioMin);
                     // SPEC-749 FR-2: la lista deriva la verdad temporal igual que el detalle
                     // (resumen y detalle no se contradicen). `now` = reloj de render.
                     const pasada =

@@ -36,6 +36,7 @@ La ventana del riel se ajusta a las horas **con contenido** del período visible
 - **FR-3:** `estiloBloque` posiciona relativo a `railInicioMin` (no a `H0`). Todos sus llamadores (4) pasan la nueva base. El ghost de arrastre y el `muroTop` del profesional usan la misma base.
 - **FR-4 (span mínimo / vacío):** contenido chico → riel ≥ mínimo legible centrado (nunca sliver, nunca recorte); período sin contenido → rango por defecto legible (D-2).
 - **FR-5 (geometría de creación del profesional):** el mapeo puntero→minutos y el popover de creación usan `railInicioMin` (si no, el arrastre se desalinea con el riel adaptativo). La **compuerta de creación** (`a<H0·60 || b>H1·60`) es **política de creación** — FUERA de esta spec (ver D-1).
+- **FR-6 (el riel del profesional nunca esconde horas creables · D-2):** en `CalendarioProfesional` la ventana = **UNIÓN de la banda creable `[H0,H1]` y el contenido ± margen** — siempre incluye 7am–9pm, se expande si hay contenido fuera, y con período vacío = 7am–9pm. Nunca más angosta que lo que el guard permite crear. En las superficies del PADRE (mira/elige) la ventana es puro contenido (± margen, mínimo, vacío → 8am–6pm).
 
 ## Criterios de éxito (SC)
 
@@ -56,15 +57,22 @@ La ventana del riel se ajusta a las horas **con contenido** del período visible
 - **A-5 (span mínimo / vacío):** una sola cita de 45 min → riel ≥ mínimo (no sliver); período vacío → rango por defecto legible.
 - **A-6 (ventanaAdaptativa pura):** unit del helper — bordes, margen, redondeo, mínimo, vacío, outlier — sin render.
 
+## Alcance medido — una AUSENCIA, no un cero (precisión del CEO)
+
+Medido: **cero familias con una CITA invisible** (las 42 `CONFIRMADA` fuera de ventana son 41 `demo_marcado` + 1 e2e). Pero esa cuenta mide **citas ya reservadas**. Con el hallazgo D-3, la afirmación honesta es más estrecha: una familia que intentó reservar una franja **fuera de la ventana nunca vio la opción** — y eso **no deja rastro que se pueda contar**. **No hay daño medido; tampoco hay forma de medirlo.** Es una ausencia (disponibilidad silenciosamente inutilizable), no un cero. El defecto es estructural y aparece con tráfico real.
+
 ## Impacto en arquitectura
 
 **Impacto en arquitectura:** cambia SOLO la geometría del riel compartido (`calendario/fechas.ts` + `calendario/Rejilla.tsx`) de un rango FIJO a uno DERIVADO del contenido, con `PXH` constante; `estiloBloque` gana el parámetro `railInicioMin` y sus 4 llamadores lo propagan. Sin esquema, sin ruta nueva, sin cambio de datos ni de estado (SPEC-730 intacto), sin tocar la política de creación de franjas. Es defensa contra un riel que esconde lo que el sistema permite crear: la verdad temporal de una cita deja de depender de un rango cableado. Una sola fuente de ventana (`ventanaAdaptativa`) para las cuatro superficies.
 
-## Decisiones para la compuerta §4 (el CEO aprueba)
+## Decisiones (aprobadas §4 · CEO 29-09)
 
-- **D-1 · La compuerta de creación (`H0/H1`) se QUEDA (FUERA de scope).** El riel adaptativo muestra lo que exista; qué horas se pueden PUBLICAR es otra decisión (FORMA §3, gate del endpoint). El profesional podrá VER una franja de 6am pero seguir creando solo dentro de la banda actual. **Recomendado: sí, dejar el guard; solo threadear `railInicioMin` en el mapeo puntero→min para que el arrastre no se desalinee.** ¿Confirmás?
-- **D-2 · Default de período VACÍO, por superficie.** Padre (ve): rango legible ~8am–6pm (FORMA §2). Profesional (crea): ¿default = banda creable **7am–9pm** (para poder arrastrar en toda ella), o el mismo ~8am–6pm? **Recomendado: profesional vacío → 7am–9pm (su banda de creación); padre → 8am–6pm.** ¿Cuál preferís?
-- **D-3 · `RejillaElegirFranja` (3ª superficie, no nombrada).** La corrección del componente compartido la cubre y **debe** cubrirla (un padre no puede elegir lo que no ve). **Recomendado: incluirla en FR-2 y en el candado.** ¿De acuerdo?
+- **D-1 · APROBADA.** La compuerta de creación (`H0/H1`) se QUEDA (política, FUERA — FORMA §3). Se threadea `railInicioMin` en el mapeo puntero→min y en el popover: **si el riel se mueve y la geometría del arrastre no, el profesional crearía la franja en un lugar distinto del que soltó** — defecto nuevo introducido por el arreglo. Eso NO puede pasar.
+- **D-2 · APROBADA con condición (regla de superficie).** Defaults por superficie, **nombrados como decisión de producto con su razón**, no como constantes sueltas:
+  - **Padre (mira):** ventana = **puro contenido** ± margen (mín. legible / vacío → **8am–6pm**, FORMA §2).
+  - **Profesional (crea):** ventana = **UNIÓN de (a) la banda creable `H0..H1` (7am–9pm) y (b) el contenido ± margen**. **Nunca más angosta que la banda creable.** Razón (condición del CEO): el endpoint **no valida la hora**, así que **lo único que acota la creación es lo que la pantalla deja arrastrar**; si la ventana del profesional se encogiera al contenido, la UI le **quitaría horas creables** que el guard sí permite → **la UI se volvería una política que nadie decidió**. Por eso el riel del profesional **siempre incluye 7am–9pm** y se **expande** si hay contenido fuera (una franja de 6am se ve). Empty → 7am–9pm.
+  - *(Si producto quiere que la UI SÍ sea el límite de creación, es una decisión legítima — se toma en un carril aparte, no se hereda de un default.)*
+- **D-3 · APROBADA — el más importante.** `RejillaElegirFranja` entra en FR-2 y en el candado. No es ampliación de alcance: que `RejillaMisCitas` esconda una cita reservada es malo; que `RejillaElegirFranja` esconda una **franja publicada** es **peor** — el padre **no puede reservar lo que no ve**, así que la disponibilidad del profesional queda **silenciosamente inutilizable** (publica a las 6am, nadie la toma, y él tampoco lo nota: mismo riel).
 - **D-4 · «No reconciliar».** Si al adaptar la ventana el layout test existente (`calendario-padre.candado.test.tsx`) se pone rojo, es **hallazgo** — se reporta, no se «arregla» en silencio.
 
 ## Fuera
