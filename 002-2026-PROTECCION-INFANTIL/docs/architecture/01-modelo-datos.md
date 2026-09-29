@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **122** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **123** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (74)
+### Otros (sin regla de dominio) (75)
 
 #### `AceptacionAutorizacionProfesional`
 
@@ -581,6 +581,18 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | resueltaEn | DateTime | opcional |
 | resueltaPorAdminId | String | opcional |
 | resueltaPor | Usuario | opcional, relación (FK) |
+
+#### `AudienciaMenor`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| hijoId | String | — |
+| consentimientoVersion | String | — |
+| declaradoPor | String | opcional |
+| ocurridoEn | DateTime | — |
+| hijo | Hijo | relación (FK) |
+| representante | Usuario | opcional, relación (FK) |
 
 #### `AuditConsentimiento`
 
@@ -1001,6 +1013,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reportes | Reporte | lista, relación |
 | identificadores | IdentificadorHijo | lista, relación |
 | padres | HijoPadre | lista, relación |
+| audienciasMenor | AudienciaMenor | lista, relación |
 
 #### `HijoPadre`
 
@@ -2306,6 +2319,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | bonosBeneficiario | BonoPromocional | lista, relación |
 | contactosConfianza | ContactoConfianza | lista, relación |
 | hijosPropios | Hijo | lista, relación |
+| audienciasMenorDeclaradas | AudienciaMenor | lista, relación |
 | lecturasTexto | LecturaReporte | lista, relación |
 | codigosAccesoSolicitados | CodigoAccesoContenido | lista, relación |
 | codigosAccesoCanjeados | CodigoAccesoContenido | lista, relación |
@@ -2429,6 +2443,7 @@ erDiagram
     Expediente ||--o{ SolicitudCita : "expedienteCompartido (opcional)"
     FranjaDisponible ||--o{ SolicitudCita : "franja"
     GuiaAccionCategoria ||--o{ AnalisisExpediente : "guiaAccion (opcional)"
+    Hijo ||--o{ AudienciaMenor : "hijo"
     Hijo ||--o{ HijoPadre : "hijo"
     Hijo ||--o{ IdentificadorHijo : "hijo"
     Hijo ||--o{ Reporte : "hijo (opcional)"
@@ -2503,6 +2518,7 @@ erDiagram
     Usuario ||--o{ AlertaColegio : "asignadoA (opcional)"
     Usuario ||--o{ AlertaSuscripcion : "usuario"
     Usuario ||--o{ Anomalia : "resueltaPor (opcional)"
+    Usuario ||--o{ AudienciaMenor : "representante (opcional)"
     Usuario ||--o{ AuditConsentimiento : "usuario"
     Usuario ||--o{ AuditLog : "usuario (opcional)"
     Usuario ||--o{ BlockList : "creadoPor"

@@ -712,6 +712,7 @@ model Usuario {
   contactosConfianza               ContactoConfianza[]
   // SPEC-339: los menores de este padre (ficha propia, no compartida).
   hijosPropios                     Hijo[]                          @relation("HijosDelPadre")
+  audienciasMenorDeclaradas        AudienciaMenor[] // SPEC-781: audiencias que este representante declaró (SetNull al borrar)
   // SPEC-584 (Fase 2/3): lecturas de textos que este usuario hizo (o canjeó) y
   // códigos temporales de acceso externo que solicitó o canjeó.
   lecturasTexto                    LecturaReporte[]
@@ -2516,9 +2517,43 @@ model Hijo {
   identificadores IdentificadorHijo[]
   /// @deprecated SPEC-339 · sin uso desde 31-08-2026 · ver nota en `HijoPadre`.
   padres          HijoPadre[]
+  audienciasMenor AudienciaMenor[] // SPEC-781: audiencias (art. 12 Dto 1377) sobre este menor
 
   @@index([usuarioId])
   @@index([estado])
+}
+
+/// SPEC-781 (D-121 · Decreto 1377 art. 12) · el HECHO de que el menor fue OÍDO según su grado de
+/// madurez, distinto de la autorización del representante (que ya se registra en Usuario). Guarda
+/// que la audiencia OCURRIÓ, cuándo, sobre qué menor y contra qué versión de consentimiento — y NADA
+/// del contenido: CERO texto de lo que el menor dijo (dato sensible; el texto es [ABOGADO] y llega en
+/// otra SPEC — esto es el CONTINENTE). El «grado de madurez» NO es un campo: es criterio del
+/// representante, no dato del sistema. Quien declara es el representante legal (el padre), no el menor.
+model AudienciaMenor {
+  id     String @id @default(cuid())
+  hijoId String
+  /// Versión de consentimiento contra la que se declaró (String, igual que Usuario.consentimientoVersion).
+  consentimientoVersion String
+  /// declaradoPor NO es el registro de responsabilidad: es una CONVENIENCIA de navegación. Con
+  /// onDelete SetNull se VACÍA al borrar la cuenta del representante — y NO se pierde nada, porque el
+  /// rastro DURABLE de quién declaró (y cuándo) vive en AuditLog (append-only), escrito en la MISMA
+  /// operación por el service de SPEC-751. Ningún candado de conducta cubre esto: ESTE COMENTARIO es
+  /// el mecanismo (por eso no se borra). Ver lección #727 (FK de actor con SetNull ≠ responsabilidad).
+  declaradoPor String?
+  ocurridoEn   DateTime @default(now()) @db.Timestamptz(6)
+
+  /// RETENCIÓN DERIVADA — decisión de CONSERVACIÓN, no de integridad: esta fila no tiene PII en sus
+  /// columnas, pero cuelga del menor por hijoId, así que la frase que forma («el representante declaró
+  /// haber oído al menor Z») es dato identificable. onDelete Cascade ATA su conservación a la de su
+  /// madre (Hijo) —que a su vez es Cascade del padre—: al purgar al menor, la audiencia se va con él.
+  /// (Restrict no: rompería borrar-padre.ts, que cuenta con el Cascade Hijo→Usuario.) El rastro de
+  /// responsabilidad NO se pierde en ese borrado: vive en AuditLog, no acá.
+  hijo          Hijo     @relation(fields: [hijoId], references: [id], onDelete: Cascade)
+  representante Usuario? @relation(fields: [declaradoPor], references: [id], onDelete: SetNull)
+
+  /// Un hecho por (menor, versión de consentimiento): declarar dos veces lo mismo NO crea dos hechos.
+  @@unique([hijoId, consentimientoVersion])
+  @@index([declaradoPor])
 }
 
 // Puente padre↔hijo (un niño puede tener dos padres separados · §3.1-bis).
