@@ -104,6 +104,23 @@ export function ProfesionalTarjeta({
                     <span className="font-semibold">{CURRENCY_COP.format(precioPrimeraCitaCOP)}</span>
                     <span className="text-muted"> · {p.duracionMinutos} min</span>
                 </p>
+                {/* SPEC-685 (FORMA 5c9194a) · la 2ª cita en adelante = tarifa del profesional,
+                    en SECUENCIA bajo la primera y subordinada (muted) — no un 2º precio que
+                    compite; los rótulos «Primera» / «De la 2ª» son el anti-«dos precios». Mismo
+                    patrón que la ficha y el panel (el padre lo aprende una vez). Guarda dura
+                    (SPEC-685): se muestra solo si tarifa > 0; null O 0 → «por definir», NUNCA
+                    «$0» (un $0 diría que las citas siguientes son gratis, y es falso). «por
+                    definir» es la cara del padre; «Sin fijar» es la etiqueta INTERNA del
+                    profesional (mi-perfil-resumen) — no se mezclan. Va sin el paréntesis
+                    «(tarifa del profesional)» de la ficha: la tarjeta se mantiene compacta. */}
+                <p className="mt-0.5 text-xs text-muted">
+                    De la 2ª cita en adelante:{" "}
+                    <span className="font-medium">
+                        {p.tarifaConsultaCOP !== null && p.tarifaConsultaCOP > 0
+                            ? CURRENCY_COP.format(p.tarifaConsultaCOP)
+                            : "por definir"}
+                    </span>
+                </p>
             </div>
 
             <ul className="text-xs text-muted space-y-1">
