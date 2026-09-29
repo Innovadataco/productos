@@ -13,7 +13,7 @@
  * profesional— los gestos de arrastrar-para-crear. El padre la usa en solo lectura.
  */
 import type { ReactNode } from "react";
-import { DOW, H0, H1, PXH, diaSemana, estiloBloque, fmt, numMes } from "./fechas";
+import { DOW, PXH, diaSemana, estiloBloque, fmt, numMes } from "./fechas";
 
 /** Lo mínimo que la rejilla necesita de un bloque para posicionarlo. */
 export interface BloquePosicionado {
@@ -29,6 +29,13 @@ export function RejillaCalendario<T extends BloquePosicionado>(props: {
     hoy: string;
     /** `grid-template-columns` del área de días (1 col en vista día, 7 en semana). */
     anchoDia: string;
+    /**
+     * SPEC-771 · rango vertical ADAPTATIVO del riel (minutos Bogotá), en HORA entera. Lo computa
+     * el consumidor con `ventanaAdaptativa(bloquesVisibles, opts)` y lo comparte con su propia
+     * geometría (p. ej. el arrastre del profesional), para que riel y bloques usen la MISMA base.
+     */
+    railInicioMin: number;
+    railFinMin: number;
     bloquesPorDia: Map<string, T[]>;
     /** El bloque ya posicionado y estilado por el lado que lo usa (usa `estiloBloque`). */
     renderBloque: (bloque: T) => ReactNode;
@@ -45,8 +52,10 @@ export function RejillaCalendario<T extends BloquePosicionado>(props: {
     /** Overlays absolutos dentro del contenedor relativo (popovers/paneles del lado). */
     children?: ReactNode;
 }) {
-    const { diasVisibles, hoy, anchoDia, bloquesPorDia, renderBloque, ghost } = props;
-    const altura = (H1 - H0) * PXH;
+    const { diasVisibles, hoy, anchoDia, bloquesPorDia, renderBloque, ghost, railInicioMin, railFinMin } = props;
+    const horaInicio = railInicioMin / 60; // hora entera (ventanaAdaptativa redondea a la hora)
+    const filas = Math.max(1, (railFinMin - railInicioMin) / 60);
+    const altura = filas * PXH;
     return (
         <div className="relative overflow-x-auto rounded-xl border border-tinta/10 bg-page">
             <div className="grid border-b border-tinta/10" style={{ gridTemplateColumns: `56px ${anchoDia}` }}>
@@ -63,14 +72,14 @@ export function RejillaCalendario<T extends BloquePosicionado>(props: {
             </div>
             <div className="grid" style={{ gridTemplateColumns: `56px ${anchoDia}`, height: altura }}>
                 <div className="border-r border-tinta/10">
-                    {Array.from({ length: H1 - H0 }, (_, i) => (
+                    {Array.from({ length: filas }, (_, i) => (
                         <div key={i} className="relative text-right font-mono text-[10px] text-subtle" style={{ height: PXH }}>
-                            <span className="pr-1.5" style={{ position: "relative", top: -6 }}>{fmt((H0 + i) * 60)}</span>
+                            <span className="pr-1.5" style={{ position: "relative", top: -6 }}>{fmt((horaInicio + i) * 60)}</span>
                         </div>
                     ))}
                 </div>
                 {diasVisibles.map((fecha) => {
-                    const g = ghost && ghost.fecha === fecha ? estiloBloque(ghost.a, ghost.b) : null;
+                    const g = ghost && ghost.fecha === fecha ? estiloBloque(ghost.a, ghost.b, railInicioMin) : null;
                     return (
                         <div
                             key={fecha}
@@ -81,7 +90,7 @@ export function RejillaCalendario<T extends BloquePosicionado>(props: {
                             onPointerMove={props.onColumnaPointerMove}
                             onPointerUp={props.onColumnaPointerUp}
                         >
-                            {Array.from({ length: H1 - H0 }, (_, i) => (
+                            {Array.from({ length: filas }, (_, i) => (
                                 <div key={i} className="border-b border-tinta/5" style={{ height: PXH }} />
                             ))}
                             {props.overlayDia?.(fecha)}

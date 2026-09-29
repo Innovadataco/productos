@@ -154,6 +154,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-537 (CEO): data-viz CON escala — mapeo umbral→token (salud del motor: <0.7 rubí,
     // 0.7-0.9 ámbar, ≥0.9 pino) + dirección (up ámbar/down pino) + serie única (cielo/tinta).
     "src/components/modules/dataviz-escala.candado.test.ts",
+    // SPEC-771: la ventana del riel es ADAPTATIVA — ninguna cita/franja queda fuera del área
+    // visible (padre = puro contenido; profesional = unión con la banda creable). Geometría pura.
+    "src/components/modules/calendario/ventana-adaptativa.candado.test.ts",
     // SPEC-530 (CEO): color crudo interno — Comité + expediente admin, 0 crudo por token.
     "src/components/modules/crudo-comite-expediente.candado.test.ts",
     // SPEC-343 (I-232): candado — los documentos legales servidos no contienen notas internas.
