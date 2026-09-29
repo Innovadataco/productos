@@ -12,6 +12,7 @@
  * de una cita la deriva la fuente única `estadoEfectivoDeCita` (#718).
  */
 import type { EstadoSolicitudCita } from "@prisma/client";
+import { estadoEfectivoDeCita, type EntradaTiempo } from "@/lib/profesional/cita/estado-efectivo";
 
 export type BadgeCita = { label: string; clases: string };
 
@@ -40,4 +41,24 @@ export function badgeDeCita(estado: EstadoSolicitudCita): BadgeCita {
         case "REPROGRAMADA":
             return { label: "Reprogramada", clases: NEUTRO };
     }
+}
+
+/**
+ * SPEC-749 FR-2 · Badge EFECTIVO para la lista: una cita `CONFIRMADA` cuya franja YA PASÓ
+ * NO sigue en «Confirmada» (cielo/verde, como una cita viva) — pasa a NEUTRO «Ya pasó»
+ * (tinta = estado pasado/cerrado, SPEC-730). El verde era parte de la mentira que mide
+ * Jelkin (105/135). Reusa la FUENTE como oráculo de frontera (now≥FIN, falla conservador).
+ * El resto de estados (incl. PAGADA_PENDIENTE/SIN_CONFIRMAR) delega en `badgeDeCita`: su
+ * verdad de lista la gobierna su propio reloj, no la franja (ver FORMA §14 vs interino).
+ */
+export function badgeDeCitaEfectivo(
+    estado: EstadoSolicitudCita,
+    franjaInicio: EntradaTiempo,
+    franjaFin: EntradaTiempo,
+    ahora: EntradaTiempo,
+): BadgeCita {
+    if (estado === "CONFIRMADA" && estadoEfectivoDeCita("CONFIRMADA", franjaInicio, franjaFin, ahora) === "PASADA") {
+        return { label: "Ya pasó", clases: "bg-tinta/10 text-muted" };
+    }
+    return badgeDeCita(estado);
 }

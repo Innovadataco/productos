@@ -11,11 +11,20 @@
  * no está expuesto, no viaja al cliente.
  */
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
 import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-detalle/types";
-import { badgeDeCita } from "@/lib/padre/citas-listado";
-import { derivarVistaFranjaPasada, type VistaEspera } from "@/lib/padre/vista-espera-cita";
+import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
+import { derivarVistaFranjaPasada, type VistaEspera, type AccionesEspera, type TonoEspera } from "@/lib/padre/vista-espera-cita";
+
+// SPEC-730 · el estado de una cita es PROCESO, nunca criticidad: cielo/pino/ámbar/tinta,
+// CERO rubí. `gris` = tinta neutro (estado pasado/cerrado — SPEC-749 FR-2).
+const TONO_CLASES: Record<TonoEspera, string> = {
+    verde: "bg-pino/10 text-pino border-pino/30",
+    rojo: "bg-ambar/10 text-ambar border-ambar/40",
+    gris: "bg-tinta/5 text-subtle border-tinta/10",
+    espera: "bg-cielo/10 text-cielo border-cielo/30",
+};
 import { GenerarPase } from "@/components/modules/padre/GenerarPase";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -151,34 +160,108 @@ function useCountdown(hastaISO: string | null): { horas: number; minutos: number
 }
 
 /**
- * SPEC-749 FR-2 (§14) · CTA de «franja pasada antes de confirmar». Solo se pinta la
- * acción con destino REAL: «Pedir otra cita» (directorio, existe). «Escríbenos para
- * revisar tu pago» va en TEXTO —el flujo de incidencia de pago (SPEC-658/D-137) aún no
- * existe: no se promete conducta que no entregamos ni se pinta un botón sin destino.
- * «Reprogramar» de §14 se OMITE: su endpoint existe pero no hay UI de nueva franja
- * (SPEC-395). Reportado al CEO.
+ * SPEC-749 FR-2 · SALIDAS de una cita con la hora ya pasada. Solo afordances con destino
+ * REAL: «Pedir otra cita» → directorio (existe). «Escríbenos» / «revisar tu pago» van en
+ * TEXTO: no hay ruta de soporte para el padre hoy, y un botón sin destino promete conducta
+ * que no entregamos. Quitar la ilusión OBLIGA a dar salida real (Pedir otra cita es la
+ * salida; el texto no deja al padre atrapado como lo dejaba «Volver a mis citas» circular).
  */
-function AccionFranjaPasada({ accion }: { accion: VistaEspera["accion"] }) {
-    if (accion === "pedir_otra_cita") {
-        return (
-            <section className="glass rounded-2xl p-4 sm:p-5">
+function AccionFranjaPasada({ acciones }: { acciones: AccionesEspera | undefined }) {
+    if (!acciones) return null;
+    return (
+        <section className="rounded-2xl border border-tinta/15 bg-tinta/5 p-4 sm:p-5 space-y-3">
+            {acciones.pedirOtraCita && (
                 <Link
                     href="/dashboard/padre/profesionales"
                     className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
                 >
                     Pedir otra cita
                 </Link>
-            </section>
-        );
-    }
-    if (accion === "revisar_pago") {
-        return (
-            <section className="rounded-2xl border border-cielo/30 bg-cielo/5 p-4 sm:p-5">
+            )}
+            {acciones.escribenos && (
+                <p className="cuerpo text-body">¿Algo no salió como esperabas? Escríbenos a soporte.</p>
+            )}
+            {acciones.revisarPago && (
                 <p className="cuerpo text-body">Escríbenos para revisar tu pago.</p>
+            )}
+        </section>
+    );
+}
+
+/**
+ * SPEC-715 + SPEC-731 · lo que el padre puede hacer ANTES de una cita CONFIRMADA que aún
+ * NO pasó: agregar al calendario + (opcional) compartir un caso. NADA de esto sobre una
+ * cita cuya hora ya pasó (el llamador lo condiciona a `confirmadaViva`, SPEC-749 FR-2):
+ * el `.ics` agendaría un evento del pasado y «compartir para la sesión» ya no aplica.
+ */
+function AntesDeLaCita({ cita, expedientes }: { cita: CitaParaPadreDto; expedientes: ExpedienteParaCompartirDto[] }) {
+    // SPEC-731 §2a: el caso a compartir. Si la cita ya venía ligada a uno, ese es el
+    // preseleccionado; si no, arranca vacío («No compartir») — nunca obligatorio.
+    const tieneCasos = expedientes.length > 0;
+    const compartidoValido =
+        cita.expedienteCompartidoId != null &&
+        expedientes.some((e) => e.expedienteId === cita.expedienteCompartidoId);
+    const [expedienteSel, setExpedienteSel] = useState<string>(
+        compartidoValido ? cita.expedienteCompartidoId! : "",
+    );
+    return (
+        <>
+            {/* §1 · «poder seguir»: agregar la cita al calendario. Va PRIMERO,
+                antes de lo de compartir — la cita vale por sí sola. */}
+            <section className="glass rounded-2xl p-4 sm:p-5 space-y-2">
+                <p className="etiqueta text-subtle">Antes de la cita</p>
+                <Button variant="secondary" onClick={() => descargarIcs(cita)}>
+                    Agregar a mi calendario
+                </Button>
             </section>
-        );
-    }
-    return null;
+
+            {/* §2 · Compartir un caso — OPCIONAL, en dos casos según si el padre
+                tiene algún expediente. Nunca se fuerza ni se auto-crea un caso. */}
+            <section className="glass rounded-2xl p-4 sm:p-5 space-y-3">
+                {tieneCasos ? (
+                    <>
+                        {/* §2a · tiene uno o más casos: oferta, no imperativo. */}
+                        <div className="space-y-1">
+                            <p className="etiqueta text-subtle">Compartir un caso (opcional)</p>
+                            <p className="cuerpo text-body">
+                                ¿Quieres que el profesional vea un caso tuyo?
+                            </p>
+                            <p className="cuerpo text-subtle">
+                                Elige cuál y te damos un <strong>pase</strong> para que lo abra en la sesión.
+                            </p>
+                        </div>
+                        <Select
+                            label="Caso a compartir"
+                            value={expedienteSel}
+                            onChange={(e) => setExpedienteSel(e.target.value)}
+                            options={[
+                                { value: "", label: "No compartir ningún caso" },
+                                ...expedientes.map((exp) => ({ value: exp.expedienteId, label: exp.etiqueta })),
+                            ]}
+                        />
+                        {expedienteSel && <GenerarPase expedienteId={expedienteSel} />}
+                    </>
+                ) : (
+                    <>
+                        {/* §2b · sin ningún caso: cierra bien y ofrece, sin exigir.
+                            NO es un callejón (nada de «elige de una lista vacía»). */}
+                        <p className="etiqueta text-subtle">Compartir un caso (opcional)</p>
+                        <p className="cuerpo text-body">
+                            No tienes un caso para compartir — y no hace falta.
+                        </p>
+                        <p className="cuerpo text-subtle">
+                            Cuéntale directamente al profesional en la sesión. Si quieres dejar algo por
+                            escrito antes, puedes{" "}
+                            <Link href="/dashboard/padre/reportar" className="underline hover:text-body">
+                                reportar un caso
+                            </Link>
+                            .
+                        </p>
+                    </>
+                )}
+            </section>
+        </>
+    );
 }
 
 export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
@@ -191,26 +274,19 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
         const t = setInterval(() => setAhora(Date.now()), 30_000);
         return () => clearInterval(t);
     }, []);
-    // La verdad de «franja pasada» para PAGADA_PENDIENTE/SIN_CONFIRMAR (§14); si no
-    // aplica (o es CONFIRMADA, diferida) cae al mapa por estado crudo.
-    const estado =
-        derivarVistaFranjaPasada(
-            cita.estado,
-            cita.franja.inicio,
-            cita.franja.fin,
-            cita.venceEn,
-            cita.profesional.nombreVisible,
-            ahora,
-        ) ?? ESTADO_LEGIBLE[cita.estado];
-    // SPEC-731 §2a: el caso a compartir. Si la cita ya venía ligada a uno, ese es
-    // el preseleccionado; si no, arranca vacío («No compartir») — nunca obligatorio.
-    const tieneCasos = expedientes.length > 0;
-    const compartidoValido =
-        cita.expedienteCompartidoId != null &&
-        expedientes.some((e) => e.expedienteId === cita.expedienteCompartidoId);
-    const [expedienteSel, setExpedienteSel] = useState<string>(
-        compartidoValido ? cita.expedienteCompartidoId! : "",
+    // La verdad de «franja pasada» (CONFIRMADA/PAGADA_PENDIENTE/SIN_CONFIRMAR); si no
+    // aplica cae al mapa por estado crudo. `vistaPasada` no-nulo ⇒ la hora ya pasó → se
+    // esconden las acciones de «antes de la cita» (calendario, compartir): son futuro sobre ayer.
+    const vistaPasada = derivarVistaFranjaPasada(
+        cita.estado,
+        cita.franja.inicio,
+        cita.franja.fin,
+        cita.venceEn,
+        cita.profesional.nombreVisible,
+        ahora,
     );
+    const estado = vistaPasada ?? ESTADO_LEGIBLE[cita.estado];
+    const confirmadaViva = cita.estado === "CONFIRMADA" && !vistaPasada;
     const countdown = useCountdown(cita.estado === "PAGADA_PENDIENTE" ? cita.venceEn : null);
 
     // Refresca al foco (el motor confirma asíncrono; volver a la pestaña
@@ -230,14 +306,7 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
 
     const puedeElegirOtro = cita.estado === "VENCIDA_SIN_RESPUESTA" || cita.estado === "NO_ASISTIO_PROFESIONAL";
 
-    const tonoClases = useMemo(() => {
-        switch (estado.tono) {
-            case "verde": return "bg-pino/10 text-pino border-pino/30";
-            case "rojo": return "bg-ambar/10 text-ambar border-ambar/40";
-            case "gris": return "bg-tinta/5 text-subtle border-tinta/10";
-            default: return "bg-cielo/10 text-cielo border-cielo/30";
-        }
-    }, [estado.tono]);
+    const tonoClases = TONO_CLASES[estado.tono];
 
     return (
         <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-5 anim-entrada">
@@ -251,7 +320,7 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 enum crudo «PAGADA_PENDIENTE»; el reloj de 48 h y el aviso de vencimiento van debajo. */}
             <section className={`rounded-2xl border p-4 sm:p-5 ${tonoClases}`}>
                 <p className="etiqueta">Estado</p>
-                <p className="cuerpo mt-1">{badgeDeCita(cita.estado).label}</p>
+                <p className="cuerpo mt-1">{badgeDeCitaEfectivo(cita.estado, cita.franja.inicio, cita.franja.fin, ahora).label}</p>
                 {countdown && !countdown.vencido && (
                     <p className="cuerpo mt-3">
                         Vence en <strong className="font-mono">{countdown.horas}h {String(countdown.minutos).padStart(2, "0")}m</strong>.
@@ -303,65 +372,12 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 Compartir un caso es un EXTRA OPCIONAL (§2), nunca un requisito. Nada de esto
                 antes de CONFIRMADA (candado). El «dónde» presencial (dirección) llega con SPEC-708
                 y el enlace de la reunión es POR CITA —lo pone el operador, no un campo del perfil—;
-                el recordatorio por correo y la encuesta NO existen y esta pantalla no los promete. */}
-            {cita.estado === "CONFIRMADA" && (
-                <>
-                    {/* §1 · «poder seguir»: agregar la cita al calendario. Va PRIMERO,
-                        antes de lo de compartir — la cita vale por sí sola. */}
-                    <section className="glass rounded-2xl p-4 sm:p-5 space-y-2">
-                        <p className="etiqueta text-subtle">Antes de la cita</p>
-                        <Button variant="secondary" onClick={() => descargarIcs(cita)}>
-                            Agregar a mi calendario
-                        </Button>
-                    </section>
-
-                    {/* §2 · Compartir un caso — OPCIONAL, en dos casos según si el padre
-                        tiene algún expediente. Nunca se fuerza ni se auto-crea un caso. */}
-                    <section className="glass rounded-2xl p-4 sm:p-5 space-y-3">
-                        {tieneCasos ? (
-                            <>
-                                {/* §2a · tiene uno o más casos: oferta, no imperativo. */}
-                                <div className="space-y-1">
-                                    <p className="etiqueta text-subtle">Compartir un caso (opcional)</p>
-                                    <p className="cuerpo text-body">
-                                        ¿Quieres que el profesional vea un caso tuyo?
-                                    </p>
-                                    <p className="cuerpo text-subtle">
-                                        Elige cuál y te damos un <strong>pase</strong> para que lo abra en la sesión.
-                                    </p>
-                                </div>
-                                <Select
-                                    label="Caso a compartir"
-                                    value={expedienteSel}
-                                    onChange={(e) => setExpedienteSel(e.target.value)}
-                                    options={[
-                                        { value: "", label: "No compartir ningún caso" },
-                                        ...expedientes.map((exp) => ({ value: exp.expedienteId, label: exp.etiqueta })),
-                                    ]}
-                                />
-                                {expedienteSel && <GenerarPase expedienteId={expedienteSel} />}
-                            </>
-                        ) : (
-                            <>
-                                {/* §2b · sin ningún caso: cierra bien y ofrece, sin exigir.
-                                    NO es un callejón (nada de «elige de una lista vacía»). */}
-                                <p className="etiqueta text-subtle">Compartir un caso (opcional)</p>
-                                <p className="cuerpo text-body">
-                                    No tienes un caso para compartir — y no hace falta.
-                                </p>
-                                <p className="cuerpo text-subtle">
-                                    Cuéntale directamente al profesional en la sesión. Si quieres dejar algo por
-                                    escrito antes, puedes{" "}
-                                    <Link href="/dashboard/padre/reportar" className="underline hover:text-body">
-                                        reportar un caso
-                                    </Link>
-                                    .
-                                </p>
-                            </>
-                        )}
-                    </section>
-                </>
-            )}
+                el recordatorio por correo y la encuesta NO existen y esta pantalla no los promete.
+                SPEC-749 FR-2: NADA de esto sobre una cita cuya hora YA PASÓ (`!vistaPasada`) —
+                «Agregar a mi calendario» agendaría un evento del pasado (Calidad, 29-09), y
+                «compartir un caso para la sesión» ya no aplica. La forma exige que en
+                CONFIRMADA-pasada no se ofrezcan (FORMA-CITA-CONFIRMADA-HORA-PASADA §1-bis). */}
+            {confirmadaViva && <AntesDeLaCita cita={cita} expedientes={expedientes} />}
 
             {/* SPEC-715 · después de la cita (CUMPLIDA): la salida real es pedir otra por el
                 directorio. Sin encuesta (no existe) y sin «te avisaremos» (tampoco). */}
@@ -391,8 +407,8 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 </section>
             )}
 
-            {/* SPEC-749 FR-2 (§14) · la SALIDA cuando la franja ya pasó antes de confirmar. */}
-            <AccionFranjaPasada accion={estado.accion} />
+            {/* SPEC-749 FR-2 · la SALIDA cuando la hora ya pasó (CONFIRMADA/PAGADA_PENDIENTE/SIN_CONFIRMAR). */}
+            <AccionFranjaPasada acciones={estado.acciones} />
 
             {/* SPEC-731 §3 · el pie vuelve a la LISTA DE CITAS (donde el padre estaba),
                 no a «mi expediente» — que ni es un expediente ni es de donde venía. */}
