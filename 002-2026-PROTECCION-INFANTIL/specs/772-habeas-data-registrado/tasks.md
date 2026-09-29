@@ -8,9 +8,9 @@
 
 ## Tras aprobación §4 (DIRECTO)
 - [ ] **T1** · Radicar a **Datos** el modelo `SolicitudHabeasData` (FK `Usuario`, `tipo`, `estado`, `creadoEn`, **`venceEn` NOT NULL**, `resueltaEn?`) + migración aditiva (D-121, carril de datos).
-- [ ] **T2** · `src/lib/habeas-data/estado-efectivo.ts` (`estadoEfectivoSolicitud`, fuente única, `RESUELTA_TARDE`/`VENCIDA_SIN_RESOLVER`, `now` inyectable) + candado unit (control positivo por mutación, ancla finde+festivo).
-- [ ] **T3** · `src/lib/habeas-data.ts` (service espejo de `apelaciones.ts`): crear solicitud, `venceEn = sumarDiasHabilesColombia(creadoEn, 10|15)` según tipo (D-3), resolver con marca de tiempo.
-- [ ] **T4** · API del mecanismo de atrás (`src/app/api/padre/…`): crear/consultar solicitud. **NO** una segunda puerta (la puerta es 752). Compuerta de supresión en el servidor + identidad verificada + candado.
-- [ ] **T5** · Rectificar: reusar `PATCH perfil` / `PATCH hijos/[id]` / `hijos/identificadores/[id]`. Relato de cita según D-2. Reporte: no se toca (3ª tensión).
+- [ ] **T2** · `src/lib/habeas-data/estado-efectivo.ts` (`estadoEfectivoSolicitud` + `esIncumplimiento` fuente única, `RESUELTA_TARDE`/`VENCIDA_SIN_RESOLVER`, `now` inyectable) + candado unit (control positivo por mutación, ancla finde+festivo). **D-4:** el resumen y el detalle leen `esIncumplimiento` IGUAL, en el mismo PR (A-7).
+- [ ] **T3** · `src/lib/habeas-data.ts` (service espejo de `apelaciones.ts`): crear solicitud, `venceEn = sumarDiasHabilesColombia(creadoEn, 10|15)` según tipo. **D-3 TECHO:** máximo legal 10/15 = constante [NORMA]; valor operativo parametrizable pero **estructuralmente ≤ constante** (config > máximo NO se puede guardar — A-6, no un comentario).
+- [ ] **T4** · API del mecanismo de atrás (`src/app/api/padre/…`): crear/consultar solicitud. **NO** una segunda puerta (la puerta es 752). Compuerta de supresión en el servidor + identidad verificada + candado. **D-1:** el copy de una negativa se funda en el DEBER LEGAL, no en el esquema/cifrado (A-8).
+- [ ] **T5** · Rectificar: reusar `PATCH perfil` / `PATCH hijos/[id]` / `hijos/identificadores/[id]`. **Relato de cita: motivo de petición ACEPTADO y cumplible — el mecanismo lo trae SPEC-780 (CEO), 772 NO lo construye** (D-2 resuelta). Reporte: no se toca (3ª tensión, [ABOGADO]).
 - [ ] **T6** · Copy de privacidad §6 (Diseño) — el mecanismo real, no «escribir al administrador».
 - [ ] **T7** · Gate: `tsc`+`lint`+`test:unit`+candados+`build`. PR + REALIZADO. Tensiones [ABOGADO] quedan marcadas, no resueltas.
