@@ -6,6 +6,7 @@
  * clave viaja como copia manual (el admin no queda atascado).
  */
 import { NextResponse } from "next/server";
+import { revelarCredencial } from "@/lib/seguridad/credencial";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -50,7 +51,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             emailEnviado,
             // SPEC-435 · contrato Jelkin: reenviar NUNCA devuelve la clave si se encoló;
             // si el envío falló, cae al fallback (copia manual) para no atascar al admin.
-            passwordTemporal: emailEnviado ? undefined : password,
+            passwordTemporal: emailEnviado ? undefined : revelarCredencial(password),
             mensaje: emailEnviado
                 ? "Email de bienvenida reenviado al verificador."
                 : "No se pudo reenviar el email. Copie la contraseña temporal mostrada arriba.",

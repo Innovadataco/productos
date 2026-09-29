@@ -17,6 +17,7 @@ import { aplicarOffset } from "./offset";
 import { aplicarQuietHours } from "./quiet-hours";
 import { sendNotificacionEnvio } from "../queue";
 import { logger, LEVELS, type LogLevel } from "../logger";
+import { revelarCredencial, type Credencial } from "../seguridad/credencial";
 
 /**
  * SPEC-302 (002-PI-208 · R-022 §1.3 punto c): nivel configurable propio del
@@ -49,6 +50,11 @@ export interface ProgramarInput {
         // con destinatarios email-only (p. ej. representante legal) DEBEN pasarlo.
         rol?: string | undefined;
         variables: Record<string, unknown>;
+        // SPEC-783: credenciales (contraseñas temporales) que van al correo. Tipo OPACO
+        // (`Credencial`): por construcción NO caben en `variables` (ponerlas sueltas no
+        // compila). El motor las guarda reveladas bajo `variables._sensibles`, y los DOS
+        // estados terminales las borran (`repoNotif.marcar{Enviada,FallidaDefinitiva}`).
+        sensibles?: Record<string, Credencial> | undefined;
     }>;
     enviarEn?: Date | undefined;
     metadatos?: Record<string, unknown> | undefined;
@@ -284,6 +290,18 @@ export async function programar(
                 ...(input.metadatos ?? {}),
                 ...destinatario.variables,
             } as Record<string, unknown>;
+            // SPEC-783: las credenciales van bajo `_sensibles` (reveladas para el render), NO
+            // sueltas. `renderizarPlantilla` las aplana antes de renderizar; los estados
+            // terminales borran `_sensibles`. Una credencial NO puede llegar a `variables` por
+            // fuera de acá: es un `Credencial` opaco y no cabe en `Record<string, unknown>` como
+            // texto — el único que la convierte a string es este punto, a conciencia.
+            if (destinatario.sensibles) {
+                const sensibles: Record<string, string> = {};
+                for (const [clave, cred] of Object.entries(destinatario.sensibles)) {
+                    sensibles[clave] = revelarCredencial(cred);
+                }
+                variables._sensibles = sensibles;
+            }
 
             const notificacion = await repos.repoNotif.crear({
                 evento: input.evento,

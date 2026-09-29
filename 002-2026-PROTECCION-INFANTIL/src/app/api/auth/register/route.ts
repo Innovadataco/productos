@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { credencial } from "@/lib/seguridad/credencial";
 import { logger } from "@/lib/logger";
 import { verifyAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
         if (data.rol === "PARENT") {
             emailEnviado = false;
             try {
-                await enviarEmailCredencialesPadre(user.email, data.password);
+                await enviarEmailCredencialesPadre(user.email, credencial(data.password));
                 emailEnviado = true;
             } catch (err) {
                 logger.error("[REGISTER] Error enviando email de credenciales al padre", err);

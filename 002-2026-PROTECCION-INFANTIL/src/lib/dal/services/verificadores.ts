@@ -20,6 +20,7 @@
  * `@/lib/prisma`.
  */
 import { randomBytes } from "node:crypto";
+import { credencial, type Credencial } from "@/lib/seguridad/credencial";
 import { hashPassword } from "@/lib/auth";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -51,8 +52,8 @@ export interface VerificadorListItem {
     ultimaSesion: Date | null;
 }
 
-function tempPassword(): string {
-    return randomBytes(6).toString("hex");
+function tempPassword(): Credencial {
+    return credencial(randomBytes(6).toString("hex"));
 }
 
 export class VerificadorService {
@@ -74,7 +75,7 @@ export class VerificadorService {
         input: CrearVerificadorInput,
         adminId: string,
         info: InfoClienteAudit,
-    ): Promise<{ verificador: VerificadorListItem; password: string }> {
+    ): Promise<{ verificador: VerificadorListItem; password: Credencial }> {
         const emailLower = input.email.toLowerCase();
         const existente = await this.usuarios.findByEmail(emailLower);
         if (existente) {
@@ -147,7 +148,7 @@ export class VerificadorService {
      * el endpoint que llama a este método SIEMPRE muestra la password en
      * la respuesta (mismo patrón que padres/profesionales).
      */
-    async restablecerPassword(id: string, adminId: string, info: InfoClienteAudit): Promise<{ email: string; password: string }> {
+    async restablecerPassword(id: string, adminId: string, info: InfoClienteAudit): Promise<{ email: string; password: Credencial }> {
         const usuario = await this.usuarios.findById(id);
         if (!usuario || usuario.rol !== "VERIFICADOR") {
             throw new AppError("Verificador no encontrado", ERROR_CODES.NOT_FOUND, 404);
@@ -173,7 +174,7 @@ export class VerificadorService {
      * Único fallback: si el motor de notif no aceptó la tarea, la password
      * viaja como copia manual para no atascar al admin.
      */
-    async prepararReenvioEmail(id: string, adminId: string, info: InfoClienteAudit): Promise<{ email: string; password: string }> {
+    async prepararReenvioEmail(id: string, adminId: string, info: InfoClienteAudit): Promise<{ email: string; password: Credencial }> {
         const usuario = await this.usuarios.findById(id);
         if (!usuario || usuario.rol !== "VERIFICADOR") {
             throw new AppError("Verificador no encontrado", ERROR_CODES.NOT_FOUND, 404);

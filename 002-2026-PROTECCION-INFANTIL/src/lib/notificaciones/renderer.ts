@@ -22,8 +22,14 @@ export function renderizarPlantilla(
     asunto: string | null,
     variables: Record<string, unknown>
 ): RenderResult {
+    // SPEC-783: las credenciales viven bajo `_sensibles` (sub-objeto reservado) para que el
+    // estado terminal las borre de un golpe, sin lista de nombres. Se APLANAN acá —único punto
+    // de render que usan envío, bandeja y reenvío— para que `{{tempPassword}}` resuelva mientras
+    // `_sensibles` exista. Tras la limpieza terminal, `_sensibles` ya no está y el token queda vacío.
+    const sensibles = (variables._sensibles ?? {}) as Record<string, unknown>;
+    const vars = { ...variables, ...sensibles };
     return {
-        asunto: asunto ? renderTemplate(asunto, variables) : null,
-        cuerpo: renderTemplate(cuerpoMarkdown, variables),
+        asunto: asunto ? renderTemplate(asunto, vars) : null,
+        cuerpo: renderTemplate(cuerpoMarkdown, vars),
     };
 }

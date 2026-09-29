@@ -78,10 +78,13 @@ describe("NotificacionRepository", () => {
     it("marcarEnviada registra proveedorId", async () => {
         const repo = new NotificacionRepository();
         const notif = await crearNotificacion({});
+        // SPEC-783: marcarEnviada ahora recarga la fila (findUnique) tras el UPDATE crudo que
+        // limpia `_sensibles` → el retorno es nullable. La fila recién creada existe.
         const actualizada = await repo.marcarEnviada(notif.id, "resend-123");
-        expect(actualizada.estado).toBe("ENVIADA");
-        expect(actualizada.proveedorId).toBe("resend-123");
-        expect(actualizada.sentAt).not.toBeNull();
+        expect(actualizada).not.toBeNull();
+        expect(actualizada!.estado).toBe("ENVIADA");
+        expect(actualizada!.proveedorId).toBe("resend-123");
+        expect(actualizada!.sentAt).not.toBeNull();
     });
 
     it("marcarAbierta y marcarClicada actualizan timestamps", async () => {

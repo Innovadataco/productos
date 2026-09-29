@@ -10,6 +10,7 @@
  * explícita. El admin decide el canal — el sistema no adivina.
  */
 import { NextResponse } from "next/server";
+import { credencial } from "@/lib/seguridad/credencial";
 import { logger } from "@/lib/logger";
 import { verifyAuth, hashPassword } from "@/lib/auth";
 import { assertModulo } from "@/lib/permisos-modulos";
@@ -71,7 +72,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         // que el admin pueda decidir.
         let encolado = false;
         try {
-            await enviarEmailCredencialesPadre(padre.email, password);
+            await enviarEmailCredencialesPadre(padre.email, credencial(password));
             encolado = true;
         } catch (err) {
             logger.error("[PADRES] Error encolando credenciales del padre", err);

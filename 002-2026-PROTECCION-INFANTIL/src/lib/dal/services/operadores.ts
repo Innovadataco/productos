@@ -8,6 +8,7 @@
  */
 import type { Prisma } from "@prisma/client";
 import { randomBytes } from "crypto";
+import { credencial, type Credencial } from "@/lib/seguridad/credencial";
 import { hashPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { getParametroSistema, descifrarValorParametro } from "@/lib/parametros";
@@ -31,8 +32,8 @@ import type {
     ResultadoCrearOperador,
 } from "../types/operador";
 
-function tempPassword() {
-    return randomBytes(6).toString("hex");
+function tempPassword(): Credencial {
+    return credencial(randomBytes(6).toString("hex"));
 }
 
 function filtroTenant(admin: { rol: string; tenantId: string | null }) {
@@ -124,7 +125,7 @@ export class OperadorService {
     async crear(
         input: CrearOperadorInput,
         admin: { id: string; tenantId: string | null }
-    ): Promise<ResultadoCrearOperador & { password?: string }> {
+    ): Promise<ResultadoCrearOperador & { password?: Credencial }> {
         const existe = await this.usuarios.findByEmail(input.email);
         if (existe) {
             const esRolGestionado = existe.rol === "OPERADOR" || existe.rol === "COMITE_VALIDACION";
@@ -287,7 +288,7 @@ export class OperadorService {
         adminId: string,
         info: InfoClienteDto,
         tipo: "regenerar" | "reenviar"
-    ): Promise<{ password: string }> {
+    ): Promise<{ password: Credencial }> {
         const password = tempPassword();
         const passwordHash = await hashPassword(password);
 

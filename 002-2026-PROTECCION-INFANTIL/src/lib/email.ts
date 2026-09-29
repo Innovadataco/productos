@@ -17,6 +17,7 @@
 import { prisma } from "./prisma.ts";
 import { getParametroSistema } from "./parametros.ts";
 import { programar } from "./notificaciones/motor.ts";
+import type { Credencial } from "./seguridad/credencial.ts";
 import { renderizarEmailReporteCirculo } from "./notificaciones/plantillas/reporte-circulo.ts";
 import type { FilaDeriva } from "./motor/deriva.ts";
 import type { CanalNotificacion } from "@prisma/client";
@@ -85,17 +86,19 @@ export async function enviarTokenRecuperacion(email: string, token: string): Pro
     }
 }
 
-export async function enviarEmailBienvenidaOperador(email: string, tempPassword: string): Promise<void> {
+export async function enviarEmailBienvenidaOperador(email: string, tempPassword: Credencial): Promise<void> {
     await programar({
         evento: "usuario.bienvenida.operador",
-        destinatarios: [{ email, variables: { email, tempPassword, urlLogin: `${baseUrl()}/login` } }],
+        // SPEC-783: la credencial va en `sensibles` (tipo `Credencial`), NO suelta en `variables`
+        // — ponerla suelta no compila. El motor la guarda bajo `_sensibles` y el terminal la borra.
+        destinatarios: [{ email, variables: { email, urlLogin: `${baseUrl()}/login` }, sensibles: { tempPassword } }],
     });
 }
 
-export async function enviarEmailBienvenidaComite(email: string, tempPassword: string): Promise<void> {
+export async function enviarEmailBienvenidaComite(email: string, tempPassword: Credencial): Promise<void> {
     await programar({
         evento: "usuario.bienvenida.comite",
-        destinatarios: [{ email, variables: { email, tempPassword, urlLogin: `${baseUrl()}/login` } }],
+        destinatarios: [{ email, variables: { email, urlLogin: `${baseUrl()}/login` }, sensibles: { tempPassword } }],
     });
 }
 
@@ -104,10 +107,10 @@ export async function enviarEmailBienvenidaComite(email: string, tempPassword: s
  * restablecimiento). Mismo patrón que el colegio: la temporal solo viaja por
  * email; si el envío falla, la ruta la muestra una sola vez al admin.
  */
-export async function enviarEmailCredencialesPadre(email: string, tempPassword: string): Promise<void> {
+export async function enviarEmailCredencialesPadre(email: string, tempPassword: Credencial): Promise<void> {
     await programar({
         evento: "usuario.credenciales.padre",
-        destinatarios: [{ email, variables: { email, tempPassword, urlLogin: `${baseUrl()}/login` } }],
+        destinatarios: [{ email, variables: { email, urlLogin: `${baseUrl()}/login` }, sensibles: { tempPassword } }],
     });
 }
 
