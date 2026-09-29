@@ -23,6 +23,8 @@
 | **Relato de cita (`SolicitudCita.presentacion`)** | Sí (texto libre del titular, sin ser evidencia) | **NO hay ruta de escritura post-creación** — se fija al crear; reprogramar lo COPIA verbatim; el repo solo actualiza `estado`/`enlaceOperadorId`; ninguna ruta admin/operador lo edita | **→ SPEC-780 (CEO):** se construye el camino sancionado; 772 acepta el motivo de petición y puede cumplirse (2º hallazgo: reprogramar multiplica el dato) |
 | **Reporte (`ContenidoReporte`)** | **NO** — inmutable por constitución (evidencia) | — | **3ª TENSIÓN LEGAL** (ver [ABOGADO]) |
 
+> **Falso amigo (barrido):** existe `CorreccionAdmin` pero **NO es ruta de rectificación del titular** — es el admin corrigiendo la **clasificación de la IA**, no el titular corrigiendo **su propio texto**. Sujeto y objeto distintos; no se cuenta como ruta.
+
 ### «Suprimir» — por qué NO puede ser por fila ni por tipo (matriz + schema)
 - `ContenidoReporte` guarda en la **misma fila** `textoCifrado` (relato, purgable) **y** `textoOriginalCifrado` (**NOT NULL**, evidencia legal), y **una sola `LlaveReporte` (DEK) 1:1** cifra **ambos**. **Hallazgo (verificado en schema):** el cripto-shred (quemar la DEK) es **all-or-nothing de la fila** — NO puede purgar el relato conservando la evidencia con una DEK compartida. Y el original **contiene** el relato: purgar uno dejando el otro no reduce la exposición. → la supresión de contenido de reporte es **[ABOGADO]**, no la resuelve 772.
 - El mecanismo de purga EXISTE (`purgadoEn`, cripto-shred vía `LlaveReporte onDelete:Cascade`, política D4) pero es **por política/pedido, no por edad**, y **row-level**.
@@ -34,7 +36,11 @@
 
 ## El arreglo
 
-1. **Modelo REGISTRADO y VENCEABLE** (`SolicitudHabeasData`, espejo de `ApelacionIdentificador`): `usuarioId` (titular, FK), `tipo` (`CONSULTA` | `RECTIFICACION` | `SUPRESION`), `estado`, `creadoEn`, **`venceEn` NOT NULL**, `resueltaEn?`, `resultado?`. Cuelga del titular → **es PII** (seguir FKs, no llamarla «sin PII»).
+1. **Modelo REGISTRADO y VENCEABLE** (`SolicitudHabeasData`, espejo de `ApelacionIdentificador`) **con EJE DE SUJETO** (crítico — si entra después es cambio de esquema): `tipo` (`CONSULTA` | `RECTIFICACION` | `SUPRESION`), `estado`, `creadoEn`, **`venceEn` NOT NULL**, `resueltaEn?`, `resultado?`, **+ quién pide y en qué calidad**:
+   - `peticionarioUsuarioId` (FK `Usuario`, **NULLABLE** — el caso 3 puede no tener cuenta), `calidad` (`TITULAR_CUENTA` | `REPRESENTANTE_LEGAL` | `TITULAR_MAYORIA_EDAD`).
+   - `sujetoDelDato` — de quién es el dato: **puede NO ser el titular de la cuenta que lo contiene** (un menor es un `Alumno`, no un `Usuario`; un ex-menor mayor de edad puede tener cuenta propia o ninguna). El modelo **admite** `peticionario ≠ dueño de la cuenta del dato`. NO se ata la petición a «el peticionario es el padre de la cuenta».
+   - **Titulares = TRES** (medido por Estrategia): (1) el reportante, (2) el representante legal del menor (Decreto 1377 art. 12), (3) **el menor que llegó a la mayoría de edad** — titular pleno de datos que otro registró sobre él. El **caso 3 va [NEEDS CLARIFICATION]** (identidad/vínculo — ver [ABOGADO]); §4 **no lo construye**, pero el modelo **no lo hace imposible**.
+   - Cuelga del titular/sujeto → **es PII** (seguir FKs, no llamarla «sin PII»).
 2. **Término LEGAL, no nuestro:** `CONSULTA` = **10** días hábiles (art. 14); `RECTIFICACION`/`SUPRESION` = **15** (art. 15, «reclamo»). `venceEn = sumarDiasHabilesColombia(creadoEn, plazo)`. **Nunca a mano.** *(Distinto del término interno de 5 de SPEC-752.)*
 3. **Estado EFECTIVO — fuente única** (`estadoEfectivoSolicitud`, espejo de `estadoEfectivoDeCita`/#718): deriva de (estado + `venceEn` + `resueltaEn`/`now`) → `EN_TERMINO` | `VENCIDA_SIN_RESOLVER` | `RESUELTA_A_TIEMPO` | `RESUELTA_TARDE`. **Resolver después de `venceEn` NO es «resuelta»: es «resuelta tarde»** — y ningún conteo pierde las tardías (son la prueba del incumplimiento). `now` inyectable, falla conservador.
 4. **Los tres derechos, sobre el registro:**
@@ -50,6 +56,7 @@
 - **FR-3 (rectificar):** reusa las rutas existentes (perfil/hijos/identificadores); NO duplica. Los huecos (relato de cita) y los bloqueos (reporte inmutable) quedan marcados, no inventados.
 - **FR-4 (suprimir):** compuerta servidor + identidad verificada; la supresión de contenido de reporte NO se ejecuta acá (bloqueo [ABOGADO]); las copias derivadas y la auditoría de menores quedan cubiertas por barrido/imposibilidad estructural cuando se implemente.
 - **FR-5:** la política de privacidad deja de prometer «escribir al administrador» y describe el mecanismo real (copy de Diseño).
+- **FR-6 (eje de sujeto):** el modelo registra **quién pide** (`peticionarioUsuarioId` nullable) y **en qué calidad** (`calidad`), y **admite** que el peticionario NO sea el titular de la cuenta que contiene el dato. El caso 3 (titular mayor de edad) queda [NEEDS CLARIFICATION] pero el modelo no lo hace imposible.
 
 ## Criterios de éxito (SC)
 
@@ -68,16 +75,18 @@
 - **A-6 (término con TECHO estructural, D-3):** guardar un valor operativo **mayor** al máximo legal (10/15) **no se puede** — imposibilidad estructural, no un `WHERE`/comentario. Control positivo: intentar setear 30 → rechazado; setear 7 (≤ techo) → aceptado.
 - **A-7 (`esIncumplimiento` coherente resumen↔detalle, D-4):** una solicitud vencida-sin-resolver o resuelta-tarde se ve incumplida **igual** en el conteo/resumen y en el detalle — ambos leen `estadoEfectivoSolicitud`. Mutación: si el resumen contara por `estado` crudo y el detalle por el efectivo → divergen → ROJO.
 - **A-8 (negativa por DEBER LEGAL, no por esquema, D-1):** el copy de una supresión denegada de reporte cita el deber de conservación/imprescriptibilidad; **no** menciona cifrado/DEK/esquema. Control positivo: buscar «cifr»/«DEK»/«esquema» en esa cara → no están.
+- **A-9 (eje de sujeto, FR-6):** se puede crear una solicitud cuyo `peticionarioUsuarioId` NO sea el dueño de la cuenta que contiene el dato (peticionario ≠ titular de la cuenta). Control positivo: el modelo/insert acepta esa combinación → el caso 3 no es imposible. Mutación: si el modelo atara la petición al `usuarioId` de la cuenta del dato → esa combinación sería inconstruible → ROJO.
 
 ## Impacto en arquitectura
 
 **Impacto en arquitectura:** agrega una entidad de proceso (`SolicitudHabeasData`) y su servicio, espejo de la Apelación (SPEC-110), con término LEGAL vía SPEC-768 y una fuente única de estado efectivo (espejo de #718) que distingue lo resuelto-tarde. Reusa las rutas de rectificación existentes (perfil/hijos/identificadores). No construye la puerta de entrada (es SPEC-752). No implementa la supresión de contenido de reporte (bloqueo [ABOGADO] por DEK compartida + evidencia + imprescriptibilidad). Corrige la política de privacidad para que no prometa un mecanismo inexistente.
 
-## [ABOGADO] — TRES tensiones, marcadas, no resueltas por código
+## [ABOGADO] — CUATRO puntos, marcados, no resueltos por código
 
 1. **Supresión vs conservación** (imprescriptibilidad de delitos contra menores) — matriz 2.7, paquete v5 del abogado.
 2. **Consentimiento del operador** (ya en el paquete).
 3. **Rectificación vs inmutabilidad del reporte (NUEVA, hallada acá):** la Ley 1581 da derecho de rectificación; la constitución hace el texto del reporte INMUTABLE (evidencia). Un titular que dice «mi reporte tiene un error» no puede corregirlo sin romper la prueba. **HIPÓTESIS del CEO (escrita como hipótesis, NO como diseño):** registrar la corrección como **ADENDA** — el original queda, la corrección se agrega — preserva la evidencia y honra el derecho. **Si eso alcanza legalmente lo decide el abogado, no esta SPEC.** [NEEDS CLARIFICATION]
+4. **El titular que llegó a la mayoría de edad (caso 3, hallado por Estrategia):** un ex-menor es hoy titular pleno de datos que otro registró sobre él cuando era menor, y puede tener cuenta propia o ninguna, sobre un expediente que cuelga de la cuenta de su padre. **Cómo se verifica su identidad y se vincula a esos datos** es [NEEDS CLARIFICATION]. §4 **no lo construye**; el modelo solo **lo admite** (eje de sujeto, FR-6) para que no sea imposible después.
 
 ## Decisiones (veredicto del CEO · 29-09)
 
@@ -87,6 +96,7 @@
   - **Las tres condiciones de SPEC-780** (772 no asume distinto): (1) rectificar deja **RASTRO**, no sobrescribe en silencio (el profesional ya leyó y actuó sobre ese relato); (2) corrige la solicitud **VIVA**, el historial de la cadena de reprogramación es historial y no se reescribe — **y al padre se le dice qué se corrigió y qué NO**; (3) camino **SANCIONADO** (operador/admin), no autoservicio del padre.
 - **D-3 · APROBADA al revés: parametrizable con TECHO, no con piso.** En un plazo legal lo peligroso no es que sea corto — es que sea **largo** (un piso no impide subirlo a 30 y caer en incumplimiento). Entonces: el **máximo legal** (10 consulta / 15 reclamo) es **constante [NORMA]**, no parametrizable; el valor operativo es parametrizable **pero clavado ≤ esa constante** (se puede prometer menos, nunca más); **imposibilidad estructural, no regla** — una configuración inválida (> máximo legal) **no se puede guardar**, no un comentario que diga que no se debe.
 - **D-4 · APROBADA — fuente única `estadoEfectivoSolicitud` con `RESUELTA_TARDE`.** Exigencia añadida: **`esIncumplimiento` es fuente única y el RESUMEN y el DETALLE la leen IGUAL, en el MISMO PR** (un resumen «al día» sobre un detalle «vencido» es el defecto que ya nos pasó — [[ceo-imprecision-del-booleano-explota-en-el-detalle]]).
+- **D-5 · EJE DE SUJETO en el modelo (exigido por el CEO antes de cerrar §4).** Los titulares son TRES; el modelo lleva `peticionarioUsuarioId` (nullable) + `calidad` + `sujetoDelDato`, y **admite** `peticionario ≠ dueño de la cuenta`. El caso 3 (mayoría de edad) queda [NEEDS CLARIFICATION] — §4 no lo construye, pero **si el eje entra después es cambio de esquema**, por eso va ahora. `CorreccionAdmin` NO es ruta de rectificación (falso amigo). SPEC-780 (relato de cita) sigue siendo del CEO.
 
 ## Fuera
 
