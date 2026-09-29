@@ -249,9 +249,13 @@ export async function sembrarColegioE2E(
                     colegioId: colegio.id,
                     nombre: nombreEstudiante,
                     apellidos: "Prueba",
-                    // SPEC-320 (§2.2-bis): documento del alumno obligatorio.
+                    // SPEC-320 (§2.2-bis): documento del alumno obligatorio y ÚNICO por
+                    // (colegioId, documentoTipo, documentoNumero). El número se deriva del `idx`
+                    // del bucle → único por alumno y escala solo a N alumnos; con `E2E-EST-${letra}`
+                    // a secas el 2º chocaba con el 1º y reventaba la tx en BD fresca (bug latente:
+                    // la constraint es de SPEC-320, posterior al sembrador).
                     documentoTipo: "TI",
-                    documentoNumero: `E2E-EST-${letra}`,
+                    documentoNumero: `E2E-EST-${letra}-${idx}`,
                     estado: "activo",
                 },
             });
