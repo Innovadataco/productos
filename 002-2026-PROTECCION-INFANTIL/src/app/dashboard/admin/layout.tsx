@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { NavLateral } from "@/components/modules/nav/NavLateral";
+import { BarraInferior } from "@/components/modules/nav/BarraInferior";
 import { AdminVersionBadge } from "@/components/modules/AdminVersionBadge";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 
@@ -28,7 +29,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         // SPEC-460: el acento del territorio IDC es ámbar-ink (theme-admin).
         <div className="theme-admin flex min-h-screen">
             <NavLateral rol={rol as AdminRol} modulosPermitidos={[...permitidos]} />
-            <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+            <BarraInferior rol={rol as AdminRol} modulosPermitidos={[...permitidos]} />
+            <main className="flex-1 overflow-auto p-4 pb-20 sm:p-6 lg:p-8">
                 {children}
                 <AdminVersionBadge />
             </main>

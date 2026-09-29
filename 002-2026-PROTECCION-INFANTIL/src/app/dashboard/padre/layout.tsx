@@ -3,7 +3,7 @@ import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { NavLateral } from "@/components/modules/nav/NavLateral";
-import { PadreNavMovil } from "@/components/modules/padre/PadreNavMovil";
+import { BarraInferior } from "@/components/modules/nav/BarraInferior";
 import { Alerta } from "@/components/ui/Alerta";
 import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
 
@@ -42,9 +42,9 @@ export default async function PadreLayout({ children }: { children: React.ReactN
     return (
         <div className="theme-padre flex min-h-screen bg-page">
             <NavLateral rol="PARENT" modulosPermitidos={[]} />
-            {/* SPEC-339: en móvil el padre no tenía NINGÚN menú (el lateral es
-                hidden sm:flex). Barra inferior + aire para que no tape contenido. */}
-            <PadreNavMovil />
+            {/* SPEC-744: barra inferior unificada (reemplaza PadreNavMovil); `sm:hidden`.
+                El `pb-16` del main deja aire para que no tape el contenido. */}
+            <BarraInferior rol="PARENT" modulosPermitidos={[]} />
             <main className="min-w-0 flex-1 pb-16 sm:pb-0">
                 {debeMostrarBanner(estadoVigencia) && (
                     <div className="px-4 pt-4 sm:px-6">

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { NavLateral } from "@/components/modules/nav/NavLateral";
+import { BarraInferior } from "@/components/modules/nav/BarraInferior";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 import { WizardProfesionalShell } from "@/components/modules/profesional/WizardProfesionalShell";
@@ -33,7 +34,8 @@ export default async function PerfilProfesionalLayout({ children }: { children: 
     return (
         <div className="flex min-h-screen">
             <NavLateral rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
-            <main className="flex-1 overflow-auto">{children}</main>
+            <BarraInferior rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
+            <main className="flex-1 overflow-auto pb-16 sm:pb-0">{children}</main>
         </div>
     );
 }

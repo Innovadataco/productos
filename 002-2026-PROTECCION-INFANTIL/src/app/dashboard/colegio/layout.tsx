@@ -3,6 +3,7 @@ import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { NavLateral, type RolLateral } from "@/components/modules/nav/NavLateral";
+import { BarraInferior } from "@/components/modules/nav/BarraInferior";
 import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
 import { CentroNotificaciones } from "@/components/modules/colegio/CentroNotificaciones";
 import { Alerta } from "@/components/ui/Alerta";
@@ -46,12 +47,13 @@ export default async function ColegioLayout({ children }: { children: React.Reac
     return (
         <div className="theme-colegio flex min-h-screen bg-page">
             <NavLateral rol={rolEfectivo as RolLateral} modulosPermitidos={[...permitidos]} />
+            <BarraInferior rol={rolEfectivo as RolLateral} modulosPermitidos={[...permitidos]} />
             <BuscadorGlobal />
             <div className="flex min-w-0 flex-1 flex-col">
                 <header className="flex items-center justify-end gap-3 border-b border-tinta/10 px-4 py-3 sm:px-6">
                     <CentroNotificaciones />
                 </header>
-                <main className="min-w-0 flex-1">
+                <main className="min-w-0 flex-1 pb-16 sm:pb-0">
                     {debeMostrarBanner(estadoVigencia) && (
                         <div className="px-4 pt-4 sm:px-6">
                             <Alerta tono="advertencia">
