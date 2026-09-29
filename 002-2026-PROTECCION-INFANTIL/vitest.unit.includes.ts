@@ -87,6 +87,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-466: el piso de tokens:check dejó de serializar merges (guard <= +
     // barrido --tension). Merge real estilo 432 + conducta del guard.
     "scripts/tokens-ratchet-sin-serializar.candado.test.ts",
+    // SPEC-760 (D-121): clasificador del guardián de drift — aísla el drift REAL del punto
+    // ciego de Prisma y es CONSERVADOR (lo desconocido nace rojo). Control positivo plantado. Sin BD.
+    "scripts/verify-schema-drift.candado.test.ts",
     // SPEC-612: guarda de credenciales de la semilla de Calidad — PURA (sin base). El candado de
     // idempotencia (con base) vive en src/lib/seed-cuentas-calidad-siembra.candado.test.ts (integración).
     "scripts/lib/credenciales-e2e-calidad.candado.test.ts",
