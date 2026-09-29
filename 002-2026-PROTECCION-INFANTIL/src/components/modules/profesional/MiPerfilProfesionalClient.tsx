@@ -163,6 +163,12 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
     const [ok, setOk] = useState("");
     const [error, setError] = useState("");
 
+    // SPEC-741: fuente VIGENTE del resumen de encabezados. Arranca del prop del servidor
+    // y se actualiza en CADA guardado exitoso con la ENTIDAD PERSISTIDA que devuelve el PUT
+    // (no con lo enviado: si el servidor normaliza —mínimo/recorte/redondeo—, el resumen
+    // debe reflejar lo GUARDADO, no lo tecleado). Antes el resumen leía el prop inmóvil.
+    const [perfilVigente, setPerfilVigente] = useState(perfil);
+
     // SPEC-741 (Diseño · doc 333da98): cada sección es plegable (disclosure). El estado
     // abierto/plegado vive acá y NO persiste entre visitas (sin memoria: arranca del default
     // en cada montaje). Default: TODAS recogidas. INDEPENDIENTE: abrir una no cierra otra
@@ -177,7 +183,8 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
         });
 
     // SPEC-741 (doc 333da98): resumen del encabezado de cada sección, para verlo sin desplegar.
-    const resumen = resumenSeccionesMiPerfil({ perfil, vista, autorizacion });
+    // Se deriva de `perfilVigente` (se refresca en cada guardado), NO del prop inmóvil.
+    const resumen = resumenSeccionesMiPerfil({ perfil: perfilVigente, vista, autorizacion });
 
     const modalidadTexto = useMemo(
         () =>
@@ -206,11 +213,13 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(cambios),
             });
-            const json = await res.json().catch(() => ({}));
+            const json = (await res.json().catch(() => ({}))) as { perfil?: typeof perfil; error?: { message?: string } };
             if (!res.ok) {
                 setErrorDato(json?.error?.message ?? "No fue posible guardar el cambio.");
                 return;
             }
+            // SPEC-741: el resumen de encabezados refleja la entidad persistida, no solo el input local.
+            if (json.perfil) setPerfilVigente(json.perfil);
             setEditando(null);
             setOkDato("Cambio guardado.");
         } finally {
@@ -265,10 +274,16 @@ export function MiPerfilProfesionalClient({ perfil, catalogos, aviso, vista, aut
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ tarifaConsultaCOP, duracionMinutos }),
             });
-            const json = await res.json().catch(() => ({}));
+            const json = (await res.json().catch(() => ({}))) as { perfil?: typeof perfil; error?: { message?: string } };
             if (!res.ok) {
                 setError(json?.error?.message ?? "No fue posible guardar la tarifa.");
                 return;
+            }
+            // El resumen (y el input) reflejan la ENTIDAD PERSISTIDA que devuelve el servidor.
+            if (json.perfil) {
+                setPerfilVigente(json.perfil);
+                setTarifaConsultaCOP(json.perfil.tarifaConsultaCOP ?? 0);
+                setDuracionMinutos(json.perfil.duracionMinutos || 45);
             }
             setOk("Tarifa guardada.");
         } finally {
