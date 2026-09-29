@@ -281,8 +281,16 @@ export class SolicitudCitaRepository {
         return solapada !== null;
     }
 
-    contarAsignadasAOperador(operadorId: string, estados: EstadoSolicitudCita[]) {
-        return this.db.solicitudCita.count({ where: { enlaceOperadorId: operadorId, estado: { in: estados } } });
+    /**
+     * SPEC-779 · Sesiones VIGENTES del operador: las de `estados` cuya ventana aún NO terminó
+     * (`franja.fin >= desde`). El corte por fecha es la mitad del arreglo: sin él, se contaban
+     * TODAS las CONFIRMADA de siempre y la carga sólo crecía — para la segunda semana ninguna
+     * cupo tenía sentido. Una sesión pasada no ocupa capacidad futura.
+     */
+    contarSesionesVigentesDeOperador(operadorId: string, estados: EstadoSolicitudCita[], desde: Date) {
+        return this.db.solicitudCita.count({
+            where: { enlaceOperadorId: operadorId, estado: { in: estados }, franja: { fin: { gte: desde } } },
+        });
     }
 
     asignarOperador(id: string, operadorId: string) {

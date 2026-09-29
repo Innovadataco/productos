@@ -176,7 +176,7 @@ describe("asignarOperadorAReporte", () => {
         expect(resultado.asignado).toBe(true);
         if (resultado.asignado) {
             expect(resultado.operadorId).toBe(operador.id);
-            expect(resultado.operador.cupoMaximo).toBe(10);
+            expect(resultado.operador.cupo).toBe(10);
         }
     });
 

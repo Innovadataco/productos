@@ -4,12 +4,18 @@ import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import type { Prisma } from "@prisma/client";
 
+/**
+ * Candidato del reparto por carga inversa. Los campos son GENÉRICOS a propósito
+ * (SPEC-779): cada libro —casos o sesiones— los llena con SU dimensión. Antes se
+ * llamaban `cupoMaximo`/`casosAbiertos`; el segundo llamador (citas) los rellenaba con
+ * CITAS y el nombre mentía. `cupo`/`cargaActual` no mienten en ninguna familia.
+ */
 export type OperadorCandidato = {
     id: string;
     email: string;
     nombre: string | null;
-    cupoMaximo: number;
-    casosAbiertos: number;
+    cupo: number;
+    cargaActual: number;
 };
 
 export type ResultadoAsignacion =
@@ -19,19 +25,24 @@ export type ResultadoAsignacion =
 export type EstrategiaAsignacion = "ponderado_carga_inversa" | "aleatorio_puro";
 
 type ConfigAsignacion = {
+    /** Tope de CASOS por operador (default si el perfil no fija uno). */
     cupoDefault: number;
+    /** Tope de SESIONES por operador — libro SEPARADO de los casos (SPEC-779). */
+    cupoSesionesDefault: number;
     estrategia: EstrategiaAsignacion;
 };
 
 export async function obtenerConfigAsignacion(client?: Prisma.TransactionClient): Promise<ConfigAsignacion> {
     const cupoRaw = await getParametroSistemaValor("operadores.cupo_maximo_default", client);
+    const cupoSesionesRaw = await getParametroSistemaValor("operadores.cupo_sesiones_default", client);
     const estrategiaRaw = await getParametroSistemaValor("operadores.estrategia_asignacion", client);
 
     const cupoDefault = cupoRaw ? parseInt(cupoRaw, 10) || 10 : 10;
+    const cupoSesionesDefault = cupoSesionesRaw ? parseInt(cupoSesionesRaw, 10) || 10 : 10;
     const estrategia: EstrategiaAsignacion =
         estrategiaRaw === "aleatorio_puro" ? "aleatorio_puro" : "ponderado_carga_inversa";
 
-    return { cupoDefault, estrategia };
+    return { cupoDefault, cupoSesionesDefault, estrategia };
 }
 
 function weightedRandom(candidatos: Array<{ operador: OperadorCandidato; peso: number }>): OperadorCandidato {
@@ -56,13 +67,12 @@ async function construirCandidatos(
     const candidatos: OperadorCandidato[] = [];
     for (const op of operadores) {
         if (!op.perfilOperador) continue;
-        const casosAbiertos = await contarCasos(op.id);
         candidatos.push({
             id: op.id,
             email: op.email,
             nombre: op.nombre,
-            cupoMaximo: op.perfilOperador.cupoMaximo ?? config.cupoDefault,
-            casosAbiertos,
+            cupo: op.perfilOperador.cupoMaximo ?? config.cupoDefault,
+            cargaActual: await contarCasos(op.id),
         });
     }
     return candidatos;
@@ -71,15 +81,24 @@ async function construirCandidatos(
 export function seleccionarOperador(
     disponibles: OperadorCandidato[],
     estrategia: EstrategiaAsignacion
-): OperadorCandidato {
+): OperadorCandidato | null {
+    // Invariante ESTRUCTURAL (SPEC-779): un candidato EN o POR ENCIMA de su cupo no alcanza
+    // la ponderación — se excluye ACÁ, no en la disciplina de cada llamador (el segundo la
+    // olvidó). Con esto el peso negativo es IMPOSIBLE (weightedRandom nunca ve pesos ≤ 0), no
+    // solo «prohibido». Y el intento no pasa en silencio: sin elegibles → null, y el llamador
+    // lo sube como capacidad al admin.
+    const elegibles = disponibles.filter((op) => op.cargaActual < op.cupo);
+    if (elegibles.length === 0) return null;
+
     if (estrategia === "aleatorio_puro") {
-        return randomChoice(disponibles);
+        return randomChoice(elegibles);
     }
 
-    // Ponderación inversa por carga: más cupo libre = más probabilidad.
-    const ponderados = disponibles.map((op) => ({
+    // Ponderación inversa por carga: más cupo libre = más probabilidad. `cargaActual < cupo`
+    // en TODO elegible ⇒ el peso es SIEMPRE > 0.
+    const ponderados = elegibles.map((op) => ({
         operador: op,
-        peso: (op.cupoMaximo - op.casosAbiertos) / op.cupoMaximo,
+        peso: (op.cupo - op.cargaActual) / op.cupo,
     }));
 
     return weightedRandom(ponderados);
@@ -122,13 +141,13 @@ export async function asignarOperadorAReporte(
         config
     );
 
-    const disponibles = candidatos.filter((c) => c.casosAbiertos < c.cupoMaximo);
+    // El filtro por cupo vive AHORA dentro de seleccionarOperador (invariante estructural,
+    // SPEC-779): null = ningún candidato bajo su cupo.
+    const elegido = seleccionarOperador(candidatos, config.estrategia);
 
-    if (disponibles.length === 0) {
+    if (!elegido) {
         return { asignado: false, razon: "Todos los operadores activos están al cupo máximo" };
     }
-
-    const elegido = seleccionarOperador(disponibles, config.estrategia);
 
     await reportes.actualizarEstado(reporteId, { operadorId: elegido.id });
 

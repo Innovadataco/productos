@@ -315,6 +315,7 @@ export async function crearParametrosReportes() {
         { clave: "scoring.source_weight.discarded_factor", valor: "0.3", tipo: "FLOAT" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "anti_abuso.retencion_fuente_dias", valor: "90", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "operadores.cupo_maximo_default", valor: "10", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
+        { clave: "operadores.cupo_sesiones_default", valor: "10", tipo: "INTEGER" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "operadores.estrategia_asignacion", valor: "ponderado_carga_inversa", tipo: "STRING" as const, categoria: "SECURITY" as const, esPublico: false },
         { clave: "operadores.reconciliacion_intervalo_min", valor: "15", tipo: "INTEGER" as const, categoria: "SYSTEM" as const, esPublico: false },
         { clave: "operadores.reconciliacion_enabled", valor: "true", tipo: "BOOLEAN" as const, categoria: "SYSTEM" as const, esPublico: false },
