@@ -758,6 +758,7 @@ model Usuario {
   apelacionesAsignadas             Apelacion[]                     @relation("ApelacionesAsignadasComite")
   apelacionesResueltas             Apelacion[]                     @relation("ApelacionesResueltas")
   accesosDocumentoApelacion        AccesoDocumentoApelacion[]
+  peticionesServicio               PeticionServicio[]
   alertasAsignadas                 AlertaColegio[]
   notificacionesInApp              NotificacionInApp[]
   // SPEC-184 (002-PI-079): blocklist y simulador de abusos.
@@ -2653,6 +2654,50 @@ model SolicitudHabeasData {
 
   @@index([estado, venceEn]) // el worker que vence/recoge por plazo
   @@index([peticionarioUsuarioId])
+// ─────────────────────────────────────────────────────────────────────────────
+// SPEC-752 · Puerta de PQR / petición-queja del SERVICIO. ARTEFACTO para D-121 de
+// Datos (Datos implementa migración; Dev construye el service). NO es habeas data
+// (eso es SPEC-772). Es una ACCIÓN REGISTRADA (no un mailto): quién/cuándo/motivo
+// CERRADO/venceEn, para poder CONTAR y VENCER.
+//  - HECHO-only: CERO texto libre / CERO contenido (candado planta texto sensible
+//    y afirma ausencia). Si la persona necesita decir más, la pantalla la manda al
+//    correo oficial (fuera del modelo de datos) diciendo qué pasa después.
+//  - NO es anónima: cuelga del Usuario (y por él del titular/menor). No se afirma
+//    «sin PII» — la fila identifica al usuario; lo que NO tiene es contenido libre.
+//    Retención atada al usuario (Cascade), como la cadena de la cita.
+//  - Término INTERNO de 5 días hábiles (SPEC-768), NO visible al padre en v1:
+//    venceEn existe para que veamos qué se está venciendo, no como promesa.
+//  - El estado (ABIERTA/RESUELTA/RESUELTA_TARDE/VENCIDA_SIN_RESOLVER) se DERIVA de
+//    (resueltoEn, venceEn, now) con estadoEfectivoPeticion — NO se persiste. Una
+//    resolución posterior a venceEn NO es «resuelta» (misma lección que el
+//    incidente); por eso el esquema guarda AMBAS fechas, para no poder mentir.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum MotivoPeticionServicio {
+  // [NEEDS Diseño] · los motivos CERRADOS son COPY (autoridad de Diseño, como la
+  // 141). Placeholder para que el esquema compile; Diseño entrega la lista y se
+  // reemplaza en el MISMO PR que la traiga. NO son definitivos.
+  PENDIENTE_DISENO
+}
+
+model PeticionServicio {
+  id          String                 @id @default(cuid())
+  usuarioId   String // quién (no anónima: cuelga del usuario → titular/menor)
+  motivo      MotivoPeticionServicio // cerrado; sin texto libre
+  creadoEn    DateTime               @default(now()) @db.Timestamptz(6) // cuándo (ancla del término)
+  // Término interno = sumarDiasHabilesColombia(creadoEn, 5) (SPEC-768). NOT NULL:
+  // una fila sin vencimiento es una fila que nadie mira. Migración de Datos: CHECK
+  // VALIDADO `venceEn > creadoEn`.
+  venceEn     DateTime               @db.Timestamptz(6)
+  resueltoEn  DateTime?              @db.Timestamptz(6)
+  // usuarioId snapshot de quien resolvió (operador/admin), NO FK (lección #727):
+  // el rastro sobrevive a la baja de la cuenta.
+  resueltoPor String?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([resueltoEn, venceEn]) // «por vencer / vencidas sin resolver» rangea sobre el plazo
+  @@index([usuarioId, creadoEn(sort: Desc)])
 }
 
 model ContactoConfianza {
