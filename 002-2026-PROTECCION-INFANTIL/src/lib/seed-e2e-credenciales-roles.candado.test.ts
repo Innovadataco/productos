@@ -7,14 +7,21 @@
  * entorno (falta variable / cuenta intocable) que abortan sin escribir.
  */
 import { describe, it, expect, beforeEach } from "vitest";
+import { DuracionPlan, TipoTitular } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { verifyPassword } from "@/lib/auth";
+import { crearUsuario } from "@/lib/reporte-test-utils";
 import { ConsentimientoService } from "@/lib/dal/services/consentimiento";
 import { crearParametrosConsentimiento } from "@/lib/consentimiento-test-utils";
+import { anioBogota } from "@/lib/pagos/renovacion-calculos";
+import { derivarPasoPendienteColegio } from "@/lib/dal/services/camino/estado-colegio";
+import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
+import { leerSesionEstado } from "@/lib/routing/vigencia-cookie";
 import { EMAIL_INTOCABLE } from "../../scripts/lib/credenciales-e2e-calidad";
 import {
     sembrarCredencialesRoles,
+    completarSuscripcionColegio,
     leerCredencialesRoles,
     CORRIDA_CUENTAS_CALIDAD,
     type CredencialRol,
@@ -33,8 +40,34 @@ async function sembrarBase(): Promise<{ paisId: string; ciudadId: string }> {
     return { paisId: pais.id, ciudadId: bogota.id };
 }
 
-function correr(base: { paisId: string; ciudadId: string }) {
-    return prisma.$transaction((tx) => sembrarCredencialesRoles(tx, CREDS, base));
+/** Plan básico MES_1 del colegio: crearSuscripcionCliente lo exige (planActualId). */
+async function crearPlanBasicoColegio(): Promise<void> {
+    const admin = await crearUsuario("ADMIN", `admin-plan-${Date.now()}@test.local`);
+    await prisma.plan.upsert({
+        where: { tipoTitular_duracion_anio: { tipoTitular: TipoTitular.COLEGIO, duracion: DuracionPlan.MES_1, anio: anioBogota() } },
+        update: { activo: true },
+        create: {
+            nombre: `Plan Colegio E2E ${Date.now()}`,
+            tipoTitular: TipoTitular.COLEGIO,
+            duracion: DuracionPlan.MES_1,
+            anio: anioBogota(),
+            precioBaseUSD: 10,
+            precio: 0,
+            activo: true,
+            creadoPorAdminId: admin.id,
+        },
+    });
+}
+
+/**
+ * Corre el sembrado COMPLETO como en producción: la tx (login + consentimiento +
+ * campos del rector + entidades del camino 3/4/5) y DESPUÉS la suscripción (paso 2,
+ * fuera de la tx porque el servicio no es tx-aware).
+ */
+async function correr(base: { paisId: string; ciudadId: string }) {
+    const r = await prisma.$transaction((tx) => sembrarCredencialesRoles(tx, CREDS, base));
+    for (const x of r.resultados) if (x.colegioId) await completarSuscripcionColegio(x.colegioId);
+    return r;
 }
 
 describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 401", () => {
@@ -45,6 +78,9 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
         // SPEC-757: la siembra ahora asienta el consentimiento del titular, que lee
         // versión + ruta del documento de ParametroSistema (existen en prod).
         await crearParametrosConsentimiento();
+        // SPEC-761: el paso 2 (suscripción) usa crearSuscripcionCliente, que exige
+        // el plan básico MES_1 del colegio (existe en prod).
+        await crearPlanBasicoColegio();
     });
 
     it("las 3 cuentas quedan con LOGIN POSIBLE (rol + activo + clave del entorno verifica)", async () => {
@@ -146,5 +182,88 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
         expect(consentimientosSembrados).toEqual(["SCHOOL_ADMIN"]);
         expect(notifDespues, "sembrar el consentimiento NO encola avisos").toBe(notifAntes);
         expect(await prisma.notificacion.count()).toBe(0);
+    });
+
+    // SPEC-761 · el fixture completa el CAMINO del colegio para que el SCHOOL_ADMIN
+    // ALCANCE /dashboard/colegio (no solo "tenga los campos"). Control positivo en
+    // dos capas: el hecho (derivarPasoPendienteColegio) y el valor que consume el
+    // guardián (la cookie que emite buildSesionEstadoValue).
+    it("SPEC-761: tras sembrar, el camino del colegio está COMPLETO (los 5 pasos)", async () => {
+        await correr(base);
+        const sa = await prisma.usuario.findUniqueOrThrow({
+            where: { email: COLEGIO },
+            select: { id: true, colegioId: true, nombre: true, apellidos: true, documentoTipo: true, documentoNumero: true, telefono: true },
+        });
+        const colegioId = sa.colegioId!;
+        // Paso 1 · campos del rector EN Usuario (no en Colegio.representanteLegal*).
+        for (const campo of ["nombre", "apellidos", "documentoTipo", "documentoNumero", "telefono"] as const) {
+            expect(sa[campo], `rector.${campo} vacío`).toBeTruthy();
+        }
+        // Pasos 2..5 · filas requeridas.
+        expect(await prisma.suscripcion.count({ where: { colegioId } }), "paso 2 · suscripción").toBeGreaterThan(0);
+        expect(await prisma.profesor.count({ where: { colegioId, estado: "activo" } }), "paso 3 · profesor activo").toBeGreaterThan(0);
+        expect(await prisma.curso.count({ where: { colegioId, estado: "activo" } }), "paso 4 · curso activo").toBeGreaterThan(0);
+        expect(await prisma.estudiante.count({ where: { colegioId, estado: "activo" } }), "paso 5 · estudiante activo").toBeGreaterThan(0);
+    });
+
+    it("SPEC-761: el estudiante sembrado tiene acudiente (alta con acudiente)", async () => {
+        await correr(base);
+        const est = await prisma.estudiante.findFirstOrThrow({ where: { documentoNumero: "E2E-EST-000" }, select: { id: true } });
+        expect(await prisma.acudienteEstudiante.count({ where: { estudianteId: est.id } })).toBeGreaterThan(0);
+    });
+
+    it("SPEC-761: la cuenta ALCANZA /dashboard/colegio — derivarPaso null Y el guardián deja pasar (cookie)", async () => {
+        await correr(base);
+        const sa = await prisma.usuario.findUniqueOrThrow({ where: { email: COLEGIO }, select: { id: true } });
+        // Capa 1 · el hecho que deriva el estado.
+        expect(await derivarPasoPendienteColegio(sa.id), "camino completo").toBeNull();
+        // Capa 2 · el valor que el guardián LEE en la cookie de estado.
+        const payload = await leerSesionEstado(await buildSesionEstadoValue(sa.id), process.env.JWT_SECRET!);
+        expect(payload, "cookie válida").not.toBeNull();
+        expect(payload!.pasoCamino, "sin paso pendiente del camino").toBeNull();
+        expect(payload!.requiereConsentimiento, "consentimiento vigente").toBe(false);
+        // La vigencia también deja pasar (no hay 4ª puerta): colegio activo, sin finServicio vencido.
+        expect(payload!.vigencia, "vigencia activa").toBe("ACTIVA");
+    });
+
+    it("SPEC-761: IDEMPOTENTE — la 2ª corrida no duplica profesor/estudiante/suscripción/cursos", async () => {
+        await correr(base);
+        await correr(base);
+        const sa = await prisma.usuario.findUniqueOrThrow({ where: { email: COLEGIO }, select: { colegioId: true } });
+        const colegioId = sa.colegioId!;
+        expect(await prisma.profesor.count({ where: { colegioId } }), "profesor no se duplica").toBe(1);
+        expect(await prisma.estudiante.count({ where: { colegioId } }), "estudiante no se duplica").toBe(1);
+        expect(await prisma.suscripcion.count({ where: { colegioId } }), "suscripción no se duplica").toBe(1);
+        expect(await prisma.curso.count({ where: { colegioId } }), "cursos no se duplican (11 grados)").toBe(11);
+    });
+
+    it("SPEC-761: OPERADOR y COMITE (sin colegio) no reciben nada del camino", async () => {
+        await correr(base);
+        for (const email of [OPERADOR, COMITE]) {
+            const u = await prisma.usuario.findUniqueOrThrow({ where: { email }, select: { colegioId: true } });
+            expect(u.colegioId, `${email} no tiene colegio`).toBeNull();
+        }
+        // ningún estudiante/profesor fuera del colegio de login.
+        const sa = await prisma.usuario.findUniqueOrThrow({ where: { email: COLEGIO }, select: { colegioId: true } });
+        expect(await prisma.estudiante.count({ where: { colegioId: { not: sa.colegioId! } } })).toBe(0);
+    });
+
+    // SPEC-761 · el caso que hace SEGURO el límite de las dos transacciones: la tx
+    // (login+consent+rector+entidades) COMMITEÓ pero la suscripción (paso 2, fuera de
+    // la tx) NO se creó — fallo ENTRE las dos. Un re-run debe COMPLETAR sin duplicar.
+    it("SPEC-761: recuperación tras fallo entre las dos transacciones (tx ok, suscripción no) → el re-run completa sin duplicar", async () => {
+        // Solo la tx, SIN completarSuscripcionColegio: estado parcial deliberado.
+        const r = await prisma.$transaction((tx) => sembrarCredencialesRoles(tx, CREDS, base));
+        const sa = r.resultados.find((x) => x.rol === "SCHOOL_ADMIN")!;
+        const colegioId = sa.colegioId!;
+        expect(await prisma.suscripcion.count({ where: { colegioId } }), "estado parcial: sin suscripción").toBe(0);
+        // el hueco es EXACTAMENTE el paso 2 (los otros 4 ya están):
+        expect(await derivarPasoPendienteColegio(sa.usuarioId), "solo falta el plan").toBe("plan");
+
+        // re-run del paso que faltaba: crea la que faltaba y NO duplica.
+        expect(await completarSuscripcionColegio(colegioId), "crea la suscripción faltante").toBe(true);
+        expect(await completarSuscripcionColegio(colegioId), "segundo intento no duplica").toBe(false);
+        expect(await prisma.suscripcion.count({ where: { colegioId } })).toBe(1);
+        expect(await derivarPasoPendienteColegio(sa.usuarioId), "camino completo tras sanar el paso 2").toBeNull();
     });
 });
