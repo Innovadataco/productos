@@ -131,7 +131,20 @@ export const GUARDIAS_ACCESO = {
      */
     consentimiento: {
         destino: "/consentimiento",
-        exentas: ["/consentimiento", "/api/consentimiento"],
+        // INVARIANTE DE PRODUCTO (veredicto CEO 29-09-2026): el camino de REPORTE nunca se
+        // gatea — «ni por consentimiento pendiente». Antes este guardián (que corre PRIMERO,
+        // antes del camino y de vigencia) solo eximía `/consentimiento`, así que un padre con
+        // consentimiento pendiente rebotaba a la pantalla de firma al intentar reportar desde
+        // su cuenta. Se agregan las SUPERFICIES_PROTECCION: proteger a un menor está por encima
+        // de cualquier formalidad. El candado `proteccion-siempre-abierta` lo vigila.
+        exentas: [
+            "/consentimiento",
+            "/api/consentimiento",
+            "/reportar",
+            "/dashboard/padre/reportar",
+            "/mis-reportes",
+            "/api/reportes",
+        ],
     } as const,
 
     /**
@@ -506,6 +519,30 @@ export function esRutaPublica(pathname: string): boolean {
 
 export function esRutaSesion(pathname: string): boolean {
     return GUARDIAS_ACCESO.sesion.some((r) => matcheaRuta(pathname, r));
+}
+
+/**
+ * INVARIANTE DE PRODUCTO (veredicto CEO 29-09-2026) · FUENTE ÚNICA de las superficies que
+ * NINGUNA compuerta puede cerrar. Esto es protección infantil: una compuerta que impida a un
+ * padre DENUNCIAR porque no completó un trámite (consentimiento, audiencia del menor —SPEC-751—,
+ * vigencia, perfil, pago) es el producto trabajando CONTRA su propósito. No hay formalidad —ni
+ * legal— que lo justifique.
+ *
+ * El camino de REPORTE y los canales oficiales de emergencia (141 / CAI / Te Protejo, que se
+ * pintan en estas superficies vía `CanalesOficiales`) quedan SIEMPRE alcanzables. Toda compuerta
+ * —presente o FUTURA— debe eximirlas; el candado `proteccion-siempre-abierta.candado.test.ts`
+ * cae si alguna las tapa.
+ */
+export const SUPERFICIES_PROTECCION = [
+    "/reportar", // reporte ANÓNIMO (público, sin cuenta)
+    "/dashboard/padre/reportar", // reporte del padre autenticado
+    "/mis-reportes", // seguimiento de sus reportes
+    "/api/reportes", // el POST que CREA el reporte
+] as const;
+
+/** ¿`pathname` es una superficie de protección que ninguna compuerta puede cerrar? */
+export function esSuperficieDeProteccion(pathname: string): boolean {
+    return SUPERFICIES_PROTECCION.some((r) => matcheaRuta(pathname, r));
 }
 
 /**
