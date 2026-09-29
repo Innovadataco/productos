@@ -168,7 +168,7 @@ describe("AdminNav (filtrada por módulo, spec 086)", () => {
         expect(screen.getByText("Bandeja de reportes")).toBeTruthy();
         expect(screen.getByText("Revisión de spam")).toBeTruthy();
         expect(screen.queryByText("Comité")).toBeNull();
-        expect(screen.queryByText("Dashboard")).toBeNull();
+        expect(screen.queryByText("Estadísticas")).toBeNull(); // SPEC-744: era «Dashboard»
         expect(screen.queryByText("Centro de Control IA")).toBeNull();
         expect(screen.queryByText("Operadores")).toBeNull();
         expect(screen.queryByText("Anti-abuso")).toBeNull();
