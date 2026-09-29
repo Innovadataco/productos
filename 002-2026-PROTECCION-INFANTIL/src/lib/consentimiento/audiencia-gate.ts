@@ -16,6 +16,8 @@
  *  · `false` → basta haber sido oído UNA vez (cualquier versión).
  */
 
+import { esSuperficieDeProteccion } from "@/lib/routing/guardias";
+
 /** ¿Este menor fue oído lo suficiente? `versionesAudiencia` = versiones de sus filas de audiencia. */
 export function menorEstaAlDia(
     versionesAudiencia: readonly string[],
@@ -59,4 +61,18 @@ export function titularAlDia(
 ): boolean {
     if (!consentimientoCuentaVigente) return false;
     return menoresPendientesDeAudiencia(menoresActivos, versionActual, reoirEnCambioDeVersion).length === 0;
+}
+
+/**
+ * ENFORCEMENT a nivel de RUTA de la compuerta de audiencia: ¿debe DETENER esta navegación?
+ *
+ * INVARIANTE DE PRODUCTO (CEO): NUNCA sobre una superficie de protección (reporte / canal de
+ * emergencia), pase lo que pase con `titularAlDia`. Es imposibilidad estructural, no una rama
+ * olvidable: el gate cortocircuita en la protección ANTES de mirar el estado del titular. El
+ * redirect real (a la declaración de audiencia) lo cablea el guard cuando exista la tabla
+ * (SPEC-765); esta función es su REGLA, y el candado `proteccion-siempre-abierta` la vigila.
+ */
+export function audienciaGateDetiene(pathname: string, titularEstaAlDia: boolean): boolean {
+    if (esSuperficieDeProteccion(pathname)) return false;
+    return !titularEstaAlDia;
 }

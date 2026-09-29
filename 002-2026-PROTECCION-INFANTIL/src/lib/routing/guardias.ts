@@ -531,7 +531,7 @@ export function esRutaSesion(pathname: string): boolean {
  * El camino de REPORTE y los canales oficiales de emergencia (141 / CAI / Te Protejo, que se
  * pintan en estas superficies vía `CanalesOficiales`) quedan SIEMPRE alcanzables. Toda compuerta
  * —presente o FUTURA— debe eximirlas; el candado `proteccion-siempre-abierta.candado.test.ts`
- * cae si alguna las tapa.
+ * cae si alguna las tapa. La compuerta de audiencia lo hace vía `audienciaGateDetiene` (SPEC-751).
  */
 export const SUPERFICIES_PROTECCION = [
     "/reportar", // reporte ANÓNIMO (público, sin cuenta)
