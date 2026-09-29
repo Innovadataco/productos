@@ -476,7 +476,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // para no volver a pedirla en cada ingreso.
     "src/components/modules/padre/profesionales/PresentacionUrgenciaForm.test.tsx",
     // SPEC-440 P3 (Jelkin 04-09): /mis-reportes trae el mismo shell del área
-    // del padre (PadreSideNav + PadreNavMovil).
+    // del padre (NavLateral + BarraInferior).
     "src/app/mis-reportes/layout.candado.test.ts",
     // SPEC-370 (I-264/I-265): nombre y bloque "Dónde" en el detalle del círculo.
     "src/components/modules/padre/circulo/DetallePersona.test.tsx",
@@ -600,10 +600,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/ui/modal-firma.candado.test.ts",
     "src/lib/rediseno/admin-sin-rojo-crudo.candado.test.ts",
     "src/lib/rediseno/emergencia-rubi.candado.test.ts",
-    // SPEC-478 (fallo Diseño): el subtítulo del nav de colegio en text-muted por AA (fuente, sin BD).
     // SPEC-477 (Diseño): los canales oficiales en neutro uniforme, sin color por canal (fuente, sin BD).
     "src/lib/rediseno/canales-oficiales-neutro.candado.test.ts",
-    // SPEC-479 (fallo Diseño): PadreSideNav en cielo, 0 sky, activo cielo / inactivo neutro (fuente, sin BD).
     // SPEC-481 (bug prod): profesional sin PerfilProfesional → redirect a completar, no 500 (mockea auth/service/redirect, sin BD).
     "src/app/dashboard/profesional/profesional-sin-perfil.candado.test.tsx",
     // SPEC-482 (Lote-2): el territorio colegio sin color crudo — emerald/slate/gray/amber → tokens (excl. pdf-informe-mensual).

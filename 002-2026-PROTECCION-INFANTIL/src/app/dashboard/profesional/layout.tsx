@@ -8,7 +8,7 @@ import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
  * SPEC-437 (A-75) · el área de trabajo del profesional, con barra lateral.
  *
  * Jelkin, textual: *«debe aparecer sus módulos, debemos utilizar la misma
- * lógica de operador»*. Por eso reusa `AdminNav` y `modulosPermitidosParaRol`
+ * lógica de operador»*. Por eso reusa `NavLateral` y `modulosPermitidosParaRol`
  * — mismo componente, mismo filtrado por módulo — y no un menú paralelo.
  *
  * Layout de UI pura, como el del admin (SPEC-287): **no ejecuta `redirect`**.
