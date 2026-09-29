@@ -12,11 +12,12 @@
  * El padre no publica ni edita franjas: solo lectura + entrada. Voz «tú». El estado
  * de una cita es PROCESO, nunca criticidad: cielo/ámbar/pino/tinta, CERO rubí (D-120).
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { EstadoSolicitudCita } from "@prisma/client";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
-import { badgeDeCita } from "@/lib/padre/citas-listado";
+import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
+import { estadoEfectivoDeCita } from "@/lib/profesional/cita/estado-efectivo";
 import { estiloBloque, fmt, posicionBogota } from "@/components/modules/calendario/fechas";
 import { RejillaCalendario, type BloquePosicionado } from "@/components/modules/calendario/Rejilla";
 import { NavCalendario } from "@/components/modules/calendario/NavCalendario";
@@ -29,7 +30,9 @@ interface BloqueCita extends BloquePosicionado {
 
 // El estado de la cita es PROCESO (mismos colores que el badge del listado):
 // cielo=confirmada, ámbar=esperando, pino=realizada, tinta=final neutro. NUNCA rubí.
-function claseBloque(estado: EstadoSolicitudCita): string {
+function claseBloque(estado: EstadoSolicitudCita, pasada: boolean): string {
+    // SPEC-749 FR-2: CONFIRMADA con la hora ya pasada NO va en cielo (cita viva) → neutro tinta.
+    if (pasada) return "border-tinta/20 bg-tinta/5 text-muted";
     switch (estado) {
         case "CONFIRMADA":
             return "border-cielo/55 bg-cielo/15 text-cielo-700";
@@ -46,7 +49,9 @@ function claseBloque(estado: EstadoSolicitudCita): string {
 // SPEC-730 (Diseño · FORMA-SPEC730-MIS-CITAS-BLOQUE-ESTADO): señal de estado NO-color
 // (WCAG 1.4.1 · daltonismo). Cada estado tiene una FORMA propia; con el ícono, recortar
 // la etiqueta de texto deja de perder información.
-function iconoEstado(estado: EstadoSolicitudCita): string {
+function iconoEstado(estado: EstadoSolicitudCita, pasada: boolean): string {
+    // SPEC-749 FR-2: CONFIRMADA pasada NO es «✓ Confirmada» viva ni «✓✓ Realizada» → «–» neutro.
+    if (pasada) return "–";
     switch (estado) {
         case "CONFIRMADA":
             return "✓";
@@ -62,6 +67,13 @@ function iconoEstado(estado: EstadoSolicitudCita): string {
 
 export function RejillaMisCitas({ citas }: { citas: CitaParaPadreDto[] }) {
     const hoy = diaBogota();
+    // SPEC-749 FR-2: `now` inyectado (reloj del cliente, tick 60 s) para que una cita
+    // cruce a «Ya pasó» en vivo. Fuera del render (regla de pureza de React).
+    const [ahoraMs, setAhoraMs] = useState<number>(() => Date.now());
+    useEffect(() => {
+        const t = setInterval(() => setAhoraMs(Date.now()), 60_000);
+        return () => clearInterval(t);
+    }, []);
 
     const bloquesPorDia = useMemo(() => {
         const m = new Map<string, BloqueCita[]>();
@@ -112,7 +124,12 @@ export function RejillaMisCitas({ citas }: { citas: CitaParaPadreDto[] }) {
                 onDiaHeaderClick={(d) => { nav.setVista("dia"); nav.setAncla(d); }}
                 renderBloque={(b) => {
                     const { top, height } = estiloBloque(b.minInicio, b.minFin);
-                    const badge = badgeDeCita(b.cita.estado);
+                    // SPEC-749 FR-2: la lista deriva la verdad temporal igual que el detalle
+                    // (resumen y detalle no se contradicen). `now` = reloj de render.
+                    const pasada =
+                        b.cita.estado === "CONFIRMADA" &&
+                        estadoEfectivoDeCita("CONFIRMADA", b.cita.franja.inicio, b.cita.franja.fin, ahoraMs) === "PASADA";
+                    const badge = badgeDeCitaEfectivo(b.cita.estado, b.cita.franja.inicio, b.cita.franja.fin, ahoraMs);
                     return (
                         <Link
                             key={b.id}
@@ -120,12 +137,12 @@ export function RejillaMisCitas({ citas }: { citas: CitaParaPadreDto[] }) {
                             aria-label={`${b.cita.profesional.nombreVisible} · ${badge.label} · ${fmt(b.minInicio)}`}
                             // SPEC-730 (Diseño): alto MÍNIMO 28px para que la línea 1 (ícono + nombre)
                             // no se recorte aunque la cita sea corta — legibilidad sobre pixel-perfect.
-                            className={`absolute inset-x-1 z-10 flex flex-col overflow-hidden rounded-lg border px-1.5 py-0.5 text-[11px] transition hover:brightness-105 ${claseBloque(b.cita.estado)}`}
+                            className={`absolute inset-x-1 z-10 flex flex-col overflow-hidden rounded-lg border px-1.5 py-0.5 text-[11px] transition hover:brightness-105 ${claseBloque(b.cita.estado, pasada)}`}
                             style={{ top, height, minHeight: 28 }}
                         >
                             {/* Línea 1 — nunca se recorta: ícono de estado (señal no-color) + nombre. */}
                             <div className="flex items-center gap-1 font-medium leading-tight">
-                                <span aria-hidden="true" className="shrink-0 font-mono">{iconoEstado(b.cita.estado)}</span>
+                                <span aria-hidden="true" className="shrink-0 font-mono">{iconoEstado(b.cita.estado, pasada)}</span>
                                 <span className="truncate">{b.cita.profesional.nombreVisible}</span>
                             </div>
                             {/* Línea 2 — puede recortarse: el estado ya lo dicen ícono + color + leyenda. */}
