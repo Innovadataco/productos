@@ -247,17 +247,23 @@ async function sembrarConsentimientoTitular(
  * los CAMPOS del rector (paso 1) los pone `upsertCuentaRol` en el Usuario. El paso 2
  * (suscripción) NO va acá: se crea con el SERVICIO fuera de la tx (ver
  * `completarSuscripcionColegio`). Datos SINTÉTICOS del colegio de PRUEBA (marcadores
- * E2E), idempotente. NO se `marcar`n aparte: cuelgan del Colegio persistente (corrida
- * e2e-calidad-cuentas, que no se purga), igual que la firma de 757 cuelga del Usuario.
+ * E2E), idempotente. SPEC-763: SÍ se `marcar`n, en la corrida PERSISTENTE
+ * `e2e-calidad-cuentas` (la MISMA de Tenant/Colegio) — para que sean IDENTIFICABLES por el
+ * mecanismo estándar (`demo_marcado`): en un producto de protección infantil, un menor
+ * sintético debe poder listarse como dato de prueba por consulta directa, no rastrearse por
+ * marcadores dentro de sus campos ni transitivamente por el Colegio. Corrida PERSISTENTE ⇒ la
+ * purga de ESTADO NO los borra (la cuenta sigue alcanzando /dashboard/colegio). La cobertura
+ * vive en `ENTIDADES_ORDEN_BORRADO` (demo/_marcado), que ya trae estas entidades: la invariante
+ * de PERTENENCIA es del catálogo, no de la corrida.
  */
 async function sembrarEntidadesCaminoColegio(tx: Prisma.TransactionClient, colegioId: string, ahora: Date): Promise<void> {
     // Paso 3 · Profesor activo. Unique (colegioId, tipoDocumento, numeroDocumento).
-    const profExistente = await tx.profesor.findFirst({
-        where: { colegioId, tipoDocumento: "CC", numeroDocumento: "E2E-PROF-000" },
-        select: { id: true },
-    });
-    if (!profExistente) {
-        await tx.profesor.create({
+    const prof =
+        (await tx.profesor.findFirst({
+            where: { colegioId, tipoDocumento: "CC", numeroDocumento: "E2E-PROF-000" },
+            select: { id: true },
+        })) ??
+        (await tx.profesor.create({
             data: {
                 colegioId,
                 nombre: "Profesor",
@@ -270,21 +276,27 @@ async function sembrarEntidadesCaminoColegio(tx: Prisma.TransactionClient, coleg
                 telefono: "3000000001",
                 estado: "activo",
             },
-        });
-    }
+            select: { id: true },
+        }));
+    // SPEC-763: marca en la corrida PERSISTENTE — identificable, no purgado.
+    await marcar(tx, "Profesor", [prof.id], { corrida: CORRIDA_CUENTAS_CALIDAD, script: SCRIPT, notas: "profesor del camino colegio" });
 
     // Paso 4 · Cursos activos: reusa el sembrador de los 11 grados (idempotente).
     await crearCursosPorDefecto(colegioId, String(ahora.getUTCFullYear()), tx);
+    const cursos = await tx.curso.findMany({ where: { colegioId }, select: { id: true } });
+    if (cursos.length > 0) {
+        await marcar(tx, "Curso", cursos.map((c) => c.id), { corrida: CORRIDA_CUENTAS_CALIDAD, script: SCRIPT, notas: "cursos del camino colegio" });
+    }
 
-    // Paso 5 · Estudiante activo + acudiente, en el primer curso activo.
-    const estExistente = await tx.estudiante.findFirst({
+    // Paso 5 · Estudiante activo (menor sintético) + acudiente, en el primer curso activo.
+    let est = await tx.estudiante.findFirst({
         where: { colegioId, documentoNumero: "E2E-EST-000" },
         select: { id: true },
     });
-    if (!estExistente) {
+    if (!est) {
         const curso = await tx.curso.findFirst({ where: { colegioId, estado: "activo" }, select: { id: true } });
         if (curso) {
-            const est = await tx.estudiante.create({
+            est = await tx.estudiante.create({
                 data: {
                     cursoId: curso.id,
                     colegioId,
@@ -299,6 +311,14 @@ async function sembrarEntidadesCaminoColegio(tx: Prisma.TransactionClient, coleg
             await tx.acudienteEstudiante.create({
                 data: { estudianteId: est.id, orden: 1, nombre: "Acudiente Calidad E2E", relacion: "acudiente", estado: "activo" },
             });
+        }
+    }
+    if (est) {
+        // El MENOR sintético: marcado para que «listame todos los menores de prueba» lo alcance.
+        await marcar(tx, "Estudiante", [est.id], { corrida: CORRIDA_CUENTAS_CALIDAD, script: SCRIPT, notas: "estudiante (menor sintético) del camino colegio" });
+        const acudientes = await tx.acudienteEstudiante.findMany({ where: { estudianteId: est.id }, select: { id: true } });
+        if (acudientes.length > 0) {
+            await marcar(tx, "AcudienteEstudiante", acudientes.map((a) => a.id), { corrida: CORRIDA_CUENTAS_CALIDAD, script: SCRIPT, notas: "acudiente del menor del camino colegio" });
         }
     }
 }
