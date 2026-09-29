@@ -16,7 +16,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { EstadoSolicitudCita } from "@prisma/client";
 import { PADRE_NAV_ITEMS } from "@/lib/nav-items";
-import { badgeDeCita } from "@/lib/padre/citas-listado";
+import { badgeDeCita, badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
 
 const SRC = path.resolve(__dirname, "..", ".."); // .../src
 
@@ -57,5 +57,35 @@ describe("SPEC-545 · «Mis citas» en el menú y su pantalla", () => {
         expect(badgeDeCita("PAGADA_PENDIENTE").clases).toContain("ambar");
         expect(badgeDeCita("CUMPLIDA").clases).toContain("pino");
         expect(badgeDeCita("REEMBOLSADA").clases).toContain("tinta");
+    });
+});
+
+describe("SPEC-749 FR-2 · badgeDeCitaEfectivo (la lista deriva la verdad temporal)", () => {
+    const HORA = 60 * 60 * 1000;
+    const INICIO = Date.parse("2026-09-28T14:00:00.000Z");
+    const FIN = INICIO + HORA;
+    const AHORA = Date.parse("2026-09-29T18:00:00.000Z"); // > FIN → franja pasada
+    const FUT_INI = AHORA + 24 * HORA;
+
+    it("CONFIRMADA con franja pasada NO es «Confirmada» cielo → «Ya pasó» tinta neutro", () => {
+        const b = badgeDeCitaEfectivo("CONFIRMADA", INICIO, FIN, AHORA);
+        expect(b.label).toBe("Ya pasó");
+        expect(b.clases).toContain("tinta"); // neutro, NO cielo (el verde miente en la lista)
+        expect(b.clases).not.toContain("cielo");
+    });
+
+    it("control positivo (otra dirección): CONFIRMADA FUTURA sigue «Confirmada» cielo", () => {
+        const b = badgeDeCitaEfectivo("CONFIRMADA", FUT_INI, FUT_INI + HORA, AHORA);
+        expect(b.label).toBe("Confirmada");
+        expect(b.clases).toContain("cielo");
+    });
+
+    it("otros estados delegan en badgeDeCita (su reloj no es la franja)", () => {
+        expect(badgeDeCitaEfectivo("PAGADA_PENDIENTE", INICIO, FIN, AHORA)).toEqual(badgeDeCita("PAGADA_PENDIENTE"));
+        expect(badgeDeCitaEfectivo("CUMPLIDA", INICIO, FIN, AHORA)).toEqual(badgeDeCita("CUMPLIDA"));
+    });
+
+    it("fallo conservador (FR-4): CONFIRMADA con franja basura → «Ya pasó»", () => {
+        expect(badgeDeCitaEfectivo("CONFIRMADA", null, "basura", AHORA).label).toBe("Ya pasó");
     });
 });

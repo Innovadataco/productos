@@ -103,3 +103,40 @@ describe("SPEC-715 §4 · la cita confirmada tiene acciones reales", () => {
         }
     });
 });
+
+describe("SPEC-749 FR-2 · CONFIRMADA con la hora ya pasada dice la verdad (render)", () => {
+    // Franja de AYER (25–26 h atrás): el reloj real del componente la cruza a PASADA.
+    const ayerH = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+    const citaPasada = () => cita({ franja: { inicio: ayerH(26), fin: ayerH(25), modalidad: "VIRTUAL" } });
+
+    it("dice «Esta cita ya pasó» y QUITA la mentira: sin .ics, sin las frases medidas, con salida real", () => {
+        const { container } = render(
+            <EsperaCitaPanel citaInicial={citaPasada()} expedientes={[{ expedienteId: "exp1", etiqueta: "EXP-1 · Ana" }]} />,
+        );
+        expect(screen.getByRole("heading", { name: /Esta cita ya pasó/ })).toBeTruthy();
+        // El .ics NO se ofrece sobre una cita ya pasada (agendaría un evento del pasado).
+        expect(screen.queryByRole("button", { name: /Agregar a mi calendario/ })).toBeNull();
+        // Compartir un caso tampoco (no hay sesión futura).
+        expect(screen.queryByText(/Compartir un caso/)).toBeNull();
+        // DOS salidas reales (no el «Volver» circular como única acción): pedir otra cita +
+        // «Escríbenos» con destino REAL (mailto de soporte), nunca un texto inerte.
+        expect(screen.getByRole("link", { name: /Pedir otra cita/ })).toBeTruthy();
+        const escribenos = screen.getByRole("link", { name: /Escríbenos/ });
+        expect(escribenos.getAttribute("href")).toMatch(/^mailto:.+@.+/);
+        const txt = container.textContent ?? "";
+        // Frases medidas por Calidad que NO deben quedar (verbatim).
+        expect(txt).not.toContain("El día y la hora quedan como acordado abajo");
+        expect(txt).not.toContain("Antes de la cita");
+        // Mundo sin operador: ni promesa de mecanismo ni culpa.
+        const low = txt.toLowerCase();
+        expect(low).not.toContain("aparecerá");
+        expect(low).not.toContain("atrasada");
+        expect(low).not.toContain("operador");
+    });
+
+    it("control positivo (dirección opuesta): una cita FUTURA sigue viva — calendario + «Cita confirmada»", () => {
+        render(<EsperaCitaPanel citaInicial={cita()} expedientes={[]} />);
+        expect(screen.getByRole("button", { name: /Agregar a mi calendario/ })).toBeTruthy();
+        expect(screen.getByRole("heading", { name: /Cita confirmada/ })).toBeTruthy();
+    });
+});
