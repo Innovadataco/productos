@@ -53,22 +53,23 @@ La rama **NO EXISTE** (local ni remoto) — el trigger apunta a un fantasma, por
 - **A-2 (control positivo del defecto original):** el candado, corrido contra el `ci.yml` de HOY (rama fantasma, sin `main`) → rojo. (Nace rojo hasta que FR-1 entre — como todo guardián, se confirma born-red antes de gate.)
 - **A-3 (barrido):** no queda ninguna referencia FUNCIONAL a `feature/001-scaffolding` en `ci.yml` (las 2 líneas). El texto histórico de specs NO se toca.
 
-## Protocolo de `main` rojo (FR-4)
+## Protocolo de `main` rojo (FR-4) — notificación automática, freeze DISCRECIONAL
 
 - **Dueño:** el **CEO** (mergea y despliega, tiene el ci-monitor y SSH). Un `main` rojo es suyo por rol.
-- **Notificación:** el ci-monitor del CEO sobre `main` + el estado del workflow en GitHub. La corrida `push` sobre `main` es la señal; sin ella (el defecto de hoy) no hay a quién avisar.
-- **Acción:** (1) `main` rojo **congela merges** — el estado integrado está roto, mergear encima lo entierra; (2) el CEO identifica el merge culpable (job que falla + últimos merges) y **revierte o radica el fix**; (3) **no se despliega con `main` rojo** ([[ceo-no-desplegar-mientras-jelkin-prueba]] es el vecino: prod refleja `main`). Un guardián que nace rojo NO es este caso: acá `main` verde es el estado normal y el rojo es un evento accionable.
+- **Notificación (automática):** el ci-monitor del CEO sobre `main` + el estado del workflow en GitHub. La corrida `push` sobre `main` es la señal; sin ella (el defecto de hoy) no hay a quién avisar.
+- **Freeze (DISCRECIONAL, no automático · ajuste D-3):** un `main` rojo **NO congela merges por sí solo**. Un rojo por **test frágil** (candado que cae en corrida paralela y pasa en aislamiento — ya medido esta noche) no puede parar a siete sesiones. El protocolo **notifica**; **el CEO decide el freeze por incidente**: si el rojo es real (integración rota) congela y revierte/radica; si es frágil, lo marca y sigue. Automatizar el freeze convertiría cada test frágil en un paro del equipo.
+- **Acción del CEO ante un rojo real:** identifica el merge culpable (job que falla + últimos merges), **revierte o radica el fix**, y **no despliega con `main` rojo** (prod refleja la punta de `main`). Un guardián que nace rojo NO es este caso: acá `main` verde es el estado normal y el rojo es un evento accionable.
 
 ## Impacto en arquitectura
 
 **Impacto en arquitectura:** corrige el disparador de un workflow (dato de configuración, no código de producto ni esquema): el `push` de `ci.yml` deja de apuntar a una rama fantasma y pasa a `main`, de modo que el **resultado integrado** de cada merge se verifica (hoy solo se verifica cada PR contra su base). Suma un candado de CI que lee su propio `ci.yml` para que la lista de ramas no vuelva a pudrirse en silencio. No toca qué jobs corren en un PR, ni el ratchet de #760, ni el CI de otros productos.
 
-## Decisiones para la compuerta §4 (el CEO decide con los números)
+## Decisiones (aprobadas §4 · CEO 29-09)
 
-- **D-1 · Suite completa vs agregador.** Números: **17.5 min wall**, ~**9 corridas/día típico** (pico 38). **Recomendado: suite COMPLETA sobre `main`** — el costo es modesto y un agregador liviano que saltee `test-integration` (el shard de 15 min) **se perdería justo la clase de bug** del radicado (un candado que B viola tras mergear A vive en la lane de integración). Si el pico de 38 preocupa, la palanca es `cancel-in-progress: true` **también para `main`** (verifica solo el último estado en ráfaga; pierde atribución por-merge). ¿Suite completa (recomendado) o agregador?
-- **D-2 · Corregir también `ci.yml:378`** (el paso de duraciones) en el mismo cambio: es la 2ª referencia funcional al fantasma y degrada el sharding. **Recomendado: sí.** ¿Confirmás?
-- **D-3 · Protocolo de `main` rojo** (arriba): dueño = CEO, congela merges, no deploy. ¿Lo aprobás como está o querés otro dueño/acción?
-- **D-4 · Alcance del candado.** ¿La meta-aserción cubre solo `push.branches ⊇ {main}` (FR-3), o también que el paso de duraciones (L378) apunte a `main`? **Recomendado: FR-3 dura; L378 verificada como aserción blanda/segunda** para no acoplar el candado a un nº de línea.
+- **D-1 · APROBADA: suite COMPLETA sobre `main` + `cancel-in-progress` TAMBIÉN para `main`.** Un agregador que saltee `test-integration` perdería justo el bug de integración (la clase que verificar `main` existe para cazar). Y se cancela en ráfaga porque **lo que importa es que el estado que se DESPLIEGA esté verificado, y el deploy siempre es la punta de `main`** — verificar cada intermedio de un pico de 38 merges es gastar sin ganar (nadie despliega un intermedio). *(Este cambio de `concurrency` va con el edit de `ci.yml`, tras el PR de Calidad.)*
+- **D-2 · APROBADA: corregir `ci.yml:378`** (paso de duraciones) → `main`, y **documentarlo como DEFECTO APARTE** (no un detalle del trigger): alguien tiene que poder encontrar *por qué las duraciones estaban congeladas*. Es la misma cadena muerta, dos defectos: el trigger que no dispara y el sharding que se degrada en silencio.
+- **D-3 · APROBADA con ajuste: notificación automática, freeze DISCRECIONAL** (ver Protocolo). Un `main` rojo NO congela merges por sí solo — un test frágil no para a siete sesiones; el CEO decide el freeze por incidente.
+- **D-4 · APROBADA: FR-3 dura** (`push.branches ⊇ {main}`) **+ L378 como aserción segunda**, y **las dos leen el `ci.yml` REAL**, no una constante copiada — el defecto fue exactamente una lista que nadie volvió a leer.
 
 ## Fuera
 
