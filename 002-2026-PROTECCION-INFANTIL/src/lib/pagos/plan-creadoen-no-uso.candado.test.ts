@@ -9,10 +9,20 @@
  * comentario «legacy, no usar», que conserva conducta pero no la impide (lección de esta noche)—:
  * ningún query de Prisma sobre `Plan` puede mencionar `creadoEn` (data/select/where/orderBy).
  *
- * ALCANCE: caza la ESCRITURA (el riesgo real de divergencia) y las referencias de query
- * (select/where/orderBy) sobre Plan. Un acceso por propiedad a un Plan ya cargado
- * (`planVar.creadoEn`) no lo caza el escaneo estático — pero ese es el lado inofensivo (leer
- * creadoEn, idéntica a createdAt, no diverge); el peligroso es escribir, y queda cerrado.
+ * ALCANCE MEDIDO (candado de AUSENCIA: su alcance se DECLARA, no se asume que cubre todo — un
+ * cero sin alcance escrito se lee como si cubriera todo, y así se leyó el barrido de código que
+ * anoche no vio la publicación):
+ *   CUBRE: queries FLUENT de Prisma sobre Plan (`X.plan.<metodo>({...})`) con `creadoEn` LITERAL
+ *     en el bloque del argumento (data/select/where/orderBy). Es el riesgo real de ESCRITURA.
+ *   NO CUBRE (puntos ciegos declarados; medidos HOY = 0, así que el verde es significativo AHORA):
+ *     · SQL crudo `$queryRaw`/`$executeRaw` con la columna a mano — medido: ningún raw toca la
+ *       tabla Plan (0 ocurrencias).
+ *     · Selección dinámica `select: { [clave]: true }` (el nombre no aparece literal) — medido: 0
+ *       en queries de Plan.
+ *     · Spread de un objeto de select/data armado en otro lado (`{ ...campos }`) — medido: 0.
+ *     · Acceso por propiedad a un Plan ya cargado (`planVar.creadoEn`) — el lado inofensivo (leer
+ *       creadoEn, idéntica a createdAt, no diverge); el peligroso es escribir, y queda cerrado.
+ *   Si mañana entra un raw / select dinámico / spread sobre Plan, este candado NO lo ve: ampliarlo.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "fs";
@@ -71,7 +81,7 @@ describe("SPEC-766 · Plan.creadoEn candada contra uso (declarada legacy, idént
 
     // Control positivo: el detector SÍ encuentra un uso plantado (no da vacío por bug del escaneo).
     it("control positivo: detecta un creadoEn plantado en un query de Plan", () => {
-        const texto = `await prisma.plan.update({ where: { id }, data: { creadoEn: new Date() } });`;
+        const texto = "await prisma.plan.update({ where: { id }, data: { creadoEn: new Date() } });";
         const m = RE_PLAN.exec(texto);
         RE_PLAN.lastIndex = 0;
         expect(m, "el regex debe pegar en .plan.update(").not.toBeNull();
