@@ -20,10 +20,10 @@
  * Exit: 0 = el historial construye el esquema · 1 = drift de historial · 2 = infra.
  */
 import { execFileSync } from "node:child_process";
-import { clasificarDrift, partirStatements } from "../src/lib/monitoreo/drift-clasificador";
+import { clasificarDrift, partirStatements, LIMITES_CLASIFICADOR } from "../src/lib/monitoreo/drift-clasificador";
 
 // Re-export para que el candado importe la MISMA fuente por el mismo camino que el sibling #760.
-export { clasificarDrift, partirStatements } from "../src/lib/monitoreo/drift-clasificador";
+export { clasificarDrift, partirStatements, LIMITES_CLASIFICADOR } from "../src/lib/monitoreo/drift-clasificador";
 
 /**
  * Baseline DOCUMENTADO de los 8 renombres de índice (SPEC-767, T4). El clasificador ya los pasa
@@ -75,9 +75,12 @@ if (esEntryPoint) {
         clearTimeout(watchdog);
         const porCat = benignas.reduce<Record<string, number>>((a, b) => ((a[b.categoria] = (a[b.categoria] ?? 0) + 1), a), {});
         console.log(`[historial] baseline benigno: ${benignas.length} (${Object.entries(porCat).map(([k, v]) => `${k}=${v}`).join(", ") || "ninguna"})`);
-        if (jsonMode) console.log(JSON.stringify({ ok: drift.length === 0, driftHistorial: drift.length, drift }));
+        // Puntos ciegos DECLARADOS del clasificador compartido (#742): un límite heredado y no
+        // mostrado es un límite olvidado. Se imprime en cada corrida, como el CLI de #760.
+        console.log(`[historial] límites conocidos declarados: ${LIMITES_CLASIFICADOR.length} (ver LIMITES_CLASIFICADOR en drift-clasificador.ts)${LIMITES_CLASIFICADOR.length ? " — p.ej. " + LIMITES_CLASIFICADOR[0]!.id : ""}`);
+        if (jsonMode) console.log(JSON.stringify({ ok: drift.length === 0, driftHistorial: drift.length, limitesConocidos: LIMITES_CLASIFICADOR.length, drift }));
         if (drift.length === 0) {
-            console.log("[historial] VERDE: las migraciones construyen el esquema declarado (salvo el punto ciego de Prisma, baselineado con razón por Datos).");
+            console.log("[historial] VERDE: el HISTORIAL de migraciones construye el esquema DECLARADO (salvo el punto ciego de Prisma, baselineado con razón por Datos). NO dice nada de la BD viva de prod — ese drift es de SPEC-760.");
         } else {
             console.error(`[historial] ROJO: ${drift.length} sentencia(s) de DRIFT DE HISTORIAL — las migraciones NO construyen el esquema:`);
             for (const d of drift) console.error(`  · ${d}`);

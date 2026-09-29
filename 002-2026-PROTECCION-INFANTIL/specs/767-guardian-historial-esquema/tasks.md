@@ -15,4 +15,5 @@
 
 ## Tras #766 en `main`
 
-- [ ] **T6** · Rebase; confirmar born-VERDE (drift vacío) — requiere que #766 agregue la migración que RECONCILIA el historial de `Plan` (creadoEn→createdAt + `precio` nullable), no solo el dato de prod; cablear paso CI como **gate DURO** (sobre el `ci.yml` de #760) + shadow DB; confirmar born-green al CEO **antes** de duro.
+- [x] **T6** · Rebase sobre `main` (`66bf7d0f0`, con #735 y #742). Born-**VERDE** confirmado por **exit code 0** (`drift 0`, baseline benigno 90) — #735 (`20260929200000_spec766_plan_reconciliar_drift`) reconcilia el historial de `Plan`. Gate **DURO** cableado en `ci.yml` (sin `continue-on-error`) con shadow DB (`CREATE DATABASE proteccion_shadow`); es determinista (insumos solo del repo). Conteo de **LIMITES_CLASIFICADOR** (#742) importado y visible en cada corrida (1: `set-default-gen-random-uuid-aislado`). Candado ampliado (superficie de límites). born-VERDE confirmado al CEO ANTES de poner el gate duro.
+  - **Nota de prod (no afecta a 767):** la migración de #735 **no está aplicada en prod** (una publicación de replicación a BI depende de `Plan.creadoEn` — dependencia del catálogo de Postgres, invisible a `git grep`). 767 mide **historial↔esquema** (repo), no BD-viva↔historial (eso es #760): «767 verde» NO significa «prod sana». Sin deploys hasta recuperar el estado del historial.

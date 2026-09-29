@@ -225,6 +225,20 @@ jobs:
         continue-on-error: true
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-767 (D-121): guardián de HISTORIAL ≠ ESQUEMA — GATE DURO. ¿El HISTORIAL de migraciones
+      # CONSTRUYE el esquema declarado? Corre `migrate diff --to-migrations` contra un shadow LIMPIO
+      # (replaya las migraciones ahí) y clasifica con la MISMA fuente de #760 (cero copia). DISTINTO de
+      # drift:check (ése mira la BD FRESCA de CI; éste, el HISTORIAL vs el esquema DECLARADO) — ninguno
+      # ve lo del otro. Entra DURO (sin continue-on-error): nació VERDE —confirmado por exit code tras
+      # la migración de #766/#735 que reconcilió `Plan`—, y sus insumos son SOLO del repo (migraciones
+      # + schema.prisma), así que el resultado es determinista. Un historial que no construye el
+      # esquema es SIEMPRE defecto, no divergencia aceptable.
+      - name: Crear shadow DB para el guardián de historial (SPEC-767)
+        run: PGPASSWORD=proteccion_dev psql -h localhost -p 5433 -U proteccion -d proteccion_infantil_test -c 'CREATE DATABASE proteccion_shadow'
+      - run: npm run historial:check
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+          SHADOW_DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_shadow
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test

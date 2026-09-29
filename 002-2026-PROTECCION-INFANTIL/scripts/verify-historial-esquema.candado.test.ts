@@ -15,7 +15,7 @@
  * Unit puro (clasificación de texto, sin BD). Escenarios REALES = medidos con `historial:check`.
  */
 import { describe, it, expect } from "vitest";
-import { clasificarDrift, partirStatements } from "./verify-historial-esquema";
+import { clasificarDrift, partirStatements, LIMITES_CLASIFICADOR } from "./verify-historial-esquema";
 
 // ── Drift REAL de HISTORIAL, medido con `historial:check` (SPEC-767, dirección --to-migrations) ──
 // El historial construye `Plan.creadoEn` + `precio NOT NULL` que el esquema NO declara (declara
@@ -71,5 +71,12 @@ describe("SPEC-767 · guardián de historial: drift de historial vs punto ciego 
         const { drift } = clasificarDrift([TIMESTAMPTZ, INDICE_CRUDO, RENAME, ...partirStatements(PLAN_HISTORIAL_DRIFT)]);
         expect(drift).toHaveLength(1);
         expect(drift[0]).toContain("\"Plan\"");
+    });
+
+    it("superficie los LÍMITES declarados del clasificador (#742) — un punto ciego no mostrado se olvida", () => {
+        // El guardián re-exporta el registro de límites de la FUENTE (no una copia); si alguien
+        // quita el import, esto y el conteo que imprime el CLI dejan de existir. Debe haber ≥1.
+        expect(LIMITES_CLASIFICADOR.length).toBeGreaterThan(0);
+        for (const l of LIMITES_CLASIFICADOR) expect(l.id.length).toBeGreaterThan(0);
     });
 });
