@@ -5,29 +5,38 @@
  * Mismo patrón que `estadoEfectivoDeCita` (#718): el plazo (`venceEn`) VIVE en
  * la columna —contable por query, nadie lo ignora sin que se vea— y el estado
  * se DERIVA, no se persiste. Así el «venció sin resolver → a favor del padre»
- * salta SOLO al cruzar la fecha, sin que ninguna persona lo decida: nadie se
- * puede sentar encima hasta que caduque.
+ * salta SOLO al cruzar la fecha, sin que ninguna persona lo decida.
  *
  * Contrato:
  *  - PURO. No toca tablas. `now` INYECTABLE (sin reloj de pared adentro).
- *  - Un incidente RESUELTO (tiene `resueltoEn`) queda RESUELTO: la resolución es
- *    un hecho, no depende del reloj.
- *  - Sin resolver: `now >= venceEn` → VENCIDO_A_FAVOR_PADRE; si no → ABIERTO.
- *  - Fallo conservador: con `now` o `venceEn` ausente/basura, cae a
- *    VENCIDO_A_FAVOR_PADRE, NUNCA a ABIERTO. Acá «conservador» es **el lado que
- *    protege al padre**: dejar un incidente ABIERTO cuando no podemos leer el
- *    reloj es justo el «caduca en silencio» que la ley nos reprocha; el default
- *    legal es a favor del padre, así que el fallo también.
+ *  - `RESUELTO` es SOLO la resolución EN PLAZO (`resueltoEn <= venceEn`): eso es
+ *    cumplimiento. Una resolución POSTERIOR al vencimiento NO es cumplimiento —
+ *    la obligación de reversar ya se disparó al vencer y resolver tarde no la
+ *    deshace (RIESGO señalado por el CEO): cae en `RESUELTO_TARDE`, que NO puede
+ *    presentarse como «esto quedó bien».
+ *  - Sin resolver: `now >= venceEn` → `VENCIDO_A_FAVOR_PADRE`; si no → `ABIERTO`.
+ *  - Fallo conservador: con `now`/`venceEn` ausente o basura NUNCA se afirma
+ *    cumplimiento ni se deja `ABIERTO`; cae al lado que PROTEGE al padre
+ *    (`RESUELTO_TARDE` si había resolución que no se puede probar a tiempo,
+ *    `VENCIDO_A_FAVOR_PADRE` si no). Dejarlo `ABIERTO`/`RESUELTO` sería el
+ *    «caduca en silencio» que la ley reprocha.
  *
- * La ACCIÓN de reversar el pago sobre un VENCIDO_A_FAVOR_PADRE NO es de esta
- * derivación (otra SPEC): acá solo se dice, sin ambigüedad, en qué estado está.
+ * `esIncumplimiento` es la fuente ÚNICA de «la obligación se disparó»: TODO
+ * conteo de incumplimientos debe usarla (incluye `RESUELTO_TARDE`, no solo
+ * `VENCIDO_A_FAVOR_PADRE`), para que resolver tarde no se escape del recuento.
+ *
+ * La ACCIÓN de reversar el pago NO es de esta derivación (otra SPEC).
  */
 
 /** Entrada temporal tolerante: Date de Prisma, ISO string, epoch ms, o ausente. */
 export type EntradaTiempoIncidente = Date | string | number | null | undefined;
 
 /** Estado efectivo del incidente. NO se persiste: se deriva del reloj. */
-export type EstadoIncidenteContradiccion = "ABIERTO" | "RESUELTO" | "VENCIDO_A_FAVOR_PADRE";
+export type EstadoIncidenteContradiccion =
+    | "ABIERTO"
+    | "RESUELTO"
+    | "RESUELTO_TARDE"
+    | "VENCIDO_A_FAVOR_PADRE";
 
 /** epoch ms, o null si la entrada es ausente/basura (la compuerta del fallo conservador). */
 function aEpochMs(v: EntradaTiempoIncidente): number | null {
@@ -48,14 +57,28 @@ export function estadoEfectivoIncidente(
     venceEn: EntradaTiempoIncidente,
     now: EntradaTiempoIncidente,
 ): EstadoIncidenteContradiccion {
-    // La resolución es un hecho: si existe y es válida, gana sobre el reloj.
-    if (aEpochMs(resueltoEn) !== null) return "RESUELTO";
-
+    const resuelto = aEpochMs(resueltoEn);
     const vence = aEpochMs(venceEn);
     const ahora = aEpochMs(now);
-    // Sin reloj confiable, NO lo dejamos ABIERTO (sería el «caduca en silencio»):
-    // cae al lado que protege al padre.
-    if (vence === null || ahora === null) return "VENCIDO_A_FAVOR_PADRE";
 
+    if (resuelto !== null) {
+        // RESUELTO solo si es COMPROBABLEMENTE a tiempo (plazo válido y resuelto ≤ plazo).
+        // Resuelto después del plazo, o plazo no confiable → RESUELTO_TARDE (no es cumplimiento).
+        return vence !== null && resuelto <= vence ? "RESUELTO" : "RESUELTO_TARDE";
+    }
+
+    // Sin resolver: con reloj no confiable NO lo dejamos ABIERTO (sería «caduca en
+    // silencio»); cae al lado que protege al padre.
+    if (vence === null || ahora === null) return "VENCIDO_A_FAVOR_PADRE";
     return ahora >= vence ? "VENCIDO_A_FAVOR_PADRE" : "ABIERTO";
+}
+
+/**
+ * Fuente ÚNICA de «la obligación de reversar se disparó» (el incumplimiento).
+ * Incluye `RESUELTO_TARDE`: una resolución posterior al vencimiento sigue siendo
+ * incumplimiento. Contar solo `VENCIDO_A_FAVOR_PADRE` se dejaría afuera los
+ * resueltos tarde — por eso el conteo se hace con esta función, no a mano.
+ */
+export function esIncumplimiento(estado: EstadoIncidenteContradiccion): boolean {
+    return estado === "VENCIDO_A_FAVOR_PADRE" || estado === "RESUELTO_TARDE";
 }
