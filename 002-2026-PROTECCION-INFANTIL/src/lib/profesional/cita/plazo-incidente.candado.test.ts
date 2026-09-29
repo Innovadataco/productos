@@ -52,9 +52,10 @@ describe("SPEC-753 · término del incidente por clase (fuente única)", () => {
     it("SOLO el reclamo del padre ancla en su respuesta; nadie más", () => {
         const padreRespondio = new Date("2026-02-02T10:00:00Z");
         const deteccion = new Date("2026-02-20T10:00:00Z");
-        expect(reclamadoEnDeClase("NO_PRESTACION_RECLAMO_PADRE", padreRespondio, deteccion)).toEqual(padreRespondio);
-        expect(reclamadoEnDeClase("NO_PRESTACION_DICHA_PROFESIONAL", padreRespondio, deteccion)).toEqual(deteccion);
-        expect(reclamadoEnDeClase("DISCREPANCIA_SERVICIO", padreRespondio, deteccion)).toEqual(deteccion);
+        const fechas = { padreRespondioEn: padreRespondio, deteccion };
+        expect(reclamadoEnDeClase("NO_PRESTACION_RECLAMO_PADRE", fechas)).toEqual(padreRespondio);
+        expect(reclamadoEnDeClase("NO_PRESTACION_DICHA_PROFESIONAL", fechas)).toEqual(deteccion);
+        expect(reclamadoEnDeClase("DISCREPANCIA_SERVICIO", fechas)).toEqual(deteccion);
     });
 
     it("venceEn > reclamadoEn SIEMPRE, para TODA clase (sostiene el CHECK), y es día hábil", () => {
