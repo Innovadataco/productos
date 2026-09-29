@@ -39,12 +39,34 @@ describe("ProfesionalTarjeta", () => {
         expect(texto).toContain("50 min");
     });
 
-    it("SPEC-441 · y NO muestra la tarifa informativa del profesional", () => {
+    it("SPEC-685 (FORMA 5c9194a) · muestra la tarifa del profesional como «2ª cita» en secuencia (Jelkin revirtió SPEC-441)", () => {
+        // Antes se OCULTABA `tarifaConsultaCOP` porque el card viejo la pintaba SOLA
+        // (rótulo «Consulta») y chocaba con el estándar que mostraba la ficha. Jelkin
+        // decidió mostrar LOS DOS tramos con rótulos secuenciales (entrada → de ahí en
+        // adelante): el número vuelve, pero rotulado «De la 2ª cita en adelante», nunca
+        // «Consulta». Los rótulos secuenciales son el anti-«dos precios sueltos».
         render(<ProfesionalTarjeta p={perfil} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
-        expect(
-            document.body.textContent ?? "",
-            "Dos números de plata en una tarjeta es la confusión que la spec cierra.",
-        ).not.toMatch(/120\.000/);
+        const texto = document.body.textContent ?? "";
+        expect(texto).toContain("De la 2ª cita en adelante:");
+        expect(texto).toMatch(/120\.000/);
+        expect(texto, "el rótulo viejo «Consulta» no vuelve").not.toContain("Consulta");
+    });
+
+    it("SPEC-685 · tarifa null → «De la 2ª cita en adelante: por definir», sin «$0» ni «Sin fijar»", () => {
+        const sinTarifa = { ...perfil, tarifaConsultaCOP: null };
+        render(<ProfesionalTarjeta p={sinTarifa} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
+        const texto = document.body.textContent ?? "";
+        expect(texto).toContain("De la 2ª cita en adelante: por definir");
+        expect(/\$\s?0(?!\d)/.test(texto), "un $0 diría que las siguientes citas son gratis").toBe(false);
+        expect(texto, "«Sin fijar» es la etiqueta INTERNA del profesional; la cara del padre dice «por definir»").not.toContain("Sin fijar");
+    });
+
+    it("SPEC-685 (control positivo) · tarifa 0 (viejo centinela) → «por definir», NUNCA «$0» — la regla es > 0", () => {
+        const tarifaCero = { ...perfil, tarifaConsultaCOP: 0 };
+        render(<ProfesionalTarjeta p={tarifaCero} hrefBase="/x" queryString="" precioPrimeraCitaCOP={50000} />);
+        const texto = document.body.textContent ?? "";
+        expect(texto).toContain("De la 2ª cita en adelante: por definir");
+        expect(/\$\s?0(?!\d)/.test(texto), "el 0 no es «gratis»").toBe(false);
     });
 
     it("SPEC-441 · la ubicación dice de quién es y lleva país", () => {
