@@ -1,14 +1,14 @@
 /**
  * SPEC-744 · `navParaRol` — la FUENTE ÚNICA de la navegación por rol.
  *
- * Antes de esta spec cada superficie armaba su propia lista + compuerta: la barra
- * lateral (AdminNav/ColegioSideNav/PadreSideNav), la barra móvil (PadreNavMovil) y
- * —el defecto que cazó Jelkin— el NavHeader, que tenía la nav ESCRITA A MANO por rol
- * (el padre: «Mi panel/Círculo de Confianza/Mis reportes», stale, distinta de
- * `PADRE_NAV_ITEMS`). Dos fuentes → desincronización → recurre. Este módulo colapsa
- * TODO a una función: cada superficie llama `navParaRol(rol, ctx)` y pinta lo que
- * devuelve. Cero listas a mano (el candado `nav-superficie-unica.candado.test.tsx`
- * rompe CI si alguna superficie vuelve a quemar destinos de nav).
+ * Antes de esta spec cada superficie armaba su propia lista + compuerta —el defecto
+ * que cazó Jelkin: el NavHeader tenía la nav ESCRITA A MANO por rol (el padre: «Mi
+ * panel/Círculo de Confianza/Mis reportes», stale, distinta de `PADRE_NAV_ITEMS`).
+ * Dos fuentes → desincronización → recurre. Este módulo colapsa TODO a una función:
+ * las superficies vivas —NavLateral (escritorio), BarraInferior/HojaMas (móvil) y el
+ * NavHeader anónimo— llaman `navParaRol(rol, ctx)` y pintan lo que devuelve. Cero
+ * listas a mano (el candado `nav-superficie-unica.candado.test.tsx` rompe CI si
+ * alguna superficie vuelve a quemar destinos de nav).
  *
  * ── CAVEAT (orden del CEO) ────────────────────────────────────────────────────
  * Esto es VISIBILIDAD, no ACCESO. La compuerta módulo/estado/proxy de acá decide
@@ -58,7 +58,8 @@ export interface CtxNav {
 // SPEC-703/686: mientras el profesional no acepte la versión vigente, la guardia
 // rebota cada ítem operativo a este muro. Ofrecer el menú operativo es ofrecer
 // entradas que rebotan → se colapsa a PORTERO (cosmético; el cierre real lo hace
-// el servidor). Igual criterio que AdminNav (SPEC-691).
+// el servidor). Criterio de SPEC-691, hoy centralizado en este resolver (antes
+// repetido por la barra lateral del profesional).
 const RUTA_ACEPTACION_AUTORIZACION = "/perfil-profesional/autorizacion";
 
 /** Quita `modulo`, resuelve `iconKey` (por defecto `href`) y normaliza hijos (recursivo). */
@@ -75,7 +76,8 @@ function desnudar(item: NavItem | PadreNavItem): NavEntry {
  * Filtra una lista por módulo concedido ∧ predicado del proxy (D-41), respetando
  * los grupos: un nodo con hijos se muestra solo si su módulo está concedido Y le
  * queda al menos un hijo visible; los hijos se filtran con el mismo criterio.
- * Réplica exacta de la compuerta que hoy vive en AdminNav/ColegioSideNav.
+ * Esta compuerta ANTES estaba repetida en cada barra lateral (ya retiradas por
+ * SPEC-744); ahora vive UNA sola vez acá y la consumen NavLateral / BarraInferior.
  */
 function porModuloYProxy(items: NavItem[], rol: string, permitidos: Set<string>): NavEntry[] {
     const salida: NavEntry[] = [];
@@ -102,7 +104,7 @@ function porModuloYProxy(items: NavItem[], rol: string, permitidos: Set<string>)
  *    sesión» es control de CUENTA, no nav — vive aparte (simétrico con «Cerrar
  *    sesión» del logueado, SPEC-742).
  *  - PARENT: `PADRE_NAV_ITEMS` completo — el área del padre no filtra por módulo;
- *    el proxy controla el acceso, el menú muestra todo (paridad con PadreSideNav).
+ *    el proxy controla el acceso y el menú muestra todo (lo pintan NavLateral y BarraInferior).
  *  - PROFESIONAL: `entradasProfesional` (por estado `habilitado`, con override del
  *    muro de aceptación) ∧ proxy.
  *  - SCHOOL_ADMIN / COMITE_CONVIVENCIA: su lista de colegio, módulo ∧ proxy.
@@ -135,7 +137,7 @@ export function navParaRol(rol: string | null | undefined, ctx: CtxNav = {}): Na
 /**
  * Aplana los grupos para una barra sin acordeones (la barra móvil): un nodo con
  * hijos aporta sus hijos, no su etiqueta «#». Los nodos hoja pasan tal cual.
- * (Paridad con `PADRE_NAV_ITEMS.flatMap(i => i.children ?? [i])` de PadreNavMovil.)
+ * Lo usa BarraInferior (el aplanado que antes hacía a mano la barra móvil del padre).
  */
 export function aplanar(items: NavEntry[]): NavEntry[] {
     return items.flatMap((item) => (item.children && item.children.length > 0 ? item.children : [item]));

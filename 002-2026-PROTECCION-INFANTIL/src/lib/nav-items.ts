@@ -40,7 +40,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     // padres: externo, no interno). Sin crear (padre y psicólogo se registran
     // solos) — el admin restablece contraseña y reenvía enlace de registro.
     { href: "/dashboard/admin/profesionales/gestion", label: "Profesionales", modulo: "profesionales_admin" },
-    // SPEC-212 (002-PI-112): panel administrativo de pagos (color ámbar en AdminNav).
+    // SPEC-212 (002-PI-112): panel administrativo de pagos (color ámbar en la barra lateral, NavLateral).
     { href: "/dashboard/admin/pagos", label: "Pagos", modulo: "pagos_admin" },
     { href: "/dashboard/admin/colegios", label: "Colegios", modulo: "colegios_gestion" },
     // SPEC-227 (002-PI-128): historial de sugerencias del motor de reglas (solo ADMIN).
