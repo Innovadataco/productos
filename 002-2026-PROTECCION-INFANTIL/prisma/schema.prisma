@@ -2673,11 +2673,16 @@ model SolicitudHabeasData {
 //    incidente); por eso el esquema guarda AMBAS fechas, para no poder mentir.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Motivos CERRADOS de la puerta (FORMA-SPEC752-MOTIVOS, Diseño, aa4e9c2). El padre
+// ve un TEMA, no legalese; el sistema etiqueta para el término. DATOS_PERSONALES es
+// habeas data (Ley 1581) — la puerta de entrada de habeas data es ESTE motivo, no
+// una segunda puerta (SPEC-772 hace el mecanismo registrado del lado de atrás).
 enum MotivoPeticionServicio {
-  // [NEEDS Diseño] · los motivos CERRADOS son COPY (autoridad de Diseño, como la
-  // 141). Placeholder para que el esquema compile; Diseño entrega la lista y se
-  // reemplaza en el MISMO PR que la traiga. NO son definitivos.
-  PENDIENTE_DISENO
+  DATOS_PERSONALES // «Mis datos personales» — habeas data → término LEGAL
+  PAGO_O_COBRO // «Un pago o un cobro»
+  CITA // «Una cita» — algo no resuelto desde la cita
+  SERVICIO_PLATAFORMA // «El servicio de la plataforma» — queja/sugerencia
+  OTRA // «Otra solicitud» — NO abre campo de texto
 }
 
 model PeticionServicio {
@@ -2693,11 +2698,17 @@ model PeticionServicio {
   // usuarioId snapshot de quien resolvió (operador/admin), NO FK (lección #727):
   // el rastro sobrevive a la baja de la cuenta.
   resueltoPor String?
+  // CONTEXTO (SPEC-752): de qué cita viene la petición — el IDENTIFICADOR, no un
+  // relato (HECHO-only). Opcional: la puerta también entra por queja general (sin
+  // cita). SetNull: si la cita se borra, la petición sobrevive y suelta el contexto.
+  solicitudId String?
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  solicitud SolicitudCita? @relation(fields: [solicitudId], references: [id], onDelete: SetNull)
 
   @@index([resueltoEn, venceEn]) // «por vencer / vencidas sin resolver» rangea sobre el plazo
   @@index([usuarioId, creadoEn(sort: Desc)])
+  @@index([solicitudId]) // peticiones de una cita (contexto para el operador)
 }
 
 model ContactoConfianza {
@@ -4461,6 +4472,7 @@ model SolicitudCita {
   // SPEC (297 filas en prod; no se hace DROP dentro de una feature).
   encuestasSesion         EncuestaCita[]
   incidentesContradiccion IncidenteContradiccionEncuesta[]
+  peticionesServicio   PeticionServicio[] // SPEC-752: PQR con contexto de esta cita (SetNull)
 
   // L4/L5: bandeja del profesional (sus solicitudes por estado) y del padre.
   @@index([profesionalId, estado, creadoEn(sort: Desc)])
