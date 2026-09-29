@@ -32,8 +32,8 @@
 import { test, expect, request as playwrightRequest, type APIRequestContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
-import type { RolUsuario } from "@prisma/client";
+import { crearProfesionalVisible, limpiarProfesionalVisible, type ProfesionalVisible } from "./fixtures/profesional-visible";
+import { crearPadreOnboarded, limpiarPadreOnboarded, type PadreOnboarded } from "./fixtures/padre-onboarded";
 
 const CORRIDA = `e2e-764-${randomUUID().slice(0, 8)}`;
 const PASSWORD = "Candado764!Secure";
@@ -46,74 +46,13 @@ const PROFESIONAL_EMAIL = `${CORRIDA}-prof@proteccion.local`;
 const PADRE_EMAIL = `${CORRIDA}-padre@proteccion.local`;
 const PADRE_2_EMAIL = `${CORRIDA}-padre2@proteccion.local`;
 
-const sembrados = {
-    usuarios: new Set<string>(),
-    perfiles: new Set<string>(),
-    franjas: new Set<string>(),
-    solicitudes: new Set<string>(),
-};
-
 let perfilProfesionalId = "";
 let franjaId = "";
 let solicitudId = "";
 let precioParametroCOP = 0;
-
-async function asegurarUsuario(email: string, rol: string, nombre: string): Promise<string> {
-    const u = await prisma.usuario.upsert({
-        where: { email },
-        update: { rol: rol as RolUsuario, estado: "activo" },
-        create: {
-            email,
-            nombre,
-            passwordHash: await hashPassword(PASSWORD),
-            rol: rol as RolUsuario,
-            estado: "activo",
-        },
-    });
-    sembrados.usuarios.add(u.id);
-    return u.id;
-}
-
-/**
- * Profesional ACTIVO directo por Prisma (el padre solo puede agendar contra un
- * perfil que `obtenerPublicoPorId` deja pasar, y ese repo filtra `estado = ACTIVO`).
- * La autorización va como ID OPACO (`autorizacionArchivoId`, no una ruta — I-303).
- */
-async function crearPerfilProfesionalActivo(usuarioId: string): Promise<string> {
-    const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
-    if (!ciudad) throw new Error("prod debe tener al menos una Ciudad sembrada");
-    const perfil = await prisma.perfilProfesional.create({
-        data: {
-            usuarioId,
-            nombreVisible: `Prof E2E ${CORRIDA}`,
-            tituloProfesional: "Psicóloga clínica",
-            especialidades: ["Familia"],
-            ciudadId: ciudad.id,
-            atiendeVirtual: true, // CHECK SPEC-673: estado≠BORRADOR ⟹ virtual OR presencial
-            atiendePresencial: false,
-            aniosExperiencia: 5,
-            presentacion: "Presentación efímera para el candado SPEC-764.",
-            tarifaConsultaCOP: TARIFA_DISTINTIVA,
-            duracionMinutos: 60,
-            emiteFactura: false,
-            estado: "ACTIVO",
-            autorizacionArchivoId: randomUUID(), // ID opaco (cutover 703 · I-303)
-            autorizacionSubidaEn: new Date(),
-        },
-    });
-    sembrados.perfiles.add(perfil.id);
-    return perfil.id;
-}
-
-async function crearFranjaVirtual(perfilId: string): Promise<string> {
-    const inicio = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7); // +7 días
-    const fin = new Date(inicio.getTime() + 1000 * 60 * 60); // +1h
-    const franja = await prisma.franjaDisponible.create({
-        data: { profesionalId: perfilId, inicio, fin, modalidad: "VIRTUAL", tomada: false },
-    });
-    sembrados.franjas.add(franja.id);
-    return franja.id;
-}
+let profesional: ProfesionalVisible | undefined;
+let padre1: PadreOnboarded | undefined;
+let padre2: PadreOnboarded | undefined;
 
 async function contexto(): Promise<APIRequestContext> {
     // baseURL viene de PLAYWRIGHT_BASE_URL o del playwright.config.
@@ -123,18 +62,6 @@ async function contexto(): Promise<APIRequestContext> {
 async function login(ctx: APIRequestContext, email: string) {
     const res = await ctx.post("/api/auth/login", { data: { email, password: PASSWORD } });
     expect(res.status(), `login ${email}`).toBe(200);
-}
-
-/**
- * Solo el PADRE es titular del dato (SPEC-416), así que su aceptación es la única
- * válida — y tras SPEC-756 el endpoint rechaza a los no-titulares. Aceptación
- * honesta por el endpoint real (la fila en `audit_consentimientos` afirma lo que pasó).
- */
-async function aceptarConsentimientoPadre(ctx: APIRequestContext) {
-    const res = await ctx.post("/api/consentimiento/aceptar", {
-        data: { documentoTipo: "POLITICA_DATOS", esRepresentanteLegal: false },
-    });
-    expect(res.ok(), "el padre (titular) acepta el consentimiento").toBeTruthy();
 }
 
 async function crearCitaComoElPadre(ctx: APIRequestContext): Promise<{ id: string; montoTotal: number }> {
@@ -153,33 +80,40 @@ async function crearCitaComoElPadre(ctx: APIRequestContext): Promise<{ id: strin
     return { id, montoTotal: body?.data?.montoTotal };
 }
 
-async function limpiarSembrados() {
-    // Orden FK-safe: solicitudes → franjas → perfil → usuarios.
-    if (sembrados.solicitudes.size > 0) {
-        await prisma.solicitudCita.deleteMany({ where: { id: { in: [...sembrados.solicitudes] } } });
-    }
-    if (sembrados.franjas.size > 0) {
-        await prisma.franjaDisponible.deleteMany({ where: { id: { in: [...sembrados.franjas] } } });
-    }
-    if (sembrados.perfiles.size > 0) {
-        await prisma.perfilProfesional.deleteMany({ where: { id: { in: [...sembrados.perfiles] } } });
-    }
-    if (sembrados.usuarios.size > 0) {
-        await prisma.usuario.deleteMany({ where: { id: { in: [...sembrados.usuarios] } } });
-    }
-    sembrados.solicitudes.clear();
-    sembrados.franjas.clear();
-    sembrados.perfiles.clear();
-    sembrados.usuarios.clear();
-}
-
 test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", () => {
     test.beforeAll(async () => {
-        const profUsuarioId = await asegurarUsuario(PROFESIONAL_EMAIL, "PROFESIONAL", `Prof E2E ${CORRIDA}`);
-        await asegurarUsuario(PADRE_EMAIL, "PARENT", `Padre E2E ${CORRIDA}`);
-        await asegurarUsuario(PADRE_2_EMAIL, "PARENT", `Padre2 E2E ${CORRIDA}`);
-        perfilProfesionalId = await crearPerfilProfesionalActivo(profUsuarioId);
-        franjaId = await crearFranjaVirtual(perfilProfesionalId);
+        // Padres onboardeados por el CAMINO REAL (builder reutilizable): el POST de la
+        // cita Y el GET de su detalle están detrás del guardián de camino (403
+        // CAMINO_INCOMPLETO hasta completarlo, `guardias.ts`), así que un bare-PARENT no
+        // alcanza ni la creación ni la comprobación de pertenencia. El consentimiento del
+        // padre (único titular, SPEC-416/756) lo firma el builder por el endpoint real.
+        const reqP1 = await contexto();
+        try { padre1 = await crearPadreOnboarded({ request: reqP1, email: PADRE_EMAIL, password: PASSWORD }); }
+        finally { await reqP1.dispose(); }
+        const reqP2 = await contexto();
+        try { padre2 = await crearPadreOnboarded({ request: reqP2, email: PADRE_2_EMAIL, password: PASSWORD }); }
+        finally { await reqP2.dispose(); }
+
+        // Profesional VISIBLE por su flujo REAL (builder reutilizable): registro →
+        // perfil → documentos → autorización → un admin efímero aprueba → ACTIVO +
+        // verificación vigente + franja. Un `estado=ACTIVO` a mano NO basta: la cita
+        // valida al profesional con `obtenerPublicoPorId`, que exige verificación
+        // vigente (SPEC-690-B). La TARIFA distintiva se fija POST-hab y es el control
+        // positivo del candado (3): el monto de la 1ª cita debe salir del parámetro.
+        const reqProf = await contexto();
+        try {
+            profesional = await crearProfesionalVisible({
+                request: reqProf,
+                email: PROFESIONAL_EMAIL,
+                password: PASSWORD,
+                corrida: CORRIDA,
+                tarifaConsultaCOP: TARIFA_DISTINTIVA,
+            });
+        } finally {
+            await reqProf.dispose();
+        }
+        perfilProfesionalId = profesional.perfilId;
+        franjaId = profesional.franjaId ?? "";
 
         // Precio estándar del parámetro (público) — referencia del candado (3).
         const ctxPub = await contexto();
@@ -192,19 +126,20 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
     });
 
     test.afterAll(async () => {
-        await limpiarSembrados();
+        // El profesional borra las solicitudes por `profesionalId` (cubre la cita);
+        // luego cada padre borra lo suyo FK-safe.
+        if (profesional) await limpiarProfesionalVisible(profesional);
+        if (padre1) await limpiarPadreOnboarded(padre1);
+        if (padre2) await limpiarPadreOnboarded(padre2);
     });
 
     test("(1) H-2 · el contacto del profesional NO viaja al padre antes de confirmar", async () => {
         const ctx = await contexto();
         try {
-            await login(ctx, PADRE_EMAIL);
-            await aceptarConsentimientoPadre(ctx);
-            await login(ctx, PADRE_EMAIL); // refresco de la cookie de estado
+            await login(ctx, PADRE_EMAIL); // re-sella la cookie con el camino ya completo
 
             const cita = await crearCitaComoElPadre(ctx);
             solicitudId = cita.id;
-            sembrados.solicitudes.add(solicitudId);
 
             // La cita recién creada NO está confirmada → `debeExponerContacto` = false.
             // Candado estructural (muere con el defecto): si el DTO dejara de gatear el
@@ -231,8 +166,6 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
         expect(solicitudId, "el candado (1) dejó una solicitud").toBeTruthy();
         const ctx = await contexto();
         try {
-            await login(ctx, PADRE_2_EMAIL);
-            await aceptarConsentimientoPadre(ctx);
             await login(ctx, PADRE_2_EMAIL);
             const res = await ctx.get(`/api/padre/citas/${solicitudId}`);
             expect(res.status(), "otro padre NO puede leer una cita ajena").toBe(404);
