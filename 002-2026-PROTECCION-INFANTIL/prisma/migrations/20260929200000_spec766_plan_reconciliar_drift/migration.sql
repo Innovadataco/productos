@@ -22,3 +22,23 @@
 ALTER TABLE "Plan" DROP COLUMN IF EXISTS "creadoEn";
 ALTER TABLE "Plan" ALTER COLUMN "precio" DROP NOT NULL;
 ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- ── worker_logs (2ª tabla del drift, medida por el CEO contra prod) ──
+-- Dos divergencias que el clasificador de 760 marca REAL contra prod:
+--  a) `creadoEn` quedó como TIMESTAMP SIN zona — es la ÚNICA columna que la migración de I-420
+--     (20260822010000) dejó afuera. El esquema la declara `@db.Timestamptz(3)`. Un `creadoEn` sin
+--     zona en la tabla de logs, en un contenedor UTC, reporta horas mal. Conversión BARE (sin
+--     `USING`), igual que I-420: en prod interpreta el naked como la TZ de sesión (UTC) → correcto;
+--     en test (que ya es timestamptz(6)) baja la precisión a (3) preservando la zona. Un `USING AT
+--     TIME ZONE 'UTC'` sería INCORRECTO en el caso ya-timestamptz (le quitaría la zona), por eso bare.
+--  b) `id` tiene un DEFAULT `gen_random_uuid()` de la BD que el esquema NO declara (`@default(cuid())`,
+--     lo genera la app). Es DRIFT REAL (no representación): Prisma siempre provee el id, así que
+--     quitar el default de la BD no rompe inserts. OJO: `gen_random_uuid()` cae en el
+--     `VALOR_DEFAULT_BENIGNO` del clasificador — un `SET DEFAULT gen_random_uuid()` aislado se
+--     marcaría benigno (límite conocido del clasificador); acá NO se esconde porque la cláusula (a)
+--     hace que el statement entero salga ROJO. Reportado aparte.
+-- CAMBIA la base viva (a diferencia del createdAt de Plan, que es no-op): completa la conversión de
+-- I-420 y quita el default. HALLAZGO si la reinterpretación naked→tz corre los timestamps (pasaría
+-- solo si NO fueran UTC — el contenedor es UTC, misma premisa que I-420).
+ALTER TABLE "worker_logs" ALTER COLUMN "id" DROP DEFAULT;
+ALTER TABLE "worker_logs" ALTER COLUMN "creadoEn" SET DATA TYPE TIMESTAMPTZ(3);
