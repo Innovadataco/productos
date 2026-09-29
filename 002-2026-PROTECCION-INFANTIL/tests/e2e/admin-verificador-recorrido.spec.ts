@@ -77,34 +77,42 @@ async function asegurarUsuario(email: string, rol: string, password: string, nom
 
 async function sembrarPerfilYVerificacionEnRevision(): Promise<void> {
     // `PerfilProfesional` y `VerificacionProfesional` los introduce SPEC-408.
-    // Siembra por SQL crudo para no depender del tipo generado; cuando la
-    // migración desplegada cree las tablas, este bloque queda funcional. Con
-    // `test.fail` activo, un runtime error acá también cumple con el candado.
+    // Siembra por SQL crudo para no depender del tipo generado (patrón SPEC-408).
+    // `ciudadId` es NOT NULL sin default: el INSERT lo omitía y tronaba con 23502.
+    // Tomamos una Ciudad sembrada real, como el resto de los recorridos.
+    const ciudad = await prisma.ciudad.findFirst({ select: { id: true } });
+    if (!ciudad) throw new Error("prod debe tener al menos una Ciudad sembrada");
     await prisma.$executeRawUnsafe(`
         INSERT INTO "PerfilProfesional" (
-            id, "usuarioId", "nombreVisible", "tituloProfesional",
+            id, "usuarioId", "ciudadId", "nombreVisible", "tituloProfesional",
             "atiendeVirtual", "atiendePresencial", "aniosExperiencia",
             "presentacion", "tarifaConsultaCOP", "duracionMinutos",
             "emiteFactura", estado, "creadoEn", "actualizadoEn"
         ) VALUES (
-            $1, $2, 'Psi Efímera 410', 'Psicóloga clínica',
+            $1, $2, $3, 'Psi Efímera 410', 'Psicóloga clínica',
             true, false, 5, 'Presentación de prueba', 120000, 60,
             false, 'EN_REVISION', NOW(), NOW()
         )
-    `, `pp-${CORRIDA}`, profesionalId);
+    `, `pp-${CORRIDA}`, profesionalId, ciudad.id);
 
+    // La FK es al PERFIL (`pp-${CORRIDA}`), no al usuario. El esquema vigente exige
+    // además `revisadoPorId` (el verificador) y `venceEn`. El CHECK XOR (SPEC-686)
+    // pide EXACTAMENTE una vía de autorización: seteo `autorizacionArchivoId` (id
+    // opaco legado) y dejo `aceptacionAutorizacionId` NULL.
     await prisma.$executeRawUnsafe(`
         INSERT INTO "VerificacionProfesional" (
-            id, "profesionalId", checklist, resultado, "creadoEn"
+            id, "perfilProfesionalId", "revisadoPorId", checklist, resultado,
+            "autorizacionArchivoId", "venceEn", "revisadoEn", "creadoEn"
         ) VALUES (
-            $1, $2, $3::jsonb, 'MAS_INFORMACION', NOW()
+            $1, $2, $3, $4::jsonb, 'MAS_INFORMACION',
+            $5, NOW() + INTERVAL '1 year', NOW(), NOW()
         )
-    `, `vp-${CORRIDA}`, profesionalId, JSON.stringify([
+    `, `vp-${CORRIDA}`, `pp-${CORRIDA}`, verificadorId, JSON.stringify([
         { id: "tarjeta", nombre: "Tarjeta profesional vigente", estado: "CUMPLE" },
         { id: "antecedentes", nombre: "Antecedentes del profesional", estado: "CUMPLE" },
         { id: "cedula", nombre: "Cédula", estado: "NO_CUMPLE", observacion: "Foto ilegible" },
         { id: "soporte", nombre: "Otro documento de soporte", estado: "CUMPLE" },
-    ]));
+    ]), `autoriz-${CORRIDA}`);
 }
 
 async function login(page: Page, email: string, password: string) {
@@ -115,7 +123,7 @@ async function login(page: Page, email: string, password: string) {
 async function limpiarSembrados() {
     // Orden: filas dependientes primero (Verificación y Perfil pertenecen al
     // profesional). SQL raw para no depender de tipos aún ausentes.
-    await prisma.$executeRawUnsafe("DELETE FROM \"VerificacionProfesional\" WHERE \"profesionalId\" = $1", profesionalId).catch(() => undefined);
+    await prisma.$executeRawUnsafe("DELETE FROM \"VerificacionProfesional\" WHERE \"perfilProfesionalId\" = $1", `pp-${CORRIDA}`).catch(() => undefined);
     await prisma.$executeRawUnsafe("DELETE FROM \"PerfilProfesional\" WHERE \"usuarioId\" = $1", profesionalId).catch(() => undefined);
     const idsU = [...sembrados.usuarios];
     if (idsU.length > 0) await prisma.usuario.deleteMany({ where: { id: { in: idsU } } });

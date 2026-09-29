@@ -188,7 +188,9 @@ test.describe.serial("Verificación con documentos a la vista (SPEC-448)", () =>
                     atiendePresencial: false,
                     aniosExperiencia: 5,
                     presentacion: "Presentación efímera SPEC-448.",
-                    tarifaConsultaCOP: 120_000,
+                    // Sin tarifa: un profesional no habilitado no puede fijarla (route.ts:166,
+                    // SPEC-685). Este recorrido verifica documentos con el perfil EN_REVISION
+                    // (nunca llega a ACTIVO), así que la tarifa no aplica.
                     duracionMinutos: 60,
                     emiteFactura: false,
                 },
