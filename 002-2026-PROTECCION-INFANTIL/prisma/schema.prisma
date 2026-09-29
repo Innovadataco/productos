@@ -4073,9 +4073,10 @@ model SolicitudCita {
   // en `CAMPOS_INTERNOS_CITA` (`cita/dto.ts`) desde ya, antes de que exista el lector.
   enlaceReunion          String?
   enlaceOperadorId       String?
-  // Marca de «publicado»: null = el operador aún no lo publicó a las partes; su
-  // presencia (timestamp) = publicado. Nulable para ser aditiva sin backfill. No es
-  // una caducidad: la visibilidad la deriva PI del tiempo, no de esta fecha.
+  // Marca de «publicado» como TIMESTAMP nulable: null = el operador aún no lo publicó a
+  // las partes; su presencia = publicado. «publicado» es DERIVADO (`enlacePublicadoEn !=
+  // null`) — UNA sola verdad, no un Boolean que pueda contradecir a la fecha. Nulable para
+  // ser aditiva sin backfill. NO es caducidad: la visibilidad la deriva PI del tiempo.
   enlacePublicadoEn      DateTime?           @db.Timestamptz(6)
 
   padreUsuario         Usuario                @relation("SolicitudesCitaPadre", fields: [padreUsuarioId], references: [id])
@@ -4087,8 +4088,13 @@ model SolicitudCita {
   pagoHeredadoDe       SolicitudCita?         @relation("PagoHeredado", fields: [pagoHeredadoDeId], references: [id])
   pagosQueHereda       SolicitudCita[]        @relation("PagoHeredado")
   // SPEC-758: el operador (rol OPERADOR) que tomó/creó el enlace de esta cita.
-  // Opcional → onDelete SetNull: dar de baja la cuenta del operador NO borra la cita,
-  // solo suelta la referencia. No es tabla puente, así que no cascada.
+  // Opcional → onDelete SetNull: dar de baja la cuenta del operador NO borra la cita, solo
+  // suelta la referencia (Restrict trabaría la baja; Cascade borraría la cita — catastrófico).
+  // CONSECUENCIA — este FK NO es el registro de responsabilidad: al borrarse la cuenta del
+  // operador se pierde quién publicó el enlace. El rastro DURABLE de «quién convocó» vive en
+  // el REGISTRO DEL HECHO (brief A-79 §9: marca de ingreso por parte, timestamps, versión de
+  // protocolo), que arma SPEC-750 — NO en esta columna nulable. El consumidor NO debe construir
+  // auditoría sobre este campo (se vacía solo).
   enlaceOperador       Usuario?               @relation("SolicitudCitaEnlaceOperador", fields: [enlaceOperadorId], references: [id], onDelete: SetNull)
   encuesta             EncuestaPrimeraCita?
 
