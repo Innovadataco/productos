@@ -17,8 +17,23 @@ import { describe, it, expect } from "vitest";
 import { LIMITES_CLASIFICADOR, clasificarDrift, partirStatements } from "../src/lib/monitoreo/drift-clasificador";
 
 describe("SPEC-760/766 · registro de LÍMITES del clasificador de drift", () => {
-    it("la lista no está vacía (la deuda declarada no se borra en silencio)", () => {
-        expect(LIMITES_CLASIFICADOR.length).toBeGreaterThan(0);
+    it("ratchet: la lista solo se vacía cuando el punto ciego histórico ya se cerró (no antes, no invierte)", () => {
+        // NO se afirma `length > 0`: eso INVERTIRÍA el ratchet — el día que alguien cierre el punto
+        // ciego y la lista quede legítimamente vacía, el candado se pondría rojo por MEJORAR, y la
+        // única salida sería tocar el candado. En su lugar (patrón PENDIENTES_FASE_2 de Dev-2: al
+        // vaciarse, la cláusula ENDURECE), vaciar la lista es un logro VERIFICABLE, no una rotura.
+        const { drift } = clasificarDrift(
+            partirStatements('ALTER TABLE "x" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();'),
+        );
+        const puntoCiegoCerrado = drift.length === 1; // gen_random_uuid aislado pasó a ser DRIFT
+        // Invariante: hay deuda declarada O el punto ciego histórico ya se cerró. Nunca «lista vacía
+        // + punto ciego abierto» (eso sería vaciar el registro sin cerrar nada). Vaciarla NUNCA pone
+        // rojo el candado por sí sola. (Una entrada obsoleta —punto ciego cerrado pero aún listada—
+        // la caza el test «cada ejemplo se clasifica benigno», que obliga a quitarla.)
+        expect(
+            LIMITES_CLASIFICADOR.length > 0 || puntoCiegoCerrado,
+            "lista vacía PERO gen_random_uuid aislado sigue benigno → se vació el registro sin cerrar el punto ciego",
+        ).toBe(true);
     });
 
     it("cada entrada está documentada (campos no vacíos) y con id único", () => {
