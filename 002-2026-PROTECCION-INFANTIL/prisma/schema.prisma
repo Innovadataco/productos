@@ -2912,7 +2912,10 @@ model WorkerLog {
   nivel        NivelLog
   mensaje      String   @db.VarChar(500)
   contextoJson Json?
-  creadoEn     DateTime @default(now()) @db.Timestamptz(3)
+  // SPEC-766: tz(6) (no (3)) — I-420 (20260822) convirtió esta columna a tz(6) junto con todo el
+  // esquema; era la ÚNICA que quedó declarada tz(3). Se alinea el esquema a la base (que ya es tz(6)),
+  // no al revés: bajar la BD a (3) truncaría precisión de logs vivos sin motivo.
+  creadoEn     DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([servicio, creadoEn(sort: Desc)], name: "idx_worker_logs_servicio_creado")
   @@index([nivel, creadoEn(sort: Desc)], name: "idx_worker_logs_nivel_creado")
