@@ -1,8 +1,12 @@
 import { randomBytes } from "crypto";
-import { addDays, getDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "./prisma";
 import { getParametroSistemaValor, type ParametroClient } from "./parametros";
+import {
+    esDiaHabilColombia,
+    sumarDiasHabilesColombia,
+    diasHabilesTranscurridosColombia,
+} from "./fechas/dias-habiles-colombia";
 import type { EstadoApelacion } from "@prisma/client";
 
 /**
@@ -12,7 +16,10 @@ import type { EstadoApelacion } from "@prisma/client";
  * - Apelar NO cambia la visibilidad; solo la resolución del comité.
  * - El apelante NO ve contenido de reportes: solo el número N de reportes asociados.
  *
- * Días hábiles = lunes a viernes (sin calendario de festivos; ver spec.md Assumptions).
+ * Días hábiles: SPEC-768 los unificó en `fechas/dias-habiles-colombia` (calendario
+ * de Bogotá + festivos Colombia). Antes este archivo los calculaba lunes-viernes
+ * SIN festivos y con un bug de tipos (medianoche UTC + getDay ciego a zona) que
+ * podía vencer TARDE. Ahora estos exports DELEGAN al módulo corregido.
  */
 
 export const APELACION_DEFAULTS = {
@@ -48,50 +55,24 @@ export function getMaxTamanoDocumentoMb(client?: ParametroClient): Promise<numbe
 
 const TZ = "America/Bogota";
 
-function isoDiaBogota(fecha: Date): string {
-    return formatInTimeZone(fecha, TZ, "yyyy-MM-dd");
-}
-
-/** Medianoche UTC del día calendario en Bogotá. */
-function inicioDeDiaBogota(fecha: Date): Date {
-    const [y, m, d] = isoDiaBogota(fecha).split("-").map(Number);
-    return new Date(Date.UTC(y!, m! - 1, d!));
-}
-
+// SPEC-768: DELEGACIÓN — misma firma, conducta corregida. El cálculo real (y su
+// candado) viven en `fechas/dias-habiles-colombia`. Nada de `getDay`/`Date.UTC`
+// crudo acá: eso reintroduciría el bug de tipos en el sitio de lectura.
 export function esDiaHabil(fecha: Date): boolean {
-    const dia = getDay(inicioDeDiaBogota(fecha));
-    return dia >= 1 && dia <= 5;
+    return esDiaHabilColombia(fecha);
 }
 
-/**
- * Suma N días hábiles a una fecha (la fecha de inicio no cuenta; se cuentan los
- * días hábiles siguientes). Conserva la hora de la fecha de inicio.
- */
+/** Suma N días hábiles a una fecha (el día del ancla no cuenta). Ver SPEC-768. */
 export function sumarDiasHabiles(fecha: Date, dias: number): Date {
-    const base = inicioDeDiaBogota(fecha);
-    const offsetMs = fecha.getTime() - base.getTime();
-    let cursor = base;
-    let restantes = dias;
-    while (restantes > 0) {
-        cursor = addDays(cursor, 1);
-        if (esDiaHabil(cursor)) restantes--;
-    }
-    return new Date(cursor.getTime() + offsetMs);
+    return sumarDiasHabilesColombia(fecha, dias);
 }
 
 /**
  * Días hábiles transcurridos entre `desde` (excluido) y `hasta` (incluido).
- * 0 si `hasta` es el mismo día o anterior.
+ * 0 si `hasta` es el mismo día o anterior. Ver SPEC-768.
  */
 export function diasHabilesTranscurridos(desde: Date, hasta: Date): number {
-    let cursor = inicioDeDiaBogota(desde);
-    const fin = inicioDeDiaBogota(hasta);
-    let count = 0;
-    while (cursor.getTime() < fin.getTime()) {
-        cursor = addDays(cursor, 1);
-        if (esDiaHabil(cursor)) count++;
-    }
-    return count;
+    return diasHabilesTranscurridosColombia(desde, hasta);
 }
 
 export async function calcularPlazoRespuesta(desde: Date, client?: ParametroClient): Promise<Date> {
