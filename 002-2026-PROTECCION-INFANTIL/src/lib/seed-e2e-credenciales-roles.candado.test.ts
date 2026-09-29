@@ -19,6 +19,7 @@ import { derivarPasoPendienteColegio } from "@/lib/dal/services/camino/estado-co
 import { buildSesionEstadoValue } from "@/lib/routing/sesion-estado-emitter";
 import { leerSesionEstado } from "@/lib/routing/vigencia-cookie";
 import { EMAIL_INTOCABLE } from "../../scripts/lib/credenciales-e2e-calidad";
+import { ENTIDADES_ORDEN_BORRADO } from "../../scripts/demo/_marcado";
 import {
     sembrarCredencialesRoles,
     completarSuscripcionColegio,
@@ -210,6 +211,26 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
         await correr(base);
         const est = await prisma.estudiante.findFirstOrThrow({ where: { documentoNumero: "E2E-EST-000" }, select: { id: true } });
         expect(await prisma.acudienteEstudiante.count({ where: { estudianteId: est.id } })).toBeGreaterThan(0);
+    });
+
+    it("SPEC-763: el camino marca profesor/cursos/estudiante(menor)/acudiente en la corrida PERSISTENTE, cubiertos por ENTIDADES_ORDEN_BORRADO", async () => {
+        await correr(base);
+        const marcadas = await prisma.demoMarcado.findMany({
+            where: { entidad: { in: ["Profesor", "Curso", "Estudiante", "AcudienteEstudiante"] } },
+            select: { entidad: true, metadata: true },
+        });
+        const presentes = new Set(marcadas.map((m) => m.entidad));
+        for (const e of ["Profesor", "Curso", "Estudiante", "AcudienteEstudiante"] as const) {
+            // Identificable: «listame todos los menores de prueba» lo alcanza por el mecanismo estándar.
+            expect(presentes, `SPEC-763: ${e} debe quedar marcado`).toContain(e);
+            // PERTENENCIA: cubierto por el orden de borrado de la familia de `marcar` (demo/_marcado),
+            // NO la de demo-prod — dos familias distintas; ésta es la que valida lo marcado por `marcar`.
+            expect(ENTIDADES_ORDEN_BORRADO, `PERTENENCIA: ${e} en ENTIDADES_ORDEN_BORRADO`).toContain(e);
+        }
+        // Corrida PERSISTENTE: una purga de ESTADO no borra el menor (la cuenta sigue alcanzando el tablero).
+        for (const m of marcadas) {
+            expect((m.metadata as { corrida?: string } | null)?.corrida, `${m.entidad} en corrida persistente`).toBe(CORRIDA_CUENTAS_CALIDAD);
+        }
     });
 
     it("SPEC-761: la cuenta ALCANZA /dashboard/colegio — derivarPaso null Y el guardián deja pasar (cookie)", async () => {
