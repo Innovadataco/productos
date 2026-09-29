@@ -59,16 +59,11 @@ const ctx = { modulosPermitidos: TODOS, profesional: { habilitado: true } };
 // PRINCIPALES_MOVIL, que deja OPERADOR/COMITE_VALIDACION afuera).
 const ROLES = Object.values(RolUsuario) as string[];
 
-// Deuda REGISTRADA de FASE 2 (cert Diseño d6fc77d §5-ter): hojas TOP-LEVEL de admin que HOY caen al
-// fallback porque esperan SVG propios de Diseño. Ver cláusula (3): igualdad exacta, la lista solo
-// puede encoger. Cuando FASE 2 registre sus 4 íconos y este set quede vacío, (3) se vuelve la regla
-// dura «ninguna hoja top-level cae al fallback».
-const PENDIENTES_FASE_2 = new Set<string>([
-    "/dashboard/admin/verificadores",
-    "/dashboard/admin/profesionales/gestion",
-    "/dashboard/admin/analisis/reglas",
-    "/dashboard/admin/verificacion",
-]);
+// FASE 2 CERRADA (Diseño e2243f6 · SPEC-744-iconos-fase2): los 4 íconos que faltaban ya están
+// registrados en `ICONOS_NAV` (VerificadorIcon · ProfesionalIcon · ReglasIcon · RevisionIcon), así
+// que este set quedó VACÍO y la cláusula (3) es ahora la regla DURA: «ninguna hoja top-level cae al
+// fallback». La lista solo encoge; ya no puede crecer sin registrar el ícono.
+const PENDIENTES_FASE_2 = new Set<string>();
 
 /** Hoja = ítem del árbol SIN hijos (los grupos van por la cláusula (2)). */
 const hojasTopLevel = (tree: NavEntry[]): NavEntry[] => tree.filter((i) => !(i.children && i.children.length > 0));

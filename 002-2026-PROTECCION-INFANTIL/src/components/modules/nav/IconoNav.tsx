@@ -238,13 +238,43 @@ export function SesionesIcon({ className }: { className?: string }) {
     );
 }
 
+// SPEC-744 FASE 2 · los 4 íconos admin restantes (FORMA-SPEC744-ICONOS-ADMIN-FASE2 · Gestión
+// e2243f6). Heroicons outline, paths OFICIALES (aplicados, no transcritos a ojo).
+export function VerificadorIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+        </svg>
+    );
+}
+export function ProfesionalIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z" />
+        </svg>
+    );
+}
+export function ReglasIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+        </svg>
+    );
+}
+export function RevisionIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75" />
+        </svg>
+    );
+}
+
 export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     // Admin + profesional (SPEC-437: misma barra).
     "/dashboard/admin": InboxIcon,
-    // SPEC-744 · FASE 1 (cert Diseño 5cb032f §5-ter): íconos que REUSAN componentes existentes
-    // (cero SVG nuevo). Los 4 restantes (verificadores · profesionales/gestion · analisis/reglas
-    // · verificacion) esperan SVG propios de Diseño (FASE 2); hasta entonces caen al fallback en
-    // lateral/«Más» y el candado NO exige aún «hoja top-level ≠ fallback».
+    // SPEC-744 · FASE 1 (cert Diseño 5cb032f §5-ter) reusó componentes existentes. FASE 2
+    // (e2243f6) registra los 4 propios → `PENDIENTES_FASE_2` queda VACÍO y la cláusula (3) del
+    // candado pasa a regla dura «ninguna hoja top-level cae al fallback».
     "/dashboard/admin/inicio": InicioIcon,
     "/dashboard/admin/bandeja": InboxIcon,
     "/dashboard/admin/usuarios": UsuariosIcon,
@@ -257,6 +287,11 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     "/dashboard/admin/ia": BrainIcon,
     "/dashboard/admin/operadores": UsersIcon,
     "/dashboard/admin/padres": UserCircleIcon,
+    // SPEC-744 FASE 2 (Diseño e2243f6): los 4 que caían al fallback InboxIcon.
+    "/dashboard/admin/verificadores": VerificadorIcon,
+    "/dashboard/admin/profesionales/gestion": ProfesionalIcon,
+    "/dashboard/admin/analisis/reglas": ReglasIcon,
+    "/dashboard/admin/verificacion": RevisionIcon,
     "/dashboard/admin/pagos": CurrencyDollarIcon,
     "/dashboard/admin/colegios": BuildingIcon,
     "/dashboard/admin/anti-abuso": ShieldIcon,
