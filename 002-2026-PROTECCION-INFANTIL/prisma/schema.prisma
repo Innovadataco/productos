@@ -390,6 +390,10 @@ enum AccionAudit {
   // escribe una fila con {campo, anterior→nuevo}. Es la fuente del «Historial de
   // cambios» de «Mi perfil» (decisión CEO 06-09-2026).
   PERFIL_CAMBIO
+  // SPEC-753: el sistema graba el HECHO del cruce de encuestas (respondida /
+  // contradicción detectada). NUNCA contenido; solo metadatos (dec 17/23).
+  ENCUESTA_CITA_RESPONDIDA
+  ENCUESTA_CITA_CONTRADICCION
 }
 
 enum TipoPeriodoServicio {
@@ -4108,6 +4112,11 @@ model SolicitudCita {
   // auditoría sobre este campo (se vacía solo).
   enlaceOperador       Usuario?               @relation("SolicitudCitaEnlaceOperador", fields: [enlaceOperadorId], references: [id], onDelete: SetNull)
   encuesta             EncuestaPrimeraCita?
+  // SPEC-753: las dos encuestas de servicio (padre + profesional) y los incidentes
+  // de contradicción. `EncuestaPrimeraCita` (arriba) QUEDA hasta su retiro en otra
+  // SPEC (297 filas en prod; no se hace DROP dentro de una feature).
+  encuestasSesion         EncuestaCita[]
+  incidentesContradiccion IncidenteContradiccionEncuesta[]
 
   // L4/L5: bandeja del profesional (sus solicitudes por estado) y del padre.
   @@index([profesionalId, estado, creadoEn(sort: Desc)])
@@ -4134,4 +4143,115 @@ model EncuestaPrimeraCita {
   // una cita con encuesta trababa con 23503 (el usuario veía el error crudo de la base).
   // La encuesta es un satélite de la cita: se va con ella.
   solicitud SolicitudCita @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPEC-753 · Las dos encuestas de SERVICIO + el cruce (ADITIVO; EncuestaPrimeraCita
+// arriba QUEDA hasta su retiro en otra SPEC). Artefacto para D-121 de Datos:
+// Datos implementa migración + orden-borrado + poblador; Dev construye el service.
+// Disciplina obligatoria (§5 del brief, lección #717): FK **Cascade** (nunca
+// RESTRICT como #429) y toda restricción **VALIDADA**, jamás NOT VALID. Sin puntaje
+// (dec 22). Los enums hacen el texto libre imposible por TIPO en EncuestaCita.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum OrigenEncuestaCita {
+  PADRE
+  PROFESIONAL
+}
+
+enum RazonNoSesion {
+  NO_ME_CONECTE
+  OTRA_PARTE_NO_CONECTO
+  PROBLEMA_TECNICO
+  OTRA
+}
+
+enum OperadorConvoco {
+  SI
+  NO
+  NO_HUBO_OPERADOR
+}
+
+enum InicioSesion {
+  A_TIEMPO
+  CON_RETRASO
+  NO_COMENZO
+}
+
+enum EnlaceFunciono {
+  SI
+  CON_PROBLEMAS
+  NO_FUNCIONO
+}
+
+enum DuracionSesion {
+  MENOS_15
+  ENTRE_15_30
+  ENTRE_30_45
+  MAS_45
+}
+
+// Las 5 preguntas de servicio que CRUZAN (mismo hecho por ambos lados).
+enum PreguntaEncuesta {
+  SE_REALIZO
+  OPERADOR
+  INICIO
+  ENLACE
+  DURACION
+}
+
+// Una fila por (cita, origen). Reemplaza a EncuestaPrimeraCita (que QUEDA hasta su
+// retiro). Las 5 respuestas de servicio; enums → texto libre imposible por TIPO.
+model EncuestaCita {
+  id             String             @id @default(cuid())
+  solicitudId    String
+  origen         OrigenEncuestaCita
+  seRealizo      Boolean // Q1
+  // Solo cuando seRealizo=false. La coherencia (razón sii !seRealizo) NO la sostiene
+  // el tipo: entra como CHECK VALIDADO en la migración de Datos + candado de
+  // inserción real (estándar #717). Prisma es ciego al CHECK.
+  razonNoRealizo RazonNoSesion?
+  operador       OperadorConvoco // Q2
+  inicio         InicioSesion // Q3
+  enlace         EnlaceFunciono // Q4
+  duracion       DuracionSesion // Q5
+  respondidaEn   DateTime           @default(now()) @db.Timestamptz(6)
+
+  solicitud SolicitudCita @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+
+  @@unique([solicitudId, origen]) // 2º intento del mismo lado = 409, no duplica
+  @@index([origen, respondidaEn])
+}
+
+// Una fila por (cita, pregunta) que divergió. Guarda el HECHO + las respuestas
+// CERRADAS + qué divergió; NUNCA contenido, NUNCA culpa. El rótulo se RENDERIZA de
+// padreValor/profesionalValor, no se persiste texto. `padreValor`/`profesionalValor`
+// son String (el valor cerrado viene de un enum DISTINTO por pregunta): la garantía
+// NO es por tipo sino por el SERVICE, que escribe solo valores cerrados (candado).
+model IncidenteContradiccionEncuesta {
+  id               String           @id @default(cuid())
+  solicitudId      String
+  pregunta         PreguntaEncuesta
+  padreValor       String
+  profesionalValor String
+  detectadoEn      DateTime         @default(now()) @db.Timestamptz(6)
+  // Reloj legal (REPORTE-070). `reclamadoEn` es COLUMNA propia NOT NULL (aporte de
+  // Datos): el reclamo puede entrar por PQR SIN encuesta, así que no se deriva de la
+  // encuesta del padre. `venceEn` = reclamadoEn + 15 días hábiles [ancla NEEDS
+  // CLARIFICATION del CEO]. El estado (ABIERTO/RESUELTO/RESUELTO_TARDE/
+  // VENCIDO_A_FAVOR_PADRE) se DERIVA con estadoEfectivoIncidente — no se persiste.
+  reclamadoEn      DateTime         @db.Timestamptz(6)
+  venceEn          DateTime         @db.Timestamptz(6)
+  // Migración de Datos (Prisma es ciego al CHECK): CHECK VALIDADO `venceEn > reclamadoEn`.
+  resueltoEn       DateTime?        @db.Timestamptz(6)
+  // usuarioId snapshot del Verificador, NO FK (lección #727): el rastro sobrevive a
+  // la baja de la cuenta; construir auditoría sobre un FK nulable la pierde.
+  resueltoPor      String?
+
+  solicitud SolicitudCita @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+
+  @@unique([solicitudId, pregunta]) // idempotente: el cruce no duplica
+  // «por vencer / vencidos sin resolver» rangea sobre el PLAZO (venceEn), no sobre
+  // cuándo se detectó (aporte de Datos).
+  @@index([resueltoEn, venceEn])
 }
