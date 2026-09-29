@@ -26,11 +26,13 @@
  *
  * Uso (dev): node --env-file=.env --import tsx scripts/seed-e2e-credenciales-roles.ts
  */
-import type { Prisma, PrismaClient, RolUsuario } from "@prisma/client";
+import { TipoTitular, type Prisma, type PrismaClient, type RolUsuario } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword, verifyPassword } from "../src/lib/auth";
 import { ConsentimientoService } from "../src/lib/dal/services/consentimiento";
 import { esTitularDelDato } from "../src/lib/routing/roles-titulares";
+import { crearCursosPorDefecto } from "../src/lib/colegio/cursos-seed";
+import { crearSuscripcionCliente } from "../src/lib/pagos/freemium.service";
 import { EMAIL_INTOCABLE } from "./lib/credenciales-e2e-calidad";
 import { marcar } from "./demo/_marcado";
 
@@ -93,6 +95,8 @@ export interface ResultadoRol {
     usuarioId: string;
     creado: boolean;
     rehashClave: boolean;
+    /** Colegio asociado (solo el rol SCHOOL_ADMIN). Necesario para completar su camino. */
+    colegioId: string | null;
 }
 
 /** Colegio+tenant DEDICADO a la cuenta de login de colegio (aparte de los A/B de aislamiento SPEC-288). */
@@ -133,6 +137,15 @@ async function upsertCuentaRol(
     const colegio = cred.requiereColegio ? await asegurarColegioLogin(tx, base) : null;
     const existente = await tx.usuario.findUnique({ where: { email: cred.email }, select: { id: true, passwordHash: true } });
 
+    // SPEC-761: el Paso 1 del camino del colegio valida estos campos EN `Usuario`
+    // (no en `Colegio.representanteLegal*`): apellidos, documentoTipo,
+    // documentoNumero, telefono. Valores sintéticos del colegio de PRUEBA (marcador
+    // E2E-LOGIN-000, igual que el Colegio; `Usuario` NO tiene unique sobre
+    // (documentoTipo, documentoNumero), así que no colisiona). Solo el rector.
+    const identidadRector = cred.requiereColegio
+        ? { apellidos: "Calidad E2E", documentoTipo: "CC", documentoNumero: "E2E-LOGIN-000", telefono: "3000000000" }
+        : {};
+
     const activos = {
         nombre: cred.nombre,
         rol: cred.rol,
@@ -141,7 +154,10 @@ async function upsertCuentaRol(
         debeCambiarPassword: false,
         tenantId: colegio?.tenantId ?? null,
         colegioId: colegio?.colegioId ?? null,
+        ...identidadRector,
     } satisfies Prisma.UsuarioUncheckedUpdateInput;
+
+    const colegioId = colegio?.colegioId ?? null;
 
     if (!existente) {
         const creada = await tx.usuario.create({
@@ -149,7 +165,7 @@ async function upsertCuentaRol(
             select: { id: true },
         });
         await marcar(tx, "Usuario", [creada.id], { corrida: CORRIDA_CUENTAS_CALIDAD, script: SCRIPT, notas: `login ${cred.rol}` });
-        return { clave: cred.clave, rol: cred.rol, email: cred.email, usuarioId: creada.id, creado: true, rehashClave: true };
+        return { clave: cred.clave, rol: cred.rol, email: cred.email, usuarioId: creada.id, creado: true, rehashClave: true, colegioId };
     }
 
     // Idempotencia del hash: re-hashea SOLO si la clave del entorno NO coincide con el hash actual.
@@ -157,7 +173,7 @@ async function upsertCuentaRol(
     const cambioClave = claveCoincide ? {} : { passwordHash: await hashPassword(cred.secreto), passwordCreadaEn: ahora };
     await tx.usuario.update({ where: { id: existente.id }, data: { ...activos, ...cambioClave } });
     await marcar(tx, "Usuario", [existente.id], { corrida: CORRIDA_CUENTAS_CALIDAD, script: SCRIPT, notas: `login ${cred.rol}` });
-    return { clave: cred.clave, rol: cred.rol, email: cred.email, usuarioId: existente.id, creado: false, rehashClave: !claveCoincide };
+    return { clave: cred.clave, rol: cred.rol, email: cred.email, usuarioId: existente.id, creado: false, rehashClave: !claveCoincide, colegioId };
 }
 
 /**
@@ -224,6 +240,86 @@ async function sembrarConsentimientoTitular(
     return true;
 }
 
+/**
+ * SPEC-761: deja el estado que el asistente del colegio habría dejado, para que
+ * `derivarPasoPendienteColegio` devuelva null y la cuenta alcance /dashboard/colegio.
+ * Cubre pasos 3/4/5 (profesor activo, cursos activos, estudiante activo + acudiente);
+ * los CAMPOS del rector (paso 1) los pone `upsertCuentaRol` en el Usuario. El paso 2
+ * (suscripción) NO va acá: se crea con el SERVICIO fuera de la tx (ver
+ * `completarSuscripcionColegio`). Datos SINTÉTICOS del colegio de PRUEBA (marcadores
+ * E2E), idempotente. NO se `marcar`n aparte: cuelgan del Colegio persistente (corrida
+ * e2e-calidad-cuentas, que no se purga), igual que la firma de 757 cuelga del Usuario.
+ */
+async function sembrarEntidadesCaminoColegio(tx: Prisma.TransactionClient, colegioId: string, ahora: Date): Promise<void> {
+    // Paso 3 · Profesor activo. Unique (colegioId, tipoDocumento, numeroDocumento).
+    const profExistente = await tx.profesor.findFirst({
+        where: { colegioId, tipoDocumento: "CC", numeroDocumento: "E2E-PROF-000" },
+        select: { id: true },
+    });
+    if (!profExistente) {
+        await tx.profesor.create({
+            data: {
+                colegioId,
+                nombre: "Profesor",
+                apellidos: "Calidad E2E",
+                tipoDocumento: "CC",
+                numeroDocumento: "E2E-PROF-000",
+                anioNacimiento: 1990,
+                sexo: "OTRO",
+                email: "soporte+e2e-profesor@innovadataco.com",
+                telefono: "3000000001",
+                estado: "activo",
+            },
+        });
+    }
+
+    // Paso 4 · Cursos activos: reusa el sembrador de los 11 grados (idempotente).
+    await crearCursosPorDefecto(colegioId, String(ahora.getUTCFullYear()), tx);
+
+    // Paso 5 · Estudiante activo + acudiente, en el primer curso activo.
+    const estExistente = await tx.estudiante.findFirst({
+        where: { colegioId, documentoNumero: "E2E-EST-000" },
+        select: { id: true },
+    });
+    if (!estExistente) {
+        const curso = await tx.curso.findFirst({ where: { colegioId, estado: "activo" }, select: { id: true } });
+        if (curso) {
+            const est = await tx.estudiante.create({
+                data: {
+                    cursoId: curso.id,
+                    colegioId,
+                    nombre: "Estudiante",
+                    apellidos: "Calidad E2E",
+                    documentoTipo: "TI",
+                    documentoNumero: "E2E-EST-000",
+                    estado: "activo",
+                },
+                select: { id: true },
+            });
+            await tx.acudienteEstudiante.create({
+                data: { estudianteId: est.id, orden: 1, nombre: "Acudiente Calidad E2E", relacion: "acudiente", estado: "activo" },
+            });
+        }
+    }
+}
+
+/**
+ * SPEC-761 · Paso 2 del camino: la suscripción del colegio. Se crea con el SERVICIO
+ * canónico `crearSuscripcionCliente` (NO se escribe la fila directo: el servicio
+ * resuelve el plan básico MES_1, el código de referido, la ventana freemium y el
+ * AuditLog). Por eso NO es tx-aware y corre en SU PROPIA transacción, fuera de la del
+ * resto del sembrado (LÍMITE DECLARADO: dos transacciones, no una — la alternativa
+ * era escribir la fila directo y saltar la lógica del servicio). Idempotente: si el
+ * colegio ya tiene suscripción, no crea otra. El servicio escribe AuditLog, no
+ * Notificacion, así que no toca el guard de cero-notificaciones. `true` si creó una.
+ */
+export async function completarSuscripcionColegio(colegioId: string): Promise<boolean> {
+    const yaTiene = await prisma.suscripcion.count({ where: { colegioId } });
+    if (yaTiene > 0) return false;
+    await crearSuscripcionCliente({ tipoTitular: TipoTitular.COLEGIO, colegioId });
+    return true;
+}
+
 export async function sembrarCredencialesRoles(
     tx: Prisma.TransactionClient,
     creds: CredencialRol[],
@@ -241,6 +337,12 @@ export async function sembrarCredencialesRoles(
     const consentimientosSembrados: RolUsuario[] = [];
     for (const r of resultados) {
         if (await sembrarConsentimientoTitular(tx, r, svc, ahora)) consentimientosSembrados.push(r.rol);
+    }
+
+    // SPEC-761: entidades del camino del colegio (pasos 3/4/5) para el/los rol(es)
+    // con colegio. El paso 2 (suscripción) se completa fuera de la tx (servicio).
+    for (const r of resultados) {
+        if (r.colegioId) await sembrarEntidadesCaminoColegio(tx, r.colegioId, ahora);
     }
 
     const notifDespues = await tx.notificacion.count();
@@ -266,6 +368,14 @@ async function main(): Promise<void> {
         sembrarCredencialesRoles(tx, creds, { paisId: pais.id, ciudadId: ciudad.id }),
     );
 
+    // SPEC-761 · Paso 2 (suscripción) FUERA de la tx: el servicio canónico no es
+    // tx-aware (ver completarSuscripcionColegio). Idempotente. Completa el camino
+    // del colegio junto con los pasos 1/3/4/5 que dejó la tx.
+    const suscripcionesColegio: string[] = [];
+    for (const r of resultados) {
+        if (r.colegioId && (await completarSuscripcionColegio(r.colegioId))) suscripcionesColegio.push(r.rol);
+    }
+
     console.log("");
     console.log("✅ Credenciales e2e de roles RESTABLECIDAS (idempotente, corrida persistente):");
     for (const r of resultados) {
@@ -276,6 +386,11 @@ async function main(): Promise<void> {
         consentimientosSembrados.length > 0
             ? `  consentimiento sembrado (titulares del dato): ${consentimientosSembrados.join(", ")} — cruza la puerta SPEC-756`
             : "  consentimiento: sin firmas nuevas (ya vigentes o sin titulares) ✅",
+    );
+    console.log(
+        suscripcionesColegio.length > 0
+            ? `  camino colegio completado (suscripción creada): ${suscripcionesColegio.join(", ")} — /dashboard/colegio alcanzable`
+            : "  camino colegio: suscripción ya existía o sin colegio ✅ (pasos 1/3/4/5 idempotentes)",
     );
     console.log("  → Calidad entra con E2E_<ROL>_PASSWORD del entorno; sin claves en logs.");
 }
