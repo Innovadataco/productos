@@ -1,39 +1,66 @@
--- SPEC-766 (D-121) · reconciliar el DRIFT de "Plan" que el clasificador de SPEC-760 cazó.
+-- SPEC-766 (D-121) · reconciliar el DRIFT de "Plan" y "worker_logs" (historial↔esquema).
 --
--- Estado medido (BD viva, mismo en prod y test): "Plan" tiene la columna LEGACY "creadoEn"
--- (NOT NULL) y "precio" NOT NULL — ninguna de las dos la declara el esquema. El esquema declara
--- "createdAt" (que YA lo crea la migración 20260822130816_pagos_modelos_base, línea 24) y
--- "precio" NULABLE ("legacy placeholder; no usar en lógica nueva"). Es decir: `init` creó
--- creadoEn + precio NOT NULL; 20260822 agregó createdAt pero CONSERVÓ creadoEn; el esquema
--- renombró conceptualmente creadoEn→createdAt e hizo precio nulable, pero NINGUNA migración lo
--- reflejó → el historial produce una base que NO coincide con el esquema (lo que traba el
--- guardián historial↔esquema de SPEC-767).
+-- ⚠️ ESTE ARCHIVO FUE CORREGIDO EN SU LUGAR tras FALLAR en producción (29-09). La versión
+-- original hacía `DROP COLUMN "Plan"."creadoEn"` y prod lo rechazó:
+--   ERROR: cannot drop column creadoEn of table "Plan" because other objects depend on it
+--   DETAIL: publication of table "Plan" in publication bi_replica depends on column creadoEn
 --
--- Esta migración hace que el HISTORIAL cuente lo que el esquema declara:
---   1) DROP creadoEn      — columna legacy, el esquema no la tiene; Prisma no la expone, ningún
---                            código la lee. `createdAt` es la fuente vigente. IF EXISTS: idempotente.
---   2) precio DROP NOT NULL — el esquema lo declara `Float?` (legacy, sin uso en lógica nueva).
---   3) ADD createdAt IF NOT EXISTS — reparación de HISTORIAL, no de esquema: `createdAt` ya existe
---      en toda base que corrió 20260822130816, así que en la BD viva es NO-OP (IF NOT EXISTS).
---      Se incluye como cinturón por si algún entorno lo tuviera fuera de las migraciones.
--- Aditiva salvo el DROP del legacy medido; si al correr contra prod se altera algo MÁS que quitar
--- creadoEn + relajar precio, es HALLAZGO y se para (createdAt debe ser no-op).
+-- POR QUÉ SE MODIFICA UNA MIGRACIÓN YA "aplicada" (normalmente PROHIBIDO — huérfana el ledger de
+-- quien la aplicó). Tres hechos lo permiten acá, y van escritos para que nadie copie la excepción
+-- sin la justificación:
+--   1. FALLÓ en el entorno que importa: prod quedó con applied_steps_count=0 (ningún statement
+--      corrió, la base intacta). No hay estado parcial que reescribir.
+--   2. Se aplicó SOLO en un entorno DESECHABLE: la BD de test, que NO tiene la publicación, así que
+--      el DROP no tenía quién lo bloqueara y sí corrió. Test se re-sincroniza (ver el PR).
+--   3. Lleva pocas horas en main; ningún tercero estable la aplicó.
+-- La recuperación de prod es `migrate resolve --rolled-back` + REINTENTO con este archivo corregido
+-- (una migración NUEVA no sirve: `migrate deploy` no aplica ninguna posterior mientras la 200000
+-- esté fallida en el ledger; marcarla `--applied` sería mentir —cero statements corrieron— y dejaría
+-- prod sin el `precio DROP NOT NULL`).
+--
+-- 🔎 HALLAZGO NOMBRADO · NO-DETERMINISMO ENTRE ENTORNOS: el MISMO archivo dejó test y prod en
+-- estados DISTINTOS —test SIN `Plan.creadoEn`, prod CON ella— porque prod tiene una PUBLICACIÓN
+-- lógica (bi_replica) que test no tiene. Una migración NO es determinista entre entornos cuyo
+-- CATÁLOGO de Postgres difiere (publicaciones, vistas, triggers). Es justo lo que el guardián de
+-- SPEC-760 existe para cazar. Corolario: el barrido de dependientes corre contra la base VIVA que
+-- recibe la migración; medir contra una fresca —o una sin publicaciones— es inconcluyente por clase.
+--
+-- ── (b) RECONCILIAR POR EL ESQUEMA, NO por DROP (dictamen del CEO) ──────────────────────────────
+-- `creadoEn` se DECLARA en el esquema (Plan.creadoEn @default(now())) y se CONSERVA en la base; el
+-- drift se cierra por el esquema, no bajando la base. Se le agrega default (la base era NOT NULL SIN
+-- default → rompía `Plan.create()`) y se CANDA contra uso nuevo
+-- (src/lib/pagos/plan-creadoen-no-uso.candado.test.ts, en este mismo PR).
+-- La salida (a) —sacar creadoEn del whitelist como limpieza de minimización— es tarea de BI CUANDO
+-- TENGA DUEÑO, no deuda perdida: la publicación es un control Ley 1581 que aplica Jelkin.
+--
+-- BARRIDO DE DEPENDIENTES DE BASE (regla post-fallo; medido contra la BD viva de test + el whitelist
+-- del repo `006/scripts/replica-setup/02-pi-db-publicacion.sql`, fuente de la publicación de prod):
+--   · Plan.creadoEn: en el whitelist (línea 164). NO se dropea (por eso falló). ADD/SET conservan la
+--     columna → la publicación NO se toca.
+--   · Plan.precio: pg_depend/pg_constraint/pg_index/pg_trigger → 0 (medido en test). En el whitelist;
+--     DROP NOT NULL conserva la columna → publicación intacta.
+--   · worker_logs.id: en el whitelist (línea 201: id,servicio,nivel,creadoEn); DROP DEFAULT conserva
+--     la columna → publicación intacta. (pg_depend: solo el pkey.)
+--   LÍMITE DECLARADO: el barrido de la clase «publicación» corrió contra test, que NO tiene
+--   publicaciones; se apoya en el whitelist del repo (= la publicación de prod). No pude medir el
+--   catálogo vivo de prod desde acá.
+--
+-- IDEMPOTENTE PARA LOS DOS ESTADOS DIVERGENTES (test: sin la columna / prod: con ella, sin default).
 
-ALTER TABLE "Plan" DROP COLUMN IF EXISTS "creadoEn";
+-- creadoEn · reconciliar por el esquema. ADD IF NOT EXISTS (test la re-agrega; prod no-op).
+ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "creadoEn" TIMESTAMPTZ(6);
+-- Backfill desde createdAt: en test las filas recién agregadas quedan NULL; en prod es no-op (ya NOT
+-- NULL). createdAt es IDÉNTICA a creadoEn (medido por el CEO: 11 filas, 0 difieren) → backfill auditable.
+UPDATE "Plan" SET "creadoEn" = "createdAt" WHERE "creadoEn" IS NULL;
+-- Default: la base era NOT NULL SIN default y Prisma la exigiría en cada create(); el esquema declara
+-- @default(now()) (= CURRENT_TIMESTAMP). Cierra el drift por ambos lados.
+ALTER TABLE "Plan" ALTER COLUMN "creadoEn" SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "Plan" ALTER COLUMN "creadoEn" SET NOT NULL;
+
+-- precio · nulable (el esquema lo declara Float?, legacy). Idempotente: no-op si ya es nulable.
 ALTER TABLE "Plan" ALTER COLUMN "precio" DROP NOT NULL;
-ALTER TABLE "Plan" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
--- ── worker_logs (2ª tabla del drift, medida por el CEO contra prod) ──
--- `id` tiene un DEFAULT `gen_random_uuid()` de la BD que el esquema NO declara (`@default(cuid())`,
--- lo genera la app). DRIFT REAL: el default de BD está MUERTO (Prisma siempre provee el id), así que
--- quitarlo no rompe inserts; alinea la base con el esquema (historial↔esquema). OJO: `gen_random_uuid()`
--- cae en `VALOR_DEFAULT_BENIGNO` del clasificador — un `SET DEFAULT gen_random_uuid()` aislado se
--- marcaría benigno (límite conocido, va al registro de límites del guardián).
---
--- `creadoEn` NO se toca en la migración: su drift es historial↔ESQUEMA (no BD-viva↔historial). El
--- esquema declara `@db.Timestamptz(3)` (intención original de 20260821), pero I-420 (20260822) la
--- convirtió a `tz(6)` junto con TODO el resto — tz(6) es la convención del esquema entero. Prod y test
--- YA son tz(6), fieles a sus migraciones. En vez de bajar la BD a tz(3) (truncar precisión de un dato
--- vivo sin motivo), se corrige el ESQUEMA a tz(6) (el que quedó fuera de sincronía es él). Cero cambio
--- de dato; el diff historial↔esquema se cierra por el lado del esquema. (Ver el schema.prisma de este PR.)
+-- worker_logs.id · sin default de BD (el esquema lo genera con cuid() en la app). Idempotente: no-op
+-- si ya no tiene default. Nota: un `SET DEFAULT gen_random_uuid()` aislado sería benigno para el
+-- clasificador de SPEC-760 — límite ya declarado en LIMITES_CLASIFICADOR (#742).
 ALTER TABLE "worker_logs" ALTER COLUMN "id" DROP DEFAULT;

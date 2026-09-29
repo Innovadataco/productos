@@ -309,6 +309,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/analisis/anomalias/puntualidad.test.ts",
     // SPEC-225 (002-PI-126): fail-open de alertas al CEO (Motor Notif mockeado, sin BD).
     "src/lib/analisis/anomalias/alertas.test.ts",
+    // SPEC-766: Plan.creadoEn declarada legacy pero CANDADA contra uso (escaneo estático, sin BD).
+    "src/lib/pagos/plan-creadoen-no-uso.candado.test.ts",
     // SPEC-220: card presentacional del score de valor (sin BD).
     "src/components/modules/pagos/ScoreClienteCard.test.tsx",
     // SPEC-355: la tarjeta freemium del colegio en el selector de planes.
