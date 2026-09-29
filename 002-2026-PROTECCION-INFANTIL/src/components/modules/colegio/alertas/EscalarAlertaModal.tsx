@@ -79,7 +79,7 @@ export function EscalarAlertaModal({ isOpen, alertaId, onClose, onEscalada }: Es
                     </label>
                     <textarea
                         id="motivo-escalamiento"
-                        className="min-h-28 w-full rounded-xl border border-tinta/20 bg-transparent p-3 text-sm text-body focus:border-pino focus:outline-none"
+                        className="min-h-28 w-full rounded-xl border border-tinta/20 bg-transparent p-3 text-sm text-body ring-accent-input"
                         maxLength={2000}
                         placeholder="Ej.: el estudiante acumula tres reportes por acoso y necesita acompañamiento del comité"
                         value={motivo}

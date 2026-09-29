@@ -339,7 +339,7 @@ export function AdminReportesTable({ rol }: AdminReportesTableProps) {
                         <input
                             id="incluirEliminados"
                             type="checkbox"
-                            className="h-4 w-4 rounded border-tinta/30 text-accent focus:ring-accent"
+                            className="h-4 w-4 rounded border-tinta/30 text-accent ring-accent-input"
                             checked={incluirEliminados}
                             onChange={(e) => setIncluirEliminados(e.target.checked)}
                         />

@@ -109,12 +109,12 @@ export function BandejaTab() {
                         placeholder="Evento"
                         value={filtros.evento}
                         onChange={(e) => { setFiltros((f) => ({ ...f, evento: e.target.value })); setPage(1); }}
-                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body placeholder:text-muted focus:border-ambar focus:outline-none"
+                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body placeholder:text-muted ring-accent-input"
                     />
                     <select
                         value={filtros.canal}
                         onChange={(e) => { setFiltros((f) => ({ ...f, canal: e.target.value })); setPage(1); }}
-                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body focus:border-ambar focus:outline-none"
+                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body ring-accent-input"
                     >
                         <option value="">Todos los canales</option>
                         {catalogos.canales.map((c) => (
@@ -126,7 +126,7 @@ export function BandejaTab() {
                     <select
                         value={filtros.estado}
                         onChange={(e) => { setFiltros((f) => ({ ...f, estado: e.target.value })); setPage(1); }}
-                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body focus:border-ambar focus:outline-none"
+                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body ring-accent-input"
                     >
                         <option value="">Todos los estados</option>
                         {catalogos.estados.map((e) => (
@@ -140,7 +140,7 @@ export function BandejaTab() {
                         placeholder="Destinatario"
                         value={filtros.destinatarioEmail}
                         onChange={(e) => { setFiltros((f) => ({ ...f, destinatarioEmail: e.target.value })); setPage(1); }}
-                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body placeholder:text-muted focus:border-ambar focus:outline-none"
+                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body placeholder:text-muted ring-accent-input"
                     />
                 </div>
                 <div className="mb-4 flex flex-wrap gap-3">
@@ -148,13 +148,13 @@ export function BandejaTab() {
                         type="date"
                         value={filtros.fechaDesde}
                         onChange={(e) => { setFiltros((f) => ({ ...f, fechaDesde: e.target.value })); setPage(1); }}
-                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body focus:border-ambar focus:outline-none"
+                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body ring-accent-input"
                     />
                     <input
                         type="date"
                         value={filtros.fechaHasta}
                         onChange={(e) => { setFiltros((f) => ({ ...f, fechaHasta: e.target.value })); setPage(1); }}
-                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body focus:border-ambar focus:outline-none"
+                        className="rounded-xl border border-tinta/15 bg-papel/60 px-3 py-2 text-sm text-body ring-accent-input"
                     />
                     <Button variant="outline" onClick={() => setPage(1)}>
                         Filtrar

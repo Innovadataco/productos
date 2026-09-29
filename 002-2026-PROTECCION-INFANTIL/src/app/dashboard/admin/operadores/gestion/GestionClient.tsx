@@ -303,7 +303,7 @@ export default function AdminOperadoresGestionPage() {
                                     type="checkbox"
                                     checked={form.esRevisorDeApelaciones}
                                     onChange={(e) => setForm((f) => ({ ...f, esRevisorDeApelaciones: e.target.checked }))}
-                                    className="h-4 w-4 rounded border-tinta/10 text-accent focus:ring-accent"
+                                    className="h-4 w-4 rounded border-tinta/10 text-accent ring-accent-input"
                                 />
                             Revisor de apelaciones
                             </label>

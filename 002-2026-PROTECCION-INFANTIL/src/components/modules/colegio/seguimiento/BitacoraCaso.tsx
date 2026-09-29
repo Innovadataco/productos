@@ -94,7 +94,7 @@ export function BitacoraCaso({ alertaId, notas }: BitacoraCasoProps) {
                     maxLength={MAX_NOTA}
                     rows={3}
                     placeholder="Ej.: llamé a la acudiente, citada para el jueves"
-                    className="mt-1 w-full rounded-xl bg-papel/60 p-3 text-sm text-body ring-1 ring-tinta/10 placeholder:text-subtle focus:outline-none focus:ring-accent"
+                    className="mt-1 w-full rounded-xl bg-papel/60 p-3 text-sm text-body ring-1 ring-tinta/10 placeholder:text-subtle ring-accent-input"
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
                     <p className="microetiqueta">

@@ -269,7 +269,7 @@ export function ClasificacionTab() {
                         <select
                             value={filters.estado}
                             onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
-                            className="w-full rounded-lg border border-tinta/10 bg-papel/70 px-3 py-2 text-sm text-body outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                            className="w-full rounded-lg border border-tinta/10 bg-papel/70 px-3 py-2 text-sm text-body outline-none ring-accent-input"
                         >
                             <option value="">Todos</option>
                             {Object.entries(ESTADO_LABELS).map(([k, v]) => (

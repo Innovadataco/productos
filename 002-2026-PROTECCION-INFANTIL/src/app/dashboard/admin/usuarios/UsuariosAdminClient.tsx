@@ -175,7 +175,7 @@ export default function UsuariosAdminClient({ rol }: { rol: RolUsuariosListado }
                         <select
                             value={estado}
                             onChange={(e) => setEstado(e.target.value)}
-                            className="w-full rounded-xl border border-tinta/20 bg-papel/70 px-3 py-2 text-sm text-body outline-none focus:border-pino dark:bg-papel/70"
+                            className="w-full rounded-xl border border-tinta/20 bg-papel/70 px-3 py-2 text-sm text-body outline-none ring-accent-input dark:bg-papel/70"
                         >
                             <option value="">Todos</option>
                             <option value="activo">Activo</option>

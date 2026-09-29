@@ -28,7 +28,7 @@ export function IdentificadorAdminClient({ identificador }: { identificador: str
                 maxLength={MAX_IDENTIFICADOR_LENGTH}
                 placeholder="Buscar por identificador (número, nick o perfil)"
                 aria-label="Buscar por identificador"
-                className="w-full flex-1 rounded-xl border border-ambar/30 bg-white/70 px-4 py-2.5 text-sm text-body placeholder:text-muted focus:border-ambar focus:outline-none"
+                className="w-full flex-1 rounded-xl border border-ambar/30 bg-white/70 px-4 py-2.5 text-sm text-body placeholder:text-muted ring-accent-input"
             />
             <button
                 type="submit"

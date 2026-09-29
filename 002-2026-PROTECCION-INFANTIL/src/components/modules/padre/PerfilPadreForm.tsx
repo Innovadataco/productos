@@ -250,7 +250,7 @@ export function PerfilPadreForm({
                         rows={5}
                         maxLength={PRESENTACION_MAX}
                         placeholder="Ej.: A mi hija de 10 años un desconocido le escribe por Roblox y no sé cómo hablarle del tema."
-                        className="mt-1.5 w-full rounded-xl border border-cielo/40 bg-white px-3 py-2 text-sm text-body focus:border-cielo focus:outline-none dark:border-cielo/30 dark:bg-cielo/10"
+                        className="mt-1.5 w-full rounded-xl border border-cielo/40 bg-white px-3 py-2 text-sm text-body ring-accent-input dark:border-cielo/30 dark:bg-cielo/10"
                     />
                     <span className="text-xs text-subtle">
                         {presentacion.trim().length}/{PRESENTACION_MAX} · mínimo {PRESENTACION_MIN}
