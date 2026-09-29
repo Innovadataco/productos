@@ -2,6 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
     testDir: "./tests/e2e",
+    // SPEC-770: guardia estructural — corre antes de TODOS los specs y aborta la
+    // corrida si la base conectada no es de pruebas (afirma contra
+    // current_database(), no contra DATABASE_URL). Ningún spec puede sembrar
+    // sobre prod, sin que nadie tenga que recordar importar nada.
+    globalSetup: "./tests/e2e/guardia.global-setup.ts",
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
