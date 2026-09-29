@@ -75,9 +75,13 @@ export function estadoEfectivoIncidente(
 
 /**
  * Fuente ÚNICA de «la obligación de reversar se disparó» (el incumplimiento).
- * Incluye `RESUELTO_TARDE`: una resolución posterior al vencimiento sigue siendo
- * incumplimiento. Contar solo `VENCIDO_A_FAVOR_PADRE` se dejaría afuera los
- * resueltos tarde — por eso el conteo se hace con esta función, no a mano.
+ * Ratificado como decisión por el CEO: cuando alguien deba responder «¿cuántas
+ * veces incumplimos?» —en un reclamo o una auditoría, y va a pasar— la respuesta
+ * NO puede depender de que cada consumidor recuerde incluir `RESUELTO_TARDE`.
+ * NADIE cuenta incumplimientos comparando estados a mano: se le pregunta a ESTA
+ * función. Incluye `RESUELTO_TARDE` (una resolución posterior al vencimiento
+ * sigue siendo incumplimiento); olvidarlo SUBESTIMA el incumplimiento, que es la
+ * dirección peligrosa.
  */
 export function esIncumplimiento(estado: EstadoIncidenteContradiccion): boolean {
     return estado === "VENCIDO_A_FAVOR_PADRE" || estado === "RESUELTO_TARDE";
