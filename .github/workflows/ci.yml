@@ -212,6 +212,19 @@ jobs:
       - run: npm run indices:check
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
+      # SPEC-760 (D-121): guardián de drift de esquema — INFORMATIVO por ahora, NO bloqueante.
+      # Corre contra la BD FRESCA de CI (armada por migrate deploy) con el esquema del PR:
+      # a diferencia del probe de PROD, acá NO empieza rojo (la BD fresca solo trae las categorías
+      # ya baselineadas). Lo único que lo pondría en rojo es que un PR sume un objeto crudo SIN
+      # declararlo — y eso SIEMPRE es defecto, no divergencia aceptable. Por eso este check PUEDE
+      # ser gate DURO de PI (no toca a BI/SICOV: vive en el job de PI).
+      # RATCHET (decisión CEO): entra con `continue-on-error` porque todavía no se observó nacer
+      # verde. **Pasa a bloqueante (se quita `continue-on-error`) cuando se observe verde en 3 PRs
+      # seguidos.** Sin esta línea escrita, se queda blando para siempre.
+      - run: npm run drift:check
+        continue-on-error: true
+        env:
+          DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test
       - run: node scripts/ensure-pgboss.mjs
         env:
           DATABASE_URL: postgresql://proteccion:proteccion_dev@localhost:5433/proteccion_infantil_test

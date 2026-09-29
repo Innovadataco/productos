@@ -21,6 +21,12 @@ import { leerHeartbeatWorker } from "../worker-heartbeat.ts";
 import { leerAntiguedadTickSeg } from "./tick-vida.ts";
 import { contarPendientesVencidas } from "../notificaciones/metricas.ts";
 import { clavesModuloHuerfanas, grantsAModulosMuertos } from "../permisos-catalogo.ts";
+// SPEC-760 (D-121): clasificador de drift de esquema — FUENTE ÚNICA compartida con el CLI.
+import { clasificarDrift, partirStatements } from "./drift-clasificador.ts";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 // SPEC-291 (002-PI-191): 7 nuevas señales por tick-vida (workers y app propios).
 export const SENALES_TICK_VIDA = [
@@ -56,6 +62,8 @@ export const SENALES_MONITOREO = [
     "modulos_huerfanos",
     // SPEC-745: guardián BLANDO de grants ACTIVOS a módulos muertos.
     "grants_modulos_muertos",
+    // SPEC-760: guardián BLANDO de drift de esquema (BD viva ↔ migraciones declaradas).
+    "drift_esquema",
     ...SENALES_TICK_VIDA,
 ] as const;
 export type SenalMonitoreo = (typeof SENALES_MONITOREO)[number];
@@ -446,6 +454,40 @@ export async function probeGrantsModulosMuertos({
  * Detecta bucle silencioso: si el event loop del worker se bloquea, el interval
  * no dispara y el tick envejece.
  */
+/**
+ * SPEC-760 (D-121): guardián BLANDO de DRIFT de esquema. Shellea `prisma migrate diff`
+ * (SOLO lectura) contra la base VIVA y clasifica con la FUENTE ÚNICA compartida con el CLI
+ * (`drift-clasificador`). Cadencia LENTA (1×/día por defecto): el drift cambia con los
+ * despliegues, no por minuto. WATCHDOG: el `timeout` mata el proceso si migrate diff cuelga —
+ * un diff colgado NO puede trabar el monitor entero. NUNCA repara: solo observa y reporta.
+ * Corre con el esquema DESPLEGADO contra la base de esa versión (un esquema de rama daría skew).
+ */
+export async function probeDriftEsquema(
+    { timeoutMs = 15000, schemaPath = "prisma/schema.prisma" }: { timeoutMs?: number; schemaPath?: string } = {},
+): Promise<ResultadoProbe> {
+    const inicio = Date.now();
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) return { ok: false, latenciaMs: 0, detalle: "DATABASE_URL no definido", metodo: "PING" };
+    try {
+        const { stdout } = await execFileAsync(
+            "npx",
+            ["prisma", "migrate", "diff", "--from-schema-datamodel", schemaPath, "--to-url", dbUrl, "--script"],
+            { timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 },
+        );
+        const { drift } = clasificarDrift(partirStatements(stdout));
+        const ok = drift.length === 0;
+        const resumen = drift.map((d) => d.replace(/\s+/g, " ").slice(0, 80)).join(" | ").slice(0, 280);
+        return {
+            ok,
+            latenciaMs: Date.now() - inicio,
+            detalle: ok ? "sin drift real de esquema (baseline al día)" : `${drift.length} drift real: ${resumen}`,
+            metodo: "PING",
+        };
+    } catch (error) {
+        return { ok: false, latenciaMs: Date.now() - inicio, detalle: `migrate diff falló/timeout: ${mensajeError(error)}`, metodo: "PING" };
+    }
+}
+
 export function probeTickVida(senal: SenalTickVida, maxAntiguedadSeg: number = 90): ResultadoProbe {
     const contenedor = NOMBRE_CONTENEDOR_POR_SENAL[senal];
     const seg = leerAntiguedadTickSeg(contenedor);
