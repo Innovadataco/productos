@@ -60,6 +60,10 @@ export const CAMPOS_INTERNOS_PROFESIONAL = [
     "datosFacturacion",
     "autorizacionArchivoId",
     "autorizacionSubidaEn",
+    // SPEC-708: dato de CONTACTO H-2. NUNCA al DTO público del directorio (solo con cita
+    // confirmada). Se vigila por NOMBRE desde ya —antes de que exista el lector— para que el
+    // PR del consumidor no pueda sumarla al `SELECT_TARJETA_PUBLICA` sin romper este candado.
+    "direccionAtencion",
 ] as const;
 
 type PerfilConCiudad = PerfilProfesional & { ciudad: Pick<Ciudad, "id" | "nombre" | "paisId"> };
