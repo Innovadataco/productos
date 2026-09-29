@@ -302,8 +302,12 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
             await aceptarConsentimiento(requestAdmin);
             await login(requestAdmin, EMAIL_ADMIN);
             const ficha = await requestAdmin.get(`/api/admin/verificacion-profesionales/${perfilProfesionalId}`);
-            const items: Array<{ clave?: string; id?: string; key?: string }> = ((await ficha.json())?.data?.checklist) ?? [];
-            const claves = items.map((it) => it.clave ?? it.id ?? it.key ?? "").filter(Boolean);
+            // La ficha del admin devuelve `checklist` como Record<clave, item> (un
+            // OBJETO), no un array — `abrirFicha` lo arma con `Object.fromEntries`. El
+            // test original lo trataba como array (`.map`) y por eso reventaba SIEMPRE:
+            // nació mal y la suite nunca corrió para decirlo.
+            const checklistFicha = (((await ficha.json())?.data?.checklist) ?? {}) as Record<string, unknown>;
+            const claves = Object.keys(checklistFicha);
             expect(claves.length, "la ficha del admin debe traer checklist con claves").toBeGreaterThan(0);
             const checklist = Object.fromEntries(claves.map((k) => [k, { estado: "CUMPLE" }]));
             const decidir = await requestAdmin.post(`/api/admin/verificacion-profesionales/${perfilProfesionalId}/decidir`, {
