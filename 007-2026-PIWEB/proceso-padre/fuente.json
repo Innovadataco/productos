@@ -219,7 +219,7 @@
       "col": 5,
       "type": "external",
       "label": "Apoyo psicológico",
-      "sublabel": "cita con reloj de 48 h",
+      "sublabel": "en preparación",
       "width": 150
     }
   ],
@@ -338,7 +338,6 @@
       "title": "Apoyo psicológico",
       "items": [
         "Presentación › directorio › perfil",
-        "Pago › cita con reloj de 48 h",
         "Agenda y citas"
       ]
     },
