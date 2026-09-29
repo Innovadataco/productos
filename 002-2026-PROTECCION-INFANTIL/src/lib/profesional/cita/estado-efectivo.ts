@@ -59,6 +59,16 @@ function aEpochMs(v: EntradaTiempo): number | null {
 }
 
 /**
+ * SPEC-778 · ¿el reloj (`now`) es un instante UTILIZABLE? Reusa la MISMA normalización
+ * que `estadoEfectivoDeCita`, para que la validez del tiempo sea UNA sola noción en el
+ * producto (no una comprobación paralela). La usa `derivarEnlaceParaCita` para caer al
+ * estado INDETERMINADO —sin afirmar que la hora pasó— cuando falta el reloj.
+ */
+export function relojUtilizable(v: EntradaTiempo): boolean {
+    return aEpochMs(v) !== null;
+}
+
+/**
  * El estado EFECTIVO de una cita, contando el paso del tiempo.
  *
  * @param estadoPersistido  el `estado` guardado (EstadoSolicitudCita).

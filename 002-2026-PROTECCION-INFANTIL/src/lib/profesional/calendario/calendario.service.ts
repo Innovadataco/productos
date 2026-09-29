@@ -28,6 +28,7 @@ import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profe
 import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
 import { TIMEZONE_BOGOTA, diaBogota } from "@/lib/fechas/formato-bogota";
 import { contactoVisiblePorSesion } from "@/lib/profesional/cita/contacto-visible";
+import { derivarEnlaceParaCita, type EnlaceParaCita } from "@/lib/profesional/cita/enlace-derivado";
 
 export type EstadoBloque = "libre" | "validando" | "esperando" | "confirmada" | "reservada";
 
@@ -51,6 +52,12 @@ export interface BloqueCalendario {
     relato?: string;
     /** Correo del padre — solo en `confirmada` (H-2). */
     contactoEmail?: string;
+    /**
+     * SPEC-778 · estado del ENLACE de la reunión (misma fuente única `enlace-derivado`
+     * que el padre y `toCitaParaProfesional`). Solo en `confirmada`. La `url` viaja
+     * únicamente en PUBLICADO.
+     */
+    enlace?: EnlaceParaCita;
 }
 
 export interface CalendarioProfesionalDto {
@@ -136,6 +143,20 @@ export async function calendarioDelProfesional(
             // padre se filtraba acá aunque el DTO la endureciera: la fuga que vio Jelkin.
             if (contactoVisiblePorSesion(f.solicitud.estado) && f.solicitud.padreUsuario.email) {
                 bloque.contactoEmail = f.solicitud.padreUsuario.email;
+            }
+            // SPEC-778: el enlace de la reunión, derivado y gateado (solo CONFIRMADA). Misma
+            // fuente que el padre; `ahora` es el reloj inyectado del calendario.
+            if (f.solicitud.estado === "CONFIRMADA") {
+                bloque.enlace = derivarEnlaceParaCita(
+                    {
+                        estado: f.solicitud.estado,
+                        enlaceReunion: f.solicitud.enlaceReunion,
+                        enlacePublicadoEn: f.solicitud.enlacePublicadoEn,
+                        franjaInicio: f.inicio,
+                        franjaFin: f.fin,
+                    },
+                    ahora,
+                );
             }
         }
         return bloque;

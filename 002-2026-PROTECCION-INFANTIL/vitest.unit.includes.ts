@@ -358,9 +358,16 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-758 (D-121): reserva por NOMBRE — el enlace de la reunión (y sus metadatos) no salen
     // por los DTOs de padre/profesional. Escenario con el campo PRESENTE. Unit puro, sin BD.
     "src/lib/profesional/cita/dto-reserva.candado.test.ts",
-    // SPEC-750: reglas puras del enlace del operador (validación https/no-HTML, visibilidad
-    // por tiempo) y el solape de ventanas de la asignación con simultaneidad. Sin BD.
+    // SPEC-750: reglas puras del enlace del operador (validación https/no-HTML) y el solape
+    // de ventanas de la asignación con simultaneidad. Sin BD. (SPEC-778 eliminó
+    // `enlaceVisibleParaCita`: la visibilidad se deriva de estadoEfectivoDeCita.)
     "src/lib/operadores/enlace-sesion.test.ts",
+    // SPEC-778: la visibilidad del enlace al padre/profesional es UNA derivación gateada
+    // (`derivarEnlaceParaCita`): url solo en PUBLICADO (cruzar el vivo), INDETERMINADO sin
+    // reloj sin mentir, y el tiempo desde estadoEfectivoDeCita (746). + copy sin adjetivos.
+    "src/lib/profesional/cita/enlace-derivado.candado.test.ts",
+    "src/components/modules/padre/citas/enlace-copy-padre.candado.test.tsx",
+    "src/components/modules/profesional/calendario/enlace-copy-profesional.candado.test.tsx",
     "src/lib/operadores/asignador-citas.test.ts",
     // SPEC-353 (A-69 · C6): reglas puras de la frase "qué hacer hoy" del rector.
     "src/lib/colegio/que-hacer-hoy.test.ts",

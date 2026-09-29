@@ -7,18 +7,19 @@
 - [x] T001 Medición (mecanismo primero): reloj = `estadoEfectivoDeCita` (746); `enlaceVisibleParaCita` sin llamadores; alcance DOBLE; fallback `: nueva` ya fail-closed.
 - [x] T002 spec.md v2 (condiciones 1 y 2 resueltas; profesional §5; copy verbatim; candados).
 - [x] T003 plan.md v2 (derivación desde 746 + INDETERMINADO + 3 superficies + copy + candados).
-- [ ] T004 **PARO** · OK del CEO a las dos condiciones + confirmación de alcance (profesional ya resuelto en `50384ba`).
+- [x] T004 §4 APROBADO por el CEO (dos condiciones + alcance doble con el profesional). Borrado de `enlaceVisibleParaCita` exigido en esta misma SPEC.
+- [x] T004b Borrar `enlaceVisibleParaCita` (3 clases: definición, re-export, test). HALLAZGO check: cero referencias restantes, tsc verde — nada se rompió.
 
 ## Fase implementación (tras aprobación)
-- [ ] T005 Exportar `relojUtilizable`/`aEpochMs` de `estado-efectivo.ts`; `derivarEnlaceParaCita(cita, now)` en módulo import-light (deriva de `estadoEfectivoDeCita`, NO comparación nueva); tipo `EnlaceParaCita` compartido con los 4 estados.
-- [ ] T006 `toCitaParaPadre` + `toCitaParaProfesional`: agregar `enlace` derivado.
-- [ ] T007 `BloqueCalendario` / `calendarioDelProfesional`: agregar `enlace` derivado (misma fuente).
-- [ ] T008 Reserva: `enlaceOperadorId`/`enlacePublicadoEn` sin salir; ajustar `dto-reserva.candado` para el valor gateado bajo `enlace.url` sin aflojar los nombres crudos.
-- [ ] T009 UI padre (`EsperaCitaPanel`) — copy `160fa5f` verbatim; link escapado; PUBLICADO sin adjetivos.
-- [ ] T010 UI profesional (`Paneles.tsx` + vista de solicitudes) — copy §5 `50384ba` («casi nada»), sin «no lo compartas».
-- [ ] T011 Candados: C-visible (3 superficies, url real, cruzar el vivo) · C-sin-reloj (condición 2) · C-fuente-reloj (condición 1) · C-copy-sin-adjetivos · C-fuente-única · C-reserva · C-no-crudo · C-no-BI/no-HTML.
-- [ ] T012 Gates: `tsc` + `lint` + `arch:check` + `test:unit` COMPLETO. Sin migración.
-- [ ] T013 Índice de specs (`specs/README.md`) + cierre.
+- [x] T005 `relojUtilizable` exportado de `estado-efectivo.ts`; `derivarEnlaceParaCita(cita, now)` en `enlace-derivado.ts` (deriva de `estadoEfectivoDeCita`, sin comparación nueva); `EnlaceParaCita` con 4 estados.
+- [x] T006 `toCitaParaPadre` + `toCitaParaProfesional`: `enlace` derivado (solo CONFIRMADA).
+- [x] T007 `BloqueCalendario` / `calendarioDelProfesional`: `enlace` derivado (misma fuente) + select del repo amplía `enlaceReunion`/`enlacePublicadoEn`.
+- [x] T008 Reserva intacta: expuse bajo la clave NUEVA `enlace` (no los nombres crudos), así `dto-reserva.candado` sigue verde sin aflojar; `enlaceOperadorId`/`enlacePublicadoEn` no salen ni por valor.
+- [x] T009 UI padre (`EsperaCitaPanel`) — copy `160fa5f` verbatim (3 estados + INDETERMINADO defensivo); link escapado; PUBLICADO sin adjetivos.
+- [x] T010 UI profesional (`Paneles.tsx`) — copy §5 `50384ba` («casi nada»), sin «no lo compartas»; comentario stale de `CalendarioProfesional` corregido.
+- [x] T011 Candados: C-visible (cruzar el vivo, url real, verificado por MUTACIÓN) · C-sin-reloj · C-fuente-reloj · C-copy-sin-adjetivos (padre + profesional). Reserva/no-BI/no-HTML se mantienen por diseño (clave nueva + validación de 750).
+- [x] T012 Gates: tsc 0 · lint 0 errores · arch:check VERDE · test:unit 425/3265. Sin migración.
+- [ ] T013 Índice de specs (`specs/README.md`) + cierre (tras merge/deploy).
 
 ## Notas
 - Condición 1: el reloj sale de `estadoEfectivoDeCita` (746), no de una frontera nueva ni de `enlaceVisibleParaCita` (redundante, sin llamadores).

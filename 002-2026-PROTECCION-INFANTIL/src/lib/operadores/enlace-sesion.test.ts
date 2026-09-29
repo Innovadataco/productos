@@ -1,9 +1,10 @@
 /**
- * SPEC-750 · unit de las reglas PURAS del enlace: validación (https/no-HTML) y
- * visibilidad derivada del tiempo. Sin BD.
+ * SPEC-750 · unit de la regla PURA del enlace: validación (https/no-HTML). Sin BD.
+ * (SPEC-778 eliminó `enlaceVisibleParaCita` y su test: la visibilidad se deriva de
+ * `estadoEfectivoDeCita` (746) en `enlace-derivado.ts`, con su propio candado.)
  */
 import { describe, it, expect } from "vitest";
-import { validarEnlaceReunion, enlaceVisibleParaCita } from "./enlace-validacion";
+import { validarEnlaceReunion } from "./enlace-validacion";
 
 describe("validarEnlaceReunion · solo https, jamás HTML", () => {
     it("acepta un https válido", () => {
@@ -34,19 +35,5 @@ describe("validarEnlaceReunion · solo https, jamás HTML", () => {
     it("rechaza vacío y basura no-URL", () => {
         expect(validarEnlaceReunion("   ").ok).toBe(false);
         expect(validarEnlaceReunion("no soy una url").ok).toBe(false);
-    });
-});
-
-describe("enlaceVisibleParaCita · publicado y antes del fin de la cita", () => {
-    const fin = new Date("2026-09-20T15:00:00Z");
-
-    it("publicado + antes del fin → visible", () => {
-        expect(enlaceVisibleParaCita(true, fin, new Date("2026-09-20T14:30:00Z"))).toBe(true);
-    });
-    it("publicado + pasada la hora → oculto", () => {
-        expect(enlaceVisibleParaCita(true, fin, new Date("2026-09-20T15:30:00Z"))).toBe(false);
-    });
-    it("no publicado → oculto aunque sea antes", () => {
-        expect(enlaceVisibleParaCita(false, fin, new Date("2026-09-20T14:30:00Z"))).toBe(false);
     });
 });
