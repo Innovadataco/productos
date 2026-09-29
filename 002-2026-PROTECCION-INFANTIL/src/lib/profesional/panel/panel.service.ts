@@ -30,6 +30,7 @@ import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { saludoDelPanel } from "./saludo";
 import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
 import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
+import { citasPendientesEncuesta } from "@/lib/dal/services/encuesta-cita";
 
 /** Estados que esperan una respuesta del profesional dentro de las 48 h. */
 const ESPERAN_RESPUESTA: EstadoSolicitudCita[] = ["SIN_CONFIRMAR", "PAGADA_PENDIENTE"];
@@ -121,6 +122,8 @@ export interface PanelProfesionalDto {
     marcador: MarcadorDto;
     verificacion: VerificacionPanelDto | null;
     expedientesCompartidos: ExpedienteCompartidoDto[];
+    /** SPEC-784 · nº de citas del profesional con su encuesta de servicio pendiente (fuente única). */
+    sesionesPorRegistrar: number;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -177,6 +180,11 @@ export async function panelDelProfesional(
     ]);
     const marcador: MarcadorDto = { familiasAtendidas, solicitudesRecibidas, sinConfirmar };
 
+    // SPEC-784: cuántas sesiones le quedan por registrar (encuesta pendiente). Fuente única (deriva del
+    // estado efectivo + ausencia de su fila); consulta propia por el DAL — NO se ensancha el `include`
+    // compartido de `listarPorProfesional`, que otros caminos comparten (misma razón que el saludo).
+    const sesionesPorRegistrar = (await citasPendientesEncuesta(usuarioId, "PROFESIONAL", ahora)).length;
+
     return {
         nombreVisible: perfil.nombreVisible,
         saludo: saludoDelPanel(cuenta?.nombre, perfil.nombreVisible),
@@ -227,6 +235,7 @@ export async function panelDelProfesional(
                 solicitudId: s.id,
                 padreNombre: s.padreUsuario.nombre ?? "Una familia",
             })),
+        sesionesPorRegistrar,
     };
 }
 

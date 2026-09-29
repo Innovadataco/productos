@@ -19,6 +19,7 @@ import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
 import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-detalle/types";
 import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
 import { derivarVistaFranjaPasada, type VistaEspera, type AccionesEspera, type TonoEspera } from "@/lib/padre/vista-espera-cita";
+import { TarjetaEncuestaPendiente } from "@/components/modules/encuesta/TarjetaEncuestaPendiente";
 
 // SPEC-749 FR-2 · destino REAL de «Escríbenos»: el correo de soporte que ya usa la plataforma
 // (`email-colegio.ts` `urlSoporte`, las pantallas de verificación) y que nombra la FORMA del canal
@@ -328,6 +329,10 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                 <h1 className="font-serif text-2xl text-body">{estado.titulo}</h1>
                 <p className="cuerpo text-subtle">{estado.detalle}</p>
             </header>
+
+            {/* SPEC-784: la MISMA invitación de la encuesta que en el panel de reportes (una sola verdad,
+                dos lugares; la del panel es la entrada). Aparece sólo si hay una pendiente; nunca bloquea. */}
+            <TarjetaEncuestaPendiente />
 
             {/* SPEC-730/731 (Diseño): la caja muestra la ETIQUETA AMIGABLE del estado, nunca el
                 enum crudo «PAGADA_PENDIENTE»; el reloj de 48 h y el aviso de vencimiento van debajo. */}

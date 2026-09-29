@@ -61,6 +61,7 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
                 <div className="space-y-6">
                     <Solicitudes data={data} />
                     <CasosPorCerrar data={data} />
+                    <SesionesPorRegistrar data={data} />
                     <CitasConfirmadas data={data} />
                 </div>
                 <div className="space-y-6">
@@ -174,6 +175,30 @@ export function Solicitudes({ data }: { data: PanelProfesionalDto }) {
                     ))}
                 </ul>
             )}
+        </Bloque>
+    );
+}
+
+/**
+ * SPEC-784 · Un ítem de trabajo más en la cola del profesional: las sesiones que le quedan por
+ * registrar (su encuesta de servicio pendiente). Sobrio, voz de usted, sin calidez — para él es un
+ * registro, no un desahogo. Permanece hasta registrar; si no hay ninguna, no ocupa lugar en la cola.
+ */
+export function SesionesPorRegistrar({ data }: { data: PanelProfesionalDto }) {
+    const n = data.sesionesPorRegistrar;
+    if (n === 0) return null;
+    return (
+        <Bloque titulo="Sesiones por registrar" cuenta={`${n}`}>
+            <p className="text-sm text-muted">
+                {n === 1 ? "Tiene una sesión por registrar." : `Tiene ${n} sesiones por registrar.`} Su
+                registro cierra el servicio de la cita.
+            </p>
+            <Link
+                href="/encuesta"
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-2xl border border-tinta/15 px-5 py-2.5 text-sm font-semibold text-body transition hover:bg-tinta/5"
+            >
+                Registrar
+            </Link>
         </Bloque>
     );
 }

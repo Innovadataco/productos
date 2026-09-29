@@ -401,6 +401,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-784 (C-3): el formulario no puede construir la combinación incoherente (FR-3) ni ofrecer
     // texto libre (FR-5) — imposibilidad estructural por árbol de render, control positivo por dirección.
     "src/components/modules/encuesta/EncuestaFormulario.candado.test.tsx",
+    // SPEC-784: la tarjeta de encuesta NUNCA precede a la vía de reporte en el panel del padre
+    // (invariante «nunca sobre el reporte» derivada del árbol de render, control positivo por mutación).
+    "src/components/modules/encuesta/tarjeta-encuesta-orden.candado.test.tsx",
     "src/components/modules/padre/citas/enlace-copy-padre.candado.test.tsx",
     "src/components/modules/profesional/calendario/enlace-copy-profesional.candado.test.tsx",
     "src/lib/operadores/asignador-citas.test.ts",
