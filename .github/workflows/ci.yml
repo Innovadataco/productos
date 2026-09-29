@@ -56,6 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.detect.outputs.skip }}
+      # SPEC-789: segunda decisión sobre la MISMA lista de archivos — ¿el diff puede
+      # romper el arnés e2e (esquema/siembra/tests/e2e)? La consume el `if:` de
+      # `test-e2e` SOLO en pull_request (ver el comentario del job).
+      e2e: ${{ steps.detect.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 2 }
@@ -65,6 +69,9 @@ jobs:
           # ubuntu-latest ya trae node preinstalado; no hace falta setup-node acá.
           skip=$(printf "%s" "$files_changed" | node 002-2026-PROTECCION-INFANTIL/scripts/ci/should-skip-pi.mjs)
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          # SPEC-789: mismo `files_changed`, módulo aparte con test propio.
+          e2e=$(printf "%s" "$files_changed" | node 002-2026-PROTECCION-INFANTIL/scripts/ci/should-run-e2e-pi.mjs)
+          echo "e2e=$e2e" >> "$GITHUB_OUTPUT"
 
   verificaciones:
     runs-on: ubuntu-latest
@@ -595,7 +602,19 @@ jobs:
   test-e2e:
     runs-on: ubuntu-latest
     needs: [should-skip]
-    if: needs.should-skip.outputs.skip != 'true'
+    # SPEC-789 — POR QUÉ ESTÁ CONDICIONADO (no borrar "por completitud"): el número
+    # OFICIAL de e2e sale de `main`, que se verifica en CADA merge (push a main → e2e
+    # SIEMPRE, sin condición de archivos). En `pull_request` la suite cuesta ~19 min y
+    # NO informa el merge: su paso de suite es `continue-on-error`, así que no puede
+    # reportar el fallo de la suite; su única señal DURA es la rotura del ARNÉS de
+    # siembra. Por eso en PR corre SOLO si el diff toca donde el arnés se puede romper
+    # —esquema, siembra o tests/e2e/**— vía should-run-e2e-pi.mjs (mismo patrón que
+    # should-skip-pi.mjs: NUNCA `on: paths:`, que dejaría el check REQUERIDO pendiente
+    # para siempre — candado I-249). Si borrás esta condición, se vuelve a tapar la
+    # cola de CI (SPEC-789 nació con 8 corridas encoladas, la más vieja a 46 min).
+    if: >-
+      needs.should-skip.outputs.skip != 'true' &&
+      (github.event_name != 'pull_request' || needs.should-skip.outputs.e2e == 'true')
     timeout-minutes: 30
     defaults:
       run:

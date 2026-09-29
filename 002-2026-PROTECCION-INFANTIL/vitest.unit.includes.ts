@@ -139,6 +139,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesionales/cron-vencimiento.test.ts",
     // SPEC-374: decisión should-skip (saltar CI en PRs que no tocan PI ni raíz compartida).
     "scripts/ci/should-skip-pi.test.mjs",
+    // SPEC-789: decisión should-run-e2e (correr test-e2e en un PR solo si toca el arnés).
+    "scripts/ci/should-run-e2e-pi.test.mjs",
     // SPEC-375: dispose limpio del singleton pg-boss (cierra el event loop del fork).
     "src/lib/queue-dispose.test.ts",
     // SPEC-290 (002-PI-190): heartbeat de vida del worker-sesiones (helper puro).
