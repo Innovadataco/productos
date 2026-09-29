@@ -18,7 +18,7 @@
  *  se cubren con aserciones de fuente al final: jsdom no evalúa CSS.)
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within, waitFor } from "@testing-library/react";
 import fs from "node:fs";
 import path from "node:path";
 import type { PerfilProfesionalPropioDto } from "@/lib/profesional/dto";
@@ -168,6 +168,57 @@ describe("SPEC-741 · «Mi perfil»: secciones plegables (Diseño doc 333da98)",
         const t = cab("Su tarifa");
         expect(t.textContent).toMatch(/120\.000/);
         expect(t.textContent).not.toMatch(/Sin fijar/);
+    });
+});
+
+describe("SPEC-741 · el resumen del encabezado se refresca tras GUARDAR (sin recargar)", () => {
+    // Bug de Jelkin: guardás la tarifa, sale «✓ Tarifa guardada.», pero el encabezado sigue
+    // «Su tarifa — Sin fijar». Causa raíz: el resumen se calculaba del PROP inmóvil y ningún
+    // guardado lo actualizaba. El resumen ahora sale de `perfilVigente`, que se refresca con la
+    // ENTIDAD PERSISTIDA que devuelve el PUT (no con lo tecleado). Control positivo por estado.
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    /** El PUT /api/profesional/perfil responde `{ perfil }` con la entidad guardada. */
+    function mockPutPerfil(persistido: Partial<PerfilProfesionalPropioDto>) {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                ok: true,
+                status: 200,
+                json: async () => ({ perfil: { ...PERFIL, ...persistido } }),
+            })) as unknown as typeof fetch,
+        );
+    }
+
+    it("TARIFA: «Sin fijar» (control positivo) → tras guardar refleja el valor PERSISTIDO", async () => {
+        montar({ perfil: { tarifaConsultaCOP: null } });
+        expect(cab("Su tarifa").textContent).toMatch(/Sin fijar/); // ANTES de guardar
+
+        // El servidor persiste 85.000: el resumen debe reflejar SU respuesta, no lo tecleado.
+        mockPutPerfil({ tarifaConsultaCOP: 85_000, duracionMinutos: 45 });
+
+        fireEvent.click(cab("Su tarifa")); // desplegar para llegar al input
+        fireEvent.change(screen.getByLabelText("Tarifa por consulta (COP)"), { target: { value: "85000" } });
+        fireEvent.click(screen.getByRole("button", { name: "Guardar tarifa" }));
+
+        await waitFor(() => expect(cab("Su tarifa").textContent).toMatch(/85\.000/));
+        expect(cab("Su tarifa").textContent).not.toMatch(/Sin fijar/);
+    });
+
+    it("DATOS (guardarBloque): «Faltan datos» (control positivo) → tras guardar, «Completos»", async () => {
+        montar({ perfil: { presentacion: "" } });
+        expect(cab("Sus datos").textContent).toMatch(/Faltan datos/); // ANTES de guardar
+
+        mockPutPerfil({}); // el servidor devuelve el perfil COMPLETO (PERFIL)
+
+        fireEvent.click(cab("Sus datos")); // desplegar
+        fireEvent.click(screen.getAllByRole("button", { name: "Editar" })[0]); // abrir el bloque «nombre»
+        fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+        await waitFor(() => expect(cab("Sus datos").textContent).toMatch(/Completos/));
+        expect(cab("Sus datos").textContent).not.toMatch(/Faltan datos/);
     });
 });
 
