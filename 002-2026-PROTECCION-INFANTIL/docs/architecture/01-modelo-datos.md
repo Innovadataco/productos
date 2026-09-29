@@ -1630,6 +1630,9 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | porcentajeServicio | Int | — |
 | creadoEn | DateTime | — |
 | actualizadoEn | DateTime | — |
+| enlaceReunion | String | opcional |
+| enlaceOperadorId | String | opcional |
+| enlacePublicadoEn | DateTime | opcional |
 | padreUsuario | Usuario | relación |
 | profesional | PerfilProfesional | relación (FK) |
 | franja | FranjaDisponible | relación (FK) |
@@ -1638,6 +1641,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | reprogramaciones | SolicitudCita | lista, relación |
 | pagoHeredadoDe | SolicitudCita | opcional, relación |
 | pagosQueHereda | SolicitudCita | lista, relación |
+| enlaceOperador | Usuario | opcional, relación |
 | encuesta | EncuestaPrimeraCita | opcional, relación |
 
 #### `Suscripcion`
@@ -2325,6 +2329,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | revisionesRenovacionHechas | RevisionRenovacion | lista, relación |
 | aceptacionesAutorizacionProfesional | AceptacionAutorizacionProfesional | lista, relación |
 | solicitudesCitaComoPadre | SolicitudCita | lista, relación |
+| citasConEnlaceComoOperador | SolicitudCita | lista, relación |
 
 ## Diagrama ER (Mermaid)
 

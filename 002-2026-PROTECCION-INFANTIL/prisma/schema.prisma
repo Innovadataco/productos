@@ -791,6 +791,9 @@ model Usuario {
   // SPEC-686 (I-420): aceptaciones de la autorización del profesional (en pantalla).
   aceptacionesAutorizacionProfesional AceptacionAutorizacionProfesional[] @relation("AceptacionesAutorizacionProfesional")
   solicitudesCitaComoPadre         SolicitudCita[]                 @relation("SolicitudesCitaPadre")
+  // SPEC-758: citas cuyo enlace de reunión tomó/creó este usuario como OPERADOR
+  // (lado inverso; no agrega columna en Usuario).
+  citasConEnlaceComoOperador       SolicitudCita[]                 @relation("SolicitudCitaEnlaceOperador")
 
   @@index([email])
   @@index([rol])
@@ -4058,6 +4061,24 @@ model SolicitudCita {
   creadoEn               DateTime            @default(now()) @db.Timestamptz(6)
   actualizadoEn          DateTime            @updatedAt @db.Timestamptz(6)
 
+  // SPEC-758 (D-121) · Enlace de la reunión, POR CITA. Lo pone el OPERADOR para ESTA
+  // cita — NO es un enlace fijo del perfil del profesional (esa sala permanente y
+  // reutilizable se rechazó: brief A-79 §7.3/§7.6; el `enlaceVideollamada` de perfil
+  // de #665 quedó fuera). Aditivo y nulable: las citas existentes no tienen enlace.
+  // SOLO ESQUEMA — sin consumidor (pantalla del operador, validación de URL/https,
+  // mostrar/ocultar y asignación van en SPEC-750). PI controla mostrar/ocultar de
+  // forma DERIVADA del tiempo; acá NO se persiste caducidad ni vida del enlace
+  // (§7.6: no las controlamos — la sala vive en un proveedor de video ajeno). El
+  // enlace es dato sensible de acceso a una sesión con un menor: se vigila por NOMBRE
+  // en `CAMPOS_INTERNOS_CITA` (`cita/dto.ts`) desde ya, antes de que exista el lector.
+  enlaceReunion          String?
+  enlaceOperadorId       String?
+  // Marca de «publicado» como TIMESTAMP nulable: null = el operador aún no lo publicó a
+  // las partes; su presencia = publicado. «publicado» es DERIVADO (`enlacePublicadoEn !=
+  // null`) — UNA sola verdad, no un Boolean que pueda contradecir a la fecha. Nulable para
+  // ser aditiva sin backfill. NO es caducidad: la visibilidad la deriva PI del tiempo.
+  enlacePublicadoEn      DateTime?           @db.Timestamptz(6)
+
   padreUsuario         Usuario                @relation("SolicitudesCitaPadre", fields: [padreUsuarioId], references: [id])
   profesional          PerfilProfesional      @relation(fields: [profesionalId], references: [id])
   franja               FranjaDisponible       @relation(fields: [franjaId], references: [id])
@@ -4066,6 +4087,15 @@ model SolicitudCita {
   reprogramaciones     SolicitudCita[]        @relation("SolicitudReprogramada")
   pagoHeredadoDe       SolicitudCita?         @relation("PagoHeredado", fields: [pagoHeredadoDeId], references: [id])
   pagosQueHereda       SolicitudCita[]        @relation("PagoHeredado")
+  // SPEC-758: el operador (rol OPERADOR) que tomó/creó el enlace de esta cita.
+  // Opcional → onDelete SetNull: dar de baja la cuenta del operador NO borra la cita, solo
+  // suelta la referencia (Restrict trabaría la baja; Cascade borraría la cita — catastrófico).
+  // CONSECUENCIA — este FK NO es el registro de responsabilidad: al borrarse la cuenta del
+  // operador se pierde quién publicó el enlace. El rastro DURABLE de «quién convocó» vive en
+  // el REGISTRO DEL HECHO (brief A-79 §9: marca de ingreso por parte, timestamps, versión de
+  // protocolo), que arma SPEC-750 — NO en esta columna nulable. El consumidor NO debe construir
+  // auditoría sobre este campo (se vacía solo).
+  enlaceOperador       Usuario?               @relation("SolicitudCitaEnlaceOperador", fields: [enlaceOperadorId], references: [id], onDelete: SetNull)
   encuesta             EncuestaPrimeraCita?
 
   // L4/L5: bandeja del profesional (sus solicitudes por estado) y del padre.

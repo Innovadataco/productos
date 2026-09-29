@@ -30,6 +30,23 @@ import { contactoVisiblePorSesion } from "./contacto-visible";
 const HORAS_48_EN_MS = 48 * 60 * 60 * 1000;
 
 /**
+ * SPEC-758 · Reserva por NOMBRE de los campos de ENLACE de la cita (dictamen D-121).
+ *
+ * `enlaceReunion` es dato sensible de ACCESO a una sesión con un menor; `enlaceOperadorId`
+ * y `enlacePublicadoEn` son metadatos operativos. NINGUNO sale por los DTOs que ve el padre
+ * (`toCitaParaPadre`) o el profesional (`toCitaParaProfesional`). Se vigila por NOMBRE desde
+ * YA —antes de que exista el lector (el consumidor va en SPEC-750)— para que ese PR no pueda
+ * colar el enlace a un DTO sin romper el candado (`dto-reserva.candado.test.ts`). Mismo patrón
+ * que `CAMPOS_INTERNOS_PROFESIONAL` con `direccionAtencion` (#665). Cuando SPEC-750 exponga el
+ * enlace, lo hará de forma DERIVADA y gateada, quitándolo de esta lista a conciencia.
+ */
+export const CAMPOS_INTERNOS_CITA = [
+    "enlaceReunion",
+    "enlaceOperadorId",
+    "enlacePublicadoEn",
+] as const;
+
+/**
  * @internal — expuesta para el test candado.
  * `now` inyectable para deterministismo en tests.
  */
