@@ -8,20 +8,20 @@
  * Decisión CEO 17:1x: opción (B) — se AGREGA el sidebar a `/mis-reportes`,
  * NO se le quita al resto.
  *
- * Refino CEO 17:4x: montar `PadreSideNav` incondicional le mostraría la
+ * Refino CEO 17:4x: montar `NavLateral` incondicional le mostraría la
  * navegación de padre a un visitante sin cuenta (que llega por link de
  * seguimiento) o a un PROFESIONAL logueado. El shell del padre debe
  * pintarse SOLO cuando el usuario es PARENT autenticado.
  *
  * Candado por CONDUCTA en las dos direcciones:
- *   · con sesión PARENT válida → el árbol renderizado contiene `PadreSideNav`.
- *   · sin sesión (anónimo) → el árbol NO contiene `PadreSideNav`.
- *   · con sesión PROFESIONAL → el árbol NO contiene `PadreSideNav`.
+ *   · con sesión PARENT válida → el árbol renderizado contiene `NavLateral`.
+ *   · sin sesión (anónimo) → el árbol NO contiene `NavLateral`.
+ *   · con sesión PROFESIONAL → el árbol NO contiene `NavLateral`.
  *   · con PARENT vencido → devuelve `ServicioVencidoScreen`, no el shell.
  *
  * Verificado por mutación: si el layout monta el shell incondicional (sin el
  * guard `if (!usuario) return <>{children}</>`), los 2 tests de "sin PARENT"
- * caen. Si el layout retira `PadreSideNav`, el test PARENT cae.
+ * caen. Si el layout retira `NavLateral`, el test PARENT cae.
  */
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -90,7 +90,7 @@ beforeEach(() => {
 });
 
 describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el usuario es PARENT", () => {
-    it("con sesión PARENT válida: el árbol contiene el PadreSideNav", async () => {
+    it("con sesión PARENT válida: el árbol contiene el NavLateral", async () => {
         cookiesMock.mockResolvedValue(cookiesConToken("t-parent"));
         verifyTokenMock.mockResolvedValue({ sub: "u1", rol: "PARENT" });
         verificarVigenciaMock.mockResolvedValue({ vigente: true });
@@ -102,7 +102,7 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
         expect(pintar(arbol).includes("contenido")).toBe(true);
     });
 
-    it("sin sesión (anónimo entrando por link de seguimiento): el árbol NO contiene PadreSideNav", async () => {
+    it("sin sesión (anónimo entrando por link de seguimiento): el árbol NO contiene NavLateral", async () => {
         cookiesMock.mockResolvedValue(cookiesConToken(undefined));
 
         const arbol = await MisReportesLayout({ children: React.createElement("main", { "data-testid": "contenido" }) });
@@ -111,7 +111,7 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
         expect(pintar(arbol).includes("contenido")).toBe(true);
     });
 
-    it("con sesión PROFESIONAL: el árbol NO contiene PadreSideNav (no es padre)", async () => {
+    it("con sesión PROFESIONAL: el árbol NO contiene NavLateral (no es padre)", async () => {
         cookiesMock.mockResolvedValue(cookiesConToken("t-prof"));
         verifyTokenMock.mockResolvedValue({ sub: "prof1", rol: "PROFESIONAL" });
 
