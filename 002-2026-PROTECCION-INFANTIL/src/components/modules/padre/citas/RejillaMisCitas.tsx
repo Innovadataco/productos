@@ -4,8 +4,10 @@
  * SPEC-730 · «Mis citas» del padre en la MISMA rejilla visual del profesional
  * (SPEC-714), no en una lista de tarjetas (radicado SPEC-730 · Jelkin probando).
  * El padre ve SOLO sus citas y entra a cada una en su detalle existente
- * (`/dashboard/padre/citas/[id]`, donde ya viven el estado, el contacto —H-2— y
- * el enlace/dirección de SPEC-708): la rejilla es el índice, no reconstruye el panel.
+ * (`/dashboard/padre/citas/[id]`, donde ya viven el estado y el contacto —H-2—; y,
+ * cuando existan, la dirección presencial (SPEC-708) y el enlace de la reunión —que
+ * es POR CITA y lo pone el operador, no un campo del perfil): la rejilla es el índice,
+ * no reconstruye el panel.
  *
  * El padre no publica ni edita franjas: solo lectura + entrada. Voz «tú». El estado
  * de una cita es PROCESO, nunca criticidad: cielo/ámbar/pino/tinta, CERO rubí (D-120).

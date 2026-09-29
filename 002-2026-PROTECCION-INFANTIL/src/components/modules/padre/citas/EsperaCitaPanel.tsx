@@ -98,8 +98,9 @@ function formatearMonto(cop: number): string {
 /**
  * SPEC-715 · «Agregar a mi calendario»: un `.ics` armado en el cliente desde la
  * fecha/hora que la cita ya trae (sin backend, sin infra). Solo datos públicos
- * (nombre visible del profesional + modalidad); nada del menor, y todavía sin
- * dirección/enlace (eso llega con SPEC-708).
+ * (nombre visible del profesional + modalidad); nada del menor, y todavía sin la
+ * dirección presencial (llega con SPEC-708) ni el enlace de la reunión (es POR CITA,
+ * lo pone el operador — no un campo del perfil del profesional).
  */
 function fechaIcs(iso: string): string {
     return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -248,8 +249,9 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
             {/* SPEC-715 + SPEC-731 · con la cita CONFIRMADA el padre YA puede «seguir»
                 sin depender de ningún caso: fecha/contacto (arriba) + agregar al calendario.
                 Compartir un caso es un EXTRA OPCIONAL (§2), nunca un requisito. Nada de esto
-                antes de CONFIRMADA (candado). El «dónde/enlace» llega con SPEC-708; el
-                recordatorio por correo y la encuesta NO existen y esta pantalla no los promete. */}
+                antes de CONFIRMADA (candado). El «dónde» presencial (dirección) llega con SPEC-708
+                y el enlace de la reunión es POR CITA —lo pone el operador, no un campo del perfil—;
+                el recordatorio por correo y la encuesta NO existen y esta pantalla no los promete. */}
             {cita.estado === "CONFIRMADA" && (
                 <>
                     {/* §1 · «poder seguir»: agregar la cita al calendario. Va PRIMERO,
