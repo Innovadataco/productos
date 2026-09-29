@@ -24,7 +24,14 @@ export const ORDEN_BORRADO: string[] = [
     // SPEC-499 · profesional demo (hijas del perfil primero, luego el perfil).
     // SPEC-676 · Red de Apoyo: la encuesta cuelga de la solicitud; la solicitud de
     // la franja y del perfil → se borran antes que ellos (y que el usuario padre).
+    // SPEC-753 · Datos: las dos encuestas de servicio (EncuestaCita) y el incidente de
+    // contradicción son satélites de la MISMA SolicitudCita (FK Cascade), igual que
+    // EncuestaPrimeraCita → van en ESTA familia (demo-prod) y ANTES que SolicitudCita.
+    // La fila cae por Cascade al borrar la solicitud, pero su MARCA en demo_marcado es
+    // polimórfica (sin FK) y no caería: se listan para que la purga limpie la marca.
     "EncuestaPrimeraCita",
+    "EncuestaCita",
+    "IncidenteContradiccionEncuesta",
     "SolicitudCita",
     "VerificacionProfesional",
     "FranjaDisponible",
