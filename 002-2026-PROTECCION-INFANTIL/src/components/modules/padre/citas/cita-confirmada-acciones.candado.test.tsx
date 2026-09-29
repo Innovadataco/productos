@@ -118,8 +118,11 @@ describe("SPEC-749 FR-2 · CONFIRMADA con la hora ya pasada dice la verdad (rend
         expect(screen.queryByRole("button", { name: /Agregar a mi calendario/ })).toBeNull();
         // Compartir un caso tampoco (no hay sesión futura).
         expect(screen.queryByText(/Compartir un caso/)).toBeNull();
-        // Salida real (no el «Volver» circular como única acción).
+        // DOS salidas reales (no el «Volver» circular como única acción): pedir otra cita +
+        // «Escríbenos» con destino REAL (mailto de soporte), nunca un texto inerte.
         expect(screen.getByRole("link", { name: /Pedir otra cita/ })).toBeTruthy();
+        const escribenos = screen.getByRole("link", { name: /Escríbenos/ });
+        expect(escribenos.getAttribute("href")).toMatch(/^mailto:.+@.+/);
         const txt = container.textContent ?? "";
         // Frases medidas por Calidad que NO deben quedar (verbatim).
         expect(txt).not.toContain("El día y la hora quedan como acordado abajo");

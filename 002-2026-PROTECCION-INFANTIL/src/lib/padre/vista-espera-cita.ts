@@ -25,10 +25,10 @@ import { estadoEfectivoDeCita, type EntradaTiempo } from "@/lib/profesional/cita
 export type TonoEspera = "espera" | "verde" | "gris" | "rojo";
 
 /**
- * CTAs bajo el estado — SOLO afordances con destino REAL. `pedirOtraCita` → directorio
- * (existe). `escribenos`/`revisarPago` → guía de soporte en TEXTO: no hay ruta de soporte
- * para el padre hoy, y un botón sin destino promete conducta que no entregamos. El
- * `reprogramar` de §14 se OMITE por lo mismo (endpoint sí, UI de nueva franja no — SPEC-395).
+ * CTAs bajo el estado — SOLO afordances con destino REAL. `pedirOtraCita` → directorio.
+ * `escribenos`/`revisarPago` → `mailto:` al soporte de la plataforma (destino real; puente
+ * hasta la PQR de SPEC-752). El `reprogramar` de §14 se OMITE: su endpoint existe pero no hay
+ * UI de selección de nueva franja (SPEC-395) — no se pinta un botón sin destino.
  */
 export interface AccionesEspera {
     pedirOtraCita?: boolean;

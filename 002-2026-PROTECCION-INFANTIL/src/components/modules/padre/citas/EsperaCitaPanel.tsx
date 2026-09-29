@@ -17,6 +17,11 @@ import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-d
 import { badgeDeCitaEfectivo } from "@/lib/padre/citas-listado";
 import { derivarVistaFranjaPasada, type VistaEspera, type AccionesEspera, type TonoEspera } from "@/lib/padre/vista-espera-cita";
 
+// SPEC-749 FR-2 · destino REAL de «Escríbenos»: el correo de soporte que ya usa la plataforma
+// (`email-colegio.ts` `urlSoporte`, las pantallas de verificación) y que nombra la FORMA del canal
+// de continuidad. Puente hasta la puerta de PQR de SPEC-752 (Dev-3), que será el destino definitivo.
+const CORREO_SOPORTE = "gerencia@innovadataco.com";
+
 // SPEC-730 · el estado de una cita es PROCESO, nunca criticidad: cielo/pino/ámbar/tinta,
 // CERO rubí. `gris` = tinta neutro (estado pasado/cerrado — SPEC-749 FR-2).
 const TONO_CLASES: Record<TonoEspera, string> = {
@@ -160,11 +165,11 @@ function useCountdown(hastaISO: string | null): { horas: number; minutos: number
 }
 
 /**
- * SPEC-749 FR-2 · SALIDAS de una cita con la hora ya pasada. Solo afordances con destino
- * REAL: «Pedir otra cita» → directorio (existe). «Escríbenos» / «revisar tu pago» van en
- * TEXTO: no hay ruta de soporte para el padre hoy, y un botón sin destino promete conducta
- * que no entregamos. Quitar la ilusión OBLIGA a dar salida real (Pedir otra cita es la
- * salida; el texto no deja al padre atrapado como lo dejaba «Volver a mis citas» circular).
+ * SPEC-749 FR-2 · SALIDAS de una cita con la hora ya pasada — DOS a propósito (Diseño): «o
+ * quiere seguir (→ Pedir otra cita) o algo salió mal (→ Escríbenos)». Ambas con destino REAL:
+ * «Pedir otra cita» → directorio; «Escríbenos» → `mailto:` al soporte de la plataforma (no un
+ * botón muerto ni un texto inerte — un «escríbenos» sin dónde es la misma promesa-sin-mecanismo
+ * que se está arreglando). No promete devolución. El destino definitivo será la PQR de SPEC-752.
  */
 function AccionFranjaPasada({ acciones }: { acciones: AccionesEspera | undefined }) {
     if (!acciones) return null;
@@ -179,10 +184,15 @@ function AccionFranjaPasada({ acciones }: { acciones: AccionesEspera | undefined
                 </Link>
             )}
             {acciones.escribenos && (
-                <p className="cuerpo text-body">¿Algo no salió como esperabas? Escríbenos a soporte.</p>
+                <p className="cuerpo text-body">
+                    ¿Algo no salió como esperabas?{" "}
+                    <a className="underline underline-offset-2 hover:text-body" href={`mailto:${CORREO_SOPORTE}`}>Escríbenos</a>.
+                </p>
             )}
             {acciones.revisarPago && (
-                <p className="cuerpo text-body">Escríbenos para revisar tu pago.</p>
+                <p className="cuerpo text-body">
+                    <a className="underline underline-offset-2 hover:text-body" href={`mailto:${CORREO_SOPORTE}`}>Escríbenos</a> para revisar tu pago.
+                </p>
             )}
         </section>
     );
