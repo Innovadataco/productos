@@ -92,14 +92,31 @@ function primeraPalabraClave(stmt: string): string {
     return stmt.replace(/^\s+/, "").slice(0, 400).toUpperCase();
 }
 
-/** Toda cláusula del ALTER TABLE es un cambio de tipo a TIMESTAMPTZ (punto ciego de Prisma, I-420). */
-function esTimestamptzPuro(stmt: string): boolean {
-    if (!/^ALTER TABLE\s+"[^"]+"/i.test(stmt.trim())) return false;
-    if (!/TIMESTAMPTZ/i.test(stmt)) return false;
-    // Quitar el prefijo ALTER TABLE "t" y partir por cláusulas; cada una debe ser un SET DATA TYPE TIMESTAMPTZ.
-    const cuerpo = stmt.trim().replace(/^ALTER TABLE\s+"[^"]+"\s*/i, "").replace(/;$/, "");
-    const clausulas = cuerpo.split(/,(?=\s*ALTER COLUMN)/i).map((c) => c.trim());
-    return clausulas.every((c) => /^ALTER COLUMN\s+"[^"]+"\s+SET DATA TYPE TIMESTAMPTZ(\(\d+\))?(\s+USING\b.*)?$/i.test(c));
+/**
+ * Un `ALTER TABLE` cuyas cláusulas son TODAS punto ciego benigno de Prisma:
+ *  - cambio de tipo a TIMESTAMPTZ (I-420: Prisma no modela timestamptz), o
+ *  - `SET DEFAULT` de un valor de REPRESENTACIÓN conocida que Prisma no round-trippea
+ *    (now()/CURRENT_TIMESTAMP, gen_random_uuid(), ARRAY[...], literal '…', número, bool).
+ * CONSERVADOR: si ALGUNA cláusula es ADD/DROP COLUMN, SET/DROP NOT NULL, DROP DEFAULT, un
+ * SET DATA TYPE que no sea timestamptz, o un SET DEFAULT de un valor NO conocido → NO es
+ * benigno (nace rojo). Así `Plan ADD COLUMN … , precio SET NOT NULL` sigue siendo drift.
+ */
+const CLAUSULA_TIPO_TS = /^ALTER COLUMN\s+"[^"]+"\s+SET DATA TYPE TIMESTAMPTZ(\(\d+\))?(\s+USING\b.*)?$/i;
+const VALOR_DEFAULT_BENIGNO = /^(CURRENT_TIMESTAMP|now\(\)|gen_random_uuid\(\)|ARRAY\[[^\]]*\](::[A-Za-z0-9_" ]+(\[\])?)?|'[^']*'|-?\d+(\.\d+)?|true|false)$/i;
+const CLAUSULA_SET_DEFAULT = /^ALTER COLUMN\s+"[^"]+"\s+SET DEFAULT\s+(.+)$/i;
+
+function esAlterColumnaBenigno(stmt: string): boolean {
+    const t = stmt.trim();
+    if (!/^ALTER TABLE\s+"[^"]+"/i.test(t)) return false;
+    const cuerpo = t.replace(/^ALTER TABLE\s+"[^"]+"\s*/i, "").replace(/;$/, "").trim();
+    if (cuerpo.length === 0) return false;
+    // Partir en cláusulas: cada una empieza en ALTER/ADD/DROP.
+    const clausulas = cuerpo.split(/,(?=\s*(?:ALTER|ADD|DROP)\b)/i).map((c) => c.trim());
+    return clausulas.every((c) => {
+        if (CLAUSULA_TIPO_TS.test(c)) return true;
+        const m = c.match(CLAUSULA_SET_DEFAULT);
+        return m !== null && VALOR_DEFAULT_BENIGNO.test(m[1].trim());
+    });
 }
 
 function extraerNombre(stmt: string, re: RegExp): string | null {
@@ -113,9 +130,9 @@ export function clasificarDrift(statements: string[]): Clasificacion {
     for (const stmt of statements) {
         const kw = primeraPalabraClave(stmt);
 
-        // 1) timestamptz — punto ciego sistemático de Prisma (categoría).
-        if (esTimestamptzPuro(stmt)) {
-            benignas.push({ stmt, categoria: "timestamptz", razon: "Prisma no modela TIMESTAMPTZ (I-420); la base tiene el tipo correcto" });
+        // 1) ALTER COLUMN de representación (timestamptz y/o SET DEFAULT conocido) — punto ciego de Prisma.
+        if (esAlterColumnaBenigno(stmt)) {
+            benignas.push({ stmt, categoria: "prisma-representacion", razon: "punto ciego de Prisma (I-420): cambio a TIMESTAMPTZ y/o SET DEFAULT de representación conocida (now()/uuid/array/literal); la base tiene el estado correcto" });
             continue;
         }
         // 2) CREATE EXTENSION — por nombre conocido.

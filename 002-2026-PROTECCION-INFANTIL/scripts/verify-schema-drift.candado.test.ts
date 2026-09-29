@@ -21,6 +21,13 @@ const INDICE_PARCIAL = "CREATE INDEX \"idx_reportes_usuario_eliminado\" ON \"Rep
 const RENAME = "ALTER INDEX \"notificaciones_estado_enviarEn_idx\" RENAME TO \"idx_notificaciones_estado_enviarEn\";";
 const EXTENSION = "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\" WITH SCHEMA \"public\" VERSION \"1.6\";";
 const TESTMUTEX = "CREATE TABLE \"TestMutex\" (\n \"id\" TEXT NOT NULL,\n CONSTRAINT \"TestMutex_pkey\" PRIMARY KEY (\"id\")\n);";
+// ── Skew de representación de DEFAULT de Prisma (benigno; medido contra la base viva, SPEC-760) ──
+const DEFAULT_TS = "ALTER TABLE \"Suscripcion\" ALTER COLUMN \"updatedAt\" SET DEFAULT CURRENT_TIMESTAMP;";
+const DEFAULT_ARRAY = "ALTER TABLE \"PerfilProfesional\" ALTER COLUMN \"especialidades\" SET DEFAULT ARRAY[]::TEXT[], ALTER COLUMN \"areasAtencion\" SET DEFAULT ARRAY[]::TEXT[];";
+const COMBINADO_TS_DEFAULT = "ALTER TABLE \"worker_logs\" ALTER COLUMN \"id\" SET DEFAULT gen_random_uuid(), ALTER COLUMN \"creadoEn\" SET DATA TYPE TIMESTAMPTZ(6);";
+const DEFAULT_ENUM = "ALTER TABLE \"SolicitudCita\" ALTER COLUMN \"estado\" SET DEFAULT 'PAGADA_PENDIENTE';";
+// ── Drift REAL medido (SPEC-760): la test tiene columna extra + SET NOT NULL que main no declara ──
+const PLAN_DRIFT = "ALTER TABLE \"Plan\" ADD COLUMN \"creadoEn\" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP, ALTER COLUMN \"precio\" SET NOT NULL;";
 
 // ── Drift REAL medido (SPEC-759): las 2 FK que faltan en la base viva ──
 const FK_DRIFT_1 = "ALTER TABLE \"Suscripcion\" DROP CONSTRAINT \"Suscripcion_autorizadoPorAdminId_fkey\";";
@@ -38,7 +45,7 @@ describe("SPEC-760 · clasificador de drift: baseline benigno vs drift real", ()
         expect(drift).toHaveLength(0);
         expect(benignas).toHaveLength(6);
         expect(new Set(benignas.map((b) => b.categoria))).toEqual(
-            new Set(["timestamptz", "indice-crudo", "rename-indice", "extension", "arnes-test"]),
+            new Set(["prisma-representacion", "indice-crudo", "rename-indice", "extension", "arnes-test"]),
         );
         for (const b of benignas) expect(b.razon.length).toBeGreaterThan(0); // toda entrada lleva RAZÓN
     });
@@ -57,6 +64,16 @@ describe("SPEC-760 · clasificador de drift: baseline benigno vs drift real", ()
         expect(benignas.map((b) => b.stmt)).toEqual([TIMESTAMPTZ, INDICE_VECTOR]);
         // Cada plantada DEBE estar en drift (un índice/tabla/extensión NUEVO no catalogado nace rojo):
         for (const p of plantadas) expect(drift, `la divergencia plantada no fue detectada: ${p}`).toContain(p);
+    });
+
+    it("SPEC-760 born-green: baselinea el skew de DEFAULT de Prisma, pero NO una columna nueva real", () => {
+        const skew = [DEFAULT_TS, DEFAULT_ARRAY, COMBINADO_TS_DEFAULT, DEFAULT_ENUM];
+        const { benignas, drift } = clasificarDrift([...skew, PLAN_DRIFT]);
+        // Los 4 de skew de representación son benignos (categoría prisma-representacion):
+        expect(benignas.map((b) => b.stmt)).toEqual(skew);
+        expect(new Set(benignas.map((b) => b.categoria))).toEqual(new Set(["prisma-representacion"]));
+        // PLAN_DRIFT tiene ADD COLUMN + SET NOT NULL → NO es benigno: nace rojo (columna que main no declara).
+        expect(drift).toEqual([PLAN_DRIFT]);
     });
 
     it("es CONSERVADOR: un índice crudo NO catalogado es drift, aunque se le parezca a uno conocido", () => {
