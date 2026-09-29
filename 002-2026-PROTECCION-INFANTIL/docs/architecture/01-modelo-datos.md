@@ -4,7 +4,7 @@
 
 # 01 · Modelo de datos (Prisma)
 
-Total de modelos: **120** (parseo textual de `prisma/schema.prisma`, sin BD).
+Total de modelos: **122** (parseo textual de `prisma/schema.prisma`, sin BD).
 
 Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 (primera que casa gana), declarada en el generador; lo que no casa cae en «Otros».
@@ -506,7 +506,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | creadoEn | DateTime | — |
 | reporte | Reporte | relación (FK) |
 
-### Otros (sin regla de dominio) (72)
+### Otros (sin regla de dominio) (74)
 
 #### `AceptacionAutorizacionProfesional`
 
@@ -837,6 +837,19 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | createdAt | DateTime | — |
 | recomendacion | Recomendacion | relación (FK) |
 
+#### `EncuestaCita`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| solicitudId | String | — |
+| origen | OrigenEncuestaCita | — |
+| seRealizo | Boolean | — |
+| razonNoRealizo | RazonNoSesion | opcional |
+| operador | OperadorConvoco | — |
+| inicio | InicioSesion | — |
+| enlace | EnlaceFunciono | — |
+
 #### `EncuestaPrimeraCita`
 
 | Campo | Tipo | Atributos |
@@ -1080,6 +1093,22 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | colegio | Colegio | relación (FK) |
 | plataforma | Plataforma | opcional, relación (FK) |
 | alertas | AlertaColegio | lista, relación |
+
+#### `IncidenteContradiccionEncuesta`
+
+| Campo | Tipo | Atributos |
+| --- | --- | --- |
+| id | String | id |
+| solicitudId | String | — |
+| pregunta | PreguntaEncuesta | — |
+| padreValor | String | — |
+| profesionalValor | String | — |
+| detectadoEn | DateTime | — |
+| reclamadoEn | DateTime | — |
+| venceEn | DateTime | — |
+| resueltoEn | DateTime | opcional |
+| resueltoPor | String | opcional |
+| solicitud | SolicitudCita | relación (FK) |
 
 #### `IncidenteInfra`
 
@@ -1643,6 +1672,8 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | pagosQueHereda | SolicitudCita | lista, relación |
 | enlaceOperador | Usuario | opcional, relación |
 | encuesta | EncuestaPrimeraCita | opcional, relación |
+| encuestasSesion | EncuestaCita | lista, relación |
+| incidentesContradiccion | IncidenteContradiccionEncuesta | lista, relación |
 
 #### `Suscripcion`
 
@@ -2458,6 +2489,7 @@ erDiagram
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
     SolicitudCita ||--o{ EncuestaPrimeraCita : "solicitud"
+    SolicitudCita ||--o{ IncidenteContradiccionEncuesta : "solicitud"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"
     Suscripcion ||--o{ CodigoReferidoUso : "referida"
     Suscripcion ||--o{ CodigoReferidoUso : "referidor"

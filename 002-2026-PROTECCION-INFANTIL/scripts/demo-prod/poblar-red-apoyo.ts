@@ -33,8 +33,23 @@
  *   es un acto DELIBERADO y GLOBAL, aparte, con purgar-demo.ts — este poblador nunca
  *   lo invoca (candado de conducta del llamador).
  */
-import type { Prisma, EstadoSolicitudCita, ModalidadCita } from "@prisma/client";
+import type {
+    Prisma,
+    EstadoSolicitudCita,
+    ModalidadCita,
+    OperadorConvoco,
+    InicioSesion,
+    EnlaceFunciono,
+    DuracionSesion,
+    RazonNoSesion,
+    PreguntaEncuesta,
+} from "@prisma/client";
 import { prisma } from "./lib/prisma";
+// SPEC-753 · reloj legal del incidente (venceEn = reclamadoEn + 15 días hábiles).
+// FUENTE canónica de días hábiles: sumarDiasHabilesColombia (SPEC-768, festivos-aware,
+// Bogotá). Rama rebasada sobre main (trae 768) → dependencia DIRECTA del calculador
+// correcto, sin pasar por el alias de apelaciones ni dejar deuda diferida.
+import { sumarDiasHabilesColombia } from "@/lib/fechas/dias-habiles-colombia";
 import { hashDemoPassword } from "./lib/password";
 import { nombrePersona } from "./lib/datos";
 import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
@@ -262,6 +277,117 @@ async function sembrarProfesional(
     });
 }
 
+// ── SPEC-753 · Encuestas de servicio que CRUZAN + incidente de contradicción ──────
+// Se siembran junto a la PRIMERA cita CUMPLIDA del padre (mismo disparador que
+// EncuestaPrimeraCita), en la MISMA tx (atómicas con la cita). Marcadas en la familia
+// demo-prod → `ORDEN_BORRADO`. Los enums hacen el texto libre imposible por TIPO; la
+// coherencia razón↔seRealizo y venceEn>reclamadoEn las sostiene la BD (CHECK + candado).
+const PLAZO_REVERSION_DIAS_HABILES = 15; // art. 51 · reloj NUESTRO de reversión
+
+type Servicio = { operador: OperadorConvoco; inicio: InicioSesion; enlace: EnlaceFunciono; duracion: DuracionSesion | null };
+type DatosEncuesta = Servicio & { seRealizo: boolean; razonNoRealizo: RazonNoSesion | null };
+
+const SERVICIO_OK: Servicio = { operador: "SI", inicio: "A_TIEMPO", enlace: "SI", duracion: "ENTRE_30_45" };
+// SPEC-753: sin sesión → duracion NULL. DuracionSesion no tiene un miembro «no hubo sesión»;
+// forzar MENOS_15 afirmaba que algo que no ocurrió duró <15 min (la mentira que Dev-3 midió).
+// El CHECK duracion-IFF (duración presente sii seRealizo) rechaza cualquier otra cosa.
+const SERVICIO_NO_SESION: Servicio = { operador: "NO_HUBO_OPERADOR", inicio: "NO_COMENZO", enlace: "NO_FUNCIONO", duracion: null };
+
+const ESCENARIOS_ENCUESTA = [
+    { tipo: "acuerdo", peso: 55 },
+    { tipo: "divergencia_servicio", peso: 30 },
+    { tipo: "divergencia_serealizo", peso: 15 },
+] as const;
+
+// Divergencia de servicio: el padre queda en SERVICIO_OK; el profesional difiere en UNA
+// pregunta. padreValor = el valor OK de esa pregunta (así el incidente refleja las filas reales).
+const DIVERGENCIAS_SERVICIO: readonly {
+    pregunta: PreguntaEncuesta;
+    padreValor: string;
+    profesionalValor: string;
+    profesional: Servicio;
+}[] = [
+    { pregunta: "OPERADOR", padreValor: "SI", profesionalValor: "NO_HUBO_OPERADOR", profesional: { ...SERVICIO_OK, operador: "NO_HUBO_OPERADOR" } },
+    { pregunta: "INICIO", padreValor: "A_TIEMPO", profesionalValor: "CON_RETRASO", profesional: { ...SERVICIO_OK, inicio: "CON_RETRASO" } },
+    { pregunta: "ENLACE", padreValor: "SI", profesionalValor: "CON_PROBLEMAS", profesional: { ...SERVICIO_OK, enlace: "CON_PROBLEMAS" } },
+    { pregunta: "DURACION", padreValor: "ENTRE_30_45", profesionalValor: "MAS_45", profesional: { ...SERVICIO_OK, duracion: "MAS_45" } },
+];
+
+// Los 4 estados EFECTIVOS del incidente (estadoEfectivoIncidente), rotados de forma
+// determinista para cobertura pareja de las pantallas y del reloj legal.
+const ESTADOS_INCIDENTE = ["ABIERTO", "RESUELTO", "RESUELTO_TARDE", "VENCIDO"] as const;
+let incidenteSeq = 0;
+// Snapshot del Verificador (NO FK, por diseño: sobrevive a la baja de la cuenta).
+const RESUELTO_POR_DEMO = "demo-verificador-red-apoyo";
+
+/** Reloj legal para que el incidente caiga en un estado efectivo dado. Fechas RELATIVAS
+ *  a `ahora` (nunca un ancla en fin de semana): el patrón que 768 dejó para sus tests. */
+function relojIncidente(
+    estado: (typeof ESTADOS_INCIDENTE)[number],
+    ahora: Date,
+): { reclamadoEn: Date; venceEn: Date; resueltoEn: Date | null } {
+    if (estado === "ABIERTO") {
+        const reclamadoEn = new Date(ahora.getTime() - 3 * MS_DIA);
+        return { reclamadoEn, venceEn: sumarDiasHabilesColombia(reclamadoEn, PLAZO_REVERSION_DIAS_HABILES), resueltoEn: null };
+    }
+    // Los otros tres nacen de un reclamo viejo: el plazo (venceEn) ya quedó en el pasado.
+    const reclamadoEn = new Date(ahora.getTime() - 40 * MS_DIA);
+    const venceEn = sumarDiasHabilesColombia(reclamadoEn, PLAZO_REVERSION_DIAS_HABILES);
+    if (estado === "RESUELTO") return { reclamadoEn, venceEn, resueltoEn: new Date(venceEn.getTime() - 3 * MS_DIA) }; // ≤ vence
+    if (estado === "RESUELTO_TARDE") return { reclamadoEn, venceEn, resueltoEn: new Date(venceEn.getTime() + 4 * MS_DIA) }; // > vence
+    return { reclamadoEn, venceEn, resueltoEn: null }; // VENCIDO: sin resolver, plazo pasado
+}
+
+const conteoCruce = { encuestasCita: 0, incidentes: 0 };
+
+/**
+ * Siembra el par de encuestas de servicio (PADRE + PROFESIONAL) de una cita CUMPLIDA y,
+ * cuando el par diverge, el incidente de contradicción con su reloj legal. Corre DENTRO
+ * de la tx de sembrarCita. Marca cada fila (familia demo-prod).
+ */
+async function sembrarEncuestasCruce(tx: Tx, solicitudId: string, ahora: Date): Promise<void> {
+    const escenario = elegirPeso(ESCENARIOS_ENCUESTA).tipo;
+
+    let padre: DatosEncuesta = { seRealizo: true, razonNoRealizo: null, ...SERVICIO_OK };
+    let profesional: DatosEncuesta = { seRealizo: true, razonNoRealizo: null, ...SERVICIO_OK };
+    let incidente: { pregunta: PreguntaEncuesta; padreValor: string; profesionalValor: string } | null = null;
+
+    if (escenario === "divergencia_servicio") {
+        const d = DIVERGENCIAS_SERVICIO[entero(0, DIVERGENCIAS_SERVICIO.length - 1)]!;
+        profesional = { seRealizo: true, razonNoRealizo: null, ...d.profesional };
+        incidente = { pregunta: d.pregunta, padreValor: d.padreValor, profesionalValor: d.profesionalValor };
+    } else if (escenario === "divergencia_serealizo") {
+        // El padre dice que NO se dio (con razón); el profesional dice que SÍ.
+        padre = { seRealizo: false, razonNoRealizo: "OTRA_PARTE_NO_CONECTO", ...SERVICIO_NO_SESION };
+        incidente = { pregunta: "SE_REALIZO", padreValor: "false", profesionalValor: "true" };
+    }
+
+    const encPadre = await tx.encuestaCita.create({ data: { solicitudId, origen: "PADRE", ...padre } });
+    await marcar(tx, "EncuestaCita", encPadre.id, "encuesta padre");
+    const encProf = await tx.encuestaCita.create({ data: { solicitudId, origen: "PROFESIONAL", ...profesional } });
+    await marcar(tx, "EncuestaCita", encProf.id, "encuesta profesional");
+    conteoCruce.encuestasCita += 2;
+
+    if (incidente) {
+        const estado = ESTADOS_INCIDENTE[incidenteSeq++ % ESTADOS_INCIDENTE.length]!;
+        const { reclamadoEn, venceEn, resueltoEn } = relojIncidente(estado, ahora);
+        const inc = await tx.incidenteContradiccionEncuesta.create({
+            data: {
+                solicitudId,
+                pregunta: incidente.pregunta,
+                padreValor: incidente.padreValor,
+                profesionalValor: incidente.profesionalValor,
+                reclamadoEn,
+                venceEn,
+                resueltoEn,
+                resueltoPor: resueltoEn ? RESUELTO_POR_DEMO : null,
+            },
+        });
+        await marcar(tx, "IncidenteContradiccionEncuesta", inc.id, `incidente ${estado}`);
+        conteoCruce.incidentes += 1;
+    }
+}
+
 /** Crea una franja + su SolicitudCita (+ encuesta si aplica) en UNA transacción. */
 async function sembrarCita(opts: {
     prof: ProfSembrado;
@@ -323,6 +449,9 @@ async function sembrarCita(opts: {
                 },
             });
             await marcar(tx, "EncuestaPrimeraCita", encuesta.id);
+            // SPEC-753 · las dos encuestas de servicio (padre + profesional) + el
+            // incidente si el par diverge. Misma tx que la cita.
+            await sembrarEncuestasCruce(tx, solicitud.id, new Date());
         }
         return solicitud.id;
     });
@@ -409,6 +538,8 @@ interface Resumen {
     franjasLibres: number;
     porEstado: Record<string, number>;
     encuestas: number;
+    encuestasCita: number; // SPEC-753 · filas EncuestaCita (padre + profesional)
+    incidentes: number; // SPEC-753 · IncidenteContradiccionEncuesta
     padres: number;
 }
 
@@ -438,7 +569,7 @@ async function main(): Promise<void> {
     // perfil toma una por índice (determinista). La doble escritura se deriva por perfil.
     const listas = await leerListasCatalogo();
     const combos = combosRedApoyo(listas);
-    const resumen: Resumen = { profesionales: 0, franjasLibres: 0, porEstado: {}, encuestas: 0, padres: 0 };
+    const resumen: Resumen = { profesionales: 0, franjasLibres: 0, porEstado: {}, encuestas: 0, encuestasCita: 0, incidentes: 0, padres: 0 };
 
     // 1) Profesionales visibles + franjas libres futuras.
     const profs: ProfSembrado[] = [];
@@ -503,6 +634,8 @@ async function main(): Promise<void> {
         if (conEncuesta) resumen.encuestas++;
     }
 
+    resumen.encuestasCita = conteoCruce.encuestasCita;
+    resumen.incidentes = conteoCruce.incidentes;
     console.log("[poblar-red-apoyo] LISTO. Resumen:", JSON.stringify(resumen, null, 2));
 }
 
