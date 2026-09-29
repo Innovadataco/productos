@@ -9,6 +9,12 @@ import { UsuarioRepository } from "../repositories/usuario";
 import { ReporteRepository } from "../repositories/reporte";
 import { ReporteOperadorRepository } from "../repositories/reporte-operador";
 import { AuditLogRepository } from "../repositories/audit-log";
+import { SolicitudCitaRepository } from "../repositories/solicitud-cita";
+// SPEC-779: la carga de SESIONES se cuenta con la MISMA fuente que el asignador de citas
+// (mismo repo, mismos estados) y el mismo tope (parámetro), para que la pantalla y el sistema
+// no discrepen.
+import { obtenerConfigAsignacion } from "@/lib/operadores/asignador";
+import { ESTADOS_OCUPAN_OPERADOR } from "@/lib/operadores/asignador-citas";
 import type {
     CasoAbiertoMetricaDto,
     CasoOperadorListItemDto,
@@ -37,12 +43,14 @@ export class OperadorMetricasService {
     private readonly reportes: ReporteRepository;
     private readonly reportesOperador: ReporteOperadorRepository;
     private readonly audit: AuditLogRepository;
+    private readonly solicitudes: SolicitudCitaRepository;
 
     constructor() {
         this.usuarios = new UsuarioRepository();
         this.reportes = new ReporteRepository();
         this.reportesOperador = new ReporteOperadorRepository();
         this.audit = new AuditLogRepository();
+        this.solicitudes = new SolicitudCitaRepository();
     }
 
     /** Valida que el usuario exista, sea OPERADOR y esté activo. */
@@ -63,6 +71,12 @@ export class OperadorMetricasService {
     /** SPEC-189: métricas de productividad del operador. */
     async obtenerMetricas(operadorId: string, ahora = new Date()): Promise<MetricasOperadorDto> {
         const operador = await this.validarOperador(operadorId);
+
+        // SPEC-779 · carga de SESIONES (libro separado de los casos), MISMA fuente que el asignador.
+        const [config, sesionesVigentes] = await Promise.all([
+            obtenerConfigAsignacion(),
+            this.solicitudes.contarSesionesVigentesDeOperador(operadorId, ESTADOS_OCUPAN_OPERADOR, ahora),
+        ]);
 
         const [reportesAbiertos, resueltos24h, resueltos7d, resueltos30d, escalados30d, cierres30d] = await Promise.all([
             this.reportes.findBandejaRevision(
@@ -152,9 +166,11 @@ export class OperadorMetricasService {
                 id: operador.id,
                 email: operador.email,
                 nombre: operador.nombre,
-                cupoMaximo: operador.perfilOperador?.cupoMaximo ?? 10,
+                cupoMaximo: operador.perfilOperador?.cupoMaximo ?? config.cupoDefault,
+                topeSesiones: config.cupoSesionesDefault,
             },
             casosAbiertos,
+            sesionesVigentes,
             casosResueltos24h: resueltos24h,
             casosResueltos7d: resueltos7d,
             casosResueltos30d: resueltos30d,

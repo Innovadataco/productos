@@ -27,8 +27,11 @@ import { metadatosHecho } from "./hecho-sesion-tipos";
 // El solape puro vive en `simultaneidad.ts` (unit sin infra); se re-exporta.
 export { ventanasSolapan } from "./simultaneidad";
 
-/** Estados en los que una cita OCUPA la agenda del operador (hay sesión programada). */
-const ESTADOS_OCUPAN_OPERADOR: EstadoSolicitudCita[] = ["CONFIRMADA"];
+/** Estados en los que una cita OCUPA la agenda del operador (hay sesión programada).
+ *  EXPORTADO para que la pantalla de carga del admin (SPEC-779) cuente las sesiones con la
+ *  MISMA fuente que este asignador: si contaran distinto, el admin vería un número y el
+ *  sistema decidiría con otro. */
+export const ESTADOS_OCUPAN_OPERADOR: EstadoSolicitudCita[] = ["CONFIRMADA"];
 
 export type ResultadoAsignacionCita =
     | { asignado: true; operadorId: string }

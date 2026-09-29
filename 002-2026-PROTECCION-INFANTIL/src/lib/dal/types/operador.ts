@@ -92,9 +92,14 @@ export interface MetricasOperadorDto {
         id: string;
         email: string;
         nombre: string | null;
+        /** Tope de CASOS (reportes/comité). SPEC-779: es UN libro; las sesiones tienen otro. */
         cupoMaximo: number;
+        /** Tope de SESIONES (videollamadas de citas) — libro SEPARADO (SPEC-779). */
+        topeSesiones: number;
     };
     casosAbiertos: CasoAbiertoMetricaDto[];
+    /** SPEC-779 · Sesiones VIGENTES del operador (misma fuente que el asignador de citas). */
+    sesionesVigentes: number;
     casosResueltos24h: number;
     casosResueltos7d: number;
     casosResueltos30d: number;

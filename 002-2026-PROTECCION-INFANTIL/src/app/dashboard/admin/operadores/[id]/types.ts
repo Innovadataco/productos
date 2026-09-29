@@ -2,7 +2,10 @@ export type OperadorHeader = {
     id: string;
     email: string;
     nombre: string | null;
+    /** Tope de CASOS (reportes/comité). SPEC-779: libro separado del de sesiones. */
     cupoMaximo: number;
+    /** Tope de SESIONES (videollamadas de citas). SPEC-779. */
+    topeSesiones: number;
 };
 
 export type CasoAbierto = {
@@ -25,6 +28,8 @@ export type CategoriaConteo = {
 export type Metricas = {
     operador: OperadorHeader;
     casosAbiertos: CasoAbierto[];
+    /** SPEC-779 · Sesiones VIGENTES (misma fuente que el asignador). */
+    sesionesVigentes: number;
     casosResueltos24h: number;
     casosResueltos7d: number;
     casosResueltos30d: number;
