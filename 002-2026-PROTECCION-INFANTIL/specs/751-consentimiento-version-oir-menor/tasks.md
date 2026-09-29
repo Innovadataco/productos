@@ -6,18 +6,22 @@
 - [x] T001 Mecanismo primero: verificar SPEC-241 en el código (versión ya re-consiente) y `Hijo` (sin audiencia). Documentar el hallazgo.
 - [x] T002 spec.md (hallazgo, FR, decisiones D-1..D-5, candados, [ABOGADO] marcados).
 - [x] T003 plan.md (contrato de datos + puerta + superficie + parámetros + candados + orden).
-- [ ] T004 **PARO** · aprobación del CEO del contrato + respuesta de abogado a FR-007 (texto) y FR-008 (re-oír por versión).
+- [x] T004 §4 APROBADO por el CEO (con (a) sin denormalizar). Abogado (FR-007 texto / FR-008 política) en el paquete de Jelkin; tabla en Datos/765.
 
-## Fase implementación (tras aprobación)
-- [ ] T005 Schema aditivo: tabla `AudienciaMenor` (FK Cascade, índices `(hijoId, version)`/`(version)`) + migración a mano no destructiva. **NO** se agrega campo a `Hijo` (D-6, fuente única).
-- [ ] T006 D-121: clasificar `AudienciaMenor` como **PII** con retención atada al menor (D-8, alcance SPEC-772) + orden de borrado + FK Cascade; candado de inserción si hay restricción cruda.
-- [ ] T007 `AudienciaMenorService` (menorEstaAlDia / menoresPendientes por consulta / declarar = INSERT inmutable en tx, sin denormalizar) + repos DAL (sin `@/lib/prisma`).
-- [ ] T008 Extender el predicado de la puerta (cuenta vigente **Y** menores ACTIVOS con fila vigente), fuente única para página + endpoint; reusar `esTitularDelDato`. No debilitar la puerta de cuenta.
+## Fase implementación — lo que NO necesita la tabla ni al abogado (ESTE entregable)
+- [x] T005 **Artefacto de esquema** `AudienciaMenor` para D-121 (`data-model.md`): campos/FK Cascade/índices/clasificación PII. La tabla la implementa Datos (SPEC-765); Dev-2 no toca `schema.prisma`.
+- [x] T008 **Puerta (predicado PURO)** `src/lib/consentimiento/audiencia-gate.ts`: `titularAlDia` = cuenta vigente **Y** cada menor ACTIVO oído para la versión vigente (per-menor). Reusa la política FR-008. Sin BD.
+- [x] T011 Parámetro sembrado `audiencia_menor.reoir_en_cambio_de_version` (default `true`, porqué en el seed; `update:{}` para no clobbear una decisión de abogado en re-seed).
+- [x] T012a Candados PUROS: C-per-menor-no-global · C-versión (política) · **C-no-romper-cuenta (regresión SPEC-241)** — la cuenta manda y no se debilita. (`audiencia-gate.candado.test.ts`.)
+- [x] T012b Tope MEDIDO: `padre.hijos.maximo` default **5**, sobre menores ACTIVOS (SPEC-339/363) → la consulta del gate es barata (confirma no-denormalizar).
+
+## Fase implementación — ESPERA (tabla Datos/765 + texto [ABOGADO])
+- [ ] T006 D-121 en `schema.prisma` (Datos): tabla + orden de borrado + candado de inserción si hay restricción cruda.
+- [ ] T007 `AudienciaMenorService`: `declarar` = INSERT inmutable en tx + consulta `menoresPendientes` (cablea el predicado puro a Prisma). Repos DAL, sin `@/lib/prisma`.
 - [ ] T009 `POST /api/audiencia-menor/declarar` (auth, 403 no-titular, idempotente por versión, AuditLog).
-- [ ] T010 UI per-menor (paso/modal), incluyendo el momento «agregaste un menor → hay que oírlo» (D-7/FR-010) con su explicación — TEXTO desde documento/parámetro legal ([ABOGADO]); si algo queda falso, PARO.
-- [ ] T011 Parámetros sembrados: `audiencia_menor.reoir_en_cambio_de_version` (default `true`, porqué documentado en el seed) + clave/ruta del texto legal (idempotentes).
-- [ ] T012 Candados: C-puerta per-menor · C-per-menor-no-global · C-versión · C-fuente-única (Hijo sin campo de audiencia) · C-activos · C-no-romper-cuenta (regresión SPEC-241).
-- [ ] T013 Gates: `tsc` + `lint` + `arch:check` + `test:unit` COMPLETO + migración verificada.
+- [ ] T010 UI: el MURO de «registraste un hijo nuevo» (copy `da2986f`) + el paso de declaración ([ABOGADO]). D-9: la vía de PROTECCIÓN (reportar/pedir ayuda por otro hijo) NO se cierra.
+- [ ] T012c Candado de conducta de la puerta (fuente única, per-menor con dato real) + candado estructural «`Hijo` sin campo de audiencia» (D-6) — cuando exista la tabla/servicio.
+- [ ] T013 Gates + migración verificada.
 - [ ] T014 Índice de specs (`specs/README.md`) + cierre.
 
 ## Notas
