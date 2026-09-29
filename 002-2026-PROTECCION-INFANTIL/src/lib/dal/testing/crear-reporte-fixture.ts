@@ -1,4 +1,4 @@
-import { PrismaClient, type Prisma, type Reporte } from "@prisma/client";
+import { type PrismaClient, type Prisma, type Reporte } from "@prisma/client";
 import { crearReporteConTexto } from "@/lib/dal/services/crear-reporte-con-texto";
 
 /**
@@ -34,6 +34,11 @@ export function crearReporteFixture(
             ...(origenEvidencia !== undefined ? { origenEvidencia } : {}),
             reporte,
         });
+    // Detectar por el MÉTODO, no por `instanceof`: el cliente de transacción interactiva de
+    // Prisma 5 ES `instanceof PrismaClient` (comparte prototipo) pero NO expone `$transaction`,
+    // así que `instanceof` clasificaba mal un `tx` como cliente completo → `$transaction` undefined.
     // Un PrismaClient trae `$transaction`; un TransactionClient no.
-    return db instanceof PrismaClient ? db.$transaction(sellar) : sellar(db);
+    const abreTransaccion = (c: PrismaClient | Prisma.TransactionClient): c is PrismaClient =>
+        typeof (c as PrismaClient).$transaction === "function";
+    return abreTransaccion(db) ? db.$transaction(sellar) : sellar(db);
 }
