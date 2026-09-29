@@ -43,6 +43,10 @@
 - **FR-2 va DESPUÉS:** (a) espera el copy de `CONFIRMADA` con franja pasada ([NEEDS CLARIFICATION] del CEO); (b) rebase sobre `main` antes de tocar `EsperaCitaPanel` (#721 ya corrigió sus comentarios). **Se arranca por FR-1 y FR-3**, que no dependen de una palabra ni de ese archivo.
 - **No correr tests contra la BD de test compartida** hasta que el CEO confirme el reset de Datos (migración huérfana de #665 + `ADD COLUMN` sin `IF NOT EXISTS`).
 
+## Impacto en arquitectura
+
+**Impacto en arquitectura:** SPEC-749 cablea la fuente única `estadoEfectivoDeCita` (#718) a `panel.service`, colapsando a **una sola frontera con un solo significado** las dos comparaciones de tiempo que hoy conviven (INICIO en el panel, ≈FIN en el listado muerto). Retira un módulo del allowlist de huérfanos (gana importador de producción) y borra código muerto (`grupoDeCita`). **Sin esquema, sin ruta nueva, sin cambio de datos ni de copy** en FR-1/FR-3; la derivación en la pantalla del padre (FR-2) es UI y va diferida. Es defensa contra la deriva de fronteras: la verdad temporal de una cita queda con un solo dueño.
+
 ## Fuera
 
 - El enlace por cita, la cola/asignación del operador con simultaneidad, el DTO del operador (**SPEC-750**). · Consentimiento por versión (**751**). · Canal de continuidad y las dos puertas (**752**). · Dos encuestas + cruce (**753**). · Cerrar el contacto mutuo (**754**). · **No** se toca `estado-efectivo.ts` (fuente, sólo lectura — si falta un caso, se pide, no se agrega acá) ni `#708/#665` (Datos).
