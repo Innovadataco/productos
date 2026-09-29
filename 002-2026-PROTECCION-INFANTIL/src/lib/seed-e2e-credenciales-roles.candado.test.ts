@@ -247,4 +247,23 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
         const sa = await prisma.usuario.findUniqueOrThrow({ where: { email: COLEGIO }, select: { colegioId: true } });
         expect(await prisma.estudiante.count({ where: { colegioId: { not: sa.colegioId! } } })).toBe(0);
     });
+
+    // SPEC-761 · el caso que hace SEGURO el límite de las dos transacciones: la tx
+    // (login+consent+rector+entidades) COMMITEÓ pero la suscripción (paso 2, fuera de
+    // la tx) NO se creó — fallo ENTRE las dos. Un re-run debe COMPLETAR sin duplicar.
+    it("SPEC-761: recuperación tras fallo entre las dos transacciones (tx ok, suscripción no) → el re-run completa sin duplicar", async () => {
+        // Solo la tx, SIN completarSuscripcionColegio: estado parcial deliberado.
+        const r = await prisma.$transaction((tx) => sembrarCredencialesRoles(tx, CREDS, base));
+        const sa = r.resultados.find((x) => x.rol === "SCHOOL_ADMIN")!;
+        const colegioId = sa.colegioId!;
+        expect(await prisma.suscripcion.count({ where: { colegioId } }), "estado parcial: sin suscripción").toBe(0);
+        // el hueco es EXACTAMENTE el paso 2 (los otros 4 ya están):
+        expect(await derivarPasoPendienteColegio(sa.usuarioId), "solo falta el plan").toBe("plan");
+
+        // re-run del paso que faltaba: crea la que faltaba y NO duplica.
+        expect(await completarSuscripcionColegio(colegioId), "crea la suscripción faltante").toBe(true);
+        expect(await completarSuscripcionColegio(colegioId), "segundo intento no duplica").toBe(false);
+        expect(await prisma.suscripcion.count({ where: { colegioId } })).toBe(1);
+        expect(await derivarPasoPendienteColegio(sa.usuarioId), "camino completo tras sanar el paso 2").toBeNull();
+    });
 });
