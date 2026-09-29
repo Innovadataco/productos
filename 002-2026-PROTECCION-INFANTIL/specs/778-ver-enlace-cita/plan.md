@@ -5,19 +5,26 @@
 
 ## Punto de partida (medido en main, no supuesto)
 
-- `enlaceVisibleParaCita(publicado, franjaFin, now)` ya existe (SPEC-750, `enlace-validacion.ts`) — la regla de los §7. Se REUSA.
-- Operador ya deriva `enlaceEstado` (`publicado`/`sin-enlace`) en `calendario-operador.service.ts:75`.
-- Columnas `enlaceReunion`/`enlaceOperadorId`/`enlacePublicadoEn` existen (SPEC-758) y están reservadas por nombre (`CAMPOS_INTERNOS_CITA` + `dto-reserva.candado`).
-- Padre y profesional NO ven el enlace (medido). Fallback `: nueva` de reasignar/reprogramar YA fail-closed (SPEC-750).
+- `estadoEfectivoDeCita` (SPEC-746, `estado-efectivo.ts`) es la FUENTE ÚNICA del reloj — su doc ya nombra el enlace. **De acá deriva 778** (condición 1 del CEO).
+- `enlaceVisibleParaCita` (750) NO tiene llamadores vivos (solo re-export + test); frontera duplicada → NO se usa (queda redundante; retiro/delegación posterior, no en esta SPEC).
+- Operador deriva `enlaceEstado` (`publicado`/`sin-enlace`) en `calendario-operador.service.ts:75` (2 estados, sin reloj).
+- Columnas de enlace existen (758) y reservadas por nombre (`CAMPOS_INTERNOS_CITA` + `dto-reserva.candado`).
+- Padre y profesional NO ven el enlace (medido, alcance DOBLE). Fallback `: nueva` YA fail-closed (750).
+- FORMA de Diseño: padre `160fa5f` (3 estados) + profesional §5 `50384ba` («casi nada»).
 
 ## Diseño (contrato — lo que aprueba el CEO)
 
-### Derivación (fuente única)
-1. `derivarEnlaceParaCita(cita, now) → { estado: "SIN_PUBLICAR" | "PUBLICADO" | "CERRADO_POR_HORA", url?: string }`:
-   - `url` presente SOLO si `enlaceVisibleParaCita(cita.enlacePublicadoEn != null, cita.franja.fin, now)`.
-   - estado: publicado+futuro → PUBLICADO(url); publicado+pasado → CERRADO_POR_HORA; no publicado → SIN_PUBLICAR.
-   - fail-closed: sin `now`/`franjaFin` → sin `url`.
-   - vive en un módulo import-light (como `enlace-validacion.ts`) para que el candado la pruebe unit.
+### Derivación (fuente única — condiciones 1 y 2)
+1. `derivarEnlaceParaCita(cita, now) → { estado: "SIN_PUBLICAR" | "PUBLICADO" | "PASADA" | "INDETERMINADO", url?: string }` en módulo import-light:
+   - `publicado = cita.enlacePublicadoEn != null` (hecho de datos, sin reloj).
+   - `relojOK` = validez de `now`/`franjaFin` reusando el normalizador de 746 (input-validity, NO una frontera nueva).
+   - `fase = estadoEfectivoDeCita(estado, inicio, fin, now)` (fuente única del reloj — condición 1).
+   - **Orden de decisión (condición 2, no miente):**
+     - `!relojOK` → **INDETERMINADO** (sin `url`; ni «se pasó» ni «aparecerá»-como-tiempo). Defensivo.
+     - `fase == PASADA` (reloj OK) → **PASADA** (sin `url`; la vista de cita de FR-2 muestra «ya pasó»).
+     - `!publicado` → **SIN_PUBLICAR** (sin `url`).
+     - resto (publicado, fase ∈ {PROXIMA, EN_CURSO}) → **PUBLICADO** + `url`.
+   - Exportar de `estado-efectivo.ts` un `relojUtilizable(now)` (o `aEpochMs`) para no reimplementar la validez.
 
 ### Superficies (consumo)
 2. `toCitaParaPadre` (dto.ts): agrega `enlace = derivarEnlaceParaCita(solicitud, now)`. El `now` ya entra a `toCitaParaPadre`.
@@ -28,15 +35,18 @@
 ### Reserva (mantener)
 6. `enlaceOperadorId`/`enlacePublicadoEn` NO se exponen (ni valor). `enlaceReunion` sigue reservado por NOMBRE; su VALOR sale solo bajo `enlace.url`. Ajustar `dto-reserva.candado` para permitir el valor gateado bajo la clave derivada sin aflojar la prohibición de los nombres crudos.
 
-### UI (copy = Diseño)
-7. Padre: `EsperaCitaPanel` pinta el bloque de enlace según `cita.enlace.estado` (link cuando hay `url`; texto de estado si no). Copy [DISEÑO].
-8. Profesional: el panel del calendario (`Paneles.tsx`, «Cita confirmada») y/o la vista de solicitudes pintan lo mismo. Copy [DISEÑO].
-9. Render: `url` como `href` escapado; nunca `dangerouslySetInnerHTML`.
+### UI (copy VERBATIM de la FORMA de Diseño)
+7. Padre (`EsperaCitaPanel`): SIN_PUBLICAR (ámbar) / PUBLICADO (cielo, botón **[ Entrar a la reunión ]** + «no lo compartas») / PASADA = la vista «ya pasó» de FR-2 (enlace ausente). Copy `160fa5f`.
+8. Profesional (`Paneles.tsx` calendario y vista de solicitudes): §5 `50384ba` — botón cuando está, renglón factual cuando no, «ya pasó su hora» cuando pasó; NADA MÁS, sin «no lo compartas».
+9. Render: `url` como `href` escapado; nunca `dangerouslySetInnerHTML`. En PUBLICADO NO se pintan adjetivos no controlados (sala/segura/caduca/un solo uso/admisión).
+10. INDETERMINADO: rama defensiva; mensaje mínimo honesto (copy a pedir a Diseño si necesita línea propia).
 
 ## Candados (fase implementación)
-- C-visible por superficie (padre, profesional-solicitudes, profesional-calendario): url real plantada; cruzar el vivo (now antes/después de `franjaFin`); publicado/no publicado. Control positivo y negativo.
-- C-fuente-única: barrido de decisores de visibilidad del enlace = exactamente los que el candado ejerce.
-- C-reserva (mantener) + C-no-crudo (fail-closed) + C-no-BI/no-HTML.
+- C-visible por superficie (padre, profesional-solicitudes, profesional-calendario): url real plantada; **cruzar el vivo** (now antes/después de `franjaFin`); publicado/no publicado.
+- C-sin-reloj (condición 2): now basura + publicado → sin `url` y la cara NO dice «se pasó»/afirma tiempo (INDETERMINADO).
+- C-fuente-reloj (condición 1): la noción de «pasó» sale de `estadoEfectivoDeCita`; un `now < X` nuevo en la derivación → rojo.
+- C-copy-sin-adjetivos (FR-008): en PUBLICADO (padre y profesional) buscar «sala|segura|caduca|un solo uso|admit» en la cara del usuario → CERO.
+- C-fuente-única + C-reserva (mantener) + C-no-crudo (fail-closed) + C-no-BI/no-HTML.
 
 ## Gates (antes de cerrar)
 `tsc` + `lint` + `arch:check` + `test:unit` COMPLETO. Sin migración (schema intacto).
