@@ -30,6 +30,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/api/admin/credencial-siempre-visible.candado.test.ts",
     // SPEC-672 (I-399): el camino de autenticación lee el Usuario con select explícito (nunca todos los escalares).
     "src/lib/auth-select-explicito.candado.test.ts",
+    // SPEC-765: el registro de columnas sensibles es un ESPEJO VERIFICADO de las 5 fuentes (cruce +
+    // FAIL-LOUD del acoplamiento cross-producto con el whitelist de 006). Sin BD.
+    "src/lib/seguridad/registro-columnas-sensibles.candado.test.ts",
     // SPEC-463 (D-107): el colegio habla de usted; el padre conserva «tú».
     "src/app/dashboard/colegio/voz-usted.candado.test.ts",
     // SPEC-514: candado de clase — el área interna (admin/operador/comité/verificador) sin voseo.
