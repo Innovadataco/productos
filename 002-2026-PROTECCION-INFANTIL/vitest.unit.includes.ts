@@ -150,7 +150,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/app/dashboard/colegio/cursos/CursosPageClient.test.tsx",
     "src/app/dashboard/colegio/configuracion/ConfiguracionPageClient.test.tsx",
     "src/app/dashboard/colegio/profesores/ProfesoresPageClient.test.tsx",
-    "src/components/modules/AdminNav.test.tsx",
     // SPEC-512: candado de voz «la cuenta» (identificador/nick → cuenta en padre+público).
     "src/components/modules/voz-cuenta.candado.test.ts",
     // SPEC-669: candado de clase — el servicio del padre no afirma alcance compartido (ficha propia · D-4).
@@ -168,7 +167,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/admin/IdentificadorExpedientesAnonimos.test.tsx",
     "src/components/modules/padre/IdentificadorBusquedaClient.test.tsx",
     // SPEC-317: menú lateral del área padre (sin BD).
-    "src/components/modules/padre/PadreSideNav.test.tsx",
     // SPEC-606: el texto sensible se revela con el código de 6 dígitos del correo (sin BD).
     "src/components/modules/padre/TextoSensible.test.tsx",
     // SPEC-392 (L3): tarjeta del directorio (tarifa por delante, "Nuevo en la red").
@@ -197,7 +195,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/components/modules/spam/SpamResolucionModal.test.tsx",
     "src/components/modules/audit-log/legible.test.ts",
     "src/components/modules/colegio/BuscadorGlobal.test.tsx",
-    "src/components/modules/colegio/ColegioSideNav.test.tsx",
     "src/components/modules/colegio/comite/ComiteEstadisticas.test.tsx",
     "src/components/modules/colegio/curso/AcudienteContacto.test.tsx",
     "src/components/modules/colegio/curso/AnilloCurso.test.tsx",
@@ -604,11 +601,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/rediseno/admin-sin-rojo-crudo.candado.test.ts",
     "src/lib/rediseno/emergencia-rubi.candado.test.ts",
     // SPEC-478 (fallo Diseño): el subtítulo del nav de colegio en text-muted por AA (fuente, sin BD).
-    "src/lib/rediseno/nav-colegio-subtitulo-muted.candado.test.ts",
     // SPEC-477 (Diseño): los canales oficiales en neutro uniforme, sin color por canal (fuente, sin BD).
     "src/lib/rediseno/canales-oficiales-neutro.candado.test.ts",
     // SPEC-479 (fallo Diseño): PadreSideNav en cielo, 0 sky, activo cielo / inactivo neutro (fuente, sin BD).
-    "src/lib/rediseno/padre-sidenav-cielo.candado.test.ts",
     // SPEC-481 (bug prod): profesional sin PerfilProfesional → redirect a completar, no 500 (mockea auth/service/redirect, sin BD).
     "src/app/dashboard/profesional/profesional-sin-perfil.candado.test.tsx",
     // SPEC-482 (Lote-2): el territorio colegio sin color crudo — emerald/slate/gray/amber → tokens (excl. pdf-informe-mensual).

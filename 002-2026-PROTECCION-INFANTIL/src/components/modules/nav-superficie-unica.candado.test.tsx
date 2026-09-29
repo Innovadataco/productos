@@ -173,9 +173,7 @@ vi.mock("@/components/ui/ThemeToggle", () => ({ ThemeToggle: () => null }));
 vi.mock("@/components/ui/Tooltip", () => ({ Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/ui/Guardian", () => ({ Guardian: () => null }));
 
-import { AdminNav } from "./AdminNav";
-import { ColegioSideNav } from "./colegio/ColegioSideNav";
-import { PadreSideNav } from "./padre/PadreSideNav";
+import { NavLateral } from "./nav/NavLateral";
 import { PadreNavMovil } from "./padre/PadreNavMovil";
 import { NavHeader } from "./NavHeader";
 
@@ -184,24 +182,11 @@ const enlaceCentinela = () => screen.getByText(SENT_LABEL).closest("a")?.getAttr
 /** Cada superficie que lee la fuente y cómo probar que refleja el centinela. */
 const SUPERFICIES_CUBIERTAS: Array<{ rel: string; render: () => void }> = [
     {
-        rel: "src/components/modules/AdminNav.tsx",
+        // SPEC-744: la lateral única reemplaza AdminNav/ColegioSideNav/PadreSideNav.
+        rel: "src/components/modules/nav/NavLateral.tsx",
         render: () => {
             authRef.value = { user: { rol: "ADMIN" }, isLoading: false };
-            render(<AdminNav rol="ADMIN" modulosPermitidos={[]} />);
-        },
-    },
-    {
-        rel: "src/components/modules/colegio/ColegioSideNav.tsx",
-        render: () => {
-            authRef.value = { user: { rol: "SCHOOL_ADMIN" }, isLoading: false };
-            render(<ColegioSideNav rol="SCHOOL_ADMIN" modulosPermitidos={[]} />);
-        },
-    },
-    {
-        rel: "src/components/modules/padre/PadreSideNav.tsx",
-        render: () => {
-            authRef.value = { user: { rol: "PARENT" }, isLoading: false };
-            render(<PadreSideNav />);
+            render(<NavLateral rol="ADMIN" modulosPermitidos={[]} />);
         },
     },
     {

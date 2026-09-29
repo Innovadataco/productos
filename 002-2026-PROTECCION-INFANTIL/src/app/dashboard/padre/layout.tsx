@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
-import { PadreSideNav } from "@/components/modules/padre/PadreSideNav";
+import { NavLateral } from "@/components/modules/nav/NavLateral";
 import { PadreNavMovil } from "@/components/modules/padre/PadreNavMovil";
 import { Alerta } from "@/components/ui/Alerta";
 import { resolverEstadoVigencia, debeMostrarBanner } from "@/lib/pagos/vigencia-middleware";
@@ -41,7 +41,7 @@ export default async function PadreLayout({ children }: { children: React.ReactN
 
     return (
         <div className="theme-padre flex min-h-screen bg-page">
-            <PadreSideNav />
+            <NavLateral rol="PARENT" modulosPermitidos={[]} />
             {/* SPEC-339: en móvil el padre no tenía NINGÚN menú (el lateral es
                 hidden sm:flex). Barra inferior + aire para que no tape contenido. */}
             <PadreNavMovil />

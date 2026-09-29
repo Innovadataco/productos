@@ -52,8 +52,8 @@ vi.mock("@/lib/dal/repositories/pagos-repository", () => ({
         obtenerSuscripcionActivaPorUsuarioId(id: string) { return obtenerSuscripcionMock(id); }
     },
 }));
-vi.mock("@/components/modules/padre/PadreSideNav", () => ({
-    PadreSideNav: () => React.createElement("nav", { "data-testid": "padre-sidenav" }),
+vi.mock("@/components/modules/nav/NavLateral", () => ({
+    NavLateral: () => React.createElement("nav", { "data-testid": "nav-lateral" }),
 }));
 vi.mock("@/components/modules/padre/PadreNavMovil", () => ({
     PadreNavMovil: () => React.createElement("nav", { "data-testid": "padre-nav-movil" }),
@@ -98,7 +98,7 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
         obtenerSuscripcionMock.mockResolvedValue(null);
 
         const arbol = await MisReportesLayout({ children: React.createElement("main", { "data-testid": "contenido" }) });
-        expect(pintar(arbol).includes("padre-sidenav")).toBe(true);
+        expect(pintar(arbol).includes("nav-lateral")).toBe(true);
         expect(pintar(arbol).includes("contenido")).toBe(true);
     });
 
@@ -106,7 +106,7 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
         cookiesMock.mockResolvedValue(cookiesConToken(undefined));
 
         const arbol = await MisReportesLayout({ children: React.createElement("main", { "data-testid": "contenido" }) });
-        expect(pintar(arbol).includes("padre-sidenav")).toBe(false);
+        expect(pintar(arbol).includes("nav-lateral")).toBe(false);
         expect(pintar(arbol).includes("padre-nav-movil")).toBe(false);
         expect(pintar(arbol).includes("contenido")).toBe(true);
     });
@@ -116,7 +116,7 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
         verifyTokenMock.mockResolvedValue({ sub: "prof1", rol: "PROFESIONAL" });
 
         const arbol = await MisReportesLayout({ children: React.createElement("main", { "data-testid": "contenido" }) });
-        expect(pintar(arbol).includes("padre-sidenav")).toBe(false);
+        expect(pintar(arbol).includes("nav-lateral")).toBe(false);
         expect(pintar(arbol).includes("padre-nav-movil")).toBe(false);
         expect(pintar(arbol).includes("contenido")).toBe(true);
     });
@@ -128,6 +128,6 @@ describe("SPEC-440 P3 · /mis-reportes reusa el shell del padre — solo si el u
 
         const arbol = await MisReportesLayout({ children: React.createElement("main", { "data-testid": "contenido" }) });
         expect(pintar(arbol).includes("vencido")).toBe(true);
-        expect(pintar(arbol).includes("padre-sidenav")).toBe(false);
+        expect(pintar(arbol).includes("nav-lateral")).toBe(false);
     });
 });

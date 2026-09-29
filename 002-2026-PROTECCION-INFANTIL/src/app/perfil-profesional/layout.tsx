@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import { AdminNav } from "@/components/modules/AdminNav";
+import { NavLateral } from "@/components/modules/nav/NavLateral";
 import { modulosPermitidosParaRol } from "@/lib/permisos-modulos";
 import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
 import { WizardProfesionalShell } from "@/components/modules/profesional/WizardProfesionalShell";
@@ -32,7 +32,7 @@ export default async function PerfilProfesionalLayout({ children }: { children: 
     const permitidos = await modulosPermitidosParaRol(rol);
     return (
         <div className="flex min-h-screen">
-            <AdminNav rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
+            <NavLateral rol="PROFESIONAL" modulosPermitidos={[...permitidos]} />
             <main className="flex-1 overflow-auto">{children}</main>
         </div>
     );

@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
-import { ColegioSideNav } from "@/components/modules/colegio/ColegioSideNav";
+import { NavLateral, type RolLateral } from "@/components/modules/nav/NavLateral";
 import { BuscadorGlobal } from "@/components/modules/colegio/BuscadorGlobal";
 import { CentroNotificaciones } from "@/components/modules/colegio/CentroNotificaciones";
 import { Alerta } from "@/components/ui/Alerta";
@@ -45,7 +45,7 @@ export default async function ColegioLayout({ children }: { children: React.Reac
 
     return (
         <div className="theme-colegio flex min-h-screen bg-page">
-            <ColegioSideNav rol={rolEfectivo} modulosPermitidos={[...permitidos]} />
+            <NavLateral rol={rolEfectivo as RolLateral} modulosPermitidos={[...permitidos]} />
             <BuscadorGlobal />
             <div className="flex min-w-0 flex-1 flex-col">
                 <header className="flex items-center justify-end gap-3 border-b border-tinta/10 px-4 py-3 sm:px-6">

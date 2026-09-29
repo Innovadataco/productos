@@ -142,7 +142,6 @@ const BASE: string[] = [
     "components/modules/padre/HijoCard.tsx :: Quitarla de mi lista La sacamos de tu lista. Si la vuelves a necesitar, hay que agregarla de nuevo.",
     "components/modules/padre/HijoCard.tsx :: Ocultar la bitácora Ver la bitácora",
     "components/modules/padre/MisReportesCadenas.tsx :: Ocultar los eventos Ver los eventos",
-    "components/modules/padre/PadreSideNav.tsx :: ",
     "components/modules/padre/TextoSensible.tsx :: Ocultar",
     "components/modules/padre/TextoSensible.tsx :: cargando Un momento… 👁 Revelar texto · se ocultó por tu seguridad",
     "components/modules/padre/VerAnalisis.tsx :: Ver análisis",
