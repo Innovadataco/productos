@@ -21,7 +21,7 @@ import {
 const CREDS: CredencialRol[] = [
     { clave: "COLEGIO", rol: "SCHOOL_ADMIN", nombre: "Colegio Calidad (E2E · login)", requiereColegio: true, email: "calidad+e2ecolegio@innovadataco.com", secreto: "ClaveColegio2026!" },
     { clave: "OPERADOR", rol: "OPERADOR", nombre: "Operador Calidad (E2E)", requiereColegio: false, email: "calidad+e2eoperador@innovadataco.com", secreto: "ClaveOperador2026!" },
-    { clave: "COMITE", rol: "COMITE_VALIDACION", nombre: "Comité-Validación Calidad (E2E)", requiereColegio: false, email: "calidad+e2ecomite@innovadataco.com", secreto: "ClaveComite2026!" },
+    { clave: "COMITE_VALIDACION", rol: "COMITE_VALIDACION", nombre: "Comité-Validación Calidad (E2E)", requiereColegio: false, email: "calidad+e2ecomite@innovadataco.com", secreto: "ClaveComite2026!" },
 ];
 
 async function sembrarBase(): Promise<{ paisId: string; ciudadId: string }> {
@@ -88,8 +88,8 @@ describe("credenciales e2e de roles (colegio/operador/comité) · arreglo del 40
             E2E_COLEGIO_PASSWORD: "x",
             E2E_OPERADOR_EMAIL: "a@ejemplo.local",
             E2E_OPERADOR_PASSWORD: "x",
-            E2E_COMITE_EMAIL: "c@ejemplo.local",
-            E2E_COMITE_PASSWORD: "x",
+            E2E_COMITE_VALIDACION_EMAIL: "c@ejemplo.local",
+            E2E_COMITE_VALIDACION_PASSWORD: "x",
         };
         expect(() => leerCredencialesRoles(envIntocable), "cuenta intocable").toThrow(/intocable/i);
     });

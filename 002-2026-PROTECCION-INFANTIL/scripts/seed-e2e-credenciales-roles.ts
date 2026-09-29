@@ -37,7 +37,11 @@ export const CORRIDA_CUENTAS_CALIDAD = "e2e-calidad-cuentas";
 const SCRIPT = "seed-e2e-credenciales-roles";
 
 interface DefinicionRol {
-    clave: "COLEGIO" | "OPERADOR" | "COMITE";
+    // COMITE_VALIDACION explícito (NO `COMITE` a secas): al lado vive la cuenta REAL de colegio
+    // `E2E_COMITE_CONVIVENCIA_*` que Calidad respeta y no camina; un nombre ambiguo sería un
+    // foot-gun (llenar la variable equivocada escribiría sobre datos reales). Calza con el nombre
+    // que Calidad ya usa en su .env.e2e → cero divergencia.
+    clave: "COLEGIO" | "OPERADOR" | "COMITE_VALIDACION";
     rol: RolUsuario;
     nombre: string;
     /** SCHOOL_ADMIN necesita un colegio/tenant; OPERADOR/COMITE son de plataforma (sin tenant). */
@@ -47,7 +51,7 @@ interface DefinicionRol {
 export const DEFINICIONES_ROL: readonly DefinicionRol[] = [
     { clave: "COLEGIO", rol: "SCHOOL_ADMIN", nombre: "Colegio Calidad (E2E · login)", requiereColegio: true },
     { clave: "OPERADOR", rol: "OPERADOR", nombre: "Operador Calidad (E2E)", requiereColegio: false },
-    { clave: "COMITE", rol: "COMITE_VALIDACION", nombre: "Comité-Validación Calidad (E2E)", requiereColegio: false },
+    { clave: "COMITE_VALIDACION", rol: "COMITE_VALIDACION", nombre: "Comité-Validación Calidad (E2E)", requiereColegio: false },
 ];
 
 export interface CredencialRol extends DefinicionRol {
