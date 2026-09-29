@@ -263,6 +263,24 @@ export class SolicitudCitaRepository {
         return this.db.solicitudCita.update({ where: { id }, data: { estado: "NO_ASISTIO_PROFESIONAL" } });
     }
 
+    /**
+     * SPEC-780 · Datos mínimos para decidir la rectificación del relato: existencia + si la fila
+     * tiene SUCESOR en la cadena de reprogramación (`reprogramaciones` = filas cuya
+     * `solicitudPreviaId` es ésta). Una fila con sucesor es un pedido ANTERIOR (historial): su
+     * relato es el registro de lo que se dijo entonces y NO se corrige.
+     */
+    findParaCorreccionRelato(id: string) {
+        return this.db.solicitudCita.findUnique({
+            where: { id },
+            select: { id: true, estado: true, _count: { select: { reprogramaciones: true } } },
+        });
+    }
+
+    /** SPEC-780 · Corrige el relato (`presentacion`) de UNA solicitud (la viva). Solo este campo. */
+    corregirRelato(id: string, presentacion: string) {
+        return this.db.solicitudCita.update({ where: { id }, data: { presentacion } });
+    }
+
     // ── SPEC-750 · asignación con simultaneidad, calendario y enlace del operador ──────
     /** Cita mínima para decidir la asignación (estado + operador + ventana). */
     findParaAsignacion(id: string) {
