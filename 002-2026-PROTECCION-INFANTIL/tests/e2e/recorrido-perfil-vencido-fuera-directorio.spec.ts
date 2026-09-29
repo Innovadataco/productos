@@ -199,7 +199,7 @@ test.describe.serial("Perfil VENCIDO fuera del directorio (SPEC-449)", () => {
             expect(
                 completar.status(),
                 `completar profesional body=${await completar.text().catch(() => "")}`,
-            ).toBe(200);
+            ).toBe(201);
             await aceptarConsentimiento(request);
             await login(request, EMAIL_PROF);
 

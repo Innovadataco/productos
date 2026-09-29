@@ -132,7 +132,7 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
             const completar = await request.post("/api/auth/registro-profesional/completar", {
                 data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
             });
-            expect(completar.status(), `completar body=${await completar.text().catch(() => "")}`).toBe(200);
+            expect(completar.status(), `completar body=${await completar.text().catch(() => "")}`).toBe(201);
             await aceptarConsentimiento(request);
         } finally {
             await request.dispose();

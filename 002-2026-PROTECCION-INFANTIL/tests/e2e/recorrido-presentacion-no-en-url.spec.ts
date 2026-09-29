@@ -122,7 +122,7 @@ async function sembrarProfesionalActivoConFranja(): Promise<{ perfilId: string; 
         const completar = await request.post("/api/auth/registro-profesional/completar", {
             data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
         });
-        expect(completar.status(), `completar profesional body=${await completar.text().catch(() => "")}`).toBe(200);
+        expect(completar.status(), `completar profesional body=${await completar.text().catch(() => "")}`).toBe(201);
         await aceptarConsentimiento(request);
         await login(request, EMAIL_PROF);
 
