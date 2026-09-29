@@ -17,13 +17,15 @@
  *
  * Se cablea como `globalSetup` de Playwright (una sola pieza que corre ANTES de
  * todos los specs): si la base no es de pruebas, ABORTA la corrida entera y ningún
- * spec llega a sembrar. Su conducta la fija el test de esta guardia end-to-end
- * (resuelve el globalSetup que la config cablea y lo invoca).
+ * spec llega a sembrar.
  */
 import { PrismaClient } from "@prisma/client";
 
-/** Solo se necesita `$queryRaw` para preguntar el nombre — así el test inyecta un doble. */
+/** Solo se necesita `$queryRaw` para preguntar el nombre. */
 type ClienteConsulta = Pick<PrismaClient, "$queryRaw">;
+
+/** Proveedor del nombre de la base conectada. Inyectable POR PARÁMETRO (ver abajo). */
+type ProveedorDeNombre = () => Promise<string>;
 
 /**
  * Predicado PURO (testeable en las dos direcciones). Convención del repo: la base
@@ -36,25 +38,13 @@ export function esBaseDeDatosDePrueba(nombre: string): boolean {
 }
 
 /** Pregunta a la conexión el nombre de la base REAL a la que quedó atada. */
-export async function nombreBaseConectada(prisma: ClienteConsulta): Promise<string> {
+async function nombreBaseConectada(prisma: ClienteConsulta): Promise<string> {
     const filas = await prisma.$queryRaw<Array<{ current_database: string }>>`SELECT current_database()`;
     return filas?.[0]?.current_database ?? "";
 }
 
-/**
- * Semilla de inyección SOLO para el test de esta guardia (nivel 3): permite
- * ejercer la conducta del globalSetup que la config cablea contra un nombre de
- * PROD, sin una base real y SIN mockear el cliente Prisma (la regla SPEC-174
- * prohíbe mockear el singleton en la suite de integración). En producción nunca
- * se llama → queda `null` → se consulta la base real.
- */
-let inyeccionNombreParaTest: (() => Promise<string>) | null = null;
-export function __inyectarNombreConectadoParaTest(fn: (() => Promise<string>) | null): void {
-    inyeccionNombreParaTest = fn;
-}
-
-async function nombreConectadoReal(): Promise<string> {
-    if (inyeccionNombreParaTest) return inyeccionNombreParaTest();
+/** Default: abre un cliente (lee `DATABASE_URL`) y pregunta la base real. */
+async function proveedorRealDeNombre(): Promise<string> {
     const prisma = new PrismaClient();
     try {
         return await nombreBaseConectada(prisma);
@@ -63,7 +53,25 @@ async function nombreConectadoReal(): Promise<string> {
     }
 }
 
-function abortarSiNoEsDePrueba(nombre: string): void {
+/**
+ * ABORTA (lanza) si la base conectada no es de pruebas.
+ *
+ * `proveedorDeNombre` es un PARÁMETRO con default —no un interruptor de módulo—:
+ * el test pasa su doble por argumento; producción usa el default (la base real).
+ * A propósito NO existe un `let` de módulo ni un export inyector: un parámetro no
+ * se filtra entre corridas y no se puede importar para desactivar la guardia (esa
+ * fue la razón para elegir globalSetup sobre import-por-spec: no confiar en que
+ * nadie se equivoque). El candado «sin interruptor» del test lo fija.
+ *
+ * LÍMITE DECLARADO (no se finge cubrir): que en PRODUCCIÓN se pase el proveedor
+ * REAL es el default de esta línea; ningún test lo prueba, porque probarlo exigiría
+ * o una base de prod real o volver a meter un seam inyectable — y eso reabre
+ * exactamente el hueco que este diseño cierra.
+ */
+export async function exigirBaseDeDatosDePrueba(
+    proveedorDeNombre: ProveedorDeNombre = proveedorRealDeNombre,
+): Promise<void> {
+    const nombre = await proveedorDeNombre();
     if (!esBaseDeDatosDePrueba(nombre)) {
         throw new Error(
             `SPEC-770 · ABORTA: los specs e2e están conectados a la base «${nombre}», que NO es de pruebas ` +
@@ -71,14 +79,4 @@ function abortarSiNoEsDePrueba(nombre: string): void {
                 "Revisá DATABASE_URL.",
         );
     }
-}
-
-/**
- * ABORTA (lanza) si la base conectada no es de pruebas. Usa el cliente inyectado
- * si se le pasa uno (nivel 2 del test); si no, consulta la base real (o el nombre
- * inyectado por el seam de test — nivel 3).
- */
-export async function exigirBaseDeDatosDePrueba(prismaInyectado?: ClienteConsulta): Promise<void> {
-    const nombre = prismaInyectado ? await nombreBaseConectada(prismaInyectado) : await nombreConectadoReal();
-    abortarSiNoEsDePrueba(nombre);
 }
