@@ -1070,6 +1070,14 @@ model Plan {
   precio                Float? // legacy placeholder; no usar en lógica nueva
   creadoPorAdminId      String
   createdAt             DateTime     @default(now()) @db.Timestamptz(6)
+  /// LEGACY (SPEC-766): columna histórica que vive en la base y en el whitelist de bi_replica
+  /// (control de minimización Ley 1581, lo aplica Jelkin). NO se dropea —la publicación depende
+  /// de ella—: se DECLARA para cerrar el drift historial↔esquema por el lado del esquema.
+  /// `@default(now())` porque la base es NOT NULL y sin él Prisma la exigiría en cada
+  /// `Plan.create()`. `createdAt` es la fuente vigente e IDÉNTICA (medido: 11 filas, 0 difieren).
+  /// CANDADA contra uso nuevo (creadoEn-plan-no-uso.candado): ningún código la lee ni la escribe;
+  /// si divergen, esta decisión expira. Retirarla del whitelist es tarea de BI con dueño, no deuda.
+  creadoEn              DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime     @updatedAt @db.Timestamptz(6)
 
   creadoPor     Usuario       @relation(fields: [creadoPorAdminId], references: [id], name: "PlanesCreados")

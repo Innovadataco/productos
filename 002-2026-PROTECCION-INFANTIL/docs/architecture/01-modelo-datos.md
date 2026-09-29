@@ -2078,6 +2078,7 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | precio | Float | opcional |
 | creadoPorAdminId | String | — |
 | createdAt | DateTime | — |
+| creadoEn | DateTime | — |
 | updatedAt | DateTime | — |
 | creadoPor | Usuario | relación (FK) |
 | suscripciones | Suscripcion | lista, relación |
