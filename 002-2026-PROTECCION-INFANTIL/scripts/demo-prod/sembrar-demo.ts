@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { prisma } from "./lib/prisma";
 import { marcarDemo } from "./lib/marcar";
+import { franjaBogota } from "./lib/franja-hora-bogota"; // SPEC-773 · hora de franja en zona de Bogotá
 import { auditarDemo } from "./lib/auditar";
 import { hashDemoPassword, getDemoPassword } from "./lib/password";
 import { hashIdentificacion } from "@/lib/hash-identificacion";
@@ -197,10 +198,11 @@ async function sembrarProfesionalDemo(
     // Franjas libres futuras (una por día, alternando modalidad). `tomada=false`.
     let franjas = 0;
     for (let f = 0; f < NUM_FRANJAS_DEMO; f++) {
-        const inicio = new Date();
-        inicio.setDate(inicio.getDate() + f + 1);
-        inicio.setHours(9 + (f % 6), 0, 0, 0);
-        const fin = new Date(inicio.getTime() + duracionMinutos * 60 * 1000);
+        const base = new Date();
+        base.setDate(base.getDate() + f + 1);
+        // SPEC-773: hora de atención en zona de Bogotá (7am–7pm), no `setHours` en UTC
+        // (que dejaba franjas 4–9am Bogotá). El día se conserva; solo se fija la hora.
+        const { inicio, fin } = franjaBogota(base, duracionMinutos, 9 + (f % 6));
         const franja = await prisma.franjaDisponible.create({
             data: {
                 profesionalId: perfil.id,

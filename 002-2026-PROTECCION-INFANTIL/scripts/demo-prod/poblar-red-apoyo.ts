@@ -68,6 +68,9 @@ import {
     modalidadesDeProfesional,
     bucketActividad,
 } from "./lib/red-apoyo-plan";
+// SPEC-773 · hora de franja EN ZONA DE BOGOTÁ (fuente única; ver el módulo). Reemplaza el
+// `setHours` (que en el contenedor UTC caía 4–9am Bogotá) y el «conservá la hora de la corrida».
+import { franjaBogota, HORA_FRANJA_MIN, HORA_FRANJA_MAX } from "./lib/franja-hora-bogota";
 
 const CONFIRM = process.argv.includes("--confirm");
 
@@ -108,12 +111,12 @@ function fechaEnVentana(): Date {
     const dias = entero(1, VENTANA_MESES * 30);
     return new Date(Date.now() - dias * MS_DIA);
 }
-/** Franja a futuro (para CONFIRMADA y libres agendables). */
+/** Franja a futuro (para CONFIRMADA y libres agendables). `hora` es la hora de atención
+ *  pretendida, EN BOGOTÁ (se encaja en la ventana 7am–7pm por el helper). */
 function fechaFutura(diasAdelante: number, hora: number): { inicio: Date; fin: Date } {
-    const inicio = new Date();
-    inicio.setDate(inicio.getDate() + diasAdelante);
-    inicio.setHours(hora, 0, 0, 0);
-    return { inicio, fin: new Date(inicio.getTime() + 50 * 60 * 1000) };
+    const base = new Date();
+    base.setDate(base.getDate() + diasAdelante);
+    return franjaBogota(base, 50, hora);
 }
 /** Cita VIVA: creada hace pocas horas (reloj corriendo), FUERA de la ventana del barrido. */
 function fechaVivaReciente(): Date {
@@ -278,8 +281,12 @@ async function sembrarCita(opts: {
     // (desenlace terminal, inerte al worker).
     const viva = esEstadoVivo(estado);
     const creadoEn = viva ? fechaVivaReciente() : fechaEnVentana();
-    const inicio = viva ? fechaFutura(entero(1, 20), 9 + entero(0, 8)).inicio : new Date(creadoEn.getTime() + 2 * MS_DIA);
-    const fin = new Date(inicio.getTime() + 50 * 60 * 1000);
+    // La HORA de la franja va en zona de Bogotá (helper), no la del contenedor (UTC). El DÍA
+    // conserva la semántica: futuro para vivas, creadoEn+2días para históricas — la lógica de
+    // vivo/barrido va por creadoEn/venceEn, nunca por la hora de la franja.
+    const { inicio, fin } = viva
+        ? fechaFutura(entero(1, 20), 9 + entero(0, 8))
+        : franjaBogota(new Date(creadoEn.getTime() + 2 * MS_DIA), 50, entero(HORA_FRANJA_MIN, HORA_FRANJA_MAX));
     const m = montos(esPrimeraDelPadre, prof.tarifa, precioEstandar, pct);
 
     return prisma.$transaction(async (tx) => {
@@ -336,11 +343,13 @@ async function sembrarReprogramacion(opts: {
 
     await prisma.$transaction(async (tx) => {
         // Original: franja LIBERADA (REPROGRAMADA la libera), estado REPROGRAMADA.
+        // Día = creadoEn+2; hora en zona de Bogotá (7am–7pm), no la del contenedor.
+        const horaOrig = franjaBogota(new Date(creadoEn.getTime() + 2 * MS_DIA), 50, entero(HORA_FRANJA_MIN, HORA_FRANJA_MAX));
         const franjaOrig = await tx.franjaDisponible.create({
             data: {
                 profesionalId: prof.perfilId,
-                inicio: new Date(creadoEn.getTime() + 2 * MS_DIA),
-                fin: new Date(creadoEn.getTime() + 2 * MS_DIA + 50 * 60 * 1000),
+                inicio: horaOrig.inicio,
+                fin: horaOrig.fin,
                 modalidad,
                 tomada: false,
             },
@@ -364,11 +373,12 @@ async function sembrarReprogramacion(opts: {
 
         // Hija: franja NUEVA tomada, hereda el pago del original (sin cobro nuevo), CUMPLIDA.
         const creadoHija = new Date(creadoEn.getTime() + 3 * MS_DIA);
+        const horaHija = franjaBogota(new Date(creadoHija.getTime() + 2 * MS_DIA), 50, entero(HORA_FRANJA_MIN, HORA_FRANJA_MAX));
         const franjaHija = await tx.franjaDisponible.create({
             data: {
                 profesionalId: prof.perfilId,
-                inicio: new Date(creadoHija.getTime() + 2 * MS_DIA),
-                fin: new Date(creadoHija.getTime() + 2 * MS_DIA + 50 * 60 * 1000),
+                inicio: horaHija.inicio,
+                fin: horaHija.fin,
                 modalidad,
                 tomada: true,
             },
