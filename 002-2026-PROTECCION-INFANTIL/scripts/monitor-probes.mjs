@@ -35,6 +35,7 @@ import {
     probeNotifPendientesVencidas,
     probeModulosHuerfanos,
     probeGrantsModulosMuertos,
+    probeDriftEsquema,
 } from "../src/lib/monitoreo/probes.ts";
 import { registrarProbe, evaluarSenal, confirmarRojo } from "../src/lib/monitoreo/incidentes.ts";
 import { revisarSlaSpam } from "../src/lib/spam/sla.ts";
@@ -144,6 +145,8 @@ async function leerConfig() {
         modulosHuerfanosIntervaloSeg: (await entero("monitoreo.modulos_huerfanos.frecuencia_horas", 24)) * 3600,
         // SPEC-745: frecuencia del guardián de grants a módulos muertos (drift lento → 1×/día).
         grantsModulosMuertosIntervaloSeg: (await entero("monitoreo.grants_modulos_muertos.frecuencia_horas", 24)) * 3600,
+        // SPEC-760: frecuencia del guardián de drift de esquema (drift lento, cambia con deploys → 1×/día).
+        driftEsquemaIntervaloSeg: (await entero("monitoreo.drift_esquema.frecuencia_horas", 24)) * 3600,
         // SPEC-291 (002-PI-191): antigüedad máxima aceptada del tick-vida antes de marcar rojo.
         tickVidaMaxSeg: await entero("monitoreo.tickVida.maxAntiguedadSeg", 90),
     };
@@ -157,6 +160,7 @@ function intervaloDe(senal, config) {
         case "indices": return config.indicesIntervaloSeg; // SPEC-251: 1×/día por defecto
         case "modulos_huerfanos": return config.modulosHuerfanosIntervaloSeg; // SPEC-739: 1×/día por defecto
         case "grants_modulos_muertos": return config.grantsModulosMuertosIntervaloSeg; // SPEC-745: 1×/día por defecto
+        case "drift_esquema": return config.driftEsquemaIntervaloSeg; // SPEC-760: 1×/día por defecto
         default:
             // SPEC-291: las 7 señales tick-vida usan la cadencia base (app/worker/bd).
             return config.appIntervaloSeg;
@@ -185,6 +189,8 @@ async function correrProbe(senal, config) {
             case "modulos_huerfanos": return await probeModulosHuerfanos();
             // SPEC-745: guardián BLANDO de grants ACTIVOS a módulos muertos. NUNCA revoca ni bloquea.
             case "grants_modulos_muertos": return await probeGrantsModulosMuertos();
+            // SPEC-760: guardián BLANDO de drift de esquema (BD viva ↔ migraciones). NUNCA repara.
+            case "drift_esquema": return await probeDriftEsquema();
             default:
                 // SPEC-291: 7 señales por tick-vida (workers propios).
                 if (SENALES_TICK_VIDA.includes(senal)) {
