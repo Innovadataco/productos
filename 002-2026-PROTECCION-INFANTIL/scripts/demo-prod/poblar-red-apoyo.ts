@@ -46,10 +46,10 @@ import type {
 } from "@prisma/client";
 import { prisma } from "./lib/prisma";
 // SPEC-753 · reloj legal del incidente (venceEn = reclamadoEn + 15 días hábiles).
-// FUENTE canónica de días hábiles EN ESTA RAMA: apelaciones.sumarDiasHabiles
-// (Bogotá, lun–vie). SPEC-768 (festivos-aware, src/lib/fechas/dias-habiles-colombia.ts)
-// NO está en la base de esta rama; cuando 753 entre a main, ese es el reemplazo.
-import { sumarDiasHabiles } from "@/lib/apelaciones";
+// FUENTE canónica de días hábiles: sumarDiasHabilesColombia (SPEC-768, festivos-aware,
+// Bogotá). Rama rebasada sobre main (trae 768) → dependencia DIRECTA del calculador
+// correcto, sin pasar por el alias de apelaciones ni dejar deuda diferida.
+import { sumarDiasHabilesColombia } from "@/lib/fechas/dias-habiles-colombia";
 import { hashDemoPassword } from "./lib/password";
 import { nombrePersona } from "./lib/datos";
 import { obtenerPorcentajeServicio } from "@/lib/profesional/cita/comision";
@@ -325,11 +325,11 @@ function relojIncidente(
 ): { reclamadoEn: Date; venceEn: Date; resueltoEn: Date | null } {
     if (estado === "ABIERTO") {
         const reclamadoEn = new Date(ahora.getTime() - 3 * MS_DIA);
-        return { reclamadoEn, venceEn: sumarDiasHabiles(reclamadoEn, PLAZO_REVERSION_DIAS_HABILES), resueltoEn: null };
+        return { reclamadoEn, venceEn: sumarDiasHabilesColombia(reclamadoEn, PLAZO_REVERSION_DIAS_HABILES), resueltoEn: null };
     }
     // Los otros tres nacen de un reclamo viejo: el plazo (venceEn) ya quedó en el pasado.
     const reclamadoEn = new Date(ahora.getTime() - 40 * MS_DIA);
-    const venceEn = sumarDiasHabiles(reclamadoEn, PLAZO_REVERSION_DIAS_HABILES);
+    const venceEn = sumarDiasHabilesColombia(reclamadoEn, PLAZO_REVERSION_DIAS_HABILES);
     if (estado === "RESUELTO") return { reclamadoEn, venceEn, resueltoEn: new Date(venceEn.getTime() - 3 * MS_DIA) }; // ≤ vence
     if (estado === "RESUELTO_TARDE") return { reclamadoEn, venceEn, resueltoEn: new Date(venceEn.getTime() + 4 * MS_DIA) }; // > vence
     return { reclamadoEn, venceEn, resueltoEn: null }; // VENCIDO: sin resolver, plazo pasado

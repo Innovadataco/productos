@@ -25,7 +25,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearPaisCiudad } from "@/lib/reporte-test-utils";
-import { sumarDiasHabiles } from "@/lib/apelaciones";
+import { sumarDiasHabilesColombia } from "@/lib/fechas/dias-habiles-colombia";
 
 let contador = 0;
 
@@ -194,7 +194,7 @@ describe("SPEC-753 · IncidenteContradiccionEncuesta · CHECK venceEn > reclamad
     it("venceEn = reclamadoEn + 15 días hábiles → pasa (control positivo)", async () => {
         const sol = await seedSolicitud();
         const reclamadoEn = new Date();
-        const venceEn = sumarDiasHabiles(reclamadoEn, 15);
+        const venceEn = sumarDiasHabilesColombia(reclamadoEn, 15);
         await insertarIncidente(sol.id, reclamadoEn, venceEn);
         expect(await prisma.incidenteContradiccionEncuesta.count({ where: { solicitudId: sol.id } })).toBe(1);
     });
@@ -207,7 +207,7 @@ describe("SPEC-753 · IncidenteContradiccionEncuesta · onDelete Cascade en soli
 
     it("dar de baja la cita arrastra el incidente y NO traba con 23503", async () => {
         const sol = await seedSolicitud();
-        await insertarIncidente(sol.id, new Date(), sumarDiasHabiles(new Date(), 15));
+        await insertarIncidente(sol.id, new Date(), sumarDiasHabilesColombia(new Date(), 15));
         // Control positivo: el incidente EXISTE antes de la baja.
         expect(await prisma.incidenteContradiccionEncuesta.count({ where: { solicitudId: sol.id } })).toBe(1);
 
