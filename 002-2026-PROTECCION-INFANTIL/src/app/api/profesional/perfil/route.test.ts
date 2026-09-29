@@ -29,10 +29,11 @@ vi.mock("next/headers", () => ({
 }));
 
 function bodyBase() {
+    // SPEC-786: `tituloProfesional`/`especialidades` son SALIDA (las deriva el sistema desde
+    // `profesion`/`areasAtencion`), NO entrada — el PUT ya no las recibe. Este cuerpo base las
+    // enviaba como relleno (era un emisor legacy); se quitan. La ciudad es lo que este candado prueba.
     return {
         nombreVisible: "Prof. Ejemplo",
-        tituloProfesional: "Psicólogo clínico",
-        especialidades: ["Terapia familiar"],
         atiendeVirtual: true,
         atiendePresencial: false,
         aniosExperiencia: 10,
