@@ -1060,6 +1060,12 @@ model Tenant {
 // SPEC-210 (002-PI-110): Plan enriquecido. El campo `precio` es legacy del
 // placeholder original; la lógica nueva usa `precioBaseUSD`.
 model Plan {
+  // SPEC-791 · INVARIANTE: un plan NO PUEDE incluir citas. La suscripción es acceso a la PLATAFORMA;
+  // la cita se paga aparte (`montoConsulta` en SolicitudCita). Empaquetarlas convertiría el plan en
+  // venta de un SERVICIO DE SALUD y exigiría habilitación sanitaria propia (REPS) — el cobro de
+  // suscripciones HOY se sostiene en que el plan NO las incluye. No agregues un campo `citasIncluidas`,
+  // `consultasIncluidas`, ni una relación a `SolicitudCita`: lo vigila
+  // `plan-sin-citas-incluidas.candado.test.ts` (cae en rojo). Si el negocio lo pide, es decisión legal.
   id                    String       @id @default(cuid())
   nombre                String
   tipoTitular           TipoTitular
