@@ -29,6 +29,8 @@
 import type { Prisma, PrismaClient, RolUsuario } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
 import { hashPassword, verifyPassword } from "../src/lib/auth";
+import { ConsentimientoService } from "../src/lib/dal/services/consentimiento";
+import { esTitularDelDato } from "../src/lib/routing/roles-titulares";
 import { EMAIL_INTOCABLE } from "./lib/credenciales-e2e-calidad";
 import { marcar } from "./demo/_marcado";
 
@@ -158,20 +160,94 @@ async function upsertCuentaRol(
     return { clave: cred.clave, rol: cred.rol, email: cred.email, usuarioId: existente.id, creado: false, rehashClave: !claveCoincide };
 }
 
+/**
+ * SPEC-757: siembra la aceptación del consentimiento para las cuentas TITULARES
+ * del dato (`esTitularDelDato` — hoy solo el SCHOOL_ADMIN de Calidad), para que
+ * crucen la puerta (SPEC-756) como cruzaría una cuenta real. Los NO titulares
+ * (OPERADOR/COMITE_VALIDACION) JAMÁS reciben firma: sembrarla fabricaría la firma
+ * inválida que el auditor (SPEC-755) marca y que la puerta (SPEC-756) impide crear.
+ * La decisión deriva de la MISMA fuente única que 755/756.
+ *
+ * - `documentoTipo` DERIVADO de `documentoPorRol(rol)` — nunca quemado.
+ * - versión y hash REALES del servicio (versionVigente + hash del documento vigente).
+ * - SIN notificación: NO pasa por `aceptar()` (que encola un aviso); escribe directo.
+ *   El guard de notificaciones de la tx lo confirma.
+ * - Idempotente por (usuario, versión): re-correr no duplica. `AuditConsentimiento`
+ *   cae por Cascade con el `Usuario` (corrida persistente), no se marca aparte.
+ * Devuelve `true` solo si CREÓ una fila nueva.
+ */
+async function sembrarConsentimientoTitular(
+    tx: Prisma.TransactionClient,
+    resultado: ResultadoRol,
+    svc: ConsentimientoService,
+    ahora: Date,
+): Promise<boolean> {
+    if (!esTitularDelDato(resultado.rol)) return false; // no-titular: jamás firma
+    const documentoTipo = svc.documentoPorRol(resultado.rol);
+    const version = await svc.versionVigente();
+
+    const existente = await tx.auditConsentimiento.findFirst({
+        where: { usuarioId: resultado.usuarioId, version },
+        select: { id: true },
+    });
+    if (existente) {
+        // La compuerta LEE `usuario.consentimientoVersion`; lo dejamos consistente
+        // por si la fila de audit existía sin el reflejo en Usuario (idempotencia).
+        await tx.usuario.update({ where: { id: resultado.usuarioId }, data: { consentimientoVersion: version } });
+        return false;
+    }
+
+    const documentoHash = svc.calcularHash(await svc.obtenerDocumentoVigente(documentoTipo));
+    await tx.auditConsentimiento.create({
+        data: {
+            usuarioId: resultado.usuarioId,
+            version,
+            documentoTipo,
+            documentoHash,
+            aceptadoEn: ahora,
+            ip: "seed",
+            userAgent: SCRIPT,
+            // Declaración del titular de PRUEBA (cuenta fixture): a un titular real la
+            // interfaz se la pregunta (SPEC-756); acá el fixture la asienta para Calidad.
+            esRepresentanteLegal: true,
+        },
+    });
+    await tx.usuario.update({
+        where: { id: resultado.usuarioId },
+        data: {
+            consentimientoVersion: version,
+            consentimientoAceptadoEn: ahora,
+            consentimientoDocumentoHash: documentoHash,
+            consentimientoIP: "seed",
+        },
+    });
+    return true;
+}
+
 export async function sembrarCredencialesRoles(
     tx: Prisma.TransactionClient,
     creds: CredencialRol[],
     base: Base,
     ahora: Date = new Date(),
-): Promise<{ resultados: ResultadoRol[]; notifAntes: number; notifDespues: number }> {
+): Promise<{ resultados: ResultadoRol[]; notifAntes: number; notifDespues: number; consentimientosSembrados: RolUsuario[] }> {
     const notifAntes = await tx.notificacion.count();
     const resultados: ResultadoRol[] = [];
     for (const cred of creds) resultados.push(await upsertCuentaRol(tx, cred, base, ahora));
+
+    // SPEC-757: aceptación de consentimiento SOLO para titulares del dato, dentro
+    // de la MISMA tx y ANTES del guard de notificaciones (así el guard también
+    // cubre este paso: si algo encolara un aviso, se DESHACE todo).
+    const svc = new ConsentimientoService();
+    const consentimientosSembrados: RolUsuario[] = [];
+    for (const r of resultados) {
+        if (await sembrarConsentimientoTitular(tx, r, svc, ahora)) consentimientosSembrados.push(r.rol);
+    }
+
     const notifDespues = await tx.notificacion.count();
     if (notifDespues !== notifAntes) {
         throw new Error(`[seed-e2e-cred-roles] la siembra disparó ${notifDespues - notifAntes} notificación(es) — se ABORTA (nada se confirma).`);
     }
-    return { resultados, notifAntes, notifDespues };
+    return { resultados, notifAntes, notifDespues, consentimientosSembrados };
 }
 
 async function main(): Promise<void> {
@@ -186,7 +262,7 @@ async function main(): Promise<void> {
     if (!pais) throw new Error("[seed-e2e-cred-roles] País 'Colombia' faltante — corre `prisma db seed` antes");
     if (!ciudad) throw new Error("[seed-e2e-cred-roles] Ciudad 'Bogotá' faltante — corre `prisma db seed` antes");
 
-    const { resultados, notifAntes, notifDespues } = await prisma.$transaction((tx) =>
+    const { resultados, notifAntes, notifDespues, consentimientosSembrados } = await prisma.$transaction((tx) =>
         sembrarCredencialesRoles(tx, creds, { paisId: pais.id, ciudadId: ciudad.id }),
     );
 
@@ -196,6 +272,11 @@ async function main(): Promise<void> {
         console.log(`  ${r.rol.padEnd(18)} ${r.email} ${r.creado ? "[creada]" : "[actualizada]"}${r.rehashClave ? " · clave (re)fijada" : " · clave ya OK"}`);
     }
     console.log(`  notificaciones (en la tx): antes=${notifAntes} después=${notifDespues} delta=${notifDespues - notifAntes} ✅`);
+    console.log(
+        consentimientosSembrados.length > 0
+            ? `  consentimiento sembrado (titulares del dato): ${consentimientosSembrados.join(", ")} — cruza la puerta SPEC-756`
+            : "  consentimiento: sin firmas nuevas (ya vigentes o sin titulares) ✅",
+    );
     console.log("  → Calidad entra con E2E_<ROL>_PASSWORD del entorno; sin claves en logs.");
 }
 
