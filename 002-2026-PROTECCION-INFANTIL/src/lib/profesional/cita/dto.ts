@@ -25,6 +25,7 @@ import type {
     SolicitudCita,
     Usuario,
 } from "@prisma/client";
+import { contactoVisiblePorSesion } from "./contacto-visible";
 
 const HORAS_48_EN_MS = 48 * 60 * 60 * 1000;
 
@@ -63,7 +64,9 @@ export function debeExponerContacto(
     // estados de tránsito como `EN_REVISION`, y eso es otra decisión que nadie
     // tomó.
     if (estadoPerfil === "VENCIDO" || estadoPerfil === "SUSPENDIDO") return false;
-    if (solicitud.estado === "CONFIRMADA") return true;
+    // La regla de sesión vive en `contactoVisiblePorSesion` (fuente única); acá se le suman
+    // las condiciones propias del PADRE (estado de perfil arriba; reembolso por vencimiento abajo).
+    if (contactoVisiblePorSesion(solicitud.estado)) return true;
     if (solicitud.estado === "VENCIDA_SIN_RESPUESTA") {
         if (!solicitud.pagoAprobadoEn) return false;
         return now.getTime() - solicitud.pagoAprobadoEn.getTime() >= HORAS_48_EN_MS;
@@ -201,9 +204,9 @@ export function toCitaParaProfesional(
         expedienteCompartidoId: solicitud.expedienteCompartidoId,
         montoConsulta: solicitud.montoConsulta,
     };
-    // Simétrico: al profesional se le da el correo del padre solo si la cita
-    // está confirmada. Antes, el sistema mediador es PI.
-    if (solicitud.estado === "CONFIRMADA") {
+    // Simétrico: al profesional se le da el correo del padre por la misma regla de sesión
+    // (fuente única `contactoVisiblePorSesion`). Antes, el sistema mediador es PI.
+    if (contactoVisiblePorSesion(solicitud.estado)) {
         dto.padre.email = solicitud.padreUsuario.email;
     }
     // Suprimir la fecha absoluta de vencimiento hasta que el reloj arranque.

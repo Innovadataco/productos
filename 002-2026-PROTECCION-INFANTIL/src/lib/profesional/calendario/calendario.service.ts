@@ -27,6 +27,7 @@ import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-dispon
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
 import { TIMEZONE_BOGOTA, diaBogota } from "@/lib/fechas/formato-bogota";
+import { contactoVisiblePorSesion } from "@/lib/profesional/cita/contacto-visible";
 
 export type EstadoBloque = "libre" | "validando" | "esperando" | "confirmada" | "reservada";
 
@@ -128,8 +129,12 @@ export async function calendarioDelProfesional(
             bloque.solicitudId = f.solicitud.id;
             bloque.familia = f.solicitud.padreUsuario.nombre ?? "Una familia";
             if (estado === "esperando") bloque.relato = f.solicitud.presentacion;
-            // H-2: el correo del padre solo cuando la cita está CONFIRMADA.
-            if (estado === "confirmada" && f.solicitud.padreUsuario.email) {
+            // H-2 (SPEC-395 · fuente única): la visibilidad del contacto la decide
+            // `contactoVisiblePorSesion` sobre el estado CRUDO de la solicitud —no el
+            // `estado` de bloque, que es una etiqueta de presentación. Antes esta línea
+            // REPLICABA la regla (`estado === "confirmada"`) y por eso el correo del
+            // padre se filtraba acá aunque el DTO la endureciera: la fuga que vio Jelkin.
+            if (contactoVisiblePorSesion(f.solicitud.estado) && f.solicitud.padreUsuario.email) {
                 bloque.contactoEmail = f.solicitud.padreUsuario.email;
             }
         }
