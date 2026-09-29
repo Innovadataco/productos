@@ -346,6 +346,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // correo real plantado) + barrido de decisores. Todo mockeado, sin BD.
     "src/lib/profesional/cita/contacto-visible.test.ts",
     "src/lib/profesional/cita/contacto-fuente-unica.candado.test.ts",
+    // SPEC-758 (D-121): reserva por NOMBRE — el enlace de la reunión (y sus metadatos) no salen
+    // por los DTOs de padre/profesional. Escenario con el campo PRESENTE. Unit puro, sin BD.
+    "src/lib/profesional/cita/dto-reserva.candado.test.ts",
     // SPEC-353 (A-69 · C6): reglas puras de la frase "qué hacer hoy" del rector.
     "src/lib/colegio/que-hacer-hoy.test.ts",
     "src/lib/colegio/seguimiento.test.ts",
