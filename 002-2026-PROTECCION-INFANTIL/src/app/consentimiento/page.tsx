@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { ConsentimientoService } from "@/lib/dal/services/consentimiento";
 import { ModalConsentimiento } from "@/components/modules/ModalConsentimiento";
+import { esTitularDelDato } from "@/lib/routing/roles-titulares";
 import type { RolUsuario } from "@prisma/client";
 
 const DASHBOARD_POR_ROL: Record<RolUsuario, string> = {
@@ -48,6 +49,16 @@ export default async function ConsentimientoPage() {
 
     if (!userId || !rol) {
         redirect("/login");
+    }
+
+    // SPEC-756: la puerta de consentimiento es SOLO para titulares del dato,
+    // misma fuente única que el emisor de sesión (roles-titulares.ts). Un rol NO
+    // titular (empleado interno / prestador) no firma este consentimiento; si
+    // llega a mano, se lo devuelve a su tablero — nunca se le sirve el formulario,
+    // que fabricaría la firma que depurar-consentimientos-internos.ts (SPEC-755)
+    // marca como inválida. Cerrar la pantalla NO cierra el endpoint: ver route.ts.
+    if (!esTitularDelDato(rol)) {
+        redirect(DASHBOARD_POR_ROL[rol]);
     }
 
     const servicio = new ConsentimientoService();
