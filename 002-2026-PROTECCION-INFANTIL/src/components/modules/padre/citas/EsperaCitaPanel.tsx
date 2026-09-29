@@ -6,9 +6,12 @@
  *  · Si venció (`VENCIDA_SIN_RESPUESTA`) o el profesional no asistió, ofrece
  *    «Elegir otro profesional» que hereda el pago (SPEC-395 · `/reasignar`).
  *
- * No pide contacto del profesional aquí — `debeExponerContacto` (DTO) sólo
- * lo revela cuando la cita ya está CONFIRMADA, y el DTO garantiza que si
- * no está expuesto, no viaja al cliente.
+ * SPEC-754 · el contacto del profesional NO se muestra en ningún estado: el
+ * contacto mutuo está CERRADO (`debeExponerContacto` → false siempre), así que
+ * `cita.contactoProfesional` nunca llega poblado y no viaja al cliente. El canal
+ * de la reunión es el ENLACE de la cita (SPEC-750); el recurso de plata, la PQR
+ * (SPEC-752). El campo `contactoProfesional?` se conserva en el DTO solo para que
+ * los candados afirmen su AUSENCIA.
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -365,16 +368,12 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                         </p>
                     )}
                 </div>
-                {cita.contactoProfesional && (
-                    <div>
-                        <p className="etiqueta text-subtle">Contacto (visible al confirmar)</p>
-                        {/* SPEC-730/731 (pulido): un correo largo sin espacios desbordaba a 375px. */}
-                        <p className="cuerpo text-body break-all">{cita.contactoProfesional.email}</p>
-                        {cita.contactoProfesional.telefono && (
-                            <p className="cuerpo text-body break-words">{cita.contactoProfesional.telefono}</p>
-                        )}
-                    </div>
-                )}
+                {/* SPEC-754 · el bloque de CONTACTO del profesional se retiró: el contacto mutuo
+                    está CERRADO (`debeExponerContacto` → false siempre; `cita.contactoProfesional`
+                    ya no llega poblado). El canal de la reunión es el ENLACE de la cita (SPEC-750)
+                    y el recurso de plata va por la PQR (SPEC-752). El MARCADOR (copy que le dice al
+                    padre por dónde seguir) lo entrega Diseño en su commit al sistema de diseño;
+                    hasta entonces NO se inventa texto acá. */}
             </section>
 
             {/* SPEC-778 · el ACCESO a la reunión — la razón por la que el padre vuelve a esta
@@ -423,11 +422,12 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
             )}
 
             {/* SPEC-715 + SPEC-731 · con la cita CONFIRMADA el padre YA puede «seguir»
-                sin depender de ningún caso: fecha/contacto (arriba) + agregar al calendario.
+                sin depender de ningún caso: fecha (arriba) + agregar al calendario.
                 Compartir un caso es un EXTRA OPCIONAL (§2), nunca un requisito. Nada de esto
                 antes de CONFIRMADA (candado). El «dónde» presencial (dirección) llega con SPEC-708
                 y el enlace de la reunión es POR CITA —lo pone el operador, no un campo del perfil—;
-                el recordatorio por correo y la encuesta NO existen y esta pantalla no los promete.
+                el contacto del profesional NO se expone (SPEC-754); el recordatorio por correo y la
+                encuesta NO existen y esta pantalla no los promete.
                 SPEC-749 FR-2: NADA de esto sobre una cita cuya hora YA PASÓ (`!vistaPasada`) —
                 «Agregar a mi calendario» agendaría un evento del pasado (Calidad, 29-09), y
                 «compartir un caso para la sesión» ya no aplica. La forma exige que en

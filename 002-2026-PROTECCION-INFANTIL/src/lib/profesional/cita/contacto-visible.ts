@@ -18,33 +18,25 @@ import type { EstadoSolicitudCita } from "@prisma/client";
  * decida el contacto por su cuenta.
  *
  * ── LA REGLA (parametrizable acá, y SOLO acá) ────────────────────────────────────────────
- * HOY la conducta es la VIEJA, sin cambio: basta con que la cita esté `CONFIRMADA` para exponer
- * el contacto. Es DATO PERSONAL de un padre en un producto de protección infantil, así que la
- * regla es reserva legal (H-2 · Ley 2375/2024).
+ * SPEC-754: el contacto mutuo está CERRADO. Ya NO se expone el correo/teléfono de ninguna parte,
+ * en NINGÚN estado (`false` siempre). El porqué —para que la próxima persona que lea la línea no
+ * la reabra sin contexto—:
+ *   · el CANAL de la reunión es el ENLACE de la cita, que pone el operador (SPEC-750) — no el correo;
+ *   · el RECURSO de plata (reembolso) va por la PQR (SPEC-752, motivo 2 «Un pago o un cobro»), que
+ *     deja constancia de CUÁNDO se reclamó — un correo directo no, y sin esa fecha el plazo de
+ *     reversión no se puede contar;
+ *   · minimización: ninguna norma exige contacto externo (Estrategia · REPORTE-066); es dato personal
+ *     de un padre en protección infantil (H-2 · Ley 2375/2024).
  *
- * FALLA CERRADA a propósito: cualquier estado distinto de `CONFIRMADA` (incluidos los futuros o
- * desconocidos) NO expone el contacto. La única puerta abierta es la que está escrita.
+ * Se llegó acá por la secuencia del CEO: (1) unificación #715 · (2) enlace SPEC-750 · (3) canal +
+ * escalamiento SPEC-752 · (4) ESTA SPEC voltea el valor. **754 NO se despliega antes que 752**
+ * (cerrar antes deja al padre sin vía). Los prerrequisitos que exigía el destino (canal de
+ * continuidad + vía de escalamiento, Ley 1090 art. 2 num. 5) los provee 752.
  *
- * DESTINO (decidido por Jelkin; NO implementado todavía): no intercambiar correo/teléfono es lo
- * correcto por minimización —ninguna norma exige contacto externo— (Estrategia · REPORTE-066).
- * Pero CERRAR el contacto tiene DOS prerrequisitos que hoy no existen POR LA PLATAFORMA, y hasta
- * que existan, quitarlo haría daño en vez de proteger:
- *   (a) un CANAL DE CONTINUIDAD padre↔profesional (si no, una cita CONFIRMADA viva se queda sin
- *       forma de realizarse); y
- *   (b) una VÍA DE ESCALAMIENTO de riesgo — la Ley 1090 art. 2 num. 5 OBLIGA al psicólogo a
- *       revelar ante daño inminente al consultante o a terceros. Cerrar el contacto sin darle
- *       otra vía le bloquea un deber LEGAL: no es más privacidad, es un profesional que ve algo
- *       grave y no tiene cómo actuar.
- *
- * Secuencia (la fija el CEO): (1) esta unificación —ahora, sin cambio de conducta— · (2) enlace
- * de la reunión · (3) canal de continuidad + vía de escalamiento · (4) recién ahí se voltea el
- * valor. El cambio de conducta llega en su propia SPEC (por radicar · CEO).
- *
- * Por eso la variable que va a decidir esta función NO es «¿ya empezó la sesión?» (tiempo) sino
- * «¿EXISTE otro canal?». La firma toma HOY solo `estado` y NO se casa con la franja/hora: cuando
- * se voltee el valor, el input que se threadea desde los tres llamadores es la existencia del
- * canal, no un reloj. El nombre dice «PorSesion» por herencia; hoy no hay compuerta de sesión.
+ * La firma conserva `estado` (los tres llamadores lo pasan y una reapertura futura lo necesitaría),
+ * pero HOY no decide: la puerta está cerrada. El candado `contacto-fuente-unica.candado.test.ts`
+ * prueba el MECANISMO (la fuente manda); el VALOR (`false`) lo prueba `contacto-visible.test.ts`.
  */
-export function contactoVisiblePorSesion(estado: EstadoSolicitudCita): boolean {
-    return estado === "CONFIRMADA";
+export function contactoVisiblePorSesion(_estado: EstadoSolicitudCita): boolean {
+    return false;
 }

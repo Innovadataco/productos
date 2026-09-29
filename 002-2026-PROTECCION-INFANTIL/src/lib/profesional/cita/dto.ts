@@ -48,12 +48,13 @@ export const CAMPOS_INTERNOS_CITA = [
 ] as const;
 
 /**
- * @internal — expuesta para el test candado.
- * `now` inyectable para deterministismo en tests.
+ * @internal — expuesta para el test candado. SPEC-754: el contacto está CERRADO (la fuente
+ * `contactoVisiblePorSesion` es `false`) y la excepción de reembolso MIGRÓ a la PQR (SPEC-752).
+ * `_now`/`pagoAprobadoEn` quedan en la firma por compatibilidad de llamadores; ya no deciden.
  */
 export function debeExponerContacto(
     solicitud: Pick<SolicitudCita, "estado" | "pagoAprobadoEn">,
-    now: Date,
+    _now: Date,
     /**
      * SPEC-449 · estado del PERFIL del profesional. **REQUERIDO a propósito.**
      *
@@ -82,13 +83,13 @@ export function debeExponerContacto(
     // estados de tránsito como `EN_REVISION`, y eso es otra decisión que nadie
     // tomó.
     if (estadoPerfil === "VENCIDO" || estadoPerfil === "SUSPENDIDO") return false;
-    // La regla de sesión vive en `contactoVisiblePorSesion` (fuente única); acá se le suman
-    // las condiciones propias del PADRE (estado de perfil arriba; reembolso por vencimiento abajo).
+    // La visibilidad la decide la fuente única `contactoVisiblePorSesion` (hoy `false`, SPEC-754):
+    // el contacto está cerrado; el canal de la reunión es el enlace de la cita.
     if (contactoVisiblePorSesion(solicitud.estado)) return true;
-    if (solicitud.estado === "VENCIDA_SIN_RESPUESTA") {
-        if (!solicitud.pagoAprobadoEn) return false;
-        return now.getTime() - solicitud.pagoAprobadoEn.getTime() >= HORAS_48_EN_MS;
-    }
+    // SPEC-754 · D-1: la excepción de REEMBOLSO (`VENCIDA_SIN_RESPUESTA` + 48h) se RETIRÓ — MIGRÓ a
+    // la PQR (SPEC-752, motivo 2 «Un pago o un cobro»). NO sobra: un reembolso es asunto padre↔PI
+    // (la plata la tiene PI), y la reversión corre con plazos contados DESDE el reclamo (padre 5
+    // hábiles, PI 15 hábiles); un correo directo no deja constancia de CUÁNDO, la PQR sí.
     return false;
 }
 
