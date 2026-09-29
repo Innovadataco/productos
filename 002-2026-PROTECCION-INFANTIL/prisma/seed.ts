@@ -158,6 +158,11 @@ async function seedParametrosPadre() {
         { clave: "padre.patron.senal_comunitaria_perpetrador_serial", valor: "5", tipo: TipoParametro.INTEGER, descripcion: "Reportes que señalan posible perpetrador serial" },
         { clave: "padre.patron.multiplataforma_min", valor: "2", tipo: TipoParametro.INTEGER, descripcion: "Mínimo de plataformas distintas para patrón multiplataforma" },
         { clave: "padre.guia.umbral_confianza_categoria_minimo", valor: "0.4", tipo: TipoParametro.FLOAT, descripcion: "Confianza mínima de clasificación para mostrar categoría" },
+        // SPEC-750: versión del guion/protocolo del operador que queda en el HECHO de la sesión
+        // (evidencia). Parámetro sembrado → editable sin desplegar. CUANDO el guion pase a ser
+        // documento legal versionado (hash+fecha, como el consentimiento), este valor apuntará a
+        // su versión+huella. Borrador actual: GUION-OPERADOR-SESION v0.1.
+        { clave: "operador.guion.version", valor: "v0.1-2026-09-29", tipo: TipoParametro.STRING, descripcion: "Versión del protocolo/guion del operador registrada en el HECHO de la sesión (SPEC-750)" },
     ];
 
     for (const p of parametrosPadre) {

@@ -16,8 +16,10 @@
  */
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
+import { asignarOperadorACita } from "@/lib/operadores/asignador-citas";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { getParametroSistemaValor } from "@/lib/parametros";
@@ -205,6 +207,21 @@ export async function confirmarPorProfesional(solicitudId: string, profesionalUs
         ipAddress: "profesional",
         userAgent: "cita/confirmar",
     });
+    // SPEC-750: al confirmar se intenta asignar un operador libre en la ventana (ANTES del
+    // día). Best-effort: un fallo NO rompe la confirmación. Sin operador libre la cita queda
+    // sin asignar (`enlaceOperadorId = null`).
+    // ⚠️ SPEC-750 T014 PENDIENTE: la superficie que le muestra al admin estas citas sin
+    // operador («capacidad, antes del día» · contrato §5) TODAVÍA NO EXISTE. Hasta que exista,
+    // el ÚNICO rastro de una cita sin asignar es este `warn` → degradación silenciosa. NO leer
+    // el flujo del operador como completo hasta T014.
+    try {
+        const r = await asignarOperadorACita(solicitudId);
+        if (!r.asignado) {
+            logger.warn(`[cita/confirmar] cita ${solicitudId} confirmada SIN operador asignado (T014 pendiente: aún NO visible al admin): ${r.razon}`);
+        }
+    } catch (e) {
+        logger.warn(`[cita/confirmar] error asignando operador a ${solicitudId}: ${String(e)}`);
+    }
     return actualizado;
 }
 
