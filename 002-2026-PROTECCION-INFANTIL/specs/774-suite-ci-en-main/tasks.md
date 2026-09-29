@@ -11,6 +11,6 @@
 
 ## Tras #752 (job e2e de Calidad) en `main` — edita `ci.yml`
 - [ ] **T2** · Rebase sobre `main` (con el `ci.yml` de Calidad). `push.branches → [main]` (L12); quitar la rama fantasma. `cancel-in-progress` también para `main` (D-1: solo la punta que se despliega importa).
-- [ ] **T3** · `if` del paso `test-durations.json` → `refs/heads/main` (L378, D-2, defecto APARTE); comentarios L30/L376 → `main`.
+- [ ] **T3** · `if` del paso `test-durations.json` → `refs/heads/main` (L378, D-2, defecto APARTE); comentarios L30/L376 → `main`. **Requisito del CEO (va en el PR, no en el spec):** el comentario de L378 debe decir POR QUÉ apuntaba al fantasma y QUÉ se degradaba en silencio — el **reparto por peso de los shards** (SPEC-281): las duraciones se congelaron, así que cada test nuevo desbalanceaba más los shards y nada avisaba. Que alguien que mire esa línea en 6 meses entienda que NO era cosmética.
 - [ ] **T4** · REGISTRAR el candado en `vitest.unit.includes.ts` → ahora VERDE (ci.yml incluye `main`, sin fantasma); confirmar por exit code.
 - [ ] **T5** · Gate: `tsc` + `lint` + `test:unit` completo + candado + `build`. PR + REALIZADO. (Protocolo de `main` rojo — notificación auto, freeze discrecional — queda en `spec.md`.)
