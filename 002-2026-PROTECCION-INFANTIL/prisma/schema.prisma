@@ -4214,7 +4214,13 @@ model EncuestaCita {
   operador       OperadorConvoco // Q2
   inicio         InicioSesion // Q3
   enlace         EnlaceFunciono // Q4
-  duracion       DuracionSesion // Q5
+  // Q5 · NULABLE: DuracionSesion {MENOS_15, ENTRE_15_30, ENTRE_30_45, MAS_45} no tiene un
+  // miembro que diga honestamente «no hubo sesión» (todos son duraciones positivas), a
+  // diferencia de operador/inicio/enlace (NO_HUBO_OPERADOR/NO_COMENZO/NO_FUNCIONO, que
+  // aportan una RAZÓN). Forzar un valor con seRealizo=false hacía que el dato afirmara que
+  // una sesión inexistente duró <15 min. CHECK VALIDADO espejo del razón-IFF: duración
+  // presente sii seRealizo (migración de Datos; Prisma es ciego al CHECK).
+  duracion       DuracionSesion? // Q5
   respondidaEn   DateTime           @default(now()) @db.Timestamptz(6)
 
   solicitud SolicitudCita @relation(fields: [solicitudId], references: [id], onDelete: Cascade)

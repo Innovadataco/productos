@@ -284,11 +284,14 @@ async function sembrarProfesional(
 // coherencia razón↔seRealizo y venceEn>reclamadoEn las sostiene la BD (CHECK + candado).
 const PLAZO_REVERSION_DIAS_HABILES = 15; // art. 51 · reloj NUESTRO de reversión
 
-type Servicio = { operador: OperadorConvoco; inicio: InicioSesion; enlace: EnlaceFunciono; duracion: DuracionSesion };
+type Servicio = { operador: OperadorConvoco; inicio: InicioSesion; enlace: EnlaceFunciono; duracion: DuracionSesion | null };
 type DatosEncuesta = Servicio & { seRealizo: boolean; razonNoRealizo: RazonNoSesion | null };
 
 const SERVICIO_OK: Servicio = { operador: "SI", inicio: "A_TIEMPO", enlace: "SI", duracion: "ENTRE_30_45" };
-const SERVICIO_NO_SESION: Servicio = { operador: "NO_HUBO_OPERADOR", inicio: "NO_COMENZO", enlace: "NO_FUNCIONO", duracion: "MENOS_15" };
+// SPEC-753: sin sesión → duracion NULL. DuracionSesion no tiene un miembro «no hubo sesión»;
+// forzar MENOS_15 afirmaba que algo que no ocurrió duró <15 min (la mentira que Dev-3 midió).
+// El CHECK duracion-IFF (duración presente sii seRealizo) rechaza cualquier otra cosa.
+const SERVICIO_NO_SESION: Servicio = { operador: "NO_HUBO_OPERADOR", inicio: "NO_COMENZO", enlace: "NO_FUNCIONO", duracion: null };
 
 const ESCENARIOS_ENCUESTA = [
     { tipo: "acuerdo", peso: 55 },

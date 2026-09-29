@@ -75,20 +75,23 @@ function detalleError(err: unknown): string {
     return `${(err as Error)?.message ?? ""} ${JSON.stringify((err as { meta?: unknown })?.meta ?? {})}`;
 }
 
-/** INSERT crudo de EncuestaCita — casteos explícitos a los enums (columnas case-sensitive). */
+/** INSERT crudo de EncuestaCita — casteos explícitos a los enums (columnas case-sensitive).
+ *  `duracion` SIGUE a seRealizo por defecto (coherente con el CHECK duracion-IFF: con sesión,
+ *  un valor; sin sesión, NULL); los tests de esquina la fijan explícitamente. */
 function insertarEncuestaCita(
     solicitudId: string,
-    opts: { origen?: string; seRealizo: boolean; razonNoRealizo: string | null },
+    opts: { origen?: string; seRealizo: boolean; razonNoRealizo: string | null; duracion?: string | null },
 ) {
     const id = `encc-test-${Date.now()}-${contador++}`;
     const { origen = "PADRE", seRealizo, razonNoRealizo } = opts;
+    const duracion = "duracion" in opts ? opts.duracion : seRealizo ? "ENTRE_30_45" : null;
     return prisma.$executeRaw`
         INSERT INTO "EncuestaCita"
             (id, "solicitudId", origen, "seRealizo", "razonNoRealizo", operador, inicio, enlace, duracion, "respondidaEn")
         VALUES (
             ${id}, ${solicitudId}, ${origen}::"OrigenEncuestaCita", ${seRealizo},
             ${razonNoRealizo}::"RazonNoSesion", ${"SI"}::"OperadorConvoco", ${"A_TIEMPO"}::"InicioSesion",
-            ${"SI"}::"EnlaceFunciono", ${"ENTRE_30_45"}::"DuracionSesion", now()
+            ${"SI"}::"EnlaceFunciono", ${duracion}::"DuracionSesion", now()
         )
     `;
 }
@@ -137,6 +140,42 @@ describe("SPEC-753 · EncuestaCita · CHECK razón↔seRealizo (IFF; Prisma es c
     ])("$nota → pasa", async ({ seRealizo, razon }) => {
         const sol = await seedSolicitud();
         await insertarEncuestaCita(sol.id, { seRealizo, razonNoRealizo: razon });
+        expect(await prisma.encuestaCita.count({ where: { solicitudId: sol.id } })).toBe(1);
+    });
+});
+
+describe("SPEC-753 · EncuestaCita · CHECK duración↔seRealizo (espejo del razón-IFF)", { timeout: 30_000 }, () => {
+    beforeEach(async () => {
+        await resetDatabase();
+    });
+
+    // Los dos INCOHERENTES. La razón SÍ sigue a seRealizo (razón-IFF satisfecho), así el único
+    // que puede rebotar es el duracion-IFF → el 23514 es de ESTE check, no del otro.
+    it.each([
+        { seRealizo: true, razon: null, duracion: null, nota: "realizó=true SIN duración" },
+        { seRealizo: false, razon: "OTRA", duracion: "ENTRE_30_45", nota: "realizó=false CON duración (el MENOS_15 que mentía)" },
+    ])("$nota → rechazo del CHECK (SQLSTATE 23514)", async ({ seRealizo, razon, duracion }) => {
+        const sol = await seedSolicitud();
+        let err: unknown;
+        try {
+            await insertarEncuestaCita(sol.id, { seRealizo, razonNoRealizo: razon, duracion });
+        } catch (e) {
+            err = e;
+        }
+        expect(err, "una fila incoherente en duración DEBE fallar: si pasa, el CHECK ya no está").toBeDefined();
+        expect(
+            detalleError(err),
+            "el rechazo debe ser el duracion-IFF (23514 / EncuestaCita_duracion_sii_realizo_check), no otro",
+        ).toMatch(/23514|EncuestaCita_duracion_sii_realizo_check/);
+    });
+
+    // Las dos COHERENTES: control positivo (el CHECK no rechaza todo).
+    it.each([
+        { seRealizo: true, razon: null, duracion: "ENTRE_30_45", nota: "realizó=true CON duración" },
+        { seRealizo: false, razon: "OTRA", duracion: null, nota: "realizó=false SIN duración" },
+    ])("$nota → pasa", async ({ seRealizo, razon, duracion }) => {
+        const sol = await seedSolicitud();
+        await insertarEncuestaCita(sol.id, { seRealizo, razonNoRealizo: razon, duracion });
         expect(await prisma.encuestaCita.count({ where: { solicitudId: sol.id } })).toBe(1);
     });
 });

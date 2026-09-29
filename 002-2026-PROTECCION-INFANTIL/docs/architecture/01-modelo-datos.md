@@ -849,9 +849,6 @@ Regla de agrupación por dominio: lista ordenada de reglas por nombre de modelo
 | operador | OperadorConvoco | — |
 | inicio | InicioSesion | — |
 | enlace | EnlaceFunciono | — |
-| duracion | DuracionSesion | — |
-| respondidaEn | DateTime | — |
-| solicitud | SolicitudCita | relación (FK) |
 
 #### `EncuestaPrimeraCita`
 
@@ -2491,7 +2488,6 @@ erDiagram
     SeguimientoCaso ||--o{ InformeCaso : "caso"
     SeguimientoCaso ||--o{ NotaSeguimiento : "seguimiento"
     SimulacionRun ||--o{ SimulacionReporte : "simulacionRun"
-    SolicitudCita ||--o{ EncuestaCita : "solicitud"
     SolicitudCita ||--o{ EncuestaPrimeraCita : "solicitud"
     SolicitudCita ||--o{ IncidenteContradiccionEncuesta : "solicitud"
     Suscripcion ||--o{ BonoAplicado : "suscripcion"
