@@ -222,7 +222,7 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const completar = await request.post("/api/auth/registro-colegio/completar", {
                 data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
             });
-            expect(completar.status(), `completar body=${await completar.text().catch(() => "")}`).toBe(200);
+            expect(completar.status(), `completar body=${await completar.text().catch(() => "")}`).toBe(201);
 
             // Paso 4 · sesión sellada; la respuesta debe aterrizar en el camino del colegio.
             const dash = await request.get("/dashboard/colegio", { maxRedirects: 0 });
@@ -316,7 +316,7 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const completar = await request.post("/api/auth/registro-profesional/completar", {
                 data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
             });
-            expect(completar.status(), `completar profesional body=${await completar.text().catch(() => "")}`).toBe(200);
+            expect(completar.status(), `completar profesional body=${await completar.text().catch(() => "")}`).toBe(201);
 
             // Ahora el spec camina `/perfil-profesional/completar` — el PUT que
             // la pantalla dispara al guardar. `ciudadId` va con texto humano
@@ -405,7 +405,7 @@ test.describe.serial("Alta completa · colegio + psicólogo (SPEC-445)", () => {
             const completar = await request.post("/api/auth/registro-profesional/completar", {
                 data: { token, password: PASSWORD, passwordConfirmacion: PASSWORD },
             });
-            expect(completar.status(), "completar profesional 200").toBe(200);
+            expect(completar.status(), "completar profesional 201").toBe(201);
             await aceptarConsentimiento(request);
             await login(request, EMAIL_PROF_CAL);
 
