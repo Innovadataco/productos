@@ -12,6 +12,9 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/demo/parseargs-estricto.candado.test.ts",
     // SPEC-287 (002-PI-187): fuente única de guardias + cookie firmada de vigencia + 4 ratchets estáticos.
     "src/lib/routing/guardias.test.ts",
+    // INVARIANTE DE PRODUCTO (CEO · extraído de SPEC-751): el camino de REPORTE y los canales
+    // oficiales NUNCA se gatean. Estructural, control positivo; cae si una compuerta los tapa.
+    "src/lib/routing/proteccion-siempre-abierta.candado.test.ts",
     "src/lib/routing/vigencia-cookie.test.ts",
     "src/lib/routing/middleware.test.ts",
     // SPEC-572 (I-236): interceptor cliente que refresca sesion_estado ante el 403 del cerrojo.
