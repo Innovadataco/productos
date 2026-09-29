@@ -294,7 +294,7 @@ export default function AdminOperadoresGestionPage() {
                             onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
                         />
                         <Input
-                            label="Cupo máximo"
+                            label="Cupo de casos"
                             type="number"
                             min={1}
                             max={200}
@@ -531,7 +531,7 @@ function EditableRow({
                 </select>
             </td>
             <td className="py-3 pr-3">
-                <label className="block text-xs text-muted">Cupo casos</label>
+                <label className="block text-xs text-muted">Cupo de casos</label>
                 <input
                     type="number"
                     min={1}
@@ -540,9 +540,13 @@ function EditableRow({
                     onChange={(e) => setValues({ ...values, cupoMaximo: Number(e.target.value) })}
                     className="w-20 rounded-lg px-2 py-1 text-sm text-body glass-input"
                 />
-                {/* El tope de SESIONES es global (parámetro), no per-operador: se muestra, no se edita acá. */}
+                {/* El tope de SESIONES es global (parámetro), no per-operador: se muestra, no se edita acá.
+                    SPEC-779 (§3 cert Diseño): decir el límite y apuntar a dónde SÍ se cambia. */}
                 <span className="mt-1 block text-xs text-muted">
                     Sesiones: {op.sesionesVigentes}/{op.topeSesiones}
+                </span>
+                <span className="mt-1 block text-xs text-muted">
+                    El tope de sesiones es el mismo para todo el equipo. Se ajusta en la configuración de asignación, no por operador.
                 </span>
             </td>
             <td className="py-3 pr-3">
