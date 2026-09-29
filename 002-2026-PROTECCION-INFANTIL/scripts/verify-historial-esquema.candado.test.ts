@@ -17,10 +17,13 @@
 import { describe, it, expect } from "vitest";
 import { clasificarDrift, partirStatements, LIMITES_CLASIFICADOR } from "./verify-historial-esquema";
 
-// ── Drift REAL de HISTORIAL, medido con `historial:check` (SPEC-767, dirección --to-migrations) ──
-// El historial construye `Plan.creadoEn` + `precio NOT NULL` que el esquema NO declara (declara
-// `createdAt` y `precio` nullable). La cláusula `updatedAt SET DEFAULT` es benigna PERO va mezclada:
-// el filtro por CLÁUSULA exige que TODAS sean benignas → el bloque entero cae en `drift`.
+// ── FIXTURE del escenario ANTES de #735 (control positivo) — NO es el estado de `main` hoy ──
+// Este string es el drift de HISTORIAL que `historial:check` medía ANTES de que #735 reconciliara
+// `Plan`: el historial CONSTRUÍA `Plan.creadoEn` + `precio NOT NULL` que el esquema NO declara
+// (declara `createdAt` y `precio` nullable). Se conserva como CASO para probar que el clasificador
+// lo caza pese a la cláusula benigna mezclada (`updatedAt SET DEFAULT`): el filtro por CLÁUSULA exige
+// que TODAS sean benignas → el bloque entero cae en `drift`. En `main` HOY el guardián da drift 0
+// (born-VERDE, HISTORIAL_EXIT=0); este fixture NO refleja el presente, es el «antes» usado de prueba.
 const PLAN_HISTORIAL_DRIFT = `ALTER TABLE "Plan" ADD COLUMN     "creadoEn" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ALTER COLUMN "precio" SET NOT NULL,
 ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP;`;
