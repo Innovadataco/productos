@@ -83,7 +83,12 @@ export function PanelBloque({ panel, enviando, onCerrar, onResponder }: {
                     <div className="space-y-1 text-xs text-body">
                         <div><span className="font-mono text-[10px] uppercase text-subtle">Con</span> {b.familia}</div>
                         <div><span className="font-mono text-[10px] uppercase text-subtle">Modo</span> {b.modalidad === "VIRTUAL" ? "Virtual" : "Presencial"}</div>
-                        {b.contactoEmail && <div><span className="font-mono text-[10px] uppercase text-subtle">Contacto</span> {b.contactoEmail}</div>}
+                        {/* SPEC-754 · el CONTACTO del padre se retiró: el contacto mutuo está CERRADO
+                            (`contactoVisiblePorSesion` → false, así que `b.contactoEmail` ya no llega).
+                            El profesional coordina por el ENLACE de la cita (SPEC-750). El MARCADOR de
+                            «por dónde seguir» lo entrega Diseño en su commit al sistema de diseño; no se
+                            inventa copy acá. El campo `contactoEmail` se conserva en el bloque solo para
+                            que el candado de fuente única afirme su ausencia. */}
                     </div>
                     <p className="mt-3 text-[11px] text-subtle">El cierre de la cita todavía no está disponible.</p>
                     <button className="mt-3 w-full rounded-lg border border-tinta/10 px-3 py-2 text-xs font-semibold text-muted" onClick={onCerrar}>Cerrar</button>

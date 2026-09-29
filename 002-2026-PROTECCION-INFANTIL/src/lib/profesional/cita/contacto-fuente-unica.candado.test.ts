@@ -180,6 +180,29 @@ describe("SPEC-395 · candado de CONDUCTA — el contacto sale/no sale según la
             expect(bloque?.contactoEmail).toBe(CORREO_PADRE);
         });
     });
+
+    describe("GUARD SUBSUMIDO · perfil VENCIDO cierra el contacto aunque la fuente diga TRUE", () => {
+        // SPEC-754 · la rama `estadoPerfil === "VENCIDO" | "SUSPENDIDO"` de `debeExponerContacto`
+        // manda SOBRE la fuente (reserva legal H-2 · Ley 2375/2024). Con la fuente HOY en `false`
+        // esa rama nunca sería el decisor real; sin este caso, en seis meses es código muerto que
+        // alguien borra «porque no lo cubre nada». Acá se la EJERCITA de verdad: se FUERZA la fuente
+        // a `true` y se pone el perfil VENCIDO ⇒ el contacto SIGUE ausente. El control positivo de
+        // arriba (fuente `true` + perfil ACTIVO ⇒ correo PRESENTE) prueba que este `undefined` lo
+        // decide el guard, no un escenario sin dato: mismo correo real plantado, único cambio el estado.
+        beforeEach(() => visibleMock.mockReturnValue(true));
+
+        it("toCitaParaPadre NO adjunta el contacto del profesional si su perfil está VENCIDO", () => {
+            // `solicitudParaPadre` está tipada `as never` (fixture ancha); la reabrimos a un objeto
+            // spreable solo para sobreescribir el estado del perfil sin duplicar la fixture entera.
+            const base = solicitudParaPadre as unknown as { profesional: Record<string, unknown> };
+            const vencido = {
+                ...base,
+                profesional: { ...base.profesional, estado: "VENCIDO" },
+            } as never;
+            const dto = toCitaParaPadre(vencido, AHORA);
+            expect(dto.contactoProfesional).toBeUndefined();
+        });
+    });
 });
 
 // ── COMPLEMENTO de fuente ────────────────────────────────────────────────────
