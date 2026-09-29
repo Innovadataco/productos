@@ -66,8 +66,13 @@ function valorServicio(e: EncuestaCita, pregunta: PreguntaServicio): string | nu
     }
 }
 
-/** Compara las dos encuestas y devuelve las contradicciones (con su clase). Puro. */
-export function detectarContradicciones(padre: EncuestaCita, profesional: EncuestaCita): Contradiccion[] {
+/**
+ * Compara las dos encuestas y devuelve las contradicciones (con su clase). Puro.
+ * Por OBJETO, no dos `EncuestaCita` posicionales: invertir padre↔profesional COMPILARÍA e
+ * invertiría la CLASE (RECLAMO_PADRE↔DICHA_PROFESIONAL) — el término legal caería sobre el
+ * lado equivocado, en silencio. El objeto lo vuelve imposible.
+ */
+export function detectarContradicciones({ padre, profesional }: { padre: EncuestaCita; profesional: EncuestaCita }): Contradiccion[] {
     if (padre.seRealizo !== profesional.seRealizo) {
         // La no-prestación la afirma quien dijo que NO. El término depende de quién fue:
         // el padre reclamando (LEGAL) o el profesional (INTERNO).
@@ -111,10 +116,10 @@ export async function cruzarEncuestasCita(
     const profesional = encuestas.find((e) => e.origen === "PROFESIONAL");
     if (!padre || !profesional) return { contradicciones: [] };
 
-    const contradicciones = detectarContradicciones(padre, profesional);
+    const contradicciones = detectarContradicciones({ padre, profesional });
 
     for (const c of contradicciones) {
-        const reclamadoEn = reclamadoEnDeClase(c.clase, padre.respondidaEn, deteccion);
+        const reclamadoEn = reclamadoEnDeClase(c.clase, { padreRespondioEn: padre.respondidaEn, deteccion });
         const venceEn = venceEnIncidente(c.clase, reclamadoEn);
         await db.incidenteContradiccionEncuesta.upsert({
             where: { solicitudId_pregunta: { solicitudId, pregunta: c.pregunta } },

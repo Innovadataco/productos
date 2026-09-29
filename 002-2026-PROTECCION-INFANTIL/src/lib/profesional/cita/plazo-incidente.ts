@@ -64,9 +64,14 @@ export function claseTieneTerminoLegal(clase: ClaseContradiccion): boolean {
 /**
  * `reclamadoEn` de un incidente según su clase: la `respondidaEn` del padre para el
  * término legal (su respuesta es el reclamo), o la detección para los internos.
+ *
+ * Las dos fechas van POR OBJETO a propósito (no dos `Date` posicionales): invertirlas
+ * COMPILARÍA y anclaría el término LEGAL en la detección en vez de en el reclamo del padre
+ * — un vencimiento calculado desde la fecha equivocada, en silencio, sobre un plazo de ley,
+ * y hacia el lado que nos da MÁS tiempo del que tenemos. El objeto lo vuelve imposible.
  */
-export function reclamadoEnDeClase(clase: ClaseContradiccion, padreRespondioEn: Date, deteccion: Date): Date {
-    return PLAZO_POR_CLASE[clase].ancla === "PADRE_RESPONDIO" ? padreRespondioEn : deteccion;
+export function reclamadoEnDeClase(clase: ClaseContradiccion, fechas: { padreRespondioEn: Date; deteccion: Date }): Date {
+    return PLAZO_POR_CLASE[clase].ancla === "PADRE_RESPONDIO" ? fechas.padreRespondioEn : fechas.deteccion;
 }
 
 /**
