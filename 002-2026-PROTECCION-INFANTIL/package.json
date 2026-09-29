@@ -25,6 +25,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "indices:check": "tsx scripts/verify-hnsw-indexes.ts",
     "drift:check": "tsx scripts/verify-schema-drift.ts",
+    "historial:check": "tsx scripts/verify-historial-esquema.ts",
     "reglas:check": "tsx scripts/verify-reglas-notificacion.ts",
     "db:verify:hnsw": "npm run indices:check",
     "db:generate": "prisma generate",

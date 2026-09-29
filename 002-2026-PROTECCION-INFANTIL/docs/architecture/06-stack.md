@@ -74,6 +74,7 @@ Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puert
 | `db:verify:hnsw` | `npm run indices:check` |
 | `dev` | `next dev -p 5005` |
 | `drift:check` | `tsx scripts/verify-schema-drift.ts` |
+| `historial:check` | `tsx scripts/verify-historial-esquema.ts` |
 | `indices:check` | `tsx scripts/verify-hnsw-indexes.ts` |
 | `lint` | `eslint .` |
 | `locks:check` | `tsx scripts/locks-check.ts` |

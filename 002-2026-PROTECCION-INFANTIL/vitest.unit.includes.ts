@@ -93,6 +93,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-760/766: registro de LÍMITES del clasificador (deuda declarada). Fija que la lista no
     // se vacía en silencio y que cada ejemplo declarado SÍ se clasifica benigno. Sin BD.
     "scripts/verify-schema-drift.limites.candado.test.ts",
+    // SPEC-767: guardián de HISTORIAL ≠ ESQUEMA (migraciones vs esquema declarado, dirección
+    // --to-migrations). Reusa la MISMA fuente de #760; separa el drift de historial (Plan) del punto
+    // ciego que ESA dirección emite; control positivo plantado. Sin BD (clasificación de texto).
+    "scripts/verify-historial-esquema.candado.test.ts",
     // SPEC-612: guarda de credenciales de la semilla de Calidad — PURA (sin base). El candado de
     // idempotencia (con base) vive en src/lib/seed-cuentas-calidad-siembra.candado.test.ts (integración).
     "scripts/lib/credenciales-e2e-calidad.candado.test.ts",
