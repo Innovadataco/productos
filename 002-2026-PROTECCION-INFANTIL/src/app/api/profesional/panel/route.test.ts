@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { GET } from "./route";
+import { panelDelProfesional } from "@/lib/profesional/panel/panel.service";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario, crearTokenUsuario } from "@/lib/reporte-test-utils";
@@ -205,6 +206,38 @@ describe("GET /api/profesional/panel · SPEC-425 (A-75 · L5)", () => {
         // El pago de las dos sigue retenido hasta el cierre (L6).
         expect(panel.porCobrar.montoRetenido).toBe(360000);
         expect(panel.porCobrar.citasEsperandoCierre).toBe(2);
+    });
+
+    it("SPEC-749 (caracterización de frontera): el split porCerrar/agenda ocurre en el INICIO, no en el fin", async () => {
+        // Caracterización ANTES del refactor a estadoEfectivoDeCita (exigencia del CEO): fija que
+        // una CONFIRMADA cruza de `agenda` a `porCerrar` en el INICIO de la franja, no en el fin.
+        // El test de arriba usa -3h/+72h y no atraparía un corrimiento de frontera; este llama a
+        // panelDelProfesional con `now` inyectado a ±1s del inicio.
+        const { usuario, perfil } = await sembrarProfesional();
+        const T = Date.now() + 5 * HORA; // inicio conocido
+        const franja = await prisma.franjaDisponible.create({
+            data: { profesionalId: perfil.id, inicio: new Date(T), fin: new Date(T + HORA), modalidad: "VIRTUAL", tomada: true },
+        });
+        const padre = await crearUsuario("PARENT", `frontera.${Date.now()}@ejemplo.local`);
+        await prisma.solicitudCita.create({
+            data: {
+                padreUsuarioId: padre.id, profesionalId: perfil.id, franjaId: franja.id,
+                presentacion: "x", urgencia: "SIN_APURO", estado: "CONFIRMADA",
+                venceEn: new Date(T), pagoAprobadoEn: new Date(),
+                montoConsulta: 180000, montoServicio: 27000, montoTotal: 207000, porcentajeServicio: 15,
+            },
+        });
+
+        // `now` JUSTO ANTES del inicio → agenda (PROXIMA), no por cerrar.
+        const antes = await panelDelProfesional(usuario.id, new Date(T - 1000));
+        expect(antes.citasConfirmadas, "antes del inicio: agenda").toHaveLength(1);
+        expect(antes.casosPorCerrar, "antes del inicio: NO por cerrar").toHaveLength(0);
+
+        // `now` JUSTO DESPUÉS del inicio (aún < fin) → por cerrar. Fija la frontera en el INICIO:
+        // si el refactor la moviera al FIN, esta cita (EN_CURSO) caería en agenda y el test rompería.
+        const despues = await panelDelProfesional(usuario.id, new Date(T + 1000));
+        expect(despues.casosPorCerrar, "después del inicio: por cerrar").toHaveLength(1);
+        expect(despues.citasConfirmadas, "después del inicio: ya no en agenda").toHaveLength(0);
     });
 
     it("el desglose de la tarifa es el que se le cobró al padre, no uno inventado", async () => {

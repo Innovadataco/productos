@@ -29,6 +29,7 @@ import { VerificadorRepository } from "@/lib/dal/repositories/verificador-reposi
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import { saludoDelPanel } from "./saludo";
 import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
+import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
 
 /** Estados que esperan una respuesta del profesional dentro de las 48 h. */
 const ESPERAN_RESPUESTA: EstadoSolicitudCita[] = ["SIN_CONFIRMAR", "PAGADA_PENDIENTE"];
@@ -125,11 +126,6 @@ export interface PanelProfesionalDto {
 const DIA_MS = 24 * 60 * 60 * 1000;
 const HORAS_48_MS = 48 * 60 * 60 * 1000;
 
-/** Un caso está «por cerrar» cuando ya se confirmó y su hora ya pasó. */
-function yaOcurrio(inicio: Date, ahora: Date): boolean {
-    return inicio.getTime() <= ahora.getTime();
-}
-
 export async function panelDelProfesional(
     usuarioId: string,
     ahora: Date = new Date(),
@@ -156,8 +152,13 @@ export async function panelDelProfesional(
             return urg !== 0 ? urg : a.franja.inicio.getTime() - b.franja.inicio.getTime();
         });
     const confirmadas = solicitudes.filter((s) => s.estado === "CONFIRMADA");
-    const porCerrar = confirmadas.filter((s) => yaOcurrio(s.franja.inicio, ahora));
-    const agenda = confirmadas.filter((s) => !yaOcurrio(s.franja.inicio, ahora));
+    // SPEC-749: la frontera porCerrar/agenda se DERIVA de la fuente única (`estadoEfectivoDeCita`,
+    // #718), no de una comparación de tiempo propia — antes había dos fronteras distintas para el
+    // mismo hecho. `agenda` = la cita aún no empezó (PROXIMA); `porCerrar` = ya empezó o pasó
+    // (EN_CURSO/PASADA). Conducta idéntica al viejo `inicio <= ahora` para datos válidos (la frontera
+    // del split es el INICIO ≡ límite PROXIMA/EN_CURSO); caracterizado en `route.test.ts`.
+    const porCerrar = confirmadas.filter((s) => estadoEfectivoDeCita(s.estado, s.franja.inicio, s.franja.fin, ahora) !== "PROXIMA");
+    const agenda = confirmadas.filter((s) => estadoEfectivoDeCita(s.estado, s.franja.inicio, s.franja.fin, ahora) === "PROXIMA");
 
     // SPEC-403: el porcentaje que se le cobró de verdad manda sobre el vigente
     // — una solicitud ya creada conserva el suyo aunque el parámetro cambie
