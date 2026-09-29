@@ -72,6 +72,8 @@ type ClienteDB = PrismaClient | Prisma.TransactionClient;
 export interface CitaPendienteEncuesta {
     readonly solicitudId: string;
     readonly origen: OrigenEncuestaCita;
+    /** Inicio de la franja — para pintar «tu cita del {fecha}» y ordenar por más reciente. */
+    readonly franjaInicio: Date;
 }
 
 /**
@@ -112,5 +114,7 @@ export async function citasConEncuestaPendiente(
                 c.encuestasSesion.length > 0,
             ),
         )
-        .map((c) => ({ solicitudId: c.id, origen }));
+        .map((c) => ({ solicitudId: c.id, origen, franjaInicio: c.franja.inicio }))
+        // Más reciente primero: el CTA lleva a la última cita (FORMA punto-de-entrada §6).
+        .sort((a, b) => b.franjaInicio.getTime() - a.franjaInicio.getTime());
 }
