@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
 import { GET, POST } from "./route";
+import { revelarCredencial } from "@/lib/seguridad/credencial";
 import { POST as loginPOST } from "../../auth/login/route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
@@ -183,7 +184,17 @@ describe("/api/admin/operadores", () => {
             where: { accion: "COMITE_CREADO", recursoId: json.operador.id },
         });
         expect(audit).not.toBeNull();
-        expect(enviarEmailBienvenidaComite).toHaveBeenCalledWith("comite@test.com", expect.any(String));
+        // SPEC-783: el 2.º arg de bienvenida YA NO es un String — es una `Credencial` opaca
+        // (contrato retirado a propósito). No aflojamos a «llamada con algo»: afirmamos que el
+        // VALOR real LLEGA — la credencial revelada es la MISMA que se le muestra al admin
+        // (`json.passwordTemporal`). El end-to-end (cuerpo renderizado del correo contiene el
+        // valor) vive en `email.migracion.test.ts`.
+        expect(enviarEmailBienvenidaComite).toHaveBeenCalledTimes(1);
+        const [emailArg, credArg] = (enviarEmailBienvenidaComite as unknown as Mock).mock.calls[0];
+        expect(emailArg).toBe("comite@test.com");
+        expect(typeof credArg, "la credencial ya no viaja como String suelto").not.toBe("string");
+        expect(revelarCredencial(credArg)).toBe(json.passwordTemporal);
+        expect(json.passwordTemporal, "la temporal que ve el admin es real").toMatch(/^[0-9a-f]{12}$/);
     });
 
     it("devuelve 409 al crear COMITE_VALIDACION con email de OPERADOR existente", async () => {
