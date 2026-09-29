@@ -16,12 +16,17 @@ import { estadoEfectivoDeCita, type EntradaTiempo } from "@/lib/profesional/cita
 
 export type BadgeCita = { label: string; clases: string };
 
+// SPEC-730 · tratamiento de ESTADO FINAL NEUTRO (tinta): los finales sin asistencia/vencida/
+// reembolsada/reprogramada, y —desde SPEC-749 FR-2— la CONFIRMADA cuya hora ya pasó. Fuente
+// ÚNICA para que la lista reuse el MISMO tratamiento y no derive uno inventado.
+const CLASES_ESTADO_NEUTRO = "bg-tinta/10 text-muted";
+
 /**
  * Badge de estado. Color de PROCESO, CERO rubí (una cita no es una alarma de
  * criticidad). cielo=confirmada, ámbar=esperando, pino=realizada, tinta=final neutro.
  */
 export function badgeDeCita(estado: EstadoSolicitudCita): BadgeCita {
-    const NEUTRO = "bg-tinta/10 text-muted";
+    const NEUTRO = CLASES_ESTADO_NEUTRO;
     switch (estado) {
         case "CONFIRMADA":
             return { label: "Confirmada", clases: "bg-cielo/10 text-cielo" };
@@ -58,7 +63,7 @@ export function badgeDeCitaEfectivo(
     ahora: EntradaTiempo,
 ): BadgeCita {
     if (estado === "CONFIRMADA" && estadoEfectivoDeCita("CONFIRMADA", franjaInicio, franjaFin, ahora) === "PASADA") {
-        return { label: "Ya pasó", clases: "bg-tinta/10 text-muted" };
+        return { label: "Ya pasó", clases: CLASES_ESTADO_NEUTRO };
     }
     return badgeDeCita(estado);
 }
