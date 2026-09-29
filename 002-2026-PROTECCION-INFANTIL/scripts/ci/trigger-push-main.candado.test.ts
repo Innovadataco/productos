@@ -63,8 +63,13 @@ describe("SPEC-774 · el trigger de push corre la suite sobre `main`", () => {
         expect(ramasDelPushTrigger(yml)).toContain("main");
     });
 
-    it("segunda (ci.yml REAL): la rama fantasma no queda en NINGÚN lado (trigger ni gate de duraciones)", () => {
-        expect(yml.includes(RAMA_FANTASMA), `«${RAMA_FANTASMA}» sigue en ci.yml — cadena muerta (trigger o paso de duraciones)`).toBe(false);
+    it("segunda (ci.yml REAL): la rama fantasma no queda en posición FUNCIONAL (trigger ni gate de duraciones)", () => {
+        // El defecto son las referencias que ACTÚAN: el trigger y los `if: github.ref == …`. Un
+        // comentario que EXPLIQUE por qué la rama estaba muerta (defecto de duraciones, D-2) es
+        // deseable, no un defecto — por eso NO se prohíbe el literal en comentarios, solo su uso vivo.
+        expect(ramasDelPushTrigger(yml), "la rama fantasma sigue en push.branches").not.toContain(RAMA_FANTASMA);
+        const gateVivo = new RegExp(`github\\.ref\\s*==\\s*['"]refs/heads/${RAMA_FANTASMA.replace(/\//g, "/")}['"]`);
+        expect(gateVivo.test(yml), `un \`if: github.ref == 'refs/heads/${RAMA_FANTASMA}'\` sigue vivo (p. ej. el paso de duraciones)`).toBe(false);
     });
 
     it("CONTROL POSITIVO por MUTACIÓN: el parser distingue `main` presente de ausente (inline y bloque)", () => {
