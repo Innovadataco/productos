@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyAuth } from "@/lib/auth";
 import { errorToResponse } from "@/lib/api-handler";
+import { AppError, ERROR_CODES } from "@/lib/errors";
 import { cuidIdSchema } from "@/lib/schemas/base";
 import { reasignarPorPadre } from "@/lib/profesional/cita/cita.service";
 import { toCitaParaPadre } from "@/lib/profesional/cita/dto";
@@ -29,8 +30,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             nuevoProfesionalId,
             nuevaFranjaId,
         });
+        // SPEC-750: NUNCA el modelo CRUDO (`nueva`) — al poblar el enlace filtraría la
+        // URL/operador al padre. DTO siempre; si la recarga falla, fail-closed.
         const conRelaciones = await new SolicitudCitaRepository().findParaPadre(nueva.id, user.id);
-        return NextResponse.json({ data: conRelaciones ? toCitaParaPadre(conRelaciones) : nueva });
+        if (!conRelaciones) {
+            throw new AppError("No se pudo cargar la cita reasignada", ERROR_CODES.NOT_FOUND, 404);
+        }
+        return NextResponse.json({ data: toCitaParaPadre(conRelaciones) });
     } catch (error) {
         return errorToResponse(error, "[PADRE/CITAS/REASIGNAR]");
     }

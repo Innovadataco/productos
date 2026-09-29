@@ -25,6 +25,8 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     // como aterrizaje que redirige a Inicio o Bandeja según módulo.
     { href: "/dashboard/admin/bandeja", label: "Bandeja de reportes", labelCorto: "Bandeja", modulo: "bandeja_reportes" },
     { href: "/dashboard/admin/spam", label: "Revisión de spam", modulo: "revision_spam" },
+    // SPEC-750: la cola de sesiones del operador (citas confirmadas asignadas).
+    { href: "/dashboard/admin/sesiones", label: "Sesiones", labelCorto: "Sesiones", modulo: "sesiones_operador" },
     { href: "/dashboard/admin/comite", label: "Comité", modulo: "comite_bandeja" },
     // SPEC-744 (Diseño, aprob. Jelkin): «Estadísticas» —no «Dashboard» (techie)— casa con
     // el rótulo del colegio y no reaviva la ambigüedad de «Dashboard» que 742 limpió.

@@ -26,6 +26,22 @@ const INCLUDE_PARA_PADRE = {
     franja: { select: { inicio: true, fin: true, modalidad: true } },
 } as const;
 
+/**
+ * SPEC-750 (FR-013) · PROYECCIÓN por defecto: las vistas de ADMIN de pagos (por-aprobar
+ * y vencidas) NO exponen el enlace de la sesión ni su operador. Son estados SIN sesión
+ * (SIN_CONFIRMAR / VENCIDA_SIN_RESPUESTA), así que hoy el enlace es null — pero se
+ * proyecta A CONCIENCIA (no por descuido): esas consultas usan `include`, que devuelve
+ * todos los escalares; sin este recorte el enlace viajaría a la vista admin el día que
+ * un estado lo tenga. Si alguien lo necesita, que lo pida con la razón.
+ */
+function sinCamposEnlaceSesion<T>(cita: T): Omit<T, "enlaceReunion" | "enlaceOperadorId" | "enlacePublicadoEn"> {
+    const copia = { ...(cita as Record<string, unknown>) };
+    delete copia.enlaceReunion;
+    delete copia.enlaceOperadorId;
+    delete copia.enlacePublicadoEn;
+    return copia as Omit<T, "enlaceReunion" | "enlaceOperadorId" | "enlacePublicadoEn">;
+}
+
 export class SolicitudCitaRepository {
     private readonly db: DbClient;
     constructor(tx?: Prisma.TransactionClient) {
@@ -99,8 +115,8 @@ export class SolicitudCitaRepository {
         return filas.length;
     }
 
-    listarPendientesAprobacionPago() {
-        return this.db.solicitudCita.findMany({
+    async listarPendientesAprobacionPago() {
+        const rows = await this.db.solicitudCita.findMany({
             where: { estado: "SIN_CONFIRMAR", pagoAprobadoEn: null },
             include: {
                 padreUsuario: { select: { id: true, nombre: true, email: true } },
@@ -110,6 +126,8 @@ export class SolicitudCitaRepository {
             orderBy: { creadoEn: "asc" },
             take: 200,
         });
+        // SPEC-750 (FR-013): no exponer el enlace de la sesión a la vista admin.
+        return rows.map(sinCamposEnlaceSesion);
     }
 
     /**
@@ -243,5 +261,63 @@ export class SolicitudCitaRepository {
 
     marcarNoAsistioProfesional(id: string) {
         return this.db.solicitudCita.update({ where: { id }, data: { estado: "NO_ASISTIO_PROFESIONAL" } });
+    }
+
+    // ── SPEC-750 · asignación con simultaneidad, calendario y enlace del operador ──────
+    /** Cita mínima para decidir la asignación (estado + operador + ventana). */
+    findParaAsignacion(id: string) {
+        return this.db.solicitudCita.findUnique({
+            where: { id },
+            select: { id: true, estado: true, enlaceOperadorId: true, franja: { select: { inicio: true, fin: true } } },
+        });
+    }
+
+    /** ¿El operador tiene alguna cita en `estados` que se solape con `[inicio, fin)`? */
+    async operadorTieneSolape(operadorId: string, inicio: Date, fin: Date, estados: EstadoSolicitudCita[]): Promise<boolean> {
+        const solapada = await this.db.solicitudCita.findFirst({
+            where: { enlaceOperadorId: operadorId, estado: { in: estados }, franja: { inicio: { lt: fin }, fin: { gt: inicio } } },
+            select: { id: true },
+        });
+        return solapada !== null;
+    }
+
+    contarAsignadasAOperador(operadorId: string, estados: EstadoSolicitudCita[]) {
+        return this.db.solicitudCita.count({ where: { enlaceOperadorId: operadorId, estado: { in: estados } } });
+    }
+
+    asignarOperador(id: string, operadorId: string) {
+        return this.db.solicitudCita.update({ where: { id }, data: { enlaceOperadorId: operadorId } });
+    }
+
+    /** Calendario del OPERADOR: sus citas CONFIRMADAS en la ventana, con `select` SIN
+     *  `padreUsuario` — el operador no puede cargar PII del padre (SPEC-750, imposibilidad
+     *  estructural). */
+    listarSesionesDeOperador(operadorId: string, desde: Date, hasta: Date) {
+        return this.db.solicitudCita.findMany({
+            where: { enlaceOperadorId: operadorId, estado: "CONFIRMADA", franja: { inicio: { gte: desde, lt: hasta } } },
+            orderBy: { franja: { inicio: "asc" } },
+            select: {
+                id: true,
+                enlaceReunion: true,
+                enlacePublicadoEn: true,
+                franja: { select: { inicio: true, fin: true, modalidad: true } },
+                profesional: { select: { nombreVisible: true } },
+            },
+        });
+    }
+
+    /** Cita mínima para publicar el enlace (guardia de dueño + estado). */
+    findParaPublicarEnlace(id: string) {
+        return this.db.solicitudCita.findUnique({
+            where: { id },
+            select: { id: true, estado: true, enlaceOperadorId: true },
+        });
+    }
+
+    publicarEnlace(id: string, url: string, publicadoEn: Date) {
+        return this.db.solicitudCita.update({
+            where: { id },
+            data: { enlaceReunion: url, enlacePublicadoEn: publicadoEn },
+        });
     }
 }

@@ -4,7 +4,7 @@ import { ReporteRepository } from "@/lib/dal/repositories/reporte";
 import { UsuarioRepository } from "@/lib/dal/repositories/usuario";
 import type { Prisma } from "@prisma/client";
 
-type OperadorCandidato = {
+export type OperadorCandidato = {
     id: string;
     email: string;
     nombre: string | null;
@@ -68,7 +68,7 @@ async function construirCandidatos(
     return candidatos;
 }
 
-function seleccionarOperador(
+export function seleccionarOperador(
     disponibles: OperadorCandidato[],
     estrategia: EstrategiaAsignacion
 ): OperadorCandidato {

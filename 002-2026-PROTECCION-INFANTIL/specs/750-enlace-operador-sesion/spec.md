@@ -11,6 +11,18 @@
 
 Una cita CONFIRMADA hoy no tiene forma de realizarse: no hay sala, ni enlace, ni operador. El modelo (Jelkin): un **operador** del pool se asigna a la cita, crea el enlace de la reunión en una plataforma de video **ajena**, lo publica en PI, entra el día de la cita, presenta un guion **NO clínico** y se retira. El **esquema** del enlace ya está en `main` y firmado (SPEC-758: `SolicitudCita.enlaceReunion` + `enlaceOperadorId` + `enlacePublicadoEn`). Esta SPEC construye **el lado del OPERADOR** (se LEE el esquema de 758, no se toca).
 
+## Impacto en arquitectura
+
+**Impacto en arquitectura:** Nuevo rol-superficie: el OPERADOR gana un módulo (`sesiones_operador`) y una pantalla de
+sesiones que REUSA el componente de calendario del profesional con un DTO propio SIN PII
+(imposibilidad estructural). La asignación de citas extiende el modelo de asignación de
+operadores con SIMULTANEIDAD (ventana de tiempo), sin tocar el asignador de reportes. El
+esquema de SPEC-758 se LEE (no se toca): el operador asignado y la publicación viven en
+`enlaceOperadorId`/`enlacePublicadoEn`. El HECHO de la sesión se registra en `AuditLog`
+(append-only, en `PRESERVADOS.tablas`) con `metadatos` TIPADO y SIN url — la columna se
+replica entera a `bi_replica`, así que la url nunca entra por construcción. Sin cambios de
+schema en esta SPEC. `AccionAudit` no se migra (discriminador en `metadatos.tipo`).
+
 ## User Scenarios & Testing
 
 ### User Story 1 — El operador ve su cola/calendario SIN PII (Priority: P1)

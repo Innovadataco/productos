@@ -16,8 +16,10 @@
  */
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 import { withUnitOfWork } from "@/lib/dal/unit-of-work";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
+import { asignarOperadorACita } from "@/lib/operadores/asignador-citas";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { getParametroSistemaValor } from "@/lib/parametros";
@@ -205,6 +207,17 @@ export async function confirmarPorProfesional(solicitudId: string, profesionalUs
         ipAddress: "profesional",
         userAgent: "cita/confirmar",
     });
+    // SPEC-750: al confirmar se intenta asignar un operador libre en la ventana (ANTES del
+    // día). Best-effort: sin operador libre la cita queda sin asignar y sube al admin como
+    // capacidad (§5); un fallo de asignación NO rompe la confirmación.
+    try {
+        const r = await asignarOperadorACita(solicitudId);
+        if (!r.asignado) {
+            logger.warn(`[cita/confirmar] cita ${solicitudId} confirmada SIN operador asignado: ${r.razon}`);
+        }
+    } catch (e) {
+        logger.warn(`[cita/confirmar] error asignando operador a ${solicitudId}: ${String(e)}`);
+    }
     return actualizado;
 }
 
