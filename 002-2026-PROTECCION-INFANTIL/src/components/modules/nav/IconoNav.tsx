@@ -231,6 +231,14 @@ function PerfilIcon({ className }: { className?: string }) {
 export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     // Admin + profesional (SPEC-437: misma barra).
     "/dashboard/admin": InboxIcon,
+    // SPEC-744 · FASE 1 (cert Diseño 5cb032f §5-ter): íconos que REUSAN componentes existentes
+    // (cero SVG nuevo). Los 4 restantes (verificadores · profesionales/gestion · analisis/reglas
+    // · verificacion) esperan SVG propios de Diseño (FASE 2); hasta entonces caen al fallback en
+    // lateral/«Más» y el candado NO exige aún «hoja top-level ≠ fallback».
+    "/dashboard/admin/inicio": InicioIcon,
+    "/dashboard/admin/bandeja": InboxIcon,
+    "/dashboard/admin/usuarios": UsuariosIcon,
+    "/dashboard/admin/verificacion/incidentes": AlertasIcon,
     "/dashboard/admin/spam": ShieldExclamationIcon,
     "/dashboard/admin/comite": ScaleIcon,
     "/dashboard/admin/estadisticas": ChartIcon,
@@ -247,6 +255,7 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     "/dashboard/profesional/citaciones": UsersIcon,
     "/dashboard/profesional/casos": ScaleIcon,
     "/dashboard/profesional/calendario": ChartIcon,
+    "/dashboard/profesional/mi-perfil": PerfilIcon,
     "/perfil-profesional/completar": UserCircleIcon,
     // Colegio.
     "/dashboard/colegio": InicioIcon,
@@ -266,6 +275,9 @@ export const ICONOS_NAV: Record<string, IconoNavComponente> = {
     "/dashboard/padre/hijos": UsuariosIcon,
     "/dashboard/padre/circulo-confianza": VigiloIcon,
     "/dashboard/padre/perfil": PerfilIcon,
+    // NOTA (cert Diseño 12f862a): las hojas PROMOVIDAS a pestaña móvil (padre /reportar,
+    // /profesionales) NO se registran acá — HEREDAN la iconKey de su grupo en navMovilParaRol.
+    // Registrarlas por href las pintaría en el LATERAL como hijas desparejas de su grupo.
     // iconKey SEMÁNTICA de los grupos (href `#` colisiona; se siembran en nav-items).
     usuarios: UsuariosIcon,
     "reportar-grupo": ReportarIcon,
