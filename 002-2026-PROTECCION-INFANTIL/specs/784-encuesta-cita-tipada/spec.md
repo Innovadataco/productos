@@ -1,6 +1,6 @@
 # SPEC-784 · Rescatar las pantallas de la encuesta (#341) sobre el modelo tipado de 753
 
-> **Status:** PLANEADO · **§4 (compuerta): PARÁ — espera veredicto del CEO (D-1..D-6).**
+> **Status:** DESARROLLO · **§4 aprobado (veredictos CEO 29-09: D-1..D-6).** T1-T4 en curso; el gate (FR-4/T5) espera SPEC-751 en `main`.
 > **Rama:** `work/pi-SPEC-784-encuesta-cita-tipada` (base `main` = `fd3507f85`).
 > **Radicado:** `RADICADO-SPEC-784-2026-09-29.md` (repo de Gestión).
 > **Forma (Diseño, autoridad de copy):** `FORMA-SPEC784-FORMULARIO-ENCUESTA-CITA-2026-09-29.md` · commit `d682cdb`.
@@ -76,9 +76,14 @@ al service del cruce** — con lo que el `hueco-funcional` de 753 se cierra.
   (`opcionesValidas`); una `key` fuera del enum se rechaza 400.
 - **FR-2 · «Pendiente» se DERIVA, no se marca (fuente única).** No existe `Usuario.encuestaPendiente`.
   Una cita tiene encuesta pendiente **para un lado** cuando su **estado efectivo** ∈ {`PASADA`,
-  `CUMPLIDA`} (vía `estadoEfectivoDeCita`, ya en `main`) **y** no existe fila `EncuestaCita` de ese
-  `origen`. La MISMA función exportada alimenta el gate, el panel y el shell (una sola noción de
-  «pendiente»; si el gate deriva distinto que el panel, el usuario queda en bucle). Núcleo PURO
+  `CUMPLIDA`, `NO_ASISTIO_PADRE`, `NO_ASISTIO_PROFESIONAL`} (vía `estadoEfectivoDeCita`, ya en `main`)
+  **y** no existe fila `EncuestaCita` de ese `origen`. **Los `NO_ASISTIO_*` SÍ se encuestan** (veredicto
+  CEO, D-2): el sistema **no tiene dato objetivo de asistencia** (SPEC-750: sin marcas de presencia); un
+  `NO_ASISTIO_*` es la **afirmación de una parte** (casi siempre el profesional), y sin encuestar al otro
+  lado la familia que **pagó** no tiene canal para contradecirlo — es exactamente
+  `NO_PRESTACION_DICHA_PROFESIONAL` de 753, la entrada principal del motor de cruce. La MISMA función
+  exportada alimenta el gate, el panel y el shell (una sola noción de «pendiente»; si el gate deriva
+  distinto que el panel, el usuario queda en bucle). Núcleo PURO
   (`esEncuestaPendientePara(estadoEfectivo, yaRespondidaEsteLado): boolean`) + envoltura que lee la BD.
   *Falla conservador:* la propia `estadoEfectivoDeCita` cae a `PASADA` ante tiempo inválido — la encuesta
   se pide de más, nunca de menos.
@@ -118,7 +123,7 @@ al service del cruce** — con lo que el `hueco-funcional` de 753 se cierra.
 
 | # | Qué vigila | Control positivo |
 |---|---|---|
-| C-1 | **FR-2** · derivación de «pendiente» (núcleo puro) | cita `PASADA`/`CUMPLIDA` sin fila → pendiente; `PROXIMA`/`EN_CURSO`, o ya respondida ese lado → NO pendiente |
+| C-1 | **FR-2** · derivación de «pendiente» (núcleo puro) | estado ∈ {`PASADA`,`CUMPLIDA`,`NO_ASISTIO_PADRE`,`NO_ASISTIO_PROFESIONAL`} sin fila → pendiente; `PROXIMA`/`EN_CURSO`/`PAGADA_PENDIENTE`/`SIN_CONFIRMAR`/`REEMBOLSADA`/`REPROGRAMADA`/`VENCIDA_SIN_RESPUESTA`, o ya respondida ese lado → NO pendiente |
 | C-2 | **FR-6** · 409 desde la SUPERFICIE (endpoint), no solo el modelo | 2º POST del mismo `origen` → 409; 1er POST → 201 |
 | C-3 | **FR-3** · el formulario no puede construir la combinación incoherente | árbol de render: con `seRealizo=Sí` NO monta razón; con `No` NO monta duración; sin texto libre |
 | C-4 | **FR-4** · protección siempre abierta (se suma al candado de SPEC-751) | gate cerrado → las 4 `SUPERFICIES_PROTECCION` abiertas; gate cerrado → ruta operativa detenida |
@@ -144,25 +149,27 @@ escrito de los 37 rojos de la línea base e2e sobre `main`), no una licencia par
   en su cuerpo, y corre en cada request. No puede derivar «pendiente» de la BD. El `+16` de #341 asumía un
   middleware que lee la BD — **suposición vencida, no se cherry-pickea**. `encuestaGateDetiene` es puro;
   el consumo (leer la BD + redirigir) va server-side. → **Confirmar.**
-- **D-2 · DERIVAR (sin flag), una sola función; disparador subsumido.** El disparador `al-cumplir` de #341
-  (subía `Usuario.encuestaPendiente`) **desaparece** — la derivación lo subsume (una pieza menos, una
-  fuente menos que desincronizar). **Pregunta abierta:** ¿el estado efectivo que dispara la encuesta es
-  {`PASADA`, `CUMPLIDA`} y **excluye** `NO_ASISTIO_PADRE`/`NO_ASISTIO_PROFESIONAL`? *(Recomiendo excluir:
-  la no-asistencia ya es una transición de negocio registrada; la encuesta es para el desenlace que
-  depende del auto-reporte. Fácil de invertir si el CEO decide que también se encuesta.)* → **Confirmar
-  el conjunto de estados.**
-- **D-3 (HALLAZGO) · La copy de Diseño DIFIERE de los labels de `encuestas-preguntas.ts` de 753.** El
-  módulo de 753 trae labels «texto legal v0.1 (REPORTE-069)»; Diseño (`d682cdb`) da otros labels y exige
-  uno **role-relative** (`OTRA_PARTE_NO_CONECTO`), que **no cabe** como string único en el módulo
-  compartido. Las `key`s son idénticas (el cruce y el CHECK están a salvo). **Recomiendo:** el módulo de
-  753 sigue siendo la fuente de **`key`s + validación** (`opcionesValidas`), y el formulario tiene su
-  **capa de copy propia** (voz, role-relative, intro, desenlace) con el texto de Diseño — así no se pisa
-  el texto de provenance legal ni se fuerza un label doble en un módulo de string único. → **Confirmar
-  (¿capa de copy en el form, o reescribo los labels del módulo de 753?).**
-- **D-4 · 784 cierra 2 de los 3 huecos de 753.** `encuestas-preguntas.ts` (lo importa el form) y
-  `encuestas-cita-cruce.service.ts` (lo importa el endpoint) salen de la allowlist en el commit del
-  cableado. `estado-efectivo-incidente.ts` (derivación del estado del INCIDENTE) **queda** — su consumidor
-  es la lectura del incidente, fuera del alcance de 784. → **Confirmar que se queda.**
+- **D-2 · [VEREDICTO CEO] DERIVAR (sin flag); `NO_ASISTIO_*` SÍ se encuesta.** El disparador `al-cumplir`
+  de #341 (subía `Usuario.encuestaPendiente`) **desaparece** — la derivación lo subsume. **Conjunto
+  confirmado: `PASADA` · `CUMPLIDA` · `NO_ASISTIO_PADRE` · `NO_ASISTIO_PROFESIONAL`.** *(Mi recomendación
+  de excluir los `NO_ASISTIO_*` fue REVERTIDA: el sistema no mide asistencia (SPEC-750), así que
+  `NO_ASISTIO_*` es la afirmación de una parte; excluirlo deja al motor de cruce sin su entrada principal
+  y a la familia que pagó sin voz. Si aparece un estado donde encuestar no tiene sentido, se pregunta al
+  CEO — no se excluye por criterio propio.)*
+- **D-3 (HALLAZGO) · [VEREDICTO CEO] Fuente ÚNICA = Diseño; eje de audiencia, sin capa nueva.** Medido:
+  (1) `encuestas-preguntas.ts` **sin consumidor** de producción (solo sus candados); (2) el texto legal
+  `ENCUESTA-SERVICIO-SESION-v0.1` es **BORRADOR ([ABOGADO] pendiente)**; los `[NORMA]` son de conducta
+  (servicio-no-clínico; «Otra» sin texto libre), respetados por Diseño; el módulo declara los labels
+  changeables. → Se **actualizan los enunciados+labels del módulo de 753 a Diseño (`d682cdb`)**, con
+  **eje de audiencia** en `OpcionPregunta` para el único role-relative (`OTRA_PARTE_NO_CONECTO`). NO se
+  agrega segunda capa de copy por-enum (dos juegos de palabras sobre la misma key se separan). La intro y
+  el desenlace por voz (no son copy por-enum) viven en el form. *Co-cambio avisado:* el candado
+  `encuestas-preguntas.candado.test.ts` (que pinea el texto exacto de v0.1) se actualiza a la redacción de
+  Diseño en el MISMO commit, preservando sus invariantes (orden · keys · «Otra» sin campo · fallback).
+- **D-4 · [VEREDICTO CEO] 784 cierra 2 de los 3 huecos de 753.** `encuestas-preguntas.ts` (lo importa el
+  form) y `encuestas-cita-cruce.service.ts` (lo importa el endpoint) salen de la allowlist en el commit
+  del cableado. `estado-efectivo-incidente.ts` **queda** — su consumidor es la lectura del incidente,
+  fuera del alcance de 784. **Confirmado.**
 - **D-5 · `al-cumplir.ts` y el middleware `+16` de #341 NO se rescatan.** No hay ningún caller en `main`
   (verificado); nada se rompe. → informativo.
 - **D-6 · Orden de entrada.** 784 depende de SPEC-751 (`SUPERFICIES_PROTECCION` + candado) en `main` para
