@@ -4072,11 +4072,18 @@ model EncuestaPrimeraCita {
   id           String   @id @default(cuid())
   solicitudId  String   @unique
   seDioLaCita  Boolean
-  // 1..5 — se valida en la capa de aplicación (Zod), Postgres no restringe.
+  // puntaje 1..5: lo restringe Postgres con un CHECK crudo (SPEC-745 · dictamen D-121).
+  // Prisma es ciego al CHECK, así que no aparece en este modelo pero vive en la BD y lo
+  // prueba el candado de inserción real. La validación en la capa de aplicación (Zod)
+  // todavía NO existe —no hay endpoint aún; la pantalla la está formando Diseño— y entra
+  // con la SPEC de esa pantalla.
   puntaje      Int
   volveria     Boolean
   comentario   String?  @db.Text
   respondidaEn DateTime @db.Timestamptz(6)
 
-  solicitud SolicitudCita @relation(fields: [solicitudId], references: [id])
+  // onDelete: Cascade (SPEC-745 · D-121): sin declararlo quedaba en RESTRICT y dar de baja
+  // una cita con encuesta trababa con 23503 (el usuario veía el error crudo de la base).
+  // La encuesta es un satélite de la cita: se va con ella.
+  solicitud SolicitudCita @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
 }
