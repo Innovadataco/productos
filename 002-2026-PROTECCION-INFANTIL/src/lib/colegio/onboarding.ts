@@ -30,14 +30,14 @@ const PASOS: Omit<PasoOnboarding, "estado">[] = [
     {
         id: 1,
         nombre: "Cursos",
-        descripcion: "Crea al menos un curso para organizar a tus estudiantes.",
+        descripcion: "Cree al menos un curso para organizar a sus estudiantes.",
         ctaHref: "/dashboard/colegio/cursos/unificado",
         ctaTexto: "Crear curso",
     },
     {
         id: 2,
         nombre: "Estudiantes",
-        descripcion: "Registra los estudiantes de tu colegio.",
+        descripcion: "Registre los estudiantes de su colegio.",
         ctaHref: "/dashboard/colegio/cursos/unificado",
         ctaTexto: "Subir lista",
     },

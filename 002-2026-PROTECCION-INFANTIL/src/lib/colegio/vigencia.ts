@@ -39,7 +39,7 @@ export async function verificarVigenciaCliente(usuarioId: string): Promise<Resul
             return {
                 vigente: false,
                 estado: "sin_colegio",
-                mensaje: "Tu cuenta institucional no está vinculada a un colegio. Contacta al administrador.",
+                mensaje: "Su cuenta institucional no está vinculada a un colegio. Contacte al administrador.",
             };
         }
         return verificarVigenciaPorColegioId(usuario.colegioId);
@@ -51,7 +51,7 @@ export async function verificarVigenciaCliente(usuarioId: string): Promise<Resul
             return {
                 vigente: false,
                 estado: "sin_colegio",
-                mensaje: "Tu cuenta institucional no está vinculada a un colegio. Contacta al administrador.",
+                mensaje: "Su cuenta institucional no está vinculada a un colegio. Contacte al administrador.",
             };
         }
         return verificarVigenciaPorColegioId(usuario.comiteColegioId);
@@ -115,7 +115,7 @@ export async function verificarVigenciaPorColegioId(colegioId: string): Promise<
         return {
             vigente: false,
             estado: "sin_colegio",
-            mensaje: "No se encontró la información del colegio. Contacta al administrador.",
+            mensaje: "No se encontró la información del colegio. Contacte al administrador.",
         };
     }
 
@@ -123,7 +123,7 @@ export async function verificarVigenciaPorColegioId(colegioId: string): Promise<
         return {
             vigente: false,
             estado: "inactivo",
-            mensaje: "El servicio del colegio no está activo. Contacta al administrador.",
+            mensaje: "El servicio del colegio no está activo. Contacte al administrador.",
         };
     }
 
@@ -132,7 +132,7 @@ export async function verificarVigenciaPorColegioId(colegioId: string): Promise<
         return {
             vigente: false,
             estado: "no_iniciado",
-            mensaje: "El servicio del colegio aún no ha comenzado. Contacta al administrador.",
+            mensaje: "El servicio del colegio aún no ha comenzado. Contacte al administrador.",
         };
     }
 
@@ -140,7 +140,7 @@ export async function verificarVigenciaPorColegioId(colegioId: string): Promise<
         return {
             vigente: false,
             estado: "vencido",
-            mensaje: "El servicio del colegio ha vencido. Contacta al administrador.",
+            mensaje: "El servicio del colegio ha vencido. Contacte al administrador.",
         };
     }
 

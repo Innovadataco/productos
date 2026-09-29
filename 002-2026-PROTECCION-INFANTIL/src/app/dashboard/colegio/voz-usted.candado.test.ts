@@ -22,6 +22,11 @@ const SRC = path.resolve(__dirname, "../../..");
 const DIRS_COLEGIO = [
     path.join(SRC, "app/dashboard/colegio"),
     path.join(SRC, "components/modules/colegio"),
+    // SPEC-720: la copia de dominio del colegio nace también en sus SERVICIOS (mensajes de
+    // notificación, textos de pendientes/bitácora). `lib/colegio/**` es subárbol PROPIO del
+    // colegio (audiencia rector = usted), así que entra al barrido — el árbol COMPARTIDO
+    // `lib/dal/services` NO, porque ahí conviven audiencias (el padre habla de «tú», §1.9).
+    path.join(SRC, "lib/colegio"),
 ];
 const DIR_PADRE = path.join(SRC, "app/dashboard/padre");
 
@@ -31,12 +36,19 @@ function sinComentarios(codigo: string): string {
         .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
+// SPEC-720 · archivos de `lib/colegio` de audiencia MIXTA: no se escanean como usted porque
+// contienen también copy del PADRE (tú, §1.9). No es hueco: sus cadenas de COLEGIO están en usted;
+// las del padre, en tú, son correctas. `vigencia.ts` decide la vigencia del SCHOOL_ADMIN (usted) y
+// del PARENT (`verificarVentanaServicioPadre`, tú) en el mismo archivo — un candado de usted daría
+// falso positivo sobre las del padre.
+const EXCLUIDOS = new Set([path.join(SRC, "lib/colegio/vigencia.ts")]);
+
 function* recorrer(dir: string): Generator<string> {
     if (!fs.existsSync(dir)) return;
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
         const ruta = path.join(dir, e.name);
         if (e.isDirectory()) yield* recorrer(ruta);
-        else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) yield ruta;
+        else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) && !EXCLUIDOS.has(ruta)) yield ruta;
     }
 }
 
@@ -97,18 +109,32 @@ describe("SPEC-463 · el colegio habla de usted (sin tuteo)", () => {
 // colegio → rojo con archivo:línea; revertir «Seleccione tipo»/«Asigne» → cae el ancla.
 const B_U = "(?<![\\p{L}])";
 const E_U = "(?![\\p{L}])";
-// Formas de tuteo INEQUÍVOCAS (2ª persona), no colisionan con 3ª persona.
+// Presentes de tuteo INEQUÍVOCOS (2ª persona -as/-es), no colisionan con 3ª persona.
 const LEXEMAS_TUTEO_VERBAL = [
-    // presentes -as/-es
     "tienes", "puedes", "quieres", "debes", "necesitas", "sabes", "prefieres",
     "eliges", "escribes", "guardas", "agregas", "editas", "creas", "completas",
     "vives", "sientes", "seleccionas", "asignas", "resuelves", "anotas",
-    // pretéritos -aste/-iste
-    "hiciste", "registraste", "anotaste", "resolviste", "asignaste", "seleccionaste",
-    "completaste", "creaste", "enviaste", "agregaste", "editaste", "guardaste",
-    "tuviste", "pudiste",
 ];
 const PATRONES_TUTEO = LEXEMAS_TUTEO_VERBAL.map((l) => new RegExp(B_U + l + E_U, "iu"));
+
+// SPEC-720 · los PRETÉRITOS de 2ª persona (-aste/-iste) se cazan por MORFOLOGÍA, no por lista
+// (la clase que construyó SPEC-719): así `marcaste`, `gestionaste` y cualquier otro quedan
+// cubiertos sin editar el candado. La 3ª de usted nunca termina así (marcó/gestionó). Ancla de
+// homógrafos válidos en usted/3ª y sustantivos; los identificadores camelCase se descartan por
+// su mayúscula interna.
+const PRETERITO_2A = /(?<![\p{L}])(\p{L}*(?:aste|iste))(?![\p{L}])/giu;
+const PRETERITO_EXCEPCIONES = new Set(
+    [
+        "existe", "coexiste", "preexiste", "subsiste", "insiste", "consiste",
+        "persiste", "resiste", "asiste", "desiste", "embiste", "reviste", "inviste",
+        "contraste", "desgaste", "engaste", "gaste", "traste",
+        "triste", "chiste", "batiste", "alpiste", "viste", "paste",
+    ].map((w) => w.toLowerCase()),
+);
+function esPreteritoTuteo(palabra: string): boolean {
+    if (/\p{Lu}/u.test(palabra.slice(1))) return false; // mayúscula interna → identificador
+    return !PRETERITO_EXCEPCIONES.has(palabra.toLowerCase());
+}
 
 describe("SPEC-523 · el colegio + comité hablan de «usted» (sin tuteo verbal)", () => {
     it("ninguna forma verbal de tuteo aparece en el árbol del colegio", () => {
@@ -120,6 +146,10 @@ describe("SPEC-523 · el colegio + comité hablan de «usted» (sin tuteo verbal
                     for (const patron of PATRONES_TUTEO) {
                         const m = linea.match(patron);
                         if (m) hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${m[0]}»: ${linea.trim().slice(0, 90)}`);
+                    }
+                    // SPEC-720 · pretéritos de 2ª persona por morfología (-aste/-iste).
+                    for (const m of linea.matchAll(PRETERITO_2A)) {
+                        if (esPreteritoTuteo(m[1])) hits.push(`${path.relative(SRC, archivo)}:${i + 1} → «${m[1]}» (pretérito 2ª): ${linea.trim().slice(0, 90)}`);
                     }
                 }
             }

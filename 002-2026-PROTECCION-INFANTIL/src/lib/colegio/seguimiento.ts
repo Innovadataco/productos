@@ -105,7 +105,7 @@ export function armarTimeline(fuentes: FuentesTimeline): HitoCaso[] {
                     tipo,
                     estado: "cumplido",
                     fecha: hito.creadoEn.toISOString(),
-                    detalle: tipo === "vista" ? "Revisaste la alerta" : "Marcaste la alerta como gestionada",
+                    detalle: tipo === "vista" ? "Revisó la alerta" : "Marcó la alerta como gestionada",
                 }
                 : { tipo, estado: "pendiente", fecha: null, detalle: pendiente }
         );
@@ -131,7 +131,7 @@ export function armarTimeline(fuentes: FuentesTimeline): HitoCaso[] {
                 detalle: avisoPendiente
                     ? "El aviso por correo saldrá en el próximo resumen"
                     : avisoOmitido
-                        ? "El aviso por correo está desactivado en tus preferencias"
+                        ? "El aviso por correo está desactivado en sus preferencias"
                         : avisoFallido
                             ? "El envío del aviso por correo falló; se reintentará"
                             : "Aún no te hemos avisado por correo",
@@ -155,13 +155,13 @@ export interface PendienteCaso {
 export function calcularPendientes(caso: { estadoAlerta: string; tieneNotas: boolean }): PendienteCaso[] {
     const pendientes: PendienteCaso[] = [];
     if (caso.estadoAlerta === "nueva") {
-        pendientes.push({ clave: "revisar", texto: "Revisa la alerta: márcala como vista cuando la leas" });
+        pendientes.push({ clave: "revisar", texto: "Revise la alerta: márquela como vista cuando la lea" });
     }
     if (caso.estadoAlerta !== "gestionada") {
-        pendientes.push({ clave: "gestionar", texto: "Márcala gestionada cuando termines de actuar" });
+        pendientes.push({ clave: "gestionar", texto: "Márquela gestionada cuando termine de actuar" });
     }
     if (!caso.tieneNotas) {
-        pendientes.push({ clave: "registrar", texto: "Registra lo que hiciste en la bitácora" });
+        pendientes.push({ clave: "registrar", texto: "Registre lo que hizo en la bitácora" });
     }
     return pendientes;
 }
