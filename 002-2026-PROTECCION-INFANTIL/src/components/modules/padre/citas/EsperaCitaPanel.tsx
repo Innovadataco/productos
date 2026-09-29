@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CitaParaPadreDto } from "@/lib/profesional/cita/dto";
 import type { ExpedienteParaCompartirDto } from "@/lib/dal/services/expediente-detalle/types";
 import { badgeDeCita } from "@/lib/padre/citas-listado";
+import { derivarVistaFranjaPasada, type VistaEspera } from "@/lib/padre/vista-espera-cita";
 import { GenerarPase } from "@/components/modules/padre/GenerarPase";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -30,7 +31,10 @@ interface Props {
     expedientes?: ExpedienteParaCompartirDto[];
 }
 
-const ESTADO_LEGIBLE: Record<CitaParaPadreDto["estado"], { titulo: string; detalle: string; tono: "espera" | "verde" | "gris" | "rojo" }> = {
+// SPEC-749 FR-2: mapa por estado CRUDO — la conducta base. La verdad de «franja
+// pasada» para PAGADA_PENDIENTE/SIN_CONFIRMAR la deriva `derivarVistaFranjaPasada`;
+// CONFIRMADA con franja pasada sigue mostrando esto (copy de Diseño diferido, §14).
+const ESTADO_LEGIBLE: Record<CitaParaPadreDto["estado"], VistaEspera> = {
     PAGADA_PENDIENTE: {
         titulo: "Esperando confirmación del profesional",
         detalle: "El profesional tiene hasta 48 h para confirmar. Si no responde, podrás elegir otro sin volver a pagar.",
@@ -146,10 +150,58 @@ function useCountdown(hastaISO: string | null): { horas: number; minutos: number
     return { horas, minutos, vencido: false };
 }
 
+/**
+ * SPEC-749 FR-2 (§14) · CTA de «franja pasada antes de confirmar». Solo se pinta la
+ * acción con destino REAL: «Pedir otra cita» (directorio, existe). «Escríbenos para
+ * revisar tu pago» va en TEXTO —el flujo de incidencia de pago (SPEC-658/D-137) aún no
+ * existe: no se promete conducta que no entregamos ni se pinta un botón sin destino.
+ * «Reprogramar» de §14 se OMITE: su endpoint existe pero no hay UI de nueva franja
+ * (SPEC-395). Reportado al CEO.
+ */
+function AccionFranjaPasada({ accion }: { accion: VistaEspera["accion"] }) {
+    if (accion === "pedir_otra_cita") {
+        return (
+            <section className="glass rounded-2xl p-4 sm:p-5">
+                <Link
+                    href="/dashboard/padre/profesionales"
+                    className="inline-flex items-center gap-2 rounded-full bg-cielo px-4 py-2 text-sm font-semibold text-acento-ink transition hover:bg-cielo/90"
+                >
+                    Pedir otra cita
+                </Link>
+            </section>
+        );
+    }
+    if (accion === "revisar_pago") {
+        return (
+            <section className="rounded-2xl border border-cielo/30 bg-cielo/5 p-4 sm:p-5">
+                <p className="cuerpo text-body">Escríbenos para revisar tu pago.</p>
+            </section>
+        );
+    }
+    return null;
+}
+
 export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
     const [cita, setCita] = useState<CitaParaPadreDto>(citaInicial);
     const [refrescando, setRefrescando] = useState(false);
-    const estado = ESTADO_LEGIBLE[cita.estado];
+    // SPEC-749 FR-2/FR-4: `now` inyectado (aquí, el reloj del cliente que avanza cada
+    // 30 s) para que la pantalla cruce la frontera de la franja en vivo, sin refrescar.
+    const [ahora, setAhora] = useState<number>(() => Date.now());
+    useEffect(() => {
+        const t = setInterval(() => setAhora(Date.now()), 30_000);
+        return () => clearInterval(t);
+    }, []);
+    // La verdad de «franja pasada» para PAGADA_PENDIENTE/SIN_CONFIRMAR (§14); si no
+    // aplica (o es CONFIRMADA, diferida) cae al mapa por estado crudo.
+    const estado =
+        derivarVistaFranjaPasada(
+            cita.estado,
+            cita.franja.inicio,
+            cita.franja.fin,
+            cita.venceEn,
+            cita.profesional.nombreVisible,
+            ahora,
+        ) ?? ESTADO_LEGIBLE[cita.estado];
     // SPEC-731 §2a: el caso a compartir. Si la cita ya venía ligada a uno, ese es
     // el preseleccionado; si no, arranca vacío («No compartir») — nunca obligatorio.
     const tieneCasos = expedientes.length > 0;
@@ -338,6 +390,9 @@ export function EsperaCitaPanel({ citaInicial, expedientes = [] }: Props) {
                     </Link>
                 </section>
             )}
+
+            {/* SPEC-749 FR-2 (§14) · la SALIDA cuando la franja ya pasó antes de confirmar. */}
+            <AccionFranjaPasada accion={estado.accion} />
 
             {/* SPEC-731 §3 · el pie vuelve a la LISTA DE CITAS (donde el padre estaba),
                 no a «mi expediente» — que ni es un expediente ni es de donde venía. */}
