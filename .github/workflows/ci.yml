@@ -35,6 +35,12 @@ on:
 # estado intermedio de una ráfaga de merges es gastar sin ganar (nadie despliega un
 # intermedio). Antes se preservaban por atribución, pero el trigger a main ni siquiera
 # disparaba, así que la excepción nunca corrió.
+# CONSECUENCIA (escrita para que no reviva como defecto): el número de la suite (test-e2e) y la
+# actualización de `test-durations.json` aparecen en los períodos TRANQUILOS, NO durante una
+# ráfaga de merges — cada corrida de `main` la cancela la siguiente (y `test-durations.json`
+# tiene guarda `!cancelled()`, así que en ráfaga tampoco se actualiza). Es aceptado, no un job
+# roto: si dentro de un mes `main` no muestra número de e2e, es esto, no un defecto. Si necesitás
+# el número EN MEDIO de una ráfaga, se dispara a mano: `workflow_dispatch` sobre `main`.
 concurrency:
   group: ci-002-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
