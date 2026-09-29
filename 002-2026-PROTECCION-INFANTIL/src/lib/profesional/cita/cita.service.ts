@@ -208,12 +208,16 @@ export async function confirmarPorProfesional(solicitudId: string, profesionalUs
         userAgent: "cita/confirmar",
     });
     // SPEC-750: al confirmar se intenta asignar un operador libre en la ventana (ANTES del
-    // día). Best-effort: sin operador libre la cita queda sin asignar y sube al admin como
-    // capacidad (§5); un fallo de asignación NO rompe la confirmación.
+    // día). Best-effort: un fallo NO rompe la confirmación. Sin operador libre la cita queda
+    // sin asignar (`enlaceOperadorId = null`).
+    // ⚠️ SPEC-750 T014 PENDIENTE: la superficie que le muestra al admin estas citas sin
+    // operador («capacidad, antes del día» · contrato §5) TODAVÍA NO EXISTE. Hasta que exista,
+    // el ÚNICO rastro de una cita sin asignar es este `warn` → degradación silenciosa. NO leer
+    // el flujo del operador como completo hasta T014.
     try {
         const r = await asignarOperadorACita(solicitudId);
         if (!r.asignado) {
-            logger.warn(`[cita/confirmar] cita ${solicitudId} confirmada SIN operador asignado: ${r.razon}`);
+            logger.warn(`[cita/confirmar] cita ${solicitudId} confirmada SIN operador asignado (T014 pendiente: aún NO visible al admin): ${r.razon}`);
         }
     } catch (e) {
         logger.warn(`[cita/confirmar] error asignando operador a ${solicitudId}: ${String(e)}`);
