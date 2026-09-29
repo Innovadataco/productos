@@ -101,6 +101,20 @@ describe("SPEC-736 · acompañamiento al reportante anónimo (pantalla de seguim
         expect(texto).toContain("la persona afectada");
     });
 
+    it("copy colombiano (Diseño 9a4acdf): «responderte» + «por tu cuenta», sin los calcos", async () => {
+        // Revisión de lenguaje: «escribirte de vuelta» era un calco (lo cazó Jelkin) → «responderte»;
+        // «resolver esto solo» misgenera a la audiencia anónima → «por tu cuenta». Textos ESTÁTICOS
+        // del acompañamiento (las viñetas de acción salen de plantillas y NO se tocan).
+        mockResponse(payload(["EXTORSION"]));
+        const { container } = render(<SeguimientoClient />);
+        await screen.findByText("Hiciste bien en reportar.");
+        const texto = container.textContent ?? "";
+        expect(texto).toContain("no podemos responderte");
+        expect(texto).toContain("resolver esto por tu cuenta");
+        expect(texto).not.toContain("escribirte de vuelta");
+        expect(texto).not.toContain("resolver esto solo");
+    });
+
     it("clasificado SIN conductas de riesgo (solo SPAM/OTRO → acciones vacías): calma + canales, sin lista de acciones", async () => {
         // El servicio filtra SPAM/OTRO antes de armar el acompañamiento → acciones vacías.
         const body = payload([]);

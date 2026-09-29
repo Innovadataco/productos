@@ -255,10 +255,10 @@ export function SeguimientoClient() {
                                 <h3 className="text-sm font-semibold text-body">Hiciste bien en reportar.</h3>
                                 <p className="mt-1 text-sm text-body">
                                     Lo que nos contaste ayuda a proteger a niños, niñas y adolescentes. No tienes
-                                    que resolver esto solo.
+                                    que resolver esto por tu cuenta.
                                 </p>
                                 <p className="mt-2 text-sm text-body">
-                                    Reportaste de forma anónima, así que no podemos escribirte de vuelta — guarda tu
+                                    Reportaste de forma anónima, así que no podemos responderte — guarda tu
                                     número de seguimiento para consultar el estado cuando quieras.
                                 </p>
 
