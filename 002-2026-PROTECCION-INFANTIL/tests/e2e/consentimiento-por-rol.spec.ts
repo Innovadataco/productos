@@ -56,6 +56,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import type { RolUsuario } from "@prisma/client";
+import { crearContextoCliente, limpiarContextoCliente, type ContextoCliente } from "./fixtures/contexto-cliente";
 
 const CORRIDA = `e2e-417-${randomUUID().slice(0, 8)}`;
 const PASSWORD = "Consent123!Secure";
@@ -125,15 +126,30 @@ async function limpiarSembrados() {
     sembrados.usuarios.clear();
 }
 
+// Roles LIGADOS A CLIENTE (SPEC-119/168): el login exige colegio con servicio VIGENTE,
+// así que su fixture NO puede ser una cuenta pelada (daría 403 y dejaría el candado MUDO).
+// Se arman con el helper de contexto de cliente. El resto —roles internos y PARENT, cuya
+// ventana de servicio vive en el propio usuario— basta con una cuenta simple.
+const ROLES_LIGADOS_A_CLIENTE = new Set<string>(["COMITE_CONVIVENCIA", "SCHOOL_ADMIN"]);
+let contextoCliente: ContextoCliente | undefined;
+
 test.describe.serial("Consentimiento por rol (SPEC-417 candado de I-118)", () => {
     test.beforeAll(async () => {
         for (const rol of [...ROLES_TITULARES, ...ROLES_NO_TITULARES]) {
+            if (ROLES_LIGADOS_A_CLIENTE.has(rol)) continue;
             await asegurarUsuario(rol);
         }
+        // COMITE_CONVIVENCIA (no titular) y SCHOOL_ADMIN (titular) con su colegio vigente.
+        contextoCliente = await crearContextoCliente({
+            corrida: CORRIDA,
+            comite: { email: emailFor("COMITE_CONVIVENCIA"), password: PASSWORD },
+            rector: { email: emailFor("SCHOOL_ADMIN"), password: PASSWORD },
+        });
     });
 
     test.afterAll(async () => {
         await limpiarSembrados();
+        if (contextoCliente) await limpiarContextoCliente(contextoCliente);
     });
 
     // ── (A) los 6 NO TITULARES deben pasar sin consentimiento ──
