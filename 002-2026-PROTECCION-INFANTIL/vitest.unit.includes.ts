@@ -753,4 +753,6 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-790: motor puro de elegibilidad REPS — C-1 falso amigo (EstadoReps ≠ EstadoPerfilProfesional),
     // C-2 dos relojes (autoridad + nuestro), D-5 modalidad, D-7 cutover. Sin base.
     "src/lib/profesional/reps/reps-elegibilidad.candado.test.ts",
+    // SPEC-790: el stub del adaptador REPS NUNCA fabrica un VIGENTE (anti degradación silenciosa). Sin base.
+    "src/lib/profesional/reps/reps-adaptador-nunca-vigente.candado.test.ts",
 ];
