@@ -15,7 +15,7 @@
  *
  * RED-BEFORE / GREEN-AFTER (estilo `facetas`): hasta T4 el test de abajo fue `it.fails` —pasaba porque
  * fallaba, confirmando que HOY nada exige REPS—. Al cablear el gate (obtenerPublicoPorId →
- * `idsHabilitadosVigenciaYReps` → `idsRepsElegibles`), el test empezó a pasar y se CONVIRTIÓ en `it`
+ * `idsOfrecibles` → `idsRepsElegibles`), el test empezó a pasar y se CONVIRTIÓ en `it`
  * (vitest cantó «expected to fail but passed» y lo exigió). Ahora vigila que el gate NO se quite.
  */
 import { describe, it, expect } from "vitest";
@@ -97,7 +97,7 @@ describe("SPEC-790 (D-8) · chokepoint de asignación de profesional a cita", ()
         const cuerpo = cuerpoDeFuncion(sinComentarios(REPO_PERFIL), "obtenerPublicoPorId");
         expect(
             cuerpo,
-            "obtenerPublicoPorId debe aplicar el gate REPS (idsHabilitadosVigenciaYReps → idsRepsElegibles)",
-        ).toMatch(/idsHabilitadosVigenciaYReps|idsRepsElegibles|repsElegible/);
+            "obtenerPublicoPorId debe aplicar el gate REPS (idsOfrecibles → idsRepsElegibles)",
+        ).toMatch(/idsOfrecibles|idsRepsElegibles|repsElegible/);
     });
 });

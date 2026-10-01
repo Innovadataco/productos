@@ -465,18 +465,31 @@ export class PerfilProfesionalRepository {
     }
 
     /**
-     * SPEC-790 (D-3/D-8) · La habilitación COMPLETA del directorio: vigencia autoritativa (SPEC-690) **∧**
-     * REPS al día (SPEC-790). Las CUATRO lecturas públicas pasan por acá —reemplaza la llamada directa a
-     * `idsConVigenciaAutoritativa`— para que el gate REPS lo hereden sin enterarse. El REPS se evalúa SOLO
-     * sobre los que ya pasaron la vigencia interna (no gastamos la consulta REPS en los ya excluidos).
+     * SPEC-790 (D-3/D-8) · «OFRECIBLE» — los profesionales que pueden OFRECERSE a las familias. Es el SEGUNDO
+     * trabajo que `habilitado` hacía mezclado, ahora nombrado: ofrecible = habilitación del directorio
+     * (vigencia autoritativa SPEC-690) **∧** `repsAlDia` (SPEC-790). NO es `habilitado` (que es «puede usar el
+     * área profesional» = ACTIVO ∧ verificación interna; el REPS NO lo toca, para no encerrar al profesional
+     * fuera de su propio panel — el aviso de «fuera de la oferta» usa `habilitado ∧ ¬repsAlDia`). Las CUATRO
+     * lecturas del directorio pasan por acá —reemplaza la llamada directa a `idsConVigenciaAutoritativa`— para
+     * heredar el gate sin enterarse. El REPS se evalúa SOLO sobre los que ya pasaron la vigencia interna.
      */
-    private async idsHabilitadosVigenciaYReps(perfilIds: string[], ahora: Date): Promise<Set<string>> {
+    private async idsOfrecibles(perfilIds: string[], ahora: Date): Promise<Set<string>> {
         const vigentes = await this.idsConVigenciaAutoritativa(perfilIds, ahora);
         if (vigentes.size === 0) return vigentes;
         const repsOk = await this.idsRepsElegibles([...vigentes], ahora, null);
         const out = new Set<string>();
         for (const id of vigentes) if (repsOk.has(id)) out.add(id);
         return out;
+    }
+
+    /**
+     * SPEC-790 · `repsAlDia` — la derivación REPS NOMBRADA y queryable para UN profesional (vigencia-only, sin
+     * modalidad). Es la mitad REPS de «ofrecible», extraída para que una PANTALLA pueda preguntarla (hoy la
+     * condición existía solo como efecto lateral del filtro del directorio). El aviso «seguís entrando pero
+     * estás fuera de la oferta» es `habilitado ∧ ¬repsAlDia`. Deriva de la ÚLTIMA fila; cutover-aware.
+     */
+    async repsAlDia(profesionalId: string, ahora: Date = new Date()): Promise<boolean> {
+        return (await this.idsRepsElegibles([profesionalId], ahora, null)).has(profesionalId);
     }
 
     /**
@@ -510,7 +523,7 @@ export class PerfilProfesionalRepository {
         });
         // SPEC-690-B: la palabra final es `verificacionVigente` (autoritativa) sobre
         // el pre-filtro grueso del SQL. Mismo término que la compuerta.
-        const vigentes = await this.idsHabilitadosVigenciaYReps(rows.map((r) => r.id), ahora);
+        const vigentes = await this.idsOfrecibles(rows.map((r) => r.id), ahora);
         return rows.filter((r) => vigentes.has(r.id)).map(toPublicoDTO);
     }
 
@@ -532,7 +545,7 @@ export class PerfilProfesionalRepository {
             where: await this.whereDirectorioPublico(ahora, viewerUsuarioId),
             select: { id: true },
         });
-        const vigentes = await this.idsHabilitadosVigenciaYReps(candidatos.map((c) => c.id), ahora);
+        const vigentes = await this.idsOfrecibles(candidatos.map((c) => c.id), ahora);
         return candidatos.filter((c) => vigentes.has(c.id)).length;
     }
 
@@ -557,7 +570,7 @@ export class PerfilProfesionalRepository {
         if (!row) return null;
         // SPEC-690-B: mismo filtro autoritativo que la lista — un profesional cuya
         // ÚLTIMA verificación venció no se abre por id (ni deja crear cita contra él).
-        const vigentes = await this.idsHabilitadosVigenciaYReps([row.id], ahora);
+        const vigentes = await this.idsOfrecibles([row.id], ahora);
         return vigentes.has(row.id) ? toPublicoDTO(row) : null;
     }
 
@@ -597,7 +610,7 @@ export class PerfilProfesionalRepository {
         });
         // SPEC-690-B: la palabra final de la vigencia es `idsConVigenciaAutoritativa`,
         // igual que la lista; las facetas se derivan SOLO de los habilitados de verdad.
-        const vigentes = await this.idsHabilitadosVigenciaYReps(rows.map((r) => r.id), ahora);
+        const vigentes = await this.idsOfrecibles(rows.map((r) => r.id), ahora);
         const ciudadesMap = new Map<string, { id: string; nombre: string }>();
         const especialidadesSet = new Set<string>();
         for (const r of rows) {

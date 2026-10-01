@@ -125,6 +125,17 @@ describe("SPEC-790 (T4) · el directorio aplica el gate REPS (última fila + cut
         expect(await repo.obtenerPublicoPorId(id, null, AHORA)).toBeNull();
     });
 
+    it("repsAlDia (derivación NOMBRADA, queryable por profesional): VIGENTE al día→true · SIN_VERIFICAR(cutover)→true · VENCIDA→false", async () => {
+        const vig = await profHabilitadoInterno("RA_Vig");
+        await reps(vig, "VIGENTE");
+        const sin = await profHabilitadoInterno("RA_Sin"); // sin fila REPS
+        const ven = await profHabilitadoInterno("RA_Ven");
+        await reps(ven, "VENCIDA");
+        expect(await repo.repsAlDia(vig, AHORA)).toBe(true);
+        expect(await repo.repsAlDia(sin, AHORA), "SIN_VERIFICAR pasa con el cutover abierto").toBe(true);
+        expect(await repo.repsAlDia(ven, AHORA), "una VENCIDA no está al día (→ el aviso «fuera de la oferta»)").toBe(false);
+    });
+
     it("T4b · esRepsElegibleParaModalidad: un VIGENTE presencial-only atiende PRESENCIAL, NO TELEMEDICINA", async () => {
         const id = await profHabilitadoInterno("SoloPresencial");
         await reps(id, "VIGENTE", { modalidades: ["PRESENCIAL"] });
