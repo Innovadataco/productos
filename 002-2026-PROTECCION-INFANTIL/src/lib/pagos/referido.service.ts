@@ -19,6 +19,7 @@
 import { EstadoSuscripcion } from "@prisma/client";
 import type { TipoTitular } from "@prisma/client";
 import { addMonths } from "date-fns";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { AppError, ERROR_CODES } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
@@ -40,6 +41,7 @@ export const EVENTOS_REFERIDO = {
 } as const;
 
 const MAX_INTENTOS_CODIGO = 5;
+const ZONA_BOGOTA = "America/Bogota";
 
 type SuscripcionConTitular = NonNullable<Awaited<ReturnType<PagosReferidosRepository["obtenerSuscripcionConTitular"]>>>;
 
@@ -273,7 +275,15 @@ export async function procesarRecompensasPagoAutorizado(
         const exitosos = await repo.contarReferidosExitososPorAnio(referidor.id, uso.anio);
         const maxPorAnio = await obtenerMaxReferidosPorAnio();
         if (exitosos < maxPorAnio) {
-            await repo.actualizarSuscripcion(referidor.id, { fechaFin: addMonths(referidor.fechaFin, 1) });
+            // SPEC-795: la recompensa (1 mes gratis) suma en el día calendario Bogotá y CLAMPA.
+            // `referidor.fechaFin` suele ser fin-de-día Bogotá (04:59:59.999Z = día UTC siguiente);
+            // `addMonths` sobre el instante crudo recortaba en el calendario UTC y le daba al
+            // referidor UN DÍA MENOS de recompensa. Método Bogotá-aware del hermano freemium (FR-003).
+            const nuevaFechaFin = fromZonedTime(
+                addMonths(toZonedTime(referidor.fechaFin, ZONA_BOGOTA), 1),
+                ZONA_BOGOTA,
+            );
+            await repo.actualizarSuscripcion(referidor.id, { fechaFin: nuevaFechaFin });
             await refRepo.actualizarCodigoReferidoUso(uso.id, {
                 recompensaOtorgada: true,
                 recompensaOtorgadaEn: ahora,

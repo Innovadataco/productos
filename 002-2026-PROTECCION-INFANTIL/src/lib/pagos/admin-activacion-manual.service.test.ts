@@ -11,7 +11,6 @@ import { PagosRepository } from "@/lib/dal/repositories/pagos-repository";
 import { prisma } from "@/lib/prisma";
 import { ERROR_CODES } from "@/lib/errors";
 import { activarSuscripcionManual } from "./admin-activacion-manual.service";
-import { mesesDeDuracion } from "./freemium-calculos";
 
 async function crearPlanPadre(adminId: string, duracion: DuracionPlan = DuracionPlan.MES_3) {
     const repo = new PagosRepository();
@@ -91,9 +90,31 @@ describe("activarSuscripcionManual", () => {
             fechaPagoReal,
         });
 
-        const esperadoFin = addMonths(fechaPagoReal, mesesDeDuracion(DuracionPlan.MES_6));
+        // SPEC-795: oráculo LITERAL. Antes se calculaba con el mismo `addMonths` del servicio →
+        // tautológico. 25-ago Bogotá + 6 meses = 25-feb Bogotá del año siguiente.
         expect(suscripcion.fechaInicio.toISOString()).toBe(fechaPagoReal.toISOString());
-        expect(suscripcion.fechaFin.toISOString()).toBe(esperadoFin.toISOString());
+        expect(suscripcion.fechaFin.toISOString()).toBe("2027-02-25T05:00:00.000Z");
+    });
+
+    // SPEC-795 · CANDADO de frontera + control positivo. `fechaPagoReal` en la ventana UTC≠Bogotá a
+    // fin de mes (31-oct UTC / 30-oct Bogotá). Oráculo LITERAL. Con el `addMonths` sobre el instante
+    // crudo (bug) daría 2027-04-30; el servicio Bogotá-aware da 2027-05-01. Cae si vuelve el bug.
+    it("fechaFin: suma de meses CLAMPA en calendario Bogotá en la frontera UTC≠Bogotá (SPEC-795)", async () => {
+        const admin = await crearUsuario(RolUsuario.ADMIN, `admin-f-${Date.now()}@test.co`);
+        const padre = await crearUsuario(RolUsuario.PARENT, `padre-f-${Date.now()}@test.co`);
+        const plan = await crearPlanPadre(admin.id, DuracionPlan.MES_6);
+
+        const suscripcion = await activarSuscripcionManual({
+            adminId: admin.id,
+            target: { tipoTitular: TipoTitular.PADRE, usuarioId: padre.id },
+            planId: plan.id,
+            metodoPagoManual: MetodoPagoManual.EFECTIVO,
+            referenciaPagoManual: "EFECT-FRONTERA",
+            montoRealPagado: 200_000,
+            fechaPagoReal: new Date("2026-10-31T02:00:00.000Z"), // 30-oct 21:00 Bogotá
+        });
+
+        expect(suscripcion.fechaFin.toISOString()).toBe("2027-05-01T02:00:00.000Z");
     });
 
     it("rechaza activar un plan freemium", async () => {

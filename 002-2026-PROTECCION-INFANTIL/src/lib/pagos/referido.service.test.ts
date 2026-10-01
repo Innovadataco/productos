@@ -4,7 +4,6 @@
  * Requieren PostgreSQL: los corre el coordinador con el gate de integración.
  */
 import { describe, it, expect, beforeEach } from "vitest";
-import { addMonths } from "date-fns";
 import { resetDatabase } from "@/lib/test-utils";
 import { crearUsuario } from "@/lib/reporte-test-utils";
 import { prisma } from "@/lib/prisma";
@@ -132,7 +131,10 @@ describe("procesarRecompensasPagoAutorizado", () => {
     it("activa el uso, descuenta el pago y otorga 1 mes gratis al referidor (FR-007)", async () => {
         await seedParametroDescuento("20");
         const repo = new PagosRepository();
-        const fechaFinReferidor = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        // SPEC-795: fecha FIJA de frontera (no `Date.now()`, que depende de cuándo corre). Fin-de-día
+        // 30-oct Bogotá, guardado como 04:59:59.999Z (día UTC siguiente) — así +1 mes recorta en el
+        // calendario equivocado si se suma sobre el instante crudo, y este caso sirve de control.
+        const fechaFinReferidor = new Date("2026-10-31T04:59:59.999Z");
         const referidor = await crearSuscripcionPadre(`ref-ok-${Date.now()}@test.co`, {
             codigoReferidoPropio: "PI-PADRE-G7H8J9K2",
             fechaFin: fechaFinReferidor,
@@ -164,7 +166,11 @@ describe("procesarRecompensasPagoAutorizado", () => {
         expect(pagoActualizado?.codigoReferidoUsado).toBe("PI-PADRE-G7H8J9K2");
 
         const suscripcionReferidor = await repo.obtenerSuscripcionPorId(referidor.suscripcion.id);
-        expect(suscripcionReferidor?.fechaFin.getTime()).toBe(addMonths(fechaFinReferidor, 1).getTime());
+        // SPEC-795: oráculo LITERAL (antes `addMonths(fechaFinReferidor,1)` = la misma primitiva del
+        // servicio → tautológico). La recompensa suma en calendario Bogotá y CLAMPA: fin del 30-oct
+        // → fin del 30-nov Bogotá (04:59:59.999Z del 01-dic UTC). Con el bug daría 2026-11-30 (un día
+        // menos para el referidor). El test cae si vuelve el addMonths sobre el instante crudo.
+        expect(suscripcionReferidor?.fechaFin.toISOString()).toBe("2026-12-01T04:59:59.999Z");
 
         const audit = await prisma.auditLog.findFirst({
             where: { accion: "REFERIDO_RECOMPENSA_OTORGADA", recursoId: uso.id },
