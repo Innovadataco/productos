@@ -896,6 +896,13 @@ model IdentificadorIntegranteComite {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // SPEC-837 · EXCEPCIÓN al FK compuesto de la cadena (declarada, no supuesta): colegioId NO se ata
+  // estructuralmente al padre. IntegranteComite NO tiene columna colegioId (se tenanta a 2 saltos:
+  // integrante → comiteId → Usuario) → no hay columna a la que apuntar. Conteo de drift: 0 SOBRE
+  // TABLA VACÍA (0 filas) = SIN EVIDENCIA, NO «medido limpio»; si la tabla se puebla, RE-CORRER el
+  // conteo (IS DISTINCT FROM contra el colegio del comité + medir NULLs aparte). PR 2 (AlertaColegio)
+  // NO cubre el sujeto INTEGRANTE_COMITE — colgaría de un colegioId no garantizado. Denormalizar/trigger
+  // RECHAZADOS (copia sin vigilante / migrate dev borra el trigger, I-420).
   integrante IntegranteComite @relation(fields: [integranteId], references: [id], onDelete: Cascade)
   colegio    Colegio          @relation(fields: [colegioId], references: [id])
   plataforma Plataforma?      @relation(fields: [plataformaId], references: [id])
@@ -1545,6 +1552,10 @@ model Profesor {
   CursoMateria        CursoMateria[]
   identificadoresProf IdentificadorProfesor[]
 
+  // SPEC-837 (D-121) · destino del FK compuesto de IdentificadorProfesor: ata su colegioId
+  // denormalizado al del profesor. `id` ya es PK; este índice existe para que el FK lo referencie
+  // (mismo patrón que Alumno en 833). Imposibilidad estructural, no disciplina de código.
+  @@unique([id, colegioId])
   @@unique([colegioId, tipoDocumento, numeroDocumento])
   @@index([colegioId, estado])
 }
@@ -1667,6 +1678,13 @@ model IdentificadorAcudiente {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // SPEC-837 · EXCEPCIÓN al FK compuesto de la cadena (declarada, no supuesta): colegioId NO se ata
+  // estructuralmente al padre. AcudienteEstudiante NO tiene columna colegioId (se tenanta a 2 saltos:
+  // acudiente → estudiante → Alumno.colegioId) → no hay columna a la que apuntar un FK compuesto.
+  // Drift medido = 0 CON filas detrás (IdentificadorAcudiente vs Alumno vía AcudienteEstudiante, CEO).
+  // Bloqueo secundario: el padre-de-dos-hijos (abajo). PR 2 (AlertaColegio) NO cubre el sujeto
+  // ACUDIENTE — colgaría de un colegioId no garantizado. Denormalizar colegioId acá se RECHAZÓ
+  // (sumaría una copia sin vigilante); trigger también (migrate dev lo borra, I-420).
   acudiente  AcudienteEstudiante @relation(fields: [acudienteId], references: [id])
   colegio    Colegio             @relation(fields: [colegioId], references: [id])
   plataforma Plataforma?         @relation(fields: [plataformaId], references: [id])
@@ -1698,7 +1716,11 @@ model IdentificadorProfesor {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  profesor   Profesor        @relation(fields: [profesorId], references: [id])
+  // SPEC-837 · FK COMPUESTO: colegioId se ata al del profesor (references [id, colegioId]). La base
+  // RECHAZA un IdentificadorProfesor cuyo colegioId no case con Profesor.colegioId. colegioId queda
+  // compartido entre esta relación (compuesta, a Profesor) y la de `colegio` (simple, a Colegio) —
+  // ambas lo restringen, coherentes. Mismo patrón que IdentificadorAlumno→Alumno (833).
+  profesor   Profesor        @relation(fields: [profesorId, colegioId], references: [id, colegioId])
   colegio    Colegio         @relation(fields: [colegioId], references: [id])
   plataforma Plataforma?     @relation(fields: [plataformaId], references: [id])
   alertas    AlertaColegio[]
