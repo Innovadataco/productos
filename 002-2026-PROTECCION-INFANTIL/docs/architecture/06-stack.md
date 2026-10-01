@@ -4,7 +4,7 @@
 
 # 06 · Stack, contenedores y puertos
 
-Paquete: `002-2026-proteccion-infantil`. Runtime: Node (sin engines declarado).
+Paquete: `002-2026-proteccion-infantil`. Runtime: Node 22.x.
 Valores de secretos NUNCA se documentan aquí: solo nombres de variables y puertos.
 
 ## Dependencias de runtime (package.json)

@@ -2,6 +2,9 @@
   "name": "002-2026-proteccion-infantil",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
