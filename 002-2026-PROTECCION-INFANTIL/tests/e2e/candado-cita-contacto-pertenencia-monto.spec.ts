@@ -34,6 +34,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { crearProfesionalVisible, limpiarProfesionalVisible, type ProfesionalVisible } from "./fixtures/profesional-visible";
 import { crearPadreOnboarded, limpiarPadreOnboarded, type PadreOnboarded } from "./fixtures/padre-onboarded";
+import type { EstadoReps, ModalidadReps } from "@prisma/client";
 
 const CORRIDA = `e2e-764-${randomUUID().slice(0, 8)}`;
 const PASSWORD = "Candado764!Secure";
@@ -48,6 +49,10 @@ const PADRE_2_EMAIL = `${CORRIDA}-padre2@proteccion.local`;
 
 let perfilProfesionalId = "";
 let franjaId = "";
+// SPEC-828 · dos franjas VIRTUALES creadas en el setup MIENTRAS el pro es SIN_VERIFICAR (creación
+// legítima, permitida pre Y post-825); el REPS se estrecha/ensancha DESPUÉS, en cada test.
+let franjaVirtualRechazoId = "";
+let franjaVirtualOkId = "";
 let solicitudId = "";
 let precioParametroCOP = 0;
 let profesional: ProfesionalVisible | undefined;
@@ -78,6 +83,52 @@ async function crearCitaComoElPadre(ctx: APIRequestContext): Promise<{ id: strin
     const id = body?.data?.id ?? "";
     expect(id, "la respuesta trae el id de la solicitud").toBeTruthy();
     return { id, montoTotal: body?.data?.montoTotal };
+}
+
+const DIA = 24 * 60 * 60 * 1000;
+const hace = (dias: number) => new Date(Date.now() - dias * DIA);
+const enDias = (dias: number) => new Date(Date.now() + dias * DIA);
+
+/**
+ * SPEC-828 (pieza 2) · planta una VerificacionReps en la BD *_test. Excepción documentada: no hay
+ * endpoint real que registre una verificación REPS con la modalidad/vigencia exacta del escenario (la
+ * carga manual del admin registra una vigente genérica). `resultado` VIGENTE EXIGE `vigenteHasta`
+ * (CHECK de la migración); el motor lee la ÚLTIMA fila (orden verificadoEn desc).
+ */
+async function plantarReps(
+    perfilId: string,
+    datos: { resultado: EstadoReps; verificadoEn: Date; vigenteHasta: Date | null; modalidades: ModalidadReps[] },
+) {
+    await prisma.verificacionReps.create({
+        data: {
+            profesionalId: perfilId,
+            verificadoEn: datos.verificadoEn,
+            fuente: "MANUAL_ADMIN",
+            resultado: datos.resultado,
+            vigenteHasta: datos.vigenteHasta,
+            modalidades: datos.modalidades,
+            modalidadesNoMapeadas: [],
+            verificadoPorSnapshot: `e2e SPEC-828 (${CORRIDA})`,
+        },
+    });
+}
+
+/** SPEC-828 · publica una franja VIRTUAL fresca por el endpoint real del profesional (atiendeVirtual +
+ *  verificación vigente). `diaOffset` evita el solape con la franja +7 del fixture y entre sí. */
+async function crearFranjaVirtual(diaOffset: number): Promise<string> {
+    const reqProf = await contexto();
+    try {
+        await login(reqProf, PROFESIONAL_EMAIL);
+        const inicio = new Date(Date.now() + diaOffset * DIA).toISOString();
+        const fin = new Date(Date.now() + diaOffset * DIA + 3600 * 1000).toISOString();
+        const r = await reqProf.post("/api/profesional/franjas", { data: { inicio, fin, modalidad: "VIRTUAL" } });
+        expect(r.status(), `crear franja virtual body=${await r.text().catch(() => "")}`).toBeLessThan(300);
+        const id = (await r.json())?.data?.id;
+        expect(id, "la franja virtual creada trae id").toBeTruthy();
+        return id as string;
+    } finally {
+        await reqProf.dispose();
+    }
 }
 
 test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", () => {
@@ -115,6 +166,15 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
         perfilProfesionalId = profesional.perfilId;
         franjaId = profesional.franjaId ?? "";
 
+        // SPEC-828 pieza 2 · las franjas de los candados (4)/(5) se crean AHORA, con el pro SIN_VERIFICAR:
+        // la creación es LEGÍTIMA (cutover abierto; permitida pre Y post-825). El REPS se estrecha/ensancha
+        // en cada test — así el escenario es el TEMPORAL que la compuerta de creación NO cubre sola: una
+        // franja creada válidamente deja de ser reservable cuando el REPS CADUCA/se estrecha, no cuando
+        // «nunca debió existir». Si se plantara el REPS antes de crear la franja, post-825 la creación misma
+        // sería rechazada y el test fallaría en el SETUP, por una razón ajena al contrato que afirma.
+        franjaVirtualRechazoId = await crearFranjaVirtual(8);
+        franjaVirtualOkId = await crearFranjaVirtual(9);
+
         // Precio estándar del parámetro (público) — referencia del candado (3).
         const ctxPub = await contexto();
         const res = await ctxPub.get("/api/publico/profesionales/precio-primera-cita");
@@ -126,6 +186,14 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
     });
 
     test.afterAll(async () => {
+        // SPEC-828: las VerificacionReps plantadas tienen FK Restrict al perfil → se borran ANTES de que
+        // limpiarProfesionalVisible borre el perfil (si no, ese delete falla en silencio y deja basura).
+        if (profesional)
+            await prisma.verificacionReps
+                .deleteMany({ where: { profesionalId: profesional.perfilId } })
+                // No tira en teardown, pero DEJA RASTRO: si este borrado empieza a fallar, el delete del
+                // perfil (limpiarProfesionalVisible, FK Restrict) fallará en silencio y dejará huérfanos.
+                .catch((e) => console.warn("[SPEC-828] limpieza de VerificacionReps falló:", e));
         // El profesional borra las solicitudes por `profesionalId` (cubre la cita);
         // luego cada padre borra lo suyo FK-safe.
         if (profesional) await limpiarProfesionalVisible(profesional);
@@ -189,5 +257,71 @@ test.describe.serial("Candados de la cita — SPEC-764 (rescate de SPEC-430)", (
             solicitud?.montoConsulta,
             `la consulta NO usa la tarifa del profesional (${TARIFA_DISTINTIVA}) ni un número quemado`,
         ).not.toBe(TARIFA_DISTINTIVA);
+    });
+
+    // ── SPEC-828 · pieza 2, aserción del CONTRATO (la que sobrevive a la UI) ──────────────────────────
+    // El servidor RECHAZA la reserva de una franja en una modalidad que el REPS del profesional NO cubre,
+    // llamado por API DIRECTA (sin pantalla). Esconder el menú (SPEC-825, display) NO es la compuerta: la
+    // compuerta es el servidor (790 T4b) y debe negar aunque nadie se lo pida por la UI — un gate
+    // condicionado a lo que manda el cliente falla ABIERTO. Se usa padre2 (sin cita previa). (La aserción
+    // 1 —que post-825 al padre NUNCA se le OFREZCA esa franja— se escribe cuando 825 entre a main.)
+    test("(4-SPEC-828) el servidor RECHAZA la reserva DIRECTA de una franja en modalidad sin REPS", async () => {
+        // El pro atiende VIRTUAL (franja → TELEMEDICINA en el REPS). Se le planta un REPS VIGENTE que cubre
+        // SOLO PRESENCIAL → sigue VISIBLE (el directorio usa modalidad=null y la vigencia pasa) pero la
+        // reserva de una franja virtual cae por `esRepsElegibleParaModalidad(TELEMEDICINA)`.
+        // La franja virtual YA existe (creada en el setup con el pro SIN_VERIFICAR). AHORA se estrecha el
+        // REPS a solo-PRESENCIAL: la franja —legítima— deja de ser reservable por su modalidad.
+        await plantarReps(perfilProfesionalId, { resultado: "VIGENTE", verificadoEn: hace(10), vigenteHasta: enDias(120), modalidades: ["PRESENCIAL"] });
+        const franjaVirtual = franjaVirtualRechazoId;
+
+        const ctx = await contexto();
+        try {
+            await login(ctx, PADRE_2_EMAIL);
+            const res = await ctx.post("/api/padre/citas", {
+                data: {
+                    profesionalId: perfilProfesionalId,
+                    franjaId: franjaVirtual,
+                    presentacion: `SPEC-828 reserva en modalidad sin REPS (debe rechazarse), corrida ${CORRIDA}, texto válido.`,
+                    urgencia: "ESTA_SEMANA",
+                },
+            });
+            expect(
+                res.status(),
+                `reserva de franja VIRTUAL con REPS solo-PRESENCIAL debe RECHAZARSE (no 200). body=${(await res.text().catch(() => "")).slice(0, 200)}`,
+            ).not.toBe(200);
+            // La compuerta niega ANTES de marcar la franja: no deja rastro de éxito (la franja sigue LIBRE).
+            const f = await prisma.franjaDisponible.findUnique({ where: { id: franjaVirtual }, select: { tomada: true } });
+            expect(f?.tomada, "la franja rechazada sigue LIBRE — el servidor no la consumió").toBe(false);
+        } finally {
+            await ctx.dispose();
+        }
+    });
+
+    test("(5-SPEC-828) control positivo — con el REPS cubriendo TELEMEDICINA, la MISMA reserva directa PASA", async () => {
+        // Remoción del discriminador: una verificación más reciente que SÍ cubre TELEMEDICINA (la «última
+        // fila» manda). Nada más cambia; que ahora PASE prueba que lo que negaba la reserva era la
+        // cobertura de modalidad del REPS, no la visibilidad del pro ni el camino del padre.
+        // La franja virtual YA existe (setup). Con el REPS cubriendo TELEMEDICINA, la MISMA reserva directa pasa.
+        await plantarReps(perfilProfesionalId, { resultado: "VIGENTE", verificadoEn: new Date(), vigenteHasta: enDias(120), modalidades: ["PRESENCIAL", "TELEMEDICINA"] });
+        const franjaVirtual = franjaVirtualOkId;
+
+        const ctx = await contexto();
+        try {
+            await login(ctx, PADRE_2_EMAIL);
+            const res = await ctx.post("/api/padre/citas", {
+                data: {
+                    profesionalId: perfilProfesionalId,
+                    franjaId: franjaVirtual,
+                    presentacion: `SPEC-828 control positivo — REPS cubre TELEMEDICINA, corrida ${CORRIDA}, texto válido.`,
+                    urgencia: "ESTA_SEMANA",
+                },
+            });
+            expect(
+                res.status(),
+                `con el REPS cubriendo TELEMEDICINA la MISMA reserva directa PASA (200). body=${(await res.text().catch(() => "")).slice(0, 200)}`,
+            ).toBe(200);
+        } finally {
+            await ctx.dispose();
+        }
     });
 });
