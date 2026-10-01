@@ -19,6 +19,7 @@ import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-dispon
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { DiaBloqueadoRepository } from "@/lib/dal/repositories/dia-bloqueado";
 import { diaBogota } from "@/lib/fechas/formato-bogota";
+import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
 
 export interface FranjaLoteInput {
     inicio: string; // ISO UTC
@@ -26,7 +27,7 @@ export interface FranjaLoteInput {
     modalidad: "VIRTUAL" | "PRESENCIAL";
 }
 
-export type MotivoOmision = "rango" | "modalidad" | "vigencia" | "bloqueado" | "solape";
+export type MotivoOmision = "rango" | "modalidad" | "vigencia" | "bloqueado" | "solape" | "reps";
 
 export interface ResultadoLote {
     creadas: number;
@@ -38,9 +39,10 @@ export async function materializarFranjas(
     entradas: FranjaLoteInput[],
 ): Promise<ResultadoLote> {
     return withUnitOfWork(async (tx) => {
-        const perfil = await new PerfilProfesionalRepository(tx).findPorId(perfilId);
+        const perfilRepo = new PerfilProfesionalRepository(tx);
+        const perfil = await perfilRepo.findPorId(perfilId);
         if (!perfil) throw new AppError("Perfil profesional no existe", ERROR_CODES.NOT_FOUND, 404);
-        const venceEn = await new PerfilProfesionalRepository(tx).venceEnVigente(perfilId);
+        const venceEn = await perfilRepo.venceEnVigente(perfilId);
         if (!venceEn) {
             throw new AppError(
                 "Necesita una verificación aprobada para publicar disponibilidad",
@@ -48,6 +50,13 @@ export async function materializarFranjas(
                 400,
             );
         }
+        // SPEC-825 · CINTURÓN de creación: no se publica una modalidad que el REPS del profesional no cubre
+        // (imposibilidad estructural: el estado malo no nace). COMPLEMENTA el filtro de lectura (pieza 1), no lo
+        // reemplaza — la validez REPS caduca por tiempo, así que la LECTURA también filtra siempre. Se evalúa
+        // una vez por eje antes del lote (no N consultas).
+        const ahoraReps = new Date();
+        const repsCubreVirtual = await perfilRepo.esRepsElegibleParaModalidad(perfilId, "TELEMEDICINA", ahoraReps);
+        const repsCubrePresencial = await perfilRepo.esRepsElegibleParaModalidad(perfilId, "PRESENCIAL", ahoraReps);
         const repo = new FranjaDisponibleRepository(tx);
         const diasRepo = new DiaBloqueadoRepository(tx);
         const omitidas: ResultadoLote["omitidas"] = [];
@@ -67,6 +76,14 @@ export async function materializarFranjas(
             }
             if (e.modalidad === "PRESENCIAL" && !perfil.atiendePresencial) {
                 omitidas.push({ inicio: e.inicio, motivo: "modalidad" });
+                continue;
+            }
+            // SPEC-825 · el REPS debe cubrir la modalidad de la franja (telemedicina↔virtual, presencial↔presencial).
+            // Sin cobertura no se crea: la reserva la rechazaría igual, y el display (pieza 1) no la ofrecería.
+            const repsReps = modalidadRepsRequerida(e.modalidad);
+            const repsCubre = repsReps === "TELEMEDICINA" ? repsCubreVirtual : repsReps === "PRESENCIAL" ? repsCubrePresencial : false;
+            if (!repsCubre) {
+                omitidas.push({ inicio: e.inicio, motivo: "reps" });
                 continue;
             }
             if (fin.getTime() > venceEn.getTime()) {
