@@ -59,6 +59,13 @@ describe("SPEC-814/836 · copy de los motivos de orfandad", () => {
         expect(REGISTRO.detalle).toMatch(/sin reubicar/i);
     });
 
+    it("🚩 FALSO AMIGO (SPEC-836/835): REVISION_INTERNA (verificación del PERFIL) NUNCA dice «REPS»/«registro»", () => {
+        // Es el eje INTERNO (VerificacionProfesional, NUESTRA), no la inscripción en el registro (REPS) — dos
+        // documentos. «registro» solo puede vivir en REGISTRO_NO_VIGENTE, que ES ese eje; confundirlos es el
+        // falso amigo que mordió en 835.
+        expect(texto(COPY_MOTIVO_REUBICACION.REVISION_INTERNA)).not.toMatch(/\breps\b|registro/i);
+    });
+
     it("NINGÚN motivo expone el estado de la cuenta (inhabilitado/sancionado/suspendido)", () => {
         for (const [, c] of ENTRADAS) {
             expect(texto(c)).not.toMatch(/inhabilitad|sancionad|suspendid/i);
