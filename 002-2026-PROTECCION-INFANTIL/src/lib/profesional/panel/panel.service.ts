@@ -31,8 +31,6 @@ import { saludoDelPanel } from "./saludo";
 import { desglosarTarifa, obtenerPorcentajeServicio, type DesgloseTarifa } from "../cita/comision";
 import { estadoEfectivoDeCita } from "../cita/estado-efectivo";
 import { citasPendientesEncuesta } from "@/lib/dal/services/encuesta-cita";
-import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
-import type { ClasificacionAvisoReps, ModalidadOferta } from "@/lib/profesional/reps/aviso-estado-reps";
 
 /** Estados que esperan una respuesta del profesional dentro de las 48 h. */
 const ESPERAN_RESPUESTA: EstadoSolicitudCita[] = ["SIN_CONFIRMAR", "PAGADA_PENDIENTE"];
@@ -126,28 +124,6 @@ export interface PanelProfesionalDto {
     expedientesCompartidos: ExpedienteCompartidoDto[];
     /** SPEC-784 · nº de citas del profesional con su encuesta de servicio pendiente (fuente única). */
     sesionesPorRegistrar: number;
-    /**
-     * SPEC-813 · clasificación REPS del profesional. El banner «fuera de la oferta» se muestra SOLO con
-     * `"CADUCADO"` (estados 4 VENCIDA / 6 vigencia pasada). Los estados de admin (5/7/8) NO llegan acá.
-     * SPEC-836 pieza 2: puede ser además `"MODALIDAD_NO_CUBIERTA"` (REPS vigente que no cubre una modalidad
-     * que el profesional ofrece) → dispara su propio banner con `modalidadesRepsNoCubiertas`.
-     */
-    avisoReps: ClasificacionAvisoReps;
-    /** SPEC-836 pieza 2: modalidades OFRECIDAS que el REPS no cubre. No vacío SOLO con `MODALIDAD_NO_CUBIERTA`. */
-    modalidadesRepsNoCubiertas: readonly ModalidadOferta[];
-    /**
-     * SPEC-836 pieza 2: true SOLO en el estado 7 (nuestro re-chequeo envejeció, autoridad vigente = zona
-     * RE_VERIFICAR). El banner «re-verificando, su inscripción sigue al día» se muestra con
-     * `avisoReps === "REVISION_ADMIN" && esReVerificacionReps` — NO con REVISION_ADMIN a secas, porque ese
-     * fusiona el 5 (NO_ENCONTRADA), donde «sigue al día» sería falso.
-     */
-    esReVerificacionReps: boolean;
-    /**
-     * SPEC-836 (4ª variante): true en el estado 5 (NO_ENCONTRADA) — el REPS no confirmó la inscripción. Dispara
-     * su propio banner (bifurca sin asignar causa) con `avisoReps === "REVISION_ADMIN" && esNoConfirmadaReps`.
-     * Excluyente con `esReVerificacionReps` (el 7): cada estado de REVISION_ADMIN muestra su propia variante.
-     */
-    esNoConfirmadaReps: boolean;
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -209,16 +185,6 @@ export async function panelDelProfesional(
     // compartido de `listarPorProfesional`, que otros caminos comparten (misma razón que el saludo).
     const sesionesPorRegistrar = (await citasPendientesEncuesta(usuarioId, "PROFESIONAL", ahora)).length;
 
-    // SPEC-813: clasificación REPS para el banner «fuera de la oferta» (solo CADUCADO lo dispara).
-    // SPEC-836 pieza 2: clasificarReps es ahora modality-aware; devuelve la clasificación + las modalidades
-    // ofrecidas que el REPS no cubre (para el banner del hueco de modalidad).
-    const {
-        clasificacion: avisoReps,
-        modalidadesNoCubiertas: modalidadesRepsNoCubiertas,
-        esReVerificacion: esReVerificacionReps,
-        esNoConfirmada: esNoConfirmadaReps,
-    } = await new PerfilProfesionalRepository().clasificarReps(perfil.id, ahora);
-
     return {
         nombreVisible: perfil.nombreVisible,
         saludo: saludoDelPanel(cuenta?.nombre, perfil.nombreVisible),
@@ -270,10 +236,6 @@ export async function panelDelProfesional(
                 padreNombre: s.padreUsuario.nombre ?? "Una familia",
             })),
         sesionesPorRegistrar,
-        avisoReps,
-        modalidadesRepsNoCubiertas,
-        esReVerificacionReps,
-        esNoConfirmadaReps,
     };
 }
 

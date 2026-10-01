@@ -95,7 +95,6 @@ export class SolicitudCitaRepository {
                 franja: { select: { inicio: true, fin: true, modalidad: true } },
                 profesional: {
                     select: {
-                        id: true, // SPEC-814: para el chequeo REPS por-modalidad (esRepsElegibleParaModalidad).
                         usuarioId: true,
                         nombreVisible: true,
                         especialidades: true,

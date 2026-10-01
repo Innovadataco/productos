@@ -21,7 +21,7 @@ export async function GET() {
             const hab = await obtenerHabilitacionProfesional(user.id);
             return NextResponse.json({
                 ...base,
-                profesional: hab ?? { estado: null, habilitado: false, repsAlDia: false },
+                profesional: hab ?? { estado: null, habilitado: false },
             });
         }
         return NextResponse.json(base);

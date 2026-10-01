@@ -16,9 +16,9 @@
  *   (3) RE-PRENDER: la MISMA franja VIRTUAL reaparece (estaba oculta).
  *
  * El profesional apaga UNA modalidad, nunca las dos (invariante de modalidad del estado, SPEC-673: un
- * no-BORRADOR conserva ≥1). Se LEE `whereFranjaOfrecible`, no se toca. El cinturón REPS (825/828) y la
- * vigencia interna están FUERA de alcance (ya cubiertos): el REPS está en cutover abierto (SIN_VERIFICAR
- * ofrecible), así que la ÚNICA variable acá es la bandera de modalidad del propio profesional.
+ * no-BORRADOR conserva ≥1). Se LEE `whereFranjaOfrecible`, no se toca. La vigencia interna está FUERA de
+ * alcance (ya cubierta): el profesional nace ACTIVO y ofrecible y no se toca, así que la ÚNICA variable
+ * acá es la bandera de modalidad del propio profesional.
  *
  * AISLAMIENTO. Corrida por `randomUUID`, prefijo `e2e-818-`. Limpieza FK-safe en afterAll (fixture).
  */
@@ -87,7 +87,7 @@ test.describe.serial("SPEC-818 · apagar una modalidad re-evalúa la oferta en L
         expect(franjaVirtualId, "el profesional nace con una franja VIRTUAL +7d").toBeTruthy();
 
         // Encender TAMBIÉN presencial (por «Mi perfil») y publicar una franja PRESENCIAL — el eje contrario
-        // del no-fuga. (REPS en cutover abierto permite crearla; la modalidad de cita→eje la valida el server.)
+        // del no-fuga. (El profesional nace ACTIVO, así que puede publicarla; el server valida la modalidad.)
         await fijarModalidades(true, true);
         const req = await ctx();
         try {

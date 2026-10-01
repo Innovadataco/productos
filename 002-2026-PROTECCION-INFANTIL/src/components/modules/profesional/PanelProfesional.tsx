@@ -2,7 +2,6 @@ import Link from "next/link";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { fechaCorta, fechaHora } from "@/lib/format/fecha";
 import type { PanelProfesionalDto } from "@/lib/profesional/panel/panel.service";
-import type { ModalidadOferta } from "@/lib/profesional/reps/aviso-estado-reps";
 import { SolicitudAcciones } from "./SolicitudAcciones";
 
 /**
@@ -34,27 +33,6 @@ export function PanelProfesional({ data }: { data: PanelProfesionalDto }) {
                         : `${pendientes} solicitud${pendientes === 1 ? "" : "es"} por responder.`}
                 </p>
             </header>
-
-            {/* SPEC-813: banner «fuera de la oferta» cuando el REPS CADUCÓ (estados 4/6). Conserva el acceso
-                (entra y lo ve); ámbar, cero rubí; no promete reasignación ni notificación. */}
-            {data.avisoReps === "CADUCADO" && <AvisoRepsCaducado />}
-
-            {/* SPEC-836 pieza 2: banner de RE-VERIFICACIÓN NUESTRA (estado 7). REVISION_ADMIN funde 5/7/8; la
-                copy «su inscripción sigue al día» SOLO es cierta en el 7 (zona RE_VERIFICAR) → se gatea con
-                `esReVerificacionReps`. El 5 (NO_ENCONTRADA) y el 8 quedan admin-only (como antes). */}
-            {data.avisoReps === "REVISION_ADMIN" && data.esReVerificacionReps && <AvisoRepsRevisionAdmin />}
-
-            {/* SPEC-836 (4ª variante): estado 5 (NO_ENCONTRADA). REVISION_ADMIN funde 5/7/8; el 7 muestra
-                re-verificación («sigue al día»), el 5 NO (ahí no aparece en el registro). El 5 bifurca sin
-                asignar causa. Excluyente con el de arriba; el 8 es inconstruible → sin banner. */}
-            {data.avisoReps === "REVISION_ADMIN" && data.esNoConfirmadaReps && <AvisoRepsNoConfirmada />}
-
-            {/* SPEC-836 pieza 2: banner del HUECO DE MODALIDAD — el REPS está vigente pero no cubre una
-                modalidad que el profesional OFRECE. 813 decía AL_DIA mientras 825/834/814 ya actuaban sobre
-                él. Aquí SÍ es su acción (actualizar su inscripción o dejar de ofrecer esa modalidad). */}
-            {data.avisoReps === "MODALIDAD_NO_CUBIERTA" && (
-                <AvisoRepsModalidadNoCubierta modalidades={data.modalidadesRepsNoCubiertas} />
-            )}
 
             {/* SPEC-610 (I-372): la ENTRADA VISIBLE al canje del pase. Antes
                 `/canjear-acceso` no estaba enlazada desde ningún lado (solo en
@@ -147,137 +125,6 @@ function Avatar({ nombre }: { nombre: string }) {
         >
             {iniciales || "?"}
         </div>
-    );
-}
-
-/**
- * SPEC-813 (FORMA-SPEC790-AVISO v4.1) · Banner que ve el profesional cuando su inscripción REPS CADUCÓ
- * (estados 4 VENCIDA / 6 vigencia pasada). Conserva el ACCESO, pierde la OFERTA: «sigue teniendo su
- * espacio, pero por ahora no lo estamos ofreciendo», nunca «perdió el acceso». Ámbar, cero rubí; voz usted.
- * NO promete reasignación de citas (no existe; es T7) ni notificación («el sistema le avisa»). NO predica
- * «habilitado» del profesional — la OFERTA es el eje visible. Lleva a su perfil/estado (la explicación +
- * cómo renovar); no es un callejón porque conserva el acceso.
- */
-export function AvisoRepsCaducado() {
-    return (
-        <section
-            aria-label="Estado de su inscripción en el registro de salud"
-            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
-        >
-            <h2 className="text-base font-semibold">Sigue teniendo su espacio aquí — por ahora no lo estamos ofreciendo a las familias.</h2>
-            <div className="mt-2 space-y-2 text-sm">
-                <p>
-                    Su inscripción en el registro de salud figura como <strong>no vigente</strong> (lo verificamos contra el
-                    registro oficial). Suele deberse a una <strong>renovación pendiente</strong> — no es una sanción ni un juicio
-                    sobre su trabajo, y <strong>no pierde su cuenta ni su acceso a esta área.</strong>
-                </p>
-                <p>Mientras su inscripción no esté vigente, no aparece en la oferta a las familias ni recibe citas nuevas.</p>
-                <p>
-                    Cuando su inscripción vuelva a estar vigente, vuelve a la oferta por sí solo — no tiene que inscribirse de
-                    nuevo ni pedir un reingreso.
-                </p>
-            </div>
-            <Link
-                href="/dashboard/profesional/mi-perfil"
-                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-2xl border border-ambar/40 px-5 py-2.5 text-sm font-semibold transition hover:bg-ambar/10"
-            >
-                Ver qué significa y cómo renovar
-            </Link>
-        </section>
-    );
-}
-
-/**
- * SPEC-836 pieza 2 · banner del HUECO DE MODALIDAD. El REPS está VIGENTE pero no cubre una (o ambas) de las
- * modalidades que el profesional OFRECE; 813 le decía AL_DIA mientras 825/834/814 ya actuaban. Acción SUYA
- * (actualizar la cobertura o dejar de ofrecer esa modalidad) → por eso va a SU panel, no al admin (que no
- * puede arreglarla). Nombra la(s) modalidad(es) —el hueco doble nombra las dos— para que no arregle la mitad.
- *
- * Copy VERBATIM de Diseño (FORMA-SPEC836, v1.0, commit c02e7e4 en Gestión), voz usted. Dos cadenas: singular
- * (una modalidad) y plural (las dos nombradas), NO un «(s)» que partiría el mensaje. El token {modalidad} se
- * interpola como «virtuales»/«presenciales» (concuerda con «citas»). Sin enlace: la forma describe las dos
- * salidas en prosa y no especifica uno (a diferencia de CADUCADO). No se reescribe; si Diseño reemite, se
- * re-transcribe.
- */
-export function AvisoRepsModalidadNoCubierta({ modalidades }: { modalidades: readonly ModalidadOferta[] }) {
-    const palabra = (m: ModalidadOferta) => (m === "VIRTUAL" ? "virtuales" : "presenciales");
-    const plural = modalidades.length > 1;
-    const lista = plural
-        ? `${palabra(modalidades[0]!)} y ${palabra(modalidades[1]!)}`
-        : palabra(modalidades[0] ?? "VIRTUAL");
-    return (
-        <section
-            aria-label="Cobertura de modalidad en su inscripción en el registro de salud"
-            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
-        >
-            <h2 className="text-base font-semibold">
-                Ofrece citas {lista}, pero su inscripción en el registro no cubre{" "}
-                {plural ? "esas modalidades" : "esa modalidad"} — las familias no pueden{" "}
-                {plural ? "reservarlas" : "reservarla"}.
-            </h2>
-            <p className="mt-2 text-sm">
-                Actualice su inscripción para que cubra {lista}, o deje de ofrecer{" "}
-                {plural ? "esas modalidades" : "esa modalidad"}.
-            </p>
-        </section>
-    );
-}
-
-/**
- * SPEC-836 pieza 2 · banner de RE-VERIFICACIÓN NUESTRA (estado 7: nuestro re-chequeo envejeció, la autoridad
- * sigue dando la inscripción por vigente). v4.1 enrutaba este estado SOLO al admin («sería un callejón»); el
- * CEO revirtió esa decisión (FORMA-SPEC790 v4.2/v4.3) porque 825 (oculta franjas) y 814 (cola) volvieron el
- * silencio PORTANTE: el profesional ve que nadie le reserva y se inventa la explicación. A diferencia de
- * CADUCADO (suya: renueve) y del hueco de modalidad (suya: actualice/deje), aquí NO hay nada que él haga.
- *
- * Copy VERBATIM de Diseño (FORMA-SPEC790 v4.3, commit 45e1623, voz usted). DOS oraciones, ambas obligatorias:
- * la 1.ª tranquiliza (es nuestro, nada que hacer); la 2.ª explica el SÍNTOMA que él observa (su oferta en
- * pausa) — sin ella el banner tranquiliza pero no conecta con lo que ve. Sin plazo (ata al evento, no al
- * reloj: la re-verificación es carga manual). Sin enlace: no hay acción suya.
- */
-export function AvisoRepsRevisionAdmin() {
-    return (
-        <section
-            aria-label="Estado de la verificación de su inscripción en el registro de salud"
-            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
-        >
-            <h2 className="text-base font-semibold">
-                Estamos re-verificando su inscripción — es un chequeo nuestro y su inscripción sigue al día, así
-                que no hay nada que usted deba hacer.
-            </h2>
-            <p className="mt-2 text-sm">
-                Mientras lo completamos, su oferta a las familias queda en pausa; vuelve por sí sola cuando
-                terminemos.
-            </p>
-        </section>
-    );
-}
-
-/**
- * SPEC-836 (4ª variante) · estado 5 (NO_ENCONTRADA): el REPS NO confirmó su inscripción. v4.1 lo mandaba al
- * admin; 836 le da voz porque 825 le oculta las franjas igual que en el 7, pero la copy del 7 («sigue al día»)
- * MENTIRÍA acá (no aparece en el registro) — por eso banner propio.
- *
- * Copy VERBATIM de Diseño (FORMA-SPEC790 v4.5, commit 2f88930, voz usted). El 5 es AMBIGUO (no inscrito / laguna
- * nuestra) y no se resuelve desde afuera: la copy NO asigna la causa — BIFURCA por lo que ÉL sabe. Tres PARÁ del
- * CEO respetados: SIN «escríbanos» (el profesional no tiene canal de soporte), SIN «lo estamos revisando» (0
- * verificadores activos = falso-conducta), sin enlace. «es algo de nuestro lado» ubica la responsabilidad sin
- * afirmar una revisión que no ocurre.
- */
-export function AvisoRepsNoConfirmada() {
-    return (
-        <section
-            aria-label="Estado de su inscripción en el registro de salud"
-            className="rounded-2xl border border-ambar/30 bg-ambar/10 p-5 text-estado-ambar"
-        >
-            <h2 className="text-base font-semibold">
-                No pudimos confirmar su inscripción en el registro, así que su oferta a las familias está en pausa.
-            </h2>
-            <p className="mt-2 text-sm">
-                Si todavía no completó su inscripción en el registro, complétela y vuelve a la oferta. Si ya está
-                inscrito y vigente, es algo de nuestro lado y no tiene que hacer nada.
-            </p>
-        </section>
     );
 }
 

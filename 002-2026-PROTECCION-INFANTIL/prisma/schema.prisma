@@ -808,8 +808,6 @@ model Usuario {
   // SPEC-388 (A-75 · L1a): back-refs de la Red de Profesionales.
   perfilProfesional                PerfilProfesional?
   verificacionesProfesionalRevisadas VerificacionProfesional[]     @relation("VerificacionesRevisadasPor")
-  // SPEC-790: verificaciones REPS que este admin registró a mano (el snapshot durable vive en la fila del hecho).
-  verificacionesRepsRealizadas     VerificacionReps[]              @relation("VerificacionesRepsRealizadas")
   // SPEC-693 (I-416): re-revisiones de renovación de documentos que hizo este verificador.
   revisionesRenovacionHechas       RevisionRenovacion[]            @relation("RevisionesRenovacionHechas")
   // SPEC-686 (I-420): aceptaciones de la autorización del profesional (en pantalla).
@@ -4192,81 +4190,11 @@ model PerfilProfesional {
   solicitudes    SolicitudCita[]
   documentos     DocumentoProfesional[]
   diasBloqueados DiaBloqueado[]
-  // SPEC-790: historial append-only de verificaciones REPS. El estado vigente se DERIVA de la última.
-  verificacionesReps VerificacionReps[]
 
   // L3 filtra el directorio abierto por estado ACTIVO + ciudad; el índice
   // compuesto sirve al listado. La búsqueda por especialidad no lo necesita
   // (usa `has` sobre el array).
   @@index([estado, ciudadId])
-}
-
-/// SPEC-790 · Cómo supimos el estado REPS (fuente del dato). NOT NULL sin default: hay que declararla.
-enum FuenteVerificacionReps {
-  API // consulta automática al REPS
-  ARCHIVO // cruce/carga de un archivo oficial
-  MANUAL_ADMIN // un admin lo verificó y cargó a mano
-}
-
-/// SPEC-790 · Resultado de un chequeo REPS. Conjunto CERRADO (la base rechaza narrativa). El ESTADO del
-/// profesional NO se cachea en una columna: se DERIVA de la ÚLTIMA fila de VerificacionReps (una columna
-/// cacheada deriva contra la realidad, ya nos mordió en la BD viva).
-enum EstadoReps {
-  VIGENTE // habilitación vigente — EXIGE vigenteHasta (CHECK de la migración)
-  VENCIDA // estuvo habilitado y venció
-  NO_ENCONTRADA // el REPS no lo tiene
-  SIN_VERIFICAR // no se pudo verificar (fuente caída, etc.)
-}
-
-/// SPEC-790 · Modalidad que HABILITA el REPS (categoría de la AUTORIDAD, no el formato de la cita). El
-/// motor evalúa «¿incluye TELEMEDICINA?». TELEMEDICINA corresponde al VIRTUAL de ModalidadCita; se
-/// mantiene enum PROPIO porque es la dimensión de la autoridad, no la del producto. Ampliar = ADD VALUE.
-enum ModalidadReps {
-  PRESENCIAL
-  TELEMEDICINA
-}
-
-/// SPEC-790 · Registro APPEND-ONLY del HECHO de verificar el REPS de un profesional: UNA fila por chequeo.
-/// NO hay columna de estado mutable en el profesional: el estado vigente se DERIVA de la ÚLTIMA fila
-/// (orden por verificadoEn desc). La fila es PRUEBA de que verificamos — sobrevive a la baja del
-/// profesional (FK Restrict; PerfilProfesional no se borra, se gestiona por estado) y el rastro del actor
-/// vive en el SNAPSHOT, no solo en el FK (SetNull se vacía al borrar la cuenta; lección #727).
-model VerificacionReps {
-  id            String                 @id @default(cuid())
-  profesionalId String
-  /// Cuándo verificamos NOSOTROS (no la fecha de la autoridad). NOT NULL, sin default, INMUTABLE por
-  /// trigger (igual que recibidoEn de SolicitudHabeasData): es la prueba del chequeo y no se reescribe.
-  verificadoEn  DateTime               @db.Timestamptz(6)
-  fuente        FuenteVerificacionReps
-  resultado     EstadoReps
-  /// Fecha de la AUTORIDAD (hasta cuándo vale la habilitación). NULLABLE A PROPÓSITO: el REPS puede NO
-  /// darla, y para VENCIDA/NO_ENCONTRADA/SIN_VERIFICAR no aplica. Para VIGENTE es OBLIGATORIA — sin ella
-  /// la compuerta quedaría abierta para siempre: lo vuelve INCONSTRUIBLE el CHECK de la migración.
-  vigenteHasta  DateTime?              @db.Timestamptz(6)
-  /// Modalidades que la autoridad habilita (lista). El motor evalúa `TELEMEDICINA IN modalidades`.
-  modalidades   ModalidadReps[]
-  /// SPEC-801 · Modalidades que llegaron del REPS y NO supimos traducir a ModalidadReps. Son valores CRUDOS
-  /// de la AUTORIDAD (string tal como vino), NO interpretación nuestra. La compuerta sigue NEGANDO ante una
-  /// no mapeada (fail-closed) y el motor deja su `warn`; esta columna NO reemplaza el log — lo hace
-  /// DESCUBRIBLE después: «¿qué modalidades sin traducir llegaron y a cuántos profesionales afectaron?»
-  /// (consulta en `modalidades-reps-no-mapeadas.ts`). GIN para poder agrupar/filtrar por el valor crudo.
-  modalidadesNoMapeadas String[]
-  /// El actor que registró el chequeo. FK nullable (API/archivo no tienen humano) + SetNull: se vacía al
-  /// borrar la cuenta. El rastro DURABLE no vive acá sino en verificadoPorSnapshot.
-  verificadoPorId       String?
-  /// Snapshot durable de quién verificó (email del admin, o «API»/«sistema»): es el registro de
-  /// responsabilidad — sobrevive al borrado de la cuenta, a diferencia del FK.
-  verificadoPorSnapshot String?
-  creadoEn      DateTime               @default(now()) @db.Timestamptz(6)
-
-  profesional   PerfilProfesional @relation(fields: [profesionalId], references: [id], onDelete: Restrict)
-  verificadoPor Usuario?          @relation("VerificacionesRepsRealizadas", fields: [verificadoPorId], references: [id], onDelete: SetNull)
-
-  // Consulta CALIENTE: «última verificación de este profesional», que corre en CADA compuerta (directorio,
-  // crear cita, reasignar, reprogramar, reubicación §4). Compuesto, NO parcial (no dejar al planner).
-  @@index([profesionalId, verificadoEn(sort: Desc)])
-  // SPEC-801 · GIN sobre la lista cruda: la consulta de descubrimiento agrupa/filtra por valor sin mapear.
-  @@index([modalidadesNoMapeadas], type: Gin)
 }
 
 // SPEC-436 (I-304) · los documentos que el profesional carga para que el

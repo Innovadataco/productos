@@ -32,32 +32,6 @@ import { idsPerfilesProfesionalesSembrados } from "../demo-exclusion";
 import { FranjaDisponibleRepository } from "./franja-disponible";
 import { verificacionVigente, type VerificacionResumenInput } from "@/lib/profesionales/vigencia";
 import { leerRangoEtario } from "@/lib/profesional/catalogos-lectura";
-import { type ConfigReps, type EstadoReps, type ModalidadReps } from "@/lib/profesional/reps/reps-elegibilidad";
-// SPEC-836 pieza 2: + clasificarAvisoRepsConModalidad / AvisoRepsConModalidad para el aviso del hueco de modalidad.
-import { clasificarAvisoReps, clasificarAvisoRepsConModalidad, zonaAdminReps, type ClasificacionAvisoReps, type AvisoRepsConModalidad, type ZonaAdminReps } from "@/lib/profesional/reps/aviso-estado-reps";
-// SPEC-825: la elegibilidad REPS por lote + su config viva viven en UN módulo compartido (sin ciclo con franja).
-import { idsRepsElegiblesLote, configRepsVivo } from "@/lib/profesional/reps/elegibilidad-reps-lote";
-
-/**
- * SPEC-790 (T6) · Fila de la pantalla admin de carga manual REPS: el profesional `ACTIVO` + su estado REPS
- * DERIVADO de la última fila (sin fila → `SIN_VERIFICAR`). Es solo-lectura; el estado NO decide el gate acá.
- */
-export interface RepsCargaItem {
-    id: string;
-    nombreVisible: string;
-    tituloProfesional: string;
-    estadoReps: EstadoReps;
-    /** De la última fila: ISO, o null (no aplica salvo VIGENTE). */
-    vigenteHasta: string | null;
-    /** Modalidades que cubrió la última carga (vacío si no VIGENTE o sin fila). */
-    modalidades: ModalidadReps[];
-    /** Cuándo se registró la última verificación (ISO), o null si nunca. */
-    verificadoEn: string | null;
-    /** SPEC-813 · clasificación para la alarma de admin: `REVISION_ADMIN` = estados 5/7/8 (van a admin). */
-    avisoReps: ClasificacionAvisoReps;
-    /** SPEC-813 §5-bis · zona de la alarma de admin: `REVISAR` (5+8) · `RE_VERIFICAR` (7) · `null` (no va a admin). */
-    zonaAdmin: ZonaAdminReps | null;
-}
 
 /** L1b (SPEC-391): perfil completo + ciudad para la vista propia del profesional.
  *  SPEC-434 (I-302): agregamos `paisId` — la pantalla de completar necesita
@@ -259,7 +233,6 @@ export class PerfilProfesionalRepository {
         return this.db.perfilProfesional.findUnique({
             where: { usuarioId },
             select: {
-                id: true, // SPEC-790: para derivar `repsAlDia` del mismo perfil sin una segunda lectura.
                 estado: true,
                 verificaciones: {
                     where: { resultado: "APROBADO" },
@@ -479,155 +452,15 @@ export class PerfilProfesionalRepository {
         return new Map(ops.map((o): [string, string] => [o.clave, o.nombre]));
     }
 
-    /** SPEC-790 · Config del gate REPS (parametrizable, fail-safe): ventana 365 d + cutover ABIERTO por defecto. */
-    private async configReps(): Promise<ConfigReps> {
-        // SPEC-825: fuente única — delega en el módulo de elegibilidad REPS por lote.
-        return configRepsVivo();
-    }
-
     /**
-     * SPEC-790 · REPS-elegibles entre `perfilIds`. Deriva el estado de la ÚLTIMA fila de `VerificacionReps`
-     * (orden `verificadoEn` desc; SIN fila → SIN_VERIFICAR) y aplica `repsElegible` (dos relojes + cutover).
-     * `modalidad=null` en el directorio: la vigencia es la compuerta; la modalidad se exige al RESERVAR.
-     * NO es una cláusula SQL: con SIN_VERIFICAR como universo y el cutover abierto, un `some(VIGENTE)`
-     * vaciaría el directorio — acá SIN_VERIFICAR PASA mientras el parámetro no exija el REPS. FK RESTRICT:
-     * la fila-prueba sobrevive a la baja del profesional, así que no asumimos que borrarlo la quita.
-     */
-    private async idsRepsElegibles(perfilIds: string[], ahora: Date, modalidad: ModalidadReps | null): Promise<Set<string>> {
-        // SPEC-825: fuente única — delega en `idsRepsElegiblesLote`. El último-por-grupo + `repsElegible` ya NO
-        // vive acá (lo comparten el directorio y las franjas sin ciclo). No reimplementar.
-        return idsRepsElegiblesLote(this.db, perfilIds, modalidad, ahora);
-    }
-
-    /**
-     * SPEC-790 (D-3/D-8) · «OFRECIBLE» — los profesionales que pueden OFRECERSE a las familias. Es el SEGUNDO
-     * trabajo que `habilitado` hacía mezclado, ahora nombrado: ofrecible = habilitación del directorio
-     * (vigencia autoritativa SPEC-690) **∧** `repsAlDia` (SPEC-790). NO es `habilitado` (que es «puede usar el
-     * área profesional» = ACTIVO ∧ verificación interna; el REPS NO lo toca, para no encerrar al profesional
-     * fuera de su propio panel — el aviso de «fuera de la oferta» usa `habilitado ∧ ¬repsAlDia`). Las CUATRO
-     * lecturas del directorio pasan por acá —reemplaza la llamada directa a `idsConVigenciaAutoritativa`— para
-     * heredar el gate sin enterarse. El REPS se evalúa SOLO sobre los que ya pasaron la vigencia interna.
+     * SPEC-790 (D-3/D-8) · «OFRECIBLE» — los profesionales que pueden OFRECERSE a las familias. Tras SPEC-852
+     * (eliminación de REPS) «ofrecible» == la habilitación del directorio: la vigencia AUTORITATIVA de la
+     * verificación INTERNA (SPEC-690). Las CUATRO lecturas del directorio pasan por acá para heredar el gate
+     * sin enterarse; se conserva como chokepoint NOMBRADO aunque hoy delegue directo (un gate nuevo del
+     * directorio se agrega acá, en un solo lugar).
      */
     private async idsOfrecibles(perfilIds: string[], ahora: Date): Promise<Set<string>> {
-        const vigentes = await this.idsConVigenciaAutoritativa(perfilIds, ahora);
-        if (vigentes.size === 0) return vigentes;
-        const repsOk = await this.idsRepsElegibles([...vigentes], ahora, null);
-        const out = new Set<string>();
-        for (const id of vigentes) if (repsOk.has(id)) out.add(id);
-        return out;
-    }
-
-    /**
-     * SPEC-790 · `repsAlDia` — la derivación REPS NOMBRADA y queryable para UN profesional (vigencia-only, sin
-     * modalidad). Es la mitad REPS de «ofrecible», extraída para que una PANTALLA pueda preguntarla (hoy la
-     * condición existía solo como efecto lateral del filtro del directorio). El aviso «seguís entrando pero
-     * estás fuera de la oferta» es `habilitado ∧ ¬repsAlDia`. Deriva de la ÚLTIMA fila; cutover-aware.
-     */
-    async repsAlDia(profesionalId: string, ahora: Date = new Date()): Promise<boolean> {
-        return (await this.idsRepsElegibles([profesionalId], ahora, null)).has(profesionalId);
-    }
-
-    /**
-     * SPEC-813 + SPEC-836 pieza 2 · Clasificación REPS del profesional para SU panel (aviso al profesional).
-     * `¬repsAlDia` funde cuatro causas; esto devuelve CUÁL — `CADUCADO` (aviso al profesional), `REVISION_ADMIN`
-     * (alarma de admin, no se muestra acá), `AL_DIA`/`SIN_VERIFICAR` (ni aviso ni alarma). SPEC-836: además,
-     * sobre un REPS vigente, detecta el HUECO DE MODALIDAD —una modalidad que el profesional OFRECE
-     * (`atiendeVirtual`/`atiendePresencial`) y su REPS no cubre— y devuelve `MODALIDAD_NO_CUBIERTA` + la lista.
-     * Por eso lee también las banderas de oferta del perfil, no solo la última fila REPS. La pantalla de carga
-     * del admin NO usa esto: usa `clasificarAvisoReps` (vigencia-only), porque el hueco de modalidad lo arregla
-     * el profesional, no el admin.
-     *
-     * SPEC-836 (expansión del CEO): REVISION_ADMIN ahora TAMBIÉN tiene banner al profesional («re-verificando,
-     * nada que hacer»). Pero REVISION_ADMIN funde estados 5/7/8 y esa copy —«su inscripción sigue al día»— solo
-     * es cierta en el 7 (nuestro re-chequeo envejeció, autoridad vigente). Para el 5 (NO_ENCONTRADA) MENTIRÍA.
-     * Por eso devuelve `esReVerificacion` (= zona RE_VERIFICAR, el estado 7): el panel solo muestra ese banner
-     * cuando es cierto. El 5/8 quedan sin banner al profesional (como hoy, admin-only). Ver nota al CEO.
-     */
-    async clasificarReps(
-        profesionalId: string,
-        ahora: Date = new Date(),
-    ): Promise<AvisoRepsConModalidad & { esReVerificacion: boolean; esNoConfirmada: boolean }> {
-        const config = await this.configReps();
-        const [fila, perfil] = await Promise.all([
-            this.db.verificacionReps.findFirst({
-                where: { profesionalId },
-                orderBy: { verificadoEn: "desc" },
-                select: { resultado: true, verificadoEn: true, vigenteHasta: true, modalidades: true },
-            }),
-            this.db.perfilProfesional.findUnique({
-                where: { id: profesionalId },
-                select: { atiendeVirtual: true, atiendePresencial: true },
-            }),
-        ]);
-        const aviso = clasificarAvisoRepsConModalidad(
-            fila,
-            { virtual: perfil?.atiendeVirtual ?? false, presencial: perfil?.atiendePresencial ?? false },
-            config,
-            ahora,
-        );
-        // El banner «re-verificando» (estado 7) solo es honesto en la zona RE_VERIFICAR: la autoridad sigue
-        // vigente y es NUESTRO chequeo el que envejeció. El 5 (NO_ENCONTRADA) también es REVISION_ADMIN pero
-        // su inscripción NO está «al día» → no mostrarle esa copy.
-        const esReVerificacion = zonaAdminReps(fila, config, ahora) === "RE_VERIFICAR";
-        // SPEC-836 (4ª variante) · estado 5: el REPS NO confirmó la inscripción (no la encontró). Es ambiguo
-        // (no inscrito / laguna nuestra) → su propio banner, que bifurca sin asignar causa. Específicamente
-        // NO_ENCONTRADA (no la zona REVISAR entera: el estado 8 es inconstruible y no lleva copy).
-        const esNoConfirmada = fila?.resultado === "NO_ENCONTRADA";
-        return { ...aviso, esReVerificacion, esNoConfirmada };
-    }
-
-    /**
-     * SPEC-790 (T4b) · ¿el profesional es REPS-elegible para ESTA modalidad, al RESERVAR? El directorio usa
-     * vigencia-only (modalidad=null); el booking exige que el REPS cubra la modalidad CONCRETA de la cita —
-     * una habilitación presencial no atiende una cita de telemedicina. Lo llama `crearSolicitudCita`.
-     */
-    async esRepsElegibleParaModalidad(profesionalId: string, modalidad: ModalidadReps, ahora: Date = new Date()): Promise<boolean> {
-        return (await this.idsRepsElegibles([profesionalId], ahora, modalidad)).has(profesionalId);
-    }
-
-    /**
-     * SPEC-790 (T6) · Lista para la PANTALLA de carga manual REPS (admin): los profesionales `ACTIVO` con el
-     * estado REPS DERIVADO de su ÚLTIMA fila (orden `verificadoEn` desc; SIN fila → `SIN_VERIFICAR`, el default
-     * de hoy — el caso NORMAL mientras nadie cargó nada). NO cachea el estado en una columna (se deriva, igual
-     * que el gate). Es SOLO-LECTURA para la pantalla: el estado NO decide el gate acá (lo decide el directorio);
-     * se MUESTRA para que el admin sepa a quién le falta. Trae `vigenteHasta`/`modalidades`/`verificadoEn` de la
-     * última fila para el detalle, sin una segunda lectura. Mismo patrón «última fila» que `idsRepsElegibles`.
-     */
-    async listarParaCargaReps(ahora: Date = new Date()): Promise<RepsCargaItem[]> {
-        const config = await this.configReps(); // SPEC-813: para clasificar cada profesional (dos relojes + cutover).
-        const profesionales = await this.db.perfilProfesional.findMany({
-            // ACTIVO-NO-DIRECTORIO (T6): esta lista NO es el directorio público. El estado NO decide el gate acá
-            // (la pantalla es solo-lectura). DEBE incluir a los de REPS VENCIDO —son justo los que el admin abre
-            // para cargarles la verificación—; pasar por `whereDirectorioPublico` (suma vigencia+exclusión+REPS)
-            // los filtraría y haría la pantalla circular: no podría arreglarse un REPS vencido desde la pantalla
-            // que lo arregla. Por eso el predicado va a mano acá, fuera del builder, declarado.
-            where: { estado: "ACTIVO" },
-            select: { id: true, nombreVisible: true, tituloProfesional: true },
-            orderBy: { nombreVisible: "asc" },
-        });
-        if (profesionales.length === 0) return [];
-        const filas = await this.db.verificacionReps.findMany({
-            where: { profesionalId: { in: profesionales.map((p) => p.id) } },
-            orderBy: { verificadoEn: "desc" },
-            select: { profesionalId: true, resultado: true, vigenteHasta: true, modalidades: true, verificadoEn: true },
-        });
-        const ultima = new Map<string, (typeof filas)[number]>();
-        // Primera que aparece por profesional = la más reciente (orden desc), igual que `idsRepsElegibles`.
-        for (const f of filas) if (!ultima.has(f.profesionalId)) ultima.set(f.profesionalId, f);
-        return profesionales.map((p) => {
-            const u = ultima.get(p.id);
-            return {
-                id: p.id,
-                nombreVisible: p.nombreVisible,
-                tituloProfesional: p.tituloProfesional,
-                estadoReps: u?.resultado ?? "SIN_VERIFICAR",
-                vigenteHasta: u?.vigenteHasta?.toISOString() ?? null,
-                modalidades: u?.modalidades ?? [],
-                verificadoEn: u?.verificadoEn?.toISOString() ?? null,
-                avisoReps: clasificarAvisoReps(u ?? null, config, ahora),
-                zonaAdmin: zonaAdminReps(u ?? null, config, ahora),
-            };
-        });
+        return this.idsConVigenciaAutoritativa(perfilIds, ahora);
     }
 
     /**

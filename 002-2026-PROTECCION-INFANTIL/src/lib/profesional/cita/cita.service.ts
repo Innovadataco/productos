@@ -22,7 +22,6 @@ import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
 import { asignarOperadorACita } from "@/lib/operadores/asignador-citas";
 import { FranjaDisponibleRepository } from "@/lib/dal/repositories/franja-disponible";
 import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
-import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
 import { getParametroSistemaValor } from "@/lib/parametros";
 
 const HORAS_48_MS = 48 * 60 * 60 * 1000;
@@ -99,19 +98,6 @@ export async function crearSolicitudCita(input: CrearCitaInput) {
         (franja.modalidad === "PRESENCIAL" && !pro.atiendePresencial)
     ) {
         throw new AppError("Esta franja ya no está disponible", ERROR_CODES.CONFLICT, 409);
-    }
-
-    // SPEC-790 (T4b): el directorio gatea por vigencia REPS (modalidad=null); al RESERVAR, el REPS debe
-    // cubrir la MODALIDAD CONCRETA de la cita (la de la franja) — una habilitación presencial no atiende
-    // una cita de telemedicina. El mapeo cita→REPS vive en `modalidadRepsRequerida`; un valor sin mapeo
-    // NIEGA (fail-closed) y queda registrado. Reutiliza el mensaje de «no disponible» (sin copy nueva).
-    const modalidadReps = modalidadRepsRequerida(franja.modalidad);
-    if (modalidadReps === null || !(await perfilRepo.esRepsElegibleParaModalidad(input.profesionalId, modalidadReps))) {
-        throw new AppError(
-            "Este profesional no está disponible o no acepta nuevas citas",
-            ERROR_CODES.VALIDATION_ERROR,
-            400
-        );
     }
 
     const plazoHoras = input.plazoPagoHoras ?? PLAZO_PAGO_HORAS_DEFAULT;
@@ -399,9 +385,8 @@ export interface ReubicarInput {
  * FILA NUEVA con historial (no swap in-place): la cita origen queda REUBICADA (terminal, con la prueba
  * durable reubicadaEn/Por/EnId), y la familia obtiene una cita nueva con B. Se reusa `crearSolicitudCita`
  * para la fila nueva —NO se reimplementa—, y con eso la reubicación HEREDA exactamente el gate de la
- * reserva: `obtenerPublicoPorId` (B ofrecible) + **REPS POR MODALIDAD** (`esRepsElegibleParaModalidad`, la
- * corrección 2 de Datos) + la franja de B libre y SUYA (invariante a). Así nunca se propone un destino que
- * la reserva rechazaría. No agrega un consumidor nuevo del par REPS: pasa por el existente.
+ * reserva: `obtenerPublicoPorId` (B ofrecible) + la franja de B libre y SUYA (invariante a). Así nunca se
+ * propone un destino que la reserva rechazaría.
  *
  * Estado de la fila nueva = PAGADA_PENDIENTE (hereda el pago; veredicto CEO 832): B puede RECHAZAR —si lo
  * hace, el sistema libera la franja y el padre reasigna gratis, un camino ya diseñado—; dejarla CONFIRMADA
@@ -424,7 +409,7 @@ export async function reubicarCitaPorAdmin(input: ReubicarInput) {
         throw new AppError("Elija OTRO profesional para reubicar", ERROR_CODES.VALIDATION_ERROR, 400);
     }
 
-    // Fila nueva con B. `crearSolicitudCita` valida B ofrecible + REPS por modalidad + franja libre/suya, toma
+    // Fila nueva con B. `crearSolicitudCita` valida B ofrecible + franja libre/suya, toma
     // la franja y hereda el pago (→ PAGADA_PENDIENTE, reloj de 48 h). El visor es el padre de la cita.
     const nueva = await crearSolicitudCita({
         padreUsuarioId: original.padreUsuarioId,
