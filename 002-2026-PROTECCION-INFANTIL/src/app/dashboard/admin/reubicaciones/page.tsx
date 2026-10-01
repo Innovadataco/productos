@@ -1,24 +1,27 @@
 import { redirect } from "next/navigation";
 import { verificarAccesoPagina } from "@/lib/permisos-modulos";
-import { citasPorReubicar, type CitaPorReubicar } from "@/lib/profesional/cita/reubicacion-cola";
 import { COPY_MOTIVO_REUBICACION } from "@/lib/profesional/cita/reubicacion-motivo-copy";
+import { datosPantallaReubicacion, type CitaConCandidatos } from "@/lib/profesional/cita/reubicacion-pantalla";
+import { ReubicarAccion, type CandidatoVista } from "@/components/modules/admin/ReubicarAccion";
 
 /**
- * SPEC-814 (T7 de 790) · La COLA «Citas en espera de reubicación» — la cara PRINCIPAL de la pantalla
- * de reubicación (la mediana de candidatos medida en prod es 0: lo común es que una cita confirmada de
- * un profesional inactivo NO tenga a quién ir). Interno, voz USTED, ámbar (hay trabajo; no es alarma
- * roja). [NORMA] Res. 3100 art. 19/8.5.
+ * SPEC-814/832 (T7 de 790) · La pantalla «Citas en espera de reubicación». La COLA es la cara PRINCIPAL
+ * (la mediana de candidatos medida en prod es 0: lo común es que una cita confirmada de un profesional
+ * inhabilitado NO tenga a quién ir). Interno, voz USTED, ámbar (hay trabajo; no es alarma roja). [NORMA]
+ * Res. 3100 art. 19/8.5.
  *
- * NO hay control de CANCELAR en ningún estado (contrato de la forma: continuidad es reubicar, no
- * cancelar). El DTO ya viene minimizado del servicio (sin relato ni PII de la familia).
+ * COMPUERTA por rol EN LA PÁGINA (servidor), no en el menú: esconder o mostrar el ítem no es el muro.
+ * NO hay control de CANCELAR en ningún estado (contrato de la forma). El DTO viene minimizado del servicio.
  *
- * PENDIENTE (declarado, no inventado):
- *  · El «a QUIÉN va» (candidatos §1-bis: comparte / no cubre, acción «Reasignar a {B}») se cabla sobre
- *    el matcher SPEC-832 (detrás de 825). Hasta entonces la pantalla es la COLA, que es justamente la
- *    cara principal.
- *  · El copy de los dos motivos vive en `reubicacion-motivo-copy.ts` (FORMA v1.5 §1-ter): leen
- *    DISTINTO a propósito (acción distinta), y un candado impide que se «unifiquen».
+ * SPEC-832 pieza 2: ya cablea el «a QUIÉN va» (candidatos §1-bis + «Reasignar a {B}», `ReubicarAccion`).
+ * Cuando una cita NO tiene candidatos —el caso mayoritario— muestra el estado §2 con su salida (seguir en
+ * la cola, que re-calza sola), nunca un vacío mudo.
  */
+
+// Copy de Diseño (FORMA v1.4 §2, commit dfcc2f4). «disponible» cubre el motivo real (el turno publicado),
+// no afirma escasez; esa línea «no se toca» (verificada por el CEO).
+const COPY_SIN_CANDIDATO =
+    "No hay un profesional habilitado disponible para esta cita todavía. No se puede reasignar automáticamente — esta cita no se cancela.";
 
 const fechaBogota = new Intl.DateTimeFormat("es-CO", {
     timeZone: "America/Bogota",
@@ -28,20 +31,27 @@ const fechaBogota = new Intl.DateTimeFormat("es-CO", {
     hour: "2-digit",
     minute: "2-digit",
 });
+const horaBogota = new Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit" });
 
 function franjaLegible(inicio: Date, fin: Date): string {
-    const horaFin = new Intl.DateTimeFormat("es-CO", {
-        timeZone: "America/Bogota",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(fin);
-    return `${fechaBogota.format(inicio)} – ${horaFin}`;
+    return `${fechaBogota.format(inicio)} – ${horaBogota.format(fin)}`;
 }
 
-function TarjetaCita({ fila }: { fila: CitaPorReubicar }) {
+/** Los candidatos del read-model, con los turnos ya ETIQUETADOS en servidor (Date no cruza bien el borde RSC). */
+function aVistaCliente(fila: CitaConCandidatos): CandidatoVista[] {
+    return fila.candidatos.map((c) => ({
+        profesionalId: c.profesionalId,
+        nombreVisible: c.nombreVisible,
+        especialidadesCompartidas: c.especialidadesCompartidas,
+        especialidadesNoCubiertas: c.especialidadesNoCubiertas,
+        turnos: c.turnos.map((t) => ({ id: t.id, etiqueta: franjaLegible(t.inicio, t.fin) })),
+    }));
+}
+
+function TarjetaCita({ fila }: { fila: CitaConCandidatos }) {
     const motivo = COPY_MOTIVO_REUBICACION[fila.deQuienSale.motivoCodigo];
-    // Caja de atención ÁMBAR del Sistema de Diseño (token `ambar` + texto `text-estado-ambar`, el
-    // único ámbar AA como texto); nunca crudo de Tailwind (candado SPEC-483).
+    const candidatos = aVistaCliente(fila);
+    // Caja de atención ÁMBAR del Sistema de Diseño (token `ambar` + `text-estado-ambar`); nunca crudo (SPEC-483).
     return (
         <li className="rounded-xl border border-ambar/30 bg-ambar/10 p-4 text-estado-ambar">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -69,9 +79,13 @@ function TarjetaCita({ fila }: { fila: CitaPorReubicar }) {
                     </div>
                 ) : null}
             </dl>
-            {/* SPEC-832: acá va el «a quién va» (candidatos que comparten/ no cubren + «Reasignar a {B}»)
-                o el estado «sin candidato disponible» (FORMA §2). Se cabla sobre el matcher. NUNCA un
-                control de cancelar. */}
+            {candidatos.length > 0 ? (
+                <ReubicarAccion citaId={fila.citaId} nombreSaliente={fila.deQuienSale.nombre} candidatos={candidatos} />
+            ) : (
+                // Estado §2 — camino PRINCIPAL (mediana 0). Con salida: la cita sigue en la cola, que re-calza
+                // sola cuando se publique un turno. No es un vacío mudo, y nunca «cancelar».
+                <p className="mt-3 border-t border-ambar/30 pt-3 text-sm font-medium">{COPY_SIN_CANDIDATO}</p>
+            )}
         </li>
     );
 }
@@ -81,7 +95,7 @@ export default async function ReubicacionesPage() {
     if (!acceso.permitido || acceso.rol !== "ADMIN") {
         redirect(acceso.rol === "COMITE_VALIDACION" ? "/dashboard/admin/comite" : "/dashboard/admin/bandeja");
     }
-    const cola = await citasPorReubicar();
+    const cola = await datosPantallaReubicacion();
 
     return (
         <section className="mx-auto max-w-3xl">
@@ -92,7 +106,7 @@ export default async function ReubicacionesPage() {
             ) : (
                 <ul className="mt-4 space-y-3">
                     {cola.map((fila) => (
-                        <TarjetaCita key={fila.citaRef} fila={fila} />
+                        <TarjetaCita key={fila.citaId} fila={fila} />
                     ))}
                 </ul>
             )}
