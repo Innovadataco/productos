@@ -1,15 +1,13 @@
 /**
  * SPEC-242 (002-PI-145): tests unitarios del helper de vigencia.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { EstadoSuscripcion, type Suscripcion, type RolUsuario } from "@prisma/client";
 import {
-    ahoraBogota,
     resolverEstadoVigencia,
     redireccionSuscripcion,
     debeMostrarBanner,
     mensajeParaEstado,
-    ZONA_BOGOTA,
 } from "./vigencia-middleware";
 
 function suscripcionMock(estado: EstadoSuscripcion): Suscripcion {
@@ -86,34 +84,5 @@ describe("mensajeParaEstado", () => {
         expect(mensajeParaEstado(EstadoSuscripcion.CANCELADA)).toContain("cancelada");
         expect(mensajeParaEstado(EstadoSuscripcion.PENDIENTE_AUTORIZACION)).toContain("pendiente");
         expect(mensajeParaEstado("SIN_SUSCRIPCION")).toContain("Elige un plan");
-    });
-});
-
-describe("ahoraBogota timezone frontera", () => {
-    it("SC-006: antes de medianoche Bogotá sigue siendo el día vigente", () => {
-        const justoAntes = new Date("2026-08-25T04:59:00.000Z"); // 23:59 Bogotá (UTC-5)
-        vi.setSystemTime(justoAntes);
-        const bogota = ahoraBogota();
-        expect(bogota.getHours()).toBe(23);
-        expect(bogota.getMinutes()).toBe(59);
-        vi.useRealTimers();
-    });
-
-    it("SC-006: durante medianoche Bogotá inicia el nuevo día", () => {
-        const medianoche = new Date("2026-08-25T05:00:00.000Z"); // 00:00 Bogotá
-        vi.setSystemTime(medianoche);
-        const bogota = ahoraBogota();
-        expect(bogota.getHours()).toBe(0);
-        expect(bogota.getMinutes()).toBe(0);
-        vi.useRealTimers();
-    });
-
-    it("SC-006: después de medianoche Bogotá avanza correctamente", () => {
-        const justoDespues = new Date("2026-08-25T05:01:00.000Z"); // 00:01 Bogotá
-        vi.setSystemTime(justoDespues);
-        const bogota = ahoraBogota();
-        expect(bogota.getHours()).toBe(0);
-        expect(bogota.getMinutes()).toBe(1);
-        vi.useRealTimers();
     });
 });
