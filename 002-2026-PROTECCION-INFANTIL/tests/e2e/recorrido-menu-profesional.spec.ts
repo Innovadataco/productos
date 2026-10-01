@@ -30,7 +30,6 @@ import { randomBytes, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { PROFESIONAL_NAV_ITEMS } from "@/lib/nav-items";
 import type { RolUsuario } from "@prisma/client";
 import { crearProfesionalVisible, limpiarProfesionalVisible, type ProfesionalVisible } from "./fixtures/profesional-visible";
 
@@ -42,14 +41,6 @@ const EMAIL_PROF = `${CORRIDA}-prof@proteccion.local`;
 // para quien llega al panel → el titular habilita a EMAIL_PROF por el flujo real,
 // y EMAIL_BORRADOR queda en BORRADOR para el candado INVERSO (conducta: redirige).
 const EMAIL_BORRADOR = `${CORRIDA}-borrador@proteccion.local`;
-
-/**
- * Los ítems de la barra lateral vienen de la FUENTE ÚNICA
- * `PROFESIONAL_NAV_ITEMS` (`src/lib/nav-items.ts`), que SPEC-437 (#359)
- * construyó. Importarla en vez de hardcodear evita que el spec se
- * desincronice: si Dev agrega/quita un ítem, el candado lo prueba solo.
- */
-const ITEMS_LATERAL = PROFESIONAL_NAV_ITEMS;
 
 /** Ítems que NUNCA deben aparecer — son de otros roles (I-299 reforzada). */
 const ITEMS_AJENOS = [
@@ -163,73 +154,46 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
         await limpiarSembrados();
     });
 
-    // PENDIENTE CONTRATO DE DISEÑO (forma = autoridad de Diseño, vía CEO). Al onboardear
-    // al profesional (ahora llega al panel) se destapó que la barra es CONDICIONAL y la
-    // lista de nav cambió desde SPEC-437: medido en vivo, un habilitado pinta Inicio·Casos·
-    // Mi ficha, pero NO Calendario (su módulo `profesional_calendario` SÍ está concedido al
-    // rol) ni «Mi perfil» (comparte `profesional_ficha` con «Mi ficha», que sí pinta). Afirmar
-    // «los 6 ítems» ya no refleja el producto; el contrato correcto (qué ítem se ve y cuándo)
-    // lo define Diseño. No lo fuerzo a verde sobre una observación empírica (podría consagrar
-    // un defecto). El candado de CONDUCTA de la compuerta vive en (D).
-    test.fixme("(A) la barra lateral pinta los 6 ítems concedibles del profesional", async () => {
-
+    /**
+     * (A · CONTRATO DE DISEÑO) FORMA-CONTRATO-BARRA-LATERAL-PROFESIONAL v1.0: el discriminador
+     * es el ESTADO `habilitado`, NO el módulo. Un VERIFICADO (habilitado) ve «Mi perfil» (su
+     * autoedición), «Calendario» (aunque NO tenga franjas), «Casos» e «Inicio» — y NUNCA
+     * «Mi ficha» (esa es la del portero, misma superficie `profesional_ficha` pero otra cara).
+     *
+     * `test.fail`: HOY falla porque la barra se pinta por MÓDULO (comparten `profesional_ficha`
+     * → pinta la fija «Mi ficha»; `profesional_calendario` no pinta) en vez de por estado
+     * (`menu-por-estado`, SPEC-691). Esa COSTURA (dos mecanismos de pintado) la radica el CEO
+     * para un Dev; cuando el pintor honre el estado, este test PASA → unexpected-pass → se quita
+     * el `test.fail`. El candado afirma el CONTRATO; su rojo de hoy ES el hallazgo, no un bug del test.
+     */
+    test.fail("(A · contrato) el VERIFICADO ve «Mi perfil»+«Calendario»+«Casos»+«Inicio», NUNCA «Mi ficha»", async () => {
         const request = await ctx();
         try {
             await login(request, EMAIL_PROF);
             const html = await htmlPanel(request, UA_DESKTOP);
-            // Cada label del menú debe aparecer en el HTML del panel.
-            for (const item of ITEMS_LATERAL) {
-                expect(
-                    html.includes(item.label),
-                    `barra lateral debe pintar '${item.label}' (href esperado ${item.href}). HTML sin ese label significa que #359 aún no lo cablea.`,
-                ).toBe(true);
+            for (const label of ["Inicio", "Casos", "Calendario", "Mi perfil"]) {
+                expect(html.includes(label), `el verificado debe ver '${label}' por estado habilitado (contrato Diseño)`).toBe(true);
             }
-            // Y ningún href debe apuntar a una pantalla inexistente: cada
-            // href del menú debe tener page.tsx real que responda distinto de 404.
-            for (const item of ITEMS_LATERAL) {
-                const res = await request.get(item.href, { maxRedirects: 0 });
-                expect(
-                    res.status() !== 404,
-                    `href '${item.href}' del ítem '${item.label}' NO puede ser 404 — sería un enlace a pantalla inexistente. status=${res.status()}`,
-                ).toBe(true);
-            }
+            expect(html.includes("Mi ficha"), "el verificado NO ve «Mi ficha» (es la cara del portero)").toBe(false);
         } finally {
             await request.dispose();
         }
     });
 
-    // PENDIENTE CONTRATO DE DISEÑO (igual que (A)): la lista de ítems que el móvil debe
-    // listar depende del contrato de barra condicional que define Diseño. El retorno al panel
-    // sí es conducta verificable, pero se re-arma junto con (A) cuando llegue el contrato.
-    test.fixme("(B) el menú móvil da los mismos accesos y permite volver al panel", async () => {
-
+    /**
+     * (B · CONTRATO) «Mi ficha» y «Mi perfil» son estado-EXCLUSIVAS (Diseño): en ningún estado
+     * se ven las dos a la vez. La costura pinta la que NO toca por estado (lo vigila (A)); que
+     * se vean las DOS sería un defecto peor y distinto — este candado lo cierra.
+     */
+    test("(B · contrato) nunca «Mi ficha» y «Mi perfil» a la vez (excluyentes por estado)", async () => {
         const request = await ctx();
         try {
             await login(request, EMAIL_PROF);
-            const html = await htmlPanel(request, UA_MOBILE);
-            // El HTML server-side es el mismo bajo desktop y móvil (Next.js);
-            // las diferencias se dan por CSS media queries. El candado es
-            // ESTRUCTURAL: en el HTML aparecen los 6 ítems Y hay marcadores
-            // del componente móvil (típicamente hamburger + drawer + link al
-            // panel para volver).
-            for (const item of ITEMS_LATERAL) {
-                expect(
-                    html.includes(item.label),
-                    `menú móvil debe listar '${item.label}' (mismo que desktop). HTML sin ese label = móvil no lo cablea.`,
-                ).toBe(true);
-            }
-            // Marcador del retorno al panel — un link a `/dashboard/profesional`
-            // o un botón con label "Panel" / "Volver al panel" / similar debe
-            // existir en el HTML móvil (hueco que Dev 02 cazó: sin él, el
-            // psicólogo queda encerrado en la subruta).
-            const marcadorRetorno =
-                html.includes("Volver al panel") ||
-                html.includes("Panel") ||
-                /href="\/dashboard\/profesional"[^/]/i.test(html);
+            const html = await htmlPanel(request, UA_DESKTOP);
             expect(
-                marcadorRetorno,
-                "menú móvil debe tener un retorno al panel (label 'Panel'/'Volver al panel' o link a /dashboard/profesional). Sin él, el psicólogo queda encerrado.",
-            ).toBe(true);
+                html.includes("Mi ficha") && html.includes("Mi perfil"),
+                "«Mi ficha» y «Mi perfil» son caras excluyentes por estado — nunca juntas",
+            ).toBe(false);
         } finally {
             await request.dispose();
         }
@@ -264,7 +228,7 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
      * ausencia de un label — si alguien quita la compuerta, el BORRADOR se quedaría en el
      * panel y este candado cae. Control positivo: sin el redirect, `res.url()` sería el panel.
      */
-    test("(D · inverso) el profesional en BORRADOR es redirigido al onboarding, NO al panel", async () => {
+    test("(D · inverso + compuerta de servidor) el BORRADOR es redirigido; la compuerta vive en el servidor", async () => {
         const request = await ctx();
         try {
             await login(request, EMAIL_BORRADOR);
@@ -275,9 +239,20 @@ test.describe.serial("Menú del profesional — barra lateral + móvil (SPEC-437
                 res.url(),
                 "un profesional NO habilitado debe ser redirigido a /perfil-profesional/completar (compuerta SPEC-691)",
             ).toContain("/perfil-profesional/completar");
-            // Y por estar en el onboarding, NO ve el ítem más distintivo de la barra.
+            // Nada operativo para el portero (contrato Diseño): ni Casos, ni Calendario, ni Mi perfil.
             const html = await res.text();
-            expect(html.includes("Citaciones"), "el BORRADOR no ve la barra del panel").toBe(false);
+            for (const op of ["Casos", "Calendario", "Mi perfil"]) {
+                expect(html.includes(op), `el portero NO ve '${op}' (nada operativo, contrato Diseño)`).toBe(false);
+            }
+            // La compuerta es del SERVIDOR, no del menú (dev-esconder-menu-no-cierra-pantalla):
+            // navegar DIRECTO a una pantalla operativa también lo bloquea — no se queda en ella.
+            for (const ruta of ["/dashboard/profesional/calendario", "/dashboard/profesional/mi-perfil"]) {
+                const r = await request.get(ruta, { headers: { "user-agent": UA_DESKTOP } });
+                expect(
+                    r.url(),
+                    `el portero que navega directo a ${ruta} debe ser bloqueado por el servidor (no quedarse en la pantalla)`,
+                ).not.toContain(ruta);
+            }
         } finally {
             await request.dispose();
         }
