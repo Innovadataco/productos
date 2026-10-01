@@ -304,16 +304,22 @@ export function ReporteWizard({
         return <ConfirmacionReporte numeroSeguimiento={resultado.numeroSeguimiento} />;
     }
 
-    // SPEC-323 (T007/US1): tarjeta de oferta de vinculación.
+    // SPEC-323 (T007/US1) · SPEC-808 (FORMA-SPEC808): el duplicado NO acusa — enuncia el estado
+    // («ya tienes un reporte»), no el acto repetido — y ofrece TRES salidas verificadas, no un
+    // callejón. El sistema es dueño del hecho (un caso por cuenta cada 30 días); el padre está
+    // cubierto, no reprochado. Voz tú; «cuenta», no «identificador». Las tres salidas existen y
+    // llevan a pantalla real: sumar = la vinculación de SPEC-323; «Ver mi reporte» =
+    // /dashboard/mis-reportes/{id} (owner-gated, muestra ESE reporte, que es suyo); «Listo» =
+    // /mis-reportes (su lista), NO de vuelta al wizard con la misma cuenta (eso re-disparaba el bloqueo).
     if (oferta) {
         return (
             <div className="mx-auto max-w-xl rounded-2xl border border-ambar/30 bg-ambar/10 p-8 text-center">
                 <p className="text-lg font-semibold text-tinta">
-                    Ya reportaste este identificador recientemente
+                    Ya tienes un reporte sobre esta cuenta
                 </p>
                 <p className="mt-2 text-sm text-tinta/80">
-                    <span className="font-mono font-bold">{oferta.identificador}</span> ya tiene un reporte tuyo en el sistema.
-                    ¿Quieres agregar otro evento al mismo caso?
+                    Reportaste <span className="font-mono font-bold">{oferta.identificador}</span> hace poco y ya está
+                    en el sistema — no necesitas empezar de nuevo. Si viste algo nuevo, puedes sumarlo al mismo reporte.
                 </p>
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <Button
@@ -324,17 +330,20 @@ export function ReporteWizard({
                             setOferta(null);
                         }}
                     >
-                        Sí, agregar otro evento
+                        Sumar algo nuevo a este reporte
                     </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() => {
-                            setOferta(null);
-                            setError("");
-                        }}
+                    <a
+                        href={`/dashboard/mis-reportes/${oferta.reporteExistenteId}`}
+                        className="inline-flex items-center justify-center rounded-full border border-tinta/20 px-5 py-2 text-sm font-semibold text-tinta transition hover:bg-tinta/5"
                     >
-                        Cancelar
-                    </Button>
+                        Ver mi reporte
+                    </a>
+                    <a
+                        href="/mis-reportes"
+                        className="inline-flex items-center justify-center px-5 py-2 text-sm font-medium text-tinta/70 transition hover:text-tinta"
+                    >
+                        Listo
+                    </a>
                 </div>
             </div>
         );
