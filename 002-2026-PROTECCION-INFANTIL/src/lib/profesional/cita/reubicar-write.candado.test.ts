@@ -5,7 +5,8 @@
  *  (b) `franja.tomada` coincide con una solicitud ACTIVA — la de A queda LIBRE (su cita pasó a REUBICADA,
  *      terminal), la de B queda TOMADA (la cita nueva, activa).
  * Más la forma de la reubicación: fila nueva PAGADA_PENDIENTE que hereda el pago, origen → REUBICADA con la
- * prueba durable, y la corrección 2 (REPS por modalidad: no se propone un destino que la reserva rechaza).
+ * prueba durable, y la ATOMICIDAD: si el destino ya no es válido, el write RECHAZA sin tocar el origen.
+ * (SPEC-852 eliminó el eje REPS; el destino sigue validándose por `crearSolicitudCita`.)
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
@@ -16,7 +17,7 @@ import { reubicarCitaPorAdmin } from "./cita.service";
 const DIA = 24 * 60 * 60 * 1000;
 let bogotaId: string;
 
-async function seedPro(opts: { nombre: string; repsModalidades?: ("PRESENCIAL" | "TELEMEDICINA")[] }) {
+async function seedPro(opts: { nombre: string }) {
     const usuario = await crearUsuario("PROFESIONAL");
     const perfil = await prisma.perfilProfesional.create({
         data: {
@@ -46,18 +47,6 @@ async function seedPro(opts: { nombre: string; repsModalidades?: ("PRESENCIAL" |
             venceEn: new Date(Date.now() + 90 * DIA),
         },
     });
-    if (opts.repsModalidades) {
-        await prisma.verificacionReps.create({
-            data: {
-                profesionalId: perfil.id,
-                verificadoEn: new Date(Date.now() - 2 * DIA),
-                fuente: "MANUAL_ADMIN",
-                resultado: "VIGENTE",
-                vigenteHasta: new Date(Date.now() + 180 * DIA),
-                modalidades: opts.repsModalidades,
-            },
-        });
-    }
     return perfil;
 }
 
@@ -90,14 +79,14 @@ async function seedCitaConfirmada(profesionalId: string, franjaId: string, padre
 }
 
 /** Escenario base: A con una cita CONFIRMADA (su franja tomada) + B ofrecible con una franja libre que solapa. */
-async function escenario(opts: { repsB?: ("PRESENCIAL" | "TELEMEDICINA")[]; modalidad?: "VIRTUAL" | "PRESENCIAL" } = {}) {
+async function escenario(opts: { modalidad?: "VIRTUAL" | "PRESENCIAL" } = {}) {
     const modalidad = opts.modalidad ?? "VIRTUAL";
     const padre = await crearUsuario("PARENT");
     const admin = await crearUsuario("ADMIN");
     const a = await seedPro({ nombre: "Prof. A (sale)" });
     const franjaA = await seedFranja(a.id, true, modalidad);
     const cita = await seedCitaConfirmada(a.id, franjaA.id, padre.id);
-    const b = await seedPro({ nombre: "Prof. B (entra)", ...(opts.repsB ? { repsModalidades: opts.repsB } : {}) });
+    const b = await seedPro({ nombre: "Prof. B (entra)" });
     const franjaB = await seedFranja(b.id, false, modalidad);
     return { padre, admin, a, franjaA, cita, b, franjaB };
 }
@@ -150,13 +139,15 @@ describe("SPEC-832 · write de reubicación · invariantes de calendario", { tim
         expect(nueva.solicitudPreviaId).toBe(e.cita.id);
     });
 
-    it("CORRECCIÓN 2 · reubicar a un B cuyo REPS NO cubre la modalidad → RECHAZA (no propone lo que la reserva rechaza)", async () => {
-        // B tiene REPS VIGENTE solo PRESENCIAL; la cita es VIRTUAL → el gate de `crearSolicitudCita` lo niega.
-        const e = await escenario({ repsB: ["PRESENCIAL"], modalidad: "VIRTUAL" });
+    it("ATOMICIDAD · si el destino ya no es válido (su franja fue tomada entre ver y confirmar) → RECHAZA y el origen NO se toca", async () => {
+        // La franja de B se tomó entre que el admin la vio y confirmó → `crearSolicitudCita` la rechaza ANTES
+        // de tocar el origen (orden deliberado: primero la fila nueva, el origen solo si B calza).
+        const e = await escenario();
+        await prisma.franjaDisponible.update({ where: { id: e.franjaB.id }, data: { tomada: true } });
         await expect(
             reubicarCitaPorAdmin({ adminId: e.admin.id, solicitudId: e.cita.id, nuevoProfesionalId: e.b.id, nuevaFranjaId: e.franjaB.id }),
         ).rejects.toThrow();
-        // Y el origen NO se tocó: sigue CONFIRMADA (no se reubicó a un destino inválido).
+        // Y el origen NO se tocó: sigue CONFIRMADA con su franja TOMADA (no se reubicó a un destino inválido).
         const origen = await prisma.solicitudCita.findUnique({ where: { id: e.cita.id } });
         expect(origen!.estado).toBe("CONFIRMADA");
         expect((await prisma.franjaDisponible.findUnique({ where: { id: e.franjaA.id } }))!.tomada).toBe(true);

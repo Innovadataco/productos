@@ -7,10 +7,6 @@
 import type { FranjaDisponible, ModalidadCita, Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { DbClient } from "../unit-of-work";
-// SPEC-825: la elegibilidad REPS vive en un módulo compartido (sin ciclo con perfil-profesional). El mapeo
-// modalidad-de-cita→eje-REPS (VIRTUAL→TELEMEDICINA, PRESENCIAL→PRESENCIAL) es su propia fuente única.
-import { idsRepsElegiblesLote } from "@/lib/profesional/reps/elegibilidad-reps-lote";
-import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
 
 /**
  * SPEC-818 · ÚNICA definición de «franja OFRECIBLE»: libre, futura, y cuya modalidad el perfil VIGENTE
@@ -54,60 +50,31 @@ export class FranjaDisponibleRepository {
         return this.db.franjaDisponible.findUnique({ where: { id } });
     }
 
-    /**
-     * SPEC-825 · la pieza que cierra la costura: candidatos por banderas (`whereFranjaOfrecible`) →
-     * intersección con el REPS-elegible POR MODALIDAD. El picker y el chip la COMPARTEN — ninguno decide
-     * ofrecible por su cuenta. Dos consultas por LOTE (no N+1): el set elegible por cada eje REPS.
-     *
-     * ⚠️ Siempre con la modalidad CONCRETA de la franja (nunca `null`): `null` = «elegible para ALGUNA
-     * modalidad», correcto para el DIRECTORIO pero el BUG a nivel de franja (un REPS-solo-PRESENCIAL se colaría
-     * con su franja virtual). El mapeo franja→eje-REPS es `modalidadRepsRequerida` (fuente única); sin mapeo →
-     * fail-closed (se excluye).
-     */
-    private async filtrarRepsElegibles<T extends { profesionalId: string; modalidad: string }>(
-        franjas: T[],
-        ahora: Date,
-    ): Promise<T[]> {
-        if (franjas.length === 0) return franjas;
-        const perfilIds = [...new Set(franjas.map((f) => f.profesionalId))];
-        const [elegiblesTelemedicina, elegiblesPresencial] = await Promise.all([
-            idsRepsElegiblesLote(this.db, perfilIds, "TELEMEDICINA", ahora),
-            idsRepsElegiblesLote(this.db, perfilIds, "PRESENCIAL", ahora),
-        ]);
-        return franjas.filter((f) => {
-            const reps = modalidadRepsRequerida(f.modalidad);
-            if (reps === null) return false; // modalidad sin mapeo al eje REPS → no se ofrece (fail-closed)
-            return (reps === "TELEMEDICINA" ? elegiblesTelemedicina : elegiblesPresencial).has(f.profesionalId);
-        });
-    }
-
-    // SPEC-818 · CHOKEPOINT: el padre solo ve lo OFRECIBLE. SPEC-825: «ofrecible» = banderas ∧ REPS-por-modalidad
-    // (la reserva exige lo mismo; antes el display miraba solo banderas y dejaba un callejón sin salida).
+    // SPEC-818 · CHOKEPOINT: el padre solo ve lo OFRECIBLE = libre, futura y de una modalidad que el perfil
+    // VIGENTE atiende (`whereFranjaOfrecible`, cruzada por la relación). El chip del directorio comparte la
+    // misma definición (SPEC-852 retiró la mitad REPS; la verificación interna gatea al nivel del perfil).
     async listarLibresDeProfesional(profesionalId: string, desde: Date) {
-        const candidatas = await this.db.franjaDisponible.findMany({
+        return this.db.franjaDisponible.findMany({
             where: { profesionalId, ...whereFranjaOfrecible(desde) },
             orderBy: { inicio: "asc" },
             take: 60,
         });
-        return this.filtrarRepsElegibles(candidatas, desde);
     }
 
     /**
      * SPEC-818 · ¿cuáles de `perfilIds` tienen ≥1 franja OFRECIBLE? MISMA definición que
      * `listarLibresDeProfesional` (el chip del directorio pregunta «¿devuelve ≥1?», no reimplementa el
-     * criterio): ambos pasan por `whereFranjaOfrecible` + `filtrarRepsElegibles`. El chip no puede decir «tiene
-     * horarios» mientras la pantalla de reserva muestra nada. SPEC-825: se trae la `modalidad` para poder
-     * aplicar el REPS por modalidad.
+     * criterio): ambos pasan por `whereFranjaOfrecible`. El chip no puede decir «tiene horarios» mientras la
+     * pantalla de reserva no muestra nada.
      */
     async idsConHorariosDisponibles(perfilIds: string[], desde: Date): Promise<Set<string>> {
         if (perfilIds.length === 0) return new Set();
         const candidatas = await this.db.franjaDisponible.findMany({
             where: { profesionalId: { in: perfilIds }, ...whereFranjaOfrecible(desde) },
-            select: { profesionalId: true, modalidad: true },
-            distinct: ["profesionalId", "modalidad"],
+            select: { profesionalId: true },
+            distinct: ["profesionalId"],
         });
-        const elegibles = await this.filtrarRepsElegibles(candidatas, desde);
-        return new Set(elegibles.map((f) => f.profesionalId));
+        return new Set(candidatas.map((f) => f.profesionalId));
     }
 
     listarDeProfesional(profesionalId: string) {
@@ -167,13 +134,12 @@ export class FranjaDisponibleRepository {
 
     /**
      * SPEC-832 (T7 de 790) · EL CUELLO de la reubicación: profesionales (≠ `excluirProfesionalId`) con una
-     * franja OFRECIBLE que SOLAPA `[inicio, fin)`. «Ofrecible» = la MISMA definición de dos etapas que usa el
-     * padre: `whereFranjaOfrecible` (libre · FUTURA · modalidad que el perfil atiende) ∩ `filtrarRepsElegibles`
-     * (REPS al día POR MODALIDAD, vía `idsRepsElegiblesLote`, la fuente única). No reimplementa el criterio: un
-     * destino que la reserva rechazaría no puede proponerse acá. La cota de futuro (`inicio >= ahora`) viene de
-     * `whereFranjaOfrecible` — antes este método la omitía (hallazgo de Datos: sobre una cita pasada devolvía
-     * franjas pasadas). El solape usa el fragmento compartido `whereSolapa`. `distinct` por profesional: la
-     * candidatura es por PERSONA; el turno concreto a tomar se elige al reubicar.
+     * franja OFRECIBLE que SOLAPA `[inicio, fin)`. «Ofrecible» = `whereFranjaOfrecible` (libre · FUTURA ·
+     * modalidad que el perfil atiende) — la MISMA definición que usa el padre, así que un destino que la
+     * reserva rechazaría no puede proponerse acá (SPEC-852 retiró la mitad REPS). La cota de futuro
+     * (`inicio >= ahora`) viene de `whereFranjaOfrecible` — antes este método la omitía (hallazgo de Datos:
+     * sobre una cita pasada devolvía franjas pasadas). El solape usa el fragmento compartido `whereSolapa`.
+     * `distinct` por profesional: la candidatura es por PERSONA; el turno concreto a tomar se elige al reubicar.
      */
     async profesionalesConFranjaLibreSolapando(
         inicio: Date,
@@ -190,20 +156,17 @@ export class FranjaDisponibleRepository {
                     { modalidad, profesionalId: { not: excluirProfesionalId } },
                 ],
             },
-            select: { profesionalId: true, modalidad: true },
+            select: { profesionalId: true },
             distinct: ["profesionalId"],
         });
-        // La mitad REPS de «ofrecible», POR MODALIDAD concreta de la franja (nunca `null`): el mismo cinturón
-        // que el picker del padre, para no quedar fuera del criterio único.
-        const elegibles = await this.filtrarRepsElegibles(franjas, ahora);
-        return elegibles.map((f) => ({ profesionalId: f.profesionalId }));
+        return franjas.map((f) => ({ profesionalId: f.profesionalId }));
     }
 
     /**
      * SPEC-832 (pieza 2) · Los TURNOS concretos de UN candidato B que el admin puede elegir al reubicar:
-     * las franjas OFRECIBLES de B (mismo criterio de dos etapas + REPS por modalidad) que SOLAPAN la ventana
-     * de la cita. El matcher da PERSONAS; esto da los turnos de una persona para el segundo paso del picker.
-     * Mismo filtro que `profesionalesConFranjaLibreSolapando` — no reimplementa el criterio.
+     * las franjas OFRECIBLES de B (`whereFranjaOfrecible`) que SOLAPAN la ventana de la cita. El matcher da
+     * PERSONAS; esto da los turnos de una persona para el segundo paso del picker. Mismo criterio que
+     * `profesionalesConFranjaLibreSolapando` — no reimplementa el filtro.
      */
     async franjasOfreciblesSolapando(
         profesionalId: string,
@@ -216,11 +179,10 @@ export class FranjaDisponibleRepository {
             where: {
                 AND: [whereFranjaOfrecible(ahora), whereSolapa(inicio, fin), { modalidad, profesionalId }],
             },
-            select: { id: true, profesionalId: true, modalidad: true, inicio: true, fin: true },
+            select: { id: true, inicio: true, fin: true },
             orderBy: { inicio: "asc" },
         });
-        const elegibles = await this.filtrarRepsElegibles(franjas, ahora);
-        return elegibles.map((f) => ({ id: f.id, inicio: f.inicio, fin: f.fin }));
+        return franjas.map((f) => ({ id: f.id, inicio: f.inicio, fin: f.fin }));
     }
 
     marcarTomadaSiLibre(id: string) {

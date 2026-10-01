@@ -1,21 +1,18 @@
 /**
- * SPEC-814 · CANDADO de la COLA de reubicación. Afirma el TRIGGER del veredicto del CEO y su motivo
- * distinguible:
+ * SPEC-814 · CANDADO de la COLA de reubicación. Afirma el TRIGGER y su motivo.
  *
- *   huérfana(cita) ⟺ ¬habilitado(A) OR ¬esRepsElegibleParaModalidad(A, modalidad de la cita)
+ * SPEC-852 (eliminación de REPS) · el trigger COLAPSÓ a UN solo término:
  *
- * Los DOS términos, cada uno con control positivo PAREADO (un «entra» y un «no entra»), porque son
- * necesarios y no redundantes:
- *   · PANEL  → un pro ¬habilitado entra (PANEL_BLOQUEADO); un pro habilitado con REPS que cubre la
- *     modalidad NO entra.
- *   · REPS   → un pro habilitado cuyo REPS NO cubre la modalidad de la cita entra (REGISTRO_NO_VIGENTE);
- *     el mismo pro con REPS que SÍ la cubre NO entra.
- * Más la minimización (el relato de la familia no sale) y el orden por urgencia.
+ *   huérfana(cita) ⟺ ¬habilitado(A)
  *
- * El eje REPS se ejerce con filas `VerificacionReps` EXPLÍCITAS (VIGENTE que cubre o no la modalidad):
- * una fila VIGENTE presente activa el chequeo de modalidad aunque el cutover esté abierto
- * (`repsElegible`: VIGENTE + modalidad no incluida ⇒ no elegible). Así el candado prueba la conducta
- * por-modalidad HOY, sin depender de que #792 cierre el cutover.
+ * `habilitado` = ACTIVO ∧ verificación INTERNA vigente (Ley 2375, documentos). Antes había un segundo
+ * término REPS (`esRepsElegibleParaModalidad`) con su propio motivo; al eliminarse REPS queda SOLO la
+ * verificación interna y, por tanto, UN solo motivo: `PANEL_BLOQUEADO` (el profesional no puede entrar a
+ * su panel → reubicar es la única salida).
+ *
+ * Control positivo PAREADO sobre el único término: un pro ¬habilitado ENTRA (PANEL_BLOQUEADO); un pro
+ * habilitado NO entra (sigue pudiendo atender). Más la minimización (el relato de la familia no sale) y
+ * el orden por urgencia.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import type { EstadoPerfilProfesional, EstadoSolicitudCita, ModalidadCita } from "@prisma/client";
@@ -30,9 +27,6 @@ let bogotaId: string;
 async function seedPro(opts: {
     estado?: EstadoPerfilProfesional;
     internaVigente?: boolean; // verificación INTERNA (Ley 2375) — define `habilitado`. default true
-    repsModalidades?: ("PRESENCIAL" | "TELEMEDICINA")[]; // fila REPS que cubre estas; omitir = sin fila (SIN_VERIFICAR)
-    repsVencida?: boolean; // fila REPS VENCIDA → 813 clasifica CADUCADO (aviso al profesional)
-    repsVerificadoHaceDias?: number; // antigüedad de NUESTRA verificación (grande → estado 7: re-chequeo envejeció)
     especialidades?: string[];
     nombre?: string;
 }) {
@@ -65,18 +59,6 @@ async function seedPro(opts: {
             venceEn: opts.internaVigente === false ? new Date(Date.now() - DIA) : new Date(Date.now() + 90 * DIA),
         },
     });
-    if (opts.repsModalidades || opts.repsVencida) {
-        await prisma.verificacionReps.create({
-            data: {
-                profesionalId: perfil.id,
-                verificadoEn: new Date(Date.now() - (opts.repsVerificadoHaceDias ?? 2) * DIA),
-                fuente: "MANUAL_ADMIN",
-                resultado: opts.repsVencida ? "VENCIDA" : "VIGENTE",
-                vigenteHasta: opts.repsVencida ? null : new Date(Date.now() + 180 * DIA),
-                modalidades: opts.repsModalidades ?? [],
-            },
-        });
-    }
     return perfil;
 }
 
@@ -115,7 +97,7 @@ async function seedCita(
 
 const refs = (cola: { citaRef: string }[]) => cola.map((c) => c.citaRef);
 
-describe("SPEC-814 · cola de reubicación · trigger de dos términos + motivo distinguible", { timeout: 40_000 }, () => {
+describe("SPEC-814/852 · cola de reubicación · trigger de un término (verificación interna) + PANEL_BLOQUEADO", { timeout: 40_000 }, () => {
     beforeEach(async () => {
         await resetDatabase();
         bogotaId = (await crearPaisCiudad()).ciudad.id;
@@ -137,59 +119,10 @@ describe("SPEC-814 · cola de reubicación · trigger de dos términos + motivo 
         expect(fila.deQuienSale.motivoCodigo).toBe("PANEL_BLOQUEADO");
     });
 
-    it("REPS CADUCÓ de verdad (fila VENCIDA) → REGISTRO_NO_VIGENTE (813 avisó; acción del profesional)", async () => {
-        const pro = await seedPro({ estado: "ACTIVO", internaVigente: true, repsVencida: true });
-        const cita = await seedCita(pro.id);
-        const [fila] = await citasPorReubicar();
-        expect(fila.citaRef).toBe(cita.id.slice(0, 8));
-        expect(fila.deQuienSale.motivoCodigo).toBe("REGISTRO_NO_VIGENTE");
-    });
-
-    it("ESTADO 7 (re-verificación NUESTRA envejecida, autoridad vigente) → REVISION_INTERNA, no REGISTRO_NO_VIGENTE", async () => {
-        // ventana determinista; verificadoEn muy atrás → nuestro re-chequeo venció aunque la autoridad siga vigente.
-        await prisma.parametroSistema.upsert({
-            where: { clave: "reps.ventana_verificacion_dias" },
-            update: { valor: "365" },
-            create: { clave: "reps.ventana_verificacion_dias", valor: "365", tipo: "INTEGER", categoria: "SYSTEM" },
-        });
-        const pro = await seedPro({
-            estado: "ACTIVO",
-            internaVigente: true,
-            repsModalidades: ["TELEMEDICINA"], // cubre la modalidad de la cita…
-            repsVerificadoHaceDias: 400, // …pero NUESTRO re-chequeo envejeció (estado 7)
-        });
-        const cita = await seedCita(pro.id, { modalidad: "VIRTUAL" });
-        const [fila] = await citasPorReubicar();
-        expect(fila.citaRef).toBe(cita.id.slice(0, 8));
-        expect(fila.deQuienSale.motivoCodigo).toBe("REVISION_INTERNA");
-    });
-
-    it("HUECO DE MODALIDAD (REPS vigente, no cubre esta modalidad → MODALIDAD_NO_CUBIERTA) → REVISION_INTERNA", async () => {
-        // REPS cubre solo PRESENCIAL; la cita es VIRTUAL (→ TELEMEDICINA). SPEC-836 pieza 2: el split de la
-        // cola clava en CADUCADO, así que el hueco de modalidad sigue cayendo en REVISION_INTERNA (conducta
-        // preservada). Flipearlo a REGISTRO_NO_VIGENTE ahora que tiene banner es decisión del CEO (pendiente).
-        const pro = await seedPro({ estado: "ACTIVO", internaVigente: true, repsModalidades: ["PRESENCIAL"] });
-        const cita = await seedCita(pro.id, { modalidad: "VIRTUAL" });
-        const [fila] = await citasPorReubicar();
-        expect(fila.citaRef).toBe(cita.id.slice(0, 8));
-        expect(fila.deQuienSale.motivoCodigo).toBe("REVISION_INTERNA");
-    });
-
-    it("CONTROL POSITIVO: habilitado + REPS que CUBRE la modalidad → NO entra", async () => {
-        const ok = await seedPro({ estado: "ACTIVO", internaVigente: true, repsModalidades: ["TELEMEDICINA"], nombre: "Al día" });
+    it("CONTROL POSITIVO: habilitado (ACTIVO + verificación interna vigente) → NO entra", async () => {
+        const ok = await seedPro({ estado: "ACTIVO", internaVigente: true, nombre: "Al día" });
         const citaOk = await seedCita(ok.id, { modalidad: "VIRTUAL" });
-        const reps = await seedPro({ estado: "ACTIVO", internaVigente: true, repsModalidades: ["PRESENCIAL"], nombre: "REPS corto" });
-        const citaReps = await seedCita(reps.id, { modalidad: "VIRTUAL" });
-
-        const cola = await citasPorReubicar();
-        expect(refs(cola)).not.toContain(citaOk.id.slice(0, 8)); // cubre TELEMEDICINA → sigue atendiendo
-        expect(refs(cola)).toContain(citaReps.id.slice(0, 8)); // no cubre → entra
-    });
-
-    it("sin fila REPS (SIN_VERIFICAR, cutover abierto) + habilitado → NO entra (hoy el REPS no angosta)", async () => {
-        const pro = await seedPro({ estado: "ACTIVO", internaVigente: true }); // sin fila REPS
-        const cita = await seedCita(pro.id, { modalidad: "VIRTUAL" });
-        expect(refs(await citasPorReubicar())).not.toContain(cita.id.slice(0, 8));
+        expect(refs(await citasPorReubicar())).not.toContain(citaOk.id.slice(0, 8));
     });
 
     it("solo CONFIRMADA: una cita en otro estado de un no habilitado NO entra", async () => {

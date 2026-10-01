@@ -1,7 +1,7 @@
 /**
  * SPEC-832 (pieza 2) · Ruta POST /api/admin/reubicaciones/[id]/reasignar.
  * Dos garantías: el camino feliz reubica (200), y —requisito del CEO— el rechazo por caducidad entre ver y
- * confirmar (B dejó de ser ofrecible para la modalidad) llega como MENSAJE 400, NO como 500 mudo.
+ * confirmar (B dejó de ser ofrecible: su verificación interna caducó) llega como MENSAJE 400, NO como 500 mudo.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
@@ -23,7 +23,7 @@ const W_INICIO = new Date(Date.now() + 3 * DIA);
 const W_FIN = new Date(W_INICIO.getTime() + 50 * 60 * 1000);
 let bogotaId: string;
 
-async function seedPro(nombre: string, repsModalidades?: ("PRESENCIAL" | "TELEMEDICINA")[]) {
+async function seedPro(nombre: string) {
     const usuario = await crearUsuario("PROFESIONAL");
     const perfil = await prisma.perfilProfesional.create({
         data: {
@@ -53,22 +53,10 @@ async function seedPro(nombre: string, repsModalidades?: ("PRESENCIAL" | "TELEME
             venceEn: new Date(Date.now() + 90 * DIA),
         },
     });
-    if (repsModalidades) {
-        await prisma.verificacionReps.create({
-            data: {
-                profesionalId: perfil.id,
-                verificadoEn: new Date(Date.now() - 2 * DIA),
-                fuente: "MANUAL_ADMIN",
-                resultado: "VIGENTE",
-                vigenteHasta: new Date(Date.now() + 180 * DIA),
-                modalidades: repsModalidades,
-            },
-        });
-    }
     return perfil;
 }
 
-async function escenario(repsB?: ("PRESENCIAL" | "TELEMEDICINA")[]) {
+async function escenario() {
     const padre = await crearUsuario("PARENT");
     const a = await seedPro("Prof. A");
     const franjaA = await prisma.franjaDisponible.create({
@@ -90,7 +78,7 @@ async function escenario(repsB?: ("PRESENCIAL" | "TELEMEDICINA")[]) {
             porcentajeServicio: 15,
         },
     });
-    const b = await seedPro("Prof. B", repsB);
+    const b = await seedPro("Prof. B");
     const franjaB = await prisma.franjaDisponible.create({
         data: { profesionalId: b.id, inicio: W_INICIO, fin: W_FIN, modalidad: "VIRTUAL", tomada: false },
     });
@@ -126,8 +114,14 @@ describe("POST /api/admin/reubicaciones/[id]/reasignar", { timeout: 30_000 }, ()
         expect(origen!.estado).toBe("REUBICADA");
     });
 
-    it("REQUISITO CEO · caducidad (B no ofrecible para la modalidad) → 400 con MENSAJE, no 500", async () => {
-        const e = await escenario(["PRESENCIAL"]); // REPS cubre solo presencial; la cita es VIRTUAL
+    it("REQUISITO CEO · caducidad (B dejó de ser ofrecible entre ver y confirmar) → 400 con MENSAJE, no 500", async () => {
+        const e = await escenario();
+        // Entre que el admin vio a B y confirmó, la verificación interna de B caducó → `obtenerPublicoPorId`
+        // lo deja fuera y `crearSolicitudCita` rechaza con mensaje (400), no con un 500 mudo.
+        await prisma.verificacionProfesional.updateMany({
+            where: { perfilProfesionalId: e.b.id },
+            data: { venceEn: new Date(Date.now() - DIA) },
+        });
         const res = await postReasignar(adminToken, e.cita.id, { nuevoProfesionalId: e.b.id, nuevaFranjaId: e.franjaB.id });
         expect(res.status).toBe(400);
         expect(res.status).not.toBe(500);

@@ -8,13 +8,10 @@
  * exige que NINGUNO aparezca, con un caso que SÍ aparece como control de que la ausencia
  * significa algo.
  *
- * ⚠️ LA TRAMPA DEL CUTOVER (radicado SPEC-814): hoy «habilitado» = estado ACTIVO ∧ verificación
- * vigente. Con el cutover abierto (`exigirRepsVerificado=false`, en la rama de #792) REPS todavía
- * NO angosta el conjunto — así que un candado que afirmara «aparece ⟺ ACTIVO» pasaría hoy y
- * MENTIRÍA mañana. Este candado NO enumera la condición: afirma a través de la FUENTE ÚNICA
- * (`obtenerPublicoPorId`, el término `estaHabilitado`). El caso «verificación vencida» es la
- * prueba de que el gate es la FUENTE y no un `estado:ACTIVO` a mano: ese profesional ES ACTIVO y
- * aun así queda fuera. Cuando #792 sume REPS al predicado, el gate lo hereda sin tocar este test.
+ * El gate es la FUENTE ÚNICA, no un `estado:ACTIVO` a mano: el matcher pasa por `obtenerPublicoPorId`
+ * (el término `estaHabilitado` = ACTIVO ∧ verificación interna vigente). El caso «verificación vencida» lo
+ * prueba: ese profesional ES ACTIVO y aun así queda fuera, porque el gate mira la FUENTE, no el estado.
+ * (SPEC-852 eliminó REPS: la habilitación es solo la verificación interna.)
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import type { EstadoPerfilProfesional, ModalidadCita } from "@prisma/client";
@@ -39,7 +36,6 @@ async function seedPro(opts: {
     ciudadId?: string;
     estado?: EstadoPerfilProfesional;
     vigente?: boolean; // false = verificación interna vencida (ayer)
-    repsModalidades?: ("PRESENCIAL" | "TELEMEDICINA")[]; // fila REPS VIGENTE que cubre estas (omitir = SIN_VERIFICAR)
     nombre?: string;
 }) {
     const usuario = await crearUsuario("PROFESIONAL");
@@ -77,18 +73,6 @@ async function seedPro(opts: {
                     : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         },
     });
-    if (opts.repsModalidades) {
-        await prisma.verificacionReps.create({
-            data: {
-                profesionalId: perfil.id,
-                verificadoEn: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-                fuente: "MANUAL_ADMIN",
-                resultado: "VIGENTE",
-                vigenteHasta: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
-                modalidades: opts.repsModalidades,
-            },
-        });
-    }
     return perfil;
 }
 
@@ -160,18 +144,6 @@ describe("SPEC-814 · matcher de reubicación · el gate no falla abierto", { ti
         await seedFranja(b.id, { inicio: pasadoInicio, fin: pasadoFin });
         const c = await candidatosDeReubicacion(reqBase({ inicio: pasadoInicio, fin: pasadoFin }));
         expect(ids(c)).not.toContain(b.id);
-    });
-
-    it("REPS POR MODALIDAD (SPEC-832): REPS vigente que NO cubre la modalidad de la franja → NO aparece; sí la cubre → APARECE", async () => {
-        // VIRTUAL → eje REPS TELEMEDICINA. El matcher pasa por el MISMO cinturón que el picker del padre.
-        const soloPresencial = await seedPro({ especialidades: ["TRAUMA"], repsModalidades: ["PRESENCIAL"], nombre: "REPS presencial" });
-        await seedFranja(soloPresencial.id, { modalidad: "VIRTUAL" });
-        const cubre = await seedPro({ especialidades: ["TRAUMA"], repsModalidades: ["TELEMEDICINA"], nombre: "REPS telemedicina" });
-        await seedFranja(cubre.id, { modalidad: "VIRTUAL" });
-
-        const c = await candidatosDeReubicacion(reqBase({ modalidad: "VIRTUAL" }));
-        expect(ids(c)).not.toContain(soloPresencial.id); // su REPS no cubre telemedicina
-        expect(ids(c)).toContain(cubre.id);
     });
 
     it("VERIFICACIÓN VENCIDA (ACTIVO, pero sin vigencia) → NO aparece — el gate es la FUENTE, no el estado", async () => {

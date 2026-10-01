@@ -6,11 +6,10 @@
  * Control: apagar la modalidad mueve AMBOS a la vez; un profesional SIN horarios SIGUE en el directorio.
  * Integración (BD).
  *
- * SPEC-825 AMPLÍA el criterio «ofrecible» para que incluya REPS-por-modalidad (no solo las banderas). Las
- * invariantes de 818 se CONSERVAN —flag-off OCULTA · la fila PERSISTE · re-encender DEVUELVE · chip ⟺
- * consulta—: los dos tests de 818 de abajo siguen tal cual (un SIN_VERIFICAR pasa el REPS por el cutover
- * abierto). Se AGREGA el eje REPS: el acuerdo chip ⟺ consulta ahora también se sostiene cuando el REPS no
- * cubre la modalidad de la franja. No se reescribe nada de 818.
+ * SPEC-852 (eliminación de REPS) · «ofrecible» vuelve a ser SOLO las banderas (`whereFranjaOfrecible`) + la
+ * vigencia interna al nivel del perfil; se retiró el eje REPS-por-modalidad que SPEC-825 había agregado. Las
+ * invariantes de 818 —flag-off OCULTA · la fila PERSISTE · re-encender DEVUELVE · chip ⟺ consulta— quedan
+ * intactas.
  */
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/prisma";
@@ -45,20 +44,6 @@ async function crearFranja(profesionalId: string, modalidad: "VIRTUAL" | "PRESEN
         data: { profesionalId, inicio, fin: new Date(inicio.getTime() + 45 * 60_000), modalidad, tomada: false },
     });
 }
-/** SPEC-825: REPS VIGENTE que cubre SOLO las modalidades dadas (para probar el eje REPS del criterio). */
-async function repsVigente(profesionalId: string, modalidades: ("PRESENCIAL" | "TELEMEDICINA")[]) {
-    await prisma.verificacionReps.create({
-        data: {
-            profesionalId,
-            verificadoEn: new Date(Date.now() - 5 * 86_400_000),
-            fuente: "MANUAL_ADMIN",
-            resultado: "VIGENTE",
-            vigenteHasta: new Date(Date.now() + 90 * 86_400_000),
-            modalidades,
-        },
-    });
-}
-
 describe("SPEC-818 · el chip de disponibilidad sale de la MISMA fuente que la consulta del padre", () => {
     beforeEach(async () => resetDatabase());
     afterAll(async () => prisma.$disconnect());
@@ -99,19 +84,5 @@ describe("SPEC-818 · el chip de disponibilidad sale de la MISMA fuente que la c
         // ...y el chip distingue, por lote (idsConHorariosDisponibles), con la misma definición.
         expect(porId.get(conFranja)!.tieneHorariosDisponibles).toBe(true);
         expect(porId.get(sinFranja)!.tieneHorariosDisponibles).toBe(false);
-    });
-
-    it("SPEC-825 · el acuerdo chip ⟺ consulta se sostiene sobre el REPS: franja virtual + REPS solo presencial → ambos FALSE/0", async () => {
-        const { ciudad } = await crearPaisCiudad();
-        const id = await profesionalOfrecible(ciudad.id); // atiendeVirtual=true (la bandera NO es el discriminador acá)
-        await crearFranja(id, "VIRTUAL");
-        await repsVigente(id, ["PRESENCIAL"]); // el REPS NO cubre TELEMEDICINA → la franja virtual no es reservable
-        const perfilRepo = new PerfilProfesionalRepository();
-        const franjaRepo = new FranjaDisponibleRepository();
-        const ahora = new Date();
-        // El chip y la consulta NO pueden divergir: ahora que el criterio incluye REPS, AMBOS excluyen la
-        // franja que la reserva rechaza (antes de 825 el chip la prometía y la reserva la negaba).
-        expect((await perfilRepo.obtenerPublicoPorId(id, null))!.tieneHorariosDisponibles).toBe(false);
-        expect((await franjaRepo.listarLibresDeProfesional(id, ahora)).length).toBe(0);
     });
 });

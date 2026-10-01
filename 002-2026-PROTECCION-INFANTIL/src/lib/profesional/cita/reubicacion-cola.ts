@@ -3,25 +3,19 @@
  * atienda. [NORMA] Res. 3100 art. 19 (continuidad) y art. 8.5 (una sesión confirmada no la atiende
  * un inactivo).
  *
- * TRIGGER (veredicto CEO · radicado SPEC-814) — por SIMETRÍA con el gate de la RESERVA:
+ * TRIGGER (veredicto CEO · radicado SPEC-814; SPEC-852 lo colapsó) — por SIMETRÍA con el gate de la
+ * RESERVA:
  *
  *   huérfana(cita) ⟺  ¬habilitado(A)
- *                 OR  ¬esRepsElegibleParaModalidad(A, modalidadRepsRequerida(cita.franja.modalidad))
  *
  * El criterio que SACA una cita y el que ADMITE un destino son el MISMO gate → no hay hueco entre
  * ellos: nunca se propone un destino que la reserva rechaza, ni se mueve una cita que A sí podía
- * atender. Los dos términos son NECESARIOS y no redundantes: `esRepsElegibleParaModalidad` es solo
- * REPS; `habilitado` es ACTIVO ∧ verificación interna (SPEC-790 le quitó el REPS a `habilitado` a
- * propósito, para no encerrar al profesional fuera de su panel). Una cuenta inactiva con REPS
- * impecable NO la caza el chequeo de REPS — y al revés.
+ * atender. `habilitado` es ACTIVO ∧ verificación INTERNA vigente (Ley 2375, documentos). Hasta
+ * SPEC-852 había un segundo término (`esRepsElegibleParaModalidad`, solo REPS); al eliminarse REPS
+ * por completo la cola queda con este único término.
  *
- * Y el motivo se DISTINGUE, porque le cambia la acción al operador:
- *   · `PANEL_BLOQUEADO` (¬habilitado): el profesional NO puede actuar —no entra a su panel, no puede
- *     arreglar nada—. Reubicar es la ÚNICA salida.
- *   · `REGISTRO_NO_VIGENTE` (¬REPS para la modalidad): el profesional SÍ opera, ve su panel y PUEDE
- *     renovar su REPS (SPEC-813 ya le avisa). Reubicar de inmediato desperdiciaría ese aviso; el
- *     orden por urgencia (franja más próxima) decide si se espera o no.
- * Si ambos disparan, `PANEL_BLOQUEADO` manda (si no puede ni entrar, la renovación es irrelevante).
+ * Por eso hay UN solo motivo, `PANEL_BLOQUEADO` (¬habilitado): el profesional NO puede actuar —no
+ * entra a su panel, no puede arreglar nada—. Reubicar es la ÚNICA salida.
  *
  * El «a QUIÉN va» (candidatos §1-bis) vive en el matcher (SPEC-832, detrás de 825), no acá. Esta
  * cola es la cara PRINCIPAL de la pantalla (la mediana de candidatos medida en prod es 0).
@@ -33,31 +27,19 @@
  */
 import type { ModalidadCita } from "@prisma/client";
 import { SolicitudCitaRepository } from "@/lib/dal/repositories/solicitud-cita";
-import { PerfilProfesionalRepository } from "@/lib/dal/repositories/perfil-profesional";
 import { obtenerHabilitacionProfesional } from "@/lib/profesionales/habilitacion";
-import { modalidadRepsRequerida } from "@/lib/profesional/reps/modalidad-cita-a-reps";
-import type { ClasificacionAvisoReps } from "@/lib/profesional/reps/aviso-estado-reps";
 
 /**
  * Por qué la cita quedó huérfana — el dato que al operador le CAMBIA la acción (no es copy; es el
  * discriminador. La copy visible la resuelve la pantalla contra la forma de Diseño).
  *
- * SPEC-836 · Tres motivos, con la ACCIÓN que le piden al operador:
- *  · `PANEL_BLOQUEADO`     — el profesional NO puede entrar a su panel (¬habilitado). Reubicar es la
- *    única salida: no puede resolver nada por su cuenta.
- *  · `REGISTRO_NO_VIGENTE` — su inscripción REPS CADUCÓ de verdad (813 se lo AVISÓ). Acción del
- *    PROFESIONAL (renovar); puede resolverse sin reubicar.
- *  · `REVISION_INTERNA`    — la acción es NUESTRA, no suya. Cubre todo lo que la clasificación REPS NO
- *    lleva al banner CADUCADO: el estado 7 (nuestra re-verificación envejeció → re-verificar) y
- *    SIN_VERIFICAR. El operador NO debe esperar a que el profesional actúe —en varios casos no hay nada
- *    que él deba hacer—.
- *    SPEC-836 pieza 2 (este PR): el hueco de modalidad pasó a tener banner (`clasificarReps` ahora
- *    devuelve `MODALIDAD_NO_CUBIERTA`). El split de abajo clava en CADUCADO, así que HOY ese caso sigue
- *    cayendo en `REVISION_INTERNA` —conducta idéntica a la previa (antes AL_DIA, mismo destino) y fijada
- *    por candado—. El #829 lo anticipó como `REGISTRO_NO_VIGENTE` «sin tocar este código»: la predicción
- *    quedó FALSIFICADA (requiere tocar el split y el candado). Flipearlo es decisión del CEO.
+ * SPEC-852 · UN solo motivo tras eliminar REPS:
+ *  · `PANEL_BLOQUEADO` — el profesional NO puede entrar a su panel (¬habilitado = ¬(ACTIVO ∧ verificación
+ *    INTERNA de documentos)). Reubicar es la única salida: no puede resolver nada por su cuenta. Antes había
+ *    además motivos REPS (REGISTRO_NO_VIGENTE / REVISION_INTERNA, derivados de `clasificarReps`); al eliminarse
+ *    REPS la cola queda con UN solo término (la verificación interna) y, por tanto, este único motivo.
  */
-export type MotivoReubicacion = "PANEL_BLOQUEADO" | "REGISTRO_NO_VIGENTE" | "REVISION_INTERNA";
+export type MotivoReubicacion = "PANEL_BLOQUEADO";
 
 export interface CitaPorReubicar {
     /** id completo de la cita — para las ACCIONES del admin (reubicar). No es PII. */
@@ -89,66 +71,27 @@ export interface CitaPorReubicar {
 export async function citasPorReubicar(
     ahora: Date = new Date(),
     repo: SolicitudCitaRepository = new SolicitudCitaRepository(),
-    perfilRepo: PerfilProfesionalRepository = new PerfilProfesionalRepository(),
 ): Promise<CitaPorReubicar[]> {
     const citas = await repo.listarConfirmadasParaReubicacion();
 
-    // Una consulta por profesional DISTINTO (varias citas lo comparten); el REPS además por modalidad.
+    // Una consulta por profesional DISTINTO (varias citas lo comparten).
     const habilitadoPorUsuario = new Map<string, boolean>();
-    const repsOkPorProModalidad = new Map<string, boolean>();
-    const clasePorProfesional = new Map<string, ClasificacionAvisoReps>();
     const salida: CitaPorReubicar[] = [];
 
     for (const c of citas) {
         const usuarioId = c.profesional.usuarioId;
-        const profesionalId = c.profesional.id;
 
-        // Término 1 · habilitado (eje PANEL: ACTIVO ∧ verificación interna). Fuente única.
+        // SPEC-852 · tras eliminar REPS la cola tiene UN solo término: la verificación INTERNA de documentos.
+        // Huérfana ⟺ ¬habilitado (= ¬(ACTIVO ∧ verificación interna)). Un profesional habilitado SIGUE pudiendo
+        // atender → NO es huérfana. El único motivo es PANEL_BLOQUEADO.
         let habilitado = habilitadoPorUsuario.get(usuarioId);
         if (habilitado === undefined) {
             habilitado = (await obtenerHabilitacionProfesional(usuarioId, ahora))?.habilitado ?? false;
             habilitadoPorUsuario.set(usuarioId, habilitado);
         }
+        if (habilitado) continue;
 
-        // Término 2 · REPS para la MODALIDAD CONCRETA de la cita (el gate de la reserva).
-        const modalidadReps = modalidadRepsRequerida(c.franja.modalidad);
-        let repsOk: boolean;
-        if (modalidadReps === null) {
-            repsOk = false; // modalidad sin mapeo → fail-closed, igual que la reserva.
-        } else {
-            const clave = `${profesionalId}:${modalidadReps}`;
-            const cacheado = repsOkPorProModalidad.get(clave);
-            if (cacheado === undefined) {
-                repsOk = await perfilRepo.esRepsElegibleParaModalidad(profesionalId, modalidadReps, ahora);
-                repsOkPorProModalidad.set(clave, repsOk);
-            } else {
-                repsOk = cacheado;
-            }
-        }
-
-        // Ninguno de los dos disparó → A sigue pudiendo atenderla → NO es huérfana.
-        if (habilitado && repsOk) continue;
-
-        // Motivo: `PANEL_BLOQUEADO` manda sobre lo REPS (si A no puede ni entrar a su panel, que su REPS
-        // esté o no vigente es irrelevante). En la rama REPS, el PORQUÉ —de quién es la acción— clava en
-        // CADUCADO: solo ese fue avisado al profesional como acción suya; todo lo demás es nuestro/interno.
-        let motivoCodigo: MotivoReubicacion;
-        if (!habilitado) {
-            motivoCodigo = "PANEL_BLOQUEADO";
-        } else {
-            let clase = clasePorProfesional.get(profesionalId);
-            if (clase === undefined) {
-                // SPEC-836 pieza 2: `clasificarReps` pasó a modality-aware (devuelve objeto); tomamos
-                // `.clasificacion`, igual que panel.service (barrido de callers del cambio de contrato). El
-                // split clava en CADUCADO, que el clasificador devuelve IGUAL (MODALIDAD_NO_CUBIERTA solo
-                // REFINA AL_DIA) → conducta preservada. Flipear el hueco de modalidad (ya con banner) a
-                // acción del profesional es decisión del CEO; ver [[MotivoReubicacion]].
-                const { clasificacion } = await perfilRepo.clasificarReps(profesionalId, ahora);
-                clase = clasificacion;
-                clasePorProfesional.set(profesionalId, clase);
-            }
-            motivoCodigo = clase === "CADUCADO" ? "REGISTRO_NO_VIGENTE" : "REVISION_INTERNA";
-        }
+        const motivoCodigo: MotivoReubicacion = "PANEL_BLOQUEADO";
 
         salida.push({
             citaId: c.id,
