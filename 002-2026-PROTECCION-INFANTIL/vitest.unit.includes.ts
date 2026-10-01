@@ -757,4 +757,7 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "src/lib/profesional/reps/reps-adaptador-nunca-vigente.candado.test.ts",
     // SPEC-790: traducción cita→REPS en un solo lugar, exhaustiva; no-mapeo niega y registra. Sin base.
     "src/lib/profesional/reps/modalidad-cita-a-reps.candado.test.ts",
+    // SPEC-790 (D-8): toda asignación de profesional a cita pasa por el chokepoint (crearSolicitudCita→obtenerPublicoPorId);
+    // el test de REPS es it.fails hasta T4 (rojo antes, verde al cablear). Scan estático, sin base.
+    "src/lib/profesional/cita/reps-gate-booking-sweep.candado.test.ts",
 ];
