@@ -107,9 +107,10 @@ describe("SPEC-715 §4 · la cita confirmada tiene acciones reales", () => {
 describe("SPEC-749 FR-2 · CONFIRMADA con la hora ya pasada dice la verdad (render)", () => {
     // Franja de AYER (25–26 h atrás): el reloj real del componente la cruza a PASADA.
     const ayerH = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
-    const citaPasada = () => cita({ franja: { inicio: ayerH(26), fin: ayerH(25), modalidad: "VIRTUAL" } });
+    // Enlace PROBADAMENTE publicado y pasado → el copy C2 «ya pasó» (el único con prueba positiva).
+    const citaPasada = () => cita({ franja: { inicio: ayerH(26), fin: ayerH(25), modalidad: "VIRTUAL" }, enlace: { estado: "PASADA" } });
 
-    it("dice «Esta cita ya pasó» y QUITA la mentira: sin .ics, sin las frases medidas, con salida real", () => {
+    it("dice «Esta cita ya pasó» y QUITA la mentira: sin .ics, sin las frases medidas, y CIERRA el escape (SPEC-792 C2)", () => {
         const { container } = render(
             <EsperaCitaPanel citaInicial={citaPasada()} expedientes={[{ expedienteId: "exp1", etiqueta: "EXP-1 · Ana" }]} />,
         );
@@ -118,9 +119,15 @@ describe("SPEC-749 FR-2 · CONFIRMADA con la hora ya pasada dice la verdad (rend
         expect(screen.queryByRole("button", { name: /Agregar a mi calendario/ })).toBeNull();
         // Compartir un caso tampoco (no hay sesión futura).
         expect(screen.queryByText(/Compartir un caso/)).toBeNull();
-        // DOS salidas reales (no el «Volver» circular como única acción): pedir otra cita +
-        // «Escríbenos» con destino REAL (mailto de soporte), nunca un texto inerte.
-        expect(screen.getByRole("link", { name: /Pedir otra cita/ })).toBeTruthy();
+        // SPEC-792 C2 supersede la aserción INTERINA de 749 FR-2 («mundo sin encuesta»): el escape
+        // «Pedir otra cita» se CERRÓ — la encuesta es el primer camino (tarjeta en EsperaCitaPanel cuando
+        // hay encuesta pendiente; lo cubre el candado espera-cita-encuesta-primero, que la verifica EVIDENTE
+        // y ALCANZABLE ahí mismo). Queda «Escríbenos» con destino REAL (mailto), como SOPORTE — no un
+        // «Volver» circular inerte. Los invariantes de 749 (ya pasó · sin .ics · sin mentira) siguen intactos.
+        expect(
+            screen.queryByRole("link", { name: /Pedir otra cita/ }),
+            "SPEC-792 C2: la pasada ya no reabre el escape; el camino es la encuesta",
+        ).toBeNull();
         const escribenos = screen.getByRole("link", { name: /Escríbenos/ });
         expect(escribenos.getAttribute("href")).toMatch(/^mailto:.+@.+/);
         const txt = container.textContent ?? "";
@@ -132,6 +139,19 @@ describe("SPEC-749 FR-2 · CONFIRMADA con la hora ya pasada dice la verdad (rend
         expect(low).not.toContain("aparecerá");
         expect(low).not.toContain("atrasada");
         expect(low).not.toContain("operador");
+    });
+
+    it("SPEC-792 C4 (RIESGO · tercer caso): CONFIRMADA-pasada SIN estado de enlace (ausente) → «no dependió de ti», NO el copy que acusa", () => {
+        // El bloque `enlace` ausente es el caso que el encadenamiento opcional colapsaba en silencio hacia
+        // «Esta cita ya pasó» — la versión que da por hecho que el acceso estuvo y que el padre lo perdió.
+        // Sin esa prueba, el default honesto es el que NO acusa (C4). `citaPasada()` sin `enlace`:
+        const sinEnlace = cita({ franja: { inicio: ayerH(26), fin: ayerH(25), modalidad: "VIRTUAL" } });
+        render(<EsperaCitaPanel citaInicial={sinEnlace} />);
+        expect(screen.getByRole("heading", { name: /no llegó a estar disponible/i })).toBeTruthy();
+        expect(
+            screen.queryByRole("heading", { name: /Esta cita ya pasó/ }),
+            "RIESGO: el enlace ausente no puede caer en el copy que acusa al padre",
+        ).toBeNull();
     });
 
     it("control positivo (dirección opuesta): una cita FUTURA sigue viva — calendario + «Cita confirmada»", () => {

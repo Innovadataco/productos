@@ -21,6 +21,7 @@
  */
 import type { EstadoSolicitudCita } from "@prisma/client";
 import { estadoEfectivoDeCita, type EntradaTiempo } from "@/lib/profesional/cita/estado-efectivo";
+import type { EnlaceParaCita } from "@/lib/profesional/cita/enlace-derivado";
 
 export type TonoEspera = "espera" | "verde" | "gris" | "rojo";
 
@@ -34,6 +35,12 @@ export interface AccionesEspera {
     pedirOtraCita?: boolean;
     escribenos?: boolean;
     revisarPago?: boolean;
+    /**
+     * SPEC-792 C4 · cuando el servicio NO se entregó (el acceso nunca se publicó), «pedir otra cita»
+     * HEREDA el pago (`?heredarDe={citaId}`) — el padre no paga de nuevo por una falla nuestra. Sin él,
+     * «pedir otra cita» es una cita nueva paga (la cita se consumió). La presencia decide el destino.
+     */
+    heredarDeCitaId?: string;
 }
 
 export interface VistaEspera {
@@ -54,21 +61,54 @@ export function derivarVistaFranjaPasada(
     venceEn: EntradaTiempo,
     nombreProfesional: string,
     ahora: EntradaTiempo,
+    // SPEC-792 · señales que refinan el «ya pasó» de una CONFIRMADA:
+    //  · `enlace` (C4 · RIESGO) → el ESTADO del enlace de la reunión TAL CUAL lo derivó la fuente única
+    //    (`enlace-derivado`), no un booleano ya colapsado. La decisión se toma ACÁ, no en el llamador,
+    //    para que el `undefined` no sea un default silencioso: solo `estado === "PASADA"` (publicado y la
+    //    hora pasó) prueba que el acceso estuvo; todo lo demás cae del lado que no acusa (ver abajo).
+    //  · `citaId` → para que «pedir otra cita» herede el pago cuando el servicio no se entregó.
+    // `enlace` admite `undefined` EXPLÍCITO a propósito: el bloque ausente es un caso con significado
+    // (cita confirmada cuya hora pasó, sin estado de enlace → C4), no un descuido. Verlo obliga a tratarlo.
+    opts: { enlace?: EnlaceParaCita | undefined; citaId?: string } = {},
 ): VistaEspera | null {
     const franjaYaPaso = estadoEfectivoDeCita("CONFIRMADA", franjaInicio, franjaFin, ahora) === "PASADA";
     if (!franjaYaPaso) return null;
 
     if (estado === "CONFIRMADA") {
-        // FORMA-CITA-CONFIRMADA-HORA-PASADA-INTERIM §1: factual, sin promesa, sin culpa,
-        // sin «Cita confirmada» a secas. Tono TINTA neutro (pasado/cerrado) — el verde
-        // era parte de la mentira (SPEC-730: estado final neutro = tinta). Salida real:
-        // el padre pagó → «pedir otra cita» (seguir) o «escríbenos» (algo salió mal).
-        return {
-            titulo: "Esta cita ya pasó",
-            detalle: `La hora que tenías con ${nombreProfesional} ya pasó. Si quieres continuar, puedes pedir otra cita; y si algo no salió como esperabas, escríbenos.`,
-            tono: "gris",
-            acciones: { pedirOtraCita: true, escribenos: true },
-        };
+        // SPEC-792 C4 (RIESGO): AMBOS copys exigen PRUEBA POSITIVA del estado del enlace — ninguno es el
+        // "default por descarte" del otro. «Esta cita ya pasó» (C2) da por hecho que el acceso ESTUVO y la
+        // hora se perdió (roza la culpa); «no dependió de ti» (C4) da por hecho que falló NUESTRO lado. Un
+        // estado de cita VIVA (`SIN_PUBLICAR`/`PUBLICADO`: el reloj autoritativo del server —fuente única
+        // 746— aún NO la da por pasada) NO es un sub-caso de «pasada» y no debe recibir ninguno de los dos:
+        // cae al copy genérico de estado. Acá solo se LEE el estado ya derivado; no se cuenta el tiempo otra vez.
+        const enlaceEstado = opts.enlace?.estado;
+        if (enlaceEstado === "PASADA") {
+            // C2 (la grave): el enlace se publicó y la hora pasó (prueba positiva). «ya pasó» NO eclipsa la
+            // encuesta (tarjeta arriba, PRIMER camino: «Cuéntanos qué pasó»). NO se ofrece [Pedir otra cita]
+            // en paralelo —era la vía de escape del motor de contradicciones (reprogramar sin responder
+            // nunca)—; reprogramar se llega DESPUÉS por el desenlace «no» de la encuesta. Queda [Escríbenos].
+            return {
+                titulo: "Esta cita ya pasó",
+                detalle: `La hora que tenías con ${nombreProfesional} ya pasó. Si algo no salió como esperabas, escríbenos.`,
+                tono: "gris",
+                acciones: { escribenos: true },
+            };
+        }
+        if (enlaceEstado === "PASADA_SIN_PUBLICAR" || enlaceEstado === undefined || enlaceEstado === "INDETERMINADO") {
+            // C4: falla NUESTRA probada (el enlace nunca se publicó al pasar la hora), O no sabemos el estado
+            // del enlace DENTRO de una cita CONFIRMADA cuya hora ya pasó (`undefined` = bloque ausente;
+            // `INDETERMINADO` = reloj no confiable) — no acusamos de algo que no consta. El pago se HEREDA
+            // (servicio no consta entregado). Copy verbatim de Diseño (FORMA-SPEC792 C4).
+            return {
+                titulo: "El acceso a tu reunión no llegó a estar disponible.",
+                detalle: `La hora de tu cita con ${nombreProfesional} ya pasó y el enlace para entrar no alcanzó a publicarse. Esto no dependió de ti. No perdiste tu cupo: puedes pedir otra cita, y si quieres que revisemos qué pasó, escríbenos.`,
+                tono: "gris",
+                acciones: { pedirOtraCita: true, escribenos: true, ...(opts.citaId ? { heredarDeCitaId: opts.citaId } : {}) },
+            };
+        }
+        // `SIN_PUBLICAR`/`PUBLICADO`: una cita VIVA (no pasada según el reloj autoritativo). No es «pasada»
+        // → se devuelve `null` y manda el copy de estado crudo, sin afirmar ni «ya pasó» ni «no dependió de ti».
+        return null;
     }
 
     if (estado === "PAGADA_PENDIENTE") {

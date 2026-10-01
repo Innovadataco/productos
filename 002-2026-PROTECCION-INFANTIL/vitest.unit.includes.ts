@@ -10,6 +10,8 @@ export const UNIT_TEST_INCLUDES: string[] = [
     "scripts/arch/no-prisma-mocks.test.ts",
     // SPEC-803: 00/01/06 fuera del gate byte-exacto del PR (representabilidad; post-merge regenera).
     "scripts/arch/docs-globales-fuera-del-gate.candado.test.ts",
+    // SPEC-808: el mensaje de reporte duplicado no acusa ni afirma la conducta vieja del anónimo.
+    "src/app/api/reportes/reporte-duplicado-mensaje.candado.test.ts",
     // CEO 06-09: parseArgs de scripts/demo ABORTA ante flag desconocido (no traga banderas en un script destructivo).
     "scripts/demo/parseargs-estricto.candado.test.ts",
     // SPEC-287 (002-PI-187): fuente única de guardias + cookie firmada de vigencia + 4 ratchets estáticos.
@@ -411,6 +413,10 @@ export const UNIT_TEST_INCLUDES: string[] = [
     // SPEC-784 (C-3): el formulario no puede construir la combinación incoherente (FR-3) ni ofrecer
     // texto libre (FR-5) — imposibilidad estructural por árbol de render, control positivo por dirección.
     "src/components/modules/encuesta/EncuestaFormulario.candado.test.tsx",
+    // SPEC-792 C1+C3: el cierre de la encuesta nunca queda sin salida (4 combinaciones) + voz por audiencia.
+    "src/components/modules/encuesta/encuesta-cierre.candado.test.tsx",
+    // SPEC-792 C2: «ya pasó» no eclipsa la encuesta — primer camino = encuesta, sin [Pedir otra cita] paralelo.
+    "src/components/modules/padre/citas/espera-cita-encuesta-primero.candado.test.tsx",
     // SPEC-784: la tarjeta de encuesta NUNCA precede a la vía de reporte en el panel del padre
     // (invariante «nunca sobre el reporte» derivada del árbol de render, control positivo por mutación).
     "src/components/modules/encuesta/tarjeta-encuesta-orden.candado.test.tsx",

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId, useState } from "react";
 import { navParaRol, type NavEntry } from "@/lib/nav/para-rol";
-import { useAuth } from "@/lib/contexts/AuthContext";
+import type { EstadoProfesionalSesion } from "@/lib/profesional/menu-por-estado";
 import { IconoNav, tieneIcono, InboxIcon, InicioIcon, type IconoNavComponente } from "@/components/modules/nav/IconoNav";
 
 /**
@@ -99,13 +99,22 @@ function tituloDeRol(rol: RolLateral): { titulo: string; subtitulo: string } {
     }
 }
 
-export function NavLateral({ rol, modulosPermitidos }: { rol: RolLateral; modulosPermitidos: string[] }) {
+export function NavLateral({
+    rol,
+    modulosPermitidos,
+    profesionalInicial,
+}: {
+    rol: RolLateral;
+    modulosPermitidos: string[];
+    profesionalInicial?: EstadoProfesionalSesion;
+}) {
     const pathname = usePathname();
-    const { user } = useAuth();
-    // SPEC-744: la nav sale de la fuente única. El resolver aplica la compuerta de cada rol
-    // (módulo ∧ proxy para internos/colegio; estado `habilitado` + muro de aceptación para el
-    // profesional). El estado activo es presentación: lo calcula la superficie con la ruta.
-    const items = navParaRol(rol, { modulosPermitidos, profesional: user?.profesional, pathname });
+    // SPEC-744: la nav sale de la fuente única (navParaRol), que aplica la compuerta de cada rol
+    // (módulo ∧ proxy para internos/colegio; estado `habilitado` + muro de aceptación para el profesional).
+    // SPEC-802: el `habilitado` del profesional lo resuelve el SERVIDOR (layout) y llega por prop
+    // `profesionalInicial` — NO de `user?.profesional` del cliente, que arranca `undefined` y haría que el
+    // SSR afirme «portero» antes de saber. Así el primer pintado ya es el correcto. El activo es presentación.
+    const items = navParaRol(rol, { modulosPermitidos, profesional: profesionalInicial, pathname });
     const raiz = items[0]?.href;
     const esActivo = (href: string) =>
         href !== "#" && (pathname === href || (href !== raiz && (pathname?.startsWith(href + "/") ?? false)));

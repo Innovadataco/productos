@@ -32,8 +32,15 @@ afterEach(() => {
 
 function montar(rol: RolLateral, opts: { modulos?: string[]; pathname?: string; profesional?: unknown } = {}) {
     mockPathname = opts.pathname ?? "/x";
-    authRef.value = { user: { rol, profesional: opts.profesional }, isLoading: false };
-    return render(<BarraInferior rol={rol} modulosPermitidos={opts.modulos ?? []} />);
+    authRef.value = { user: { rol }, isLoading: false };
+    // SPEC-802: el estado del profesional llega por PROP (resuelto en el servidor), no por el cliente.
+    return render(
+        <BarraInferior
+            rol={rol}
+            modulosPermitidos={opts.modulos ?? []}
+            profesionalInicial={opts.profesional as { habilitado: boolean } | null | undefined}
+        />,
+    );
 }
 
 describe("SPEC-744 · BarraInferior: pestañas fijas de la fuente única (sin scroll horizontal)", () => {

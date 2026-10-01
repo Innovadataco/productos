@@ -8,12 +8,18 @@
  * SEGURIDAD, no de estética (MAPA §0). SPEC-690 cierra la API; esto cierra el menú
  * para que no queden entradas que existen y no hacen nada (I-411 otra vez).
  *
- * Se condiciona a `habilitado` que sirve `GET /api/me` (SPEC-690), NO a `estado`
- * crudo ni al catálogo de módulos. Ajuste medido por el CEO: el worker de vigencia
- * marca VENCIDO en su corrida, no al instante de vencer — entre medio el perfil dice
- * `ACTIVO` pero `habilitado=false`. Si se mapeara por estado, ese profesional vería
- * el menú operativo y todo le daría 403. Por eso: **operativo solo si `habilitado`.**
- * Fail-closed: sin dato (cargando, o antes de que 690 publique el campo) → portero.
+ * Se condiciona a `habilitado` (SPEC-690), NO a `estado` crudo ni al catálogo de
+ * módulos. Ajuste medido por el CEO: el worker de vigencia marca VENCIDO en su corrida,
+ * no al instante de vencer — entre medio el perfil dice `ACTIVO` pero `habilitado=false`.
+ * Si se mapeara por estado, ese profesional vería el menú operativo y todo le daría 403.
+ * Por eso: **operativo solo si `habilitado`.**
+ *
+ * SPEC-802 · misma ausencia de dato, conducta OPUESTA según el plano:
+ *  · COMPUERTA (ruta, servidor): sigue FAIL-CLOSED — sin verificar no se concede (403/redirige).
+ *  · DISPLAY (esta barra): ya NO afirma «portero» por una carrera del cliente. `habilitado` se
+ *    resuelve EN EL SERVIDOR (layout) y se pasa como prop a NavLateral/BarraInferior, así que el SSR
+ *    ya trae el estado real. Esta función recibe ese valor resuelto; el `undefined` dejó de ser la
+ *    ventana de carga de un `fetch` del cliente. Un display que no sabe no debe afirmar el negativo.
  *
  * Las entradas se DERIVAN de `PROFESIONAL_NAV_ITEMS` (mismo href y módulo) para que
  * el candado de pantallas vivas (SPEC-437 · I-299) siga cubriendo que ninguna lleva

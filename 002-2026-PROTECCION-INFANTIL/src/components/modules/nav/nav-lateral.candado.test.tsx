@@ -36,8 +36,15 @@ function montar(
     opts: { modulos?: string[]; pathname?: string; profesional?: unknown } = {},
 ) {
     mockPathname = opts.pathname ?? "/x";
-    authRef.value = { user: { rol, profesional: opts.profesional }, isLoading: false };
-    return render(<NavLateral rol={rol} modulosPermitidos={opts.modulos ?? []} />);
+    authRef.value = { user: { rol }, isLoading: false };
+    // SPEC-802: el estado del profesional llega por PROP (resuelto en el servidor), no por el cliente.
+    return render(
+        <NavLateral
+            rol={rol}
+            modulosPermitidos={opts.modulos ?? []}
+            profesionalInicial={opts.profesional as { habilitado: boolean } | null | undefined}
+        />,
+    );
 }
 
 const ADMIN_MODULOS = ["inicio_admin", "bandeja_reportes", "revision_spam", "comite_bandeja", "estadisticas", "pagos_admin"];
@@ -104,6 +111,39 @@ describe("SPEC-703 · el profesional en el muro de aceptación ve PORTERO, no el
         montar("PROFESIONAL", { profesional: { habilitado: true }, pathname: "/dashboard/profesional/mi-perfil" });
         expect(screen.getByText("Casos")).toBeTruthy();
         expect(screen.getByText("Calendario")).toBeTruthy();
+    });
+});
+
+describe("SPEC-802 · el menú del profesional sale del estado resuelto EN EL SERVIDOR (prop), no de la carrera del cliente", () => {
+    it("habilitado por PROP con el cliente SIN dato (user=null) → menú verificado, NUNCA «Mi ficha» (elimina la ventana de carga)", () => {
+        // El cliente todavía no sabe (user=null: el SSR y la ventana previa al fetch de /api/me). Antes,
+        // derivar de user?.profesional caía a portero. Ahora el prop resuelto en el servidor ya trae el estado.
+        authRef.value = { user: null, isLoading: true };
+        mockPathname = "/dashboard/profesional";
+        render(<NavLateral rol="PROFESIONAL" modulosPermitidos={[]} profesionalInicial={{ habilitado: true }} />);
+        for (const label of ["Inicio", "Casos", "Calendario", "Mi perfil"]) {
+            expect(screen.getByText(label)).toBeTruthy();
+        }
+        expect(screen.queryByText("Mi ficha")).toBeNull();
+    });
+
+    it("no habilitado por PROP → sólo «Mi ficha», nada operativo", () => {
+        authRef.value = { user: null, isLoading: false };
+        mockPathname = "/dashboard/profesional";
+        render(<NavLateral rol="PROFESIONAL" modulosPermitidos={[]} profesionalInicial={{ habilitado: false }} />);
+        expect(screen.getByText("Mi ficha")).toBeTruthy();
+        expect(screen.queryByText("Mi perfil")).toBeNull();
+        expect(screen.queryByText("Casos")).toBeNull();
+    });
+
+    it("MUTACIÓN: el PROP del servidor MANDA — si se vuelve a derivar de user?.profesional del cliente, esto da ROJO", () => {
+        // Cliente: NO habilitado. Servidor (prop): habilitado. Si alguien revierte NavLateral a
+        // `user?.profesional`, acá se vería el portero → el test se pone rojo. Con el fix, el prop manda.
+        authRef.value = { user: { rol: "PROFESIONAL", profesional: { habilitado: false } }, isLoading: false };
+        mockPathname = "/dashboard/profesional";
+        render(<NavLateral rol="PROFESIONAL" modulosPermitidos={[]} profesionalInicial={{ habilitado: true }} />);
+        expect(screen.getByText("Mi perfil")).toBeTruthy();
+        expect(screen.queryByText("Mi ficha")).toBeNull();
     });
 });
 

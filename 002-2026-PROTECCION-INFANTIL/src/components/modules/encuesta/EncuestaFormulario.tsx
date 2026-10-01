@@ -27,18 +27,23 @@ import {
 const CORREO_SOPORTE = "gerencia@innovadataco.com";
 
 /** Copy que varía por AUDIENCIA (voz + desenlace). NO es copy por-pregunta: vive en el form. */
-const COPY: Record<Audiencia, { intro: (fecha: string) => string; subtitulo: string; enviar: string; gracias: string }> = {
+const COPY: Record<Audiencia, { intro: (fecha: string) => string; subtitulo: string; enviar: string; gracias: string; panel: string }> = {
     PADRE: {
         intro: (fecha) => `Cuéntanos cómo te fue en tu cita del ${fecha}.`,
         subtitulo: "Es un minuto y nos ayuda a cuidar el servicio.",
         enviar: "Contar cómo me fue",
-        gracias: "Gracias, quedó registrado.",
+        // SPEC-792 C3: cierre CÁLIDO del padre (espeja su intro «Cuéntanos cómo te fue»; no presume que
+        // estuvo excelente). NO «quedó registrado» (voz de archivador, la del profesional).
+        gracias: "Gracias por contarnos cómo te fue. Nos ayuda a cuidar el servicio.",
+        panel: "/dashboard",
     },
     PROFESIONAL: {
         intro: () => "Registre cómo fue la sesión.",
         subtitulo: "Su registro nos ayuda a cuidar el servicio de esta cita.",
         enviar: "Registrar",
+        // El registro del profesional es un log; su voz es sobria. Se queda como está.
         gracias: "Gracias, quedó registrado.",
+        panel: "/dashboard/profesional", // = homeParaRol("PROFESIONAL")
     },
 };
 
@@ -121,7 +126,18 @@ export function EncuestaFormulario({ solicitudId, origen, fecha }: Props) {
                             </div>
                         </>
                     ) : (
-                        <p className="cuerpo text-body">{copy.gracias}</p>
+                        // SPEC-792 C1+C3: el cierre del camino feliz (padre-sí y profesional) tenía SALIDA
+                        // solo por el botón atrás del navegador. Ahora: mensaje por audiencia (C3) + una
+                        // salida real al panel (C1). Botón secundario: la acción (responder) ya se hizo.
+                        <>
+                            <p className="cuerpo text-body">{copy.gracias}</p>
+                            <a
+                                className="inline-flex rounded-xl border border-tinta/15 px-4 py-2 text-sm text-body hover:bg-tinta/5"
+                                href={copy.panel}
+                            >
+                                Volver a mi panel
+                            </a>
+                        </>
                     )}
                 </div>
             </section>
