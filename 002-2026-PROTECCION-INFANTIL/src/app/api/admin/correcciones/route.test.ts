@@ -3,6 +3,7 @@ import { crearReporteFixture } from "@/lib/dal/testing/crear-reporte-fixture";
 import { POST } from "./route";
 import { prisma } from "@/lib/prisma";
 import { resetDatabase } from "@/lib/test-utils";
+import { esperarTareasFondo } from "@/lib/tareas-fondo";
 import {
     crearUsuario,
     crearTokenUsuario,
@@ -132,6 +133,8 @@ describe("POST /api/admin/correcciones", () => {
 
         const res = await POST(req);
         expect(res.status).toBe(200);
+        // SPEC-807: la derivación del dataset corre en segundo plano; se espera su asentamiento.
+        await esperarTareasFondo();
 
         const dataset = await prisma.datasetEntrenamiento.findFirst({
             where: { fuente: "correccion_admin" },
@@ -169,6 +172,8 @@ describe("POST /api/admin/correcciones", () => {
         const res = await POST(req);
         // La corrección misma SÍ se completa; solo se omite la copia de entrenamiento.
         expect(res.status).toBe(200);
+        // SPEC-807: la derivación (que aquí falla) corre en segundo plano; se espera su asentamiento.
+        await esperarTareasFondo();
 
         // Ninguna copia se guardó (ni cruda ni anonimizada): el relato en claro nunca entra.
         expect(await prisma.datasetEntrenamiento.count()).toBe(0);
@@ -182,6 +187,57 @@ describe("POST /api/admin/correcciones", () => {
             select: { estado: true },
         });
         expect(reporteActualizado?.estado).toBe("CORREGIDO");
+    });
+
+    // SPEC-807 · CANDADO: con Ollama COLGADO, la corrección RESPONDE en vez de bloquear hasta el timeout.
+    // La derivación del dataset (best-effort, toca Ollama) corre en segundo plano; su lentitud no puede
+    // afectar a la petición que la disparó.
+    //
+    // ⚠️ SIMULA HANG, NO REFUSED. El mock DEMORA en resolver (Ollama remoto que acepta la conexión y no
+    // contesta: la Mac dormida o el túnel caído — el estado REAL de prod). Si esto se "simplifica" a un
+    // rechazo RÁPIDO (puerto cerrado / `mockRejectedValue`), el camino falla en ~26 ms y el `await`
+    // también vuelve al instante → el candado daría VERDE aunque el bloqueo siguiera vivo. El retardo es
+    // la esencia de la prueba: por eso DEMORA, no rechaza.
+    it("CANDADO SPEC-807 · con Ollama colgado (HANG) la corrección responde sin bloquear; el best-effort completa aparte", async () => {
+        const admin = await crearUsuario("ADMIN");
+        mockToken = await crearTokenUsuario(admin.id, "ADMIN");
+        const { reporte } = await setupReporteConPii();
+
+        const DEMORA_HANG_MS = 2000;
+        mockAnonimizar.mockImplementation(
+            () =>
+                new Promise((resolve) =>
+                    setTimeout(
+                        () =>
+                            resolve({
+                                textoAnonimizado: "Mi hija [NOMBRE] recibió mensajes ofreciendo regalos.",
+                                piiDetectada: [],
+                                metrics: { modelo: "ornith:9b", latenciaMs: DEMORA_HANG_MS },
+                            }),
+                        DEMORA_HANG_MS,
+                    ),
+                ),
+        );
+
+        const req = crearRequestAutenticado("POST", "http://localhost:5005/api/admin/correcciones", {
+            reporteId: reporte.id,
+            categoriaCorregida: "SOLICITUD_ENCUENTRO",
+        }, mockToken);
+
+        const t0 = Date.now();
+        const res = await POST(req);
+        const duracionMs = Date.now() - t0;
+
+        expect(res.status).toBe(200);
+        // El núcleo del candado, en las DOS direcciones: la petición vuelve MUCHO antes que el trabajo de
+        // Ollama. Si alguien vuelve a awaitar la derivación (quita el backgrounding), duracionMs ≥ 2000 → ROJO.
+        expect(duracionMs).toBeLessThan(DEMORA_HANG_MS / 2);
+        // Y el trabajo está genuinamente EN VUELO (el mock cuelga, no resolvió rápido): aún no hay copia.
+        expect(await prisma.datasetEntrenamiento.count({ where: { fuente: "correccion_admin" } })).toBe(0);
+
+        // El best-effort NO se pierde: tras asentarse el segundo plano, la copia existe.
+        await esperarTareasFondo();
+        expect(await prisma.datasetEntrenamiento.count({ where: { fuente: "correccion_admin" } })).toBe(1);
     });
 
     it("deja el reporte en CORREGIDO y registra transición con responsable OPERADOR", async () => {

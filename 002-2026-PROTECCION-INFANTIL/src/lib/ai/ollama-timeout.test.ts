@@ -5,7 +5,10 @@ import { getOllamaTimeoutMs } from "./ollama-config";
 import { llamarOllamaStructured } from "./ollama-client";
 
 const CLAVE_TIMEOUT = "ia.ollama.timeout_ms";
-const DEFAULT_TIMEOUT_MS = 120_000;
+// SPEC-807: el default bajó de 120 s a 60 s. No es arbitrario: nuestra propia vigilancia ya declara 60 s
+// como FALLA de Ollama (`monitoreo.ollama.smoke.timeout_ms = 60000`); esperar el DOBLE en el camino de la
+// petición no tiene defensa. (El valor vivo en prod lo baja Datos/CEO por el parámetro `ia.ollama.timeout_ms`.)
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 async function fijarTimeoutParam(valor: string) {
     await prisma.parametroSistema.upsert({
@@ -37,7 +40,7 @@ describe("getOllamaTimeoutMs", () => {
         expect(await getOllamaTimeoutMs()).toBe(60000);
     });
 
-    it("cae al default 120000 ms cuando el parámetro no existe", async () => {
+    it("cae al default 60000 ms cuando el parámetro no existe", async () => {
         expect(await getOllamaTimeoutMs()).toBe(DEFAULT_TIMEOUT_MS);
     });
 
@@ -75,7 +78,7 @@ describe("timeout aplicado a los fetch de /api/generate", () => {
         expect(spyTimeout).toHaveBeenCalledWith(90000);
     });
 
-    it("sin parámetro aplica el default de 120000 ms", async () => {
+    it("sin parámetro aplica el default de 60000 ms", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ({
             ok: true,
             json: async () => ollamaOkResponse,
