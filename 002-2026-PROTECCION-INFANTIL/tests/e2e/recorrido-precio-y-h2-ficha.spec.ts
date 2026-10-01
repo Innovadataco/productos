@@ -35,10 +35,9 @@
  *   C · FICHA: idéntico barrido sobre el detalle — H-2 no depende de si la
  *       vista es lista o detalle.
  *
- * ESTADO. **SPEC-441 aún no despliega**: los tres tests corren con
- * `test.fail(true, ...)` citando 441. Cuando esa spec entre a `main`, los tres
- * pasan a verde y Playwright marca cada `test.fail` como fallo — esa transición
- * es la señal para que Calidad quite los tres `test.fail`.
+ * ESTADO. **SPEC-441 YA desplegó** (#367 en `main`): precio alineado tarjeta↔ficha +
+ * H-2 en ambas superficies. Calidad retiró los tres `test.fail` (SPEC-820): la
+ * transición esperada ocurrió y los tres corren en verde como candados vivos.
  *
  * REGLA. Aviso permanente del CEO: «Caminá la pantalla real, no siembres
  * alrededor.» El profesional se levanta caminando el flujo real (registro por
@@ -347,11 +346,6 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
     });
 
     test("(A) tarjeta y ficha muestran EL MISMO precio, y coincide con precio-primera-cita público", async () => {
-        test.fail(
-            true,
-            "SPEC-441 (Dev X) alinea el precio entre tarjeta y ficha del profesional y refuerza H-2. Este candado se quita cuando esa spec despliegue.",
-        );
-
         // Precio estándar de referencia — SPEC-428, endpoint público sin sesión.
         const anon = await ctx();
         let precioEstandar = 0;
@@ -408,11 +402,6 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
     });
 
     test("(B) TARJETA del directorio no expone contacto del profesional — H-2 (Ley 2375/2024)", async () => {
-        test.fail(
-            true,
-            "SPEC-441 (Dev X) alinea el precio entre tarjeta y ficha del profesional y refuerza H-2. Este candado se quita cuando esa spec despliegue.",
-        );
-
         const request = await ctx();
         try {
             await login(request, EMAIL_PADRE);
@@ -447,11 +436,6 @@ test.describe.serial("Directorio del padre · tarjeta y ficha coherentes + H-2 (
     });
 
     test("(C) FICHA del directorio no expone contacto del profesional — H-2 (Ley 2375/2024)", async () => {
-        test.fail(
-            true,
-            "SPEC-441 (Dev X) alinea el precio entre tarjeta y ficha del profesional y refuerza H-2. Este candado se quita cuando esa spec despliegue.",
-        );
-
         const request = await ctx();
         try {
             await login(request, EMAIL_PADRE);
